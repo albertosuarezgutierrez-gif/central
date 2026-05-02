@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 
 /* ─── Design Tokens ─── */
@@ -60,6 +60,9 @@ const ICONS = {
   eyeOff: 'M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22',
   play: 'M5 3l14 9-14 9V3z',
   stop: 'M6 6h12v12H6z',
+  book: 'M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z',
+  upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
+  sparkle: 'M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM5 17l.75 2.25L8 20l-2.25.75L5 23l-.75-2.25L2 20l2.25-.75L5 17zM19 2l.5 1.5L21 4l-1.5.5L19 6l-.5-1.5L17 4l1.5-.5L19 2z',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -625,12 +628,371 @@ function ResumenTab() {
   )
 }
 
+/* ─── Tab: Carta ─── */
+type Producto = { id: string; nombre: string; descripcion: string | null; precio: number | null; categoria: string; activo: boolean; orden: number }
+type ProductoDraft = Omit<Producto, 'id' | 'orden' | 'activo'> & { _key: string }
+
+type CartaView = 'lista' | 'escanear'
+
+function CartaTab() {
+  const [view, setView] = useState<CartaView>('lista')
+  const [productos, setProductos] = useState<Producto[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', categoria: 'Sin categoría' })
+  const [err, setErr] = useState('')
+
+  // Scanner state
+  const [images, setImages] = useState<{ data: string; mediaType: string; preview: string }[]>([])
+  const [extracting, setExtracting] = useState(false)
+  const [extracted, setExtracted] = useState<ProductoDraft[] | null>(null)
+  const [extractErr, setExtractErr] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const CATEGORIAS = ['Tapas', 'Entrantes', 'Ensaladas', 'Carnes', 'Pescados', 'Pizzas', 'Bocadillos', 'Postres', 'Bebidas', 'Cervezas', 'Vinos', 'Sin categoría']
+
+  const load = useCallback(async () => {
+    const r = await fetch('/api/owner/carta')
+    const d = await r.json()
+    setProductos(d.productos || [])
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  // ── CRUD ──
+  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', categoria: 'Sin categoría' }); setErr(''); setModal('create') }
+  const openEdit = (p: Producto) => { setForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio != null ? String(p.precio) : '', categoria: p.categoria }); setErr(''); setModal({ edit: p }) }
+  const openDel = (p: Producto) => setModal({ del: p })
+
+  const save = async () => {
+    setErr('')
+    if (!form.nombre.trim()) return setErr('Nombre requerido')
+    const isEdit = modal && typeof modal === 'object' && 'edit' in modal
+    const body = {
+      ...(isEdit ? { id: (modal as { edit: Producto }).edit.id } : {}),
+      nombre: form.nombre.trim(),
+      descripcion: form.descripcion.trim() || null,
+      precio: form.precio !== '' ? parseFloat(form.precio) : null,
+      categoria: form.categoria,
+    }
+    const r = await fetch('/api/owner/carta', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (!r.ok) return setErr(d.error || 'Error')
+    await load(); setModal(null)
+  }
+
+  const del = async () => {
+    if (!modal || typeof modal !== 'object' || !('del' in modal)) return
+    await fetch('/api/owner/carta', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: (modal as { del: Producto }).del.id }) })
+    await load(); setModal(null)
+  }
+
+  const toggleActivo = async (p: Producto) => {
+    await fetch('/api/owner/carta', { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: p.id, activo: !p.activo }) })
+    await load()
+  }
+
+  // ── Scanner ──
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return
+    const newImgs: typeof images = []
+    for (const file of Array.from(files)) {
+      if (!file.type.startsWith('image/')) continue
+      const base64 = await new Promise<string>((res) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.readAsDataURL(file)
+      })
+      const preview = URL.createObjectURL(file)
+      newImgs.push({ data: base64, mediaType: file.type as string, preview })
+    }
+    setImages(prev => [...prev, ...newImgs].slice(0, 10))
+  }
+
+  const extract = async () => {
+    setExtractErr(''); setExtracting(true); setExtracted(null)
+    try {
+      const r = await fetch('/api/owner/carta?action=extract', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ images: images.map(i => ({ data: i.data, mediaType: i.mediaType })) }),
+      })
+      const d = await r.json()
+      if (!r.ok) { setExtractErr(d.error || 'Error'); return }
+      setExtracted((d.productos || []).map((p: Omit<ProductoDraft, '_key'>, i: number) => ({ ...p, _key: String(i) })))
+    } finally {
+      setExtracting(false)
+    }
+  }
+
+  const confirmExtracted = async () => {
+    if (!extracted) return
+    const r = await fetch('/api/owner/carta?action=bulk', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ productos: extracted }),
+    })
+    if (r.ok) {
+      setExtracted(null); setImages([]); setView('lista'); await load()
+    }
+  }
+
+  const updateDraft = (key: string, field: keyof ProductoDraft, value: string | number | null) => {
+    setExtracted(prev => prev ? prev.map(p => p._key === key ? { ...p, [field]: value } : p) : null)
+  }
+  const removeDraft = (key: string) => {
+    setExtracted(prev => prev ? prev.filter(p => p._key !== key) : null)
+  }
+
+  // ── Group by category ──
+  const byCategoria = productos.reduce<Record<string, Producto[]>>((acc, p) => {
+    if (!acc[p.categoria]) acc[p.categoria] = []
+    acc[p.categoria].push(p)
+    return acc
+  }, {})
+
+  if (loading) return <div style={{ padding: 40, textAlign: 'center', color: C.ink3, fontFamily: SM, fontSize: 12 }}>CARGANDO...</div>
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: C.ink3, textTransform: 'uppercase' }}>Carta</div>
+          <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, marginTop: 2 }}>
+            {productos.length} producto{productos.length !== 1 ? 's' : ''}
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Btn onClick={() => { setView(view === 'escanear' ? 'lista' : 'escanear'); setExtracted(null); setImages([]) }}
+            variant={view === 'escanear' ? 'primary' : 'default'}>
+            <Icon d={ICONS.sparkle} size={14}/>Escanear carta
+          </Btn>
+          <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/>Añadir</Btn>
+        </div>
+      </div>
+
+      {/* ── SCANNER VIEW ── */}
+      {view === 'escanear' && (
+        <div style={{ marginBottom: 32 }}>
+          {/* Step 1: Upload */}
+          {!extracted && (
+            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, marginBottom: 16 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.red, textTransform: 'uppercase', marginBottom: 12 }}>
+                01 · Sube las fotos de la carta
+              </div>
+              <p style={{ fontFamily: SN, fontSize: 13, color: C.ink3, margin: '0 0 16px', lineHeight: 1.5 }}>
+                Puedes subir varias páginas a la vez. La IA extrae nombre, precio y categoría de cada plato.
+              </p>
+
+              {/* Drop zone */}
+              <div
+                onClick={() => fileRef.current?.click()}
+                onDragOver={e => e.preventDefault()}
+                onDrop={e => { e.preventDefault(); handleFiles(e.dataTransfer.files) }}
+                style={{ border: `2px dashed ${C.rule}`, borderRadius: 8, padding: '32px 24px',
+                  textAlign: 'center', cursor: 'pointer', background: C.paper,
+                  transition: 'border-color .15s' }}>
+                <Icon d={ICONS.upload} size={28}/>
+                <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.ink, marginTop: 10 }}>
+                  Arrastra las fotos aquí o haz clic
+                </div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginTop: 4 }}>
+                  JPG, PNG, WEBP · máx. 10 páginas
+                </div>
+                <input ref={fileRef} type="file" accept="image/*" multiple hidden onChange={e => handleFiles(e.target.files)} />
+              </div>
+
+              {/* Thumbnails */}
+              {images.length > 0 && (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 16 }}>
+                  {images.map((img, i) => (
+                    <div key={i} style={{ position: 'relative' }}>
+                      <img src={img.preview} alt={`Página ${i + 1}`}
+                        style={{ width: 80, height: 80, objectFit: 'cover', borderRadius: 6, border: `1px solid ${C.rule}` }} />
+                      <button onClick={() => setImages(prev => prev.filter((_, j) => j !== i))}
+                        style={{ position: 'absolute', top: -6, right: -6, width: 18, height: 18,
+                          background: C.red, color: C.paper, border: 'none', borderRadius: 999,
+                          cursor: 'pointer', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {images.length > 0 && (
+                <div style={{ marginTop: 16 }}>
+                  <Btn variant="primary" onClick={extract} disabled={extracting}>
+                    <Icon d={ICONS.sparkle} size={14}/>
+                    {extracting ? 'Analizando carta...' : `Extraer con IA (${images.length} página${images.length > 1 ? 's' : ''})`}
+                  </Btn>
+                  {extracting && (
+                    <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginTop: 8 }}>
+                      BRAIN · procesando imágenes · puede tardar 10-20s...
+                    </div>
+                  )}
+                  {extractErr && <div style={{ fontFamily: SM, fontSize: 11, color: C.red, marginTop: 8 }}>{extractErr}</div>}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Step 2: Review & confirm */}
+          {extracted && (
+            <div>
+              <div style={{ background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 8, padding: '14px 20px', marginBottom: 16,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.amber, textTransform: 'uppercase' }}>
+                    02 · Revisa y confirma
+                  </div>
+                  <div style={{ fontFamily: SN, fontSize: 13, color: C.ink2, marginTop: 2 }}>
+                    {extracted.length} productos extraídos. Edita lo que necesites antes de guardar.
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <Btn variant="ghost" onClick={() => { setExtracted(null); setImages([]) }}>Volver a subir</Btn>
+                  <Btn variant="primary" onClick={confirmExtracted}>
+                    <Icon d={ICONS.check} size={14}/>Guardar {extracted.length} productos
+                  </Btn>
+                </div>
+              </div>
+
+              <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 100px 120px 40px',
+                  padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
+                  fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>
+                  <span>Nombre</span><span>Categoría</span><span>Precio</span><span>Descripción</span><span/>
+                </div>
+                {extracted.map((p) => (
+                  <div key={p._key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 100px 120px 40px',
+                    padding: '8px 16px', gap: 8, alignItems: 'center',
+                    borderBottom: `1px solid ${C.rule}` }}>
+                    <input value={p.nombre} onChange={e => updateDraft(p._key, 'nombre', e.target.value)}
+                      style={{ fontFamily: SN, fontSize: 13, background: C.paper, border: `1px solid ${C.rule}`,
+                        borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }} />
+                    <select value={p.categoria} onChange={e => updateDraft(p._key, 'categoria', e.target.value)}
+                      style={{ fontFamily: SN, fontSize: 12, background: C.paper, border: `1px solid ${C.rule}`,
+                        borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }}>
+                      {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                    <input value={p.precio != null ? String(p.precio) : ''} onChange={e => updateDraft(p._key, 'precio', e.target.value === '' ? null : parseFloat(e.target.value))}
+                      placeholder="—" type="number" step="0.01"
+                      style={{ fontFamily: SM, fontSize: 13, background: C.paper, border: `1px solid ${C.rule}`,
+                        borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }} />
+                    <input value={p.descripcion || ''} onChange={e => updateDraft(p._key, 'descripcion', e.target.value || null)}
+                      placeholder="—"
+                      style={{ fontFamily: SN, fontSize: 12, background: C.paper, border: `1px solid ${C.rule}`,
+                        borderRadius: 4, padding: '5px 8px', color: C.ink3, outline: 'none', width: '100%' }} />
+                    <button onClick={() => removeDraft(p._key)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink4, display: 'flex', padding: 4 }}>
+                      <Icon d={ICONS.x} size={14}/>
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── LISTA VIEW ── */}
+      {view === 'lista' && (
+        <>
+          {productos.length === 0 ? (
+            <div style={{ padding: '48px 0', textAlign: 'center' }}>
+              <div style={{ fontFamily: SE, fontSize: 22, color: C.ink3, marginBottom: 8 }}>Carta vacía</div>
+              <div style={{ fontFamily: SN, fontSize: 13, color: C.ink4, marginBottom: 20 }}>
+                Añade productos manualmente o escanea la carta con IA.
+              </div>
+              <Btn onClick={() => setView('escanear')}><Icon d={ICONS.sparkle} size={14}/>Escanear carta</Btn>
+            </div>
+          ) : (
+            Object.entries(byCategoria).map(([cat, ps]) => (
+              <div key={cat} style={{ marginBottom: 28 }}>
+                <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em',
+                  color: C.red, textTransform: 'uppercase', marginBottom: 10,
+                  display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {cat}
+                  <span style={{ color: C.ink4 }}>· {ps.length}</span>
+                </div>
+                <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
+                  {ps.map((p, i) => (
+                    <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px 110px',
+                      padding: '12px 16px', alignItems: 'center', gap: 8,
+                      borderBottom: i < ps.length - 1 ? `1px solid ${C.rule}` : 'none',
+                      background: !p.activo ? C.paper : 'transparent' }}>
+                      <div>
+                        <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: p.activo ? C.ink : C.ink4 }}>{p.nombre}</div>
+                        {p.descripcion && <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginTop: 2 }}>{p.descripcion}</div>}
+                      </div>
+                      <div style={{ fontFamily: SM, fontSize: 14, fontWeight: 700, color: C.ink2, textAlign: 'right' }}>
+                        {p.precio != null ? `${p.precio.toFixed(2)} €` : '—'}
+                      </div>
+                      <div>
+                        <button onClick={() => toggleActivo(p)}
+                          style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                            background: p.activo ? C.greenS : C.paper2, color: p.activo ? C.green : C.ink3,
+                            border: `1px solid ${p.activo ? '#A8C9AB' : C.rule}`, borderRadius: 999,
+                            padding: '3px 8px', cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                          {p.activo ? 'ON' : 'OFF'}
+                        </button>
+                      </div>
+                      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                        <Btn size="sm" variant="ghost" onClick={() => openEdit(p)}><Icon d={ICONS.edit} size={13}/></Btn>
+                        <Btn size="sm" variant="danger" onClick={() => openDel(p)}><Icon d={ICONS.trash} size={13}/></Btn>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </>
+      )}
+
+      {/* Create / Edit modal */}
+      {modal && (modal === 'create' || (typeof modal === 'object' && 'edit' in modal)) && (
+        <Modal title={modal === 'create' ? 'Nuevo producto' : 'Editar producto'} onClose={() => setModal(null)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <Field label="Nombre" value={form.nombre} onChange={v => setForm(f => ({ ...f, nombre: v }))} placeholder="Croquetas de jamón"/>
+            <Field label="Precio (€)" value={form.precio} onChange={v => setForm(f => ({ ...f, precio: v }))} placeholder="8.50" type="number"/>
+            <Select label="Categoría" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria: v }))}
+              options={CATEGORIAS.map(c => ({ value: c, label: c }))}/>
+            <Field label="Descripción (opcional)" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion: v }))} placeholder="Caseras, con bechamel de la abuela"/>
+            {err && <div style={{ fontFamily: SM, fontSize: 11, color: C.red }}>{err}</div>}
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
+              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
+              <Btn variant="primary" onClick={save}><Icon d={ICONS.check} size={14}/>{modal === 'create' ? 'Crear' : 'Guardar'}</Btn>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {modal && typeof modal === 'object' && 'del' in modal && (
+        <Modal title="Borrar producto" onClose={() => setModal(null)}>
+          <p style={{ fontFamily: SN, fontSize: 14, color: C.ink2, marginTop: 0 }}>
+            ¿Borrar <strong>{(modal as { del: Producto }).del.nombre}</strong>?
+          </p>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+            <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
+            <Btn variant="danger" onClick={del}><Icon d={ICONS.trash} size={14}/>Borrar</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
 /* ─── Main Page ─── */
 const TABS = [
   { id: 'camareros', label: 'Camareros', icon: ICONS.users },
   { id: 'mesas',     label: 'Mesas',     icon: ICONS.grid  },
   { id: 'turno',     label: 'Turno',     icon: ICONS.clock },
   { id: 'resumen',   label: 'Resumen',   icon: ICONS.chart },
+  { id: 'carta',     label: 'Carta',     icon: ICONS.book  },
 ]
 
 export default function OwnerPage() {
@@ -702,6 +1064,7 @@ export default function OwnerPage() {
         {tab === 'mesas'     && <MesasTab/>}
         {tab === 'turno'     && <TurnoTab/>}
         {tab === 'resumen'   && <ResumenTab/>}
+        {tab === 'carta'     && <CartaTab/>}
       </div>
     </div>
   )
