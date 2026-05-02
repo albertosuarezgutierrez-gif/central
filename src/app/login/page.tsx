@@ -28,7 +28,8 @@ export default function LoginPage() {
       const d = await r.json()
       if (d.camarero) {
         localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
-        window.location.href = d.camarero.rol === 'admin' ? '/hub' : '/edge'
+        const rol = d.camarero.rol
+        window.location.href = rol === 'admin' ? '/hub' : rol === 'owner' ? '/owner' : '/edge'
       } else {
         setError('PIN incorrecto')
         setPin('')
@@ -143,7 +144,7 @@ export default function LoginPage() {
 
       {/* Hint */}
       <div style={{ marginTop:32, fontFamily:SM, fontSize:9, color:'#4A3F33', textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>
-        ADMIN · 0000 &nbsp;|&nbsp; CAMARERO · 1234 · 5678
+        ADMIN · 0000 &nbsp;|&nbsp; DUEÑO · 2026 &nbsp;|&nbsp; CAMARERO · 1234
       </div>
     </div>
   )

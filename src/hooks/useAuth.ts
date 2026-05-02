@@ -4,10 +4,10 @@ import { useEffect, useState } from 'react'
 interface Session {
   id: string
   nombre: string
-  rol: 'admin' | 'camarero'
+  rol: 'admin' | 'camarero' | 'owner'
 }
 
-export function useAuth(requiredRole?: 'admin' | 'camarero') {
+export function useAuth(requiredRole?: 'admin' | 'camarero' | 'owner') {
   const [session, setSession] = useState<Session | null>(null)
   const [checking, setChecking] = useState(true)
 
@@ -15,7 +15,6 @@ export function useAuth(requiredRole?: 'admin' | 'camarero') {
     const raw = localStorage.getItem('ia_rest_session')
 
     if (!raw) {
-      // No session — redirect to login
       setChecking(false)
       window.location.href = '/login'
       return
@@ -24,18 +23,23 @@ export function useAuth(requiredRole?: 'admin' | 'camarero') {
     try {
       const s: Session = JSON.parse(raw)
 
-      // Wrong role for this page
       if (requiredRole === 'admin' && s.rol !== 'admin') {
         setChecking(false)
-        window.location.href = '/edge'
+        if (s.rol === 'owner') window.location.href = '/owner'
+        else window.location.href = '/edge'
         return
       }
 
-      // Valid session
+      if (requiredRole === 'owner' && s.rol !== 'owner') {
+        setChecking(false)
+        if (s.rol === 'admin') window.location.href = '/hub'
+        else window.location.href = '/edge'
+        return
+      }
+
       setSession(s)
       setChecking(false)
     } catch {
-      // Corrupt session data
       localStorage.removeItem('ia_rest_session')
       setChecking(false)
       window.location.href = '/login'
