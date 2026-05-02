@@ -55,6 +55,19 @@ export interface ComandaItem {
   estado: ItemEstado
   created_at: string
   seccion_id: string | null
+  formato_id: string | null
+  formato_nombre: string | null
+}
+
+export interface ProductoFormato {
+  id: string
+  producto_id: string
+  nombre: string          // 'tapa' | 'media' | 'racion' | custom
+  precio: number
+  activo: boolean
+  orden: number
+  restaurante_id: string
+  created_at: string
 }
 
 export interface Transcripcion {
@@ -72,7 +85,7 @@ export interface Transcripcion {
 export interface BrainResult {
   mesa: string
   tipo: 'comanda' | 'marchar' | '86' | 'cuenta' | 'aviso'
-  items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number }[]
+  items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato?: string | null }[]
   confianza: number
   raw: string
 }

@@ -35,12 +35,37 @@ export async function POST(req: NextRequest) {
       comandaId = comanda.id
 
       if (brainResult.items.length > 0) {
+        // Resolver formato_id para items que traen formato de voz
+        const itemsConFormato = brainResult.items.filter(i => i.formato)
+        const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
+
+        if (itemsConFormato.length > 0) {
+          const nombresUnicos = [...new Set(itemsConFormato.map(i => i.nombre))]
+          const { data: prods } = await supabase
+            .from('productos').select('id,nombre').in('nombre', nombresUnicos).eq('restaurante_id', rid)
+          if (prods?.length) {
+            const { data: formatos } = await supabase
+              .from('producto_formatos').select('id,producto_id,nombre,precio')
+              .in('producto_id', prods.map(p => p.id)).eq('activo', true)
+            for (const f of formatos ?? []) {
+              const prod = prods.find(p => p.id === f.producto_id)
+              if (prod) formatoMap[`${prod.nombre}:${f.nombre}`] = { id: f.id, nombre: f.nombre, precio: f.precio }
+            }
+          }
+        }
+
         await supabase.from('comanda_items').insert(
-          brainResult.items.map((item) => ({
-            comanda_id: comanda.id, nombre: item.nombre, cantidad: item.cantidad,
-            notas: item.notas || null, producto_id: item.producto_id ?? null,
-            precio_unitario: item.precio_unitario ?? null, restaurante_id: rid,
-          }))
+          brainResult.items.map((item) => {
+            const fmtData = item.formato ? (formatoMap[`${item.nombre}:${item.formato}`] ?? null) : null
+            return {
+              comanda_id: comanda.id, nombre: item.nombre, cantidad: item.cantidad,
+              notas: item.notas || null, producto_id: item.producto_id ?? null,
+              precio_unitario: fmtData?.precio ?? item.precio_unitario ?? null,
+              restaurante_id: rid,
+              formato_id: fmtData?.id ?? null,
+              formato_nombre: fmtData?.nombre ?? null,
+            }
+          })
         )
       }
 

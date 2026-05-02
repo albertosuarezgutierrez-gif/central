@@ -1,21 +1,35 @@
 import { BrainResult } from '@/types'
 import { createServerClient } from '@/lib/supabase'
 
-/** Construye el bloque de carta para el prompt con aliases. */
+/** Construye el bloque de carta para el prompt con aliases y formatos. */
 async function buildMenuContext(): Promise<string> {
   try {
     const supabase = createServerClient()
-    const { data } = await supabase
-      .from('productos')
-      .select('nombre, nombre_alternativo, seccion, precio')
-      .eq('activo', true)
-      .order('seccion')
-      .order('orden')
+    const [{ data: productos }, { data: formatos }] = await Promise.all([
+      supabase
+        .from('productos')
+        .select('id, nombre, nombre_alternativo, seccion, precio')
+        .eq('activo', true)
+        .order('seccion')
+        .order('orden'),
+      supabase
+        .from('producto_formatos')
+        .select('producto_id, nombre, precio')
+        .eq('activo', true)
+        .order('orden'),
+    ])
 
-    if (!data?.length) return ''
+    if (!productos?.length) return ''
 
-    const bySec: Record<string, typeof data> = {}
-    for (const p of data) {
+    // Build formato map: producto_id → formatos[]
+    const fmtMap: Record<string, { nombre: string; precio: number }[]> = {}
+    for (const f of formatos ?? []) {
+      if (!fmtMap[f.producto_id]) fmtMap[f.producto_id] = []
+      fmtMap[f.producto_id].push({ nombre: f.nombre, precio: f.precio })
+    }
+
+    const bySec: Record<string, typeof productos> = {}
+    for (const p of productos) {
       const s = p.seccion ?? 'otras'
       if (!bySec[s]) bySec[s] = []
       bySec[s].push(p)
@@ -26,6 +40,12 @@ async function buildMenuContext(): Promise<string> {
         const alias = p.nombre_alternativo?.length
           ? ` [${(p.nombre_alternativo as string[]).join('/')}]`
           : ''
+        const fmts = fmtMap[p.id]
+        if (fmts?.length) {
+          // Mostrar formatos en lugar del precio único
+          const fmtStr = fmts.map(f => `${f.nombre}:${f.precio}€`).join('/')
+          return `${p.nombre}${alias} (formatos: ${fmtStr})`
+        }
         const precio = p.precio != null ? ` ${p.precio}€` : ''
         return `${p.nombre}${alias}${precio}`
       }).join(' · ')
@@ -47,9 +67,11 @@ REGLAS ESTRICTAS:
 - "mesa cuatro"=T04, "la doce"=T12, "barra dos"=B02
 - Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
 - Para tipo "86": los items son los productos agotados
+- FORMATOS: si un producto tiene formatos (tapa/media/racion), extrae el formato mencionado en "formato" (null si no se menciona)
+- Ejemplos formato: "una tapa de bravas"→formato:"tapa", "media de croquetas"→formato:"media", "una ración"→formato:"racion"
 
 SCHEMA:
-{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":""}],"confianza":0.95,"raw":"texto original"}`
+{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string): Promise<BrainResult> {
   const [Anthropic, menuContext] = await Promise.all([

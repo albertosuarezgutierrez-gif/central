@@ -182,7 +182,14 @@ function KDSInner() {
                           {it.estado === 'listo' && <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1 5 4 8 9 2" stroke={K.fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" /></svg>}
                         </div>
                         <div style={{ flex: 1 }}>
-                          <div style={{ fontFamily: SM, fontSize: 14, fontWeight: 700, letterSpacing: '.05em', color: K.fg, textTransform: 'uppercase', textDecoration: it.estado === 'listo' ? 'line-through' : 'none' }}>{it.nombre}</div>
+                          <div style={{ fontFamily: SM, fontSize: 14, fontWeight: 700, letterSpacing: '.05em', color: K.fg, textTransform: 'uppercase', textDecoration: it.estado === 'listo' ? 'line-through' : 'none' }}>
+                            {it.nombre}
+                            {it.formato_nombre && (
+                              <span style={{ fontFamily: SM, fontSize: 10, fontWeight: 600, marginLeft: 6, padding: '1px 5px', borderRadius: 2, background: K.rule, color: K.fg3, letterSpacing: '.06em', verticalAlign: 'middle' }}>
+                                {it.formato_nombre.toUpperCase()}
+                              </span>
+                            )}
+                          </div>
                           {it.notas && <div style={{ fontFamily: SN, fontSize: 11, color: K.amb, marginTop: 2 }}>{it.notas}</div>}
                         </div>
                         <span style={{ fontFamily: SM, fontSize: 13, color: K.fg3 }}>{it.cantidad}x</span>

@@ -651,8 +651,107 @@ function ResumenTab() {
 /* ─── Tab: Carta ─── */
 type Producto = { id: string; nombre: string; descripcion: string | null; precio: number | null; categoria: string; seccion: string; nombre_alternativo: string[]; activo: boolean; orden: number }
 type ProductoDraft = Omit<Producto, 'id' | 'orden' | 'activo'> & { _key: string }
+type ProdFormato = { id: string; nombre: string; precio: number; activo: boolean; orden: number }
 
 type CartaView = 'lista' | 'escanear'
+
+const NOMBRES_FORMATO = ['tapa', 'media', 'ración', 'entera', 'pequeña', 'grande', 'unidad']
+
+function FormatsEditor({ productoId, sh }: { productoId: string; sh: () => Record<string, string> }) {
+  const [formatos, setFormatos] = useState<ProdFormato[]>([])
+  const [nuevo, setNuevo] = useState({ nombre: 'tapa', precio: '' })
+  const [loading, setLoading] = useState(true)
+
+  const load = useCallback(async () => {
+    const r = await fetch(`/api/owner/formatos?producto_id=${productoId}`, { headers: sh() })
+    const d = await r.json()
+    setFormatos(d.formatos || [])
+    setLoading(false)
+  }, [productoId, sh])
+
+  useEffect(() => { load() }, [load])
+
+  const add = async () => {
+    if (!nuevo.nombre || !nuevo.precio) return
+    await fetch('/api/owner/formatos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sh() },
+      body: JSON.stringify({ producto_id: productoId, nombre: nuevo.nombre, precio: parseFloat(nuevo.precio), orden: formatos.length }),
+    })
+    setNuevo({ nombre: 'tapa', precio: '' })
+    await load()
+  }
+
+  const del = async (id: string) => {
+    await fetch('/api/owner/formatos', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id }) })
+    await load()
+  }
+
+  const toggle = async (f: ProdFormato) => {
+    await fetch('/api/owner/formatos', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: f.id, activo: !f.activo }) })
+    await load()
+  }
+
+  return (
+    <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: 16, marginTop: 4 }}>
+      <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase', marginBottom: 12 }}>
+        Formatos
+      </div>
+      {loading ? (
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>Cargando...</div>
+      ) : (
+        <>
+          {formatos.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+              {formatos.map(f => (
+                <div key={f.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px', background: f.activo ? C.bone : C.paper, border: `1px solid ${C.rule}`, borderRadius: 4, opacity: f.activo ? 1 : 0.55 }}>
+                  <span style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', color: C.ink, flex: 1 }}>{f.nombre}</span>
+                  <span style={{ fontFamily: SM, fontSize: 13, color: C.red, fontWeight: 700 }}>{f.precio.toFixed(2)} €</span>
+                  <button onClick={() => toggle(f)} style={{ background: 'none', border: `1px solid ${C.rule}`, borderRadius: 3, padding: '2px 6px', fontFamily: SM, fontSize: 9, letterSpacing: '.08em', color: C.ink3, cursor: 'pointer' }}>
+                    {f.activo ? 'OCULTAR' : 'ACTIVAR'}
+                  </button>
+                  <button onClick={() => del(f.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink3, padding: '2px 4px', lineHeight: 1 }}>
+                    <svg width="12" height="12" viewBox="0 0 14 14" fill="none"><path d="M2 2L12 12M12 2L2 12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Add new format row */}
+          <div style={{ display: 'flex', gap: 6, alignItems: 'flex-end' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4, letterSpacing: '.06em' }}>NOMBRE</div>
+              <select
+                value={nuevo.nombre}
+                onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))}
+                style={{ width: '100%', padding: '7px 8px', fontFamily: SN, fontSize: 13, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 4, color: C.ink, outline: 'none' }}
+              >
+                {NOMBRES_FORMATO.map(n => <option key={n} value={n}>{n}</option>)}
+              </select>
+            </div>
+            <div style={{ width: 90 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4, letterSpacing: '.06em' }}>PRECIO €</div>
+              <input
+                value={nuevo.precio}
+                onChange={e => setNuevo(n => ({ ...n, precio: e.target.value }))}
+                placeholder="5.50"
+                type="number"
+                step="0.5"
+                style={{ width: '100%', padding: '7px 8px', fontFamily: SN, fontSize: 13, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 4, color: C.ink, outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
+            <Btn variant="primary" onClick={add}><Icon d={ICONS.plus} size={13}/>Añadir</Btn>
+          </div>
+          {formatos.length === 0 && (
+            <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 10, lineHeight: 1.4 }}>
+              Sin formatos. El producto tiene precio único. Añade formatos si se vende en varios tamaños (tapa / media / ración).
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
 
 function CartaTab() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
@@ -998,6 +1097,9 @@ function CartaTab() {
               options={SECCIONES.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}/>
             <Field label="Aliases (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="bravas, una de bravas, patatas"/>
             <Field label="Descripción (opcional)" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion: v }))} placeholder="Caseras, con bechamel de la abuela"/>
+            {modal !== 'create' && typeof modal === 'object' && 'edit' in modal && (
+              <FormatsEditor productoId={(modal as { edit: Producto }).edit.id} sh={sh} />
+            )}
             {err && <div style={{ fontFamily: SM, fontSize: 11, color: C.red }}>{err}</div>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
