@@ -138,3 +138,42 @@ export function useReloj() {
   }, [])
   return ahora
 }
+
+export interface ProductoActivo {
+  id: string
+  nombre: string
+  nombre_alternativo: string[]
+  seccion: string
+  precio: number | null
+  activo: boolean
+  orden: number
+}
+
+/** Hook: lista de productos activos con realtime. Usado por Edge para mostrar 86. */
+export function useProductosActivos() {
+  const [productos, setProductos] = useState<ProductoActivo[]>([])
+
+  const fetch = useCallback(async () => {
+    const { data } = await supabase
+      .from('productos')
+      .select('id, nombre, nombre_alternativo, seccion, precio, activo, orden')
+      .order('seccion')
+      .order('orden')
+    if (data) setProductos(data)
+  }, [])
+
+  useEffect(() => {
+    fetch()
+
+    const channel = supabase
+      .channel('productos-activos-live')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'productos' }, () => {
+        fetch()
+      })
+      .subscribe()
+
+    return () => { supabase.removeChannel(channel) }
+  }, [fetch])
+
+  return { productos, refetch: fetch }
+}

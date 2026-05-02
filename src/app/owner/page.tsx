@@ -632,7 +632,7 @@ function ResumenTab() {
 }
 
 /* ─── Tab: Carta ─── */
-type Producto = { id: string; nombre: string; descripcion: string | null; precio: number | null; categoria: string; activo: boolean; orden: number }
+type Producto = { id: string; nombre: string; descripcion: string | null; precio: number | null; categoria: string; seccion: string; nombre_alternativo: string[]; activo: boolean; orden: number }
 type ProductoDraft = Omit<Producto, 'id' | 'orden' | 'activo'> & { _key: string }
 
 type CartaView = 'lista' | 'escanear'
@@ -642,7 +642,7 @@ function CartaTab() {
   const [productos, setProductos] = useState<Producto[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
-  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', categoria: 'Sin categoría' })
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: 'entrantes', nombre_alternativo: '' })
   const [err, setErr] = useState('')
 
   // Scanner state
@@ -652,7 +652,7 @@ function CartaTab() {
   const [extractErr, setExtractErr] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const CATEGORIAS = ['Tapas', 'Entrantes', 'Ensaladas', 'Carnes', 'Pescados', 'Pizzas', 'Bocadillos', 'Postres', 'Bebidas', 'Cervezas', 'Vinos', 'Sin categoría']
+  const SECCIONES = ['entrantes', 'principales', 'postres', 'bebidas', 'cafes', 'copas', 'otras']
 
   const load = useCallback(async () => {
     const r = await fetch('/api/owner/carta')
@@ -664,20 +664,31 @@ function CartaTab() {
   useEffect(() => { load() }, [load])
 
   // ── CRUD ──
-  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', categoria: 'Sin categoría' }); setErr(''); setModal('create') }
-  const openEdit = (p: Producto) => { setForm({ nombre: p.nombre, descripcion: p.descripcion || '', precio: p.precio != null ? String(p.precio) : '', categoria: p.categoria }); setErr(''); setModal({ edit: p }) }
+  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: 'entrantes', nombre_alternativo: '' }); setErr(''); setModal('create') }
+  const openEdit = (p: Producto) => {
+    setForm({
+      nombre: p.nombre, descripcion: p.descripcion || '',
+      precio: p.precio != null ? String(p.precio) : '',
+      seccion: p.seccion || 'otras',
+      nombre_alternativo: (p.nombre_alternativo || []).join(', '),
+    })
+    setErr(''); setModal({ edit: p })
+  }
   const openDel = (p: Producto) => setModal({ del: p })
 
   const save = async () => {
     setErr('')
     if (!form.nombre.trim()) return setErr('Nombre requerido')
     const isEdit = modal && typeof modal === 'object' && 'edit' in modal
+    const aliases = form.nombre_alternativo.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)
     const body = {
       ...(isEdit ? { id: (modal as { edit: Producto }).edit.id } : {}),
       nombre: form.nombre.trim(),
       descripcion: form.descripcion.trim() || null,
       precio: form.precio !== '' ? parseFloat(form.precio) : null,
-      categoria: form.categoria,
+      seccion: form.seccion,
+      categoria: form.seccion, // keep categoria in sync for compat
+      nombre_alternativo: aliases,
     }
     const r = await fetch('/api/owner/carta', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
     const d = await r.json()
@@ -750,8 +761,8 @@ function CartaTab() {
 
   // ── Group by category ──
   const byCategoria = productos.reduce<Record<string, Producto[]>>((acc, p) => {
-    if (!acc[p.categoria]) acc[p.categoria] = []
-    acc[p.categoria].push(p)
+    if (!acc[p.seccion || p.categoria]) acc[p.seccion || p.categoria] = []
+    acc[p.seccion || p.categoria].push(p)
     return acc
   }, {})
 
@@ -876,10 +887,10 @@ function CartaTab() {
                     <input value={p.nombre} onChange={e => updateDraft(p._key, 'nombre', e.target.value)}
                       style={{ fontFamily: SN, fontSize: 13, background: C.paper, border: `1px solid ${C.rule}`,
                         borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }} />
-                    <select value={p.categoria} onChange={e => updateDraft(p._key, 'categoria', e.target.value)}
+                    <select value={p.seccion || p.categoria} onChange={e => updateDraft(p._key, 'seccion', e.target.value)}
                       style={{ fontFamily: SN, fontSize: 12, background: C.paper, border: `1px solid ${C.rule}`,
                         borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }}>
-                      {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+                      {SECCIONES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
                     </select>
                     <input value={p.precio != null ? String(p.precio) : ''} onChange={e => updateDraft(p._key, 'precio', e.target.value === '' ? null : parseFloat(e.target.value))}
                       placeholder="—" type="number" step="0.01"
@@ -962,8 +973,9 @@ function CartaTab() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Field label="Nombre" value={form.nombre} onChange={v => setForm(f => ({ ...f, nombre: v }))} placeholder="Croquetas de jamón"/>
             <Field label="Precio (€)" value={form.precio} onChange={v => setForm(f => ({ ...f, precio: v }))} placeholder="8.50" type="number"/>
-            <Select label="Categoría" value={form.categoria} onChange={v => setForm(f => ({ ...f, categoria: v }))}
-              options={CATEGORIAS.map(c => ({ value: c, label: c }))}/>
+            <Select label="Sección" value={form.seccion} onChange={v => setForm(f => ({ ...f, seccion: v }))}
+              options={SECCIONES.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}/>
+            <Field label="Aliases (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="bravas, una de bravas, patatas"/>
             <Field label="Descripción (opcional)" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion: v }))} placeholder="Caseras, con bechamel de la abuela"/>
             {err && <div style={{ fontFamily: SM, fontSize: 11, color: C.red }}>{err}</div>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>

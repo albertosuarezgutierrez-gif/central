@@ -34,10 +34,21 @@ export async function PUT(req: NextRequest) {
   const supabase = createServerClient()
   const { id, ...updates } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
+
   const { data, error } = await supabase
     .from('productos').update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Si se marca como inactivo (86 manual), registrar en productos_86 para el turno activo
+  if (updates.activo === false && data) {
+    const { data: turno } = await supabase
+      .from('turnos').select('id').eq('estado', 'activo').order('created_at', { ascending: false }).limit(1).single()
+    if (turno) {
+      await supabase.from('productos_86').insert({ nombre: data.nombre, turno_id: turno.id })
+    }
+  }
+
   return NextResponse.json({ producto: data })
 }
 

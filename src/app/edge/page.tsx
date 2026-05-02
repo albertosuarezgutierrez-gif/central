@@ -1,6 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import { useProductos86 } from '@/hooks/useRealtime'
 
 const C = {
   bg:'#14110E', e1:'#1F1A15', e2:'#2A241D',
@@ -72,6 +73,21 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
   const [brain, setBrain] = useState<BrainResult|null>(null)
   const [error, setError] = useState('')
   const [latencia, setLatencia] = useState<number|null>(null)
+  const [alert86, setAlert86] = useState<string[]>([])
+
+  // Escucha 86 en realtime — muestra banner cuando hay nuevos agotados
+  const productos86 = useProductos86(turnoId ?? undefined)
+  const prev86Ref = useRef<number>(0)
+  useEffect(() => {
+    if (productos86.length > prev86Ref.current) {
+      const nuevos = productos86.slice(0, productos86.length - prev86Ref.current)
+      setAlert86(nuevos.map(p => p.nombre))
+      const t = setTimeout(() => setAlert86([]), 8000)
+      prev86Ref.current = productos86.length
+      return () => clearTimeout(t)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [productos86.length])
 
   const mediaRef = useRef<MediaRecorder|null>(null)
   const chunksRef = useRef<Blob[]>([])
@@ -164,7 +180,25 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
       <style>{`
         @keyframes pulse{50%{opacity:.3}}
         @keyframes toastUp{from{transform:translateY(16px);opacity:0}to{transform:translateY(0);opacity:1}}
+        @keyframes alert86{0%{transform:translateY(-100%);opacity:0}15%{transform:translateY(0);opacity:1}85%{transform:translateY(0);opacity:1}100%{transform:translateY(-100%);opacity:0}}
       `}</style>
+
+      {/* BANNER 86 — aparece cuando se agota un producto */}
+      {alert86.length > 0 && (
+        <div style={{
+          position:'fixed',top:0,left:0,right:0,zIndex:100,
+          background:'#A8311E',padding:'12px 16px',
+          fontFamily:SM,fontSize:13,color:'#F6F1E7',
+          display:'flex',alignItems:'center',gap:10,
+          animation:'alert86 8s ease forwards',
+          borderBottom:'1px solid rgba(255,255,255,.15)',
+        }}>
+          <span style={{fontWeight:700,letterSpacing:'.1em'}}>86</span>
+          <span style={{opacity:.5}}>·</span>
+          <span>{alert86.join(' · ')}</span>
+          <button onClick={()=>setAlert86([])} style={{marginLeft:'auto',background:'none',border:'none',color:'#F6F1E7',cursor:'pointer',opacity:.6,fontSize:16}}>×</button>
+        </div>
+      )}
 
       {/* HEADER */}
       <div style={{padding:'10px 16px 8px',borderBottom:`1px solid ${C.rule}`,background:C.bg,flexShrink:0}}>

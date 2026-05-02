@@ -1,42 +1,68 @@
 import { BrainResult } from '@/types'
+import { createServerClient } from '@/lib/supabase'
 
-export interface ProductoCarta {
-  id: string
-  nombre: string
-  precio: number | null
-  categoria: string
+/** Construye el bloque de carta para el prompt con aliases. */
+async function buildMenuContext(): Promise<string> {
+  try {
+    const supabase = createServerClient()
+    const { data } = await supabase
+      .from('productos')
+      .select('nombre, nombre_alternativo, seccion, precio')
+      .eq('activo', true)
+      .order('seccion')
+      .order('orden')
+
+    if (!data?.length) return ''
+
+    const bySec: Record<string, typeof data> = {}
+    for (const p of data) {
+      const s = p.seccion ?? 'otras'
+      if (!bySec[s]) bySec[s] = []
+      bySec[s].push(p)
+    }
+
+    const lines = Object.entries(bySec).map(([sec, items]) => {
+      const row = items.map(p => {
+        const alias = p.nombre_alternativo?.length
+          ? ` [${(p.nombre_alternativo as string[]).join('/')}]`
+          : ''
+        const precio = p.precio != null ? ` ${p.precio}€` : ''
+        return `${p.nombre}${alias}${precio}`
+      }).join(' · ')
+      return `${sec.toUpperCase()}: ${row}`
+    })
+
+    return `\nCARTA ACTIVA (usa el nombre canónico; alias entre corchetes):\n${lines.join('\n')}\n`
+  } catch {
+    return ''
+  }
 }
 
-function buildSystemPrompt(carta: ProductoCarta[]): string {
-  const cartaSection = carta.length > 0
-    ? `\nCARTA DEL RESTAURANTE (usa estos nombres y IDs exactos al estructurar items):\n${
-        carta.map(p =>
-          `- id:${p.id} | "${p.nombre}" | ${p.categoria}${p.precio != null ? ` | ${p.precio.toFixed(2)}€` : ''}`
-        ).join('\n')
-      }\n\nCuando identifiques un item, incluye "producto_id" con el id de la carta y "precio_unitario" con el precio. Si no hay coincidencia exacta, usa null para producto_id.`
-    : '\n(Carta no configurada — infiere nombres de productos de la jerga hostelera española.)'
-
-  return `Eres BRAIN, el agente de ia.rest. Conviertes transcripciones de voz de camareros españoles en comandas JSON estructuradas.
+const BASE_PROMPT = `Eres BRAIN, el agente de ia.rest. Conviertes transcripciones de voz de camareros españoles en comandas JSON estructuradas.
 
 REGLAS ESTRICTAS:
 - Responde SOLO con JSON valido, sin texto adicional ni markdown
-- Entiende jerga: "manchado"=cafe cortado, "marchar"=enviar a cocina, "86"=sin stock
+- Entiende jerga: "manchado"=Cortado, "marchar"=enviar a cocina, "86"=agotado/sin stock
 - Codigos de mesa: T01-T20 (salon), B01-B05 (barra), P01-P10 (terraza)
 - "mesa cuatro"=T04, "la doce"=T12, "barra dos"=B02
-- Cuando el camarero menciona un plato, busca la coincidencia más cercana en la carta${cartaSection}
+- Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
+- Para tipo "86": los items son los productos agotados
 
-SCHEMA DE RESPUESTA:
-{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre exacto de carta","cantidad":2,"notas":"","producto_id":"uuid-o-null","precio_unitario":8.50}],"confianza":0.95,"raw":"texto original"}`
-}
+SCHEMA:
+{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":""}],"confianza":0.95,"raw":"texto original"}`
 
-export async function parsearComanda(texto: string, carta: ProductoCarta[] = []): Promise<BrainResult> {
-  const Anthropic = (await import('@anthropic-ai/sdk')).default
+export async function parsearComanda(texto: string): Promise<BrainResult> {
+  const [Anthropic, menuContext] = await Promise.all([
+    import('@anthropic-ai/sdk').then(m => m.default),
+    buildMenuContext(),
+  ])
+
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
   const response = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
     max_tokens: 512,
-    system: buildSystemPrompt(carta),
+    system: BASE_PROMPT + menuContext,
     messages: [{ role: 'user', content: texto }],
   })
 
