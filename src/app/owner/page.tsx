@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
+import Analytics from '@/components/Analytics'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -1461,7 +1462,7 @@ const TABS = [
   { id: 'mesas',      label: 'Mesas',      icon: ICONS.grid    },
   { id: 'impresoras', label: 'Impresoras', icon: ICONS.printer },
   { id: 'turno',      label: 'Turno',      icon: ICONS.clock   },
-  { id: 'resumen',    label: 'Resumen',    icon: ICONS.chart   },
+  { id: 'analytics',  label: 'Analytics',  icon: ICONS.chart   },
   { id: 'carta',      label: 'Carta',      icon: ICONS.book    },
 ]
 
@@ -1534,7 +1535,7 @@ export default function OwnerPage() {
         {tab === 'mesas'      && <MesasTab/>}
         {tab === 'impresoras' && <ImpresorasTab/>}
         {tab === 'turno'      && <TurnoTab/>}
-        {tab === 'resumen'    && <ResumenTab/>}
+        {tab === 'analytics'  && <Analytics compact />}
         {tab === 'carta'      && <CartaTab/>}
       </div>
     </div>

@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { useMesas, useComandas, useTranscripciones, useProductos86, useReloj } from '@/hooks/useRealtime'
 import { useAuth } from '@/hooks/useAuth'
+import Analytics from '@/components/Analytics'
 
 const C = {
   paper:'#F6F1E7',paper2:'#EFE7D6',paper3:'#E5DAC2',bone:'#FBF8F1',
@@ -42,7 +43,8 @@ const NAVS=[
   {id:'salon',  label:'Salón',  icon:'M4 4h16v6H4zM4 14h7v6H4zM13 14h7v6h-7z'},
   {id:'cocina', label:'Cocina', icon:'M3 12h18M5 12V8a7 7 0 0 1 14 0v4M7 12v6h10v-6'},
   {id:'comandas',label:'Comandas',icon:'M5 4h11l3 3v13H5z'},
-  {id:'stream', label:'Stream', icon:'M4 5h12M4 10h16M4 15h10M4 20h14'},
+  {id:'stream',    label:'Stream',    icon:'M4 5h12M4 10h16M4 15h10M4 20h14'},
+  {id:'analytics', label:'Analytics', icon:'M18 20V10M12 20V4M6 20v-6'},
 ]
 
 export default function HubPage(){
@@ -221,6 +223,11 @@ export default function HubPage(){
               <div style={{fontFamily:SE,fontSize:22,fontWeight:500,color:C.ink,marginBottom:12}}>Stream completo</div>
               <TranscriptBox entries={txs}/>
             </div>
+          )}
+
+          {/* ANALYTICS */}
+          {tab==='analytics'&&(
+            <Analytics />
           )}
 
         </div>
