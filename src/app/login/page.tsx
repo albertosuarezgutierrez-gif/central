@@ -7,26 +7,34 @@ const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-// Detecta restaurante desde subdominio (slug.ia.rest) o ?r=CODIGO en URL
+// Detecta restaurante SOLO desde subdominio *.ia.rest o ?r= param
+// No intenta parsear dominios de Vercel/localhost
 function detectRestauranteCode(): string | null {
   if (typeof window === 'undefined') return null
-  // ?r=CODIGO o ?restaurante=CODIGO
+
+  // 1. Param ?r=CODIGO o ?restaurante=CODIGO — mayor prioridad
   const params = new URLSearchParams(window.location.search)
   const fromParam = params.get('r') ?? params.get('restaurante')
   if (fromParam) {
-    storeRestauranteCode(fromParam)
-    return fromParam
+    storeRestauranteCode(fromParam.toUpperCase())
+    return fromParam.toUpperCase()
   }
-  // subdominio: slug.ia.rest o slug.localhost
+
+  // 2. Subdominio — SOLO para *.ia.rest (producción real)
   const host = window.location.hostname
-  const parts = host.split('.')
-  if (parts.length >= 3 && parts[0] !== 'www' && parts[0] !== 'ia') {
-    const slug = parts[0]
-    storeRestauranteCode(slug)
-    return slug
+  if (host.endsWith('.ia.rest') && !host.startsWith('www.')) {
+    const slug = host.replace(/\.ia\.rest$/, '')
+    if (slug && slug !== 'ia') {
+      storeRestauranteCode(slug)
+      return slug
+    }
   }
-  // guardado previamente
-  return localStorage.getItem('ia_rest_restaurante')
+
+  // 3. Guardado previamente de una sesión anterior
+  const stored = localStorage.getItem('ia_rest_restaurante')
+  if (stored && stored !== 'ia-rest') return stored  // filtrar slugs de Vercel
+
+  return null  // sin código → fallback demo en la API
 }
 
 export default function LoginPage() {
@@ -40,10 +48,10 @@ export default function LoginPage() {
   useEffect(() => {
     const code = detectRestauranteCode()
     setRestauranteCode(code)
-    // Si no hay código de restaurante, mostrar campo de código
-    if (!code) setShowCodeInput(true)
+    // NO mostrar input por defecto — el fallback demo en la API lo cubre
   }, [])
 
+  // Auto-submit al completar 4 dígitos
   useEffect(() => {
     if (pin.length === 4 && !showCodeInput) doLogin(pin)
   }, [pin, showCodeInput])
@@ -88,11 +96,13 @@ export default function LoginPage() {
   }
 
   const confirmCode = () => {
-    if (codeInput.trim().length < 2) return
     const code = codeInput.trim().toUpperCase()
+    if (code.length < 2) return
     storeRestauranteCode(code)
     setRestauranteCode(code)
     setShowCodeInput(false)
+    setPin('')
+    setError('')
   }
 
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
@@ -137,15 +147,15 @@ export default function LoginPage() {
         <div style={{ fontFamily:SE, fontSize:26, color:C.fg, fontWeight:500 }}>
           ia<span style={{ color:C.red }}>.</span>rest
         </div>
-        {restauranteCode && !showCodeInput && (
+        {restauranteCode && (
           <div style={{ fontFamily:SM, fontSize:9, color:C.fg3, letterSpacing:'.1em' }}>
-            {restauranteCode.toUpperCase()}
+            {restauranteCode}
           </div>
         )}
       </div>
 
-      {/* Código de restaurante — solo si no se detectó por subdominio */}
       {showCodeInput ? (
+        /* Pantalla de código de restaurante */
         <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, width:'100%', maxWidth:260 }}>
           <div style={{ fontFamily:SM, fontSize:10, color:C.fg3, letterSpacing:'.12em' }}>
             CÓDIGO DE RESTAURANTE
@@ -162,6 +172,7 @@ export default function LoginPage() {
               color:C.fg, fontFamily:SM, fontSize:16, letterSpacing:'.08em',
               outline:'none', textAlign:'center',
               WebkitAppearance:'none',
+              boxSizing:'border-box',
             }}
           />
           <button
@@ -174,17 +185,24 @@ export default function LoginPage() {
           >
             Continuar
           </button>
-          <div style={{ fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', textAlign:'center' }}>
-            O accede por subdominio: restaurante.ia.rest
-          </div>
+          <button
+            onPointerDown={() => setShowCodeInput(false)}
+            style={{
+              background:'none', border:'none', fontFamily:SM,
+              fontSize:9, color:C.rS, letterSpacing:'.08em',
+              cursor:'pointer', marginTop:4,
+            }}
+          >
+            Cancelar
+          </button>
         </div>
       ) : (
+        /* Pantalla PIN normal */
         <>
           <div style={{ fontFamily:SM, fontSize:10, color:C.fg3, letterSpacing:'.12em', marginBottom:20 }}>
             INTRODUCE TU PIN
           </div>
 
-          {/* 4 dots */}
           <div style={{ display:'flex', gap:16, marginBottom:6, height:20, alignItems:'center' }}>
             {[0,1,2,3].map(i => (
               <div key={i} style={{
@@ -224,9 +242,9 @@ export default function LoginPage() {
           )}
 
           <button
-            onPointerDown={() => { setShowCodeInput(true); setPin('') }}
+            onPointerDown={() => { setShowCodeInput(true); setCodeInput('') }}
             style={{
-              marginTop:24, background:'none', border:'none',
+              marginTop:28, background:'none', border:'none',
               fontFamily:SM, fontSize:9, color:C.rS,
               letterSpacing:'.08em', cursor:'pointer',
               textDecoration:'underline', textDecorationStyle:'dotted',
@@ -234,6 +252,10 @@ export default function LoginPage() {
           >
             CAMBIAR RESTAURANTE
           </button>
+
+          <div style={{ marginTop:16, fontFamily:SM, fontSize:9, color:'#2F2820', textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>
+            ADMIN · 0000 &nbsp;|&nbsp; OWNER · 2026 &nbsp;|&nbsp; SUPER · 9999
+          </div>
         </>
       )}
     </div>
