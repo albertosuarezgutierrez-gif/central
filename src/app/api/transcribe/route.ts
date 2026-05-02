@@ -18,11 +18,20 @@ export async function POST(req: NextRequest) {
 
     const supabase = createServerClient()
 
+    // 0. Load active carta so BRAIN knows the real menu
+    const { data: cartaData } = await supabase
+      .from('productos')
+      .select('id, nombre, precio, categoria')
+      .eq('activo', true)
+      .order('categoria')
+      .order('nombre')
+    const carta = cartaData ?? []
+
     // 1. EAR: Whisper transcribes audio
     const { texto, latencia_ms: latenciaEar } = await transcribir(audio)
 
-    // 2. BRAIN: Claude Haiku parses the transcription
-    const brainResult = await parsearComanda(texto)
+    // 2. BRAIN: Claude Haiku parses with real menu context
+    const brainResult = await parsearComanda(texto, carta)
 
     // 3. COURIER: Find the table by code
     const { data: mesa } = await supabase
@@ -34,7 +43,7 @@ export async function POST(req: NextRequest) {
     let comandaId: string | null = null
 
     if (mesa) {
-      // 4. Create comanda in DB
+      // 4. Create comanda
       const { data: comanda, error: comandaError } = await supabase
         .from('comandas')
         .insert({
@@ -48,10 +57,9 @@ export async function POST(req: NextRequest) {
         .single()
 
       if (comandaError) throw comandaError
-
       comandaId = comanda.id
 
-      // 5. Insert items
+      // 5. Insert items — with producto_id + precio_unitario if BRAIN found them
       if (brainResult.items.length > 0) {
         await supabase.from('comanda_items').insert(
           brainResult.items.map((item) => ({
@@ -59,6 +67,8 @@ export async function POST(req: NextRequest) {
             nombre: item.nombre,
             cantidad: item.cantidad,
             notas: item.notas || null,
+            producto_id: item.producto_id ?? null,
+            precio_unitario: item.precio_unitario ?? null,
           }))
         )
       }
@@ -81,7 +91,7 @@ export async function POST(req: NextRequest) {
         })
         .eq('id', mesa.id)
 
-      // 7. If 86 — create product alert
+      // 7. If 86 — log to productos_86
       if (brainResult.tipo === '86') {
         await supabase.from('productos_86').insert(
           brainResult.items.map((item) => ({
@@ -119,4 +129,3 @@ export async function POST(req: NextRequest) {
     )
   }
 }
-

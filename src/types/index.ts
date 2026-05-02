@@ -71,7 +71,7 @@ export interface Transcripcion {
 export interface BrainResult {
   mesa: string
   tipo: 'comanda' | 'marchar' | '86' | 'cuenta' | 'aviso'
-  items: { nombre: string; cantidad: number; notas?: string }[]
+  items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number }[]
   confianza: number
   raw: string
 }
