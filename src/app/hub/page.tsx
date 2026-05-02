@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { useMesas, useComandas, useTranscripciones, useProductos86, useReloj } from '@/hooks/useRealtime'
+import { useAuth } from '@/hooks/useAuth'
 
 const C = {
   paper:'#F6F1E7',paper2:'#EFE7D6',paper3:'#E5DAC2',bone:'#FBF8F1',
@@ -45,6 +46,7 @@ const NAVS=[
 ]
 
 export default function HubPage(){
+  const { session, checking } = useAuth('admin')
   const [tab,setTab]=useState('salon')
   const [sel,setSel]=useState<string|null>(null)
   const {mesas,loading}=useMesas()
@@ -65,6 +67,8 @@ export default function HubPage(){
       <path d={path}/>
     </svg>
   )
+
+  if (checking || !session) return <div style={{minHeight:'100dvh',background:'#F6F1E7'}}/>
 
   return(
     <div style={{minHeight:'100dvh',display:'flex',flexDirection:'column',background:C.paper,fontFamily:SN}}>

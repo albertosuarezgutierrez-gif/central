@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 import { Comanda } from '@/types'
+import { useAuth } from '@/hooks/useAuth'
 
 const K={bg:'#0D0B08',c1:'#161310',fg:'#F6F1E7',fg2:'#C9BFAA',fg3:'#8D8270',rule:'#2F2820',rS:'#4A3F33',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44'}
 const SE="'Newsreader',Georgia,serif"
@@ -12,6 +13,7 @@ function edadStr(iso:string){const m=Math.floor((Date.now()-new Date(iso).getTim
 function edadColor(iso:string){const m=Math.floor((Date.now()-new Date(iso).getTime())/60000);return m<10?K.gr:m<20?K.amb:K.red}
 
 export default function KDSPage(){
+  const { session, checking } = useAuth('admin')
   const [comandas,setComandasState]=useState<Comanda[]>([])
   const [time,setTime]=useState(new Date())
 
@@ -37,6 +39,8 @@ export default function KDSPage(){
     await supabase.from('mesas').update({estado:'activa'}).eq('id',mesaId)
     fetch()
   }
+
+  if (checking || !session) return <div style={{minHeight:'100dvh',background:K.bg}}/>
 
   return(
     <div style={{minHeight:'100dvh',display:'flex',flexDirection:'column',background:K.bg}}>
