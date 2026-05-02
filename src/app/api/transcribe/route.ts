@@ -38,6 +38,8 @@ export async function POST(req: NextRequest) {
         // Resolver formato_id para items que traen formato de voz
         const itemsConFormato = brainResult.items.filter(i => i.formato)
         const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
+        // Normalizar tildes para matching robusto (BRAIN puede devolver sin tilde)
+        const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
         if (itemsConFormato.length > 0) {
           const nombresUnicos = [...new Set(itemsConFormato.map(i => i.nombre))]
@@ -49,14 +51,14 @@ export async function POST(req: NextRequest) {
               .in('producto_id', prods.map(p => p.id)).eq('activo', true)
             for (const f of formatos ?? []) {
               const prod = prods.find(p => p.id === f.producto_id)
-              if (prod) formatoMap[`${prod.nombre}:${f.nombre}`] = { id: f.id, nombre: f.nombre, precio: f.precio }
+              if (prod) formatoMap[`${norm(prod.nombre)}:${norm(f.nombre)}`] = { id: f.id, nombre: f.nombre, precio: f.precio }
             }
           }
         }
 
         await supabase.from('comanda_items').insert(
           brainResult.items.map((item) => {
-            const fmtData = item.formato ? (formatoMap[`${item.nombre}:${item.formato}`] ?? null) : null
+            const fmtData = item.formato ? (formatoMap[`${norm(item.nombre)}:${norm(item.formato)}`] ?? null) : null
             return {
               comanda_id: comanda.id, nombre: item.nombre, cantidad: item.cantidad,
               notas: item.notas || null, producto_id: item.producto_id ?? null,
