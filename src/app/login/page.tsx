@@ -1,37 +1,75 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { storeRestauranteCode } from '@/hooks/useAuth'
 
 const C = { bg:'#14110E', e1:'#1F1A15', fg:'#F6F1E7', fg3:'#8D8270', rule:'#2F2820', rS:'#4A3F33', red:'#D9442B' }
 const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
+// Detecta restaurante desde subdominio (slug.ia.rest) o ?r=CODIGO en URL
+function detectRestauranteCode(): string | null {
+  if (typeof window === 'undefined') return null
+  // ?r=CODIGO o ?restaurante=CODIGO
+  const params = new URLSearchParams(window.location.search)
+  const fromParam = params.get('r') ?? params.get('restaurante')
+  if (fromParam) {
+    storeRestauranteCode(fromParam)
+    return fromParam
+  }
+  // subdominio: slug.ia.rest o slug.localhost
+  const host = window.location.hostname
+  const parts = host.split('.')
+  if (parts.length >= 3 && parts[0] !== 'www' && parts[0] !== 'ia') {
+    const slug = parts[0]
+    storeRestauranteCode(slug)
+    return slug
+  }
+  // guardado previamente
+  return localStorage.getItem('ia_rest_restaurante')
+}
+
 export default function LoginPage() {
   const [pin, setPin] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [restauranteCode, setRestauranteCode] = useState<string | null>(null)
+  const [showCodeInput, setShowCodeInput] = useState(false)
+  const [codeInput, setCodeInput] = useState('')
 
-  // Auto-submit when exactly 4 digits
   useEffect(() => {
-    if (pin.length === 4) doLogin(pin)
-  }, [pin])
+    const code = detectRestauranteCode()
+    setRestauranteCode(code)
+    // Si no hay código de restaurante, mostrar campo de código
+    if (!code) setShowCodeInput(true)
+  }, [])
+
+  useEffect(() => {
+    if (pin.length === 4 && !showCodeInput) doLogin(pin)
+  }, [pin, showCodeInput])
 
   const doLogin = async (p: string) => {
     setLoading(true)
     setError('')
     try {
+      const body: Record<string, string> = { pin: p }
+      if (restauranteCode) body.restaurante_code = restauranteCode
       const r = await fetch('/api/auth', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin: p }),
+        body: JSON.stringify(body),
       })
       const d = await r.json()
       if (d.camarero) {
         localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
         const rol = d.camarero.rol
-        window.location.href = rol === 'admin' ? '/hub' : rol === 'owner' ? '/owner' : '/edge'
+        const dest: Record<string, string> = {
+          super_admin: '/super', owner: '/owner',
+          admin: '/hub', camarero: '/edge', cocina: '/kds'
+        }
+        window.location.href = dest[rol] ?? '/edge'
       } else {
-        setError('PIN incorrecto')
+        setError(d.error ?? 'PIN incorrecto')
         setPin('')
         setLoading(false)
       }
@@ -42,16 +80,19 @@ export default function LoginPage() {
     }
   }
 
-  // Single handler — onPointerDown fires once for both mouse and touch
   const tap = (k: string) => {
     if (loading) return
-    if (k === 'del') {
-      setPin(p => p.slice(0, -1))
-      setError('')
-      return
-    }
+    if (k === 'del') { setPin(p => p.slice(0, -1)); setError(''); return }
     if (pin.length >= 4) return
     setPin(p => p + k)
+  }
+
+  const confirmCode = () => {
+    if (codeInput.trim().length < 2) return
+    const code = codeInput.trim().toUpperCase()
+    storeRestauranteCode(code)
+    setRestauranteCode(code)
+    setShowCodeInput(false)
   }
 
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
@@ -96,56 +137,105 @@ export default function LoginPage() {
         <div style={{ fontFamily:SE, fontSize:26, color:C.fg, fontWeight:500 }}>
           ia<span style={{ color:C.red }}>.</span>rest
         </div>
-        <div style={{ fontFamily:SM, fontSize:10, color:C.fg3, letterSpacing:'.12em' }}>
-          INTRODUCE TU PIN
-        </div>
+        {restauranteCode && !showCodeInput && (
+          <div style={{ fontFamily:SM, fontSize:9, color:C.fg3, letterSpacing:'.1em' }}>
+            {restauranteCode.toUpperCase()}
+          </div>
+        )}
       </div>
 
-      {/* 4 dots */}
-      <div style={{ display:'flex', gap:16, marginBottom:6, height:20, alignItems:'center' }}>
-        {[0,1,2,3].map(i => (
-          <div key={i} style={{
-            width: 14, height: 14, borderRadius: 999,
-            background: loading ? C.red : i < pin.length ? C.red : C.rS,
-            transition: 'background 0.12s, transform 0.1s',
-            transform: i < pin.length ? 'scale(1.2)' : 'scale(1)',
-          }}/>
-        ))}
-      </div>
-
-      {/* Error / loading */}
-      <div style={{ height:20, marginBottom:20, fontFamily:SN, fontSize:12, color:C.red, textAlign:'center' }}>
-        {loading ? '' : error}
-      </div>
-      {loading && (
-        <div style={{ fontFamily:SM, fontSize:11, color:C.red, letterSpacing:'.1em', marginBottom:20 }}>
-          VERIFICANDO...
+      {/* Código de restaurante — solo si no se detectó por subdominio */}
+      {showCodeInput ? (
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:12, width:'100%', maxWidth:260 }}>
+          <div style={{ fontFamily:SM, fontSize:10, color:C.fg3, letterSpacing:'.12em' }}>
+            CÓDIGO DE RESTAURANTE
+          </div>
+          <input
+            autoFocus
+            value={codeInput}
+            onChange={e => setCodeInput(e.target.value.toUpperCase())}
+            onKeyDown={e => e.key === 'Enter' && confirmCode()}
+            placeholder="DEMO"
+            style={{
+              width:'100%', padding:'12px 16px',
+              background:C.e1, border:`1px solid ${C.rule}`, borderRadius:4,
+              color:C.fg, fontFamily:SM, fontSize:16, letterSpacing:'.08em',
+              outline:'none', textAlign:'center',
+              WebkitAppearance:'none',
+            }}
+          />
+          <button
+            onPointerDown={confirmCode}
+            style={{
+              width:'100%', padding:'12px', background:C.red, border:'none',
+              borderRadius:4, color:C.fg, fontFamily:SN, fontSize:14,
+              fontWeight:600, cursor:'pointer',
+            }}
+          >
+            Continuar
+          </button>
+          <div style={{ fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', textAlign:'center' }}>
+            O accede por subdominio: restaurante.ia.rest
+          </div>
         </div>
+      ) : (
+        <>
+          <div style={{ fontFamily:SM, fontSize:10, color:C.fg3, letterSpacing:'.12em', marginBottom:20 }}>
+            INTRODUCE TU PIN
+          </div>
+
+          {/* 4 dots */}
+          <div style={{ display:'flex', gap:16, marginBottom:6, height:20, alignItems:'center' }}>
+            {[0,1,2,3].map(i => (
+              <div key={i} style={{
+                width: 14, height: 14, borderRadius: 999,
+                background: loading ? C.red : i < pin.length ? C.red : C.rS,
+                transition: 'background 0.12s, transform 0.1s',
+                transform: i < pin.length ? 'scale(1.2)' : 'scale(1)',
+              }}/>
+            ))}
+          </div>
+
+          <div style={{ height:20, marginBottom:20, fontFamily:SN, fontSize:12, color:C.red, textAlign:'center' }}>
+            {loading ? '' : error}
+          </div>
+          {loading && (
+            <div style={{ fontFamily:SM, fontSize:11, color:C.red, letterSpacing:'.1em', marginBottom:20 }}>
+              VERIFICANDO...
+            </div>
+          )}
+
+          {!loading && (
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 76px)', gap:12 }}>
+              {keys.map((k, i) => {
+                if (k === '') return <div key={i}/>
+                return (
+                  <button
+                    key={i}
+                    className="pk"
+                    onPointerDown={e => { e.preventDefault(); tap(k) }}
+                    style={k === 'del' ? { fontSize: 18 } : {}}
+                  >
+                    {k === 'del' ? '⌫' : k}
+                  </button>
+                )
+              })}
+            </div>
+          )}
+
+          <button
+            onPointerDown={() => { setShowCodeInput(true); setPin('') }}
+            style={{
+              marginTop:24, background:'none', border:'none',
+              fontFamily:SM, fontSize:9, color:C.rS,
+              letterSpacing:'.08em', cursor:'pointer',
+              textDecoration:'underline', textDecorationStyle:'dotted',
+            }}
+          >
+            CAMBIAR RESTAURANTE
+          </button>
+        </>
       )}
-
-      {/* Keypad — onPointerDown only (no double-fire on mobile) */}
-      {!loading && (
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 76px)', gap:12 }}>
-          {keys.map((k, i) => {
-            if (k === '') return <div key={i}/>
-            return (
-              <button
-                key={i}
-                className="pk"
-                onPointerDown={e => { e.preventDefault(); tap(k) }}
-                style={k === 'del' ? { fontSize: 18 } : {}}
-              >
-                {k === 'del' ? '⌫' : k}
-              </button>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Hint */}
-      <div style={{ marginTop:32, fontFamily:SM, fontSize:9, color:'#4A3F33', textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>
-        ADMIN · 0000 &nbsp;|&nbsp; DUEÑO · 2026 &nbsp;|&nbsp; CAMARERO · 1234
-      </div>
     </div>
   )
 }
