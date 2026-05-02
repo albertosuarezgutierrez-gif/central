@@ -9,7 +9,7 @@ const sb = () => createClient(
 export async function GET() {
   const { data, error } = await sb()
     .from('impresoras')
-    .select('id, nombre, seccion_id, cloud_device_id, modelo, activa, ultimo_ping, configurada, connection_type')
+    .select('id, nombre, seccion_id, cloud_device_id, modelo, activa, ultimo_ping, configurada, connection_type, ip_address, port')
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ impresoras: data })
