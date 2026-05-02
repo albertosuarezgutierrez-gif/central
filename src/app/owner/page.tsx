@@ -69,6 +69,9 @@ const ICONS = {
   wifi: 'M5 12.55a11 11 0 0 1 14.08 0M1.42 9a16 16 0 0 1 21.16 0M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01',
   upload: 'M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12',
   sparkle: 'M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3zM5 17l.75 2.25L8 20l-2.25.75L5 23l-.75-2.25L2 20l2.25-.75L5 17zM19 2l.5 1.5L21 4l-1.5.5L19 6l-.5-1.5L17 4l1.5-.5L19 2z',
+  receipt: 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1zm3 5h10M7 10h10M7 13h6',
+  shield: 'M12 2l8 3v6c0 5-3.5 9.74-8 11-4.5-1.26-8-6-8-11V5l8-3z',
+  externalLink: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -1578,6 +1581,219 @@ function ImpresorasTab() {
     </div>
   )
 }
+/* ─── Tab: Facturas Verifactu ─── */
+type Factura = {
+  id: string; numero_serie: string; numero_factura: number; fecha_expedicion: string
+  mesa_label: string; razon_social: string; nif_emisor: string
+  importe_total: number; base_imponible: number; cuota_iva: number; tipo_iva: number
+  huella: string; huella_anterior: string | null; primer_registro: boolean
+  qr_data: string; enviada_aeat: boolean; anulada: boolean; comanda_id: string | null
+}
+
+function FacturasTab() {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [facturas, setFacturas] = useState<Factura[]>([])
+  const [total, setTotal] = useState(0)
+  const [page, setPage] = useState(0)
+  const [pages, setPages] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [desde, setDesde] = useState(() => new Date(Date.now() - 86400 * 7 * 1000).toISOString().slice(0, 10))
+  const [hasta, setHasta] = useState(() => new Date().toISOString().slice(0, 10))
+  const [selected, setSelected] = useState<Factura | null>(null)
+  const [anulando, setAnulando] = useState(false)
+
+  const load = useCallback(async (p = 0) => {
+    setLoading(true); setError('')
+    try {
+      const r = await fetch(`/api/factura/lista?desde=${desde}&hasta=${hasta}&page=${p}`, { headers: sh() })
+      const d = await r.json()
+      setFacturas(d.facturas ?? [])
+      setTotal(d.total ?? 0)
+      setPages(d.pages ?? 1)
+      setPage(p)
+    } catch { setError('Error al cargar facturas') }
+    finally { setLoading(false) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desde, hasta])
+
+  useEffect(() => { load(0) }, [load])
+
+  const anular = async (f: Factura) => {
+    if (!confirm(`Anular factura T-${String(f.numero_factura).padStart(8,'0')} por ${f.importe_total.toFixed(2)} €?`)) return
+    setAnulando(true)
+    const r = await fetch('/api/factura/anular', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ factura_id: f.id })
+    })
+    if (r.ok) { setSelected(null); load(page) }
+    else { const d = await r.json(); alert(d.error ?? 'Error al anular') }
+    setAnulando(false)
+  }
+
+  const formatEuro = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
+  const formatFecha = (s: string) => new Date(s).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      {/* Header info Verifactu */}
+      <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '14px 18px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+          <path d={ICONS.shield}/>
+        </svg>
+        <div>
+          <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink2, marginBottom: 3 }}>
+            VERIFACTU · RD 1007/2023 · FASE 1 (hash local)
+          </div>
+          <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.5 }}>
+            Registros con hash SHA-256 encadenado almacenados localmente. QR verificable en sede AEAT impreso en ticket.
+            Envio automatico a AEAT (Fase 2) obligatorio desde 01/01/2027.
+          </div>
+        </div>
+      </div>
+
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>DESDE</div>
+        <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
+          style={{ fontFamily: SM, fontSize: 12, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '5px 8px', background: C.bone, color: C.ink }} />
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>HASTA</div>
+        <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
+          style={{ fontFamily: SM, fontSize: 12, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '5px 8px', background: C.bone, color: C.ink }} />
+        <Btn onClick={() => load(0)}>Filtrar</Btn>
+        <div style={{ marginLeft: 'auto', fontFamily: SM, fontSize: 11, color: C.ink3 }}>
+          {total} factura{total !== 1 ? 's' : ''}
+        </div>
+      </div>
+
+      {error && <div style={{ color: C.red, fontFamily: SN, fontSize: 13 }}>{error}</div>}
+
+      {/* Tabla */}
+      {loading ? (
+        <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, padding: 24 }}>Cargando...</div>
+      ) : facturas.length === 0 ? (
+        <div style={{ fontFamily: SN, fontSize: 14, color: C.ink3, padding: 24 }}>Sin facturas en el periodo seleccionado.</div>
+      ) : (
+        <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.paper2 }}>
+                {['Numero', 'Fecha', 'Mesa', 'Base', 'IVA', 'Total', 'Hash', 'Estado'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, borderBottom: `1px solid ${C.rule}`, textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {facturas.map((f, i) => (
+                <tr key={f.id}
+                  onClick={() => setSelected(f)}
+                  style={{ background: i % 2 === 0 ? C.bone : C.paper, cursor: 'pointer', opacity: f.anulada ? 0.5 : 1 }}>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, fontSize: 12, color: C.red }}>
+                    T-{String(f.numero_factura).padStart(8, '0')}
+                  </td>
+                  <td style={{ padding: '10px 14px', color: C.ink3, fontSize: 12 }}>{formatFecha(f.fecha_expedicion)}</td>
+                  <td style={{ padding: '10px 14px' }}>{f.mesa_label}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM }}>{formatEuro(f.base_imponible)}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, color: C.ink3 }}>{formatEuro(f.cuota_iva)}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, fontWeight: 700 }}>{formatEuro(f.importe_total)}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, fontSize: 10, color: C.ink4 }}>
+                    {f.huella?.slice(0, 8)}…
+                  </td>
+                  <td style={{ padding: '10px 14px' }}>
+                    {f.anulada ? (
+                      <Badge color={C.redS}>ANULADA</Badge>
+                    ) : f.enviada_aeat ? (
+                      <Badge color={C.greenS}>AEAT OK</Badge>
+                    ) : (
+                      <Badge color={C.amberS}>LOCAL</Badge>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {/* Paginacion */}
+      {pages > 1 && (
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <Btn size="sm" onClick={() => load(page - 1)} disabled={page === 0}>Anterior</Btn>
+          <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3, alignSelf: 'center' }}>{page + 1} / {pages}</span>
+          <Btn size="sm" onClick={() => load(page + 1)} disabled={page >= pages - 1}>Siguiente</Btn>
+        </div>
+      )}
+
+      {/* Modal detalle factura */}
+      {selected && (
+        <div onClick={() => setSelected(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,20,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: 32, width: 480, maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.1em', marginBottom: 8 }}>FACTURA SIMPLIFICADA</div>
+            <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, letterSpacing: '-.01em', marginBottom: 20 }}>
+              T-{String(selected.numero_factura).padStart(8, '0')}
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginBottom: 20 }}>
+              {[
+                ['Emisor', selected.razon_social],
+                ['NIF', selected.nif_emisor],
+                ['Mesa', selected.mesa_label],
+                ['Fecha', formatFecha(selected.fecha_expedicion)],
+                ['Base imponible', formatEuro(selected.base_imponible)],
+                [`IVA ${selected.tipo_iva}%`, formatEuro(selected.cuota_iva)],
+                ['TOTAL', formatEuro(selected.importe_total)],
+                ['Estado', selected.anulada ? 'ANULADA' : selected.enviada_aeat ? 'Enviada AEAT' : 'Local (Fase 1)'],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase' }}>{k}</div>
+                  <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: 14, marginBottom: 14 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>HASH SHA-256</div>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink2, wordBreak: 'break-all', lineHeight: 1.6 }}>{selected.huella}</div>
+            </div>
+
+            {selected.huella_anterior && (
+              <div style={{ marginBottom: 14 }}>
+                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>HASH ANTERIOR (encadenado)</div>
+                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, wordBreak: 'break-all', lineHeight: 1.6 }}>{selected.huella_anterior}</div>
+              </div>
+            )}
+
+            {selected.primer_registro && (
+              <div style={{ background: C.amberS, borderRadius: 4, padding: '6px 10px', marginBottom: 14, fontFamily: SM, fontSize: 11, color: C.ink2 }}>
+                Primer registro de la serie T — encadenamiento iniciado
+              </div>
+            )}
+
+            <div style={{ marginBottom: 20 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 4 }}>QR AEAT (verificacion)</div>
+              <a href={selected.qr_data} target="_blank" rel="noreferrer"
+                style={{ fontFamily: SM, fontSize: 10, color: C.red, wordBreak: 'break-all', lineHeight: 1.6, textDecoration: 'none' }}>
+                {selected.qr_data}
+              </a>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              {!selected.anulada && (
+                <Btn variant="danger" onClick={() => anular(selected)} disabled={anulando}>
+                  {anulando ? 'Anulando...' : 'Anular factura'}
+                </Btn>
+              )}
+              <Btn onClick={() => setSelected(null)}>Cerrar</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 const TABS = [
   { id: 'camareros',  label: 'Camareros',  icon: ICONS.users   },
   { id: 'mesas',      label: 'Mesas',      icon: ICONS.grid    },
@@ -1585,6 +1801,7 @@ const TABS = [
   { id: 'turno',      label: 'Turno',      icon: ICONS.clock   },
   { id: 'analytics',  label: 'Analytics',  icon: ICONS.chart   },
   { id: 'carta',      label: 'Carta',      icon: ICONS.book    },
+  { id: 'facturas',   label: 'Facturas',   icon: ICONS.receipt },
 ]
 
 export default function OwnerPage() {
@@ -1659,6 +1876,7 @@ export default function OwnerPage() {
         {tab === 'turno'      && <TurnoTab/>}
         {tab === 'analytics'  && <Analytics compact />}
         {tab === 'carta'      && <CartaTab/>}
+        {tab === 'facturas'   && <FacturasTab/>}
       </div>
     </div>
   )

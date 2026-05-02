@@ -76,6 +76,8 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
   const [error, setError] = useState('')
   const [latencia, setLatencia] = useState<number|null>(null)
   const [alert86, setAlert86] = useState<string[]>([])
+  const [lastComandaId, setLastComandaId] = useState<string|null>(null)
+  const [pedidoCuenta, setPedidoCuenta] = useState<{loading:boolean;error:string;factura:null|{numero_factura:number;importe_total:number;qr_data:string}}>({loading:false,error:'',factura:null})
   const { prompt: installPrompt, install } = useInstallPrompt()
   const { subscribed, subscribe } = usePushNotifications(session.id)
 
@@ -150,6 +152,7 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
         setTranscript(d.texto)
         setBrain(d.brain)
         setLatencia(d.latencia_ms)
+        setLastComandaId(d.comanda_id ?? null)
         setScreen('confirm')
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
@@ -177,7 +180,27 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
     window.location.href = '/login'
   }
 
-  const reset = () => { setScreen('idle'); setBrain(null); setTranscript(''); setError('') }
+  const reset = () => { setScreen('idle'); setBrain(null); setTranscript(''); setError(''); setPedidoCuenta({loading:false,error:'',factura:null}) }
+
+  const pedirCuenta = async () => {
+    if (!lastComandaId) return
+    setPedidoCuenta({loading:true,error:'',factura:null})
+    try {
+      const r = await fetch('/api/factura/cerrar', {
+        method: 'POST',
+        headers: { 'Content-Type':'application/json', 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+        body: JSON.stringify({ comanda_id: lastComandaId, mesa_label: brain?.mesa ?? 'Mesa' })
+      })
+      const d = await r.json()
+      if (r.ok) {
+        setPedidoCuenta({loading:false,error:'',factura: d.factura})
+      } else {
+        setPedidoCuenta({loading:false,error: d.error ?? 'Error al generar cuenta',factura:null})
+      }
+    } catch {
+      setPedidoCuenta({loading:false,error:'Error de red',factura:null})
+    }
+  }
 
   return (
     <div style={{height:'100dvh',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',fontFamily:SN}}>
@@ -318,6 +341,7 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
 
         {screen==='sent' && (
           <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:16}}>
+            {/* Confirmacion envio */}
             <div style={{width:64,height:64,borderRadius:999,background:'rgba(63,125,68,.15)',
               display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${C.gr}`}}>
               <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke={C.gr} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -326,8 +350,38 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
             </div>
             <div style={{fontFamily:SE,fontSize:22,color:C.fg,fontWeight:500}}>Enviado.</div>
             <div style={{fontFamily:SM,fontSize:11,color:C.fg3}}>{latencia}ms · {brain?.mesa}</div>
+
+            {/* Pedir cuenta — solo si hay comanda */}
+            {lastComandaId && !pedidoCuenta.factura && (
+              <button onClick={pedirCuenta} disabled={pedidoCuenta.loading}
+                style={{marginTop:8,background:C.e1,border:`1px solid ${C.rS}`,color:C.fg,
+                  padding:'12px 24px',borderRadius:4,fontFamily:SN,fontSize:13,fontWeight:600,
+                  cursor:'pointer',display:'flex',alignItems:'center',gap:8}}>
+                {pedidoCuenta.loading ? 'Generando...' : 'Pedir cuenta · generar ticket'}
+              </button>
+            )}
+
+            {/* Error cuenta */}
+            {pedidoCuenta.error && (
+              <div style={{fontFamily:SM,fontSize:11,color:C.red,textAlign:'center',padding:'0 16px'}}>{pedidoCuenta.error}</div>
+            )}
+
+            {/* Factura generada */}
+            {pedidoCuenta.factura && (
+              <div style={{background:C.e1,border:`1px solid ${C.rS}`,borderRadius:8,padding:16,width:'100%',maxWidth:320,display:'flex',flexDirection:'column',gap:8}}>
+                <div style={{fontFamily:SM,fontSize:9,color:C.fg3,letterSpacing:'.1em'}}>FACTURA VERIFACTU</div>
+                <div style={{fontFamily:SM,fontSize:18,color:C.red,fontWeight:700}}>
+                  T-{String(pedidoCuenta.factura.numero_factura).padStart(8,'0')}
+                </div>
+                <div style={{fontFamily:SE,fontSize:24,fontWeight:500,color:C.fg}}>
+                  {pedidoCuenta.factura.importe_total.toFixed(2).replace('.',',')} €
+                </div>
+                <div style={{fontFamily:SM,fontSize:9,color:C.fg3,marginTop:4}}>QR en ticket impreso · verificable en sede AEAT</div>
+              </div>
+            )}
+
             <button onClick={reset}
-              style={{marginTop:16,background:'transparent',border:`1px solid ${C.rS}`,color:C.fg2,
+              style={{marginTop:8,background:'transparent',border:`1px solid ${C.rS}`,color:C.fg2,
                 padding:'12px 24px',borderRadius:4,fontFamily:SN,fontSize:13,fontWeight:600,cursor:'pointer'}}>
               Volver
             </button>

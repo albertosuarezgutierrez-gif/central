@@ -287,6 +287,126 @@ async function resolverSecciones(
   }))
 }
 
+// ── Ticket de cuenta con QR Verifactu ────────────────────────
+// ESC/POS 80mm — compatible con Epson TM / Star TSP143
+
+export interface ItemCuenta {
+  nombre:       string
+  cantidad:     number
+  precio_unit:  number
+  formato?:     string | null
+}
+
+export interface TicketCuentaParams {
+  mesa_label:      string
+  razon_social:    string
+  nif_emisor:      string
+  direccion?:      string
+  numero_factura:  number
+  numero_serie:    string
+  fecha:           string       // ISO string
+  items:           ItemCuenta[]
+  base_imponible:  number
+  cuota_iva:       number
+  tipo_iva:        number
+  importe_total:   number
+  qr_data:         string
+  primer_registro: boolean
+}
+
+export function generarTicketCuenta(p: TicketCuentaParams): string {
+  const lines: string[] = []
+  const SEP = '────────────────────────────────────────'
+  const formatNum = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
+  const dt = new Date(p.fecha)
+  const fechaStr = dt.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+  const horaStr  = dt.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+
+  lines.push(CMD.init)
+  lines.push(CMD.center)
+
+  // Cabecera: razón social
+  lines.push(CMD.bold_on + p.razon_social.toUpperCase() + CMD.bold_off + CMD.lf)
+  lines.push(`NIF: ${p.nif_emisor}` + CMD.lf)
+  if (p.direccion) lines.push(p.direccion + CMD.lf)
+  lines.push(CMD.lf)
+
+  // Mesa + fecha
+  lines.push(CMD.left)
+  lines.push(CMD.bold_on + p.mesa_label + CMD.bold_off + CMD.lf)
+  lines.push(`${fechaStr}  ${horaStr}` + CMD.lf)
+  lines.push(CMD.medium + `FACTURA T-${String(p.numero_factura).padStart(8, '0')}` + CMD.normal + CMD.lf)
+  lines.push(SEP + CMD.lf)
+
+  // Items
+  for (const it of p.items) {
+    const precioLine = formatNum(it.precio_unit * it.cantidad)
+    const nombre = it.formato ? `${it.nombre} (${it.formato})` : it.nombre
+    const left = `${it.cantidad}x ${nombre}`
+    // Pad a 40 chars
+    const pad = 40 - left.length - precioLine.length
+    lines.push(
+      CMD.bold_on + left + CMD.bold_off +
+      ' '.repeat(Math.max(1, pad)) +
+      precioLine + CMD.lf
+    )
+  }
+
+  lines.push(SEP + CMD.lf)
+
+  // Totales
+  lines.push(`Base imponible (${p.tipo_iva}% IVA)`.padEnd(28) + formatNum(p.base_imponible) + CMD.lf)
+  lines.push(`IVA ${p.tipo_iva}%`.padEnd(28) + formatNum(p.cuota_iva) + CMD.lf)
+  lines.push(CMD.bold_on)
+  lines.push(`TOTAL`.padEnd(28) + formatNum(p.importe_total) + CMD.bold_off + CMD.lf)
+  lines.push(SEP + CMD.lf)
+  lines.push(CMD.lf)
+
+  // QR Verifactu (ESC/POS QR code: GS ( k)
+  // Model 2, size 8, error correction M
+  const qrData = p.qr_data
+  const qrLen = qrData.length + 3
+  const pL = qrLen & 0xff
+  const pH = (qrLen >> 8) & 0xff
+
+  lines.push(CMD.center)
+  // Select QR model 2
+  lines.push('\x1d\x28\x6b\x04\x00\x31\x41\x32\x00')
+  // Set QR size (module size 8)
+  lines.push('\x1d\x28\x6b\x03\x00\x31\x43\x08')
+  // Error correction level M
+  lines.push('\x1d\x28\x6b\x03\x00\x31\x45\x31')
+  // Store data
+  lines.push(
+    '\x1d\x28\x6b' +
+    String.fromCharCode(pL) + String.fromCharCode(pH) +
+    '\x31\x50\x30' +
+    qrData
+  )
+  // Print QR
+  lines.push('\x1d\x28\x6b\x03\x00\x31\x51\x30')
+
+  lines.push(CMD.lf)
+  lines.push('Factura verificable en' + CMD.lf)
+  lines.push('sede electronica AEAT' + CMD.lf)
+  lines.push(CMD.lf)
+
+  if (p.primer_registro) {
+    lines.push('Primer registro de la serie' + CMD.lf)
+  }
+
+  // Pie
+  lines.push(CMD.left)
+  lines.push(SEP + CMD.lf)
+  lines.push(CMD.center + 'Gracias por su visita' + CMD.lf)
+  lines.push(CMD.lf + CMD.lf + CMD.lf)
+  lines.push(CMD.cut_partial)
+
+  return lines.join('')
+}
+
+// ────────────────────────────────────────────────────────────
+
 let _ticketCounter = 0
 
 async function getNextTicketNum(
