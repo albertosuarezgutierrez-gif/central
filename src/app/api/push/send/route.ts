@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getRestauranteId } from '@/lib/session'
 
-// Forzar evaluación dinámica — evita que Next.js ejecute el módulo en build time
 export const dynamic = 'force-dynamic'
 
 // VAPID keys — set via Vercel env vars en producción
+// Fallback = VAPID keys reales generadas para este proyecto (BKLVkE3...)
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
-  || 'BBFk-hGNnxaQ6rOO9c2qBNzkv5aAZscWijQ8RPT_DlnrepdpVPqj-JlZaKR13epEGDCnisgTPZ2KedtisVXD0AY'
+  || 'BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc'
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
   || 'g9A32b3wnr_c4Q0ZHtOAllFxwB4ez8TXiH1v1PdXH88'
 
@@ -17,13 +18,21 @@ async function getWebPush() {
   return webpush
 }
 
+export async function GET() {
+  return NextResponse.json({ error: 'Method not allowed — usa POST' }, { status: 405 })
+}
+
 export async function POST(req: NextRequest) {
   const supabase = createServerClient()
-  const { title, body, mesa, camarero_ids, data } = await req.json()
+  const rid = getRestauranteId(req)
+  const { title, body, mesa, camarero_ids, camarero_id, data } = await req.json()
 
-  // Obtener suscripciones — si se pasan camarero_ids, filtrar; si no, notificar a todos
-  let query = supabase.from('push_subscriptions').select('*')
-  if (camarero_ids?.length) query = query.in('camarero_id', camarero_ids)
+  // Aceptar tanto camarero_id (singular, desde KDS) como camarero_ids (plural)
+  const ids: string[] = camarero_ids?.length ? camarero_ids : camarero_id ? [camarero_id] : []
+
+  // Filtrar suscripciones por restaurante (multi-tenant) + ids si se pasan
+  let query = supabase.from('push_subscriptions').select('*').eq('restaurante_id', rid)
+  if (ids.length) query = query.in('camarero_id', ids)
   const { data: subs, error } = await query
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -44,6 +53,8 @@ export async function POST(req: NextRequest) {
         const e = err as { statusCode?: number }
         if (e?.statusCode === 410 || e?.statusCode === 404) {
           await supabase.from('push_subscriptions').delete().eq('id', row.id)
+        } else {
+          console.error('[PUSH] sendNotification error:', err)
         }
       }
     })

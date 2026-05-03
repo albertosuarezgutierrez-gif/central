@@ -266,7 +266,10 @@ function KDSInner() {
     if (camareroId) {
       fetch('/api/push/send', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ia-session': localStorage.getItem('ia_rest_session') ?? '',
+        },
         body: JSON.stringify({
           title: 'Comanda lista',
           body: `${mesaCodigo || 'Mesa'} — todo listo. Puedes servir.`,
