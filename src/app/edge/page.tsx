@@ -17,7 +17,7 @@ const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-type Screen = 'idle' | 'recording' | 'processing' | 'speaking' | 'confirm' | 'sent' | 'error'
+type Screen = 'idle' | 'recording' | 'processing' | 'speaking' | 'asking' | 'confirm' | 'sent' | 'error'
 
 interface BrainResult {
   mesa:string; tipo:string
@@ -131,6 +131,8 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
   // Voice Confirm: el sistema lee la comanda antes de mostrar botones
   const [voiceConfirm, setVoiceConfirm] = useState(true)
   const speakingRef = useRef(false)
+  // Flujo conversacional: items guardados mientras esperamos la mesa por voz
+  const [pendingItems, setPendingItems] = useState<BrainResult['items']>([])
   // Items 86 detectados en la última comanda
   const [alertas86Comanda, setAlertas86Comanda] = useState<string[]>([])
   // Alertas de alérgenos EU 1169/2011
@@ -225,6 +227,8 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
     fd.append('audio', blob, 'audio.webm')
     fd.append('camarero_id', session.id)
     fd.append('turno_id', turnoId || 'demo')
+    // Si estamos esperando mesa (flujo conversacional), pasar items pendientes
+    if (pendingItems.length > 0) fd.append('pending_items', JSON.stringify(pendingItems))
 
     try {
       const r = await fetch('/api/transcribe', { method:'POST', body:fd })
@@ -236,6 +240,17 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
         setLastComandaId(d.comanda_id ?? null)
         setAlertas86Comanda(d.alertas_86 ?? [])
         setAlertasAlergenos(d.alertas_alergenos ?? [])
+
+        // Mesa no encontrada → flujo conversacional: preguntar por voz
+        if (!d.comanda_id && d.brain?.mesa && ['T00','','desconocida'].includes(d.brain.mesa)) {
+          if (d.brain?.items?.length > 0) setPendingItems(d.brain.items)
+          setScreen('asking')
+          speak('¿Qué mesa?').then(() => startRecording())
+          return
+        }
+
+        // Mesa encontrada → limpiar pendientes y continuar normal
+        setPendingItems([])
         // Si voiceConfirm activo y speechSynthesis disponible → leer en voz alta
         const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window
         setScreen(voiceConfirm && hasTTS ? 'speaking' : 'confirm')
@@ -250,7 +265,7 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
       setError('Error de red')
       setScreen('error')
     }
-  }, [session.id, turnoId])
+  }, [session.id, turnoId, pendingItems])
 
   // Spacebar PTT
   useEffect(() => {
@@ -270,7 +285,7 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
   const reset = () => {
     if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
     speakingRef.current = false
-    setScreen('idle'); setBrain(null); setTranscript(''); setError(''); setPedidoCuenta({loading:false,error:'',factura:null}); setAlertas86Comanda([]); setAlertasAlergenos([])
+    setScreen('idle'); setBrain(null); setTranscript(''); setError(''); setPedidoCuenta({loading:false,error:'',factura:null}); setAlertas86Comanda([]); setAlertasAlergenos([]); setPendingItems([])
   }
 
   const pedirCuenta = async () => {
@@ -394,6 +409,28 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
 
       {/* BODY */}
       <div style={{flex:1,display:'flex',flexDirection:'column',padding:16,gap:16,overflow:'auto'}}>
+
+        {screen==='asking' && (
+          <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}}>
+            <div style={{fontFamily:SM,fontSize:11,color:C.tl,letterSpacing:'.1em',display:'flex',gap:8,alignItems:'center'}}>
+              <span style={{width:8,height:8,borderRadius:999,background:C.tl,animation:'pulse 1.2s ease-in-out infinite'}}/>
+              EAR · ESCUCHANDO MESA
+            </div>
+            {pendingItems.length>0 && (
+              <div style={{background:C.e1,border:`1px solid ${C.rule}`,borderRadius:6,padding:'10px 16px',maxWidth:280,width:'100%'}}>
+                <div style={{fontFamily:SM,fontSize:9,color:C.fg3,letterSpacing:'.1em',marginBottom:8}}>ITEMS GUARDADOS</div>
+                {pendingItems.map((it,i)=>(
+                  <div key={i} style={{fontFamily:SN,fontSize:14,color:C.fg2,padding:'3px 0',display:'flex',gap:8}}>
+                    <span style={{fontFamily:SM,fontSize:11,fontWeight:700,color:C.red}}>{it.cantidad}×</span>
+                    {it.nombre}
+                  </div>
+                ))}
+              </div>
+            )}
+            <div style={{fontFamily:SE,fontSize:24,color:C.fg,fontStyle:'italic'}}>¿Qué mesa?</div>
+            <button onPointerDown={reset} style={{fontFamily:SM,fontSize:9,color:C.rS,background:'none',border:`1px solid ${C.rS}`,borderRadius:3,padding:'4px 10px',cursor:'pointer',letterSpacing:'.06em'}}>CANCELAR</button>
+          </div>
+        )}
 
         {screen==='idle' && (
           <div style={{flex:1,display:'flex',alignItems:'center',justifyContent:'center'}}>

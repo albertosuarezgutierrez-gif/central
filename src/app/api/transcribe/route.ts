@@ -12,6 +12,7 @@ export async function POST(req: NextRequest) {
     const audio = formData.get('audio') as Blob
     const camareroId = formData.get('camarero_id') as string
     const turnoId = formData.get('turno_id') as string
+    const pendingItemsRaw = formData.get('pending_items') as string | null  // flujo conversacional
     if (!audio || !camareroId || !turnoId)
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
@@ -20,6 +21,17 @@ export async function POST(req: NextRequest) {
 
     const { texto, latencia_ms: latenciaEar } = await transcribir(audio)
     const brainResult = await parsearComanda(texto, rid)
+
+    // Flujo conversacional: si hay items pendientes de grabación anterior
+    // (camarero dijo items pero no la mesa), esta grabación es solo la mesa
+    if (pendingItemsRaw) {
+      try {
+        const prevItems = JSON.parse(pendingItemsRaw)
+        if (brainResult.items.length === 0 && prevItems.length > 0) {
+          brainResult.items = prevItems
+        }
+      } catch { /* ignorar */ }
+    }
 
     // ── CHEQUEO 86: antes de insertar, detectar items agotados ──────────────
     // Si la comanda trae items (no es cuenta/aviso), cruzar con productos_86 activos
