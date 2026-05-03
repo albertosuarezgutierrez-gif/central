@@ -17,12 +17,42 @@ const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-type Screen = 'idle' | 'recording' | 'processing' | 'confirm' | 'sent' | 'error'
+type Screen = 'idle' | 'recording' | 'processing' | 'speaking' | 'confirm' | 'sent' | 'error'
 
 interface BrainResult {
   mesa:string; tipo:string
   items:{nombre:string;cantidad:number}[]
   confianza:number; raw:string
+}
+
+/** Construye el texto que se leerá en voz alta al camarero */
+function buildTTSText(brain: BrainResult): string {
+  if (brain.items.length === 0) return `${brain.tipo} para ${brain.mesa}. ¿Confirmamos?`
+  const items = brain.items
+    .map(it => `${it.cantidad === 1 ? 'una de' : it.cantidad} ${it.nombre}`)
+    .join(', ')
+  return `${brain.mesa}: ${items}. ¿Confirmamos?`
+}
+
+/** Habla el texto y devuelve una promesa que resuelve al terminar */
+function speak(text: string): Promise<void> {
+  return new Promise(resolve => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) { resolve(); return }
+    window.speechSynthesis.cancel()
+    const utt = new SpeechSynthesisUtterance(text)
+    utt.lang = 'es-ES'
+    utt.rate = 1.05
+    utt.pitch = 1
+    utt.volume = 1
+    // Priorizar voz femenina en español si existe
+    const voices = window.speechSynthesis.getVoices()
+    const esVoice = voices.find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('female'))
+      ?? voices.find(v => v.lang.startsWith('es'))
+    if (esVoice) utt.voice = esVoice
+    utt.onend = () => resolve()
+    utt.onerror = () => resolve()
+    window.speechSynthesis.speak(utt)
+  })
 }
 
 function WaveBars({ active }: { active: boolean }) {
@@ -92,6 +122,29 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
   const [latencia, setLatencia] = useState<number|null>(null)
   const [alert86, setAlert86] = useState<string[]>([])
   const [lastComandaId, setLastComandaId] = useState<string|null>(null)
+  // Voice Confirm: el sistema lee la comanda antes de mostrar botones
+  const [voiceConfirm, setVoiceConfirm] = useState(true)
+  const speakingRef = useRef(false)
+
+  const skipSpeaking = useCallback(() => {
+    if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+    speakingRef.current = false
+    setScreen('confirm')
+  }, [])
+
+  // Al entrar en estado 'speaking' → leer TTS y pasar a 'confirm'
+  useEffect(() => {
+    if (screen !== 'speaking' || !brain) return
+    speakingRef.current = true
+    speak(buildTTSText(brain)).then(() => {
+      if (speakingRef.current) {
+        speakingRef.current = false
+        setScreen('confirm')
+        if (navigator.vibrate) navigator.vibrate([30, 50, 30])
+      }
+    })
+    return () => { speakingRef.current = false }
+  }, [screen, brain])
   const [pedidoCuenta, setPedidoCuenta] = useState<{loading:boolean;error:string;factura:null|{numero_factura:number;importe_total:number;qr_data:string}}>({loading:false,error:'',factura:null})
   const { prompt: installPrompt, install } = useInstallPrompt()
   const { subscribed, subscribe } = usePushNotifications(session.id)
@@ -168,7 +221,9 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
         setBrain(d.brain)
         setLatencia(d.latencia_ms)
         setLastComandaId(d.comanda_id ?? null)
-        setScreen('confirm')
+        // Si voiceConfirm activo y speechSynthesis disponible → leer en voz alta
+        const hasTTS = typeof window !== 'undefined' && 'speechSynthesis' in window
+        setScreen(voiceConfirm && hasTTS ? 'speaking' : 'confirm')
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
         setError(d.code === 'API_KEY_INVALID'
@@ -184,8 +239,8 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
 
   // Spacebar PTT
   useEffect(() => {
-    const down = (e:KeyboardEvent) => { if(e.code==='Space'&&!e.repeat){e.preventDefault();startRecording()} }
-    const up = (e:KeyboardEvent) => { if(e.code==='Space') stopRecording() }
+    const down = (e:KeyboardEvent) => { if(e.code==='Space'&&!e.repeat&&screen==='idle'){e.preventDefault();startRecording()} }
+    const up = (e:KeyboardEvent) => { if(e.code==='Space'&&screen==='recording') stopRecording() }
     window.addEventListener('keydown',down)
     window.addEventListener('keyup',up)
     return () => { window.removeEventListener('keydown',down); window.removeEventListener('keyup',up) }
@@ -197,7 +252,11 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
     window.location.href = '/login'
   }
 
-  const reset = () => { setScreen('idle'); setBrain(null); setTranscript(''); setError(''); setPedidoCuenta({loading:false,error:'',factura:null}) }
+  const reset = () => {
+    if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+    speakingRef.current = false
+    setScreen('idle'); setBrain(null); setTranscript(''); setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
+  }
 
   const pedirCuenta = async () => {
     if (!lastComandaId) return
@@ -288,6 +347,16 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
           >
             {modoManual ? 'VOZ' : 'MANUAL'}
           </button>
+            <button
+              onPointerDown={() => setVoiceConfirm(v => !v)}
+              title={voiceConfirm ? 'Voice Confirm activo — toca para silenciar' : 'Voice Confirm silenciado'}
+              style={{fontFamily:SN,fontSize:10,fontWeight:600,letterSpacing:'.04em',
+                color: voiceConfirm ? C.tl : C.fg3,
+                background:'transparent',
+                border:`1px solid ${voiceConfirm ? C.tl : C.rS}`,
+                borderRadius:3,padding:'3px 8px',cursor:'pointer'}}>
+              {voiceConfirm ? 'VOX ON' : 'VOX OFF'}
+            </button>
           <button onClick={logout}
               style={{fontFamily:SN,fontSize:10,fontWeight:600,color:C.fg3,background:'transparent',
                 border:`1px solid ${C.rS}`,borderRadius:3,padding:'3px 8px',cursor:'pointer'}}>
@@ -323,6 +392,51 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
             <div style={{fontFamily:SM,fontSize:13,color:C.fg3,animation:'pulse 1.2s ease-in-out infinite'}}>
               Procesando...
             </div>
+          </div>
+        )}
+
+        {screen==='speaking' && brain && (
+          <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:20}}>
+            <style>{`@keyframes ripple{0%{transform:scale(1);opacity:.6}100%{transform:scale(2.2);opacity:0}}`}</style>
+            {/* Onda sonora animada */}
+            <div style={{position:'relative',width:80,height:80,display:'flex',alignItems:'center',justifyContent:'center'}}>
+              <div style={{position:'absolute',width:80,height:80,borderRadius:999,border:`2px solid ${C.tl}`,
+                animation:'ripple 1.4s ease-out infinite'}}/>
+              <div style={{position:'absolute',width:80,height:80,borderRadius:999,border:`2px solid ${C.tl}`,
+                animation:'ripple 1.4s ease-out 0.5s infinite'}}/>
+              <div style={{width:48,height:48,borderRadius:999,background:`rgba(43,106,110,.25)`,
+                display:'flex',alignItems:'center',justifyContent:'center',border:`2px solid ${C.tl}`}}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.tl} strokeWidth="2" strokeLinecap="round">
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+                  <path d="M15.54 8.46a5 5 0 0 1 0 7.07"/>
+                  <path d="M19.07 4.93a10 10 0 0 1 0 14.14"/>
+                </svg>
+              </div>
+            </div>
+            {/* Comanda en texto */}
+            <div style={{textAlign:'center',maxWidth:280}}>
+              <div style={{fontFamily:SM,fontSize:10,color:C.tl,letterSpacing:'.12em',marginBottom:10}}>
+                VOX · LEYENDO COMANDA
+              </div>
+              <div style={{fontFamily:SE,fontSize:22,color:C.fg,lineHeight:1.3}}>
+                {brain.mesa}
+              </div>
+              <div style={{display:'flex',flexDirection:'column',gap:4,marginTop:10}}>
+                {brain.items.map((it,i)=>(
+                  <div key={i} style={{fontFamily:SN,fontSize:15,color:C.fg2,display:'flex',gap:8,justifyContent:'center'}}>
+                    <span style={{fontFamily:SM,color:C.red,fontWeight:700}}>{it.cantidad}×</span>
+                    {it.nombre}
+                  </div>
+                ))}
+              </div>
+            </div>
+            {/* Skip */}
+            <button onClick={skipSpeaking}
+              style={{marginTop:8,background:'transparent',border:`1px solid ${C.rS}`,
+                color:C.fg3,padding:'10px 24px',borderRadius:4,
+                fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer',letterSpacing:'.04em'}}>
+              Saltar lectura
+            </button>
           </div>
         )}
 
@@ -443,13 +557,15 @@ function EdgeContent({ session, turnoId, setTurnoId }: {
           onPointerDown={e=>{e.preventDefault();startRecording()}}
           onPointerUp={e=>{e.preventDefault();stopRecording()}}
           onPointerLeave={e=>{e.preventDefault();if(recordingRef.current)stopRecording()}}
+          disabled={screen==='speaking' || screen==='processing'}
           style={{
             width:180, height:180, borderRadius:999,
-            border:`4px solid ${screen==='recording'?C.red:C.rS}`,
-            background:screen==='recording'?C.red:C.e1,
-            color:C.fg, cursor:'pointer',
+            border:`4px solid ${screen==='recording'?C.red:screen==='speaking'?C.tl:C.rS}`,
+            background:screen==='recording'?C.red:screen==='speaking'?'rgba(43,106,110,.15)':C.e1,
+            color:C.fg, cursor: screen==='speaking'||screen==='processing' ? 'default' : 'pointer',
             transition:'transform 120ms cubic-bezier(0.34,1.56,0.64,1), background 200ms, border-color 200ms',
             transform:screen==='recording'?'scale(0.95)':'scale(1)',
+            opacity: screen==='speaking'||screen==='processing' ? 0.5 : 1,
             boxShadow:screen==='recording'
               ?'0 0 0 16px rgba(217,68,43,0.15),0 0 0 32px rgba(217,68,43,0.06)'
               :'0 8px 24px rgba(0,0,0,0.5)',
