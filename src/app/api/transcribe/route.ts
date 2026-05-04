@@ -34,7 +34,6 @@ export async function POST(req: NextRequest) {
     }
 
     // ── CHEQUEO 86: antes de insertar, detectar items agotados ──────────────
-    // Si la comanda trae items (no es cuenta/aviso), cruzar con productos_86 activos
     let alertas86: string[] = []
     if (brainResult.items.length > 0 && brainResult.tipo !== '86') {
       const { data: activos86 } = await supabase
@@ -51,15 +50,50 @@ export async function POST(req: NextRequest) {
     }
     // ────────────────────────────────────────────────────────────────────────
 
-    // ── CHEQUEO ALÉRGENOS: cruzar items con alérgenos declarados en la mesa ─
+    // ── LOOKUP DE MESA: robusto en 2 pasos ──────────────────────────────────
     // EU Reglamento 1169/2011 — 14 alérgenos de declaración obligatoria
     let alertasAlergenos: { producto: string; alergenos: string[] }[] = []
-    const { data: mesa } = await supabase.from('mesas')
-      .select('id, codigo, estado, alergenos_mesa').eq('codigo', brainResult.mesa).eq('restaurante_id', rid).single()
+
+    // Paso 1: buscar por codigo exacto (M04, T02, B01…)
+    let { data: mesa } = await supabase.from('mesas')
+      .select('id, codigo, estado, alergenos_mesa, numero, zona')
+      .eq('codigo', brainResult.mesa)
+      .eq('restaurante_id', rid)
+      .maybeSingle()
+
+    // Paso 2: fallback por numero extraído del codigo BRAIN
+    // Cubre casos donde el prompt devuelve código con prefijo distinto al de la BD
+    if (!mesa && brainResult.mesa) {
+      const num = parseInt((brainResult.mesa).replace(/[^0-9]/g, ''))
+      if (num > 0) {
+        const prefix = (brainResult.mesa).match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
+        // Mapa de prefijos a zonas según la BD real
+        const prefixToZona: Record<string, string> = { M: 'salon', T: 'terraza', B: 'barra', S: 'salon', P: 'terraza' }
+        const zonaHint = prefix ? prefixToZona[prefix] : null
+
+        const { data: candidatas } = await supabase.from('mesas')
+          .select('id, codigo, estado, alergenos_mesa, numero, zona')
+          .eq('restaurante_id', rid)
+          .eq('numero', num)
+
+        if (candidatas?.length === 1) {
+          mesa = candidatas[0]
+          console.log(`[TRANSCRIBE] mesa fallback by numero: ${brainResult.mesa} → ${mesa.codigo}`)
+        } else if (candidatas && candidatas.length > 1) {
+          // Intentar discriminar por zona inferida del prefijo
+          const candidataZona = zonaHint
+            ? candidatas.find(m => (m as any).zona === zonaHint)
+            : null
+          // Sin zona clara, preferir salón (la más común sin prefijo)
+          mesa = candidataZona ?? candidatas.find(m => (m as any).zona === 'salon') ?? candidatas[0]
+          console.log(`[TRANSCRIBE] mesa fallback ambigua: ${brainResult.mesa} → ${mesa?.codigo} (zona ${mesa?.zona})`)
+        }
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     if (mesa?.alergenos_mesa?.length && brainResult.items.length > 0) {
       const alergenosMesa: string[] = mesa.alergenos_mesa
-      // Consultar alérgenos de los productos en la carta
       const nombresItems = brainResult.items.map(it => it.nombre)
       const { data: productosConAlergenos } = await supabase
         .from('productos')
@@ -79,7 +113,6 @@ export async function POST(req: NextRequest) {
         }
       }
     }
-    // ────────────────────────────────────────────────────────────────────────
 
     let comandaId: string | null = null
     if (mesa) {
@@ -93,10 +126,8 @@ export async function POST(req: NextRequest) {
       comandaId = comanda.id
 
       if (brainResult.items.length > 0) {
-        // Resolver formato_id para items que traen formato de voz
         const itemsConFormato = brainResult.items.filter(i => i.formato)
         const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
-        // Normalizar tildes para matching robusto (BRAIN puede devolver sin tilde)
         const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
         if (itemsConFormato.length > 0) {
@@ -132,7 +163,7 @@ export async function POST(req: NextRequest) {
       if (['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
         const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
         crearPrintJobs(
-          { id: comanda.id, tipo: brainResult.tipo, mesa_codigo: brainResult.mesa, camarero_nombre: camarero?.nombre ?? 'Sala' },
+          { id: comanda.id, tipo: brainResult.tipo, mesa_codigo: mesa.codigo, camarero_nombre: camarero?.nombre ?? 'Sala' },
           brainResult.items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad,
             notas: item.notas ?? null, seccion_id: (item as Record<string, unknown>).seccion_id as string ?? null }))
         ).catch(err => console.error('[COURIER]', err))
@@ -154,28 +185,26 @@ export async function POST(req: NextRequest) {
       texto_brain: brainResult, latencia_ms: latenciaTotal, comanda_id: comandaId, restaurante_id: rid,
     })
 
-      // Log de confirmaciones de alérgenos (trazabilidad legal EU 1169/2011)
-      if (alertasAlergenos.length > 0 && comandaId && mesa) {
-        const logs = alertasAlergenos.flatMap(a =>
-          a.alergenos.map(al => ({
-            comanda_id: comandaId,
-            mesa_id: mesa.id,
-            restaurante_id: rid,
-            producto_nombre: a.producto,
-            alergeno: al,
-            confirmado_por: camareroId,
-            nota: `Alerta automática — alérgeno declarado en mesa ${brainResult.mesa}`,
-          }))
-        )
-        await supabase.from('alergeno_confirmaciones').insert(logs)
-      }
+    if (alertasAlergenos.length > 0 && comandaId && mesa) {
+      const logs = alertasAlergenos.flatMap(a =>
+        a.alergenos.map(al => ({
+          comanda_id: comandaId,
+          mesa_id: mesa!.id,
+          restaurante_id: rid,
+          producto_nombre: a.producto,
+          alergeno: al,
+          confirmado_por: camareroId,
+          nota: `Alerta automática — alérgeno declarado en mesa ${mesa!.codigo}`,
+        }))
+      )
+      await supabase.from('alergeno_confirmaciones').insert(logs)
+    }
 
     return NextResponse.json({ ok: true, texto, brain: brainResult, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, comanda_id: comandaId, alertas_86: alertas86, alertas_alergenos: alertasAlergenos })
   } catch (err) {
-    // Identificar qué servicio devuelve el 401
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || (err as { status?: number })?.status === 401
-    
+
     if (is401) {
       const missingGroq = !process.env.GROQ_API_KEY
       const missingAnthropic = !process.env.ANTHROPIC_API_KEY
@@ -187,7 +216,7 @@ export async function POST(req: NextRequest) {
       console.error('[TRANSCRIBE] 401 —', hint, err)
       return NextResponse.json({ error: hint, code: 'API_KEY_INVALID' }, { status: 500 })
     }
-    
+
     console.error('[TRANSCRIBE]', err)
     return NextResponse.json({ error: msg || 'Error interno' }, { status: 500 })
   }

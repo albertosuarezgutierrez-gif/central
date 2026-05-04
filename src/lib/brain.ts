@@ -42,7 +42,6 @@ async function buildMenuContext(): Promise<string> {
           : ''
         const fmts = fmtMap[p.id]
         if (fmts?.length) {
-          // Mostrar formatos en lugar del precio único
           const fmtStr = fmts.map(f => `${f.nombre}:${f.precio}€`).join('/')
           return `${p.nombre}${alias} (formatos: ${fmtStr})`
         }
@@ -81,13 +80,18 @@ async function buildZonasContext(restaurante_id?: string): Promise<string> {
   }
 }
 
+// ── FIX: prefijos corregidos para coincidir con la BD real ──────────────────
+// M = salón interior  (mesas M01-M99)
+// T = terraza         (mesas T01-T20)
+// B = barra           (mesas B01-B10)
+// ────────────────────────────────────────────────────────────────────────────
 const BASE_PROMPT = `Eres BRAIN, el agente de ia.rest. Conviertes transcripciones de voz de camareros españoles en comandas JSON estructuradas.
 
 REGLAS ESTRICTAS:
 - Responde SOLO con JSON valido, sin texto adicional ni markdown
 - Entiende jerga: "manchado"=Cortado, "marchar"=enviar a cocina, "86"=agotado/sin stock
-- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: T=salon, B=barra, P=terraza
-- "mesa cuatro"=T04, "la doce"=T12, "barra dos"=B02
+- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: M=salon, T=terraza, B=barra
+- "mesa cuatro"=M04, "la doce"=M12, "terraza cuatro"=T04, "barra dos"=B02
 - Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
 - Para tipo "86": los items son los productos agotados
 - FORMATOS: si un producto tiene formatos (tapa/media/racion), extrae el formato mencionado en "formato" (null si no se menciona)
@@ -96,7 +100,7 @@ REGLAS ESTRICTAS:
 - Ejemplos comensales: "mesa cuatro para tres"→num_comensales:3, "somos cuatro"→num_comensales:4, "dos cubiertos"→num_comensales:2
 
 SCHEMA:
-{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
+{"mesa":"M04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   const [Anthropic, menuContext, zonasContext] = await Promise.all([
@@ -121,6 +125,7 @@ export async function parsearComanda(texto: string, restaurante_id?: string): Pr
     const parsed = JSON.parse(content.text)
     return { ...parsed, raw: texto }
   } catch {
-    return { mesa: 'T00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
+    // ── FIX: fallback usa M00 (salon) en lugar de T00 (terraza) ──
+    return { mesa: 'M00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
   }
 }
