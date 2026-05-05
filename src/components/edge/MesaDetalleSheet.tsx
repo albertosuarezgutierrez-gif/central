@@ -1,10 +1,7 @@
 'use client'
 // ia.rest · MesaDetalleSheet
-// Sheet que se abre al tocar una mesa ocupada.
-// Muestra la comanda activa con todas las acciones:
-//   Ver · Añadir items · Modificar cantidad · Eliminar item · Cobrar
-
 import React, { useState, useEffect, useCallback } from 'react'
+import CobrarSheet from './CobrarSheet'
 
 const C = {
   bg:'#F6F1E7', bg1:'#FBF8F1', bg2:'#EFE7D6', bg3:'#E5DAC2',
@@ -54,6 +51,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
   const [editNotas, setEditNotas] = useState('')
   const [saving, setSaving]     = useState(false)
   const [savedMsg, setSavedMsg] = useState('')
+  const [cobrarOpen, setCobrarOpen] = useState(false)
 
   const session_str = JSON.stringify(session)
 
@@ -363,7 +361,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
             </button>
 
             {/* Pedir cuenta */}
-            <button onClick={()=>{ onPedirCuenta(comanda.id, mesaCodigo); onClose() }}
+            <button onClick={()=>setCobrarOpen(true)}
               style={{flex:2,padding:'11px 12px',background:C.verm,border:'none',borderRadius:10,
                 display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -386,6 +384,22 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
           </div>
         )}
       </div>
+
+      {/* COBRAR SHEET */}
+      {cobrarOpen && comanda && (
+        <CobrarSheet
+          comandaId={comanda.id}
+          mesaLabel={mesaCodigo}
+          total={comanda.total_estimado}
+          session={session}
+          onCerrado={(result)=>{
+            setCobrarOpen(false)
+            onClose()
+            onPedirCuenta(comanda.id, mesaCodigo)
+          }}
+          onCancel={()=>setCobrarOpen(false)}
+        />
+      )}
     </>
   )
 }
