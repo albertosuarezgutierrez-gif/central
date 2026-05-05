@@ -329,55 +329,51 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         </div>
       )}
 
-      {/* HEADER */}
-      <div style={{padding:'10px 20px 8px',borderBottom:`1px solid ${C.rule}`,background:C.bg,flexShrink:0}}>
-        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-          <div>
-            <div style={{fontFamily:SE,fontStyle:'italic',fontSize:22,color:C.verm,letterSpacing:'-.5px',lineHeight:1}}>ia.rest</div>
-            <div style={{fontSize:10,color:isListening?C.teal:isProcessing?C.amber:C.txt4,textTransform:'uppercase',letterSpacing:'.9px',marginTop:1,display:'flex',alignItems:'center',gap:5}}>
-              {(isListening||isProcessing)&&<div style={{width:5,height:5,borderRadius:'50%',background:isListening?C.teal:C.amber,animation:'ldot 1.2s ease-in-out infinite'}}/>}
-              {isListening?'EAR · escuchando':isProcessing?'BRAIN · procesando':'Edge · sala'}
-            </div>
-          </div>
-          <div style={{display:'flex',alignItems:'center',gap:6}}>
-            {!subscribed&&<button onClick={subscribe} style={{fontFamily:SN,fontSize:9,fontWeight:700,color:C.amber,background:'transparent',border:`1px solid ${C.amber}`,borderRadius:3,padding:'3px 7px',cursor:'pointer'}}>NOTIF</button>}
-            {installPrompt&&<button onClick={install} style={{fontFamily:SN,fontSize:9,fontWeight:700,color:C.verm,background:'transparent',border:`1px solid ${C.verm}`,borderRadius:3,padding:'3px 7px',cursor:'pointer'}}>INSTALAR</button>}
-            <button onPointerDown={()=>setVoiceConfirm(v=>!v)} style={{fontFamily:SN,fontSize:9,fontWeight:700,color:voiceConfirm?C.teal:C.txt4,background:'transparent',border:`1px solid ${voiceConfirm?C.teal:C.bg3}`,borderRadius:3,padding:'3px 7px',cursor:'pointer'}}>VOX</button>
-            <button onPointerDown={()=>setMostrarAlergenos(v=>!v)} style={{fontFamily:SN,fontSize:9,fontWeight:700,color:alergenosMesa.length>0?C.amber:C.txt4,background:'transparent',border:`1px solid ${alergenosMesa.length>0?C.amber:C.bg3}`,borderRadius:3,padding:'3px 7px',cursor:'pointer'}}>{alergenosMesa.length>0?`ALERG(${alergenosMesa.length})`:'ALERG'}</button>
-            <div style={{display:'flex',alignItems:'center',gap:6,background:C.bg2,border:`1px solid ${C.bg3}`,borderRadius:20,padding:'5px 10px 5px 7px',cursor:'pointer'}} onClick={logout}>
-              <div style={{width:6,height:6,borderRadius:'50%',background:C.green,boxShadow:`0 0 5px ${C.green}`,animation:'ldot 2s infinite'}}/>
-              <span style={{fontSize:12,fontWeight:600}}>{session.nombre.split(' ')[0]}</span>
-            </div>
+      {/* HEADER — mínimo */}
+      <div style={{padding:'8px 16px',borderBottom:`1px solid ${C.rule}`,background:C.bg,flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+        <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.verm,letterSpacing:'-.5px',lineHeight:1}}>ia.rest</div>
+        <div style={{display:'flex',alignItems:'center',gap:6}}>
+          {!subscribed&&<button onClick={subscribe} title="Activar notificaciones" style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:6,cursor:'pointer',fontSize:14}}>🔔</button>}
+          {installPrompt&&<button onClick={install} title="Instalar app" style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:`1px solid ${C.bg3}`,borderRadius:6,cursor:'pointer',fontSize:14}}>⬇︎</button>}
+          {/* VOX icon */}
+          <button onPointerDown={()=>setVoiceConfirm(v=>!v)} title={voiceConfirm?'VOX activo':'VOX silenciado'}
+            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:'transparent',border:`1px solid ${voiceConfirm?C.teal:C.bg3}`,borderRadius:6,cursor:'pointer'}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={voiceConfirm?C.teal:C.txt4} strokeWidth="2" strokeLinecap="round">
+              <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/>
+              {voiceConfirm?<path d="M15.54 8.46a5 5 0 0 1 0 7.07M19.07 4.93a10 10 0 0 1 0 14.14"/>:<line x1="1" y1="1" x2="23" y2="23"/>}
+            </svg>
+          </button>
+          {/* ALERG icon */}
+          <button onPointerDown={()=>setMostrarAlergenos(v=>!v)} title="Alérgenos de mesa"
+            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
+              background:alergenosMesa.length>0?'rgba(232,163,59,.12)':'transparent',
+              border:`1px solid ${alergenosMesa.length>0?C.amber:C.bg3}`,borderRadius:6,cursor:'pointer',
+              fontFamily:SN,fontSize:9,fontWeight:700,color:alergenosMesa.length>0?C.amber:C.txt4,letterSpacing:'.05em'}}>
+            {alergenosMesa.length>0?alergenosMesa.length:'⚠'}
+          </button>
+          {/* Camarero pill */}
+          <div style={{display:'flex',alignItems:'center',gap:5,background:C.bg2,border:`1px solid ${C.bg3}`,borderRadius:16,padding:'4px 10px 4px 6px',cursor:'pointer'}} onClick={logout}>
+            <div style={{width:5,height:5,borderRadius:'50%',background:C.green,boxShadow:`0 0 5px ${C.green}`,animation:'ldot 2s infinite'}}/>
+            <span style={{fontSize:12,fontWeight:600}}>{session.nombre.split(' ')[0]}</span>
           </div>
         </div>
       </div>
 
-      {/* TELEMETRÍA */}
-      <div style={{display:'flex',background:C.bg1,borderBottom:`1px solid ${C.rule}`,flexShrink:0}}>
-        {[
-          {v:latencia?`${latencia}ms`:'—ms',l:'latencia',c:latencia&&latencia<500?C.green:C.amber},
-          {v:'live',l:'pipeline',c:C.green},
-          {v:'EAR',l:'agente',c:C.teal},
-          {v:'BRAIN',l:'agente',c:C.amber},
-        ].map((t,i)=>(
-          <div key={i} style={{flex:1,padding:'6px 0',textAlign:'center',borderRight:i<3?`1px solid ${C.rule}`:'none'}}>
-            <div style={{fontFamily:SM,fontSize:11,fontWeight:500,color:t.c}}>{t.v}</div>
-            <div style={{fontSize:8,color:C.txt4,textTransform:'uppercase',letterSpacing:'.7px',marginTop:1}}>{t.l}</div>
-          </div>
-        ))}
-      </div>
+
 
       {/* ══ TAB: HABLAR ══════════════════════════════════════════ */}
       {tab==='hablar' && (
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
-          {/* EAR strip */}
-          <div style={{background:C.bg1,borderBottom:`1px solid ${C.rule}`,padding:'8px 20px',display:'flex',alignItems:'center',gap:9,minHeight:36,flexShrink:0}}>
-            <span style={{fontFamily:SM,fontSize:8,color:C.teal,textTransform:'uppercase',letterSpacing:'1px',flexShrink:0}}>EAR</span>
-            <span style={{fontFamily:SM,fontSize:11,color:isListening?C.txt2:C.txt4,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
-              {transcript||'en espera…'}
-            </span>
-            {isListening&&<div style={{width:2,height:12,background:C.verm,borderRadius:1,flexShrink:0,animation:'blink .85s step-end infinite'}}/>}
-          </div>
+          {/* EAR strip — solo visible cuando hay actividad */}
+          {(isListening||isProcessing||transcript) && (
+            <div style={{background:C.bg1,borderBottom:`1px solid ${C.rule}`,padding:'7px 20px',display:'flex',alignItems:'center',gap:9,flexShrink:0}}>
+              <span style={{fontFamily:SM,fontSize:8,color:isListening?C.teal:C.amber,textTransform:'uppercase',letterSpacing:'1px',flexShrink:0}}>{isListening?'EAR':'BRAIN'}</span>
+              <span style={{fontFamily:SM,fontSize:11,color:C.txt2,flex:1,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>
+                {isProcessing&&!transcript?'procesando…':transcript||'…'}
+              </span>
+              {isListening&&<div style={{width:2,height:12,background:C.verm,borderRadius:1,flexShrink:0,animation:'blink .85s step-end infinite'}}/>}
+            </div>
+          )}
 
           <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const}}>
             {/* MESAS */}
@@ -506,26 +502,21 @@ function MesasGrid() {
   ]
   const [sel,setSel]=useState<string|null>(null)
   return (
-    <div>
-      <div style={{padding:'13px 20px 9px',display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
-        <span style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'1.2px',color:C.txt4}}>Sala · mesas</span>
-        <span style={{fontFamily:SM,fontSize:9,color:C.amber}}>{demomesas.filter(m=>m.estado!=='libre').length} ocupadas</span>
-      </div>
-      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:5,padding:'0 20px'}}>
+    <div style={{padding:'10px 16px 4px'}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:4}}>
         {demomesas.map(m=>{
           const isSel=sel===m.id
           return (
             <div key={m.id} onClick={()=>setSel(s=>s===m.id?null:m.id)}
               style={{background:isSel?'rgba(217,68,43,.15)':(MESA_BG[m.estado]||'transparent'),
                 border:`1px solid ${isSel?C.verm:(MESA_BORDER[m.estado]||C.rule)}`,
-                borderRadius:9,padding:'8px 4px',textAlign:'center',cursor:'pointer',position:'relative',
+                borderRadius:9,padding:'7px 4px',textAlign:'center',cursor:'pointer',position:'relative',
                 animation:m.estado==='urgente'?'urg 1.6s infinite':'none',
-                boxShadow:isSel?`0 0 0 2px rgba(217,68,43,.2)`:undefined,
                 transition:'transform .12s cubic-bezier(.34,1.56,.64,1)'}}>
               {m.estado!=='libre'&&<div style={{position:'absolute',top:4,right:4,width:4,height:4,borderRadius:'50%',background:MESA_COLOR[m.estado]||C.txt4}}/>}
               <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,fontWeight:600,lineHeight:1,color:MESA_COLOR[m.estado]||C.txt3}}>{m.numero}</div>
-              <div style={{fontSize:8,color:C.txt4,marginTop:2}}>
-                {m.zona==='terraza'?'terr':m.zona==='barra'?'barra':m.estado==='libre'?'libre':m.estado}
+              <div style={{fontSize:8,color:C.txt4,marginTop:1}}>
+                {m.zona==='terraza'?'terr':m.zona==='barra'?'bar':m.estado==='libre'?'libre':m.estado}
               </div>
             </div>
           )
@@ -542,29 +533,33 @@ function ColaEnMarcha({ session, turnoId }:{session:{id:string;nombre:string;rol
     {id:'3',mesa:'M11',items:'1× manchado · 2× agua',estado:'lista',t:new Date(Date.now()-2*60000).toISOString()},
   ]
   function timer(iso:string){const s=Math.floor((Date.now()-new Date(iso).getTime())/1000);return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`}
+  if(!demo.length) return null
   return (
-    <div>
-      <div style={{padding:'13px 20px 9px',display:'flex',justifyContent:'space-between',alignItems:'baseline'}}>
-        <span style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'1.2px',color:C.txt4}}>En marcha</span>
-        <span style={{fontFamily:SM,fontSize:9,color:C.amber}}>{demo.length} activas</span>
-      </div>
-      <div style={{padding:'0 20px 10px',display:'flex',flexDirection:'column',gap:5}}>
-        {demo.map(c=>{
-          const urg=c.estado==='urgente';const done=c.estado==='lista'
-          return (
-            <div key={c.id} style={{background:C.bg1,border:`1px solid ${C.rule}`,borderLeft:`3px solid ${done?C.green:urg?C.verm:C.amber}`,borderRadius:8,padding:'9px 12px',display:'flex',justifyContent:'space-between',alignItems:'center',opacity:done?.55:1}}>
-              <div>
-                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:13,fontWeight:600}}>{c.mesa}</div>
-                <div style={{fontSize:11,color:C.txt4,marginTop:2}}>{c.items}</div>
-              </div>
-              <div style={{textAlign:'right'}}>
-                <div style={{fontFamily:SM,fontSize:11,color:urg?C.verm:C.txt2}}>{timer(c.t)}</div>
-                <div style={{fontSize:9,textTransform:'uppercase',letterSpacing:'.7px',color:done?C.green:urg?C.verm:C.green,marginTop:2}}>{done?'listo ✓':c.estado}</div>
-              </div>
+    <div style={{padding:'6px 16px 6px',display:'flex',flexDirection:'column',gap:4}}>
+      {demo.map(c=>{
+        const urg=c.estado==='urgente';const done=c.estado==='lista'
+        return (
+          <div key={c.id} style={{
+            background:C.bg1,border:`1px solid ${C.rule}`,
+            borderLeft:`3px solid ${done?C.green:urg?C.verm:C.amber}`,
+            borderRadius:8,padding:'7px 10px',
+            display:'flex',alignItems:'center',gap:10,
+            opacity:done?.5:1}}>
+            <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,fontWeight:600,
+              color:done?C.txt4:urg?C.verm:C.amber,
+              lineHeight:1,minWidth:26,textAlign:'center'}}>
+              {c.mesa.replace(/[^0-9]/g,'')}
             </div>
-          )
-        })}
-      </div>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontSize:11,color:done?C.txt4:C.txt2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{c.items}</div>
+            </div>
+            <div style={{textAlign:'right',flexShrink:0}}>
+              <div style={{fontFamily:SM,fontSize:11,color:urg?C.verm:done?C.txt4:C.txt2}}>{timer(c.t)}</div>
+              <div style={{fontSize:8,textTransform:'uppercase',letterSpacing:'.7px',color:done?C.green:urg?C.verm:C.amber,marginTop:1}}>{done?'✓':c.estado}</div>
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
