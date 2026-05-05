@@ -5,6 +5,8 @@ import ManualComanda from '@/components/ManualComanda'
 import { useProductos86, useComandas } from '@/hooks/useRealtime'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { useAlertas } from '@/hooks/useAlertas'
+import AlertaBanner from '@/components/AlertaBanner'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -123,6 +125,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const { prompt: installPrompt, install } = useInstallPrompt()
   const { subscribed, subscribe }          = usePushNotifications(session.id)
+  const { alertas, marcarLeida }           = useAlertas(session.id, session.restaurante_id)
   const productos86                        = useProductos86(turnoId??undefined)
   const { comandas }                       = useComandas(turnoId??undefined)
   const prev86 = useRef(0)
@@ -270,6 +273,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         @keyframes msgIn{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
         @keyframes a86{0%{opacity:0;transform:translateY(-100%)}10%{opacity:1;transform:translateY(0)}85%{opacity:1;transform:translateY(0)}100%{opacity:0;transform:translateY(-100%)}}
       `}</style>
+
+      {/* ALERTAS — banner audio + notificación */}
+      <AlertaBanner alertas={alertas} onMarcarLeida={marcarLeida} />
 
       {/* PUSH */}
       {showPush && (
