@@ -8,6 +8,7 @@ import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAlertas } from '@/hooks/useAlertas'
 import AlertaBanner from '@/components/AlertaBanner'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import ComandaModModal, { ItemMod } from '@/components/ComandaModModal'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -586,55 +587,61 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 }
 
 /* ─── PENDIENTES ─────────────────────────────────────────────── */
-function PendientesScreen({session,turnoId}:{session:{id:string;nombre:string;rol:string};turnoId:string|null}) {
+function PendientesScreen({session,turnoId}:{session:{id:string;nombre:string;rol:string;restaurante_id:string};turnoId:string|null}) {
   const [filtro,setFiltro] = useState('todas')
-  const demo = [
-    {id:'1',mesa:'Mesa 7',estado:'urgente',items:[{q:3,n:'Gambas al ajillo',nota:'sin guindilla'},{q:1,n:'Padrón',nota:''}],t:new Date(Date.now()-12*60000).toISOString(),who:'cocina'},
-    {id:'2',mesa:'Mesa 4',estado:'cocina', items:[{q:2,n:'Croquetas caseras',nota:''},{q:1,n:'Salmorejo',nota:''}],t:new Date(Date.now()-4*60000).toISOString(), who:'frío'},
-    {id:'3',mesa:'Mesa 11',estado:'lista', items:[{q:1,n:'Manchado sin azúcar',nota:''},{q:2,n:'Agua mineral',nota:''}],t:new Date(Date.now()-2*60000).toISOString(),who:'barra'},
-  ]
+  const [itemMod, setItemMod] = useState<{item:ItemMod;comandaId:string;mesaLabel:string}|null>(null)
+  const { comandas, refetch } = useComandas(turnoId??undefined)
+  const misComandasActivas = comandas.filter(c=>c.camarero_id===session.id&&['nueva','en_cocina'].includes(c.estado))
   const timer = (iso:string) => { const s=Math.floor((Date.now()-new Date(iso).getTime())/1000); return `${Math.floor(s/60)}m ${s%60}s` }
-  const vis = demo.filter(d=>filtro==='todas'||(filtro==='urgentes'&&d.estado==='urgente')||(filtro==='listas'&&d.estado==='lista')||(filtro==='cocina'&&d.estado==='cocina'))
+  type FiltroT = 'todas'|'nueva'|'en_cocina'
+  const vis = misComandasActivas.filter(c=>filtro==='todas'||(filtro==='nueva'&&c.estado==='nueva')||(filtro==='en_cocina'&&c.estado==='en_cocina'))
+  const cnt=(f:string)=>f==='todas'?misComandasActivas.length:misComandasActivas.filter(c=>c.estado===f).length
   return (
     <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:C.bg}}>
       <div style={{padding:'9px 16px',borderBottom:`1px solid ${C.rule}`,display:'flex',gap:5,overflowX:'auto',scrollbarWidth:'none' as const,flexShrink:0,background:C.bg1}}>
-        {['todas','cocina','urgentes','listas'].map(f=>(
+        {(['todas','nueva','en_cocina'] as FiltroT[]).map(f=>(
           <div key={f} onClick={()=>setFiltro(f)}
             style={{background:f===filtro?C.vermS:C.bg2,border:`1px solid ${f===filtro?C.verm+'55':C.rule}`,borderRadius:20,padding:'5px 12px',fontSize:11,fontWeight:f===filtro?600:400,color:f===filtro?C.verm:C.ink3,whiteSpace:'nowrap',cursor:'pointer',flexShrink:0}}>
-            {f.charAt(0).toUpperCase()+f.slice(1)}{f==='todas'?` (${demo.length})`:f==='urgentes'?` (${demo.filter(d=>d.estado==='urgente').length})`:''}
-          </div>
+            {f==='todas'?'Todas':f==='nueva'?'Enviadas':'En cocina'} ({cnt(f)})</div>
         ))}
       </div>
       <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 16px',display:'flex',flexDirection:'column',gap:7}}>
+        {vis.length===0&&(<div style={{textAlign:'center',padding:'40px 0'}}><div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink3}}>Sin comandas activas</div><div style={{fontFamily:SM,fontSize:11,color:C.ink4,marginTop:6}}>todo tranquilo</div></div>)}
         {vis.map(c=>{
-          const urg=c.estado==='urgente'; const done=c.estado==='lista'
+          const mesa=c.mesa?.codigo||'?'; const enCocina=c.estado==='en_cocina'
+          const items=(c.items||[]).filter((it:Record<string,unknown>)=>it.estado_item!=='eliminado')
           return (
-            <div key={c.id} style={{background:C.bg1,border:`1px solid ${urg?C.verm+'44':done?C.gr+'44':C.rule}`,borderRadius:12,overflow:'hidden',opacity:done?.75:1,boxShadow:'0 1px 4px rgba(26,23,20,.06)'}}>
-              <div style={{padding:'9px 13px',borderBottom:`1px solid ${C.rule}`,display:'flex',justifyContent:'space-between',alignItems:'center',background:done?C.grS:urg?C.vermS:C.bg2}}>
-                <span style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink}}>{c.mesa}</span>
-                <span style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',padding:'3px 9px',borderRadius:20,background:urg?C.verm:done?C.gr:C.amb,color:'#fff'}}>
-                  {done?'✓ lista':urg?'⚡ urgente':'cocina'}
-                </span>
+            <div key={c.id} style={{background:C.bg1,border:`1px solid ${enCocina?C.amb+'66':C.gr+'44'}`,borderRadius:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(26,23,20,.06)'}}>
+              <div style={{padding:'9px 13px',borderBottom:`1px solid ${C.rule}`,display:'flex',justifyContent:'space-between',alignItems:'center',background:enCocina?C.ambS:C.grS}}>
+                <span style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink}}>Mesa {mesa}</span>
+                <div style={{display:'flex',alignItems:'center',gap:7}}>
+                  <span style={{fontFamily:SM,fontSize:10,color:C.ink3}}>{timer(c.created_at)}</span>
+                  <span style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',padding:'3px 9px',borderRadius:20,background:enCocina?C.amb:C.gr,color:'#fff'}}>{enCocina?'cocina':'enviada'}</span>
+                </div>
               </div>
-              <div style={{padding:'8px 13px 9px'}}>
-                <div style={{display:'flex',flexDirection:'column',gap:3,marginBottom:6}}>
-                  {c.items.map((it,i)=>(
-                    <div key={i} style={{display:'flex',alignItems:'center',gap:8,opacity:done?.5:1,textDecoration:done?'line-through':'none'}}>
-                      <span style={{fontFamily:SE,fontStyle:'italic',fontSize:15,color:C.verm,minWidth:14}}>{it.q}</span>
-                      <span style={{fontSize:12,color:C.ink2}}>{it.n}</span>
-                      {it.nota&&<span style={{fontFamily:SC,fontSize:11,color:C.amb,marginLeft:'auto'}}>{it.nota}</span>}
-                    </div>
-                  ))}
-                </div>
-                <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-                  <span style={{fontFamily:SM,fontSize:11,color:urg?C.verm:done?C.ink4:C.amb}}>{timer(c.t)}{urg?' ⚠':''}</span>
-                  <span style={{fontSize:10,color:C.ink4}}>{session.nombre.split(' ')[0]} · {c.who}</span>
-                </div>
+              <div style={{padding:'8px 13px 10px'}}>
+                {(items as Array<{id:string;nombre:string;cantidad:number;cantidad_original?:number;notas?:string|null;estado:string}>).map((it,i)=>(
+                  <div key={it.id||String(i)} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:i<items.length-1?`1px solid ${C.rule}`:'none'}}>
+                    <span style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.verm,minWidth:18,flexShrink:0}}>{it.cantidad}</span>
+                    <span style={{flex:1,fontSize:13,color:C.ink2}}>{it.nombre}</span>
+                    {it.notas&&<span style={{fontFamily:SC,fontSize:11,color:C.amb}}>{it.notas}</span>}
+                    <button onClick={()=>setItemMod({item:{id:it.id,nombre:it.nombre,cantidad:it.cantidad,cantidad_original:it.cantidad_original,estado:it.estado},comandaId:c.id,mesaLabel:`Mesa ${mesa}`})}
+                      style={{background:'none',border:`1px solid ${C.rule}`,borderRadius:6,padding:'3px 8px',fontFamily:SM,fontSize:9,color:C.ink3,cursor:'pointer',flexShrink:0}}>···</button>
+                  </div>
+                ))}
+                {items.length===0&&<div style={{fontFamily:SM,fontSize:11,color:C.ink4,padding:'4px 0'}}>sin ítems activos</div>}
               </div>
             </div>
           )
         })}
       </div>
+      {itemMod&&(
+        <ComandaModModal item={itemMod.item} comandaId={itemMod.comandaId}
+          restauranteId={session.restaurante_id} camareroId={session.id}
+          mesaLabel={itemMod.mesaLabel}
+          onSuccess={()=>{setItemMod(null);refetch()}}
+          onClose={()=>setItemMod(null)}/>
+      )}
     </div>
   )
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { supabase } from '@/lib/supabase'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -73,6 +74,7 @@ const ICONS = {
   receipt: 'M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1-2-1zm3 5h10M7 10h10M7 13h6',
   shield: 'M12 2l8 3v6c0 5-3.5 9.74-8 11-4.5-1.26-8-6-8-11V5l8-3z',
   externalLink: 'M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14L21 3',
+  alertTriangle: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -2050,15 +2052,164 @@ function FacturasTab() {
   )
 }
 
+/* ─── Tab: Modificaciones / Audit Trail ─── */
+type Modificacion = {
+  id: string; tipo_accion: string; motivo_declarado: string; motivo_categoria: string
+  valor_antes: Record<string,unknown>|null; valor_despues: Record<string,unknown>|null
+  camarero_nombre: string; autorizado_nombre: string|null; requiere_autorizacion: boolean
+  estado_item_en_kds: string|null; mesa_numero: string|null; created_at: string
+}
+type Sospechoso = { camarero_id: string; camarero_nombre: string; num_eliminaciones: number; primera_accion: string; ultima_accion: string }
+
+const TIPO_META: Record<string,{label:string;color:string}> = {
+  eliminar_item:      {label:'Ítem eliminado',    color:C.red},
+  modificar_cantidad: {label:'Cantidad cambiada', color:C.amber},
+  cancelar_comanda:   {label:'Comanda cancelada', color:C.red},
+  aplicar_descuento:  {label:'Descuento aplicado',color:C.amber},
+  modificar_nota:     {label:'Nota modificada',   color:C.green},
+}
+const MOTIVO_META: Record<string,string> = {
+  error_pedido:'Error al pedir', cliente_cambio:'Cliente cambió de opinión',
+  producto_no_disponible:'Producto no disponible', orden_supervisor:'Orden supervisor', otro:'Otro',
+}
+
+function ModificacionesTab({ restauranteId }: { restauranteId: string }) {
+  const [mods, setMods]             = useState<Modificacion[]>([])
+  const [sosp, setSosp]             = useState<Sospechoso[]>([])
+  const [kpis, setKpis]             = useState<{total:number;cancelados:number;enCocina:number}|null>(null)
+  const [filtroTipo, setFiltroTipo] = useState('todos')
+  const [loading, setLoading]       = useState(true)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const hoy = new Date(); hoy.setHours(0,0,0,0)
+
+    let query = supabase.from('comanda_modificaciones')
+      .select('*').eq('restaurante_id', restauranteId)
+      .gte('created_at', new Date(Date.now()-24*60*60*1000).toISOString())
+      .order('created_at',{ascending:false}).limit(200)
+    if (filtroTipo!=='todos') query = (query as unknown as {eq:(a:string,b:string)=>typeof query}).eq('tipo_accion', filtroTipo) as typeof query
+    const {data:modsData} = await query
+    setMods((modsData||[]) as unknown as Modificacion[])
+
+    const {data:hoyData} = await supabase.from('comanda_modificaciones')
+      .select('tipo_accion,estado_item_en_kds')
+      .eq('restaurante_id', restauranteId)
+      .gte('created_at', hoy.toISOString())
+    if (hoyData) {
+      const h = hoyData as unknown as {tipo_accion:string;estado_item_en_kds:string|null}[]
+      setKpis({
+        total: h.length,
+        cancelados: h.filter(m=>['eliminar_item','cancelar_comanda'].includes(m.tipo_accion)).length,
+        enCocina: h.filter(m=>['en_proceso','listo'].includes(m.estado_item_en_kds||'')).length,
+      })
+    }
+    const {data:sospData} = await supabase.rpc('fn_camareros_sospechosos',{p_restaurante_id:restauranteId})
+    setSosp((sospData||[]) as Sospechoso[])
+    setLoading(false)
+  }, [restauranteId, filtroTipo])
+
+  useEffect(() => { load() }, [load])
+
+  const fmtHora = (iso:string) => new Date(iso).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})
+
+  return (
+    <div>
+      {sosp.length>0&&(
+        <div style={{background:C.redS,border:`1px solid ${C.red}44`,borderRadius:10,padding:'14px 18px',marginBottom:20}}>
+          <div style={{fontFamily:SM,fontSize:10,fontWeight:700,color:C.red,letterSpacing:'.1em',marginBottom:8}}>⚠ ACTIVIDAD INUSUAL DETECTADA</div>
+          {sosp.map(s=>(
+            <div key={s.camarero_id} style={{display:'flex',justifyContent:'space-between',alignItems:'center',padding:'8px 0',borderTop:`1px solid ${C.red}22`}}>
+              <div>
+                <div style={{fontFamily:SN,fontWeight:600,fontSize:14,color:C.ink}}>{s.camarero_nombre}</div>
+                <div style={{fontFamily:SM,fontSize:10,color:C.ink3}}>{fmtHora(s.primera_accion)} – {fmtHora(s.ultima_accion)}</div>
+              </div>
+              <div style={{textAlign:'right'}}>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:28,color:C.red,lineHeight:1}}>{s.num_eliminaciones}</div>
+                <div style={{fontFamily:SM,fontSize:9,color:C.ink3}}>eliminaciones/hora</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+      {kpis&&(
+        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:12,marginBottom:20}}>
+          {[
+            {v:kpis.total,     l:'Modificaciones hoy',   c:C.ink2, a:false},
+            {v:kpis.cancelados,l:'Ítems eliminados',      c:C.red,  a:kpis.cancelados>10},
+            {v:kpis.enCocina,  l:'Cancelados en cocina',  c:C.red,  a:kpis.enCocina>0},
+          ].map((k,i)=>(
+            <div key={i} style={{background:C.bone,border:`1px solid ${k.a?C.red+'55':C.rule}`,borderRadius:10,padding:'12px 16px'}}>
+              <div style={{fontFamily:SE,fontStyle:'italic',fontSize:32,color:k.c,lineHeight:1}}>{k.v}</div>
+              <div style={{fontFamily:SN,fontSize:11,color:C.ink3,marginTop:4}}>{k.l}</div>
+            </div>
+          ))}
+        </div>
+      )}
+      <div style={{display:'flex',gap:6,marginBottom:16,flexWrap:'wrap' as const}}>
+        {['todos','eliminar_item','modificar_cantidad','cancelar_comanda'].map(f=>(
+          <button key={f} onClick={()=>setFiltroTipo(f)}
+            style={{padding:'6px 14px',borderRadius:20,border:`1px solid ${filtroTipo===f?C.red+'55':C.rule}`,
+              background:filtroTipo===f?C.redS:'transparent',fontFamily:SN,fontSize:12,
+              fontWeight:filtroTipo===f?600:400,color:filtroTipo===f?C.red:C.ink3,cursor:'pointer'}}>
+            {f==='todos'?'Todos':f==='eliminar_item'?'🗑 Eliminar':f==='modificar_cantidad'?'✏ Cantidad':'✕ Cancelar'}</button>
+        ))}
+        <button onClick={load} style={{marginLeft:'auto',padding:'6px 14px',borderRadius:20,border:`1px solid ${C.rule}`,background:'transparent',fontFamily:SN,fontSize:12,color:C.ink3,cursor:'pointer'}}>↻ Actualizar</button>
+      </div>
+      {loading ? (
+        <div style={{textAlign:'center',padding:'40px 0',color:C.ink3,fontFamily:SN,fontSize:13}}>Cargando…</div>
+      ) : mods.length===0 ? (
+        <div style={{textAlign:'center',padding:'60px 0',border:`1px dashed ${C.rule}`,borderRadius:12}}>
+          <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink3}}>Sin modificaciones registradas</div>
+          <div style={{fontFamily:SN,fontSize:12,color:C.ruleS,marginTop:6}}>buena señal</div>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {mods.map(m=>{
+            const meta = TIPO_META[m.tipo_accion]||{label:m.tipo_accion,color:C.ink3}
+            const fueEnCocina=['en_proceso','listo'].includes(m.estado_item_en_kds||'')
+            const diff=m.tipo_accion==='modificar_cantidad'&&m.valor_antes&&m.valor_despues
+              ?`${(m.valor_antes as Record<string,unknown>).cantidad} → ${(m.valor_despues as Record<string,unknown>).cantidad} ud.`
+              :null
+            return (
+              <div key={m.id} style={{background:C.bone,border:`1px solid ${C.rule}`,borderRadius:10,padding:'12px 16px'}}>
+                <div style={{display:'flex',alignItems:'flex-start',justifyContent:'space-between',gap:12}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:'flex',alignItems:'center',gap:8,flexWrap:'wrap' as const,marginBottom:5}}>
+                      <span style={{fontFamily:SN,fontWeight:600,fontSize:13,color:meta.color}}>{meta.label}</span>
+                      {fueEnCocina&&<span style={{fontFamily:SM,fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:99,background:C.redS,color:C.red}}>en cocina</span>}
+                      {m.autorizado_nombre&&<span style={{fontFamily:SM,fontSize:9,padding:'2px 8px',borderRadius:99,background:C.greenS,color:C.green}}>✓ auth: {m.autorizado_nombre}</span>}
+                    </div>
+                    <div style={{display:'flex',gap:12,flexWrap:'wrap' as const,alignItems:'center'}}>
+                      <span style={{fontFamily:SN,fontSize:13,color:C.ink}}>{m.camarero_nombre}</span>
+                      {m.mesa_numero&&<span style={{fontFamily:SM,fontSize:10,color:C.ink3}}>Mesa {m.mesa_numero}</span>}
+                      {diff&&<span style={{fontFamily:SM,fontSize:10,color:C.amber}}>{diff}</span>}
+                    </div>
+                    <div style={{fontFamily:SN,fontSize:11,color:C.ink3,marginTop:4,fontStyle:'italic'}}>
+                      &ldquo;{MOTIVO_META[m.motivo_categoria]||m.motivo_declarado}&rdquo;
+                    </div>
+                  </div>
+                  <div style={{fontFamily:SM,fontSize:11,color:C.ink3,flexShrink:0}}>{fmtHora(m.created_at)}</div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const TABS = [
-  { id: 'camareros',   label: 'Camareros',   icon: ICONS.users   },
-  { id: 'mesas',       label: 'Mesas',       icon: ICONS.grid    },
-  { id: 'impresoras',  label: 'Impresoras',  icon: ICONS.printer },
-  { id: 'turno',       label: 'Turno',       icon: ICONS.clock   },
-  { id: 'analytics',   label: 'Analytics',   icon: ICONS.chart   },
-  { id: 'carta',       label: 'Carta',       icon: ICONS.book    },
-  { id: 'facturas',    label: 'Facturas',    icon: ICONS.receipt },
-  { id: 'restaurante', label: 'Restaurante', icon: ICONS.shield  },
+  { id: 'camareros',       label: 'Camareros',      icon: ICONS.users         },
+  { id: 'mesas',           label: 'Mesas',           icon: ICONS.grid          },
+  { id: 'impresoras',      label: 'Impresoras',      icon: ICONS.printer       },
+  { id: 'turno',           label: 'Turno',           icon: ICONS.clock         },
+  { id: 'analytics',       label: 'Analytics',       icon: ICONS.chart         },
+  { id: 'carta',           label: 'Carta',           icon: ICONS.book          },
+  { id: 'facturas',        label: 'Facturas',        icon: ICONS.receipt       },
+  { id: 'modificaciones',  label: 'Modificaciones',  icon: ICONS.alertTriangle },
+  { id: 'restaurante',     label: 'Restaurante',     icon: ICONS.shield        },
 ]
 
 export default function OwnerPage() {
@@ -2128,14 +2279,15 @@ export default function OwnerPage() {
         </div>
 
         {/* Tab content */}
-        {tab === 'camareros'  && <CamarerosTab/>}
-        {tab === 'mesas'      && <MesasTab/>}
-        {tab === 'impresoras' && <ImpresorasTab/>}
-        {tab === 'turno'      && <TurnoTab/>}
-        {tab === 'analytics'  && <Analytics compact />}
-        {tab === 'carta'       && <CartaTab/>}
-        {tab === 'facturas'    && <FacturasTab/>}
-        {tab === 'restaurante' && <RestauranteTab/>}
+        {tab === 'camareros'       && <CamarerosTab/>}
+        {tab === 'mesas'           && <MesasTab/>}
+        {tab === 'impresoras'      && <ImpresorasTab/>}
+        {tab === 'turno'           && <TurnoTab/>}
+        {tab === 'analytics'       && <Analytics compact />}
+        {tab === 'carta'           && <CartaTab/>}
+        {tab === 'facturas'        && <FacturasTab/>}
+        {tab === 'modificaciones'  && <ModificacionesTab restauranteId={session.restaurante_id}/>}
+        {tab === 'restaurante'     && <RestauranteTab/>}
       </div>
     </div>
   )
