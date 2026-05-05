@@ -572,7 +572,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           alergenosMesa={alergenosMesa}
           onAlergenosMesa={()=>setMostrarAlergenos(true)}
           subscribed={subscribed} onSubscribe={subscribe}
-          installPrompt={installPrompt} onInstall={install}
+          installPrompt={!!installPrompt} onInstall={install}
           onLogout={logout}
         />
       )}
@@ -600,7 +600,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
               <circle cx="12" cy="12" r="3"/>
               <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
             </svg>)},
-        ] as {id:Tab;label:string;icon:React.ReactNode}[]).map(t=>(
+        ] as {id:Tab;label:string;icon:React.JSX.Element}[]).map(t=>(
           <button key={t.id} onClick={()=>setTab(t.id)}
             style={{flex:1,padding:'9px 4px 13px',background:'transparent',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,position:'relative',color:tab===t.id?C.verm:C.txt4,transition:'color .15s'}}>
             {tab===t.id&&<div style={{position:'absolute',top:0,left:'22%',right:'22%',height:2,background:C.verm,borderRadius:'0 0 3px 3px'}}/>}
@@ -679,10 +679,10 @@ function ConfigScreen({
   fontSize:'normal'|'grande'; onFontSize:(v:'normal'|'grande')=>void
   alergenosMesa:string[]; onAlergenosMesa:()=>void
   subscribed:boolean; onSubscribe:()=>void
-  installPrompt:unknown; onInstall:()=>void
+  installPrompt:boolean; onInstall:()=>void
   onLogout:()=>void
 }) {
-  const Row = ({label,sub,right}:{label:string;sub?:string;right:React.ReactNode})=>(
+  const Row = ({label,sub,right}:{label:string;sub?:string;right:React.ReactElement})=>(
     <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
       <div>
         <div style={{fontSize:13,fontWeight:500}}>{label}</div>
