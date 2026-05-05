@@ -141,7 +141,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   // Todas las mesas ocupadas del turno (de cualquier camarero) para el grid
   const mesasOcupadas = comandas
-    .filter(c => ['nueva','en_cocina'].includes(c.estado) || c.tipo==='cuenta')
+    .filter(c => ['nueva','en_cocina'].includes(c.estado))
     .reduce((acc: Record<string,typeof comandas[0]>, c) => {
       // Una entrada por mesa (la más reciente)
       if (!acc[c.mesa_id] || new Date(c.created_at) > new Date(acc[c.mesa_id].created_at)) {

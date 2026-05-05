@@ -1,5 +1,5 @@
 export type MesaEstado = 'libre' | 'activa' | 'marchar' | 'aviso' | 'urgente' | 'cuenta'
-export type ComandaEstado = 'nueva' | 'en_cocina' | 'lista' | 'entregada' | 'cancelada'
+export type ComandaEstado = 'nueva' | 'en_cocina' | 'lista' | 'entregada' | 'cancelada' | 'cerrada'
 export type ItemEstado = 'pendiente' | 'en_proceso' | 'listo'
 
 export interface Mesa {
