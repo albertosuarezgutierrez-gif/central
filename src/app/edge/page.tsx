@@ -11,6 +11,7 @@ import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
 import AlertaBanner from '@/components/AlertaBanner'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import ComandaModModal, { ItemMod } from '@/components/ComandaModModal'
+import ComensalesModal from '@/components/edge/ComensalesModal'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -118,6 +119,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [chatMsgs, setChatMsgs]     = useState<ChatMsg[]>([])
   // Mesa seleccionada para ver detalle
   const [mesaDetalle, setMesaDetalle] = useState<{id:string;codigo:string}|null>(null)
+  const [comensalesModal, setComensalesModal] = useState<{
+    mesaId: string; mesaCodigo: string; capacidad?: number
+  } | null>(null)
+  const [servicioConfig, setServicioConfig] = useState<{
+    activo: boolean; precio: number; nombre: string; skip: boolean
+  }>({ activo: false, precio: 1.50, nombre: 'Cubierto', skip: true })
+  const [mesasPaxMap, setMesasPaxMap] = useState<Record<string, number>>({})
 
   // Config camarero
   const [voiceConfirm, setVoiceConfirm] = useState(true)
@@ -170,6 +178,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       if (cfg.zonaAsignada) setZonaAsignada(cfg.zonaAsignada)
       if (cfg.fontBig !== undefined) setFontBig(cfg.fontBig)
     } catch {}
+    // Cargar config de servicio/cubierto
+    const ses = localStorage.getItem('ia_rest_session') ?? ''
+    fetch('/api/owner/config/servicio', { headers: { 'x-ia-session': ses } })
+      .then(r => r.json())
+      .then(d => {
+        if (d.config) setServicioConfig({
+          activo:  d.config.servicio_activo  ?? false,
+          precio:  d.config.servicio_precio  ?? 1.50,
+          nombre:  d.config.servicio_nombre  ?? 'Cubierto',
+          skip:    d.config.servicio_skip    ?? true,
+        })
+      })
+      .catch(() => {})
   }, [])
 
   const saveCfg = useCallback((patch: Record<string,unknown>) => {
@@ -178,6 +199,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       localStorage.setItem('ia_cfg', JSON.stringify({...cfg,...patch}))
     } catch {}
   }, [])
+  void mesasPaxMap // usado en sessionStorage via ComensalesModal
 
   useEffect(() => {
     if (screen !== 'speaking' || !brain) return
@@ -645,6 +667,28 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             setMesaDetalle(null); setTab('hablar')
             addMsg('sistema', `Añadiendo a ${codigo}. Mantén PTT.`, 'pregunta')
           }}
+        />
+      )}
+
+      {/* ── COMENSALES MODAL ───────────────────────────────────── */}
+      {comensalesModal && (
+        <ComensalesModal
+          mesaCodigo={comensalesModal.mesaCodigo}
+          capacidad={comensalesModal.capacidad}
+          servicio={servicioConfig}
+          onConfirmar={(pax, incluirServicio) => {
+            setMesasPaxMap(prev => ({ ...prev, [comensalesModal.mesaId]: pax }))
+            setComensalesModal(null)
+            // Abrir la mesa con el detalle ya conociendo los comensales
+            setMesaDetalle({ id: comensalesModal.mesaId, codigo: comensalesModal.mesaCodigo })
+            // Guardar en sessionStorage para que la próxima comanda lo sepa
+            sessionStorage.setItem(`pax_${comensalesModal.mesaId}`, JSON.stringify({ pax, incluirServicio }))
+          }}
+          onSaltarse={() => {
+            setComensalesModal(null)
+            setMesaDetalle({ id: comensalesModal.mesaId, codigo: comensalesModal.mesaCodigo })
+          }}
+          onClose={() => setComensalesModal(null)}
         />
       )}
 
