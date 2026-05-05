@@ -2980,20 +2980,44 @@ function CajaTab() {
   )
 }
 
-const TABS = [
-  { id: 'camareros',       label: 'Camareros',      icon: ICONS.users         },
-  { id: 'mesas',           label: 'Mesas',           icon: ICONS.grid          },
-  { id: 'secciones',       label: 'Secciones',       icon: ICONS.sparkle       },
-  { id: 'carta',           label: 'Carta',           icon: ICONS.book          },
-  { id: 'impresoras',      label: 'Impresoras',      icon: ICONS.printer       },
-  { id: 'flujos',          label: 'Flujos',          icon: ICONS.wifi          },
-  { id: 'turno',           label: 'Turno',           icon: ICONS.clock         },
-  { id: 'caja',            label: 'Caja',            icon: ICONS.receipt       },
-  { id: 'analytics',       label: 'Analytics',       icon: ICONS.chart         },
-  { id: 'facturas',        label: 'Facturas',        icon: ICONS.receipt       },
-  { id: 'modificaciones',  label: 'Modificaciones',  icon: ICONS.alertTriangle },
-  { id: 'restaurante',     label: 'Restaurante',     icon: ICONS.shield        },
+const GRUPOS = [
+  {
+    id: 'sala', label: 'Sala', icon: ICONS.users,
+    tabs: [
+      { id: 'camareros', label: 'Camareros', icon: ICONS.users  },
+      { id: 'mesas',     label: 'Mesas',     icon: ICONS.grid   },
+    ]
+  },
+  {
+    id: 'carta', label: 'Carta', icon: ICONS.book,
+    tabs: [
+      { id: 'carta',     label: 'Productos', icon: ICONS.book    },
+      { id: 'secciones', label: 'Secciones', icon: ICONS.sparkle },
+    ]
+  },
+  {
+    id: 'servicio', label: 'Servicio', icon: ICONS.chart,
+    tabs: [
+      { id: 'turno',     label: 'Turno',     icon: ICONS.clock   },
+      { id: 'caja',      label: 'Caja',      icon: ICONS.receipt },
+      { id: 'analytics', label: 'Analytics', icon: ICONS.chart   },
+      { id: 'facturas',  label: 'Facturas',  icon: ICONS.receipt },
+    ]
+  },
+  {
+    id: 'config', label: 'Config', icon: ICONS.shield,
+    tabs: [
+      { id: 'impresoras',     label: 'Impresoras',    icon: ICONS.printer       },
+      { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          },
+      { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle },
+      { id: 'restaurante',    label: 'Restaurante',    icon: ICONS.shield        },
+    ]
+  },
 ]
+
+function getGrupo(tabId: string) {
+  return GRUPOS.find(g => g.tabs.some(t => t.id === tabId)) ?? GRUPOS[0]
+}
 
 export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
@@ -3052,36 +3076,62 @@ export default function OwnerPage() {
       </header>
 
       <div className="owner-wrap">
-        {/* Tab nav — scroll horizontal en móvil */}
-        <div className="owner-tabs" style={{ marginBottom:20, background:C.paper2, border:`1px solid ${C.rule}`, borderRadius:8, padding:4 }}>
-          {TABS.map(t => (
-            <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6,
-                padding:'8px 12px', borderRadius:6, border:'none', cursor:'pointer',
-                background: tab===t.id ? C.bone : 'transparent',
-                color: tab===t.id ? C.ink : C.ink3,
-                fontFamily:SN, fontSize:13, fontWeight:tab===t.id?600:500,
-                boxShadow: tab===t.id ? `0 1px 0 rgba(26,23,20,.04), 0 1px 3px rgba(26,23,20,.1)` : 'none',
-                transition:'all .15s', whiteSpace:'nowrap' }}>
-              <Icon d={t.icon} size={15}/>
-              <span className="owner-tab-lbl">{t.label}</span>
-            </button>
-          ))}
+        {/* ── Nav grupos (4 pills) ── */}
+        <div className="owner-tabs" style={{ marginBottom:4, gap:4 }}>
+          {GRUPOS.map(g => {
+            const activo = getGrupo(tab).id === g.id
+            return (
+              <button key={g.id}
+                onClick={() => setTab(g.tabs[0].id)}
+                style={{ flexShrink:0, display:'flex', alignItems:'center', gap:6,
+                  padding:'9px 16px', borderRadius:6, border:'none', cursor:'pointer',
+                  background: activo ? C.ink : C.paper2,
+                  color: activo ? C.paper : C.ink3,
+                  fontFamily:SN, fontSize:13, fontWeight:600,
+                  transition:'all .15s', whiteSpace:'nowrap' }}>
+                <Icon d={g.icon} size={15}/>
+                <span className="owner-tab-lbl">{g.label}</span>
+              </button>
+            )
+          })}
         </div>
 
-        {/* Tab content */}
-        {tab === 'camareros'       && <CamarerosTab/>}
-        {tab === 'mesas'           && <MesasTab/>}
-        {tab === 'secciones'       && <SeccionesTab/>}
-        {tab === 'impresoras'      && <ImpresorasTab/>}
-        {tab === 'flujos'          && <FlujoTab/>}
-        {tab === 'turno'           && <TurnoTab/>}
-        {tab === 'caja'            && <CajaTab/>}
-        {tab === 'analytics'       && <Analytics compact />}
-        {tab === 'carta'           && <CartaTab/>}
-        {tab === 'facturas'        && <FacturasTab/>}
-        {tab === 'modificaciones'  && <ModificacionesTab restauranteId={session.restaurante_id}/>}
-        {tab === 'restaurante'     && <RestauranteTab/>}
+        {/* ── Sub-tabs del grupo activo ── */}
+        {(() => {
+          const grupo = getGrupo(tab)
+          if (grupo.tabs.length <= 1) return null
+          return (
+            <div style={{ display:'flex', gap:2, marginBottom:20, borderBottom:`1px solid ${C.rule}`, paddingBottom:0 }}>
+              {grupo.tabs.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)}
+                  style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
+                    background:'none', border:'none', borderBottom:`2px solid ${tab===t.id ? C.red : 'transparent'}`,
+                    color: tab===t.id ? C.ink : C.ink3,
+                    fontFamily:SN, fontSize:12, fontWeight:tab===t.id?600:500,
+                    cursor:'pointer', whiteSpace:'nowrap', transition:'all .15s', marginBottom:-1 }}>
+                  <Icon d={t.icon} size={13}/>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          )
+        })()}
+
+        {/* ── Contenido ── */}
+        <div style={{ marginTop: getGrupo(tab).tabs.length <= 1 ? 20 : 0 }}>
+          {tab === 'camareros'      && <CamarerosTab/>}
+          {tab === 'mesas'          && <MesasTab/>}
+          {tab === 'secciones'      && <SeccionesTab/>}
+          {tab === 'carta'          && <CartaTab/>}
+          {tab === 'turno'          && <TurnoTab/>}
+          {tab === 'caja'           && <CajaTab/>}
+          {tab === 'analytics'      && <Analytics compact />}
+          {tab === 'facturas'       && <FacturasTab/>}
+          {tab === 'impresoras'     && <ImpresorasTab/>}
+          {tab === 'flujos'         && <FlujoTab/>}
+          {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
+          {tab === 'restaurante'    && <RestauranteTab/>}
+        </div>
       </div>
     </div>
   )
