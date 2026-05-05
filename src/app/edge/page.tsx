@@ -1,5 +1,5 @@
 'use client'
-import { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ManualComanda from '@/components/ManualComanda'
 import { useProductos86, useComandas } from '@/hooks/useRealtime'
