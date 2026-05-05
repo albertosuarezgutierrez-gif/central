@@ -43,13 +43,6 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
   useEffect(() => {
     const headers = { 'x-ia-session': session_str }
 
-    // Total real desde la API si el prop es 0
-    if (total <= 0) {
-      setLoadingTotal(true)
-      fetch(`/api/mesa/x/comanda`, { headers })  // se obtiene desde el sheet de mesa
-      setLoadingTotal(false)
-    }
-
     // Métodos de pago del restaurante
     fetch('/api/metodos-pago', { headers })
       .then(r => r.json())

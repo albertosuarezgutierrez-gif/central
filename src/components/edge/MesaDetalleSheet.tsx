@@ -143,14 +143,14 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
             <div>
               <div style={{display:'flex',alignItems:'center',gap:10}}>
                 <span style={{fontFamily:SE,fontStyle:'italic',fontSize:24,color:C.ink}}>
-                  {mesaCodigo.replace(/[^0-9]/g,'')}
+                  {parseInt(mesaCodigo.replace(/[^0-9]/g,''),10)||mesaCodigo}
                 </span>
                 <span style={{fontSize:11,color:C.ink3}}>{mesaCodigo}</span>
                 {comanda && (
                   <span style={{fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,
                     background:estadoBg(comanda.estado),color:estadoColor(comanda.estado),
                     textTransform:'uppercase',letterSpacing:'.7px'}}>
-                    {comanda.estado}
+                    {({'nueva':'Nueva','en_cocina':'En cocina','lista':'Lista ✓','cuenta':'Cuenta','cerrada':'Cerrada'})[comanda.estado]||comanda.estado}
                   </span>
                 )}
               </div>

@@ -128,7 +128,16 @@ export async function POST(req: NextRequest) {
       if (brainResult.items.length > 0) {
         const itemsConFormato = brainResult.items.filter(i => i.formato)
         const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
+        const precioMap: Record<string, { id: string; precio: number }> = {}
         const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+
+        // Precio base de TODOS los productos (lookup automático desde carta)
+        const todosNombres = [...new Set(brainResult.items.map(i => i.nombre))]
+        const { data: todosProds } = await supabase
+          .from('productos').select('id,nombre,precio').in('nombre', todosNombres).eq('restaurante_id', rid)
+        for (const p of todosProds ?? []) {
+          if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
+        }
 
         if (itemsConFormato.length > 0) {
           const nombresUnicos = [...new Set(itemsConFormato.map(i => i.nombre))]
@@ -148,10 +157,12 @@ export async function POST(req: NextRequest) {
         await supabase.from('comanda_items').insert(
           brainResult.items.map((item) => {
             const fmtData = item.formato ? (formatoMap[`${norm(item.nombre)}:${norm(item.formato)}`] ?? null) : null
+            const prodBase = precioMap[norm(item.nombre)] ?? null
             return {
               comanda_id: comanda.id, nombre: item.nombre, cantidad: item.cantidad,
-              notas: item.notas || null, producto_id: item.producto_id ?? null,
-              precio_unitario: fmtData?.precio ?? item.precio_unitario ?? null,
+              notas: item.notas || null,
+              producto_id: item.producto_id ?? prodBase?.id ?? null,
+              precio_unitario: fmtData?.precio ?? item.precio_unitario ?? prodBase?.precio ?? null,
               restaurante_id: rid,
               formato_id: fmtData?.id ?? null,
               formato_nombre: fmtData?.nombre ?? null,

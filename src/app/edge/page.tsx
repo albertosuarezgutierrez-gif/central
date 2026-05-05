@@ -475,7 +475,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   <div key={c.id} onClick={()=>setMesaDetalle({id:c.mesa_id, codigo:mesa})}
                     style={{background:bg,border:`1px solid ${col}44`,borderLeft:`3px solid ${col}`,borderRadius:8,padding:'7px 10px',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
                     <div style={{fontFamily:SE,fontStyle:'italic',fontSize:19,fontWeight:600,color:col,lineHeight:1,minWidth:24,textAlign:'center'}}>
-                      {mesa.replace(/[^0-9]/g,'')}
+                      {parseInt(mesa.replace(/[^0-9]/g,''),10)||mesa}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,color:C.ink2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{resumen||'—'}</div>
