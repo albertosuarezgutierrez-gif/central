@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState } from 'react'
 
-export type Rol = 'super_admin' | 'owner' | 'admin' | 'camarero' | 'cocina'
+export type Rol = 'super_admin' | 'owner' | 'admin' | 'jefe_sala' | 'camarero' | 'cocina'
 
 export interface Session {
   id: string
@@ -16,6 +16,7 @@ const REDIRECT: Record<Rol, string> = {
   super_admin: '/super',
   owner:       '/owner',
   admin:       '/hub',
+  jefe_sala:   '/jefe',
   camarero:    '/edge',
   cocina:      '/kds',
 }
