@@ -17,6 +17,7 @@ interface ItemParaPrint {
   cantidad: number
   notas?: string | null
   seccion_id?: string | null
+  producto_id?: string | null   // para matching por producto v3
 }
 
 interface PrintPayload {
@@ -163,15 +164,19 @@ export function generarTextoPlano(payload: PrintPayload): string {
 
 interface ReglaEnvio {
   zona_tipo:           string | null
+  zona_tipos:          string[]          // multi-zona v3
   seccion_id:          string | null
   seccion_ids:         string[]
+  producto_ids:        string[]          // producto-específico v3
   destino_tipo:        'impresora' | 'kds'
   destino_ref:         string
+  destino_kds_ref:     string | null     // destino dual v3
   prioridad:           number
+  es_fallback:         boolean           // regla catch-all v3
   imprimir_al_marchar: boolean
   impresora_pase_id:   string | null
-  hora_desde:          string | null   // "HH:MM"
-  hora_hasta:          string | null   // "HH:MM"
+  hora_desde:          string | null     // "HH:MM"
+  hora_hasta:          string | null     // "HH:MM"
 }
 
 function horaEnRango(desde: string | null, hasta: string | null): boolean {
@@ -184,36 +189,50 @@ function horaEnRango(desde: string | null, hasta: string | null): boolean {
 }
 
 function resolverDestinoItem(
-  seccion: string,
-  zona:    string | null | undefined,
-  reglas:  ReglaEnvio[]
+  seccion:    string,
+  zona:       string | null | undefined,
+  reglas:     ReglaEnvio[],
+  productoId: string | null = null
 ): ReglaEnvio | null {
   if (!reglas.length) return null
 
-  const scored = reglas
-    .filter(r => {
-      // Filtro de horario
-      if (!horaEnRango(r.hora_desde, r.hora_hasta)) return false
-      // Filtro de zona
-      const zonaOk = r.zona_tipo === null || r.zona_tipo === zona
-      // Filtro de sección: usar seccion_ids (array) con fallback a seccion_id legacy
-      const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
-      const seccionOk = ids.length === 0 || ids.includes(seccion)
-      return zonaOk && seccionOk
-    })
-    .map(r => {
-      const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
-      return {
-        regla: r,
-        score: r.prioridad * 100
-          + (r.zona_tipo !== null     ? 10 : 0)
-          + (ids.length  > 0          ?  5 : 0)
-          + (r.hora_desde !== null    ?  2 : 0),  // bonus horario específico
-      }
-    })
-    .sort((a, b) => b.score - a.score)
+  // Separar fallbacks del resto — se evalúan sólo si ninguna regla normal aplica
+  const normales  = reglas.filter(r => !r.es_fallback)
+  const fallbacks = reglas.filter(r =>  r.es_fallback)
 
-  return scored[0]?.regla ?? null
+  const evaluar = (candidatas: ReglaEnvio[]) => {
+    const scored = candidatas
+      .filter(r => {
+        if (!horaEnRango(r.hora_desde, r.hora_hasta)) return false
+        // Zona: usar zona_tipos (v3) con fallback a zona_tipo legacy
+        const zonaTypes = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+        const zonaOk = zonaTypes.length === 0 || (zona != null && zonaTypes.includes(zona))
+        if (!zonaOk) return false
+        // Producto específico (v3): si la regla tiene producto_ids, solo aplica a esos productos
+        const prodIds = r.producto_ids ?? []
+        if (prodIds.length > 0) return productoId != null && prodIds.includes(productoId)
+        // Sección: usar seccion_ids con fallback a seccion_id legacy
+        const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
+        return ids.length === 0 || ids.includes(seccion)
+      })
+      .map(r => {
+        const zonaTypes = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+        const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
+        const prodIds = r.producto_ids ?? []
+        return {
+          regla: r,
+          score: r.prioridad * 100
+            + (zonaTypes.length > 0 ? 10 : 0)
+            + (prodIds.length  > 0  ?  8 : 0)  // producto > sección (más específico)
+            + (ids.length      > 0  ?  5 : 0)
+            + (r.hora_desde != null ?  2 : 0),
+        }
+      })
+      .sort((a, b) => b.score - a.score)
+    return scored[0]?.regla ?? null
+  }
+
+  return evaluar(normales) ?? evaluar(fallbacks)
 }
 
 // ── crearPrintJobs ───────────────────────────────────────────
@@ -250,10 +269,17 @@ export async function crearPrintJobs(
   if (comanda.restaurante_id) {
     const { data: reglasDB } = await supabase
       .from('reglas_envio')
-      .select('zona_tipo, seccion_id, seccion_ids, destino_tipo, destino_ref, prioridad, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
+      .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
       .eq('restaurante_id', comanda.restaurante_id)
       .eq('activa', true)
-    reglas = (reglasDB ?? []) as ReglaEnvio[]
+    reglas = (reglasDB ?? []).map((r: Record<string, unknown>) => ({
+      ...r,
+      zona_tipos:   (r['zona_tipos'] as string[]) ?? [],
+      seccion_ids:  (r['seccion_ids'] as string[]) ?? [],
+      producto_ids: (r['producto_ids'] as string[]) ?? [],
+      es_fallback:  r['es_fallback'] ?? false,
+      destino_kds_ref: r['destino_kds_ref'] as string | null ?? null,
+    })) as ReglaEnvio[]
   }
 
   const hayReglas = reglas.length > 0
@@ -280,8 +306,6 @@ export async function crearPrintJobs(
   const reglasConPase: Array<{ seccion: string; impresora_pase_id: string }> = []
 
   // 4. Agrupar items por destino
-  //    Si hay reglas → usa motor de enrutamiento
-  //    Si no → comportamiento legacy (seccion → impresora del mapa)
   const porDestino: Record<string, {
     items: ItemParaPrint[]
     destino_tipo: 'impresora' | 'kds'
@@ -290,27 +314,28 @@ export async function crearPrintJobs(
   }> = {}
 
   for (const item of itemsConSeccion) {
-    const seccion = item.seccion_id || 'otras'
+    const seccion    = item.seccion_id || 'otras'
+    const productoId = item.producto_id ?? null   // necesario para matching v3
+
     let destino_tipo: 'impresora' | 'kds'
     let destino_ref: string
     let seccion_label: string
+    let destino_kds_ref: string | null = null
 
     if (hayReglas) {
-      // ── Motor de enrutamiento configurable ──
-      const regla = resolverDestinoItem(seccion, comanda.zona_tipo, reglas)
+      const regla = resolverDestinoItem(seccion, comanda.zona_tipo, reglas, productoId)
       if (regla) {
-        destino_tipo  = regla.destino_tipo
-        destino_ref   = regla.destino_ref
-        seccion_label = seccion
-        // Registrar regla de pase si aplica
+        destino_tipo    = regla.destino_tipo
+        destino_ref     = regla.destino_ref
+        destino_kds_ref = regla.destino_kds_ref ?? null
+        seccion_label   = seccion
         if (regla.imprimir_al_marchar && regla.impresora_pase_id) {
           reglasConPase.push({ seccion, impresora_pase_id: regla.impresora_pase_id })
         }
       } else {
-        // Sin regla que aplique: fallback a impresora por sección
         const imp = impresoraMap[seccion] ?? impresoraMap['otras']
         if (!imp) {
-          console.warn(`[COURIER] Sin regla ni impresora para sección "${seccion}" (zona: ${comanda.zona_tipo}) — ítem omitido`)
+          console.warn(`[COURIER] Sin regla ni impresora para sección "${seccion}" — ítem omitido`)
           continue
         }
         destino_tipo  = 'impresora'
@@ -318,7 +343,6 @@ export async function crearPrintJobs(
         seccion_label = seccion
       }
     } else {
-      // ── Comportamiento legacy: seccion → impresora ──
       const imp = impresoraMap[seccion] ?? impresoraMap['otras']
       if (!imp) {
         console.warn(`[COURIER] Sin impresora para sección "${seccion}" — ítem omitido`)
@@ -329,16 +353,21 @@ export async function crearPrintJobs(
       seccion_label = seccion
     }
 
-    // Items KDS: ya están en DB y KDS los ve por realtime → no crear print_job
-    if (destino_tipo === 'kds') {
+    // KDS: sin print_job (los ve por realtime)
+    if (destino_tipo === 'kds' && !destino_kds_ref) {
       console.log(`[COURIER] ítem "${item.nombre}" → KDS (${destino_ref}) — sin print_job`)
       continue
     }
 
-    // Agrupar por impresora destino
-    const key = destino_ref
+    // Destino dual: KDS + Impresora → crear print_job para impresora
+    // (el KDS ya recibe el ítem por realtime)
+    const impresoraDestino = destino_tipo === 'impresora' ? destino_ref
+      : destino_kds_ref ? null : null   // kds-only sin dual: sin print_job
+    if (!impresoraDestino) continue
+
+    const key = impresoraDestino
     if (!porDestino[key]) {
-      porDestino[key] = { items: [], destino_tipo, destino_ref, seccion_label }
+      porDestino[key] = { items: [], destino_tipo: 'impresora', destino_ref: impresoraDestino, seccion_label }
     }
     porDestino[key].items.push(item)
   }
@@ -433,12 +462,19 @@ export async function crearPrintJobMarchar(
   // Cargar reglas con pase activo
   const { data: reglasDB } = await supabase
     .from('reglas_envio')
-    .select('zona_tipo, seccion_id, seccion_ids, destino_tipo, destino_ref, prioridad, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
+    .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
     .eq('restaurante_id', comanda.restaurante_id)
     .eq('activa', true)
     .eq('imprimir_al_marchar', true)
 
-  const reglas = (reglasDB ?? []) as ReglaEnvio[]
+  const reglas = ((reglasDB ?? []).map((r: Record<string, unknown>) => ({
+    ...r,
+    zona_tipos:   (r['zona_tipos'] as string[]) ?? [],
+    seccion_ids:  (r['seccion_ids'] as string[]) ?? [],
+    producto_ids: (r['producto_ids'] as string[]) ?? [],
+    es_fallback:  r['es_fallback'] ?? false,
+    destino_kds_ref: r['destino_kds_ref'] as string | null ?? null,
+  }))) as ReglaEnvio[]
   if (!reglas.length) return jobIds
 
   // Resolver secciones de los items

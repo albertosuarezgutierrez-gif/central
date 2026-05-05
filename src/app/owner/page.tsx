@@ -2065,24 +2065,28 @@ function ImpresorasTab() {
 
 type ReglaEnvio = {
   id: string
+  nombre: string | null
   zona_tipo: string | null
+  zona_tipos: string[]
   seccion_id: string | null
   seccion_ids: string[]
+  producto_ids: string[]
   destino_tipo: 'impresora' | 'kds'
   destino_ref: string
+  destino_kds_ref: string | null
   destino_nombre: string | null
   prioridad: number
   activa: boolean
+  es_fallback: boolean
   imprimir_al_marchar: boolean
   impresora_pase_id: string | null
   hora_desde: string | null
   hora_hasta: string | null
 }
-type CatImp  = { id: string; nombre: string; seccion_id: string; connection_type: string }
-type CatSec  = { id: string; nombre: string; color_kds: string; icono: string }
-type CatZona = { id: string; tipo: string; nombre: string }
-
-const DESTINO_ICON: Record<string, string> = { impresora: '🖨️', kds: '📺' }
+type CatImp      = { id: string; nombre: string; seccion_id: string; connection_type: string }
+type CatSec      = { id: string; nombre: string; color_kds: string; icono: string }
+type CatZona     = { id: string; tipo: string; nombre: string }
+type CatProducto = { id: string; nombre: string; seccion: string; precio: number }
 
 function FlujoTab() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
@@ -2090,19 +2094,33 @@ function FlujoTab() {
   const [impresoras, setImpresoras] = useState<CatImp[]>([])
   const [secciones,  setSecciones]  = useState<CatSec[]>([])
   const [zonas,      setZonas]      = useState<CatZona[]>([])
+  const [productos,  setProductos]  = useState<CatProducto[]>([])
   const [loading,    setLoading]    = useState(true)
   const [modal,      setModal]      = useState(false)
   const [saving,     setSaving]     = useState(false)
   const [err,        setErr]        = useState('')
   const [ordenModified, setOrdenModified] = useState(false)
   const [savingOrden,   setSavingOrden]   = useState(false)
-  const [dragging, setDragging] = useState<string | null>(null)
-  const [dragOver, setDragOver] = useState<string | null>(null)
+  const [dragging,  setDragging]  = useState<string | null>(null)
+  const [dragOver,  setDragOver]  = useState<string | null>(null)
+  // tree: which sections are expanded in the product picker
+  const [secAbiertas, setSecAbiertas] = useState<Set<string>>(new Set())
+  // simulator
+  const [simOpen,    setSimOpen]    = useState(false)
+  const [simProdId,  setSimProdId]  = useState('')
+  const [simZona,    setSimZona]    = useState('')
+  const [simResult,  setSimResult]  = useState<{ ok: boolean; msg: string } | null>(null)
+
   const [form, setForm] = useState({
-    zona_tipo:           '',
+    nombre:              '',
+    zona_tipos:          [] as string[],
     seccion_ids:         [] as string[],
-    destino_tipo:        'impresora' as 'impresora' | 'kds',
-    destino_ref:         '',
+    producto_ids:        [] as string[],
+    dest_imp:            true,
+    dest_kds:            false,
+    destino_imp_ref:     '',
+    destino_kds_ref:     '',
+    es_fallback:         false,
     imprimir_al_marchar: false,
     impresora_pase_id:   '',
     hora_desde:          '',
@@ -2114,56 +2132,204 @@ function FlujoTab() {
     const r = await fetch('/api/owner/reglas-envio', { headers: sh() })
     if (r.ok) {
       const d = await r.json()
-      setReglas(d.reglas)
-      setImpresoras(d.impresoras)
-      setSecciones(d.secciones)
-      setZonas(d.zonas)
+      setReglas(d.reglas); setImpresoras(d.impresoras)
+      setSecciones(d.secciones); setZonas(d.zonas)
+      setProductos(d.productos ?? [])
     }
     setLoading(false)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   useEffect(() => { load() }, [load])
 
   const openModal = () => {
-    setForm({
-      zona_tipo: '', seccion_ids: [], destino_tipo: 'impresora',
-      destino_ref: '', imprimir_al_marchar: false, impresora_pase_id: '',
-      hora_desde: '', hora_hasta: '',
-    })
+    setForm({ nombre:'', zona_tipos:[], seccion_ids:[], producto_ids:[],
+      dest_imp:true, dest_kds:false, destino_imp_ref:'', destino_kds_ref:'',
+      es_fallback:false, imprimir_al_marchar:false, impresora_pase_id:'',
+      hora_desde:'', hora_hasta:'' })
+    setSecAbiertas(new Set())
     setErr('')
     setModal(true)
   }
 
-  const toggleSeccion = (id: string) => {
-    setForm(f => ({
-      ...f,
-      seccion_ids: f.seccion_ids.includes(id)
-        ? f.seccion_ids.filter(s => s !== id)
-        : [...f.seccion_ids, id],
-    }))
+  // ── Zone multi-checkbox ──
+  const toggleZona = (tipo: string) =>
+    setForm(f => ({ ...f, zona_tipos: f.zona_tipos.includes(tipo) ? f.zona_tipos.filter(z => z !== tipo) : [...f.zona_tipos, tipo] }))
+  const toggleTodasZonas = () =>
+    setForm(f => ({ ...f, zona_tipos: f.zona_tipos.length === zonas.length ? [] : zonas.map(z => z.tipo) }))
+
+  // ── Section + product tree ──
+  const prodsBySeccion = (sid: string) => productos.filter(p => p.seccion === sid)
+
+  type SecState = 'none' | 'some' | 'all'
+  const seccionState = (sid: string): SecState => {
+    if (form.seccion_ids.includes(sid)) return 'all'
+    const prods = prodsBySeccion(sid)
+    const sel = prods.filter(p => form.producto_ids.includes(p.id))
+    if (sel.length === 0) return 'none'
+    if (sel.length === prods.length) return 'all'
+    return 'some'
   }
 
-  const guardar = async () => {
-    if (!form.destino_ref) return setErr('Selecciona un destino')
-    if (form.imprimir_al_marchar && !form.impresora_pase_id) return setErr('Selecciona la impresora de pase')
-    setSaving(true)
-    setErr('')
-    let destino_nombre = ''
-    if (form.destino_tipo === 'impresora') {
-      destino_nombre = impresoras.find(i => i.id === form.destino_ref)?.nombre ?? ''
+  const toggleSeccion = (sid: string) => {
+    const state = seccionState(sid)
+    const prods = prodsBySeccion(sid).map(p => p.id)
+    if (state === 'all') {
+      setForm(f => ({
+        ...f,
+        seccion_ids:  f.seccion_ids.filter(s => s !== sid),
+        producto_ids: f.producto_ids.filter(pid => !prods.includes(pid)),
+      }))
     } else {
-      destino_nombre = secciones.find(s => s.id === form.destino_ref)?.nombre ?? ''
+      setForm(f => ({
+        ...f,
+        seccion_ids:  [...new Set([...f.seccion_ids, sid])],
+        producto_ids: f.producto_ids.filter(pid => !prods.includes(pid)),
+      }))
     }
+  }
+
+  const toggleProducto = (pid: string, sid: string) => {
+    const seccionFull = form.seccion_ids.includes(sid)
+    const prods = prodsBySeccion(sid)
+
+    setForm(f => {
+      let pids = [...f.producto_ids]
+      let sids = [...f.seccion_ids]
+
+      if (seccionFull) {
+        // Expand from "whole section" → deselect only this product
+        const otrosIds = prods.filter(p => p.id !== pid).map(p => p.id)
+        pids = [...new Set([...pids, ...otrosIds])]
+        sids = sids.filter(s => s !== sid)
+      } else if (pids.includes(pid)) {
+        pids = pids.filter(p => p !== pid)
+      } else {
+        pids = [...pids, pid]
+        // If all products now selected → collapse to section level
+        if (prods.every(p => pids.includes(p.id))) {
+          pids = pids.filter(p => !prods.map(pr => pr.id).includes(p))
+          sids = [...new Set([...sids, sid])]
+        }
+      }
+      return { ...f, producto_ids: pids, seccion_ids: sids }
+    })
+  }
+
+  const isProdChecked = (pid: string, sid: string) =>
+    form.seccion_ids.includes(sid) || form.producto_ids.includes(pid)
+
+  // ── Simulator (client-side mirror of courier logic) ──
+  const simular = () => {
+    if (!simProdId) { setSimResult({ ok:false, msg:'Selecciona un producto' }); return }
+    const prod = productos.find(p => p.id === simProdId)
+    if (!prod) { setSimResult({ ok:false, msg:'Producto no encontrado' }); return }
+
+    const seccion = prod.seccion
+    const zona    = simZona || null
+    const now     = new Date()
+    const hhmm    = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`
+
+    const horaOk = (desde: string|null, hasta: string|null) => {
+      if (!desde || !hasta) return true
+      return desde <= hasta ? hhmm >= desde && hhmm <= hasta : hhmm >= desde || hhmm <= hasta
+    }
+
+    const evaluar = (candidatas: ReglaEnvio[]) => {
+      return candidatas
+        .filter(r => {
+          if (!horaOk(r.hora_desde, r.hora_hasta)) return false
+          const zonaTypes = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+          if (zonaTypes.length > 0 && !zonaTypes.includes(zona ?? '')) return false
+          const prodIds = r.producto_ids ?? []
+          if (prodIds.length > 0) return prodIds.includes(simProdId)
+          const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
+          return ids.length === 0 || ids.includes(seccion)
+        })
+        .map(r => {
+          const zonaTypes = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+          const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
+          return {
+            r,
+            score: r.prioridad * 100
+              + (zonaTypes.length > 0   ? 10 : 0)
+              + ((r.producto_ids?.length ?? 0) > 0 ?  8 : 0)
+              + (ids.length > 0         ?  5 : 0)
+              + (r.hora_desde           ?  2 : 0),
+          }
+        })
+        .sort((a,b) => b.score - a.score)[0]?.r ?? null
+    }
+
+    const activas   = reglas.filter(r => r.activa && !r.es_fallback)
+    const fallbacks = reglas.filter(r => r.activa && r.es_fallback)
+    const regla = evaluar(activas) ?? evaluar(fallbacks)
+
+    if (!regla) {
+      setSimResult({ ok:false, msg:`Sin regla → fallback legacy (impresora de sección "${seccion}")` })
+      return
+    }
+
+    const destinos: string[] = []
+    if (regla.destino_tipo === 'impresora') {
+      const imp = impresoras.find(i => i.id === regla.destino_ref)
+      if (imp) destinos.push(`🖨️ ${imp.nombre}`)
+    }
+    if (regla.destino_tipo === 'kds' || regla.destino_kds_ref) {
+      const kdsRef = regla.destino_tipo === 'kds' ? regla.destino_ref : regla.destino_kds_ref
+      const sec = secciones.find(s => s.id === kdsRef)
+      if (sec) destinos.push(`📺 KDS · ${sec.nombre}`)
+    }
+    if (regla.imprimir_al_marchar && regla.impresora_pase_id) {
+      const imp = impresoras.find(i => i.id === regla.impresora_pase_id)
+      if (imp) destinos.push(`🖨️ Pase: ${imp.nombre}`)
+    }
+
+    const label = regla.nombre ? `"${regla.nombre}"` : `Regla #${regla.prioridad}`
+    setSimResult({
+      ok: true,
+      msg: `${label}${regla.es_fallback ? ' (fallback)' : ''} → ${destinos.join(' + ')}`,
+    })
+  }
+
+  // ── Save ──
+  const guardar = async () => {
+    if (!form.dest_imp && !form.dest_kds) return setErr('Selecciona al menos un destino')
+    if (form.dest_imp && !form.destino_imp_ref) return setErr('Selecciona la impresora')
+    if (form.dest_kds && !form.destino_kds_ref) return setErr('Selecciona la sección KDS')
+    if (form.imprimir_al_marchar && !form.impresora_pase_id) return setErr('Selecciona la impresora de pase')
+
+    setSaving(true); setErr('')
+
+    // Determinar destino_tipo/destino_ref para backward compat
+    let destino_tipo: 'impresora' | 'kds' = 'impresora'
+    let destino_ref  = ''
+    let destino_nombre = ''
+    let destino_kds_ref: string | null = null
+
+    if (form.dest_imp && form.destino_imp_ref) {
+      destino_tipo   = 'impresora'
+      destino_ref    = form.destino_imp_ref
+      destino_nombre = impresoras.find(i => i.id === form.destino_imp_ref)?.nombre ?? ''
+      if (form.dest_kds && form.destino_kds_ref) destino_kds_ref = form.destino_kds_ref
+    } else if (form.dest_kds && form.destino_kds_ref) {
+      destino_tipo   = 'kds'
+      destino_ref    = form.destino_kds_ref
+      destino_nombre = secciones.find(s => s.id === form.destino_kds_ref)?.nombre ?? ''
+    }
+
+    const noFallbacks = reglas.filter(r => !r.es_fallback)
     const r = await fetch('/api/owner/reglas-envio', {
       method: 'POST',
       headers: { ...sh(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        zona_tipo:           form.zona_tipo || null,
+        nombre:              form.nombre || null,
+        zona_tipos:          form.zona_tipos,
         seccion_ids:         form.seccion_ids,
-        destino_tipo:        form.destino_tipo,
-        destino_ref:         form.destino_ref,
-        destino_nombre,
-        prioridad:           reglas.length + 1,
+        producto_ids:        form.producto_ids,
+        destino_tipo, destino_ref, destino_nombre, destino_kds_ref,
+        es_fallback:         form.es_fallback,
+        prioridad:           form.es_fallback ? 0 : noFallbacks.length + 1,
         imprimir_al_marchar: form.imprimir_al_marchar,
         impresora_pase_id:   form.impresora_pase_id || null,
         hora_desde:          form.hora_desde || null,
@@ -2176,301 +2342,453 @@ function FlujoTab() {
   }
 
   const toggleActiva = async (regla: ReglaEnvio) => {
-    await fetch('/api/owner/reglas-envio', {
-      method: 'PATCH',
-      headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: regla.id, activa: !regla.activa }),
-    })
+    await fetch('/api/owner/reglas-envio', { method:'PATCH', headers:{...sh(),'Content-Type':'application/json'}, body:JSON.stringify({ id:regla.id, activa:!regla.activa }) })
     load()
   }
-
   const guardarOrden = async () => {
     setSavingOrden(true)
-    for (let i = 0; i < reglas.length; i++) {
-      await fetch('/api/owner/reglas-envio', {
-        method: 'PATCH',
-        headers: { ...sh(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: reglas[i].id, prioridad: reglas.length - i }),
-      })
+    const noFb = reglas.filter(r => !r.es_fallback)
+    for (let i = 0; i < noFb.length; i++) {
+      await fetch('/api/owner/reglas-envio', { method:'PATCH', headers:{...sh(),'Content-Type':'application/json'}, body:JSON.stringify({ id:noFb[i].id, prioridad:noFb.length-i }) })
     }
-    setSavingOrden(false)
-    setOrdenModified(false)
-    load()
+    setSavingOrden(false); setOrdenModified(false); load()
   }
-
   const handleDrop = (targetId: string) => {
     if (!dragging || dragging === targetId) return
-    const fromIdx = reglas.findIndex(x => x.id === dragging)
-    const toIdx   = reglas.findIndex(x => x.id === targetId)
-    const newR = [...reglas]
-    const [moved] = newR.splice(fromIdx, 1)
-    newR.splice(toIdx, 0, moved)
-    setReglas(newR)
-    setOrdenModified(true)
-    setDragging(null)
-    setDragOver(null)
+    const from = reglas.findIndex(x => x.id === dragging)
+    const to   = reglas.findIndex(x => x.id === targetId)
+    const newR = [...reglas]; const [m] = newR.splice(from,1); newR.splice(to,0,m)
+    setReglas(newR); setOrdenModified(true); setDragging(null); setDragOver(null)
   }
-
   const borrar = async (id: string) => {
     if (!confirm('¿Eliminar esta regla?')) return
-    await fetch('/api/owner/reglas-envio', {
-      method: 'DELETE',
-      headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id }),
-    })
+    await fetch('/api/owner/reglas-envio', { method:'DELETE', headers:{...sh(),'Content-Type':'application/json'}, body:JSON.stringify({ id }) })
     load()
   }
 
-  const zonaNombre = (tipo: string | null) =>
-    tipo ? (zonas.find(z => z.tipo === tipo)?.nombre ?? tipo) : null
-  const seccionNombres = (ids: string[]) =>
-    ids.map(id => secciones.find(s => s.id === id) ?? { id, nombre: id, color_kds: C.ink4, icono: '' })
-
-  const opcionesDestino = form.destino_tipo === 'impresora'
-    ? impresoras.map(i => ({ value: i.id, label: `🖨️ ${i.nombre}` }))
-    : secciones.map(s => ({ value: s.id, label: `📺 KDS · ${s.nombre}` }))
-
-  const inputSt: React.CSSProperties = {
-    width: '100%', padding: '8px 10px', borderRadius: 6,
-    border: `1px solid ${C.rule}`, background: C.bone,
-    fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none',
-    boxSizing: 'border-box',
+  // ── Helpers de display ──
+  const zonasDeRegla = (r: ReglaEnvio) => {
+    const tipos = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+    return tipos.map(t => zonas.find(z => z.tipo === t)?.nombre ?? t)
   }
-  const labelSt: React.CSSProperties = { fontFamily: SN, fontSize: 12, color: C.ink3, fontWeight: 600, marginBottom: 4, display: 'block' }
+  const secsDeRegla = (r: ReglaEnvio) =>
+    (r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : []))
+      .map(id => secciones.find(s => s.id === id) ?? { id, nombre:id, color_kds:C.ink4, icono:'' })
+  const nProdsLabel = (r: ReglaEnvio) => {
+    const n = r.producto_ids?.length ?? 0
+    if (n === 0) return null
+    const names = r.producto_ids.slice(0,2).map(id => productos.find(p=>p.id===id)?.nombre ?? '').filter(Boolean)
+    return n <= 2 ? names.join(', ') : `${names[0]} +${n-1}`
+  }
+  const destinoLabel = (r: ReglaEnvio) => {
+    const parts: string[] = []
+    if (r.destino_tipo === 'impresora') {
+      parts.push(`🖨️ ${r.destino_nombre ?? r.destino_ref}`)
+      if (r.destino_kds_ref) {
+        const sec = secciones.find(s => s.id === r.destino_kds_ref)
+        parts.push(`📺 ${sec?.nombre ?? r.destino_kds_ref}`)
+      }
+    } else {
+      parts.push(`📺 ${r.destino_nombre ?? r.destino_ref}`)
+    }
+    return parts.join(' + ')
+  }
+
+  // ── Styles ──
+  const inputSt: React.CSSProperties = { width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, outline:'none', boxSizing:'border-box' }
+  const labelSt: React.CSSProperties = { fontFamily:SN, fontSize:12, color:C.ink3, fontWeight:600, marginBottom:4, display:'block' }
+
+  const Chk = ({ checked, indeterminate, onClick }: { checked:boolean; indeterminate?:boolean; onClick:()=>void }) => (
+    <div onClick={onClick} style={{ width:16, height:16, borderRadius:4, flexShrink:0, border:`2px solid ${checked||indeterminate?C.red:C.rule}`, background:checked?C.red:indeterminate?C.redS:'transparent', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
+      {checked    && <svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1 4 3.5 7 8 1" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
+      {!checked && indeterminate && <div style={{ width:8, height:2, background:C.red, borderRadius:1 }} />}
+    </div>
+  )
+
+  const toggleBtn = (active: boolean, label: string, onClick: ()=>void) => (
+    <button onClick={onClick} style={{ flex:1, padding:'8px 0', border:`2px solid ${active?C.red:C.rule}`, borderRadius:8, background:active?C.redS:'transparent', fontFamily:SN, fontSize:13, fontWeight:600, color:active?C.red:C.ink3, cursor:'pointer' }}>
+      {label}
+    </button>
+  )
 
   return (
-    <div style={{ padding: '20px 0' }}>
+    <div style={{ padding:'20px 0' }}>
 
-      {/* Cabecera */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+      {/* ── Cabecera ── */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:16 }}>
         <div>
-          <div style={{ fontFamily: SE, fontSize: 20, fontWeight: 700, color: C.ink }}>Flujos de trabajo</div>
-          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, marginTop: 4 }}>
-            Define a dónde va cada comanda según zona, sección y horario.
-            Sin reglas, el sistema usa la configuración de impresoras estándar.
+          <div style={{ fontFamily:SE, fontSize:20, fontWeight:700, color:C.ink }}>Flujos de trabajo</div>
+          <div style={{ fontFamily:SN, fontSize:13, color:C.ink3, marginTop:4 }}>
+            Define a dónde va cada comanda según zona, sección, producto y horario.
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display:'flex', gap:8 }}>
           {ordenModified && (
-            <button onClick={guardarOrden} disabled={savingOrden} style={{
-              background: C.green, color: '#fff', border: 'none', borderRadius: 8,
-              padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
-              cursor: 'pointer', whiteSpace: 'nowrap',
-            }}>
-              {savingOrden ? 'Guardando…' : '↕ Guardar orden'}
+            <button onClick={guardarOrden} disabled={savingOrden} style={{ background:C.green, color:'#fff', border:'none', borderRadius:8, padding:'9px 16px', fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>
+              {savingOrden?'Guardando…':'↕ Guardar orden'}
             </button>
           )}
-          <button onClick={openModal} style={{
-            background: C.red, color: '#fff', border: 'none', borderRadius: 8,
-            padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
-            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-          }}>
+          <button onClick={openModal} style={{ background:C.red, color:'#fff', border:'none', borderRadius:8, padding:'9px 16px', fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer', display:'flex', alignItems:'center', gap:6, whiteSpace:'nowrap' }}>
             <Icon d={ICONS.plus} size={15}/> Nueva regla
           </button>
         </div>
       </div>
 
-      {/* Sin terminales configurados — aviso */}
-      {!loading && impresoras.length === 0 && secciones.length === 0 && (
-        <div style={{ background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 8, padding: '12px 16px', fontFamily: SN, fontSize: 13, color: C.ink2, marginBottom: 16 }}>
-          ⚠️ No hay impresoras activas ni secciones de cocina configuradas.
-          Configúralos primero en las pestañas <strong>Impresoras</strong> y <strong>Secciones</strong>.
+      {/* ── Aviso sin terminales ── */}
+      {!loading && impresoras.length===0 && secciones.length===0 && (
+        <div style={{ background:C.amberS, border:`1px solid ${C.amber}`, borderRadius:8, padding:'12px 16px', fontFamily:SN, fontSize:13, color:C.ink2, marginBottom:16 }}>
+          ⚠️ No hay impresoras activas ni secciones de cocina. Configúralos primero.
         </div>
       )}
 
-      {/* Explicación del sistema de cascada */}
-      <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontFamily: SN, fontSize: 12, color: C.ink3, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px' }}>
-        <div style={{ gridColumn: '1/-1', fontWeight: 700, color: C.ink2, marginBottom: 4 }}>Orden de prioridad · Arrastra para reordenar</div>
-        <div>1. Zona específica + Sección específica</div>
-        <div>3. Sin zona + Sección específica</div>
-        <div>2. Zona específica + Todas las secciones</div>
-        <div>4. Sin zona + Todas las secciones (global)</div>
-      </div>
-
-      {/* Lista de reglas */}
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 40, color: C.ink4, fontFamily: SN }}>Cargando…</div>
-      ) : reglas.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 48, color: C.ink4, fontFamily: SN, border: `2px dashed ${C.rule}`, borderRadius: 12 }}>
-          <div style={{ fontSize: 32, marginBottom: 8 }}>🔀</div>
-          <div style={{ fontWeight: 600, marginBottom: 4 }}>Sin flujos configurados</div>
-          <div style={{ fontSize: 12 }}>Todas las comandas se enrutan según la configuración de impresoras estándar</div>
+      {/* ── Simulador ── */}
+      <div style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:10, marginBottom:16, overflow:'hidden' }}>
+        <div onClick={()=>setSimOpen(v=>!v)} style={{ display:'flex', alignItems:'center', gap:8, padding:'11px 14px', cursor:'pointer', userSelect:'none' }}>
+          <span style={{ fontFamily:SN, fontSize:13, fontWeight:700, color:C.ink }}>🎯 Simulador</span>
+          <span style={{ fontFamily:SN, fontSize:12, color:C.ink4 }}>— prueba una regla antes de abrir el restaurante</span>
+          <span style={{ marginLeft:'auto', color:C.ink4, fontSize:12 }}>{simOpen?'▲':'▼'}</span>
         </div>
-      ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {reglas.map(r => {
-            const secs = seccionNombres(r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : []))
-            const isDragging = dragging === r.id
-            const isDragOver  = dragOver  === r.id
-            return (
-              <div key={r.id} draggable
-                onDragStart={() => setDragging(r.id)}
-                onDragOver={(e) => { e.preventDefault(); setDragOver(r.id) }}
-                onDragLeave={() => setDragOver(null)}
-                onDrop={() => handleDrop(r.id)}
-                onDragEnd={() => { setDragging(null); setDragOver(null) }}
-                style={{
-                  background: isDragOver ? C.paper3 : r.activa ? C.bone : C.paper2,
-                  border: `1px solid ${isDragOver ? C.red : r.activa ? C.rule : C.paper3}`,
-                  borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
-                  opacity: isDragging ? 0.4 : r.activa ? 1 : 0.55, transition: 'opacity .2s, border-color .15s', cursor: 'grab',
-                }}>
-                <div style={{ color: C.ink4, fontSize: 18, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}>⠿</div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 4 }}>SI</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {r.zona_tipo
-                      ? <span style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink2, fontWeight: 600 }}>📍 {zonaNombre(r.zona_tipo)}</span>
-                      : <span style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink4, fontStyle: 'italic' }}>Todas las zonas</span>
-                    }
-                    {secs.length > 0 ? secs.map(s => (
-                      <span key={s.id} style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink2, fontWeight: 600 }}>{s.icono} {s.nombre}</span>
-                    )) : (
-                      <span style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink4, fontStyle: 'italic' }}>Todas las secciones</span>
-                    )}
-                    {r.hora_desde && r.hora_hasta && (
-                      <span style={{ background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink2 }}>🕐 {r.hora_desde}–{r.hora_hasta}</span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ color: C.red, fontWeight: 700, fontSize: 18, flexShrink: 0 }}>→</div>
-
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 4 }}>ENTONCES</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    <span style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 600 }}>
-                      {DESTINO_ICON[r.destino_tipo]}{' '}{r.destino_nombre ?? r.destino_ref}
-                      <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 400, background: r.destino_tipo === 'kds' ? C.greenS : C.paper3, color: r.destino_tipo === 'kds' ? C.green : C.ink3, borderRadius: 4, padding: '1px 5px' }}>
-                        {r.destino_tipo === 'kds' ? 'pantalla' : 'impresora'}
-                      </span>
-                    </span>
-                    {r.imprimir_al_marchar && (
-                      <span style={{ background: C.greenS, border: `1px solid ${C.green}`, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.green }}>🖨️ pase al marchar</span>
-                    )}
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button onClick={() => toggleActiva(r)} style={{ background: r.activa ? C.greenS : C.paper3, color: r.activa ? C.green : C.ink4, border: 'none', borderRadius: 6, padding: '5px 10px', fontFamily: SN, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                    {r.activa ? '● ON' : '○ OFF'}
-                  </button>
-                  <button onClick={() => borrar(r.id)} style={{ background: 'transparent', color: C.ink4, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
-                    <Icon d={ICONS.trash} size={13}/>
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-      )}
-
-      {/* Modal nueva regla */}
-      {modal && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,20,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}
-          onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
-          <div style={{ background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 480, boxShadow: '0 8px 32px rgba(26,23,20,.2)', maxHeight: '90vh', overflowY: 'auto' }}>
-            <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 20 }}>Nueva regla de flujo</div>
-
-            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
-              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 10, letterSpacing: '0.06em' }}>SI (condiciones)</div>
-
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelSt}>Zona de sala</label>
-                <select value={form.zona_tipo} onChange={e => setForm(f => ({ ...f, zona_tipo: e.target.value }))} style={inputSt}>
-                  <option value="">Todas las zonas</option>
-                  {zonas.map(z => <option key={z.tipo} value={z.tipo}>{z.nombre}</option>)}
+        {simOpen && (
+          <div style={{ padding:'0 14px 14px', borderTop:`1px solid ${C.rule}` }}>
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr auto', gap:8, marginTop:12, alignItems:'flex-end' }}>
+              <div>
+                <label style={labelSt}>Producto</label>
+                <select value={simProdId} onChange={e=>setSimProdId(e.target.value)} style={inputSt}>
+                  <option value="">— Selecciona —</option>
+                  {secciones.map(s => (
+                    <optgroup key={s.id} label={`${s.icono} ${s.nombre}`}>
+                      {prodsBySeccion(s.id).map(p => (
+                        <option key={p.id} value={p.id}>{p.nombre}</option>
+                      ))}
+                    </optgroup>
+                  ))}
+                  {productos.filter(p => !secciones.some(s=>s.id===p.seccion)).map(p=>(
+                    <option key={p.id} value={p.id}>{p.nombre}</option>
+                  ))}
                 </select>
               </div>
+              <div>
+                <label style={labelSt}>Zona de la mesa</label>
+                <select value={simZona} onChange={e=>setSimZona(e.target.value)} style={inputSt}>
+                  <option value="">— Sin zona —</option>
+                  {zonas.map(z=><option key={z.tipo} value={z.tipo}>{z.nombre}</option>)}
+                </select>
+              </div>
+              <button onClick={simular} style={{ background:C.red, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer', whiteSpace:'nowrap' }}>
+                Probar →
+              </button>
+            </div>
+            {simResult && (
+              <div style={{ marginTop:10, padding:'10px 12px', borderRadius:8, background:simResult.ok?C.greenS:C.redS, border:`1px solid ${simResult.ok?C.green:C.red}`, fontFamily:SM, fontSize:12, color:simResult.ok?C.green:C.red }}>
+                {simResult.msg}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-              <div style={{ marginBottom: 12 }}>
-                <label style={labelSt}>
-                  Secciones de carta{' '}
-                  <span style={{ fontWeight: 400, color: C.ink4 }}>({form.seccion_ids.length === 0 ? 'todas' : `${form.seccion_ids.length} sel.`})</span>
-                </label>
-                <div style={{ border: `1px solid ${C.rule}`, borderRadius: 6, background: C.paper, maxHeight: 140, overflowY: 'auto' }}>
-                  {secciones.map((s, i) => (
-                    <div key={s.id} onClick={() => toggleSeccion(s.id)}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: i < secciones.length - 1 ? `1px solid ${C.rule}` : 'none', cursor: 'pointer', background: form.seccion_ids.includes(s.id) ? C.bone : 'transparent' }}>
-                      <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `2px solid ${form.seccion_ids.includes(s.id) ? C.red : C.rule}`, background: form.seccion_ids.includes(s.id) ? C.red : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {form.seccion_ids.includes(s.id) && <svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1 4 3.5 7 8 1" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
-                      </div>
-                      <span style={{ fontFamily: SN, fontSize: 13, color: C.ink }}>{s.icono} {s.nombre}</span>
-                      <div style={{ marginLeft: 'auto', width: 10, height: 10, borderRadius: '50%', background: s.color_kds }} />
+      {/* ── Leyenda prioridad ── */}
+      <div style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:8, padding:'10px 14px', marginBottom:16, fontFamily:SN, fontSize:12, color:C.ink3, display:'grid', gridTemplateColumns:'1fr 1fr', gap:'4px 16px' }}>
+        <div style={{ gridColumn:'1/-1', fontWeight:700, color:C.ink2, marginBottom:2 }}>Orden de cascada · Arrastra para reordenar</div>
+        <div>1. Producto específico + zona</div><div>3. Sección + zona</div>
+        <div>2. Producto específico</div>        <div>4. Sección · 5. Global · 6. Fallback</div>
+      </div>
+
+      {/* ── Lista de reglas ── */}
+      {loading ? (
+        <div style={{ textAlign:'center', padding:40, color:C.ink4, fontFamily:SN }}>Cargando…</div>
+      ) : reglas.length === 0 ? (
+        <div style={{ textAlign:'center', padding:48, color:C.ink4, fontFamily:SN, border:`2px dashed ${C.rule}`, borderRadius:12 }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>🔀</div>
+          <div style={{ fontWeight:600, marginBottom:4 }}>Sin flujos configurados</div>
+          <div style={{ fontSize:12 }}>Todas las comandas se enrutan según la configuración de impresoras estándar</div>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {/* Fallback separator */}
+          {reglas.some(r=>r.es_fallback) && reglas.some(r=>!r.es_fallback) && (() => {
+            const firstFb = reglas.findIndex(r=>r.es_fallback)
+            return reglas.map((r, i) => [
+              i === firstFb ? (
+                <div key="sep-fb" style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0' }}>
+                  <div style={{ flex:1, height:1, background:C.rule }} />
+                  <span style={{ fontFamily:SN, fontSize:11, color:C.ink4, fontWeight:600 }}>FALLBACK — si ninguna regla aplica</span>
+                  <div style={{ flex:1, height:1, background:C.rule }} />
+                </div>
+              ) : null,
+              <ReglaRow key={r.id} r={r}
+                isDragging={dragging===r.id} isDragOver={dragOver===r.id}
+                onDragStart={()=>setDragging(r.id)}
+                onDragOver={(e: React.DragEvent)=>{e.preventDefault();setDragOver(r.id)}}
+                onDragLeave={()=>setDragOver(null)}
+                onDrop={()=>handleDrop(r.id)}
+                onDragEnd={()=>{setDragging(null);setDragOver(null)}}
+                zonasLabel={zonasDeRegla(r)}
+                secsLabel={secsDeRegla(r)}
+                prodsLabel={nProdsLabel(r)}
+                destinoLabel={destinoLabel(r)}
+                onToggle={()=>toggleActiva(r)}
+                onDelete={()=>borrar(r.id)}
+              />
+            ])
+          })()}
+          {!(reglas.some(r=>r.es_fallback) && reglas.some(r=>!r.es_fallback)) && reglas.map(r => (
+            <ReglaRow key={r.id} r={r}
+              isDragging={dragging===r.id} isDragOver={dragOver===r.id}
+              onDragStart={()=>setDragging(r.id)}
+              onDragOver={(e: React.DragEvent)=>{e.preventDefault();setDragOver(r.id)}}
+              onDragLeave={()=>setDragOver(null)}
+              onDrop={()=>handleDrop(r.id)}
+              onDragEnd={()=>{setDragging(null);setDragOver(null)}}
+              zonasLabel={zonasDeRegla(r)}
+              secsLabel={secsDeRegla(r)}
+              prodsLabel={nProdsLabel(r)}
+              destinoLabel={destinoLabel(r)}
+              onToggle={()=>toggleActiva(r)}
+              onDelete={()=>borrar(r.id)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* ── Modal nueva regla ── */}
+      {modal && (
+        <div style={{ position:'fixed', inset:0, background:'rgba(26,23,20,.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, padding:16 }}
+          onClick={e=>{ if (e.target===e.currentTarget) setModal(false) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:500, boxShadow:'0 8px 32px rgba(26,23,20,.2)', maxHeight:'92vh', overflowY:'auto' }}>
+
+            <div style={{ fontFamily:SE, fontSize:18, fontWeight:700, color:C.ink, marginBottom:16 }}>Nueva regla de flujo</div>
+
+            {/* Nombre */}
+            <div style={{ marginBottom:14 }}>
+              <label style={labelSt}>Nombre de la regla <span style={{ fontWeight:400, color:C.ink4 }}>(opcional)</span></label>
+              <input type="text" placeholder="ej: Barbacoa, Bebidas terraza, Postres noche…" value={form.nombre}
+                onChange={e=>setForm(f=>({...f,nombre:e.target.value}))} style={inputSt} />
+            </div>
+
+            {/* SI — condiciones */}
+            <div style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:8, padding:'12px 14px', marginBottom:12 }}>
+              <div style={{ fontFamily:SN, fontSize:11, fontWeight:700, color:C.red, marginBottom:10, letterSpacing:'0.06em' }}>SI (condiciones)</div>
+
+              {/* Zona multi-checkbox */}
+              <div style={{ marginBottom:12 }}>
+                <label style={labelSt}>Zona de sala</label>
+                <div style={{ border:`1px solid ${C.rule}`, borderRadius:6, background:C.paper }}>
+                  {/* "Todas" master */}
+                  <div onClick={toggleTodasZonas} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderBottom:`1px solid ${C.rule}`, cursor:'pointer', background:form.zona_tipos.length===0?C.bone:'transparent' }}>
+                    <Chk checked={form.zona_tipos.length===0} onClick={toggleTodasZonas}/>
+                    <span style={{ fontFamily:SN, fontSize:13, color:C.ink, fontStyle:'italic' }}>Todas las zonas</span>
+                  </div>
+                  {zonas.map((z,i)=>(
+                    <div key={z.tipo} onClick={()=>toggleZona(z.tipo)} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px', borderBottom:i<zonas.length-1?`1px solid ${C.rule}`:'none', cursor:'pointer', background:form.zona_tipos.includes(z.tipo)?C.bone:'transparent' }}>
+                      <Chk checked={form.zona_tipos.includes(z.tipo)} onClick={()=>toggleZona(z.tipo)}/>
+                      <span style={{ fontFamily:SN, fontSize:13, color:C.ink }}>{z.nombre}</span>
                     </div>
                   ))}
-                  {secciones.length === 0 && <div style={{ padding: '10px 12px', fontFamily: SN, fontSize: 12, color: C.ink4, fontStyle: 'italic' }}>Sin secciones configuradas</div>}
+                  {zonas.length===0 && <div style={{ padding:'10px 12px', fontFamily:SN, fontSize:12, color:C.ink4, fontStyle:'italic' }}>Sin zonas configuradas</div>}
                 </div>
-                <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 4 }}>Sin selección = aplica a todas las secciones</div>
+                <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:3 }}>Sin selección = todas las zonas</div>
               </div>
 
+              {/* Secciones árbol con productos */}
+              <div style={{ marginBottom:12 }}>
+                <label style={labelSt}>
+                  Secciones / Productos{' '}
+                  <span style={{ fontWeight:400, color:C.ink4 }}>
+                    ({form.seccion_ids.length===0 && form.producto_ids.length===0 ? 'todos' :
+                      [form.seccion_ids.length>0?`${form.seccion_ids.length} sección${form.seccion_ids.length>1?'es':''}`:null,
+                       form.producto_ids.length>0?`${form.producto_ids.length} producto${form.producto_ids.length>1?'s':''}`:null]
+                      .filter(Boolean).join(', ')})
+                  </span>
+                </label>
+                <div style={{ border:`1px solid ${C.rule}`, borderRadius:6, background:C.paper, maxHeight:200, overflowY:'auto' }}>
+                  {secciones.map((s,i)=>{
+                    const state = seccionState(s.id)
+                    const abierta = secAbiertas.has(s.id)
+                    const prods = prodsBySeccion(s.id)
+                    return (
+                      <div key={s.id} style={{ borderBottom:i<secciones.length-1?`1px solid ${C.rule}`:'none' }}>
+                        {/* Section row */}
+                        <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', background:state!=='none'?C.bone:'transparent' }}>
+                          <Chk checked={state==='all'} indeterminate={state==='some'} onClick={()=>toggleSeccion(s.id)}/>
+                          <span style={{ fontFamily:SN, fontSize:13, color:C.ink, flex:1 }}>{s.icono} {s.nombre}</span>
+                          <div style={{ width:10, height:10, borderRadius:'50%', background:s.color_kds, flexShrink:0 }}/>
+                          {prods.length > 0 && (
+                            <button onClick={()=>setSecAbiertas(prev=>{const n=new Set(prev);n.has(s.id)?n.delete(s.id):n.add(s.id);return n})}
+                              style={{ background:'none', border:'none', cursor:'pointer', padding:'0 4px', color:C.ink4, fontSize:11 }}>
+                              {abierta?'▲':'▼'} {prods.length}
+                            </button>
+                          )}
+                        </div>
+                        {/* Products (expanded) */}
+                        {abierta && prods.map(p=>(
+                          <div key={p.id} onClick={()=>toggleProducto(p.id,s.id)} style={{ display:'flex', alignItems:'center', gap:8, padding:'6px 12px 6px 32px', borderTop:`1px solid ${C.rule}`, cursor:'pointer', background:isProdChecked(p.id,s.id)?C.bone:'transparent' }}>
+                            <Chk checked={isProdChecked(p.id,s.id)} onClick={()=>toggleProducto(p.id,s.id)}/>
+                            <span style={{ fontFamily:SN, fontSize:12, color:C.ink2 }}>{p.nombre}</span>
+                            <span style={{ marginLeft:'auto', fontFamily:SM, fontSize:11, color:C.ink4 }}>{p.precio.toFixed(2)} €</span>
+                          </div>
+                        ))}
+                      </div>
+                    )
+                  })}
+                  {secciones.length===0 && <div style={{ padding:'10px 12px', fontFamily:SN, fontSize:12, color:C.ink4, fontStyle:'italic' }}>Sin secciones configuradas</div>}
+                </div>
+                <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:3 }}>▼ Despliega una sección para seleccionar productos concretos</div>
+              </div>
+
+              {/* Horario */}
               <div>
                 <label style={labelSt}>Horario (opcional)</label>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <input type="time" value={form.hora_desde} onChange={e => setForm(f => ({ ...f, hora_desde: e.target.value }))} style={{ ...inputSt, width: 120 }} />
-                  <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>a</span>
-                  <input type="time" value={form.hora_hasta} onChange={e => setForm(f => ({ ...f, hora_hasta: e.target.value }))} style={{ ...inputSt, width: 120 }} />
+                <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                  <input type="time" value={form.hora_desde} onChange={e=>setForm(f=>({...f,hora_desde:e.target.value}))} style={{ ...inputSt, width:120 }}/>
+                  <span style={{ fontFamily:SN, fontSize:12, color:C.ink4 }}>a</span>
+                  <input type="time" value={form.hora_hasta} onChange={e=>setForm(f=>({...f,hora_hasta:e.target.value}))} style={{ ...inputSt, width:120 }}/>
                 </div>
-                <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 4 }}>Vacío = activa siempre</div>
+                <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:3 }}>Vacío = activa siempre</div>
               </div>
             </div>
 
-            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
-              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.green, marginBottom: 10, letterSpacing: '0.06em' }}>ENTONCES (destino)</div>
+            {/* ENTONCES — destino */}
+            <div style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:8, padding:'12px 14px', marginBottom:12 }}>
+              <div style={{ fontFamily:SN, fontSize:11, fontWeight:700, color:C.green, marginBottom:10, letterSpacing:'0.06em' }}>ENTONCES (destino)</div>
 
-              <div style={{ marginBottom: 10 }}>
-                <label style={labelSt}>Tipo de destino</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  {(['impresora', 'kds'] as const).map(tipo => (
-                    <button key={tipo} onClick={() => setForm(f => ({ ...f, destino_tipo: tipo, destino_ref: '' }))}
-                      style={{ flex: 1, padding: '8px 0', border: `2px solid ${form.destino_tipo === tipo ? C.red : C.rule}`, borderRadius: 8, background: form.destino_tipo === tipo ? C.redS : 'transparent', fontFamily: SN, fontSize: 13, fontWeight: 600, color: form.destino_tipo === tipo ? C.red : C.ink3, cursor: 'pointer' }}>
-                      {DESTINO_ICON[tipo]} {tipo === 'impresora' ? 'Impresora' : 'Pantalla KDS'}
-                    </button>
-                  ))}
+              <div style={{ marginBottom:10 }}>
+                <label style={labelSt}>Tipo de destino <span style={{ fontWeight:400, color:C.ink4 }}>(puedes marcar ambos)</span></label>
+                <div style={{ display:'flex', gap:8 }}>
+                  {toggleBtn(form.dest_imp, '🖨️ Impresora', ()=>setForm(f=>({...f,dest_imp:!f.dest_imp,destino_imp_ref:''})))}
+                  {toggleBtn(form.dest_kds, '📺 Pantalla KDS', ()=>setForm(f=>({...f,dest_kds:!f.dest_kds,destino_kds_ref:''})))}
                 </div>
               </div>
 
-              <div style={{ marginBottom: 14 }}>
-                <label style={labelSt}>{form.destino_tipo === 'impresora' ? 'Impresora' : 'Sección KDS'}</label>
-                <select value={form.destino_ref} onChange={e => setForm(f => ({ ...f, destino_ref: e.target.value }))} style={inputSt}>
-                  <option value="">— Selecciona —</option>
-                  {opcionesDestino.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
-                </select>
-                {opcionesDestino.length === 0 && <div style={{ fontFamily: SN, fontSize: 11, color: C.amber, marginTop: 4 }}>⚠️ No hay {form.destino_tipo === 'impresora' ? 'impresoras activas' : 'secciones de cocina'} configuradas</div>}
-              </div>
-
-              <div>
-                <div onClick={() => setForm(f => ({ ...f, imprimir_al_marchar: !f.imprimir_al_marchar, impresora_pase_id: '' }))} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
-                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `2px solid ${form.imprimir_al_marchar ? C.red : C.rule}`, background: form.imprimir_al_marchar ? C.red : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {form.imprimir_al_marchar && <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1 5 4 8 9 2" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
-                  </div>
-                  <span style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>Imprimir ticket de pase al marchar</span>
+              {form.dest_imp && (
+                <div style={{ marginBottom:10 }}>
+                  <label style={labelSt}>Impresora</label>
+                  <select value={form.destino_imp_ref} onChange={e=>setForm(f=>({...f,destino_imp_ref:e.target.value}))} style={inputSt}>
+                    <option value="">— Selecciona —</option>
+                    {impresoras.map(i=><option key={i.id} value={i.id}>🖨️ {i.nombre}</option>)}
+                  </select>
+                  {impresoras.length===0 && <div style={{ fontFamily:SN, fontSize:11, color:C.amber, marginTop:3 }}>⚠️ No hay impresoras activas configuradas</div>}
                 </div>
-                <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginLeft: 28, marginTop: 2 }}>Cuando cocina pulsa MARCHAR, imprime un resumen en sala</div>
+              )}
+
+              {form.dest_kds && (
+                <div style={{ marginBottom:10 }}>
+                  <label style={labelSt}>Sección KDS</label>
+                  <select value={form.destino_kds_ref} onChange={e=>setForm(f=>({...f,destino_kds_ref:e.target.value}))} style={inputSt}>
+                    <option value="">— Selecciona —</option>
+                    {secciones.map(s=><option key={s.id} value={s.id}>📺 KDS · {s.nombre}</option>)}
+                  </select>
+                  {secciones.length===0 && <div style={{ fontFamily:SN, fontSize:11, color:C.amber, marginTop:3 }}>⚠️ No hay secciones de cocina configuradas</div>}
+                </div>
+              )}
+
+              {/* Imprimir al marchar */}
+              <div style={{ borderTop:`1px solid ${C.rule}`, paddingTop:10, marginTop:4 }}>
+                <div onClick={()=>setForm(f=>({...f,imprimir_al_marchar:!f.imprimir_al_marchar,impresora_pase_id:''}))} style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+                  <Chk checked={form.imprimir_al_marchar} onClick={()=>setForm(f=>({...f,imprimir_al_marchar:!f.imprimir_al_marchar,impresora_pase_id:''}))}/>
+                  <span style={{ fontFamily:SN, fontSize:13, color:C.ink, fontWeight:500 }}>Imprimir ticket de pase al marchar</span>
+                </div>
+                <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginLeft:26, marginTop:2 }}>Cuando cocina pulsa MARCHAR, imprime un resumen en sala</div>
                 {form.imprimir_al_marchar && (
-                  <div style={{ marginTop: 10 }}>
+                  <div style={{ marginTop:10 }}>
                     <label style={labelSt}>Impresora de pase</label>
-                    <select value={form.impresora_pase_id} onChange={e => setForm(f => ({ ...f, impresora_pase_id: e.target.value }))} style={inputSt}>
+                    <select value={form.impresora_pase_id} onChange={e=>setForm(f=>({...f,impresora_pase_id:e.target.value}))} style={inputSt}>
                       <option value="">— Selecciona impresora —</option>
-                      {impresoras.map(i => <option key={i.id} value={i.id}>🖨️ {i.nombre}</option>)}
+                      {impresoras.map(i=><option key={i.id} value={i.id}>🖨️ {i.nombre}</option>)}
                     </select>
                   </div>
                 )}
               </div>
             </div>
 
-            {err && <div style={{ color: C.red, fontFamily: SN, fontSize: 12, marginBottom: 12 }}>{err}</div>}
+            {/* Fallback toggle */}
+            <div style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:8, padding:'10px 14px', marginBottom:14 }}>
+              <div onClick={()=>setForm(f=>({...f,es_fallback:!f.es_fallback}))} style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+                <Chk checked={form.es_fallback} onClick={()=>setForm(f=>({...f,es_fallback:!f.es_fallback}))}/>
+                <span style={{ fontFamily:SN, fontSize:13, color:C.ink, fontWeight:500 }}>Regla fallback</span>
+              </div>
+              <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginLeft:26, marginTop:2 }}>
+                Se aplica solo si ninguna otra regla coincide. Evita que comandas queden sin destino.
+              </div>
+            </div>
 
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setModal(false)} style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 18px', fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer' }}>Cancelar</button>
-              <button onClick={guardar} disabled={saving} style={{ background: saving ? C.ink4 : C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}>
-                {saving ? 'Guardando…' : 'Guardar regla'}
+            {err && <div style={{ color:C.red, fontFamily:SN, fontSize:12, marginBottom:12 }}>{err}</div>}
+
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end' }}>
+              <button onClick={()=>setModal(false)} style={{ background:'transparent', border:`1px solid ${C.rule}`, borderRadius:8, padding:'9px 18px', fontFamily:SN, fontSize:13, color:C.ink3, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={guardar} disabled={saving} style={{ background:saving?C.ink4:C.red, color:'#fff', border:'none', borderRadius:8, padding:'9px 18px', fontFamily:SN, fontSize:13, fontWeight:600, cursor:saving?'default':'pointer' }}>
+                {saving?'Guardando…':'Guardar regla'}
               </button>
             </div>
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// ── Componente de fila de regla ──
+function ReglaRow({ r, isDragging, isDragOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, zonasLabel, secsLabel, prodsLabel, destinoLabel, onToggle, onDelete }: {
+  r: ReglaEnvio
+  isDragging: boolean; isDragOver: boolean
+  onDragStart:()=>void; onDragOver:(e:React.DragEvent)=>void
+  onDragLeave:()=>void; onDrop:()=>void; onDragEnd:()=>void
+  zonasLabel: string[]; secsLabel: {id:string;nombre:string;color_kds:string;icono:string}[]
+  prodsLabel: string|null; destinoLabel: string
+  onToggle:()=>void; onDelete:()=>void
+}) {
+  return (
+    <div draggable onDragStart={onDragStart} onDragOver={onDragOver} onDragLeave={onDragLeave} onDrop={onDrop} onDragEnd={onDragEnd}
+      style={{ background:isDragOver?'#EFE7D6':r.activa?'#FBF8F1':'#EFE7D6', border:`1px solid ${isDragOver?'#D9442B':r.activa?'#D8CDB6':'#E5DAC2'}`, borderRadius:10, padding:'12px 16px', display:'flex', alignItems:'center', gap:12, opacity:isDragging?0.4:r.activa?1:0.55, transition:'opacity .2s,border-color .15s', cursor:'grab' }}>
+      <div style={{ color:'#9A8D7C', fontSize:18, cursor:'grab', flexShrink:0, userSelect:'none' }}>⠿</div>
+
+      <div style={{ flex:1, minWidth:0 }}>
+        {/* Nombre + fallback badge */}
+        {(r.nombre || r.es_fallback) && (
+          <div style={{ display:'flex', alignItems:'center', gap:6, marginBottom:4 }}>
+            {r.nombre && <span style={{ fontFamily:"'Inter Tight',system-ui,sans-serif", fontSize:13, fontWeight:700, color:'#1A1714' }}>{r.nombre}</span>}
+            {r.es_fallback && <span style={{ background:'#F7E3B6', border:'1px solid #E8A33B', borderRadius:4, padding:'1px 6px', fontSize:10, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#A8761A', fontWeight:600 }}>FALLBACK</span>}
+          </div>
+        )}
+        {/* SI */}
+        <div style={{ fontFamily:"'Inter Tight',system-ui,sans-serif", fontSize:11, color:'#9A8D7C', marginBottom:3 }}>SI</div>
+        <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+          {zonasLabel.length > 0 ? zonasLabel.map((n,i)=>(
+            <span key={i} style={{ background:'#E5DAC2', borderRadius:4, padding:'2px 7px', fontSize:11, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#3A332C', fontWeight:600 }}>📍 {n}</span>
+          )) : (
+            <span style={{ background:'#E5DAC2', borderRadius:4, padding:'2px 7px', fontSize:11, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#9A8D7C', fontStyle:'italic' }}>Todas las zonas</span>
+          )}
+          {prodsLabel ? (
+            <span style={{ background:'#F4D8CF', border:'1px solid #D9442B', borderRadius:4, padding:'2px 7px', fontSize:11, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#A8311E', fontWeight:600 }}>📦 {prodsLabel}</span>
+          ) : secsLabel.length > 0 ? secsLabel.map(s=>(
+            <span key={s.id} style={{ background:'#E5DAC2', borderRadius:4, padding:'2px 7px', fontSize:11, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#3A332C', fontWeight:600 }}>{s.icono} {s.nombre}</span>
+          )) : (
+            <span style={{ background:'#E5DAC2', borderRadius:4, padding:'2px 7px', fontSize:11, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#9A8D7C', fontStyle:'italic' }}>Todas las secciones</span>
+          )}
+          {r.hora_desde && r.hora_hasta && (
+            <span style={{ background:'#F7E3B6', border:'1px solid #E8A33B', borderRadius:4, padding:'2px 7px', fontSize:11, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#3A332C' }}>🕐 {r.hora_desde}–{r.hora_hasta}</span>
+          )}
+        </div>
+      </div>
+
+      <div style={{ color:'#D9442B', fontWeight:700, fontSize:18, flexShrink:0 }}>→</div>
+
+      <div style={{ flex:1, minWidth:0 }}>
+        <div style={{ fontFamily:"'Inter Tight',system-ui,sans-serif", fontSize:11, color:'#9A8D7C', marginBottom:3 }}>ENTONCES</div>
+        <div style={{ fontFamily:"'Inter Tight',system-ui,sans-serif", fontSize:13, color:'#1A1714', fontWeight:600 }}>{destinoLabel}</div>
+        {r.imprimir_al_marchar && (
+          <span style={{ display:'inline-block', marginTop:3, background:'#D4E4D2', border:'1px solid #3F7D44', borderRadius:4, padding:'1px 6px', fontSize:10, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#3F7D44' }}>🖨️ pase al marchar</span>
+        )}
+      </div>
+
+      <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+        <button onClick={onToggle} style={{ background:r.activa?'#D4E4D2':'#E5DAC2', color:r.activa?'#3F7D44':'#9A8D7C', border:'none', borderRadius:6, padding:'5px 10px', fontFamily:"'Inter Tight',system-ui,sans-serif", fontSize:11, fontWeight:600, cursor:'pointer' }}>
+          {r.activa?'● ON':'○ OFF'}
+        </button>
+        <button onClick={onDelete} style={{ background:'transparent', color:'#9A8D7C', border:'1px solid #D8CDB6', borderRadius:6, padding:'5px 8px', cursor:'pointer', display:'flex', alignItems:'center' }}>
+          <Icon d={ICONS.trash} size={13}/>
+        </button>
+      </div>
     </div>
   )
 }
