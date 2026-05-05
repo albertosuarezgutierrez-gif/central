@@ -162,11 +162,25 @@ export function generarTextoPlano(payload: PrintPayload): string {
 // Si no hay reglas → devuelve null → COURIER usa lógica legacy.
 
 interface ReglaEnvio {
-  zona_tipo:     string | null
-  seccion_id:    string | null
-  destino_tipo:  'impresora' | 'kds'
-  destino_ref:   string
-  prioridad:     number
+  zona_tipo:           string | null
+  seccion_id:          string | null
+  seccion_ids:         string[]
+  destino_tipo:        'impresora' | 'kds'
+  destino_ref:         string
+  prioridad:           number
+  imprimir_al_marchar: boolean
+  impresora_pase_id:   string | null
+  hora_desde:          string | null   // "HH:MM"
+  hora_hasta:          string | null   // "HH:MM"
+}
+
+function horaEnRango(desde: string | null, hasta: string | null): boolean {
+  if (!desde || !hasta) return true  // sin horario = siempre activa
+  const now  = new Date()
+  const hhmm = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`
+  if (desde <= hasta) return hhmm >= desde && hhmm <= hasta
+  // Rango nocturno que cruza medianoche (ej: 22:00–02:00)
+  return hhmm >= desde || hhmm <= hasta
 }
 
 function resolverDestinoItem(
@@ -176,19 +190,27 @@ function resolverDestinoItem(
 ): ReglaEnvio | null {
   if (!reglas.length) return null
 
-  // Puntúa cada regla por especificidad (base: prioridad)
   const scored = reglas
     .filter(r => {
-      const zonaOk    = r.zona_tipo   === null || r.zona_tipo   === zona
-      const seccionOk = r.seccion_id  === null || r.seccion_id  === seccion
+      // Filtro de horario
+      if (!horaEnRango(r.hora_desde, r.hora_hasta)) return false
+      // Filtro de zona
+      const zonaOk = r.zona_tipo === null || r.zona_tipo === zona
+      // Filtro de sección: usar seccion_ids (array) con fallback a seccion_id legacy
+      const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
+      const seccionOk = ids.length === 0 || ids.includes(seccion)
       return zonaOk && seccionOk
     })
-    .map(r => ({
-      regla: r,
-      score: r.prioridad * 100
-        + (r.zona_tipo   !== null ? 10 : 0)
-        + (r.seccion_id  !== null ?  5 : 0),
-    }))
+    .map(r => {
+      const ids = r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : [])
+      return {
+        regla: r,
+        score: r.prioridad * 100
+          + (r.zona_tipo !== null     ? 10 : 0)
+          + (ids.length  > 0          ?  5 : 0)
+          + (r.hora_desde !== null    ?  2 : 0),  // bonus horario específico
+      }
+    })
     .sort((a, b) => b.score - a.score)
 
   return scored[0]?.regla ?? null
@@ -228,7 +250,7 @@ export async function crearPrintJobs(
   if (comanda.restaurante_id) {
     const { data: reglasDB } = await supabase
       .from('reglas_envio')
-      .select('zona_tipo, seccion_id, destino_tipo, destino_ref, prioridad')
+      .select('zona_tipo, seccion_id, seccion_ids, destino_tipo, destino_ref, prioridad, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
       .eq('restaurante_id', comanda.restaurante_id)
       .eq('activa', true)
     reglas = (reglasDB ?? []) as ReglaEnvio[]
@@ -238,7 +260,7 @@ export async function crearPrintJobs(
 
   // 3. Cargar impresoras activas (siempre las necesitamos)
   const query = supabase.from('impresoras')
-    .select('id, seccion_id, nombre, connection_type')
+    .select('id, seccion_id, nombre, connection_type, impresora_fallback_id')
     .eq('activa', true)
   if (comanda.restaurante_id) {
     query.eq('restaurante_id', comanda.restaurante_id)
@@ -246,13 +268,16 @@ export async function crearPrintJobs(
   const { data: impresoras } = await query
 
   // Mapa seccion → impresora (lógica legacy)
-  const impresoraMap: Record<string, { id: string; connection_type: string }> = {}
+  const impresoraMap: Record<string, { id: string; connection_type: string; fallback_id?: string | null }> = {}
   // Mapa UUID → impresora (para reglas)
-  const impresoraById: Record<string, { id: string; connection_type: string; seccion_id: string }> = {}
+  const impresoraById: Record<string, { id: string; connection_type: string; seccion_id: string; fallback_id?: string | null }> = {}
   for (const imp of impresoras ?? []) {
-    impresoraMap[imp.seccion_id] = { id: imp.id, connection_type: imp.connection_type }
-    impresoraById[imp.id] = { id: imp.id, connection_type: imp.connection_type, seccion_id: imp.seccion_id }
+    impresoraMap[imp.seccion_id] = { id: imp.id, connection_type: imp.connection_type, fallback_id: imp.impresora_fallback_id }
+    impresoraById[imp.id] = { id: imp.id, connection_type: imp.connection_type, seccion_id: imp.seccion_id, fallback_id: imp.impresora_fallback_id }
   }
+
+  // Mapa de reglas que tienen imprimir_al_marchar (para crear jobs de pase después)
+  const reglasConPase: Array<{ seccion: string; impresora_pase_id: string }> = []
 
   // 4. Agrupar items por destino
   //    Si hay reglas → usa motor de enrutamiento
@@ -277,6 +302,10 @@ export async function crearPrintJobs(
         destino_tipo  = regla.destino_tipo
         destino_ref   = regla.destino_ref
         seccion_label = seccion
+        // Registrar regla de pase si aplica
+        if (regla.imprimir_al_marchar && regla.impresora_pase_id) {
+          reglasConPase.push({ seccion, impresora_pase_id: regla.impresora_pase_id })
+        }
       } else {
         // Sin regla que aplique: fallback a impresora por sección
         const imp = impresoraMap[seccion] ?? impresoraMap['otras']
@@ -322,7 +351,7 @@ export async function crearPrintJobs(
   for (const grupo of Object.values(porDestino)) {
     if (grupo.destino_tipo !== 'impresora') continue
 
-    const imp = impresoraById[grupo.destino_ref]
+    let imp = impresoraById[grupo.destino_ref]
     if (!imp) {
       console.warn(`[COURIER] Impresora "${grupo.destino_ref}" no encontrada — job omitido`)
       continue
@@ -363,11 +392,105 @@ export async function crearPrintJobs(
       .single()
 
     if (error) {
-      console.error(`[COURIER] Error creando print_job:`, error)
+      // ── Fallback: intentar impresora alternativa ──
+      if (imp.fallback_id && impresoraById[imp.fallback_id]) {
+        console.warn(`[COURIER] Error en impresora principal, intentando fallback "${imp.fallback_id}"`)
+        imp = impresoraById[imp.fallback_id]
+        const printDataFallback = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
+          ? generarEscPos(payload)
+          : generarTextoPlano(payload)
+        const { data: jobFallback } = await supabase
+          .from('print_jobs')
+          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, payload, print_data: printDataFallback, status: 'pendiente' })
+          .select('id')
+          .single()
+        if (jobFallback) jobIds.push(jobFallback.id)
+      } else {
+        console.error(`[COURIER] Error creando print_job:`, error)
+      }
       continue
     }
 
     jobIds.push(job.id)
+  }
+
+  return jobIds
+}
+
+// ── crearPrintJobMarchar ─────────────────────────────────────
+// Genera tickets de pase cuando cocina marca MARCHAR.
+// Busca reglas con imprimir_al_marchar=true que apliquen a la comanda.
+
+export async function crearPrintJobMarchar(
+  comanda: ComandaInfo,
+  items: ItemParaPrint[]
+): Promise<string[]> {
+  const supabase = createServerClient()
+  const jobIds: string[] = []
+
+  if (!comanda.restaurante_id || items.length === 0) return jobIds
+
+  // Cargar reglas con pase activo
+  const { data: reglasDB } = await supabase
+    .from('reglas_envio')
+    .select('zona_tipo, seccion_id, seccion_ids, destino_tipo, destino_ref, prioridad, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
+    .eq('restaurante_id', comanda.restaurante_id)
+    .eq('activa', true)
+    .eq('imprimir_al_marchar', true)
+
+  const reglas = (reglasDB ?? []) as ReglaEnvio[]
+  if (!reglas.length) return jobIds
+
+  // Resolver secciones de los items
+  const itemsConSeccion = await resolverSecciones(items, supabase)
+
+  // Agrupar por impresora_pase_id
+  const porPase: Record<string, { items: ItemParaPrint[]; seccion_label: string }> = {}
+  for (const item of itemsConSeccion) {
+    const seccion = item.seccion_id || 'otras'
+    const regla = resolverDestinoItem(seccion, comanda.zona_tipo, reglas)
+    if (!regla?.impresora_pase_id) continue
+    const key = regla.impresora_pase_id
+    if (!porPase[key]) porPase[key] = { items: [], seccion_label: seccion }
+    porPase[key].items.push(item)
+  }
+
+  if (!Object.keys(porPase).length) return jobIds
+
+  // Cargar impresoras de pase
+  const paseIds = Object.keys(porPase)
+  const { data: impresoras } = await supabase
+    .from('impresoras')
+    .select('id, nombre, connection_type, seccion_id')
+    .in('id', paseIds)
+
+  const ticketNum = await getNextTicketNum(supabase)
+  const ts = new Date().toISOString()
+
+  for (const [impresoraId, grupo] of Object.entries(porPase)) {
+    const imp = (impresoras ?? []).find((i: { id: string }) => i.id === impresoraId)
+    if (!imp) continue
+
+    const payload: PrintPayload = {
+      mesa:       comanda.mesa_codigo,
+      camarero:   comanda.camarero_nombre,
+      ticket_num: ticketNum,
+      seccion:    'PASE',
+      items: grupo.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, notas: i.notas ?? undefined })),
+      tipo: 'marchar',
+      ts,
+    }
+    const printData = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
+      ? generarEscPos(payload)
+      : generarTextoPlano(payload)
+
+    const { data: job } = await supabase
+      .from('print_jobs')
+      .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, payload, print_data: printData, status: 'pendiente' })
+      .select('id')
+      .single()
+
+    if (job) jobIds.push(job.id)
   }
 
   return jobIds

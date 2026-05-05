@@ -220,6 +220,9 @@ function KDSInner() {
   const [time, setTime] = useState(new Date())
   const [vistaPase, setVistaPase] = useState(false)
   const [vistaProduccion, setVistaProduccion] = useState(false)
+  const [vistaCompacta, setVistaCompacta] = useState(false)
+  const [sonidoOn, setSonidoOn] = useState(true)
+  const prevCountRef = useRef(0)
   // Map zona_id → nombre del running que la cubre (para preview en botón MARCHAR)
   const [runningPorZona, setRunningPorZona] = useState<Record<string, string>>({})
 
@@ -258,6 +261,22 @@ function KDSInner() {
     if (data) setSecciones(data)
   }, [session])
 
+  const beep = useCallback(() => {
+    try {
+      const ctx = new (window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext)()
+      const osc = ctx.createOscillator()
+      const gain = ctx.createGain()
+      osc.connect(gain)
+      gain.connect(ctx.destination)
+      osc.frequency.value = 880
+      osc.type = 'sine'
+      gain.gain.setValueAtTime(0.3, ctx.currentTime)
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25)
+      osc.start(ctx.currentTime)
+      osc.stop(ctx.currentTime + 0.25)
+    } catch { /* silencioso si no hay contexto de audio */ }
+  }, [])
+
   const fetchData = useCallback(async () => {
     if (!session) return
     const { data } = await supabase
@@ -267,8 +286,15 @@ function KDSInner() {
       .in('tipo', ['comanda', 'marchar'])
       .in('estado', ['nueva', 'en_cocina'])
       .order('created_at', { ascending: true })
-    if (data) setComandasState(data as unknown as Comanda[])
-  }, [session])
+    if (data) {
+      const newCount = data.length
+      if (sonidoOn && newCount > prevCountRef.current && prevCountRef.current > 0) {
+        beep()
+      }
+      prevCountRef.current = newCount
+      setComandasState(data as unknown as Comanda[])
+    }
+  }, [session, sonidoOn, beep])
 
   useEffect(() => {
     if (!session) return
@@ -397,10 +423,20 @@ function KDSInner() {
                 background:vistaProduccion?K.amb:'transparent', color:vistaProduccion?'#1A1714':K.fg3, transition:'background .15s,color .15s' }}>
               PROD
             </button>
+            <button onClick={()=>setVistaCompacta(v=>!v)}
+              style={{ cursor:'pointer', padding:'4px 10px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.1em', border:'none',
+                background:vistaCompacta?K.tl:'transparent', color:vistaCompacta?'#fff':K.fg3, transition:'background .15s,color .15s' }}>
+              ≡ COMP
+            </button>
           </div>
         )}
 
         <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <button onClick={()=>setSonidoOn(v=>!v)} title={sonidoOn?'Silenciar':'Activar sonido'}
+            style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.08em', border:'none',
+              background:sonidoOn?'rgba(43,106,110,.2)':'transparent', color:sonidoOn?K.tl:K.fg3, transition:'background .15s,color .15s' }}>
+            {sonidoOn?'🔔':'🔕'}
+          </button>
           <div style={{ display:'flex', alignItems:'center', gap:5 }}>
             <svg width="11" height="11" viewBox="0 0 12 12" fill="none">
               <rect x="4.5" y="1.5" width="3" height="6" rx="1.5" fill={K.tl} />
@@ -585,12 +621,51 @@ function KDSInner() {
               </span>
             )}
           </div>
+        ) : vistaCompacta ? (
+          /* ── VISTA COMPACTA ── */
+          <div className="kds-grid" style={{ display:'grid', gridTemplateColumns:'1fr', gap:6 }}>
+            {comandasFiltradas.map(c => {
+              const allDone = (c.items||[]).every(it=>it.estado==='listo')
+              const col = edadColor(c.created_at)
+              const urgente = col===K.red
+              const pendientes = (c.items||[]).filter(it=>it.estado!=='listo')
+              return (
+                <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.06)':col===K.amb?'rgba(232,163,59,.06)':'rgba(63,125,68,.04)', border:`1px solid ${urgente?'rgba(217,68,43,.3)':col===K.amb?'rgba(232,163,59,.25)':'rgba(63,125,68,.2)'}`, borderRadius:0, padding:'8px 12px', animation:'slideIn .3s ease' }}>
+                  {allDone && (
+                    <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.8)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
+                      <span style={{ fontFamily:SM, fontSize:12, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
+                    </div>
+                  )}
+                  <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                    <span style={{ fontFamily:SE, fontSize:22, fontWeight:500, color:K.fg, lineHeight:1, minWidth:50 }}>{c.mesa?.codigo}</span>
+                    <span style={{ fontFamily:SM, fontSize:11, color:col, fontWeight:700, animation:urgente?'pulse 1.5s ease-in-out infinite':'none' }}>{edadStr(c.created_at)}</span>
+                    <div style={{ flex:1, display:'flex', flexWrap:'wrap', gap:4 }}>
+                      {(c.items||[]).map(it=>(
+                        <span key={it.id} onClick={()=>toggle(it.id,it.estado)}
+                          style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.04em', textTransform:'uppercase',
+                            background:it.estado==='listo'?'rgba(63,125,68,.15)':K.rS,
+                            border:`1px solid ${it.estado==='listo'?K.gr:K.rule}`,
+                            color:it.estado==='listo'?K.gr:K.fg,
+                            textDecoration:it.estado==='listo'?'line-through':'none',
+                            opacity:it.estado==='listo'?0.5:1, transition:'all .15s' }}>
+                          {it.cantidad}× {it.nombre}
+                          {it.notas&&<span style={{ color:K.amb, fontWeight:400 }}> ·{it.notas}</span>}
+                        </span>
+                      ))}
+                    </div>
+                    <span style={{ fontFamily:SM, fontSize:9, color:K.fg3 }}>{pendientes.length}/{(c.items||[]).length}</span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         ) : (
           <div className="kds-grid" style={{ display:'grid', gridTemplateColumns:'1fr', gap:10 }}>
             {comandasFiltradas.map(c => {
               const allDone = (c.items||[]).every(it=>it.estado==='listo')
               const col = edadColor(c.created_at)
               const urgente = col===K.red
+              const minutosComanda = Math.floor((Date.now()-new Date(c.created_at).getTime())/60000)
               return (
                 <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.08)':col===K.amb?'rgba(232,163,59,.08)':'rgba(63,125,68,.06)', border:`1px solid ${urgente?'rgba(217,68,43,.35)':col===K.amb?'rgba(232,163,59,.3)':'rgba(63,125,68,.25)'}`, borderRadius:0, padding:14, animation:'slideIn .3s ease' }}>
                   {allDone && (
@@ -627,7 +702,12 @@ function KDSInner() {
                           </div>
                           {it.notas&&<div style={{ fontFamily:SN, fontSize:11, color:K.amb, marginTop:2 }}>{it.notas}</div>}
                         </div>
-                        <span style={{ fontFamily:SM, fontSize:13, color:K.fg3 }}>{it.cantidad}x</span>
+                        <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:2, flexShrink:0 }}>
+                          <span style={{ fontFamily:SM, fontSize:13, color:K.fg3 }}>{it.cantidad}x</span>
+                          {minutosComanda > 0 && it.estado !== 'listo' && (
+                            <span style={{ fontFamily:SM, fontSize:8, color:minutosComanda>20?K.red:minutosComanda>10?K.amb:K.fg3, letterSpacing:'.06em' }}>+{minutosComanda}m</span>
+                          )}
+                        </div>
                         {!seccionFiltro&&it.seccion_id&&(
                           <span style={{ fontFamily:SM, fontSize:8, padding:'2px 5px', borderRadius:2, background:K.rule, color:K.fg3, letterSpacing:'.06em' }}>
                             {it.seccion_id.toUpperCase()}

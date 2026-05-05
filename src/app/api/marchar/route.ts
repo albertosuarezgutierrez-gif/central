@@ -14,6 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
+import { crearPrintJobMarchar } from '@/lib/courier'
 
 export const dynamic = 'force-dynamic'
 
@@ -226,6 +227,25 @@ export async function POST(req: NextRequest) {
       mesa_codigo, config.camarero_sin_running,
       items ?? [], config, baseUrl
     )
+  }
+
+  // 6. Imprimir ticket de pase si hay reglas configuradas
+  if (items && items.length > 0) {
+    try {
+      await crearPrintJobMarchar(
+        {
+          id:              comanda_id,
+          tipo:            'marchar',
+          mesa_codigo,
+          camarero_nombre: receptor.camarero_nombre ?? 'Sala',
+          restaurante_id:  receptor.restaurante_id,
+          zona_tipo:       receptor.zona_id ?? null,
+        },
+        items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad }))
+      )
+    } catch (e) {
+      console.error('[MARCHAR] Error imprimiendo ticket de pase:', e)
+    }
   }
 
   return NextResponse.json({

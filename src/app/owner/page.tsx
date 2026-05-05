@@ -26,7 +26,7 @@ type Camarero = { id: string; nombre: string; pin: string; rol: string; activo: 
 type Mesa = { id: string; codigo: string; nombre: string | null; zona: string; capacidad: number; estado: string }
 type Turno = { id: string; nombre: string; estado: string; created_at: string; fecha: string }
 type TurnoStats = { total_comandas: number; avg_latencia_ms: number | null; mesas_activas: { codigo: string; count: number }[] }
-type Impresora = { id: string; nombre: string; seccion_id: string; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null }
+type Impresora = { id: string; nombre: string; seccion_id: string; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null }
 type BridgeToken = { id: string; token: string; nombre: string; activo: boolean; ultimo_ping: string | null }
 type PrintJob = { id: string; status: string; seccion_id: string; created_at: string; sent_at: string | null; acked_at: string | null; attempts: number; error_msg: string | null; impresoras?: { nombre: string } }
 
@@ -1686,6 +1686,7 @@ function ImpresorasTab() {
         port:           editando.port,
         cloud_device_id: editando.cloud_device_id,
         modelo:         editando.modelo,
+        impresora_fallback_id: editando.impresora_fallback_id || null,
       })
     })
     setSaving(false)
@@ -1845,6 +1846,21 @@ function ImpresorasTab() {
                         <Field label="Device ID" value={editando.cloud_device_id ?? ''} onChange={v => setEditando(e => e ? {...e, cloud_device_id: v} : null)} placeholder="SL-T300-XXXXXXXX"/>
                       </div>
                     )}
+                    <div style={{ marginBottom: 12 }}>
+                      <label style={{ fontFamily: SN, fontSize: 12, color: C.ink3, fontWeight: 600, marginBottom: 4, display: 'block' }}>
+                        Impresora de fallback (si falla la principal)
+                      </label>
+                      <select
+                        value={editando.impresora_fallback_id ?? ''}
+                        onChange={e => setEditando(ed => ed ? { ...ed, impresora_fallback_id: e.target.value || null } : null)}
+                        style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none' }}
+                      >
+                        <option value="">Sin fallback</option>
+                        {impresoras.filter(i => i.id !== editando.id).map(i => (
+                          <option key={i.id} value={i.id}>🖨️ {i.nombre}</option>
+                        ))}
+                      </select>
+                    </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Btn variant="ghost" onClick={() => setEditando(null)}>Cancelar</Btn>
                       <Btn variant="primary" onClick={saveEdit} disabled={saving}><Icon d={ICONS.check} size={14}/>{saving ? 'Guardando...' : 'Guardar'}</Btn>
@@ -1856,6 +1872,11 @@ function ImpresorasTab() {
                     <div>
                       <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: imp.activa ? C.ink : C.ink4 }}>{imp.nombre}</div>
                       <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, marginTop: 2, letterSpacing: '.04em' }}>{connInfo}</div>
+                      {imp.impresora_fallback_id && (
+                        <div style={{ fontFamily: SM, fontSize: 10, color: C.amber, marginTop: 2 }}>
+                          ↩ fallback: {impresoras.find(i => i.id === imp.impresora_fallback_id)?.nombre ?? imp.impresora_fallback_id}
+                        </div>
+                      )}
                     </div>
                     <span>
                       <span style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', background: sec.color, color: sec.text, padding: '3px 8px', borderRadius: 3 }}>
@@ -2046,11 +2067,16 @@ type ReglaEnvio = {
   id: string
   zona_tipo: string | null
   seccion_id: string | null
+  seccion_ids: string[]
   destino_tipo: 'impresora' | 'kds'
   destino_ref: string
   destino_nombre: string | null
   prioridad: number
   activa: boolean
+  imprimir_al_marchar: boolean
+  impresora_pase_id: string | null
+  hora_desde: string | null
+  hora_hasta: string | null
 }
 type CatImp  = { id: string; nombre: string; seccion_id: string; connection_type: string }
 type CatSec  = { id: string; nombre: string; color_kds: string; icono: string }
@@ -2068,12 +2094,19 @@ function FlujoTab() {
   const [modal,      setModal]      = useState(false)
   const [saving,     setSaving]     = useState(false)
   const [err,        setErr]        = useState('')
+  const [ordenModified, setOrdenModified] = useState(false)
+  const [savingOrden,   setSavingOrden]   = useState(false)
+  const [dragging, setDragging] = useState<string | null>(null)
+  const [dragOver, setDragOver] = useState<string | null>(null)
   const [form, setForm] = useState({
-    zona_tipo:    '',
-    seccion_id:   '',
-    destino_tipo: 'impresora' as 'impresora' | 'kds',
-    destino_ref:  '',
-    prioridad:    '5',
+    zona_tipo:           '',
+    seccion_ids:         [] as string[],
+    destino_tipo:        'impresora' as 'impresora' | 'kds',
+    destino_ref:         '',
+    imprimir_al_marchar: false,
+    impresora_pase_id:   '',
+    hora_desde:          '',
+    hora_hasta:          '',
   })
 
   const load = useCallback(async () => {
@@ -2092,16 +2125,29 @@ function FlujoTab() {
   useEffect(() => { load() }, [load])
 
   const openModal = () => {
-    setForm({ zona_tipo: '', seccion_id: '', destino_tipo: 'impresora', destino_ref: '', prioridad: '5' })
+    setForm({
+      zona_tipo: '', seccion_ids: [], destino_tipo: 'impresora',
+      destino_ref: '', imprimir_al_marchar: false, impresora_pase_id: '',
+      hora_desde: '', hora_hasta: '',
+    })
     setErr('')
     setModal(true)
   }
 
+  const toggleSeccion = (id: string) => {
+    setForm(f => ({
+      ...f,
+      seccion_ids: f.seccion_ids.includes(id)
+        ? f.seccion_ids.filter(s => s !== id)
+        : [...f.seccion_ids, id],
+    }))
+  }
+
   const guardar = async () => {
     if (!form.destino_ref) return setErr('Selecciona un destino')
+    if (form.imprimir_al_marchar && !form.impresora_pase_id) return setErr('Selecciona la impresora de pase')
     setSaving(true)
     setErr('')
-    // Calcular nombre caché del destino
     let destino_nombre = ''
     if (form.destino_tipo === 'impresora') {
       destino_nombre = impresoras.find(i => i.id === form.destino_ref)?.nombre ?? ''
@@ -2112,12 +2158,16 @@ function FlujoTab() {
       method: 'POST',
       headers: { ...sh(), 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        zona_tipo:    form.zona_tipo    || null,
-        seccion_id:   form.seccion_id   || null,
-        destino_tipo: form.destino_tipo,
-        destino_ref:  form.destino_ref,
+        zona_tipo:           form.zona_tipo || null,
+        seccion_ids:         form.seccion_ids,
+        destino_tipo:        form.destino_tipo,
+        destino_ref:         form.destino_ref,
         destino_nombre,
-        prioridad:    parseInt(form.prioridad) || 5,
+        prioridad:           reglas.length + 1,
+        imprimir_al_marchar: form.imprimir_al_marchar,
+        impresora_pase_id:   form.impresora_pase_id || null,
+        hora_desde:          form.hora_desde || null,
+        hora_hasta:          form.hora_hasta || null,
       }),
     })
     if (!r.ok) setErr('Error al guardar')
@@ -2134,6 +2184,33 @@ function FlujoTab() {
     load()
   }
 
+  const guardarOrden = async () => {
+    setSavingOrden(true)
+    for (let i = 0; i < reglas.length; i++) {
+      await fetch('/api/owner/reglas-envio', {
+        method: 'PATCH',
+        headers: { ...sh(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: reglas[i].id, prioridad: reglas.length - i }),
+      })
+    }
+    setSavingOrden(false)
+    setOrdenModified(false)
+    load()
+  }
+
+  const handleDrop = (targetId: string) => {
+    if (!dragging || dragging === targetId) return
+    const fromIdx = reglas.findIndex(x => x.id === dragging)
+    const toIdx   = reglas.findIndex(x => x.id === targetId)
+    const newR = [...reglas]
+    const [moved] = newR.splice(fromIdx, 1)
+    newR.splice(toIdx, 0, moved)
+    setReglas(newR)
+    setOrdenModified(true)
+    setDragging(null)
+    setDragOver(null)
+  }
+
   const borrar = async (id: string) => {
     if (!confirm('¿Eliminar esta regla?')) return
     await fetch('/api/owner/reglas-envio', {
@@ -2145,11 +2222,10 @@ function FlujoTab() {
   }
 
   const zonaNombre = (tipo: string | null) =>
-    tipo ? (zonas.find(z => z.tipo === tipo)?.nombre ?? tipo) : <span style={{ color: C.ink4, fontStyle: 'italic' }}>Todas las zonas</span>
-  const seccionNombre = (id: string | null) =>
-    id ? (secciones.find(s => s.id === id)?.nombre ?? id) : <span style={{ color: C.ink4, fontStyle: 'italic' }}>Todas las secciones</span>
+    tipo ? (zonas.find(z => z.tipo === tipo)?.nombre ?? tipo) : null
+  const seccionNombres = (ids: string[]) =>
+    ids.map(id => secciones.find(s => s.id === id) ?? { id, nombre: id, color_kds: C.ink4, icono: '' })
 
-  // Opciones de destino según tipo seleccionado
   const opcionesDestino = form.destino_tipo === 'impresora'
     ? impresoras.map(i => ({ value: i.id, label: `🖨️ ${i.nombre}` }))
     : secciones.map(s => ({ value: s.id, label: `📺 KDS · ${s.nombre}` }))
@@ -2170,252 +2246,225 @@ function FlujoTab() {
         <div>
           <div style={{ fontFamily: SE, fontSize: 20, fontWeight: 700, color: C.ink }}>Flujos de trabajo</div>
           <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, marginTop: 4 }}>
-            Define a dónde va cada comanda según la zona y el tipo de producto.
+            Define a dónde va cada comanda según zona, sección y horario.
             Sin reglas, el sistema usa la configuración de impresoras estándar.
           </div>
         </div>
-        <button onClick={openModal} style={{
-          background: C.red, color: '#fff', border: 'none', borderRadius: 8,
-          padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
-          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-        }}>
-          <Icon d={ICONS.plus} size={15}/> Nueva regla
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {ordenModified && (
+            <button onClick={guardarOrden} disabled={savingOrden} style={{
+              background: C.green, color: '#fff', border: 'none', borderRadius: 8,
+              padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
+              cursor: 'pointer', whiteSpace: 'nowrap',
+            }}>
+              {savingOrden ? 'Guardando…' : '↕ Guardar orden'}
+            </button>
+          )}
+          <button onClick={openModal} style={{
+            background: C.red, color: '#fff', border: 'none', borderRadius: 8,
+            padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+          }}>
+            <Icon d={ICONS.plus} size={15}/> Nueva regla
+          </button>
+        </div>
       </div>
 
       {/* Sin terminales configurados — aviso */}
       {!loading && impresoras.length === 0 && secciones.length === 0 && (
-        <div style={{
-          background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 8,
-          padding: '12px 16px', fontFamily: SN, fontSize: 13, color: C.ink2, marginBottom: 16,
-        }}>
+        <div style={{ background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 8, padding: '12px 16px', fontFamily: SN, fontSize: 13, color: C.ink2, marginBottom: 16 }}>
           ⚠️ No hay impresoras activas ni secciones de cocina configuradas.
           Configúralos primero en las pestañas <strong>Impresoras</strong> y <strong>Secciones</strong>.
         </div>
       )}
 
       {/* Explicación del sistema de cascada */}
-      <div style={{
-        background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
-        padding: '12px 16px', marginBottom: 20, fontFamily: SN, fontSize: 12, color: C.ink3,
-        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px',
-      }}>
-        <div style={{ gridColumn: '1/-1', fontWeight: 700, color: C.ink2, marginBottom: 4 }}>
-          Orden de prioridad (de mayor a menor)
-        </div>
+      <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 16px', marginBottom: 20, fontFamily: SN, fontSize: 12, color: C.ink3, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px' }}>
+        <div style={{ gridColumn: '1/-1', fontWeight: 700, color: C.ink2, marginBottom: 4 }}>Orden de prioridad · Arrastra para reordenar</div>
         <div>1. Zona específica + Sección específica</div>
         <div>3. Sin zona + Sección específica</div>
         <div>2. Zona específica + Todas las secciones</div>
-        <div>4. Sin zona + Todas las secciones (default global)</div>
+        <div>4. Sin zona + Todas las secciones (global)</div>
       </div>
 
       {/* Lista de reglas */}
       {loading ? (
         <div style={{ textAlign: 'center', padding: 40, color: C.ink4, fontFamily: SN }}>Cargando…</div>
       ) : reglas.length === 0 ? (
-        <div style={{
-          textAlign: 'center', padding: 48, color: C.ink4, fontFamily: SN,
-          border: `2px dashed ${C.rule}`, borderRadius: 12,
-        }}>
+        <div style={{ textAlign: 'center', padding: 48, color: C.ink4, fontFamily: SN, border: `2px dashed ${C.rule}`, borderRadius: 12 }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🔀</div>
           <div style={{ fontWeight: 600, marginBottom: 4 }}>Sin flujos configurados</div>
           <div style={{ fontSize: 12 }}>Todas las comandas se enrutan según la configuración de impresoras estándar</div>
         </div>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {reglas.map(r => (
-            <div key={r.id} style={{
-              background: r.activa ? C.bone : C.paper2,
-              border: `1px solid ${r.activa ? C.rule : C.paper3}`,
-              borderRadius: 10, padding: '12px 16px',
-              display: 'flex', alignItems: 'center', gap: 12,
-              opacity: r.activa ? 1 : 0.55, transition: 'opacity .2s',
-            }}>
-              {/* Prioridad badge */}
-              <div style={{
-                background: C.paper2, border: `1px solid ${C.rule}`,
-                borderRadius: 6, padding: '2px 7px', fontFamily: SM,
-                fontSize: 11, color: C.ink3, minWidth: 28, textAlign: 'center', flexShrink: 0,
-              }}>
-                P{r.prioridad}
-              </div>
+          {reglas.map(r => {
+            const secs = seccionNombres(r.seccion_ids?.length > 0 ? r.seccion_ids : (r.seccion_id ? [r.seccion_id] : []))
+            const isDragging = dragging === r.id
+            const isDragOver  = dragOver  === r.id
+            return (
+              <div key={r.id} draggable
+                onDragStart={() => setDragging(r.id)}
+                onDragOver={(e) => { e.preventDefault(); setDragOver(r.id) }}
+                onDragLeave={() => setDragOver(null)}
+                onDrop={() => handleDrop(r.id)}
+                onDragEnd={() => { setDragging(null); setDragOver(null) }}
+                style={{
+                  background: isDragOver ? C.paper3 : r.activa ? C.bone : C.paper2,
+                  border: `1px solid ${isDragOver ? C.red : r.activa ? C.rule : C.paper3}`,
+                  borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12,
+                  opacity: isDragging ? 0.4 : r.activa ? 1 : 0.55, transition: 'opacity .2s, border-color .15s', cursor: 'grab',
+                }}>
+                <div style={{ color: C.ink4, fontSize: 18, cursor: 'grab', flexShrink: 0, userSelect: 'none' }}>⠿</div>
 
-              {/* SI: Zona + Sección */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 2 }}>SI</div>
-                <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>
-                  <span style={{
-                    background: C.paper3, borderRadius: 4, padding: '2px 6px', marginRight: 6, fontSize: 12,
-                  }}>
-                    {zonaNombre(r.zona_tipo)}
-                  </span>
-                  <span style={{ color: C.ink4 }}>·</span>
-                  <span style={{
-                    background: C.paper3, borderRadius: 4, padding: '2px 6px', marginLeft: 6, fontSize: 12,
-                  }}>
-                    {seccionNombre(r.seccion_id)}
-                  </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 4 }}>SI</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    {r.zona_tipo
+                      ? <span style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink2, fontWeight: 600 }}>📍 {zonaNombre(r.zona_tipo)}</span>
+                      : <span style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink4, fontStyle: 'italic' }}>Todas las zonas</span>
+                    }
+                    {secs.length > 0 ? secs.map(s => (
+                      <span key={s.id} style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink2, fontWeight: 600 }}>{s.icono} {s.nombre}</span>
+                    )) : (
+                      <span style={{ background: C.paper3, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink4, fontStyle: 'italic' }}>Todas las secciones</span>
+                    )}
+                    {r.hora_desde && r.hora_hasta && (
+                      <span style={{ background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.ink2 }}>🕐 {r.hora_desde}–{r.hora_hasta}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ color: C.red, fontWeight: 700, fontSize: 18, flexShrink: 0 }}>→</div>
+
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 4 }}>ENTONCES</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                    <span style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 600 }}>
+                      {DESTINO_ICON[r.destino_tipo]}{' '}{r.destino_nombre ?? r.destino_ref}
+                      <span style={{ marginLeft: 6, fontSize: 11, fontWeight: 400, background: r.destino_tipo === 'kds' ? C.greenS : C.paper3, color: r.destino_tipo === 'kds' ? C.green : C.ink3, borderRadius: 4, padding: '1px 5px' }}>
+                        {r.destino_tipo === 'kds' ? 'pantalla' : 'impresora'}
+                      </span>
+                    </span>
+                    {r.imprimir_al_marchar && (
+                      <span style={{ background: C.greenS, border: `1px solid ${C.green}`, borderRadius: 4, padding: '2px 7px', fontSize: 11, fontFamily: SN, color: C.green }}>🖨️ pase al marchar</span>
+                    )}
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                  <button onClick={() => toggleActiva(r)} style={{ background: r.activa ? C.greenS : C.paper3, color: r.activa ? C.green : C.ink4, border: 'none', borderRadius: 6, padding: '5px 10px', fontFamily: SN, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                    {r.activa ? '● ON' : '○ OFF'}
+                  </button>
+                  <button onClick={() => borrar(r.id)} style={{ background: 'transparent', color: C.ink4, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '5px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                    <Icon d={ICONS.trash} size={13}/>
+                  </button>
                 </div>
               </div>
-
-              {/* Flecha */}
-              <div style={{ color: C.red, fontWeight: 700, fontSize: 18, flexShrink: 0 }}>→</div>
-
-              {/* ENTONCES: Destino */}
-              <div style={{ flex: 1 }}>
-                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 2 }}>ENTONCES</div>
-                <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 600 }}>
-                  {DESTINO_ICON[r.destino_tipo]}{' '}
-                  {r.destino_nombre ?? r.destino_ref}
-                  <span style={{
-                    marginLeft: 6, fontSize: 11, fontWeight: 400,
-                    background: r.destino_tipo === 'kds' ? C.greenS : C.paper3,
-                    color: r.destino_tipo === 'kds' ? C.green : C.ink3,
-                    borderRadius: 4, padding: '1px 5px',
-                  }}>
-                    {r.destino_tipo === 'kds' ? 'pantalla' : 'impresora'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Acciones */}
-              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                <button
-                  onClick={() => toggleActiva(r)}
-                  title={r.activa ? 'Desactivar' : 'Activar'}
-                  style={{
-                    background: r.activa ? C.greenS : C.paper3,
-                    color: r.activa ? C.green : C.ink4,
-                    border: 'none', borderRadius: 6, padding: '5px 10px',
-                    fontFamily: SN, fontSize: 11, fontWeight: 600, cursor: 'pointer',
-                  }}
-                >
-                  {r.activa ? '● ON' : '○ OFF'}
-                </button>
-                <button
-                  onClick={() => borrar(r.id)}
-                  title="Eliminar"
-                  style={{
-                    background: 'transparent', color: C.ink4,
-                    border: `1px solid ${C.rule}`, borderRadius: 6, padding: '5px 8px',
-                    cursor: 'pointer', display: 'flex', alignItems: 'center',
-                  }}
-                >
-                  <Icon d={ICONS.trash} size={13}/>
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
 
       {/* Modal nueva regla */}
       {modal && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(26,23,20,.45)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16,
-        }}
-          onClick={e => { if (e.target === e.currentTarget) setModal(false) }}
-        >
-          <div style={{
-            background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 440,
-            boxShadow: '0 8px 32px rgba(26,23,20,.2)',
-          }}>
-            <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 20 }}>
-              Nueva regla de flujo
-            </div>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,20,.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(false) }}>
+          <div style={{ background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 480, boxShadow: '0 8px 32px rgba(26,23,20,.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+            <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 20 }}>Nueva regla de flujo</div>
 
-            {/* SI — Condiciones */}
-            <div style={{
-              background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
-              padding: '12px 14px', marginBottom: 14,
-            }}>
-              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 10, letterSpacing: '0.06em' }}>
-                SI (condiciones)
-              </div>
-              <div style={{ marginBottom: 10 }}>
-                <label style={labelSt}>Zona</label>
+            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
+              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 10, letterSpacing: '0.06em' }}>SI (condiciones)</div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelSt}>Zona de sala</label>
                 <select value={form.zona_tipo} onChange={e => setForm(f => ({ ...f, zona_tipo: e.target.value }))} style={inputSt}>
                   <option value="">Todas las zonas</option>
                   {zonas.map(z => <option key={z.tipo} value={z.tipo}>{z.nombre}</option>)}
                 </select>
               </div>
+
+              <div style={{ marginBottom: 12 }}>
+                <label style={labelSt}>
+                  Secciones de carta{' '}
+                  <span style={{ fontWeight: 400, color: C.ink4 }}>({form.seccion_ids.length === 0 ? 'todas' : `${form.seccion_ids.length} sel.`})</span>
+                </label>
+                <div style={{ border: `1px solid ${C.rule}`, borderRadius: 6, background: C.paper, maxHeight: 140, overflowY: 'auto' }}>
+                  {secciones.map((s, i) => (
+                    <div key={s.id} onClick={() => toggleSeccion(s.id)}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderBottom: i < secciones.length - 1 ? `1px solid ${C.rule}` : 'none', cursor: 'pointer', background: form.seccion_ids.includes(s.id) ? C.bone : 'transparent' }}>
+                      <div style={{ width: 16, height: 16, borderRadius: 4, flexShrink: 0, border: `2px solid ${form.seccion_ids.includes(s.id) ? C.red : C.rule}`, background: form.seccion_ids.includes(s.id) ? C.red : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {form.seccion_ids.includes(s.id) && <svg width="9" height="9" viewBox="0 0 9 9"><polyline points="1 4 3.5 7 8 1" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
+                      </div>
+                      <span style={{ fontFamily: SN, fontSize: 13, color: C.ink }}>{s.icono} {s.nombre}</span>
+                      <div style={{ marginLeft: 'auto', width: 10, height: 10, borderRadius: '50%', background: s.color_kds }} />
+                    </div>
+                  ))}
+                  {secciones.length === 0 && <div style={{ padding: '10px 12px', fontFamily: SN, fontSize: 12, color: C.ink4, fontStyle: 'italic' }}>Sin secciones configuradas</div>}
+                </div>
+                <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 4 }}>Sin selección = aplica a todas las secciones</div>
+              </div>
+
               <div>
-                <label style={labelSt}>Sección de carta</label>
-                <select value={form.seccion_id} onChange={e => setForm(f => ({ ...f, seccion_id: e.target.value }))} style={inputSt}>
-                  <option value="">Todas las secciones</option>
-                  {secciones.map(s => <option key={s.id} value={s.id}>{s.icono} {s.nombre}</option>)}
-                </select>
+                <label style={labelSt}>Horario (opcional)</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <input type="time" value={form.hora_desde} onChange={e => setForm(f => ({ ...f, hora_desde: e.target.value }))} style={{ ...inputSt, width: 120 }} />
+                  <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>a</span>
+                  <input type="time" value={form.hora_hasta} onChange={e => setForm(f => ({ ...f, hora_hasta: e.target.value }))} style={{ ...inputSt, width: 120 }} />
+                </div>
+                <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 4 }}>Vacío = activa siempre</div>
               </div>
             </div>
 
-            {/* ENTONCES — Destino */}
-            <div style={{
-              background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
-              padding: '12px 14px', marginBottom: 14,
-            }}>
-              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.green, marginBottom: 10, letterSpacing: '0.06em' }}>
-                ENTONCES (destino)
-              </div>
+            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 14px', marginBottom: 14 }}>
+              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.green, marginBottom: 10, letterSpacing: '0.06em' }}>ENTONCES (destino)</div>
+
               <div style={{ marginBottom: 10 }}>
                 <label style={labelSt}>Tipo de destino</label>
                 <div style={{ display: 'flex', gap: 8 }}>
                   {(['impresora', 'kds'] as const).map(tipo => (
                     <button key={tipo} onClick={() => setForm(f => ({ ...f, destino_tipo: tipo, destino_ref: '' }))}
-                      style={{
-                        flex: 1, padding: '8px 0', border: `2px solid ${form.destino_tipo === tipo ? C.red : C.rule}`,
-                        borderRadius: 8, background: form.destino_tipo === tipo ? C.redS : 'transparent',
-                        fontFamily: SN, fontSize: 13, fontWeight: 600,
-                        color: form.destino_tipo === tipo ? C.red : C.ink3, cursor: 'pointer',
-                      }}
-                    >
+                      style={{ flex: 1, padding: '8px 0', border: `2px solid ${form.destino_tipo === tipo ? C.red : C.rule}`, borderRadius: 8, background: form.destino_tipo === tipo ? C.redS : 'transparent', fontFamily: SN, fontSize: 13, fontWeight: 600, color: form.destino_tipo === tipo ? C.red : C.ink3, cursor: 'pointer' }}>
                       {DESTINO_ICON[tipo]} {tipo === 'impresora' ? 'Impresora' : 'Pantalla KDS'}
                     </button>
                   ))}
                 </div>
               </div>
-              <div>
+
+              <div style={{ marginBottom: 14 }}>
                 <label style={labelSt}>{form.destino_tipo === 'impresora' ? 'Impresora' : 'Sección KDS'}</label>
                 <select value={form.destino_ref} onChange={e => setForm(f => ({ ...f, destino_ref: e.target.value }))} style={inputSt}>
                   <option value="">— Selecciona —</option>
                   {opcionesDestino.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
                 </select>
-                {opcionesDestino.length === 0 && (
-                  <div style={{ fontFamily: SN, fontSize: 11, color: C.amber, marginTop: 4 }}>
-                    ⚠️ No hay {form.destino_tipo === 'impresora' ? 'impresoras activas' : 'secciones de cocina'} configuradas
+                {opcionesDestino.length === 0 && <div style={{ fontFamily: SN, fontSize: 11, color: C.amber, marginTop: 4 }}>⚠️ No hay {form.destino_tipo === 'impresora' ? 'impresoras activas' : 'secciones de cocina'} configuradas</div>}
+              </div>
+
+              <div>
+                <div onClick={() => setForm(f => ({ ...f, imprimir_al_marchar: !f.imprimir_al_marchar, impresora_pase_id: '' }))} style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, flexShrink: 0, border: `2px solid ${form.imprimir_al_marchar ? C.red : C.rule}`, background: form.imprimir_al_marchar ? C.red : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {form.imprimir_al_marchar && <svg width="10" height="10" viewBox="0 0 10 10"><polyline points="1 5 4 8 9 2" stroke="#fff" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
+                  </div>
+                  <span style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>Imprimir ticket de pase al marchar</span>
+                </div>
+                <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginLeft: 28, marginTop: 2 }}>Cuando cocina pulsa MARCHAR, imprime un resumen en sala</div>
+                {form.imprimir_al_marchar && (
+                  <div style={{ marginTop: 10 }}>
+                    <label style={labelSt}>Impresora de pase</label>
+                    <select value={form.impresora_pase_id} onChange={e => setForm(f => ({ ...f, impresora_pase_id: e.target.value }))} style={inputSt}>
+                      <option value="">— Selecciona impresora —</option>
+                      {impresoras.map(i => <option key={i.id} value={i.id}>🖨️ {i.nombre}</option>)}
+                    </select>
                   </div>
                 )}
               </div>
             </div>
 
-            {/* Prioridad */}
-            <div style={{ marginBottom: 16 }}>
-              <label style={labelSt}>Prioridad (1–10, mayor = más peso)</label>
-              <input
-                type="number" min={1} max={10}
-                value={form.prioridad}
-                onChange={e => setForm(f => ({ ...f, prioridad: e.target.value }))}
-                style={{ ...inputSt, width: 80 }}
-              />
-              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginLeft: 8 }}>
-                Usa 10 para reglas específicas, 1 para fallbacks globales
-              </span>
-            </div>
-
             {err && <div style={{ color: C.red, fontFamily: SN, fontSize: 12, marginBottom: 12 }}>{err}</div>}
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setModal(false)} style={{
-                background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8,
-                padding: '9px 18px', fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer',
-              }}>
-                Cancelar
-              </button>
-              <button onClick={guardar} disabled={saving} style={{
-                background: saving ? C.ink4 : C.red, color: '#fff',
-                border: 'none', borderRadius: 8, padding: '9px 18px',
-                fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer',
-              }}>
+              <button onClick={() => setModal(false)} style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 18px', fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={guardar} disabled={saving} style={{ background: saving ? C.ink4 : C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer' }}>
                 {saving ? 'Guardando…' : 'Guardar regla'}
               </button>
             </div>
@@ -2425,6 +2474,7 @@ function FlujoTab() {
     </div>
   )
 }
+
 
 /* ─── Tab: Facturas Verifactu ─── */
 type Factura = {
