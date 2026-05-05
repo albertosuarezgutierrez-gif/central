@@ -2,6 +2,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ManualComanda from '@/components/ManualComanda'
+import MesaDetalleSheet from '@/components/edge/MesaDetalleSheet'
 import { useProductos86, useComandas } from '@/hooks/useRealtime'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
@@ -114,6 +115,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [showPush, setShowPush]     = useState(false)
   const [pushMsg, setPushMsg]       = useState('')
   const [chatMsgs, setChatMsgs]     = useState<ChatMsg[]>([])
+  // Mesa seleccionada para ver detalle
+  const [mesaDetalle, setMesaDetalle] = useState<{id:string;codigo:string}|null>(null)
 
   // Config camarero
   const [voiceConfirm, setVoiceConfirm] = useState(true)
@@ -406,7 +409,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {tab==='hablar' && (
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
-          {/* ÚLTIMAS 2 COMANDAS */}
+          {/* ÚLTIMAS 2 COMANDAS — tap para ver detalle */}
           {ultimasComandas.length>0 && (
             <div style={{padding:'8px 16px 0',display:'flex',flexDirection:'column',gap:4,flexShrink:0}}>
               {ultimasComandas.map(c => {
@@ -416,14 +419,18 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 const col    = c.estado==='en_cocina'?C.amb:c.estado==='lista'?C.gr:C.ink4
                 const bg     = c.estado==='en_cocina'?C.ambS:c.estado==='lista'?C.grS:C.bg2
                 return (
-                  <div key={c.id} style={{background:bg,border:`1px solid ${col}44`,borderLeft:`3px solid ${col}`,borderRadius:8,padding:'7px 10px',display:'flex',alignItems:'center',gap:10}}>
+                  <div key={c.id} onClick={()=>setMesaDetalle({id:c.mesa_id, codigo:mesa})}
+                    style={{background:bg,border:`1px solid ${col}44`,borderLeft:`3px solid ${col}`,borderRadius:8,padding:'7px 10px',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
                     <div style={{fontFamily:SE,fontStyle:'italic',fontSize:19,fontWeight:600,color:col,lineHeight:1,minWidth:24,textAlign:'center'}}>
                       {mesa.replace(/[^0-9]/g,'')}
                     </div>
                     <div style={{flex:1,minWidth:0}}>
                       <div style={{fontSize:11,color:C.ink2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{resumen||'—'}</div>
                     </div>
-                    <div style={{fontFamily:SM,fontSize:9,color:col,textTransform:'uppercase',flexShrink:0}}>{c.estado==='en_cocina'?'cocina':c.estado}</div>
+                    <div style={{display:'flex',alignItems:'center',gap:6}}>
+                      <div style={{fontFamily:SM,fontSize:9,color:col,textTransform:'uppercase'}}>{c.estado==='en_cocina'?'cocina':c.estado}</div>
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+                    </div>
                   </div>
                 )
               })}
@@ -558,6 +565,25 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           subscribed={subscribed}       onSubscribe={subscribe}
           hasInstall={!!installPrompt}  onInstall={install}
           onLogout={logout}
+        />
+      )}
+
+      {/* ── MESA DETALLE SHEET ─────────────────────────────────── */}
+      {mesaDetalle && (
+        <MesaDetalleSheet
+          mesaId={mesaDetalle.id}
+          mesaCodigo={mesaDetalle.codigo}
+          session={session}
+          onClose={()=>setMesaDetalle(null)}
+          onPedirCuenta={(comandaId, mesa)=>{
+            setLastComandaId(comandaId)
+            setBrain({mesa, tipo:'cuenta', items:[], confianza:1, raw:''})
+            setScreen('sent'); pedirCuenta()
+          }}
+          onAnadirPorVoz={(id, codigo, _comandaId)=>{
+            setMesaDetalle(null); setTab('hablar')
+            addMsg('sistema', `Añadiendo a ${codigo}. Mantén PTT.`, 'pregunta')
+          }}
         />
       )}
 
