@@ -77,23 +77,25 @@ const SCENARIOS=[
 ];
 
 const PLANS=[
-  {id:"barra",name:"BARRA",price:59,featured:false,desc:"Bares y cafeterías",
-   features:["1 camarero con voz","Hasta 12 mesas","KDS en cocina","VeriFactu incluido","Soporte email"]},
-  {id:"servicio",name:"SERVICIO",price:99,featured:true,desc:"Restaurante con sala completa",
-   features:["Hasta 4 camareros con voz","Mesas ilimitadas","KDS + Control Hub","Analytics ANALYST","Soporte WhatsApp","VeriFactu incluido"]},
-  {id:"casa",name:"CASA",price:169,featured:false,desc:"Grupos y varios locales",
-   features:["Camareros ilimitados","Hasta 3 locales","Secciones ilimitadas","API acceso","Onboarding personalizado","VeriFactu incluido"]},
+  {id:"barra",name:"BARRA",price:39,featured:false,desc:"Bares y cafeterías",
+   features:["1 camarero con voz","Hasta 12 mesas","KDS en cocina","Impresoras ilimitadas","VeriFactu homologado","Alérgenos EU incluidos","Soporte email"]},
+  {id:"servicio",name:"SERVICIO",price:79,featured:true,desc:"Restaurante con sala completa",
+   features:["Hasta 4 camareros con voz","Mesas ilimitadas","KDS + Control Hub","Analytics ANALYST","Cobro Stripe + Bizum","VeriFactu homologado","Soporte WhatsApp · 24h"]},
+  {id:"casa",name:"CASA",price:129,featured:false,desc:"Grupos y varios locales",
+   features:["Camareros ilimitados","Hasta 3 locales","Secciones ilimitadas","API acceso","Hardware Bridge incluido","Onboarding personalizado","VeriFactu homologado"]},
 ];
 
 const FAQS=[
-  {q:"¿Necesito hardware especial?",a:"No. Un Android en el bolsillo del camarero, una tablet en la barra y un monitor en cocina. Sin terminales propietarios."},
-  {q:"¿Funciona con acento o jerga hostelera?",a:"BRAIN está entrenado con vocabulario real: 'marchar', '86', 'sin', 'para llevar'... y aprende con cada servicio."},
-  {q:"¿Cumple con VeriFactu?",a:"Sí. Todos los planes generan facturas con QR firmado SHA-256 y envío a AEAT. Obligatorio desde enero 2026 para sociedades."},
-  {q:"¿Cómo es el proceso de alta?",a:"Email o teléfono → verificación → 3 pasos (local, mesas, camareros) → empiezas. Sin llamadas ni comerciales."},
-  {q:"¿Puedo cancelar cuando quiera?",a:"Sí. Sin permanencia. Cancelas desde el panel y no se renueva. Datos exportables 30 días."},
+  {q:"¿Qué hardware necesito exactamente?",a:"Un Android desde 180 € (validamos el Samsung Galaxy A15 5G), una impresora térmica de cocina y una tablet para el KDS. Sin terminales propietarios, sin contratos de hardware. Si tienes ya una impresora Epson o Star, conéctala directamente."},
+  {q:"¿Funciona con acento andaluz, catalán o de cualquier región?",a:"Sí. BRAIN usa Whisper entrenado con vocabulario hostelero real: 'marchar', '86', 'sin', 'para llevar', 'pon una de gambas'... Funciona con todos los acentos del español y aprende con cada servicio."},
+  {q:"¿Cuándo es obligatorio VeriFactu en España?",a:"Para sociedades desde el 1 de enero de 2027; para autónomos desde el 1 de julio de 2027. La multa por software no homologado es de hasta 50.000 € por ejercicio. ia.rest incluye VeriFactu con hash SHA-256 en todos los planes, ya activo."},
+  {q:"¿Puedo financiar ia.rest con el Kit Digital?",a:"Sí. Las subvenciones Kit Digital del Gobierno de España cubren herramientas de digitalización para pymes y autónomos. Una suscripción anual de ia.rest puede cofinanciarse con estas ayudas. Consúltanos y te orientamos."},
+  {q:"¿Hay comisión por cada cobro con tarjeta o Bizum?",a:"No. ia.rest cobra una cuota mensual fija y cero por transacción. Usas tu propio datáfono del banco o el lector Stripe Terminal. Bizum tampoco tiene comisión nuestra."},
+  {q:"¿Cómo es el proceso de alta?",a:"Registro en 3 pasos (local, mesas, camareros) → verificación en minutos → empiezas. Sin llamadas, sin comerciales, sin instalador que venga a tu local."},
+  {q:"¿Puedo cancelar cuando quiera?",a:"Sí. Sin permanencia ni penalización. Cancelas desde el panel y no se renueva. Datos exportables en formato estándar durante 30 días."},
 ];
 
-const TICKER=["marchar segundos mesa cuatro","86 las croquetas","la dos sin gluten ojo","cuenta separada en dos","vamos vamos vamos","padrón con sal gorda","datáfono en la cinco","sin azúcar el manchado"];
+const TICKER=["marchar segundos mesa cuatro","86 las croquetas","la dos sin gluten ojo","cuenta separada en dos","vamos vamos vamos","padrón con sal gorda","datáfono en la cinco","sin azúcar el manchado","verifactu homologado","sin comisiones","39€/mes completo","14 días gratis sin tarjeta","kit digital compatible","funciona en terraza"];
 
 /* ─── DEMO ────────────────────────────────────────────────── */
 function Demo({mob}:{mob:boolean}) {
@@ -257,7 +259,7 @@ export default function LandingPage() {
               Habla.<br/><span style={{color:T.verm}}>Cocina ya</span><br/>tiene el ticket.
             </h1>
             <p className="fu d3" style={{fontFamily:"Inter Tight,sans-serif",fontSize:mob?15:17,color:T.tintaMed,lineHeight:1.65,marginBottom:28,maxWidth:440,margin:mob?"0 auto 28px":"0 0 28px"}}>
-              Sin pantallas en sala. Sin &ldquo;espera, que apunto.&rdquo; El camarero habla y la impresora térmica escupe el ticket en{" "}
+              TPV con IA para restaurantes y bares en España. Sin pantallas en sala. Sin &ldquo;espera, que apunto.&rdquo; El camarero habla y el ticket llega a cocina en{" "}
               <strong style={{color:T.tinta}}>menos de medio segundo.</strong>
             </p>
             <div className="fu d4" style={{display:"flex",gap:10,flexWrap:"wrap",justifyContent:mob?"center":"flex-start"}}>
@@ -265,7 +267,7 @@ export default function LandingPage() {
               <a href="#como" className="ghost" style={{fontSize:14,color:T.tinta,padding:"12px 22px"}}>Ver cómo funciona →</a>
             </div>
             <div className="fu d5" style={{display:"grid",gridTemplateColumns:`repeat(${mob?2:4},1fr)`,gap:mob?12:20,marginTop:32}}>
-              {[["< 0.5s","voz → ticket"],["0%","comisión"],["14 días","gratis"],["+22%","rotación mesas"]].map(([v,l])=>(
+              {[["< 0.5s","voz → ticket"],["0%","comisión"],["desde 39€","al mes"],["14 días","gratis sin tarjeta"]].map(([v,l])=>(
                 <div key={l} style={{textAlign:mob?"center":"left"}}>
                   <div style={{fontFamily:"Newsreader,serif",fontSize:mob?22:26,fontStyle:"italic",fontWeight:700,color:T.tinta}}>{v}</div>
                   <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,color:T.tintaGris}}>{l}</div>
@@ -334,6 +336,108 @@ export default function LandingPage() {
                 <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,color:T.tintaGris}}>{l}</div>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* VERIFACTU URGENCY BANNER */}
+      <section style={{background:`linear-gradient(135deg,#1C0F09,#2A1208)`,padding:mob?"24px 16px":"32px 24px",borderBottom:`1px solid ${T.verm}33`}}>
+        <div style={{maxWidth:900,margin:"0 auto",display:"flex",gap:20,alignItems:"center",flexDirection:mob?"column":"row",textAlign:mob?"center":"left"}}>
+          <div style={{fontSize:36,flexShrink:0}}>⚖️</div>
+          <div style={{flex:1}}>
+            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,letterSpacing:".2em",color:T.verm,textTransform:"uppercase",marginBottom:4}}>Obligatorio en España</div>
+            <div style={{fontFamily:"Newsreader,serif",fontSize:mob?18:22,fontStyle:"italic",fontWeight:700,color:T.crema,marginBottom:4}}>
+              VeriFactu homologado SHA-256 — incluido en todos los planes
+            </div>
+            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:13,color:T.tintaGris,lineHeight:1.6}}>
+              Multa de hasta <strong style={{color:T.ambar}}>50.000 €/ejercicio</strong> por software no homologado.
+              Obligatorio para sociedades el <strong style={{color:T.crema}}>1-ene-2027</strong> y autónomos el <strong style={{color:T.crema}}>1-jul-2027</strong>.
+              ia.rest genera facturas con QR verificable por la AEAT desde el primer ticket.{" "}
+              <span style={{fontFamily:"Caveat,cursive",color:T.marchar}}>Ya activo, no hay que configurar nada.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* TODO INCLUIDO */}
+      <section style={{background:T.elev1,padding:mob?"36px 16px":"48px 24px",borderBottom:`1px solid ${T.reglas}`}}>
+        <div style={{maxWidth:1000,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:28}}>
+            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,letterSpacing:".2em",color:T.verm,textTransform:"uppercase",marginBottom:8}}>En todos los planes, sin asteriscos</div>
+            <h2 style={{fontFamily:"Newsreader,serif",fontSize:mob?"clamp(20px,6vw,28px)":"clamp(22px,3vw,32px)",fontStyle:"italic",fontWeight:700,color:T.tinta}}>
+              Todo lo que esperas. Y la voz que nadie más da.
+            </h2>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:mob?"1fr 1fr":`repeat(4,1fr)`,gap:12}}>
+            {[
+              {icon:"🎤",label:"Comandas por voz",sub:"EAR + BRAIN nativos"},
+              {icon:"⚖️",label:"VeriFactu SHA-256",sub:"Homologado AEAT"},
+              {icon:"🌿",label:"Alérgenos EU",sub:"Reg. 1169/2011"},
+              {icon:"📺",label:"KDS en cocina",sub:"Tiempo real"},
+              {icon:"💳",label:"Stripe + Bizum",sub:"Sin comisión nuestra"},
+              {icon:"📱",label:"Sin app de tienda",sub:"PWA en cualquier Android"},
+              {icon:"🔁",label:"Sin permanencia",sub:"Cancelas cuando quieras"},
+              {icon:"🏷",label:"Kit Digital",sub:"Subvención compatible"},
+            ].map(({icon,label,sub})=>(
+              <div key={label} style={{background:T.crema,border:`1px solid ${T.reglas}`,borderRadius:10,padding:"14px 12px",textAlign:"center"}}>
+                <div style={{fontSize:22,marginBottom:6}}>{icon}</div>
+                <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:12,fontWeight:700,color:T.tinta,lineHeight:1.3,marginBottom:3}}>{label}</div>
+                <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,color:T.tintaGris}}>{sub}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* COMPARATIVA */}
+      <section style={{background:T.crema,padding:mob?"40px 16px":"56px 24px"}}>
+        <div style={{maxWidth:900,margin:"0 auto"}}>
+          <div style={{textAlign:"center",marginBottom:32}}>
+            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,letterSpacing:".2em",color:T.verm,textTransform:"uppercase",marginBottom:8}}>Comparativa · mayo 2026</div>
+            <h2 style={{fontFamily:"Newsreader,serif",fontSize:mob?"clamp(20px,6vw,28px)":"clamp(22px,3vw,32px)",fontStyle:"italic",fontWeight:700,color:T.tinta}}>
+              Lo que dan los demás a 59 €/mes.<br/>Lo que da ia.rest a 39 €/mes.
+            </h2>
+          </div>
+          <div style={{overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Inter Tight,sans-serif",fontSize:mob?11:13}}>
+              <thead>
+                <tr>
+                  {["Característica","ia.rest 39 €","TPV básico ~34–59 €"].map((h,i)=>(
+                    <th key={h} style={{padding:"10px 14px",textAlign:i===0?"left":"center",
+                      borderBottom:`2px solid ${i===1?T.verm:T.reglas}`,
+                      fontWeight:700,color:i===1?T.verm:T.tintaMed,
+                      background:i===1?`${T.verm}08`:"transparent",
+                      fontSize:10,letterSpacing:".1em",textTransform:"uppercase"}}>
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  ["Comandas por voz con IA","✓","✗ (no existe en el mercado)"],
+                  ["VeriFactu homologado AEAT","✓","Según producto"],
+                  ["Sin comisión por transacción","✓","Depende — algunos cobran 1–1,5%"],
+                  ["KDS cocina incluido en plan base","✓","Habitualmente módulo extra"],
+                  ["Dispositivos ilimitados en el local","✓","A menudo cobran por terminal"],
+                  ["Alérgenos EU Reg. 1169/2011","✓","✓ (estándar del sector)"],
+                  ["PWA · sin descarga de app","✓","Variable"],
+                  ["14 días gratis sin tarjeta","✓","Raro en el mercado español"],
+                ].map(([feat,ours,theirs],i)=>(
+                  <tr key={feat} style={{background:i%2===0?T.elev1:"transparent"}}>
+                    <td style={{padding:"10px 14px",color:T.tintaMed,borderBottom:`1px solid ${T.reglas}`}}>{feat}</td>
+                    <td style={{padding:"10px 14px",textAlign:"center",color:T.marchar,fontWeight:700,
+                      background:`${T.verm}05`,borderBottom:`1px solid ${T.reglas}`,borderLeft:`2px solid ${T.verm}22`}}>{ours}</td>
+                    <td style={{padding:"10px 14px",textAlign:"center",color:T.tintaGris,borderBottom:`1px solid ${T.reglas}`}}>{theirs}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{textAlign:"center",marginTop:16}}>
+            <span style={{fontFamily:"Caveat,cursive",fontSize:13,color:T.tintaGris}}>
+              Comparativa orientativa basada en información pública de mayo 2026
+            </span>
           </div>
         </div>
       </section>
@@ -414,7 +518,8 @@ export default function LandingPage() {
             El próximo viernes<br/><span style={{color:T.verm}}>sin anotar nada.</span>
           </h2>
           <p style={{fontFamily:"Inter Tight,sans-serif",fontSize:mob?14:15,color:T.tintaGris,lineHeight:1.7,marginBottom:32}}>
-            14 días gratis con el plan SERVICIO completo. Sin tarjeta. Sin llamadas.
+            14 días gratis con el plan SERVICIO completo. Sin tarjeta. Sin llamadas.<br/>
+            <span style={{fontFamily:"Caveat,cursive",fontSize:15,color:T.ambar}}>Luego desde 39 €/mes. Sin comisiones. Sin permanencia.</span>
           </p>
           {!done?(
             <div style={{display:"flex",gap:10,flexDirection:mob?"column":"row",maxWidth:420,margin:"0 auto"}}>

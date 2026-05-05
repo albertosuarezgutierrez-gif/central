@@ -1,0 +1,16 @@
+User-agent: *
+Allow: /
+Allow: /registro
+Allow: /login
+
+Disallow: /api/
+Disallow: /edge
+Disallow: /kds
+Disallow: /owner
+Disallow: /super
+Disallow: /jefe
+Disallow: /hub
+Disallow: /cocina
+Disallow: /manual
+
+Sitemap: https://ia-rest.vercel.app/sitemap.xml
