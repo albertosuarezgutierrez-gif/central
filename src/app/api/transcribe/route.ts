@@ -163,7 +163,14 @@ export async function POST(req: NextRequest) {
       if (['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
         const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
         crearPrintJobs(
-          { id: comanda.id, tipo: brainResult.tipo, mesa_codigo: mesa.codigo, camarero_nombre: camarero?.nombre ?? 'Sala' },
+          {
+            id: comanda.id,
+            tipo: brainResult.tipo,
+            mesa_codigo: mesa.codigo,
+            camarero_nombre: camarero?.nombre ?? 'Sala',
+            restaurante_id: rid,
+            zona_tipo: (mesa as Record<string, unknown>).zona as string ?? null,
+          },
           brainResult.items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad,
             notas: item.notas ?? null, seccion_id: (item as Record<string, unknown>).seccion_id as string ?? null }))
         ).catch(err => console.error('[COURIER]', err))

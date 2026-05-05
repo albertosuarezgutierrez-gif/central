@@ -152,6 +152,48 @@ export function generarTextoPlano(payload: PrintPayload): string {
   return lines.join('\n')
 }
 
+// ── Motor de enrutamiento configurable ──────────────────────
+// Lee reglas_envio y resuelve destino para cada (zona, seccion).
+// Cascada de prioridad (mayor número = más peso):
+//   1. zona_tipo + seccion_id   (más específico)
+//   2. zona_tipo solo           (zona, cualquier sección)
+//   3. seccion_id solo          (sección, cualquier zona)
+//   4. zona_tipo NULL + seccion_id NULL  (fallback global)
+// Si no hay reglas → devuelve null → COURIER usa lógica legacy.
+
+interface ReglaEnvio {
+  zona_tipo:     string | null
+  seccion_id:    string | null
+  destino_tipo:  'impresora' | 'kds'
+  destino_ref:   string
+  prioridad:     number
+}
+
+function resolverDestinoItem(
+  seccion: string,
+  zona:    string | null | undefined,
+  reglas:  ReglaEnvio[]
+): ReglaEnvio | null {
+  if (!reglas.length) return null
+
+  // Puntúa cada regla por especificidad (base: prioridad)
+  const scored = reglas
+    .filter(r => {
+      const zonaOk    = r.zona_tipo   === null || r.zona_tipo   === zona
+      const seccionOk = r.seccion_id  === null || r.seccion_id  === seccion
+      return zonaOk && seccionOk
+    })
+    .map(r => ({
+      regla: r,
+      score: r.prioridad * 100
+        + (r.zona_tipo   !== null ? 10 : 0)
+        + (r.seccion_id  !== null ?  5 : 0),
+    }))
+    .sort((a, b) => b.score - a.score)
+
+  return scored[0]?.regla ?? null
+}
+
 // ── crearPrintJobs ───────────────────────────────────────────
 
 interface ComandaInfo {
@@ -160,6 +202,8 @@ interface ComandaInfo {
   mesa_codigo: string
   camarero_nombre: string
   ticket_num?: number
+  restaurante_id?: string   // necesario para consultar reglas_envio
+  zona_tipo?: string | null // zona de la mesa (salon, terraza, barra…)
 }
 
 /**
@@ -177,47 +221,119 @@ export async function crearPrintJobs(
   if (items.length === 0) return jobIds
 
   // 1. Resolver producto→seccion para items sin seccion_id
-  //    (BRAIN ya debería haberla rellenado, pero por si acaso)
   const itemsConSeccion: ItemParaPrint[] = await resolverSecciones(items, supabase)
 
-  // 2. Agrupar por sección
-  const porSeccion: Record<string, ItemParaPrint[]> = {}
-  for (const item of itemsConSeccion) {
-    const sec = item.seccion_id || 'otras'
-    if (!porSeccion[sec]) porSeccion[sec] = []
-    porSeccion[sec].push(item)
+  // 2. Cargar reglas de enrutamiento del restaurante (si las hay)
+  let reglas: ReglaEnvio[] = []
+  if (comanda.restaurante_id) {
+    const { data: reglasDB } = await supabase
+      .from('reglas_envio')
+      .select('zona_tipo, seccion_id, destino_tipo, destino_ref, prioridad')
+      .eq('restaurante_id', comanda.restaurante_id)
+      .eq('activa', true)
+    reglas = (reglasDB ?? []) as ReglaEnvio[]
   }
 
-  // 3. Cargar todas las impresoras activas (una query)
-  const { data: impresoras } = await supabase
-    .from('impresoras')
+  const hayReglas = reglas.length > 0
+
+  // 3. Cargar impresoras activas (siempre las necesitamos)
+  const query = supabase.from('impresoras')
     .select('id, seccion_id, nombre, connection_type')
     .eq('activa', true)
+  if (comanda.restaurante_id) {
+    query.eq('restaurante_id', comanda.restaurante_id)
+  }
+  const { data: impresoras } = await query
 
+  // Mapa seccion → impresora (lógica legacy)
   const impresoraMap: Record<string, { id: string; connection_type: string }> = {}
+  // Mapa UUID → impresora (para reglas)
+  const impresoraById: Record<string, { id: string; connection_type: string; seccion_id: string }> = {}
   for (const imp of impresoras ?? []) {
     impresoraMap[imp.seccion_id] = { id: imp.id, connection_type: imp.connection_type }
+    impresoraById[imp.id] = { id: imp.id, connection_type: imp.connection_type, seccion_id: imp.seccion_id }
   }
 
-  // 4. Obtener número de ticket
-  const ticketNum = await getNextTicketNum(supabase)
+  // 4. Agrupar items por destino
+  //    Si hay reglas → usa motor de enrutamiento
+  //    Si no → comportamiento legacy (seccion → impresora del mapa)
+  const porDestino: Record<string, {
+    items: ItemParaPrint[]
+    destino_tipo: 'impresora' | 'kds'
+    destino_ref: string
+    seccion_label: string
+  }> = {}
 
+  for (const item of itemsConSeccion) {
+    const seccion = item.seccion_id || 'otras'
+    let destino_tipo: 'impresora' | 'kds'
+    let destino_ref: string
+    let seccion_label: string
+
+    if (hayReglas) {
+      // ── Motor de enrutamiento configurable ──
+      const regla = resolverDestinoItem(seccion, comanda.zona_tipo, reglas)
+      if (regla) {
+        destino_tipo  = regla.destino_tipo
+        destino_ref   = regla.destino_ref
+        seccion_label = seccion
+      } else {
+        // Sin regla que aplique: fallback a impresora por sección
+        const imp = impresoraMap[seccion] ?? impresoraMap['otras']
+        if (!imp) {
+          console.warn(`[COURIER] Sin regla ni impresora para sección "${seccion}" (zona: ${comanda.zona_tipo}) — ítem omitido`)
+          continue
+        }
+        destino_tipo  = 'impresora'
+        destino_ref   = imp.id
+        seccion_label = seccion
+      }
+    } else {
+      // ── Comportamiento legacy: seccion → impresora ──
+      const imp = impresoraMap[seccion] ?? impresoraMap['otras']
+      if (!imp) {
+        console.warn(`[COURIER] Sin impresora para sección "${seccion}" — ítem omitido`)
+        continue
+      }
+      destino_tipo  = 'impresora'
+      destino_ref   = imp.id
+      seccion_label = seccion
+    }
+
+    // Items KDS: ya están en DB y KDS los ve por realtime → no crear print_job
+    if (destino_tipo === 'kds') {
+      console.log(`[COURIER] ítem "${item.nombre}" → KDS (${destino_ref}) — sin print_job`)
+      continue
+    }
+
+    // Agrupar por impresora destino
+    const key = destino_ref
+    if (!porDestino[key]) {
+      porDestino[key] = { items: [], destino_tipo, destino_ref, seccion_label }
+    }
+    porDestino[key].items.push(item)
+  }
+
+  // 5. Obtener número de ticket
+  const ticketNum = await getNextTicketNum(supabase)
   const ts = new Date().toISOString()
 
-  // 5. Crear un job por sección
-  for (const [seccion, secItems] of Object.entries(porSeccion)) {
-    const impresora = impresoraMap[seccion] ?? impresoraMap['otras']
-    if (!impresora) {
-      console.warn(`[COURIER] Sin impresora para sección "${seccion}" — job omitido`)
+  // 6. Crear un print_job por impresora destino
+  for (const grupo of Object.values(porDestino)) {
+    if (grupo.destino_tipo !== 'impresora') continue
+
+    const imp = impresoraById[grupo.destino_ref]
+    if (!imp) {
+      console.warn(`[COURIER] Impresora "${grupo.destino_ref}" no encontrada — job omitido`)
       continue
     }
 
     const payload: PrintPayload = {
-      mesa:     comanda.mesa_codigo,
-      camarero: comanda.camarero_nombre,
+      mesa:       comanda.mesa_codigo,
+      camarero:   comanda.camarero_nombre,
       ticket_num: ticketNum,
-      seccion,
-      items: secItems.map(i => ({
+      seccion:    grupo.seccion_label,
+      items: grupo.items.map(i => ({
         nombre:   i.nombre,
         cantidad: i.cantidad,
         notas:    i.notas ?? undefined,
@@ -226,12 +342,10 @@ export async function crearPrintJobs(
       ts,
     }
 
-    // Generar ESC/POS según tipo de conexión
     let printData: string
-    if (impresora.connection_type === 'ip_local' || impresora.connection_type === 'usb_bridge') {
+    if (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge') {
       printData = generarEscPos(payload)
     } else {
-      // CloudPRNT / ePOS: texto plano (el endpoint CloudPRNT lo reconstruye)
       printData = generarTextoPlano(payload)
     }
 
@@ -239,8 +353,8 @@ export async function crearPrintJobs(
       .from('print_jobs')
       .insert({
         comanda_id:   comanda.id,
-        impresora_id: impresora.id,
-        seccion_id:   seccion,
+        impresora_id: imp.id,
+        seccion_id:   imp.seccion_id,
         payload,
         print_data:   printData,
         status:       'pendiente',
@@ -249,7 +363,7 @@ export async function crearPrintJobs(
       .single()
 
     if (error) {
-      console.error(`[COURIER] Error creando print_job para sección "${seccion}":`, error)
+      console.error(`[COURIER] Error creando print_job:`, error)
       continue
     }
 

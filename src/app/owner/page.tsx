@@ -1837,6 +1837,392 @@ function ImpresorasTab() {
     </div>
   )
 }
+/* ─── Tab: Flujos de trabajo ─── */
+
+type ReglaEnvio = {
+  id: string
+  zona_tipo: string | null
+  seccion_id: string | null
+  destino_tipo: 'impresora' | 'kds'
+  destino_ref: string
+  destino_nombre: string | null
+  prioridad: number
+  activa: boolean
+}
+type CatImp  = { id: string; nombre: string; seccion_id: string; connection_type: string }
+type CatSec  = { id: string; nombre: string; color_kds: string; icono: string }
+type CatZona = { id: string; tipo: string; nombre: string }
+
+const DESTINO_ICON: Record<string, string> = { impresora: '🖨️', kds: '📺' }
+
+function FlujoTab() {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [reglas,     setReglas]     = useState<ReglaEnvio[]>([])
+  const [impresoras, setImpresoras] = useState<CatImp[]>([])
+  const [secciones,  setSecciones]  = useState<CatSec[]>([])
+  const [zonas,      setZonas]      = useState<CatZona[]>([])
+  const [loading,    setLoading]    = useState(true)
+  const [modal,      setModal]      = useState(false)
+  const [saving,     setSaving]     = useState(false)
+  const [err,        setErr]        = useState('')
+  const [form, setForm] = useState({
+    zona_tipo:    '',
+    seccion_id:   '',
+    destino_tipo: 'impresora' as 'impresora' | 'kds',
+    destino_ref:  '',
+    prioridad:    '5',
+  })
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const r = await fetch('/api/owner/reglas-envio', { headers: sh() })
+    if (r.ok) {
+      const d = await r.json()
+      setReglas(d.reglas)
+      setImpresoras(d.impresoras)
+      setSecciones(d.secciones)
+      setZonas(d.zonas)
+    }
+    setLoading(false)
+  }, [])
+
+  useEffect(() => { load() }, [load])
+
+  const openModal = () => {
+    setForm({ zona_tipo: '', seccion_id: '', destino_tipo: 'impresora', destino_ref: '', prioridad: '5' })
+    setErr('')
+    setModal(true)
+  }
+
+  const guardar = async () => {
+    if (!form.destino_ref) return setErr('Selecciona un destino')
+    setSaving(true)
+    setErr('')
+    // Calcular nombre caché del destino
+    let destino_nombre = ''
+    if (form.destino_tipo === 'impresora') {
+      destino_nombre = impresoras.find(i => i.id === form.destino_ref)?.nombre ?? ''
+    } else {
+      destino_nombre = secciones.find(s => s.id === form.destino_ref)?.nombre ?? ''
+    }
+    const r = await fetch('/api/owner/reglas-envio', {
+      method: 'POST',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        zona_tipo:    form.zona_tipo    || null,
+        seccion_id:   form.seccion_id   || null,
+        destino_tipo: form.destino_tipo,
+        destino_ref:  form.destino_ref,
+        destino_nombre,
+        prioridad:    parseInt(form.prioridad) || 5,
+      }),
+    })
+    if (!r.ok) setErr('Error al guardar')
+    else { setModal(false); load() }
+    setSaving(false)
+  }
+
+  const toggleActiva = async (regla: ReglaEnvio) => {
+    await fetch('/api/owner/reglas-envio', {
+      method: 'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id: regla.id, activa: !regla.activa }),
+    })
+    load()
+  }
+
+  const borrar = async (id: string) => {
+    if (!confirm('¿Eliminar esta regla?')) return
+    await fetch('/api/owner/reglas-envio', {
+      method: 'DELETE',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id }),
+    })
+    load()
+  }
+
+  const zonaNombre = (tipo: string | null) =>
+    tipo ? (zonas.find(z => z.tipo === tipo)?.nombre ?? tipo) : <span style={{ color: C.ink4, fontStyle: 'italic' }}>Todas las zonas</span>
+  const seccionNombre = (id: string | null) =>
+    id ? (secciones.find(s => s.id === id)?.nombre ?? id) : <span style={{ color: C.ink4, fontStyle: 'italic' }}>Todas las secciones</span>
+
+  // Opciones de destino según tipo seleccionado
+  const opcionesDestino = form.destino_tipo === 'impresora'
+    ? impresoras.map(i => ({ value: i.id, label: `🖨️ ${i.nombre}` }))
+    : secciones.map(s => ({ value: s.id, label: `📺 KDS · ${s.nombre}` }))
+
+  const inputSt: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', borderRadius: 6,
+    border: `1px solid ${C.rule}`, background: C.bone,
+    fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none',
+    boxSizing: 'border-box',
+  }
+  const labelSt: React.CSSProperties = { fontFamily: SN, fontSize: 12, color: C.ink3, fontWeight: 600, marginBottom: 4, display: 'block' }
+
+  return (
+    <div style={{ padding: '20px 0' }}>
+
+      {/* Cabecera */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontFamily: SE, fontSize: 20, fontWeight: 700, color: C.ink }}>Flujos de trabajo</div>
+          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, marginTop: 4 }}>
+            Define a dónde va cada comanda según la zona y el tipo de producto.
+            Sin reglas, el sistema usa la configuración de impresoras estándar.
+          </div>
+        </div>
+        <button onClick={openModal} style={{
+          background: C.red, color: '#fff', border: 'none', borderRadius: 8,
+          padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
+          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
+        }}>
+          <Icon d={ICONS.plus} size={15}/> Nueva regla
+        </button>
+      </div>
+
+      {/* Sin terminales configurados — aviso */}
+      {!loading && impresoras.length === 0 && secciones.length === 0 && (
+        <div style={{
+          background: C.amberS, border: `1px solid ${C.amber}`, borderRadius: 8,
+          padding: '12px 16px', fontFamily: SN, fontSize: 13, color: C.ink2, marginBottom: 16,
+        }}>
+          ⚠️ No hay impresoras activas ni secciones de cocina configuradas.
+          Configúralos primero en las pestañas <strong>Impresoras</strong> y <strong>Secciones</strong>.
+        </div>
+      )}
+
+      {/* Explicación del sistema de cascada */}
+      <div style={{
+        background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
+        padding: '12px 16px', marginBottom: 20, fontFamily: SN, fontSize: 12, color: C.ink3,
+        display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px 20px',
+      }}>
+        <div style={{ gridColumn: '1/-1', fontWeight: 700, color: C.ink2, marginBottom: 4 }}>
+          Orden de prioridad (de mayor a menor)
+        </div>
+        <div>1. Zona específica + Sección específica</div>
+        <div>3. Sin zona + Sección específica</div>
+        <div>2. Zona específica + Todas las secciones</div>
+        <div>4. Sin zona + Todas las secciones (default global)</div>
+      </div>
+
+      {/* Lista de reglas */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 40, color: C.ink4, fontFamily: SN }}>Cargando…</div>
+      ) : reglas.length === 0 ? (
+        <div style={{
+          textAlign: 'center', padding: 48, color: C.ink4, fontFamily: SN,
+          border: `2px dashed ${C.rule}`, borderRadius: 12,
+        }}>
+          <div style={{ fontSize: 32, marginBottom: 8 }}>🔀</div>
+          <div style={{ fontWeight: 600, marginBottom: 4 }}>Sin flujos configurados</div>
+          <div style={{ fontSize: 12 }}>Todas las comandas se enrutan según la configuración de impresoras estándar</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {reglas.map(r => (
+            <div key={r.id} style={{
+              background: r.activa ? C.bone : C.paper2,
+              border: `1px solid ${r.activa ? C.rule : C.paper3}`,
+              borderRadius: 10, padding: '12px 16px',
+              display: 'flex', alignItems: 'center', gap: 12,
+              opacity: r.activa ? 1 : 0.55, transition: 'opacity .2s',
+            }}>
+              {/* Prioridad badge */}
+              <div style={{
+                background: C.paper2, border: `1px solid ${C.rule}`,
+                borderRadius: 6, padding: '2px 7px', fontFamily: SM,
+                fontSize: 11, color: C.ink3, minWidth: 28, textAlign: 'center', flexShrink: 0,
+              }}>
+                P{r.prioridad}
+              </div>
+
+              {/* SI: Zona + Sección */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 2 }}>SI</div>
+                <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>
+                  <span style={{
+                    background: C.paper3, borderRadius: 4, padding: '2px 6px', marginRight: 6, fontSize: 12,
+                  }}>
+                    {zonaNombre(r.zona_tipo)}
+                  </span>
+                  <span style={{ color: C.ink4 }}>·</span>
+                  <span style={{
+                    background: C.paper3, borderRadius: 4, padding: '2px 6px', marginLeft: 6, fontSize: 12,
+                  }}>
+                    {seccionNombre(r.seccion_id)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Flecha */}
+              <div style={{ color: C.red, fontWeight: 700, fontSize: 18, flexShrink: 0 }}>→</div>
+
+              {/* ENTONCES: Destino */}
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 2 }}>ENTONCES</div>
+                <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 600 }}>
+                  {DESTINO_ICON[r.destino_tipo]}{' '}
+                  {r.destino_nombre ?? r.destino_ref}
+                  <span style={{
+                    marginLeft: 6, fontSize: 11, fontWeight: 400,
+                    background: r.destino_tipo === 'kds' ? C.greenS : C.paper3,
+                    color: r.destino_tipo === 'kds' ? C.green : C.ink3,
+                    borderRadius: 4, padding: '1px 5px',
+                  }}>
+                    {r.destino_tipo === 'kds' ? 'pantalla' : 'impresora'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Acciones */}
+              <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                <button
+                  onClick={() => toggleActiva(r)}
+                  title={r.activa ? 'Desactivar' : 'Activar'}
+                  style={{
+                    background: r.activa ? C.greenS : C.paper3,
+                    color: r.activa ? C.green : C.ink4,
+                    border: 'none', borderRadius: 6, padding: '5px 10px',
+                    fontFamily: SN, fontSize: 11, fontWeight: 600, cursor: 'pointer',
+                  }}
+                >
+                  {r.activa ? '● ON' : '○ OFF'}
+                </button>
+                <button
+                  onClick={() => borrar(r.id)}
+                  title="Eliminar"
+                  style={{
+                    background: 'transparent', color: C.ink4,
+                    border: `1px solid ${C.rule}`, borderRadius: 6, padding: '5px 8px',
+                    cursor: 'pointer', display: 'flex', alignItems: 'center',
+                  }}
+                >
+                  <Icon d={ICONS.trash} size={13}/>
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal nueva regla */}
+      {modal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(26,23,20,.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 16,
+        }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(false) }}
+        >
+          <div style={{
+            background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 440,
+            boxShadow: '0 8px 32px rgba(26,23,20,.2)',
+          }}>
+            <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 20 }}>
+              Nueva regla de flujo
+            </div>
+
+            {/* SI — Condiciones */}
+            <div style={{
+              background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
+              padding: '12px 14px', marginBottom: 14,
+            }}>
+              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.red, marginBottom: 10, letterSpacing: '0.06em' }}>
+                SI (condiciones)
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={labelSt}>Zona</label>
+                <select value={form.zona_tipo} onChange={e => setForm(f => ({ ...f, zona_tipo: e.target.value }))} style={inputSt}>
+                  <option value="">Todas las zonas</option>
+                  {zonas.map(z => <option key={z.tipo} value={z.tipo}>{z.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={labelSt}>Sección de carta</label>
+                <select value={form.seccion_id} onChange={e => setForm(f => ({ ...f, seccion_id: e.target.value }))} style={inputSt}>
+                  <option value="">Todas las secciones</option>
+                  {secciones.map(s => <option key={s.id} value={s.id}>{s.icono} {s.nombre}</option>)}
+                </select>
+              </div>
+            </div>
+
+            {/* ENTONCES — Destino */}
+            <div style={{
+              background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
+              padding: '12px 14px', marginBottom: 14,
+            }}>
+              <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.green, marginBottom: 10, letterSpacing: '0.06em' }}>
+                ENTONCES (destino)
+              </div>
+              <div style={{ marginBottom: 10 }}>
+                <label style={labelSt}>Tipo de destino</label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {(['impresora', 'kds'] as const).map(tipo => (
+                    <button key={tipo} onClick={() => setForm(f => ({ ...f, destino_tipo: tipo, destino_ref: '' }))}
+                      style={{
+                        flex: 1, padding: '8px 0', border: `2px solid ${form.destino_tipo === tipo ? C.red : C.rule}`,
+                        borderRadius: 8, background: form.destino_tipo === tipo ? C.redS : 'transparent',
+                        fontFamily: SN, fontSize: 13, fontWeight: 600,
+                        color: form.destino_tipo === tipo ? C.red : C.ink3, cursor: 'pointer',
+                      }}
+                    >
+                      {DESTINO_ICON[tipo]} {tipo === 'impresora' ? 'Impresora' : 'Pantalla KDS'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <label style={labelSt}>{form.destino_tipo === 'impresora' ? 'Impresora' : 'Sección KDS'}</label>
+                <select value={form.destino_ref} onChange={e => setForm(f => ({ ...f, destino_ref: e.target.value }))} style={inputSt}>
+                  <option value="">— Selecciona —</option>
+                  {opcionesDestino.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+                </select>
+                {opcionesDestino.length === 0 && (
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.amber, marginTop: 4 }}>
+                    ⚠️ No hay {form.destino_tipo === 'impresora' ? 'impresoras activas' : 'secciones de cocina'} configuradas
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Prioridad */}
+            <div style={{ marginBottom: 16 }}>
+              <label style={labelSt}>Prioridad (1–10, mayor = más peso)</label>
+              <input
+                type="number" min={1} max={10}
+                value={form.prioridad}
+                onChange={e => setForm(f => ({ ...f, prioridad: e.target.value }))}
+                style={{ ...inputSt, width: 80 }}
+              />
+              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginLeft: 8 }}>
+                Usa 10 para reglas específicas, 1 para fallbacks globales
+              </span>
+            </div>
+
+            {err && <div style={{ color: C.red, fontFamily: SN, fontSize: 12, marginBottom: 12 }}>{err}</div>}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModal(false)} style={{
+                background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8,
+                padding: '9px 18px', fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer',
+              }}>
+                Cancelar
+              </button>
+              <button onClick={guardar} disabled={saving} style={{
+                background: saving ? C.ink4 : C.red, color: '#fff',
+                border: 'none', borderRadius: 8, padding: '9px 18px',
+                fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: saving ? 'default' : 'pointer',
+              }}>
+                {saving ? 'Guardando…' : 'Guardar regla'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── Tab: Facturas Verifactu ─── */
 type Factura = {
   id: string; numero_serie: string; numero_factura: number; fecha_expedicion: string
@@ -2054,6 +2440,7 @@ const TABS = [
   { id: 'camareros',   label: 'Camareros',   icon: ICONS.users   },
   { id: 'mesas',       label: 'Mesas',       icon: ICONS.grid    },
   { id: 'impresoras',  label: 'Impresoras',  icon: ICONS.printer },
+  { id: 'flujos',      label: 'Flujos',      icon: ICONS.wifi    },
   { id: 'turno',       label: 'Turno',       icon: ICONS.clock   },
   { id: 'analytics',   label: 'Analytics',   icon: ICONS.chart   },
   { id: 'carta',       label: 'Carta',       icon: ICONS.book    },
@@ -2131,6 +2518,7 @@ export default function OwnerPage() {
         {tab === 'camareros'  && <CamarerosTab/>}
         {tab === 'mesas'      && <MesasTab/>}
         {tab === 'impresoras' && <ImpresorasTab/>}
+        {tab === 'flujos'     && <FlujoTab/>}
         {tab === 'turno'      && <TurnoTab/>}
         {tab === 'analytics'  && <Analytics compact />}
         {tab === 'carta'       && <CartaTab/>}
