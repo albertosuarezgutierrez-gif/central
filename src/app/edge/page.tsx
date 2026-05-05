@@ -7,6 +7,7 @@ import { useProductos86, useComandas } from '@/hooks/useRealtime'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAlertas } from '@/hooks/useAlertas'
+import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
 import AlertaBanner from '@/components/AlertaBanner'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import ComandaModModal, { ItemMod } from '@/components/ComandaModModal'
@@ -129,6 +130,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }, [])
 
   const { prompt: installPrompt, install } = useInstallPrompt()
+  const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
   const { subscribed, subscribe }          = usePushNotifications(session.id)
   const { alertas, marcarLeida }           = useAlertas(session.id, session.restaurante_id)
   const productos86                        = useProductos86(turnoId??undefined)
@@ -416,6 +418,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <div style={{background:C.ambS,border:`1px solid ${C.amb}44`,borderRadius:12,padding:'3px 8px',fontFamily:SM,fontSize:9,color:'#7A5A1A',fontWeight:700}}>
               ⚠ {alergenosMesa.length}
             </div>
+          )}
+          {updateAvailable && (
+            <button onClick={applyUpdate} title="Actualizar app"
+              style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:C.vermS,border:`1px solid ${C.verm}55`,borderRadius:8,cursor:'pointer',fontSize:15,flexShrink:0}}>
+              ↺
+            </button>
           )}
           <div style={{display:'flex',alignItems:'center',gap:5,background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,padding:'5px 11px 5px 7px',cursor:'pointer'}} onClick={logout}>
             <div style={{width:6,height:6,borderRadius:'50%',background:C.gr,animation:'ldot 2s infinite'}}/>
