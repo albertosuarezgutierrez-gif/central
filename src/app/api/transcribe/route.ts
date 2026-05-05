@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
     // EU Reglamento 1169/2011 — 14 alérgenos de declaración obligatoria
     let alertasAlergenos: { producto: string; alergenos: string[] }[] = []
 
-    // Paso 1: buscar por codigo exacto (M04, T02, B01…)
+    // Paso 1: buscar por codigo exacto (T04, P02, B01…)
     let { data: mesa } = await supabase.from('mesas')
       .select('id, codigo, estado, alergenos_mesa, numero, zona')
       .eq('codigo', brainResult.mesa)
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       if (num > 0) {
         const prefix = (brainResult.mesa).match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
         // Mapa de prefijos a zonas según la BD real
-        const prefixToZona: Record<string, string> = { M: 'salon', T: 'terraza', B: 'barra', S: 'salon', P: 'terraza' }
+        const prefixToZona: Record<string, string> = { T: 'salon', P: 'terraza', B: 'barra', M: 'salon' }
         const zonaHint = prefix ? prefixToZona[prefix] : null
 
         const { data: candidatas } = await supabase.from('mesas')

@@ -81,17 +81,17 @@ async function buildZonasContext(restaurante_id?: string): Promise<string> {
 }
 
 // ── FIX: prefijos corregidos para coincidir con la BD real ──────────────────
-// M = salón interior  (mesas M01-M99)
-// T = terraza         (mesas T01-T20)
-// B = barra           (mesas B01-B10)
+// T = salón           (mesas T01-T12)
+// P = terraza         (mesas P01-P04)
+// B = barra           (mesas B01-B03)
 // ────────────────────────────────────────────────────────────────────────────
 const BASE_PROMPT = `Eres BRAIN, el agente de ia.rest. Conviertes transcripciones de voz de camareros españoles en comandas JSON estructuradas.
 
 REGLAS ESTRICTAS:
 - Responde SOLO con JSON valido, sin texto adicional ni markdown
 - Entiende jerga: "manchado"=Cortado, "marchar"=enviar a cocina, "86"=agotado/sin stock
-- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: M=salon, T=terraza, B=barra
-- "mesa cuatro"=M04, "la doce"=M12, "terraza cuatro"=T04, "barra dos"=B02
+- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: T=salon, P=terraza, B=barra
+- "mesa cuatro"=T04, "la doce"=T12, "terraza cuatro"=P04, "barra dos"=B02
 - Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
 - Para tipo "86": los items son los productos agotados
 - FORMATOS: si un producto tiene formatos (tapa/media/racion), extrae el formato mencionado en "formato" (null si no se menciona)
@@ -100,7 +100,7 @@ REGLAS ESTRICTAS:
 - Ejemplos comensales: "mesa cuatro para tres"→num_comensales:3, "somos cuatro"→num_comensales:4, "dos cubiertos"→num_comensales:2
 
 SCHEMA:
-{"mesa":"M04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
+{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   const [Anthropic, menuContext, zonasContext] = await Promise.all([
@@ -135,6 +135,6 @@ export async function parsearComanda(texto: string, restaurante_id?: string): Pr
     return { ...parsed, raw: texto }
   } catch (e) {
     console.error('[BRAIN] JSON.parse failed. raw_text:', raw_text.substring(0, 200), 'error:', e)
-    return { mesa: 'M00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
+    return { mesa: 'T00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
   }
 }
