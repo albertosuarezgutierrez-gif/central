@@ -52,12 +52,21 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
   const [saving, setSaving]     = useState(false)
   const [savedMsg, setSavedMsg] = useState('')
   const [cobrarOpen, setCobrarOpen] = useState(false)
+  const [vistaAnadir, setVistaAnadir] = useState(false)
+  const [productos, setProductos]     = useState<{id:string;nombre:string;precio:number;seccion_id:string|null}[]>([])
+  const [cartAnadir, setCartAnadir]   = useState<{producto_id:string;nombre:string;cantidad:number;precio_unitario:number}[]>([])
+  const [savingAnadir, setSavingAnadir] = useState(false)
 
   const session_str = JSON.stringify(session)
 
   const cargarComanda = useCallback(async () => {
     if (!mesaId) return
     setLoading(true); setError('')
+    // Cargar productos de la carta
+    fetch('/api/owner/carta', { headers: { 'x-ia-session': session_str } })
+      .then(r => r.json()).then(d => setProductos((d.productos ?? []).filter((p:{activo:boolean}) => p.activo)))
+      .catch(() => {})
+
     try {
       const r = await fetch(`/api/mesa/${mesaId}/comanda`, {
         headers: { 'x-ia-session': session_str }
@@ -67,6 +76,18 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
     } catch { setError('Error cargando comanda') }
     setLoading(false)
   }, [mesaId, session_str])
+
+  const enviarCartAnadir = async () => {
+    if (!comanda || !cartAnadir.length) return
+    setSavingAnadir(true)
+    await fetch(`/api/comanda/${comanda.id}/item`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': session_str },
+      body: JSON.stringify({ items: cartAnadir })
+    })
+    setCartAnadir([]); setVistaAnadir(false)
+    await cargarComanda(); setSavingAnadir(false); flash('Añadido ✓')
+  }
 
   const cargarAudit = useCallback(async () => {
     if (!comanda?.id) return
@@ -177,6 +198,13 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
                   {v==='items'?`Items (${comanda.items.length})`:'Historial'}
                 </button>
               ))}
+              <button onClick={()=>{setVistaAnadir(v=>!v);setCartAnadir([])}}
+                style={{padding:'4px 12px',borderRadius:20,border:`1px solid ${vistaAnadir?C.verm+'55':C.rule}`,
+                  background:vistaAnadir?C.vermS:'transparent',
+                  fontSize:11,fontWeight:vistaAnadir?600:400,
+                  color:vistaAnadir?C.verm:C.ink3,cursor:'pointer'}}>
+                {vistaAnadir?'✕ Cerrar':'＋ Añadir'}
+              </button>
               <div style={{flex:1}}/>
               {comanda && <span style={{fontFamily:SM,fontSize:13,fontWeight:700,color:C.ink,alignSelf:'center'}}>
                 {comanda.total_estimado>0?`${comanda.total_estimado.toFixed(2).replace('.',',')} €`:''}
@@ -337,6 +365,63 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
           )}
         </div>
 
+        {/* VISTA: AÑADIR MANUAL */}
+        {vistaAnadir && comanda && (
+          <div style={{padding:'10px 16px',borderTop:`1px solid ${C.rule}`,background:C.bg2}}>
+            {/* Carrito */}
+            {cartAnadir.length > 0 && (
+              <div style={{marginBottom:10}}>
+                <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase' as const,letterSpacing:'1px',color:C.ink4,marginBottom:6}}>En el carrito</div>
+                <div style={{display:'flex',flexDirection:'column' as const,gap:4}}>
+                  {cartAnadir.map((it,i) => (
+                    <div key={i} style={{display:'flex',alignItems:'center',gap:8,background:C.bg1,borderRadius:7,padding:'6px 10px'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:8}}>
+                        <button onClick={()=>setCartAnadir(p=>p.map((x,j)=>j===i?{...x,cantidad:Math.max(1,x.cantidad-1)}:x))}
+                          style={{width:22,height:22,borderRadius:'50%',border:`1px solid ${C.rule}`,background:C.bg2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:C.ink3}}>−</button>
+                        <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:15,color:C.verm,fontWeight:700,minWidth:16,textAlign:'center' as const}}>{it.cantidad}</span>
+                        <button onClick={()=>setCartAnadir(p=>p.map((x,j)=>j===i?{...x,cantidad:x.cantidad+1}:x))}
+                          style={{width:22,height:22,borderRadius:'50%',border:`1px solid ${C.rule}`,background:C.bg2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:14,color:C.ink3}}>+</button>
+                      </div>
+                      <span style={{flex:1,fontSize:13,color:C.ink}}>{it.nombre}</span>
+                      <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.ink4}}>{(it.precio_unitario*it.cantidad).toFixed(2)} €</span>
+                      <button onClick={()=>setCartAnadir(p=>p.filter((_,j)=>j!==i))}
+                        style={{background:'none',border:'none',color:C.verm,cursor:'pointer',fontSize:16,padding:2}}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={enviarCartAnadir} disabled={savingAnadir}
+                  style={{marginTop:8,width:'100%',padding:'10px',background:C.verm,border:'none',borderRadius:8,color:'#fff',fontFamily:"'Inter Tight',sans-serif",fontSize:13,fontWeight:700,cursor:'pointer',opacity:savingAnadir?.6:1}}>
+                  {savingAnadir?'Añadiendo…':`Añadir ${cartAnadir.reduce((s,x)=>s+x.cantidad,0)} items a la comanda`}
+                </button>
+              </div>
+            )}
+            {/* Catálogo */}
+            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase' as const,letterSpacing:'1px',color:C.ink4,marginBottom:6}}>Carta</div>
+            <div style={{display:'flex',flexWrap:'wrap' as const,gap:5,maxHeight:180,overflowY:'auto' as const,scrollbarWidth:'none' as const}}>
+              {productos.filter(p=>p.precio&&p.precio>0).map(p => {
+                const enCarrito = cartAnadir.find(x=>x.producto_id===p.id)
+                return (
+                  <button key={p.id}
+                    onClick={()=>{
+                      if(enCarrito) setCartAnadir(prev=>prev.map(x=>x.producto_id===p.id?{...x,cantidad:x.cantidad+1}:x))
+                      else setCartAnadir(prev=>[...prev,{producto_id:p.id,nombre:p.nombre,cantidad:1,precio_unitario:p.precio}])
+                    }}
+                    style={{padding:'6px 10px',borderRadius:8,
+                      background:enCarrito?C.vermS:C.bg1,
+                      border:`1px solid ${enCarrito?C.verm+'55':C.rule}`,
+                      fontSize:12,fontWeight:enCarrito?600:400,
+                      color:enCarrito?C.verm:C.ink2,cursor:'pointer',
+                      display:'flex',alignItems:'center',gap:5}}>
+                    {enCarrito&&<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.verm,fontWeight:700}}>{enCarrito.cantidad}×</span>}
+                    <span>{p.nombre}</span>
+                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.ink4}}>{p.precio?.toFixed(2)}€</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
         {/* ACCIONES FIJAS ABAJO */}
         {comanda && (
           <div style={{padding:'10px 16px 20px',borderTop:`1px solid ${C.rule}`,flexShrink:0,display:'flex',gap:8,background:C.bg1}}>
@@ -350,14 +435,14 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
               <span style={{fontSize:10,fontWeight:600,color:C.teal}}>Añadir voz</span>
             </button>
 
-            {/* Añadir manual (placeholder — redirige a tab manual con mesa presel.) */}
-            <button onClick={()=>{ onAnadirPorVoz(mesaId!, mesaCodigo, comanda.id); onClose() }}
-              style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,
+            {/* Añadir manual — abre selector de carta inline */}
+            <button onClick={()=>{setVistaAnadir(v=>!v);setCartAnadir([])}}
+              style={{flex:1,padding:'11px 8px',background:vistaAnadir?C.vermS:C.bg2,border:`1px solid ${vistaAnadir?C.verm+'55':C.rule}`,borderRadius:10,
                 display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={vistaAnadir?C.verm:C.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
               </svg>
-              <span style={{fontSize:10,fontWeight:600,color:C.ink3}}>Añadir manual</span>
+              <span style={{fontSize:10,fontWeight:600,color:vistaAnadir?C.verm:C.ink3}}>{vistaAnadir?'Cerrar':'Añadir manual'}</span>
             </button>
 
             {/* Pedir cuenta */}
