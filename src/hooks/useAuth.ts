@@ -20,35 +20,45 @@ const REDIRECT: Record<Rol, string> = {
   cocina:      '/kds',
 }
 
-// Acepta string (legacy) o array de roles
+// Lee sesión de localStorage de forma síncrona (sin flicker)
+function readSession(): Session | null {
+  if (typeof window === 'undefined') return null
+  const raw = localStorage.getItem('ia_rest_session')
+  if (!raw) return null
+  try { return JSON.parse(raw) } catch { return null }
+}
+
 export function useAuth(requiredRoles?: Rol | Rol[]) {
-  const [session, setSession] = useState<Session | null>(null)
-  const [checking, setChecking] = useState(true)
+  // Inicialización síncrona → elimina el parpadeo blanco inicial
+  const [session, setSession] = useState<Session | null>(() => readSession())
+  const [checking, setChecking] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
+    return !localStorage.getItem('ia_rest_session')
+  })
 
   useEffect(() => {
-    const raw = localStorage.getItem('ia_rest_session')
-    if (!raw) { window.location.href = '/login'; return }
-    try {
-      const s: Session = JSON.parse(raw)
-      if (requiredRoles) {
-        const allowed: Rol[] = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles]
-        // super_admin siempre pasa
-        if (s.rol !== 'super_admin' && !allowed.includes(s.rol)) {
-          window.location.href = REDIRECT[s.rol] ?? '/login'
-          return
-        }
-      }
-      setSession(s)
-    } catch {
+    const s = readSession()
+
+    if (!s) {
       window.location.href = '/login'
+      return
     }
+
+    if (requiredRoles) {
+      const allowed: Rol[] = Array.isArray(requiredRoles) ? requiredRoles : [requiredRoles]
+      if (s.rol !== 'super_admin' && !allowed.includes(s.rol)) {
+        window.location.href = REDIRECT[s.rol] ?? '/login'
+        return
+      }
+    }
+
+    setSession(s)
     setChecking(false)
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   return { session, checking }
 }
 
-// Helper para guardar el código de restaurante en localStorage
 export function storeRestauranteCode(code: string) {
   if (typeof window !== 'undefined') {
     localStorage.setItem('ia_rest_restaurante', code.toUpperCase())

@@ -1,10 +1,9 @@
 'use client'
-// ia.rest · Panel Jefe de Sala
-// Fusión de /hub + control de caja + audit de modificaciones
-// Rol: jefe_sala (PIN 0000)
+// ia.rest · Panel Jefe de Sala — v2.1 (fix: no flicker, restaurante_id, fonts)
+// Rol: jefe_sala (PIN 0000) · También accesible por owner y super_admin
 
-import { useState, useEffect, useCallback } from 'react'
-import { useAuth } from '@/hooks/useAuth'
+import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuth, Session } from '@/hooks/useAuth'
 import { useMesas, useComandas, useTranscripciones, useProductos86, useReloj } from '@/hooks/useRealtime'
 import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
@@ -65,26 +64,40 @@ function NavIcon({path}:{path:string}){
 function fmtEur(n:number){ return `${n>=0?'':'-'}${Math.abs(n).toFixed(2).replace('.',',')} €` }
 function fmtTime(iso:string){ return new Date(iso).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}) }
 
+// ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
 export default function JefeSalaPage() {
-  const { session, checking } = useAuth('jefe_sala')
+  // useAuth ya inicializa síncronamente → sin parpadeo blanco
+  const { session, checking } = useAuth(['jefe_sala', 'owner', 'super_admin'])
   const [tab, setTab] = useState<Tab>('salon')
   const ahora = useReloj()
-  const productos86 = useProductos86()
 
-  if (checking || !session) return <div style={{minHeight:'100dvh',background:C.paper}}/>
+  // Productos 86 con filtro de restaurante
+  const productos86 = useProductos86(undefined, session?.restaurante_id)
+
+  // Pantalla de carga mínima (solo mientras checking=true Y no hay sesión síncrona)
+  if (!session) {
+    return (
+      <div style={{minHeight:'100dvh',background:C.paper,display:'flex',alignItems:'center',justifyContent:'center'}}>
+        <span style={{fontFamily:SM,fontSize:11,color:C.ink4,letterSpacing:'.12em'}}>Cargando…</span>
+      </div>
+    )
+  }
 
   const logout = () => {
     fetch('/api/auth',{method:'DELETE'})
     localStorage.removeItem('ia_rest_session')
     window.location.href = '/login'
   }
-  const sh = ():Record<string,string> => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+
+  const sh = ():Record<string,string> => ({
+    'x-ia-session': localStorage.getItem('ia_rest_session') ?? ''
+  })
 
   return(
     <div style={{minHeight:'100dvh',display:'flex',flexDirection:'column',background:C.paper,fontFamily:SN}}>
+      {/* Fuentes cargadas via link en layout — NO @import aquí */}
       <style>{`
-        * { box-sizing:border-box; }
-        @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Newsreader:ital,wght@0,500;1,400;1,500&family=JetBrains+Mono:wght@400;500;600&display=swap');
+        *{box-sizing:border-box}
         @media(min-width:768px){
           .jefe-sidebar{display:flex!important}
           .jefe-bottom{display:none!important}
@@ -140,10 +153,10 @@ export default function JefeSalaPage() {
 
         {/* MAIN */}
         <div className="jefe-main" style={{flex:1,overflow:'auto',padding:'12px 12px 80px'}}>
-          {tab==='salon'    && <SalonTab/>}
-          {tab==='cocina'   && <CocinaTab/>}
-          {tab==='comandas' && <ComandasTab/>}
-          {tab==='stream'   && <StreamTab/>}
+          {tab==='salon'    && <SalonTab session={session}/>}
+          {tab==='cocina'   && <CocinaTab session={session}/>}
+          {tab==='comandas' && <ComandasTab session={session}/>}
+          {tab==='stream'   && <StreamTab session={session}/>}
           {tab==='caja'     && <CajaTab sh={sh}/>}
           {tab==='audit'    && <AuditTab sh={sh} restauranteId={session.restaurante_id}/>}
           {tab==='analytics'&& <Analytics/>}
@@ -162,16 +175,40 @@ export default function JefeSalaPage() {
   )
 }
 
-/* ─── SALON ──────────────────────────────────────────────────── */
-function SalonTab(){
-  const {mesas,loading}=useMesas()
-  const txs=useTranscripciones()
+// ─── SALON ────────────────────────────────────────────────────────────────────
+function SalonTab({session}:{session:Session}){
+  const {mesas,loading}=useMesas(session.restaurante_id)
+  const txs=useTranscripciones(undefined, 20, session.restaurante_id)
   const [sel,setSel]=useState<string|null>(null)
+
+  // Totales rápidos
+  const libres   = mesas.filter(m=>m.estado==='libre').length
+  const activas  = mesas.filter(m=>m.estado!=='libre').length
+  const urgentes = mesas.filter(m=>m.estado==='urgente').length
+
   return(
     <div>
+      {/* KPIs rápidos */}
+      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+        {[
+          {l:'Libres',  v:libres,   c:C.ink3},
+          {l:'Activas', v:activas,  c:C.green},
+          {l:'Urgentes',v:urgentes, c:urgentes>0?C.red:C.ink3},
+        ].map(k=>(
+          <div key={k.l} style={{background:C.bone,border:`1px solid ${C.rule}`,borderRadius:8,padding:'8px 12px',textAlign:'center'}}>
+            <div style={{fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',marginBottom:2}}>{k.l.toUpperCase()}</div>
+            <div style={{fontFamily:SE,fontSize:24,fontWeight:500,color:k.c,lineHeight:1}}>{k.v}</div>
+          </div>
+        ))}
+      </div>
+
       <div style={{fontFamily:SE,fontSize:22,fontWeight:500,color:C.ink,marginBottom:12}}>Salón</div>
       {loading ? (
-        <div style={{fontFamily:SM,fontSize:12,color:C.ink4}}>Cargando...</div>
+        <div style={{fontFamily:SM,fontSize:12,color:C.ink4}}>Cargando mesas…</div>
+      ) : mesas.length===0 ? (
+        <div style={{fontFamily:SE,fontSize:16,color:C.ink3,fontStyle:'italic',padding:'20px 0'}}>
+          Sin mesas configuradas. Configura las mesas en /owner → Mesas.
+        </div>
       ) : (
         <div style={{display:'grid',gridTemplateColumns:'repeat(4,1fr)',gap:7,marginBottom:20}}>
           {mesas.map(m=>{
@@ -184,7 +221,7 @@ function SalonTab(){
                   <span style={{fontFamily:SE,fontSize:18,fontWeight:500,color:p.fg,lineHeight:1}}>{m.codigo}</span>
                   {m.estado!=='libre'&&<span style={{width:6,height:6,borderRadius:999,background:p.ac,flexShrink:0}}/>}
                 </div>
-                {m.camarero&&<div style={{fontFamily:SN,fontSize:9,color:p.fg,opacity:.75}}>{m.camarero.nombre.split(' ')[0]}</div>}
+                {m.camarero&&<div style={{fontFamily:SN,fontSize:9,color:p.fg,opacity:.75}}>{(m.camarero as any).nombre?.split(' ')[0]}</div>}
                 {m.ultima_comanda&&<div style={{fontFamily:SM,fontSize:9,color:edadColor(m.ultima_comanda)}}>{tiempoDesde(m.ultima_comanda)}</div>}
               </button>
             )
@@ -197,35 +234,40 @@ function SalonTab(){
   )
 }
 
-/* ─── COCINA ─────────────────────────────────────────────────── */
-function CocinaTab(){
-  const {comandas}=useComandas()
-  const activas=comandas.filter(c=>['comanda','marchar'].includes(c.tipo))
+// ─── COCINA ───────────────────────────────────────────────────────────────────
+function CocinaTab({session}:{session:Session}){
+  const {comandas,loading}=useComandas(undefined, session.restaurante_id)
+  // El hook ya filtra por estado nueva|en_cocina
   return(
     <div>
       <div style={{fontFamily:SE,fontSize:22,fontWeight:500,color:C.ink,marginBottom:12}}>
-        Cocina · {activas.length} activos
+        Cocina · {loading ? '…' : `${comandas.length} activos`}
       </div>
+      {loading && <div style={{fontFamily:SM,fontSize:12,color:C.ink4}}>Cargando…</div>}
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:10}}>
-        {activas.map(c=>(
+        {comandas.map(c=>(
           <div key={c.id} style={{background:C.bone,border:`1px solid ${C.rule}`,borderRadius:8,padding:14,fontFamily:SM}}>
             <div style={{display:'flex',justifyContent:'space-between',marginBottom:8}}>
-              <span style={{fontFamily:SE,fontSize:24,fontWeight:500,color:C.ink}}>{c.mesa?.codigo}</span>
+              <span style={{fontFamily:SE,fontSize:24,fontWeight:500,color:C.ink}}>{(c.mesa as any)?.codigo}</span>
               <span style={{fontSize:16,fontWeight:700,color:edadColor(c.created_at)}}>{tiempoDesde(c.created_at)}</span>
             </div>
             <div style={{borderTop:`1px dashed ${C.ruleS}`,paddingTop:8}}>
-              {(c.items||[]).map((it,i)=>(
+              {((c.items||[]) as any[]).map((it,i)=>(
                 <div key={i} style={{display:'flex',gap:8,padding:'3px 0',fontSize:12,fontWeight:600,color:C.ink}}>
                   <span style={{color:C.red,width:22}}>{it.cantidad}x</span>{it.nombre}
+                  {it.notas&&<span style={{color:C.amber,fontSize:10,fontStyle:'italic'}}> {it.notas}</span>}
                 </div>
               ))}
             </div>
             <div style={{display:'flex',justifyContent:'space-between',marginTop:8,fontSize:10,color:C.ink3}}>
-              <span>{c.camarero?.nombre}</span><span>#{c.numero_ticket}</span>
+              <span>{(c.camarero as any)?.nombre}</span>
+              <span style={{background:c.estado==='en_cocina'?C.amberS:C.greenS,color:c.estado==='en_cocina'?'#7A5614':C.green,padding:'1px 6px',borderRadius:3,fontWeight:700}}>
+                {c.estado.replace('_',' ').toUpperCase()}
+              </span>
             </div>
           </div>
         ))}
-        {activas.length===0 && (
+        {!loading && comandas.length===0 && (
           <div style={{fontFamily:SE,fontSize:18,color:C.ink3,fontStyle:'italic',padding:'20px 0'}}>Cocina libre.</div>
         )}
       </div>
@@ -233,22 +275,25 @@ function CocinaTab(){
   )
 }
 
-/* ─── COMANDAS ───────────────────────────────────────────────── */
-function ComandasTab(){
-  const {comandas}=useComandas()
+// ─── COMANDAS ─────────────────────────────────────────────────────────────────
+function ComandasTab({session}:{session:Session}){
+  const {comandas,loading}=useComandas(undefined, session.restaurante_id)
   return(
     <div>
-      <div style={{fontFamily:SE,fontSize:22,fontWeight:500,color:C.ink,marginBottom:12}}>Historial de comandas</div>
+      <div style={{fontFamily:SE,fontSize:22,fontWeight:500,color:C.ink,marginBottom:12}}>
+        Comandas activas{!loading&&` (${comandas.length})`}
+      </div>
       <div style={{background:C.bone,border:`1px solid ${C.rule}`,borderRadius:8,overflow:'hidden'}}>
-        {comandas.length===0&&<div style={{padding:20,fontFamily:SM,fontSize:12,color:C.ink4}}>Sin comandas.</div>}
+        {loading && <div style={{padding:20,fontFamily:SM,fontSize:12,color:C.ink4}}>Cargando…</div>}
+        {!loading && comandas.length===0 && <div style={{padding:20,fontFamily:SM,fontSize:12,color:C.ink4}}>Sin comandas activas.</div>}
         {comandas.map(c=>(
           <div key={c.id} style={{display:'flex',gap:10,padding:'10px 14px',borderBottom:`1px solid ${C.rule}`,alignItems:'center'}}>
-            <span style={{fontFamily:SE,fontSize:16,fontWeight:500,color:C.ink,minWidth:50,flexShrink:0}}>{c.mesa?.codigo}</span>
-            <span style={{fontFamily:SM,fontSize:9,fontWeight:700,padding:'2px 5px',borderRadius:2,background:c.tipo==='86'?C.redS:C.paper2,color:c.tipo==='86'?C.redD:C.ink2,flexShrink:0}}>
-              {c.tipo.toUpperCase()}
+            <span style={{fontFamily:SE,fontSize:16,fontWeight:500,color:C.ink,minWidth:50,flexShrink:0}}>{(c.mesa as any)?.codigo}</span>
+            <span style={{fontFamily:SM,fontSize:9,fontWeight:700,padding:'2px 5px',borderRadius:2,background:C.paper2,color:C.ink2,flexShrink:0}}>
+              {c.estado.replace('_',' ').toUpperCase()}
             </span>
             <span style={{fontFamily:SN,fontSize:12,color:C.ink2,flex:1,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>
-              {(c.items||[]).map(it=>`${it.cantidad}× ${it.nombre}`).join(', ')||'—'}
+              {((c.items||[]) as any[]).map(it=>`${it.cantidad}× ${it.nombre}`).join(', ')||'—'}
             </span>
             <span style={{fontFamily:SM,fontSize:10,color:C.ink4,flexShrink:0}}>
               {new Date(c.created_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}
@@ -260,9 +305,9 @@ function ComandasTab(){
   )
 }
 
-/* ─── STREAM ─────────────────────────────────────────────────── */
-function StreamTab(){
-  const txs=useTranscripciones()
+// ─── STREAM ───────────────────────────────────────────────────────────────────
+function StreamTab({session}:{session:Session}){
+  const txs=useTranscripciones(undefined, 30, session.restaurante_id)
   return(
     <div>
       <div style={{fontFamily:SE,fontSize:22,fontWeight:500,color:C.ink,marginBottom:12}}>Stream de voz en vivo</div>
@@ -271,7 +316,7 @@ function StreamTab(){
   )
 }
 
-/* ─── TRANSCRIPTBOX (compartido) ─────────────────────────────── */
+// ─── TRANSCRIPTBOX ────────────────────────────────────────────────────────────
 function TranscriptBox({entries}:{entries:unknown[]}){
   const es = entries as {id?:string;created_at:string;camarero?:{nombre:string};texto_original:string;texto_brain?:{tipo?:string}}[]
   return(
@@ -283,7 +328,7 @@ function TranscriptBox({entries}:{entries:unknown[]}){
         <span style={{fontFamily:SM,fontSize:10,color:C.ink4}}>{es.length}</span>
       </div>
       {es.length===0&&<div style={{fontFamily:SM,fontSize:11,color:C.ink4,fontStyle:'italic'}}>Esperando voz...</div>}
-      {es.slice(0,15).map((t,i)=>(
+      {es.slice(0,20).map((t,i)=>(
         <div key={t.id||i} style={{display:'flex',gap:8,alignItems:'flex-start',padding:'5px 0',borderBottom:`1px solid ${C.rule}`}}>
           <span style={{fontFamily:SM,fontSize:10,color:C.ink4,width:40,flexShrink:0}}>
             {new Date(t.created_at).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}
@@ -303,7 +348,7 @@ function TranscriptBox({entries}:{entries:unknown[]}){
   )
 }
 
-/* ─── CAJA ───────────────────────────────────────────────────── */
+// ─── CAJA ─────────────────────────────────────────────────────────────────────
 function CajaTab({ sh }:{ sh:()=>Record<string,string> }) {
   const [data, setData] = useState<{
     turno:{id:string;nombre:string}|null
@@ -321,7 +366,7 @@ function CajaTab({ sh }:{ sh:()=>Record<string,string> }) {
   const load = useCallback(async () => {
     setLoading(true)
     const r = await fetch('/api/caja',{headers:sh()})
-    setData(await r.json())
+    if (r.ok) setData(await r.json())
     setLoading(false)
   },[sh])
   useEffect(()=>{load()},[load])
@@ -339,7 +384,12 @@ function CajaTab({ sh }:{ sh:()=>Record<string,string> }) {
   }
 
   if(loading) return <div style={{padding:40,textAlign:'center',color:C.ink4,fontFamily:SM,fontSize:12}}>Cargando caja…</div>
-  if(!data?.turno) return <div style={{padding:40,textAlign:'center',color:C.ink4,fontFamily:SE,fontStyle:'italic',fontSize:18}}>Sin turno activo</div>
+  if(!data?.turno) return (
+    <div style={{padding:40,textAlign:'center'}}>
+      <div style={{fontFamily:SE,fontSize:20,color:C.ink3,fontStyle:'italic',marginBottom:8}}>Sin turno activo</div>
+      <div style={{fontFamily:SN,fontSize:13,color:C.ink4}}>Abre un turno desde /owner para usar la caja.</div>
+    </div>
+  )
 
   const {resumen,movimientos}=data
   const saldo=resumen?.saldo_actual??0
@@ -464,7 +514,7 @@ function CajaTab({ sh }:{ sh:()=>Record<string,string> }) {
   )
 }
 
-/* ─── AUDIT ──────────────────────────────────────────────────── */
+// ─── AUDIT ────────────────────────────────────────────────────────────────────
 function AuditTab({ sh, restauranteId }:{ sh:()=>Record<string,string>; restauranteId:string }) {
   const [audit, setAudit] = useState<{id:string;accion:string;camarero_nombre:string;item_nombre:string|null;item_cantidad_antes:number|null;item_cantidad_despues:number|null;es_propietario:boolean;created_at:string}[]>([])
   const [loading, setLoading] = useState(true)
@@ -472,8 +522,10 @@ function AuditTab({ sh, restauranteId }:{ sh:()=>Record<string,string>; restaura
   const load = useCallback(async()=>{
     setLoading(true)
     const r = await fetch(`/api/audit/resumen`,{headers:sh()})
-    const d = await r.json()
-    setAudit(d.audit??[])
+    if (r.ok) {
+      const d = await r.json()
+      setAudit(d.audit??[])
+    }
     setLoading(false)
   },[sh])
   useEffect(()=>{load()},[load])
