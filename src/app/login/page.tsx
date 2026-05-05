@@ -48,12 +48,41 @@ export default function LoginPage() {
   const chunksRef = useRef<Blob[]>([])
   const recordingRef = useRef(false)
 
+  // Multi-cuenta: selector de restaurante
+  const [cuentaSelector, setCuentaSelector] = useState<null | {
+    cuenta: { id: string; nombre: string }
+    restaurantes: { id: string; nombre: string; ciudad?: string; plan: string; plan_status: string }[]
+  }>(null)
+  const [selectedRestaurante, setSelectedRestaurante] = useState('')
+
   useEffect(() => { setRestauranteCode(detectRestauranteCode()) }, [])
   useEffect(() => { if (pin.length === 4 && !showCodeInput) doLogin(pin) }, [pin, showCodeInput])
 
   const doLogin = async (p: string) => {
     setLoading(true); setError('')
     try {
+      // 1. Intentar login por PIN de cuenta (multi-restaurante)
+      const rCuenta = await fetch('/api/auth/pin-cuenta', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: p })
+      })
+      if (rCuenta.ok) {
+        const dCuenta = await rCuenta.json()
+        if (dCuenta.tipo === 'directo') {
+          // Solo 1 restaurante → ir directo
+          localStorage.setItem('ia_rest_session', JSON.stringify(dCuenta.session))
+          navigateByRol({ rol: 'owner' })
+          return
+        }
+        if (dCuenta.tipo === 'selector') {
+          // Múltiples restaurantes → mostrar selector
+          setCuentaSelector({ cuenta: dCuenta.cuenta, restaurantes: dCuenta.restaurantes })
+          setLoading(false)
+          return
+        }
+      }
+
+      // 2. Fallback: login estándar por PIN de camarero (sistema actual)
       const body: Record<string, string> = { pin: p }
       if (restauranteCode) body.restaurante_code = restauranteCode
       const r = await fetch('/api/auth', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) })
@@ -63,6 +92,22 @@ export default function LoginPage() {
         navigateByRol(d.camarero)
       } else { setError(d.error ?? 'PIN incorrecto'); setPin(''); setLoading(false) }
     } catch { setError('Error de conexion'); setPin(''); setLoading(false) }
+  }
+
+  const elegirRestaurante = async () => {
+    if (!cuentaSelector || !selectedRestaurante) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/auth/seleccionar-restaurante', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cuenta_id: cuentaSelector.cuenta.id, restaurante_id: selectedRestaurante })
+      })
+      const d = await r.json()
+      if (d.session) {
+        localStorage.setItem('ia_rest_session', JSON.stringify(d.session))
+        navigateByRol({ rol: 'owner' })
+      } else { setError('Error al seleccionar restaurante'); setLoading(false) }
+    } catch { setError('Error de conexion'); setLoading(false) }
   }
 
   const tap = (k: string) => {
@@ -161,6 +206,43 @@ export default function LoginPage() {
             style={{ width:'100%', padding:'12px 16px', background:C.e1, border:`1px solid ${C.rule}`, borderRadius:4, color:C.fg, fontFamily:SM, fontSize:16, letterSpacing:'.08em', outline:'none', textAlign:'center', boxSizing:'border-box' }}/>
           <button onPointerDown={confirmCode} style={{ width:'100%', padding:'12px', background:C.red, border:'none', borderRadius:4, color:C.fg, fontFamily:SN, fontSize:14, fontWeight:600, cursor:'pointer' }}>Continuar</button>
           <button onPointerDown={()=>setShowCodeInput(false)} style={{ background:'none', border:'none', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', cursor:'pointer' }}>Cancelar</button>
+        </div>
+
+      ) : cuentaSelector ? (
+        /* ─── Selector de restaurante multi-cuenta ─── */
+        <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:16, width:'100%', maxWidth:320, animation:'fadeIn .3s ease' }}>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontFamily:SM, fontSize:10, color:C.fg3, letterSpacing:'.12em', marginBottom:6 }}>SELECCIONA UN LOCAL</div>
+            <div style={{ fontFamily:SE, fontSize:16, color:C.fg, fontStyle:'italic' }}>{cuentaSelector.cuenta.nombre}</div>
+          </div>
+          <div style={{ width:'100%', display:'flex', flexDirection:'column', gap:8 }}>
+            {cuentaSelector.restaurantes.map(r => (
+              <button key={r.id}
+                onPointerDown={() => setSelectedRestaurante(r.id)}
+                style={{
+                  width:'100%', padding:'14px 16px',
+                  background: selectedRestaurante === r.id ? C.red : C.e1,
+                  border: `1px solid ${selectedRestaurante === r.id ? C.red : C.rule}`,
+                  borderRadius:6, color:C.fg,
+                  fontFamily:SN, fontSize:14, fontWeight:600,
+                  cursor:'pointer', textAlign:'left',
+                  display:'flex', alignItems:'center', justifyContent:'space-between',
+                  transition:'all .15s',
+                }}>
+                <span>{r.nombre}</span>
+                <span style={{ fontFamily:SM, fontSize:10, color: selectedRestaurante === r.id ? 'rgba(255,255,255,.7)' : C.fg3 }}>{r.ciudad || r.plan}</span>
+              </button>
+            ))}
+          </div>
+          <button onPointerDown={elegirRestaurante}
+            disabled={!selectedRestaurante || loading}
+            style={{ width:'100%', padding:'14px', background:selectedRestaurante?C.red:'#333', border:'none', borderRadius:6, color:C.fg, fontFamily:SN, fontSize:15, fontWeight:700, cursor:selectedRestaurante?'pointer':'not-allowed', opacity:loading?0.6:1 }}>
+            {loading ? 'Entrando...' : 'Entrar →'}
+          </button>
+          <button onPointerDown={() => { setCuentaSelector(null); setPin(''); setSelectedRestaurante('') }}
+            style={{ background:'none', border:'none', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', cursor:'pointer' }}>
+            Volver
+          </button>
         </div>
 
       ) : vozMode === 'seleccion' ? (

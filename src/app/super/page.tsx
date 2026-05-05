@@ -29,6 +29,19 @@ interface Restaurante {
   comandas: [{ count: number }]
 }
 
+interface CuentaVista {
+  cuenta_id: string
+  cuenta_nombre: string
+  email: string | null
+  telefono: string | null
+  estado: string
+  plan: string | null
+  plan_status: string | null
+  num_restaurantes: number
+  restaurantes: { id: string; nombre: string; plan: string; plan_status: string; activo: boolean; ciudad: string }[]
+  created_at: string
+}
+
 const PLAN_COLOR: Record<string, string> = {
   starter: C.ink3,
   pro: C.red,
@@ -43,11 +56,17 @@ export default function SuperPage() {
   const [form, setForm] = useState({ nombre: '', slug: '', codigo_acceso: '', plan: 'starter', ciudad: 'Madrid' })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'sugerencias'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'sugerencias'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
   const [badgeSug, setBadgeSug] = useState(0)
+  const [cuentas, setCuentas] = useState<CuentaVista[]>([])
+  const [loadingCuentas, setLoadingCuentas] = useState(false)
+  const [showFormCuenta, setShowFormCuenta] = useState(false)
+  const [formCuenta, setFormCuenta] = useState({ nombre:'', email:'', telefono:'', pin_cuenta:'', nif:'', razon_social:'', notas_super:'' })
+  const [savingCuenta, setSavingCuenta] = useState(false)
+  const [errCuenta, setErrCuenta] = useState('')
 
   const loadSugerencias = useCallback(async () => {
     if (!session) return
@@ -82,10 +101,39 @@ export default function SuperPage() {
   }
 
   useEffect(() => { if (session && tabSuper === 'sugerencias') loadSugerencias() }, [session, tabSuper, loadSugerencias])
+  useEffect(() => { if (session && tabSuper === 'clientes') loadCuentas() }, [session, tabSuper])
   useEffect(() => { if (session) { 
     fetch('/api/sugerencias', { headers: { 'x-ia-session': JSON.stringify(session) } })
       .then(r => r.json()).then(d => setBadgeSug((d.sugerencias ?? []).filter((s: any) => !s.leida).length))
   }}, [session])
+
+  const loadCuentas = async () => {
+    if (!session) return
+    setLoadingCuentas(true)
+    const r = await fetch('/api/super/cuentas', { headers: { 'x-ia-session': JSON.stringify(session) } })
+    const d = await r.json()
+    setCuentas(d.cuentas ?? [])
+    setLoadingCuentas(false)
+  }
+
+  const crearCuenta = async () => {
+    if (!formCuenta.nombre.trim() || !formCuenta.pin_cuenta.trim()) {
+      setErrCuenta('Nombre y PIN son obligatorios')
+      return
+    }
+    setSavingCuenta(true); setErrCuenta('')
+    const r = await fetch('/api/super/cuentas', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
+      body: JSON.stringify(formCuenta),
+    })
+    const d = await r.json()
+    setSavingCuenta(false)
+    if (!r.ok) { setErrCuenta(d.error || 'Error'); return }
+    setShowFormCuenta(false)
+    setFormCuenta({ nombre:'', email:'', telefono:'', pin_cuenta:'', nif:'', razon_social:'', notas_super:'' })
+    await loadCuentas()
+  }
 
   const load = useCallback(async () => {
     if (!session) return
@@ -168,7 +216,8 @@ export default function SuperPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px', display: 'flex', gap: 0 }}>
           {([
             { id: 'restaurantes', label: 'Restaurantes' },
-            { id: 'sugerencias', label: 'Sugerencias', badge: badgeSug },
+            { id: 'clientes',     label: 'Clientes' },
+            { id: 'sugerencias',  label: 'Sugerencias', badge: badgeSug },
           ] as const).map(t => (
             <button key={t.id} onClick={() => setTabSuper(t.id)}
               style={{
@@ -209,6 +258,116 @@ export default function SuperPage() {
             onCambiarEstado={cambiarEstado}
             onRecargar={loadSugerencias}
           />
+        ) : tabSuper === 'clientes' ? (
+          <div>
+            <div style={{ marginBottom: 32 }}>
+              <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>CLIENTES · MULTI-RESTAURANTE</div>
+              <h1 style={{ fontFamily: SE, fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>Clientes</h1>
+              <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: 0 }}>
+                Cada cliente puede tener uno o varios restaurantes. Un PIN de cuenta, múltiples locales.
+              </p>
+            </div>
+
+            {/* Botón nueva cuenta */}
+            {!showFormCuenta && (
+              <button onClick={() => setShowFormCuenta(true)}
+                style={{ marginBottom: 24, padding: '10px 20px', background: C.red, border: 'none', borderRadius: 4, color: '#fff', fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                + Nueva cuenta de cliente
+              </button>
+            )}
+
+            {/* Formulario nueva cuenta */}
+            {showFormCuenta && (
+              <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, marginBottom: 24 }}>
+                <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.1em', marginBottom: 16 }}>NUEVA CUENTA</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  {[
+                    { k: 'nombre',       l: 'Nombre *',         ph: 'Manuela García' },
+                    { k: 'pin_cuenta',   l: 'PIN de cuenta *',  ph: '2026', type: 'text' },
+                    { k: 'email',        l: 'Email',            ph: 'manuela@gmail.com' },
+                    { k: 'telefono',     l: 'Teléfono',         ph: '+34 600 000 000' },
+                    { k: 'nif',          l: 'NIF',              ph: 'B12345678' },
+                    { k: 'razon_social', l: 'Razón social',     ph: 'Hostelería SL' },
+                  ].map(f => (
+                    <div key={f.k}>
+                      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4 }}>{f.l}</div>
+                      <input
+                        value={formCuenta[f.k as keyof typeof formCuenta]}
+                        onChange={e => setFormCuenta(fc => ({ ...fc, [f.k]: e.target.value }))}
+                        placeholder={f.ph}
+                        style={{ width: '100%', padding: '8px 10px', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 4, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none', boxSizing: 'border-box' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4 }}>Notas internas</div>
+                  <textarea
+                    value={formCuenta.notas_super}
+                    onChange={e => setFormCuenta(fc => ({ ...fc, notas_super: e.target.value }))}
+                    placeholder="Solo visible para super admin"
+                    rows={2}
+                    style={{ width: '100%', padding: '8px 10px', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 4, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none', resize: 'vertical', boxSizing: 'border-box' }}
+                  />
+                </div>
+                {errCuenta && <div style={{ fontFamily: SM, fontSize: 11, color: C.red, marginBottom: 8 }}>{errCuenta}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={crearCuenta} disabled={savingCuenta}
+                    style={{ padding: '8px 20px', background: C.red, border: 'none', borderRadius: 4, color: '#fff', fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                    {savingCuenta ? 'Guardando...' : 'Crear cuenta'}
+                  </button>
+                  <button onClick={() => { setShowFormCuenta(false); setErrCuenta('') }}
+                    style={{ padding: '8px 16px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 4, fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer' }}>
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Lista cuentas */}
+            {loadingCuentas ? (
+              <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>Cargando...</div>
+            ) : cuentas.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '48px', background: C.bg, borderRadius: 8, border: `1px dashed ${C.rule}` }}>
+                <div style={{ fontSize: 32, marginBottom: 8 }}>👤</div>
+                <div style={{ fontFamily: SE, fontSize: 20, color: C.ink, marginBottom: 6 }}>Sin cuentas todavía</div>
+                <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Crea la primera cuenta de cliente</div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                {cuentas.map(c => (
+                  <div key={c.cuenta_id} style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 8, padding: 20, display: 'grid', gridTemplateColumns: '1fr auto', gap: 16, alignItems: 'start' }}>
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
+                        <div style={{ fontFamily: SE, fontSize: 20, color: C.ink }}>{c.cuenta_nombre}</div>
+                        <span style={{ fontFamily: SM, fontSize: 9, padding: '2px 7px', borderRadius: 3, background: c.estado === 'activo' ? C.greenS : C.redS, color: c.estado === 'activo' ? C.green : C.red, letterSpacing: '.08em' }}>
+                          {c.estado.toUpperCase()}
+                        </span>
+                        <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>
+                          {c.num_restaurantes} local{c.num_restaurantes !== 1 ? 'es' : ''}
+                        </span>
+                      </div>
+                      {c.email && <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginBottom: 4 }}>{c.email}</div>}
+                      {/* Restaurantes de la cuenta */}
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+                        {(c.restaurantes || []).map((r: any) => (
+                          <span key={r.id} style={{ fontFamily: SM, fontSize: 10, padding: '3px 8px', borderRadius: 3, background: C.bg, border: `1px solid ${C.rule}`, color: C.ink2 }}>
+                            {r.nombre} · {r.plan}
+                          </span>
+                        ))}
+                        {c.num_restaurantes === 0 && (
+                          <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, fontStyle: 'italic' }}>Sin restaurantes asignados</span>
+                        )}
+                      </div>
+                    </div>
+                    <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>
+                      {new Date(c.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         ) : (
         <div>
         {/* Title */}
