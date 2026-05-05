@@ -598,5 +598,6 @@ export default function KDSPage() {
     <Suspense fallback={<div style={{ minHeight:'100dvh', background:'#0D0B08' }}/>}>
       <KDSInner />
     </Suspense>
+    </>
   )
 }
