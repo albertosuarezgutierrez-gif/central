@@ -155,7 +155,7 @@ const Modal = ({ title, onClose, children }: { title: string; onClose: () => voi
 )
 
 /* ─── Tab: Camareros ─── */
-type Seccion = { id: string; nombre: string }
+type Seccion = { id: string; nombre: string; color_kds?: string; icono?: string; activa?: boolean; orden?: number }
 function CamarerosTab() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [camareros, setCamareros] = useState<Camarero[]>([])
@@ -1018,9 +1018,10 @@ function CartaTab() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [view, setView] = useState<CartaView>('lista')
   const [productos, setProductos] = useState<Producto[]>([])
+  const [secciones, setSecciones] = useState<Seccion[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
-  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: 'entrantes', nombre_alternativo: '' })
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '' })
   const [err, setErr] = useState('')
 
   // Scanner state
@@ -1030,19 +1031,26 @@ function CartaTab() {
   const [extractErr, setExtractErr] = useState('')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const SECCIONES = ['entrantes', 'principales', 'postres', 'bebidas', 'cafes', 'copas', 'otras']
+  const SECCIONES_DEFAULT = ['entrantes', 'principales', 'postres', 'bebidas', 'cafes', 'copas', 'otras']
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/owner/carta', { headers: sh() })
-    const d = await r.json()
-    setProductos(d.productos || [])
+    const [rCarta, rSec] = await Promise.all([
+      fetch('/api/owner/carta', { headers: sh() }),
+      fetch('/api/owner/secciones', { headers: sh() }),
+    ])
+    const dCarta = await rCarta.json()
+    const dSec   = await rSec.json()
+    setProductos(dCarta.productos || [])
+    setSecciones(dSec.secciones || [])
     setLoading(false)
   }, [])
 
   useEffect(() => { load() }, [load])
 
+  const primeraSeccion = secciones[0]?.id || SECCIONES_DEFAULT[0]
+
   // ── CRUD ──
-  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: 'entrantes', nombre_alternativo: '' }); setErr(''); setModal('create') }
+  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '' }); setErr(''); setModal('create') }
   const openEdit = (p: Producto) => {
     setForm({
       nombre: p.nombre, descripcion: p.descripcion || '',
@@ -1271,7 +1279,10 @@ function CartaTab() {
                     <select value={p.seccion || p.categoria} onChange={e => updateDraft(p._key, 'seccion', e.target.value)}
                       style={{ fontFamily: SN, fontSize: 12, background: C.paper, border: `1px solid ${C.rule}`,
                         borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }}>
-                      {SECCIONES.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)}
+                      {secciones.length > 0
+                        ? secciones.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)
+                        : SECCIONES_DEFAULT.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)
+                      }
                     </select>
                     <input value={p.precio != null ? String(p.precio) : ''} onChange={e => updateDraft(p._key, 'precio', e.target.value === '' ? null : parseFloat(e.target.value))}
                       placeholder="—" type="number" step="0.01"
@@ -1355,7 +1366,10 @@ function CartaTab() {
             <Field label="Nombre" value={form.nombre} onChange={v => setForm(f => ({ ...f, nombre: v }))} placeholder="Croquetas de jamón"/>
             <Field label="Precio (€)" value={form.precio} onChange={v => setForm(f => ({ ...f, precio: v }))} placeholder="8.50" type="number"/>
             <Select label="Sección" value={form.seccion} onChange={v => setForm(f => ({ ...f, seccion: v }))}
-              options={SECCIONES.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))}/>
+              options={secciones.length > 0
+                ? secciones.map(s => ({ value: s.id, label: s.nombre }))
+                : SECCIONES_DEFAULT.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))
+              }/>
             <Field label="Aliases (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="bravas, una de bravas, patatas"/>
             <Field label="Descripción (opcional)" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion: v }))} placeholder="Caseras, con bechamel de la abuela"/>
             {modal !== 'create' && typeof modal === 'object' && 'edit' in modal && (
@@ -1378,6 +1392,139 @@ function CartaTab() {
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
             <Btn variant="danger" onClick={del}><Icon d={ICONS.trash} size={14}/>Borrar</Btn>
+          </div>
+        </Modal>
+      )}
+    </div>
+  )
+}
+
+/* ─── Tab: Secciones de cocina ─── */
+const COLORES_KDS = ['#D9442B','#E8A33B','#3F7D44','#2B6A6E','#7B5EA7','#C4602A','#1A6B9A','#6B5F52']
+const ICONOS_SEC  = ['🍽️','🥩','🥗','🍺','☕','🍰','🍳','🥘','🌮','🍕','🥤','🍷']
+
+function SeccionesTab() {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [secciones, setSecciones] = useState<Seccion[]>([])
+  const [loading, setLoading]     = useState(true)
+  const [modal, setModal]         = useState<null | 'create' | { edit: Seccion }>(null)
+  const [form, setForm]           = useState({ nombre: '', color_kds: '#D9442B', icono: '🍽️' })
+  const [err, setErr]             = useState('')
+  const [saving, setSaving]       = useState(false)
+
+  const load = useCallback(async () => {
+    const r = await fetch('/api/owner/secciones', { headers: sh() })
+    const d = await r.json()
+    setSecciones(d.secciones || [])
+    setLoading(false)
+  }, [])
+  useEffect(() => { load() }, [load])
+
+  const openCreate = () => { setForm({ nombre: '', color_kds: '#D9442B', icono: '🍽️' }); setErr(''); setModal('create') }
+  const openEdit   = (s: Seccion) => { setForm({ nombre: s.nombre, color_kds: s.color_kds||'#D9442B', icono: s.icono||'🍽️' }); setErr(''); setModal({ edit: s }) }
+
+  const save = async () => {
+    if (!form.nombre.trim()) return setErr('Nombre requerido')
+    setSaving(true); setErr('')
+    const isEdit = modal && typeof modal === 'object' && 'edit' in modal
+    const r = await fetch('/api/owner/secciones', {
+      method: isEdit ? 'PUT' : 'POST',
+      headers: { 'Content-Type': 'application/json', ...sh() },
+      body: JSON.stringify(isEdit ? { id: (modal as { edit: Seccion }).edit.id, ...form } : form),
+    })
+    const d = await r.json()
+    setSaving(false)
+    if (!r.ok) return setErr(d.error || 'Error')
+    await load(); setModal(null)
+  }
+
+  const toggleActiva = async (s: Seccion) => {
+    await fetch('/api/owner/secciones', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: s.id, activa: !s.activa }) })
+    await load()
+  }
+
+  const del = async (s: Seccion) => {
+    if (!confirm(`¿Borrar sección "${s.nombre}"?`)) return
+    const r = await fetch('/api/owner/secciones', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: s.id }) })
+    const d = await r.json()
+    if (!r.ok) { alert(d.error); return }
+    await load()
+  }
+
+  return (
+    <div>
+      <div style={{ display:'flex', alignItems:'flex-start', justifyContent:'space-between', marginBottom:24, gap:16, flexWrap:'wrap' }}>
+        <div>
+          <div style={{ fontFamily:SE, fontSize:28, fontWeight:500, color:C.ink, marginTop:2 }}>Secciones</div>
+          <div style={{ fontFamily:SN, fontSize:13, color:C.ink3, marginTop:4, lineHeight:1.5 }}>
+            Cada sección es una partida de cocina o barra. Totalmente personalizable.
+          </div>
+        </div>
+        <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={14}/>Nueva sección</Btn>
+      </div>
+
+      {loading ? <div style={{ fontFamily:SM, fontSize:12, color:C.ink3 }}>Cargando...</div>
+      : secciones.length === 0 ? (
+        <div style={{ textAlign:'center', padding:'48px 24px', background:C.bone, borderRadius:8, border:`1px dashed ${C.rule}` }}>
+          <div style={{ fontSize:32, marginBottom:8 }}>🍽️</div>
+          <div style={{ fontFamily:SE, fontSize:18, color:C.ink, marginBottom:6 }}>Sin secciones todavía</div>
+          <div style={{ fontFamily:SN, fontSize:13, color:C.ink3, marginBottom:16 }}>Crea tu primera sección — cocina caliente, fría, barra, postres...</div>
+          <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={14}/>Crear primera sección</Btn>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:6 }}>
+          {secciones.map(s => (
+            <div key={s.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 16px', background:C.bone, border:`1px solid ${C.rule}`, borderRadius:6, opacity:s.activa===false?0.55:1, borderLeft:`4px solid ${s.color_kds||C.red}` }}>
+              <span style={{ fontSize:20 }}>{s.icono||'🍽️'}</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontWeight:600, fontSize:14, color:C.ink }}>{s.nombre}</div>
+                <div style={{ fontFamily:SM, fontSize:10, color:C.ink3, marginTop:2 }}>{s.id}</div>
+              </div>
+              <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0, flexWrap:'wrap' }}>
+                <button onClick={() => toggleActiva(s)} style={{ background:'none', border:`1px solid ${C.rule}`, borderRadius:3, padding:'3px 8px', fontFamily:SM, fontSize:9, letterSpacing:'.08em', color:C.ink3, cursor:'pointer', textTransform:'uppercase' }}>
+                  {s.activa===false?'Activar':'Ocultar'}
+                </button>
+                <Btn variant="ghost" onClick={() => openEdit(s)}><Icon d={ICONS.edit} size={13}/>Editar</Btn>
+                <Btn variant="danger" onClick={() => del(s)}><Icon d={ICONS.trash} size={13}/></Btn>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {modal && (modal === 'create' || (typeof modal === 'object' && 'edit' in modal)) && (
+        <Modal title={modal==='create'?'Nueva sección':'Editar sección'} onClose={() => setModal(null)}>
+          <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+            <Field label="Nombre" value={form.nombre} onChange={v => setForm(f=>({...f,nombre:v}))} placeholder="ej. Cocina caliente"/>
+            <div>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, letterSpacing:'.12em', color:C.ink3, textTransform:'uppercase', marginBottom:8 }}>Icono</div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
+                {ICONOS_SEC.map(ic => (
+                  <button key={ic} onClick={() => setForm(f=>({...f,icono:ic}))} style={{ fontSize:20, padding:'6px 8px', borderRadius:6, cursor:'pointer', border:`2px solid ${form.icono===ic?C.red:C.rule}`, background:form.icono===ic?C.redS:C.paper }}>{ic}</button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, letterSpacing:'.12em', color:C.ink3, textTransform:'uppercase', marginBottom:8 }}>Color en KDS</div>
+              <div style={{ display:'flex', gap:6, flexWrap:'wrap', alignItems:'center' }}>
+                {COLORES_KDS.map(c => (
+                  <button key={c} onClick={() => setForm(f=>({...f,color_kds:c}))} style={{ width:28, height:28, borderRadius:'50%', background:c, cursor:'pointer', border:`3px solid ${form.color_kds===c?C.ink:'transparent'}` }}/>
+                ))}
+                <input type="color" value={form.color_kds} onChange={e => setForm(f=>({...f,color_kds:e.target.value}))} style={{ width:28, height:28, padding:0, border:`1px solid ${C.rule}`, borderRadius:4, cursor:'pointer' }} title="Color personalizado"/>
+              </div>
+            </div>
+            <div style={{ background:C.paper2, border:`1px solid ${C.rule}`, borderRadius:6, padding:'10px 14px', borderLeft:`4px solid ${form.color_kds}` }}>
+              <div style={{ fontFamily:SM, fontSize:10, color:C.ink3, textTransform:'uppercase', letterSpacing:'.08em', marginBottom:4 }}>Vista previa KDS</div>
+              <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                <span style={{ fontSize:18 }}>{form.icono}</span>
+                <span style={{ fontWeight:600, fontSize:14 }}>{form.nombre||'Nombre de la sección'}</span>
+              </div>
+            </div>
+            {err && <div style={{ fontFamily:SM, fontSize:11, color:C.red }}>{err}</div>}
+            <div style={{ display:'flex', gap:8, justifyContent:'flex-end', marginTop:8 }}>
+              <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
+              <Btn variant="primary" onClick={save} disabled={saving}><Icon d={ICONS.check} size={14}/>{saving?'Guardando...':modal==='create'?'Crear':'Guardar'}</Btn>
+            </div>
           </div>
         </Modal>
       )}
@@ -2589,11 +2736,12 @@ function ModificacionesTab({ restauranteId }: { restauranteId: string }) {
 const TABS = [
   { id: 'camareros',       label: 'Camareros',      icon: ICONS.users         },
   { id: 'mesas',           label: 'Mesas',           icon: ICONS.grid          },
+  { id: 'secciones',       label: 'Secciones',       icon: ICONS.sparkle       },
+  { id: 'carta',           label: 'Carta',           icon: ICONS.book          },
   { id: 'impresoras',      label: 'Impresoras',      icon: ICONS.printer       },
   { id: 'flujos',          label: 'Flujos',          icon: ICONS.wifi          },
   { id: 'turno',           label: 'Turno',           icon: ICONS.clock         },
   { id: 'analytics',       label: 'Analytics',       icon: ICONS.chart         },
-  { id: 'carta',           label: 'Carta',           icon: ICONS.book          },
   { id: 'facturas',        label: 'Facturas',        icon: ICONS.receipt       },
   { id: 'modificaciones',  label: 'Modificaciones',  icon: ICONS.alertTriangle },
   { id: 'restaurante',     label: 'Restaurante',     icon: ICONS.shield        },
@@ -2621,6 +2769,15 @@ export default function OwnerPage() {
         input:focus, select:focus { border-color: ${C.red} !important; box-shadow: 0 0 0 3px rgba(217,68,43,.15); }
         button { font-family: ${SN}; }
         @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+        .owner-tabs { display:flex; gap:2px; overflow-x:auto; scrollbar-width:none; -webkit-overflow-scrolling:touch; }
+        .owner-tabs::-webkit-scrollbar { display:none; }
+        .owner-tab-lbl { display:inline; }
+        .owner-wrap { max-width:960px; margin:0 auto; padding:24px 20px 80px; }
+        @media (max-width:640px) {
+          .owner-tab-lbl { display:none; }
+          .owner-wrap { padding:14px 10px 80px; }
+          .owner-hdr-name { display:none; }
+        }
       `}</style>
 
       {/* Top nav */}
@@ -2637,7 +2794,7 @@ export default function OwnerPage() {
           Panel del dueño
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink2 }}>{session.nombre}</div>
+          <div className="owner-hdr-name" style={{ fontFamily: SN, fontSize: 13, color: C.ink2 }}>{session.nombre}</div>
           <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.rule}`,
             borderRadius: 4, padding: '6px 10px', cursor: 'pointer', color: C.ink3, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon d={ICONS.logout} size={14}/>
@@ -2646,21 +2803,20 @@ export default function OwnerPage() {
         </div>
       </header>
 
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: '32px 24px 80px' }}>
-        {/* Tab nav */}
-        <div style={{ display: 'flex', gap: 2, marginBottom: 32, background: C.paper2,
-          border: `1px solid ${C.rule}`, borderRadius: 8, padding: 4 }}>
+      <div className="owner-wrap">
+        {/* Tab nav — scroll horizontal en móvil */}
+        <div className="owner-tabs" style={{ marginBottom:20, background:C.paper2, border:`1px solid ${C.rule}`, borderRadius:8, padding:4 }}>
           {TABS.map(t => (
             <button key={t.id} onClick={() => setTab(t.id)}
-              style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
-                padding: '8px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
-                background: tab === t.id ? C.bone : 'transparent',
-                color: tab === t.id ? C.ink : C.ink3,
-                fontFamily: SN, fontSize: 13, fontWeight: tab === t.id ? 600 : 500,
-                boxShadow: tab === t.id ? `0 1px 0 rgba(26,23,20,.04), 0 1px 3px rgba(26,23,20,.1)` : 'none',
-                transition: 'all .15s' }}>
+              style={{ flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', gap:6,
+                padding:'8px 12px', borderRadius:6, border:'none', cursor:'pointer',
+                background: tab===t.id ? C.bone : 'transparent',
+                color: tab===t.id ? C.ink : C.ink3,
+                fontFamily:SN, fontSize:13, fontWeight:tab===t.id?600:500,
+                boxShadow: tab===t.id ? `0 1px 0 rgba(26,23,20,.04), 0 1px 3px rgba(26,23,20,.1)` : 'none',
+                transition:'all .15s', whiteSpace:'nowrap' }}>
               <Icon d={t.icon} size={15}/>
-              {t.label}
+              <span className="owner-tab-lbl">{t.label}</span>
             </button>
           ))}
         </div>
@@ -2668,6 +2824,7 @@ export default function OwnerPage() {
         {/* Tab content */}
         {tab === 'camareros'       && <CamarerosTab/>}
         {tab === 'mesas'           && <MesasTab/>}
+        {tab === 'secciones'       && <SeccionesTab/>}
         {tab === 'impresoras'      && <ImpresorasTab/>}
         {tab === 'flujos'          && <FlujoTab/>}
         {tab === 'turno'           && <TurnoTab/>}
