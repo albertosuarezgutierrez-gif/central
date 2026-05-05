@@ -403,8 +403,11 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, session, onClose,
                 return (
                   <button key={p.id}
                     onClick={()=>{
-                      if(enCarrito) setCartAnadir(prev=>prev.map(x=>x.producto_id===p.id?{...x,cantidad:x.cantidad+1}:x))
-                      else setCartAnadir(prev=>[...prev,{producto_id:p.id,nombre:p.nombre,cantidad:1,precio_unitario:p.precio}])
+                      setCartAnadir(function(prev){
+                        var ex = prev.find(function(x){return x.producto_id===p.id})
+                        if(ex) return prev.map(function(x){return x.producto_id===p.id?{...x,cantidad:x.cantidad+1}:x})
+                        return [...prev,{producto_id:p.id,nombre:p.nombre,cantidad:1,precio_unitario:p.precio}]
+                      })
                     }}
                     style={{padding:'6px 10px',borderRadius:8,
                       background:enCarrito?C.vermS:C.bg1,
