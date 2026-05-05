@@ -165,6 +165,7 @@ function CamarerosTab() {
   const [form, setForm] = useState({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '' })
   const [showPins, setShowPins] = useState<Record<string, boolean>>({})
   const [err, setErr] = useState('')
+  const [delErr, setDelErr] = useState('')
 
   const load = useCallback(async () => {
     const r = await fetch('/api/owner/camareros', { headers: sh() })
@@ -179,7 +180,7 @@ function CamarerosTab() {
 
   const openCreate = () => { setForm({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '' }); setErr(''); setModal('create') }
   const openEdit = (c: Camarero) => { setForm({ nombre: c.nombre, pin: c.pin, rol: c.rol, activo: c.activo, seccion_id: c.seccion_id || '' }); setErr(''); setModal({ edit: c }) }
-  const openDel = (c: Camarero) => { setModal({ del: c }) }
+  const openDel = (c: Camarero) => { setDelErr(''); setModal({ del: c }) }
 
   const save = async () => {
     setErr('')
@@ -202,8 +203,16 @@ function CamarerosTab() {
 
   const del = async () => {
     if (!modal || typeof modal !== 'object' || !('del' in modal)) return
-    await fetch('/api/owner/camareros', { method: 'DELETE',
+    const r = await fetch('/api/owner/camareros', { method: 'DELETE',
       headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: (modal as { del: Camarero }).del.id }) })
+    if (!r.ok) {
+      const d = await r.json()
+      const msg = d.error || 'Error al borrar'
+      setDelErr(msg.includes('foreign key') || msg.includes('violates')
+        ? 'Este camarero tiene comandas o datos históricos asociados. Márcalo como BAJA en lugar de borrar.'
+        : msg)
+      return
+    }
     await load(); setModal(null)
   }
 
@@ -307,9 +316,24 @@ function CamarerosTab() {
           <p style={{ fontFamily: SN, fontSize: 14, color: C.ink2, marginTop: 0, lineHeight: 1.5 }}>
             ¿Borrar a <strong>{(modal as { del: Camarero }).del.nombre}</strong>? Esta acción no se puede deshacer.
           </p>
+          {delErr && (
+            <div style={{ padding: '10px 12px', background: '#FFF3CD', border: `1px solid ${C.amber}`, borderRadius: 8,
+              fontFamily: SN, fontSize: 12, color: C.ink, marginBottom: 8, lineHeight: 1.5 }}>
+              ⚠️ {delErr}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
             <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>
-            <Btn variant="danger" onClick={del}><Icon d={ICONS.trash} size={14}/>Borrar</Btn>
+            {delErr && (
+              <Btn variant="ghost" onClick={async () => {
+                const c = (modal as { del: Camarero }).del
+                await fetch('/api/owner/camareros', { method: 'PUT',
+                  headers: { 'Content-Type': 'application/json', ...sh() },
+                  body: JSON.stringify({ id: c.id, activo: false }) })
+                await load(); setModal(null)
+              }}>Marcar como BAJA</Btn>
+            )}
+            {!delErr && <Btn variant="danger" onClick={del}><Icon d={ICONS.trash} size={14}/>Borrar</Btn>}
           </div>
         </Modal>
       )}
