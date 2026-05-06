@@ -4491,6 +4491,19 @@ export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [tab, setTab] = useState('camareros')
+  const [numProductos, setNumProductos] = useState<number | null>(null)
+  const [checkoutSuccess] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return new URLSearchParams(window.location.search).get('checkout') === 'success'
+  })
+
+  useEffect(() => {
+    if (!session) return
+    fetch('/api/owner/carta', { headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' } })
+      .then(r => r.json())
+      .then(d => setNumProductos((d.productos ?? []).length))
+      .catch(() => setNumProductos(0))
+  }, [session])
 
   const logout = () => {
     localStorage.removeItem('ia_rest_session')
@@ -4544,6 +4557,30 @@ export default function OwnerPage() {
           </button>
         </div>
       </header>
+
+      {/* Banner bienvenida — solo si viene de checkout o no tiene productos */}
+      {(checkoutSuccess || numProductos === 0) && numProductos !== null && (
+        <div style={{ background: 'rgba(63,125,68,.08)', border: '1px solid rgba(63,125,68,.3)', borderRadius: 10, padding: '16px 20px', margin: '16px 20px 0', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
+          <div style={{ fontSize: 24, flexShrink: 0 }}>🎉</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 17, color: C.ink, marginBottom: 4 }}>
+              {checkoutSuccess ? '¡Bienvenido a ia.rest!' : 'Tu restaurante está casi listo'}
+            </div>
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink2, lineHeight: 1.6, marginBottom: 12 }}>
+              Para empezar a tomar comandas por voz necesitas:<br/>
+              <strong>1.</strong> Añadir tu carta &nbsp;·&nbsp; <strong>2.</strong> Crear tus camareros &nbsp;·&nbsp; <strong>3.</strong> Abrir un turno desde /edge
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button onClick={() => setTab('carta')} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 14px', fontFamily: SN, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                Añadir carta →
+              </button>
+              <button onClick={() => setTab('camareros')} style={{ background: C.paper2, color: C.ink2, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '8px 14px', fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                Crear camareros
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="owner-wrap">
         {/* ── Nav grupos (4 pills) ── */}
