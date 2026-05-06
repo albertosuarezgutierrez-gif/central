@@ -231,6 +231,10 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
   const [totalReal, setTotalReal]   = useState(total)
   const [entregadoFinal, setEntregadoFinal] = useState<number | null>(null)
   const [items, setItems]           = useState<ComandaItem[]>([])
+  const [propina, setPropina]       = useState(0)
+  const [propinaInput, setPropinaInput] = useState('')
+
+  const totalConPropina = Math.round((totalReal + propina) * 100) / 100
 
   const session_str = JSON.stringify(session)
 
@@ -282,18 +286,32 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
           comanda_id: comandaId,
           mesa_label: mesaLabel,
           metodo_id: metodoSel.id,
-          entregado: metodoSel.tipo === 'efectivo' ? (entregado ?? totalReal) : 0,
+          entregado: metodoSel.tipo === 'efectivo' ? (entregado ?? totalConPropina) : 0,
+          propina: propina > 0 ? propina : undefined,
         })
       })
       const d = await r.json()
       if (!r.ok) { setError(d.error || 'Error al cobrar'); setLoading(false); return }
       onCerrado({ factura: d.factura, cambio: d.cambio ?? 0, metodo: metodoSel.nombre })
     } catch { setError('Error de red'); setLoading(false) }
-  }, [metodoSel, totalReal, comandaId, mesaLabel, session_str, onCerrado])
+  }, [metodoSel, totalConPropina, propina, comandaId, mesaLabel, session_str, onCerrado])
 
   const handleNumpadConfirm = (entregado: number) => {
     setEntregadoFinal(entregado)
     cobrar(entregado)
+  }
+
+  const aplicarPropina = (val: number) => {
+    setPropina(val)
+    setPropinaInput(val > 0 ? val.toFixed(2).replace('.', ',') : '')
+    setEntregadoFinal(null)
+  }
+
+  const onPropinaInputChange = (v: string) => {
+    setPropinaInput(v)
+    const n = parseFloat(v.replace(',', '.'))
+    setPropina(isNaN(n) ? 0 : Math.round(n * 100) / 100)
+    setEntregadoFinal(null)
   }
 
   return (
@@ -324,8 +342,15 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
               <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.ink}}>
                 Cobrar · {mesaLabel}
               </div>
-              <div style={{fontFamily:SM,fontSize:22,fontWeight:700,color:C.verm,marginTop:2}}>
-                {`${totalReal.toFixed(2).replace('.',',')} €`}
+              <div style={{display:'flex',alignItems:'baseline',gap:8,marginTop:2}}>
+                <div style={{fontFamily:SM,fontSize:22,fontWeight:700,color:C.verm}}>
+                  {`${totalConPropina.toFixed(2).replace('.',',')} €`}
+                </div>
+                {propina > 0 && (
+                  <div style={{fontFamily:SM,fontSize:11,color:C.gr}}>
+                    ({`${total.toFixed(2).replace('.',',')} + ${propina.toFixed(2).replace('.',',')} propina`})
+                  </div>
+                )}
               </div>
             </div>
             <button onClick={onCancel}
@@ -407,10 +432,50 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
             </div>
           </div>
 
+          {/* ── PROPINA (opcional) ── */}
+          {!loading && (
+            <div style={{padding:'0 20px 14px'}}>
+              <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:C.ink4,marginBottom:10}}>
+                Propina <span style={{fontWeight:400,fontSize:9,letterSpacing:0,textTransform:'none',color:C.ink4}}>· opcional</span>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center',flexWrap:'wrap'}}>
+                {[0, 1, 2, 5].map(v => {
+                  const sel = propina === v
+                  return (
+                    <button key={v} onClick={() => aplicarPropina(v)}
+                      style={{
+                        padding:'8px 14px',borderRadius:10,
+                        border:`1.5px solid ${sel ? C.gr : C.rule}`,
+                        background: sel ? `${C.gr}18` : C.bg2,
+                        fontFamily:SM,fontSize:13,fontWeight:sel?700:400,
+                        color: sel ? C.gr : C.ink3,
+                        cursor:'pointer',transition:'all .12s',
+                      }}>
+                      {v === 0 ? 'Sin propina' : `${v} €`}
+                    </button>
+                  )
+                })}
+                <div style={{display:'flex',alignItems:'center',gap:4,flex:'1 1 80px',minWidth:80}}>
+                  <input
+                    type="text" inputMode="decimal" placeholder="otro €"
+                    value={propinaInput}
+                    onChange={e => onPropinaInputChange(e.target.value)}
+                    style={{
+                      width:'100%',padding:'8px 10px',borderRadius:10,
+                      border:`1.5px solid ${propinaInput && propina > 0 && ![1,2,5].includes(propina) ? C.gr : C.rule}`,
+                      background:C.bg2,fontFamily:SM,fontSize:13,color:C.ink,
+                      outline:'none',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* ── EFECTIVO: NUMPAD ── */}
           {metodoSel?.tipo === 'efectivo' && !loading && (
             <NumpadEfectivo
-              total={totalReal}
+              total={totalConPropina}
               onConfirm={handleNumpadConfirm}
             />
           )}
@@ -426,7 +491,8 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
                 <span style={{fontSize:28}}>{metodoSel.icono}</span>
                 <div>
                   <div style={{fontSize:14,fontWeight:700,color:C.ink}}>
-                    {metodoSel.nombre} · {totalReal.toFixed(2).replace('.',',')} €
+                    {metodoSel.nombre} · {totalConPropina.toFixed(2).replace('.',',')} €
+                    {propina > 0 && <span style={{fontWeight:400,fontSize:11,color:C.gr}}> (incl. {propina.toFixed(2).replace('.',',')} propina)</span>}
                   </div>
                   <div style={{fontSize:12,color:C.ink3,marginTop:3}}>
                     {metodoSel.tipo==='tarjeta'
@@ -447,7 +513,7 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
                 </svg>
-                Confirmar cobro · {totalReal.toFixed(2).replace('.',',')} €
+                Confirmar cobro · {totalConPropina.toFixed(2).replace('.',',')} €
               </button>
             </div>
           )}

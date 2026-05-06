@@ -1,7 +1,7 @@
 // ============================================================
 // POST /api/factura/cerrar
 // Cierra una comanda, genera factura Verifactu y registra cobro
-// Body: { comanda_id, mesa_label?, metodo_id, entregado?, notas? }
+// Body: { comanda_id, mesa_label?, metodo_id, entregado?, notas?, propina? }
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -18,12 +18,12 @@ export async function POST(req: NextRequest) {
 
   let body: {
     comanda_id: string; mesa_label?: string
-    metodo_id?: string; entregado?: number; notas?: string
+    metodo_id?: string; entregado?: number; notas?: string; propina?: number
   }
   try { body = await req.json() }
   catch { return NextResponse.json({ error: 'Body inválido' }, { status: 400 }) }
 
-  const { comanda_id, mesa_label = 'Mesa', metodo_id, entregado = 0, notas } = body
+  const { comanda_id, mesa_label = 'Mesa', metodo_id, entregado = 0, notas, propina = 0 } = body
   if (!comanda_id) return NextResponse.json({ error: 'comanda_id requerido' }, { status: 400 })
   if (!metodo_id)  return NextResponse.json({ error: 'metodo_id requerido — selecciona método de pago' }, { status: 400 })
 
@@ -60,8 +60,11 @@ export async function POST(req: NextRequest) {
   if (importe_total <= 0)
     return NextResponse.json({ error: 'Importe total 0 — revisa precios en la carta' }, { status: 422 })
 
-  const cambio = metodo.tipo === 'efectivo' && entregado > importe_total
-    ? Math.round((entregado - importe_total) * 100) / 100
+  const propina_val = Math.round((propina ?? 0) * 100) / 100
+  const total_cobrar = Math.round((importe_total + propina_val) * 100) / 100
+
+  const cambio = metodo.tipo === 'efectivo' && entregado > total_cobrar
+    ? Math.round((entregado - total_cobrar) * 100) / 100
     : 0
 
   // ── 4. Datos fiscales ───────────────────────────────────
@@ -100,6 +103,7 @@ export async function POST(req: NextRequest) {
       metodo_tipo:  metodo.tipo,
       entregado:    metodo.tipo === 'efectivo' ? entregado : 0,
       cambio,
+      propina:      propina_val > 0 ? propina_val : null,
       camarero_id:  session?.id ?? comanda.camarero_id,
     })
     .select().single()
@@ -116,6 +120,7 @@ export async function POST(req: NextRequest) {
     importe: importe_total,
     entregado: metodo.tipo === 'efectivo' ? entregado : 0,
     cambio,
+    propina: propina_val > 0 ? propina_val : null,
     metodo_tipo: metodo.tipo,
     camarero_id: session?.id ?? comanda.camarero_id,
     notas: notas ?? null,
@@ -147,12 +152,13 @@ export async function POST(req: NextRequest) {
   await supabase.from('mesas').update({ estado: 'libre', camarero_id: null, ultima_comanda: new Date().toISOString() })
     .eq('id', (await supabase.from('comandas').select('mesa_id').eq('id', comanda_id).single()).data?.mesa_id ?? '')
 
-  console.log(`[factura/cerrar] ✓ Factura ${numero} · ${importe_total}€ · ${metodo.nombre} · cambio ${cambio}€`)
+  console.log(`[factura/cerrar] ✓ Factura ${numero} · ${importe_total}€ · propina ${propina_val}€ · ${metodo.nombre} · cambio ${cambio}€`)
 
   return NextResponse.json({
     factura,
     metodo: metodo.nombre,
     importe_total,
+    propina: propina_val,
     cambio,
     ya_existia: false,
   }, { status: 201 })
