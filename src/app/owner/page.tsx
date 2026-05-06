@@ -4487,22 +4487,200 @@ function getGrupo(tabId: string) {
   return GRUPOS.find(g => g.tabs.some(t => t.id === tabId)) ?? GRUPOS[0]
 }
 
+// ─── Componente checklist de configuración ───────────────────────────────────
+interface SetupStatus {
+  tiene_camareros: boolean
+  tiene_productos: boolean
+  tiene_mesas: boolean
+  turno_activo: boolean
+}
+
+function SetupChecklist({ status, setTab, onDismiss }: {
+  status: SetupStatus
+  setTab: (t: string) => void
+  onDismiss: () => void
+}) {
+  const completados = Object.values(status).filter(Boolean).length
+  const total = Object.values(status).length
+  const todo_listo = completados === total
+
+  if (todo_listo) return null
+
+  const pasos = [
+    {
+      hecho: status.tiene_camareros,
+      titulo: 'Crear al menos un camarero de sala',
+      desc: 'Sin camarero no se puede tomar comandas por voz.',
+      cta: 'Ir a Camareros →',
+      accion: () => setTab('camareros'),
+    },
+    {
+      hecho: status.tiene_productos,
+      titulo: 'Añadir tu carta',
+      desc: 'Sube tu carta manualmente o desde una foto con IA.',
+      cta: 'Ir a Carta →',
+      accion: () => setTab('carta'),
+    },
+    {
+      hecho: status.tiene_mesas,
+      titulo: 'Revisar tus mesas',
+      desc: 'Ya tienes mesas creadas por defecto. Puedes añadir o renombrarlas.',
+      cta: 'Ir a Mesas →',
+      accion: () => setTab('mesas'),
+    },
+    {
+      hecho: status.turno_activo,
+      titulo: 'Abrir el primer turno',
+      desc: 'El camarero abre el turno desde /edge antes de empezar el servicio.',
+      cta: null,
+      accion: null,
+    },
+  ]
+
+  return (
+    <div style={{
+      margin: '16px 20px 0',
+      background: C.paper,
+      border: `1px solid ${C.rule}`,
+      borderRadius: 12,
+      overflow: 'hidden',
+    }}>
+      {/* Header */}
+      <div style={{
+        background: C.paper2,
+        borderBottom: `1px solid ${C.rule}`,
+        padding: '14px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+      }}>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.ink }}>
+            Configura tu restaurante
+          </div>
+          <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 2 }}>
+            {completados} de {total} pasos completados
+          </div>
+        </div>
+        {/* Barra de progreso */}
+        <div style={{ width: 80, height: 4, background: C.rule, borderRadius: 2, overflow: 'hidden' }}>
+          <div style={{ width: `${(completados / total) * 100}%`, height: '100%', background: C.red, borderRadius: 2, transition: 'width .3s' }} />
+        </div>
+        <button onClick={onDismiss} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink3, fontSize: 18, lineHeight: 1, padding: 4 }}>×</button>
+      </div>
+
+      {/* Pasos */}
+      <div style={{ padding: '4px 0' }}>
+        {pasos.map((paso, i) => (
+          <div key={i} style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+            padding: '14px 20px',
+            borderBottom: i < pasos.length - 1 ? `1px solid ${C.rule}` : 'none',
+            opacity: paso.hecho ? 0.5 : 1,
+            transition: 'opacity .2s',
+          }}>
+            {/* Check */}
+            <div style={{
+              width: 22, height: 22, borderRadius: '50%', flexShrink: 0,
+              background: paso.hecho ? '#3F7D44' : C.paper2,
+              border: `2px solid ${paso.hecho ? '#3F7D44' : C.rule}`,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              marginTop: 1,
+            }}>
+              {paso.hecho && (
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="4 12 10 18 20 6"/>
+                </svg>
+              )}
+            </div>
+            {/* Contenido */}
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 2 }}>
+                {paso.titulo}
+              </div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.5 }}>
+                {paso.desc}
+              </div>
+            </div>
+            {/* CTA */}
+            {paso.cta && !paso.hecho && (
+              <button onClick={paso.accion!} style={{
+                flexShrink: 0,
+                background: C.red, color: '#fff', border: 'none',
+                borderRadius: 6, padding: '7px 12px',
+                fontFamily: SN, fontSize: 11, fontWeight: 700,
+                cursor: 'pointer', whiteSpace: 'nowrap',
+              }}>
+                {paso.cta}
+              </button>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Footer soporte */}
+      <div style={{
+        background: C.paper2,
+        borderTop: `1px solid ${C.rule}`,
+        padding: '12px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+      }}>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+          ¿Necesitas ayuda para configurarlo?
+        </div>
+        <a
+          href="https://wa.me/34612345678?text=Hola,%20acabo%20de%20registrarme%20en%20ia.rest%20y%20necesito%20ayuda%20para%20configurar%20mi%20restaurante"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{
+            display: 'flex', alignItems: 'center', gap: 6,
+            background: '#25D366', color: '#fff',
+            textDecoration: 'none',
+            borderRadius: 6, padding: '7px 12px',
+            fontFamily: SN, fontSize: 11, fontWeight: 700,
+            flexShrink: 0,
+          }}
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+          </svg>
+          WhatsApp
+        </a>
+      </div>
+    </div>
+  )
+}
+
+
 export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [tab, setTab] = useState('camareros')
-  const [numProductos, setNumProductos] = useState<number | null>(null)
-  const [checkoutSuccess] = useState(() => {
-    if (typeof window === 'undefined') return false
-    return new URLSearchParams(window.location.search).get('checkout') === 'success'
-  })
+  const [setupStatus, setSetupStatus] = useState<{ tiene_camareros:boolean; tiene_productos:boolean; tiene_mesas:boolean; turno_activo:boolean } | null>(null)
+  const [showChecklist, setShowChecklist] = useState(true)
 
   useEffect(() => {
     if (!session) return
-    fetch('/api/owner/carta', { headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' } })
-      .then(r => r.json())
-      .then(d => setNumProductos((d.productos ?? []).length))
-      .catch(() => setNumProductos(0))
+    const h = { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' }
+    Promise.all([
+      fetch('/api/owner/camareros', { headers: h }).then(r => r.json()),
+      fetch('/api/owner/carta',     { headers: h }).then(r => r.json()),
+      fetch('/api/owner/mesas',     { headers: h }).then(r => r.json()),
+      fetch('/api/owner/turno',     { headers: h }).then(r => r.json()),
+    ]).then(([cams, carta, mesas, turno]) => {
+      const camarerosSala = (cams.camareros ?? []).filter((c: any) => c.rol === 'camarero' || c.rol === 'jefe_sala')
+      setSetupStatus({
+        tiene_camareros: camarerosSala.length > 0,
+        tiene_productos: (carta.productos ?? []).length > 0,
+        tiene_mesas:     (mesas.mesas ?? []).length > 0,
+        turno_activo:    turno.turno?.estado === 'activo',
+      })
+    }).catch(() => {})
   }, [session])
 
   const logout = () => {
@@ -4558,28 +4736,12 @@ export default function OwnerPage() {
         </div>
       </header>
 
-      {/* Banner bienvenida — solo si viene de checkout o no tiene productos */}
-      {(checkoutSuccess || numProductos === 0) && numProductos !== null && (
-        <div style={{ background: 'rgba(63,125,68,.08)', border: '1px solid rgba(63,125,68,.3)', borderRadius: 10, padding: '16px 20px', margin: '16px 20px 0', display: 'flex', alignItems: 'flex-start', gap: 14 }}>
-          <div style={{ fontSize: 24, flexShrink: 0 }}>🎉</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 17, color: C.ink, marginBottom: 4 }}>
-              {checkoutSuccess ? '¡Bienvenido a ia.rest!' : 'Tu restaurante está casi listo'}
-            </div>
-            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink2, lineHeight: 1.6, marginBottom: 12 }}>
-              Para empezar a tomar comandas por voz necesitas:<br/>
-              <strong>1.</strong> Añadir tu carta &nbsp;·&nbsp; <strong>2.</strong> Crear tus camareros &nbsp;·&nbsp; <strong>3.</strong> Abrir un turno desde /edge
-            </div>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <button onClick={() => setTab('carta')} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 6, padding: '8px 14px', fontFamily: SN, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
-                Añadir carta →
-              </button>
-              <button onClick={() => setTab('camareros')} style={{ background: C.paper2, color: C.ink2, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '8px 14px', fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
-                Crear camareros
-              </button>
-            </div>
-          </div>
-        </div>
+      {setupStatus && showChecklist && (
+        <SetupChecklist
+          status={setupStatus}
+          setTab={setTab}
+          onDismiss={() => setShowChecklist(false)}
+        />
       )}
 
       <div className="owner-wrap">
