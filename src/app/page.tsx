@@ -82,9 +82,9 @@ function calcPrecioBase(n:number):number{
   return 59+extra;
 }
 const PRICE_EJEMPLOS=[
-  {n:1,label:"Un bar",desc:"Cafetería o barra pequeña"},
-  {n:3,label:"Restaurante",desc:"Sala completa, turno de comida y cena"},
-  {n:6,label:"Casa grande",desc:"Varios salones o amplia terraza"},
+  {n:1,label:"Un bar",desc:"1 usuario · barra pequeña o cafetería"},
+  {n:3,label:"Restaurante",desc:"3 usuarios · sala + cocina en turno"},
+  {n:6,label:"Casa grande",desc:"6 usuarios · sala, terraza y cocina"},
 ];
 
 const FAQS=[
@@ -92,7 +92,7 @@ const FAQS=[
   {q:"¿Funciona con acento andaluz, catalán o de cualquier región?",a:"Sí. BRAIN usa Whisper entrenado con vocabulario hostelero real: 'marchar', '86', 'sin', 'para llevar', 'pon una de gambas'... Funciona con todos los acentos del español y aprende con cada servicio."},
   {q:"¿Cuándo es obligatorio VeriFactu en España?",a:"Para sociedades desde el 1 de enero de 2027; para autónomos desde el 1 de julio de 2027. La multa por software no homologado es de hasta 50.000 € por ejercicio. ia.rest incluye VeriFactu con hash SHA-256 en todos los planes, ya activo."},
   {q:"¿Puedo financiar ia.rest con el Kit Digital?",a:"Sí. Las subvenciones Kit Digital del Gobierno de España cubren herramientas de digitalización para pymes y autónomos. Una suscripción anual de ia.rest puede cofinanciarse con estas ayudas. Consúltanos y te orientamos."},
-  {q:"¿Cómo funciona el precio? ¿Hay planes fijos?",a:"No. ia.rest usa tarificación por camarero activo: 59 €/mes por el local + 20 €/mes por cada camarero adicional (a partir del 7.º, 15 €). Un bar con 1 camarero paga 59 €/mes. Un restaurante con 3 camareros paga 99 €/mes. Solo pagas por los camareros que tengas activos en cada ciclo de facturación."},
+  {q:"¿Cómo funciona el precio? ¿Hay planes fijos?",a:"No hay planes fijos. ia.rest usa tarificación por usuario activo: 59 €/mes por el local + 20 €/mes por cada usuario adicional (a partir del 7.º, 15 €). Cuenta como usuario cualquier persona que acceda al sistema: camarero, cocina o jefe de sala. El dueño no cuenta. Un bar con 1 camarero paga 59 €/mes. Un restaurante con 3 camareros + 2 cocina + 1 jefe de sala paga 159 €/mes — precio que Numier o Revo ni siquiera publican en su web."},
   {q:"¿Cómo es el proceso de alta?",a:"Registro en 3 pasos (local, mesas, camareros) → verificación en minutos → empiezas. Sin llamadas, sin comerciales, sin instalador que venga a tu local."},
   {q:"¿Puedo cancelar cuando quiera?",a:"Sí. Sin permanencia ni penalización. Cancelas desde el panel y no se renueva. Datos exportables en formato estándar durante 30 días."},
 ];
@@ -398,40 +398,48 @@ export default function LandingPage() {
           <div style={{textAlign:"center",marginBottom:32}}>
             <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:10,letterSpacing:".2em",color:T.verm,textTransform:"uppercase",marginBottom:8}}>Comparativa · mayo 2026</div>
             <h2 style={{fontFamily:"Newsreader,serif",fontSize:mob?"clamp(20px,6vw,28px)":"clamp(22px,3vw,32px)",fontStyle:"italic",fontWeight:700,color:T.tinta}}>
-              Lo que dan los demás a 59 €/mes.<br/>Lo que da ia.rest a 59 €/mes.
+              Precio transparente desde el primer día.<br/>Ellos te llaman para contártelo.
             </h2>
           </div>
           <div style={{overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Inter Tight,sans-serif",fontSize:mob?11:13}}>
+            <table style={{width:"100%",borderCollapse:"collapse",fontFamily:"Inter Tight,sans-serif",fontSize:mob?10:12,minWidth:560}}>
               <thead>
                 <tr>
-                  {["Característica","ia.rest 59 €","TPV básico ~34–59 €"].map((h,i)=>(
-                    <th key={h} style={{padding:"10px 14px",textAlign:i===0?"left":"center",
+                  {["Característica","ia.rest","Numier","Square Plus","Revo Xef Plus"].map((h,i)=>(
+                    <th key={h} style={{padding:"10px 12px",textAlign:i===0?"left":"center",
                       borderBottom:`2px solid ${i===1?T.verm:T.reglas}`,
                       fontWeight:700,color:i===1?T.verm:T.tintaMed,
                       background:i===1?`${T.verm}08`:"transparent",
                       fontSize:10,letterSpacing:".1em",textTransform:"uppercase"}}>
-                      {h}
+                      {h}{i===2&&<div style={{fontFamily:"Caveat,cursive",fontSize:10,color:T.tintaGris,fontWeight:400,letterSpacing:0,textTransform:"none"}}>fuerte en Sevilla</div>}
                     </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {[
-                  ["Comandas por voz con IA","✓","✗ (no existe en el mercado)"],
-                  ["VeriFactu homologado AEAT","✓","Según producto"],
-                  ["Sin comisión por transacción","✓","Depende — algunos cobran 1–1,5%"],
-                  ["KDS cocina incluido en plan base","✓","Habitualmente módulo extra"],
-                  ["Dispositivos ilimitados en el local","✓","A menudo cobran por terminal"],
-                  ["Alérgenos EU Reg. 1169/2011","✓","✓ (estándar del sector)"],
-                  ["PWA · sin descarga de app","✓","Variable"],
-                  ["14 días gratis sin tarjeta","✓","Raro en el mercado español"],
-                ].map(([feat,ours,theirs],i)=>(
+                  ["Precio mensual base","59 €","Bajo consulta — llama al comercial","59 €+IVA/terminal","69,90 €+IVA/iPad"],
+                  ["Comandas por voz con IA","✓","✗","✗","✗"],
+                  ["VeriFactu homologado AEAT","✓","No mencionado","✗ no disponible","Según producto"],
+                  ["KDS cocina en base","✓","✓ módulo Numier Cocina","✓ Plan Plus","Módulo extra"],
+                  ["Sin comisión por cobro","✓","✓","✗ 1,25 %+0,05 €/op.","✓"],
+                  ["Hardware propio obligatorio","✗ cualquier Android","✓ ecosistema Numier","Terminal Square","iPad obligatorio"],
+                  ["Sin instalador en el local","✓ autoservicio","✗ comercial presencial","✓","✓"],
+                  ["Contrato / permanencia","✗ sin permanencia","Habitual","✗ sin permanencia","Habitual"],
+                  ["Trial sin tarjeta","✓ 14 días","30 sesiones demo","✓ 30 días","✓ 30 días"],
+                ].map(([feat,...cols],i)=>(
                   <tr key={feat} style={{background:i%2===0?T.elev1:"transparent"}}>
-                    <td style={{padding:"10px 14px",color:T.tintaMed,borderBottom:`1px solid ${T.reglas}`}}>{feat}</td>
-                    <td style={{padding:"10px 14px",textAlign:"center",color:T.marchar,fontWeight:700,
-                      background:`${T.verm}05`,borderBottom:`1px solid ${T.reglas}`,borderLeft:`2px solid ${T.verm}22`}}>{ours}</td>
-                    <td style={{padding:"10px 14px",textAlign:"center",color:T.tintaGris,borderBottom:`1px solid ${T.reglas}`}}>{theirs}</td>
+                    <td style={{padding:"9px 12px",color:T.tintaMed,borderBottom:`1px solid ${T.reglas}`}}>{feat}</td>
+                    {cols.map((c,ci)=>(
+                      <td key={ci} style={{padding:"9px 12px",textAlign:"center",
+                        color:ci===0?T.marchar:c==="✗"||c.startsWith("✗")?T.tintaGris:T.tintaMed,
+                        fontWeight:ci===0?700:400,
+                        background:ci===0?`${T.verm}05`:"transparent",
+                        borderBottom:`1px solid ${T.reglas}`,
+                        borderLeft:ci===0?`2px solid ${T.verm}22`:"none"}}>
+                        {c}
+                      </td>
+                    ))}
                   </tr>
                 ))}
               </tbody>
@@ -439,7 +447,7 @@ export default function LandingPage() {
           </div>
           <div style={{textAlign:"center",marginTop:16}}>
             <span style={{fontFamily:"Caveat,cursive",fontSize:13,color:T.tintaGris}}>
-              Comparativa orientativa basada en información pública de mayo 2026
+              Comparativa orientativa basada en información pública · mayo 2026
             </span>
           </div>
         </div>
@@ -453,8 +461,11 @@ export default function LandingPage() {
             <h2 style={{fontFamily:"Newsreader,serif",fontSize:mob?"clamp(24px,7vw,34px)":"clamp(28px,4vw,40px)",fontStyle:"italic",fontWeight:700,color:T.tinta,marginBottom:10}}>
               Pagas lo que usas.
             </h2>
-            <p style={{fontFamily:"Inter Tight,sans-serif",fontSize:mob?13:14,color:T.tintaMed,maxWidth:460,margin:"0 auto 28px"}}>
-              59 €/mes por el local · +20 € por camarero activo (a partir del 7.º, +15 €).<br/>Sin planes fijos. Sin comisiones por cobro.
+            <p style={{fontFamily:"Inter Tight,sans-serif",fontSize:mob?13:14,color:T.tintaMed,maxWidth:480,margin:"0 auto 4px"}}>
+              59 €/mes por el local · +20 € por usuario activo (a partir del 7.º, +15 €).
+            </p>
+            <p style={{fontFamily:"Caveat,cursive",fontSize:14,color:T.tintaGris,margin:"0 auto 28px"}}>
+              camarero, cocina o jefe de sala — cada persona que entra al sistema
             </p>
             {/* Toggle mensual/anual */}
             <div style={{display:"inline-flex",background:T.elev2,borderRadius:30,padding:3,gap:2}}>
@@ -466,7 +477,8 @@ export default function LandingPage() {
 
           {/* CALCULADORA */}
           <div style={{background:T.elev1,borderRadius:18,border:`1.5px solid ${T.reglas}`,padding:mob?"24px 18px":"36px 40px",maxWidth:640,margin:"0 auto 32px"}}>
-            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:11,letterSpacing:".15em",textTransform:"uppercase",color:T.tintaGris,marginBottom:16}}>¿Cuántos camareros?</div>
+            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:11,letterSpacing:".15em",textTransform:"uppercase",color:T.tintaGris,marginBottom:4}}>¿Cuántos usuarios activos?</div>
+            <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:11,color:T.tintaGris,marginBottom:16}}>camareros + cocina + jefe de sala</div>
             {/* Botones selector */}
             <div style={{display:"flex",flexWrap:"wrap",gap:8,marginBottom:28}}>
               {[1,2,3,4,5,6,7,8].map(n=>{
@@ -492,8 +504,8 @@ export default function LandingPage() {
                   </div>
                   <div style={{paddingBottom:8}}>
                     <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:12,color:T.tintaMed,lineHeight:1.6}}>
-                      {n===1?"1 camarero incluido":`${n>7?"8+":n} camareros`}
-                      {n>1&&<span style={{color:T.tintaGris}}> · 59€ base + {n<=6?(n-1)*20:5*20+(n-6)*15}€ en camareros</span>}
+                      {n===1?"1 usuario incluido":`${n>7?"8+":n} usuarios activos`}
+                      {n>1&&<span style={{color:T.tintaGris}}> · 59€ base + {n<=6?(n-1)*20:5*20+(n-6)*15}€ en usuarios</span>}
                     </div>
                     {annual&&ahorro>0&&<div style={{fontFamily:"Caveat,cursive",fontSize:13,color:T.marchar,marginTop:2}}>ahorras {ahorro}€/mes con facturación anual</div>}
                   </div>
@@ -518,7 +530,7 @@ export default function LandingPage() {
                   <div style={{fontFamily:"Inter Tight,sans-serif",fontSize:11,color:sel?"#C4B9A8":T.tintaGris,marginBottom:10}}>{desc}</div>
                   <div>
                     <span style={{fontFamily:"Newsreader,serif",fontSize:28,fontWeight:700,fontStyle:"italic",color:sel?T.crema:T.tinta}}>{total}</span>
-                    <span style={{fontFamily:"Inter Tight,sans-serif",fontSize:11,color:sel?"#C4B9A8":T.tintaGris}}> €/mes · {n} cam{n>1?"arero":"arero"}</span>
+                    <span style={{fontFamily:"Inter Tight,sans-serif",fontSize:11,color:sel?"#C4B9A8":T.tintaGris}}> €/mes · {n} usuario{n>1?"s":""}</span>
                   </div>
                 </button>
               );
@@ -572,7 +584,7 @@ export default function LandingPage() {
           </h2>
           <p style={{fontFamily:"Inter Tight,sans-serif",fontSize:mob?14:15,color:T.tintaGris,lineHeight:1.7,marginBottom:32}}>
             14 días gratis con todas las funciones. Sin tarjeta. Sin llamadas.<br/>
-            <span style={{fontFamily:"Caveat,cursive",fontSize:15,color:T.ambar}}>Luego desde 59 €/mes. Pagas por camareros activos, no por funciones.</span>
+            <span style={{fontFamily:"Caveat,cursive",fontSize:15,color:T.ambar}}>Luego desde 59 €/mes. Pagas por usuarios activos, no por funciones.</span>
           </p>
           {!done?(
             <div style={{display:"flex",gap:10,flexDirection:mob?"column":"row",maxWidth:420,margin:"0 auto"}}>
