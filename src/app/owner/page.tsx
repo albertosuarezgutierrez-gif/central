@@ -1165,7 +1165,7 @@ function RestauranteTab() {
         <div style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase', marginBottom: 18 }}>
           DATOS DEL RESTAURANTE
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
           {inp('Nombre comercial', 'nombre', 'Restaurante El Ejemplo')}
           {inp('Teléfono', 'telefono', '+34 91 000 00 00')}
           {inp('Dirección', 'direccion', 'Calle Mayor 1, Madrid')}
@@ -1185,7 +1185,7 @@ function RestauranteTab() {
           Estos datos aparecen en el encabezado de las facturas simplificadas y en el hash SHA-256 Verifactu.
           Sin NIF configurado, las facturas usan el NIF demo (B00000000).
         </div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 14 }}>
           {inp('NIF / CIF', 'nif', 'B12345678')}
           {inp('Razón social', 'razon_social', 'Mi Restaurante SL')}
         </div>
@@ -1453,7 +1453,7 @@ function ResumenTab() {
       {stats ? (
         <>
           {/* Stats grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
             {[
               { val: stats.total_comandas, label: 'Comandas totales', sub: 'en este turno' },
               { val: stats.avg_latencia_ms ? `${stats.avg_latencia_ms}ms` : '—', label: 'Latencia media', sub: 'voz → ticket' },
@@ -1857,7 +1857,8 @@ function CartaTab() {
                 </div>
               </div>
 
-              <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch' }}>
+              <div style={{ minWidth: 560, border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
                 <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 100px 120px 40px',
                   padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
                   fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>
@@ -1893,6 +1894,7 @@ function CartaTab() {
                   </div>
                 ))}
               </div>
+              </div>
             </div>
           )}
         </div>
@@ -1919,6 +1921,8 @@ function CartaTab() {
                   <span style={{ color: C.ink4 }}>· {ps.length}</span>
                 </div>
                 <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch' }}>
+                  <div style={{ minWidth: 380 }}>
                   {ps.map((p, i) => (
                     <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px 110px',
                       padding: '12px 16px', alignItems: 'center', gap: 8,
@@ -1946,6 +1950,8 @@ function CartaTab() {
                       </div>
                     </div>
                   ))}
+                  </div>
+                  </div>
                 </div>
               </div>
             ))
@@ -2306,7 +2312,7 @@ function ImpresorasTab() {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: C.ink3, textTransform: 'uppercase' }}>COURIER · Impresión</div>
           <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, marginTop: 2 }}>Impresoras</div>
@@ -2322,7 +2328,7 @@ function ImpresorasTab() {
             )}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Btn onClick={() => setModal('bridge')}><Icon d={ICONS.wifi} size={14}/>Bridge local</Btn>
           <Btn variant="primary" onClick={() => { setErr(''); setModal('create') }}>
             <Icon d={ICONS.plus} size={15}/>Añadir impresora
@@ -2994,7 +3000,7 @@ function FlujoTab() {
         </div>
         {simOpen && (
           <div style={{ padding:'0 14px 14px', borderTop:`1px solid ${C.rule}` }}>
-            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr auto', gap:8, marginTop:12, alignItems:'flex-end' }}>
+            <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit, minmax(140px, 1fr))', gap:8, marginTop:12, alignItems:'flex-end' }}>
               <div>
                 <label style={labelSt}>Producto</label>
                 <select value={simProdId} onChange={e=>setSimProdId(e.target.value)} style={inputSt}>

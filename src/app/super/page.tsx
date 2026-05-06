@@ -221,7 +221,7 @@ export default function SuperPage() {
 
       {/* TABS NAV */}
       <div style={{ borderBottom: `1px solid ${C.rule}`, background: C.bg }}>
-        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 32px', display: 'flex', gap: 0 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(12px, 4vw, 32px)', display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {([
             { id: 'restaurantes', label: 'Restaurantes' },
             { id: 'clientes',     label: 'Clientes' },
@@ -256,7 +256,7 @@ export default function SuperPage() {
         </div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 32px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: `clamp(24px, 5vw, 48px) clamp(12px, 4vw, 32px)` }}>
         {tabSuper === 'sugerencias' ? (
           <SugerenciasPanel
             sugerencias={sugerencias}
@@ -413,7 +413,7 @@ export default function SuperPage() {
             <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.1em', marginBottom: 20 }}>
               NUEVO RESTAURANTE
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 16 }}>
               {[
                 { key: 'nombre', label: 'Nombre', placeholder: 'Bodega La Plaza' },
                 { key: 'slug', label: 'Slug (subdominio)', placeholder: 'bodega-laplaza' },
@@ -437,7 +437,7 @@ export default function SuperPage() {
                 </div>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 16, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 16 }}>
               <div>
                 <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.08em', marginBottom: 6 }}>PLAN</div>
                 <select
@@ -596,7 +596,7 @@ export default function SuperPage() {
               <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>Cargando estadísticas…</div>
             ) : (
               <div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 16, marginBottom: 32 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 32 }}>
                   {[
                     { l: 'Total pares', v: trainingStats.total ?? 0 },
                     { l: 'Restaurantes activos', v: trainingStats.restaurantes ?? 0 },

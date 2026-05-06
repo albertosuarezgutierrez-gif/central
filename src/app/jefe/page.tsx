@@ -237,7 +237,7 @@ function SalonTab({session}:{session:Session}){
   return(
     <div>
       {/* KPIs rápidos */}
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,marginBottom:14}}>
+      <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(100px,1fr))',gap:8,marginBottom:14}}>
         {[
           {l:'Libres',  v:libres,   c:C.ink3},
           {l:'Activas', v:activas,  c:C.green},
