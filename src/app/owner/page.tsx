@@ -4157,7 +4157,7 @@ function ZonaCubiertoOverride({ sesion, precioGlobal, activoGlobal }: {
                   <span style={{
                     marginLeft: 8, fontSize: 10, fontFamily: SM,
                     color: hereda ? C.ink4 : activoFinal ? C.green : C.ink3,
-                    background: hereda ? C.bg2 : activoFinal ? `${C.green}18` : C.paper2,
+                    background: hereda ? C.paper2 : activoFinal ? `${C.green}18` : C.paper2,
                     padding: '2px 7px', borderRadius: 6, letterSpacing: '.06em',
                   }}>
                     {hereda ? 'hereda global' : activoFinal ? 'con cubierto' : 'sin cubierto'}
