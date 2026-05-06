@@ -40,7 +40,7 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
-type Tab    = 'hablar'|'manual'|'pendientes'|'config'
+type Tab    = 'hablar'|'manual'|'config'
 
 interface BrainResult {
   mesa: string; tipo: string
@@ -748,7 +748,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       )}
 
       {/* ══ TAB: PENDIENTES ══════════════════════════════════════ */}
-      {tab==='pendientes' && <PendientesScreen session={session} turnoId={turnoId}/>}
+      {tab==='config'    && <ConfigScreen session={session} turnoId={turnoId}/>}
 
       {/* ══ TAB: CONFIG ══════════════════════════════════════════ */}
       {tab==='config' && (
@@ -841,7 +841,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         {([
           {id:'hablar',    lbl:'Hablar',   path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
           {id:'manual',    lbl:'Manual',   path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
-          {id:'pendientes',lbl:'Pedidos',  path:'M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11'},
           {id:'config',    lbl:'Config',   path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
         ] as {id:Tab;lbl:string;path:string}[]).map(t => {
           const on = tab===t.id
@@ -857,66 +856,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           )
         })}
       </nav>
-    </div>
-  )
-}
-
-/* ─── PENDIENTES ─────────────────────────────────────────────── */
-function PendientesScreen({session,turnoId}:{session:{id:string;nombre:string;rol:string;restaurante_id:string};turnoId:string|null}) {
-  const [filtro,setFiltro] = useState('todas')
-  const [itemMod, setItemMod] = useState<{item:ItemMod;comandaId:string;mesaLabel:string}|null>(null)
-  const { comandas, refetch } = useComandas(turnoId??undefined)
-  const misComandasActivas = comandas.filter(c=>c.camarero_id===session.id&&['nueva','en_cocina'].includes(c.estado))
-  const timer = (iso:string) => { const s=Math.floor((Date.now()-new Date(iso).getTime())/1000); return `${Math.floor(s/60)}m ${s%60}s` }
-  type FiltroT = 'todas'|'nueva'|'en_cocina'
-  const vis = misComandasActivas.filter(c=>filtro==='todas'||(filtro==='nueva'&&c.estado==='nueva')||(filtro==='en_cocina'&&c.estado==='en_cocina'))
-  const cnt=(f:string)=>f==='todas'?misComandasActivas.length:misComandasActivas.filter(c=>c.estado===f).length
-  return (
-    <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden',background:C.bg}}>
-      <div style={{padding:'9px 16px',borderBottom:`1px solid ${C.rule}`,display:'flex',gap:5,overflowX:'auto',scrollbarWidth:'none' as const,flexShrink:0,background:C.bg1}}>
-        {(['todas','nueva','en_cocina'] as FiltroT[]).map(f=>(
-          <div key={f} onClick={()=>setFiltro(f)}
-            style={{background:f===filtro?C.vermS:C.bg2,border:`1px solid ${f===filtro?C.verm+'55':C.rule}`,borderRadius:20,padding:'5px 12px',fontSize:11,fontWeight:f===filtro?600:400,color:f===filtro?C.verm:C.ink3,whiteSpace:'nowrap',cursor:'pointer',flexShrink:0}}>
-            {f==='todas'?'Todas':f==='nueva'?'Enviadas':'En cocina'} ({cnt(f)})</div>
-        ))}
-      </div>
-      <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 16px',display:'flex',flexDirection:'column',gap:7}}>
-        {vis.length===0&&(<div style={{textAlign:'center',padding:'40px 0'}}><div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink3}}>Sin comandas activas</div><div style={{fontFamily:SM,fontSize:11,color:C.ink4,marginTop:6}}>todo tranquilo</div></div>)}
-        {vis.map(c=>{
-          const mesa=c.mesa?.codigo||'?'; const enCocina=c.estado==='en_cocina'
-          const items=(c.items||[]).filter(it=>(it as unknown as {estado_item?:string}).estado_item!=='eliminado')
-          return (
-            <div key={c.id} style={{background:C.bg1,border:`1px solid ${enCocina?C.amb+'66':C.gr+'44'}`,borderRadius:12,overflow:'hidden',boxShadow:'0 1px 4px rgba(26,23,20,.06)'}}>
-              <div style={{padding:'9px 13px',borderBottom:`1px solid ${C.rule}`,display:'flex',justifyContent:'space-between',alignItems:'center',background:enCocina?C.ambS:C.grS}}>
-                <span style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink}}>Mesa {mesa}</span>
-                <div style={{display:'flex',alignItems:'center',gap:7}}>
-                  <span style={{fontFamily:SM,fontSize:10,color:C.ink3}}>{timer(c.created_at)}</span>
-                  <span style={{fontSize:9,fontWeight:700,textTransform:'uppercase',letterSpacing:'.7px',padding:'3px 9px',borderRadius:20,background:enCocina?C.amb:C.gr,color:'#fff'}}>{enCocina?'cocina':'enviada'}</span>
-                </div>
-              </div>
-              <div style={{padding:'8px 13px 10px'}}>
-                {(items as Array<{id:string;nombre:string;cantidad:number;cantidad_original?:number;notas?:string|null;estado:string}>).map((it,i)=>(
-                  <div key={it.id||String(i)} style={{display:'flex',alignItems:'center',gap:8,padding:'5px 0',borderBottom:i<items.length-1?`1px solid ${C.rule}`:'none'}}>
-                    <span style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.verm,minWidth:18,flexShrink:0}}>{it.cantidad}</span>
-                    <span style={{flex:1,fontSize:13,color:C.ink2}}>{it.nombre}</span>
-                    {it.notas&&<span style={{fontFamily:SC,fontSize:11,color:C.amb}}>{it.notas}</span>}
-                    <button onClick={()=>setItemMod({item:{id:it.id,nombre:it.nombre,cantidad:it.cantidad,cantidad_original:it.cantidad_original,estado:it.estado},comandaId:c.id,mesaLabel:`Mesa ${mesa}`})}
-                      style={{background:'none',border:`1px solid ${C.rule}`,borderRadius:6,padding:'3px 8px',fontFamily:SM,fontSize:9,color:C.ink3,cursor:'pointer',flexShrink:0}}>···</button>
-                  </div>
-                ))}
-                {items.length===0&&<div style={{fontFamily:SM,fontSize:11,color:C.ink4,padding:'4px 0'}}>sin ítems activos</div>}
-              </div>
-            </div>
-          )
-        })}
-      </div>
-      {itemMod&&(
-        <ComandaModModal item={itemMod.item} comandaId={itemMod.comandaId}
-          restauranteId={session.restaurante_id} camareroId={session.id}
-          mesaLabel={itemMod.mesaLabel}
-          onSuccess={()=>{setItemMod(null);refetch()}}
-          onClose={()=>setItemMod(null)}/>
-      )}
     </div>
   )
 }
