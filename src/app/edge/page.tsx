@@ -40,7 +40,7 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
-type Tab    = 'hablar'|'manual'|'config'
+type Tab    = 'hablar'|'manual'|'sala'|'config'
 
 interface BrainResult {
   mesa: string; tipo: string
@@ -138,6 +138,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   // Config camarero
   const [voiceConfirm, setVoiceConfirm] = useState(true)
+  const [autoConfirm, setAutoConfirm]   = useState(false)   // enviar sin confirmar si confianza alta
+  const [autoThreshold, setAutoThreshold] = useState(85)    // % mínimo para auto-confirmar
+  const [ttsOff, setTtsOff]             = useState(false)   // BRAIN no habla, solo escribe
+  const [mesaFijada, setMesaFijada]     = useState<string|null>(null)  // mesa pinchada en HABLAR
   const [alergenosMesa, setAlergenosMesa] = useState<string[]>([])
   const [zonaAsignada, setZonaAsignada]   = useState('salon')
   const [fontBig, setFontBig]             = useState(false)
@@ -187,6 +191,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       if (cfg.voiceConfirm !== undefined) setVoiceConfirm(cfg.voiceConfirm)
       if (cfg.zonaAsignada) setZonaAsignada(cfg.zonaAsignada)
       if (cfg.fontBig !== undefined) setFontBig(cfg.fontBig)
+      if (cfg.autoConfirm !== undefined) setAutoConfirm(cfg.autoConfirm)
+      if (cfg.autoThreshold !== undefined) setAutoThreshold(cfg.autoThreshold)
+      if (cfg.ttsOff !== undefined) setTtsOff(cfg.ttsOff)
     } catch {}
     const ses = localStorage.getItem('ia_rest_session') ?? ''
     // Cargar config de servicio/cubierto
@@ -338,8 +345,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         }
 
         const hasTTS = typeof window!=='undefined' && 'speechSynthesis' in window
-        if (voiceConfirm && hasTTS) { setScreen('speaking') }
-        else { setScreen('confirm'); setSheetOpen(true) }
+        const conf   = d.brain?.confianza ?? 0
+
+        // Auto-confirmar si confianza suficiente y opción activada
+        if (autoConfirm && conf * 100 >= autoThreshold && d.comanda_id) {
+          setScreen('sent')
+          addMsg('brain', `✓ Auto-enviado · ${d.brain?.mesa||'?'}`, 'ok')
+        } else if (!ttsOff && voiceConfirm && hasTTS) {
+          setScreen('speaking')
+        } else {
+          setScreen('confirm'); setSheetOpen(true)
+        }
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
         const msg = d.code==='API_KEY_INVALID'?'API key no configurada':d.error||'Error procesando voz'
@@ -540,111 +556,66 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         </div>
       </div>
 
-      {/* ══ TAB: HABLAR ══════════════════════════════════════════ */}
+      {/* ══ TAB: HABLAR — chat limpio, sin plano ═══════════════ */}
       {tab==='hablar' && (
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
-          {/* ── PLANO COLAPSABLE ─────────────────────────────────
-              idle + sin sheet → expandido (plano completo visible)
-              recording / processing / speaking / confirm / sent → colapsado
-              La transición es CSS max-height para suavidad
-          ──────────────────────────────────────────────────── */}
-          {zonasPlano.length > 0 && mesasPlano.length > 0 && (() => {
-            const planoAbierto = screen === 'idle' && !sheetOpen
-            return (
-              <div style={{
-                flexShrink: 0,
-                background: C.bg1,
-                borderBottom: `1px solid ${C.rule}`,
-                overflow: 'hidden',
-                transition: 'max-height .28s cubic-bezier(.4,0,.2,1)',
-                maxHeight: planoAbierto ? '420px' : '48px',
-              }}>
-                {/* Strip de 48px — siempre visible */}
-                <div style={{
-                  display:'flex', alignItems:'center',
-                  gap:6, padding:'0 12px',
-                  height:48, overflowX:'auto', scrollbarWidth:'none',
-                  flexShrink:0,
-                }}>
-                  <span style={{fontFamily:SM,fontSize:9,color:C.ink4,flexShrink:0,letterSpacing:'.06em'}}>
-                    {planoAbierto ? 'SALA' : 'MESAS'}
-                  </span>
-                  {mesasPlano.filter(m => m.estado !== 'libre').slice(0,8).map(m => {
-                    const min = m.minutos_abierta ?? 0
-                    const col = min>=45?C.verm:min>=30?'#D26414':min>=15?C.amb:C.gr
-                    return (
-                      <div key={m.id}
-                        onClick={()=>setMesaDetalle({id:m.id,codigo:m.codigo,capacidad:m.capacidad})}
-                        style={{
-                          flexShrink:0,
-                          background: m.es_mia?`${col}18`:'transparent',
-                          border:`1px solid ${col}${m.es_mia?'99':'44'}`,
-                          borderRadius:6, padding:'3px 7px',
-                          display:'flex', alignItems:'center', gap:4,
-                          cursor:'pointer',
-                        }}
-                      >
-                        <div style={{width:5,height:5,borderRadius:'50%',background:col,flexShrink:0}}/>
-                        <span style={{fontFamily:SM,fontSize:10,color:col,fontWeight:m.es_mia?700:400}}>{m.codigo}</span>
-                        {m.servicio_pendiente && <span style={{fontSize:9}}>🍞</span>}
-                      </div>
-                    )
-                  })}
-                  {!mesasPlano.some(m=>m.estado!=='libre') && (
-                    <span style={{fontFamily:SN,fontSize:11,color:C.ink4,fontStyle:'italic'}}>sin mesas activas</span>
-                  )}
+          {/* ── Mis comandas activas ─────────────────────────── */}
+          <div style={{
+            height:44,flexShrink:0,background:C.bg1,
+            borderBottom:`1px solid ${C.rule}`,
+            display:'flex',alignItems:'center',gap:6,
+            padding:'0 12px',overflowX:'auto',scrollbarWidth:'none' as const,
+          }}>
+            <span style={{fontFamily:SM,fontSize:8,color:C.ink4,flexShrink:0,letterSpacing:'.06em'}}>MIS MESAS</span>
+            {ultimasComandas.length === 0 && (
+              <span style={{fontFamily:SN,fontSize:11,color:C.ink4,fontStyle:'italic'}}>sin mesas activas</span>
+            )}
+            {ultimasComandas.map(c => {
+              const mesa  = c.mesa?.codigo || '?'
+              const min   = Math.floor((Date.now() - new Date(c.created_at).getTime()) / 60000)
+              const col   = min >= 45 ? C.verm : min >= 30 ? '#D26414' : min >= 15 ? C.amb : C.gr
+              const esFijada = mesaFijada === c.mesa_id
+              return (
+                <div key={c.id}
+                  onClick={()=>setMesaDetalle({id:c.mesa_id, codigo:mesa, capacidad:(c.mesa as {capacidad?:number})?.capacidad})}
+                  onContextMenu={e=>{e.preventDefault();setMesaFijada(mesaFijada===c.mesa_id?null:c.mesa_id)}}
+                  style={{
+                    flexShrink:0,display:'flex',alignItems:'center',gap:5,
+                    padding:'4px 9px',borderRadius:8,cursor:'pointer',
+                    background: esFijada ? `${col}22` : `${col}10`,
+                    border:`${esFijada?2:1}px solid ${col}${esFijada?'':' 55'}`,
+                    animation: min>=45 ? 'urgPulse 1.8s ease-in-out infinite' : 'none',
+                  }}>
+                  {esFijada && <span style={{fontSize:9,color:col}}>→</span>}
+                  <div style={{width:5,height:5,borderRadius:'50%',background:col,flexShrink:0}}/>
+                  <div>
+                    <div style={{fontFamily:SE,fontStyle:'italic',fontSize:14,fontWeight:500,color:col,lineHeight:1}}>{mesa}</div>
+                    <div style={{fontFamily:SM,fontSize:7,color:col,textTransform:'uppercase',lineHeight:1,marginTop:1}}>
+                      {c.estado==='en_cocina'?'cocina':c.estado==='lista'?'lista ✓':'activa'} · {min}m
+                    </div>
+                  </div>
                 </div>
+              )
+            })}
+            {mesaFijada && (
+              <div style={{marginLeft:'auto',flexShrink:0,fontFamily:SM,fontSize:8,color:C.verm,letterSpacing:'.05em'}}>
+                → fijada · mantén para soltar
+              </div>
+            )}
+          </div>
 
-                {/* Plano completo — visible sólo cuando expandido */}
-                {planoAbierto && (
-                  <div style={{padding:'0 12px 8px'}}>
-                    <PlanoSala
-                      mesas={mesasPlano}
-                      zonas={zonasPlano}
-                      resaltarMias={true}
-                      mostrarLibres={true}
-                      mesaSeleccionada={mesaDetalle?.id??null}
-                      onMesaTap={m=>setMesaDetalle({id:m.id,codigo:m.codigo,capacidad:m.capacidad})}
-                      onMesaDoubleTap={marcharRapido}
-                    />
+          {/* ── Chat ─────────────────────────────────────────── */}
+          <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 14px',display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:8}}>
+
+            {chatMsgs.length===0 && screen==='idle' && (
+              <div style={{textAlign:'center',padding:'20px 20px 10px'}}>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:19,color:C.ink3,lineHeight:1.4,marginBottom:6}}>Mantén pulsado y habla.</div>
+                {mesaFijada && (
+                  <div style={{fontFamily:SM,fontSize:10,color:C.verm,background:C.vermS,display:'inline-block',padding:'3px 10px',borderRadius:8}}>
+                    → siguiente comanda va a {ultimasComandas.find(c=>c.mesa_id===mesaFijada)?.mesa?.codigo||'mesa fijada'}
                   </div>
                 )}
-              </div>
-            )
-          })()}
-
-          {/* Fallback chips sin plano */}
-          {(zonasPlano.length===0||mesasPlano.length===0) && Object.values(mesasOcupadas).length>0 && (
-            <div style={{padding:'6px 16px 2px',flexShrink:0}}>
-              <div style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'1.2px',color:C.ink4,marginBottom:6}}>Mesas activas</div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:4}}>
-                {Object.values(mesasOcupadas).map(c=>{
-                  const codigo=c.mesa?.codigo||'?'
-                  const num=codigo.replace(/[^0-9]/g,'')
-                  const esMia=c.camarero_id===session.id
-                  const col=c.estado==='en_cocina'?C.amb:C.gr
-                  const bg=c.estado==='en_cocina'?C.ambS:C.grS
-                  const pax=c.num_comensales as number|null
-                  return (
-                    <div key={c.mesa_id} onClick={()=>setMesaDetalle({id:c.mesa_id,codigo,capacidad:(c.mesa as {capacidad?:number})?.capacidad})}
-                      style={{background:bg,border:`1px solid ${col}55`,borderRadius:8,padding:'6px 3px',textAlign:'center',cursor:'pointer',position:'relative',transition:'transform .1s'}}>
-                      {!esMia&&<div style={{position:'absolute',top:3,right:3,width:5,height:5,borderRadius:'50%',background:C.teal}}/>}
-                      {pax&&pax>0&&<div style={{position:'absolute',top:-5,left:'50%',transform:'translateX(-50%)',background:C.gr,color:'#fff',borderRadius:6,fontSize:7,fontWeight:700,fontFamily:SM,padding:'1px 4px',lineHeight:1.4,border:`1px solid ${C.bg}`}}>{pax}p</div>}
-                      <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,fontWeight:600,color:col,lineHeight:1}}>{num}</div>
-                      <div style={{fontSize:8,color:col,marginTop:1,opacity:.7}}>{c.tipo==='cuenta'?'cuenta':c.estado==='en_cocina'?'cocina':'activa'}</div>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* ── CHAT — flex-1, siempre respira ─────────────────── */}
-          <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 16px',display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:6}}>
-            {chatMsgs.length===0 && screen==='idle' && (
-              <div style={{textAlign:'center',padding:'0 20px 20px'}}>
-                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:19,color:C.ink3,lineHeight:1.4}}>Mantén pulsado y habla.</div>
               </div>
             )}
 
@@ -666,10 +637,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             )}
 
             {chatMsgs.map(msg=>{
-              const isCam=msg.from==='camarero'
-              const isSis=msg.from==='sistema'
-              const bCol=msg.tipo==='error'?C.verm:msg.tipo==='aviso'?C.amb:msg.tipo==='pregunta'?C.teal:msg.tipo==='ok'?C.gr:C.rule
-              const bBg=msg.tipo==='error'?C.vermS:msg.tipo==='aviso'?C.ambS:msg.tipo==='ok'?C.grS:C.bg2
+              const isCam = msg.from==='camarero'
+              const isSis = msg.from==='sistema'
+              const bCol  = msg.tipo==='error'?C.verm:msg.tipo==='aviso'?C.amb:msg.tipo==='pregunta'?C.teal:msg.tipo==='ok'?C.gr:C.rule
+              const bBg   = msg.tipo==='error'?C.vermS:msg.tipo==='aviso'?C.ambS:msg.tipo==='ok'?C.grS:C.bg2
               return (
                 <div key={msg.id} style={{alignSelf:isCam?'flex-end':'flex-start',maxWidth:'88%',background:isCam?C.bg2:bBg,border:`1px solid ${isCam?C.rule:bCol+'55'}`,borderRadius:isCam?'12px 3px 12px 12px':'3px 12px 12px 12px',padding:'8px 12px',animation:'msgIn .2s ease',boxShadow:'0 1px 3px rgba(26,23,20,.06)'}}>
                   {!isCam&&(
@@ -686,6 +657,51 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 </div>
               )
             })}
+
+            {/* ── Confirm inline — dentro del chat ────────────── */}
+            {screen==='confirm' && brain && (
+              <div style={{alignSelf:'flex-start',width:'96%',background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:12,overflow:'hidden',boxShadow:'0 2px 8px rgba(26,23,20,.08)',animation:'msgIn .2s ease'}}>
+                <div style={{padding:'9px 14px 7px',borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',gap:8}}>
+                  <span style={{fontFamily:SM,fontSize:8,background:C.ambS,color:'#7A5614',border:`1px solid ${C.amb}44`,padding:'2px 6px',borderRadius:4}}>BRAIN</span>
+                  <span style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink,flex:1}}>{brain.mesa}</span>
+                  <span style={{fontFamily:SM,fontSize:9,color:C.gr}}>{Math.round((brain.confianza||.9)*100)}%</span>
+                </div>
+                {alertas86.length>0&&(
+                  <div style={{margin:'6px 14px 0',background:C.vermS,border:`1px solid ${C.verm}44`,borderRadius:6,padding:'5px 10px',fontFamily:SM,fontSize:10,color:C.verm}}>
+                    ⚠ 86 · {alertas86.join(', ')}
+                  </div>
+                )}
+                {alertasAlerg.length>0&&(
+                  <div style={{margin:'6px 14px 0',background:C.ambS,border:`1px solid ${C.amb}44`,borderRadius:6,padding:'5px 10px',fontFamily:SM,fontSize:10,color:'#7A5A1A'}}>
+                    ⚠ Alérgeno: {alertasAlerg.map(a=>a.producto).join(', ')}
+                  </div>
+                )}
+                <div style={{padding:'6px 14px 8px'}}>
+                  {brain.items.map((it,i)=>(
+                    <div key={i} style={{display:'flex',alignItems:'baseline',gap:8,padding:'3px 0'}}>
+                      <span style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.verm,lineHeight:1,minWidth:20,textAlign:'center'}}>{it.cantidad}</span>
+                      <span style={{fontSize:13,fontWeight:500,color:C.ink}}>{it.nombre}</span>
+                      {it.notas&&<span style={{fontSize:11,color:C.ink4,fontStyle:'italic'}}>· {it.notas}</span>}
+                    </div>
+                  ))}
+                </div>
+                {transcript&&(
+                  <div style={{padding:'4px 14px 6px',borderTop:`1px solid ${C.rule}`,fontFamily:SC,fontSize:13,color:C.teal}}>
+                    💬 {transcript}
+                  </div>
+                )}
+                <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
+                  <button onClick={reset} style={{flex:1,padding:12,background:'none',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>✗ Cancelar</button>
+                  <button onClick={()=>{
+                    setSheetOpen(false); setScreen('sent')
+                    addMsg('brain',`✓ Enviado · ${brain.mesa}`,'ok')
+                    setPushMsg(`🍳 Cocina recibió · ${brain.mesa}`); setShowPush(true); setTimeout(()=>setShowPush(false),4000)
+                  }} style={{flex:2,padding:12,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                    ✓ Confirmar
+                  </button>
+                </div>
+              </div>
+            )}
 
             {screen==='sent' && brain && (
               <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:10,padding:'10px 0'}}>
@@ -716,7 +732,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             )}
           </div>
 
-          {/* ── PTT ─────────────────────────────────────────────── */}
+          {/* ── Respuestas rápidas (solo con confirm activo) ──── */}
+          {screen==='confirm' && (
+            <div style={{padding:'4px 14px 6px',display:'flex',gap:6,flexShrink:0,overflowX:'auto',scrollbarWidth:'none' as const,background:C.bg1,borderTop:`1px solid ${C.rule}`}}>
+              {['✓ Sí','✗ No','Repite'].map(r=>(
+                <button key={r} onClick={r==='✓ Sí'?()=>{setSheetOpen(false);setScreen('sent');addMsg('brain',`✓ Enviado · ${brain?.mesa}`,'ok')}:r==='✗ No'?reset:()=>{reset();setScreen('idle')}}
+                  style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1px solid ${C.rule}`,background:C.bg2,fontSize:12,fontWeight:600,color:r==='✓ Sí'?C.gr:r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
+                  {r}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* ── PTT ─────────────────────────────────────────── */}
           <div style={{padding:'8px 20px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,flexShrink:0,borderTop:`1px solid ${C.rule}`,background:C.bg1}}>
             <div style={{position:'relative',width:88,height:88,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <div style={{position:'absolute',width:80,height:80,borderRadius:'50%',border:`1.5px solid ${isListening?C.verm+'60':'#D9442B22'}`,animation:'hout 2s ease-out infinite'}}/>
@@ -754,19 +782,57 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         </div>
       )}
 
-      {/* ══ TAB: PENDIENTES ══════════════════════════════════════ */}
-      {tab==='config'    && <ConfigScreen session={session} turnoId={turnoId}/>}
+      {/* ══ TAB: SALA — plano consulta rápida ══════════════════ */}
+      {tab==='sala' && (
+        <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+          <div style={{padding:'8px 14px 4px',flexShrink:0,background:C.bg1,borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',gap:10}}>
+            <div style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink}}>Sala</div>
+            <div style={{display:'flex',gap:10,marginLeft:'auto'}}>
+              {[
+                {l:'Libre',  v:mesasPlano.filter(m=>m.estado==='libre').length,         c:C.ink4},
+                {l:'Activa', v:mesasPlano.filter(m=>m.estado!=='libre').length,         c:C.gr},
+                {l:'Urgente',v:mesasPlano.filter(m=>(m.minutos_abierta??0)>=45).length, c:C.verm},
+              ].map(k=>(
+                <div key={k.l} style={{textAlign:'center'}}>
+                  <div style={{fontFamily:SM,fontSize:7,color:C.ink4,letterSpacing:'.07em'}}>{k.l.toUpperCase()}</div>
+                  <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:k.v>0&&k.l==='Urgente'?C.verm:k.c,lineHeight:1}}>{k.v}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div style={{flex:1,overflowY:'auto',padding:'8px 12px'}}>
+            {zonasPlano.length > 0 && mesasPlano.length > 0 ? (
+              <PlanoSala
+                mesas={mesasPlano}
+                zonas={zonasPlano}
+                resaltarMias={true}
+                mostrarLibres={true}
+                onMesaTap={m=>setMesaDetalle({id:m.id,codigo:m.codigo,capacidad:m.capacidad})}
+                onMesaDoubleTap={marcharRapido}
+              />
+            ) : (
+              <div style={{textAlign:'center',padding:'40px 20px',fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink4}}>
+                El owner debe configurar el plano en /owner → Mesas
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
+      {/* ══ TAB: PENDIENTES ══════════════════════════════════════ */}
       {/* ══ TAB: CONFIG ══════════════════════════════════════════ */}
       {tab==='config' && (
         <ConfigScreen
           session={session}
-          voiceConfirm={voiceConfirm}  onVoiceConfirm={v=>{setVoiceConfirm(v);saveCfg({voiceConfirm:v})}}
-          zonaAsignada={zonaAsignada}  onZona={v=>{setZonaAsignada(v);saveCfg({zonaAsignada:v})}}
-          fontBig={fontBig}            onFontBig={v=>{setFontBig(v);saveCfg({fontBig:v})}}
-          alergenosMesa={alergenosMesa} onAlergenosMesa={()=>setMostrarAlerg(true)}
-          subscribed={subscribed}       onSubscribe={subscribe}
-          hasInstall={!!installPrompt}  onInstall={install}
+          voiceConfirm={voiceConfirm}    onVoiceConfirm={v=>{setVoiceConfirm(v);saveCfg({voiceConfirm:v})}}
+          zonaAsignada={zonaAsignada}    onZona={v=>{setZonaAsignada(v);saveCfg({zonaAsignada:v})}}
+          fontBig={fontBig}              onFontBig={v=>{setFontBig(v);saveCfg({fontBig:v})}}
+          alergenosMesa={alergenosMesa}  onAlergenosMesa={()=>setMostrarAlerg(true)}
+          subscribed={subscribed}        onSubscribe={subscribe}
+          hasInstall={!!installPrompt}   onInstall={install}
+          autoConfirm={autoConfirm}      onAutoConfirm={v=>{setAutoConfirm(v);saveCfg({autoConfirm:v})}}
+          autoThreshold={autoThreshold}  onAutoThreshold={v=>{setAutoThreshold(v);saveCfg({autoThreshold:v})}}
+          ttsOff={ttsOff}               onTtsOff={v=>{setTtsOff(v);saveCfg({ttsOff:v})}}
           onLogout={logout}
         />
       )}
@@ -846,9 +912,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ── BOTTOM NAV ─────────────────────────────────────────── */}
       <nav style={{display:'flex',background:C.bg1,borderTop:`1px solid ${C.rule}`,flexShrink:0}}>
         {([
-          {id:'hablar',    lbl:'Hablar',   path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
-          {id:'manual',    lbl:'Manual',   path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
-          {id:'config',    lbl:'Config',   path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
+          {id:'hablar', lbl:'Hablar', path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
+          {id:'manual', lbl:'Manual', path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
+          {id:'sala',   lbl:'Sala',   path:'M2 3h9v9H2zM13 3h9v9h-9zM2 14h9v9H2zM13 14h9v9h-9z'},
+          {id:'config', lbl:'Config', path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
         ] as {id:Tab;lbl:string;path:string}[]).map(t => {
           const on = tab===t.id
           return (
@@ -868,7 +935,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 }
 
 /* ─── CONFIG ─────────────────────────────────────────────────── */
-function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonaAsignada,onZona,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,onLogout}:{
+function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonaAsignada,onZona,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThreshold,onAutoThreshold,ttsOff,onTtsOff,onLogout}:{
   session:{id:string;nombre:string;rol:string}
   voiceConfirm:boolean; onVoiceConfirm:(v:boolean)=>void
   zonaAsignada:string;  onZona:(v:string)=>void
@@ -876,6 +943,9 @@ function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonaAsignada,onZona,f
   alergenosMesa:string[];onAlergenosMesa:()=>void
   subscribed:boolean;   onSubscribe:()=>void
   hasInstall:boolean;   onInstall:()=>void
+  autoConfirm:boolean;  onAutoConfirm:(v:boolean)=>void
+  autoThreshold:number; onAutoThreshold:(v:number)=>void
+  ttsOff:boolean;       onTtsOff:(v:boolean)=>void
   onLogout:()=>void
 }) {
   const Toggle = ({on,onT}:{on:boolean;onT:()=>void}) => (
@@ -919,6 +989,23 @@ function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonaAsignada,onZona,f
         </div>
         <Row label="Confirmación por voz" sub="BRAIN lee la comanda antes de confirmar"
           right={<Toggle on={voiceConfirm} onT={()=>onVoiceConfirm(!voiceConfirm)}/>}/>
+        {/* ── AUTO-CONFIRMAR ── */}
+        <Row label="Auto-confirmar" sub={`BRAIN envía sin preguntar si confianza ≥ ${autoThreshold}%`}
+          right={<Toggle on={autoConfirm} onT={()=>onAutoConfirm(!autoConfirm)}/>}/>
+        {autoConfirm && (
+          <div style={{padding:'10px 0',borderBottom:`1px solid ${C.rule}`}}>
+            <div style={{fontSize:12,color:C.ink3,marginBottom:8}}>Umbral de confianza: <strong style={{color:C.ink}}>{autoThreshold}%</strong></div>
+            <input type="range" min={70} max={99} step={5} value={autoThreshold}
+              onChange={e=>onAutoThreshold(Number(e.target.value))}
+              style={{width:'100%',accentColor:C.verm}}/>
+            <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:C.ink4,marginTop:3}}>
+              <span>70% · más automático</span><span>99% · más seguro</span>
+            </div>
+          </div>
+        )}
+        {/* ── SILENCIO TTS ── */}
+        <Row label="Modo silencio" sub="BRAIN no habla, solo escribe en el chat"
+          right={<Toggle on={ttsOff} onT={()=>onTtsOff(!ttsOff)}/>}/>
         <div style={{padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <div>
