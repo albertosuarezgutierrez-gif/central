@@ -1,6 +1,6 @@
 'use client'
-// ia.rest · CobrarSheet
-// Sheet de cobro: selecciona método, calcula cambio, genera factura VeriFactu
+// ia.rest · CobrarSheet v2
+// Sheet de cobro con numpad táctil para efectivo, cálculo de cambio en tiempo real
 
 import React, { useState, useEffect, useCallback } from 'react'
 
@@ -12,6 +12,7 @@ const C = {
   amb:'#E8A33B',ambS:'#F7E3B6',
   gr:'#3F7D44',grS:'#D4E4D2',
   teal:'#2B6A6E',
+  numBg:'#1A1714', numKey:'#2A2420', numKeyHL:'#3A3028',
 }
 const SN="'Inter Tight',system-ui,sans-serif"
 const SE="'Newsreader',Georgia,serif"
@@ -22,38 +23,225 @@ interface MetodoPago { id:string; nombre:string; tipo:string; icono:string; colo
 interface Props {
   comandaId: string
   mesaLabel: string
-  total: number            // total estimado (puede ser 0 si no hay precios)
+  total: number
   session: { id:string; nombre:string; rol:string }
   onCerrado: (result: { factura: Record<string,unknown>; cambio: number; metodo: string }) => void
   onCancel: () => void
 }
 
+// ─── Numpad ────────────────────────────────────────────────────────────────
+function NumpadEfectivo({
+  total,
+  onConfirm,
+}: {
+  total: number
+  onConfirm: (entregado: number) => void
+}) {
+  const [input, setInput] = useState('')
+
+  const parsed   = parseFloat(input.replace(',', '.')) || 0
+  const cambio   = parsed > total ? Math.round((parsed - total) * 100) / 100 : null
+  const falta    = parsed > 0 && parsed < total ? Math.round((total - parsed) * 100) / 100 : null
+  const exacto   = parsed === total
+
+  const press = (key: string) => {
+    if (key === 'C') { setInput(''); return }
+    if (key === '⌫') { setInput(p => p.slice(0, -1)); return }
+    // Justo
+    if (key === '✓') { setInput(total.toFixed(2).replace('.', ',')); return }
+    // Billetes rápidos
+    if (typeof key === 'string' && key.endsWith('€')) {
+      setInput(key.replace('€', '')); return
+    }
+    // Punto decimal — solo uno
+    if (key === ',' && input.includes(',')) return
+    // Max 2 decimales
+    const partes = input.split(',')
+    if (partes.length === 2 && partes[1].length >= 2) return
+    // Max 6 chars antes del decimal
+    if (!input.includes(',') && input.length >= 6 && key !== ',') return
+    setInput(p => p + key)
+  }
+
+  // Billetes que tienen sentido para este total
+  const billetes = [5,10,20,50,100,200].filter(b => b >= total).slice(0, 3)
+
+  const canConfirm = parsed >= total
+
+  const keyStyle = (col = C.numKey): React.CSSProperties => ({
+    background: col,
+    border: 'none',
+    borderRadius: 12,
+    fontFamily: SM,
+    fontSize: 22,
+    fontWeight: 600,
+    color: '#F6F1E7',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 60,
+    transition: 'background .08s',
+    WebkitTapHighlightColor: 'transparent',
+    userSelect: 'none',
+  })
+
+  return (
+    <div style={{ background: C.numBg, borderRadius: 16, overflow: 'hidden', margin: '0 20px 14px' }}>
+
+      {/* DISPLAY ──────────────────────────────────── */}
+      <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #2A2420' }}>
+
+        {/* Total */}
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom: 8 }}>
+          <span style={{ fontFamily:SN, fontSize:11, fontWeight:700, textTransform:'uppercase',
+            letterSpacing:'1px', color:'#6B5F52' }}>Total a cobrar</span>
+          <span style={{ fontFamily:SM, fontSize:18, color:'#F6F1E7', fontWeight:600 }}>
+            {total.toFixed(2).replace('.',',')} €
+          </span>
+        </div>
+
+        {/* Entregado — el "display" principal */}
+        <div style={{
+          background: '#0D0B09',
+          borderRadius: 10,
+          padding: '10px 14px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          minHeight: 52,
+          marginBottom: 10,
+          border: `1px solid ${input ? '#3A3028' : '#1F1A15'}`,
+        }}>
+          <span style={{ fontFamily:SN, fontSize:11, fontWeight:700, textTransform:'uppercase',
+            letterSpacing:'1px', color:'#4A4038' }}>Entrega</span>
+          <span style={{
+            fontFamily: SM,
+            fontSize: input ? 28 : 18,
+            fontWeight: 700,
+            color: input ? '#F6F1E7' : '#3A3028',
+            letterSpacing: '-0.5px',
+          }}>
+            {input ? `${input} €` : '_ _  €'}
+          </span>
+        </div>
+
+        {/* Resultado: cambio / falta / exacto */}
+        {parsed > 0 && (
+          <div style={{
+            borderRadius: 8,
+            padding: '8px 12px',
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            background: cambio ? '#1A2E1B' : falta ? '#2E1A1A' : '#1A2518',
+            border: `1px solid ${cambio ? C.gr+'44' : falta ? C.verm+'44' : C.gr+'44'}`,
+          }}>
+            <span style={{
+              fontFamily: SN, fontSize: 12, fontWeight: 700,
+              color: cambio ? C.gr : falta ? C.verm : C.gr,
+            }}>
+              {cambio ? 'Cambio' : falta ? 'Falta' : '✓ Exacto'}
+            </span>
+            <span style={{
+              fontFamily: SM, fontSize: 20, fontWeight: 700,
+              color: cambio ? C.gr : falta ? C.verm : C.gr,
+            }}>
+              {cambio ? `${cambio.toFixed(2).replace('.',',')} €`
+                : falta ? `${falta.toFixed(2).replace('.',',')} €`
+                : ''}
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ATAJOS BILLETES ────────────────────────────── */}
+      <div style={{ padding:'10px 12px 8px', display:'flex', gap:6, borderBottom:'1px solid #1F1A15' }}>
+        <button onClick={() => press('✓')}
+          style={{ ...keyStyle(C.gr+'CC'), flex:1, fontSize:12, fontWeight:700, height:38, borderRadius:8 }}>
+          Justo
+        </button>
+        {billetes.map(b => (
+          <button key={b} onClick={() => press(`${b}€`)}
+            style={{ ...keyStyle('#2A2420'), flex:1, fontSize:13, height:38, borderRadius:8 }}>
+            {b} €
+          </button>
+        ))}
+      </div>
+
+      {/* NUMPAD 3×4 ────────────────────────────────── */}
+      <div style={{ padding:'10px 12px', display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:8 }}>
+        {['7','8','9','4','5','6','1','2','3',',','0','⌫'].map(k => (
+          <button key={k} onClick={() => press(k)}
+            style={{
+              ...keyStyle(k === '⌫' ? C.verm+'CC' : C.numKey),
+              fontSize: k === '⌫' ? 18 : 22,
+            }}>
+            {k}
+          </button>
+        ))}
+      </div>
+
+      {/* BOTÓN CONFIRMAR EFECTIVO */}
+      <div style={{ padding:'4px 12px 14px' }}>
+        <button
+          onClick={() => canConfirm && onConfirm(parsed)}
+          disabled={!canConfirm}
+          style={{
+            width: '100%',
+            height: 56,
+            borderRadius: 12,
+            border: 'none',
+            background: canConfirm ? C.gr : '#1F1A15',
+            fontFamily: SN,
+            fontSize: 15,
+            fontWeight: 700,
+            color: canConfirm ? '#fff' : '#4A4038',
+            cursor: canConfirm ? 'pointer' : 'default',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            transition: 'background .15s',
+          }}>
+          {canConfirm ? (
+            <>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Confirmar efectivo
+              {cambio ? ` · Cambio ${cambio.toFixed(2).replace('.',',')} €` : exacto ? ' · Exacto' : ''}
+            </>
+          ) : (
+            'Introduce el importe'
+          )}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── CobrarSheet ───────────────────────────────────────────────────────────
 export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCerrado, onCancel }: Props) {
   const [metodos, setMetodos]       = useState<MetodoPago[]>([])
   const [metodoSel, setMetodoSel]   = useState<MetodoPago | null>(null)
-  const [entregado, setEntregado]   = useState('')
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
   const [totalReal, setTotalReal]   = useState(total)
-  const [loadingTotal, setLoadingTotal] = useState(false)
+  const [entregadoFinal, setEntregadoFinal] = useState<number | null>(null)
 
   const session_str = JSON.stringify(session)
 
-  // Cargar métodos de pago y total real
   useEffect(() => {
     const headers = { 'x-ia-session': session_str }
-
-    // Métodos de pago del restaurante
     fetch('/api/metodos-pago', { headers })
       .then(r => r.json())
       .then(d => {
         const lista: MetodoPago[] = d.metodos ?? []
         setMetodos(lista)
-        // Seleccionar el primero por defecto
         if (lista.length > 0) setMetodoSel(lista[0])
       })
       .catch(() => {
-        // Fallback demo si la API no está lista
         const demo = [
           { id:'demo-ef', nombre:'Efectivo', tipo:'efectivo', icono:'💵', color:C.gr },
           { id:'demo-ta', nombre:'Tarjeta',  tipo:'tarjeta',  icono:'💳', color:C.teal },
@@ -64,17 +252,15 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
       })
   }, [session_str, total])
 
-  const cambio = metodoSel?.tipo === 'efectivo' && parseFloat(entregado) > totalReal
-    ? Math.round((parseFloat(entregado) - totalReal) * 100) / 100
-    : 0
+  // Cuando cambia método, resetear entregado
+  const seleccionarMetodo = (m: MetodoPago) => {
+    setMetodoSel(m)
+    setEntregadoFinal(null)
+    setError('')
+  }
 
-  const entregadoValido = metodoSel?.tipo !== 'efectivo' || parseFloat(entregado) >= totalReal || entregado === ''
-
-  const cobrar = useCallback(async () => {
+  const cobrar = useCallback(async (entregado?: number) => {
     if (!metodoSel) { setError('Selecciona un método de pago'); return }
-    if (metodoSel.tipo === 'efectivo' && entregado && parseFloat(entregado) < totalReal) {
-      setError('El importe entregado es menor que el total'); return
-    }
     setLoading(true); setError('')
     try {
       const r = await fetch('/api/factura/cerrar', {
@@ -84,20 +270,19 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
           comanda_id: comandaId,
           mesa_label: mesaLabel,
           metodo_id: metodoSel.id,
-          entregado: metodoSel.tipo === 'efectivo' ? parseFloat(entregado) || totalReal : 0,
+          entregado: metodoSel.tipo === 'efectivo' ? (entregado ?? totalReal) : 0,
         })
       })
       const d = await r.json()
       if (!r.ok) { setError(d.error || 'Error al cobrar'); setLoading(false); return }
       onCerrado({ factura: d.factura, cambio: d.cambio ?? 0, metodo: metodoSel.nombre })
     } catch { setError('Error de red'); setLoading(false) }
-  }, [metodoSel, entregado, totalReal, comandaId, mesaLabel, session_str, onCerrado])
+  }, [metodoSel, totalReal, comandaId, mesaLabel, session_str, onCerrado])
 
-  // Atajos de importe entregado (billetes comunes)
-  const atajos = totalReal > 0
-    ? [10, 20, 50, 100].filter(b => b >= totalReal).slice(0, 3)
-    : []
-  if (atajos.length === 0 && totalReal > 0) atajos.push(...[50, 100, 200].filter(b => b >= totalReal).slice(0, 3))
+  const handleNumpadConfirm = (entregado: number) => {
+    setEntregadoFinal(entregado)
+    cobrar(entregado)
+  }
 
   return (
     <>
@@ -114,25 +299,34 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
         fontFamily:SN,color:C.ink,
         animation:'slideUp .3s cubic-bezier(.32,1,.28,1)',
       }}>
-        <style>{`@keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}`}</style>
+        <style>{`
+          @keyframes slideUp{from{transform:translateY(100%)}to{transform:translateY(0)}}
+          button:active { opacity: 0.85; transform: scale(0.97); }
+        `}</style>
         <div style={{width:36,height:3,background:C.rule,borderRadius:2,margin:'10px auto 0',flexShrink:0}}/>
 
         {/* HEADER */}
         <div style={{padding:'12px 20px 10px',borderBottom:`1px solid ${C.rule}`,flexShrink:0}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
             <div>
-              <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.ink}}>Cobrar · {mesaLabel}</div>
+              <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.ink}}>
+                Cobrar · {mesaLabel}
+              </div>
               <div style={{fontFamily:SM,fontSize:22,fontWeight:700,color:C.verm,marginTop:2}}>
-                {loadingTotal ? '…' : `${totalReal.toFixed(2).replace('.',',')} €`}
+                {`${totalReal.toFixed(2).replace('.',',')} €`}
               </div>
             </div>
-            <button onClick={onCancel} style={{background:'none',border:'none',fontSize:20,color:C.ink3,cursor:'pointer',padding:4}}>×</button>
+            <button onClick={onCancel}
+              style={{background:'none',border:'none',fontSize:22,color:C.ink3,cursor:'pointer',padding:4}}>
+              ×
+            </button>
           </div>
         </div>
 
         <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const}}>
+
           {/* MÉTODO DE PAGO */}
-          <div style={{padding:'14px 20px 0'}}>
+          <div style={{padding:'14px 20px 14px'}}>
             <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:C.ink4,marginBottom:10}}>
               Método de pago
             </div>
@@ -140,7 +334,7 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
               {metodos.map(m => {
                 const on = metodoSel?.id === m.id
                 return (
-                  <button key={m.id} onClick={() => { setMetodoSel(m); setEntregado('') }}
+                  <button key={m.id} onClick={() => seleccionarMetodo(m)}
                     style={{
                       padding:'12px 8px',borderRadius:12,
                       background:on?`${m.color}18`:C.bg2,
@@ -149,129 +343,72 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
                       cursor:'pointer',transition:'all .12s',
                     }}>
                     <span style={{fontSize:24}}>{m.icono}</span>
-                    <span style={{fontSize:12,fontWeight:on?700:400,color:on?m.color:C.ink2}}>{m.nombre}</span>
+                    <span style={{fontSize:12,fontWeight:on?700:400,color:on?m.color:C.ink2}}>
+                      {m.nombre}
+                    </span>
                   </button>
                 )
               })}
             </div>
           </div>
 
-          {/* EFECTIVO: importe entregado + cambio */}
-          {metodoSel?.tipo === 'efectivo' && (
-            <div style={{padding:'14px 20px 0'}}>
-              <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase',letterSpacing:'1px',color:C.ink4,marginBottom:10}}>
-                ¿Cuánto entrega el cliente?
-              </div>
+          {/* ── EFECTIVO: NUMPAD ── */}
+          {metodoSel?.tipo === 'efectivo' && !loading && (
+            <NumpadEfectivo
+              total={totalReal}
+              onConfirm={handleNumpadConfirm}
+            />
+          )}
 
-              {/* Atajos de billetes */}
-              {atajos.length > 0 && (
-                <div style={{display:'flex',gap:6,marginBottom:10}}>
-                  <button onClick={()=>setEntregado(String(totalReal.toFixed(2)))}
-                    style={{flex:1,padding:'8px',borderRadius:8,background:C.grS,border:`1px solid ${C.gr}55`,
-                      fontSize:12,fontWeight:600,color:C.gr,cursor:'pointer'}}>
-                    Justo
-                  </button>
-                  {atajos.map(b => (
-                    <button key={b} onClick={()=>setEntregado(String(b))}
-                      style={{flex:1,padding:'8px',borderRadius:8,background:C.bg2,border:`1px solid ${C.rule}`,
-                        fontSize:12,fontWeight:500,color:C.ink2,cursor:'pointer'}}>
-                      {b} €
-                    </button>
-                  ))}
+          {/* ── TARJETA / BIZUM: instrucción + botón directo ── */}
+          {metodoSel && metodoSel.tipo !== 'efectivo' && !loading && (
+            <div style={{padding:'0 20px 14px'}}>
+              <div style={{
+                padding:'14px 16px',borderRadius:12,
+                background:C.bg2,border:`1px solid ${C.rule}`,
+                display:'flex',alignItems:'center',gap:12,marginBottom:14,
+              }}>
+                <span style={{fontSize:28}}>{metodoSel.icono}</span>
+                <div>
+                  <div style={{fontSize:14,fontWeight:700,color:C.ink}}>
+                    {metodoSel.nombre} · {totalReal.toFixed(2).replace('.',',')} €
+                  </div>
+                  <div style={{fontSize:12,color:C.ink3,marginTop:3}}>
+                    {metodoSel.tipo==='tarjeta'
+                      ? 'Pasa el datáfono al cliente'
+                      : 'Envía el código QR de Bizum'}
+                  </div>
                 </div>
-              )}
-
-              {/* Input manual */}
-              <div style={{position:'relative'}}>
-                <input
-                  type="number" inputMode="decimal"
-                  value={entregado}
-                  onChange={e=>setEntregado(e.target.value)}
-                  placeholder={`${totalReal.toFixed(2)} €`}
-                  style={{
-                    width:'100%',background:C.bg2,border:`1px solid ${!entregadoValido?C.verm:C.rule}`,
-                    borderRadius:10,padding:'12px 44px 12px 14px',
-                    fontFamily:SM,fontSize:20,color:C.ink,outline:'none',
-                    boxSizing:'border-box',
-                  }}/>
-                <span style={{position:'absolute',right:14,top:'50%',transform:'translateY(-50%)',
-                  fontFamily:SM,fontSize:14,color:C.ink3}}>€</span>
               </div>
 
-              {/* Cambio */}
-              {parseFloat(entregado) > 0 && (
-                <div style={{
-                  marginTop:10,padding:'12px 14px',borderRadius:10,
-                  background:cambio>0?C.grS:C.vermS,
-                  border:`1px solid ${cambio>0?C.gr+'55':C.verm+'55'}`,
-                  display:'flex',justifyContent:'space-between',alignItems:'center',
+              <button onClick={() => cobrar()}
+                style={{
+                  width:'100%',height:54,borderRadius:12,border:'none',
+                  background:C.verm,
+                  fontFamily:SN,fontSize:15,fontWeight:700,color:'#fff',
+                  cursor:'pointer',
+                  display:'flex',alignItems:'center',justifyContent:'center',gap:8,
                 }}>
-                  <span style={{fontSize:13,fontWeight:600,color:cambio>0?C.gr:C.verm}}>
-                    {cambio>0?'Cambio a devolver':'Falta'}
-                  </span>
-                  <span style={{fontFamily:SM,fontSize:20,fontWeight:700,color:cambio>0?C.gr:C.verm}}>
-                    {cambio>0
-                      ? `${cambio.toFixed(2).replace('.',',')} €`
-                      : `${(totalReal-parseFloat(entregado)).toFixed(2).replace('.',',')} €`}
-                  </span>
-                </div>
-              )}
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                Confirmar cobro · {totalReal.toFixed(2).replace('.',',')} €
+              </button>
             </div>
           )}
 
-          {/* Bizum/Tarjeta: solo confirmar */}
-          {metodoSel && metodoSel.tipo !== 'efectivo' && (
-            <div style={{padding:'14px 20px 0'}}>
-              <div style={{padding:'12px 14px',borderRadius:10,background:C.bg2,border:`1px solid ${C.rule}`,
-                display:'flex',alignItems:'center',gap:12}}>
-                <span style={{fontSize:22}}>{metodoSel.icono}</span>
-                <div>
-                  <div style={{fontSize:13,fontWeight:600,color:C.ink}}>
-                    {metodoSel.nombre} · {totalReal.toFixed(2).replace('.',',')} €
-                  </div>
-                  <div style={{fontSize:11,color:C.ink3,marginTop:2}}>
-                    {metodoSel.tipo==='tarjeta'?'Pasa el datáfono al cliente':'Envía el código QR de Bizum'}
-                  </div>
-                </div>
-              </div>
+          {/* Loading */}
+          {loading && (
+            <div style={{padding:'24px 20px',textAlign:'center'}}>
+              <div style={{fontFamily:SM,fontSize:13,color:C.ink3}}>Generando factura…</div>
             </div>
           )}
 
           {error && (
-            <div style={{margin:'10px 20px 0',padding:'10px 14px',borderRadius:8,
+            <div style={{margin:'0 20px 14px',padding:'10px 14px',borderRadius:8,
               background:C.vermS,border:`1px solid ${C.verm}44`,
               fontFamily:SM,fontSize:11,color:C.verm}}>
               {error}
-            </div>
-          )}
-        </div>
-
-        {/* BOTÓN COBRAR */}
-        <div style={{padding:'12px 20px 24px',borderTop:`1px solid ${C.rule}`,flexShrink:0}}>
-          <button onClick={cobrar} disabled={loading||!metodoSel||!entregadoValido}
-            style={{
-              width:'100%',padding:'15px',
-              background:loading||!metodoSel?C.rule:C.verm,
-              border:'none',borderRadius:12,
-              fontFamily:SN,fontSize:15,fontWeight:700,color:'#fff',
-              cursor:loading||!metodoSel?'default':'pointer',
-              transition:'background .15s',
-              display:'flex',alignItems:'center',justifyContent:'center',gap:8,
-            }}>
-            {loading ? (
-              <><span style={{fontFamily:SM,fontSize:12}}>Generando factura…</span></>
-            ) : (
-              <>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
-                </svg>
-                Cobrar · {metodoSel?.nombre ?? '—'} · {totalReal.toFixed(2).replace('.',',')} €
-              </>
-            )}
-          </button>
-          {cambio > 0 && !loading && (
-            <div style={{textAlign:'center',marginTop:8,fontFamily:SM,fontSize:13,color:C.gr,fontWeight:700}}>
-              💵 Dar cambio: {cambio.toFixed(2).replace('.',',')} €
             </div>
           )}
         </div>
