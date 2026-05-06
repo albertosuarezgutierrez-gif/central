@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
             .select('zona_id, zonas(servicio_override, servicio_precio_zona, nombre)')
             .eq('id', mesa.id).single()
 
-          const zonaServ = mesaZonaServ?.zonas as { servicio_override: boolean | null; servicio_precio_zona: number | null; nombre?: string } | null
+          const zonaServ = (mesaZonaServ?.zonas as unknown) as { servicio_override: boolean | null; servicio_precio_zona: number | null; nombre?: string } | null
 
           const servicioActivoZona =
             zonaServ?.servicio_override !== null && zonaServ?.servicio_override !== undefined
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
                 receptor_id:    runningId || camareroId,
                 mesa_id:        mesa.id,
                 mesa_codigo:    mesa.codigo,
-                zona_nombre:    (mesaZona.zonas as { nombre?: string } | null)?.nombre ?? null,
+                zona_nombre:    ((mesaZona.zonas as unknown) as { nombre?: string } | null)?.nombre ?? null,
                 tipo:           'servicio',
                 num_comensales: pax,
                 items_resumen:  `${restCfg.servicio_nombre} · ${pax} pax`,
