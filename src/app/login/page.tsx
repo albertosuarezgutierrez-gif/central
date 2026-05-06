@@ -337,6 +337,7 @@ export default function LoginPage() {
           {vozMode==='idle' && (
             <>
               <button onPointerDown={()=>{setShowCodeInput(true);setCodeInput('')}} style={{ marginTop:24, background:'none', border:'none', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', cursor:'pointer', textDecoration:'underline', textDecorationStyle:'dotted' }}>CAMBIAR RESTAURANTE</button>
+              <a href="/recuperar-pin" style={{ marginTop:8, display:'block', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', textAlign:'center', textDecoration:'underline', textDecorationStyle:'dotted' }}>¿OLVIDASTE TU PIN?</a>
               {(!restauranteCode || restauranteCode === 'DEMO') && (
                 <div style={{ marginTop:12, fontFamily:SM, fontSize:9, color:'#2F2820', textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>ADMIN · 0000 &nbsp;|&nbsp; OWNER · 2026 &nbsp;|&nbsp; SUPER · 9999</div>
               )}
