@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
+import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 
 const L = {
   bg:'#F6F1E7', bg2:'#EFE7D6', bg3:'#E5DAC2', bone:'#FBF8F1',
@@ -34,10 +35,13 @@ interface Session { id:string; nombre:string; rol:string; restaurante_id?:string
 
 export default function ManualComanda({
   session, onSent, onVoiceMode,
+  mesasPlano, zonasPlano,
 }: {
   session: Session
   onSent: () => void
   onVoiceMode?: () => void
+  mesasPlano?: MesaPlano[]
+  zonasPlano?: ZonaInfo[]
 }) {
   const [step, setStep] = useState<'mesa'|'carta'>('mesa')
   const [mesas, setMesas] = useState<Mesa[]>([])
@@ -198,32 +202,51 @@ export default function ManualComanda({
 
       {/* ── STEP: MESAS ── */}
       {step === 'mesa' && (
-        <div className="step-mesa" style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          {/* Filtros zona */}
-          <div style={{ padding:'10px 14px 6px', borderBottom:`1px solid ${L.rule}`, flexShrink:0, display:'flex', gap:6, overflowX:'auto' }}>
-            <button className={`zb ${zonaFiltro==='todas'?'on':''}`} onPointerDown={() => setZonaFiltro('todas')}>TODAS</button>
-            {zonas.map(z => (
-              <button key={z} className={`zb ${zonaFiltro===z?'on':''}`} onPointerDown={() => setZonaFiltro(z)}>{z}</button>
-            ))}
-          </div>
-          {/* Grid mesas */}
-          <div style={{ flex:1, overflow:'auto', padding:14 }}>
-            <div className="mg" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:10 }}>
-              {mesasFiltradas.map(m => (
-                <button key={m.id} onPointerDown={() => selectMesa(m)}
-                  style={{ background: ESTADO_BG[m.estado]??L.bone, border:`2px solid ${ESTADO_BORDER[m.estado]??L.rule}`, borderRadius:8, padding:'12px 8px 10px', cursor:'pointer', display:'flex', flexDirection:'column', gap:4, textAlign:'center', alignItems:'center', transition:'transform .1s', WebkitTapHighlightColor:'transparent' }}>
-                  <span style={{ fontFamily:SE, fontSize:22, fontWeight:500, color:L.ink, lineHeight:1 }}>{m.codigo}</span>
-                  <span style={{ fontFamily:SM, fontSize:8, color: ESTADO_DOT[m.estado]??L.ink4, letterSpacing:'.06em', textTransform:'uppercase' }}>{m.estado}</span>
-                  {m.estado !== 'libre' && (
-                    <div style={{ width:6, height:6, borderRadius:999, background: ESTADO_DOT[m.estado]??L.rule }}/>
-                  )}
-                </button>
-              ))}
-              {mesasFiltradas.length === 0 && (
-                <div style={{ gridColumn:'1/-1', fontFamily:SE, fontSize:14, color:L.ink3, fontStyle:'italic', padding:24 }}>Sin mesas.</div>
-              )}
+        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+          {mesasPlano && mesasPlano.length > 0 && zonasPlano && zonasPlano.length > 0 ? (
+            /* Plano visual cuando hay datos de posición */
+            <div style={{ flex:1, overflowY:'auto', padding:'6px 10px 10px' }}>
+              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:L.ink4, letterSpacing:'.07em', textTransform:'uppercase', marginBottom:6, paddingLeft:2 }}>
+                Toca una mesa para comandar
+              </div>
+              <PlanoSala
+                mesas={mesasPlano}
+                zonas={zonasPlano}
+                resaltarMias={false}
+                mostrarLibres={true}
+                onMesaTap={m => {
+                  const mesaData = mesas.find(mx => mx.id === m.id)
+                  if (mesaData) selectMesa(mesaData)
+                  else selectMesa({ id: m.id, codigo: m.codigo, zona: m.zona, estado: m.estado })
+                }}
+              />
             </div>
-          </div>
+          ) : (
+            /* Fallback: grid clásico si no hay plano configurado */
+            <div className="step-mesa" style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+              <div style={{ padding:'10px 14px 6px', borderBottom:`1px solid ${L.rule}`, flexShrink:0, display:'flex', gap:6, overflowX:'auto' }}>
+                <button className={`zb ${zonaFiltro==='todas'?'on':''}`} onPointerDown={() => setZonaFiltro('todas')}>TODAS</button>
+                {zonas.map(z => (
+                  <button key={z} className={`zb ${zonaFiltro===z?'on':''}`} onPointerDown={() => setZonaFiltro(z)}>{z}</button>
+                ))}
+              </div>
+              <div style={{ flex:1, overflow:'auto', padding:14 }}>
+                <div className="mg" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:10 }}>
+                  {mesasFiltradas.map(m => (
+                    <button key={m.id} onPointerDown={() => selectMesa(m)}
+                      style={{ background: ESTADO_BG[m.estado]??L.bone, border:`2px solid ${ESTADO_BORDER[m.estado]??L.rule}`, borderRadius:8, padding:'12px 8px 10px', cursor:'pointer', display:'flex', flexDirection:'column', gap:4, textAlign:'center', alignItems:'center', transition:'transform .1s' }}>
+                      <span style={{ fontFamily:SE, fontSize:22, fontWeight:500, color:L.ink, lineHeight:1 }}>{m.codigo}</span>
+                      <span style={{ fontFamily:SM, fontSize:8, color: ESTADO_DOT[m.estado]??L.ink4, letterSpacing:'.06em', textTransform:'uppercase' }}>{m.estado}</span>
+                      {m.estado !== 'libre' && <div style={{ width:6, height:6, borderRadius:999, background: ESTADO_DOT[m.estado]??L.rule }}/>}
+                    </button>
+                  ))}
+                  {mesasFiltradas.length === 0 && (
+                    <div style={{ gridColumn:'1/-1', fontFamily:SE, fontSize:14, color:L.ink3, fontStyle:'italic', padding:24 }}>Sin mesas.</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

@@ -266,7 +266,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (screen !== 'speaking' || !brain) return
     speakingRef.current = true
     speak(buildTTS(brain, alertas86, alertasAlerg)).then(() => {
-      if (speakingRef.current) { speakingRef.current=false; setScreen('confirm'); setSheetOpen(true) }
+      if (speakingRef.current) { speakingRef.current=false; setScreen('confirm') }
     })
     return () => { speakingRef.current = false }
   }, [screen, brain]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -340,7 +340,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
         if (necesitaPax && mesaIdRes) {
           setPendingVozComanda({ mesaId: mesaIdRes, mesaCodigo: d.brain?.mesa||'?', paxYaConocido: null })
-          setSheetOpen(false)
           // Mostramos confirm sheet igual pero con el modal de comensales encima
         }
 
@@ -354,7 +353,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         } else if (!ttsOff && voiceConfirm && hasTTS) {
           setScreen('speaking')
         } else {
-          setScreen('confirm'); setSheetOpen(true)
+          setScreen('confirm')
         }
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
@@ -396,7 +395,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (typeof window!=='undefined') window.speechSynthesis?.cancel()
     speakingRef.current=false; setScreen('idle'); setBrain(null); setTranscript('')
     setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
-    setAlertas86([]); setAlertasAlerg([]); setPendingItems([]); setSheetOpen(false)
+    setAlertas86([]); setAlertasAlerg([]); setPendingItems([])
   }
   const pedirCuenta = async () => {
     if (!lastComandaId) return
@@ -447,62 +446,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         </div>
       )}
 
-      {/* OVERLAY */}
-      {sheetOpen && (
-        <div onClick={()=>{setSheetOpen(false);if(screen==='confirm')reset()}}
-          style={{position:'absolute',inset:0,background:'rgba(26,23,20,.35)',zIndex:20,backdropFilter:'blur(2px)'}}/>
-      )}
-
-      {/* CONFIRM SHEET */}
-      {sheetOpen && brain && (
-        <div style={{position:'absolute',bottom:0,left:0,right:0,zIndex:30,background:C.bg1,borderTop:`1px solid ${C.rule}`,borderRadius:'20px 20px 0 0',animation:'slideUp .3s ease',boxShadow:'0 -8px 32px rgba(26,23,20,.12)'}}>
-          <div style={{width:36,height:3,background:C.rule,borderRadius:2,margin:'10px auto 0'}}/>
-          <div style={{padding:'13px 20px 11px',display:'flex',alignItems:'center',gap:10,borderBottom:`1px solid ${C.rule}`}}>
-            <span style={{fontFamily:SM,fontSize:8,color:C.amb,background:C.ambS,border:`1px solid ${C.amb}44`,borderRadius:4,padding:'2px 6px'}}>BRAIN</span>
-            <span style={{fontFamily:SE,fontStyle:'italic',fontSize:18,flex:1,color:C.ink}}>{brain.mesa}</span>
-            <span style={{fontFamily:SM,fontSize:10,color:C.gr}}>{Math.round((brain.confianza||.9)*100)}%</span>
-          </div>
-          {alertas86.length>0 && (
-            <div style={{margin:'8px 20px 0',background:C.vermS,border:`1px solid ${C.verm}44`,borderRadius:7,padding:'7px 11px',fontFamily:SM,fontSize:11,color:C.verm,display:'flex',gap:8}}>
-              <span style={{fontWeight:700}}>86</span><span>·</span><span>{alertas86.join(' · ')}</span>
-            </div>
-          )}
-          {alertasAlerg.length>0 && (
-            <div style={{margin:'6px 20px 0',background:C.ambS,border:`1px solid ${C.amb}44`,borderRadius:7,padding:'7px 11px',fontFamily:SM,fontSize:10,color:'#7A5A1A',display:'flex',flexDirection:'column',gap:3}}>
-              <span style={{fontWeight:700,fontSize:11}}>ALÉRGENO DETECTADO</span>
-              {alertasAlerg.map((a,i)=><span key={i}>{a.producto} contiene: {a.alergenos.join(', ')}</span>)}
-            </div>
-          )}
-          <div style={{padding:'6px 20px',maxHeight:'34vh',overflowY:'auto'}}>
-            {brain.items.map((it,i)=>{
-              const is86 = alertas86.map(n=>n.toLowerCase()).includes(it.nombre.toLowerCase())
-              return (
-                <div key={i} style={{display:'flex',alignItems:'center',gap:12,padding:'8px 0',borderBottom:`1px solid ${C.rule}`,opacity:is86?.55:1,textDecoration:is86?'line-through':'none'}}>
-                  <span style={{fontFamily:SE,fontStyle:'italic',fontSize:23,color:C.verm,lineHeight:1,minWidth:24,textAlign:'center'}}>{it.cantidad}</span>
-                  <span style={{flex:1,fontSize:14,fontWeight:500,color:C.ink}}>{it.nombre}</span>
-                  {is86 && <span style={{fontFamily:SM,fontSize:9,fontWeight:700,color:C.verm,padding:'1px 6px',background:C.vermS,borderRadius:3}}>86</span>}
-                </div>
-              )
-            })}
-          </div>
-          {transcript && (
-            <div style={{padding:'7px 20px 10px',borderTop:`1px solid ${C.rule}`,fontFamily:SC,fontSize:14,color:C.teal}}>
-              💬 {transcript}
-            </div>
-          )}
-          <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
-            <button onClick={reset} style={{flex:1,padding:15,background:'transparent',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>Cancelar</button>
-            <button onClick={reset} style={{flex:1,padding:15,background:'transparent',border:'none',borderRight:`1px solid ${C.rule}`,color:C.amb,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>Editar</button>
-            <button onClick={()=>{
-              setSheetOpen(false); setScreen('sent')
-              addMsg('brain',`✓ Enviado · ${brain.mesa}`,'ok')
-              setPushMsg(`🍳 Cocina recibió · ${brain.mesa}`); setShowPush(true); setTimeout(()=>setShowPush(false),4000)
-            }} style={{flex:2,padding:15,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:13,fontWeight:700,cursor:'pointer'}}>
-              ✓ Confirmar
-            </button>
-          </div>
-        </div>
-      )}
 
       {/* ALÉRGENOS MODAL */}
       {mostrarAlerg && (
@@ -692,8 +635,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 )}
                 <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
                   <button onClick={reset} style={{flex:1,padding:12,background:'none',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>✗ Cancelar</button>
-                  <button onClick={()=>{
-                    setSheetOpen(false); setScreen('sent')
+                  <button onClick={()=>{; setScreen('sent')
                     addMsg('brain',`✓ Enviado · ${brain.mesa}`,'ok')
                     setPushMsg(`🍳 Cocina recibió · ${brain.mesa}`); setShowPush(true); setTimeout(()=>setShowPush(false),4000)
                   }} style={{flex:2,padding:12,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:13,fontWeight:700,cursor:'pointer'}}>
@@ -736,7 +678,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           {screen==='confirm' && (
             <div style={{padding:'4px 14px 6px',display:'flex',gap:6,flexShrink:0,overflowX:'auto',scrollbarWidth:'none' as const,background:C.bg1,borderTop:`1px solid ${C.rule}`}}>
               {['✓ Sí','✗ No','Repite'].map(r=>(
-                <button key={r} onClick={r==='✓ Sí'?()=>{setSheetOpen(false);setScreen('sent');addMsg('brain',`✓ Enviado · ${brain?.mesa}`,'ok')}:r==='✗ No'?reset:()=>{reset();setScreen('idle')}}
+                <button key={r} onClick={r==='✓ Sí'?()=>{;setScreen('sent');addMsg('brain',`✓ Enviado · ${brain?.mesa}`,'ok')}:r==='✗ No'?reset:()=>{reset();setScreen('idle')}}
                   style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1px solid ${C.rule}`,background:C.bg2,fontSize:12,fontWeight:600,color:r==='✓ Sí'?C.gr:r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
                   {r}
                 </button>
@@ -778,7 +720,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ══ TAB: MANUAL ══════════════════════════════════════════ */}
       {tab==='manual' && (
         <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          <ManualComanda session={session} onSent={()=>{}} onVoiceMode={()=>setTab('hablar')}/>
+          <ManualComanda
+            session={session}
+            onSent={()=>{}}
+            onVoiceMode={()=>setTab('hablar')}
+            mesasPlano={mesasPlano}
+            zonasPlano={zonasPlano}
+          />
         </div>
       )}
 
@@ -902,10 +850,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             }
             setMesasPaxMap(prev => ({ ...prev, [pendingVozComanda.mesaId]: pax }))
             setPendingVozComanda(null)
-            setScreen('confirm'); setSheetOpen(true)
+            setScreen('confirm')
           }}
-          onSaltarse={() => { setPendingVozComanda(null); setScreen('confirm'); setSheetOpen(true) }}
-          onClose={() => { setPendingVozComanda(null); setScreen('confirm'); setSheetOpen(true) }}
+          onSaltarse={() => { setPendingVozComanda(null); setScreen('confirm') }}
+          onClose={() => { setPendingVozComanda(null); setScreen('confirm') }}
         />
       )}
 
