@@ -1054,7 +1054,7 @@ function MesasTab() {
       {modal && (modal === 'create' || (typeof modal === 'object' && 'edit' in modal)) && (
         <Modal title={modal === 'create' ? 'Nueva mesa' : 'Editar mesa'} onClose={() => setModal(null)}>
           <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-            <Field label="Código (ej. T05)" value={form.codigo} onChange={v => setForm(f => ({ ...f, codigo: v.toUpperCase() }))} placeholder="T05"/>
+            <Field label="Código (ej. S5)" value={form.codigo} onChange={v => setForm(f => ({ ...f, codigo: v.toUpperCase() }))} placeholder="S5"/>
             <Field label="Nombre (opcional)" value={form.nombre} onChange={v => setForm(f => ({ ...f, nombre: v }))} placeholder='ej. "La ventana"'/>
             <Select label="Zona" value={form.zona} onChange={v => setForm(f => ({ ...f, zona: v }))}
               options={zonas.filter(z => z.activa).map(z => ({ value: z.tipo, label: `${z.nombre} (${z.prefijo})` }))}/>

@@ -70,10 +70,10 @@ const SCENARIOS=[
    brain:"Hecho. Quedan 3 raciones de gambas, conviene avisar.",items:["86 Croquetas","×1 Gambas (sustitución)"]},
   {cam:"Marta",mesa:"M05",color:T.marchar,label:"Cobro",emoji:"💸",
    frase:"cuenta para la cinco, pago con tarjeta, separada en dos",
-   brain:"Dividida 50/50. Datáfono activado en T05. Mesa: 1h 12m.",items:["Cobro ×2 partes","Datáfono activado"]},
-  {cam:"Iván",mesa:"M02",color:"#8B4FC9",label:"Alergia",emoji:"⚠️",
+   brain:"Dividida 50/50. Datáfono activado en S5. Mesa: 1h 12m.",items:["Cobro ×2 partes","Datáfono activado"]},
+  {cam:"Iván",mesa:"S2",color:"#8B4FC9",label:"Alergia",emoji:"⚠️",
    frase:"la dos es alérgica al gluten, sin pan, sin rebozado, todo limpio",
-   brain:"Marcado. Bloqueo automático en M02. Que David lo confirme.",items:["⚠ Alérgica gluten","Sin pan · Sin rebozado"]},
+   brain:"Marcado. Bloqueo automático en S2. Que David lo confirme.",items:["⚠ Alérgica gluten","Sin pan · Sin rebozado"]},
 ];
 
 // Nuevo modelo per-seat: 59€ base + 20€/cam adicional (1-6) + 15€/cam (7+)

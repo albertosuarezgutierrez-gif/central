@@ -18,11 +18,11 @@ FRASES QUE DEBES ENTENDER (ejemplos):
 - "mesa 4 pasa" → S4
 - "sale todo S4" → S4
 - "listo mesa doce" → S12
-- "sale la ocho" → T08
+- "sale la ocho" → S8
 - "barra dos lista" → B02
 - "pasa terraza cinco" → P05
 - "listo todo la quince" → T15
-- "sale mesa siete" → T07
+- "sale mesa siete" → S7
 
 SCHEMA (responde EXACTAMENTE con este formato):
 {"mesa":"S4","confianza":0.95,"raw":"texto original"}`

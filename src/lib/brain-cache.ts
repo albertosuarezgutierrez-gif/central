@@ -112,7 +112,7 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
   if (zonasCache.length === 0) {
     const defaults: ZonaCacheItem[] = [
       { prefijo: 'T', nombre: 'Salón', tipo: 'salon' },
-      { prefijo: 'P', nombre: 'Terraza', tipo: 'terraza' },
+      { prefijo: 'T', nombre: 'Terraza', tipo: 'terraza' },
       { prefijo: 'B', nombre: 'Barra', tipo: 'barra' },
     ]
     for (const z of defaults) {
