@@ -4294,7 +4294,6 @@ export default function OwnerPage() {
 
   return (
     <div style={{ minHeight: '100dvh', background: C.paper, fontFamily: SN }}>
-      <SugerenciaButton session={session} tema="light" />
       <style>{`
         * { box-sizing: border-box; }
         input:focus, select:focus { border-color: ${C.red} !important; box-shadow: 0 0 0 3px rgba(217,68,43,.15); }
@@ -4328,6 +4327,7 @@ export default function OwnerPage() {
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
           <div className="owner-hdr-name" style={{ fontFamily: SN, fontSize: 13, color: C.ink2 }}>{session.nombre}</div>
+          <SugerenciaButton session={session} tema="light" variant="inline" />
           <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.rule}`,
             borderRadius: 4, padding: '6px 10px', cursor: 'pointer', color: C.ink3, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon d={ICONS.logout} size={14}/>

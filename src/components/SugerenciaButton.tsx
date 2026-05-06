@@ -12,6 +12,11 @@ interface SugerenciaButtonProps {
   }
   /** Tema: 'light' = páginas crema (edge/owner), 'dark' = páginas oscuras (kds) */
   tema?: 'light' | 'dark'
+  /**
+   * 'floating' (default) — botón fijo bottom-right como antes
+   * 'inline'             — icono sin posicionamiento, para meter en headers
+   */
+  variant?: 'floating' | 'inline'
 }
 
 // ─── Config categorías ───────────────────────────────────────────
@@ -22,7 +27,7 @@ const CATS: { id: Categoria; label: string; emoji: string; color: string }[] = [
   { id: 'urgente', label: 'Urgente', emoji: '🚨', color: '#A8311E' },
 ]
 
-export default function SugerenciaButton({ session, tema = 'light' }: SugerenciaButtonProps) {
+export default function SugerenciaButton({ session, tema = 'light', variant = 'floating' }: SugerenciaButtonProps) {
   const [open, setOpen] = useState(false)
   const [texto, setTexto] = useState('')
   const [categoria, setCategoria] = useState<Categoria>('mejora')
@@ -108,39 +113,67 @@ export default function SugerenciaButton({ session, tema = 'light' }: Sugerencia
 
   return (
     <>
-      {/* ── Botón flotante ── */}
-      <button
-        onClick={() => setOpen(true)}
-        title="Enviar sugerencia"
-        style={{
-          position: 'fixed',
-          bottom: 84,
-          right: 16,
-          zIndex: 900,
-          width: 42,
-          height: 42,
-          borderRadius: '50%',
-          background: isDark ? '#252018' : '#F6F1E7',
-          border: `1.5px solid ${isDark ? '#4A3F33' : '#C8BDA6'}`,
-          boxShadow: isDark
-            ? '0 2px 12px rgba(0,0,0,0.6)'
-            : '0 2px 10px rgba(26,23,20,0.15)',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 18,
-          transition: 'transform 0.15s, box-shadow 0.15s',
-        }}
-        onMouseEnter={e => {
-          (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)'
-        }}
-        onMouseLeave={e => {
-          (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)'
-        }}
-      >
-        💬
-      </button>
+      {/* ── Botón disparador ── */}
+      {variant === 'floating' ? (
+        // Flotante legacy (ya no se usa, mantenido por compatibilidad)
+        <button
+          onClick={() => setOpen(true)}
+          title="Enviar sugerencia"
+          style={{
+            position: 'fixed',
+            bottom: 84,
+            right: 16,
+            zIndex: 900,
+            width: 42,
+            height: 42,
+            borderRadius: '50%',
+            background: isDark ? '#252018' : '#F6F1E7',
+            border: `1.5px solid ${isDark ? '#4A3F33' : '#C8BDA6'}`,
+            boxShadow: isDark
+              ? '0 2px 12px rgba(0,0,0,0.6)'
+              : '0 2px 10px rgba(26,23,20,0.15)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 18,
+            transition: 'transform 0.15s, box-shadow 0.15s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1)' }}
+        >
+          💬
+        </button>
+      ) : (
+        // Inline — para headers, al lado del botón de salir
+        <button
+          onClick={() => setOpen(true)}
+          title="Enviar sugerencia"
+          style={{
+            width: 30,
+            height: 30,
+            borderRadius: 6,
+            background: 'transparent',
+            border: `1px solid ${isDark ? '#3A3226' : '#D8CDB6'}`,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 14,
+            flexShrink: 0,
+            transition: 'background 0.15s',
+            color: isDark ? '#8D8270' : '#6B5F52',
+          }}
+          onMouseEnter={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = isDark ? '#2A2318' : '#EFE7D6'
+          }}
+          onMouseLeave={e => {
+            (e.currentTarget as HTMLButtonElement).style.background = 'transparent'
+          }}
+        >
+          💬
+        </button>
+      )}
 
       {/* ── Modal ── */}
       {open && (

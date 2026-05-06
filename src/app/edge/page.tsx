@@ -348,9 +348,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ALERTAS — banner audio + notificación */}
       <AlertaBanner alertas={alertas} onMarcarLeida={marcarLeida} />
 
-      {/* SUGERENCIAS — botón flotante */}
-      <SugerenciaButton session={session} tema="light" />
-
       {/* PUSH */}
       {showPush && (
         <div style={{position:'absolute',top:0,left:0,right:0,zIndex:60,background:C.grS,borderBottom:`2px solid ${C.gr}`,padding:'10px 16px',display:'flex',alignItems:'center',gap:10,animation:'pushIn .3s ease'}}>
@@ -474,6 +471,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <div style={{width:6,height:6,borderRadius:'50%',background:C.gr,animation:'ldot 2s infinite'}}/>
             <span style={{fontSize:12,fontWeight:600,color:C.ink}}>{session.nombre.split(' ')[0]}</span>
           </div>
+          <SugerenciaButton session={session} tema="light" variant="inline" />
         </div>
       </div>
 
