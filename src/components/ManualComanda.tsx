@@ -270,25 +270,46 @@ export default function ManualComanda({
             </div>
             {/* Grid productos — estilo PDA */}
             <div style={{ flex:1, overflow:'auto', padding:10 }}>
-              <div className="pg" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(100px,1fr))', gap:8 }}>
+              <div className="pg" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(120px,1fr))', gap:10 }}>
                 {filtered.map(p => {
                   const fmts = getFormatos(p.id)
                   const inCart = cart.filter(c => c.producto_id === p.id).reduce((s,c) => s+c.cantidad, 0)
                   return (
-                    <button key={p.id} className="pb" onPointerDown={() => tapProduct(p)}
-                      style={{ padding:'10px 8px', display:'flex', flexDirection:'column', gap:3 }}>
+                    <div key={p.id} style={{
+                      background:L.bone, border:`1px solid ${inCart>0?L.red:L.rule}`,
+                      borderRadius:10, padding:'10px 10px 8px',
+                      display:'flex', flexDirection:'column', gap:4,
+                      position:'relative',
+                    }}>
+                      {/* Badge cantidad en carrito */}
                       {inCart > 0 && (
-                        <div style={{ alignSelf:'flex-end', background:L.red, color:L.bone, borderRadius:999, padding:'1px 6px', fontFamily:SM, fontSize:9, fontWeight:700, marginBottom:2 }}>×{inCart}</div>
+                        <div style={{ position:'absolute', top:6, right:6, background:L.red, color:L.bone, borderRadius:999, padding:'1px 6px', fontFamily:SM, fontSize:9, fontWeight:700 }}>×{inCart}</div>
                       )}
-                      <span style={{ fontFamily:SN, fontSize:13, fontWeight:700, color:L.ink, lineHeight:1.25 }}>{p.nombre}</span>
+                      {/* Nombre */}
+                      <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink, lineHeight:1.25, paddingRight: inCart>0?22:0 }}>{p.nombre}</span>
+                      {/* Precio o formatos */}
                       {fmts.length > 0 ? (
                         <span style={{ fontFamily:SM, fontSize:9, color:L.ink3, lineHeight:1.4 }}>
                           {fmts.map(f => `${f.nombre} ${f.precio}€`).join(' · ')}
                         </span>
                       ) : p.precio != null ? (
-                        <span style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:L.ink3 }}>{p.precio}€</span>
+                        <span style={{ fontFamily:SM, fontSize:11, color:L.ink3 }}>{p.precio}€</span>
                       ) : null}
-                    </button>
+                      {/* Botón + explícito — único punto de acción */}
+                      <button
+                        onPointerDown={e => { e.stopPropagation(); tapProduct(p) }}
+                        style={{
+                          marginTop:4, alignSelf:'flex-end',
+                          width:32, height:32, borderRadius:8,
+                          background:L.ink, border:'none', color:L.bone,
+                          fontSize:20, lineHeight:1, fontWeight:300,
+                          cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center',
+                          flexShrink:0, WebkitTapHighlightColor:'transparent',
+                          touchAction:'manipulation',
+                        }}>
+                        +
+                      </button>
+                    </div>
                   )
                 })}
                 {filtered.length === 0 && (
