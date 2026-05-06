@@ -42,6 +42,7 @@ export interface Comanda {
   estado: ComandaEstado
   tipo: 'comanda' | 'cuenta' | 'marchar' | '86' | 'aviso'
   numero_ticket: number
+  num_comensales?: number | null
   items?: ComandaItem[]
   created_at: string
   updated_at: string
