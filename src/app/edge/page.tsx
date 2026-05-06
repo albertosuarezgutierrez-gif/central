@@ -544,60 +544,95 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {tab==='hablar' && (
         <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
 
-          {/* PLANO VISUAL — sustituye al grid de chips */}
-          {zonasPlano.length > 0 && mesasPlano.length > 0 && (
-            <div style={{padding:'6px 16px 4px',flexShrink:0}}>
-              <PlanoSala
-                mesas={mesasPlano}
-                zonas={zonasPlano}
-                resaltarMias={true}
-                mostrarLibres={true}
-                mesaSeleccionada={mesaDetalle?.id ?? null}
-                onMesaTap={m => setMesaDetalle({
-                  id: m.id, codigo: m.codigo, capacidad: m.capacidad
-                })}
-                onMesaDoubleTap={marcharRapido}
-              />
-            </div>
-          )}
-
-          {/* Fallback: chips si aún no hay datos del plano */}
-          {(zonasPlano.length === 0 || mesasPlano.length === 0) && Object.values(mesasOcupadas).length > 0 && (
-            <div style={{padding:'6px 16px 2px',flexShrink:0}}>
-              <div style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'1.2px',color:C.ink4,marginBottom:6}}>
-                Mesas activas — tap para ver
-              </div>
-              <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:4}}>
-                {Object.values(mesasOcupadas).map(c => {
-                  const codigo = c.mesa?.codigo || '?'
-                  const num    = codigo.replace(/[^0-9]/g,'')
-                  const esMia  = c.camarero_id === session.id
-                  const col    = c.estado==='en_cocina'?C.amb:C.gr
-                  const bg     = c.estado==='en_cocina'?C.ambS:C.grS
-                  const pax    = c.num_comensales as number | null
-                  return (
-                    <div key={c.mesa_id} onClick={()=>setMesaDetalle({id:c.mesa_id, codigo, capacidad: (c.mesa as {capacidad?:number})?.capacidad})}
-                      style={{background:bg,border:`1px solid ${col}55`,borderRadius:8,
-                        padding:'6px 3px',textAlign:'center',cursor:'pointer',position:'relative',
-                        transition:'transform .1s cubic-bezier(.34,1.56,.64,1)'}}>
-                      {!esMia && (
-                        <div style={{position:'absolute',top:3,right:3,width:5,height:5,
-                          borderRadius:'50%',background:C.teal}}
-                          title="Mesa de otro camarero"/>
-                      )}
-                      {pax && pax > 0 && (
-                        <div style={{
-                          position:'absolute',top:-5,left:'50%',transform:'translateX(-50%)',
-                          background:C.gr,color:'#fff',borderRadius:6,
-                          fontSize:7,fontWeight:700,fontFamily:SM,
-                          padding:'1px 4px',lineHeight:1.4,whiteSpace:'nowrap',
-                          border:`1px solid ${C.bg}`,
-                        }}>{pax}p</div>
-                      )}
-                      <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,fontWeight:600,color:col,lineHeight:1}}>{num}</div>
-                      <div style={{fontSize:8,color:col,marginTop:1,opacity:.7}}>
-                        {c.tipo==='cuenta'?'cuenta':c.estado==='en_cocina'?'cocina':'activa'}
+          {/* ── PLANO COLAPSABLE ─────────────────────────────────
+              idle + sin sheet → expandido (plano completo visible)
+              recording / processing / speaking / confirm / sent → colapsado
+              La transición es CSS max-height para suavidad
+          ──────────────────────────────────────────────────── */}
+          {zonasPlano.length > 0 && mesasPlano.length > 0 && (() => {
+            const planoAbierto = screen === 'idle' && !sheetOpen
+            return (
+              <div style={{
+                flexShrink: 0,
+                background: C.bg1,
+                borderBottom: `1px solid ${C.rule}`,
+                overflow: 'hidden',
+                transition: 'max-height .28s cubic-bezier(.4,0,.2,1)',
+                maxHeight: planoAbierto ? '420px' : '48px',
+              }}>
+                {/* Strip de 48px — siempre visible */}
+                <div style={{
+                  display:'flex', alignItems:'center',
+                  gap:6, padding:'0 12px',
+                  height:48, overflowX:'auto', scrollbarWidth:'none',
+                  flexShrink:0,
+                }}>
+                  <span style={{fontFamily:SM,fontSize:9,color:C.ink4,flexShrink:0,letterSpacing:'.06em'}}>
+                    {planoAbierto ? 'SALA' : 'MESAS'}
+                  </span>
+                  {mesasPlano.filter(m => m.estado !== 'libre').slice(0,8).map(m => {
+                    const min = m.minutos_abierta ?? 0
+                    const col = min>=45?C.verm:min>=30?'#D26414':min>=15?C.amb:C.gr
+                    return (
+                      <div key={m.id}
+                        onClick={()=>setMesaDetalle({id:m.id,codigo:m.codigo,capacidad:m.capacidad})}
+                        style={{
+                          flexShrink:0,
+                          background: m.es_mia?`${col}18`:'transparent',
+                          border:`1px solid ${col}${m.es_mia?'99':'44'}`,
+                          borderRadius:6, padding:'3px 7px',
+                          display:'flex', alignItems:'center', gap:4,
+                          cursor:'pointer',
+                        }}
+                      >
+                        <div style={{width:5,height:5,borderRadius:'50%',background:col,flexShrink:0}}/>
+                        <span style={{fontFamily:SM,fontSize:10,color:col,fontWeight:m.es_mia?700:400}}>{m.codigo}</span>
+                        {m.servicio_pendiente && <span style={{fontSize:9}}>🍞</span>}
                       </div>
+                    )
+                  })}
+                  {!mesasPlano.some(m=>m.estado!=='libre') && (
+                    <span style={{fontFamily:SN,fontSize:11,color:C.ink4,fontStyle:'italic'}}>sin mesas activas</span>
+                  )}
+                </div>
+
+                {/* Plano completo — visible sólo cuando expandido */}
+                {planoAbierto && (
+                  <div style={{padding:'0 12px 8px'}}>
+                    <PlanoSala
+                      mesas={mesasPlano}
+                      zonas={zonasPlano}
+                      resaltarMias={true}
+                      mostrarLibres={true}
+                      mesaSeleccionada={mesaDetalle?.id??null}
+                      onMesaTap={m=>setMesaDetalle({id:m.id,codigo:m.codigo,capacidad:m.capacidad})}
+                      onMesaDoubleTap={marcharRapido}
+                    />
+                  </div>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* Fallback chips sin plano */}
+          {(zonasPlano.length===0||mesasPlano.length===0) && Object.values(mesasOcupadas).length>0 && (
+            <div style={{padding:'6px 16px 2px',flexShrink:0}}>
+              <div style={{fontSize:9,fontWeight:600,textTransform:'uppercase',letterSpacing:'1.2px',color:C.ink4,marginBottom:6}}>Mesas activas</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(5,1fr)',gap:4}}>
+                {Object.values(mesasOcupadas).map(c=>{
+                  const codigo=c.mesa?.codigo||'?'
+                  const num=codigo.replace(/[^0-9]/g,'')
+                  const esMia=c.camarero_id===session.id
+                  const col=c.estado==='en_cocina'?C.amb:C.gr
+                  const bg=c.estado==='en_cocina'?C.ambS:C.grS
+                  const pax=c.num_comensales as number|null
+                  return (
+                    <div key={c.mesa_id} onClick={()=>setMesaDetalle({id:c.mesa_id,codigo,capacidad:(c.mesa as {capacidad?:number})?.capacidad})}
+                      style={{background:bg,border:`1px solid ${col}55`,borderRadius:8,padding:'6px 3px',textAlign:'center',cursor:'pointer',position:'relative',transition:'transform .1s'}}>
+                      {!esMia&&<div style={{position:'absolute',top:3,right:3,width:5,height:5,borderRadius:'50%',background:C.teal}}/>}
+                      {pax&&pax>0&&<div style={{position:'absolute',top:-5,left:'50%',transform:'translateX(-50%)',background:C.gr,color:'#fff',borderRadius:6,fontSize:7,fontWeight:700,fontFamily:SM,padding:'1px 4px',lineHeight:1.4,border:`1px solid ${C.bg}`}}>{pax}p</div>}
+                      <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,fontWeight:600,color:col,lineHeight:1}}>{num}</div>
+                      <div style={{fontSize:8,color:col,marginTop:1,opacity:.7}}>{c.tipo==='cuenta'?'cuenta':c.estado==='en_cocina'?'cocina':'activa'}</div>
                     </div>
                   )
                 })}
@@ -605,35 +640,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             </div>
           )}
 
-          {/* ÚLTIMAS 2 COMANDAS — tap para ver detalle */}
-          {ultimasComandas.length>0 && (
-            <div style={{padding:'8px 16px 0',display:'flex',flexDirection:'column',gap:4,flexShrink:0}}>
-              {ultimasComandas.map(c => {
-                const mesa   = c.mesa?.codigo || '?'
-                const items  = c.items || []
-                const resumen = items.slice(0,3).map(it=>`${it.cantidad}× ${it.nombre}`).join(' · ') + (items.length>3?` +${items.length-3}`:'')
-                const col    = c.estado==='en_cocina'?C.amb:c.estado==='lista'?C.gr:C.ink4
-                const bg     = c.estado==='en_cocina'?C.ambS:c.estado==='lista'?C.grS:C.bg2
-                return (
-                  <div key={c.id} onClick={()=>setMesaDetalle({id:c.mesa_id, codigo:mesa, capacidad: (c.mesa as {capacidad?:number})?.capacidad})}
-                    style={{background:bg,border:`1px solid ${col}44`,borderLeft:`3px solid ${col}`,borderRadius:8,padding:'7px 10px',display:'flex',alignItems:'center',gap:10,cursor:'pointer'}}>
-                    <div style={{fontFamily:SE,fontStyle:'italic',fontSize:19,fontWeight:600,color:col,lineHeight:1,minWidth:24,textAlign:'center'}}>
-                      {parseInt(mesa.replace(/[^0-9]/g,''),10)||mesa}
-                    </div>
-                    <div style={{flex:1,minWidth:0}}>
-                      <div style={{fontSize:11,color:C.ink2,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis'}}>{resumen||'—'}</div>
-                    </div>
-                    <div style={{display:'flex',alignItems:'center',gap:6}}>
-                      <div style={{fontFamily:SM,fontSize:9,color:col,textTransform:'uppercase'}}>{c.estado==='en_cocina'?'cocina':c.estado}</div>
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={col} strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          )}
-
-          {/* CHAT */}
+          {/* ── CHAT — flex-1, siempre respira ─────────────────── */}
           <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 16px',display:'flex',flexDirection:'column',justifyContent:'flex-end',gap:6}}>
             {chatMsgs.length===0 && screen==='idle' && (
               <div style={{textAlign:'center',padding:'0 20px 20px'}}>
@@ -647,7 +654,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 <div style={{fontSize:15,fontWeight:600,color:C.ink}}>¿Qué mesa?</div>
                 {pendingItems.length>0 && (
                   <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:3}}>
-                    {pendingItems.map((it,i) => (
+                    {pendingItems.map((it,i)=>(
                       <div key={i} style={{display:'flex',gap:8,fontSize:12,color:C.ink2}}>
                         <span style={{fontFamily:SM,color:C.verm,fontWeight:700}}>{it.cantidad}×</span>{it.nombre}
                       </div>
@@ -658,14 +665,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
               </div>
             )}
 
-            {chatMsgs.map(msg => {
-              const isCam = msg.from==='camarero'
-              const isSis = msg.from==='sistema'
-              const bCol  = msg.tipo==='error'?C.verm:msg.tipo==='aviso'?C.amb:msg.tipo==='pregunta'?C.teal:msg.tipo==='ok'?C.gr:C.rule
-              const bBg   = msg.tipo==='error'?C.vermS:msg.tipo==='aviso'?C.ambS:msg.tipo==='ok'?C.grS:C.bg2
+            {chatMsgs.map(msg=>{
+              const isCam=msg.from==='camarero'
+              const isSis=msg.from==='sistema'
+              const bCol=msg.tipo==='error'?C.verm:msg.tipo==='aviso'?C.amb:msg.tipo==='pregunta'?C.teal:msg.tipo==='ok'?C.gr:C.rule
+              const bBg=msg.tipo==='error'?C.vermS:msg.tipo==='aviso'?C.ambS:msg.tipo==='ok'?C.grS:C.bg2
               return (
                 <div key={msg.id} style={{alignSelf:isCam?'flex-end':'flex-start',maxWidth:'88%',background:isCam?C.bg2:bBg,border:`1px solid ${isCam?C.rule:bCol+'55'}`,borderRadius:isCam?'12px 3px 12px 12px':'3px 12px 12px 12px',padding:'8px 12px',animation:'msgIn .2s ease',boxShadow:'0 1px 3px rgba(26,23,20,.06)'}}>
-                  {!isCam && (
+                  {!isCam&&(
                     <div style={{fontFamily:SM,fontSize:8,color:isSis?C.ink3:C.teal,letterSpacing:'1px',marginBottom:3,textTransform:'uppercase'}}>
                       {isSis?'sistema':msg.tipo==='pregunta'?'brain · pregunta':'brain'}
                     </div>
@@ -709,7 +716,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             )}
           </div>
 
-          {/* PTT */}
+          {/* ── PTT ─────────────────────────────────────────────── */}
           <div style={{padding:'8px 20px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,flexShrink:0,borderTop:`1px solid ${C.rule}`,background:C.bg1}}>
             <div style={{position:'relative',width:88,height:88,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <div style={{position:'absolute',width:80,height:80,borderRadius:'50%',border:`1.5px solid ${isListening?C.verm+'60':'#D9442B22'}`,animation:'hout 2s ease-out infinite'}}/>
