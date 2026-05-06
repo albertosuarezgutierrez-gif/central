@@ -125,8 +125,8 @@ const BASE_PROMPT = `Eres BRAIN, el agente de ia.rest. Conviertes transcripcione
 REGLAS ESTRICTAS:
 - Responde SOLO con JSON valido, sin texto adicional ni markdown
 - Entiende jerga: "manchado"=Cortado, "marchar"=enviar a cocina, "86"=agotado/sin stock
-- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: T=salon, TE=terraza, B=barra
-- "mesa cuatro"=T04, "la doce"=T12, "terraza cuatro"=TE04, "barra dos"=B02, "barra uno"=B01
+- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: S=salon, TE=terraza, B=barra
+- "mesa cuatro"=S04, "la doce"=S12, "terraza cuatro"=TE04, "barra dos"=B02, "barra uno"=B01
 - Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
 - Para tipo "86": los items son los productos agotados
 - FORMATOS: si un producto tiene formatos (tapa/media/racion), extrae el formato mencionado en "formato" (null si no se menciona)
@@ -135,7 +135,7 @@ REGLAS ESTRICTAS:
 - Ejemplos comensales: "mesa cuatro para tres"→num_comensales:3, "somos cuatro"→num_comensales:4, "dos cubiertos"→num_comensales:2
 
 SCHEMA:
-{"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   // Usar cache cuando sea posible para evitar DB queries en cada llamada (~200ms ahorrados)
