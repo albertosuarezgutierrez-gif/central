@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   const { data: restaurantes, error } = await supabase
     .from('restaurantes')
     .select(`
-      id, nombre, slug, codigo_acceso, plan, activo, ciudad, created_at,
+      id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad, created_at,
+      trial_end, max_camareros, stripe_subscription_id,
       camareros(count),
       mesas(count),
       comandas(count)

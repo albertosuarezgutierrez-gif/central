@@ -22,9 +22,13 @@ interface Restaurante {
   slug: string
   codigo_acceso: string
   plan: string
+  plan_status: string | null
   activo: boolean
   ciudad: string
   created_at: string
+  trial_end: string | null
+  max_camareros: number | null
+  stripe_subscription_id: string | null
   camareros: [{ count: number }]
   mesas: [{ count: number }]
   comandas: [{ count: number }]
@@ -534,6 +538,23 @@ export default function SuperPage() {
                     }}>
                       {r.plan.toUpperCase()}
                     </span>
+                    {r.plan_status && (
+                      <span style={{
+                        fontFamily: SM, fontSize: 9, fontWeight: 700,
+                        padding: '2px 7px', borderRadius: 3, letterSpacing: '.08em',
+                        background: r.plan_status === 'active' ? 'rgba(63,125,68,.15)' : r.plan_status === 'trial' ? 'rgba(232,163,59,.15)' : 'rgba(217,68,43,.12)',
+                        color: r.plan_status === 'active' ? '#3F7D44' : r.plan_status === 'trial' ? '#A8761A' : '#D9442B',
+                      }}>
+                        {r.plan_status === 'trial'
+                          ? `TRIAL · ${r.trial_end ? Math.max(0, Math.ceil((new Date(r.trial_end).getTime() - Date.now()) / 86400000)) + 'd' : '?'}`
+                          : r.plan_status.toUpperCase()}
+                      </span>
+                    )}
+                    {r.max_camareros && r.max_camareros < 999 && (
+                      <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, padding: '2px 6px', background: C.bg3, borderRadius: 3 }}>
+                        {r.max_camareros}u
+                      </span>
+                    )}
                   </div>
                   <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, letterSpacing: '.06em' }}>
                     {r.slug}.ia.rest &nbsp;·&nbsp; {r.codigo_acceso} &nbsp;·&nbsp; {r.ciudad}
