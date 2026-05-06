@@ -44,7 +44,7 @@ type Tab    = 'hablar'|'manual'|'sala'|'config'
 
 interface BrainResult {
   mesa: string; tipo: string
-  items: { nombre: string; cantidad: number }[]
+  items: { nombre: string; cantidad: number; notas?: string }[]
   confianza: number; raw: string
 }
 interface ChatMsg {
