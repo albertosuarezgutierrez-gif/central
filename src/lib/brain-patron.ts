@@ -1,15 +1,13 @@
 /**
- * brain-patron.ts
+ * brain-patron.ts  v2
  * Fast lane de reconocimiento de patrones para comandas hosteleras.
  *
- * Cubre ~60-70 % del tráfico real en <10ms, sin llamar a Claude.
- * Si la confianza es < THRESHOLD, devuelve null → el router llama a Claude.
- *
- * Patrones reconocidos:
- *   - Pedido:    "[N] [producto] [a la|mesa|para la] [mesa]"
- *   - Marchar:   "marchar [mesa]" / "[mesa] lista" / "pasa la [mesa]"
- *   - Cuenta:    "cuenta [mesa]" / "cobro [mesa]"
- *   - 86:        "86 [producto]" / "sin [producto]" / "agotado [producto]"
+ * Fixes v2:
+ * - Lookup plural→singular (manchados→manchado)
+ * - Alias con artículo incluido ("un tinto" como unidad)
+ * - Detección de notas (muy hecho/sin sal/…) → fallback a Claude
+ * - Multi-intent (marchar + items) → fallback a Claude
+ * - Regex de mesa mejorada para "a la mesa seis"
  */
 
 import { BrainResult } from '@/types'
@@ -18,24 +16,11 @@ import { MenuCache, ProductoCacheItem } from './brain-cache'
 // ── Utilidades ────────────────────────────────────────────────────────────────
 
 function norm(s: string): string {
-  return s
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .toLowerCase()
-    .trim()
+  return s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 }
 
-// Números en español hasta 20
 const NUMS_ES: Record<string, number> = {
   un: 1, uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
-  seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
-  once: 11, doce: 12, trece: 13, catorce: 14, quince: 15,
-  dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
-}
-
-const NOMBRES_NUMERO: Record<string, number> = {
-  // mesa "la cuatro" etc
-  uno: 1, una: 1, dos: 2, tres: 3, cuatro: 4, cinco: 5,
   seis: 6, siete: 7, ocho: 8, nueve: 9, diez: 10,
   once: 11, doce: 12, trece: 13, catorce: 14, quince: 15,
   dieciseis: 16, diecisiete: 17, dieciocho: 18, diecinueve: 19, veinte: 20,
@@ -47,141 +32,136 @@ function toNum(s: string): number | null {
   return NUMS_ES[norm(s)] ?? null
 }
 
-// Palabras a ignorar en búsqueda de productos
+/** Singular simple: quita -s o -es final para lookup */
+function singular(s: string): string {
+  if (s.endsWith('es') && s.length > 4) return s.slice(0, -2)
+  if (s.endsWith('s') && s.length > 3) return s.slice(0, -1)
+  return s
+}
+
 const STOPWORDS = new Set([
-  'a', 'la', 'el', 'las', 'los', 'un', 'una', 'unos', 'unas',
-  'de', 'del', 'para', 'por', 'en', 'con', 'sin', 'al', 'y',
+  'a', 'la', 'el', 'las', 'los', 'unos', 'unas',
+  'de', 'del', 'para', 'por', 'en', 'al', 'y',
   'mesa', 'barra', 'terraza', 'salon', 'interior', 'exterior',
-  'ración', 'racion', 'media', 'tapa', 'entera', 'grande', 'pequeño', 'pequeña',
-  'por', 'favor', 'gracias', 'venga', 'vamos', 'ojo',
+  'racion', 'entera', 'por', 'favor', 'gracias', 'venga', 'vamos', 'ojo',
 ])
 
-// Palabras clave por tipo
+// Palabras que indican nota (→ Claude)
+const KW_NOTA = [
+  'muy hecho', 'poco hecho', 'al punto', 'muy hecha', 'poco hecha',
+  'sin sal', 'sin cebolla', 'sin gluten', 'sin lactosa', 'sin', 'extra',
+  'bien fria', 'bien fría', 'caliente', 'templado',
+  'alérgic', 'alergic', 'intolerante',
+]
+
 const KW_CUENTA  = ['cuenta', 'cobro', 'cobrar', 'pagar', 'ticket', 'factura']
-const KW_MARCHAR = ['marchar', 'marcha', 'pasa', 'pasar', 'listo', 'lista', 'sale', 'salen', 'sacar']
-const KW_86      = ['86', 'agotado', 'agotada', 'sin stock', 'se acabo', 'se acabó', 'no hay', 'acabamos']
-const KW_AVISO   = ['aviso', 'nota', 'llama', 'atencion', 'atención', 'espera']
+const KW_MARCHAR = ['marchar', 'marcha', 'pasa', 'pasar', 'listo', 'lista', 'sale ', 'salen']
+const KW_86      = ['86', 'agotado', 'agotada', 'sin stock', 'se acabo', 'se acabó', 'no hay']
 
 // ── Detección de mesa ─────────────────────────────────────────────────────────
 
 function detectarMesa(tNorm: string, cache: MenuCache): string | null {
-  // 1. Buscar por zona explícita: "terraza cuatro", "barra dos"
+  // 1. Por zona explícita: "terraza dos", "barra uno"
   for (const zona of cache.zonas) {
-    const aliases = [norm(zona.nombre), norm(zona.tipo)]
+    const aliases = [norm(zona.nombre), norm(zona.tipo)].filter(Boolean)
     for (const alias of aliases) {
-      if (!alias) continue
       const re = new RegExp(`(?:^|\\s)${alias}\\s+(\\w+)`)
       const m = tNorm.match(re)
-      if (m) {
-        const num = toNum(m[1])
-        if (num) return `${zona.prefijo}${String(num).padStart(2, '0')}`
-      }
+      if (m) { const n = toNum(m[1]); if (n) return `${zona.prefijo}${String(n).padStart(2, '0')}` }
     }
   }
 
-  // 2. Genérico: "mesa [N]" / "la [N]" / número suelto al final
-  const mesaRe = /(?:mesa|la|numero)\s+(\w+)/
+  // 2. "mesa N", "a la N", "a la mesa N", "para la N", "numero N"
+  const mesaRe = /(?:a la mesa|para la mesa|a la|mesa|numero)\s+(\w+)/
   const m1 = tNorm.match(mesaRe)
-  if (m1) {
-    const num = toNum(m1[1])
-    if (num) return `T${String(num).padStart(2, '0')}`
-  }
+  if (m1) { const n = toNum(m1[1]); if (n) return `T${String(n).padStart(2, '0')}` }
 
-  // 3. Número solo al final de la frase (ej: "dos cañas cuatro")
-  const finalNumRe = /(?:\s|^)(\d{1,2})(?:\s*$)/
-  const m2 = tNorm.match(finalNumRe)
-  if (m2) {
-    const num = parseInt(m2[1])
-    if (num >= 1 && num <= 99) return `T${String(num).padStart(2, '0')}`
-  }
+  // 3. "la cuatro" suelto (al final o cerca del final)
+  const laRe = /\bla\s+(\w+)(?:\s*$|\s+(?:vamos|venga|ojo|por favor))/
+  const m2 = tNorm.match(laRe)
+  if (m2) { const n = toNum(m2[1]); if (n) return `T${String(n).padStart(2, '0')}` }
+
+  // 4. Número dígito solo al final
+  const m3 = tNorm.match(/\b(\d{1,2})\s*$/)
+  if (m3) { const n = parseInt(m3[1]); if (n >= 1 && n <= 99) return `T${String(n).padStart(2, '0')}` }
 
   return null
 }
 
-// ── Búsqueda de producto en menú ──────────────────────────────────────────────
+// ── Lookup de producto en cache ───────────────────────────────────────────────
+
+function buscarProducto(palabras: string[], cache: MenuCache): { prod: ProductoCacheItem; len: number } | null {
+  // Intentar combinaciones de largo→corto, con y sin artículo ("un X", "una X")
+  const articulos = ['', 'un ', 'una ']
+  for (const art of articulos) {
+    for (let len = Math.min(palabras.length, 4); len >= 1; len--) {
+      for (let start = 0; start + len <= palabras.length; start++) {
+        const candidato = art + palabras.slice(start, start + len).join(' ')
+        const prod = cache.byAlias.get(candidato)
+        if (prod) return { prod, len }
+
+        // Plural → singular
+        const candidatoSing = art + palabras.slice(start, start + len).map((w, i) =>
+          i === len - 1 ? singular(w) : w
+        ).join(' ')
+        const prodSing = cache.byAlias.get(candidatoSing)
+        if (prodSing) return { prod: prodSing, len }
+      }
+    }
+  }
+  return null
+}
+
+// ── Detección de items ────────────────────────────────────────────────────────
 
 interface ItemDetectado {
   producto: ProductoCacheItem
   cantidad: number
   formato: string | null
-  notas: string | null
 }
 
-const FORMATOS = ['tapa', 'media', 'media racion', 'racion', 'entera', 'grande', 'pequeño']
+const FORMATOS = ['tapa', 'media racion', 'media', 'racion', 'ración', 'entera', 'grande']
 
 function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[]; confianza: number } | null {
-  // Tokenizar la frase en segmentos entre separadores
-  // Ej: "dos cañas y unas bravas" → ["dos cañas", "unas bravas"]
-  const segmentos = tNorm
-    .split(/\s+y\s+|\s*,\s*|\s+con\s+/)
-    .map(s => s.trim())
-    .filter(Boolean)
-
+  const segmentos = tNorm.split(/\s+y\s+|\s*,\s*/).map(s => s.trim()).filter(Boolean)
   const items: ItemDetectado[] = []
   let confianzaTotal = 0
 
   for (const seg of segmentos) {
     const palabras = seg.split(/\s+/).filter(w => w.length > 1)
-    
-    // Extraer cantidad al principio
+
+    // Extraer cantidad
     let cantidad = 1
-    let offset = 0
+    let palabrasResto = palabras
     if (palabras.length > 0) {
-      const num = toNum(palabras[0])
-      if (num !== null) {
-        cantidad = num
-        offset = 1
+      const n = toNum(palabras[0])
+      if (n !== null && !['un', 'una'].includes(norm(palabras[0]))) {
+        cantidad = n
+        palabrasResto = palabras.slice(1)
       }
     }
+
+    // Filtrar stopwords, pero NO artículo "un/una" (puede ser parte del alias)
+    const palabrasBusqueda = palabrasResto.filter(w => !STOPWORDS.has(norm(w)))
+
+    if (palabrasBusqueda.length === 0) continue
 
     // Extraer formato si existe
     let formato: string | null = null
-    const restoSeg = palabras.slice(offset).join(' ')
+    const segFull = palabrasBusqueda.join(' ')
     for (const fmt of FORMATOS) {
-      if (restoSeg.includes(fmt)) {
-        formato = fmt
-        break
-      }
+      if (segFull.includes(fmt)) { formato = fmt; break }
     }
 
-    // Buscar el producto: probar combinaciones de 1-4 palabras
-    const palabrasSinStop = palabras.slice(offset).filter(w => !STOPWORDS.has(w))
-    let productoEncontrado: ProductoCacheItem | null = null
-    let mejorLong = 0
+    const resultado = buscarProducto(palabrasBusqueda, cache)
+    if (!resultado) return null // No reconocido → Claude
 
-    for (let len = Math.min(palabrasSinStop.length, 4); len >= 1; len--) {
-      for (let start = 0; start + len <= palabrasSinStop.length; start++) {
-        const candidato = palabrasSinStop.slice(start, start + len).join(' ')
-        const p = cache.byAlias.get(candidato)
-        if (p && len > mejorLong) {
-          productoEncontrado = p
-          mejorLong = len
-        }
-      }
-      if (productoEncontrado) break
-    }
-
-    if (!productoEncontrado) {
-      // No se reconoció este segmento → confianza baja → fallback a Claude
-      return null
-    }
-
-    items.push({
-      producto: productoEncontrado,
-      cantidad,
-      formato,
-      notas: null,
-    })
-
-    // Confianza por item: alta si la cantidad es explícita o el producto es unívoco
-    const confianzaItem = mejorLong >= 2 ? 0.92 : 0.82
-    confianzaTotal += confianzaItem
+    items.push({ producto: resultado.prod, cantidad, formato })
+    confianzaTotal += resultado.len >= 2 ? 0.92 : 0.84
   }
 
   if (items.length === 0) return null
-
-  const confianzaMedia = confianzaTotal / items.length
-  return { items, confianza: confianzaMedia }
+  return { items, confianza: confianzaTotal / items.length }
 }
 
 // ── Función principal ─────────────────────────────────────────────────────────
@@ -189,90 +169,62 @@ function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[
 export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | null {
   const tNorm = norm(texto)
 
-  // ── 1. CUENTA ─────────────────────────────────────────────────────────────
+  // ── Guardia: si hay palabras de nota → Claude (seguridad operacional)
+  if (KW_NOTA.some(k => tNorm.includes(k))) return null
+
+  // ── 1. CUENTA ────────────────────────────────────────────────────────────
   if (KW_CUENTA.some(k => tNorm.includes(k))) {
     const mesa = detectarMesa(tNorm, cache)
-    if (mesa) {
-      return {
-        mesa,
-        tipo: 'cuenta',
-        items: [],
-        confianza: 0.95,
-        raw: texto,
-      }
-    }
+    if (mesa) return { mesa, tipo: 'cuenta', items: [], confianza: 0.95, raw: texto }
   }
 
   // ── 2. MARCHAR ───────────────────────────────────────────────────────────
   if (KW_MARCHAR.some(k => tNorm.includes(k))) {
+    // Multi-intent: "marchar mesa X y un producto" → Claude
+    const tieneItems = /\b(y|,)\s+\w+/.test(tNorm) &&
+      !KW_MARCHAR.some(k => tNorm.replace(k, '').trim().startsWith('mesa'))
+    if (tieneItems) return null
+
     const mesa = detectarMesa(tNorm, cache)
-    if (mesa) {
-      return {
-        mesa,
-        tipo: 'marchar',
-        items: [],
-        confianza: 0.95,
-        raw: texto,
-      }
-    }
+    if (mesa) return { mesa, tipo: 'marchar', items: [], confianza: 0.95, raw: texto }
   }
 
-  // ── 3. 86 ─────────────────────────────────────────────────────────────────
+  // ── 3. 86 ────────────────────────────────────────────────────────────────
   if (KW_86.some(k => tNorm.includes(k))) {
-    // Quitar el keyword del texto para buscar el producto
     let textoSin = tNorm
     for (const k of KW_86) textoSin = textoSin.replace(k, ' ')
     textoSin = textoSin.trim()
-
-    // Buscar el producto directamente en el texto limpio
     for (const p of cache.productos) {
       for (const alias of p.aliases) {
         if (textoSin.includes(norm(alias))) {
-          return {
-            mesa: 'T00',
-            tipo: '86',
-            items: [{ nombre: p.nombre, cantidad: 1, notas: undefined }],
-            confianza: 0.90,
-            raw: texto,
-          }
+          return { mesa: 'T00', tipo: '86', items: [{ nombre: p.nombre, cantidad: 1 }], confianza: 0.90, raw: texto }
         }
       }
     }
-    // 86 sin producto reconocido → fallback
     return null
   }
 
-  // ── 4. AVISO ──────────────────────────────────────────────────────────────
-  if (KW_AVISO.some(k => tNorm.includes(k))) {
-    return null // Avisos son demasiado libres → siempre Claude
-  }
-
-  // ── 5. COMANDA ───────────────────────────────────────────────────────────
-  // Quitar palabras de mesa para buscar items
+  // ── 4. COMANDA ───────────────────────────────────────────────────────────
   const mesa = detectarMesa(tNorm, cache)
-  
-  // Limpiar el texto de la referencia a la mesa para el parsing de items
+
+  // Limpiar referencia a mesa del texto de items
   let textoItems = tNorm
   if (mesa) {
-    // Quitar "mesa N", "la terraza N", etc.
     textoItems = textoItems
-      .replace(/(?:a la|para la|en la|mesa|barra|terraza|salon|salón|interior|exterior)\s+\w+/g, '')
-      .replace(/\b\d{1,2}\b$/, '') // número solo al final
+      .replace(/(?:a la mesa|para la mesa|a la|para la|en la|mesa|barra|terraza|salon|salo n)\s+\w+/g, ' ')
+      .replace(/\bla\s+\w+\s*$/, '')
+      .replace(/\b\d{1,2}\s*$/, '')
       .trim()
   }
 
-  const resultado = detectarItems(textoItems || tNorm, cache)
-  if (!resultado || resultado.items.length === 0) {
-    return null // No reconocido → Claude
-  }
+  if (!textoItems) return null
+
+  const resultado = detectarItems(textoItems, cache)
+  if (!resultado || resultado.items.length === 0) return null
 
   const { items, confianza } = resultado
-
-  // Si no detectamos mesa, la confianza baja pero podemos devolver el resultado
-  // El sistema conversacional se encargará de pedir la mesa
-  const confianzaFinal = mesa ? confianza : confianza * 0.7
-
-  if (confianzaFinal < 0.75) return null // Demasiado inseguro → Claude
+  const confianzaFinal = mesa ? confianza : confianza * 0.65
+  if (confianzaFinal < 0.75) return null
 
   return {
     mesa: mesa ?? 'T00',
@@ -280,7 +232,7 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
     items: items.map(i => ({
       nombre: i.producto.nombre,
       cantidad: i.cantidad,
-      notas: i.notas ?? undefined,
+      notas: undefined,
       producto_id: i.producto.id,
       precio_unitario: i.producto.precio ?? undefined,
       formato: i.formato ?? undefined,
