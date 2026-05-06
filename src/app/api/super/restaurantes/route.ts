@@ -16,20 +16,20 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Usar la función RPC que ya verifica is_super_admin internamente
-  // Como usamos service_role, bypasamos RLS directamente
-  const { data: restaurantes, error } = await supabase
-    .from('restaurantes')
-    .select(`
-      id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad, created_at,
-      trial_end, max_camareros, stripe_subscription_id,
-      camareros(count),
-      mesas(count),
-      comandas(count)
-    `)
-    .order('created_at', { ascending: false })
+  // Pasar contexto de super_admin para que is_super_admin() y RLS funcionen
+  await supabase.rpc('set_config', { key: 'app.camarero_id', value: session.id, is_local: true }).catch(() => {})
+
+  const { data, error } = await supabase.rpc('super_get_all_restaurantes')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Normalizar al mismo formato que esperaba el frontend
+  const restaurantes = (data ?? []).map((r: any) => ({
+    ...r,
+    camareros: [{ count: Number(r.num_camareros) }],
+    mesas:     [{ count: Number(r.num_mesas) }],
+    comandas:  [{ count: Number(r.num_comandas) }],
+  }))
 
   return NextResponse.json({ restaurantes })
 }
