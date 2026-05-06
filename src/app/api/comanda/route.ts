@@ -131,6 +131,7 @@ export async function POST(req: NextRequest) {
         })
 
       await supabase.from('marchar_log').insert({
+        comanda_id:     comanda.id,
         restaurante_id: rid,
         receptor_id:    runningId || camarero_id,
         mesa_id,
