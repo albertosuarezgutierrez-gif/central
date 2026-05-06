@@ -125,6 +125,80 @@ export async function POST(req: NextRequest) {
       if (comandaError) throw comandaError
       comandaId = comanda.id
 
+      // ── Servicio/cubierto automático (voz) ───────────────────────────────
+      // Si BRAIN capturó num_comensales Y es la primera comanda de esta mesa
+      // en el turno activo, insertar línea de servicio automáticamente.
+      let servicioInsertado = false
+      if (brainResult.num_comensales && brainResult.num_comensales > 0) {
+        const { data: esPrimera } = await supabase
+          .rpc('es_primera_comanda', {
+            p_mesa_id:  mesa.id,
+            p_turno_id: turnoId,
+          })
+          // es_primera_comanda comprueba ANTES de insertar esta comanda,
+          // pero ya la insertamos — así que chequeamos si no hay OTRAS comandas
+        // Realmente necesitamos saber si ésta es la única comanda de la mesa en el turno
+        const { count: otrasComandas } = await supabase
+          .from('comandas')
+          .select('id', { count: 'exact', head: true })
+          .eq('mesa_id', mesa.id)
+          .eq('turno_id', turnoId)
+          .neq('id', comanda.id)
+          .not('estado', 'in', '(cancelada,cerrada)')
+
+        void esPrimera // usamos otrasComandas que es más preciso post-insert
+
+        if ((otrasComandas ?? 1) === 0) {
+          // Primera comanda — verificar config servicio
+          const { data: restCfg } = await supabase
+            .from('restaurantes')
+            .select('servicio_activo,servicio_precio,servicio_nombre,servicio_auto')
+            .eq('id', rid).single()
+
+          if (restCfg?.servicio_activo && restCfg?.servicio_auto) {
+            const pax = brainResult.num_comensales
+            // Insertar línea de servicio al inicio de los items
+            await supabase.from('comanda_items').insert({
+              comanda_id:     comanda.id,
+              nombre:         `${restCfg.servicio_nombre} (${pax} pax)`,
+              cantidad:       pax,
+              notas:          null,
+              producto_id:    null,
+              precio_unitario: Number(restCfg.servicio_precio),
+              restaurante_id: rid,
+            })
+
+            // Tarea para running
+            const { data: mesaZona } = await supabase
+              .from('mesas').select('zona_id,zonas(nombre)').eq('id', mesa.id).single()
+            if (mesaZona?.zona_id) {
+              const { data: runningId } = await supabase.rpc('get_running_de_zona', {
+                p_zona_id: mesaZona.zona_id, p_restaurante_id: rid,
+              })
+              await supabase.from('marchar_log').insert({
+                restaurante_id: rid,
+                receptor_id:    runningId || camareroId,
+                mesa_id:        mesa.id,
+                mesa_codigo:    mesa.codigo,
+                zona_nombre:    (mesaZona.zonas as { nombre?: string } | null)?.nombre ?? null,
+                tipo:           'servicio',
+                num_comensales: pax,
+                items_resumen:  `${restCfg.servicio_nombre} · ${pax} pax`,
+                items_detalle:  [
+                  { nombre: 'Pan / aceite',           cantidad: pax },
+                  { nombre: 'Cubiertos completos',     cantidad: pax },
+                  { nombre: 'Agua / carta de bebidas', cantidad: 1  },
+                ],
+                recogido: false,
+              })
+            }
+            servicioInsertado = true
+          }
+        }
+      }
+      // ─────────────────────────────────────────────────────────────────────
+      void servicioInsertado
+
       if (brainResult.items.length > 0) {
         const itemsConFormato = brainResult.items.filter(i => i.formato)
         const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
