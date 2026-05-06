@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribir } from '@/lib/ear'
-import { parsearComanda } from '@/lib/brain'
+import { routearComanda } from '@/lib/brain-router'
 import { crearPrintJobs } from '@/lib/courier'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     const rid = getRestauranteId(req)
 
     const { texto, latencia_ms: latenciaEar } = await transcribir(audio)
-    const brainResult = await parsearComanda(texto, rid)
+    const brainResult = await routearComanda(texto, rid)
 
     // Flujo conversacional: si hay items pendientes de grabación anterior
     // (camarero dijo items pero no la mesa), esta grabación es solo la mesa
@@ -275,6 +275,8 @@ export async function POST(req: NextRequest) {
     await supabase.from('transcripciones').insert({
       camarero_id: camareroId, turno_id: turnoId, texto_original: texto,
       texto_brain: brainResult, latencia_ms: latenciaTotal, comanda_id: comandaId, restaurante_id: rid,
+      fuente_brain: brainResult.fuente,
+      latencia_brain_ms: brainResult.latencia_brain_ms,
     })
 
     if (alertasAlergenos.length > 0 && comandaId && mesa) {
@@ -292,7 +294,7 @@ export async function POST(req: NextRequest) {
       await supabase.from('alergeno_confirmaciones').insert(logs)
     }
 
-    return NextResponse.json({ ok: true, texto, brain: brainResult, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, comanda_id: comandaId, mesa_id: mesa?.id ?? null, alertas_86: alertas86, alertas_alergenos: alertasAlergenos })
+    return NextResponse.json({ ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, latencia_brain_ms: brainResult.latencia_brain_ms, comanda_id: comandaId, mesa_id: mesa?.id ?? null, alertas_86: alertas86, alertas_alergenos: alertasAlergenos })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || (err as { status?: number })?.status === 401

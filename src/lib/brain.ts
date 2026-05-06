@@ -1,8 +1,43 @@
 import { BrainResult } from '@/types'
 import { createServerClient } from '@/lib/supabase'
+import { getMenuCache } from '@/lib/brain-cache'
 
-/** Construye el bloque de carta para el prompt con aliases y formatos. */
-async function buildMenuContext(): Promise<string> {
+/** Construye el bloque de carta para el prompt usando el cache de menú (evita DB queries). */
+async function buildMenuContext(restaurante_id?: string): Promise<string> {
+  // Si tenemos restaurante_id, usar el cache para evitar 2 DB queries por llamada
+  if (restaurante_id) {
+    try {
+      const cache = await getMenuCache(restaurante_id)
+      if (cache.productos.length === 0) return ''
+
+      const bySec = new Map<string, typeof cache.productos>()
+      for (const p of cache.productos) {
+        const s = p.seccion ?? 'otras'
+        const arr = bySec.get(s) ?? []
+        arr.push(p)
+        bySec.set(s, arr)
+      }
+
+      const lines = [...bySec.entries()].map(([sec, items]) => {
+        const row = items.map(p => {
+          const alias = p.aliases.length > 1 ? ` [${p.aliases.slice(1).join('/')}]` : ''
+          if (p.formatos.length) {
+            const fmtStr = p.formatos.map(f => `${f.nombre}:${f.precio}€`).join('/')
+            return `${p.nombre}${alias} (formatos: ${fmtStr})`
+          }
+          const precio = p.precio != null ? ` ${p.precio}€` : ''
+          return `${p.nombre}${alias}${precio}`
+        }).join(' · ')
+        return `${sec.toUpperCase()}: ${row}`
+      })
+
+      return `\nCARTA ACTIVA (usa el nombre canónico; alias entre corchetes):\n${lines.join('\n')}\n`
+    } catch {
+      // Fallback a query directa si el cache falla
+    }
+  }
+
+  // Fallback legacy: query directa sin restaurante_id (modo demo/compatibilidad)
   try {
     const supabase = createServerClient()
     const [{ data: productos }, { data: formatos }] = await Promise.all([
@@ -103,9 +138,10 @@ SCHEMA:
 {"mesa":"T04","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
+  // Usar cache cuando sea posible para evitar DB queries en cada llamada (~200ms ahorrados)
   const [Anthropic, menuContext, zonasContext] = await Promise.all([
     import('@anthropic-ai/sdk').then(m => m.default),
-    buildMenuContext(),
+    buildMenuContext(restaurante_id),
     buildZonasContext(restaurante_id),
   ])
 
