@@ -55,6 +55,8 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
   const [savedMsg, setSavedMsg] = useState('')
   const [cobrarOpen, setCobrarOpen] = useState(false)
   const [vistaAnadir, setVistaAnadir] = useState(false)
+  const [searchAnadir, setSearchAnadir] = useState('')
+  const [catAnadir, setCatAnadir]       = useState('todo')
   const [productos, setProductos]     = useState<{id:string;nombre:string;precio:number;seccion_id:string|null}[]>([])
   const [cartAnadir, setCartAnadir]   = useState<{producto_id:string;nombre:string;cantidad:number;precio_unitario:number}[]>([])
   const [savingAnadir, setSavingAnadir] = useState(false)
@@ -200,7 +202,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                   {v==='items'?`Items (${comanda.items.length})`:'Historial'}
                 </button>
               ))}
-              <button onClick={()=>{setVistaAnadir(v=>!v);setCartAnadir([])}}
+              <button onClick={()=>{setVistaAnadir(v=>!v);setCartAnadir([]);setSearchAnadir('');setCatAnadir('todo')}}
                 style={{padding:'4px 12px',borderRadius:20,border:`1px solid ${vistaAnadir?C.verm+'55':C.rule}`,
                   background:vistaAnadir?C.vermS:'transparent',
                   fontSize:11,fontWeight:vistaAnadir?600:400,
@@ -411,33 +413,76 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                 </button>
               </div>
             )}
-            {/* Catálogo */}
-            <div style={{fontSize:10,fontWeight:700,textTransform:'uppercase' as const,letterSpacing:'1px',color:C.ink4,marginBottom:6}}>Carta</div>
-            <div style={{display:'flex',flexWrap:'wrap' as const,gap:5,maxHeight:180,overflowY:'auto' as const,scrollbarWidth:'none' as const}}>
-              {productos.filter(p=>p.precio&&p.precio>0).map(p => {
-                const enCarrito = cartAnadir.find(x=>x.producto_id===p.id)
-                return (
-                  <button key={p.id}
-                    onClick={()=>{
-                      setCartAnadir(function(prev){
-                        var ex = prev.find(function(x){return x.producto_id===p.id})
-                        if(ex) return prev.map(function(x){return x.producto_id===p.id?{...x,cantidad:x.cantidad+1}:x})
+            {/* Catálogo con búsqueda + categorías */}
+            {(() => {
+              const cats = ['todo', ...Array.from(new Set(productos.map(p=>(p as {categoria?:string}).categoria||'Otros'))).sort()]
+              const filtrados = productos.filter(p => {
+                const q = searchAnadir.toLowerCase().trim()
+                const matchQ = !q || p.nombre.toLowerCase().includes(q)
+                const matchC = catAnadir==='todo' || ((p as {categoria?:string}).categoria||'Otros')===catAnadir
+                return p.precio && p.precio > 0 && matchQ && matchC
+              })
+              return (
+                <div>
+                  {/* Buscador */}
+                  <div style={{position:'relative',marginBottom:8}}>
+                    <svg style={{position:'absolute',left:9,top:'50%',transform:'translateY(-50%)',pointerEvents:'none'}} width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={C.ink4} strokeWidth="2" strokeLinecap="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input
+                      value={searchAnadir}
+                      onChange={e=>setSearchAnadir(e.target.value)}
+                      placeholder="Buscar producto…"
+                      style={{width:'100%',padding:'8px 10px 8px 28px',background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:8,fontFamily:"'Inter Tight',sans-serif",fontSize:13,color:C.ink,outline:'none',boxSizing:'border-box' as const}}
+                    />
+                    {searchAnadir && (
+                      <button onClick={()=>setSearchAnadir('')} style={{position:'absolute',right:8,top:'50%',transform:'translateY(-50%)',background:'none',border:'none',cursor:'pointer',color:C.ink4,fontSize:16,lineHeight:1,padding:0}}>×</button>
+                    )}
+                  </div>
+                  {/* Tabs categoría */}
+                  {!searchAnadir && (
+                    <div style={{display:'flex',gap:4,overflowX:'auto',scrollbarWidth:'none' as const,marginBottom:8,paddingBottom:2}}>
+                      {cats.map(cat=>(
+                        <button key={cat} onClick={()=>setCatAnadir(cat)}
+                          style={{padding:'4px 10px',borderRadius:20,flexShrink:0,border:`1px solid ${catAnadir===cat?C.verm+'55':C.rule}`,background:catAnadir===cat?C.vermS:'transparent',fontSize:10,fontWeight:catAnadir===cat?600:400,color:catAnadir===cat?C.verm:C.ink3,cursor:'pointer',whiteSpace:'nowrap' as const}}>
+                          {cat==='todo'?'Todo':cat}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {/* Lista de productos */}
+                  <div style={{display:'flex',flexDirection:'column' as const,gap:4,maxHeight:220,overflowY:'auto' as const,scrollbarWidth:'none' as const}}>
+                    {filtrados.map(p => {
+                      const enCarrito = cartAnadir.find(x=>x.producto_id===p.id)
+                      const addP = () => setCartAnadir(prev => {
+                        const ex = prev.find(x=>x.producto_id===p.id)
+                        if (ex) return prev.map(x=>x.producto_id===p.id?{...x,cantidad:x.cantidad+1}:x)
                         return [...prev,{producto_id:p.id,nombre:p.nombre,cantidad:1,precio_unitario:p.precio}]
                       })
-                    }}
-                    style={{padding:'6px 10px',borderRadius:8,
-                      background:enCarrito?C.vermS:C.bg1,
-                      border:`1px solid ${enCarrito?C.verm+'55':C.rule}`,
-                      fontSize:12,fontWeight:enCarrito?600:400,
-                      color:enCarrito?C.verm:C.ink2,cursor:'pointer',
-                      display:'flex',alignItems:'center',gap:5}}>
-                    {enCarrito&&<span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.verm,fontWeight:700}}>{enCarrito.cantidad}×</span>}
-                    <span>{p.nombre}</span>
-                    <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:10,color:C.ink4}}>{p.precio?.toFixed(2)}€</span>
-                  </button>
-                )
-              })}
-            </div>
+                      return (
+                        <div key={p.id} style={{display:'flex',alignItems:'center',gap:8,background:enCarrito?C.vermS:C.bg1,border:`1px solid ${enCarrito?C.verm+'44':C.rule}`,borderRadius:8,padding:'8px 10px'}}>
+                          <span style={{flex:1,fontSize:13,color:enCarrito?C.verm:C.ink,fontWeight:enCarrito?600:400}}>{p.nombre}</span>
+                          <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:11,color:C.ink4,flexShrink:0}}>{p.precio?.toFixed(2)}€</span>
+                          {enCarrito ? (
+                            <div style={{display:'flex',alignItems:'center',gap:4,flexShrink:0}}>
+                              <button onClick={()=>setCartAnadir(prev=>prev.map(x=>x.producto_id===p.id?{...x,cantidad:Math.max(0,x.cantidad-1)}:x).filter(x=>x.cantidad>0))}
+                                style={{width:24,height:24,borderRadius:'50%',border:`1px solid ${C.rule}`,background:C.bg2,cursor:'pointer',fontSize:14,color:C.ink3,display:'flex',alignItems:'center',justifyContent:'center'}}>−</button>
+                              <span style={{fontFamily:"'JetBrains Mono',monospace",fontSize:13,color:C.verm,fontWeight:700,minWidth:16,textAlign:'center' as const}}>{enCarrito.cantidad}</span>
+                              <button onClick={addP}
+                                style={{width:24,height:24,borderRadius:'50%',border:'none',background:C.verm,cursor:'pointer',fontSize:14,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center'}}>+</button>
+                            </div>
+                          ) : (
+                            <button onClick={addP}
+                              style={{width:28,height:28,borderRadius:7,border:'none',background:C.ink,cursor:'pointer',fontSize:18,color:'#fff',display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>+</button>
+                          )}
+                        </div>
+                      )
+                    })}
+                    {filtrados.length===0 && (
+                      <div style={{textAlign:'center' as const,padding:'16px 0',fontFamily:"'Newsreader',serif",fontStyle:'italic',fontSize:14,color:C.ink4}}>Sin resultados</div>
+                    )}
+                  </div>
+                </div>
+              )
+            })()}
           </div>
         )}
 
