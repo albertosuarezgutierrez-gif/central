@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback, useRef } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
@@ -4479,6 +4479,7 @@ const GRUPOS = [
       { id: 'notificaciones', label: 'Notificaciones',    icon: ICONS.alertTriangle },
       { id: 'modificaciones', label: 'Modificaciones',    icon: ICONS.alertTriangle },
       { id: 'restaurante',    label: 'Restaurante',       icon: ICONS.shield        },
+      { id: 'suscripcion',    label: 'Suscripción',       icon: ICONS.receipt       },
     ]
   },
 ]
@@ -4657,6 +4658,144 @@ function SetupChecklist({ status, setTab, onDismiss }: {
 }
 
 
+/* ─── Tab Suscripción ──────────────────────────────────────────────────────── */
+function SuscripcionTab({ restauranteId, onSetupClick }: { restauranteId: string; onSetupClick: () => void }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [billing, setBilling] = React.useState<any>(null)
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch(`/api/owner/billing?restaurante_id=${restauranteId}`, { headers: sh() })
+      .then(r => r.json())
+      .then(d => { setBilling(d.billing); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [restauranteId])
+
+  const STATUS_COLOR: Record<string, string> = {
+    trial:   C.amber, active: '#3F7D44', expired: C.red,
+    past_due: C.red, cancelled: C.ink3,
+  }
+  const STATUS_LABEL: Record<string, string> = {
+    trial:    'En período de prueba', active:   'Suscripción activa',
+    expired:  'Trial expirado',        past_due: 'Pago pendiente',
+    cancelled:'Cancelado',
+  }
+
+  if (loading) return (
+    <div style={{ padding: 32, textAlign: 'center', fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.08em' }}>CARGANDO...</div>
+  )
+
+  if (!billing) return (
+    <div style={{ padding: 32, textAlign: 'center', fontSize: 14, color: C.ink3 }}>No se pudo cargar la información.</div>
+  )
+
+  const status: string = billing.plan_status ?? 'trial'
+  const diasTrial: number = billing.dias_trial ?? 0
+  const precioMensual: number = billing.precio_mensual ?? 59
+  const camActivos: number = billing.camareros_activos ?? 0
+  const maxCam: number = billing.max_camareros ?? 1
+  const trialEnd: string = billing.trial_end ? new Date(billing.trial_end).toLocaleDateString('es-ES') : ''
+
+  return (
+    <div style={{ padding: '24px 20px', maxWidth: 580 }}>
+      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: C.ink, marginBottom: 24 }}>
+        Tu suscripción
+      </div>
+
+      {/* Estado */}
+      <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '20px 24px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ width: 10, height: 10, borderRadius: '50%', background: STATUS_COLOR[status] ?? C.ink3, flexShrink: 0 }} />
+        <div style={{ flex: 1 }}>
+          <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 2 }}>
+            {STATUS_LABEL[status] ?? status}
+          </div>
+          {status === 'trial' && (
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>
+              {diasTrial > 0
+                ? `Te quedan ${diasTrial} día${diasTrial !== 1 ? 's' : ''} de prueba gratuita`
+                : `El trial ha expirado el ${trialEnd}`}
+            </div>
+          )}
+          {status === 'active' && (
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Suscripción activa y al día</div>
+          )}
+        </div>
+        {status === 'trial' && diasTrial > 0 && (
+          <div style={{
+            fontFamily: SM, fontSize: 28, fontWeight: 700, color: diasTrial <= 3 ? C.red : C.amber,
+            letterSpacing: '-1px',
+          }}>
+            {diasTrial}d
+          </div>
+        )}
+      </div>
+
+      {/* Trial expirando pronto */}
+      {status === 'trial' && diasTrial <= 3 && diasTrial > 0 && (
+        <div style={{ background: 'rgba(217,68,43,.08)', border: `1px solid rgba(217,68,43,.3)`, borderRadius: 10, padding: '14px 16px', marginBottom: 16, fontSize: 13, color: C.ink2, lineHeight: 1.6 }}>
+          <strong style={{ color: C.red }}>⚠ El trial expira pronto.</strong> Activa tu suscripción para no perder el acceso.
+        </div>
+      )}
+
+      {/* Trial expirado */}
+      {(status === 'expired' || (status === 'trial' && diasTrial <= 0)) && (
+        <div style={{ background: 'rgba(217,68,43,.08)', border: `1px solid rgba(217,68,43,.3)`, borderRadius: 10, padding: '14px 16px', marginBottom: 16, fontSize: 13, color: C.ink2, lineHeight: 1.6 }}>
+          <strong style={{ color: C.red }}>Trial expirado.</strong> Activa tu suscripción para seguir usando ia.rest.
+        </div>
+      )}
+
+      {/* Precio */}
+      <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '20px 24px', marginBottom: 16 }}>
+        <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 12 }}>Plan actual</div>
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, marginBottom: 8 }}>
+          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 36, color: C.ink, lineHeight: 1 }}>{precioMensual}€</div>
+          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, marginBottom: 4 }}>/mes</div>
+        </div>
+        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, lineHeight: 1.6 }}>
+          {camActivos <= 1 && '59€ base · 1 usuario'}
+          {camActivos > 1 && camActivos <= 6 && `59€ base + ${camActivos - 1} usuarios × 20€`}
+          {camActivos > 6 && `59€ base + 5 usuarios × 20€ + ${camActivos - 6} usuarios × 15€`}
+        </div>
+        <div style={{ marginTop: 8, fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+          {camActivos} usuario{camActivos !== 1 ? 's' : ''} activo{camActivos !== 1 ? 's' : ''}
+          {maxCam < 999 && ` · máx ${maxCam} contratados`}
+        </div>
+      </div>
+
+      {/* CTA según estado */}
+      {(status === 'trial' || status === 'expired') && !billing.stripe_subscription_id && (
+        <a
+          href="https://wa.me/34637349990?text=Hola,%20quiero%20activar%20mi%20suscripci%C3%B3n%20de%20ia.rest"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: 'block', background: C.red, color: '#fff', textDecoration: 'none', textAlign: 'center', padding: '14px', borderRadius: 10, fontFamily: SN, fontSize: 14, fontWeight: 700, marginBottom: 12 }}
+        >
+          Activar suscripción →
+        </a>
+      )}
+
+      {/* Añadir usuarios */}
+      {camActivos >= maxCam && maxCam < 999 && (
+        <div style={{ background: 'rgba(232,163,59,.08)', border: `1px solid rgba(232,163,59,.3)`, borderRadius: 10, padding: '12px 16px', marginBottom: 12, fontSize: 13, color: C.ink2 }}>
+          Has llegado al límite de {maxCam} usuarios. Para añadir más,{' '}
+          <a href="https://wa.me/34637349990?text=Quiero%20ampliar%20usuarios%20en%20ia.rest" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366' }}>
+            escríbenos por WhatsApp
+          </a>.
+        </div>
+      )}
+
+      {/* Soporte */}
+      <div style={{ marginTop: 8, fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.7 }}>
+        ¿Tienes dudas sobre tu suscripción?{' '}
+        <a href="https://wa.me/34637349990" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366' }}>
+          WhatsApp +34 637 349 990
+        </a>
+      </div>
+    </div>
+  )
+}
+
+
 export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
@@ -4802,6 +4941,7 @@ export default function OwnerPage() {
           {tab === 'notificaciones' && <NotificacionesTab/>}
           {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
           {tab === 'restaurante'    && <RestauranteTab/>}
+          {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
         </div>
       </div>
     </div>
