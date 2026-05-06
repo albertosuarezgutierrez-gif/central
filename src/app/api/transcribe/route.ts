@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       if (num > 0) {
         const prefix = (brainResult.mesa).match(/^([A-Za-z]+)/)?.[1]?.toUpperCase()
         // Mapa de prefijos a zonas según la BD real
-        const prefixToZona: Record<string, string> = { T: 'salon', P: 'terraza', B: 'barra', M: 'salon' }
+        const prefixToZona: Record<string, string> = { T: 'salon', P: 'terraza', TE: 'terraza', B: 'barra', M: 'salon' }
         const zonaHint = prefix ? prefixToZona[prefix] : null
 
         const { data: candidatas } = await supabase.from('mesas')

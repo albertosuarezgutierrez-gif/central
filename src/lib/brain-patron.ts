@@ -91,6 +91,7 @@ function detectarMesa(tNorm: string, cache: MenuCache): string | null {
 // ── Lookup de producto en cache ───────────────────────────────────────────────
 
 function buscarProducto(palabras: string[], cache: MenuCache): { prod: ProductoCacheItem; len: number } | null {
+  // ── Nivel 1: match exacto / singular ─────────────────────────────────────
   // Intentar combinaciones de largo→corto, con y sin artículo ("un X", "una X")
   const articulos = ['', 'un ', 'una ']
   for (const art of articulos) {
@@ -109,6 +110,39 @@ function buscarProducto(palabras: string[], cache: MenuCache): { prod: ProductoC
       }
     }
   }
+
+  // ── Nivel 2: prefix match como fallback ──────────────────────────────────
+  // Útil cuando el camarero dice "cerveza" y el alias canónico es "cerveza caña".
+  // Solo aplica si el resultado es UNAMBIGUO (exactamente 1 producto).
+  // Si hay 2+ matches (ej: "cerveza caña" y "cerveza mediana") → Claude decide.
+  const candidatoFull = palabras.join(' ')
+  if (candidatoFull.length >= 3) {
+    const prefixMatches = new Set<ProductoCacheItem>()
+    for (const [aliasKey, prod] of cache.byAlias.entries()) {
+      if (aliasKey.startsWith(candidatoFull + ' ') || aliasKey === candidatoFull) {
+        prefixMatches.add(prod)
+      }
+    }
+    if (prefixMatches.size === 1) {
+      return { prod: [...prefixMatches][0], len: palabras.length }
+    }
+    // Intentar también con singular
+    const candidatoSingFull = palabras.slice(0, -1)
+      .concat(singular(palabras[palabras.length - 1]))
+      .join(' ')
+    if (candidatoSingFull !== candidatoFull && candidatoSingFull.length >= 3) {
+      const singMatches = new Set<ProductoCacheItem>()
+      for (const [aliasKey, prod] of cache.byAlias.entries()) {
+        if (aliasKey.startsWith(candidatoSingFull + ' ') || aliasKey === candidatoSingFull) {
+          singMatches.add(prod)
+        }
+      }
+      if (singMatches.size === 1) {
+        return { prod: [...singMatches][0], len: palabras.length }
+      }
+    }
+  }
+
   return null
 }
 

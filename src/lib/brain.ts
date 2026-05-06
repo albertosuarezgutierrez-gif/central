@@ -125,8 +125,8 @@ const BASE_PROMPT = `Eres BRAIN, el agente de ia.rest. Conviertes transcripcione
 REGLAS ESTRICTAS:
 - Responde SOLO con JSON valido, sin texto adicional ni markdown
 - Entiende jerga: "manchado"=Cortado, "marchar"=enviar a cocina, "86"=agotado/sin stock
-- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: T=salon, P=terraza, B=barra
-- "mesa cuatro"=T04, "la doce"=T12, "terraza cuatro"=P04, "barra dos"=B02
+- Códigos de mesa según ZONAS DEL LOCAL (ver abajo). Fallback: T=salon, TE=terraza, B=barra
+- "mesa cuatro"=T04, "la doce"=T12, "terraza cuatro"=TE04, "barra dos"=B02, "barra uno"=B01
 - Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
 - Para tipo "86": los items son los productos agotados
 - FORMATOS: si un producto tiene formatos (tapa/media/racion), extrae el formato mencionado en "formato" (null si no se menciona)
