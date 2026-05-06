@@ -124,8 +124,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   } | null>(null)
   const [servicioConfig, setServicioConfig] = useState<{
     activo: boolean; precio: number; nombre: string; skip: boolean
-  }>({ activo: false, precio: 1.50, nombre: 'Cubierto', skip: true })
+    preguntar_voz: boolean  // preguntar comensales al dictar por voz
+  }>({ activo: false, precio: 1.50, nombre: 'Cubierto', skip: true, preguntar_voz: false })
   const [mesasPaxMap, setMesasPaxMap] = useState<Record<string, number>>({})
+  // Guarda resultado de BRAIN mientras esperamos comensales por voz
+  const [pendingVozComanda, setPendingVozComanda] = useState<{
+    mesaId: string; mesaCodigo: string; paxYaConocido: number | null
+  } | null>(null)
 
   // Config camarero
   const [voiceConfirm, setVoiceConfirm] = useState(true)
@@ -184,10 +189,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       .then(r => r.json())
       .then(d => {
         if (d.config) setServicioConfig({
-          activo:  d.config.servicio_activo  ?? false,
-          precio:  d.config.servicio_precio  ?? 1.50,
-          nombre:  d.config.servicio_nombre  ?? 'Cubierto',
-          skip:    d.config.servicio_skip    ?? true,
+          activo:        d.config.servicio_activo       ?? false,
+          precio:        d.config.servicio_precio       ?? 1.50,
+          nombre:        d.config.servicio_nombre       ?? 'Cubierto',
+          skip:          d.config.servicio_skip         ?? true,
+          preguntar_voz: d.config.servicio_preguntar_voz ?? false,
         })
       })
       .catch(() => {})
@@ -266,6 +272,23 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         const bItems: BrainResult['items'] = d.brain?.items||[]
         const msgTxt = `${d.brain?.mesa||'?'}: ${bItems.map((it: BrainResult['items'][0])=>`${it.cantidad}× ${it.nombre}`).join(', ')}`
         addMsg('brain', msgTxt + (d.alertas_86?.length?` · ⚠ 86`:'') + (d.alertas_alergenos?.length?` · ⚠ alérgeno`:''), (d.alertas_86?.length||d.alertas_alergenos?.length)?'aviso':'ok')
+
+        // ── ¿Preguntar comensales? ─────────────────────────────
+        // Solo si: config activo + config preguntar_voz + BRAIN no capturó pax + es primera comanda de la mesa
+        const paxEnVoz = d.brain?.num_comensales ?? null
+        const mesaIdRes = d.brain?.mesa_id ?? null  // si BRAIN devuelve mesa_id
+        const necesitaPax =
+          servicioConfig.activo &&
+          servicioConfig.preguntar_voz &&
+          !paxEnVoz &&
+          d.comanda_id  // comanda ya creada, pero sin pax
+
+        if (necesitaPax && mesaIdRes) {
+          setPendingVozComanda({ mesaId: mesaIdRes, mesaCodigo: d.brain?.mesa||'?', paxYaConocido: null })
+          setSheetOpen(false)
+          // Mostramos confirm sheet igual pero con el modal de comensales encima
+        }
+
         const hasTTS = typeof window!=='undefined' && 'speechSynthesis' in window
         if (voiceConfirm && hasTTS) { setScreen('speaking') }
         else { setScreen('confirm'); setSheetOpen(true) }
@@ -699,6 +722,32 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             setMesaDetalle({ id: comensalesModal.mesaId, codigo: comensalesModal.mesaCodigo })
           }}
           onClose={() => setComensalesModal(null)}
+        />
+      )}
+
+      {/* ── COMENSALES VOZ (post-PTT, comanda ya creada) ─────── */}
+      {pendingVozComanda && (
+        <ComensalesModal
+          mesaCodigo={pendingVozComanda.mesaCodigo}
+          servicio={servicioConfig}
+          initialPax={pendingVozComanda.paxYaConocido ?? 0}
+          comandaId="pending"
+          onConfirmar={async (pax, _incl) => {
+            // Actualizar num_comensales de la comanda recién creada via API
+            const ses = localStorage.getItem('ia_rest_session') ?? ''
+            if (lastComandaId) {
+              await fetch(`/api/comanda/${lastComandaId}/pax`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },
+                body: JSON.stringify({ num_comensales: pax }),
+              })
+            }
+            setMesasPaxMap(prev => ({ ...prev, [pendingVozComanda.mesaId]: pax }))
+            setPendingVozComanda(null)
+            setScreen('confirm'); setSheetOpen(true)
+          }}
+          onSaltarse={() => { setPendingVozComanda(null); setScreen('confirm'); setSheetOpen(true) }}
+          onClose={() => { setPendingVozComanda(null); setScreen('confirm'); setSheetOpen(true) }}
         />
       )}
 

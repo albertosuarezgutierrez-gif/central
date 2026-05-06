@@ -3554,11 +3554,12 @@ function CajaTab() {
 function ServicioTab() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '', 'Content-Type': 'application/json' })
   const [form, setForm] = useState({
-    servicio_activo: false,
-    servicio_precio: 1.50,
-    servicio_nombre: 'Cubierto',
-    servicio_auto:   true,
-    servicio_skip:   true,
+    servicio_activo:      false,
+    servicio_precio:      1.50,
+    servicio_nombre:      'Cubierto',
+    servicio_auto:        true,
+    servicio_skip:        true,
+    servicio_preguntar_voz: false,
   })
   const [loading, setLoading] = useState(true)
   const [saving,  setSaving]  = useState(false)
@@ -3569,11 +3570,12 @@ function ServicioTab() {
       .then(r => r.json())
       .then(d => {
         if (d.config) setForm({
-          servicio_activo: d.config.servicio_activo ?? false,
-          servicio_precio: parseFloat(d.config.servicio_precio) || 1.50,
-          servicio_nombre: d.config.servicio_nombre ?? 'Cubierto',
-          servicio_auto:   d.config.servicio_auto   ?? true,
-          servicio_skip:   d.config.servicio_skip   ?? true,
+          servicio_activo:        d.config.servicio_activo         ?? false,
+          servicio_precio:        parseFloat(d.config.servicio_precio) || 1.50,
+          servicio_nombre:        d.config.servicio_nombre         ?? 'Cubierto',
+          servicio_auto:          d.config.servicio_auto           ?? true,
+          servicio_skip:          d.config.servicio_skip           ?? true,
+          servicio_preguntar_voz: d.config.servicio_preguntar_voz  ?? false,
         })
         setLoading(false)
       })
@@ -3593,7 +3595,7 @@ function ServicioTab() {
   const toggle = (key: keyof typeof form) =>
     setForm(f => ({ ...f, [key]: !f[key] }))
 
-  const ToggleRow = ({ label, sub, k }: { label: string; sub?: string; k: 'servicio_activo'|'servicio_auto'|'servicio_skip' }) => (
+  const ToggleRow = ({ label, sub, k }: { label: string; sub?: string; k: 'servicio_activo'|'servicio_auto'|'servicio_skip'|'servicio_preguntar_voz' }) => (
     <div style={{ display:'flex', alignItems:'center', gap:12, padding:'12px 0', borderBottom:`1px solid ${C.rule}` }}>
       <div style={{ flex:1 }}>
         <div style={{ fontSize:14, color:C.ink, fontWeight:500 }}>{label}</div>
@@ -3706,6 +3708,11 @@ function ServicioTab() {
           k="servicio_skip"
           label="Permitir omitir"
           sub="El camarero puede saltarse el cubierto mesa a mesa si el cliente no lo quiere"
+        />
+        <ToggleRow
+          k="servicio_preguntar_voz"
+          label="Preguntar comensales al dictar por voz"
+          sub="Si el camarero no lo dice en la frase, el sistema pregunta antes de confirmar. Recomendado para restaurantes, no para bares."
         />
       </div>
 
