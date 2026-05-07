@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       .select('onboarding_completado')
       .eq('id', cam.restaurante_id)
       .single()
-    onboarding_completado = rest?.onboarding_completado ?? null
+    onboarding_completado = rest?.onboarding_completado ?? false
   }
 
   return NextResponse.json({

@@ -97,7 +97,7 @@ export default function LoginPage() {
       if (d.camarero) {
         localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
         // Owner nuevo → guía de onboarding
-        if (d.camarero.rol === 'owner' && d.camarero.onboarding_completado === false) {
+        if (d.camarero.rol === 'owner' && d.camarero.onboarding_completado !== true) {
           window.location.href = '/onboarding'
         } else {
           navigateByRol(d.camarero)
