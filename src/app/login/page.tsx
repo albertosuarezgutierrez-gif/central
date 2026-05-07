@@ -96,7 +96,12 @@ export default function LoginPage() {
       const d = await r.json()
       if (d.camarero) {
         localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
-        navigateByRol(d.camarero)
+        // Owner nuevo → guía de onboarding
+        if (d.camarero.rol === 'owner' && d.camarero.onboarding_completado === false) {
+          window.location.href = '/onboarding'
+        } else {
+          navigateByRol(d.camarero)
+        }
       } else { setError(d.error ?? 'PIN incorrecto'); setPin(''); setLoading(false) }
     } catch { setError('Error de conexion'); setPin(''); setLoading(false) }
   }

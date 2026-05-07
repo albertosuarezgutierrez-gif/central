@@ -36,6 +36,17 @@ export async function POST(req: NextRequest) {
 
   const cam = data[0]
 
+  // Leer onboarding_completado para owners nuevos
+  let onboarding_completado: boolean | null = null
+  if (cam.rol === 'owner' || cam.rol === 'super_admin') {
+    const { data: rest } = await supabase
+      .from('restaurantes')
+      .select('onboarding_completado')
+      .eq('id', cam.restaurante_id)
+      .single()
+    onboarding_completado = rest?.onboarding_completado ?? null
+  }
+
   return NextResponse.json({
     camarero: {
       id: cam.camarero_id,
@@ -44,6 +55,7 @@ export async function POST(req: NextRequest) {
       restaurante_id: cam.restaurante_id,
       restaurante_nombre: cam.restaurante_nombre ?? restaurante_nombre,
       seccion_id: cam.seccion_id ?? null,
+      onboarding_completado,
     }
   })
 }
