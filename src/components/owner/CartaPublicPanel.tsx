@@ -15,6 +15,24 @@ const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
+// ─── Logo de demo (SVG inline → data URL) ────────────────────
+// Tenedor + cuchillo sobre fondo vermilion. Sirve para probar el QR con logo.
+const DEMO_LOGO_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <rect width="120" height="120" rx="20" fill="#D9442B"/>
+  <!-- Tenedor -->
+  <line x1="42" y1="28" x2="42" y2="92" stroke="#F6F1E7" stroke-width="4" stroke-linecap="round"/>
+  <line x1="34" y1="28" x2="34" y2="50" stroke="#F6F1E7" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="42" y1="28" x2="42" y2="50" stroke="#F6F1E7" stroke-width="3.5" stroke-linecap="round"/>
+  <line x1="50" y1="28" x2="50" y2="50" stroke="#F6F1E7" stroke-width="3.5" stroke-linecap="round"/>
+  <path d="M34 50 Q34 58 42 58 Q50 58 50 50" stroke="#F6F1E7" stroke-width="3.5" fill="none"/>
+  <!-- Cuchillo -->
+  <line x1="78" y1="28" x2="78" y2="92" stroke="#F6F1E7" stroke-width="4" stroke-linecap="round"/>
+  <path d="M78 28 L88 42 Q90 50 78 54" stroke="#F6F1E7" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+</svg>`
+
+const DEMO_LOGO_DATA_URL =
+  'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(DEMO_LOGO_SVG)))
+
 // ─── Helpers ─────────────────────────────────────────────────
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
@@ -297,13 +315,22 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
                   )}
                   <input ref={logoRef} type="file" accept="image/png,image/svg+xml,image/jpeg,image/webp" hidden onChange={handleLogo} />
                 </div>
-                {logoDataUrl && (
-                  <button
-                    onClick={() => { setLogoDataUrl(null); if (logoRef.current) logoRef.current.value = '' }}
-                    style={{ marginTop: 6, background: 'none', border: 'none', cursor: 'pointer', fontFamily: SN, fontSize: 11, color: C.ink4, padding: 0, textDecoration: 'underline' }}>
-                    Quitar logo
-                  </button>
-                )}
+                <div style={{ display: 'flex', gap: 10, marginTop: 6 }}>
+                  {!logoDataUrl && (
+                    <button
+                      onClick={() => setLogoDataUrl(DEMO_LOGO_DATA_URL)}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: SN, fontSize: 11, color: C.red, padding: 0, fontWeight: 600 }}>
+                      Usar logo de demo →
+                    </button>
+                  )}
+                  {logoDataUrl && (
+                    <button
+                      onClick={() => { setLogoDataUrl(null); if (logoRef.current) logoRef.current.value = '' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: SN, fontSize: 11, color: C.ink4, padding: 0, textDecoration: 'underline' }}>
+                      Quitar logo
+                    </button>
+                  )}
+                </div>
               </div>
             </section>
 
