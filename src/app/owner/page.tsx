@@ -1088,7 +1088,7 @@ function MesasTab() {
 /* ─── Tab: Restaurante / Configuración ─── */
 type RestauranteConfig = {
   id: string; nombre: string; slug: string
-  nif: string | null; razon_social: string | null
+  nif: string | null; razon_social: string | null; logo_url?: string | null
   direccion: string | null; ciudad: string | null; telefono: string | null
   plan: string; activo: boolean
 }
@@ -1107,6 +1107,9 @@ function RestauranteTab() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '' })
+  const [logoUploading, setLogoUploading] = useState(false)
+  const [logoMsg, setLogoMsg] = useState('')
+  const logoInputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     Promise.all([
@@ -1143,6 +1146,29 @@ function RestauranteTab() {
     setTimeout(() => setMsg(''), 3000)
   }
 
+  const uploadLogo = async (file: File) => {
+    setLogoUploading(true); setLogoMsg('')
+    const fd = new FormData()
+    fd.append('logo', file)
+    const r = await fetch('/api/owner/logo', { method: 'POST', headers: sh(), body: fd })
+    const d = await r.json()
+    if (r.ok) {
+      setRest(prev => prev ? { ...prev, logo_url: d.logo_url } : prev)
+      setLogoMsg('Logo guardado.')
+    } else {
+      setLogoMsg(d.error ?? 'Error al subir')
+    }
+    setLogoUploading(false)
+    setTimeout(() => setLogoMsg(''), 4000)
+  }
+
+  const deleteLogo = async () => {
+    setLogoUploading(true)
+    await fetch('/api/owner/logo', { method: 'DELETE', headers: sh() })
+    setRest(prev => prev ? { ...prev, logo_url: null } : prev)
+    setLogoUploading(false)
+  }
+
   const inp = (label: string, key: keyof typeof form, placeholder = '') => (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, textTransform: 'uppercase' }}>{label}</label>
@@ -1160,6 +1186,62 @@ function RestauranteTab() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+
+      {/* ── Logo del restaurante ── */}
+      <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, background: C.bone }}>
+        <div style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase', marginBottom: 4 }}>
+          LOGO DEL RESTAURANTE
+        </div>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 16, lineHeight: 1.5 }}>
+          Aparece en la carta digital pública y centrado en el QR de mesa. PNG, JPG, WebP o SVG · máx 2 MB.
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap' }}>
+          {/* Preview */}
+          <div style={{
+            width: 88, height: 88, borderRadius: 8, flexShrink: 0,
+            border: `2px solid ${C.rule}`, background: '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden',
+          }}>
+            {rest?.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={rest.logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+            ) : (
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke={C.rule} strokeWidth="1.5" strokeLinecap="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <path d="M21 15l-5-5L5 21"/>
+              </svg>
+            )}
+          </div>
+          {/* Acciones */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <Btn onClick={() => logoInputRef.current?.click()} disabled={logoUploading}>
+                {logoUploading ? 'Subiendo…' : rest?.logo_url ? 'Cambiar logo' : 'Subir logo'}
+              </Btn>
+              {rest?.logo_url && (
+                <Btn variant="ghost" onClick={deleteLogo} disabled={logoUploading}>
+                  Quitar logo
+                </Btn>
+              )}
+            </div>
+            {logoMsg && (
+              <span style={{ fontFamily: SM, fontSize: 11, color: logoMsg.includes('Error') || logoMsg.includes('supera') ? C.red : C.green }}>
+                {logoMsg}
+              </span>
+            )}
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>
+              El logo se adapta automáticamente a cualquier forma o proporción.
+            </div>
+          </div>
+        </div>
+        <input
+          ref={logoInputRef} type="file"
+          accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+          hidden
+          onChange={e => { const f = e.target.files?.[0]; if (f) uploadLogo(f); e.target.value = '' }}
+        />
+      </div>
 
       {/* Datos del restaurante */}
       <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, background: C.bone }}>

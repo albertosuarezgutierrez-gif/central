@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('restaurantes')
-    .select('id, nombre, slug, nif, razon_social, direccion, ciudad, telefono, plan, activo, configuracion, onboarding_completado')
+    .select('id, nombre, slug, nif, razon_social, direccion, ciudad, telefono, plan, activo, configuracion, onboarding_completado, logo_url')
     .eq('id', rid)
     .single()
 

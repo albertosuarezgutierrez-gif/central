@@ -24,7 +24,7 @@ export async function GET(
   // Buscar restaurante por slug (case-insensitive)
   const { data: rest, error: restErr } = await supabase
     .from('restaurantes')
-    .select('id, nombre, slug')
+    .select('id, nombre, slug, logo_url')
     .eq('slug', code.toLowerCase())
     .eq('activo', true)
     .single()
@@ -55,7 +55,7 @@ export async function GET(
 
   return NextResponse.json(
     {
-      restaurante: { nombre: rest.nombre, slug: rest.slug },
+      restaurante: { nombre: rest.nombre, slug: rest.slug, logo_url: rest.logo_url ?? null },
       productos: productos || [],
     },
     {

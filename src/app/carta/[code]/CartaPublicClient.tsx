@@ -11,7 +11,7 @@ type Producto = {
   precio: number | null
   categoria: string
 }
-type Restaurante = { nombre: string; slug: string }
+type Restaurante = { nombre: string; slug: string; logo_url?: string | null }
 
 // ─── Design tokens (paleta crema, orientada al cliente) ───────
 const C = {
@@ -172,6 +172,27 @@ export default function CartaPublicClient({ code }: { code: string }) {
         textAlign: 'center',
         borderBottom: `1px solid ${C.rule}`,
       }}>
+        {/* Logo — se adapta a cualquier forma */}
+        {restaurante?.logo_url && (
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginBottom: 20,
+          }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={restaurante.logo_url}
+              alt={restaurante.nombre}
+              style={{
+                maxWidth: 'min(140px, 38vw)',
+                maxHeight: 80,
+                width: 'auto',
+                height: 'auto',
+                objectFit: 'contain',
+                display: 'block',
+              }}
+            />
+          </div>
+        )}
         <div style={{
           fontFamily: SM, fontSize: 10, fontWeight: 700,
           letterSpacing: '.2em', color: C.ink3, textTransform: 'uppercase', marginBottom: 12,
