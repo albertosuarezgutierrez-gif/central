@@ -122,6 +122,19 @@ export default function CartaPublicClient({ code }: { code: string }) {
         html { -webkit-text-size-adjust: 100%; }
         body { background: #F6F1E7; }
 
+        /* ── Responsive ── */
+        .carta-restaurant-name { font-size: clamp(24px, 7vw, 40px); }
+        .carta-header-wrap     { padding: clamp(28px,6vw,48px) 20px clamp(20px,4vw,32px); }
+        .carta-container       { max-width: 680px; margin: 0 auto; padding: clamp(20px,4vw,32px) 16px 80px; }
+        .producto-nombre       { min-width: 0; word-break: break-word; }
+        .precio-col            { flex-shrink: 0; white-space: nowrap; }
+
+        @media (max-width: 400px) {
+          .carta-restaurant-name { font-size: 22px; }
+          .carta-header-wrap     { padding: 24px 16px 18px; }
+          .carta-container       { padding: 16px 12px 64px; }
+        }
+
         @media print {
           .no-print { display: none !important; }
           body { background: white; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
@@ -155,8 +168,7 @@ export default function CartaPublicClient({ code }: { code: string }) {
       </div>
 
       {/* ── Cabecera del restaurante ── */}
-      <div style={{
-        padding: '48px 24px 32px',
+      <div className="carta-header-wrap" style={{
         textAlign: 'center',
         borderBottom: `1px solid ${C.rule}`,
       }}>
@@ -166,8 +178,8 @@ export default function CartaPublicClient({ code }: { code: string }) {
         }}>
           Carta
         </div>
-        <div style={{
-          fontFamily: SE, fontSize: 40, fontStyle: 'italic',
+        <div className="carta-restaurant-name" style={{
+          fontFamily: SE, fontStyle: 'italic',
           color: C.ink, lineHeight: 1.15,
         }}>
           {restaurante?.nombre}
@@ -181,7 +193,7 @@ export default function CartaPublicClient({ code }: { code: string }) {
       </div>
 
       {/* ── Contenido de la carta ── */}
-      <div className="carta-container" style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px 80px' }}>
+      <div className="carta-container">
         {categorias.map((cat, catIdx) => (
           <div key={cat} style={{ marginBottom: 44 }}>
             {/* Título de categoría */}
@@ -200,14 +212,15 @@ export default function CartaPublicClient({ code }: { code: string }) {
                 key={p.id}
                 className="producto-row"
                 style={{
-                  display: 'grid',
-                  gridTemplateColumns: '1fr auto',
-                  gap: '6px 16px',
-                  padding: '14px 0',
+                  display: 'flex',
+                  alignItems: 'baseline',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  padding: '13px 0',
                   borderBottom: i < byCategoria[cat].length - 1 ? `1px solid ${C.rule}` : 'none',
                 }}>
                 {/* Nombre + descripción */}
-                <div>
+                <div className="producto-nombre">
                   <div style={{ fontFamily: SN, fontSize: 15, fontWeight: 600, color: C.ink, lineHeight: 1.3 }}>
                     {p.nombre}
                   </div>
@@ -218,9 +231,9 @@ export default function CartaPublicClient({ code }: { code: string }) {
                   )}
                 </div>
                 {/* Precio */}
-                <div style={{
-                  fontFamily: SE, fontSize: 17, fontStyle: 'italic',
-                  color: C.ink2, whiteSpace: 'nowrap', paddingTop: 1,
+                <div className="precio-col" style={{
+                  fontFamily: SE, fontSize: 16, fontStyle: 'italic',
+                  color: C.ink2,
                 }}>
                   {p.precio != null ? `${p.precio.toFixed(2)} €` : '—'}
                 </div>

@@ -178,7 +178,7 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
         background: C.paper,
         border: `1px solid ${C.rule}`,
         borderRadius: 12,
-        padding: 32,
+        padding: 'clamp(20px,4vw,32px)',
         width: 'min(540px, 94vw)',
         maxHeight: '92vh',
         overflowY: 'auto',
@@ -242,7 +242,7 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
             </section>
 
             {/* ── QR Preview + Logo upload ── */}
-            <section style={{ display: 'flex', gap: 20, marginBottom: 24, alignItems: 'flex-start' }}>
+            <section style={{ display: 'flex', gap: 20, marginBottom: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
 
               {/* QR preview */}
               <div style={{ flexShrink: 0 }}>
@@ -280,7 +280,7 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
               </div>
 
               {/* Logo upload */}
-              <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ flex: 1, minWidth: 200 }}>
                 <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.ink3, textTransform: 'uppercase', marginBottom: 8 }}>
                   Logo del restaurante (opcional)
                 </div>
