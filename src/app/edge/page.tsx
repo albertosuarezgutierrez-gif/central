@@ -496,6 +496,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <span style={{fontSize:12,fontWeight:600,color:C.ink}}>{session.nombre.split(' ')[0]}</span>
           </div>
           <SugerenciaButton session={session} tema="light" variant="inline" />
+          <a href="/manuals/manual_camarero.pdf" download title="Descargar manual del camarero"
+            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:8,cursor:'pointer',fontSize:14,flexShrink:0,textDecoration:'none',color:C.ink3}}>
+            📄
+          </a>
         </div>
       </div>
 

@@ -4916,6 +4916,21 @@ export default function OwnerPage() {
             <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 600 }}>Guía</span>
           </button>
           <SugerenciaButton session={session} tema="light" variant="inline" />
+          {/* Manuales descargables */}
+          <div style={{ display:'flex', gap:4 }}>
+            {[
+              { href:'/manuals/manual_camarero.pdf', label:'Camarero' },
+              { href:'/manuals/manual_cocina.pdf',   label:'Cocina'   },
+            ].map(m => (
+              <a key={m.href} href={m.href} download title={`Manual ${m.label}`}
+                style={{ background:'none', border:`1px solid ${C.rule}`, borderRadius:4,
+                  padding:'6px 10px', cursor:'pointer', color:C.ink3, display:'flex', alignItems:'center',
+                  gap:5, textDecoration:'none', fontFamily:SN, fontSize:12, fontWeight:600 }}>
+                <Icon d={ICONS.book} size={13}/>
+                {m.label}
+              </a>
+            ))}
+          </div>
           <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.rule}`,
             borderRadius: 4, padding: '6px 10px', cursor: 'pointer', color: C.ink3, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon d={ICONS.logout} size={14}/>

@@ -452,6 +452,10 @@ function KDSInner() {
           </div>
           <span style={{ fontFamily:SM, fontSize:16, fontWeight:700, color:K.fg }}>{time.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
           <SugerenciaButton session={session} tema="dark" variant="inline" />
+          <a href="/manuals/manual_cocina.pdf" download title="Descargar manual de cocina"
+            style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', border:`1px solid ${K.rule}`, borderRadius:6, color:K.fg3, fontSize:13, flexShrink:0, textDecoration:'none' }}>
+            📄
+          </a>
           <button
             onClick={() => { localStorage.removeItem('ia_rest_session'); localStorage.removeItem('ia_kds_token'); window.location.href = '/login' }}
             title="Salir"
