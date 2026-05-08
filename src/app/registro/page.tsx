@@ -18,21 +18,56 @@ function precioMensual(n: number) {
   return 59 + 5 * 20 + (n - 6) * 15
 }
 
+// Regex RFC 5322 simplificado — requiere TLD de mínimo 2 letras
+const EMAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/
+
+// Dominios comunes con sus typos frecuentes
+const DOMAIN_TYPOS: Record<string, string> = {
+  'gmail.co': 'gmail.com',     'gmail.cm': 'gmail.com',     'gmai.com': 'gmail.com',
+  'gmial.com': 'gmail.com',    'gmal.com': 'gmail.com',     'gmaill.com': 'gmail.com',
+  'hotmail.co': 'hotmail.com', 'hotmail.cm': 'hotmail.com',
+  'hotmai.com': 'hotmail.com', 'hotmial.com': 'hotmail.com',
+  'outlook.co': 'outlook.com', 'outloook.com': 'outlook.com',
+  'yahoo.co': 'yahoo.com',     'yaho.com': 'yahoo.com',
+  'icloud.co': 'icloud.com',   'iclooud.com': 'icloud.com',
+}
+
 interface Created { checkout_url: string; codigo_acceso: string; pin_owner: string }
 
 export default function RegistroPage() {
-  const [nombre, setNombre]   = useState('')
-  const [email, setEmail]     = useState('')
-  const [rest, setRest]       = useState('')
-  const [nU, setNU]           = useState(1)
-  const [loading, setLoading] = useState(false)
-  const [error, setError]     = useState('')
-  const [created, setCreated] = useState<Created | null>(null)
-  const [copied, setCopied]   = useState(false)
+  const [nombre, setNombre]       = useState('')
+  const [email, setEmail]         = useState('')
+  const [rest, setRest]           = useState('')
+  const [nU, setNU]               = useState(1)
+  const [loading, setLoading]     = useState(false)
+  const [error, setError]         = useState('')
+  const [emailWarn, setEmailWarn] = useState('')
+  const [created, setCreated]     = useState<Created | null>(null)
+  const [copied, setCopied]       = useState(false)
+
+  function checkEmailWarn(val: string) {
+    if (!val.includes('@')) { setEmailWarn(''); return }
+    const domain = val.split('@')[1]?.toLowerCase() ?? ''
+    setEmailWarn(DOMAIN_TYPOS[domain] ?? '')
+  }
+
+  function applyEmailFix() {
+    const parts  = email.split('@')
+    const domain = parts[1]?.toLowerCase() ?? ''
+    const fixed  = DOMAIN_TYPOS[domain]
+    if (fixed) { setEmail(parts[0] + '@' + fixed); setEmailWarn('') }
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setLoading(true)
+
+    if (!EMAIL_RE.test(email.trim())) {
+      setError('El email no tiene un formato válido. Revisa que incluya @ y un dominio correcto (ej: nombre@empresa.com)')
+      setLoading(false)
+      return
+    }
+
     try {
       const r = await fetch(`${SUPABASE_URL}/functions/v1/auth-register`, {
         method: 'POST',
@@ -55,7 +90,6 @@ export default function RegistroPage() {
     <div style={pageS}>
       <Logo />
       <div style={cardS}>
-        {/* check */}
         <div style={{ textAlign: 'center' }}>
           <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(63,125,68,.12)', border: `2px solid ${T.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={T.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
@@ -64,14 +98,12 @@ export default function RegistroPage() {
           <p style={{ fontSize: 13, color: T.fg3, margin: 0 }}>Guarda estos datos antes de continuar al pago.</p>
         </div>
 
-        {/* código restaurante */}
         <div style={boxS}>
           <div style={labelMonoS}>Código de restaurante</div>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: T.fg, letterSpacing: '.12em' }}>{created.codigo_acceso}</div>
           <div style={{ fontSize: 12, color: T.fg3, marginTop: 4 }}>Lo usarás en la pantalla de login</div>
         </div>
 
-        {/* PIN — caja destacada */}
         <div style={{ ...boxS, borderColor: T.amber, background: 'rgba(232,163,59,.06)' }}>
           <div style={{ ...labelMonoS, color: T.amber }}>Tu PIN de propietario</div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
@@ -83,7 +115,6 @@ export default function RegistroPage() {
           <div style={{ fontSize: 12, color: T.amber, marginTop: 6, fontWeight: 600 }}>⚠ Cámbialo desde /owner → Personal después de entrar</div>
         </div>
 
-        {/* aviso rojo */}
         <div style={{ background: 'rgba(217,68,43,.08)', border: '1px solid rgba(217,68,43,.3)', borderRadius: 10, padding: '12px 14px', fontSize: 13, color: T.fg2, lineHeight: 1.6 }}>
           <strong style={{ color: T.vermilion }}>Importante:</strong> este PIN solo se muestra una vez. Anótalo ahora.
         </div>
@@ -105,7 +136,33 @@ export default function RegistroPage() {
 
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Field label="Tu nombre"><input type="text" placeholder="María García" value={nombre} onChange={e => setNombre(e.target.value)} required style={inputS} /></Field>
-          <Field label="Email"><input type="email" placeholder="maria@labodega.es" value={email} onChange={e => setEmail(e.target.value)} required style={inputS} /></Field>
+
+          {/* Email con detector de typos */}
+          <div>
+            <label style={labelS}>Email</label>
+            <input
+              type="email"
+              placeholder="maria@labodega.es"
+              value={email}
+              onChange={e => { setEmail(e.target.value); checkEmailWarn(e.target.value) }}
+              required
+              style={{ ...inputS, borderColor: emailWarn ? T.amber : 'var(--dark-rule-s)' }}
+            />
+            {emailWarn && (
+              <div style={{ marginTop: 6, fontSize: 12, color: T.amber, display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span>⚠</span>
+                <span>¿Quisiste decir <strong>@{emailWarn}</strong>?</span>
+                <button
+                  type="button"
+                  onClick={applyEmailFix}
+                  style={{ background: 'none', border: 'none', color: T.amber, textDecoration: 'underline', cursor: 'pointer', fontSize: 12, paddingLeft: 4, fontFamily: 'var(--font-sans)', fontWeight: 600 }}
+                >
+                  Corregir
+                </button>
+              </div>
+            )}
+          </div>
+
           <Field label="Nombre del restaurante"><input type="text" placeholder="Bodega La Plaza" value={rest} onChange={e => setRest(e.target.value)} required style={inputS} /></Field>
 
           <div>
@@ -118,7 +175,6 @@ export default function RegistroPage() {
             </div>
           </div>
 
-          {/* precio */}
           <div style={{ background: T.elev2, border: `1px solid ${T.ruleS}`, borderRadius: 10, padding: '14px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: 12, color: T.fg3, marginBottom: 2 }}>Total mensual</div>
