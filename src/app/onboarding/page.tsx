@@ -619,6 +619,293 @@ function StepCocina({ onNext }: { onNext: () => void }) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   STEP 4 — SECCIONES DE COCINA
+══════════════════════════════════════════════════════════ */
+const SECCIONES_PRESET = [
+  { nombre: 'Cocina caliente', color: '#D9442B', icono: '🔥' },
+  { nombre: 'Cocina fría',     color: '#2B6A6E', icono: '❄️' },
+  { nombre: 'Barra',           color: '#E8A33B', icono: '🍺' },
+  { nombre: 'Postres',         color: '#9B6CC9', icono: '🍮' },
+]
+
+function StepSecciones({ onNext }: { onNext: () => void }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [secciones, setSecciones] = useState<{ nombre: string; color: string; icono: string; _id: number }[]>([])
+  const [form, setForm] = useState({ nombre: '', color: C.red })
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  const añadir = () => {
+    if (!form.nombre.trim()) return
+    if (secciones.some(s => s.nombre.toLowerCase() === form.nombre.trim().toLowerCase())) {
+      setError('Ya existe una sección con ese nombre'); return
+    }
+    setSecciones(ss => [...ss, { nombre: form.nombre.trim(), color: form.color, icono: '', _id: Date.now() }])
+    setForm({ nombre: '', color: C.red })
+    setError('')
+  }
+
+  const añadirPreset = (p: typeof SECCIONES_PRESET[0]) => {
+    if (secciones.some(s => s.nombre === p.nombre)) return
+    setSecciones(ss => [...ss, { ...p, _id: Date.now() }])
+  }
+
+  const guardar = async () => {
+    setSaving(true); setError('')
+    try {
+      for (const s of secciones) {
+        const r = await fetch('/api/owner/secciones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sh() },
+          body: JSON.stringify({ nombre: s.nombre, color_kds: s.color }),
+        })
+        if (!r.ok) throw new Error((await r.json()).error || 'Error')
+      }
+      setDone(true)
+      setTimeout(onNext, 1000)
+    } catch (e: any) { setError(e.message); setSaving(false) }
+  }
+
+  if (done) return (
+    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: C.greenS, border: `2px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: C.green }}>
+        <Icon d={ICONS.check} size={28}/>
+      </div>
+      <p style={{ fontFamily: SE, fontSize: 22, fontStyle: 'italic', color: C.fg, margin: '0 0 6px' }}>{secciones.length} secciones creadas</p>
+      <p style={{ fontFamily: SC, fontSize: 17, color: C.fg3 }}>El KDS ya sabe a quién va cada ticket</p>
+    </div>
+  )
+
+  return (
+    <div>
+      {/* Explicación */}
+      <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+        <p style={{ fontFamily: SN, fontSize: 14, color: C.fg2, margin: '0 0 6px', lineHeight: 1.6 }}>
+          Las secciones son las <strong style={{ color: C.fg }}>partidas de tu cocina</strong>. Cada sección tiene su propia pantalla KDS.
+          Cuando el camarero manda una comanda, el sistema enruta cada plato a la sección correcta automáticamente.
+        </p>
+        <p style={{ fontFamily: SC, fontSize: 15, color: C.fg3, margin: 0 }}>
+          💡 Un restaurante pequeño puede funcionar con una sola sección "Cocina"
+        </p>
+      </div>
+
+      {/* Presets rápidos */}
+      <p style={{ fontFamily: SN, fontSize: 12, color: C.fg3, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 1 }}>Plantillas habituales</p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+        {SECCIONES_PRESET.map(p => {
+          const ya = secciones.some(s => s.nombre === p.nombre)
+          return (
+            <button key={p.nombre} onClick={() => añadirPreset(p)} disabled={ya}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', borderRadius: 20, border: `1px solid ${ya ? C.rule : p.color}`, background: ya ? C.e1 : `${p.color}18`, color: ya ? C.fg3 : p.color, fontFamily: SN, fontSize: 13, cursor: ya ? 'default' : 'pointer', transition: 'all .15s' }}>
+              {p.icono} {p.nombre} {ya && '✓'}
+            </button>
+          )
+        })}
+      </div>
+
+      {/* Formulario manual */}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+        <input value={form.nombre} onChange={e => { setForm(f => ({ ...f, nombre: e.target.value })); setError('') }}
+          onKeyDown={e => e.key === 'Enter' && añadir()}
+          placeholder="Nombre de sección personalizada"
+          style={{ flex: 1, background: C.e2, border: `1px solid ${error ? '#F07060' : C.rule2}`, color: C.fg, borderRadius: 8, padding: '9px 12px', fontFamily: SN, fontSize: 14, outline: 'none' }}/>
+        <input type="color" value={form.color} onChange={e => setForm(f => ({ ...f, color: e.target.value }))}
+          style={{ width: 42, height: 40, border: `1px solid ${C.rule2}`, borderRadius: 8, background: C.e2, cursor: 'pointer', padding: 4 }}/>
+        <button onClick={añadir}
+          style={{ background: C.e2, border: `1px solid ${C.rule2}`, color: C.fg2, borderRadius: 8, padding: '9px 14px', cursor: 'pointer', fontFamily: SN, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Icon d={ICONS.plus} size={14}/> Añadir
+        </button>
+      </div>
+      {error && <p style={{ fontFamily: SN, fontSize: 12, color: '#F07060', margin: '-4px 0 12px' }}>⚠ {error}</p>}
+
+      {/* Lista */}
+      {secciones.length > 0 && (
+        <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 10, overflow: 'hidden', marginBottom: 20 }}>
+          {secciones.map((s, i) => (
+            <div key={s._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: i < secciones.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
+              <div style={{ width: 10, height: 10, borderRadius: '50%', background: s.color, flexShrink: 0 }}/>
+              <span style={{ fontFamily: SN, fontSize: 14, color: C.fg, flex: 1 }}>{s.nombre}</span>
+              <button onClick={() => setSecciones(ss => ss.filter(x => x._id !== s._id))}
+                style={{ background: 'none', border: 'none', color: C.fg3, cursor: 'pointer', padding: 4 }}>
+                <Icon d={ICONS.x} size={14}/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={onNext}
+          style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+          Configuraré las secciones después
+        </button>
+        <button onClick={secciones.length ? guardar : onNext} disabled={saving}
+          style={{ background: C.red, border: 'none', color: '#fff', borderRadius: 8, padding: '11px 24px', cursor: 'pointer', fontFamily: SN, fontSize: 14, fontWeight: 600 }}>
+          {saving ? 'Guardando…' : secciones.length > 0 ? `Crear ${secciones.length} sección${secciones.length > 1 ? 'es' : ''} →` : 'Siguiente →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════
+   STEP 5 — IMPRESORAS
+══════════════════════════════════════════════════════════ */
+function StepImpresoras({ onNext }: { onNext: () => void }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [secciones, setSecciones] = useState<{ id: string; nombre: string }[]>([])
+  const [form, setForm] = useState({ nombre: 'Impresora cocina', cloud_device_id: '', seccion_id: '' })
+  const [impresoras, setImpresoras] = useState<{ nombre: string; seccion_id: string; cloud_device_id: string; _id: number }[]>([])
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [done, setDone] = useState(false)
+
+  useEffect(() => {
+    fetch('/api/owner/secciones', { headers: sh() }).then(r => r.json())
+      .then(d => {
+        setSecciones(d.secciones || [])
+        if (d.secciones?.length) setForm(f => ({ ...f, seccion_id: d.secciones[0].id }))
+      })
+  }, [])
+
+  const añadir = () => {
+    if (!form.nombre.trim() || !form.cloud_device_id.trim() || !form.seccion_id) {
+      setError('Rellena todos los campos'); return
+    }
+    setImpresoras(ps => [...ps, { ...form, cloud_device_id: form.cloud_device_id.trim().toUpperCase(), _id: Date.now() }])
+    setForm(f => ({ ...f, nombre: '', cloud_device_id: '' }))
+    setError('')
+  }
+
+  const guardar = async () => {
+    setSaving(true); setError('')
+    try {
+      for (const p of impresoras) {
+        const r = await fetch('/api/owner/impresoras', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sh() },
+          body: JSON.stringify({ nombre: p.nombre, seccion_id: p.seccion_id, cloud_device_id: p.cloud_device_id }),
+        })
+        if (!r.ok) throw new Error((await r.json()).error || 'Error')
+      }
+      setDone(true)
+      setTimeout(onNext, 1000)
+    } catch (e: any) { setError(e.message); setSaving(false) }
+  }
+
+  if (done) return (
+    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: C.greenS, border: `2px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: C.green }}>
+        <Icon d={ICONS.check} size={28}/>
+      </div>
+      <p style={{ fontFamily: SE, fontSize: 22, fontStyle: 'italic', color: C.fg, margin: '0 0 6px' }}>{impresoras.length} impresora{impresoras.length > 1 ? 's' : ''} registrada{impresoras.length > 1 ? 's' : ''}</p>
+      <p style={{ fontFamily: SC, fontSize: 17, color: C.fg3 }}>Los tickets ya tienen destino</p>
+    </div>
+  )
+
+  return (
+    <div>
+      {/* Explicación */}
+      <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+        <p style={{ fontFamily: SN, fontSize: 14, color: C.fg2, margin: '0 0 8px', lineHeight: 1.6 }}>
+          ia.rest usa <strong style={{ color: C.fg }}>Star CloudPRNT</strong> para enviar tickets a impresoras térmicas.
+          Cada impresora se vincula a una sección: cuando un plato de "Cocina caliente" se confirma, el ticket va directamente a esa impresora.
+        </p>
+        <p style={{ fontFamily: SC, fontSize: 15, color: C.fg3, margin: 0 }}>
+          💡 El Device ID aparece en el menú de red de la impresora o en el panel CloudPRNT de Star
+        </p>
+      </div>
+
+      {/* Sin impresoras todavía — opción de saltar */}
+      <div style={{ background: C.amberS, border: `1px solid ${C.amber}33`, borderRadius: 10, padding: '12px 14px', marginBottom: 20 }}>
+        <p style={{ fontFamily: SN, fontSize: 13, color: C.amber, margin: 0 }}>
+          ⚠ Si aún no tienes la impresora a mano, puedes saltarte este paso. El KDS (pantalla de cocina) funciona sin impresora física.
+          Puedes añadir impresoras desde <strong>/owner → Impresoras</strong> cuando quieras.
+        </p>
+      </div>
+
+      {/* Formulario */}
+      {secciones.length > 0 && (
+        <>
+          <div style={{ display: 'grid', gap: 10, marginBottom: 10 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div>
+                <label style={{ fontFamily: SN, fontSize: 12, color: C.fg3, display: 'block', marginBottom: 5 }}>Nombre</label>
+                <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
+                  placeholder="Impresora cocina"
+                  style={{ width: '100%', background: C.e2, border: `1px solid ${C.rule2}`, color: C.fg, borderRadius: 8, padding: '9px 12px', fontFamily: SN, fontSize: 14, outline: 'none', boxSizing: 'border-box' }}/>
+              </div>
+              <div>
+                <label style={{ fontFamily: SN, fontSize: 12, color: C.fg3, display: 'block', marginBottom: 5 }}>Sección</label>
+                <select value={form.seccion_id} onChange={e => setForm(f => ({ ...f, seccion_id: e.target.value }))}
+                  style={{ width: '100%', background: C.e2, border: `1px solid ${C.rule2}`, color: C.fg, borderRadius: 8, padding: '9px 12px', fontFamily: SN, fontSize: 14, outline: 'none', cursor: 'pointer' }}>
+                  {secciones.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                </select>
+              </div>
+            </div>
+            <div>
+              <label style={{ fontFamily: SN, fontSize: 12, color: C.fg3, display: 'block', marginBottom: 5 }}>Device ID CloudPRNT</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input value={form.cloud_device_id} onChange={e => setForm(f => ({ ...f, cloud_device_id: e.target.value.toUpperCase() }))}
+                  placeholder="00:11:62:XX:XX:XX"
+                  style={{ flex: 1, background: C.e2, border: `1px solid ${error ? '#F07060' : C.rule2}`, color: C.fg, borderRadius: 8, padding: '9px 12px', fontFamily: SM, fontSize: 14, outline: 'none', letterSpacing: 1 }}/>
+                <button onClick={añadir}
+                  style={{ background: C.e2, border: `1px solid ${C.rule2}`, color: C.fg2, borderRadius: 8, padding: '9px 14px', cursor: 'pointer', fontFamily: SN, fontSize: 13, flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Icon d={ICONS.plus} size={14}/> Añadir
+                </button>
+              </div>
+            </div>
+          </div>
+          {error && <p style={{ fontFamily: SN, fontSize: 12, color: '#F07060', margin: '0 0 12px' }}>⚠ {error}</p>}
+        </>
+      )}
+
+      {secciones.length === 0 && (
+        <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginBottom: 16, textAlign: 'center' }}>
+          <p style={{ fontFamily: SN, fontSize: 14, color: C.fg3, margin: 0 }}>
+            No hay secciones creadas. Crea secciones en el paso anterior para poder asignar impresoras.
+          </p>
+        </div>
+      )}
+
+      {/* Lista impresoras añadidas */}
+      {impresoras.length > 0 && (
+        <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 10, overflow: 'hidden', marginBottom: 16 }}>
+          {impresoras.map((p, i) => (
+            <div key={p._id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px', borderBottom: i < impresoras.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
+              <div style={{ color: C.fg3 }}><Icon d={ICONS.printer} size={16}/></div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <span style={{ fontFamily: SN, fontSize: 14, color: C.fg, fontWeight: 600 }}>{p.nombre}</span>
+                <span style={{ fontFamily: SM, fontSize: 11, color: C.fg3, marginLeft: 10 }}>{p.cloud_device_id}</span>
+              </div>
+              <span style={{ fontFamily: SN, fontSize: 12, color: C.fg3 }}>
+                {secciones.find(s => s.id === p.seccion_id)?.nombre ?? p.seccion_id}
+              </span>
+              <button onClick={() => setImpresoras(ps => ps.filter(x => x._id !== p._id))}
+                style={{ background: 'none', border: 'none', color: C.fg3, cursor: 'pointer', padding: 4 }}>
+                <Icon d={ICONS.x} size={14}/>
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={onNext}
+          style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+          Saltarme las impresoras
+        </button>
+        <button onClick={impresoras.length ? guardar : onNext} disabled={saving}
+          style={{ background: C.red, border: 'none', color: '#fff', borderRadius: 8, padding: '11px 24px', cursor: 'pointer', fontFamily: SN, fontSize: 14, fontWeight: 600 }}>
+          {saving ? 'Guardando…' : impresoras.length > 0 ? `Registrar ${impresoras.length} impresora${impresoras.length > 1 ? 's' : ''} →` : 'Siguiente →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════
    STEP 4 — MESAS
 ══════════════════════════════════════════════════════════ */
 function StepMesas({ session, onComplete }: { session: any; onComplete: () => void }) {
@@ -789,6 +1076,114 @@ function StepMesas({ session, onComplete }: { session: any; onComplete: () => vo
 }
 
 /* ══════════════════════════════════════════════════════════
+   STEP 7 — PRIMER TURNO
+══════════════════════════════════════════════════════════ */
+function StepPrimerTurno({ session, onComplete }: { session: any; onComplete: () => void }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [abriendo, setAbriendo] = useState(false)
+  const [turnoAbierto, setTurnoAbierto] = useState(false)
+  const [error, setError] = useState('')
+
+  const abrirTurno = async () => {
+    setAbriendo(true); setError('')
+    try {
+      const r = await fetch('/api/owner/turno', { method: 'POST', headers: sh() })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error || 'Error al abrir turno')
+      setTurnoAbierto(true)
+    } catch (e: any) { setError(e.message); setAbriendo(false) }
+  }
+
+  if (turnoAbierto) return (
+    <div style={{ textAlign: 'center', padding: '48px 0' }}>
+      <div style={{ width: 56, height: 56, borderRadius: '50%', background: C.greenS, border: `2px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', color: C.green }}>
+        <Icon d={ICONS.check} size={28}/>
+      </div>
+      <p style={{ fontFamily: SE, fontSize: 24, fontStyle: 'italic', color: C.fg, margin: '0 0 8px' }}>
+        Turno abierto. Ya estáis en marcha.
+      </p>
+      <p style={{ fontFamily: SC, fontSize: 18, color: C.fg3, margin: '0 0 28px' }}>
+        Ahora el camarero ya puede entrar a /edge y lanzar la primera comanda
+      </p>
+      <button onClick={onComplete}
+        style={{ background: C.red, border: 'none', color: '#fff', borderRadius: 10, padding: '13px 32px', cursor: 'pointer', fontFamily: SN, fontSize: 15, fontWeight: 700, letterSpacing: '.3px' }}>
+        Ir al panel de control →
+      </button>
+    </div>
+  )
+
+  return (
+    <div>
+      {/* Resumen de lo configurado */}
+      <div style={{ background: C.greenS, border: `1px solid ${C.green}44`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+          <div style={{ color: C.green }}><Icon d={ICONS.check} size={16}/></div>
+          <span style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.green }}>Configuración completada</span>
+        </div>
+        <p style={{ fontFamily: SN, fontSize: 13, color: '#7AC47F', margin: 0, lineHeight: 1.6 }}>
+          Carta · Personal · Cocina y flujos · Secciones · Impresoras · Mesas.
+          Solo queda abrir el primer turno y ya podéis empezar a tomar comandas.
+        </p>
+      </div>
+
+      {/* Qué es un turno */}
+      <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20 }}>
+        <p style={{ fontFamily: SN, fontSize: 14, color: C.fg2, margin: '0 0 10px', lineHeight: 1.6 }}>
+          El <strong style={{ color: C.fg }}>turno</strong> es el contenedor de todas las operaciones del servicio: comandas, facturas, cobros y métricas quedan agrupados dentro del turno activo.
+          Al cerrarlo al final del servicio, el sistema calcula el resumen del día.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+          {[
+            { icon: ICONS.mic,   label: 'Comandas por voz',    desc: 'El camarero habla. El ticket va a cocina.' },
+            { icon: ICONS.chef,  label: 'KDS en tiempo real',  desc: 'La cocina ve y gestiona cada ticket.' },
+            { icon: ICONS.book,  label: 'Facturas legales',    desc: 'VeriFactu con hash SHA-256 y QR AEAT.' },
+          ].map((item, i) => (
+            <div key={i} style={{ background: C.e2, borderRadius: 10, padding: '12px', textAlign: 'center' }}>
+              <div style={{ color: C.red, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+                <Icon d={item.icon} size={20}/>
+              </div>
+              <p style={{ fontFamily: SN, fontSize: 12, fontWeight: 600, color: C.fg, margin: '0 0 4px' }}>{item.label}</p>
+              <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: 0, lineHeight: 1.4 }}>{item.desc}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Accesos rápidos tras completar */}
+      <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '14px 16px', marginBottom: 24 }}>
+        <p style={{ fontFamily: SN, fontSize: 12, color: C.fg3, margin: '0 0 10px', textTransform: 'uppercase', letterSpacing: 1 }}>Tras abrir el turno, comparte estas URLs</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {[
+            { url: '/edge',    label: 'Camarero — sala',    color: C.red,   pin: 'PIN del camarero' },
+            { url: '/kds',     label: 'Cocina — KDS',       color: C.amber, pin: 'PIN de cocina' },
+            { url: '/owner',   label: 'Owner — control',    color: '#5B8FD4', pin: 'PIN 2026' },
+          ].map(item => (
+            <div key={item.url} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 10px', background: C.e2, borderRadius: 8 }}>
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: item.color, flexShrink: 0 }}/>
+              <span style={{ fontFamily: SM, fontSize: 13, color: item.color, flexShrink: 0 }}>ia-rest.vercel.app{item.url}</span>
+              <span style={{ fontFamily: SN, fontSize: 12, color: C.fg3, marginLeft: 'auto' }}>{item.pin}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {error && <p style={{ fontFamily: SN, fontSize: 13, color: '#F07060', marginBottom: 16 }}>⚠ {error}</p>}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={onComplete}
+          style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+          Abriré el turno después desde /owner
+        </button>
+        <button onClick={abrirTurno} disabled={abriendo}
+          style={{ background: abriendo ? C.e2 : C.red, border: 'none', color: abriendo ? C.fg3 : '#fff', borderRadius: 8, padding: '12px 28px', cursor: abriendo ? 'default' : 'pointer', fontFamily: SN, fontSize: 15, fontWeight: 700, transition: 'all .2s' }}>
+          {abriendo ? 'Abriendo turno…' : '🚀 Abrir primer turno'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════
    MAIN WIZARD
 ══════════════════════════════════════════════════════════ */
 const STEPS = [
@@ -808,17 +1203,38 @@ const STEPS = [
   },
   {
     n:        '03',
-    label:    'Cocina y flujos',
-    title:    'Cómo funciona esto.',
-    subtitle: 'El viaje de un pedido desde que el camarero habla hasta que llega al ticket de cocina.',
+    label:    'Cómo funciona',
+    title:    'El viaje de un pedido.',
+    subtitle: 'Del "dos cañas y una ensalada" al ticket en cocina en menos de medio segundo.',
     caveat:   'Lee esto una vez · Después lo entiendes en el primer turno',
   },
   {
     n:        '04',
+    label:    'Secciones',
+    title:    'Las partidas de tu cocina.',
+    subtitle: 'Cada sección tiene su propia pantalla KDS. Los platos van a donde tienen que ir, sin confusiones.',
+    caveat:   'Un bar pequeño puede funcionar con una sola sección',
+  },
+  {
+    n:        '05',
+    label:    'Impresoras',
+    title:    'Tickets físicos en cocina.',
+    subtitle: 'Si tienes impresoras térmicas Star, conéctalas en 30 segundos con su Device ID CloudPRNT.',
+    caveat:   'El KDS funciona sin impresora · Añade las impresoras cuando quieras',
+  },
+  {
+    n:        '06',
     label:    'Mesas',
     title:    'El plano de tu local.',
     subtitle: 'Define las zonas y cuántas mesas tiene cada una. ia.rest genera los códigos automáticamente.',
     caveat:   'Puedes reorganizar el plano en /owner → Mesas después',
+  },
+  {
+    n:        '07',
+    label:    'Primer turno',
+    title:    '¡Listos para servir!',
+    subtitle: 'Abre el primer turno y empieza. El camarero puede mandar la primera comanda por voz ahora mismo.',
+    caveat:   'Todo listo · Que empiece el servicio',
   },
 ]
 
@@ -939,7 +1355,10 @@ export default function OnboardingPage() {
           {step === 0 && <StepCarta session={session} onNext={() => setStep(1)}/>}
           {step === 1 && <StepPersonal session={session} onNext={() => setStep(2)}/>}
           {step === 2 && <StepCocina onNext={() => setStep(3)}/>}
-          {step === 3 && <StepMesas session={session} onComplete={complete}/>}
+          {step === 3 && <StepSecciones onNext={() => setStep(4)}/>}
+          {step === 4 && <StepImpresoras onNext={() => setStep(5)}/>}
+          {step === 5 && <StepMesas session={session} onComplete={() => setStep(6)}/>}
+          {step === 6 && <StepPrimerTurno session={session} onComplete={complete}/>}
         </div>
 
         {/* Step counter */}
