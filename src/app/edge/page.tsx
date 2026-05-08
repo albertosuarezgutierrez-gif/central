@@ -8,6 +8,7 @@ import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAlertas } from '@/hooks/useAlertas'
 import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
+import FueraCartaPill from '@/components/edge/FueraCartaPill'
 import AlertaBanner from '@/components/AlertaBanner'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import ComandaModModal, { ItemMod } from '@/components/ComandaModModal'
@@ -502,6 +503,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           </a>
         </div>
       </div>
+
+      {/* FUERA DE CARTA — pill visible solo cuando hay especiales */}
+      <FueraCartaPill restauranteId={session.restaurante_id} />
 
       {/* ══ TAB: HABLAR — chat limpio, sin plano ═══════════════ */}
       {tab==='hablar' && (

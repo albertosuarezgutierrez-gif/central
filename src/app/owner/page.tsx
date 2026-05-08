@@ -5,6 +5,7 @@ import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { supabase } from '@/lib/supabase'
 import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
+import FueraCartaSection from '@/components/owner/FueraCartaSection'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -1691,7 +1692,7 @@ function FormatsEditor({ productoId, sh }: { productoId: string; sh: () => Recor
   )
 }
 
-function CartaTab() {
+function CartaTab({ restauranteId }: { restauranteId: string }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [view, setView] = useState<CartaView>('lista')
   const [productos, setProductos] = useState<Producto[]>([])
@@ -1994,6 +1995,7 @@ function CartaTab() {
       {/* ── LISTA VIEW ── */}
       {view === 'lista' && (
         <>
+          <FueraCartaSection restauranteId={restauranteId} />
           {productos.length === 0 ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
               <div style={{ fontFamily: SE, fontSize: 22, color: C.ink3, marginBottom: 8 }}>Carta vacía</div>
@@ -5089,7 +5091,7 @@ export default function OwnerPage() {
           {tab === 'camareros'      && <CamarerosTab/>}
           {tab === 'mesas'          && <MesasTab/>}
           {tab === 'secciones'      && <SeccionesTab/>}
-          {tab === 'carta'          && <CartaTab/>}
+          {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
           {tab === 'turno'          && <TurnoTab/>}
           {tab === 'caja'           && <CajaTab/>}
           {tab === 'analytics'      && <Analytics compact />}
