@@ -201,54 +201,113 @@ export default function ManualComanda({
       </div>
 
       {/* ── STEP: MESAS ── */}
-      {step === 'mesa' && (
-        <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-          {mesasPlano && mesasPlano.length > 0 && zonasPlano && zonasPlano.length > 0 ? (
-            /* Plano visual cuando hay datos de posición */
-            <div style={{ flex:1, overflowY:'auto', padding:'6px 10px 10px' }}>
-              <div style={{ fontFamily:"'JetBrains Mono',monospace", fontSize:9, color:L.ink4, letterSpacing:'.07em', textTransform:'uppercase', marginBottom:6, paddingLeft:2 }}>
-                Toca una mesa para comandar
-              </div>
-              <PlanoSala
-                mesas={mesasPlano}
-                zonas={zonasPlano}
-                resaltarMias={false}
-                mostrarLibres={true}
-                onMesaTap={m => {
-                  const mesaData = mesas.find(mx => mx.id === m.id)
-                  if (mesaData) selectMesa(mesaData)
-                  else selectMesa({ id: m.id, codigo: m.codigo, zona: m.zona, estado: m.estado })
-                }}
-              />
+      {step === 'mesa' && (() => {
+        // Enriquecer mesas con datos de tiempo desde mesasPlano si disponible
+        const mesasEnriquecidas = mesasFiltradas.map(m => {
+          const plano = mesasPlano?.find(p => p.id === m.id)
+          return { ...m, minutos: plano?.minutos_abierta ?? null, capacidad: plano?.capacidad ?? null }
+        })
+        // Zonas para tabs — usar zonasPlano si hay, si no usar zonas string[]
+        const zonaTabs = zonasPlano && zonasPlano.length > 0
+          ? zonasPlano.map(z => ({ key: z.tipo, label: z.nombre }))
+          : zonas.map(z => ({ key: z, label: z }))
+
+        // Colores de sombra por estado (técnica shadow ring tintada)
+        const shadowCard = (estado: string) => {
+          const m: Record<string, string> = {
+            libre:   `rgba(200,184,154,0.45) 0px 0px 0px 1px`,
+            activa:  `rgba(63,125,68,0.35) 0px 0px 0px 1px, rgba(63,125,68,0.12) 0px 5px 14px -3px`,
+            marchar: `rgba(45,122,45,0.4) 0px 0px 0px 1px, rgba(45,122,45,0.16) 0px 5px 14px -3px`,
+            aviso:   `rgba(232,163,59,0.4) 0px 0px 0px 1px, rgba(232,163,59,0.14) 0px 5px 14px -3px`,
+            urgente: `rgba(217,68,43,0.45) 0px 0px 0px 1px, rgba(217,68,43,0.18) 0px 5px 14px -3px`,
+            cuenta:  `rgba(107,95,82,0.35) 0px 0px 0px 1px, rgba(107,95,82,0.1) 0px 5px 14px -3px`,
+          }
+          return m[estado] ?? m.libre
+        }
+        const bgCard = (estado: string) => ({
+          libre:'#F6F1E7', activa:'rgba(63,125,68,.08)', marchar:'rgba(63,125,68,.14)',
+          aviso:'rgba(232,163,59,.08)', urgente:'rgba(217,68,43,.08)', cuenta:'#EFE7D6',
+        }[estado] ?? '#F6F1E7')
+        const fgCard = (estado: string) => ({
+          libre:L.ink4, activa:'#2A5C2E', marchar:'#1F4A23',
+          aviso:'#A8761A', urgente:L.red, cuenta:L.ink3,
+        }[estado] ?? L.ink4)
+        const tiempoStr = (min: number | null) => {
+          if (!min || min < 1) return null
+          return min < 60 ? `${min}'` : `${Math.floor(min/60)}h${min%60?min%60+"'":""}`
+        }
+        const nCols = mesasEnriquecidas.length <= 4 ? 2 : 3
+
+        return (
+          <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
+            {/* Tabs de zona */}
+            <div style={{ padding:'0 14px', borderBottom:`1px solid ${L.rule}`, background:L.bone, display:'flex', gap:0, overflowX:'auto', scrollbarWidth:'none', flexShrink:0 }}>
+              <button
+                onPointerDown={() => setZonaFiltro('todas')}
+                style={{ border:'none', background:'none', padding:'9px 10px', fontFamily:SN, fontWeight: zonaFiltro==='todas'?700:500, fontSize:'0.82rem', color: zonaFiltro==='todas'?L.ink:L.ink3, borderBottom: zonaFiltro==='todas'?`2px solid ${L.red}`:'2px solid transparent', cursor:'pointer', whiteSpace:'nowrap', marginBottom:-1, transition:'all .14s' }}>
+                Todas
+              </button>
+              {zonaTabs.map(z => {
+                const cnt = mesas.filter(m => m.zona === z.key && m.estado !== 'libre').length
+                return (
+                  <button key={z.key}
+                    onPointerDown={() => setZonaFiltro(z.key)}
+                    style={{ border:'none', background:'none', padding:'9px 10px', fontFamily:SN, fontWeight: zonaFiltro===z.key?700:500, fontSize:'0.82rem', color: zonaFiltro===z.key?L.ink:L.ink3, borderBottom: zonaFiltro===z.key?`2px solid ${L.red}`:'2px solid transparent', cursor:'pointer', whiteSpace:'nowrap', marginBottom:-1, transition:'all .14s', display:'flex', alignItems:'center', gap:5 }}>
+                    {z.label}
+                    {cnt > 0 && <span style={{ background: zonaFiltro===z.key?L.red:L.bg2, color: zonaFiltro===z.key?'#fff':L.ink3, borderRadius:9999, padding:'0 6px', fontSize:'0.62rem', fontWeight:700, lineHeight:'16px' }}>{cnt}</span>}
+                  </button>
+                )
+              })}
             </div>
-          ) : (
-            /* Fallback: grid clásico si no hay plano configurado */
-            <div className="step-mesa" style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-              <div style={{ padding:'10px 14px 6px', borderBottom:`1px solid ${L.rule}`, flexShrink:0, display:'flex', gap:6, overflowX:'auto' }}>
-                <button className={`zb ${zonaFiltro==='todas'?'on':''}`} onPointerDown={() => setZonaFiltro('todas')}>TODAS</button>
-                {zonas.map(z => (
-                  <button key={z} className={`zb ${zonaFiltro===z?'on':''}`} onPointerDown={() => setZonaFiltro(z)}>{z}</button>
-                ))}
-              </div>
-              <div style={{ flex:1, overflow:'auto', padding:14 }}>
-                <div className="mg" style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(80px,1fr))', gap:10 }}>
-                  {mesasFiltradas.map(m => (
+
+            {/* Info strip */}
+            <div style={{ padding:'8px 14px 4px', display:'flex', justifyContent:'space-between', alignItems:'center', flexShrink:0 }}>
+              <span style={{ fontFamily:SM, fontSize:'0.6rem', color:L.ink4, letterSpacing:'.08em', textTransform:'uppercase' }}>
+                {mesasEnriquecidas.length} mesa{mesasEnriquecidas.length!==1?'s':''} · {mesasEnriquecidas.filter(m=>m.estado!=='libre').length} ocupadas
+              </span>
+            </div>
+
+            {/* Grid mesas */}
+            <div style={{ flex:1, overflow:'auto', padding:'4px 14px 20px' }}>
+              <div style={{ display:'grid', gridTemplateColumns:`repeat(${nCols}, 1fr)`, gap:10 }}>
+                {mesasEnriquecidas.map(m => {
+                  const t = tiempoStr(m.minutos)
+                  return (
                     <button key={m.id} onPointerDown={() => selectMesa(m)}
-                      style={{ background: ESTADO_BG[m.estado]??L.bone, border:`2px solid ${ESTADO_BORDER[m.estado]??L.rule}`, borderRadius:8, padding:'12px 8px 10px', cursor:'pointer', display:'flex', flexDirection:'column', gap:4, textAlign:'center', alignItems:'center', transition:'transform .1s' }}>
-                      <span style={{ fontFamily:SE, fontSize:22, fontWeight:500, color:L.ink, lineHeight:1 }}>{m.codigo}</span>
-                      <span style={{ fontFamily:SM, fontSize:8, color: ESTADO_DOT[m.estado]??L.ink4, letterSpacing:'.06em', textTransform:'uppercase' }}>{m.estado}</span>
-                      {m.estado !== 'libre' && <div style={{ width:6, height:6, borderRadius:999, background: ESTADO_DOT[m.estado]??L.rule }}/>}
+                      style={{ padding: nCols===3?'13px 8px 11px':'16px 10px 14px', borderRadius:12, border:'none', background:bgCard(m.estado), boxShadow:shadowCard(m.estado), cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, transition:'all .15s cubic-bezier(.4,0,.2,1)', WebkitTapHighlightColor:'transparent' }}>
+                      <span style={{ fontFamily:SE, fontStyle:'italic', fontSize: nCols===3?'1.25rem':'1.4rem', fontWeight:500, color:L.ink, lineHeight:1 }}>
+                        {m.codigo}
+                      </span>
+                      <span style={{ fontFamily:SM, fontSize:'0.65rem', fontWeight:700, color:fgCard(m.estado), letterSpacing:'.05em', textTransform:'uppercase' }}>
+                        {t ?? (m.estado==='libre' ? 'libre' : m.estado)}
+                      </span>
+                      {m.capacidad && (
+                        <span style={{ fontFamily:SN, fontSize:'0.58rem', color:L.ink4, marginTop:1 }}>{m.capacidad} pax</span>
+                      )}
                     </button>
-                  ))}
-                  {mesasFiltradas.length === 0 && (
-                    <div style={{ gridColumn:'1/-1', fontFamily:SE, fontSize:14, color:L.ink3, fontStyle:'italic', padding:24 }}>Sin mesas.</div>
-                  )}
-                </div>
+                  )
+                })}
+                {mesasEnriquecidas.length === 0 && (
+                  <div style={{ gridColumn:'1/-1', fontFamily:SE, fontStyle:'italic', fontSize:14, color:L.ink3, padding:32, textAlign:'center' }}>
+                    Sin mesas en esta zona.
+                  </div>
+                )}
               </div>
             </div>
-          )}
-        </div>
-      )}
+
+            {/* Leyenda */}
+            <div style={{ padding:'8px 14px 10px', borderTop:`1px solid ${L.rule}`, display:'flex', gap:12, flexWrap:'wrap', justifyContent:'center', flexShrink:0 }}>
+              {[['#C8B89A','Libre'],['#3F7D44','< 15\''],['#E8A33B','15–30\''],['#E07040','30–45\''],['#D9442B','> 45\'']].map(([c,l]) => (
+                <div key={l} style={{ display:'flex', alignItems:'center', gap:4 }}>
+                  <span style={{ width:7, height:7, borderRadius:'50%', background:c, display:'inline-block' }}/>
+                  <span style={{ fontFamily:SN, fontSize:'0.62rem', color:L.ink4 }}>{l}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
+
 
       {/* ── STEP: CARTA ── */}
       {step === 'carta' && (
