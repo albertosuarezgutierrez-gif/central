@@ -5097,6 +5097,73 @@ function SetupChecklist({ status, setTab, onDismiss }: {
 
 
 /* ─── Tab Suscripción ──────────────────────────────────────────────────────── */
+/* ─── ContratoSection ─── */
+function ContratoSection({ restauranteId }: { restauranteId: string }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [aceptacion, setAceptacion] = React.useState<{ accepted_at: string; contract_version: string; ip_address: string } | null>(null)
+  const [loading, setLoading] = React.useState(true)
+
+  React.useEffect(() => {
+    fetch(`/api/owner/contrato?restaurante_id=${restauranteId}`, { headers: sh() })
+      .then(r => r.json())
+      .then(d => { setAceptacion(d.aceptacion ?? null); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [restauranteId])
+
+  const fecha = aceptacion
+    ? new Date(aceptacion.accepted_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+    : null
+
+  return (
+    <div style={{ marginTop: 24, background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '20px 24px' }}>
+      <div style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase' as const, marginBottom: 14 }}>
+        Mi contrato
+      </div>
+
+      {loading ? (
+        <div style={{ fontSize: 12, color: C.ink3 }}>Cargando...</div>
+      ) : aceptacion ? (
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap' as const, gap: 4 }}>
+            <div>
+              <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>
+                Contrato de Prestación de Servicios SaaS
+              </div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 2 }}>
+                Versión {aceptacion.contract_version} · Aceptado el {fecha}
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#3F7D44" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="4 12 10 18 20 6"/>
+              </svg>
+              <span style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: '#3F7D44' }}>ACEPTADO</span>
+            </div>
+          </div>
+          <a
+            href="/contrato-iarest-v1.pdf"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 14px', textDecoration: 'none', color: C.ink2, fontFamily: SN, fontSize: 12, fontWeight: 600, alignSelf: 'flex-start' as const }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+            </svg>
+            Descargar contrato (PDF)
+          </a>
+        </div>
+      ) : (
+        <div style={{ fontSize: 13, color: C.ink3, lineHeight: 1.6 }}>
+          No se encontró registro de aceptación. Si acabas de registrarte, puede tardar unos minutos en aparecer.{' '}
+          <a href="/contrato-iarest-v1.pdf" target="_blank" rel="noopener noreferrer" style={{ color: C.red }}>
+            Descargar contrato aquí.
+          </a>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function SuscripcionTab({ restauranteId, onSetupClick }: { restauranteId: string; onSetupClick: () => void }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [billing, setBilling] = React.useState<any>(null)
@@ -5259,6 +5326,9 @@ function SuscripcionTab({ restauranteId, onSetupClick }: { restauranteId: string
           WhatsApp +34 637 349 990
         </a>
       </div>
+
+      {/* ─── Mi contrato ─── */}
+      <ContratoSection restauranteId={restauranteId} />
     </div>
   )
 }
