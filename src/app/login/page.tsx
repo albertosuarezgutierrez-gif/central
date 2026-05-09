@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { storeRestauranteCode } from '@/hooks/useAuth'
 
-const C = { bg:'#14110E', e1:'#1F1A15', fg:'#F6F1E7', fg3:'#8D8270', rule:'#2F2820', rS:'#4A3F33', red:'#D9442B', teal:'#2B6A6E', green:'#3F7D44' }
+const C = { bg:'#F6F1E7', e1:'#FBF8F1', e2:'#EFE7D6', fg:'#1A1714', fg3:'#6B5F52', rule:'#D8CDB6', rS:'#B8A98B', red:'#D9442B', teal:'#2B6A6E', green:'#3F7D44' }
 const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
@@ -197,7 +197,7 @@ export default function LoginPage() {
     <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 24px 48px', userSelect:'none' }}>
       {/* Banner bienvenida post-checkout */}
       {checkoutSuccess && (
-        <div style={{ position:'fixed', top:16, left:'50%', transform:'translateX(-50%)', zIndex:100, background:'#1a2d1b', border:'1px solid #3F7D44', borderRadius:12, padding:'12px 20px', display:'flex', alignItems:'center', gap:10, boxShadow:'0 4px 24px rgba(0,0,0,.4)', maxWidth:'90vw' }}>
+        <div style={{ position:'fixed', top:16, left:'50%', transform:'translateX(-50%)', zIndex:100, background:'#D4E4D2', border:'1px solid #3F7D44', borderRadius:12, padding:'12px 20px', display:'flex', alignItems:'center', gap:10, boxShadow:'rgba(63,125,68,0.15) 0px 4px 24px', maxWidth:'90vw' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#3F7D44" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
           <div style={{ fontFamily:SN, fontSize:13, color:'#a8d4ab', lineHeight:1.4 }}>
             <strong style={{ color:'#c8e6c9' }}>¡Cuenta activada!</strong><br/>
@@ -206,17 +206,17 @@ export default function LoginPage() {
         </div>
       )}
       <style>{`
-        .pk{width:76px;height:76px;border-radius:999px;background:#1F1A15;border:1px solid #2F2820;color:#F6F1E7;font-family:'Inter Tight',system-ui,sans-serif;font-size:24px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .1s,transform .08s;}
-        .pk:active{background:#2A241D;transform:scale(.9);}
+        .pk{width:76px;height:76px;border-radius:999px;background:#FBF8F1;border:none;box-shadow:rgba(184,169,139,0.5) 0px 0px 0px 1px, rgba(184,169,139,0.15) 0px 2px 8px;color:#1A1714;font-family:'Inter Tight',system-ui,sans-serif;font-size:24px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;touch-action:manipulation;transition:background .1s,transform .08s;}
+        .pk:active{background:#EFE7D6;transform:scale(.9);}
         @media(max-height:700px){.pk{width:64px;height:64px;font-size:20px}}
         @keyframes pulse{50%{opacity:.3}}
         @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-        .cam-btn{width:100%;max-width:260px;padding:14px 16px;background:#1F1A15;border:1px solid #2F2820;border-radius:4px;color:#F6F1E7;font-family:'Inter Tight',system-ui,sans-serif;font-size:15px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;transition:background .1s;-webkit-tap-highlight-color:transparent;}
-        .cam-btn:active{background:#2A241D;}
+        .cam-btn{width:100%;max-width:260px;padding:14px 16px;background:#FBF8F1;border:none;box-shadow:rgba(184,169,139,0.5) 0px 0px 0px 1px;border-radius:12px;color:#1A1714;font-family:'Inter Tight',system-ui,sans-serif;font-size:15px;font-weight:600;cursor:pointer;text-align:left;display:flex;align-items:center;gap:12px;transition:background .1s;-webkit-tap-highlight-color:transparent;}
+        .cam-btn:active{background:#EFE7D6;}
       `}</style>
 
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginBottom:28 }}>
-        <svg width="52" height="52" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1F1A15"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
+        <svg width="52" height="52" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1A1714"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
         <div style={{ fontFamily:SE, fontSize:26, color:C.fg, fontWeight:500 }}>ia<span style={{color:C.red}}>.</span>rest</div>
         {restauranteCode && <div style={{ fontFamily:SM, fontSize:9, color:C.fg3, letterSpacing:'.1em' }}>{restauranteCode}</div>}
       </div>
@@ -245,7 +245,7 @@ export default function LoginPage() {
                   width:'100%', padding:'14px 16px',
                   background: selectedRestaurante === r.id ? C.red : C.e1,
                   border: `1px solid ${selectedRestaurante === r.id ? C.red : C.rule}`,
-                  borderRadius:6, color:C.fg,
+                  borderRadius:9999, color:C.fg,
                   fontFamily:SN, fontSize:14, fontWeight:600,
                   cursor:'pointer', textAlign:'left',
                   display:'flex', alignItems:'center', justifyContent:'space-between',
@@ -258,7 +258,7 @@ export default function LoginPage() {
           </div>
           <button onPointerDown={elegirRestaurante}
             disabled={!selectedRestaurante || loading}
-            style={{ width:'100%', padding:'14px', background:selectedRestaurante?C.red:'#333', border:'none', borderRadius:6, color:C.fg, fontFamily:SN, fontSize:15, fontWeight:700, cursor:selectedRestaurante?'pointer':'not-allowed', opacity:loading?0.6:1 }}>
+            style={{ width:'100%', padding:'14px', background:selectedRestaurante?C.red:C.e2, border:'none', borderRadius:9999, color:C.fg, fontFamily:SN, fontSize:15, fontWeight:700, cursor:selectedRestaurante?'pointer':'not-allowed', opacity:loading?0.6:1 }}>
             {loading ? 'Entrando...' : 'Entrar →'}
           </button>
           <button onPointerDown={() => { setCuentaSelector(null); setPin(''); setSelectedRestaurante('') }}
@@ -344,7 +344,7 @@ export default function LoginPage() {
               <button onPointerDown={()=>{setShowCodeInput(true);setCodeInput('')}} style={{ marginTop:24, background:'none', border:'none', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', cursor:'pointer', textDecoration:'underline', textDecorationStyle:'dotted' }}>CAMBIAR RESTAURANTE</button>
               <a href="/recuperar-pin" style={{ marginTop:8, display:'block', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', textAlign:'center', textDecoration:'underline', textDecorationStyle:'dotted' }}>¿OLVIDASTE TU PIN?</a>
               {(!restauranteCode || restauranteCode === 'DEMO') && (
-                <div style={{ marginTop:12, fontFamily:SM, fontSize:9, color:'#2F2820', textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>ADMIN · 0000 &nbsp;|&nbsp; OWNER · 2026 &nbsp;|&nbsp; SUPER · 9999</div>
+                <div style={{ marginTop:12, fontFamily:SM, fontSize:9, color:C.rS, textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>ADMIN · 0000 &nbsp;|&nbsp; OWNER · 2026 &nbsp;|&nbsp; SUPER · 9999</div>
               )}
             </>
           )}

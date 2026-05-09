@@ -5,6 +5,15 @@ import { useState } from 'react'
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
+const C = {
+  bg:'#F6F1E7', bg1:'#FBF8F1', bg2:'#EFE7D6',
+  fg:'#1A1714', fg2:'#3A332C', fg3:'#6B5F52',
+  rule:'#D8CDB6', rS:'#B8A98B',
+  red:'#D9442B', green:'#3F7D44',
+}
+const SE = "'Newsreader',Georgia,serif"
+const SN = "'Inter Tight',system-ui,sans-serif"
+
 export default function RecuperarPinPage() {
   const [email, setEmail]     = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,7 +24,6 @@ export default function RecuperarPinPage() {
     e.preventDefault()
     setError('')
     setLoading(true)
-
     try {
       const res = await fetch(`${SUPABASE_URL}/functions/v1/recuperar-pin`, {
         method: 'POST',
@@ -25,37 +33,27 @@ export default function RecuperarPinPage() {
       const data = await res.json()
       if (!data.success) throw new Error(data.error)
       setSent(true)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Error')
     } finally {
       setLoading(false)
     }
   }
 
-  const bg    = '#14110E'
-  const elev  = '#1F1A15'
-  const fg    = '#F6F1E7'
-  const fg3   = '#6B5F52'
-  const ruleS = '#2F2820'
-  const red   = '#D9442B'
-  const green = '#3F7D44'
-  const SE    = "'Newsreader',Georgia,serif"
-  const SN    = "'Inter Tight',system-ui,sans-serif"
-
   if (sent) return (
-    <div style={{ minHeight: '100vh', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: SN }}>
-      <a href="/" style={{ textDecoration: 'none', marginBottom: 32 }}>
-        <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 26, color: fg }}>ia<span style={{ color: red }}>.</span>rest</span>
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 16px', fontFamily:SN }}>
+      <a href="/" style={{ textDecoration:'none', marginBottom:32 }}>
+        <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:26, color:C.fg }}>ia<span style={{ color:C.red }}>.</span>rest</span>
       </a>
-      <div style={{ width: '100%', maxWidth: 420, background: elev, borderRadius: 16, border: `1px solid ${ruleS}`, padding: '36px 32px', textAlign: 'center' }}>
-        <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(63,125,68,.12)', border: `2px solid ${green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
+      <div style={{ width:'100%', maxWidth:420, background:C.bg1, borderRadius:16, border:'none', boxShadow:`${C.rS} 0px 0px 0px 1px, rgba(184,169,139,0.15) 0px 8px 32px`, padding:'36px 32px', textAlign:'center' }}>
+        <div style={{ width:48, height:48, borderRadius:'50%', background:'rgba(63,125,68,.1)', border:`2px solid ${C.green}`, display:'flex', alignItems:'center', justifyContent:'center', margin:'0 auto 16px' }}>
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 12 10 18 20 6"/></svg>
         </div>
-        <h2 style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: fg, margin: '0 0 8px' }}>Email enviado</h2>
-        <p style={{ fontSize: 13, color: fg3, lineHeight: 1.6, margin: '0 0 24px' }}>
+        <h2 style={{ fontFamily:SE, fontStyle:'italic', fontSize:22, color:C.fg, margin:'0 0 8px' }}>Email enviado</h2>
+        <p style={{ fontSize:13, color:C.fg3, lineHeight:1.6, margin:'0 0 24px' }}>
           Si existe una cuenta con ese email, recibirás tus datos de acceso en unos segundos.
         </p>
-        <a href="/login" style={{ display: 'block', background: red, color: '#fff', textDecoration: 'none', textAlign: 'center', padding: '13px', borderRadius: 10, fontSize: 14, fontWeight: 700 }}>
+        <a href="/login" style={{ display:'block', background:C.red, color:'#fff', textDecoration:'none', textAlign:'center', padding:'13px', borderRadius:9999, fontSize:14, fontWeight:700 }}>
           Volver al login →
         </a>
       </div>
@@ -63,50 +61,43 @@ export default function RecuperarPinPage() {
   )
 
   return (
-    <div style={{ minHeight: '100vh', background: bg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: SN }}>
-      <a href="/" style={{ textDecoration: 'none', marginBottom: 32 }}>
-        <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 26, color: fg }}>ia<span style={{ color: red }}>.</span>rest</span>
+    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 16px', fontFamily:SN }}>
+      <a href="/" style={{ textDecoration:'none', marginBottom:32 }}>
+        <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:26, color:C.fg }}>ia<span style={{ color:C.red }}>.</span>rest</span>
       </a>
-      <div style={{ width: '100%', maxWidth: 420, background: elev, borderRadius: 16, border: `1px solid ${ruleS}`, padding: '36px 32px' }}>
-        <h1 style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 24, color: fg, margin: '0 0 8px' }}>Recuperar acceso</h1>
-        <p style={{ fontSize: 13, color: fg3, margin: '0 0 28px', lineHeight: 1.6 }}>
+      <div style={{ width:'100%', maxWidth:420, background:C.bg1, borderRadius:16, border:'none', boxShadow:`${C.rS} 0px 0px 0px 1px, rgba(184,169,139,0.15) 0px 8px 32px`, padding:'36px 32px' }}>
+        <h1 style={{ fontFamily:SE, fontStyle:'italic', fontSize:24, color:C.fg, margin:'0 0 8px' }}>Recuperar acceso</h1>
+        <p style={{ fontSize:13, color:C.fg3, margin:'0 0 28px', lineHeight:1.6 }}>
           Introduce el email con el que te registraste y te enviaremos tu código de restaurante y PIN.
         </p>
-
-        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <form onSubmit={handleSubmit} style={{ display:'flex', flexDirection:'column', gap:16 }}>
           <div>
-            <label style={{ display: 'block', fontSize: 13, fontWeight: 600, color: '#B8AFA6', marginBottom: 6 }}>Email</label>
+            <label style={{ display:'block', fontSize:13, fontWeight:600, color:C.fg2, marginBottom:6 }}>Email</label>
             <input
-              type="email"
-              placeholder="maria@labodega.es"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              required
-              style={{ width: '100%', background: bg, border: `1px solid ${ruleS}`, borderRadius: 8, padding: '11px 14px', fontSize: 15, color: fg, fontFamily: SN, outline: 'none', boxSizing: 'border-box' }}
+              type="email" placeholder="maria@labodega.es"
+              value={email} onChange={e => setEmail(e.target.value)} required
+              style={{ width:'100%', background:C.bg2, border:'none', boxShadow:`${C.rS} 0px 0px 0px 1px`, borderRadius:8, padding:'11px 14px', fontSize:15, color:C.fg, fontFamily:SN, outline:'none', boxSizing:'border-box' }}
             />
           </div>
-
           {error && (
-            <div style={{ background: '#3d1a14', border: `1px solid ${red}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#f4a090' }}>
+            <div style={{ background:'rgba(217,68,43,0.08)', border:'none', boxShadow:`rgba(217,68,43,0.3) 0px 0px 0px 1px`, borderRadius:8, padding:'10px 14px', fontSize:13, color:C.red }}>
               {error}
             </div>
           )}
-
-          <button type="submit" disabled={loading} style={{ background: loading ? '#2F2820' : red, color: loading ? fg3 : '#fff', border: 'none', borderRadius: 10, padding: '14px', fontSize: 14, fontWeight: 700, fontFamily: SN, cursor: loading ? 'not-allowed' : 'pointer' }}>
+          <button type="submit" disabled={loading}
+            style={{ background:loading?C.bg2:C.red, color:loading?C.fg3:'#fff', border:'none', borderRadius:9999, padding:'14px', fontSize:14, fontWeight:700, fontFamily:SN, cursor:loading?'not-allowed':'pointer' }}>
             {loading ? 'Enviando...' : 'Enviar datos de acceso →'}
           </button>
         </form>
-
-        <p style={{ fontSize: 12, color: fg3, textAlign: 'center', margin: '20px 0 0', lineHeight: 1.6 }}>
+        <p style={{ fontSize:12, color:C.fg3, textAlign:'center', margin:'20px 0 0', lineHeight:1.6 }}>
           ¿Sigues sin poder entrar?{' '}
-          <a href="https://wa.me/34637349990" target="_blank" rel="noopener noreferrer" style={{ color: '#25D366', textDecoration: 'underline' }}>
+          <a href="https://wa.me/34637349990" target="_blank" rel="noopener noreferrer" style={{ color:'#25D366', textDecoration:'underline' }}>
             Escríbenos por WhatsApp
           </a>
         </p>
       </div>
-
-      <p style={{ fontSize: 12, color: fg3, marginTop: 24 }}>
-        <a href="/login" style={{ color: fg3, textDecoration: 'underline' }}>← Volver al login</a>
+      <p style={{ fontSize:12, color:C.fg3, marginTop:24 }}>
+        <a href="/login" style={{ color:C.fg3, textDecoration:'underline' }}>← Volver al login</a>
       </p>
     </div>
   )

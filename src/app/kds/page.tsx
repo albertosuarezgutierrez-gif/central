@@ -6,7 +6,7 @@ import { Comanda } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
 
-const K={bg:'#0D0B08',c1:'#161310',fg:'#F6F1E7',fg2:'#C9BFAA',fg3:'#8D8270',rule:'#2F2820',rS:'#4A3F33',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
+const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
 const SE="'Newsreader',Georgia,serif"
 const SN="'Inter Tight',system-ui,sans-serif"
 const SM="'JetBrains Mono',ui-monospace,monospace"
@@ -176,7 +176,7 @@ function PttButton({
           transform: isRecording ? 'scale(0.93)' : 'scale(1)',
           boxShadow: isRecording
             ? `0 0 0 6px rgba(217,68,43,.18), 0 8px 24px rgba(217,68,43,.35)`
-            : `0 4px 16px rgba(0,0,0,.6)`,
+            : `rgba(184,169,139,0.5) 0px 0px 0px 1px, rgba(184,169,139,0.2) 0px 4px 12px`,
           pointerEvents:'auto', touchAction:'none', userSelect:'none',
         }}
       >
@@ -393,7 +393,7 @@ function KDSInner() {
 
       <div style={{ padding:'0 16px', minHeight:52, borderBottom:`1px solid ${K.rule}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:K.c1, flexShrink:0, position:'sticky', top:0, zIndex:10, flexWrap:'wrap', gap:8, paddingTop:6, paddingBottom:6 }}>
         <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <svg width="22" height="22" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1F1A15"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
+          <svg width="22" height="22" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1A1714"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
           <span style={{ fontFamily:SN, fontSize:12, color:vistaProduccion?K.amb:vistaPase?K.gr:K.fg2, fontWeight:500, letterSpacing:'.04em' }}>
             {vistaProduccion ? 'KDS · PRODUCCIÓN' : vistaPase ? 'KDS · PASE' : ('KDS'+(seccionActiva ? ` · ${seccionActiva.nombre.toUpperCase()}` : ' · TODAS'))}
           </span>
@@ -507,7 +507,7 @@ function KDSInner() {
                       <div key={nombre} style={{
                         background: v.listos===v.total?'rgba(63,125,68,.1)':urgent?'rgba(217,68,43,.08)':K.c1,
                         border:'1px solid '+(v.listos===v.total?K.gr:urgent?'rgba(217,68,43,.4)':K.rule),
-                        borderRadius:0, padding:14,
+                        borderRadius:10, padding:14,
                         display:'flex', flexDirection:'column', gap:8,
                       }}>
                         {/* Número grande de pendientes */}
@@ -560,7 +560,7 @@ function KDSInner() {
                   const urgente = col===K.red
                   const pct = total>0?Math.round((listos/total)*100):0
                   return (
-                    <div key={c.id} style={{ background:allDone?'rgba(63,125,68,.12)':urgente?'rgba(217,68,43,.06)':K.c1, border:'1px solid '+(allDone?K.gr:urgente?'rgba(217,68,43,.35)':K.rule), borderRadius:0, padding:14 }}>
+                    <div key={c.id} style={{ background:allDone?'rgba(63,125,68,.12)':urgente?'rgba(217,68,43,.06)':K.c1, border:'1px solid '+(allDone?K.gr:urgente?'rgba(217,68,43,.35)':K.rule), borderRadius:10, padding:14 }}>
                       <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:10 }}>
                         <span style={{ fontFamily:SE, fontSize:44, fontWeight:500, color:allDone?K.gr:K.fg, lineHeight:1, minWidth:90 }}>
                           {c.mesa?.codigo}{c.mesa?.nombre ? <span style={{display:'block',fontFamily:"'Newsreader',serif",fontSize:12,opacity:.7,fontStyle:'italic',lineHeight:1.3,marginTop:2}}>{c.mesa.nombre}</span> : null}
@@ -641,7 +641,7 @@ function KDSInner() {
               const urgente = col===K.red
               const pendientes = (c.items||[]).filter(it=>it.estado!=='listo')
               return (
-                <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.06)':col===K.amb?'rgba(232,163,59,.06)':'rgba(63,125,68,.04)', border:`1px solid ${urgente?'rgba(217,68,43,.3)':col===K.amb?'rgba(232,163,59,.25)':'rgba(63,125,68,.2)'}`, borderRadius:0, padding:'8px 12px', animation:'slideIn .3s ease' }}>
+                <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.06)':col===K.amb?'rgba(232,163,59,.06)':'rgba(63,125,68,.04)', border:`1px solid ${urgente?'rgba(217,68,43,.3)':col===K.amb?'rgba(232,163,59,.25)':'rgba(63,125,68,.2)'}`, borderRadius:10, padding:'8px 12px', animation:'slideIn .3s ease' }}>
                   {allDone && (
                     <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.8)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
                       <span style={{ fontFamily:SM, fontSize:12, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
@@ -678,7 +678,7 @@ function KDSInner() {
               const urgente = col===K.red
               const minutosComanda = Math.floor((Date.now()-new Date(c.created_at).getTime())/60000)
               return (
-                <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.08)':col===K.amb?'rgba(232,163,59,.08)':'rgba(63,125,68,.06)', border:`1px solid ${urgente?'rgba(217,68,43,.35)':col===K.amb?'rgba(232,163,59,.3)':'rgba(63,125,68,.25)'}`, borderRadius:0, padding:14, animation:'slideIn .3s ease' }}>
+                <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.08)':col===K.amb?'rgba(232,163,59,.08)':'rgba(63,125,68,.06)', border:`1px solid ${urgente?'rgba(217,68,43,.35)':col===K.amb?'rgba(232,163,59,.3)':'rgba(63,125,68,.25)'}`, borderRadius:10, padding:14, animation:'slideIn .3s ease' }}>
                   {allDone && (
                     <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.75)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
                       <span style={{ fontFamily:SM, fontSize:14, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
@@ -752,7 +752,7 @@ function KDSInner() {
 export default function KDSPage() {
   return (
     <>
-    <Suspense fallback={<div style={{ minHeight:'100dvh', background:'#0D0B08' }}/>}>
+    <Suspense fallback={<div style={{ minHeight:'100dvh', background:'#F6F1E7' }}/>}>
       <KDSInner />
     </Suspense>
     </>

@@ -23,11 +23,10 @@ interface Formato { id:string; nombre:string; precio:number }
 interface Producto { id:string; nombre:string; categoria:string; precio:number|null; seccion:string; nombre_alternativo:string[]; formatos?:Formato[] }
 interface LineaComanda { producto:Producto; cantidad:number; formato:Formato|null; notas:string }
 
-function shadowMesa(estado: string, isDark: boolean, selected = false): string {
+function shadowMesa(estado: string, selected = false): string {
   if (selected) return `rgba(217,68,43,0.25) 0px 0px 0px 2px, rgba(217,68,43,0.20) 0px 6px 20px -4px`
   const map: Record<string, string> = {
-    libre:    isDark ? `rgba(74,63,51,0.6) 0px 0px 0px 1px`
-                     : `rgba(200,184,154,0.5) 0px 0px 0px 1px`,
+    libre:    `rgba(200,184,154,0.5) 0px 0px 0px 1px`,
     activa:   `rgba(63,125,68,0.35) 0px 0px 0px 1px, rgba(63,125,68,0.15) 0px 5px 14px -3px`,
     marchar:  `rgba(45,122,45,0.4) 0px 0px 0px 1px, rgba(45,122,45,0.18) 0px 5px 14px -3px`,
     aviso:    `rgba(232,163,59,0.4) 0px 0px 0px 1px, rgba(232,163,59,0.15) 0px 5px 14px -3px`,
@@ -53,12 +52,11 @@ const ESTADO_BG_LIGHT: Record<string,string> = {
 interface Props {
   session: { id:string; nombre:string; rol:string; restaurante_id:string }
   turnoId: string | null
-  isDark: boolean
   onBack?: () => void
 }
 
-export default function ModoManual({ session, turnoId, isDark, onBack }: Props) {
-  const T = isDark ? C : { ...C, bg:L.bg, e1:L.bg2, e2:L.bg3, fg:L.fg, fg2:L.fg2, fg3:L.fg3, rule:L.rule, rS:L.rS }
+export default function ModoManual({ session, turnoId, onBack }: Props) {
+  const T = { ...C, bg:L.bg, e1:L.bg2, e2:L.bg3, fg:L.fg, fg2:L.fg2, fg3:L.fg3, rule:L.rule, rS:L.rS }
 
   const [step, setStep] = useState<'mesa'|'carta'|'resumen'|'enviado'|'error'>('mesa')
   const [mesas, setMesas] = useState<Mesa[]>([])
@@ -173,7 +171,7 @@ export default function ModoManual({ session, turnoId, isDark, onBack }: Props) 
   }
 
   const Header = () => (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:`1px solid ${T.rule}`, background: isDark ? C.e1 : L.bg2, flexShrink:0 }}>
+    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:`1px solid ${T.rule}`, background: L.bg2, flexShrink:0 }}>
       {onBack && (
         <button onPointerDown={onBack} style={{ background:'none', border:'none', boxShadow:`${T.rS} 0px 0px 0px 1px`, borderRadius:9999, padding:'4px 10px', color:T.fg3, fontFamily:SM, fontSize:9, cursor:'pointer', letterSpacing:'.06em' }}>
           ← VOZ
@@ -225,18 +223,18 @@ export default function ModoManual({ session, turnoId, isDark, onBack }: Props) 
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:9 }}>
           {mesasFiltradas.map(m => {
             const isSel = mesaSel?.id === m.id
-            const bgEst = isDark ? ESTADO_BG_DARK[m.estado] ?? C.e1 : ESTADO_BG_LIGHT[m.estado] ?? L.bg2
+            const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
             return (
               <button key={m.id} onPointerDown={() => { setMesaSel(m); setStep('carta') }}
                 style={{
                   padding:'12px 6px 10px', borderRadius:12, border:'none',
-                  background: isSel ? (isDark ? '#3A1A14' : '#F4D8CF') : bgEst,
-                  boxShadow: shadowMesa(m.estado, isDark, isSel),
+                  background: isSel ? '#F4D8CF' : bgEst,
+                  boxShadow: shadowMesa(m.estado, isSel),
                   cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4,
                   transition:'all .15s cubic-bezier(.4,0,.2,1)',
                   transform: isSel ? 'scale(0.95)' : 'scale(1)',
                 }}>
-                <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: isSel ? C.red : (isDark ? C.fg : L.fg), lineHeight:1 }}>
+                <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: isSel ? C.red : (L.fg), lineHeight:1 }}>
                   {m.codigo}
                 </span>
                 <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
@@ -266,8 +264,8 @@ export default function ModoManual({ session, turnoId, isDark, onBack }: Props) 
           const fmts = p.formatos?.filter(f => f.precio > 0)
           return (
             <div key={p.id} style={{
-              background: isDark?C.e1:L.bg2, border:'none',
-              boxShadow: isDark ? `rgba(74,63,51,0.5) 0px 0px 0px 1px` : `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
+              background: L.bg2, border:'none',
+              boxShadow: `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
               borderRadius:10, padding:'10px 12px',
             }}>
               <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom: fmts?.length ? 8 : 0 }}>
@@ -287,8 +285,8 @@ export default function ModoManual({ session, turnoId, isDark, onBack }: Props) 
                   {fmts.map(fmt => (
                     <button key={fmt.id} onPointerDown={() => addProducto(p, fmt)}
                       style={{ display:'flex', alignItems:'center', gap:6, padding:'5px 12px', borderRadius:9999,
-                        background: isDark?C.e2:L.bg3, border:'none',
-                        boxShadow: isDark ? `rgba(74,63,51,0.5) 0px 0px 0px 1px` : `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
+                        background: L.bg3, border:'none',
+                        boxShadow: `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
                         cursor:'pointer' }}>
                       <span style={{ fontFamily:SN, fontSize:12, color:T.fg2 }}>{fmt.nombre}</span>
                       <span style={{ fontFamily:SM, fontSize:10, color:T.fg3 }}>{fmt.precio.toFixed(2)}€</span>
@@ -305,10 +303,10 @@ export default function ModoManual({ session, turnoId, isDark, onBack }: Props) 
         )}
       </div>
       {lineas.length > 0 && (
-        <div style={{ padding:'10px 14px', borderTop:`1px solid ${T.rule}`, background: isDark?C.e1:L.bg2, flexShrink:0, display:'flex', gap:8, alignItems:'center', overflowX:'auto' }}>
+        <div style={{ padding:'10px 14px', borderTop:`1px solid ${T.rule}`, background: L.bg2, flexShrink:0, display:'flex', gap:8, alignItems:'center', overflowX:'auto' }}>
           {lineas.map((l,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:4, background: isDark?C.e2:L.bg3, borderRadius:9999, padding:'4px 10px', flexShrink:0,
-              boxShadow: isDark ? `rgba(74,63,51,0.4) 0px 0px 0px 1px` : `rgba(184,169,139,0.4) 0px 0px 0px 1px` }}>
+            <div key={i} style={{ display:'flex', alignItems:'center', gap:4, background: L.bg3, borderRadius:9999, padding:'4px 10px', flexShrink:0,
+              boxShadow: `rgba(184,169,139,0.4) 0px 0px 0px 1px` }}>
               <span style={{ fontFamily:SM, fontSize:10, color:T.fg3 }}>{l.cantidad}×</span>
               <span style={{ fontFamily:SN, fontSize:11, color:T.fg }}>{l.formato ? `${l.producto.nombre}·${l.formato.nombre}` : l.producto.nombre}</span>
               <button onPointerDown={() => removeLinea(i)} style={{ background:'none', border:'none', color:C.red, fontSize:14, cursor:'pointer', lineHeight:1, padding:'0 2px' }}>×</button>
@@ -330,13 +328,13 @@ export default function ModoManual({ session, turnoId, isDark, onBack }: Props) 
         <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
           {lineas.map((l,i) => (
             <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
-              background: isDark?C.e1:L.bg2, border:'none',
-              boxShadow: isDark ? `rgba(74,63,51,0.5) 0px 0px 0px 1px` : `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
+              background: L.bg2, border:'none',
+              boxShadow: `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
               borderRadius:10 }}>
               <div style={{ display:'flex', gap:4, alignItems:'center' }}>
-                <button onPointerDown={() => updateCantidad(i,-1)} style={{ width:24,height:24,borderRadius:9999,background:isDark?C.e2:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
+                <button onPointerDown={() => updateCantidad(i,-1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
                 <span style={{ fontFamily:SM,fontSize:13,fontWeight:700,color:T.fg,width:24,textAlign:'center' }}>{l.cantidad}</span>
-                <button onPointerDown={() => updateCantidad(i,+1)} style={{ width:24,height:24,borderRadius:9999,background:isDark?C.e2:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
+                <button onPointerDown={() => updateCantidad(i,+1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
               </div>
               <div style={{ flex:1 }}>
                 <div style={{ fontFamily:SN,fontSize:13,fontWeight:600,color:T.fg }}>{l.producto.nombre}</div>
