@@ -242,6 +242,27 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .vdot{width:6px;height:6px;border-radius:50%;background:var(--green)}
 @keyframes fu{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
 @keyframes gpulse{0%,100%{opacity:1;box-shadow:0 0 0 0 rgba(74,145,80,.5)}50%{opacity:.7;box-shadow:0 0 0 5px rgba(74,145,80,0)}}
+/* ---- CONTACTO ---- */
+.contacto{max-width:600px;margin:0 auto;padding:120px 40px;text-align:center}
+.contacto h2{font-family:var(--head);font-style:italic;font-size:clamp(38px,5.5vw,64px);font-weight:400;line-height:1.02;letter-spacing:-.03em;color:var(--cream);margin-bottom:16px}
+.contacto h2 em{color:var(--red)}
+.contacto .csub{font-size:18px;color:var(--cream2);letter-spacing:-.01em;line-height:1.65;margin-bottom:48px}
+.cform{display:flex;flex-direction:column;gap:14px;text-align:left}
+.cfield{display:flex;flex-direction:column;gap:6px}
+.cfield label{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream3)}
+.cinput{background:rgba(246,241,231,.05);border:1px solid rgba(246,241,231,.12);border-radius:12px;padding:14px 18px;font-family:var(--ui);font-size:16px;color:var(--cream);outline:none;transition:border-color .2s;width:100%}
+.cinput:focus{border-color:rgba(217,68,43,.5);background:rgba(246,241,231,.07)}
+.cinput::placeholder{color:var(--cream4)}
+.csubmit{margin-top:8px;padding:16px 32px;border-radius:9999px;background:var(--red);border:none;color:var(--cream);font-size:16px;font-weight:700;font-family:var(--ui);cursor:pointer;letter-spacing:-.015em;box-shadow:rgba(217,68,43,.55) 0 8px 28px -6px;transition:all .25s}
+.csubmit:hover:not(:disabled){background:#e54e35;transform:translateY(-2px);box-shadow:rgba(217,68,43,.7) 0 12px 36px -6px}
+.csubmit:disabled{opacity:.6;cursor:not-allowed}
+.csent{text-align:center;padding:40px 0}
+.csent .ccheck{font-size:48px;margin-bottom:20px}
+.csent h3{font-family:var(--head);font-style:italic;font-size:28px;color:var(--cream);margin-bottom:12px}
+.csent p{font-size:16px;color:var(--cream2);line-height:1.65}
+.csent p strong{color:var(--amber)}
+.cerr{font-family:var(--mono);font-size:12px;color:var(--amber);margin-top:8px;text-align:center}
+.cnota{font-family:var(--soft);font-size:14px;color:var(--cream3);text-align:center;margin-top:16px}
 @media(max-width:768px){
   nav{padding:0 20px}.nav-c{display:none}
   .hero{padding:0 20px 80px}
@@ -259,6 +280,7 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
   .ba{padding:60px 20px}.testi{padding:60px 20px}
   .faqsec{padding:60px 20px}.pricing{padding:60px 20px}
   .fcta{padding:80px 20px}
+  .contacto{padding:80px 20px}
   footer{padding:40px 20px}.fbot{padding:20px}
 }
 `;
@@ -271,8 +293,36 @@ const COMANDAS = [
 
 export default function Page() {
   const [openFaq, setOpenFaq] = useState<number|null>(null);
+  const [leadNombre, setLeadNombre] = useState("");
+  const [leadRest, setLeadRest] = useState("");
+  const [leadTel, setLeadTel] = useState("");
+  const [leadSending, setLeadSending] = useState(false);
+  const [leadSent, setLeadSent] = useState(false);
+  const [leadError, setLeadError] = useState("");
   const navRef = useRef<HTMLElement>(null);
   const demoRunning = useRef(false);
+
+  const handleLead = async () => {
+    if (!leadNombre.trim() || !leadRest.trim() || !leadTel.trim()) {
+      setLeadError("Rellena los tres campos para que podamos llamarte.");
+      return;
+    }
+    setLeadError("");
+    setLeadSending(true);
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/contact-lead`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+        body: JSON.stringify({ nombre: leadNombre.trim(), restaurante: leadRest.trim(), telefono: leadTel.trim() }),
+      });
+      if (!res.ok) throw new Error("error");
+      setLeadSent(true);
+    } catch {
+      setLeadError("Algo falló. Escríbenos directamente a alberto.suarez.gutierrez@gmail.com");
+    } finally {
+      setLeadSending(false);
+    }
+  };
 
   // NAV scroll
   useEffect(() => {
@@ -368,10 +418,11 @@ export default function Page() {
           <li><a href="#como">Cómo funciona</a></li>
           <li><a href="#testimonios">Restaurantes</a></li>
           <li><a href="#precios">Precios</a></li>
+          <li><a href="#contacto">Contacto</a></li>
         </ul>
         <div className="nav-r">
           <button className="nbg" onClick={()=>window.location.href="/login"}>Entrar</button>
-          <button className="nbr" onClick={()=>window.location.href="/registro"}>14 días gratis</button>
+          <button className="nbr" onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Quiero probarlo</button>
         </div>
       </nav>
 
@@ -393,7 +444,7 @@ export default function Page() {
             <strong>en menos de medio segundo.</strong> Sin errores. Sin desplazamientos. Sin semanas de formación.
           </p>
           <div className="hctas">
-            <button className="bth" onClick={()=>window.location.href="/registro"}>Empezar gratis — 14 días</button>
+            <button className="bth" onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Empezar gratis — 14 días</button>
             <button className="bto" onClick={()=>document.getElementById("como")?.scrollIntoView({behavior:"smooth"})}>Ver cómo funciona →</button>
           </div>
           <p className="nc">Sin tarjeta · Sin hardware caro · En marcha en 10 minutos</p>
@@ -643,25 +694,45 @@ export default function Page() {
                   <li key={txt}><span className={cls}>—</span>{txt}</li>
                 ))}
               </ul>
-              <button className={`plbtn ${p.btn}`} onClick={()=>window.location.href="/registro"}>{p.cta}</button>
+              <button className={`plbtn ${p.btn}`} onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>{p.cta}</button>
               <p className="pltrial">{p.trial}</p>
             </div>
           ))}
         </div>
       </section>
 
-      {/* FINAL CTA */}
-      <section className="fcta">
+      {/* FORMULARIO DE CONTACTO */}
+      <section className="contacto" id="contacto">
         <h2 className="reveal">Tu cocina te está<br/><em>esperando.</em></h2>
-        <p className="reveal rd1">14 días gratis. Sin tarjeta. Funciona en cualquier móvil o tablet que ya tengas en sala. Si en 14 días no ves la diferencia, te devolvemos lo que hayas pagado.</p>
-        <div className="ctag reveal rd2">
-          <button className="bfinal" onClick={()=>window.location.href="/registro"}>Empezar ahora — es gratis</button>
-          <div className="fsub">
-            <span>✓ Sin tarjeta</span>
-            <span>✓ 14 días completos</span>
-            <span>✓ Cancela cuando quieras</span>
+        <p className="csub reveal rd1">Déjanos tu teléfono y te llamamos. Sin presiones, sin tarjeta. Solo una demo de 10 minutos y ves si encaja.</p>
+
+        {leadSent ? (
+          <div className="csent reveal">
+            <div className="ccheck">✓</div>
+            <h3>Recibido. Te llamamos pronto.</h3>
+            <p>En menos de 24h te contactamos para organizar la demo.<br/><strong>Gracias por confiar en ia.rest.</strong></p>
           </div>
-        </div>
+        ) : (
+          <div className="cform reveal rd2">
+            <div className="cfield">
+              <label htmlFor="cf-nombre">Tu nombre</label>
+              <input id="cf-nombre" className="cinput" type="text" placeholder="María García" value={leadNombre} onChange={e=>setLeadNombre(e.target.value)} />
+            </div>
+            <div className="cfield">
+              <label htmlFor="cf-rest">Nombre del restaurante</label>
+              <input id="cf-rest" className="cinput" type="text" placeholder="Bodega La Plaza" value={leadRest} onChange={e=>setLeadRest(e.target.value)} />
+            </div>
+            <div className="cfield">
+              <label htmlFor="cf-tel">Teléfono (te llamamos nosotros)</label>
+              <input id="cf-tel" className="cinput" type="tel" placeholder="+34 600 000 000" value={leadTel} onChange={e=>setLeadTel(e.target.value)} onKeyDown={e=>e.key==="Enter"&&handleLead()} />
+            </div>
+            {leadError && <p className="cerr">{leadError}</p>}
+            <button className="csubmit" onClick={handleLead} disabled={leadSending}>
+              {leadSending ? "Enviando…" : "Quiero la demo — me llamáis vosotros →"}
+            </button>
+            <p className="cnota">Sin tarjeta · Sin compromiso · Respuesta en menos de 24h</p>
+          </div>
+        )}
       </section>
 
       <footer>
