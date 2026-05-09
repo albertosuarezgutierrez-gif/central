@@ -746,11 +746,11 @@ export default function Page() {
         </div>
         <div className="fcol">
           <h4>Legal</h4>
-          <ul>{[["#","Privacidad"],["#","Términos"],["#","RGPD"]].map(([h,l])=><li key={l}><a href={h}>{l}</a></li>)}</ul>
+          <ul>{[["/aviso-legal","Aviso legal"],["/privacidad","Privacidad"],["/cookies","Cookies"],["/terminos","Términos de uso"],["/contrato-iarest-v1.pdf","Contrato SaaS"]].map(([h,l])=><li key={l}><a href={h}>{l}</a></li>)}</ul>
         </div>
       </footer>
       <div className="fbot">
-        <p>© 2025 ia.rest · Hecho en España 🇪🇸</p>
+        <p>© 2026 ia.rest · Hecho en España 🇪🇸</p>
         <div className="vbadge"><span className="vdot"/><span>VeriFactu AEAT 2026</span></div>
       </div>
     </>
