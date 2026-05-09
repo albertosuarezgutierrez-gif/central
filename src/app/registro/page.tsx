@@ -18,10 +18,8 @@ function precioMensual(n: number) {
   return 59 + 5 * 20 + (n - 6) * 15
 }
 
-// Regex RFC 5322 simplificado — requiere TLD de mínimo 2 letras
 const EMAIL_RE = /^[A-Za-z0-9._%+\-]+@[A-Za-z0-9.\-]+\.[A-Za-z]{2,}$/
 
-// Dominios comunes con sus typos frecuentes
 const DOMAIN_TYPOS: Record<string, string> = {
   'gmail.co': 'gmail.com',     'gmail.cm': 'gmail.com',     'gmai.com': 'gmail.com',
   'gmial.com': 'gmail.com',    'gmal.com': 'gmail.com',     'gmaill.com': 'gmail.com',
@@ -32,7 +30,21 @@ const DOMAIN_TYPOS: Record<string, string> = {
   'icloud.co': 'icloud.com',   'iclooud.com': 'icloud.com',
 }
 
-interface Created { checkout_url: string; codigo_acceso: string; pin_owner: string }
+interface Created {
+  checkout_url:   string
+  codigo_acceso:  string
+  pin_owner:      string
+  restaurante_id: string
+}
+
+const CLAUSULAS = [
+  { titulo: 'Servicio bajo suscripción', texto: '14 días de prueba gratis. Plan mensual sin permanencia o anual con 18 % de descuento. Cancelas cuando quieras desde tu panel.' },
+  { titulo: 'Servicio en "mejor esfuerzo"', texto: 'ia.rest depende de infraestructura de terceros (Vercel, Supabase, Groq). No garantizamos disponibilidad ininterrumpida. Los errores de transcripción o interpretación de IA son posibles.' },
+  { titulo: 'Limitación de responsabilidad', texto: 'La indemnización máxima por cualquier fallo es 1 mes de cuota. Quedan excluidos el lucro cesante y los daños indirectos. Eres responsable de verificar las comandas antes de confirmarlas.' },
+  { titulo: 'Alérgenos y VeriFactu', texto: 'El sistema de alérgenos es una herramienta de apoyo, no sustituye tu responsabilidad legal. Las facturas VeriFactu requieren configurar correctamente tu NIF y razón social.' },
+  { titulo: 'Compatibilidad de hardware', texto: 'Las impresoras están garantizadas solo con protocolo ESC/POS TCP/IP y CloudPRNT Star LAN/Wi-Fi. Otros modelos pueden funcionar pero sin garantía de soporte.' },
+  { titulo: 'Tus datos son tuyos', texto: 'ia.rest actúa como encargado del tratamiento (RGPD). Puedes exportar y borrar tus datos en cualquier momento. El uso para entrenamiento de IA es opt-in.' },
+]
 
 export default function RegistroPage() {
   const [nombre, setNombre]       = useState('')
@@ -44,6 +56,10 @@ export default function RegistroPage() {
   const [emailWarn, setEmailWarn] = useState('')
   const [created, setCreated]     = useState<Created | null>(null)
   const [copied, setCopied]       = useState(false)
+  const [step, setStep]           = useState<'pin' | 'contrato'>('pin')
+  const [aceptado, setAceptado]   = useState(false)
+  const [accepting, setAccepting] = useState(false)
+  const [acceptErr, setAcceptErr] = useState('')
 
   function checkEmailWarn(val: string) {
     if (!val.includes('@')) { setEmailWarn(''); return }
@@ -61,13 +77,11 @@ export default function RegistroPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     setError(''); setLoading(true)
-
     if (!EMAIL_RE.test(email.trim())) {
       setError('El email no tiene un formato válido. Revisa que incluya @ y un dominio correcto (ej: nombre@empresa.com)')
       setLoading(false)
       return
     }
-
     try {
       const r = await fetch(`${SUPABASE_URL}/functions/v1/auth-register`, {
         method: 'POST',
@@ -86,7 +100,24 @@ export default function RegistroPage() {
     navigator.clipboard.writeText(created.pin_owner).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
   }
 
-  if (created) return (
+  async function aceptarContrato() {
+    if (!created || !aceptado) return
+    setAccepting(true); setAcceptErr('')
+    try {
+      const r = await fetch('/api/contrato/aceptar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ restaurante_id: created.restaurante_id, email }),
+      })
+      const d = await r.json()
+      if (!d.ok) throw new Error(d.error ?? 'Error al registrar la aceptación')
+      window.location.href = created.checkout_url
+    } catch (err: any) { setAcceptErr(err.message) }
+    finally { setAccepting(false) }
+  }
+
+  // ─── Vista: PIN creado ──────────────────────────────────────────────────
+  if (created && step === 'pin') return (
     <div style={pageS}>
       <Logo />
       <div style={cardS}>
@@ -119,14 +150,97 @@ export default function RegistroPage() {
           <strong style={{ color: T.vermilion }}>Importante:</strong> este PIN solo se muestra una vez. Anótalo ahora.
         </div>
 
-        <button onClick={() => { window.location.href = created.checkout_url }} style={{ background: T.vermilion, color: '#fff', border: 'none', borderRadius: 10, padding: '15px 0', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font-sans)', cursor: 'pointer', letterSpacing: '-0.2px' }}>
-          Continuar al pago →
+        <button onClick={() => setStep('contrato')} style={{ background: T.vermilion, color: '#fff', border: 'none', borderRadius: 10, padding: '15px 0', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font-sans)', cursor: 'pointer', letterSpacing: '-0.2px' }}>
+          Ya lo tengo — ver contrato →
         </button>
         <p style={{ fontSize: 12, color: T.fg3, textAlign: 'center', margin: 0, lineHeight: 1.6 }}>14 días gratis. Sin cargos hasta que finalice el trial.</p>
       </div>
     </div>
   )
 
+  // ─── Vista: aceptación del contrato ────────────────────────────────────
+  if (created && step === 'contrato') return (
+    <div style={pageS}>
+      <Logo />
+      <div style={{ ...cardS, maxWidth: 520 }}>
+        <div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: T.fg3, textTransform: 'uppercase' as const, marginBottom: 6 }}>
+            Paso 2 de 2 — Contrato de servicio
+          </div>
+          <h2 style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 22, color: T.fg, margin: '0 0 4px' }}>
+            Revisa las condiciones
+          </h2>
+          <p style={{ fontSize: 13, color: T.fg3, margin: 0, lineHeight: 1.6 }}>
+            Resumen de los puntos más relevantes. Puedes descargar el contrato completo antes de aceptar.
+          </p>
+        </div>
+
+        <a href="/contrato-iarest-v1.pdf" target="_blank" rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', gap: 10, background: T.elev2, border: `1px solid ${T.ruleS}`, borderRadius: 10, padding: '12px 16px', textDecoration: 'none', color: T.fg2, fontSize: 13, fontWeight: 600 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="12" y1="18" x2="12" y2="12"/><line x1="9" y1="15" x2="15" y2="15"/>
+          </svg>
+          <span>Descargar contrato completo (PDF)</span>
+          <span style={{ marginLeft: 'auto', fontSize: 11, color: T.fg3 }}>contrato_iarest_v1.pdf</span>
+        </a>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          {CLAUSULAS.map((c, i) => (
+            <div key={i} style={{ background: T.elev2, border: `1px solid ${T.ruleS}`, borderRadius: 8, padding: '11px 14px' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: T.fg2, marginBottom: 3 }}>{c.titulo}</div>
+              <div style={{ fontSize: 12, color: T.fg3, lineHeight: 1.6 }}>{c.texto}</div>
+            </div>
+          ))}
+        </div>
+
+        <div style={{ height: 1, background: T.ruleS }} />
+
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12, cursor: 'pointer', padding: '4px 0' }} onClick={() => setAceptado(v => !v)}>
+          <div style={{
+            width: 20, height: 20, minWidth: 20, borderRadius: 5,
+            border: `2px solid ${aceptado ? T.vermilion : T.ruleS}`,
+            background: aceptado ? 'rgba(217,68,43,.15)' : 'transparent',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            marginTop: 1, transition: 'all .15s',
+          }}>
+            {aceptado && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke={T.vermilion} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="4 12 10 18 20 6"/></svg>}
+          </div>
+          <span style={{ fontSize: 13, color: T.fg2, lineHeight: 1.6 }}>
+            He leído y acepto el{' '}
+            <a href="/contrato-iarest-v1.pdf" target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()} style={{ color: T.fg, textDecoration: 'underline' }}>
+              Contrato de Prestación de Servicios SaaS
+            </a>
+            , incluyendo la limitación de responsabilidad, los requisitos de hardware y las condiciones de VeriFactu y alérgenos.
+          </span>
+        </div>
+
+        {acceptErr && (
+          <div style={{ background: '#3d1a14', border: `1px solid ${T.vermilion}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#f4a090' }}>{acceptErr}</div>
+        )}
+
+        <button onClick={aceptarContrato} disabled={!aceptado || accepting} style={{
+          background: aceptado && !accepting ? T.vermilion : T.elev2,
+          color: aceptado && !accepting ? '#fff' : T.fg3,
+          border: 'none', borderRadius: 10, padding: '15px 0',
+          fontSize: 15, fontWeight: 600, fontFamily: 'var(--font-sans)',
+          cursor: aceptado && !accepting ? 'pointer' : 'not-allowed',
+          transition: 'all .15s', letterSpacing: '-0.2px',
+        }}>
+          {accepting ? 'Guardando aceptación…' : 'Acepto y continuar al pago →'}
+        </button>
+
+        <button onClick={() => setStep('pin')} style={{ background: 'none', border: 'none', color: T.fg3, fontSize: 12, cursor: 'pointer', fontFamily: 'var(--font-sans)', padding: 0, textDecoration: 'underline', textAlign: 'center' as const }}>
+          ← Volver a mis credenciales
+        </button>
+
+        <p style={{ fontSize: 11, color: T.fg3, textAlign: 'center', margin: 0, lineHeight: 1.6 }}>
+          La aceptación queda registrada con fecha, hora e IP como prueba legal (LSSI art. 27).
+        </p>
+      </div>
+    </div>
+  )
+
+  // ─── Vista: formulario inicial ──────────────────────────────────────────
   return (
     <div style={pageS}>
       <Logo />
@@ -137,28 +251,17 @@ export default function RegistroPage() {
         <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <Field label="Tu nombre"><input type="text" placeholder="María García" value={nombre} onChange={e => setNombre(e.target.value)} required style={inputS} /></Field>
 
-          {/* Email con detector de typos */}
           <div>
             <label style={labelS}>Email</label>
-            <input
-              type="email"
-              placeholder="maria@labodega.es"
-              value={email}
+            <input type="email" placeholder="maria@labodega.es" value={email}
               onChange={e => { setEmail(e.target.value); checkEmailWarn(e.target.value) }}
-              required
-              style={{ ...inputS, borderColor: emailWarn ? T.amber : 'var(--dark-rule-s)' }}
+              required style={{ ...inputS, borderColor: emailWarn ? T.amber : 'var(--dark-rule-s)' }}
             />
             {emailWarn && (
               <div style={{ marginTop: 6, fontSize: 12, color: T.amber, display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span>⚠</span>
                 <span>¿Quisiste decir <strong>@{emailWarn}</strong>?</span>
-                <button
-                  type="button"
-                  onClick={applyEmailFix}
-                  style={{ background: 'none', border: 'none', color: T.amber, textDecoration: 'underline', cursor: 'pointer', fontSize: 12, paddingLeft: 4, fontFamily: 'var(--font-sans)', fontWeight: 600 }}
-                >
-                  Corregir
-                </button>
+                <button type="button" onClick={applyEmailFix} style={{ background: 'none', border: 'none', color: T.amber, textDecoration: 'underline', cursor: 'pointer', fontSize: 12, paddingLeft: 4, fontFamily: 'var(--font-sans)', fontWeight: 600 }}>Corregir</button>
               </div>
             )}
           </div>
@@ -169,7 +272,7 @@ export default function RegistroPage() {
             <label style={labelS}>Usuarios de sala <span style={{ color: T.fg3, fontWeight: 400 }}>(camareros + jefe de sala)</span></label>
             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 8 }}>
               <button type="button" onClick={() => setNU(Math.max(1, nU - 1))} style={stepS}>−</button>
-              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: T.fg, minWidth: 32, textAlign: 'center' }}>{nU}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 22, color: T.fg, minWidth: 32, textAlign: 'center' as const }}>{nU}</span>
               <button type="button" onClick={() => setNU(nU + 1)} style={stepS}>+</button>
               <span style={{ fontSize: 13, color: T.fg3 }}>El dueño no cuenta</span>
             </div>
