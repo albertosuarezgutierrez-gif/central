@@ -2,7 +2,8 @@ import type { Metadata, Viewport } from 'next'
 import React from 'react'
 import './globals.css'
 
-const BASE_URL = 'https://ia-rest.vercel.app'
+const BASE_URL = 'https://www.iarest.es'
+const GA_ID = 'G-EN2YQLRLEX'
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -170,6 +171,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style>{`body { background: #F6F1E7; }`}</style>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
+        {/* Google Analytics */}
+        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+        <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}',{page_path:window.location.pathname});` }} />
       </head>
       <body>
         {children}
