@@ -21,10 +21,11 @@ export default function TerminosPage() {
           { titulo:'5. Facturación legal (VeriFactu)', texto:'ia.rest genera facturas con hash encadenado SHA-256 conforme al Reglamento VeriFactu (España, 2026). Para activar la facturación legal debes configurar tu NIF y razón social en el panel de propietario.' },
           { titulo:'6. Disponibilidad del servicio', texto:'ia.rest se presta con una disponibilidad objetivo del 99,5% mensual. En caso de incidencia, el equipo de soporte está disponible por WhatsApp en horario de lunes a viernes de 9:00 a 21:00.' },
           { titulo:'7. Limitación de responsabilidad', texto:'ia.rest no se hace responsable de errores en comandas derivados de mala calidad de audio, vocabulario no incluido en la carta o condiciones de red deficientes. El sistema proporciona confirmación de voz antes de enviar cada comanda para que el camarero pueda corregir posibles errores.' },
-          { titulo:'8. Legislación aplicable', texto:'Estos términos se rigen por la legislación española. Para cualquier conflicto, las partes se someten a los juzgados y tribunales de Sevilla, España.' },
-          { titulo:'9. Contacto', texto:'Para cualquier consulta sobre estos términos, escríbenos por WhatsApp al +34 637 349 990 o por email a alberto.suarez.gutierrez@gmail.com.' },
+          { titulo:'8. Compatibilidad de hardware', texto:'ia.rest garantiza compatibilidad y soporte técnico exclusivamente con impresoras térmicas que utilicen protocolo ESC/POS sobre TCP/IP (conexión IP local mediante bridge) o Star CloudPRNT (modelos Star Micronics con interfaz LAN o WiFi, como TSP143IIILAN y TSP143IIIW). Otras marcas y modelos de impresoras pueden funcionar en algunos casos, pero ia.rest no ofrece garantía de funcionamiento ni soporte técnico para hardware no validado. El cliente es responsable de verificar la compatibilidad de su hardware antes de la contratación.' },
+          { titulo:'9. Legislación aplicable', texto:'Estos términos se rigen por la legislación española. Para cualquier conflicto, las partes se someten a los juzgados y tribunales de Sevilla, España.' },
+          { titulo:'10. Contacto', texto:'Para cualquier consulta sobre estos términos, escríbenos por WhatsApp al +34 637 349 990 o por email a alberto.suarez.gutierrez@gmail.com.' },
         ].map((s, i) => (
-          <div key={i} style={{ marginBottom:32, paddingBottom:32, borderBottom: i < 8 ? '1px solid #D8CDB6' : 'none' }}>
+          <div key={i} style={{ marginBottom:32, paddingBottom:32, borderBottom: i < 9 ? '1px solid #D8CDB6' : 'none' }}>
             <h2 style={{ fontFamily:SE, fontStyle:'italic', fontSize:20, color:'#1A1714', margin:'0 0 10px' }}>{s.titulo}</h2>
             <p style={{ fontSize:14, color:'#6B5F52', lineHeight:1.8, margin:0 }}>{s.texto}</p>
           </div>
