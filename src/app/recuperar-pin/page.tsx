@@ -20,7 +20,7 @@ export default function RecuperarPinPage() {
   const [sent, setSent]       = useState(false)
   const [error, setError]     = useState('')
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: { preventDefault: () => void }) {
     e.preventDefault()
     setError('')
     setLoading(true)

@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next'
+import React from 'react'
 import './globals.css'
 
 const BASE_URL = 'https://ia-rest.vercel.app'
@@ -80,7 +81,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#14110E',
+  themeColor: '#F6F1E7',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -166,7 +167,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="geo.placename" content="España" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <style>{`body { background: #14110E; }`}</style>
+        <style>{`body { background: #F6F1E7; }`}</style>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
       </head>

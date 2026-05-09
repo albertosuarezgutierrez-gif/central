@@ -963,7 +963,7 @@ function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonaAsignada,onZona,f
       <div style={{position:'absolute',top:3,left:on?20:3,width:18,height:18,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(26,23,20,.2)',transition:'left .2s'}}/>
     </div>
   )
-  const Chip = ({label,on,onClick}:{label:string;on:boolean;onClick:()=>void}) => (
+  const Chip = ({label,on,onClick}:{label:string;on:boolean;onClick:()=>void;key?:string}) => (
     <div onClick={onClick} style={{padding:'6px 14px',borderRadius:20,background:on?C.vermS:C.bg2,border:`1px solid ${on?C.verm+'55':C.rule}`,fontSize:12,fontWeight:on?700:400,color:on?C.verm:C.ink2,cursor:'pointer',transition:'all .12s'}}>
       {label}
     </div>

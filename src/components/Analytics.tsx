@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
 /* ─── Design tokens ─── */
@@ -59,7 +59,7 @@ function StatCard({ label, value, sub, accent }: {
 }
 
 function BarRow({ label, value, max, fmt: fmtFn, highlight }: {
-  label: string; value: number; max: number; fmt?: (v: number) => string; highlight?: boolean
+  label: string; value: number; max: number; fmt?: (v: number) => string; highlight?: boolean; key?: string | number
 }) {
   const pct = max > 0 ? Math.max(2, (value / max) * 100) : 2
   const fmtVal = fmtFn ? fmtFn(value) : value.toString()

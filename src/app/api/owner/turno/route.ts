@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  let stats = null
+  let stats: { total_comandas: number; avg_latencia_ms: number | null; mesas_activas: { codigo: string; count: number }[] } | null = null
   if (ultimo) {
     const { data: comandas } = await supabase.from('comandas')
       .select('id, mesa_id, created_at, updated_at, tipo, mesas(codigo)')

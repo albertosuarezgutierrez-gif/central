@@ -2013,7 +2013,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
               <Btn onClick={() => setView('escanear')}><Icon d={ICONS.sparkle} size={14}/>Escanear carta</Btn>
             </div>
           ) : (
-            Object.entries(byCategoria).map(([cat, ps]) => (
+            (Object.entries(byCategoria) as [string, Producto[]][]).map(([cat, ps]) => (
               <div key={cat} style={{ marginBottom: 28 }}>
                 <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em',
                   color: C.red, textTransform: 'uppercase', marginBottom: 10,
@@ -3161,7 +3161,7 @@ function FlujoTab() {
           {/* Fallback separator */}
           {reglas.some(r=>r.es_fallback) && reglas.some(r=>!r.es_fallback) && (() => {
             const firstFb = reglas.findIndex(r=>r.es_fallback)
-            return reglas.map((r, i) => [
+            return reglas.map((r: ReglaEnvio, i: number) => [
               i === firstFb ? (
                 <div key="sep-fb" style={{ display:'flex', alignItems:'center', gap:8, padding:'4px 0' }}>
                   <div style={{ flex:1, height:1, background:C.rule }} />
@@ -3169,36 +3169,36 @@ function FlujoTab() {
                   <div style={{ flex:1, height:1, background:C.rule }} />
                 </div>
               ) : null,
-              <ReglaRow key={r.id} r={r}
+              <ReglaRow key={r.id} r={r as ReglaEnvio}
                 isDragging={dragging===r.id} isDragOver={dragOver===r.id}
-                onDragStart={()=>setDragging(r.id)}
+                onDragStart={()=>{ setDragging(r.id) }}
                 onDragOver={(e: React.DragEvent)=>{e.preventDefault();setDragOver(r.id)}}
-                onDragLeave={()=>setDragOver(null)}
+                onDragLeave={()=>{ setDragOver(null) }}
                 onDrop={()=>handleDrop(r.id)}
                 onDragEnd={()=>{setDragging(null);setDragOver(null)}}
-                zonasLabel={zonasDeRegla(r)}
+                zonasLabel={zonasDeRegla(r) as string[]}
                 secsLabel={secsDeRegla(r)}
                 prodsLabel={nProdsLabel(r)}
                 destinoLabel={destinoLabel(r)}
-                onToggle={()=>toggleActiva(r)}
-                onDelete={()=>borrar(r.id)}
+                onToggle={()=>{ void toggleActiva(r) }}
+                onDelete={()=>{ void borrar(r.id) }}
               />
             ])
           })()}
           {!(reglas.some(r=>r.es_fallback) && reglas.some(r=>!r.es_fallback)) && reglas.map(r => (
-            <ReglaRow key={r.id} r={r}
+            <ReglaRow key={r.id} r={r as ReglaEnvio}
               isDragging={dragging===r.id} isDragOver={dragOver===r.id}
-              onDragStart={()=>setDragging(r.id)}
+              onDragStart={()=>{ setDragging(r.id) }}
               onDragOver={(e: React.DragEvent)=>{e.preventDefault();setDragOver(r.id)}}
-              onDragLeave={()=>setDragOver(null)}
+              onDragLeave={()=>{ setDragOver(null) }}
               onDrop={()=>handleDrop(r.id)}
               onDragEnd={()=>{setDragging(null);setDragOver(null)}}
-              zonasLabel={zonasDeRegla(r)}
+              zonasLabel={zonasDeRegla(r) as string[]}
               secsLabel={secsDeRegla(r)}
               prodsLabel={nProdsLabel(r)}
               destinoLabel={destinoLabel(r)}
-              onToggle={()=>toggleActiva(r)}
-              onDelete={()=>borrar(r.id)}
+              onToggle={()=>{ void toggleActiva(r) }}
+              onDelete={()=>{ void borrar(r.id) }}
             />
           ))}
         </div>
@@ -3382,7 +3382,7 @@ function FlujoTab() {
 
 // ── Componente de fila de regla ──
 function ReglaRow({ r, isDragging, isDragOver, onDragStart, onDragOver, onDragLeave, onDrop, onDragEnd, zonasLabel, secsLabel, prodsLabel, destinoLabel, onToggle, onDelete }: {
-  r: ReglaEnvio
+  r: ReglaEnvio; key?: React.Key
   isDragging: boolean; isDragOver: boolean
   onDragStart:()=>void; onDragOver:(e:React.DragEvent)=>void
   onDragLeave:()=>void; onDrop:()=>void; onDragEnd:()=>void

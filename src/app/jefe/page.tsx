@@ -144,7 +144,7 @@ export default function JefeSalaPage() {
             </button>
           ))}
           <div style={{flex:1}}/>
-          <a href="/kds" target="_blank" style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'#14110E',borderRadius:6,color:'#F6F1E7',textDecoration:'none',fontSize:12,fontWeight:600,marginBottom:4}}>
+          <a href="/kds" target="_blank" style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'#1A1714',borderRadius:9999,color:'#F6F1E7',textDecoration:'none',fontSize:12,fontWeight:600,marginBottom:4}}>
             <NavIcon path="M2 3h20v14H2zM8 21h8M12 17v4"/>KDS
           </a>
           <a href="/edge" style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:C.red,borderRadius:6,color:'#fff',textDecoration:'none',fontSize:12,fontWeight:600}}>

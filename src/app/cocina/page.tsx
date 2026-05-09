@@ -153,7 +153,7 @@ function CocinaInner() {
 
 export default function CocinaPage() {
   return (
-    <Suspense fallback={<div style={{ minHeight: '100dvh', background: '#0D0B08' }} />}>
+    <Suspense fallback={<div style={{ minHeight: '100dvh', background: '#F6F1E7' }} />}>
       <CocinaInner />
     </Suspense>
   )
