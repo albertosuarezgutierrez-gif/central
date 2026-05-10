@@ -21,14 +21,49 @@ export async function POST(req: NextRequest) {
 
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
-    const { sesion_id, mesa_id, restaurante_id } = session.metadata || {}
+    const { sesion_id, mesa_id, restaurante_id, slot_id } = session.metadata || {}
 
     if (sesion_id) {
       const supabase = createServerClient()
-      await supabase
-        .from('qr_sesiones_cliente')
-        .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
-        .eq('id', sesion_id)
+
+      if (slot_id) {
+        // Pago parcial (división de cuenta)
+        await supabase
+          .from('qr_division_slots')
+          .update({ pagado: true, pagado_en: new Date().toISOString() })
+          .eq('id', slot_id)
+
+        // Incrementar contador de slots pagados en la sesión
+        await supabase.rpc('increment_division_slots_pagados', { p_sesion_id: sesion_id })
+
+        // Comprobar si todos han pagado → cerrar sesión
+        const { data: sesion } = await supabase
+          .from('qr_sesiones_cliente')
+          .select('division_personas, division_modo, division_slots_pagados')
+          .eq('id', sesion_id).single()
+
+        const { count: slotsPagados } = await supabase
+          .from('qr_division_slots')
+          .select('*', { count: 'exact', head: true })
+          .eq('sesion_id', sesion_id).eq('pagado', true)
+
+        const todosHanPagado = sesion?.division_modo === 'por_items'
+          ? (slotsPagados || 0) > 0 // en por_items cerramos cuando no quedan items
+          : (slotsPagados || 0) >= (sesion?.division_personas || 1)
+
+        if (todosHanPagado) {
+          await supabase
+            .from('qr_sesiones_cliente')
+            .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
+            .eq('id', sesion_id)
+        }
+      } else {
+        // Pago completo (sin división)
+        await supabase
+          .from('qr_sesiones_cliente')
+          .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
+          .eq('id', sesion_id)
+      }
 
       // Push al camarero: mesa pagada vía QR
       const { data: camareros } = await supabase
@@ -43,9 +78,9 @@ export async function POST(req: NextRequest) {
           headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}` },
           body: JSON.stringify({
             camarero_id: cam.id,
-            titulo: '💳 Pagado por QR',
-            cuerpo: `Mesa ${mesa_id} ha pagado desde su móvil`,
-            datos: { tipo: 'qr_pagado', mesa_id, sesion_id }
+            titulo: slot_id ? '💳 Pago parcial QR' : '💳 Pagado por QR',
+            cuerpo: slot_id ? `Una persona ha pagado su parte en mesa ${mesa_id}` : `Mesa ${mesa_id} ha pagado desde su móvil`,
+            datos: { tipo: slot_id ? 'qr_pago_parcial' : 'qr_pagado', mesa_id, sesion_id }
           })
         })
       }

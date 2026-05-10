@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-type Screen = 'loading' | 'error' | 'welcome' | 'menu' | 'cart' | 'cooking' | 'bill' | 'tip' | 'paying'
+type Screen = 'loading' | 'error' | 'welcome' | 'menu' | 'cart' | 'cooking' | 'bill' | 'split_modo' | 'split_igual' | 'split_items' | 'tip' | 'paying'
 
 interface Producto {
   id: string; nombre: string; descripcion: string; precio: number
@@ -47,6 +47,10 @@ export default function QrClientApp({ token }: { token: string }) {
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
   const [numComandas, setNumComandas] = useState(0)   // cuántas comandas ha hecho en esta sesión
+  const [splitPersonas, setSplitPersonas] = useState(2)
+  const [splitItemsSeleccionados, setSplitItemsSeleccionados] = useState<string[]>([])
+  const [splitItemsDisponibles, setSplitItemsDisponibles] = useState<any[]>([])
+  const [splitSlotId, setSplitSlotId] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [propinaPct, setPropinaPct] = useState(0)
@@ -92,18 +96,58 @@ export default function QrClientApp({ token }: { token: string }) {
     else showToast('Error al enviar el pedido')
   }, [data, sesionId, cart])
 
-  const cobrar = useCallback(async () => {
+  const cobrar = useCallback(async (modo: 'completo' | 'igual' | 'items' = 'completo') => {
     if (!sesionId) return
     setScreen('paying')
-    const res = await callEF('qr-cobro', {
-      sesion_id: sesionId,
-      propina_pct: propinaPct,
-      success_url: `${window.location.origin}/q/success`,
-      cancel_url: window.location.href,
-    })
-    if (res.checkout_url) window.location.href = res.checkout_url
-    else { showToast('Error al procesar el pago'); setScreen('bill') }
-  }, [sesionId, propinaPct])
+
+    if (modo === 'completo') {
+      const res = await callEF('qr-cobro', {
+        sesion_id: sesionId, propina_pct: propinaPct,
+        success_url: `${window.location.origin}/q/success`,
+        cancel_url: window.location.href,
+      })
+      if (res.checkout_url) window.location.href = res.checkout_url
+      else { showToast('Error al procesar el pago'); setScreen('bill') }
+    }
+
+    if (modo === 'igual') {
+      const res = await callEF('qr-split', {
+        action: 'pay_slot', sesion_id: sesionId,
+        modo: 'igual', personas: splitPersonas, propina_pct: propinaPct,
+        success_url: `${window.location.origin}/q/success`,
+        cancel_url: window.location.href,
+      })
+      if (res.checkout_url) window.location.href = res.checkout_url
+      else { showToast('Error al procesar el pago'); setScreen('split_igual') }
+    }
+
+    if (modo === 'items') {
+      // Primero claim_items para crear el slot
+      const claim = await callEF('qr-split', {
+        action: 'claim_items', sesion_id: sesionId,
+        item_ids: splitItemsSeleccionados, propina_pct: propinaPct,
+      })
+      if (!claim.ok) { showToast('Error al reclamar items'); setScreen('split_items'); return }
+
+      const res = await callEF('qr-split', {
+        action: 'pay_slot', sesion_id: sesionId,
+        modo: 'por_items', slot_id: claim.slot_id, propina_pct: propinaPct,
+        success_url: `${window.location.origin}/q/success`,
+        cancel_url: window.location.href,
+      })
+      if (res.checkout_url) window.location.href = res.checkout_url
+      else { showToast('Error al procesar el pago'); setScreen('split_items') }
+    }
+  }, [sesionId, propinaPct, splitPersonas, splitItemsSeleccionados])
+
+  const iniciarSplitItems = useCallback(async () => {
+    const res = await callEF('qr-split', { action: 'init_por_items', sesion_id: sesionId })
+    if (res.ok) {
+      setSplitItemsDisponibles(res.items_disponibles || [])
+      setSplitItemsSeleccionados([])
+      setScreen('split_items')
+    }
+  }, [sesionId])
 
   const addToCart = (prod: Producto) => setCart(prev => {
     const ex = prev.find(p => p.id === prod.id)
@@ -289,12 +333,141 @@ export default function QrClientApp({ token }: { token: string }) {
               </div>
             </div>
           </div>
-          <div style={{ padding: '14px 18px', flexShrink: 0 }}>
+          <div style={{ padding: '14px 18px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
             <button onClick={() => setScreen('tip')} style={{ width: '100%', padding: '14px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-              Pagar ahora — {fmt(total)}
+              Pagar todo — {fmt(total)}
             </button>
-            <div style={{ textAlign: 'center', fontSize: 12, color: C.creamDim, marginTop: 9 }}>🔒 Pago seguro via Stripe</div>
+            <button onClick={() => setScreen('split_modo')} style={{ width: '100%', padding: '13px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamMid, fontSize: 14, cursor: 'pointer' }}>
+              👥 Dividir la cuenta
+            </button>
+            <div style={{ textAlign: 'center', fontSize: 12, color: C.creamDim }}>🔒 Pago seguro via Stripe</div>
           </div>
+        </div>
+      )}
+
+      {/* ── SPLIT MODO ── */}
+      {screen === 'split_modo' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 18px', display: 'flex', gap: 11, alignItems: 'center', borderBottom: `1px solid ${C.rule}`, flexShrink: 0 }}>
+            <button onClick={() => setScreen('bill')} style={{ background: 'none', border: 'none', color: C.creamDim, fontSize: 22, cursor: 'pointer' }}>←</button>
+            <div style={{ fontSize: 21, fontStyle: 'italic' }}>Dividir cuenta</div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '28px 22px', gap: 16 }}>
+            <div style={{ textAlign: 'center', marginBottom: 8 }}>
+              <div style={{ fontSize: 13, color: C.creamDim }}>Total a dividir</div>
+              <div style={{ fontSize: 28, fontStyle: 'italic', color: C.cream, marginTop: 4 }}>{fmt(total)}</div>
+            </div>
+
+            <button onClick={() => setScreen('split_igual')} style={{ width: '100%', padding: '20px 20px', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', gap: 14, alignItems: 'center' }}>
+              <div style={{ fontSize: 32, flexShrink: 0 }}>➗</div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.cream, marginBottom: 3 }}>A partes iguales</div>
+                <div style={{ fontSize: 12, color: C.creamDim }}>Dividís el total entre N personas. Cada uno paga lo mismo.</div>
+              </div>
+            </button>
+
+            <button onClick={iniciarSplitItems} style={{ width: '100%', padding: '20px 20px', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, cursor: 'pointer', textAlign: 'left', display: 'flex', gap: 14, alignItems: 'center' }}>
+              <div style={{ fontSize: 32, flexShrink: 0 }}>🍽️</div>
+              <div>
+                <div style={{ fontSize: 15, fontWeight: 600, color: C.cream, marginBottom: 3 }}>Cada uno lo suyo</div>
+                <div style={{ fontSize: 12, color: C.creamDim }}>Cada persona elige los platos que ha pedido y paga exactamente eso.</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── SPLIT IGUAL ── */}
+      {screen === 'split_igual' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 18px', display: 'flex', gap: 11, alignItems: 'center', borderBottom: `1px solid ${C.rule}`, flexShrink: 0 }}>
+            <button onClick={() => setScreen('split_modo')} style={{ background: 'none', border: 'none', color: C.creamDim, fontSize: 22, cursor: 'pointer' }}>←</button>
+            <div style={{ fontSize: 21, fontStyle: 'italic' }}>A partes iguales</div>
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', padding: '28px 22px', gap: 22, textAlign: 'center' }}>
+            <div>
+              <div style={{ fontSize: 13, color: C.creamDim, marginBottom: 4 }}>¿Cuántas personas sois?</div>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 20, marginTop: 12 }}>
+                <button onClick={() => setSplitPersonas(p => Math.max(2, p - 1))} style={{ width: 44, height: 44, borderRadius: '50%', background: C.bg3, border: `1px solid ${C.rule}`, color: C.cream, fontSize: 22, cursor: 'pointer' }}>−</button>
+                <div style={{ fontSize: 52, fontStyle: 'italic', color: C.cream, fontFamily: 'serif', width: 60, textAlign: 'center' }}>{splitPersonas}</div>
+                <button onClick={() => setSplitPersonas(p => Math.min(10, p + 1))} style={{ width: 44, height: 44, borderRadius: '50%', background: C.bg3, border: `1px solid ${C.rule}`, color: C.cream, fontSize: 22, cursor: 'pointer' }}>+</button>
+              </div>
+            </div>
+            <div style={{ background: C.bg2, borderRadius: 14, padding: '20px', border: `1px solid ${C.rule}` }}>
+              <div style={{ fontSize: 13, color: C.creamDim, marginBottom: 8 }}>Cada persona paga</div>
+              <div style={{ fontSize: 36, fontStyle: 'italic', color: C.cream }}>{fmt(total / splitPersonas)}</div>
+              <div style={{ fontFamily: 'monospace', fontSize: 11, color: C.creamDim, marginTop: 6 }}>{fmt(total)} ÷ {splitPersonas} personas</div>
+            </div>
+            <div style={{ display: 'flex', gap: 9 }}>
+              {[5, 10, 15].map(p => (
+                <button key={p} onClick={() => setPropinaPct(propinaPct === p ? 0 : p)} style={{ flex: 1, padding: '10px 0', background: propinaPct === p ? C.vermilion : C.bg2, border: propinaPct === p ? 'none' : `1px solid ${C.rule}`, borderRadius: 11, color: 'white', cursor: 'pointer', fontSize: 12 }}>
+                  +{p}%<br/><span style={{ fontFamily: 'monospace', fontSize: 10, opacity: 0.7 }}>{fmt(total / splitPersonas * p / 100)}</span>
+                </button>
+              ))}
+            </div>
+            <button onClick={() => cobrar('igual')} style={{ width: '100%', padding: '14px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+              Pagar mi parte — {fmt(total / splitPersonas * (1 + propinaPct / 100))}
+            </button>
+            <div style={{ fontFamily: 'cursive', fontSize: 12, color: C.creamDim }}>Pasa el móvil a los demás para que paguen su parte 📱</div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SPLIT ITEMS ── */}
+      {screen === 'split_items' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ padding: '16px 18px', display: 'flex', gap: 11, alignItems: 'center', borderBottom: `1px solid ${C.rule}`, flexShrink: 0 }}>
+            <button onClick={() => setScreen('split_modo')} style={{ background: 'none', border: 'none', color: C.creamDim, fontSize: 22, cursor: 'pointer' }}>←</button>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 18, fontStyle: 'italic' }}>Elige lo que has pedido</div>
+              <div style={{ fontSize: 11, color: C.creamDim, marginTop: 1 }}>Toca los platos que son tuyos</div>
+            </div>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '8px 18px' }}>
+            {splitItemsDisponibles.filter(i => !i.reclamado).map(item => {
+              const sel = splitItemsSeleccionados.includes(item.id)
+              return (
+                <div key={item.id} onClick={() => setSplitItemsSeleccionados(prev => sel ? prev.filter(id => id !== item.id) : [...prev, item.id])} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: `1px solid ${C.rule}`, cursor: 'pointer' }}>
+                  <div style={{ width: 24, height: 24, borderRadius: 6, background: sel ? C.vermilion : C.bg3, border: sel ? 'none' : `1px solid ${C.rule}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 13 }}>{sel ? '✓' : ''}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 13, fontWeight: sel ? 600 : 400, color: sel ? C.cream : C.creamMid }}>{item.cantidad}× {item.productos?.nombre || item.nombre}</div>
+                  </div>
+                  <div style={{ fontFamily: 'monospace', fontSize: 13, color: sel ? C.cream : C.creamDim }}>{fmt(item.precio_unitario * item.cantidad)}</div>
+                </div>
+              )
+            })}
+            {splitItemsDisponibles.filter(i => i.reclamado).length > 0 && (
+              <div style={{ padding: '12px 0', opacity: 0.4 }}>
+                <div style={{ fontSize: 11, color: C.creamDim, marginBottom: 8, fontFamily: 'monospace', letterSpacing: '0.05em' }}>YA RECLAMADOS</div>
+                {splitItemsDisponibles.filter(i => i.reclamado).map(item => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: `1px solid ${C.rule}22` }}>
+                    <span style={{ fontSize: 13, color: C.creamDim, textDecoration: 'line-through' }}>{item.cantidad}× {item.productos?.nombre}</span>
+                    <span style={{ fontFamily: 'monospace', fontSize: 12, color: C.creamDim }}>{fmt(item.precio_unitario * item.cantidad)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          {splitItemsSeleccionados.length > 0 && (
+            <div style={{ padding: '12px 18px', borderTop: `1px solid ${C.rule}`, flexShrink: 0 }}>
+              {(() => {
+                const miTotal = splitItemsDisponibles
+                  .filter(i => splitItemsSeleccionados.includes(i.id))
+                  .reduce((a, i) => a + i.precio_unitario * i.cantidad, 0) * 1.10
+                return (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <span style={{ fontSize: 13, color: C.creamMid }}>Mi parte ({splitItemsSeleccionados.length} items)</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 16, fontWeight: 700 }}>{fmt(miTotal)}</span>
+                    </div>
+                    <button onClick={() => cobrar('items')} style={{ width: '100%', padding: '14px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                      Pagar mis platos — {fmt(miTotal)}
+                    </button>
+                  </>
+                )
+              })()}
+            </div>
+          )}
         </div>
       )}
 
@@ -313,7 +486,7 @@ export default function QrClientApp({ token }: { token: string }) {
               </button>
             ))}
           </div>
-          <button onClick={cobrar} style={{ width: '100%', padding: '14px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+          <button onClick={() => cobrar('completo')} style={{ width: '100%', padding: '14px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
             {propinaPct > 0 ? `Pagar ${fmt(total + total * propinaPct / 100)}` : `Pagar ${fmt(total)}`}
           </button>
         </div>
