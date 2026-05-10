@@ -1,6 +1,7 @@
 'use client'
 // QrClientApp — App completa del cliente en la mesa
-// Flujo: bienvenida → carta → carrito → cocina → cuenta → propina → pago
+// Flujo: bienvenida → carta → carrito → cocina ↔ carta (multi-pedido) → cuenta → propina → pago
+// El cliente puede hacer múltiples comandas en la misma sesión. Todas se agrupan en la cuenta final.
 
 import { useState, useEffect, useCallback } from 'react'
 
@@ -45,6 +46,7 @@ export default function QrClientApp({ token }: { token: string }) {
   const [data, setData] = useState<SessionData | null>(null)
   const [sesionId, setSesionId] = useState<string | null>(null)
   const [cart, setCart] = useState<CartItem[]>([])
+  const [numComandas, setNumComandas] = useState(0)   // cuántas comandas ha hecho en esta sesión
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [propinaPct, setPropinaPct] = useState(0)
@@ -82,7 +84,11 @@ export default function QrClientApp({ token }: { token: string }) {
       restaurante_id: data.restaurante.id,
       items
     })
-    if (res.ok) setScreen('cooking')
+    if (res.ok) {
+      setNumComandas(n => n + 1)
+      setCart([])          // limpia carrito para el próximo pedido
+      setScreen('cooking')
+    }
     else showToast('Error al enviar el pedido')
   }, [data, sesionId, cart])
 
@@ -233,7 +239,25 @@ export default function QrClientApp({ token }: { token: string }) {
           <div style={{ fontSize: 56 }}>👨‍🍳</div>
           <div style={{ fontSize: 23, fontStyle: 'italic' }}>En cocina...</div>
           <div style={{ fontSize: 13, color: C.creamDim }}>Tiempo estimado: ~12 min</div>
-          <button onClick={() => setScreen('bill')} style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamDim, fontSize: 13, cursor: 'pointer' }}>Pedir la cuenta</button>
+          {numComandas > 1 && (
+            <div style={{ background: C.bg2, borderRadius: 10, padding: '8px 16px', border: `1px solid ${C.rule}` }}>
+              <span style={{ fontFamily: 'monospace', fontSize: 11, color: C.creamDim }}>{numComandas} pedidos enviados esta sesión</span>
+            </div>
+          )}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+            <button
+              onClick={() => setScreen('menu')}
+              style={{ width: '100%', padding: '13px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            >
+              + Pedir algo más
+            </button>
+            <button
+              onClick={() => setScreen('bill')}
+              style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamDim, fontSize: 13, cursor: 'pointer' }}
+            >
+              Pedir la cuenta
+            </button>
+          </div>
         </div>
       )}
 
