@@ -1402,7 +1402,7 @@ export default function OnboardingPage() {
         </div>
 
         {/* Step content */}
-        <div key={`content-${step}`} style={{ animation: 'fadeIn .35s ease .1s both' }}>
+        <div key={'content-' + step} style={{ animation: 'fadeIn .35s ease .1s both' }}>
           {step === 0 && <StepCarta session={session} onNext={() => setStep(1)}/>}
           {step === 1 && <StepPersonal session={session} onNext={() => setStep(2)}/>}
           {step === 2 && <StepCocina onNext={() => setStep(3)}/>}
