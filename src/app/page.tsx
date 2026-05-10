@@ -653,7 +653,7 @@ export default function Page() {
         <div className="tgrid-wide" style={{marginTop:16}}>
           {[
             {ini:"A",av:"ta-blue",q:'"Tengo un bar en el Mercado de San Miguel. Volumen brutal, espacio mínimo. <em>El camarero dicta y el cocinero lo ve al momento.</em> No sé cómo trabajábamos antes."',r:"Volumen ×3 · mismo equipo · cero cuellos de botella",n:"Alejandro Mora",l:"Propietario · Barra Madrid, Mercado San Miguel",p:"1 perfil · 59€/mes"},
-            {ini:"P",av:"ta-brown",q:'"Tengo 3 locales en Valencia. Con ia.rest <em>veo los tres en tiempo real</em> y las alertas de alergia ya no se pierden entre papeles."',r:"3 locales · panel único · alertas centralizadas",n:"Pilar Escrivá",l:"Grupo hostelero · La Familia Escrivá, Valencia",p:"8 perfiles · 189€/mes"},
+            {ini:"P",av:"ta-brown",q:'"Tengo 3 locales en Valencia. Con ia.rest <em>veo los tres en tiempo real</em> y las alertas de alergia ya no se pierden entre papeles."',r:"3 locales · panel único · alertas centralizadas",n:"Pilar Escrivá",l:"Grupo hostelero · La Familia Escrivá, Valencia",p:"3 restaurantes · desde 59€/local"},
           ].map((t,i)=>(
             <div key={i} className={`tcard reveal rd${i}`}>
               <div className="tstars">⭐⭐⭐⭐⭐</div>
@@ -705,7 +705,7 @@ export default function Page() {
         <div className="phead reveal">
           <div className="section-tag">Precios</div>
           <h2>Sin comisiones por comanda.<br/>Sin sorpresas al mes siguiente.</h2>
-          <p>Solo pagas por los perfiles activos. Sin planes fijos, sin letra pequeña.</p>
+          <p>Solo pagas por los perfiles activos de cada restaurante. Sin planes fijos, sin letra pequeña.</p>
         </div>
         {(()=>{
           const calcPrice=(n:number,ann:boolean)=>{
@@ -722,7 +722,7 @@ export default function Page() {
               <div className="pcalc-inner">
                 {/* Precio */}
                 <div>
-                  <div className="pcalc-label">Precio mensual estimado</div>
+                  <div className="pcalc-label">Precio mensual estimado · por restaurante</div>
                   <div className="plpw">
                     <div className="plp"><sup>€</sup>{price}</div>
                     <div className="plper">/mes · sin permanencia{pAnnual?" · pago anual":""}</div>
@@ -768,6 +768,12 @@ export default function Page() {
                 <div className="pcalc-inc-grid">
                   {feats.map(f=><div key={f} className="pcalc-inc-item"><span className="ckg">—</span>{f}</div>)}
                 </div>
+              </div>
+              <div style={{marginTop:16,textAlign:"center"}}>
+                <p style={{fontFamily:"var(--soft)",fontSize:15,color:"var(--cream3)",letterSpacing:"-.005em"}}>
+                  ¿Tienes varios locales? Cada restaurante tiene su propia suscripción independiente al mismo precio.{" "}
+                  <button style={{background:"none",border:"none",color:"var(--red)",fontFamily:"var(--soft)",fontSize:15,cursor:"pointer",padding:0,textDecoration:"underline"}} onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Cuéntanos tu caso →</button>
+                </p>
               </div>
             </div>
           );
