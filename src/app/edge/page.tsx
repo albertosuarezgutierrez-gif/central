@@ -56,8 +56,9 @@ interface ChatMsg {
 function buildTTS(b: BrainResult, a86: string[] = [], aAlerg: {producto:string;alergenos:string[]}[] = []): string {
   const s86 = a86.length ? `Atención, ochenta y seis: ${a86.join(' y ')}. ` : ''
   const sAl = aAlerg.length ? `Alérgeno detectado: ${aAlerg.map(a=>`${a.producto} contiene ${a.alergenos.join(' y ')}`).join('. ')}. ` : ''
-  if (!b.items.length) return `${s86}${sAl}${b.tipo} para ${b.mesa}. ¿Confirmamos?`
-  return `${s86}${sAl}${b.mesa}: ${b.items.map(it=>`${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}. ¿Confirmamos?`
+  const items = b.items ?? []
+  if (!items.length) return `${s86}${sAl}${b.tipo} para ${b.mesa}. ¿Confirmamos?`
+  return `${s86}${sAl}${b.mesa}: ${items.map(it=>`${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}. ¿Confirmamos?`
 }
 
 function speak(text: string): Promise<void> {
@@ -325,8 +326,22 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           speak('¿Qué mesa?').then(() => startRecording())
           return
         }
+
+        // ── Detectar productos fuera de carta ─────────────────────────────
+        // BRAIN devolvió comanda pero con items vacíos (producto no reconocido)
+        const bItems: BrainResult['items'] = d.brain?.items || []
+        const esFueraCarta = bItems.length === 0 &&
+          d.brain?.tipo === 'comanda' &&
+          d.brain?.confianza < 0.5
+        if (esFueraCarta) {
+          const aviso = 'Producto no encontrado en la carta — ¿lo repites o es fuera de carta?'
+          addMsg('sistema', aviso, 'aviso')
+          setScreen('idle')
+          return
+        }
+        // ─────────────────────────────────────────────────────────────────
+
         setPendingItems([])
-        const bItems: BrainResult['items'] = d.brain?.items||[]
         const msgTxt = `${d.brain?.mesa||'?'}: ${bItems.map((it: BrainResult['items'][0])=>`${it.cantidad}× ${it.nombre}`).join(', ')}`
         addMsg('brain', msgTxt + (d.alertas_86?.length?` · ⚠ 86`:'') + (d.alertas_alergenos?.length?` · ⚠ alérgeno`:''), (d.alertas_86?.length||d.alertas_alergenos?.length)?'aviso':'ok')
 
@@ -359,10 +374,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         }
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
-        const msg = d.code==='API_KEY_INVALID'?'API key no configurada':d.error||'Error procesando voz'
+        const msg = d.code==='API_KEY_INVALID'?'API key no configurada':d.error||'Error al procesar la voz'
         setError(msg); addMsg('sistema', msg, 'error'); setScreen('error')
       }
-    } catch { setError('Error de red'); addMsg('sistema','Sin conexión','error'); setScreen('error') }
+    } catch { setError('Sin conexión'); addMsg('sistema','Sin conexión con el servidor — comprueba el WiFi','error'); setScreen('error') }
   }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg])
 
   useEffect(() => {

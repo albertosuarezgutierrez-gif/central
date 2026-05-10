@@ -22,6 +22,9 @@ export async function POST(req: NextRequest) {
     const { texto, latencia_ms: latenciaEar } = await transcribir(audio)
     const brainResult = await routearComanda(texto, rid)
 
+    // Guardia: asegurar que items siempre es array (defensa en profundidad)
+    if (!Array.isArray(brainResult.items)) brainResult.items = []
+
     // Flujo conversacional: si hay items pendientes de grabación anterior
     // (camarero dijo items pero no la mesa), esta grabación es solo la mesa
     if (pendingItemsRaw) {
@@ -329,7 +332,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: hint, code: 'API_KEY_INVALID' }, { status: 500 })
     }
 
+    // Traducir errores JS técnicos a mensajes legibles en español
+    let msgEs = 'Error interno al procesar la voz'
+    if (msg.includes('Cannot read properties of undefined')) {
+      msgEs = 'Error al procesar la comanda — inténtalo de nuevo'
+    } else if (msg.includes('Failed to fetch') || msg.includes('network')) {
+      msgEs = 'Sin conexión — comprueba el WiFi o los datos'
+    } else if (msg.includes('timeout') || msg.includes('AbortError')) {
+      msgEs = 'Tiempo de espera agotado — inténtalo de nuevo'
+    } else if (msg.includes('JSON') || msg.includes('parse')) {
+      msgEs = 'No se pudo interpretar la respuesta — inténtalo de nuevo'
+    } else if (msg.length < 120 && !msg.match(/[A-Z][a-z]+ \w+ properties/)) {
+      // Solo mostrar el mensaje original si parece legible (no un error JS técnico)
+      msgEs = msg
+    }
+
     console.error('[TRANSCRIBE]', err)
-    return NextResponse.json({ error: msg || 'Error interno' }, { status: 500 })
-  }
+    return NextResponse.json({ error: msgEs }, { status: 500 })
 }

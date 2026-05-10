@@ -167,7 +167,9 @@ export async function parsearComanda(texto: string, restaurante_id?: string): Pr
 
   try {
     const parsed = JSON.parse(clean)
-    console.log('[BRAIN] OK:', parsed.mesa, parsed.tipo, parsed.items?.length, 'items')
+    // Garantizar que items siempre es array (Claude a veces devuelve null o lo omite)
+    if (!Array.isArray(parsed.items)) parsed.items = []
+    console.log('[BRAIN] OK:', parsed.mesa, parsed.tipo, parsed.items.length, 'items')
     return { ...parsed, raw: texto }
   } catch (e) {
     console.error('[BRAIN] JSON.parse failed. raw_text:', raw_text.substring(0, 200), 'error:', e)
