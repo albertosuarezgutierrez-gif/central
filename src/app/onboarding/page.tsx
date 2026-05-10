@@ -322,7 +322,7 @@ function StepCarta({ session, onNext }: { session: any; onNext: () => void }) {
 
       {error && <p style={{ fontFamily: SN, fontSize: 13, color: '#F07060', marginTop: 12 }}>⚠ {error}</p>}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, gap: 12 }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20, gap: 12 }}>
         <button onClick={() => { setPhase('upload'); setFiles([]); setPreviews([]) }}
           style={{ background: 'none', border: '1px solid ' + C.rule2, color: C.fg2, borderRadius: 8, padding: '10px 18px', cursor: 'pointer', fontFamily: SN, fontSize: 14 }}>
           ← Nueva foto
@@ -339,6 +339,7 @@ function StepCarta({ session, onNext }: { session: any; onNext: () => void }) {
   return (
     <div>
       <div
+        className="ob-upload"
         onDragOver={e => { e.preventDefault(); setDragging(true) }}
         onDragLeave={() => setDragging(false)}
         onDrop={e => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files) }}
@@ -380,7 +381,7 @@ function StepCarta({ session, onNext }: { session: any; onNext: () => void }) {
 
       {error && <p style={{ fontFamily: SN, fontSize: 13, color: '#F07060', marginBottom: 12 }}>⚠ {error}</p>}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
         <button onClick={onNext}
           style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Añadiré la carta después
@@ -519,7 +520,7 @@ function StepPersonal({ session, onNext }: { session: any; onNext: () => void })
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onNext}
           style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Añadiré el personal después
@@ -735,7 +736,7 @@ function StepSecciones({ onNext }: { onNext: () => void }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onNext}
           style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Configuraré las secciones después
@@ -936,7 +937,7 @@ function StepImpresoras({ onNext }: { onNext: () => void }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onNext}
           style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Saltarme las impresoras
@@ -1107,7 +1108,7 @@ function StepMesas({ session, onComplete }: { session: any; onComplete: () => vo
 
       {saveError && <p style={{ fontFamily: SN, fontSize: 13, color: '#F07060', marginBottom: 12 }}>⚠ {saveError}</p>}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onComplete}
           style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Configuraré las mesas después
@@ -1215,7 +1216,7 @@ function StepPrimerTurno({ session, onComplete }: { session: any; onComplete: ()
 
       {error && <p style={{ fontFamily: SN, fontSize: 13, color: '#F07060', marginBottom: 16 }}>⚠ {error}</p>}
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="ob-btns" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <button onClick={onComplete}
           style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
           Abriré el turno después desde /owner
@@ -1343,21 +1344,28 @@ export default function OnboardingPage() {
         ::-webkit-scrollbar-thumb { background: ${C.rule2}; border-radius: 4px; }
         select option { background: ${C.e2}; color: ${C.fg}; }
         @media (max-width: 600px) {
-          .ob-grid-2 { grid-template-columns: 1fr !important; }
-          .ob-grid-3 { grid-template-columns: 1fr !important; }
+          .ob-grid-2  { grid-template-columns: 1fr !important; }
+          .ob-grid-3  { grid-template-columns: 1fr !important; }
           .ob-grid-imp { grid-template-columns: 1fr !important; }
+          .ob-header  { padding: 12px 16px !important; }
+          .ob-dots    { display: none !important; }
+          .ob-content { padding: 24px 16px 80px !important; }
+          .ob-btns    { flex-direction: column !important; }
+          .ob-btns button { width: 100% !important; justify-content: center !important; }
+          .ob-h1      { font-size: 26px !important; }
+          .ob-upload  { padding: 24px 16px !important; }
         }
       `}</style>
 
       {/* Top bar */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid ' + C.rule, position: 'sticky', top: 0, background: C.bg, zIndex: 10 }}>
+      <div className="ob-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid ' + C.rule, position: 'sticky', top: 0, background: C.bg, zIndex: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <Logo/>
           <span style={{ fontFamily: SE, fontSize: 17, fontStyle: 'italic', color: C.fg }}>ia.rest</span>
         </div>
 
         {/* Progress dots */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="ob-dots" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {STEPS.map((st, i) => (
             <React.Fragment key={i}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1384,7 +1392,7 @@ export default function OnboardingPage() {
       </div>
 
       {/* Content */}
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
+      <div className="ob-content" style={{ maxWidth: 680, margin: '0 auto', padding: '40px 24px 80px' }}>
         {/* Step header */}
         <div key={step} style={{ animation: 'fadeIn .35s ease', marginBottom: 32 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
@@ -1392,7 +1400,7 @@ export default function OnboardingPage() {
               {s.n} · {s.label}
             </span>
           </div>
-          <h1 style={{ fontFamily: SE, fontSize: 34, fontStyle: 'italic', color: C.fg, margin: '0 0 10px', lineHeight: 1.2 }}>
+          <h1 className="ob-h1" style={{ fontFamily: SE, fontSize: 34, fontStyle: 'italic', color: C.fg, margin: '0 0 10px', lineHeight: 1.2 }}>
             {s.title}
           </h1>
           <p style={{ fontFamily: SN, fontSize: 16, color: C.fg2, margin: '0 0 8px', lineHeight: 1.6 }}>
