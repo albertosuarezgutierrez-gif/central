@@ -340,7 +340,6 @@ export default function Page() {
   const [leadNombre, setLeadNombre] = useState("");
   const [pUsers, setPUsers] = useState(3);
   const [pAnnual, setPAnnual] = useState(false);
-  const [pQR, setPQR] = useState(0);
   const [leadEmail, setLeadEmail] = useState("");
   const [leadRest, setLeadRest] = useState("");
   const [leadTel, setLeadTel] = useState("");
@@ -366,7 +365,7 @@ export default function Page() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/contact-lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
-        body: JSON.stringify({ nombre: leadNombre.trim(), restaurante: leadRest.trim(), telefono: leadTel.trim(), email: leadEmail.trim(), consent_rgpd: true }),
+        body: JSON.stringify({ nombre: leadNombre.trim(), restaurante: leadRest.trim(), telefono: leadTel.trim(), email: leadEmail.trim() }),
       });
       if (!res.ok) throw new Error("error");
       setLeadSent(true);
@@ -727,19 +726,13 @@ export default function Page() {
           <p>Solo pagas por los perfiles activos de cada restaurante. Sin planes fijos, sin letra pequeña.</p>
         </div>
         {(()=>{
-          const calcBase=(n:number,ann:boolean)=>{
+          const calcPrice=(n:number,ann:boolean)=>{
             let p=59;
             if(n>1) p+=Math.min(n-1,5)*20;
             if(n>6) p+=(n-6)*15;
             return ann?Math.round(p*0.82):p;
           };
-          const calcQR=(q:number,ann:boolean)=>{
-            if(q===0) return 0;
-            return ann?Math.round(q*12*0.82):q*12;
-          };
-          const basePrice=calcBase(pUsers,pAnnual);
-          const qrPrice=calcQR(pQR,pAnnual);
-          const totalPrice=basePrice+qrPrice;
+          const price=calcPrice(pUsers,pAnnual);
           const examples:Array<[number,string]>=[[1,"1 perfil"],[3,"3 perfiles"],[6,"6 perfiles"]];
           const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Alertas en tiempo real","Panel owner","Soporte en español","14 días de prueba gratis"];
           return (
@@ -749,31 +742,12 @@ export default function Page() {
                 <div>
                   <div className="pcalc-label">Precio mensual estimado · por restaurante</div>
                   <div className="plpw">
-                    <div className="plp"><sup>€</sup>{totalPrice}</div>
+                    <div className="plp"><sup>€</sup>{price}</div>
                     <div className="plper">/mes · sin permanencia{pAnnual?" · pago anual":""}</div>
                   </div>
-                  {/* Desglose cuando hay QR activo */}
-                  {pQR>0?(
-                    <div style={{marginBottom:16,display:"flex",flexDirection:"column",gap:6}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:"rgba(246,241,231,.04)",border:"1px solid var(--b)",borderRadius:10}}>
-                        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--cream3)",letterSpacing:".04em"}}>
-                          {pUsers} PERFIL{pUsers>1?"ES":""} VOZ
-                        </span>
-                        <span style={{fontFamily:"var(--mono)",fontSize:12,color:"var(--cream2)",fontWeight:600}}>{basePrice}€</span>
-                      </div>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:"rgba(217,68,43,.06)",border:"1px solid rgba(217,68,43,.2)",borderRadius:10}}>
-                        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--cream3)",letterSpacing:".04em"}}>
-                          {pQR} MESA{pQR>1?"S":""} QR
-                        </span>
-                        <span style={{fontFamily:"var(--mono)",fontSize:12,color:"var(--red)",fontWeight:600}}>+{qrPrice}€</span>
-                      </div>
-                    </div>
-                  ):(
-                    <div className="pcalc-note">{pUsers} perfil{pUsers>1?"es":""} activo{pUsers>1?"s":""}
-                      {pAnnual&&<> · <em style={{color:"var(--green)"}}>18% de descuento aplicado</em></>}
-                    </div>
-                  )}
-                  {pQR>0&&pAnnual&&<div style={{marginBottom:12,fontFamily:"var(--soft)",fontSize:13,color:"var(--green)"}}>18% de descuento anual aplicado a todo</div>}
+                  <div className="pcalc-note">{pUsers} perfil{pUsers>1?"es":""} activo{pUsers>1?"s":""}
+                    {pAnnual&&<> · <em style={{color:"var(--green)"}}>18% de descuento aplicado</em></>}
+                  </div>
                   <button className="plbtn plbf" style={{maxWidth:320}} onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Solicitar 14 días gratis</button>
                   <p className="pltrial">Sin tarjeta · Te configuramos nosotros</p>
                 </div>
@@ -788,16 +762,6 @@ export default function Page() {
                     <input type="range" min={1} max={15} value={pUsers} onChange={e=>setPUsers(+e.target.value)} className="pcalc-slider"/>
                     <div className="pcalc-range-labels"><span>1</span><span>15 perfiles</span></div>
                   </div>
-                  {/* Slider QR mesas */}
-                  <div>
-                    <div className="pcalc-field-label">
-                      Mesas QR <span style={{display:"inline",fontFamily:"var(--mono)",fontSize:10,color:"var(--red)",background:"rgba(217,68,43,.1)",border:"1px solid rgba(217,68,43,.22)",borderRadius:9999,padding:"1px 8px",marginLeft:6,letterSpacing:".04em",fontWeight:700}}>NUEVO</span>
-                      <span>El cliente pide desde su móvil. 12€/mesa/mes.</span>
-                    </div>
-                    <div className="pcalc-count" style={{color:pQR>0?"var(--red)":"var(--cream3)"}}>{pQR}</div>
-                    <input type="range" min={0} max={20} value={pQR} onChange={e=>setPQR(+e.target.value)} className="pcalc-slider"/>
-                    <div className="pcalc-range-labels"><span>Sin QR</span><span>20 mesas</span></div>
-                  </div>
                   <div className="pcalc-annual" onClick={()=>setPAnnual(!pAnnual)}>
                     <button className={`pcalc-toggle${pAnnual?" on":""}`} onClick={e=>{e.stopPropagation();setPAnnual(!pAnnual)}}>
                       <span className="pcalc-toggle-knob"/>
@@ -808,9 +772,9 @@ export default function Page() {
                     <div className="pcalc-field-label">Ejemplos rápidos</div>
                     <div className="pcalc-examples">
                       {examples.map(([n,label])=>(
-                        <button key={n} className={`pcalc-ex${pUsers===n&&pQR===0?" active":""}`} onClick={()=>{setPUsers(n);setPQR(0);}}>
+                        <button key={n} className={`pcalc-ex${pUsers===n?" active":""}`} onClick={()=>setPUsers(n)}>
                           <strong>{label}</strong>
-                          <span>{calcBase(n,pAnnual)}€/mes</span>
+                          <span>{calcPrice(n,pAnnual)}€/mes</span>
                         </button>
                       ))}
                     </div>
