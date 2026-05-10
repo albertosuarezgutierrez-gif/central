@@ -365,7 +365,7 @@ export default function Page() {
       const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/contact-lead`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
-        body: JSON.stringify({ nombre: leadNombre.trim(), restaurante: leadRest.trim(), telefono: leadTel.trim(), email: leadEmail.trim() }),
+        body: JSON.stringify({ nombre: leadNombre.trim(), restaurante: leadRest.trim(), telefono: leadTel.trim(), email: leadEmail.trim(), consent_rgpd: true }),
       });
       if (!res.ok) throw new Error("error");
       setLeadSent(true);

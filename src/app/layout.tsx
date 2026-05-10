@@ -3,7 +3,6 @@ import React from 'react'
 import './globals.css'
 
 const BASE_URL = 'https://www.iarest.es'
-const GA_ID = 'G-EN2YQLRLEX'
 
 export const metadata: Metadata = {
   metadataBase: new URL(BASE_URL),
@@ -171,9 +170,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <style>{`body { background: #F6F1E7; }`}</style>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
-        {/* Google Analytics */}
-        <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
-        <script dangerouslySetInnerHTML={{ __html: `window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','${GA_ID}',{page_path:window.location.pathname});` }} />
+        {/* Google Analytics eliminado: requiere consentimiento previo (RGPD + ePrivacy)
+            y la política de cookies declara expresamente que no se usan analytics de terceros.
+            Alternativa sin cookies ni consentimiento: https://plausible.io */}
       </head>
       <body>
         {children}
