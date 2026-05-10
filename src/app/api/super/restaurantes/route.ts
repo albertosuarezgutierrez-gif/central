@@ -16,19 +16,24 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Pasar contexto de super_admin para que is_super_admin() y RLS funcionen
-  try { await supabase.rpc('set_config', { key: 'app.camarero_id', value: session.id, is_local: true }) } catch { /* ignore */ }
-
-  const { data, error } = await supabase.rpc('super_get_all_restaurantes')
+  const { data, error } = await supabase
+    .from('restaurantes')
+    .select(`
+      id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad,
+      created_at, trial_end, max_camareros, stripe_subscription_id,
+      camareros:camareros(count),
+      mesas:mesas(count),
+      comandas:comandas(count)
+    `)
+    .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Normalizar al mismo formato que esperaba el frontend
   const restaurantes = (data ?? []).map((r: any) => ({
     ...r,
-    camareros: [{ count: Number(r.num_camareros) }],
-    mesas:     [{ count: Number(r.num_mesas) }],
-    comandas:  [{ count: Number(r.num_comandas) }],
+    num_camareros: r.camareros?.[0]?.count ?? 0,
+    num_mesas:     r.mesas?.[0]?.count ?? 0,
+    num_comandas:  r.comandas?.[0]?.count ?? 0,
   }))
 
   return NextResponse.json({ restaurantes })
