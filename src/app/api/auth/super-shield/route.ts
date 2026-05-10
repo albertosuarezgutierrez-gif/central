@@ -3,21 +3,18 @@ import { NextRequest, NextResponse } from 'next/server'
 const KEY = process.env.SUPER_ACCESS_KEY
 
 /**
- * GET /api/super/shield?k=<SUPER_ACCESS_KEY>
+ * GET /api/auth/super-shield?k=<SUPER_ACCESS_KEY>
  *
  * Si la clave es correcta → establece cookie __super_shield y redirige a /super.
- * Si es incorrecta → 404 (no revela nada).
+ * Si es incorrecta → 404 silencioso (no revela que esta ruta existe).
  *
- * La cookie es HttpOnly + Secure + SameSite=Strict → no accesible por JS.
- * Duración: 8 horas. Pasadas las 8h hay que volver a usar el enlace.
- *
- * Guarda este enlace solo en tu gestor de contraseñas:
- * https://ia-rest.vercel.app/api/super/shield?k=<TU_CLAVE>
+ * Cookie: HttpOnly + Secure + SameSite=Strict, duración 8h.
+ * Nota: esta ruta está FUERA del namespace /api/super para no ser bloqueada
+ * por el propio middleware que protege /super.
  */
 export async function GET(req: NextRequest) {
   const k = req.nextUrl.searchParams.get('k')
 
-  // Fail secure: si no hay clave configurada o es incorrecta → 404 silencioso
   if (!KEY || !k || k !== KEY) {
     return new NextResponse(null, { status: 404 })
   }
