@@ -521,7 +521,7 @@ export default function SuperRestaurantePage() {
                       </div>
                       <button onClick={saveCuenta}
                         disabled={savingCuenta || !cuentaSelected || cuentaSelected === cuentaData.cuenta_id_actual}
-                        style={{background:C.ink,border:'none',borderRadius:6,color:C.cream,padding:'10px 20px',
+                        style={{background:C.ink,border:'none',borderRadius:6,color:C.bg,padding:'10px 20px',
                           fontFamily:SM,fontSize:11,letterSpacing:'.1em',cursor:'pointer',opacity:(!cuentaSelected||cuentaSelected===cuentaData.cuenta_id_actual)?0.4:1}}>
                         {savingCuenta ? 'ASIGNANDO…' : 'ASIGNAR A ESTA CUENTA'}
                       </button>
