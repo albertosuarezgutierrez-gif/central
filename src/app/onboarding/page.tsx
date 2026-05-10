@@ -225,7 +225,7 @@ function StepCarta({ session, onNext }: { session: any; onNext: () => void }) {
           <div key={i} style={{
             width: 8, height: 8, borderRadius: '50%',
             background: C.red, opacity: 0.3,
-            animation: `loadDot 1.2s ease-in-out ${i * 0.2}s infinite`,
+            animation: 'loadDot 1.2s ease-in-out ' + (i * 0.2) + 's infinite',
           }}/>
         ))}
       </div>
