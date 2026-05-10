@@ -194,8 +194,34 @@ export default function SuperPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: SN }}>
+      <style>{`
+        .super-rest-row {
+          display: grid;
+          grid-template-columns: 1fr auto auto auto auto;
+          align-items: center;
+          gap: 24px;
+        }
+        .super-rest-actions { display: flex; align-items: center; gap: 8px; }
+        .super-header-name { display: block; }
+        @media (max-width: 768px) {
+          .super-rest-row {
+            grid-template-columns: 1fr;
+            gap: 12px;
+          }
+          .super-rest-actions {
+            flex-wrap: wrap;
+            gap: 6px;
+          }
+          .super-form-grid { grid-template-columns: 1fr !important; }
+          .super-header { padding: 0 16px !important; }
+          .super-content { padding: clamp(16px,4vw,32px) clamp(12px,4vw,24px) !important; }
+        }
+        @media (max-width: 480px) {
+          .super-header-name { display: none; }
+        }
+      `}</style>
       {/* Header */}
-      <header style={{
+      <header className="super-header" style={{
         position: 'sticky', top: 0, zIndex: 10,
         background: C.dark, borderBottom: `1px solid #2F2820`,
         padding: '0 32px', height: 56,
@@ -208,7 +234,7 @@ export default function SuperPage() {
           SUPER ADMIN
         </div>
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
-          <div style={{ fontFamily: SM, fontSize: 11, color: '#8D8270' }}>
+          <div className="super-header-name" style={{ fontFamily: SM, fontSize: 11, color: '#8D8270' }}>
             {session?.nombre}
           </div>
           <button
@@ -295,7 +321,7 @@ export default function SuperPage() {
             {showFormCuenta && (
               <div style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, marginBottom: 24 }}>
                 <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.1em', marginBottom: 16 }}>NUEVA CUENTA</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+                <div className="super-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
                   {[
                     { k: 'nombre',       l: 'Nombre *',         ph: 'Manuela García' },
                     { k: 'pin_cuenta',   l: 'PIN de cuenta *',  ph: '2026', type: 'text' },
@@ -512,11 +538,9 @@ export default function SuperPage() {
         ) : (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {restaurantes.map(r => (
-              <div key={r.id} style={{
+              <div key={r.id} className="super-rest-row" style={{
                 background: r.activo ? C.bg : C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8,
                 padding: '20px 24px',
-                display: 'grid', gridTemplateColumns: '1fr auto auto auto auto',
-                alignItems: 'center', gap: 24,
                 opacity: r.activo ? 1 : 0.6,
               }}>
                 {/* Info */}

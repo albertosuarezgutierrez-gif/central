@@ -245,9 +245,9 @@ function CamarerosTab() {
       </div>
 
       <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch' }}>
-        <div style={{ minWidth: 640 }}>
+        <div className="carta-table-wrap" style={{ overflowX: "auto" }}>
         {/* Table header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 80px 100px',
+        <div className='carta-table-row' style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 80px 100px',
           padding: '10px 20px', borderBottom: `1px solid ${C.rule}`,
           fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>
           <span>Nombre</span><span>Rol</span><span>Sección</span><span>PIN</span><span>Estado</span><span style={{ textAlign: 'right' }}>Acciones</span>
@@ -260,7 +260,7 @@ function CamarerosTab() {
         )}
 
         {camareros.map((c, i) => (
-          <div key={c.id} style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 80px 100px',
+          <div key={c.id} className='carta-table-row' style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 80px 100px',
             padding: '14px 20px', alignItems: 'center',
             borderBottom: i < camareros.length - 1 ? `1px solid ${C.rule}` : 'none',
             background: !c.activo ? C.paper : 'transparent' }}>
@@ -5518,6 +5518,16 @@ export default function OwnerPage() {
           .owner-tab-lbl { display:none; }
           .owner-wrap { padding:14px 10px 80px; }
           .owner-hdr-name { display:none; }
+          .carta-table-wrap { min-width: 0 !important; overflow-x: auto; }
+          .carta-table-row { grid-template-columns: 1fr 80px 80px 60px !important; gap: 8px !important; }
+          .carta-table-row .col-hide { display: none; }
+          .owner-form-2col { grid-template-columns: 1fr !important; }
+          .owner-stats-grid { grid-template-columns: 1fr 1fr !important; }
+          .owner-action-row { flex-wrap: wrap; gap: 8px !important; }
+        }
+        @media (max-width:420px) {
+          .carta-table-row { grid-template-columns: 1fr 70px 56px !important; }
+          .owner-stats-grid { grid-template-columns: 1fr !important; }
         }
       `}</style>
 

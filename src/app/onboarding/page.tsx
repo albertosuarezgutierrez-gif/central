@@ -451,7 +451,7 @@ function StepPersonal({ session, onNext }: { session: any; onNext: () => void })
   return (
     <div>
       {/* Role cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 24 }}>
+      <div className="ob-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 24 }}>
         {ROL_INFO.map(r => (
           <div key={r.rol} style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '12px 14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
@@ -466,7 +466,7 @@ function StepPersonal({ session, onNext }: { session: any; onNext: () => void })
       {/* Add form */}
       <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
         <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.fg2, margin: '0 0 12px' }}>Añadir persona</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 10, marginBottom: 10 }}>
+        <div className="ob-grid-imp" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 100px', gap: 10, marginBottom: 10 }}>
           <div>
             <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
               onKeyDown={e => e.key === 'Enter' && pinRef.current?.focus()}
@@ -1044,7 +1044,7 @@ function StepMesas({ session, onComplete }: { session: any; onComplete: () => vo
       {/* Add zone form */}
       <div style={{ background: C.e1, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
         <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.fg2, margin: '0 0 12px' }}>Añadir zona</p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 70px', gap: 10, marginBottom: 10 }}>
+        <div className="ob-grid-imp" style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr 70px', gap: 10, marginBottom: 10 }}>
           <div>
             <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))}
               placeholder="Salón interior, Terraza…"
@@ -1178,7 +1178,7 @@ function StepPrimerTurno({ session, onComplete }: { session: any; onComplete: ()
           El <strong style={{ color: C.fg }}>turno</strong> es el contenedor de todas las operaciones del servicio: comandas, facturas, cobros y métricas quedan agrupados dentro del turno activo.
           Al cerrarlo al final del servicio, el sistema calcula el resumen del día.
         </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
+        <div className="ob-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
           {[
             { icon: ICONS.mic,   label: 'Comandas por voz',    desc: 'El camarero habla. El ticket va a cocina.' },
             { icon: ICONS.chef,  label: 'KDS en tiempo real',  desc: 'La cocina ve y gestiona cada ticket.' },
@@ -1342,7 +1342,12 @@ export default function OnboardingPage() {
         ::-webkit-scrollbar-track { background: ${C.e1}; }
         ::-webkit-scrollbar-thumb { background: ${C.rule2}; border-radius: 4px; }
         select option { background: ${C.e2}; color: ${C.fg}; }
-      `}</style>
+        @media (max-width: 600px) {
+          .ob-grid-2 { grid-template-columns: 1fr !important; }
+          .ob-grid-3 { grid-template-columns: 1fr !important; }
+          .ob-grid-imp { grid-template-columns: 1fr !important; }
+        }
+      \`}</style>
 
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: `1px solid ${C.rule}`, position: 'sticky', top: 0, background: C.bg, zIndex: 10 }}>

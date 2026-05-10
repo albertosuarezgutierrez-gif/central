@@ -189,6 +189,33 @@ export default function SuperRestaurantePage() {
 
   return (
     <div style={{minHeight:'100dvh',background:C.bg,color:C.ink,fontFamily:SN}}>
+      <style>{`
+        .sid-layout { display: flex; height: calc(100dvh - 56px); }
+        .sid-sidebar {
+          width: 160px; background: #1C1710;
+          border-right: 1px solid #2F2820;
+          flex-shrink: 0; padding-top: 8px; overflow-y: auto;
+        }
+        .sid-content { flex: 1; overflow: auto; padding: 32px; }
+        @media (max-width: 768px) {
+          .sid-layout { flex-direction: column; height: auto; min-height: calc(100dvh - 56px); }
+          .sid-sidebar {
+            width: 100%; height: auto; border-right: none;
+            border-bottom: 1px solid #2F2820;
+            padding-top: 0; display: flex;
+            overflow-x: auto; scrollbar-width: none; -webkit-overflow-scrolling: touch;
+          }
+          .sid-sidebar button {
+            flex-shrink: 0 !important; width: auto !important;
+            border-left: none !important;
+            padding: 12px 16px !important; white-space: nowrap;
+          }
+          .sid-content { padding: 16px !important; }
+        }
+        @media (max-width: 480px) {
+          .sid-content { padding: 12px !important; }
+        }
+      `}</style>
       {/* Top bar */}
       <div style={{background:C.bg2,borderBottom:`1px solid ${C.rule}`,padding:'0 24px',display:'flex',alignItems:'center',gap:16,height:56}}>
         <button onClick={()=>router.push('/super')}
@@ -211,9 +238,9 @@ export default function SuperRestaurantePage() {
         </button>
       </div>
 
-      <div style={{display:'flex',height:'calc(100dvh - 56px)'}}>
+      <div className='sid-layout' style={{}}>
         {/* Sidebar tabs */}
-        <div style={{width:160,background:C.bg2,borderRight:`1px solid ${C.rule}`,flexShrink:0,paddingTop:8}}>
+        <div className='sid-sidebar' style={{'--sid-bg2':C.bg2,'--sid-rule':C.rule} as any}>
           {TABS.map(t=>(
             <button key={t.id} onClick={()=>setTab(t.id)}
               style={{width:'100%',textAlign:'left',background:tab===t.id?C.redS:'none',
@@ -226,7 +253,7 @@ export default function SuperRestaurantePage() {
         </div>
 
         {/* Content */}
-        <div style={{flex:1,overflow:'auto',padding:32}}>
+        <div className='sid-content' style={{flex:1,overflow:'auto'}}>
 
           {/* ── VISTA GENERAL ── */}
           {tab==='vista' && (
