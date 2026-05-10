@@ -454,7 +454,6 @@ export default function Page() {
           <li><a href="#contacto">Contacto</a></li>
         </ul>
         <div className="nav-r">
-          <button className="nbg" onClick={()=>window.location.href="/login"}>Entrar</button>
           <button className="nbr" onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Quiero probarlo</button>
         </div>
       </nav>

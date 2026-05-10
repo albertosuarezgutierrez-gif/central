@@ -45,6 +45,7 @@ interface Restaurante {
   id: string; nombre: string; nombre_comercial: string; slug: string
   codigo_acceso: string; plan: string; plan_status: string; activo: boolean
   ciudad: string; nif: string; razon_social: string; created_at: string
+  access_token: string | null
 }
 interface Stats {
   camareros: number; mesas: number; comandas_hoy: number; ingresos_mes: number
@@ -259,6 +260,7 @@ export default function SuperRestaurantePage() {
                   {[
                     ['ID Supabase', rest.id],
                     ['Slug / Código', `${rest.slug} · ${rest.codigo_acceso}`],
+                    ['Enlace de acceso', rest.access_token ? `ia-rest.vercel.app/login?t=${rest.access_token}` : '⚠ Sin token — ejecuta migración SQL'],
                     ['Ciudad', rest.ciudad || '—'],
                     ['NIF', rest.nif || '⚠ No configurado'],
                     ['Razón Social', rest.razon_social || '⚠ No configurado'],

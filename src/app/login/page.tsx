@@ -10,6 +10,8 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 function detectRestauranteCode(): string | null {
   if (typeof window === 'undefined') return null
   const params = new URLSearchParams(window.location.search)
+  // ?t= token personalizado — se resuelve async en useEffect
+  if (params.get('t')) return null
   const fromParam = params.get('r') ?? params.get('restaurante')
   if (fromParam) { storeRestauranteCode(fromParam.toUpperCase()); return fromParam.toUpperCase() }
   const host = window.location.hostname
@@ -57,11 +59,31 @@ export default function LoginPage() {
   }>(null)
   const [selectedRestaurante, setSelectedRestaurante] = useState('')
   const [checkoutSuccess, setCheckoutSuccess] = useState(false)
+  const [tokenLocked, setTokenLocked] = useState(false) // llegó por ?t= → no puede cambiar restaurante
+  const [tokenError, setTokenError] = useState('')
 
   useEffect(() => {
     setRestauranteCode(detectRestauranteCode())
     const params = new URLSearchParams(window.location.search)
     if (params.get('checkout') === 'success') setCheckoutSuccess(true)
+    // Resolver token personalizado ?t=
+    const token = params.get('t')
+    if (token) {
+      setLoading(true)
+      fetch(`/api/login/token?t=${encodeURIComponent(token)}`)
+        .then(r => r.json())
+        .then(d => {
+          if (d.codigo_acceso) {
+            storeRestauranteCode(d.codigo_acceso)
+            setRestauranteCode(d.codigo_acceso)
+            setTokenLocked(true)
+          } else {
+            setTokenError(d.error ?? 'Enlace no válido')
+          }
+          setLoading(false)
+        })
+        .catch(() => { setTokenError('Error de red'); setLoading(false) })
+    }
   }, [])
   useEffect(() => { if (pin.length === 4 && !showCodeInput) doLogin(pin) }, [pin, showCodeInput])
 
@@ -192,6 +214,17 @@ export default function LoginPage() {
 
   const resetVoz = () => { setVozMode('idle'); setVozTexto(''); setVozSugerencias([]); setError('') }
   const keys = ['1','2','3','4','5','6','7','8','9','','0','del']
+
+  // Pantalla de error si el token no es válido
+  if (tokenError) {
+    return (
+      <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:24, gap:16 }}>
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
+        <div style={{ fontFamily:SE, fontSize:18, color:C.fg }}>Enlace no válido</div>
+        <div style={{ fontFamily:SM, fontSize:11, color:C.fg3, textAlign:'center', maxWidth:260 }}>{tokenError}.<br/>Solicita un enlace actualizado al propietario del restaurante.</div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 24px 48px', userSelect:'none' }}>
@@ -341,11 +374,9 @@ export default function LoginPage() {
           {vozMode==='idle' && !loading && <div style={{ marginTop:6, fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.06em' }}>MANTEN PARA ENTRAR POR VOZ</div>}
           {vozMode==='idle' && (
             <>
-              <button onPointerDown={()=>{setShowCodeInput(true);setCodeInput('')}} style={{ marginTop:24, background:'none', border:'none', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', cursor:'pointer', textDecoration:'underline', textDecorationStyle:'dotted' }}>CAMBIAR RESTAURANTE</button>
+              {!tokenLocked && <button onPointerDown={()=>{setShowCodeInput(true);setCodeInput('')}} style={{ marginTop:24, background:'none', border:'none', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', cursor:'pointer', textDecoration:'underline', textDecorationStyle:'dotted' }}>CAMBIAR RESTAURANTE</button>}
               <a href="/recuperar-pin" style={{ marginTop:8, display:'block', fontFamily:SM, fontSize:9, color:C.rS, letterSpacing:'.08em', textAlign:'center', textDecoration:'underline', textDecorationStyle:'dotted' }}>¿OLVIDASTE TU PIN?</a>
-              {(!restauranteCode || restauranteCode === 'DEMO') && (
-                <div style={{ marginTop:12, fontFamily:SM, fontSize:9, color:C.rS, textAlign:'center', lineHeight:2, letterSpacing:'.08em' }}>ADMIN · 0000 &nbsp;|&nbsp; OWNER · 2026 &nbsp;|&nbsp; SUPER · 9999</div>
-              )}
+
             </>
           )}
         </>

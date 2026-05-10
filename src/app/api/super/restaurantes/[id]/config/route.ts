@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   // Datos del restaurante
   const { data: restaurante, error } = await supabase
     .from('restaurantes')
-    .select('id, nombre, nombre_comercial, slug, codigo_acceso, plan, plan_status, activo, ciudad, nif, razon_social, created_at')
+    .select('id, nombre, nombre_comercial, slug, codigo_acceso, access_token, plan, plan_status, activo, ciudad, nif, razon_social, created_at')
     .eq('id', id)
     .single()
 
