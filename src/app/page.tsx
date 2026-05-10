@@ -265,6 +265,7 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .cnota{font-family:var(--soft);font-size:14px;color:var(--cream3);text-align:center;margin-top:16px}
 @media(max-width:768px){
   nav{padding:0 20px}.nav-c{display:none}
+  .nbr{font-size:12px;padding:7px 14px;letter-spacing:-.01em}
   .hero{padding:0 20px 80px}
   .dstage{grid-template-columns:1fr;min-height:auto}
   .ddiv{width:100%;height:1px}
@@ -284,6 +285,15 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
   footer{padding:40px 20px}.fbot{padding:20px}
   .pcalc-inner{grid-template-columns:1fr}
   .pcalc-inc-grid{grid-template-columns:repeat(2,1fr)}
+  /* Testimonios — fixes responsive */
+  .tcard{padding:20px}
+  .tquote{font-size:17px}.tquote.sm{font-size:15px}
+  .tresult{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+  .tauthor{flex-wrap:wrap;gap:8px}
+  .tbadge{margin-left:0}
+  /* BA section — evitar overflow en badge de tiempo */
+  .bar2{flex-wrap:wrap;gap:8px}
+  .bat{margin-left:0;white-space:normal}
 }
 .pcalc{max-width:860px;margin:0 auto}
 .pcalc-inner{display:grid;grid-template-columns:1fr 1fr;gap:48px;background:var(--bg2);border:1px solid rgba(217,68,43,.22);border-radius:24px;padding:52px;margin-bottom:24px;box-shadow:rgba(217,68,43,.07) 0 20px 60px -20px}
