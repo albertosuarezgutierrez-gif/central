@@ -349,4 +349,5 @@ export async function POST(req: NextRequest) {
 
     console.error('[TRANSCRIBE]', err)
     return NextResponse.json({ error: msgEs }, { status: 500 })
+  }
 }

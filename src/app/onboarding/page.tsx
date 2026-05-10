@@ -1347,7 +1347,7 @@ export default function OnboardingPage() {
           .ob-grid-3 { grid-template-columns: 1fr !important; }
           .ob-grid-imp { grid-template-columns: 1fr !important; }
         }
-      \`}</style>
+      `}</style>
 
       {/* Top bar */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid ' + C.rule, position: 'sticky', top: 0, background: C.bg, zIndex: 10 }}>
