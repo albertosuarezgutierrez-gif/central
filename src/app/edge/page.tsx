@@ -334,7 +334,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           d.brain?.tipo === 'comanda' &&
           d.brain?.confianza < 0.5
         if (esFueraCarta) {
-          const aviso = 'Producto no encontrado en la carta — ¿lo repites o es fuera de carta?'
+          const aviso = `"${d.texto}" — producto no encontrado en carta. Repítelo o avisa al dueño para añadirlo`
           addMsg('sistema', aviso, 'aviso')
           setScreen('idle')
           return
