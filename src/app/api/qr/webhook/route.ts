@@ -5,7 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' })
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
