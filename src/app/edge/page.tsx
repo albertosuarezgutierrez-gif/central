@@ -150,8 +150,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [autoThreshold, setAutoThreshold] = useState(85)    // % mínimo para auto-confirmar
   const [ttsOff, setTtsOff]             = useState(false)   // BRAIN no habla, solo escribe
   const [mesaFijada, setMesaFijada]     = useState<string|null>(null)  // mesa pinchada en HABLAR
-  const [clarificacionCtx, setClarificacionCtx] = useState<string|null>(null)  // texto ambiguo anterior
+  const [clarificacionCtx, setClarificacionCtx] = useState<string|null>(null)
   const [preguntaBrain, setPreguntaBrain]       = useState<string>('¿Qué mesa?')
+  const [chipsClarificacion, setChipsClarificacion] = useState<{nombre:string;precio?:number|null;cantidad:number}[]>([])
+  const [mesaClarificacion, setMesaClarificacion]   = useState<string|null>(null) // codigo de mesa
   const [alergenosMesa, setAlergenosMesa]   = useState<string[]>([])
   const [zonasAsignadas, setZonasAsignadas] = useState<string[]>([])   // [] = todas
   const [fontBig, setFontBig]               = useState(false)
@@ -354,19 +356,29 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         setLastComandaId(d.comanda_id??null); setAlertas86(d.alertas_86??[]); setAlertasAlerg(d.alertas_alergenos??[])
         addMsg('camarero', d.texto)
 
-        // ── BRAIN pide clarificación por ambigüedad (ej: "copa de vino" sin tipo) ──
+        // ── BRAIN pide clarificación por ambigüedad (ej: "un tinto" con 4 tintos) ──
         if (d.brain?.necesita_clarificacion && d.brain?.pregunta_clarificacion) {
-          const pregunta = d.brain.pregunta_clarificacion as string
+          const pregunta  = d.brain.pregunta_clarificacion as string
+          const opciones  = (d.brain.opciones_clarificacion ?? []) as {nombre:string;precio?:number|null;cantidad:number}[]
           setClarificacionCtx(d.texto)
           setPreguntaBrain(pregunta)
+          setMesaClarificacion(d.brain?.mesa ?? null)
           addMsg('brain', pregunta, 'pregunta')
-          setScreen('asking')
-          speak(pregunta).then(() => startRecording())
+          if (opciones.length >= 2) {
+            // Muchas opciones → chips tocables, no voz
+            setChipsClarificacion(opciones)
+            setScreen('asking')
+          } else {
+            // Pocas opciones → flujo de voz (blanco/tinto/rosado)
+            setChipsClarificacion([])
+            setScreen('asking')
+            speak(pregunta).then(() => startRecording())
+          }
           return
         }
         // Limpiar contexto de clarificación si se resolvió con éxito
-        setClarificacionCtx(null)
-        setPreguntaBrain('¿Qué mesa?')
+        setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
+        setChipsClarificacion([]); setMesaClarificacion(null)
 
         // Si BRAIN no encontró mesa o no creó comanda → preguntar
         const mesaInvalida = !d.comanda_id && (
@@ -538,12 +550,46 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     })
     addMsg('sistema', `✓ Marchado · ${mesa.codigo}`, 'ok')
   }
+  const seleccionarChip = useCallback(async (chip: {nombre:string;precio?:number|null;cantidad:number}) => {
+    // Buscar mesa_id a partir del codigo guardado
+    const mesa = mesasPlano.find(m => m.codigo === mesaClarificacion)
+    if (!mesa) {
+      addMsg('sistema', `Mesa ${mesaClarificacion} no encontrada`, 'error')
+      return
+    }
+    const ses = localStorage.getItem('ia_rest_session') ?? ''
+    try {
+      const r = await fetch('/api/comanda', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },
+        body: JSON.stringify({ mesa_id: mesa.id, items: [{ nombre: chip.nombre, cantidad: chip.cantidad }] }),
+      })
+      const d = await r.json()
+      if (r.ok) {
+        addMsg('brain', `✓ ${chip.cantidad}× ${chip.nombre} · ${mesa.codigo}`, 'ok')
+        setChipsClarificacion([])
+        setClarificacionCtx(null)
+        setMesaClarificacion(null)
+        setPreguntaBrain('¿Qué mesa?')
+        setScreen('sent')
+        setBrain({ mesa: mesa.codigo, tipo: 'comanda', items: [chip], confianza: 1, raw: chip.nombre })
+        setLastComandaId(d.comanda_id ?? d.id ?? null)
+        if (navigator.vibrate) navigator.vibrate([30,50,30])
+      } else {
+        addMsg('sistema', d.error ?? 'Error al crear comanda', 'error')
+      }
+    } catch {
+      addMsg('sistema', 'Sin conexión', 'error')
+    }
+  }, [mesasPlano, mesaClarificacion, addMsg])
+
   const reset = () => {
     if (typeof window!=='undefined') window.speechSynthesis?.cancel()
     speakingRef.current=false; setScreen('idle'); setBrain(null); setTranscript('')
     setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
     setAlertas86([]); setAlertasAlerg([]); setPendingItems([])
     setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
+    setChipsClarificacion([]); setMesaClarificacion(null)
   }
   const pedirCuenta = async () => {
     if (!lastComandaId) return
@@ -720,8 +766,37 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             {screen==='asking' && (
               <div style={{background:`${C.teal}14`,border:`1px solid ${C.teal}44`,borderRadius:12,padding:'12px 14px',animation:'msgIn .2s ease'}}>
                 <div style={{fontFamily:SM,fontSize:8,color:C.teal,letterSpacing:'1px',marginBottom:5,textTransform:'uppercase'}}>BRAIN · pregunta</div>
-                <div style={{fontSize:15,fontWeight:600,color:C.ink}}>{preguntaBrain}</div>
-                {pendingItems.length>0 && (
+                <div style={{fontSize:15,fontWeight:600,color:C.ink,marginBottom: chipsClarificacion.length ? 12 : 0}}>{preguntaBrain}</div>
+                {/* Chips tocables cuando hay opciones concretas de carta */}
+                {chipsClarificacion.length > 0 && (
+                  <div style={{display:'flex',flexDirection:'column',gap:7}}>
+                    {chipsClarificacion.map((chip,i) => (
+                      <button key={i} onPointerDown={()=>seleccionarChip(chip)}
+                        style={{display:'flex',alignItems:'center',justifyContent:'space-between',
+                          background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:10,
+                          padding:'10px 14px',cursor:'pointer',textAlign:'left',
+                          boxShadow:'0 1px 4px rgba(26,23,20,.07)',transition:'all .1s',
+                          fontFamily:SN,gap:10}}>
+                        <div style={{display:'flex',alignItems:'center',gap:8}}>
+                          <div style={{width:5,height:5,borderRadius:'50%',background:C.verm,flexShrink:0}}/>
+                          <span style={{fontSize:14,fontWeight:600,color:C.ink}}>
+                            {chip.cantidad > 1 && <span style={{fontFamily:SE,fontStyle:'italic',color:C.verm,marginRight:5}}>{chip.cantidad}×</span>}
+                            {chip.nombre}
+                          </span>
+                        </div>
+                        {chip.precio != null && (
+                          <span style={{fontFamily:SE,fontStyle:'italic',fontSize:15,color:C.ink3,flexShrink:0}}>
+                            {chip.precio.toFixed(2).replace('.',',')} €
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                    <button onClick={reset} style={{background:'none',border:`1px solid ${C.rule}`,color:C.ink4,borderRadius:8,padding:'7px 12px',fontFamily:SN,fontSize:11,cursor:'pointer',marginTop:2}}>
+                      Cancelar
+                    </button>
+                  </div>
+                )}
+                {pendingItems.length>0 && chipsClarificacion.length===0 && (
                   <div style={{marginTop:8,display:'flex',flexDirection:'column',gap:3}}>
                     {pendingItems.map((it,i)=>(
                       <div key={i} style={{display:'flex',gap:8,fontSize:12,color:C.ink2}}>

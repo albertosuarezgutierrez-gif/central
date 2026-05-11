@@ -136,14 +136,16 @@ REGLAS ESTRICTAS:
 
 CLARIFICACIÓN POR AMBIGÜEDAD:
 - Si el camarero menciona un producto que en la CARTA ACTIVA tiene múltiples variantes distintas (tipos diferentes, no solo formatos de tamaño) y NO especificó cuál, devuelve necesita_clarificacion:true
-- Ejemplo: "una copa de vino" y en carta existen "Copa Vino Blanco", "Copa Vino Tinto", "Copa Vino Rosado" → preguntar tipo
-- Ejemplo: "una cerveza" y en carta existen "Caña", "Mediana", "Botellín" → preguntar formato
-- NO preguntes si: el producto es único, si ya especificó tipo/formato, o si las variantes tienen el mismo nombre base con solo diferencia de tamaño trivial
-- La pregunta debe ser corta, directa y listar las opciones: "¿Qué tipo de vino? Blanco, tinto o rosado"
-- Si hay texto "→ respuesta:" en el input, es la respuesta a una clarificación anterior — úsala para completar la comanda sin volver a preguntar
+- Ejemplo: "un tinto" y en carta existen "Rioja Crianza 4.5€", "Ribera del Duero 5€", "Tempranillo 3.5€" → lista las opciones
+- Ejemplo: "una copa de vino" → primero pregunta blanco/tinto/rosado; si solo hay un blanco y múltiples tintos, lista solo los tintos si dijo "tinto"
+- opciones_clarificacion: array con los productos EXACTOS de la carta que coinciden, con precio y cantidad inferida del texto (ej: "dos tintos" → cantidad:2 en todas las opciones)
+- La pregunta debe ser corta: "¿Qué tinto?" o "¿Qué tipo de vino?"
+- NO preguntes si: el producto es único en carta, si ya especificó, o si las variantes son solo tamaño
+- Si hay texto "→ respuesta:" en el input, es respuesta a clarificación anterior — úsala para completar sin volver a preguntar
+- Con clarificación resuelta: devuelve necesita_clarificacion:false con los items completos
 
 SCHEMA:
-{"mesa":"S4","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S4","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   // Usar cache cuando sea posible para evitar DB queries en cada llamada (~200ms ahorrados)
