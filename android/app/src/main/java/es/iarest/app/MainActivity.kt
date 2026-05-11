@@ -129,3 +129,4 @@ class MainActivity : AppCompatActivity() {
         // else: no hacemos nada — la app no se cierra
     }
 }
+// build trigger Mon May 11 11:47:07 UTC 2026
