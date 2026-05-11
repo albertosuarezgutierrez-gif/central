@@ -7,6 +7,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.media.AudioManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.view.KeyEvent
 import android.view.WindowManager
@@ -25,8 +26,22 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaSession: MediaSessionCompat
     private var pttActive = false
 
-    private val CURRENT_VERSION = 6
+    private val CURRENT_VERSION = 7
     private val VERSION_URL = "https://www.iarest.es/app/version.json"
+    private val PERM_REQUEST = 10
+
+    // Todos los permisos que necesita ia.rest
+    private val REQUIRED_PERMISSIONS = buildList {
+        add(Manifest.permission.RECORD_AUDIO)
+        add(Manifest.permission.CAMERA)
+        add(Manifest.permission.VIBRATE)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            add(Manifest.permission.POST_NOTIFICATIONS)
+            add(Manifest.permission.READ_MEDIA_IMAGES)
+        } else {
+            add(Manifest.permission.READ_EXTERNAL_STORAGE)
+        }
+    }.toTypedArray()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -46,7 +61,6 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
         }
 
-        // Toda navegación interna — no salta a Chrome
         webView.webViewClient = object : WebViewClient() {
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
                 val url = request?.url?.toString() ?: return false
@@ -59,7 +73,6 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        // Permisos de micrófono al WebView
         webView.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest) {
                 runOnUiThread { request.grant(request.resources) }
@@ -68,35 +81,38 @@ class MainActivity : AppCompatActivity() {
 
         webView.loadUrl("https://www.iarest.es/login")
 
-        // ── CRÍTICO: dar foco al WebView para que los toques respondan ──
         webView.isFocusable = true
         webView.isFocusableInTouchMode = true
         webView.requestFocus()
 
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
-            != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.RECORD_AUDIO), 1)
-        }
-
+        // Pedir todos los permisos de una vez
+        requestAllPermissions()
         setupMediaSession()
         checkForUpdate()
     }
 
-    // Recarga WebView cuando Android concede el permiso de micro
+    private fun requestAllPermissions() {
+        val missing = REQUIRED_PERMISSIONS.filter {
+            ContextCompat.checkSelfPermission(this, it) != PackageManager.PERMISSION_GRANTED
+        }.toTypedArray()
+
+        if (missing.isNotEmpty()) {
+            ActivityCompat.requestPermissions(this, missing, PERM_REQUEST)
+        }
+    }
+
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<String>, grantResults: IntArray) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 1 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+        if (requestCode == PERM_REQUEST) {
+            // Recargar el WebView para que recoja todos los permisos concedidos
             webView.reload()
         }
     }
 
-    // ── PTT via teclado hardware (DOBLE cobertura: Activity + MediaSession) ──
-    // Este método intercepta el botón del auricular A NIVEL DE ACTIVITY,
-    // antes de que llegue a cualquier otro handler del sistema.
+    // PTT via teclado hardware — intercepta ANTES que cualquier asistente
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val isHeadset = event.keyCode == KeyEvent.KEYCODE_HEADSETHOOK ||
                         event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
-
         if (isHeadset) {
             when (event.action) {
                 KeyEvent.ACTION_DOWN -> {
@@ -104,19 +120,18 @@ class MainActivity : AppCompatActivity() {
                         pttActive = true
                         webView.post { webView.evaluateJavascript("window.startPTT&&window.startPTT()", null) }
                     }
-                    return true // consumido
+                    return true
                 }
                 KeyEvent.ACTION_UP -> {
                     pttActive = false
                     webView.post { webView.evaluateJavascript("window.stopPTT&&window.stopPTT()", null) }
-                    return true // consumido
+                    return true
                 }
             }
         }
         return super.dispatchKeyEvent(event)
     }
 
-    // ── Auto-update ───────────────────────────────────────────────
     private fun checkForUpdate() {
         Thread {
             try {
@@ -147,7 +162,6 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
-    // ── MediaSession (segunda línea de defensa para el PTT) ────────
     private fun setupMediaSession() {
         mediaSession = MediaSessionCompat(this, "IaRest")
         mediaSession.setPlaybackState(PlaybackStateCompat.Builder()

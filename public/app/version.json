@@ -1,5 +1,5 @@
 {
-  "version": 6,
+  "version": 7,
   "url": "https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v1.0/iarest.apk",
-  "notes": "Fix botón Continuar. PTT auricular via dispatchKeyEvent (más fiable)."
+  "notes": "Permisos completos: notificaciones, cámara, micro, galería, vibración."
 }

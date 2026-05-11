@@ -2,11 +2,31 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="es.iarest.app">
 
+    <!-- Red -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+
+    <!-- Micrófono (PTT + Whisper) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS"/>
+
+    <!-- Cámara (importar carta desde foto en /owner) -->
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-feature android:name="android.hardware.camera" android:required="false"/>
+
+    <!-- Fotos / galería -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"
+        android:maxSdkVersion="32"/>
+
+    <!-- Notificaciones push (Android 13+) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
+    <!-- Vibración (feedback PTT) -->
+    <uses-permission android:name="android.permission.VIBRATE"/>
+
+    <!-- Pantalla encendida en turno -->
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
 
     <application
         android:allowBackup="false"
@@ -29,7 +49,6 @@
             </intent-filter>
         </activity>
 
-        <!-- MediaButtonReceiver: captura el botón del auricular con máxima prioridad -->
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"
             android:exported="true">
