@@ -18,7 +18,7 @@ interface Producto {
 interface CartItem extends Producto { qty: number }
 
 interface SessionData {
-  mesa: { id: string; codigo: string; nombre: string; qr_modo_pago: string }
+  mesa: { id: string; codigo: string; nombre: string; qr_modo_pago: string; precio_fijo_persona?: number; precio_fijo_concepto?: string }
   restaurante: { id: string; nombre: string; connect_activo: boolean }
   productos: Producto[]
   sesion_id: string | null
