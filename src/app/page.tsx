@@ -303,7 +303,7 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .pcalc-inner{display:grid;grid-template-columns:1fr 1fr;gap:48px;background:var(--bg2);border:1px solid rgba(217,68,43,.22);border-radius:24px;padding:52px;margin-bottom:24px;box-shadow:rgba(217,68,43,.07) 0 20px 60px -20px}
 .pcalc-label{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin-bottom:20px}
 .pcalc-note{font-family:var(--soft);font-size:14px;color:var(--cream3);margin-top:6px;margin-bottom:28px}
-.pcalc-ctrl{display:flex;flex-direction:column;justify-content:center;gap:28px}
+.pcalc-ctrl{display:flex;flex-direction:column;justify-content:flex-start;gap:28px}
 .pcalc-field-label{font-size:14px;color:var(--cream2);margin-bottom:10px;letter-spacing:-.005em;line-height:1.4}
 .pcalc-field-label span{display:block;font-size:12px;color:var(--cream3);margin-top:3px}
 .pcalc-count{font-family:var(--head);font-style:italic;font-size:56px;color:var(--red);line-height:1;margin-bottom:10px;letter-spacing:-.03em}
@@ -759,26 +759,22 @@ export default function Page() {
                     <div className="plp"><sup>€</sup>{total}</div>
                     <div className="plper">/mes · sin permanencia{pAnnual?" · pago anual":""}</div>
                   </div>
-                  {pQR>0?(
-                    <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:8,marginBottom:24}}>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:"rgba(246,241,231,.03)",border:"1px solid var(--b)",borderRadius:9}}>
-                        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--cream3)"}}>{pUsers} PERFIL{pUsers>1?"ES":""} VOZ</span>
-                        <span style={{fontFamily:"var(--mono)",fontSize:13,color:"var(--cream2)",fontWeight:600}}>{basePrice}€</span>
+                  <div className="pcalc-note" style={{marginBottom:pQR>0?10:28}}>
+                    {pUsers} perfil{pUsers>1?"es":""} activo{pUsers>1?"s":""}
+                    {pAnnual&&<> · <em style={{color:"var(--green)"}}>18% descuento aplicado</em></>}
+                  </div>
+                  {pQR>0&&(
+                    <div style={{display:"flex",flexDirection:"column",gap:5,marginBottom:20}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"rgba(246,241,231,.03)",border:"1px solid var(--b)",borderRadius:8}}>
+                        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--cream3)"}}>{pUsers} perfil{pUsers>1?"es":""} voz</span>
+                        <span style={{fontFamily:"var(--mono)",fontSize:12,color:"var(--cream2)",fontWeight:600}}>{basePrice}€</span>
                       </div>
-                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 12px",background:"rgba(232,163,59,.05)",border:"1px solid rgba(232,163,59,.2)",borderRadius:9}}>
-                        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--cream3)",display:"flex",alignItems:"center",gap:6}}>
-                          {pQR} MESA{pQR>1?"S":""} QR
-                          <em style={{fontStyle:"normal",fontSize:9,color:"var(--amber)",background:"rgba(232,163,59,.12)",border:"1px solid rgba(232,163,59,.25)",borderRadius:9999,padding:"1px 7px",letterSpacing:".05em",fontWeight:700}}>NUEVO</em>
-                        </span>
-                        <span style={{fontFamily:"var(--mono)",fontSize:13,color:"var(--amber)",fontWeight:600}}>+{qrPrice}€</span>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"6px 10px",background:"rgba(232,163,59,.05)",border:"1px solid rgba(232,163,59,.2)",borderRadius:8}}>
+                        <span style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--cream3)"}}>{pQR} mesa{pQR>1?"s":""} QR</span>
+                        <span style={{fontFamily:"var(--mono)",fontSize:12,color:"var(--amber)",fontWeight:600}}>+{qrPrice}€</span>
                       </div>
-                    </div>
-                  ):(
-                    <div className="pcalc-note">{pUsers} perfil{pUsers>1?"es":""} activo{pUsers>1?"s":""}
-                      {pAnnual&&<> · <em style={{color:"var(--green)"}}>18% de descuento aplicado</em></>}
                     </div>
                   )}
-                  {pQR>0&&pAnnual&&<div style={{fontFamily:"var(--mono)",fontSize:11,color:"var(--green)",marginBottom:16}}>✓ Descuento anual 18% aplicado a todo</div>}
                   <button className="plbtn plbf" style={{maxWidth:320}} onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Solicitar 14 días gratis</button>
                   <p className="pltrial">Sin tarjeta · Te configuramos nosotros</p>
                 </div>
