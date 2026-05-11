@@ -24,8 +24,9 @@ class MainActivity : AppCompatActivity() {
     private lateinit var webView: WebView
     private lateinit var mediaSession: MediaSessionCompat
 
-    private val CURRENT_VERSION = 3
+    private val CURRENT_VERSION = 4
     private val VERSION_URL = "https://www.iarest.es/app/version.json"
+    private val APP_HOST = "iarest.es"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -34,6 +35,7 @@ class MainActivity : AppCompatActivity() {
 
         webView = WebView(this)
         setContentView(webView)
+
         webView.settings.apply {
             javaScriptEnabled = true
             domStorageEnabled = true
@@ -41,12 +43,40 @@ class MainActivity : AppCompatActivity() {
             allowFileAccessFromFileURLs = true
             allowUniversalAccessFromFileURLs = true
             cacheMode = WebSettings.LOAD_DEFAULT
+            setSupportMultipleWindows(false)
         }
+
+        // ── WebViewClient: toda la navegación interna, sin saltar a Chrome ──
+        webView.webViewClient = object : WebViewClient() {
+            override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
+                val url = request?.url?.toString() ?: return false
+                return when {
+                    // URLs de ia.rest → dentro del WebView
+                    url.contains(APP_HOST) -> false
+                    url.contains("ia-rest.vercel.app") -> false
+                    // Supabase (auth, realtime) → dentro del WebView
+                    url.contains("supabase.co") -> false
+                    // GitHub solo para descarga del APK → Chrome
+                    url.contains("github.com") -> {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        true
+                    }
+                    // Cualquier otra URL externa → Chrome
+                    else -> {
+                        startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
+                        true
+                    }
+                }
+            }
+        }
+
+        // ── WebChromeClient: permisos micro ────────────────────────────────
         webView.webChromeClient = object : WebChromeClient() {
             override fun onPermissionRequest(request: PermissionRequest) {
                 runOnUiThread { request.grant(request.resources) }
             }
         }
+
         webView.loadUrl("https://www.iarest.es/login")
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
@@ -57,6 +87,7 @@ class MainActivity : AppCompatActivity() {
         checkForUpdate()
     }
 
+    // ── Auto-update ───────────────────────────────────────────────
     private fun checkForUpdate() {
         Thread {
             try {
@@ -88,6 +119,7 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // ── MediaSession PTT ──────────────────────────────────────────
     private fun setupMediaSession() {
         mediaSession = MediaSessionCompat(this, "IaRest")
         val stateBuilder = PlaybackStateCompat.Builder()

@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "url": "https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v1.0/iarest.apk",
-  "notes": "Icono ia.rest + apertura directa en login"
+  "notes": "Fix navegación — ya no salta al navegador. Login funciona correctamente."
 }
