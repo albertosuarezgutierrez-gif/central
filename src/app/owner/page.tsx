@@ -291,7 +291,7 @@ function CamarerosTab() {
               </button>
             </span>
             <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-              <Btn size="sm" variant="ghost" onClick={() => openQr(c)} title="QR de instalación"><Icon d={ICONS.qr} size={13}/></Btn>
+              <Btn size="sm" variant="ghost" onClick={() => openQr(c)}><Icon d={ICONS.qr} size={13}/></Btn>
               <Btn size="sm" variant="ghost" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={13}/></Btn>
               <Btn size="sm" variant="danger" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={13}/></Btn>
             </span>
