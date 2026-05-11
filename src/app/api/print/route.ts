@@ -28,7 +28,7 @@ const supabase = () => createClient(
 )
 
 // Tipos de conexión que el bridge maneja via TCP
-const TIPOS_TCP = ['tcp', 'ip_local', 'usb_bridge']
+const TIPOS_TCP = ['ip_local', 'usb_bridge']
 
 // ── GET — Bridge solicita jobs pendientes ────────────────────
 export async function GET(req: NextRequest) {
