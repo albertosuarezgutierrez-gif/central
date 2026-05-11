@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
   if (body.trigger === 'test' && body.impresora_id) {
     const { data: imp } = await sb
       .from('impresoras')
-      .select('id, nombre, seccion_id, ip_address, port, connection_type')
+      .select('id, nombre, seccion_id, restaurante_id, ip_address, port, connection_type')
       .eq('id', body.impresora_id)
       .single()
 
@@ -148,11 +148,12 @@ export async function POST(req: NextRequest) {
     const { data: job, error } = await sb
       .from('print_jobs')
       .insert({
-        impresora_id: imp.id,
-        seccion_id:   imp.seccion_id,
+        impresora_id:  imp.id,
+        seccion_id:    imp.seccion_id,
+        restaurante_id: imp.restaurante_id,
         payload,
-        print_data:   printData,
-        status:       'pendiente',
+        print_data:    printData,
+        status:        'pendiente',
       })
       .select('id')
       .single()
