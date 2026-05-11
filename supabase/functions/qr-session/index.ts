@@ -42,8 +42,15 @@ serve(async (req) => {
     // 2. Restaurante
     const { data: rest } = await supabase
       .from('restaurantes')
-      .select('id, nombre, stripe_connect_account_id, stripe_connect_onboarded')
+      .select('id, nombre, stripe_connect_account_id, stripe_connect_onboarded, stripe_account_id')
       .eq('id', mesa.restaurante_id)
+      .single()
+
+    // 2b. Configuración de cobro (modo pre_auth / por_ronda / cuenta_abierta)
+    const { data: cobroConfig } = await supabase
+      .from('cobro_config')
+      .select('modo_cobro, timer_inactividad_min')
+      .eq('restaurante_id', mesa.restaurante_id)
       .single()
 
     // 3. Carta activa
@@ -73,7 +80,15 @@ serve(async (req) => {
           precio_fijo_persona: mesa.qr_precio_fijo_persona,
           precio_fijo_concepto: mesa.qr_precio_fijo_concepto || 'Cubierto',
         },
-        restaurante: { id: rest?.id, nombre: rest?.nombre, connect_activo: rest?.stripe_connect_onboarded },
+        restaurante: {
+          id: rest?.id, nombre: rest?.nombre,
+          connect_activo: rest?.stripe_connect_onboarded,
+          stripe_account_id: rest?.stripe_account_id || null,
+        },
+        cobro: {
+          modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
+          timer_min: cobroConfig?.timer_inactividad_min || 45,
+        },
         productos: productos || [],
         sesion_id: sesionExistente?.id || null,
         num_comensales: sesionExistente?.num_comensales || null,
@@ -111,7 +126,15 @@ serve(async (req) => {
         precio_fijo_persona,
         precio_fijo_concepto: mesa.qr_precio_fijo_concepto || 'Cubierto',
       },
-      restaurante: { id: rest?.id, nombre: rest?.nombre, connect_activo: rest?.stripe_connect_onboarded },
+      restaurante: {
+        id: rest?.id, nombre: rest?.nombre,
+        connect_activo: rest?.stripe_connect_onboarded,
+        stripe_account_id: rest?.stripe_account_id || null,
+      },
+      cobro: {
+        modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
+        timer_min: cobroConfig?.timer_inactividad_min || 45,
+      },
       productos: productos || [],
     })
 

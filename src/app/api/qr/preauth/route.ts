@@ -74,6 +74,7 @@ export async function POST(req: NextRequest) {
       ok: true,
       client_secret: setupIntent.client_secret,
       setup_intent_id: setupIntent.id,
+      stripe_account_id: restaurante?.stripe_account_id || null,
     })
   } catch (error: any) {
     console.error('[qr/preauth] Error:', error)

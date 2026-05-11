@@ -3,12 +3,12 @@
 // Flujo: bienvenida → carta → carrito → cocina ↔ carta (multi-pedido) → cuenta → propina → pago
 // El cliente puede hacer múltiples comandas en la misma sesión. Todas se agrupan en la cuenta final.
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-type Screen = 'loading' | 'error' | 'welcome' | 'comensales' | 'menu' | 'cart' | 'cooking' | 'bill' | 'split_modo' | 'split_igual' | 'split_items' | 'tip' | 'paying'
+type Screen = 'loading' | 'error' | 'welcome' | 'comensales' | 'preauth' | 'menu' | 'cart' | 'cooking' | 'bill' | 'split_modo' | 'split_igual' | 'split_items' | 'tip' | 'paying'
 
 interface Producto {
   id: string; nombre: string; descripcion: string; precio: number
@@ -19,7 +19,8 @@ interface CartItem extends Producto { qty: number }
 
 interface SessionData {
   mesa: { id: string; codigo: string; nombre: string; qr_modo_pago: string; precio_fijo_persona?: number | null; precio_fijo_concepto?: string | null }
-  restaurante: { id: string; nombre: string; connect_activo: boolean }
+  restaurante: { id: string; nombre: string; connect_activo: boolean; stripe_account_id?: string | null }
+  cobro?: { modo_cobro: 'por_ronda' | 'pre_auth' | 'cuenta_abierta'; timer_min: number }
   productos: Producto[]
   sesion_id: string | null
 }
@@ -57,6 +58,12 @@ export default function QrClientApp({ token }: { token: string }) {
   const [error, setError] = useState('')
   const [toast, setToast] = useState('')
   const [propinaPct, setPropinaPct] = useState(0)
+  // Pre-auth state
+  const [preauthClientSecret, setPreauthClientSecret] = useState<string | null>(null)
+  const [preauthProcessing, setPreauthProcessing] = useState(false)
+  const [preauthError, setPreauthError] = useState('')
+  const stripeRef = useRef<any>(null)
+  const cardElementRef = useRef<any>(null)
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
@@ -72,24 +79,127 @@ export default function QrClientApp({ token }: { token: string }) {
       .catch(() => { setError('Error de conexión'); setScreen('error') })
   }, [token])
 
+  const modoCobro = data?.cobro?.modo_cobro || 'cuenta_abierta'
+
+  // Función auxiliar: crear sesión + manejar flujo post-sesión
+  const postCrearSesion = useCallback(async (sid: string, nCom: number, d: SessionData) => {
+    setSesionId(sid)
+    setNumComensales(nCom)
+    setData(prev => ({ ...(prev || d), ...d }))
+
+    if (d.cobro?.modo_cobro === 'pre_auth') {
+      // Crear SetupIntent para capturar tarjeta
+      const res = await fetch('/api/qr/preauth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sesion_id: sid, restaurante_id: d.restaurante.id }),
+      }).then(r => r.json())
+
+      if (res.ok && res.client_secret) {
+        setPreauthClientSecret(res.client_secret)
+        setScreen('preauth')
+      } else {
+        // Si falla el pre-auth, continúa sin él
+        if (d.mesa.precio_fijo_persona) setScreen('comensales')
+        else setScreen('menu')
+      }
+    } else {
+      if (d.mesa.precio_fijo_persona) setScreen('comensales')
+      else setScreen('menu')
+    }
+  }, [])
+
   const iniciarSesion = useCallback(async () => {
     if (!data) return
-    // Si hay precio fijo por persona → preguntar comensales primero
-    if (data.mesa.precio_fijo_persona) {
+    if (data.mesa.precio_fijo_persona && modoCobro !== 'pre_auth') {
+      // Sin pre_auth: pedir comensales primero, sesión se crea en confirmarComensales
       setScreen('comensales')
     } else {
-      // Sin precio fijo: crear sesión con 1 comensal y pasar a carta
+      // Con pre_auth O sin precio fijo: crear sesión ya
       const d = await callEF('qr-session', { token, num_comensales: 1 })
-      if (d.sesion_id) { setSesionId(d.sesion_id); setNumComensales(1); setScreen('menu') }
-      else { setError('No se pudo iniciar sesión'); setScreen('error') }
+      if (!d.sesion_id) { setError('No se pudo iniciar sesión'); setScreen('error'); return }
+      await postCrearSesion(d.sesion_id, 1, { ...data, ...d })
     }
-  }, [data, token])
+  }, [data, token, modoCobro, postCrearSesion])
+
+  // Cargar Stripe.js y montar card element cuando entramos en pantalla preauth
+  useEffect(() => {
+    if (screen !== 'preauth' || !preauthClientSecret) return
+
+    const mountCard = async () => {
+      if (!stripeRef.current) {
+        await new Promise<void>(resolve => {
+          const s = document.createElement('script')
+          s.src = 'https://js.stripe.com/v3/'
+          s.onload = () => resolve()
+          document.head.appendChild(s)
+        })
+        const stripeAccountId = data?.restaurante?.stripe_account_id
+        stripeRef.current = (window as any).Stripe(
+          process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY,
+          stripeAccountId ? { stripeAccount: stripeAccountId } : {}
+        )
+      }
+
+      const elements = stripeRef.current.elements()
+      const card = elements.create('card', {
+        style: {
+          base: {
+            color: '#F6F1E7', fontSize: '16px', fontFamily: 'system-ui, sans-serif',
+            '::placeholder': { color: '#8C7B69' },
+            iconColor: '#D9442B',
+          },
+          invalid: { color: '#E8A33B' },
+        },
+      })
+      const el = document.getElementById('stripe-card-element')
+      if (el && !el.children.length) card.mount('#stripe-card-element')
+      cardElementRef.current = { elements, card }
+    }
+
+    mountCard()
+  }, [screen, preauthClientSecret, data])
+
+  const confirmarPreauth = useCallback(async () => {
+    if (!stripeRef.current || !cardElementRef.current || !preauthClientSecret) return
+    setPreauthProcessing(true)
+    setPreauthError('')
+
+    const { error: stripeErr, setupIntent } = await stripeRef.current.confirmCardSetup(
+      preauthClientSecret,
+      { payment_method: { card: cardElementRef.current.card } }
+    )
+
+    if (stripeErr) {
+      setPreauthError(stripeErr.message || 'Error al verificar la tarjeta')
+      setPreauthProcessing(false)
+      return
+    }
+
+    // Guardar PM en la sesión
+    await fetch('/api/qr/preauth', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sesion_id: sesionId, payment_method_id: setupIntent.payment_method }),
+    })
+
+    setPreauthProcessing(false)
+    // Continuar al flujo normal
+    if (data?.mesa.precio_fijo_persona) setScreen('comensales')
+    else setScreen('menu')
+  }, [preauthClientSecret, sesionId, data])
 
   const confirmarComensales = useCallback(async (n: number) => {
+    // Si ya tenemos sesionId (venimos de pre_auth), solo actualizamos comensales
+    if (sesionId) {
+      setNumComensales(n)
+      setScreen('menu')
+      return
+    }
     const d = await callEF('qr-session', { token, num_comensales: n })
     if (d.sesion_id) { setSesionId(d.sesion_id); setNumComensales(n); setScreen('menu') }
     else { setError('No se pudo iniciar sesión'); setScreen('error') }
-  }, [token])
+  }, [token, sesionId])
 
   const confirmarPedido = useCallback(async () => {
     if (!data || !sesionId || !cart.length) return
@@ -200,7 +310,7 @@ export default function QrClientApp({ token }: { token: string }) {
     { id:'problema',  emoji:'⚠️', label:'Tengo un problema' },
   ]
 
-  const mostrarHeader = sesionId && !['welcome','paying'].includes(screen)
+  const mostrarHeader = sesionId && !['welcome','paying','preauth'].includes(screen)
 
   return (
     <div style={s}>
@@ -287,6 +397,42 @@ export default function QrClientApp({ token }: { token: string }) {
       )}
 
       {/* ── COMENSALES ── */}
+      {screen === 'preauth' && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 22px', gap: 20 }}>
+          <div style={{ fontSize: 38 }}>💳</div>
+          <div style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: 22, fontStyle: 'italic', color: C.cream, marginBottom: 8 }}>Añade tu tarjeta</div>
+            <div style={{ fontSize: 13, color: C.creamDim, lineHeight: 1.6 }}>
+              Este local requiere verificar tu tarjeta antes de pedir.{'\n'}
+              No se realiza ningún cobro ahora.
+            </div>
+          </div>
+
+          {/* Contenedor del card element */}
+          <div style={{ width: '100%', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, padding: '16px 18px' }}>
+            <div id="stripe-card-element" style={{ minHeight: 24 }} />
+          </div>
+
+          {preauthError && (
+            <div style={{ width: '100%', background: '#A8311E22', border: '1px solid #A8311E55', borderRadius: 10, padding: '10px 14px', fontSize: 13, color: '#E8A33B' }}>
+              {preauthError}
+            </div>
+          )}
+
+          <button
+            onClick={confirmarPreauth}
+            disabled={preauthProcessing}
+            style={{ width: '100%', padding: '15px', background: preauthProcessing ? C.bg3 : C.vermilion, border: 'none', borderRadius: 13, color: preauthProcessing ? C.creamDim : 'white', fontSize: 15, fontWeight: 700, cursor: preauthProcessing ? 'not-allowed' : 'pointer' }}>
+            {preauthProcessing ? 'Verificando...' : 'Verificar tarjeta →'}
+          </button>
+
+          <div style={{ fontSize: 11, color: C.creamDim, textAlign: 'center', lineHeight: 1.6 }}>
+            Tu tarjeta se guarda de forma segura por Stripe.{'\n'}
+            Solo se cobrará el importe final de tu consumo.
+          </div>
+        </div>
+      )}
+
       {screen === 'comensales' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 22px', gap: 22, textAlign: 'center' }}>
           <div style={{ fontSize: 42 }}>👥</div>
