@@ -6,7 +6,7 @@ const ESTADOS = ['nuevo', 'contactado', 'demo', 'cliente', 'descartado']
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = getSession(req)
-  if (!session || !['owner', 'super_admin'].includes(session.rol)) {
+  if (!session || session.rol !== 'super_admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
   const { id } = await params

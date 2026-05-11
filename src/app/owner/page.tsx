@@ -1529,94 +1529,6 @@ function TurnoTab() {
   )
 }
 
-/* ─── Tab: Leads ─── */
-const ESTADOS_LEAD = ['nuevo','contactado','demo','cliente','descartado'] as const
-type EstadoLead = typeof ESTADOS_LEAD[number]
-const ESTADO_COLOR: Record<EstadoLead, string> = {
-  nuevo:       '#E8A33B',
-  contactado:  '#3B8BE8',
-  demo:        '#7B5EA7',
-  cliente:     '#3F7D44',
-  descartado:  '#6B5F52',
-}
-interface Lead { id: string; nombre: string; restaurante: string; telefono: string; estado: EstadoLead; notas: string | null; created_at: string }
-
-function LeadsTab() {
-  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '', 'Content-Type': 'application/json' })
-  const [leads, setLeads] = useState<Lead[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/owner/leads', { headers: sh() })
-      .then(r => r.json())
-      .then(d => setLeads(d.leads || []))
-      .finally(() => setLoading(false))
-  }, [])
-
-  const cambiarEstado = async (lead: Lead) => {
-    const idx = ESTADOS_LEAD.indexOf(lead.estado)
-    const next = ESTADOS_LEAD[(idx + 1) % ESTADOS_LEAD.length]
-    const r = await fetch(`/api/owner/leads/${lead.id}`, { method: 'PATCH', headers: sh(), body: JSON.stringify({ estado: next }) })
-    const d = await r.json()
-    if (d.lead) setLeads(prev => prev.map(l => l.id === lead.id ? d.lead : l))
-  }
-
-  const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-
-  return (
-    <div>
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:24 }}>
-        <div>
-          <div style={{ fontFamily:SN, fontSize:22, fontWeight:500, color:C.ink }}>Leads</div>
-          <div style={{ fontFamily:SM, fontSize:12, color:C.ink3, marginTop:2 }}>{leads.length} contacto{leads.length !== 1 ? 's' : ''} recibido{leads.length !== 1 ? 's' : ''}</div>
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          {ESTADOS_LEAD.map(e => (
-            <div key={e} style={{ display:'flex', alignItems:'center', gap:4, fontSize:11, fontFamily:SM, color:C.ink3 }}>
-              <div style={{ width:7, height:7, borderRadius:'50%', background:ESTADO_COLOR[e] }}/>
-              {e}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {loading ? (
-        <div style={{ textAlign:'center', padding:48, color:C.ink3, fontFamily:SM, fontSize:13 }}>Cargando…</div>
-      ) : leads.length === 0 ? (
-        <div style={{ textAlign:'center', padding:64 }}>
-          <div style={{ fontSize:36, marginBottom:16 }}>📭</div>
-          <div style={{ fontFamily:SN, fontStyle:'italic', fontSize:20, color:C.ink, marginBottom:8 }}>Aún no hay leads</div>
-          <div style={{ fontFamily:SM, fontSize:13, color:C.ink3 }}>Cuando alguien rellene el formulario de la landing, aparecerá aquí.</div>
-        </div>
-      ) : (
-        <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
-          {leads.map(lead => (
-            <div key={lead.id} style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:14, padding:'16px 20px', display:'grid', gridTemplateColumns:'1fr auto', gap:12, alignItems:'center' }}>
-              <div style={{ display:'flex', flexDirection:'column', gap:4 }}>
-                <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                  <span style={{ fontFamily:SN, fontSize:16, fontWeight:500, color:C.ink }}>{lead.nombre}</span>
-                  <span style={{ fontFamily:SM, fontSize:12, color:C.ink3 }}>·</span>
-                  <span style={{ fontFamily:SM, fontSize:13, color:C.ink2 }}>{lead.restaurante}</span>
-                </div>
-                <div style={{ display:'flex', alignItems:'center', gap:16 }}>
-                  <a href={`tel:${lead.telefono}`} style={{ fontFamily:SM, fontSize:13, color:C.red, textDecoration:'none', fontWeight:600 }}>📞 {lead.telefono}</a>
-                  <span style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>{fmt(lead.created_at)}</span>
-                </div>
-                {lead.notas && <div style={{ fontFamily:SM, fontSize:12, color:C.ink3, fontStyle:'italic' }}>{lead.notas}</div>}
-              </div>
-              <button
-                onClick={() => cambiarEstado(lead)}
-                style={{ padding:'6px 14px', borderRadius:20, border:`1px solid ${ESTADO_COLOR[lead.estado]}`, background:`${ESTADO_COLOR[lead.estado]}18`, color:ESTADO_COLOR[lead.estado], fontFamily:SM, fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap', letterSpacing:'.04em', textTransform:'uppercase' }}
-              >
-                {lead.estado} →
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  )
-}
 
 /* ─── Tab: Resumen ─── */
 function ResumenTab() {
@@ -5420,7 +5332,6 @@ const GRUPOS = [
   {
     id: 'servicio', label: 'Servicio', icon: ICONS.chart,
     tabs: [
-      { id: 'leads',     label: 'Leads',     icon: ICONS.users   },
       { id: 'reservas',  label: 'Reservas',  icon: ICONS.calendar },
       { id: 'turno',     label: 'Turno',     icon: ICONS.clock   },
       { id: 'caja',      label: 'Caja',      icon: ICONS.receipt },
@@ -6090,7 +6001,6 @@ export default function OwnerPage() {
           {tab === 'qr'             && <QRTabOwner restauranteId={session.restaurante_id} sh={sh} />}
           {tab === 'cubierto'       && <ServicioTab/>}
           {tab === 'reservas'       && <ReservasTab/>}
-          {tab === 'leads'           && <LeadsTab/>}
           {tab === 'camareros'      && <CamarerosTab/>}
           {tab === 'mesas'          && <MesasTab/>}
           {tab === 'secciones'      && <SeccionesTab/>}

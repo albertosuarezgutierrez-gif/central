@@ -4,7 +4,7 @@ import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
   const session = getSession(req)
-  if (!session || !['owner', 'super_admin'].includes(session.rol)) {
+  if (!session || session.rol !== 'super_admin') {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
   const supabase = createServerClient()

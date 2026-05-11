@@ -64,7 +64,7 @@ export default function SuperPage() {
   const [form, setForm] = useState({ nombre: '', slug: '', codigo_acceso: '', plan: 'starter', ciudad: 'Madrid' })
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'sugerencias'|'ia_training'|'sistema'|'cobro'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'cobro'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -256,6 +256,7 @@ export default function SuperPage() {
           {([
             { id: 'restaurantes', label: 'Restaurantes' },
             { id: 'clientes',     label: 'Clientes' },
+            { id: 'leads',        label: 'Leads' },
             { id: 'cobro',        label: 'Cobro €' },
             { id: 'sugerencias',  label: 'Sugerencias', badge: badgeSug },
             { id: 'ia_training',  label: 'IA Training' },
@@ -292,6 +293,8 @@ export default function SuperPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: `clamp(24px, 5vw, 48px) clamp(12px, 4vw, 32px)` }}>
         {tabSuper === 'cobro' ? (
           <Cobro session={session} C={C} SE={SE} SN={SN} SM={SM} />
+        ) : tabSuper === 'leads' ? (
+          <LeadsTab C={C} SE={SE} SN={SN} SM={SM} />
         ) : tabSuper === 'sugerencias' ? (
           <SugerenciasPanel
             sugerencias={sugerencias}
@@ -812,6 +815,99 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
               )
             })}
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Tab: Leads (super_admin) ─── */
+const ESTADOS_LEAD = ['nuevo','contactado','demo','cliente','descartado'] as const
+type EstadoLead = typeof ESTADOS_LEAD[number]
+const ESTADO_COLOR: Record<EstadoLead, string> = {
+  nuevo:       '#E8A33B',
+  contactado:  '#3B8BE8',
+  demo:        '#7B5EA7',
+  cliente:     '#3F7D44',
+  descartado:  '#6B5F52',
+}
+interface Lead { id: string; nombre: string; restaurante: string; telefono: string; email?: string; estado: EstadoLead; notas: string | null; created_at: string }
+
+function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '', 'Content-Type': 'application/json' })
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch('/api/super/leads', { headers: sh() })
+      .then(r => r.json())
+      .then(d => setLeads(d.leads || []))
+      .finally(() => setLoading(false))
+  }, [])
+
+  const cambiarEstado = async (lead: Lead) => {
+    const idx = ESTADOS_LEAD.indexOf(lead.estado)
+    const next = ESTADOS_LEAD[(idx + 1) % ESTADOS_LEAD.length]
+    const r = await fetch(`/api/super/leads/${lead.id}`, { method: 'PATCH', headers: sh(), body: JSON.stringify({ estado: next }) })
+    const d = await r.json()
+    if (d.lead) setLeads(prev => prev.map(l => l.id === lead.id ? d.lead : l))
+  }
+
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <div>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>COMERCIAL</div>
+        <h1 style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>Leads</h1>
+        <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: 0 }}>
+          Contactos del formulario de la landing. {leads.length} recibido{leads.length !== 1 ? 's' : ''}.
+        </p>
+      </div>
+
+      {/* Leyenda estados */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        {ESTADOS_LEAD.map(e => (
+          <div key={e} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: SM, color: C.ink3 }}>
+            <div style={{ width: 7, height: 7, borderRadius: '50%', background: ESTADO_COLOR[e] }} />
+            {e}
+          </div>
+        ))}
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 48, color: C.ink3, fontFamily: SM, fontSize: 13 }}>Cargando…</div>
+      ) : leads.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 64 }}>
+          <div style={{ fontSize: 36, marginBottom: 16 }}>📭</div>
+          <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontStyle: 'italic', fontSize: 20, color: C.ink, marginBottom: 8 }}>Aún no hay leads</div>
+          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Cuando alguien rellene el formulario de la landing, aparecerá aquí.</div>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {leads.map(lead => (
+            <div key={lead.id} style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ fontFamily: SN, fontSize: 16, fontWeight: 500, color: C.ink }}>{lead.nombre}</span>
+                  <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>·</span>
+                  <span style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>{lead.restaurante}</span>
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                  <a href={`tel:${lead.telefono}`} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none', fontWeight: 600 }}>📞 {lead.telefono}</a>
+                  {lead.email && <a href={`mailto:${lead.email}`} style={{ fontFamily: SM, fontSize: 13, color: C.ink2, textDecoration: 'none' }}>✉ {lead.email}</a>}
+                  <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{fmt(lead.created_at)}</span>
+                </div>
+                {lead.notas && <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, fontStyle: 'italic' }}>{lead.notas}</div>}
+              </div>
+              <button
+                onClick={() => cambiarEstado(lead)}
+                style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${ESTADO_COLOR[lead.estado]}`, background: `${ESTADO_COLOR[lead.estado]}18`, color: ESTADO_COLOR[lead.estado], fontFamily: SM, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.04em', textTransform: 'uppercase' }}
+              >
+                {lead.estado} →
+              </button>
+            </div>
+          ))}
         </div>
       )}
     </div>
