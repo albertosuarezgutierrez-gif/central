@@ -53,7 +53,7 @@ class MainActivity : AppCompatActivity() {
         }
 
         // Cargar ia.rest
-        webView.loadUrl("https://www.iarest.es")
+        webView.loadUrl("https://www.iarest.es/login")
 
         // Pedir permiso de micrófono al sistema Android
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
