@@ -8,6 +8,14 @@
     {
       "path": "/api/cron/alertas",
             "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/cobro-inactividad",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cobro-descuento",
+      "schedule": "0 2 1 * *"
     }
   ]
 }

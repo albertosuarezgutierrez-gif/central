@@ -4578,6 +4578,9 @@ function QRTabOwner({ restauranteId, sh }: { restauranteId: string; sh: () => Re
 
       {/* ── ia.rest cobro ── */}
       <CobroConfigSection restauranteId={restauranteId} sh={sh} />
+
+      {/* ── Sesiones pre-auth pendientes de cobro ── */}
+      <PreauthPendientesPanel restauranteId={restauranteId} sh={sh} />
     </div>
   )
 }
@@ -4722,6 +4725,68 @@ function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: 
           </div>
         </>
       )}
+    </div>
+  )
+}
+
+// ── Panel: sesiones QR con pre-auth pendientes de cobro ───────
+function PreauthPendientesPanel({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
+  const [sesiones, setSesiones] = useState<any[]>([])
+  const [loading, setLoading] = useState(true)
+  const [cobrando, setCobrando] = useState<string | null>(null)
+  const [msg, setMsg] = useState<Record<string, string>>({})
+
+  const cargar = () => {
+    fetch(`/api/qr/sesiones-preauth?restaurante_id=${restauranteId}`, { headers: sh() })
+      .then(r => r.json())
+      .then(d => { setSesiones(d.sesiones || []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }
+
+  useEffect(() => { cargar() }, [])
+
+  const cobrar = async (s: any) => {
+    const importe = prompt(`Importe a cobrar (€) para mesa ${s.mesa_codigo}:`, s.total_estimado?.toString() || '')
+    if (!importe || isNaN(parseFloat(importe))) return
+    setCobrando(s.id)
+    const r = await fetch('/api/qr/cobrar-preauth', {
+      method: 'POST',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sesion_id: s.id, importe_eur: parseFloat(importe) }),
+    })
+    const d = await r.json()
+    setMsg(prev => ({ ...prev, [s.id]: d.ok ? `✓ ${d.mensaje}` : `✗ ${d.error}` }))
+    setCobrando(null)
+    if (d.ok) setTimeout(() => cargar(), 1000)
+  }
+
+  if (loading || sesiones.length === 0) return null
+
+  return (
+    <div style={{ marginTop: 28, background: '#1F1A15', borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.amber}44` }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+        <span style={{ fontFamily: SM, fontSize: 10, color: C.amber, letterSpacing: '.1em' }}>⚠ PENDIENTES DE COBRO (PRE-AUTH)</span>
+        <span style={{ background: C.amber + '22', color: C.amber, fontFamily: SM, fontSize: 9, borderRadius: 10, padding: '1px 7px' }}>{sesiones.length}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {sesiones.map(s => (
+          <div key={s.id} style={{ background: C.paper, borderRadius: 10, padding: '10px 14px', border: `1px solid ${C.rule}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>Mesa {s.mesa_codigo}</div>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>
+                {Math.round(s.minutos_abierta || 0)}min · tarjeta capturada ✓
+              </div>
+              {msg[s.id] && (
+                <div style={{ fontFamily: SN, fontSize: 11, color: msg[s.id].startsWith('✓') ? C.green : C.red, marginTop: 3 }}>{msg[s.id]}</div>
+              )}
+            </div>
+            <button onClick={() => cobrar(s)} disabled={cobrando === s.id}
+              style={{ padding: '8px 16px', background: cobrando === s.id ? C.paper2 : C.red, border: 'none', borderRadius: 9, color: cobrando === s.id ? C.ink3 : '#fff', fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: cobrando === s.id ? 'not-allowed' : 'pointer' }}>
+              {cobrando === s.id ? 'Cobrando...' : 'Cobrar →'}
+            </button>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
