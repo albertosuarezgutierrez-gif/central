@@ -2324,6 +2324,7 @@ function ImpresorasTab() {
   const [impresoras, setImpresoras]     = useState<Impresora[]>([])
   const [jobs, setJobs]                 = useState<PrintJob[]>([])
   const [bridgeTokens, setBridgeTokens] = useState<BridgeToken[]>([])
+  const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null)
   const [loading, setLoading]           = useState(true)
   const [editando, setEditando]         = useState<Impresora | null>(null)
   const [modal, setModal]               = useState<null | 'create' | 'bridge' | { del: Impresora }>(null)
@@ -2773,9 +2774,28 @@ function ImpresorasTab() {
                         </div>
                         <button
                           title="Copiar token"
-                          onClick={() => navigator.clipboard.writeText(bt.token)}
-                          style={{ background: C.paper2, color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontFamily: SM, fontSize: 10, fontWeight: 700 }}>
-                          COPIAR
+                          onClick={() => {
+                            const copy = (text: string) => {
+                              if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(text).catch(() => {
+                                  const el = document.createElement('textarea')
+                                  el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
+                                  document.body.appendChild(el); el.select(); document.execCommand('copy')
+                                  document.body.removeChild(el)
+                                })
+                              } else {
+                                const el = document.createElement('textarea')
+                                el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
+                                document.body.appendChild(el); el.select(); document.execCommand('copy')
+                                document.body.removeChild(el)
+                              }
+                              setCopiedTokenId(bt.id)
+                              setTimeout(() => setCopiedTokenId(null), 2000)
+                            }
+                            copy(bt.token)
+                          }}
+                          style={{ background: copiedTokenId === bt.id ? C.green : C.paper2, color: copiedTokenId === bt.id ? '#fff' : C.ink3, border: `1px solid ${copiedTokenId === bt.id ? C.green : C.rule}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontFamily: SM, fontSize: 10, fontWeight: 700, transition: 'all .2s' }}>
+                          {copiedTokenId === bt.id ? '✓ COPIADO' : 'COPIAR'}
                         </button>
                         <Btn size="sm" variant="danger" onClick={() => deleteBridgeToken(bt.id)}><Icon d={ICONS.trash} size={13}/></Btn>
                       </div>
