@@ -348,7 +348,7 @@ function CamarerosTab() {
               <div style={{ width: '100%', fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.7, textAlign: 'center' }}>
                 El camarero escanea el QR con la cámara del móvil → se abre la app → escribe su PIN
               </div>
-              <Btn variant="ghost" onClick={() => setModal(null)} style={{ width: '100%' }}>Cerrar</Btn>
+              <div style={{ width: '100%' }}><Btn variant="ghost" onClick={() => setModal(null)}>Cerrar</Btn></div>
             </div>
           </Modal>
         )
