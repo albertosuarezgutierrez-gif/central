@@ -1,9 +1,9 @@
 // ============================================================
 // ia.rest · /api/print
 // ============================================================
-// Bridge endpoint para impresoras ip_local.
-// La impresora NO hace polling — lo hace un proceso Node.js local
-// en la red del restaurante (scripts/bridge-local.js).
+// Bridge endpoint para impresoras ESC/POS TCP.
+// La impresora NO hace polling — lo hace el bridge local
+// (scripts/bridge-local.js) en la red del restaurante.
 //
 // GET  ?token=BRIDGE_TOKEN
 //   → devuelve print_jobs pendientes con print_data (ESC/POS)
@@ -14,16 +14,21 @@
 //
 // POST { trigger: 'test', impresora_id }
 //   → crea un job de prueba para verificar conectividad
+//
+// connection_type válidos para bridge TCP: 'tcp' | 'ip_local' | 'usb_bridge'
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { generarEscPos, generarTextoPlano } from '@/lib/courier'
+import { generarTextoPlano } from '@/lib/courier'
 
 const supabase = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
+
+// Tipos de conexión que el bridge maneja via TCP
+const TIPOS_TCP = ['tcp', 'ip_local', 'usb_bridge']
 
 // ── GET — Bridge solicita jobs pendientes ────────────────────
 export async function GET(req: NextRequest) {
@@ -50,11 +55,11 @@ export async function GET(req: NextRequest) {
     .update({ ultimo_ping: new Date().toISOString() })
     .eq('id', bridge.id)
 
-  // Buscar impresoras ip_local activas
+  // Buscar impresoras TCP activas (acepta 'tcp', 'ip_local', 'usb_bridge')
   const { data: impresoras } = await sb
     .from('impresoras')
-    .select('id, ip_address, port')
-    .eq('connection_type', 'ip_local')
+    .select('id, ip_address, port, connection_type')
+    .in('connection_type', TIPOS_TCP)
     .eq('activa', true)
 
   if (!impresoras?.length) {
@@ -114,21 +119,29 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Impresora no encontrada' }, { status: 404 })
     }
 
+    const ahora    = new Date()
+    const horaStr  = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    const fechaStr = ahora.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+
     const payload = {
       mesa:       'TEST',
       camarero:   'ia.rest',
       ticket_num: 0,
-      seccion:    imp.seccion_id ?? 'test',
+      seccion:    imp.nombre ?? 'TEST',
       items: [
-        { nombre: 'TICKET DE PRUEBA', cantidad: 1 },
-        { nombre: 'Conexión verificada', cantidad: 1 },
+        { nombre: 'IMPRESORA CONECTADA', cantidad: 1 },
+        { nombre: `IP: ${imp.ip_address ?? 'N/A'}:${imp.port ?? 9100}`, cantidad: 1 },
+        { nombre: `Modelo: ${imp.nombre}`, cantidad: 1 },
+        { nombre: `Hora: ${horaStr}`, cantidad: 1 },
+        { nombre: fechaStr, cantidad: 1 },
       ],
       tipo: 'test',
-      ts:   new Date().toISOString(),
+      ts:   ahora.toISOString(),
     }
 
-    const printData = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
-      ? generarEscPos(payload)
+    const esTcp = TIPOS_TCP.includes(imp.connection_type)
+    const printData = esTcp
+      ? generarEscPosPrueba(imp.nombre ?? 'Impresora', imp.ip_address ?? '', imp.port ?? 9100)
       : generarTextoPlano(payload)
 
     const { data: job, error } = await sb
@@ -139,7 +152,6 @@ export async function POST(req: NextRequest) {
         payload,
         print_data:   printData,
         status:       'pendiente',
-        // No comanda_id — es un test
       })
       .select('id')
       .single()
@@ -158,22 +170,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Parámetros inválidos' }, { status: 400 })
   }
 
-  const update: Record<string, unknown> = {
-    status,
-    attempts: supabaseSql('attempts + 1'),
-  }
-
-  if (status === 'impreso') {
-    update.acked_at = new Date().toISOString()
-  } else if (status === 'error') {
-    update.error_msg  = error_msg ?? 'Error desconocido'
-    update.status     = 'error'
-  }
-
-  // No podemos usar RPC inline aquí — lo hacemos con update numérico
   const { data: current } = await sb
     .from('print_jobs')
-    .select('attempts')
+    .select('attempts, comanda_id, seccion_id')
     .eq('id', job_id)
     .single()
 
@@ -182,32 +181,90 @@ export async function POST(req: NextRequest) {
       status,
       attempts:  (current?.attempts ?? 0) + 1,
       acked_at:  status === 'impreso' ? new Date().toISOString() : undefined,
-      error_msg: status === 'error' ? (error_msg ?? 'Error desconocido') : undefined,
+      error_msg: status === 'error'   ? (error_msg ?? 'Error desconocido') : undefined,
     })
     .eq('id', job_id)
 
   // Si impreso: actualizar comanda_items
-  if (status === 'impreso') {
-    const { data: job } = await sb
-      .from('print_jobs')
-      .select('comanda_id, seccion_id')
-      .eq('id', job_id)
-      .single()
-
-    if (job?.comanda_id) {
-      await sb.from('comanda_items')
-        .update({
-          print_status: 'impreso',
-          printed_at:   new Date().toISOString(),
-        })
-        .eq('comanda_id', job.comanda_id)
-        .eq('seccion_id', job.seccion_id)
-    }
+  if (status === 'impreso' && current?.comanda_id) {
+    await sb.from('comanda_items')
+      .update({
+        print_status: 'impreso',
+        printed_at:   new Date().toISOString(),
+      })
+      .eq('comanda_id', current.comanda_id)
+      .eq('seccion_id', current.seccion_id)
   }
 
   return NextResponse.json({ ok: true })
 }
 
-// Placeholder para evitar error de linting — no es una RPC real
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-function supabaseSql(_expr: string) { return undefined }
+// ── Ticket de prueba ESC/POS mejorado (80mm, autocutter full) ──
+function generarEscPosPrueba(nombre: string, ip: string, port: number): string {
+  const ESC = '\x1B'
+  const GS  = '\x1D'
+  const LF  = '\x0A'
+
+  const init     = ESC + '@'
+  const center   = ESC + 'a\x01'
+  const left     = ESC + 'a\x00'
+  const bold_on  = ESC + 'E\x01'
+  const bold_off = ESC + 'E\x00'
+  const big      = GS  + '!\x11'   // 2x ancho + 2x alto
+  const medium   = GS  + '!\x10'   // 2x ancho
+  const normal   = GS  + '!\x00'
+  const cut_full = GS  + 'V\x00'   // Autocorte completo
+
+  const SEP  = '-'.repeat(42)
+  const SEP2 = '='.repeat(42)
+  const ahora = new Date()
+  const hora  = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+  const fecha = ahora.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })
+
+  const lines: string[] = []
+
+  lines.push(init)
+
+  // Cabecera marca
+  lines.push(center)
+  lines.push(LF)
+  lines.push(big + bold_on)
+  lines.push('ia.rest' + LF)
+  lines.push(normal + bold_off)
+  lines.push('Sistema TPV por voz' + LF)
+  lines.push(LF)
+
+  lines.push(left)
+  lines.push(SEP2 + LF)
+
+  // Estado OK en grande centrado
+  lines.push(center)
+  lines.push(medium + bold_on)
+  lines.push('IMPRESORA OK' + LF)
+  lines.push(normal + bold_off)
+  lines.push(LF)
+
+  // Detalles
+  lines.push(left)
+  lines.push(SEP + LF)
+  lines.push(bold_on + 'Nombre:   ' + bold_off + nombre + LF)
+  lines.push(bold_on + 'IP:       ' + bold_off + ip + ':' + String(port) + LF)
+  lines.push(bold_on + 'Protocolo:' + bold_off + ' ESC/POS TCP' + LF)
+  lines.push(bold_on + 'Hora:     ' + bold_off + hora + LF)
+  lines.push(bold_on + 'Fecha:    ' + bold_off + fecha + LF)
+  lines.push(SEP + LF)
+  lines.push(LF)
+
+  // Nota al pie
+  lines.push(center)
+  lines.push('Si ves esto, todo funciona.' + LF)
+  lines.push('Listo para marchar.' + LF)
+  lines.push(LF)
+  lines.push(LF)
+  lines.push(LF)
+
+  // Corte completo (Seiko + Sunmi soportan GS V 0)
+  lines.push(cut_full)
+
+  return lines.join('')
+}
