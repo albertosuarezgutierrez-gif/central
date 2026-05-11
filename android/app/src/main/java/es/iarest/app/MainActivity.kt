@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var pttActive = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val CURRENT_VERSION = 9
+    private val CURRENT_VERSION = 10
     private val VERSION_URL = "https://www.iarest.es/app/version.json"
 
     private val REQUIRED_PERMISSIONS = buildList {
@@ -139,7 +139,7 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.ACTION_DOWN -> {
                     if (!pttActive) {
                         pttActive = true
-                        webView.post { webView.evaluateJavascript("window.startPTT&&window.startPTT()", null) }
+                        webView.post { webView.evaluateJavascript("window.resetPTT&&window.resetPTT();setTimeout(()=>{window.startPTT&&window.startPTT()},50)", null) }
                     }
                     return true
                 }
@@ -166,7 +166,7 @@ class MainActivity : AppCompatActivity() {
                 val k = e.getParcelableExtra<KeyEvent>(Intent.EXTRA_KEY_EVENT) ?: return false
                 if (k.keyCode == KeyEvent.KEYCODE_HEADSETHOOK || k.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE) {
                     when (k.action) {
-                        KeyEvent.ACTION_DOWN -> if (!pttActive) { pttActive = true; webView.post { webView.evaluateJavascript("window.startPTT&&window.startPTT()", null) } }
+                        KeyEvent.ACTION_DOWN -> if (!pttActive) { pttActive = true; webView.post { webView.evaluateJavascript("window.resetPTT&&window.resetPTT();setTimeout(()=>{window.startPTT&&window.startPTT()},50)", null) } }
                         KeyEvent.ACTION_UP   -> { pttActive = false; webView.post { webView.evaluateJavascript("window.stopPTT&&window.stopPTT()", null) }; mainHandler.postDelayed({ requestAudioFocusAndSession() }, 500) }
                     }
                     return true

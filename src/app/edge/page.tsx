@@ -173,9 +173,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const servicioPendiente                  = useServicioPendiente(session.restaurante_id)
   const prev86 = useRef(0)
 
-  const ultimasComandas = comandas
-    .filter(c => c.camarero_id === session.id)
-    .slice(-2)
+  const ultimasComandas = Object.values(
+    comandas
+      .filter(c => c.camarero_id === session.id && ['nueva','en_cocina'].includes(c.estado))
+      .reduce((acc, c) => {
+        // Quedarse con la comanda más reciente por mesa
+        if (!acc[c.mesa_id] || c.created_at > acc[c.mesa_id].created_at) acc[c.mesa_id] = c
+        return acc
+      }, {} as Record<string, typeof comandas[0]>)
+  ).slice(-4) // máximo 4 mesas activas visibles
 
   // Todas las mesas ocupadas del turno (de cualquier camarero) para el grid
   const mesasOcupadas = comandas
@@ -322,7 +328,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }, [])
 
   const startRecording = useCallback(async () => {
-    if (screen !== 'idle') return
+    // Permitir grabar desde idle O desde asking (responder pregunta de BRAIN)
+    if (screen !== 'idle' && screen !== 'asking') return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
       chunksRef.current = []
@@ -531,6 +538,23 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     checkHeadphones()
     navigator.mediaDevices.addEventListener('devicechange', checkHeadphones)
     return () => navigator.mediaDevices.removeEventListener('devicechange', checkHeadphones)
+  }, [])
+
+  // ── Timeout reset estado asking (15s sin respuesta → idle) ───────
+  useEffect(() => {
+    if (screen !== 'asking') return
+    const t = setTimeout(() => { setScreen('idle'); setBrain(null); setTranscript('') }, 15000)
+    return () => clearTimeout(t)
+  }, [screen])
+
+  // ── window.resetPTT para el APK nativo ───────────────────────────
+  // Permite al APK forzar vuelta a idle si detecta estado colgado
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    ;(window as any).resetPTT = () => {
+      setScreen('idle'); setBrain(null); setTranscript('')
+    }
+    return () => { delete (window as any).resetPTT }
   }, [])
 
   const logout = () => {

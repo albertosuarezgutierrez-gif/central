@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "url": "https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v1.0/iarest.apk",
-  "notes": "Fix PTT multi-comanda: re-adquiere foco audio tras cada grabación."
+  "notes": "Fix PTT multi-comanda. Fix mesas duplicadas. Timeout asking 15s."
 }
