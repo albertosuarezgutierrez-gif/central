@@ -4575,6 +4575,153 @@ function QRTabOwner({ restauranteId, sh }: { restauranteId: string; sh: () => Re
           )
         })}
       </div>
+
+      {/* ── ia.rest cobro ── */}
+      <CobroConfigSection restauranteId={restauranteId} sh={sh} />
+    </div>
+  )
+}
+
+// ── Sección ia.rest cobro (modo + timer + progreso descuento) ─
+function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
+  const [config, setConfig] = useState<{ modo_cobro: string; timer_inactividad_min: number } | null>(null)
+  const [resumen, setResumen] = useState<{ volumen_eur: number; comision_eur: number; descuento_cuota_eur: number; num_transacciones: number } | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  const TRAMOS = [
+    { desde: 0,     hasta: 2000,  descuento: 0,  label: '0–2k€'  },
+    { desde: 2000,  hasta: 5000,  descuento: 15, label: '2–5k€'  },
+    { desde: 5000,  hasta: 10000, descuento: 30, label: '5–10k€' },
+    { desde: 10000, hasta: 20000, descuento: 50, label: '10–20k€'},
+    { desde: 20000, hasta: null,  descuento: 59, label: '+20k€'  },
+  ]
+
+  useEffect(() => {
+    fetch('/api/owner/cobro-config', { headers: sh() })
+      .then(r => r.json())
+      .then(d => { setConfig(d.config); setResumen(d.mes_actual) })
+      .catch(() => {})
+  }, [])
+
+  const save = async (patch: Record<string,unknown>) => {
+    setSaving(true)
+    const r = await fetch('/api/owner/cobro-config', {
+      method: 'PUT',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify(patch),
+    })
+    const d = await r.json()
+    if (d.config) setConfig(d.config)
+    setMsg(d.ok ? 'Guardado' : (d.error || 'Error'))
+    setSaving(false)
+    setTimeout(() => setMsg(''), 2000)
+  }
+
+  const volumen = resumen?.volumen_eur || 0
+  const descuento = resumen?.descuento_cuota_eur || 0
+  const tramoActual = TRAMOS.reduce((best, t) => volumen >= t.desde ? t : best, TRAMOS[0])
+  const tramoSig = TRAMOS.find(t => t.desde > tramoActual.desde)
+  const progreso = tramoSig
+    ? Math.min(100, ((volumen - tramoActual.desde) / (tramoSig.desde - tramoActual.desde)) * 100)
+    : 100
+
+  const modoOpts = [
+    { val: 'cuenta_abierta', label: 'Cuenta abierta',     desc: 'Máxima comodidad. El cliente paga al final cuando quiere' },
+    { val: 'pre_auth',       label: 'Pre-autorización',   desc: 'Se verifica la tarjeta al abrir sesión. Si se va sin pagar, cobras igualmente' },
+    { val: 'por_ronda',      label: 'Pago por ronda',     desc: 'Cada pedido se cobra al momento. Impago imposible' },
+  ]
+
+  return (
+    <div style={{ marginTop: 36, borderTop: `1px solid ${C.rule}`, paddingTop: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+        <div style={{ fontFamily: SE, fontSize: 20, fontWeight: 500, color: C.ink }}>ia.rest cobro</div>
+        <span style={{ fontFamily: SM, fontSize: 9, letterSpacing: '.08em', background: C.redS, color: C.red, border: `1px solid ${C.red}44`, borderRadius: 20, padding: '2px 8px' }}>NUEVO</span>
+      </div>
+
+      {/* Progreso descuento mes actual */}
+      <div style={{ background: C.paper, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.rule}`, marginBottom: 18 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 }}>
+          <div>
+            <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>Descuento en cuota este mes</div>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginTop: 2 }}>
+              {resumen?.num_transacciones || 0} cobros · {volumen.toFixed(2).replace('.',',')} € procesados
+            </div>
+          </div>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 700, fontStyle: 'italic', color: descuento > 0 ? C.green : C.ink3 }}>
+              {descuento > 0 ? `-${descuento}€` : '—'}
+            </div>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3 }}>próxima cuota</div>
+          </div>
+        </div>
+        <div style={{ background: C.paper2, borderRadius: 6, height: 8, marginBottom: 10, overflow: 'hidden' }}>
+          <div style={{ height: '100%', borderRadius: 6, background: progreso >= 100 ? C.green : C.red, width: `${progreso}%`, transition: 'width 0.4s' }} />
+        </div>
+        <div style={{ display: 'flex', gap: 2 }}>
+          {TRAMOS.map((t, i) => (
+            <div key={i} style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontFamily: SM, fontSize: 9, color: volumen >= t.desde ? C.ink : C.ink4, fontWeight: volumen >= t.desde ? 700 : 400 }}>
+                {t.descuento === 0 ? '—' : `-${t.descuento}€`}
+              </div>
+              <div style={{ fontFamily: SN, fontSize: 8, color: C.ink4, marginTop: 1 }}>{t.label}</div>
+            </div>
+          ))}
+        </div>
+        {tramoSig ? (
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.amber, marginTop: 10, textAlign: 'center' }}>
+            Faltan {(tramoSig.desde - volumen).toFixed(0)} € para -{tramoSig.descuento}€/mes en cuota
+          </div>
+        ) : (
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.green, marginTop: 10, textAlign: 'center', fontWeight: 600 }}>
+            ✓ Cuota completamente cubierta por ia.rest cobro este mes
+          </div>
+        )}
+      </div>
+
+      {/* Modo cobro */}
+      {config && (
+        <>
+          <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 10, letterSpacing: '0.06em' }}>MODO DE COBRO QR</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {modoOpts.map(opt => (
+              <div key={opt.val}
+                onClick={() => save({ modo_cobro: opt.val })}
+                style={{ background: config.modo_cobro === opt.val ? C.redS : C.paper, border: `1px solid ${config.modo_cobro === opt.val ? C.red + '55' : C.rule}`, borderRadius: 12, padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${config.modo_cobro === opt.val ? C.red : C.ink3}`, background: config.modo_cobro === opt.val ? C.red : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {config.modo_cobro === opt.val && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                </div>
+                <div>
+                  <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{opt.label}</div>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2 }}>{opt.desc}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Timer inactividad */}
+          <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 10, letterSpacing: '0.06em' }}>ALERTA AL CAMARERO SI LA MESA NO PAGA</div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
+            {[30, 45, 60, 90].map(min => (
+              <button key={min}
+                onClick={() => save({ timer_inactividad_min: min })}
+                style={{ flex: 1, padding: '10px 0', background: config.timer_inactividad_min === min ? C.paper3 : C.paper, border: `1px solid ${config.timer_inactividad_min === min ? C.ruleS : C.rule}`, borderRadius: 10, color: config.timer_inactividad_min === min ? C.ink : C.ink3, fontFamily: SM, fontSize: 12, fontWeight: config.timer_inactividad_min === min ? 700 : 400, cursor: 'pointer' }}>
+                {min}min
+              </button>
+            ))}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, maxWidth: 380 }}>
+              {config.modo_cobro === 'pre_auth' && 'La tarjeta del cliente queda capturada al abrir sesión. Puedes cobrar si se va sin pagar.'}
+              {config.modo_cobro === 'por_ronda' && 'Cada pedido requiere pago antes de enviarse a cocina. El impago es imposible.'}
+              {config.modo_cobro === 'cuenta_abierta' && 'El cliente paga cuando quiere. Si no paga, el camarero recibe alerta pasado el tiempo configurado.'}
+            </div>
+            {saving && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>Guardando...</span>}
+            {msg && <span style={{ fontFamily: SM, fontSize: 10, color: msg === 'Guardado' ? C.green : C.red }}>{msg}</span>}
+          </div>
+        </>
+      )}
     </div>
   )
 }

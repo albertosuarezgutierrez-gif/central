@@ -1,4 +1,5 @@
 // POST /api/qr/webhook — Stripe webhook: checkout.session.completed
+// v2: registra cada pago en resumen_cobros_mensual (panel financiero Alberto)
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
@@ -6,6 +7,7 @@ import { createServerClient } from '@/lib/supabase'
 export const runtime = 'nodejs'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
+const COMISION_RATE = 0.005 // 0,5% ia.rest cobro
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -64,6 +66,22 @@ export async function POST(req: NextRequest) {
           .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
           .eq('id', sesion_id)
       }
+
+      // ── REGISTRAR EN RESUMEN COBROS (panel financiero Alberto) ──
+      if (restaurante_id && session.amount_total) {
+        const importeEur = session.amount_total / 100
+        const comisionEur = parseFloat((importeEur * COMISION_RATE).toFixed(2))
+        try {
+          await supabase.rpc('registrar_pago_cobro', {
+            p_restaurante_id: restaurante_id,
+            p_importe_eur:    importeEur,
+            p_comision_eur:   comisionEur,
+          })
+        } catch (e) {
+          console.error('[cobro-resumen] Error registrando pago en resumen:', e)
+        }
+      }
+      // ─────────────────────────────────────────────────────────
 
       // Push al camarero: mesa pagada vía QR
       const { data: camareros } = await supabase

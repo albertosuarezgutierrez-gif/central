@@ -256,6 +256,7 @@ export default function SuperPage() {
           {([
             { id: 'restaurantes', label: 'Restaurantes' },
             { id: 'clientes',     label: 'Clientes' },
+            { id: 'cobro',        label: 'Cobro €' },
             { id: 'sugerencias',  label: 'Sugerencias', badge: badgeSug },
             { id: 'ia_training',  label: 'IA Training' },
             { id: 'sistema',      label: 'Sistema' },
@@ -289,7 +290,9 @@ export default function SuperPage() {
       </div>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: `clamp(24px, 5vw, 48px) clamp(12px, 4vw, 32px)` }}>
-        {tabSuper === 'sugerencias' ? (
+        {tabSuper === 'cobro' ? (
+          <Cobro session={session} C={C} SE={SE} SN={SN} SM={SM} />
+        ) : tabSuper === 'sugerencias' ? (
           <SugerenciasPanel
             sugerencias={sugerencias}
             loading={loadingSug}
@@ -694,6 +697,123 @@ export default function SuperPage() {
         </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Panel financiero ia.rest cobro (super admin) ──────────────
+function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }) {
+  const [data, setData] = useState<any>(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    if (!session) return
+    const token = typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') : null
+    fetch('/api/super/cobro-resumen', { headers: { 'x-session-token': token || '' } })
+      .then(r => r.json())
+      .then(d => { setData(d); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [session])
+
+  const fmt = (n: number) => (n || 0).toFixed(2).replace('.', ',') + ' €'
+  const fmtK = (n: number) => n >= 1000 ? ((n/1000).toFixed(1) + 'k €') : fmt(n)
+
+  if (loading) return <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, padding: 32 }}>CARGANDO...</div>
+  if (!data) return <div style={{ fontFamily: SM, fontSize: 12, color: C.red, padding: 32 }}>Error al cargar datos</div>
+
+  const { totales, restaurantes, historico } = data
+  const mesActual = new Date().toLocaleString('es', { month: 'long', year: 'numeric' })
+
+  return (
+    <div>
+      {/* Header */}
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, fontStyle: 'italic', marginBottom: 4 }}>ia.rest cobro</div>
+        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Panel financiero · Comisiones QR de la plataforma</div>
+      </div>
+
+      {/* KPIs globales */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 36 }}>
+        {[
+          { label: 'Volumen mes', value: fmtK(totales.volumen_mes), sub: mesActual, color: C.ink },
+          { label: 'Comisión mes', value: fmt(totales.comision_mes), sub: '0,5% de ' + fmtK(totales.volumen_mes), color: C.green },
+          { label: 'Volumen año', value: fmtK(totales.volumen_anio), sub: new Date().getFullYear().toString(), color: C.ink },
+          { label: 'Comisión año', value: fmt(totales.comision_anio), sub: 'acumulado ' + new Date().getFullYear(), color: C.green },
+          { label: 'Transacciones', value: (totales.txn_mes || 0).toString(), sub: 'este mes', color: C.blue },
+        ].map((kpi, i) => (
+          <div key={i} style={{ background: C.dark2, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', marginBottom: 8 }}>{kpi.label.toUpperCase()}</div>
+            <div style={{ fontFamily: SE, fontSize: 26, fontWeight: 700, fontStyle: 'italic', color: kpi.color }}>{kpi.value}</div>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 4 }}>{kpi.sub}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabla por restaurante */}
+      <div style={{ marginBottom: 36 }}>
+        <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.1em', marginBottom: 14 }}>RESTAURANTES · MES ACTUAL</div>
+        <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: 'hidden' }}>
+          {/* Header tabla */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 90px 80px 90px', gap: 0, padding: '10px 20px', borderBottom: `1px solid ${C.rule}` }}>
+            {['Restaurante', 'Ciudad', 'Volumen', 'Comisión', 'Txn', 'Descuento'].map(h => (
+              <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.08em' }}>{h.toUpperCase()}</div>
+            ))}
+          </div>
+          {(restaurantes || []).length === 0 && (
+            <div style={{ padding: '24px 20px', fontFamily: SN, fontSize: 13, color: C.ink3 }}>Sin cobros QR registrados este mes</div>
+          )}
+          {(restaurantes || []).map((r: any, i: number) => (
+            <div key={r.restaurante_id} style={{ display: 'grid', gridTemplateColumns: '1fr 110px 90px 90px 80px 90px', gap: 0, padding: '12px 20px', borderBottom: i < restaurantes.length - 1 ? `1px solid ${C.rule}` : 'none', background: i % 2 === 0 ? 'transparent' : C.dark }}>
+              <div>
+                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{r.restaurante_nombre}</div>
+                <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
+                  <span style={{ fontFamily: SM, fontSize: 9, color: C.ink3 }}>{r.codigo_acceso}</span>
+                  {r.ia_cobro_activo && <span style={{ fontFamily: SM, fontSize: 9, color: C.green, background: C.greenS, borderRadius: 10, padding: '1px 6px' }}>COBRO ON</span>}
+                  <span style={{ fontFamily: SM, fontSize: 9, color: C.ink3, background: C.dark2, borderRadius: 10, padding: '1px 6px' }}>{r.modo_cobro}</span>
+                </div>
+              </div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, paddingTop: 2 }}>{r.ciudad || '—'}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: r.volumen_mes_actual > 0 ? C.ink : C.ink4 }}>{fmtK(r.volumen_mes_actual)}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: r.comision_mes_actual > 0 ? C.green : C.ink4 }}>{fmt(r.comision_mes_actual)}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>{r.txn_mes_actual || '—'}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: r.descuento_mes_actual > 0 ? C.amber : C.ink4 }}>
+                {r.descuento_mes_actual > 0 ? `-${r.descuento_mes_actual}€` : '—'}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Histórico global últimos 12 meses */}
+      {historico && historico.length > 0 && (
+        <div>
+          <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.1em', marginBottom: 14 }}>HISTÓRICO · PLATAFORMA COMPLETA</div>
+          <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: 'hidden' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 100px 80px', padding: '10px 20px', borderBottom: `1px solid ${C.rule}` }}>
+              {['Mes', 'Volumen', 'Comisión', 'Txn'].map(h => (
+                <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.08em' }}>{h.toUpperCase()}</div>
+              ))}
+            </div>
+            {historico.map((h: any, i: number) => {
+              const d = new Date(h.mes + 'T12:00:00Z')
+              const label = d.toLocaleString('es', { month: 'long', year: 'numeric' })
+              return (
+                <div key={h.mes} style={{ display: 'grid', gridTemplateColumns: '120px 1fr 100px 80px', padding: '11px 20px', borderBottom: i < historico.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, textTransform: 'capitalize' }}>{label}</div>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <div style={{ height: 6, borderRadius: 3, background: C.red, width: `${Math.min(100, (h.volumen / (historico[0]?.volumen || 1)) * 100)}%`, minWidth: 4, maxWidth: 160 }} />
+                      <span style={{ fontFamily: SM, fontSize: 12, color: C.ink }}>{fmtK(h.volumen)}</span>
+                    </div>
+                  </div>
+                  <div style={{ fontFamily: SM, fontSize: 12, color: C.green }}>{fmt(h.comision)}</div>
+                  <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>{h.txn || '—'}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
