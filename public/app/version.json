@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 6,
   "url": "https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v1.0/iarest.apk",
-  "notes": "Fix micrófono: recarga tras conceder permiso. Fix navegación interna."
+  "notes": "Fix botón Continuar. PTT auricular via dispatchKeyEvent (más fiable)."
 }
