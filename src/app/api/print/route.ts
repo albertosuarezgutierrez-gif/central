@@ -15,7 +15,7 @@
 // POST { trigger: 'test', impresora_id }
 //   → crea un job de prueba para verificar conectividad
 //
-// connection_type válidos para bridge TCP: 'tcp' | 'ip_local' | 'usb_bridge'
+// connection_type validos para bridge TCP (ip_local, usb_bridge): 'tcp' | 'ip_local' | 'usb_bridge'
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server'
