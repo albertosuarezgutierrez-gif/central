@@ -216,7 +216,7 @@ function generarEscPosPrueba(nombre: string, ip: string, port: number): string {
   const cut_full = GS  + 'V\x00'   // Autocorte completo
 
   const SEP  = '-'.repeat(42)
-  const SEP2 = '='.repeat(42)
+  const SEP2 = '-'.repeat(42)
   const ahora = new Date()
   const hora  = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const fecha = ahora.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })

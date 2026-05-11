@@ -59,7 +59,7 @@ const CMD = {
 export function generarEscPos(payload: PrintPayload): string {
   const now = new Date(payload.ts)
   const hora = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
-  const SEP  = '━'.repeat(32) // U+2501, cabe en 80mm
+  const SEP  = '-'.repeat(42)
 
   const lines: string[] = []
 
