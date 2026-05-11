@@ -85,6 +85,7 @@ const ICONS = {
   alertTriangle: 'M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01',
   calendar: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
   phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.77 3.19 2 2 0 0 1 3.74 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6.59 6.59l.97-1.04a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z',
+  qr: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -171,11 +172,13 @@ function CamarerosTab() {
   const [camareros, setCamareros] = useState<Camarero[]>([])
   const [secciones, setSecciones] = useState<Seccion[]>([])
   const [loading, setLoading] = useState(true)
-  const [modal, setModal] = useState<null | 'create' | { edit: Camarero } | { del: Camarero }>(null)
+  const [modal, setModal] = useState<null | 'create' | { edit: Camarero } | { del: Camarero } | { qr: Camarero }>(null)
   const [form, setForm] = useState({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '' })
   const [showPins, setShowPins] = useState<Record<string, boolean>>({})
   const [err, setErr] = useState('')
   const [delErr, setDelErr] = useState('')
+  const [qrData, setQrData] = useState<{ url: string; expira_at: string; nombre: string } | null>(null)
+  const [qrLoading, setQrLoading] = useState(false)
 
   const load = useCallback(async () => {
     const r = await fetch('/api/owner/camareros', { headers: sh() })
@@ -191,6 +194,16 @@ function CamarerosTab() {
   const openCreate = () => { setForm({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '' }); setErr(''); setModal('create') }
   const openEdit = (c: Camarero) => { setForm({ nombre: c.nombre, pin: c.pin, rol: c.rol, activo: c.activo, seccion_id: c.seccion_id || '' }); setErr(''); setModal({ edit: c }) }
   const openDel = (c: Camarero) => { setDelErr(''); setModal({ del: c }) }
+  const openQr = async (c: Camarero) => {
+    setQrData(null); setQrLoading(true); setModal({ qr: c })
+    try {
+      const r = await fetch(`/api/owner/camareros/${c.id}/install-token`, {
+        method: 'POST', headers: { ...sh() }
+      })
+      const d = await r.json()
+      if (d.url) setQrData({ url: d.url, expira_at: d.expira_at, nombre: d.nombre })
+    } finally { setQrLoading(false) }
+  }
 
   const save = async () => {
     setErr('')
@@ -286,6 +299,7 @@ function CamarerosTab() {
               </button>
             </span>
             <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+              <Btn size="sm" variant="ghost" onClick={() => openQr(c)} title="QR de instalación"><Icon d={ICONS.qr} size={13}/></Btn>
               <Btn size="sm" variant="ghost" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={13}/></Btn>
               <Btn size="sm" variant="danger" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={13}/></Btn>
             </span>
@@ -322,7 +336,70 @@ function CamarerosTab() {
         </Modal>
       )}
 
-      {/* Delete modal */}
+      {/* QR modal */}
+      {modal && typeof modal === 'object' && 'qr' in modal && (() => {
+        const qrUrl = qrData?.url ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(qrData.url)}` : null
+        const expira = qrData?.expira_at ? new Date(qrData.expira_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) + ' · ' + new Date(qrData.expira_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : ''
+        return (
+          <Modal title={`QR de instalación · ${(modal as { qr: Camarero }).qr.nombre}`} onClose={() => { setModal(null); setQrData(null) }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 20 }}>
+              {/* QR */}
+              <div style={{
+                background: '#fff', borderRadius: 12, padding: 8,
+                border: `1px solid ${C.rule}`, minHeight: 236, minWidth: 236,
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}>
+                {qrLoading && (
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                    <svg width={28} height={28} viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"
+                      style={{ animation: 'spin 0.9s linear infinite' }}>
+                      <style>{`@keyframes spin{to{transform:rotate(360deg)}}`}</style>
+                      <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Generando…</span>
+                  </div>
+                )}
+                {!qrLoading && qrUrl && (
+                  <img src={qrUrl} alt="QR de instalación" width={220} height={220} style={{ display: 'block', borderRadius: 8 }} />
+                )}
+                {!qrLoading && !qrUrl && (
+                  <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Error generando QR</span>
+                )}
+              </div>
+
+              {/* Info */}
+              {qrData && (
+                <div style={{ width: '100%', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontFamily: SM, fontSize: 10, color: C.amber, fontWeight: 700, paddingTop: 1 }}>1×</span>
+                      <span style={{ fontFamily: SN, fontSize: 12, color: C.ink2, lineHeight: 1.5 }}>Un solo uso — tras escanearlo queda consumido</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontFamily: SM, fontSize: 10, color: C.amber, fontWeight: 700, paddingTop: 1 }}>24h</span>
+                      <span style={{ fontFamily: SN, fontSize: 12, color: C.ink2, lineHeight: 1.5 }}>Caduca el {expira}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                      <span style={{ fontFamily: SM, fontSize: 10, color: C.green, fontWeight: 700, paddingTop: 1 }}>→</span>
+                      <span style={{ fontFamily: SN, fontSize: 12, color: C.ink2, lineHeight: 1.5 }}>Al escanear, entra directo a la app y puede instalarla</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: 8, width: '100%' }}>
+                <Btn variant="ghost" onClick={() => openQr((modal as { qr: Camarero }).qr)} style={{ flex: 1 }}>
+                  Regenerar QR
+                </Btn>
+                <Btn variant="ghost" onClick={() => { setModal(null); setQrData(null) }} style={{ flex: 1 }}>
+                  Cerrar
+                </Btn>
+              </div>
+            </div>
+          </Modal>
+        )
+      })()}
       {modal && typeof modal === 'object' && 'del' in modal && (
         <Modal title="Borrar camarero" onClose={() => setModal(null)}>
           <p style={{ fontFamily: SN, fontSize: 14, color: C.ink2, marginTop: 0, lineHeight: 1.5 }}>
