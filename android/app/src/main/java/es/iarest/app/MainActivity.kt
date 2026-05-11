@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var mediaSession: MediaSessionCompat
     private var pttActive = false
 
-    private val CURRENT_VERSION = 7
+    private val CURRENT_VERSION = 8
     private val VERSION_URL = "https://www.iarest.es/app/version.json"
     private val PERM_REQUEST = 10
 

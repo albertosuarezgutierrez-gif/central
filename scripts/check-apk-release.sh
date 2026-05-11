@@ -24,7 +24,7 @@ TS_ERRORS=$(cd "$ROOT" && npx tsc --noEmit 2>&1 | grep "error TS" | wc -l)
 
 # ── 2. Versiones sincronizadas ───────────────────────────────────────
 head "2. Versiones APK"
-APK_VER=$(grep "CURRENT_VERSION" "$ROOT/android/app/src/main/java/es/iarest/app/MainActivity.kt" | grep -oP '(?<=CURRENT_VERSION = )[0-9]+' | head -1)
+APK_VER=$(python3 -c "import re; c=open('$ROOT/android/app/src/main/java/es/iarest/app/MainActivity.kt').read(); m=re.search(r'CURRENT_VERSION = ([0-9]+)', c); print(m.group(1) if m else '0')")
 JSON_VER=$(python3 -c "import json; print(json.load(open('$ROOT/public/app/version.json'))['version'])")
 GRADLE_VER=$(grep "versionCode" "$ROOT/android/app/build.gradle" | grep -o '[0-9]*')
 
