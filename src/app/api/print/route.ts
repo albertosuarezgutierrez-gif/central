@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   // Verificar token de bridge
   const { data: bridge } = await sb
     .from('bridge_tokens')
-    .select('id, activo')
+    .select('id, activo, restaurante_id')
     .eq('token', token)
     .single()
 
@@ -55,10 +55,11 @@ export async function GET(req: NextRequest) {
     .update({ ultimo_ping: new Date().toISOString() })
     .eq('id', bridge.id)
 
-  // Buscar impresoras TCP activas (acepta 'tcp', 'ip_local', 'usb_bridge')
+  // Buscar impresoras TCP activas filtradas por restaurante del bridge
   const { data: impresoras } = await sb
     .from('impresoras')
     .select('id, ip_address, port, connection_type')
+    .eq('restaurante_id', bridge.restaurante_id)
     .in('connection_type', TIPOS_TCP)
     .eq('activa', true)
 
