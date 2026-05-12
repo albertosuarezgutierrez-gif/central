@@ -286,19 +286,28 @@ export async function crearPrintJobs(
 
   // 3. Cargar impresoras activas (siempre las necesitamos)
   const query = supabase.from('impresoras')
-    .select('id, seccion_id, nombre, connection_type, impresora_fallback_id')
+    .select('id, seccion_id, secciones_ids, nombre, connection_type, impresora_fallback_id')
     .eq('activa', true)
   if (comanda.restaurante_id) {
     query.eq('restaurante_id', comanda.restaurante_id)
   }
   const { data: impresoras } = await query
 
-  // Mapa seccion → impresora (lógica legacy)
+  // Mapa seccion → impresora (lógica legacy, soporta multi-sección)
   const impresoraMap: Record<string, { id: string; connection_type: string; fallback_id?: string | null }> = {}
   // Mapa UUID → impresora (para reglas)
   const impresoraById: Record<string, { id: string; connection_type: string; seccion_id: string; fallback_id?: string | null }> = {}
   for (const imp of impresoras ?? []) {
-    impresoraMap[imp.seccion_id] = { id: imp.id, connection_type: imp.connection_type, fallback_id: imp.impresora_fallback_id }
+    // Construir lista de secciones: array nuevo tiene prioridad, fallback a campo legacy
+    const secciones: string[] = (imp.secciones_ids?.length > 0)
+      ? imp.secciones_ids
+      : (imp.seccion_id ? [imp.seccion_id] : [])
+    for (const s of secciones) {
+      // Si ya hay una impresora para esta sección, la primera gana (orden por created_at)
+      if (!impresoraMap[s]) {
+        impresoraMap[s] = { id: imp.id, connection_type: imp.connection_type, fallback_id: imp.impresora_fallback_id }
+      }
+    }
     impresoraById[imp.id] = { id: imp.id, connection_type: imp.connection_type, seccion_id: imp.seccion_id, fallback_id: imp.impresora_fallback_id }
   }
 
@@ -410,7 +419,7 @@ export async function crearPrintJobs(
       .insert({
         comanda_id:   comanda.id,
         impresora_id: imp.id,
-        seccion_id:   imp.seccion_id,
+        seccion_id:   grupo.seccion_label || imp.seccion_id,
         payload,
         print_data:   printData,
         status:       'pendiente',
@@ -429,7 +438,7 @@ export async function crearPrintJobs(
         const printDataFallback = Buffer.from(printDataFallbackRaw, 'binary').toString('base64')
         const { data: jobFallback } = await supabase
           .from('print_jobs')
-          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, payload, print_data: printDataFallback, status: 'pendiente' })
+          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, payload, print_data: printDataFallback, status: 'pendiente' })
           .select('id')
           .single()
         if (jobFallback) jobIds.push(jobFallback.id)
