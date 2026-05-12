@@ -159,9 +159,21 @@ ia_training_log, system_errors
 
 **Vistas:** `v_productos_con_seccion`
 
-### Constraints críticos
-- `comandas.estado` valores válidos: `nueva` · `en_curso` · `lista` · `cerrada` (**NUNCA usar `pendiente`**)
+### Constraints críticos (auditados en BD mayo 2026)
+- `mesas.estado` CHECK: `libre` · `activa` · `marchar` · `aviso` · `urgente` · `cuenta` — **NUNCA `ocupada`**
+- `comandas.estado` CHECK: `nueva` · `en_cocina` · `lista` · `entregada` · `cancelada` · `cerrada` — **NUNCA `pendiente`**
+- `comandas.origen` CHECK: `camarero` · `qr_cliente` · `kds` · `sistema` — **NUNCA `voz`**
+- `comandas.tipo` CHECK: `comanda` · `cuenta` · `marchar` · `86` · `aviso`
+- `comandas.numero_ticket` es `GENERATED ALWAYS` — **no insertar manualmente**
 - `comanda_items` requiere siempre `nombre` + `restaurante_id`
+
+### Schema alerta_reglas (columnas existentes + añadidas mayo 2026)
+Existentes: `nombre, activa, logica, horario_desde, horario_hasta, destinatario_tipo, camarero_id, canal_vox, canal_push, canal_hub`  
+Añadidas: `condicion, umbral_minutos, objeto, mensaje, dias_semana, zona_ids, escalar_a, escalar_minutos, prioridad`
+
+### Schema alerta_log (columnas existentes + añadidas mayo 2026)
+Existentes: `regla_id, regla_nombre, mesa_id, camarero_notificado_id, trigger_tipos TEXT[], contexto JSONB, disparada_at, actuada_at, resuelta_por_id, mensaje_voz, leida`  
+Añadidas: `referencia_id, reclamado_at, eta_minutos, respondido_at, respondido_por`
 
 ---
 
@@ -262,7 +274,8 @@ serve(async (req) => {
 | **Módulo venta SaaS** | Landing, onboarding 6 pasos, contrato v1.0, EFs auth+stripe |
 | **APK Android v10** | Icono vermilion, PTT nativo, auto-update via `version.json`, release GitHub android-v1.0 |
 | **KDS voz continua** | SpeechRecognition keywords + TTS, filtro sección por URL `?seccion=` |
-| **Alertas** | Realtime + TTS + Web Push, 7 reglas por restaurante nuevo, cron job #6 |
+| **Alertas** | Realtime + TTS + Web Push, cron cada 2 min |
+| **Supervisor de Tiempos** | Motor reglas configurable. Tab en /owner+/jefe. Misma fuente de verdad. 6 condiciones. API /api/owner/supervisor. SupervisorTab.tsx compartido. |
 | **RGPD leads** | Casilla no pre-marcada, validación server-side EF (422 sin consent), IP anonimizada |
 
 ---
@@ -281,6 +294,14 @@ serve(async (req) => {
 2. `STRIPE_CLIENT_ID` + `STRIPE_WEBHOOK_SECRET_QR` en Vercel
 3. `ALTER TABLE leads ADD COLUMN consent_rgpd BOOLEAN, consent_at TIMESTAMPTZ, consent_ip TEXT`
 4. Email IONOS Mail Basic → `noreply@iarest.es` → configurar en Resend
+
+### Patrón Supervisor — fuente única owner+jefe_sala
+```typescript
+// Misma API, mismo componente, mismo restaurante_id
+// /owner → <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} sh={sh} />
+// /jefe  → <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} />
+// DELETE solo para owner/super_admin — verificar session.rol en API route
+```
 
 ---
 

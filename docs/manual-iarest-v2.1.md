@@ -128,7 +128,20 @@ Pantalla para el personal de cocina. Alta legibilidad, se actualiza en tiempo re
 
 ### 3.3 Jefe de sala — `/jefe`
 
-Cuadro de mando de solo lectura con visión global de sala, estado de todas las mesas y mensajería interna. Diseñado para gestionar el servicio sin interferir en el flujo del camarero.
+Cuadro de mando con visión global de sala, estado de todas las mesas, stream de actividad y gestión de alertas. Diseñado para coordinar el servicio en tiempo real.
+
+| Tab | Qué puedes hacer |
+|---|---|
+| **Salón** | Mapa en tiempo real de todas las mesas con estados y tiempos |
+| **Cocina** | Estado del KDS: tickets en marcha, tiempos, partidas |
+| **Comandas** | Historial de comandas del turno activo |
+| **Stream** | Transcripción en tiempo real de lo que dicta sala |
+| **Caja** | Resumen de cobros del turno |
+| **Cambios** | Audit trail de modificaciones en comandas |
+| **Analytics** | Métricas del servicio |
+| **Supervisor** | Configurar y gestionar reglas de alerta — mismas que ve el owner |
+
+> ⚡ **Supervisor compartido** — El jefe de sala puede crear, editar y activar/desactivar reglas de alerta. El owner ve los mismos cambios al instante. Una sola fuente de verdad, sin conflictos.
 
 ---
 
@@ -136,17 +149,23 @@ Cuadro de mando de solo lectura con visión global de sala, estado de todas las 
 
 Panel de gestión completo del restaurante. Accesible con rol owner.
 
-| Tab | Qué puedes hacer |
-|---|---|
-| **Carta** | Ver, editar y añadir productos. Importar carta desde foto (IA) |
-| **Mesas** | Gestionar mesas, zonas, capacidades y estados |
-| **Personal** | Crear camareros, asignar roles y secciones. QR de acceso camarero |
-| **Secciones** | Gestionar partidas del KDS |
-| **Impresoras** | Configurar CloudPRNT o IP local |
-| **Facturas** | Ver facturas Verifactu con hash SHA-256 y QR AEAT |
-| **Restaurante** | NIF, razón social y datos para Verifactu |
-| **Config QR** | Gestión add-on QR en mesa (+12 €/mesa/mes) |
-| **Alertas** | 7 reglas de alerta pre-configuradas, logs, notificaciones |
+| Grupo | Tab | Qué puedes hacer |
+|---|---|---|
+| **Sala** | Camareros | Crear camareros, asignar roles y secciones. QR de acceso |
+| **Sala** | Mesas | Gestionar mesas, zonas, capacidades y estados |
+| **Carta** | Productos | Ver, editar y añadir productos. Importar carta desde foto (IA) |
+| **Carta** | Secciones | Gestionar partidas del KDS |
+| **Servicio** | Reservas | Gestión de reservas |
+| **Servicio** | Turno | Control del turno activo |
+| **Servicio** | Caja | Movimientos y cierre de caja |
+| **Servicio** | Analytics | Métricas y estadísticas del negocio |
+| **Servicio** | Facturas | Ver facturas Verifactu con hash SHA-256 y QR AEAT |
+| **Servicio** | **Supervisor** | **Motor de reglas de alerta configurable** |
+| **Config** | QR Mesa | Gestión add-on QR en mesa (+12 €/mesa/mes) |
+| **Config** | Impresoras | Configurar CloudPRNT o IP local |
+| **Config** | Flujos | Reglas de envío a cocina y motor de flujos v2 |
+| **Config** | Restaurante | NIF, razón social y datos para Verifactu |
+| **Config** | Suscripción | Plan, facturación y contrato SaaS |
 
 > 📸 **Importar carta con IA** — Carta → Importar desde foto. Sube una foto de tu carta en papel, Claude la lee y carga todos los productos automáticamente con nombre, precio y categoría. Solo revisar y confirmar.
 
@@ -219,14 +238,54 @@ Cuando cocina marca una mesa como lista, el camarero asignado recibe push en su 
 2. El navegador pide permiso para notificaciones — acepta
 3. Desde ese momento recibes alertas de cocina en tiempo real
 
-### 4.7 Alertas de ritmo de servicio
+### 4.7 Supervisor de tiempos — motor de reglas configurable
 
-El sistema monitoriza el ritmo del servicio y envía alertas automáticas:
+El Supervisor es el sistema de alertas inteligente de ia.rest. En lugar de una lista fija de avisos, el dueño y el jefe de sala configuran libremente sus propias reglas: qué vigilar, cuándo disparar, a quién avisar y cómo.
 
-- 7 reglas pre-configuradas por restaurante nuevo
-- Cron cada 2 minutos comprobando métricas
-- Alertas vía push, TTS y panel `/jefe`
-- Ejemplos: mesa con comanda abierta >X minutos, tickets/hora por debajo del umbral, impresora sin respuesta
+**Acceso:** `/owner` → Servicio → Supervisor  ·  `/jefe` → Supervisor  
+**Fuente única:** owner y jefe de sala comparten exactamente las mismas reglas. Cualquier cambio de uno lo ve el otro al instante.
+
+#### Condiciones disponibles
+
+| Condición | Qué vigila |
+|---|---|
+| **Mesa sin pedir** | Mesa activa sin ninguna comanda desde hace X min |
+| **Plato sin llegar** | Comanda confirmada, plato sin llegar al cliente |
+| **Ticket cocina sin tocar** | Ticket en KDS sin marcar ningún ítem |
+| **Cuenta sin cobrar** | Cuenta pedida, sin pago cerrado |
+| **Mesa tiempo total** | Mesa ocupada más de X min en total (rotación) |
+| **Pico de cuentas** | X o más mesas piden cuenta en menos de 5 min |
+
+#### Cada regla configura
+
+- **Umbral** — minutos libres (tú decides: 5, 12, 90, lo que necesite tu negocio)
+- **Horario** — solo entre las 13:00 y 16:00, por ejemplo. Vacío = siempre
+- **Días** — solo viernes y sábado si el ritmo lo requiere. Vacío = todos
+- **Destinatario** — camarero asignado, todos sala, jefe sala, cocina, owner
+- **Canales** — push al móvil, voz en el dispositivo, badge en panel
+- **Mensaje** — plantilla libre con variables `{mesa}`, `{tiempo}`, `{plato}`, `{n}`
+- **Escalado** — si no se atiende en N min, reenviar a otro rol
+
+#### Permisos
+
+| Acción | Owner | Jefe de sala |
+|---|---|---|
+| Ver todas las reglas | ✅ | ✅ |
+| Activar / desactivar | ✅ | ✅ |
+| Editar umbral / mensaje | ✅ | ✅ |
+| Crear nueva regla | ✅ | ✅ |
+| Eliminar regla | ✅ | ❌ solo desactivar |
+
+#### Escenarios de prueba activos en DEMO
+
+| Mesa | Estado | Dispara |
+|---|---|---|
+| **S1** | activa 20 min sin pedir | Mesa sin pedir (umbral 10 min) |
+| **S2** | activa 35 min sin pedir | Mesa sin pedir — más urgente |
+| **S6** | Entrecot + Ensalada 22 min pendientes | Plato sin llegar (umbral 12 min) |
+| **T2** | 3 ítems en KDS 16 min sin tocar | Ticket cocina sin tocar (umbral 10 min) |
+| **S5** | Cuenta abierta 12 min sin cobrar | Cuenta sin cobrar (umbral 5 min) |
+| **T1** | Ocupada 107 min | Mesa tiempo total (umbral 90 min) |
 
 ---
 
@@ -280,6 +339,14 @@ Abre 3 pestañas y sigue este flujo para probar el 100% del sistema:
 - Añade un producto manualmente
 - Tab Facturas → ver facturas Verifactu con QR AEAT
 - Tab Config QR → explorar configuración del add-on QR
+
+**PASO 9 — Supervisor de tiempos**
+- `/owner` → Servicio → **Supervisor** (o `/jefe` → Supervisor — son exactamente las mismas reglas)
+- Verás las reglas activas con los umbrales configurados
+- Las mesas S1, S2, S5, S6, T1 y T2 ya tienen datos que disparan las alertas
+- Pulsa **"+ Nueva regla"** → elige condición, umbral, quién recibe el aviso y mensaje
+- Desactiva/activa una regla → si tienes `/jefe` abierto en otra pestaña, verás el cambio al instante
+- El cron corre cada 2 min — en la siguiente pasada llegará push al dispositivo del camarero
 
 ---
 
@@ -373,6 +440,10 @@ Para bloquear el terminal en modo kiosco y gestionar la flota remotamente: **Esp
 | **86** | Producto agotado en el turno actual |
 | **Verifactu** | Estándar de facturación con hash SHA-256 (España, 2026) |
 | **Motor de Flujos** | Sistema de reglas que decide a dónde va cada comanda |
+| **Supervisor** | Motor de reglas de alerta configurable por owner y jefe de sala |
+| **Condición** | Tipo de evento que dispara una alerta (sin_comanda, plato_sin_llegar…) |
+| **Umbral** | Minutos que deben pasar para que se dispare la alerta |
+| **Escalado** | Si nadie atiende la alerta en N min, se reenvía a un rol superior |
 | **Bridge** | Agente local que conecta ia.rest con impresoras físicas |
 | **Multi-tenant** | Un sistema, múltiples restaurantes aislados |
 | **RLS** | Row Level Security — aislamiento de datos en Supabase |
