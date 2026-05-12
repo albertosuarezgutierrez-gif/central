@@ -28,7 +28,7 @@ type Camarero = { id: string; nombre: string; pin: string; rol: string; activo: 
 type Mesa = { id: string; codigo: string; nombre: string | null; zona: string; capacidad: number; estado: string; pos_x: number | null; pos_y: number | null; forma: 'round' | 'square' | 'bar' | null }
 type Turno = { id: string; nombre: string; estado: string; created_at: string; fecha: string }
 type TurnoStats = { total_comandas: number; avg_latencia_ms: number | null; mesas_activas: { codigo: string; count: number }[] }
-type Impresora = { id: string; nombre: string; seccion_id: string; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null }
+type Impresora = { id: string; nombre: string; seccion_id: string; secciones_ids: string[]; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null }
 type BridgeToken = { id: string; token: string; nombre: string; activo: boolean; ultimo_ping: string | null }
 type PrintJob = { id: string; status: string; seccion_id: string; created_at: string; sent_at: string | null; acked_at: string | null; attempts: number; error_msg: string | null; impresoras?: { nombre: string } }
 type Reserva = {
@@ -2283,7 +2283,8 @@ const SECCIONES_IMP = [
   { value: 'barra',     label: 'Barra',           color: '#F7E3B6', text: '#854F0B' },
   { value: 'postres',   label: 'Postres',         color: '#E5DAC2', text: '#4B4036' },
 ]
-const seccionStyle = (id: string) => SECCIONES_IMP.find(s => s.value === id) ?? SECCIONES_IMP[0]
+const seccionStyle  = (id: string) => SECCIONES_IMP.find(s => s.value === id) ?? { value: id, label: id, color: '#E5DAC2', text: '#4B4036' }
+const seccionStyles = (ids: string[]) => ids.map(id => seccionStyle(id))
 const fmtPing = (ts: string | null) => {
   if (!ts) return 'Sin contacto'
   const diff = Math.floor((Date.now() - new Date(ts).getTime()) / 1000)
@@ -2330,7 +2331,7 @@ function ImpresorasTab() {
   const [modal, setModal]               = useState<null | 'create' | 'bridge' | { del: Impresora }>(null)
   const [testResult, setTestResult]     = useState<Record<string, { status: 'testing'|'ok'|'error'|'timeout', msg?: string }>>({})  // impresora_id → resultado test
   const [form, setForm]                 = useState({
-    nombre: '', seccion_id: 'calientes', connection_type: 'ip_local',
+    nombre: '', secciones_ids: ['calientes'] as string[], connection_type: 'ip_local',
     ip_address: '', port: '9100', cloud_device_id: '', modelo: ''
   })
   const [err, setErr]   = useState('')
@@ -2371,7 +2372,8 @@ function ImpresorasTab() {
       body: JSON.stringify({
         id:             editando.id,
         nombre:         editando.nombre,
-        seccion_id:     editando.seccion_id,
+        secciones_ids:  editando.secciones_ids?.length > 0 ? editando.secciones_ids : [editando.seccion_id],
+        seccion_id:     editando.secciones_ids?.[0] ?? editando.seccion_id,
         connection_type: editando.connection_type,
         ip_address:     editando.ip_address,
         port:           editando.port,
@@ -2395,7 +2397,8 @@ function ImpresorasTab() {
       method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() },
       body: JSON.stringify({
         nombre:          form.nombre,
-        seccion_id:      form.seccion_id,
+        secciones_ids:   form.secciones_ids,
+        seccion_id:      form.secciones_ids[0] ?? 'calientes',
         cloud_device_id: form.cloud_device_id || null,
         modelo:          form.modelo || null,
         connection_type: form.connection_type,
@@ -2407,7 +2410,7 @@ function ImpresorasTab() {
     setSaving(false)
     if (!r.ok) return setErr(d.error || 'Error')
     setModal(null)
-    setForm({ nombre: '', seccion_id: 'calientes', connection_type: 'ip_local', ip_address: '', port: '9100', cloud_device_id: '', modelo: '' })
+    setForm({ nombre: '', secciones_ids: ['calientes'], connection_type: 'ip_local', ip_address: '', port: '9100', cloud_device_id: '', modelo: '' })
     await loadAll()
   }
 
@@ -2531,7 +2534,7 @@ function ImpresorasTab() {
             <span>Impresora</span><span>Sección</span><span>Conexión</span><span>Ping</span><span style={{ textAlign: 'right' }}>Acciones</span>
           </div>
           {impresoras.map((imp, i) => {
-            const sec     = seccionStyle(imp.seccion_id)
+            const secsBadges = seccionStyles(imp.secciones_ids?.length > 0 ? imp.secciones_ids : (imp.seccion_id ? [imp.seccion_id] : []))
             const isOnline  = imp.ultimo_ping && Date.now() - new Date(imp.ultimo_ping).getTime() < 35000
             const testState = testResult[imp.id]
             const connInfo = imp.connection_type === 'ip_local'
@@ -2556,12 +2559,25 @@ function ImpresorasTab() {
                         </select>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>Sección</label>
-                        <select value={editando.seccion_id}
-                          onChange={e => setEditando(ed => ed ? {...ed, seccion_id: e.target.value} : null)}
-                          style={{ fontFamily: SN, fontSize: 13, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '8px 10px', color: C.ink, outline: 'none' }}>
-                          {SECCIONES_IMP.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
-                        </select>
+                        <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>Secciones</label>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                          {SECCIONES_IMP.map(s => {
+                            const eds = editando.secciones_ids?.length > 0 ? editando.secciones_ids : (editando.seccion_id ? [editando.seccion_id] : [])
+                            const sel = eds.includes(s.value)
+                            return (
+                              <button key={s.value} type="button"
+                                onClick={() => {
+                                  const cur = editando.secciones_ids?.length > 0 ? editando.secciones_ids : (editando.seccion_id ? [editando.seccion_id] : [])
+                                  const next = sel ? cur.filter(x => x !== s.value) : [...cur, s.value]
+                                  if (next.length === 0) return // al menos una
+                                  setEditando(ed => ed ? { ...ed, secciones_ids: next, seccion_id: next[0] } : null)
+                                }}
+                                style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.06em', padding: '5px 10px', borderRadius: 4, cursor: 'pointer', border: `1.5px solid ${sel ? s.text : C.rule}`, background: sel ? s.color : C.bone, color: sel ? s.text : C.ink3, transition: 'all .15s' }}>
+                                {sel ? '✓ ' : ''}{s.label.split(' ')[0]}
+                              </button>
+                            )
+                          })}
+                        </div>
                       </div>
                     </div>
                     {(editando.connection_type === 'ip_local' || editando.connection_type === 'usb_bridge') && (
@@ -2607,10 +2623,12 @@ function ImpresorasTab() {
                         </div>
                       )}
                     </div>
-                    <span>
-                      <span style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', background: sec.color, color: sec.text, padding: '3px 8px', borderRadius: 3 }}>
-                        {sec.label.toUpperCase()}
-                      </span>
+                    <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                      {secsBadges.map(sec => (
+                        <span key={sec.value} style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', background: sec.color, color: sec.text, padding: '3px 8px', borderRadius: 3, whiteSpace: 'nowrap' }}>
+                          {sec.label.split(' ')[0].toUpperCase()}
+                        </span>
+                      ))}
                     </span>
                     <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>
                       {CONN_TYPES.find(ct => ct.value === imp.connection_type)?.label ?? imp.connection_type}
@@ -2700,7 +2718,26 @@ function ImpresorasTab() {
                 {CONN_TYPES.map(ct => <option key={ct.value} value={ct.value}>{ct.label}</option>)}
               </select>
             </div>
-            <Select label="Sección" value={form.seccion_id} onChange={v => setForm(f => ({...f, seccion_id: v}))} options={SECCIONES_IMP.map(s => ({ value: s.value, label: s.label }))}/>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>Secciones</label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {SECCIONES_IMP.map(s => {
+                  const sel = form.secciones_ids.includes(s.value)
+                  return (
+                    <button key={s.value} type="button"
+                      onClick={() => {
+                        const next = sel ? form.secciones_ids.filter(x => x !== s.value) : [...form.secciones_ids, s.value]
+                        if (next.length === 0) return
+                        setForm(f => ({ ...f, secciones_ids: next }))
+                      }}
+                      style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.06em', padding: '6px 12px', borderRadius: 4, cursor: 'pointer', border: `1.5px solid ${sel ? s.text : C.rule}`, background: sel ? s.color : C.bone, color: sel ? s.text : C.ink3, transition: 'all .15s' }}>
+                      {sel ? '✓ ' : ''}{s.label}
+                    </button>
+                  )
+                })}
+              </div>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>Selecciona las secciones que recibirán tickets en esta impresora</div>
+            </div>
             {(form.connection_type === 'ip_local' || form.connection_type === 'usb_bridge') && (
               <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10 }}>
                 <Field label="IP address" value={form.ip_address} onChange={v => setForm(f => ({...f, ip_address: v}))} placeholder="192.168.1.50"/>
