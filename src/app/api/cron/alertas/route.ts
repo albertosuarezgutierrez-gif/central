@@ -37,8 +37,9 @@ async function yaAlertado(
   const hace = new Date(Date.now() - ventanaMin * 60_000).toISOString()
   const { data } = await supabase
     .from('alerta_log').select('id')
-    .eq('restaurante_id', rid).eq('tipo', condicion).eq('referencia_id', ref)
-    .gte('enviada_en', hace).limit(1)
+    .eq('restaurante_id', rid)
+    .eq('referencia_id', ref)
+    .gte('disparada_at', hace).limit(1)
   return (data?.length ?? 0) > 0
 }
 
@@ -56,10 +57,15 @@ async function registrar(
   rid: string, regla: ReglaActiva, ref: string, mensaje: string
 ) {
   await supabase.from('alerta_log').insert({
-    restaurante_id: rid, tipo: regla.condicion ?? regla.tipo,
-    referencia_id: ref, regla_id: regla.id ?? null,
-    destinatario: regla.destinatario, accion: regla.accion,
-    enviada_en: new Date().toISOString(),
+    restaurante_id: rid,
+    regla_id: regla.id ?? null,
+    regla_nombre: regla.nombre ?? '',
+    referencia_id: ref,
+    trigger_tipos: [regla.condicion ?? 'sin_comanda'],
+    contexto: { ref, mensaje },
+    mensaje_voz: mensaje,
+    disparada_at: new Date().toISOString(),
+    leida: false,
   })
   console.log(`[CRON] ${regla.condicion}:${ref} → ${mensaje}`)
 }

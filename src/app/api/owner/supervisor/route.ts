@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('alerta_reglas')
-    .select('*')
+    .select('id, restaurante_id, nombre, activa, condicion, umbral_minutos, objeto, mensaje, horario_desde, horario_hasta, dias_semana, zona_ids, destinatario_tipo, camarero_id, canal_vox, canal_push, canal_hub, escalar_a, escalar_minutos, prioridad, created_at, updated_at')
     .eq('restaurante_id', rid)
     .order('prioridad', { ascending: true })
     .order('created_at', { ascending: true })
@@ -33,10 +33,11 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
 
   const {
-    nombre, objeto, condicion, umbral_minutos,
+    nombre, condicion, umbral_minutos, objeto,
     horario_desde, horario_hasta, dias_semana, zona_ids,
-    destinatario, partida_id, accion, mensaje,
-    escalar_a, escalar_minutos, prioridad
+    destinatario_tipo, camarero_id,
+    canal_vox, canal_push, canal_hub,
+    mensaje, escalar_a, escalar_minutos, prioridad
   } = body
 
   if (!nombre?.trim())
@@ -51,23 +52,24 @@ export async function POST(req: NextRequest) {
     .insert({
       restaurante_id: rid,
       nombre: nombre.trim(),
-      objeto: objeto ?? 'mesa',
+      activa: true,
+      logica: 'AND',
       condicion,
       umbral_minutos,
-      threshold_min: umbral_minutos, // compat con cron legacy
-      tipo: condicion,               // compat con cron legacy
+      objeto: objeto ?? 'mesa',
       horario_desde: horario_desde ?? null,
       horario_hasta: horario_hasta ?? null,
       dias_semana: dias_semana ?? null,
       zona_ids: zona_ids ?? null,
-      destinatario: destinatario ?? 'camarero_asignado',
-      partida_id: partida_id ?? null,
-      accion: accion ?? 'push_sonido',
+      destinatario_tipo: destinatario_tipo ?? 'camarero_asignado',
+      camarero_id: camarero_id ?? null,
+      canal_vox: canal_vox ?? false,
+      canal_push: canal_push ?? true,
+      canal_hub: canal_hub ?? false,
       mensaje: mensaje ?? null,
       escalar_a: escalar_a ?? null,
       escalar_minutos: escalar_minutos ?? null,
       prioridad: prioridad ?? 0,
-      activa: true,
     })
     .select()
     .single()
@@ -76,7 +78,7 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ regla: data }, { status: 201 })
 }
 
-// ── PUT: actualizar regla completa ────────────────────────────────────────────
+// ── PUT: actualizar regla ─────────────────────────────────────────────────────
 export async function PUT(req: NextRequest) {
   const session = getSession(req)
   if (!session || !ROLES_PERMITIDOS.includes(session.rol))
@@ -89,14 +91,9 @@ export async function PUT(req: NextRequest) {
 
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
-  // Verificar que la regla pertenece al restaurante
   const { data: existing } = await supabase
     .from('alerta_reglas').select('id').eq('id', id).eq('restaurante_id', rid).single()
   if (!existing) return NextResponse.json({ error: 'Regla no encontrada' }, { status: 404 })
-
-  // Sync campos legacy
-  if (updates.umbral_minutos) updates.threshold_min = updates.umbral_minutos
-  if (updates.condicion) updates.tipo = updates.condicion
 
   const { data, error } = await supabase
     .from('alerta_reglas')
