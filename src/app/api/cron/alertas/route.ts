@@ -92,7 +92,7 @@ function getCond(r: ReglaActiva): string {
 async function evalSinComanda(supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]) {
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
   const { data: mesas } = await supabase.from('mesas').select('id, codigo, ultima_comanda')
-    .eq('restaurante_id', rid).in('estado', ['activa','ocupada','marchar'])
+    .eq('restaurante_id', rid).in('estado', ['activa','marchar','aviso','urgente','cuenta'])
     .lt('ultima_comanda', hace).not('ultima_comanda', 'is', null)
   for (const mesa of mesas ?? []) {
     const ref = `sin_comanda_${mesa.id}`
@@ -165,7 +165,7 @@ async function evalCuentaSinCobrar(supabase: ReturnType<typeof createServerClien
 async function evalRotacionLarga(supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]) {
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
   const { data: mesas } = await supabase.from('mesas').select('id, codigo, updated_at')
-    .eq('restaurante_id', rid).in('estado', ['activa','ocupada','marchar','aviso']).lt('updated_at', hace)
+    .eq('restaurante_id', rid).in('estado', ['activa','marchar','aviso','urgente','cuenta']).lt('updated_at', hace)
   for (const mesa of mesas ?? []) {
     const ref = `rotacion_larga_${mesa.id}`
     if (await yaAlertado(supabase, rid, getCond(regla), ref, 60)) continue
