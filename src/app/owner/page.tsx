@@ -5395,41 +5395,53 @@ function ReservasTab() {
 
 const GRUPOS = [
   {
+    // Sala: supervisor primero (uso diario en servicio), luego setup de personal y espacio
     id: 'sala', label: 'Sala', icon: ICONS.users,
     tabs: [
-      { id: 'camareros', label: 'Camareros', icon: ICONS.users  },
-      { id: 'mesas',     label: 'Mesas',     icon: ICONS.grid   },
+      { id: 'supervisor', label: 'Supervisor',   icon: ICONS.clock  }, // diario durante servicio
+      { id: 'camareros',  label: 'Camareros',    icon: ICONS.users  }, // semanal/mensual
+      { id: 'mesas',      label: 'Mesas',        icon: ICONS.grid   }, // setup inicial, raro
     ]
   },
   {
+    // Carta: productos primero (actualizar carta, precios, 86), secciones es setup
     id: 'carta', label: 'Carta', icon: ICONS.book,
     tabs: [
-      { id: 'carta',     label: 'Productos', icon: ICONS.book    },
-      { id: 'secciones', label: 'Secciones', icon: ICONS.sparkle },
+      { id: 'carta',     label: 'Productos', icon: ICONS.book    }, // frecuente
+      { id: 'secciones', label: 'Secciones', icon: ICONS.sparkle }, // setup inicial
     ]
   },
   {
+    // Servicio: operativo diario primero (turno y caja se abren/cierran cada servicio),
+    // reservas antes del servicio, analytics consulta semanal, cubierto se configura una vez
     id: 'servicio', label: 'Servicio', icon: ICONS.chart,
     tabs: [
-      { id: 'reservas',   label: 'Reservas',    icon: ICONS.calendar      },
-      { id: 'turno',      label: 'Turno',        icon: ICONS.clock         },
-      { id: 'caja',       label: 'Caja',         icon: ICONS.receipt       },
-      { id: 'analytics',  label: 'Analytics',    icon: ICONS.chart         },
-      { id: 'facturas',   label: 'Facturas',     icon: ICONS.receipt       },
-      { id: 'supervisor', label: 'Supervisor',   icon: ICONS.clock         },
+      { id: 'turno',     label: 'Turno',     icon: ICONS.clock    }, // diario x2 (abrir/cerrar)
+      { id: 'caja',      label: 'Caja',      icon: ICONS.receipt  }, // diario durante servicio
+      { id: 'reservas',  label: 'Reservas',  icon: ICONS.calendar }, // diario antes del servicio
+      { id: 'analytics', label: 'Analytics', icon: ICONS.chart    }, // semanal
+      { id: 'cubierto',  label: 'Cubierto',  icon: ICONS.receipt  }, // se configura una vez
     ]
   },
   {
+    // Config: hardware primero (impresoras se consulta cuando algo falla),
+    // flujos y QR son setup importantes, el resto es configuración que se toca raramente
     id: 'config', label: 'Config', icon: ICONS.shield,
     tabs: [
-      { id: 'qr',             label: 'QR Mesa',           icon: ICONS.wifi          },
-      { id: 'cubierto',       label: 'Cubierto',         icon: ICONS.receipt       },
-      { id: 'impresoras',     label: 'Impresoras',        icon: ICONS.printer       },
-      { id: 'flujos',         label: 'Flujos',            icon: ICONS.wifi          },
-      { id: 'notificaciones', label: 'Notificaciones',    icon: ICONS.alertTriangle },
-      { id: 'modificaciones', label: 'Modificaciones',    icon: ICONS.alertTriangle },
-      { id: 'restaurante',    label: 'Restaurante',       icon: ICONS.shield        },
-      { id: 'suscripcion',    label: 'Suscripción',       icon: ICONS.receipt       },
+      { id: 'impresoras',     label: 'Impresoras',     icon: ICONS.printer       }, // se revisa si hay problemas
+      { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          }, // setup + ajustes puntuales
+      { id: 'qr',             label: 'QR Mesa',        icon: ICONS.qr            }, // al habilitar/deshabilitar mesas
+      { id: 'notificaciones', label: 'Notificaciones', icon: ICONS.alertTriangle }, // setup inicial
+      { id: 'restaurante',    label: 'Restaurante',    icon: ICONS.shield        }, // setup inicial (NIF, logo)
+      { id: 'suscripcion',    label: 'Suscripción',    icon: ICONS.receipt       }, // mensual / raramente
+    ]
+  },
+  {
+    // Auditoría: separado del resto porque es legal/fiscal — consulta periódica o ante incidencias
+    id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle,
+    tabs: [
+      { id: 'facturas',       label: 'Facturas',       icon: ICONS.receipt       }, // consulta periódica (contabilidad)
+      { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
     ]
   },
 ]

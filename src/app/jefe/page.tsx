@@ -23,18 +23,27 @@ const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'|'supervisor'
+type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'|'supervisor'|'mas'
 
-const NAVS: {id:Tab;label:string;icon:string}[] = [
+// Tabs principales en bottom nav — máximo 5, ordenadas de más a menos uso diario
+const NAV_PRINCIPAL: {id:Tab;label:string;icon:string}[] = [
   {id:'salon',      label:'Salón',      icon:'M4 4h16v6H4zM4 14h7v6H4zM13 14h7v6h-7z'},
-  {id:'cocina',     label:'Cocina',     icon:'M3 12h18M5 12V8a7 7 0 0 1 14 0v4M7 12v6h10v-6'},
-  {id:'comandas',   label:'Comandas',   icon:'M5 4h11l3 3v13H5z'},
-  {id:'stream',     label:'Stream',     icon:'M4 5h12M4 10h16M4 15h10M4 20h14'},
-  {id:'caja',       label:'Caja',       icon:'M3 9h18M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2M3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 14h6'},
-  {id:'audit',      label:'Cambios',    icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10'},
-  {id:'analytics',  label:'Analytics',  icon:'M18 20V10M12 20V4M6 20v-6'},
   {id:'supervisor', label:'Supervisor', icon:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2'},
+  {id:'cocina',     label:'Cocina',     icon:'M3 12h18M5 12V8a7 7 0 0 1 14 0v4M7 12v6h10v-6'},
+  {id:'caja',       label:'Caja',       icon:'M3 9h18M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2M3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 14h6'},
+  {id:'mas',        label:'Más',        icon:'M5 12h.01M12 12h.01M19 12h.01'},
 ]
+
+// Tabs secundarias — accesibles desde el menú "Más" (uso ocasional o técnico)
+const NAV_SECUNDARIO: {id:Tab;label:string;icon:string;desc:string}[] = [
+  {id:'comandas',  label:'Comandas',       icon:'M5 4h11l3 3v13H5z',                                                       desc:'Lista completa de comandas activas'},
+  {id:'analytics', label:'Analytics',      icon:'M18 20V10M12 20V4M6 20v-6',                                                desc:'Métricas del servicio'},
+  {id:'audit',     label:'Modificaciones', icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10',                              desc:'Cambios en comandas · audit trail'},
+  {id:'stream',    label:'Stream',         icon:'M4 5h12M4 10h16M4 15h10M4 20h14',                                          desc:'Transcripciones en tiempo real'},
+]
+
+// Todos los NAVS juntos — para el sidebar desktop (no hay restricción de espacio)
+const NAVS_TODOS = [...NAV_PRINCIPAL.filter(n => n.id !== 'mas'), ...NAV_SECUNDARIO]
 
 const STATUS_PAL: Record<string,{bg:string;fg:string;ac:string}> = {
   libre:  {bg:C.bone,    fg:C.ink3,   ac:C.ruleS},
@@ -138,9 +147,9 @@ export default function JefeSalaPage() {
       {/* BODY */}
       <div style={{flex:1,display:'flex',minHeight:0}}>
 
-        {/* SIDEBAR desktop */}
+        {/* SIDEBAR desktop — muestra todos los tabs sin restricción de espacio */}
         <div className="jefe-sidebar" style={{display:'none',flexDirection:'column',background:C.bone,borderRight:`1px solid ${C.rule}`,padding:'12px 8px',gap:2,width:160,flexShrink:0}}>
-          {NAVS.map(n=>(
+          {NAVS_TODOS.map(n=>(
             <button key={n.id} className={tab===n.id?'act':''} onClick={()=>setTab(n.id)}>
               <NavIcon path={n.icon}/>{n.label}
             </button>
@@ -164,13 +173,30 @@ export default function JefeSalaPage() {
           {tab==='audit'    && <AuditTab sh={sh} restauranteId={session.restaurante_id}/>}
           {tab==='analytics'  && <Analytics/>}
           {tab==='supervisor' && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} />}
+          {tab==='mas' && (
+            <div style={{padding:'24px 16px'}}>
+              <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink,marginBottom:20}}>Más opciones</div>
+              <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(140px,1fr))',gap:10}}>
+                {NAV_SECUNDARIO.map(n=>(
+                  <button key={n.id} onClick={()=>setTab(n.id)}
+                    style={{display:'flex',flexDirection:'column',alignItems:'flex-start',gap:8,padding:'16px 16px',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:10,cursor:'pointer',textAlign:'left'}}>
+                    <NavIcon path={n.icon}/>
+                    <div>
+                      <div style={{fontFamily:SN,fontSize:13,fontWeight:600,color:C.ink}}>{n.label}</div>
+                      <div style={{fontFamily:SN,fontSize:11,color:C.ink3,marginTop:2,lineHeight:1.4}}>{n.desc}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
-      {/* BOTTOM NAV mobile */}
+      {/* BOTTOM NAV mobile — solo 5 tabs para que el área de toque sea usable */}
       <div className="jefe-bottom" style={{display:'flex',borderTop:`1px solid ${C.rule}`,background:C.bone,position:'sticky',bottom:0,zIndex:10}}>
-        {NAVS.map(n=>(
-          <button key={n.id} className={tab===n.id?'act':''} onClick={()=>setTab(n.id)}>
+        {NAV_PRINCIPAL.map(n=>(
+          <button key={n.id} className={tab===n.id||((tab==='comandas'||tab==='analytics'||tab==='audit'||tab==='stream')&&n.id==='mas')?'act':''} onClick={()=>setTab(n.id)}>
             <NavIcon path={n.icon}/>{n.label}
           </button>
         ))}
