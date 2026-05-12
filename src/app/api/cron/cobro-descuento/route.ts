@@ -10,7 +10,7 @@ import { createServerClient } from '@/lib/supabase'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
 
 function autorizado(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
     try {
       // Aplicar crédito en la cuenta del cliente Stripe
       // Un balance negativo se descuenta automáticamente de la siguiente factura
-      await stripe.customers.createBalanceTransaction(customerId, {
+      await getStripe().customers.createBalanceTransaction(customerId, {
         amount: importeCentimos,
         currency: 'eur',
         description: `ia.rest cobro — descuento ${mesLabel}: ${d.volumen_eur.toFixed(2)}€ procesados`,

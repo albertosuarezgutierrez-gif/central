@@ -6,8 +6,9 @@ import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 
 export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
 const COMISION_RATE = 0.005
 
 async function getRestauranteId(req: NextRequest): Promise<string | null> {
@@ -75,7 +76,7 @@ export async function POST(req: NextRequest) {
       : {}
 
     // Crear y confirmar PaymentIntent usando el PM guardado
-    const pi = await stripe.paymentIntents.create(
+    const pi = await getStripe().paymentIntents.create(
       {
         amount: importeCentimos,
         currency: 'eur',

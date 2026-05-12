@@ -304,7 +304,7 @@ function KDSInner() {
     // Refrescar runnings cada 30s (pueden cambiar de zonas)
     const r = setInterval(fetchRunnings, 30000)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const ch = (supabase.channel('kds') as any)
+    const ch = (supabase.channel(`kds-${session.restaurante_id}`) as any)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comandas' }, fetchData)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'comanda_items' }, fetchData)
       .subscribe()

@@ -151,17 +151,18 @@ const Select = ({ label, value, onChange, options }:
 /* ─── Modal ─── */
 const Modal = ({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) => (
   <div style={{ position: 'fixed', inset: 0, zIndex: 100, display: 'flex', alignItems: 'center', justifyContent: 'center',
-    background: 'rgba(26,23,20,.6)', backdropFilter: 'blur(4px)' }}>
+    background: 'rgba(26,23,20,.6)', backdropFilter: 'blur(4px)', padding: 16 }}>
     <div style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 12, width: '100%', maxWidth: 440,
-      margin: 16, boxShadow: '0 18px 40px -12px rgba(26,23,20,.28)' }}>
+      maxHeight: 'calc(100dvh - 32px)', display: 'flex', flexDirection: 'column',
+      boxShadow: '0 18px 40px -12px rgba(26,23,20,.28)' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        padding: '20px 24px', borderBottom: `1px solid ${C.rule}` }}>
+        padding: '20px 24px', borderBottom: `1px solid ${C.rule}`, flexShrink: 0 }}>
         <div style={{ fontFamily: SE, fontSize: 22, fontWeight: 500, color: C.ink }}>{title}</div>
         <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink3, display: 'flex' }}>
           <Icon d={ICONS.x} size={20}/>
         </button>
       </div>
-      <div style={{ padding: '24px' }}>{children}</div>
+      <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>{children}</div>
     </div>
   </div>
 )

@@ -135,6 +135,15 @@ REGLAS ESTRICTAS:
 - COMENSALES: si el camarero menciona número de personas/comensales/cubiertos, extráelo en "num_comensales" (null si no se menciona)
 - Ejemplos comensales: "mesa cuatro para tres"→num_comensales:3, "somos cuatro"→num_comensales:4, "dos cubiertos"→num_comensales:2
 
+CUENTAS POR NOMBRE (nombre_cuenta):
+- Cuando el camarero dice "a nombre de X", "para X", "cuenta de X" SIN mencionar mesa, usa nombre_cuenta
+- En ese caso: mesa:"", nombre_cuenta:"X" (nombre tal como se dice, capitalizado)
+- Ejemplos: "dos cañas para Alberto"→nombre_cuenta:"Alberto", mesa:""
+- "abre cuenta a nombre de Pedro García"→tipo:"cuenta",nombre_cuenta:"Pedro García",mesa:"",items:[]
+- "cuenta de María, paga con tarjeta"→tipo:"cuenta",nombre_cuenta:"María",mesa:"",items:[]
+- "dos tintos para la mesa cuatro"→mesa:"S4",nombre_cuenta:null (tiene mesa, NO es cuenta nominal)
+- Si el camarero dice TANTO mesa COMO nombre: usa la mesa, ignora el nombre (la mesa tiene prioridad)
+
 CLARIFICACIÓN POR AMBIGÜEDAD:
 - Si el camarero menciona un producto que en la CARTA ACTIVA tiene múltiples variantes distintas (tipos diferentes, no solo formatos de tamaño) y NO especificó cuál, devuelve necesita_clarificacion:true
 - Ejemplo: "un tinto" y en carta existen "Rioja Crianza 4.5€", "Ribera del Duero 5€", "Tempranillo 3.5€" → lista las opciones
@@ -146,7 +155,7 @@ CLARIFICACIÓN POR AMBIGÜEDAD:
 - Con clarificación resuelta: devuelve necesita_clarificacion:false con los items completos
 
 SCHEMA:
-{"mesa":"S4","tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   // Usar cache cuando sea posible para evitar DB queries en cada llamada (~200ms ahorrados)

@@ -8,13 +8,16 @@ export async function POST(req: NextRequest) {
     const supabase = createServerClient()
     const rid = getRestauranteId(req)
     const {
-      mesa_id, items, tipo = 'comanda',
+      mesa_id, nombre_cuenta, items, tipo = 'comanda',
       num_comensales,
       incluir_servicio = true,
     } = await req.json()
 
-    if (!mesa_id || !items?.length) {
-      return NextResponse.json({ error: 'mesa_id e items requeridos' }, { status: 400 })
+    if (!mesa_id && !nombre_cuenta) {
+      return NextResponse.json({ error: 'mesa_id o nombre_cuenta requerido' }, { status: 400 })
+    }
+    if (!items?.length) {
+      return NextResponse.json({ error: 'items requeridos' }, { status: 400 })
     }
 
     const sessionHeader = req.headers.get('x-ia-session')
@@ -30,7 +33,36 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Sin turno activo' }, { status: 400 })
     }
 
-    // ¿Primera comanda de esta mesa en el turno?
+    // ── RUTA CUENTA NOMINAL (sin mesa) ──────────────────────────────────────
+    if (!mesa_id && nombre_cuenta) {
+      const { data: comanda, error: cmdErr } = await supabase
+        .from('comandas')
+        .insert({
+          mesa_id: null,
+          nombre_cuenta: nombre_cuenta.trim(),
+          camarero_id, turno_id,
+          tipo, estado: tipo === 'cuenta' ? 'nueva' : 'en_cocina',
+          restaurante_id: rid,
+        })
+        .select().single()
+      if (cmdErr) throw cmdErr
+
+      await supabase.from('comanda_items').insert(
+        items.map((it: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number }) => ({
+          comanda_id: comanda.id,
+          nombre: it.nombre, cantidad: it.cantidad,
+          notas: it.notas ?? null,
+          producto_id: it.producto_id ?? null,
+          precio_unitario: it.precio_unitario ?? null,
+          restaurante_id: rid,
+        }))
+      )
+
+      return NextResponse.json({ ok: true, comanda_id: comanda.id, numero_ticket: comanda.numero_ticket, nombre_cuenta: nombre_cuenta.trim() })
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
+    // ── RUTA NORMAL CON MESA ─────────────────────────────────────────────────
     const { data: esPrimera } = await supabase
       .rpc('es_primera_comanda', { p_mesa_id: mesa_id, p_turno_id: turno_id })
 

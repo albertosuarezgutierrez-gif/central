@@ -41,7 +41,15 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
-type Tab    = 'hablar'|'manual'|'sala'|'carta'|'config'
+type Tab    = 'hablar'|'manual'|'sala'|'cuentas'|'carta'|'config'
+
+type CuentaNominal = {
+  nombre: string
+  comandas: { id: string; created_at: string; items: { nombre: string; cantidad: number; precio_unitario: number | null; notas: string | null }[] }[]
+  total: number
+  ultima_actividad: string
+  num_items: number
+}
 
 interface ProductoCarta {
   id: string; nombre: string; precio: number | null
@@ -159,6 +167,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [fontBig, setFontBig]               = useState(false)
   const [productosCarta, setProductosCarta] = useState<ProductoCarta[]>([])
   const [cartaBusqueda, setCartaBusqueda]   = useState('')
+  const [cuentasNominales, setCuentasNominales] = useState<CuentaNominal[]>([])
+  const [cuentaDetalle, setCuentaDetalle] = useState<CuentaNominal|null>(null)
+  const [nuevaCuentaNombre, setNuevaCuentaNombre] = useState('')
+  const [nuevaCuentaOpen, setNuevaCuentaOpen] = useState(false)
 
   const addMsg = useCallback((from:ChatMsg['from'], texto:string, tipo?:ChatMsg['tipo']) => {
     setChatMsgs(prev => [...prev.slice(-4), {id:Date.now().toString(), from, texto, ts:new Date(), tipo}])
@@ -253,6 +265,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       })))
     }).catch(() => {})
   }, [])
+
+  // Recargar cuentas nominales al entrar en la tab
+  const loadCuentasNominales = useCallback(() => {
+    const ses = localStorage.getItem('ia_rest_session') ?? ''
+    fetch('/api/cuenta-nominal', { headers: { 'x-ia-session': ses } })
+      .then(r => r.json())
+      .then(d => { if (d.cuentas) setCuentasNominales(d.cuentas) })
+      .catch(() => {})
+  }, [])
+
+  useEffect(() => {
+    if (tab === 'cuentas') loadCuentasNominales()
+  }, [tab, loadCuentasNominales])
 
   const saveCfg = useCallback((patch: Record<string,unknown>) => {
     try {
@@ -390,7 +415,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         setChipsClarificacion([]); setMesaClarificacion(null)
 
         // Si BRAIN no encontró mesa o no creó comanda → preguntar
-        const mesaInvalida = !d.comanda_id && (
+        // Excepción: si usó nombre_cuenta, la comanda ya se creó sin mesa
+        const esNominal = !!(d.nombre_cuenta && d.comanda_id)
+        const mesaInvalida = !esNominal && !d.comanda_id && (
           !d.brain?.mesa ||
           ['T00','M00','','desconocida','undefined'].includes(d.brain.mesa) ||
           d.brain?.tipo === 'aviso' && !d.brain?.items?.length
@@ -400,6 +427,18 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           // NO añadimos al chat aquí — ya lo muestra screen==='asking' directamente
           setScreen('asking')
           speak('¿Qué mesa?').then(() => startRecording())
+          return
+        }
+
+        // Cuenta nominal creada → refrescar lista y notificar
+        if (esNominal) {
+          loadCuentasNominales()
+          const bItemsN: BrainResult['items'] = d.brain?.items || []
+          const msgN = `★ ${d.nombre_cuenta}: ${bItemsN.map((it: BrainResult['items'][0]) => `${it.cantidad}× ${it.nombre}`).join(', ')}`
+          addMsg('brain', msgN, 'ok')
+          setLastComandaId(d.comanda_id)
+          if (!ttsOff) speak(`${d.nombre_cuenta}: ${bItemsN.map((it: BrainResult['items'][0]) => `${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}. Anotado.`)
+          setScreen('sent')
           return
         }
 
@@ -1085,7 +1124,164 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         )
       })()}
 
-      {/* ══ TAB: PENDIENTES ══════════════════════════════════════ */}
+      {/* ══ TAB: CUENTAS POR NOMBRE ══════════════════════════════ */}
+      {tab==='cuentas' && (() => {
+        // Si hay una cuenta en detalle, mostrar su contenido
+        if (cuentaDetalle) {
+          const mins = Math.floor((Date.now() - new Date(cuentaDetalle.ultima_actividad).getTime()) / 60000)
+          const allItems = cuentaDetalle.comandas.flatMap(c => c.items)
+          // Agrupar items por nombre
+          const itemMap: Record<string, {cantidad:number; precio:number|null; notas:string[]}> = {}
+          for (const it of allItems) {
+            if (!itemMap[it.nombre]) itemMap[it.nombre] = {cantidad:0, precio:it.precio_unitario, notas:[]}
+            itemMap[it.nombre].cantidad += it.cantidad
+            if (it.notas) itemMap[it.nombre].notas.push(it.notas)
+          }
+          return (
+            <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+              <div style={{padding:'10px 14px',flexShrink:0,background:C.bg1,borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',gap:10}}>
+                <button onClick={()=>setCuentaDetalle(null)} style={{background:'none',border:'none',cursor:'pointer',color:C.ink3,display:'flex',alignItems:'center',gap:4,fontFamily:SN,fontSize:13,padding:0}}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6"/></svg>
+                  Cuentas
+                </button>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink,marginLeft:4}}>★ {cuentaDetalle.nombre}</div>
+                <div style={{marginLeft:'auto',fontFamily:SM,fontSize:11,color:C.ink3}}>{mins}m · {cuentaDetalle.num_items} ítems</div>
+              </div>
+              <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'12px 14px',display:'flex',flexDirection:'column',gap:8}}>
+                {/* Items agrupados */}
+                <div style={{background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:10,overflow:'hidden'}}>
+                  <div style={{padding:'8px 12px',borderBottom:`1px solid ${C.rule}`,fontFamily:SM,fontSize:10,color:C.ink4,textTransform:'uppercase',letterSpacing:'.06em'}}>Consumo</div>
+                  {Object.entries(itemMap).map(([nombre, data], i) => (
+                    <div key={i} style={{display:'flex',alignItems:'baseline',gap:8,padding:'8px 12px',borderBottom:i<Object.keys(itemMap).length-1?`1px solid ${C.rule}`:'none'}}>
+                      <span style={{fontFamily:SE,fontStyle:'italic',fontSize:19,color:C.verm,minWidth:22,textAlign:'center'}}>{data.cantidad}</span>
+                      <span style={{fontSize:14,color:C.ink,flex:1}}>{nombre}</span>
+                      {data.precio && <span style={{fontFamily:SM,fontSize:11,color:C.ink3}}>{(data.precio*data.cantidad).toFixed(2)}€</span>}
+                    </div>
+                  ))}
+                </div>
+                {/* Total */}
+                <div style={{background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:10,padding:'12px 16px',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                  <span style={{fontFamily:SN,fontSize:14,color:C.ink2,fontWeight:600}}>Total</span>
+                  <span style={{fontFamily:SE,fontStyle:'italic',fontSize:26,color:C.ink,fontWeight:500}}>{cuentaDetalle.total.toFixed(2)} €</span>
+                </div>
+              </div>
+              {/* Footer acciones */}
+              <div style={{padding:'12px 14px',borderTop:`1px solid ${C.rule}`,display:'flex',gap:10,flexShrink:0}}>
+                <button
+                  onClick={async () => {
+                    const ses = localStorage.getItem('ia_rest_session') ?? ''
+                    await fetch('/api/cuenta-nominal', { method:'DELETE', headers:{'Content-Type':'application/json','x-ia-session':ses}, body:JSON.stringify({nombre_cuenta:cuentaDetalle.nombre}) })
+                    setCuentaDetalle(null); loadCuentasNominales()
+                  }}
+                  style={{flex:1,background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,padding:'12px',fontFamily:SN,fontSize:14,fontWeight:600,cursor:'pointer',color:C.ink3}}>
+                  Cerrar cuenta
+                </button>
+                <button
+                  onClick={()=>{setCuentaDetalle(null); setTab('hablar')}}
+                  style={{flex:1,background:C.verm,border:'none',borderRadius:10,padding:'12px',fontFamily:SN,fontSize:14,fontWeight:600,cursor:'pointer',color:'#fff'}}>
+                  + Añadir pedido
+                </button>
+              </div>
+            </div>
+          )
+        }
+
+        return (
+          <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
+            {/* Header */}
+            <div style={{padding:'8px 14px',flexShrink:0,background:C.bg1,borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',gap:10}}>
+              <div style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink}}>Cuentas por nombre</div>
+              <div style={{marginLeft:'auto',display:'flex',gap:8,alignItems:'center'}}>
+                {cuentasNominales.length>0 && (
+                  <div style={{background:C.vermS,border:`1px solid ${C.verm}44`,borderRadius:8,padding:'3px 8px',fontFamily:SM,fontSize:9,color:C.verm,fontWeight:700}}>
+                    {cuentasNominales.length} ABIERTAS
+                  </div>
+                )}
+                <button onClick={()=>setNuevaCuentaOpen(v=>!v)}
+                  style={{background:C.verm,border:'none',borderRadius:8,padding:'5px 10px',fontFamily:SN,fontSize:11,fontWeight:700,cursor:'pointer',color:'#fff',display:'flex',alignItems:'center',gap:5}}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 5v14M5 12h14"/></svg>
+                  Nueva
+                </button>
+              </div>
+            </div>
+
+            {/* Formulario nueva cuenta */}
+            {nuevaCuentaOpen && (
+              <div style={{padding:'12px 14px',background:C.bg2,borderBottom:`1px solid ${C.rule}`,display:'flex',gap:8}}>
+                <input
+                  autoFocus
+                  value={nuevaCuentaNombre}
+                  onChange={e=>setNuevaCuentaNombre(e.target.value)}
+                  onKeyDown={async e => {
+                    if (e.key==='Enter' && nuevaCuentaNombre.trim()) {
+                      const ses = localStorage.getItem('ia_rest_session') ?? ''
+                      // Crear una comanda nominal vacía (solo para registrar la apertura)
+                      // El camarero añadirá items por voz diciendo "X para [nombre]"
+                      setNuevaCuentaOpen(false); setNuevaCuentaNombre('')
+                      // Redirigir a hablar con el nombre como contexto
+                      addMsg('sistema', `Cuenta abierta para ${nuevaCuentaNombre.trim()} — di "dos cañas para ${nuevaCuentaNombre.trim()}" para añadir`, 'ok')
+                      setTab('hablar')
+                    }
+                    if (e.key==='Escape') { setNuevaCuentaOpen(false); setNuevaCuentaNombre('') }
+                  }}
+                  placeholder="Nombre del cliente…"
+                  style={{flex:1,background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:8,padding:'9px 12px',fontFamily:SN,fontSize:14,color:C.ink,outline:'none'}}
+                />
+                <button onClick={()=>{setNuevaCuentaOpen(false);setNuevaCuentaNombre('')}}
+                  style={{background:'none',border:`1px solid ${C.rule}`,borderRadius:8,padding:'9px 12px',fontFamily:SN,fontSize:13,cursor:'pointer',color:C.ink3}}>
+                  ✕
+                </button>
+              </div>
+            )}
+
+            {/* Lista de cuentas */}
+            <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 14px',display:'flex',flexDirection:'column',gap:10}}>
+              {cuentasNominales.length === 0 && (
+                <div style={{textAlign:'center',padding:'40px 20px'}}>
+                  <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.ink4,marginBottom:6}}>Sin cuentas abiertas</div>
+                  <div style={{fontFamily:SN,fontSize:12,color:C.ink4,lineHeight:1.5}}>
+                    Di <span style={{fontFamily:SM,color:C.teal}}>"dos cañas para Alberto"</span><br/>
+                    y la cuenta se abre automáticamente
+                  </div>
+                </div>
+              )}
+              {cuentasNominales.map(c => {
+                const mins = Math.floor((Date.now() - new Date(c.ultima_actividad).getTime()) / 60000)
+                return (
+                  <div key={c.nombre} onClick={()=>setCuentaDetalle(c)}
+                    style={{background:C.bg1,border:`1px solid ${C.rule}`,borderLeft:`3px solid ${C.verm}`,borderRadius:10,overflow:'hidden',cursor:'pointer',boxShadow:'0 1px 4px rgba(26,23,20,.06)'}}>
+                    <div style={{display:'flex',alignItems:'center',gap:10,padding:'10px 14px'}}>
+                      {/* Icono persona */}
+                      <div style={{width:36,height:36,borderRadius:'50%',background:C.vermS,display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0}}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.verm} strokeWidth="1.8"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                      </div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink,lineHeight:1,marginBottom:3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>★ {c.nombre}</div>
+                        <div style={{fontFamily:SM,fontSize:10,color:C.ink4}}>{c.num_items} ítem{c.num_items!==1?'s':''} · hace {mins}m</div>
+                      </div>
+                      <div style={{textAlign:'right',flexShrink:0}}>
+                        <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.ink,fontWeight:500}}>{c.total.toFixed(2)}€</div>
+                        <div style={{fontFamily:SM,fontSize:9,color:C.verm,textTransform:'uppercase',letterSpacing:'.06em'}}>{c.comandas.length} ronda{c.comandas.length!==1?'s':''}</div>
+                      </div>
+                    </div>
+                    {/* Preview últimos items */}
+                    <div style={{padding:'6px 14px 10px',borderTop:`1px solid ${C.rule}`,display:'flex',gap:6,flexWrap:'wrap' as const}}>
+                      {c.comandas[0]?.items.slice(0,4).map((it,i) => (
+                        <span key={i} style={{fontFamily:SM,fontSize:10,color:C.ink3,background:C.bg2,borderRadius:6,padding:'2px 7px'}}>
+                          {it.cantidad}× {it.nombre}
+                        </span>
+                      ))}
+                      {(c.comandas[0]?.items.length??0) > 4 && (
+                        <span style={{fontFamily:SM,fontSize:10,color:C.ink4}}>+{(c.comandas[0]?.items.length??0)-4} más</span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
 
       {/* ══ TAB: CARTA — consulta de carta para camarero ════════ */}
       {tab==='carta' && (() => {
@@ -1301,17 +1497,21 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ── BOTTOM NAV ─────────────────────────────────────────── */}
       <nav style={{display:'flex',background:C.bg1,borderTop:`1px solid ${C.rule}`,flexShrink:0}}>
         {([
-          {id:'hablar', lbl:'Hablar', path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
-          {id:'manual', lbl:'Manual', path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
-          {id:'sala',   lbl:'Pedidos', path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
-          {id:'carta',  lbl:'Carta',   path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
-          {id:'config', lbl:'Config',  path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
+          {id:'hablar',  lbl:'Hablar',   path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
+          {id:'manual',  lbl:'Manual',   path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
+          {id:'sala',    lbl:'Pedidos',  path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
+          {id:'cuentas', lbl:'Cuentas',  path:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM19 8v6M22 11h-6'},
+          {id:'carta',   lbl:'Carta',    path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
+          {id:'config',  lbl:'Config',   path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
         ] as {id:Tab;lbl:string;path:string}[]).map(t => {
           const on = tab===t.id
           return (
             <button key={t.id} onClick={()=>setTab(t.id)}
               style={{flex:1,padding:'9px 4px 13px',background:'transparent',border:'none',cursor:'pointer',display:'flex',flexDirection:'column',alignItems:'center',gap:3,position:'relative',color:on?C.verm:C.ink3,transition:'color .15s'}}>
               {on && <div style={{position:'absolute',top:0,left:'22%',right:'22%',height:2,background:C.verm,borderRadius:'0 0 3px 3px'}}/>}
+              {t.id==='cuentas' && cuentasNominales.length>0 && !on && (
+                <div style={{position:'absolute',top:6,right:'20%',width:8,height:8,borderRadius:'50%',background:C.verm}}/>
+              )}
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {t.path.split('M').filter(Boolean).map((seg,i) => <path key={i} d={`M${seg}`}/>)}
               </svg>

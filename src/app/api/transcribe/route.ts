@@ -288,7 +288,7 @@ export async function POST(req: NextRequest) {
       }
 
       const nuevoEstado = ({ comanda: 'activa', marchar: 'marchar', '86': mesa.estado, cuenta: 'cuenta', aviso: 'aviso' })[brainResult.tipo] as string
-      await supabase.from('mesas').update({ estado: nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id)
+      await supabase.from('mesas').update({ estado: nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('restaurante_id', rid)
 
       if (brainResult.tipo === '86') {
         await supabase.from('productos_86').insert(
@@ -296,6 +296,64 @@ export async function POST(req: NextRequest) {
         )
       }
     }
+
+    // ── CUENTA NOMINAL: si BRAIN devuelve nombre_cuenta sin mesa ────────────
+    let nombreCuentaUsada: string | null = null
+    if (!mesa && brainResult.nombre_cuenta && brainResult.items.length > 0) {
+      const nombreNorm = brainResult.nombre_cuenta.trim()
+      const { data: comanda, error: cErr } = await supabase.from('comandas')
+        .insert({
+          mesa_id: null,
+          nombre_cuenta: nombreNorm,
+          camarero_id: camareroId,
+          turno_id: turnoId,
+          tipo: brainResult.tipo === 'cuenta' ? 'comanda' : brainResult.tipo,
+          estado: 'en_cocina',
+          restaurante_id: rid,
+        })
+        .select().single()
+      if (cErr) throw cErr
+      comandaId = comanda.id
+      nombreCuentaUsada = nombreNorm
+
+      // Insertar items con precios
+      if (brainResult.items.length > 0) {
+        const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+        const todosNombres = [...new Set(brainResult.items.map(i => i.nombre))]
+        const { data: todosProds } = await supabase
+          .from('productos').select('id,nombre,precio').in('nombre', todosNombres).eq('restaurante_id', rid)
+        const precioMap: Record<string, { id: string; precio: number }> = {}
+        for (const p of todosProds ?? []) {
+          if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
+        }
+        await supabase.from('comanda_items').insert(
+          brainResult.items.map(item => {
+            const prodBase = precioMap[norm(item.nombre)] ?? null
+            return {
+              comanda_id: comanda.id, nombre: item.nombre, cantidad: item.cantidad,
+              notas: item.notas || null,
+              producto_id: item.producto_id ?? prodBase?.id ?? null,
+              precio_unitario: item.precio_unitario ?? prodBase?.precio ?? null,
+              restaurante_id: rid,
+            }
+          })
+        )
+        // Enviar a impresora igual que con mesa (courier)
+        const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
+        crearPrintJobs(
+          {
+            id: comanda.id,
+            tipo: brainResult.tipo,
+            mesa_codigo: `★ ${nombreNorm}`,
+            camarero_nombre: camarero?.nombre ?? 'Sala',
+            restaurante_id: rid,
+            zona_tipo: null,
+          },
+          brainResult.items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad, notas: item.notas ?? null, seccion_id: null }))
+        ).catch(err => console.error('[COURIER nominal]', err))
+      }
+    }
+    // ────────────────────────────────────────────────────────────────────────
 
     const latenciaTotal = Date.now() - start
     await supabase.from('transcripciones').insert({
@@ -320,7 +378,7 @@ export async function POST(req: NextRequest) {
       await supabase.from('alergeno_confirmaciones').insert(logs)
     }
 
-    return NextResponse.json({ ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, latencia_brain_ms: brainResult.latencia_brain_ms, comanda_id: comandaId, mesa_id: mesa?.id ?? null, alertas_86: alertas86, alertas_alergenos: alertasAlergenos })
+    return NextResponse.json({ ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, latencia_brain_ms: brainResult.latencia_brain_ms, comanda_id: comandaId, mesa_id: mesa?.id ?? null, nombre_cuenta: nombreCuentaUsada, alertas_86: alertas86, alertas_alergenos: alertasAlergenos })
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || (err as { status?: number })?.status === 401
