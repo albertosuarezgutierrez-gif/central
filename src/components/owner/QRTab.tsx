@@ -31,6 +31,32 @@ export default function QRTab({ restauranteId, stripeHeaders }: Props) {
   const [saving, setSaving] = useState<string | null>(null)
   const [editPrecio, setEditPrecio] = useState<Record<string, string>>({})
   const [editConcepto, setEditConcepto] = useState<Record<string, string>>({})
+  const [copiado, setCopiado] = useState<string | null>(null)
+
+  const copiarUrl = async (mesaId: string, token: string) => {
+    const url = `https://www.iarest.es/q/${token}`
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url)
+      } else {
+        // Fallback para contextos sin clipboard API
+        const ta = document.createElement('textarea')
+        ta.value = url
+        ta.style.position = 'fixed'
+        ta.style.opacity = '0'
+        document.body.appendChild(ta)
+        ta.focus()
+        ta.select()
+        document.execCommand('copy')
+        document.body.removeChild(ta)
+      }
+      setCopiado(mesaId)
+      setTimeout(() => setCopiado(null), 2000)
+    } catch {
+      // Si todo falla, mostrar la URL en un alert como último recurso
+      window.prompt('Copia esta URL:', url)
+    }
+  }
 
   const sh = stripeHeaders
 
@@ -184,7 +210,21 @@ export default function QRTab({ restauranteId, stripeHeaders }: Props) {
                   {mesa.qr_token && (
                     <div style={{ background: '#14110E', borderRadius: 9, padding: '10px 14px', border: '1px solid #2E2720', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontFamily: 'monospace', fontSize: 11, color: '#8C7B69' }}>/q/{mesa.qr_token.slice(0, 12)}...</span>
-                      <button onClick={() => navigator.clipboard.writeText(`https://www.iarest.es/q/${mesa.qr_token}`)} style={{ padding: '4px 10px', background: 'transparent', border: '1px solid #2E2720', borderRadius: 6, color: '#8C7B69', fontSize: 11, cursor: 'pointer' }}>Copiar URL</button>
+                      <button
+                        onClick={() => copiarUrl(mesa.id, mesa.qr_token!)}
+                        style={{
+                          padding: '4px 10px',
+                          background: copiado === mesa.id ? '#3F7D44' : 'transparent',
+                          border: `1px solid ${copiado === mesa.id ? '#3F7D44' : '#2E2720'}`,
+                          borderRadius: 6,
+                          color: copiado === mesa.id ? '#F6F1E7' : '#8C7B69',
+                          fontSize: 11,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                        }}
+                      >
+                        {copiado === mesa.id ? '¡Copiado!' : 'Copiar URL'}
+                      </button>
                     </div>
                   )}
                 </div>
