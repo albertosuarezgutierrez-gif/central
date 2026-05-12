@@ -730,8 +730,19 @@ function MesasTab() {
   }
 
   const delZona = async (z: Zona) => {
-    if (!confirm(`Eliminar zona "${z.nombre}"?`)) return
-    await fetch('/api/owner/zonas', { method: 'DELETE', headers: { 'Content-Type':'application/json', ...sh() }, body: JSON.stringify({ id: z.id }) })
+    // Avisar si hay mesas usando este tipo (solo para tipos custom, los base comparten tipo)
+    const mesasEnZona = mesas.filter(m => m.zona === z.tipo)
+    const esBase = ['salon','terraza','barra'].includes(z.tipo)
+    const msg = (!esBase && mesasEnZona.length > 0)
+      ? `¿Eliminar zona "${z.nombre}"?\n⚠️ Tiene ${mesasEnZona.length} mesa(s) — quedarán sin zona hasta que las reasignes.`
+      : `¿Eliminar zona "${z.nombre}"?`
+    if (!confirm(msg)) return
+    const r = await fetch('/api/owner/zonas', { method: 'DELETE', headers: { 'Content-Type':'application/json', ...sh() }, body: JSON.stringify({ id: z.id }) })
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}))
+      alert('Error al eliminar la zona: ' + (d.error || 'Error desconocido'))
+      return
+    }
     await load()
   }
 

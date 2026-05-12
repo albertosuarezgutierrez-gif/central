@@ -22,9 +22,37 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { nombre, tipo, prefijo, descripcion, orden } = await req.json()
   if (!nombre || !prefijo) return NextResponse.json({ error: 'nombre y prefijo requeridos' }, { status: 400 })
+
+  // Si no viene tipo explícito, generar slug único desde el nombre
+  let tipoFinal: string = tipo || ''
+  if (!tipoFinal) {
+    const slug = (nombre as string)
+      .toLowerCase()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')   // quitar acentos
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_]/g, '')
+      .slice(0, 20) || 'zona'
+
+    // Verificar unicidad dentro del restaurante
+    const { data: existing } = await supabase
+      .from('zonas')
+      .select('tipo')
+      .eq('restaurante_id', rid)
+      .ilike('tipo', `${slug}%`)
+
+    const usados = new Set(existing?.map(z => z.tipo) ?? [])
+    tipoFinal = slug
+    if (usados.has(tipoFinal)) {
+      let n = 2
+      while (usados.has(`${slug}_${n}`)) n++
+      tipoFinal = `${slug}_${n}`
+    }
+  }
+
   const { data, error } = await supabase
     .from('zonas')
-    .insert({ nombre, tipo: tipo || 'salon', prefijo: prefijo.toUpperCase(), descripcion, orden: orden ?? 99, restaurante_id: rid })
+    .insert({ nombre, tipo: tipoFinal, prefijo: prefijo.toUpperCase(), descripcion, orden: orden ?? 99, restaurante_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data, { status: 201 })
