@@ -14,6 +14,7 @@ import SugerenciaButton from '@/components/SugerenciaButton'
 import ComandaModModal, { ItemMod } from '@/components/ComandaModModal'
 import ComensalesModal from '@/components/edge/ComensalesModal'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
+import { useMensajes } from '@/hooks/useMensajes'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -41,7 +42,7 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
-type Tab    = 'hablar'|'manual'|'sala'|'cuentas'|'carta'|'config'
+type Tab    = 'hablar'|'manual'|'sala'|'cuentas'|'carta'|'chat'|'config'
 
 type CuentaNominal = {
   nombre: string
@@ -183,6 +184,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const productos86                        = useProductos86(turnoId??undefined)
   const { comandas }                       = useComandas(turnoId??undefined)
   const servicioPendiente                  = useServicioPendiente(session.restaurante_id)
+  const { mensajes, noLeidos, enviar: enviarMensaje, marcarLeido: marcarMensajeLeido } =
+    useMensajes(session.restaurante_id, session.id, session.rol, turnoId)
+  const [chatTexto, setChatTexto]          = useState('')
+  const [chatDestino, setChatDestino]      = useState<'todos'|'cocina'|'camarero'|'jefe_sala'>('todos')
+  const chatEndRef                         = useRef<HTMLDivElement>(null)
   const prev86 = useRef(0)
 
   const ultimasComandas = Object.values(
@@ -1283,6 +1289,128 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         )
       })()}
 
+      {/* ══ TAB: CHAT — mensajes entre roles del turno ══════════ */}
+      {tab==='chat' && (() => {
+        // Auto-scroll cuando llegan mensajes
+        // eslint-disable-next-line react-hooks/rules-of-hooks
+        useEffect(() => {
+          chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+          // Marcar como leídos los mensajes dirigidos a mí
+          mensajes
+            .filter(m => !m.leido_por?.includes(session.id) && m.camarero_id !== session.id)
+            .forEach(m => marcarMensajeLeido(m.id))
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+        }, [mensajes.length])
+
+        const rolLabel = (r: string) => ({ camarero: 'Sala', cocina: 'Cocina', jefe_sala: 'Jefe', running: 'Running', super_admin: 'Admin' }[r] ?? r)
+        const rolColor = (r: string) => ({ camarero: C.teal, cocina: C.verm, jefe_sala: C.amb, running: C.gr }[r] ?? C.ink3)
+
+        const handleEnviar = async () => {
+          const t = chatTexto.trim()
+          if (!t) return
+          setChatTexto('')
+          await enviarMensaje(t, { rol_destino: chatDestino })
+        }
+
+        return (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Header destino */}
+            <div style={{ padding: '10px 16px', borderBottom: `1px solid ${C.rule}`, background: C.bg1, display: 'flex', gap: 8, alignItems: 'center', flexShrink: 0 }}>
+              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, letterSpacing: '.08em' }}>PARA:</span>
+              {(['todos','cocina','jefe_sala'] as const).map(d => (
+                <button key={d} onClick={() => setChatDestino(d)} style={{
+                  padding: '4px 10px', borderRadius: 20, border: `1px solid ${chatDestino===d ? rolColor(d==='todos'?'jefe_sala':d) : C.rule}`,
+                  background: chatDestino===d ? rolColor(d==='todos'?'jefe_sala':d) : 'transparent',
+                  color: chatDestino===d ? '#fff' : C.ink3, fontFamily: SN, fontSize: 12, cursor: 'pointer',
+                }}>
+                  {d==='todos' ? 'Todos' : d==='cocina' ? 'Cocina' : 'Jefe sala'}
+                </button>
+              ))}
+            </div>
+
+            {/* Mensajes */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {mensajes.length === 0 && (
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink4 }}>Sin mensajes en el turno</span>
+                  <span style={{ fontFamily: SC, fontSize: 14, color: C.ink4 }}>empieza tú la conversación</span>
+                </div>
+              )}
+              {mensajes.map(m => {
+                const esMio = m.camarero_id === session.id
+                return (
+                  <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: esMio ? 'flex-end' : 'flex-start' }}>
+                    {/* Nombre + rol */}
+                    {!esMio && (
+                      <span style={{ fontFamily: SN, fontSize: 10, color: rolColor(m.rol_origen), marginBottom: 2, paddingLeft: 4 }}>
+                        {m.nombre_origen} · {rolLabel(m.rol_origen)}
+                        {m.mesa_ref && <span style={{ color: C.ink3 }}> · {m.mesa_ref}</span>}
+                      </span>
+                    )}
+                    {/* Burbuja */}
+                    <div style={{
+                      maxWidth: '80%', padding: '8px 12px', borderRadius: esMio ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                      background: esMio ? C.verm : C.bg1,
+                      border: esMio ? 'none' : `1px solid ${C.rule}`,
+                      color: esMio ? '#fff' : C.ink,
+                      fontFamily: SN, fontSize: 14, lineHeight: 1.4,
+                    }}>
+                      {m.texto}
+                    </div>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginTop: 2, paddingRight: esMio ? 4 : 0, paddingLeft: esMio ? 0 : 4 }}>
+                      {new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                      {esMio && m.rol_destino !== 'todos' && <span style={{ color: C.ink4 }}> · para {rolLabel(m.rol_destino)}</span>}
+                    </span>
+                  </div>
+                )
+              })}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Plantillas rápidas */}
+            <div style={{ padding: '6px 12px', borderTop: `1px solid ${C.rule}`, background: C.bg, display: 'flex', gap: 6, overflowX: 'auto', flexShrink: 0 }}>
+              {['La mesa tiene prisa', '86 un producto', 'Alérgeno detectado tarde', '¿Cuánto falta?'].map(t => (
+                <button key={t} onClick={() => setChatTexto(t)} style={{
+                  whiteSpace: 'nowrap', padding: '4px 10px', borderRadius: 20,
+                  border: `1px solid ${C.rule}`, background: C.bg1,
+                  fontFamily: SN, fontSize: 12, color: C.ink2, cursor: 'pointer', flexShrink: 0,
+                }}>{t}</button>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: '10px 12px', borderTop: `1px solid ${C.rule}`, background: C.bg1, display: 'flex', gap: 8, alignItems: 'flex-end', flexShrink: 0 }}>
+              <textarea
+                value={chatTexto}
+                onChange={e => setChatTexto(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleEnviar() } }}
+                placeholder="Escribe un mensaje..."
+                rows={1}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 20,
+                  border: `1px solid ${C.rule}`, background: C.bg,
+                  fontFamily: SN, fontSize: 14, color: C.ink, resize: 'none',
+                  outline: 'none', lineHeight: 1.4,
+                }}
+              />
+              <button
+                onClick={handleEnviar}
+                disabled={!chatTexto.trim()}
+                style={{
+                  width: 40, height: 40, borderRadius: '50%', border: 'none', flexShrink: 0,
+                  background: chatTexto.trim() ? C.verm : C.rule, cursor: chatTexto.trim() ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={chatTexto.trim() ? '#fff' : C.ink4} strokeWidth={2}>
+                  <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        )
+      })()}
+
       {/* ══ TAB: CARTA — consulta de carta para camarero ════════ */}
       {tab==='carta' && (() => {
         const nombres86 = new Set(productos86.map(p => p.nombre.toLowerCase()))
@@ -1502,6 +1630,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           {id:'sala',    lbl:'Pedidos',  path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
           {id:'cuentas', lbl:'Cuentas',  path:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM19 8v6M22 11h-6'},
           {id:'carta',   lbl:'Carta',    path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
+          {id:'chat',    lbl:'Chat',     path:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'},
           {id:'config',  lbl:'Config',   path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
         ] as {id:Tab;lbl:string;path:string}[]).map(t => {
           const on = tab===t.id
@@ -1511,6 +1640,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
               {on && <div style={{position:'absolute',top:0,left:'22%',right:'22%',height:2,background:C.verm,borderRadius:'0 0 3px 3px'}}/>}
               {t.id==='cuentas' && cuentasNominales.length>0 && !on && (
                 <div style={{position:'absolute',top:6,right:'20%',width:8,height:8,borderRadius:'50%',background:C.verm}}/>
+              )}
+              {t.id==='chat' && noLeidos>0 && !on && (
+                <div style={{position:'absolute',top:5,right:'18%',minWidth:16,height:16,borderRadius:8,background:C.verm,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 4px'}}>
+                  <span style={{fontFamily:SN,fontSize:9,fontWeight:700,color:'#fff'}}>{noLeidos>9?'9+':noLeidos}</span>
+                </div>
               )}
               <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                 {t.path.split('M').filter(Boolean).map((seg,i) => <path key={i} d={`M${seg}`}/>)}

@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 import { Comanda } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { useMensajes } from '@/hooks/useMensajes'
 
 const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
 const SE="'Newsreader',Georgia,serif"
@@ -222,6 +223,9 @@ function KDSInner() {
   const [vistaProduccion, setVistaProduccion] = useState(false)
   const [vistaCompacta, setVistaCompacta] = useState(false)
   const [sonidoOn, setSonidoOn] = useState(true)
+  const [chatAbierto, setChatAbierto] = useState(false)
+  const [chatTexto, setChatTexto] = useState('')
+  const chatEndRef = useRef<HTMLDivElement>(null)
   const prevCountRef = useRef(0)
   // Map zona_id → nombre del running que la cubre (para preview en botón MARCHAR)
   const [runningPorZona, setRunningPorZona] = useState<Record<string, string>>({})
@@ -374,6 +378,10 @@ function KDSInner() {
   const colorSeccion = seccionActiva?.color_kds ?? K.gr
   const esAdmin = session?.rol === 'jefe_sala' || session?.rol === 'super_admin'
 
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const { mensajes, noLeidos, enviar: enviarMensaje, marcarLeido: marcarMensajeLeido } =
+    useMensajes(session?.restaurante_id ?? '', session?.id ?? '', session?.rol ?? 'cocina')
+
   if (checking || !session) return <div style={{ minHeight: '100dvh', background: K.bg }} />
 
   return (
@@ -452,6 +460,19 @@ function KDSInner() {
           </div>
           <span style={{ fontFamily:SM, fontSize:16, fontWeight:700, color:K.fg }}>{time.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
           <SugerenciaButton session={session} tema="dark" variant="inline" />
+          {/* Botón chat con badge */}
+          <button
+            onClick={() => { setChatAbierto(v => !v); if (!chatAbierto) mensajes.filter(m => !m.leido_por?.includes(session.id)).forEach(m => marcarMensajeLeido(m.id)) }}
+            title="Mensajes"
+            style={{ position:'relative', cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background: chatAbierto ? K.red : 'transparent', border:`1px solid ${chatAbierto ? K.red : K.rule}`, borderRadius:6, color: chatAbierto ? '#fff' : K.fg3, flexShrink:0 }}
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            {noLeidos > 0 && !chatAbierto && (
+              <div style={{ position:'absolute', top:-4, right:-4, minWidth:14, height:14, borderRadius:7, background:K.red, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 3px' }}>
+                <span style={{ fontFamily:SN, fontSize:8, fontWeight:700, color:'#fff' }}>{noLeidos > 9 ? '9+' : noLeidos}</span>
+              </div>
+            )}
+          </button>
           <a href="/manuals/manual_cocina.pdf" download title="Manual de cocina"
             style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', border:`1px solid ${K.rule}`, borderRadius:6, color:K.fg3, flexShrink:0, textDecoration:'none' }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
@@ -744,6 +765,97 @@ function KDSInner() {
         session={session}
         onConfirmed={handleVozConfirmada}
       />
+
+      {/* ══ PANEL CHAT — slide-in desde la derecha ══════════ */}
+      {chatAbierto && (
+        <div style={{
+          position: 'fixed', top: 0, right: 0, bottom: 0, width: 320, maxWidth: '90vw',
+          background: K.c1, borderLeft: `1px solid ${K.rule}`, zIndex: 200,
+          display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 20px rgba(0,0,0,.15)',
+        }}>
+          {/* Header */}
+          <div style={{ padding: '12px 16px', borderBottom: `1px solid ${K.rule}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: K.bg }}>
+            <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: K.fg, letterSpacing: '.05em' }}>MENSAJES DEL TURNO</span>
+            <button onClick={() => setChatAbierto(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: K.fg3, fontSize: 18, lineHeight: 1 }}>✕</button>
+          </div>
+
+          {/* Mensajes */}
+          <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {mensajes.length === 0 && (
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ fontFamily: SE, fontStyle: 'italic', color: K.fg3, fontSize: 14, textAlign: 'center' }}>Sin mensajes aún</span>
+              </div>
+            )}
+            {mensajes.map(m => {
+              const esMio = m.camarero_id === session.id
+              const rolColor = ({ camarero: K.tl, cocina: K.red, jefe_sala: K.amb, running: K.gr } as Record<string,string>)[m.rol_origen] ?? K.fg3
+              const rolLabel = ({ camarero: 'Sala', cocina: 'Cocina', jefe_sala: 'Jefe', running: 'Running' } as Record<string,string>)[m.rol_origen] ?? m.rol_origen
+              return (
+                <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: esMio ? 'flex-end' : 'flex-start' }}>
+                  {!esMio && (
+                    <span style={{ fontFamily: SN, fontSize: 10, color: rolColor, marginBottom: 2, paddingLeft: 4 }}>
+                      {m.nombre_origen} · {rolLabel}{m.mesa_ref ? ` · ${m.mesa_ref}` : ''}
+                    </span>
+                  )}
+                  <div style={{
+                    maxWidth: '85%', padding: '7px 11px',
+                    borderRadius: esMio ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                    background: esMio ? K.red : K.bg,
+                    border: esMio ? 'none' : `1px solid ${K.rule}`,
+                    color: esMio ? '#fff' : K.fg,
+                    fontFamily: SN, fontSize: 13, lineHeight: 1.4,
+                  }}>
+                    {m.texto}
+                  </div>
+                  <span style={{ fontFamily: SM, fontSize: 9, color: K.fg3, marginTop: 2, paddingLeft: esMio ? 0 : 4, paddingRight: esMio ? 4 : 0 }}>
+                    {new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )
+            })}
+            <div ref={chatEndRef} />
+          </div>
+
+          {/* Plantillas rápidas */}
+          <div style={{ padding: '6px 10px', borderTop: `1px solid ${K.rule}`, display: 'flex', gap: 5, flexWrap: 'wrap', background: K.bg }}>
+            {['86 un producto', 'La mesa está lista', 'Falta guarnición', '¿Cuánto falta?'].map(t => (
+              <button key={t} onClick={() => setChatTexto(t)} style={{
+                padding: '3px 8px', borderRadius: 14, border: `1px solid ${K.rule}`,
+                background: K.c1, fontFamily: SN, fontSize: 11, color: K.fg2, cursor: 'pointer',
+              }}>{t}</button>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div style={{ padding: '8px 10px', borderTop: `1px solid ${K.rule}`, display: 'flex', gap: 8, alignItems: 'flex-end', background: K.c1 }}>
+            <textarea
+              value={chatTexto}
+              onChange={e => setChatTexto(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (chatTexto.trim()) { enviarMensaje(chatTexto.trim(), { rol_destino: 'camarero' }); setChatTexto('') } } }}
+              placeholder="Mensaje a sala..."
+              rows={1}
+              style={{
+                flex: 1, padding: '7px 11px', borderRadius: 16,
+                border: `1px solid ${K.rule}`, background: K.bg,
+                fontFamily: SN, fontSize: 13, color: K.fg, resize: 'none', outline: 'none', lineHeight: 1.4,
+              }}
+            />
+            <button
+              onClick={() => { if (chatTexto.trim()) { enviarMensaje(chatTexto.trim(), { rol_destino: 'camarero' }); setChatTexto('') } }}
+              disabled={!chatTexto.trim()}
+              style={{
+                width: 36, height: 36, borderRadius: '50%', border: 'none', flexShrink: 0,
+                background: chatTexto.trim() ? K.red : K.rule, cursor: chatTexto.trim() ? 'pointer' : 'default',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+              }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={chatTexto.trim() ? '#fff' : K.fg3} strokeWidth={2}>
+                <line x1="22" y1="2" x2="11" y2="13" /><polygon points="22 2 15 22 11 13 2 9 22 2" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
     </div>
     </>
   )
