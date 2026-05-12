@@ -8,6 +8,7 @@ import { useMesas, useComandas, useTranscripciones, useProductos86, useReloj } f
 import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
+import SupervisorTab from '@/components/owner/SupervisorTab'
 
 const C = {
   paper:'#F6F1E7', paper2:'#EFE7D6', paper3:'#E5DAC2', bone:'#FBF8F1',
@@ -22,16 +23,17 @@ const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'
+type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'|'supervisor'
 
 const NAVS: {id:Tab;label:string;icon:string}[] = [
-  {id:'salon',    label:'Salón',     icon:'M4 4h16v6H4zM4 14h7v6H4zM13 14h7v6h-7z'},
-  {id:'cocina',   label:'Cocina',    icon:'M3 12h18M5 12V8a7 7 0 0 1 14 0v4M7 12v6h10v-6'},
-  {id:'comandas', label:'Comandas',  icon:'M5 4h11l3 3v13H5z'},
-  {id:'stream',   label:'Stream',    icon:'M4 5h12M4 10h16M4 15h10M4 20h14'},
-  {id:'caja',     label:'Caja',      icon:'M3 9h18M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2M3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 14h6'},
-  {id:'audit',    label:'Cambios',   icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10'},
-  {id:'analytics',label:'Analytics', icon:'M18 20V10M12 20V4M6 20v-6'},
+  {id:'salon',      label:'Salón',      icon:'M4 4h16v6H4zM4 14h7v6H4zM13 14h7v6h-7z'},
+  {id:'cocina',     label:'Cocina',     icon:'M3 12h18M5 12V8a7 7 0 0 1 14 0v4M7 12v6h10v-6'},
+  {id:'comandas',   label:'Comandas',   icon:'M5 4h11l3 3v13H5z'},
+  {id:'stream',     label:'Stream',     icon:'M4 5h12M4 10h16M4 15h10M4 20h14'},
+  {id:'caja',       label:'Caja',       icon:'M3 9h18M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2M3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 14h6'},
+  {id:'audit',      label:'Cambios',    icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10'},
+  {id:'analytics',  label:'Analytics',  icon:'M18 20V10M12 20V4M6 20v-6'},
+  {id:'supervisor', label:'Supervisor', icon:'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM12 6v6l4 2'},
 ]
 
 const STATUS_PAL: Record<string,{bg:string;fg:string;ac:string}> = {
@@ -160,7 +162,8 @@ export default function JefeSalaPage() {
           {tab==='stream'   && <StreamTab session={session}/>}
           {tab==='caja'     && <CajaTab sh={sh}/>}
           {tab==='audit'    && <AuditTab sh={sh} restauranteId={session.restaurante_id}/>}
-          {tab==='analytics'&& <Analytics/>}
+          {tab==='analytics'  && <Analytics/>}
+          {tab==='supervisor' && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} />}
         </div>
       </div>
 

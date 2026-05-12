@@ -6,6 +6,7 @@ import SugerenciaButton from '@/components/SugerenciaButton'
 import { supabase } from '@/lib/supabase'
 import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
 import FueraCartaSection from '@/components/owner/FueraCartaSection'
+import SupervisorTab from '@/components/owner/SupervisorTab'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -5409,11 +5410,12 @@ const GRUPOS = [
   {
     id: 'servicio', label: 'Servicio', icon: ICONS.chart,
     tabs: [
-      { id: 'reservas',  label: 'Reservas',  icon: ICONS.calendar },
-      { id: 'turno',     label: 'Turno',     icon: ICONS.clock   },
-      { id: 'caja',      label: 'Caja',      icon: ICONS.receipt },
-      { id: 'analytics', label: 'Analytics', icon: ICONS.chart   },
-      { id: 'facturas',  label: 'Facturas',  icon: ICONS.receipt },
+      { id: 'reservas',   label: 'Reservas',    icon: ICONS.calendar      },
+      { id: 'turno',      label: 'Turno',        icon: ICONS.clock         },
+      { id: 'caja',       label: 'Caja',         icon: ICONS.receipt       },
+      { id: 'analytics',  label: 'Analytics',    icon: ICONS.chart         },
+      { id: 'facturas',   label: 'Facturas',     icon: ICONS.receipt       },
+      { id: 'supervisor', label: 'Supervisor',   icon: ICONS.clock         },
     ]
   },
   {
@@ -6075,6 +6077,7 @@ export default function OwnerPage() {
 
         {/* ── Contenido ── */}
         <div style={{ marginTop: getGrupo(tab).tabs.length <= 1 ? 20 : 0 }}>
+          {tab === 'supervisor'     && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} sh={sh} />}
           {tab === 'qr'             && <QRTabOwner restauranteId={session.restaurante_id} sh={sh} />}
           {tab === 'cubierto'       && <ServicioTab/>}
           {tab === 'reservas'       && <ReservasTab/>}
