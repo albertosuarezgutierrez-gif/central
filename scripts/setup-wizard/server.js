@@ -385,6 +385,10 @@ const server = http.createServer(async (req, res) => {
     return json(await installAutostart(token))
   }
 
+  if (req.method==='GET' && url.pathname==='/api/config') {
+    return json(loadConfig())
+  }
+
   if (req.method==='GET' && url.pathname==='/api/check-autostart') {
     return new Promise(resolve => {
       exec('reg query "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "iarest-bridge"', (err, stdout) => {
