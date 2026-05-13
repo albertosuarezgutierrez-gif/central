@@ -923,6 +923,28 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ALERTAS — banner audio + notificación */}
       <AlertaBanner alertas={alertas} onMarcarLeida={marcarLeida} />
 
+      {/* BANNER ACTUALIZACIÓN DISPONIBLE */}
+      {updateAvailable && (
+        <div style={{
+          position:'absolute', top:0, left:0, right:0, zIndex:80,
+          background:'#1A1714', borderBottom:'2px solid #D9442B',
+          padding:'10px 16px', display:'flex', alignItems:'center', gap:12,
+          boxShadow:'0 4px 16px rgba(217,68,43,.25)',
+        }}>
+          <div style={{width:8,height:8,borderRadius:'50%',background:'#D9442B',flexShrink:0,animation:'ldot 1s infinite'}}/>
+          <span style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:13,color:'#F6F1E7',flex:1,fontWeight:500}}>
+            Nueva versión disponible
+          </span>
+          <button onClick={applyUpdate} style={{
+            background:'#D9442B', border:'none', borderRadius:8,
+            padding:'7px 16px', fontFamily:"'Inter Tight',system-ui,sans-serif",
+            fontSize:13, fontWeight:700, color:'#fff', cursor:'pointer',
+          }}>
+            Actualizar ahora
+          </button>
+        </div>
+      )}
+
       {/* BANNER OFFLINE — sin conexión o comandas pendientes */}
       {(offline || offlineQueue.length > 0) && (
         <div style={{
@@ -1004,12 +1026,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <div style={{background:C.ambS,border:`1px solid ${C.amb}44`,borderRadius:12,padding:'3px 8px',fontFamily:SM,fontSize:9,color:'#7A5A1A',fontWeight:700}}>
               ⚠ {alergenosMesa.length}
             </div>
-          )}
-          {updateAvailable && (
-            <button onClick={applyUpdate} title="Actualizar app"
-              style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:C.vermS,border:`1px solid ${C.verm}55`,borderRadius:8,cursor:'pointer',fontSize:15,flexShrink:0}}>
-              ↺
-            </button>
           )}
           <div style={{display:'flex',alignItems:'center',gap:5,background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,padding:'5px 11px 5px 7px',cursor:'pointer'}} onClick={logout}>
             <div style={{width:6,height:6,borderRadius:'50%',background:C.gr,animation:'ldot 2s infinite'}}/>

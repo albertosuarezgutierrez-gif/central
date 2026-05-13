@@ -8,29 +8,32 @@ export function useServiceWorkerUpdate() {
   useEffect(() => {
     if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return
 
-    const handleUpdate = (reg: ServiceWorkerRegistration) => {
-      if (!reg.waiting) return
-      waitingRef.current = reg.waiting
+    const handleWaiting = (sw: ServiceWorker) => {
+      waitingRef.current = sw
       setUpdateAvailable(true)
     }
 
     navigator.serviceWorker.ready.then(reg => {
-      if (reg.waiting) handleUpdate(reg)
+      // Comprobar inmediatamente al entrar a la app
+      reg.update()
+      if (reg.waiting) handleWaiting(reg.waiting)
+
       reg.addEventListener('updatefound', () => {
         const newSW = reg.installing
         if (!newSW) return
         newSW.addEventListener('statechange', () => {
           if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            waitingRef.current = newSW
-            setUpdateAvailable(true)
+            handleWaiting(newSW)
           }
         })
       })
     })
 
+    // Recomprobar cada 2 minutos
     const interval = setInterval(() => {
       navigator.serviceWorker.ready.then(reg => reg.update())
-    }, 5 * 60 * 1000) // cada 5 minutos
+    }, 2 * 60 * 1000)
+
     return () => clearInterval(interval)
   }, [])
 
