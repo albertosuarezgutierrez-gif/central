@@ -366,7 +366,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
               outline:'none', boxSizing:'border-box' }}
           />
           {notaGeneral.trim() && (
-            <div style={{ marginTop:6, fontFamily:SN, fontSize:11, color:C.amb }}>
+            <div style={{ marginTop:6, fontFamily:SN, fontSize:11, color:C.amber }}>
               ⚠ Esta nota aparecerá en todos los tickets de esta comanda
             </div>
           )}
