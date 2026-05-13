@@ -1243,38 +1243,38 @@ const STEPS = [
   },
   {
     n:        '02',
-    label:    'Personal',
-    title:    'Tu equipo, listos para entrar.',
-    subtitle: 'Cada persona tiene su PIN y su pantalla. El camarero en /edge, cocina en /kds.',
-    caveat:   'Puedes añadir más personas en cualquier momento desde /owner',
-  },
-  {
-    n:        '03',
-    label:    'Cómo funciona',
-    title:    'El viaje de un pedido.',
-    subtitle: 'Del "dos cañas y una ensalada" al ticket en cocina en menos de medio segundo.',
-    caveat:   'Lee esto una vez · Después lo entiendes en el primer turno',
-  },
-  {
-    n:        '04',
     label:    'Secciones',
     title:    'Las partidas de tu cocina.',
     subtitle: 'Cada sección tiene su propia pantalla KDS. Los platos van a donde tienen que ir, sin confusiones.',
     caveat:   'Un bar pequeño puede funcionar con una sola sección',
   },
   {
-    n:        '05',
-    label:    'Impresoras',
-    title:    'Tickets físicos en cocina.',
-    subtitle: 'Si tienes impresoras térmicas Star, conéctalas en 30 segundos con su Device ID CloudPRNT.',
-    caveat:   'El KDS funciona sin impresora · Añade las impresoras cuando quieras',
+    n:        '03',
+    label:    'Personal',
+    title:    'Tu equipo, listos para entrar.',
+    subtitle: 'Cada persona tiene su PIN y su pantalla. El camarero en /edge, cocina en /kds.',
+    caveat:   'Puedes añadir más personas en cualquier momento desde /owner',
   },
   {
-    n:        '06',
+    n:        '04',
     label:    'Mesas',
     title:    'El plano de tu local.',
     subtitle: 'Define las zonas y cuántas mesas tiene cada una. ia.rest genera los códigos automáticamente.',
     caveat:   'Puedes reorganizar el plano en /owner → Mesas después',
+  },
+  {
+    n:        '05',
+    label:    'Cómo funciona',
+    title:    'El viaje de un pedido.',
+    subtitle: 'Del "dos cañas y una ensalada" al ticket en cocina en menos de medio segundo.',
+    caveat:   'Lee esto una vez · Después lo entiendes en el primer turno',
+  },
+  {
+    n:        '06',
+    label:    'Impresoras',
+    title:    'Tickets físicos en cocina.',
+    subtitle: 'Si tienes impresoras térmicas, conéctalas ahora. Ya tienes tus secciones creadas para asignarlas directamente.',
+    caveat:   'El KDS funciona sin impresora · Puedes añadirlas cuando quieras',
   },
   {
     n:        '07',
@@ -1415,11 +1415,11 @@ export default function OnboardingPage() {
         {/* Step content */}
         <div key={'content-' + step} style={{ animation: 'fadeIn .35s ease .1s both' }}>
           {step === 0 && <StepCarta session={session} onNext={() => setStep(1)}/>}
-          {step === 1 && <StepPersonal session={session} onNext={() => setStep(2)}/>}
-          {step === 2 && <StepCocina onNext={() => setStep(3)}/>}
-          {step === 3 && <StepSecciones onNext={() => setStep(4)}/>}
-          {step === 4 && <StepImpresoras onNext={() => setStep(5)}/>}
-          {step === 5 && <StepMesas session={session} onComplete={() => setStep(6)}/>}
+          {step === 1 && <StepSecciones onNext={() => setStep(2)}/>}
+          {step === 2 && <StepPersonal session={session} onNext={() => setStep(3)}/>}
+          {step === 3 && <StepMesas session={session} onComplete={() => setStep(4)}/>}
+          {step === 4 && <StepCocina onNext={() => setStep(5)}/>}
+          {step === 5 && <StepImpresoras onNext={() => setStep(6)}/>}
           {step === 6 && <StepPrimerTurno session={session} onComplete={complete}/>}
         </div>
 
