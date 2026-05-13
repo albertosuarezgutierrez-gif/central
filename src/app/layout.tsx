@@ -81,7 +81,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#F6F1E7',
+  themeColor: '#14110E',
   width: 'device-width',
   initialScale: 1,
   maximumScale: 5,
@@ -167,7 +167,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="geo.placename" content="España" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <style>{`body { background: #F6F1E7; }`}</style>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
         {/* Analytics — pendiente. Opción elegida: Plausible (sin cookies, RGPD, UE, 9€/mes).

@@ -7,9 +7,9 @@ const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 const T = {
-  bg: 'var(--dark-bg)', elev: 'var(--dark-elev)', elev2: 'var(--dark-elev2)',
-  fg: 'var(--dark-fg)', fg2: 'var(--dark-fg2)', fg3: 'var(--dark-fg3)',
-  ruleS: 'var(--dark-rule-s)', vermilion: 'var(--vermilion)',
+  bg: 'var(--paper)', elev: 'var(--bone)', elev2: 'var(--paper-2)',
+  fg: 'var(--ink)', fg2: 'var(--ink-2)', fg3: 'var(--ink-3)',
+  ruleS: 'var(--rule)', vermilion: 'var(--vermilion)',
   green: 'var(--green)', amber: 'var(--amber)',
 }
 
@@ -219,7 +219,7 @@ export default function RegistroPage() {
         </div>
 
         {acceptErr && (
-          <div style={{ background: '#3d1a14', border: `1px solid ${T.vermilion}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#f4a090' }}>{acceptErr}</div>
+          <div style={{ background: 'var(--vermilion-s)', border: `1px solid ${T.vermilion}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--vermilion-d)' }}>{acceptErr}</div>
         )}
 
         <button onClick={aceptarContrato} disabled={!aceptado || accepting} style={{
@@ -259,7 +259,7 @@ export default function RegistroPage() {
             <label style={labelS}>Email</label>
             <input type="email" placeholder="maria@labodega.es" value={email}
               onChange={e => { setEmail(e.target.value); checkEmailWarn(e.target.value) }}
-              required style={{ ...inputS, borderColor: emailWarn ? T.amber : 'var(--dark-rule-s)' }}
+              required style={{ ...inputS, borderColor: emailWarn ? T.amber : 'var(--rule)' }}
             />
             {emailWarn && (
               <div style={{ marginTop: 6, fontSize: 12, color: T.amber, display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -297,7 +297,7 @@ export default function RegistroPage() {
             </div>
           </div>
 
-          {error && <div style={{ background: '#3d1a14', border: `1px solid ${T.vermilion}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#f4a090' }}>{error}</div>}
+          {error && <div style={{ background: 'var(--vermilion-s)', border: `1px solid ${T.vermilion}`, borderRadius: 8, padding: '10px 14px', fontSize: 13, color: 'var(--vermilion-d)' }}>{error}</div>}
 
           <button type="submit" disabled={loading} style={{ marginTop: 4, background: loading ? T.elev2 : T.vermilion, color: loading ? T.fg3 : '#fff', border: 'none', borderRadius: 10, padding: '15px 0', fontSize: 15, fontWeight: 600, fontFamily: 'var(--font-sans)', cursor: loading ? 'not-allowed' : 'pointer', transition: 'background .15s', letterSpacing: '-0.2px' }}>
             {loading ? 'Preparando tu cuenta…' : 'Empezar 14 días gratis →'}
@@ -316,7 +316,7 @@ export default function RegistroPage() {
 function Logo() {
   return (
     <a href="/" style={{ textDecoration: 'none', marginBottom: 32 }}>
-      <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 28, color: 'var(--dark-fg)', letterSpacing: '-0.5px' }}>
+      <span style={{ fontFamily: 'var(--font-serif)', fontStyle: 'italic', fontSize: 28, color: 'var(--ink)', letterSpacing: '-0.5px' }}>
         ia<span style={{ color: 'var(--vermilion)' }}>.</span>rest
       </span>
     </a>
@@ -327,10 +327,10 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   return <div><label style={labelS}>{label}</label>{children}</div>
 }
 
-const pageS: React.CSSProperties  = { minHeight: '100vh', background: 'var(--dark-bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: 'var(--font-sans)' }
-const cardS: React.CSSProperties  = { width: '100%', maxWidth: 440, background: 'var(--dark-elev)', borderRadius: 16, border: '1px solid var(--dark-rule-s)', padding: '36px 32px', display: 'flex', flexDirection: 'column', gap: 16 }
-const boxS: React.CSSProperties   = { background: 'var(--dark-elev2)', border: '1px solid var(--dark-rule-s)', borderRadius: 10, padding: '14px 16px' }
-const labelMonoS: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: 'var(--dark-fg3)', textTransform: 'uppercase', marginBottom: 8 }
-const labelS: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--dark-fg2)', marginBottom: 6 }
-const inputS: React.CSSProperties = { width: '100%', background: 'var(--dark-bg)', border: '1px solid var(--dark-rule-s)', borderRadius: 8, padding: '11px 14px', fontSize: 15, color: 'var(--dark-fg)', fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }
-const stepS: React.CSSProperties  = { width: 36, height: 36, background: 'var(--dark-elev2)', border: '1px solid var(--dark-rule-s)', borderRadius: 8, color: 'var(--dark-fg)', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)' }
+const pageS: React.CSSProperties  = { minHeight: '100vh', background: 'var(--paper)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', fontFamily: 'var(--font-sans)' }
+const cardS: React.CSSProperties  = { width: '100%', maxWidth: 440, background: 'var(--bone)', borderRadius: 16, border: '1px solid var(--rule)', padding: '36px 32px', display: 'flex', flexDirection: 'column', gap: 16 }
+const boxS: React.CSSProperties   = { background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 10, padding: '14px 16px' }
+const labelMonoS: React.CSSProperties = { fontSize: 11, fontWeight: 700, letterSpacing: '.08em', color: 'var(--ink-3)', textTransform: 'uppercase', marginBottom: 8 }
+const labelS: React.CSSProperties = { display: 'block', fontSize: 13, fontWeight: 600, color: 'var(--ink-2)', marginBottom: 6 }
+const inputS: React.CSSProperties = { width: '100%', background: 'var(--paper)', border: '1px solid var(--rule)', borderRadius: 8, padding: '11px 14px', fontSize: 15, color: 'var(--ink-2)', fontFamily: 'var(--font-sans)', outline: 'none', boxSizing: 'border-box' }
+const stepS: React.CSSProperties  = { width: 36, height: 36, background: 'var(--paper-2)', border: '1px solid var(--rule)', borderRadius: 8, color: 'var(--ink-2)', fontSize: 20, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--font-sans)' }
