@@ -72,6 +72,8 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
   const [notaGeneral, setNotaGeneral] = useState('')
   const [zonas, setZonas] = useState<string[]>([])
   const [zonaFiltro, setZonaFiltro] = useState('todas')
+  const [nombreMesa, setNombreMesa] = useState('')
+  const [editandoNombre, setEditandoNombre] = useState(false)
 
   const sh = useCallback(() => ({
     'Content-Type': 'application/json',
@@ -144,7 +146,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
       const r = await fetch('/api/comanda', {
         method: 'POST',
         headers: sh(),
-        body: JSON.stringify({ mesa_id: mesaSel.id, items, tipo: 'comanda', ...(notaGeneral.trim() ? { nota_general: notaGeneral.trim() } : {}) }),
+        body: JSON.stringify({ mesa_id: mesaSel.id, items, tipo: 'comanda', ...(notaGeneral.trim() ? { nota_general: notaGeneral.trim() } : {}), ...(nombreMesa.trim() ? { nombre_cuenta: nombreMesa.trim() } : {}) }),
       })
       const d = await r.json()
       if (d.ok) {
@@ -162,7 +164,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     }
   }
 
-  const reset = () => { setStep('mesa'); setMesaSel(null); setLineas([]); setErrorMsg(''); setTicketNum(null); setNotaGeneral('') }
+  const reset = () => { setStep('mesa'); setMesaSel(null); setLineas([]); setErrorMsg(''); setTicketNum(null); setNotaGeneral(''); setNombreMesa(''); setEditandoNombre(false) }
 
   const mesasFiltradas = zonaFiltro === 'todas' ? mesas : mesas.filter(m => m.zona === zonaFiltro)
   const prodsFiltrados = productos.filter(p => (p.categoria || p.seccion || 'Otros') === catActiva)
@@ -173,26 +175,74 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
   }
 
   const Header = () => (
-    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 14px', borderBottom:`1px solid ${T.rule}`, background: L.bg2, flexShrink:0 }}>
-      {onBack && (
-        <button onPointerDown={onBack} style={{ background:'none', border:'none', boxShadow:`${T.rS} 0px 0px 0px 1px`, borderRadius:9999, padding:'4px 10px', color:T.fg3, fontFamily:SM, fontSize:9, cursor:'pointer', letterSpacing:'.06em' }}>
-          ← VOZ
-        </button>
-      )}
-      <span style={{ fontFamily:SM, fontSize:10, color:T.fg3, letterSpacing:'.1em', textTransform:'uppercase' }}>
-        COMANDA MANUAL{mesaSel ? ` · ${mesaSel.codigo}` : ''}
-      </span>
-      {lineas.length > 0 && (
-        <span style={{ marginLeft:'auto', fontFamily:SM, fontSize:11, fontWeight:700, color:C.red }}>
-          {lineas.reduce((a,l) => a+l.cantidad, 0)} items · {totalPrecio.toFixed(2)}€
-        </span>
-      )}
-      {lineas.length > 0 && step === 'carta' && (
-        <button onPointerDown={() => setStep('resumen')}
-          style={{ background:C.red, border:'none', borderRadius:9999, padding:'6px 14px', color:C.fg, fontFamily:SN, fontSize:12, fontWeight:700, cursor:'pointer', marginLeft: lineas.length > 0 ? 0 : 'auto' }}>
-          Revisar →
-        </button>
-      )}
+    <div style={{ flexShrink:0, background:L.bg2, borderBottom:`1px solid ${T.rule}` }}>
+      {/* Fila principal */}
+      <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px' }}>
+        {/* Volver a mesas */}
+        {step !== 'mesa' && (
+          <button onPointerDown={() => { setStep('mesa'); setLineas([]) }}
+            style={{ background:'none', border:'none', boxShadow:`${T.rS} 0px 0px 0px 1px`, borderRadius:9999,
+              padding:'4px 10px', color:T.fg3, fontFamily:SM, fontSize:9, cursor:'pointer', letterSpacing:'.06em', flexShrink:0 }}>
+            ← MESAS
+          </button>
+        )}
+        {/* Código de mesa */}
+        {mesaSel && (
+          <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:20, color:T.fg, fontWeight:500, lineHeight:1 }}>
+            {mesaSel.codigo}
+          </span>
+        )}
+        {/* Nombre editable */}
+        {mesaSel && step === 'carta' && (
+          editandoNombre ? (
+            <input
+              autoFocus
+              value={nombreMesa}
+              onChange={e => setNombreMesa(e.target.value)}
+              onBlur={() => setEditandoNombre(false)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === 'Escape') setEditandoNombre(false) }}
+              placeholder="Nombre…"
+              style={{ flex:1, background:L.bg, border:`1px solid ${T.amber}`, borderRadius:8,
+                padding:'4px 10px', fontFamily:SN, fontSize:13, color:T.fg, outline:'none', minWidth:0 }}
+            />
+          ) : (
+            <button onPointerDown={() => setEditandoNombre(true)}
+              style={{ background:'none', border:'none', cursor:'pointer', display:'flex', alignItems:'center',
+                gap:5, padding:'2px 0', minWidth:0 }}>
+              {nombreMesa
+                ? <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:14, color:T.amber }}>★ {nombreMesa}</span>
+                : <span style={{ fontFamily:SN, fontSize:11, color:T.fg3 }}>+ nombre</span>
+              }
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke={T.fg3} strokeWidth="2">
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+              </svg>
+            </button>
+          )
+        )}
+        {/* Spacer + total + revisar */}
+        <div style={{ flex:1 }}/>
+        {lineas.length > 0 && (
+          <span style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:C.red, flexShrink:0 }}>
+            {lineas.reduce((a,l) => a+l.cantidad, 0)}u · {totalPrecio.toFixed(2)}€
+          </span>
+        )}
+        {lineas.length > 0 && step === 'carta' && (
+          <button onPointerDown={() => setStep('resumen')}
+            style={{ background:C.red, border:'none', borderRadius:9999, padding:'6px 14px',
+              color:C.fg, fontFamily:SN, fontSize:12, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+            Revisar →
+          </button>
+        )}
+        {/* Botón VOZ si estamos en step mesa */}
+        {step === 'mesa' && onBack && (
+          <button onPointerDown={onBack}
+            style={{ background:'none', border:'none', boxShadow:`${T.rS} 0px 0px 0px 1px`, borderRadius:9999,
+              padding:'4px 10px', color:T.fg3, fontFamily:SM, fontSize:9, cursor:'pointer', letterSpacing:'.06em' }}>
+            ← VOZ
+          </button>
+        )}
+      </div>
     </div>
   )
 
