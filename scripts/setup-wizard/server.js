@@ -147,7 +147,64 @@ function apiCall(path, method, body, token) {
   })
 }
 
-// ── Instalar como servicio Windows ───────────────────────────
+// ── Modo bridge (arrancado desde el servicio de inicio) ──────
+if (process.argv.includes('--bridge')) {
+  const TOKEN   = process.env.BRIDGE_TOKEN || ''
+  const API_URL = process.env.IAREST_API   || 'https://www.iarest.es'
+  const POLL_MS = 3000
+
+  if (!TOKEN) {
+    console.error('[BRIDGE] BRIDGE_TOKEN no configurado.')
+    process.exit(1)
+  }
+
+  console.log(`[ia.rest Bridge] Iniciado — token: ${TOKEN.slice(0,8)}...`)
+
+  let running = false
+
+  async function poll() {
+    if (running) return
+    running = true
+    try {
+      const res = await fetch(`${API_URL}/api/print?token=${TOKEN}`, {
+        signal: AbortSignal.timeout(10000),
+      })
+      if (!res.ok) { running = false; return }
+      const { jobs } = await res.json()
+      if (!jobs?.length) { running = false; return }
+
+      for (const job of jobs) {
+        try {
+          await sendESCPOS(job.ip, job.port, Buffer.from(job.print_data, 'base64'))
+          await fetch(`${API_URL}/api/print`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: job.id, status: 'impreso' }),
+          })
+          console.log(`[OK] Job ${job.id.slice(0,8)} → ${job.ip}`)
+        } catch (e) {
+          console.error(`[ERR] Job ${job.id.slice(0,8)}: ${e.message}`)
+          await fetch(`${API_URL}/api/print`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ job_id: job.id, status: 'error', error_msg: e.message }),
+          }).catch(() => {})
+        }
+      }
+    } catch {}
+    running = false
+  }
+
+  setInterval(poll, POLL_MS)
+  poll()
+  process.on('SIGINT', () => process.exit(0))
+
+} else {
+  // ── Modo wizard (doble clic normal) ─────────────────────────
+  startWizard()
+}
+
+function startWizard() {
 function installWindowsService(token) {
   return new Promise((resolve) => {
     const exePath = process.execPath  // ruta del propio .exe
@@ -331,7 +388,6 @@ server.listen(PORT, '127.0.0.1', () => {
   console.log(`\n  ia.rest Setup Wizard`)
   console.log(`  Abriendo navegador en ${url}...\n`)
 
-  // Abrir navegador según plataforma
   const platform = process.platform
   if (platform === 'win32') {
     exec(`start ${url}`)
@@ -350,3 +406,5 @@ server.on('error', (e) => {
   }
   process.exit(1)
 })
+
+} // fin startWizard

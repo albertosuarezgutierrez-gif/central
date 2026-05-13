@@ -364,18 +364,18 @@
   <!-- ── PASO 4: Instalar servicio ── -->
   <div id="step4" class="card hidden">
     <div class="card-title">Instalar bridge</div>
-    <p class="card-sub">El bridge arrancará automáticamente cada vez que enciendas el ordenador. Las impresoras siempre estarán disponibles.</p>
+    <p class="card-sub">El bridge arrancará automáticamente cada vez que enciendas el ordenador. <strong style="color:var(--fg2)">No necesita permisos de administrador.</strong></p>
     <div class="test-list">
       <div class="test-row" id="svcRow">
         <div class="test-icon" id="svcIcon">⟳</div>
         <div class="test-info">
-          <div class="test-name">Servicio de Windows</div>
-          <div class="test-detail" id="svcDetail">Pendiente de instalar</div>
+          <div class="test-name">Inicio automático con Windows</div>
+          <div class="test-detail" id="svcDetail">Se añade al inicio de sesión del usuario actual</div>
         </div>
       </div>
     </div>
-    <button class="btn" id="btnInstallService">Instalar servicio →</button>
-    <button class="btn-ghost" id="btnSkipService">Saltar este paso (instalar luego)</button>
+    <button class="btn" id="btnInstallService">Instalar inicio automático →</button>
+    <button class="btn-ghost" id="btnSkipService">Saltar — lo haré manualmente</button>
   </div>
 
   <!-- ── PASO 5: Listo ── -->
