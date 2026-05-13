@@ -255,55 +255,96 @@ function CamarerosTab() {
         <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/>Añadir</Btn>
       </div>
 
-      <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch' }}>
-        <div className="carta-table-wrap" style={{ overflowX: "auto" }}>
-        {/* Table header */}
-        <div className='carta-table-row' style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 80px 100px',
-          padding: '10px 20px', borderBottom: `1px solid ${C.rule}`,
-          fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>
+      <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, overflow: 'hidden' }}>
+        {/* Table header — desktop */}
+        <div className='cam-table-hdr' style={{
+          padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
+          fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>
           <span>Nombre</span><span>Rol</span><span>Sección</span><span>PIN</span><span>Estado</span><span style={{ textAlign: 'right' }}>Acciones</span>
         </div>
 
         {camareros.length === 0 && (
-          <div style={{ padding: '32px 20px', textAlign: 'center', color: C.ink4, fontFamily: SN, fontSize: 14 }}>
+          <div style={{ padding: '32px 16px', textAlign: 'center', color: C.ink4, fontFamily: SN, fontSize: 14 }}>
             No hay camareros aún.
           </div>
         )}
 
         {camareros.map((c, i) => (
-          <div key={c.id} className='carta-table-row' style={{ display: 'grid', gridTemplateColumns: '1fr 100px 120px 80px 80px 100px',
-            padding: '14px 20px', alignItems: 'center',
-            borderBottom: i < camareros.length - 1 ? `1px solid ${C.rule}` : 'none',
-            background: !c.activo ? C.paper : 'transparent' }}>
-            <span style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: c.activo ? C.ink : C.ink4 }}>{c.nombre}</span>
-            <span><Badge color={c.rol === 'jefe_sala' ? C.redS : c.rol === 'cocina' ? C.paper2 : C.paper2}>{ROL_LABEL[c.rol] || c.rol}</Badge></span>
-            <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{c.seccion_id ? secciones.find(s => s.id === c.seccion_id)?.nombre || c.seccion_id : '—'}</span>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>
-                {showPins[c.id] ? c.pin : '••••'}
+          <div key={c.id}>
+            {/* Fila desktop */}
+            <div className='cam-table-row' style={{
+              padding: '13px 16px', alignItems: 'center',
+              borderBottom: i < camareros.length - 1 ? `1px solid ${C.rule}` : 'none',
+              background: !c.activo ? C.paper : 'transparent' }}>
+              <span style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: c.activo ? C.ink : C.ink4 }}>{c.nombre}</span>
+              <span><Badge color={c.rol === 'jefe_sala' ? C.redS : C.paper2}>{ROL_LABEL[c.rol] || c.rol}</Badge></span>
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{c.seccion_id ? secciones.find(s => s.id === c.seccion_id)?.nombre || c.seccion_id : '—'}</span>
+              <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>{showPins[c.id] ? c.pin : '••••'}</span>
+                <button onClick={() => setShowPins(p => ({ ...p, [c.id]: !p[c.id] }))}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink4, display: 'flex', padding: 2 }}>
+                  <Icon d={showPins[c.id] ? ICONS.eyeOff : ICONS.eye} size={13}/>
+                </button>
               </span>
-              <button onClick={() => setShowPins(p => ({ ...p, [c.id]: !p[c.id] }))}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink4, display: 'flex', padding: 2 }}>
-                <Icon d={showPins[c.id] ? ICONS.eyeOff : ICONS.eye} size={13}/>
-              </button>
-            </span>
-            <span>
-              <button onClick={() => toggleActivo(c)}
-                style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
-                  background: c.activo ? C.greenS : C.paper2, color: c.activo ? C.green : C.ink3,
-                  border: `1px solid ${c.activo ? '#A8C9AB' : C.rule}`, borderRadius: 999,
-                  padding: '3px 8px', cursor: 'pointer' }}>
-                {c.activo ? 'ACTIVO' : 'BAJA'}
-              </button>
-            </span>
-            <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-              <Btn size="sm" variant="ghost" onClick={() => openQr(c)}><Icon d={ICONS.qr} size={13}/></Btn>
-              <Btn size="sm" variant="ghost" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={13}/></Btn>
-              <Btn size="sm" variant="danger" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={13}/></Btn>
-            </span>
+              <span>
+                <button onClick={() => toggleActivo(c)}
+                  style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                    background: c.activo ? C.greenS : C.paper2, color: c.activo ? C.green : C.ink3,
+                    border: `1px solid ${c.activo ? '#A8C9AB' : C.rule}`, borderRadius: 999,
+                    padding: '3px 8px', cursor: 'pointer' }}>
+                  {c.activo ? 'ACTIVO' : 'BAJA'}
+                </button>
+              </span>
+              <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                <Btn size="sm" variant="ghost" onClick={() => openQr(c)}><Icon d={ICONS.qr} size={13}/></Btn>
+                <Btn size="sm" variant="ghost" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={13}/></Btn>
+                <Btn size="sm" variant="danger" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={13}/></Btn>
+              </span>
+            </div>
+
+            {/* Card móvil */}
+            <div className='cam-card' style={{
+              flexDirection: 'column', gap: 8, padding: '14px 14px',
+              borderBottom: i < camareros.length - 1 ? `1px solid ${C.rule}` : 'none',
+              background: !c.activo ? C.paper : 'transparent', opacity: c.activo ? 1 : 0.65 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1 }}>
+                  <div style={{ fontFamily: SN, fontSize: 15, fontWeight: 700, color: C.ink }}>{c.nombre}</div>
+                  <Badge color={c.rol === 'jefe_sala' ? C.redS : C.paper2}>{ROL_LABEL[c.rol] || c.rol}</Badge>
+                </div>
+                <button onClick={() => toggleActivo(c)}
+                  style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                    background: c.activo ? C.greenS : C.paper2, color: c.activo ? C.green : C.ink3,
+                    border: `1px solid ${c.activo ? '#A8C9AB' : C.rule}`, borderRadius: 999,
+                    padding: '4px 10px', cursor: 'pointer', flexShrink: 0 }}>
+                  {c.activo ? 'ACTIVO' : 'BAJA'}
+                </button>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>PIN:</span>
+                  <span style={{ fontFamily: SM, fontSize: 14, fontWeight: 700, color: C.ink2, letterSpacing: '0.1em' }}>
+                    {showPins[c.id] ? c.pin : '••••'}
+                  </span>
+                  <button onClick={() => setShowPins(p => ({ ...p, [c.id]: !p[c.id] }))}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink4, display: 'flex', padding: 2 }}>
+                    <Icon d={showPins[c.id] ? ICONS.eyeOff : ICONS.eye} size={14}/>
+                  </button>
+                  {c.seccion_id && (
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>
+                      · {secciones.find(s => s.id === c.seccion_id)?.nombre || c.seccion_id}
+                    </span>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <Btn size="sm" variant="ghost" onClick={() => openQr(c)}><Icon d={ICONS.qr} size={14}/></Btn>
+                  <Btn size="sm" variant="ghost" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={14}/></Btn>
+                  <Btn size="sm" variant="danger" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={14}/></Btn>
+                </div>
+              </div>
+            </div>
           </div>
         ))}
-        </div>{/* /minWidth */}
       </div>
 
       {/* Create / Edit modal */}
@@ -1898,26 +1939,26 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   return (
     <div>
       {/* Header */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: C.ink3, textTransform: 'uppercase' }}>Carta</div>
-          <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, marginTop: 2 }}>
+          <div style={{ fontFamily: SE, fontSize: 26, fontWeight: 500, color: C.ink, marginTop: 2 }}>
             {productos.length} producto{productos.length !== 1 ? 's' : ''}
           </div>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="carta-hdr-btns">
           <Btn onClick={() => setQrPanelOpen(true)}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/>
               <path d="M14 14h2v2h-2zM18 14h3M18 16v2M14 18h2v2M18 20h3v-2"/>
             </svg>
-            QR y PDF
+            <span className="carta-hdr-btn-lbl">QR y PDF</span>
           </Btn>
           <Btn onClick={() => { setView(view === 'escanear' ? 'lista' : 'escanear'); setExtracted(null); setImages([]) }}
             variant={view === 'escanear' ? 'primary' : 'default'}>
-            <Icon d={ICONS.sparkle} size={14}/>Escanear carta
+            <Icon d={ICONS.sparkle} size={14}/><span className="carta-hdr-btn-lbl">Escanear</span>
           </Btn>
-          <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/>Añadir</Btn>
+          <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/></Btn>
         </div>
       </div>
 
@@ -2074,20 +2115,20 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                 </div>
                 <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
                   <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch' }}>
-                  <div style={{ minWidth: 380 }}>
+                  <div style={{ minWidth: 320 }}>
                   {ps.map((p, i) => (
-                    <div key={p.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 60px 110px',
-                      padding: '12px 16px', alignItems: 'center', gap: 8,
+                    <div key={p.id} className="carta-item-row" style={{
+                      padding: '11px 14px', alignItems: 'center', gap: 8,
                       borderBottom: i < ps.length - 1 ? `1px solid ${C.rule}` : 'none',
                       background: !p.activo ? C.paper : 'transparent' }}>
-                      <div>
-                        <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: p.activo ? C.ink : C.ink4 }}>{p.nombre}</div>
-                        {p.descripcion && <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginTop: 2 }}>{p.descripcion}</div>}
+                      <div style={{ minWidth: 0 }}>
+                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: p.activo ? C.ink : C.ink4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</div>
+                        {p.descripcion && <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
                       </div>
-                      <div style={{ fontFamily: SM, fontSize: 14, fontWeight: 700, color: C.ink2, textAlign: 'right' }}>
+                      <div style={{ fontFamily: SM, fontSize: 13, fontWeight: 700, color: C.ink2, textAlign: 'right' as const, flexShrink: 0 }}>
                         {p.precio != null ? `${p.precio.toFixed(2)} €` : '—'}
                       </div>
-                      <div>
+                      <div className="col-toggle" style={{ flexShrink: 0 }}>
                         <button onClick={() => toggleActivo(p)}
                           style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
                             background: p.activo ? C.greenS : C.paper2, color: p.activo ? C.green : C.ink3,
@@ -2096,7 +2137,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                           {p.activo ? 'ON' : 'OFF'}
                         </button>
                       </div>
-                      <div style={{ display: 'flex', gap: 4, justifyContent: 'flex-end' }}>
+                      <div className="col-acciones" style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', flexShrink: 0 }}>
                         <Btn size="sm" variant="ghost" onClick={() => openEdit(p)}><Icon d={ICONS.edit} size={13}/></Btn>
                         <Btn size="sm" variant="danger" onClick={() => openDel(p)}><Icon d={ICONS.trash} size={13}/></Btn>
                       </div>
@@ -2545,9 +2586,9 @@ function ImpresorasTab() {
           <div style={{ fontSize: 13 }}>Añade la primera para empezar a imprimir tickets automáticamente</div>
         </div>
       ) : (
-        <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, marginBottom: 32, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch' }}>
-          <div style={{ minWidth: 580 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 120px 80px 120px', padding: '10px 20px', borderBottom: `1px solid ${C.rule}`, fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>
+        <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, marginBottom: 32 }}>
+          {/* Cabecera tabla — desktop */}
+          <div className="imp-table-hdr" style={{ padding: '10px 16px', borderBottom: `1px solid ${C.rule}`, fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>
             <span>Impresora</span><span>Sección</span><span>Conexión</span><span>Ping</span><span style={{ textAlign: 'right' }}>Acciones</span>
           </div>
           {impresoras.map((imp, i) => {
@@ -2564,11 +2605,11 @@ function ImpresorasTab() {
               <div key={imp.id} style={{ borderBottom: i < impresoras.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
                 {editando?.id === imp.id ? (
                   /* ─ Fila en edición inline ─ */
-                  <div style={{ padding: '16px 20px', background: C.paper2 }}>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 12 }}>
+                  <div style={{ padding: '16px 16px', background: C.paper2 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 12, marginBottom: 12 }}>
                       <Field label="Nombre" value={editando.nombre} onChange={v => setEditando(e => e ? {...e, nombre: v} : null)}/>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>Tipo conexión</label>
+                        <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>Tipo conexión</label>
                         <select value={editando.connection_type}
                           onChange={e => setEditando(ed => ed ? {...ed, connection_type: e.target.value} : null)}
                           style={{ fontFamily: SN, fontSize: 13, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '8px 10px', color: C.ink, outline: 'none' }}>
@@ -2576,7 +2617,7 @@ function ImpresorasTab() {
                         </select>
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                        <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>Secciones</label>
+                        <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>Secciones</label>
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                           {SECCIONES_IMP.map(s => {
                             const eds = editando.secciones_ids?.length > 0 ? editando.secciones_ids : (editando.seccion_id ? [editando.seccion_id] : [])
@@ -2586,7 +2627,7 @@ function ImpresorasTab() {
                                 onClick={() => {
                                   const cur = editando.secciones_ids?.length > 0 ? editando.secciones_ids : (editando.seccion_id ? [editando.seccion_id] : [])
                                   const next = sel ? cur.filter(x => x !== s.value) : [...cur, s.value]
-                                  if (next.length === 0) return // al menos una
+                                  if (next.length === 0) return
                                   setEditando(ed => ed ? { ...ed, secciones_ids: next, seccion_id: next[0] } : null)
                                 }}
                                 style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.06em', padding: '5px 10px', borderRadius: 4, cursor: 'pointer', border: `1.5px solid ${sel ? s.text : C.rule}`, background: sel ? s.color : C.bone, color: sel ? s.text : C.ink3, transition: 'all .15s' }}>
@@ -2629,61 +2670,86 @@ function ImpresorasTab() {
                     </div>
                   </div>
                 ) : (
-                  /* ─ Fila normal ─ */
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px 120px 80px 120px', padding: '14px 20px', alignItems: 'center' }}>
-                    <div>
-                      <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: imp.activa ? C.ink : C.ink4 }}>{imp.nombre}</div>
-                      <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, marginTop: 2, letterSpacing: '.04em' }}>{connInfo}</div>
-                      {imp.impresora_fallback_id && (
-                        <div style={{ fontFamily: SM, fontSize: 10, color: C.amber, marginTop: 2 }}>
-                          ↩ fallback: {impresoras.find(i => i.id === imp.impresora_fallback_id)?.nombre ?? imp.impresora_fallback_id}
-                        </div>
-                      )}
-                    </div>
-                    <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                      {secsBadges.map(sec => (
-                        <span key={sec.value} style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', background: sec.color, color: sec.text, padding: '3px 8px', borderRadius: 3, whiteSpace: 'nowrap' }}>
-                          {sec.label.split(' ')[0].toUpperCase()}
-                        </span>
-                      ))}
-                    </span>
-                    <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>
-                      {CONN_TYPES.find(ct => ct.value === imp.connection_type)?.label ?? imp.connection_type}
-                    </span>
-                    <span style={{ fontFamily: SM, fontSize: 11, color: isOnline ? C.green : C.ink4, fontWeight: isOnline ? 700 : 400 }}>
-                      {isOnline ? 'ONLINE' : fmtPing(imp.ultimo_ping)}
-                    </span>
-                    <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end', flexDirection: 'column', alignItems: 'flex-end' }}>
-                      <span style={{ display: 'flex', gap: 6 }}>
-                      <button
-                        onClick={() => testPrint(imp.id)}
-                        disabled={!!testState}
-                        title="Test de impresión"
-                        style={{
-                          background: testState?.status === 'ok' ? C.greenS : testState?.status === 'error' || testState?.status === 'timeout' ? '#3D1010' : testState?.status === 'testing' ? C.paper2 : C.paper2,
-                          color:      testState?.status === 'ok' ? C.green  : testState?.status === 'error' || testState?.status === 'timeout' ? C.red : C.ink3,
-                          border: `1px solid ${testState?.status === 'ok' ? C.green : testState?.status === 'error' || testState?.status === 'timeout' ? C.red : C.rule}`,
-                          borderRadius: 4, padding: '5px 8px', cursor: testState ? 'not-allowed' : 'pointer',
-                          fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.06em',
-                          transition: 'all .2s',
-                        }}>
-                        {testState?.status === 'testing' ? '⏳ ...' : testState?.status === 'ok' ? '✓ OK' : testState?.status === 'error' ? '✗ ERROR' : testState?.status === 'timeout' ? '⏱ TIMEOUT' : 'TEST'}
-                      </button>
-                      <Btn size="sm" onClick={() => setEditando({...imp})}><Icon d={ICONS.edit} size={13}/></Btn>
-                      <Btn size="sm" variant="danger" onClick={() => setModal({ del: imp })}><Icon d={ICONS.trash} size={13}/></Btn>
+                  <>
+                    {/* Fila desktop */}
+                    <div className="imp-table-row" style={{ padding: '13px 16px', alignItems: 'center' }}>
+                      <div>
+                        <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: imp.activa ? C.ink : C.ink4 }}>{imp.nombre}</div>
+                        <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, marginTop: 2 }}>{connInfo}</div>
+                        {imp.impresora_fallback_id && (
+                          <div style={{ fontFamily: SM, fontSize: 10, color: C.amber, marginTop: 2 }}>
+                            ↩ fallback: {impresoras.find(i => i.id === imp.impresora_fallback_id)?.nombre ?? imp.impresora_fallback_id}
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {secsBadges.map(sec => (
+                          <span key={sec.value} style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', background: sec.color, color: sec.text, padding: '3px 7px', borderRadius: 3, whiteSpace: 'nowrap' }}>
+                            {sec.label.split(' ')[0].toUpperCase()}
+                          </span>
+                        ))}
                       </span>
-                      {(testState?.status === 'error' || testState?.status === 'timeout') && testState.msg && (
-                        <div style={{ fontFamily: SM, fontSize: 9, color: C.red, letterSpacing: '.04em', maxWidth: 180, textAlign: 'right', lineHeight: 1.4 }}>
-                          {testState.msg}
+                      <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>
+                        {CONN_TYPES.find(ct => ct.value === imp.connection_type)?.label ?? imp.connection_type}
+                      </span>
+                      <span style={{ fontFamily: SM, fontSize: 11, color: isOnline ? C.green : C.ink4, fontWeight: isOnline ? 700 : 400 }}>
+                        {isOnline ? 'ONLINE' : fmtPing(imp.ultimo_ping)}
+                      </span>
+                      <span style={{ display: 'flex', gap: 5, justifyContent: 'flex-end', flexDirection: 'column', alignItems: 'flex-end' }}>
+                        <span style={{ display: 'flex', gap: 5 }}>
+                          <button onClick={() => testPrint(imp.id)} disabled={!!testState} title="Test"
+                            style={{ background: testState?.status === 'ok' ? C.greenS : testState?.status === 'error' || testState?.status === 'timeout' ? '#3D1010' : C.paper2,
+                              color: testState?.status === 'ok' ? C.green : testState?.status === 'error' || testState?.status === 'timeout' ? C.red : C.ink3,
+                              border: `1px solid ${testState?.status === 'ok' ? C.green : testState?.status === 'error' || testState?.status === 'timeout' ? C.red : C.rule}`,
+                              borderRadius: 4, padding: '5px 8px', cursor: testState ? 'not-allowed' : 'pointer',
+                              fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.06em' }}>
+                            {testState?.status === 'testing' ? '⏳' : testState?.status === 'ok' ? '✓ OK' : testState?.status === 'error' ? '✗ ERR' : testState?.status === 'timeout' ? '⏱' : 'TEST'}
+                          </button>
+                          <Btn size="sm" onClick={() => setEditando({...imp})}><Icon d={ICONS.edit} size={13}/></Btn>
+                          <Btn size="sm" variant="danger" onClick={() => setModal({ del: imp })}><Icon d={ICONS.trash} size={13}/></Btn>
+                        </span>
+                        {(testState?.status === 'error' || testState?.status === 'timeout') && testState.msg && (
+                          <div style={{ fontFamily: SM, fontSize: 9, color: C.red, maxWidth: 160, textAlign: 'right', lineHeight: 1.4 }}>{testState.msg}</div>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Card móvil */}
+                    <div className="imp-card" style={{ padding: '14px 14px', flexDirection: 'column', gap: 10 }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: imp.activa ? C.ink : C.ink4 }}>{imp.nombre}</div>
+                          <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginTop: 2 }}>{connInfo}</div>
                         </div>
-                      )}
-                    </span>
-                  </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                          <span style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, color: isOnline ? C.green : C.ink4 }}>
+                            {isOnline ? '● ONLINE' : fmtPing(imp.ultimo_ping)}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+                        {secsBadges.map(sec => (
+                          <span key={sec.value} style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, background: sec.color, color: sec.text, padding: '3px 8px', borderRadius: 3 }}>
+                            {sec.label}
+                          </span>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
+                        <button onClick={() => testPrint(imp.id)} disabled={!!testState}
+                          style={{ background: testState?.status === 'ok' ? C.greenS : C.paper2, color: testState?.status === 'ok' ? C.green : C.ink3,
+                            border: `1px solid ${testState?.status === 'ok' ? C.green : C.rule}`, borderRadius: 4, padding: '6px 10px',
+                            fontFamily: SM, fontSize: 10, fontWeight: 700, cursor: testState ? 'not-allowed' : 'pointer' }}>
+                          {testState?.status === 'testing' ? '⏳...' : testState?.status === 'ok' ? '✓ OK' : 'TEST'}
+                        </button>
+                        <Btn size="sm" onClick={() => setEditando({...imp})}><Icon d={ICONS.edit} size={14}/></Btn>
+                        <Btn size="sm" variant="danger" onClick={() => setModal({ del: imp })}><Icon d={ICONS.trash} size={14}/></Btn>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )
           })}
-          </div>{/* /minWidth impresoras */}
         </div>
       )}
 
@@ -3854,7 +3920,7 @@ function FacturasTab() {
       ) : facturas.length === 0 ? (
         <div style={{ fontFamily: SN, fontSize: 14, color: C.ink3, padding: 24 }}>Sin facturas en el periodo seleccionado.</div>
       ) : (
-        <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
+        <div className="fact-table-wrap" style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 13 }}>
             <thead>
               <tr style={{ background: C.paper2 }}>
@@ -5961,37 +6027,96 @@ export default function OwnerPage() {
         .owner-subtabs::-webkit-scrollbar { display:none; }
         .owner-tab-lbl { display:inline; }
         .owner-wrap { max-width:960px; margin:0 auto; padding:24px 20px 80px; }
-        @media (max-width:640px) {
-          .owner-tab-lbl { display:none; }
-          .owner-wrap { padding:14px 10px 80px; }
+
+        /* ── Camareros: cards en móvil ─────────────────────── */
+        .cam-table-hdr { display:grid; grid-template-columns:1fr 100px 120px 80px 80px 100px; }
+        .cam-table-row { display:grid; grid-template-columns:1fr 100px 120px 80px 80px 100px; }
+        .cam-card { display:none; }
+
+        /* ── Carta: items ──────────────────────────────────── */
+        .carta-item-row { display:grid; grid-template-columns:1fr 80px 60px 110px; }
+
+        /* ── Impresoras: tabla ─────────────────────────────── */
+        .imp-table-hdr { display:grid; grid-template-columns:1fr 110px 120px 80px 120px; }
+        .imp-table-row { display:grid; grid-template-columns:1fr 110px 120px 80px 120px; }
+        .imp-card { display:none; }
+
+        /* ── Carta header botones ──────────────────────────── */
+        .carta-hdr-btns { display:flex; gap:8px; flex-wrap:nowrap; }
+        .carta-hdr-btn-lbl { display:inline; }
+
+        /* ── Header nav ────────────────────────────────────── */
+        .owner-hdr-badge { display:flex; }
+        .owner-hdr-actions { display:flex; }
+        .owner-hdr-btn-lbl { display:inline; }
+        .owner-hdr-menu-btn { display:none; }
+
+        @media (max-width:768px) {
+          /* Header: compactar */
+          .owner-hdr-badge { display:none; }
           .owner-hdr-name { display:none; }
-          .carta-table-wrap { min-width: 0 !important; overflow-x: auto; }
-          .carta-table-row { grid-template-columns: 1fr 80px 80px 60px !important; gap: 8px !important; }
-          .carta-table-row .col-hide { display: none; }
+          .owner-hdr-btn-lbl { display:none; }
+          .owner-hdr-actions { gap:6px; }
+
+          /* Tabs grupos: compactar */
+          .owner-tab-lbl { display:none; }
+          .owner-wrap { padding:12px 12px 80px; }
+        }
+
+        @media (max-width:640px) {
+          /* Header */
+          .owner-hdr-name { display:none; }
+          .owner-wrap { padding:10px 10px 80px; }
+
+          /* Camareros → cards */
+          .cam-table-hdr { display:none; }
+          .cam-table-row { display:none; }
+          .cam-card { display:flex; }
+
+          /* Carta items → simplificado */
+          .carta-item-row { grid-template-columns:1fr 72px 52px; }
+          .carta-item-row .col-acciones { width:auto; }
+
+          /* Carta header → dos líneas */
+          .carta-hdr-btns { flex-wrap:wrap; gap:6px; }
+          .carta-hdr-btn-lbl { display:none; }
+
+          /* Impresoras → cards */
+          .imp-table-hdr { display:none; }
+          .imp-table-row { display:none; }
+          .imp-card { display:flex; }
+
+          /* Grids adaptativos */
           .owner-form-2col { grid-template-columns: 1fr !important; }
           .owner-stats-grid { grid-template-columns: 1fr 1fr !important; }
           .owner-action-row { flex-wrap: wrap; gap: 8px !important; }
+
+          /* Fact table → scroll horizontal con indicador */
+          .fact-table-wrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+          .fact-table-wrap table { min-width:580px; }
         }
+
         @media (max-width:420px) {
-          .carta-table-row { grid-template-columns: 1fr 70px 56px !important; }
           .owner-stats-grid { grid-template-columns: 1fr !important; }
+          .carta-item-row { grid-template-columns:1fr 64px; }
+          .carta-item-row .col-toggle { display:none; }
         }
       `}</style>
 
       {/* Top nav */}
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(246,241,231,.94)',
         backdropFilter: 'blur(14px)', borderBottom: `1px solid ${C.rule}`,
-        display: 'flex', alignItems: 'center', gap: 16, padding: '0 24px', height: 56 }}>
+        display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 52 }}>
         <Logo/>
-        <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 500, color: C.ink }}>
+        <div style={{ fontFamily: SE, fontSize: 17, fontWeight: 500, color: C.ink }}>
           ia<span style={{ color: C.red }}>.</span>rest
         </div>
-        <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em',
+        <div className="owner-hdr-badge" style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em',
           color: C.ink3, textTransform: 'uppercase', padding: '3px 8px', background: C.paper2,
-          border: `1px solid ${C.rule}`, borderRadius: 3 }}>
+          border: `1px solid ${C.rule}`, borderRadius: 3, whiteSpace: 'nowrap' }}>
           Panel del dueño
         </div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="owner-hdr-actions" style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {misRestaurantes.length > 1 && (
             <div style={{ position: 'relative' }}>
               <select
@@ -6017,7 +6142,7 @@ export default function OwnerPage() {
             style={{ background: 'none', border: `1px solid ${C.rule}`, borderRadius: 4, padding: '6px 10px', cursor: 'pointer', color: C.ink3, display: 'flex', alignItems: 'center', gap: 6 }}
             title="Guía de inicio">
             <Icon d={ICONS.book} size={14}/>
-            <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 600 }}>Guía</span>
+            <span className="owner-hdr-btn-lbl" style={{ fontFamily: SN, fontSize: 12, fontWeight: 600 }}>Guía</span>
           </button>
           <SugerenciaButton session={session} tema="light" variant="inline" />
           <div style={{ position:'relative' }} onMouseLeave={e => { const m = e.currentTarget.querySelector('[data-manuales]') as HTMLElement; if(m) m.style.display='none' }}>
@@ -6025,7 +6150,7 @@ export default function OwnerPage() {
               onMouseEnter={e => { const m = e.currentTarget.nextElementSibling as HTMLElement; if(m) m.style.display='flex' }}
               style={{ background:'none', border:`1px solid ${C.rule}`, borderRadius:4, padding:'6px 10px', cursor:'pointer', color:C.ink3, display:'flex', alignItems:'center', gap:6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-              <span style={{ fontFamily:SN, fontSize:12, fontWeight:600 }}>Manuales</span>
+              <span className="owner-hdr-btn-lbl" style={{ fontFamily:SN, fontSize:12, fontWeight:600 }}>Manuales</span>
             </button>
             <div data-manuales="true" style={{ display:'none', position:'absolute', top:'calc(100% + 6px)', right:0, flexDirection:'column', gap:2, background:'#fff', border:`1px solid ${C.rule}`, borderRadius:6, padding:4, boxShadow:'0 4px 16px rgba(0,0,0,.08)', zIndex:200, minWidth:140 }}>
               {[
@@ -6046,7 +6171,7 @@ export default function OwnerPage() {
           <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.rule}`,
             borderRadius: 4, padding: '6px 10px', cursor: 'pointer', color: C.ink3, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon d={ICONS.logout} size={14}/>
-            <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 600 }}>Salir</span>
+            <span className="owner-hdr-btn-lbl" style={{ fontFamily: SN, fontSize: 12, fontWeight: 600 }}>Salir</span>
           </button>
         </div>
       </header>
