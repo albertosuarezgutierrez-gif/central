@@ -9,6 +9,7 @@ import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
 import FueraCartaSection from '@/components/owner/FueraCartaSection'
 import SupervisorTab from '@/components/owner/SupervisorTab'
 import DiagnosticoTab from '@/components/owner/DiagnosticoTab'
+import SoporteTab from '@/components/owner/SoporteTab'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -5449,6 +5450,7 @@ const GRUPOS = [
     id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle,
     tabs: [
       { id: 'sistema',        label: 'Sistema',        icon: ICONS.shield        }, // diagnóstico en tiempo real
+      { id: 'soporte',        label: 'Soporte',        icon: ICONS.phone         }, // chat con IA de soporte
       { id: 'facturas',       label: 'Facturas',       icon: ICONS.receipt       }, // consulta periódica (contabilidad)
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
     ]
@@ -6100,6 +6102,7 @@ export default function OwnerPage() {
         {/* ── Contenido ── */}
         <div style={{ marginTop: getGrupo(tab).tabs.length <= 1 ? 20 : 0 }}>
           {tab === 'sistema'          && <DiagnosticoTab restauranteId={session.restaurante_id} />}
+          {tab === 'soporte'          && <SoporteTab restauranteId={session.restaurante_id} />}
           {tab === 'supervisor'     && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} sh={sh} />}
           {tab === 'qr'             && <QRTabOwner restauranteId={session.restaurante_id} sh={sh} />}
           {tab === 'cubierto'       && <ServicioTab/>}
