@@ -310,6 +310,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     setChatMsgs(prev => [...prev.slice(-4), {id:Date.now().toString(), from, texto, ts:new Date(), tipo}])
   }, [])
 
+  // setScreenSafe: actualiza estado Y ref en un solo punto → evita stale closures en guards PTT/VAD
+  const setScreenSafe = useCallback((s: Screen) => {
+    screenRef.current = s
+    setScreen(s)
+  }, [])
+
   const { prompt: installPrompt, install } = useInstallPrompt()
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
   const { subscribed, subscribe }          = usePushNotifications(session.id)
@@ -461,7 +467,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (screen !== 'speaking' || !brain) return
     speakingRef.current = true
     speak(buildTTS(brain, alertas86, alertasAlerg)).then(() => {
-      if (speakingRef.current) { speakingRef.current=false; setScreen('confirm') }
+      if (speakingRef.current) { speakingRef.current=false; setScreenSafe('confirm') }
     })
     return () => { speakingRef.current = false }
   }, [screen, brain]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -469,6 +475,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const mediaRef    = useRef<MediaRecorder|null>(null)
   const chunksRef   = useRef<Blob[]>([])
   const recordingRef = useRef(false)
+  // screenRef: espejo síncrono de `screen` para guards en callbacks sin stale closures
+  const screenRef    = useRef<Screen>('idle')
+  // processingRef: mutex para evitar doble fetch concurrente
+  const processingRef = useRef(false)
   const silenceTimerRef  = useRef<ReturnType<typeof setTimeout>|null>(null)
   const analyserRef      = useRef<AnalyserNode|null>(null)
   const audioCtxRef      = useRef<AudioContext|null>(null)
@@ -501,9 +511,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }, [])
 
   const startRecording = useCallback(async () => {
+    // Guard via screenRef (síncrono) — evita stale closures cuando el PTT llega muy rápido
+    const cur = screenRef.current
     // Permitir grabar desde idle O desde asking (responder pregunta de BRAIN)
     // Si screen === 'sent', el camarero quiere la siguiente comanda → auto-reset y seguir
-    if (screen === 'sent') {
+    if (cur === 'sent') {
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
       speakingRef.current = false
       setBrain(null); setTranscript(''); setError('')
@@ -512,14 +524,16 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       setChipsClarificacion([]); setMesaClarificacion(null)
       setPedidoCuenta({ loading: false, error: '', factura: null })
       // continúa sin return — empieza a grabar directamente
-    } else if (screen !== 'idle' && screen !== 'asking') return
+    } else if (cur !== 'idle' && cur !== 'asking') return
+    // Lock extra: evitar doble MediaRecorder si el PTT llega antes de que React actualice
+    if (recordingRef.current) return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
       chunksRef.current = []
       const mr = new MediaRecorder(stream, {mimeType:'audio/webm;codecs=opus'})
       mr.ondataavailable = e => { if (e.data.size>0) chunksRef.current.push(e.data) }
       mr.start(100); mediaRef.current=mr; recordingRef.current=true
-      setScreen('recording')
+      setScreenSafe('recording')
       if (navigator.vibrate) navigator.vibrate(50)
 
       // ── VAD: auto-stop por silencio (~1.5s sin voz) ──────────────
@@ -562,21 +576,29 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         vadFrameRef.current = setTimeout(vadLoop, 400) as unknown as number
       } catch { /* VAD no disponible, modo normal sin auto-stop */ }
       // ─────────────────────────────────────────────────────────────
-    } catch { setError('Sin acceso al micrófono'); setScreen('error') }
-  }, [screen])
+    } catch { setError('Sin acceso al micrófono'); setScreenSafe('error') }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [setScreenSafe])
 
   const stopRecording = useCallback(async () => {
     if (!recordingRef.current || !mediaRef.current) return
-    recordingRef.current = false; setScreen('processing')
+    // Mutex: evitar doble fetch si stopRecording se llama dos veces casi simultáneamente
+    if (processingRef.current) return
+    processingRef.current = true
+    recordingRef.current = false; setScreenSafe('processing')
     // Limpiar VAD
     if (vadFrameRef.current) { clearTimeout(vadFrameRef.current); vadFrameRef.current = null }
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null }
     if (audioCtxRef.current) { try { audioCtxRef.current.close() } catch {} audioCtxRef.current = null }
     analyserRef.current = null
     const mr = mediaRef.current
-    await new Promise<void>(resolve => { mr.onstop=()=>resolve(); mr.stop() })
+    // Timeout en onstop: en Android WebView puede no dispararse nunca → PROCESANDO colgado
+    await Promise.race([
+      new Promise<void>(resolve => { mr.onstop=()=>resolve(); mr.stop() }),
+      new Promise<void>(resolve => setTimeout(resolve, 2500))   // fallback 2.5s
+    ])
     mr.stream.getTracks().forEach(t=>t.stop())
-    if (!chunksRef.current.length) { setScreen('idle'); return }
+    if (!chunksRef.current.length) { processingRef.current = false; setScreenSafe('idle'); return }
 
     const blob = new Blob(chunksRef.current, {type:'audio/webm'})
     const fd   = new FormData()
@@ -605,13 +627,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           if (opciones.length >= 2) {
             // Muchas opciones → chips tocables, no voz
             setChipsClarificacion(opciones)
-            setScreen('asking')
+            setScreenSafe('asking')
           } else {
             // Pocas opciones → flujo de voz (blanco/tinto/rosado)
             setChipsClarificacion([])
-            setScreen('asking')
+            setScreenSafe('asking')
             speak(pregunta).then(() => startRecording())
           }
+          processingRef.current = false
           return
         }
         // Limpiar contexto de clarificación si se resolvió con éxito
@@ -629,8 +652,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         if (mesaInvalida) {
           if (d.brain?.items?.length>0) setPendingItems(d.brain.items)
           // NO añadimos al chat aquí — ya lo muestra screen==='asking' directamente
-          setScreen('asking')
+          setScreenSafe('asking')
           speak('¿Qué mesa?').then(() => startRecording())
+          processingRef.current = false
           return
         }
 
@@ -641,7 +665,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           addMsg('brain', msgN, 'ok')
           setLastComandaId(d.comanda_id)
           if (!ttsOff) speak(`${d.nombre_cuenta}: ${bItemsN.map((it: BrainResult['items'][0]) => `${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}. Anotado.`)
-          setScreen('sent')
+          setScreenSafe('sent')
+          processingRef.current = false
           return
         }
 
@@ -654,7 +679,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         if (esFueraCarta) {
           const aviso = `"${d.texto}" — producto no encontrado en carta. Repítelo o avisa al dueño para añadirlo`
           addMsg('sistema', aviso, 'aviso')
-          setScreen('idle')
+          setScreenSafe('idle')
+          processingRef.current = false
           return
         }
         // ─────────────────────────────────────────────────────────────────
@@ -683,28 +709,28 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
         // Auto-confirmar si confianza suficiente y opción activada
         if (autoConfirm && conf * 100 >= autoThreshold && d.comanda_id) {
-          setScreen('sent')
+          setScreenSafe('sent')
           addMsg('brain', `✓ Auto-enviado · ${d.brain?.mesa||'?'}`, 'ok')
         } else if (voiceConfirm && !ttsOff && hasTTS) {
           // Confirmación por voz ON + TTS disponible → BRAIN lee la comanda antes de confirmar
-          setScreen('speaking')
+          setScreenSafe('speaking')
         } else if (voiceConfirm) {
           // Confirmación por voz ON pero TTS desactivado → mostrar pantalla de confirmación visual
-          setScreen('confirm')
+          setScreenSafe('confirm')
         } else {
           // Confirmación por voz OFF → enviar directamente sin confirmación
-          setScreen('sent')
+          setScreenSafe('sent')
           addMsg('brain', `✓ Enviado · ${d.brain?.mesa||'?'}`, 'ok')
         }
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
         const msg = d.code==='API_KEY_INVALID'?'API key no configurada':d.error||'Error al procesar la voz'
-        setError(msg); addMsg('sistema', msg, 'error'); setScreen('error')
+        setError(msg); addMsg('sistema', msg, 'error'); setScreenSafe('error')
       }
     } catch { 
       setError('Sin conexión')
       addMsg('sistema','Sin conexión con el servidor — comanda guardada, se enviará al recuperar WiFi','error')
-      setScreen('error')
+      setScreenSafe('error')
       // Circuit breaker: encolar para reintento offline si BRAIN ya procesó items
       if (brain && brain.items?.length > 0 && brain.mesa) {
         const sesHeader = localStorage.getItem('ia_rest_session') ?? ''
@@ -717,7 +743,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         })
       }
     }
-  }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, brain, mesasPlano, encolar])
+    processingRef.current = false
+  }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, brain, mesasPlano, encolar, setScreenSafe])
 
   useEffect(() => {
     const dn = (e:KeyboardEvent) => { if(e.code==='Space'&&!e.repeat&&screen==='idle'){e.preventDefault();startRecording()} }
@@ -806,7 +833,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // ── Timeout reset estado asking (15s sin respuesta → idle) ───────
   useEffect(() => {
     if (screen !== 'asking') return
-    const t = setTimeout(() => { setScreen('idle'); setBrain(null); setTranscript('') }, 15000)
+    const t = setTimeout(() => { setScreenSafe('idle'); setBrain(null); setTranscript('') }, 15000)
     return () => clearTimeout(t)
   }, [screen])
 
@@ -814,7 +841,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // Permite pulsar PTT para la siguiente comanda sin tocar "Nueva comanda".
   useEffect(() => {
     if (screen !== 'sent') return
-    const t = setTimeout(() => setScreen('idle'), 3000)
+    const t = setTimeout(() => setScreenSafe('idle'), 3000)
     return () => clearTimeout(t)
   }, [screen])
 
@@ -823,7 +850,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   useEffect(() => {
     if (typeof window === 'undefined') return
     ;(window as any).resetPTT = () => {
-      setScreen('idle'); setBrain(null); setTranscript('')
+      speakingRef.current=false; processingRef.current=false; recordingRef.current=false
+      setScreenSafe('idle'); setBrain(null); setTranscript('')
     }
     return () => { delete (window as any).resetPTT }
   }, [])
@@ -870,7 +898,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         setClarificacionCtx(null)
         setMesaClarificacion(null)
         setPreguntaBrain('¿Qué mesa?')
-        setScreen('sent')
+        setScreenSafe('sent')
         setBrain({ mesa: mesa.codigo, tipo: 'comanda', items: [chip], confianza: 1, raw: chip.nombre })
         setLastComandaId(d.comanda_id ?? d.id ?? null)
         if (navigator.vibrate) navigator.vibrate([30,50,30])
@@ -884,7 +912,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const reset = () => {
     if (typeof window!=='undefined') window.speechSynthesis?.cancel()
-    speakingRef.current=false; setScreen('idle'); setBrain(null); setTranscript('')
+    speakingRef.current=false; processingRef.current=false; recordingRef.current=false
+    setScreenSafe('idle'); setBrain(null); setTranscript('')
     setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
     setAlertas86([]); setAlertasAlerg([]); setPendingItems([])
     setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
@@ -1208,7 +1237,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 )}
                 <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
                   <button onClick={reset} style={{flex:1,padding:12,background:'none',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>✗ Cancelar</button>
-                  <button onClick={()=>{; setScreen('sent')
+                  <button onClick={()=>{; setScreenSafe('sent')
                     addMsg('brain',`✓ Enviado · ${brain.mesa}`,'ok')
                     setPushMsg(`🍳 Cocina recibió · ${brain.mesa}`); setShowPush(true); setTimeout(()=>setShowPush(false),4000)
                   }} style={{flex:2,padding:12,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:13,fontWeight:700,cursor:'pointer'}}>
@@ -1239,7 +1268,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           {screen==='confirm' && (
             <div style={{padding:'4px 14px 6px',display:'flex',gap:6,flexShrink:0,overflowX:'auto',scrollbarWidth:'none' as const,background:C.bg1,borderTop:`1px solid ${C.rule}`}}>
               {['✓ Sí','✗ No','Repite'].map(r=>(
-                <button key={r} onClick={r==='✓ Sí'?()=>{;setScreen('sent');addMsg('brain',`✓ Enviado · ${brain?.mesa}`,'ok')}:r==='✗ No'?reset:()=>{reset();setScreen('idle')}}
+                <button key={r} onClick={r==='✓ Sí'?()=>{;setScreenSafe('sent');addMsg('brain',`✓ Enviado · ${brain?.mesa}`,'ok')}:r==='✗ No'?reset:()=>{reset();setScreenSafe('idle')}}
                   style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1px solid ${C.rule}`,background:C.bg2,fontSize:12,fontWeight:600,color:r==='✓ Sí'?C.gr:r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
                   {r}
                 </button>
@@ -1558,7 +1587,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           onPedirCuenta={(comandaId, mesa)=>{
             setLastComandaId(comandaId)
             setBrain({mesa, tipo:'cuenta', items:[], confianza:1, raw:''})
-            setScreen('sent'); pedirCuenta()
+            setScreenSafe('sent'); pedirCuenta()
           }}
           onAnadirPorVoz={(id, codigo, _comandaId)=>{
             setMesaDetalle(null); setMesaFijada(id); setTab('hablar')
@@ -1612,10 +1641,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             }
             setMesasPaxMap(prev => ({ ...prev, [pendingVozComanda.mesaId]: pax }))
             setPendingVozComanda(null)
-            setScreen('confirm')
+            setScreenSafe('confirm')
           }}
-          onSaltarse={() => { setPendingVozComanda(null); setScreen('confirm') }}
-          onClose={() => { setPendingVozComanda(null); setScreen('confirm') }}
+          onSaltarse={() => { setPendingVozComanda(null); setScreenSafe('confirm') }}
+          onClose={() => { setPendingVozComanda(null); setScreenSafe('confirm') }}
         />
       )}
 
