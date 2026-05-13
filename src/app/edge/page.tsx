@@ -1782,6 +1782,7 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
   ttsOff:boolean;       onTtsOff:(v:boolean)=>void
   onLogout:()=>void
 }) {
+  const [tabsOpen, setTabsOpen] = React.useState(false)
   const Toggle = ({on,onT}:{on:boolean;onT:()=>void}) => (
     <div onClick={onT} style={{width:44,height:26,borderRadius:13,background:on?C.verm:C.bg3,border:`1px solid ${on?C.vermD:C.rule}`,position:'relative',cursor:'pointer',transition:'background .2s',flexShrink:0}}>
       <div style={{position:'absolute',top:3,left:on?20:3,width:18,height:18,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(26,23,20,.2)',transition:'left .2s'}}/>
@@ -1817,34 +1818,47 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
       <div style={{padding:'0 20px'}}>
         {/* ── MIS TABS ── */}
         <div style={{padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
-          <div style={{fontSize:13,fontWeight:500,color:C.ink,marginBottom:3}}>Mis tabs</div>
-          <div style={{fontSize:11,color:C.ink4,marginBottom:10}}>Personaliza qué botones ves en la barra inferior</div>
-          <div style={{display:'flex',flexDirection:'column',gap:6}}>
-            {ALL_TABS.map(t => {
-              const on = tabsVisibles.includes(t.id)
-              const fijo = !!t.fijo
-              return (
-                <div key={t.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 0'}}>
-                  <div style={{display:'flex',alignItems:'center',gap:10}}>
-                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={on?C.verm:C.ink4} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                      {t.path.split('M').filter(Boolean).map((seg,i) => <path key={i} d={`M${seg}`}/>)}
-                    </svg>
-                    <span style={{fontSize:13,fontWeight:500,color:on?C.ink:C.ink3}}>{t.lbl}</span>
-                    {fijo && <span style={{fontSize:10,color:C.ink4,background:C.bg2,padding:'2px 6px',borderRadius:10}}>siempre</span>}
-                  </div>
-                  <div
-                    onClick={()=>{
-                      if (fijo) return
-                      const next = on ? tabsVisibles.filter(x=>x!==t.id) : [...tabsVisibles, t.id]
-                      onTabsVisibles(next)
-                    }}
-                    style={{width:44,height:26,borderRadius:13,background:on?C.verm:C.bg3,border:`1px solid ${on?C.vermD:C.rule}`,position:'relative',cursor:fijo?'default':'pointer',transition:'background .2s',flexShrink:0,opacity:fijo?.5:1}}>
-                    <div style={{position:'absolute',top:3,left:on?20:3,width:18,height:18,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(26,23,20,.2)',transition:'left .2s'}}/>
-                  </div>
-                </div>
-              )
-            })}
+          <div onClick={()=>setTabsOpen(o=>!o)} style={{display:'flex',alignItems:'center',justifyContent:'space-between',cursor:'pointer'}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:C.ink}}>Mis tabs</div>
+              {!tabsOpen && <div style={{fontSize:11,color:C.ink4,marginTop:1}}>{tabsVisibles.filter(t=>!ALL_TABS.find(a=>a.id===t)?.fijo).length} activas</div>}
+            </div>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+              style={{transition:'transform .2s',transform:tabsOpen?'rotate(180deg)':'rotate(0deg)',flexShrink:0}}>
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
           </div>
+          {tabsOpen && (
+            <div style={{marginTop:10}}>
+              <div style={{fontSize:11,color:C.ink4,marginBottom:10}}>Personaliza qué botones ves en la barra inferior</div>
+              <div style={{display:'flex',flexDirection:'column',gap:6}}>
+                {ALL_TABS.map(t => {
+                  const on = tabsVisibles.includes(t.id)
+                  const fijo = !!t.fijo
+                  return (
+                    <div key={t.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 0'}}>
+                      <div style={{display:'flex',alignItems:'center',gap:10}}>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={on?C.verm:C.ink4} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                          {t.path.split('M').filter(Boolean).map((seg,i) => <path key={i} d={`M${seg}`}/>)}
+                        </svg>
+                        <span style={{fontSize:13,fontWeight:500,color:on?C.ink:C.ink3}}>{t.lbl}</span>
+                        {fijo && <span style={{fontSize:10,color:C.ink4,background:C.bg2,padding:'2px 6px',borderRadius:10}}>siempre</span>}
+                      </div>
+                      <div
+                        onClick={()=>{
+                          if (fijo) return
+                          const next = on ? tabsVisibles.filter(x=>x!==t.id) : [...tabsVisibles, t.id]
+                          onTabsVisibles(next)
+                        }}
+                        style={{width:44,height:26,borderRadius:13,background:on?C.verm:C.bg3,border:`1px solid ${on?C.vermD:C.rule}`,position:'relative',cursor:fijo?'default':'pointer',transition:'background .2s',flexShrink:0,opacity:fijo?.5:1}}>
+                        <div style={{position:'absolute',top:3,left:on?20:3,width:18,height:18,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(26,23,20,.2)',transition:'left .2s'}}/>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
         </div>
         <div style={{padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
           <div style={{fontSize:13,fontWeight:500,color:C.ink,marginBottom:4}}>Zona asignada</div>
