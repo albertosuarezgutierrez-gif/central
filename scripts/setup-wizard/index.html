@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ia.rest · Setup</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,600;1,400;1,600&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:    #14110E;
+    --bg2:   #1F1A15;
+    --bg3:   #2A231C;
+    --rule:  #3A332C;
+    --fg:    #F6F1E7;
+    --fg2:   #D8CDB6;
+    --fg3:   #9A8D7C;
+    --verm:  #D9442B;
+    --vermS: rgba(217,68,43,0.12);
+    --amb:   #E8A33B;
+    --gr:    #3F7D44;
+    --grS:   rgba(63,125,68,0.15);
+    --red:   #C0392B;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  /* ── Layout ── */
+  .wrap {
+    width: 100%;
+    max-width: 560px;
+    padding: 40px 24px 80px;
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  /* ── Logo ── */
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-text {
+    font-family: 'Newsreader', serif;
+    font-style: italic;
+    font-size: 24px;
+    color: var(--verm);
+    letter-spacing: -.4px;
+  }
+  .logo-badge {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    color: var(--fg3);
+    border: 1px solid var(--rule);
+    border-radius: 4px;
+    padding: 2px 6px;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* ── Progreso ── */
+  .steps {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .step-dot {
+    width: 28px;
+    height: 4px;
+    border-radius: 2px;
+    background: var(--bg3);
+    transition: background .3s;
+  }
+  .step-dot.done    { background: var(--gr); }
+  .step-dot.active  { background: var(--verm); }
+
+  /* ── Card ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    border-radius: 16px;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .card-title {
+    font-family: 'Newsreader', serif;
+    font-style: italic;
+    font-size: 22px;
+    color: var(--fg);
+    font-weight: 400;
+    line-height: 1.2;
+  }
+  .card-sub {
+    font-size: 13px;
+    color: var(--fg3);
+    line-height: 1.5;
+    margin-top: -12px;
+  }
+
+  /* ── Input ── */
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  .field label { font-size: 10px; font-weight: 700; color: var(--fg3); letter-spacing: .08em; text-transform: uppercase; font-family: 'JetBrains Mono', monospace; }
+  .field input, .field select {
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 8px;
+    color: var(--fg);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 12px 14px;
+    outline: none;
+    transition: border-color .2s;
+    width: 100%;
+  }
+  .field input:focus, .field select:focus { border-color: var(--verm); }
+  .field input::placeholder { color: var(--fg3); }
+
+  /* ── Botones ── */
+  .btn {
+    background: var(--verm);
+    border: none;
+    border-radius: 10px;
+    color: var(--fg);
+    cursor: pointer;
+    font-family: 'Inter Tight', system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 14px 24px;
+    transition: background .15s, transform .1s;
+    width: 100%;
+    letter-spacing: .01em;
+  }
+  .btn:hover   { background: #C03A24; }
+  .btn:active  { transform: scale(.98); }
+  .btn:disabled { background: var(--bg3); color: var(--fg3); cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    color: var(--fg3);
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    padding: 10px 20px;
+    transition: border-color .15s, color .15s;
+  }
+  .btn-ghost:hover { border-color: var(--fg3); color: var(--fg); }
+
+  /* ── Tests / estados ── */
+  .test-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .test-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+    border: 1px solid var(--rule);
+    border-radius: 10px;
+    padding: 12px 14px;
+    transition: border-color .3s;
+  }
+  .test-row.ok     { border-color: var(--gr); }
+  .test-row.fail   { border-color: var(--red); }
+  .test-row.active { border-color: var(--amb); }
+
+  .test-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    flex-shrink: 0;
+    background: var(--bg2);
+    border: 1px solid var(--rule);
+    transition: all .3s;
+  }
+  .test-row.ok   .test-icon { background: var(--grS); border-color: var(--gr); }
+  .test-row.fail .test-icon { background: rgba(192,57,43,.15); border-color: var(--red); }
+  .test-row.active .test-icon { background: rgba(232,163,59,.15); border-color: var(--amb); }
+
+  .test-info { flex: 1; }
+  .test-name { font-size: 13px; font-weight: 600; color: var(--fg2); }
+  .test-detail { font-size: 11px; color: var(--fg3); font-family: 'JetBrains Mono', monospace; margin-top: 2px; }
+
+  /* ── Printer cards ── */
+  .printer-list { display: flex; flex-direction: column; gap: 8px; }
+  .printer-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--bg);
+    border: 1.5px solid var(--rule);
+    border-radius: 10px;
+    padding: 12px 14px;
+    cursor: pointer;
+    transition: border-color .2s;
+  }
+  .printer-card:hover  { border-color: var(--verm); }
+  .printer-card.sel    { border-color: var(--verm); background: var(--vermS); }
+  .printer-ip   { font-family: 'JetBrains Mono', monospace; font-size: 13px; color: var(--fg); }
+  .printer-port { font-size: 11px; color: var(--fg3); font-family: 'JetBrains Mono', monospace; }
+
+  /* ── Scan progress ── */
+  .scan-bar-wrap {
+    background: var(--bg3);
+    border-radius: 4px;
+    height: 4px;
+    overflow: hidden;
+  }
+  .scan-bar {
+    height: 4px;
+    background: var(--verm);
+    border-radius: 4px;
+    width: 0%;
+    transition: width .1s linear;
+  }
+  .scan-label {
+    font-size: 11px;
+    color: var(--fg3);
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 6px;
+  }
+
+  /* ── Alerta ── */
+  .alert {
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-size: 12px;
+    line-height: 1.5;
+  }
+  .alert-warn { background: rgba(232,163,59,.1); border: 1px solid rgba(232,163,59,.3); color: var(--amb); }
+  .alert-ok   { background: var(--grS); border: 1px solid rgba(63,125,68,.4); color: #6DBF74; }
+  .alert-err  { background: rgba(192,57,43,.1); border: 1px solid rgba(192,57,43,.3); color: #E57A70; }
+
+  /* ── Done ── */
+  .done-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: var(--grS);
+    border: 2px solid var(--gr);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 32px;
+    margin: 0 auto;
+  }
+  .done-title {
+    font-family: 'Newsreader', serif;
+    font-style: italic;
+    font-size: 26px;
+    text-align: center;
+    color: var(--fg);
+  }
+  .done-sub { font-size: 13px; color: var(--fg3); text-align: center; line-height: 1.6; }
+
+  .hidden { display: none !important; }
+  .spin { animation: spin 1s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Logo -->
+  <div class="logo">
+    <svg width="28" height="28" viewBox="0 0 56 56">
+      <rect width="56" height="56" rx="8" fill="#1F1A15"/>
+      <g transform="translate(11,14)">
+        <rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/>
+        <rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/>
+        <rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/>
+        <rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/>
+        <rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/>
+        <rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/>
+      </g>
+    </svg>
+    <span class="logo-text">ia.rest</span>
+    <span class="logo-badge">Setup v1.0</span>
+  </div>
+
+  <!-- Progreso -->
+  <div class="steps">
+    <div class="step-dot active"  id="dot0"></div>
+    <div class="step-dot"         id="dot1"></div>
+    <div class="step-dot"         id="dot2"></div>
+    <div class="step-dot"         id="dot3"></div>
+    <div class="step-dot"         id="dot4"></div>
+  </div>
+
+  <!-- ── PASO 0: Bienvenida ── -->
+  <div id="step0" class="card">
+    <div class="card-title">Bienvenido a ia.rest</div>
+    <p class="card-sub">Este asistente configurará el bridge y tus impresoras en menos de 5 minutos. Solo necesitas la referencia que recibiste por email.</p>
+    <div class="field">
+      <label>Referencia / Token</label>
+      <input id="tokenInput" type="text" placeholder="XXXX-XXXX-XXXX-XXXX" autocomplete="off" spellcheck="false"/>
+    </div>
+    <div id="tokenError" class="alert alert-err hidden"></div>
+    <button class="btn" id="btnVerifyToken">Verificar referencia →</button>
+  </div>
+
+  <!-- ── PASO 1: Escaneo de red ── -->
+  <div id="step1" class="card hidden">
+    <div class="card-title">Buscando impresoras</div>
+    <p class="card-sub" id="scanSubtitle">Escaneando la red local en busca de impresoras térmicas...</p>
+    <div class="scan-bar-wrap"><div class="scan-bar" id="scanBar"></div></div>
+    <div class="scan-label" id="scanLabel">Preparando escaneo...</div>
+    <div id="printerList" class="printer-list hidden"></div>
+    <div id="scanDoneActions" class="hidden" style="display:flex;flex-direction:column;gap:10px;">
+      <button class="btn" id="btnUsePrinters">Usar impresoras detectadas →</button>
+      <button class="btn-ghost" id="btnManualIP">Introducir IP manualmente</button>
+    </div>
+    <div id="manualIPForm" class="hidden" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="field">
+        <label>IP de la impresora</label>
+        <input id="manualIPInput" type="text" placeholder="192.168.1.45" />
+      </div>
+      <div class="field">
+        <label>Puerto</label>
+        <input id="manualPortInput" type="text" placeholder="9100" value="9100" />
+      </div>
+      <button class="btn" id="btnAddManual">Añadir impresora</button>
+    </div>
+  </div>
+
+  <!-- ── PASO 2: Nombrar y asignar secciones ── -->
+  <div id="step2" class="card hidden">
+    <div class="card-title">Configurar impresoras</div>
+    <p class="card-sub">Asigna un nombre y sección a cada impresora detectada.</p>
+    <div id="printerConfigList" style="display:flex;flex-direction:column;gap:14px;"></div>
+    <button class="btn" id="btnTestPrinters">Probar impresoras →</button>
+  </div>
+
+  <!-- ── PASO 3: Test completo ── -->
+  <div id="step3" class="card hidden">
+    <div class="card-title">Comprobando conexión</div>
+    <p class="card-sub">Verificando cada paso del ciclo completo bridge → impresora.</p>
+    <div class="test-list" id="testList"></div>
+    <div id="printConfirm" class="hidden" style="display:flex;flex-direction:column;gap:12px;">
+      <div class="alert alert-warn">¿Ha salido el ticket de prueba por la impresora?</div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn" id="btnTicketYes" style="flex:1;">✓ Sí, ha salido</button>
+        <button class="btn-ghost" id="btnTicketNo" style="flex:1;">✗ No ha salido</button>
+      </div>
+    </div>
+    <div id="testError" class="alert alert-err hidden"></div>
+  </div>
+
+  <!-- ── PASO 4: Instalar servicio ── -->
+  <div id="step4" class="card hidden">
+    <div class="card-title">Instalar bridge</div>
+    <p class="card-sub">El bridge arrancará automáticamente cada vez que enciendas el ordenador. Las impresoras siempre estarán disponibles.</p>
+    <div class="test-list">
+      <div class="test-row" id="svcRow">
+        <div class="test-icon" id="svcIcon">⟳</div>
+        <div class="test-info">
+          <div class="test-name">Servicio de Windows</div>
+          <div class="test-detail" id="svcDetail">Pendiente de instalar</div>
+        </div>
+      </div>
+    </div>
+    <button class="btn" id="btnInstallService">Instalar servicio →</button>
+    <button class="btn-ghost" id="btnSkipService">Saltar este paso (instalar luego)</button>
+  </div>
+
+  <!-- ── PASO 5: Listo ── -->
+  <div id="step5" class="card hidden" style="align-items:center;gap:16px;text-align:center;">
+    <div class="done-icon">✓</div>
+    <div class="done-title" id="doneTitle">Todo listo.</div>
+    <p class="done-sub" id="doneSub">Bridge activo · Impresoras configuradas</p>
+    <button class="btn" id="btnOpenPanel">Abrir panel ia.rest →</button>
+  </div>
+
+</div>
+
+<script>
+// ── Estado global ────────────────────────────────────────────
+const state = {
+  step: 0,
+  token: '',
+  restaurantName: '',
+  restaurantId: '',
+  printers: [],      // [{ip, port, nombre, seccion_id}]
+  currentTest: -1,
+}
+
+// ── Utilidades ───────────────────────────────────────────────
+const $ = id => document.getElementById(id)
+
+function setStep(n) {
+  for (let i = 0; i <= 5; i++) {
+    const el = $(`step${i}`)
+    if (el) el.classList.toggle('hidden', i !== n)
+    const dot = $(`dot${i}`)
+    if (dot) {
+      dot.classList.remove('active', 'done')
+      if (i < n)  dot.classList.add('done')
+      if (i === n) dot.classList.add('active')
+    }
+  }
+  state.step = n
+}
+
+function showErr(id, msg) {
+  const el = $(id)
+  el.textContent = msg
+  el.classList.remove('hidden')
+}
+function hideErr(id) { $(id).classList.add('hidden') }
+
+// ── PASO 0: Verificar token ──────────────────────────────────
+$('btnVerifyToken').addEventListener('click', async () => {
+  const token = $('tokenInput').value.trim()
+  if (!token) return showErr('tokenError', 'Introduce tu referencia de acceso.')
+  hideErr('tokenError')
+
+  const btn = $('btnVerifyToken')
+  btn.disabled = true
+  btn.textContent = 'Verificando...'
+
+  try {
+    const res = await fetch('/api/verify-token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    })
+    const data = await res.json()
+
+    if (data.ok) {
+      state.token = token
+      state.restaurantName = data.data?.nombre || 'Mi restaurante'
+      state.restaurantId   = data.data?.restaurante_id || ''
+      setStep(1)
+      startScan()
+    } else {
+      showErr('tokenError', data.error || 'Referencia no válida. Revisa el email de bienvenida.')
+    }
+  } catch (e) {
+    showErr('tokenError', 'No se pudo conectar con ia.rest. Comprueba tu conexión a internet.')
+  }
+
+  btn.disabled = false
+  btn.textContent = 'Verificar referencia →'
+})
+
+$('tokenInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') $('btnVerifyToken').click()
+})
+
+// ── PASO 1: Escaneo de red ───────────────────────────────────
+function startScan() {
+  const bar   = $('scanBar')
+  const label = $('scanLabel')
+  const list  = $('printerList')
+
+  list.innerHTML = ''
+  list.classList.add('hidden')
+  $('scanDoneActions').classList.add('hidden')
+  $('manualIPForm').classList.add('hidden')
+
+  const foundIPs = []
+
+  const es = new EventSource('/api/scan')
+
+  es.onmessage = (e) => {
+    const d = JSON.parse(e.data)
+
+    if (d.type === 'start') {
+      label.textContent = `Escaneando ${d.subnet}.1 – ${d.subnet}.254...`
+    }
+    else if (d.type === 'progress') {
+      const pct = Math.round((d.checked / 254) * 100)
+      bar.style.width = pct + '%'
+      label.textContent = `Escaneando... ${pct}%  ${d.found > 0 ? `· ${d.found} encontrada${d.found>1?'s':''}` : ''}`
+    }
+    else if (d.type === 'done') {
+      bar.style.width = '100%'
+      es.close()
+
+      if (d.found.length === 0) {
+        label.textContent = 'No se encontraron impresoras en la red.'
+        $('scanDoneActions').classList.remove('hidden')
+        $('btnUsePrinters').classList.add('hidden')
+      } else {
+        label.textContent = `${d.found.length} impresora${d.found.length>1?'s':''} encontrada${d.found.length>1?'s':''}`
+        list.classList.remove('hidden')
+
+        d.found.forEach((p, i) => {
+          foundIPs.push(p)
+          const card = document.createElement('div')
+          card.className = 'printer-card sel'
+          card.dataset.idx = i
+          card.innerHTML = `
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D9442B" stroke-width="2">
+              <polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+              <rect x="6" y="14" width="12" height="8"/>
+            </svg>
+            <div>
+              <div class="printer-ip">${p.ip}</div>
+              <div class="printer-port">Puerto ${p.port}</div>
+            </div>
+          `
+          list.appendChild(card)
+        })
+
+        $('scanDoneActions').classList.remove('hidden')
+        $('btnUsePrinters').classList.remove('hidden')
+
+        $('btnUsePrinters').onclick = () => {
+          state.printers = foundIPs.map((p, i) => ({
+            ip: p.ip, port: p.port,
+            nombre: `Impresora ${i+1}`,
+            seccion_id: ''
+          }))
+          buildConfigStep()
+          setStep(2)
+        }
+      }
+    }
+    else if (d.type === 'error') {
+      es.close()
+      label.textContent = 'Error al escanear: ' + d.error
+    }
+  }
+
+  es.onerror = () => {
+    es.close()
+    label.textContent = 'Error de conexión durante el escaneo.'
+    $('scanDoneActions').classList.remove('hidden')
+  }
+}
+
+// Manual IP
+$('btnManualIP').addEventListener('click', () => {
+  $('manualIPForm').classList.remove('hidden')
+})
+$('btnAddManual').addEventListener('click', () => {
+  const ip   = $('manualIPInput').value.trim()
+  const port = parseInt($('manualPortInput').value) || 9100
+  if (!ip) return
+  state.printers = [{ ip, port, nombre: 'Impresora 1', seccion_id: '' }]
+  buildConfigStep()
+  setStep(2)
+})
+
+// ── PASO 2: Configurar impresoras ────────────────────────────
+function buildConfigStep() {
+  const container = $('printerConfigList')
+  container.innerHTML = ''
+
+  state.printers.forEach((p, i) => {
+    const div = document.createElement('div')
+    div.style.cssText = 'background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;'
+    div.innerHTML = `
+      <div style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg3);">${p.ip}:${p.port}</div>
+      <div style="display:flex;gap:10px;">
+        <div class="field" style="flex:1;">
+          <label>Nombre</label>
+          <input type="text" id="pname${i}" value="${p.nombre}" placeholder="Ej: Cocina caliente" />
+        </div>
+        <div class="field" style="flex:1;">
+          <label>Sección</label>
+          <input type="text" id="psec${i}" value="${p.seccion_id}" placeholder="Ej: calientes" />
+        </div>
+      </div>
+    `
+    container.appendChild(div)
+  })
+}
+
+$('btnTestPrinters').addEventListener('click', () => {
+  state.printers.forEach((p, i) => {
+    p.nombre     = $(`pname${i}`).value.trim() || `Impresora ${i+1}`
+    p.seccion_id = $(`psec${i}`).value.trim()
+  })
+  setStep(3)
+  runTests()
+})
+
+// ── PASO 3: Tests ────────────────────────────────────────────
+const TESTS = [
+  { id: 'internet', label: 'Conexión a internet',       detail: 'Verificando acceso a ia.rest...' },
+  { id: 'tcp',      label: 'Puerto TCP 9100 abierto',   detail: 'Conectando con la impresora...' },
+  { id: 'print',    label: 'Envío de ticket de prueba', detail: 'Mandando ticket ESC/POS...' },
+  { id: 'confirm',  label: 'Confirmación manual',       detail: 'Esperando confirmación...' },
+]
+
+function buildTestList() {
+  const list = $('testList')
+  list.innerHTML = ''
+  TESTS.forEach(t => {
+    const row = document.createElement('div')
+    row.className = 'test-row'
+    row.id = `trow_${t.id}`
+    row.innerHTML = `
+      <div class="test-icon" id="ticon_${t.id}">·</div>
+      <div class="test-info">
+        <div class="test-name">${t.label}</div>
+        <div class="test-detail" id="tdetail_${t.id}">${t.detail}</div>
+      </div>
+    `
+    list.appendChild(row)
+  })
+}
+
+function setTestState(id, state, detail) {
+  const row    = $(`trow_${id}`)
+  const icon   = $(`ticon_${id}`)
+  const dEl    = $(`tdetail_${id}`)
+  row.className = `test-row ${state}`
+  const icons  = { ok: '✓', fail: '✗', active: '●', pending: '·' }
+  icon.textContent = icons[state] || '·'
+  if (detail) dEl.textContent = detail
+}
+
+async function runTests() {
+  buildTestList()
+  $('printConfirm').classList.add('hidden')
+  $('testError').classList.add('hidden')
+
+  const printer = state.printers[0]
+  if (!printer) return
+
+  // Test 1: internet
+  setTestState('internet', 'active', 'Conectando con ia.rest...')
+  try {
+    const r = await fetch('https://www.iarest.es/api/estado')
+    if (r.ok || r.status === 401) {
+      setTestState('internet', 'ok', 'ia.rest accesible ✓')
+    } else {
+      throw new Error(`HTTP ${r.status}`)
+    }
+  } catch (e) {
+    setTestState('internet', 'fail', `Sin conexión: ${e.message}`)
+    showErr('testError', 'No hay conexión con ia.rest. Comprueba el WiFi.')
+    return
+  }
+
+  // Test 2: TCP
+  setTestState('tcp', 'active', `Conectando ${printer.ip}:${printer.port}...`)
+  try {
+    const r = await fetch('/api/test-printer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: printer.ip, port: printer.port, restaurantName: state.restaurantName, tcpOnly: true })
+    })
+    const d = await r.json()
+    if (d.step === 'tcp' && !d.ok) throw new Error(d.error)
+    setTestState('tcp', 'ok', `${printer.ip}:${printer.port} responde ✓`)
+  } catch (e) {
+    setTestState('tcp', 'fail', `No responde: ${e.message}`)
+    showErr('testError', `No se puede conectar a la impresora en ${printer.ip}:${printer.port}. Comprueba el cable y la IP.`)
+    return
+  }
+
+  // Test 3: imprimir
+  setTestState('print', 'active', 'Enviando ticket de prueba...')
+  try {
+    const r = await fetch('/api/test-printer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ip: printer.ip, port: printer.port, restaurantName: state.restaurantName })
+    })
+    const d = await r.json()
+    if (!d.ok) throw new Error(d.error)
+    setTestState('print', 'ok', 'Ticket enviado ✓')
+  } catch (e) {
+    setTestState('print', 'fail', `Error: ${e.message}`)
+    showErr('testError', `El ticket no se pudo enviar: ${e.message}`)
+    return
+  }
+
+  // Test 4: confirmación manual
+  setTestState('confirm', 'active', 'Esperando tu confirmación...')
+  $('printConfirm').classList.remove('hidden')
+
+  $('btnTicketYes').onclick = async () => {
+    $('printConfirm').classList.add('hidden')
+    setTestState('confirm', 'ok', 'Ciclo completo verificado ✓')
+    await registerPrinters()
+    setStep(4)
+  }
+
+  $('btnTicketNo').onclick = () => {
+    $('printConfirm').classList.add('hidden')
+    setTestState('confirm', 'fail', 'Ticket no recibido')
+    showErr('testError', 'El ticket no llegó a la impresora. Comprueba que está encendida, con papel, y en la misma red.')
+  }
+}
+
+// ── Registrar impresoras en ia.rest ─────────────────────────
+async function registerPrinters() {
+  for (const p of state.printers) {
+    try {
+      await fetch('/api/register-printer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: state.token, ...p })
+      })
+    } catch {}
+  }
+}
+
+// ── PASO 4: Instalar servicio ────────────────────────────────
+$('btnInstallService').addEventListener('click', async () => {
+  $('svcRow').className = 'test-row active'
+  $('svcIcon').textContent = '●'
+  $('svcDetail').textContent = 'Instalando...'
+  $('btnInstallService').disabled = true
+
+  try {
+    const r = await fetch('/api/install-service', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: state.token })
+    })
+    const d = await r.json()
+    if (d.ok) {
+      $('svcRow').className = 'test-row ok'
+      $('svcIcon').textContent = '✓'
+      $('svcDetail').textContent = 'Bridge instalado — arranca con Windows ✓'
+      setTimeout(() => showDone(true), 800)
+    } else {
+      throw new Error(d.error)
+    }
+  } catch (e) {
+    $('svcRow').className = 'test-row fail'
+    $('svcIcon').textContent = '✗'
+    $('svcDetail').textContent = 'No se pudo instalar: ' + e.message
+    $('btnInstallService').disabled = false
+  }
+})
+
+$('btnSkipService').addEventListener('click', () => showDone(false))
+
+// ── PASO 5: Listo ────────────────────────────────────────────
+function showDone(withService) {
+  const cnt = state.printers.length
+  $('doneTitle').textContent = `${state.restaurantName || 'Tu restaurante'} está listo.`
+  $('doneSub').textContent = `${cnt} impresora${cnt!==1?'s':''} configurada${cnt!==1?'s':''} · ${withService ? 'Bridge como servicio Windows' : 'Bridge configurado'}`
+  setStep(5)
+}
+
+$('btnOpenPanel').addEventListener('click', () => {
+  window.open('https://www.iarest.es/owner', '_blank')
+})
+</script>
+</body>
+</html>

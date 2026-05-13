@@ -1,0 +1,18 @@
+{
+  "name": "iarest-setup",
+  "version": "1.0.0",
+  "description": "ia.rest · Wizard de instalación",
+  "main": "server.js",
+  "bin": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "build": "npx pkg . --targets node18-win-x64 --output dist/iarest-setup.exe --compress GZip"
+  },
+  "pkg": {
+    "assets": ["public/**/*"],
+    "targets": ["node18-win-x64"]
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
