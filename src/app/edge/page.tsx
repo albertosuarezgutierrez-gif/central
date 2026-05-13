@@ -347,7 +347,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const ultimasComandas = Object.values(
     comandas
-      .filter(c => c.camarero_id === session.id && ['nueva','en_cocina'].includes(c.estado))
+      .filter(c => c.camarero_id === session.id && ['nueva','en_cocina','lista'].includes(c.estado))
       .reduce((acc, c) => {
         // Quedarse con la comanda más reciente por mesa
         if (!acc[c.mesa_id] || c.created_at > acc[c.mesa_id].created_at) acc[c.mesa_id] = c
@@ -520,7 +520,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const startRecording = useCallback(async () => {
     // Permitir grabar desde idle O desde asking (responder pregunta de BRAIN)
-    if (screen !== 'idle' && screen !== 'asking') return
+    // Si screen === 'sent', el camarero quiere la siguiente comanda → auto-reset y seguir
+    if (screen === 'sent') {
+      if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+      speakingRef.current = false
+      setBrain(null); setTranscript(''); setError('')
+      setAlertas86([]); setAlertasAlerg([]); setPendingItems([])
+      setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
+      setChipsClarificacion([]); setMesaClarificacion(null)
+      setPedidoCuenta({ loading: false, error: '', factura: null })
+      // continúa sin return — empieza a grabar directamente
+    } else if (screen !== 'idle' && screen !== 'asking') return
     try {
       const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
       chunksRef.current = []
@@ -662,10 +672,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       setError('Sin conexión')
       addMsg('sistema','Sin conexión con el servidor — comanda guardada, se enviará al recuperar WiFi','error')
       setScreen('error')
-      // Circuit breaker: si BRAIN ya procesó una comanda, guardarla para reintento offline
-      // brain tiene: mesa, items, mesa_id (seteado antes del fetch)
+      // Circuit breaker: encolar para reintento offline si BRAIN ya procesó items
+      if (brain && brain.items?.length > 0 && brain.mesa) {
+        const sesHeader = localStorage.getItem('ia_rest_session') ?? ''
+        const mesaObj = mesasPlano.find(m => m.codigo === brain.mesa)
+        if (mesaObj) encolar({
+          mesa_codigo: brain.mesa,
+          mesa_id: mesaObj.id,
+          items: brain.items,
+          sesion_header: sesHeader,
+        })
+      }
     }
-  }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg])
+  }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, loadCuentasNominales, brain, mesasPlano, encolar])
 
   useEffect(() => {
     const dn = (e:KeyboardEvent) => { if(e.code==='Space'&&!e.repeat&&screen==='idle'){e.preventDefault();startRecording()} }
@@ -758,6 +777,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     return () => clearTimeout(t)
   }, [screen])
 
+  // ── Auto-reset sent → idle tras 3s ───────────────────────────────
+  // Permite pulsar PTT para la siguiente comanda sin tocar "Nueva comanda".
+  useEffect(() => {
+    if (screen !== 'sent') return
+    const t = setTimeout(() => setScreen('idle'), 3000)
+    return () => clearTimeout(t)
+  }, [screen])
+
   // ── window.resetPTT para el APK nativo ───────────────────────────
   // Permite al APK forzar vuelta a idle si detecta estado colgado
   useEffect(() => {
@@ -776,7 +803,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // Marchar rápido desde doble-tap en plano
   const marcharRapido = async (mesa: MesaPlano) => {
     const comanda = mesasOcupadas[mesa.id]
-    if (!comanda || !['en_cocina','activa'].includes(comanda.estado ?? '')) return
+    if (!comanda || !['en_cocina','nueva','lista'].includes(comanda.estado ?? '')) return
     const items = (comanda.items ?? []).map((it: {nombre:string;cantidad:number}) => ({
       nombre: it.nombre, cantidad: it.cantidad,
     }))
