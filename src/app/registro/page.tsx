@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
+import { copyToClipboard } from '@/lib/clipboard'
 
 const SUPABASE_URL      = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -97,7 +98,10 @@ export default function RegistroPage() {
 
   function copiar() {
     if (!created) return
-    navigator.clipboard.writeText(created.pin_owner).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000) })
+    copyToClipboard(created.pin_owner).then(() => {
+      setCopied(true)
+      setTimeout(() => setCopied(false), 2000)
+    })
   }
 
   async function aceptarContrato() {

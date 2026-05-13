@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { copyToClipboard } from '@/lib/clipboard'
 import { supabase } from '@/lib/supabase'
 import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
 import FueraCartaSection from '@/components/owner/FueraCartaSection'
@@ -4503,6 +4504,7 @@ function QRTabOwner({ restauranteId, sh }: { restauranteId: string; sh: () => Re
   const [saving, setSaving] = useState<string|null>(null)
   const [editPrecio, setEditPrecio] = useState<Record<string,string>>({})
   const [editConcepto, setEditConcepto] = useState<Record<string,string>>({})
+  const [copiadoQR, setCopiadoQR] = useState<string|null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -4626,9 +4628,14 @@ function QRTabOwner({ restauranteId, sh }: { restauranteId: string; sh: () => Re
                   {mesa.qr_token && (
                     <div style={{ background: C.paper2, borderRadius: 9, padding: '9px 13px', border: `1px solid ${C.rule}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>iarest.es/q/{mesa.qr_token.slice(0, 12)}...</span>
-                      <button onClick={() => { navigator.clipboard.writeText(`https://www.iarest.es/q/${mesa.qr_token}`); }}
-                        style={{ padding: '4px 10px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink3, fontFamily: SN, fontSize: 11, cursor: 'pointer' }}>
-                        Copiar URL
+                      <button onClick={() => {
+                        copyToClipboard(`https://www.iarest.es/q/${mesa.qr_token}`).then(() => {
+                          setCopiadoQR(mesa.id)
+                          setTimeout(() => setCopiadoQR(null), 2000)
+                        })
+                      }}
+                        style={{ padding: '4px 10px', background: copiadoQR === mesa.id ? C.green : 'transparent', border: `1px solid ${copiadoQR === mesa.id ? C.green : C.rule}`, borderRadius: 6, color: copiadoQR === mesa.id ? '#fff' : C.ink3, fontFamily: SN, fontSize: 11, cursor: 'pointer', transition: 'all .2s' }}>
+                        {copiadoQR === mesa.id ? '¡Copiado!' : 'Copiar URL'}
                       </button>
                     </div>
                   )}

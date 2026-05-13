@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [main]
+
+# Cancelar runs anteriores del mismo branch si llega uno nuevo
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Lint · TypeCheck · Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── 1. ESLint ──────────────────────────────────────────────────────────
+      - name: Lint
+        run: npm run lint
+
+      # ── 2. TypeScript ──────────────────────────────────────────────────────
+      - name: TypeScript check
+        run: npx tsc --noEmit
+
+      # ── 3. Build ───────────────────────────────────────────────────────────
+      # Usamos vars dummy para que next build no falle por falta de env.
+      # El objetivo es verificar que el código compila, no que funciona en runtime.
+      - name: Build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://efncqyvhniaxsirhdxaa.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ci_dummy_key_build_check_only
+          SUPABASE_SERVICE_ROLE_KEY: ci_dummy_service_role_key
+          NEXTAUTH_SECRET: ci_dummy_secret
+          NEXTAUTH_URL: https://www.iarest.es
+        run: npm run build
+
+  # ── Aviso en PR hacia main ──────────────────────────────────────────────────
+  # Si el CI pasa, Claude puede hacer merge dev→main con seguridad
+  ready-to-merge:
+    name: Ready to merge
+    needs: check
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - name: CI passed ✓
+        run: echo "Lint + TypeCheck + Build OK — safe to merge to main"

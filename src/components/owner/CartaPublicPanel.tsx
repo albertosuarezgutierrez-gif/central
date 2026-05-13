@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { copyToClipboard } from '@/lib/clipboard'
 
 // ─── Design tokens ────────────────────────────────────────────
 const C = {
@@ -120,7 +121,7 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
   const openPDF = () => rest && window.open(`/carta/${rest.slug}?imprimir=1`, '_blank')
 
   const copyUrl = async () => {
-    await navigator.clipboard.writeText(cartaUrl).catch(() => {})
+    await copyToClipboard(cartaUrl)
     setCopied(true)
     setTimeout(() => setCopied(false), 2200)
   }
