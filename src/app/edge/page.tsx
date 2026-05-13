@@ -1144,8 +1144,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         </div>
       )}
 
-      {/* ── HEADER ──────────────────────────────────────────────── */}
-      <div style={{padding:'10px 16px',borderBottom:`1px solid ${C.rule}`,background:C.bg1,flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:'0 1px 0 rgba(26,23,20,.06)'}}>
+      {/* ── HEADER ─── oculto en tab Manual (tiene su propio header) ── */}
+      {tab !== 'manual' && <div style={{padding:'10px 16px',borderBottom:`1px solid ${C.rule}`,background:C.bg1,flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:'0 1px 0 rgba(26,23,20,.06)'}}>
         <div style={{fontFamily:SE,fontStyle:'italic',fontSize:21,color:C.verm,letterSpacing:'-.4px',lineHeight:1}}>ia.rest</div>
         <div style={{display:'flex',alignItems:'center',gap:6}}>
           {(isListening||isProcessing) && (
@@ -1169,7 +1169,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </a>
         </div>
-      </div>
+      </div>}
 
       {/* FUERA DE CARTA — pill visible solo cuando hay especiales */}
       <FueraCartaPill restauranteId={session.restaurante_id} />
@@ -1856,7 +1856,7 @@ function ForceUpdateRow() {
 }
 
 function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZonasAsignadas,zonasDisponibles,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThreshold,onAutoThreshold,ttsOff,onTtsOff,onLogout}:{
-  session:{id:string;nombre:string;rol:string}
+  session:{id:string;restaurante_id:string;nombre:string;rol:string}
   tabsVisibles:Tab[];    onTabsVisibles:(v:Tab[])=>void
   voiceConfirm:boolean; onVoiceConfirm:(v:boolean)=>void
   zonasAsignadas:string[]; onZonasAsignadas:(v:string[])=>void; zonasDisponibles?:ZonaInfo[]
