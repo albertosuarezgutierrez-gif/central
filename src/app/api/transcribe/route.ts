@@ -5,6 +5,11 @@ import { crearPrintJobs } from '@/lib/courier'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
 
+// ── Cache de idempotencia en memoria (dura hasta redeploy) ──────────────
+// Protege contra peticiones duplicadas que lleguen en rafaga (red lenta + reintento)
+const recentRecordings = new Map<string, { ts: number; result: object }>()
+const IDEMPOTENCY_TTL_MS = 30_000 // 30s
+
 export async function POST(req: NextRequest) {
   const start = Date.now()
   try {
@@ -12,10 +17,23 @@ export async function POST(req: NextRequest) {
     const audio = formData.get('audio') as Blob
     const camareroId = formData.get('camarero_id') as string
     const turnoId = formData.get('turno_id') as string
+    const recordingId = formData.get('recording_id') as string | null  // idempotency key
     const pendingItemsRaw = formData.get('pending_items') as string | null  // flujo conversacional
-    const pendingContext  = formData.get('pending_context') as string | null  // flujo clarificación
+    const pendingContext  = formData.get('pending_context') as string | null  // flujo clarificacion
     if (!audio || !camareroId || !turnoId)
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
+
+    // ── Idempotencia: si ya procesamos esta grabacion, devolver resultado cacheado ──
+    if (recordingId) {
+      const cached = recentRecordings.get(recordingId)
+      if (cached && Date.now() - cached.ts < IDEMPOTENCY_TTL_MS) {
+        return NextResponse.json(cached.result)
+      }
+      // Limpiar entradas viejas
+      for (const [k, v] of recentRecordings) {
+        if (Date.now() - v.ts > IDEMPOTENCY_TTL_MS) recentRecordings.delete(k)
+      }
+    }
 
     const supabase = createServerClient()
     const rid = getRestauranteId(req)
@@ -379,7 +397,10 @@ export async function POST(req: NextRequest) {
       await supabase.from('alergeno_confirmaciones').insert(logs)
     }
 
-    return NextResponse.json({ ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, latencia_brain_ms: brainResult.latencia_brain_ms, comanda_id: comandaId, mesa_id: mesa?.id ?? null, nombre_cuenta: nombreCuentaUsada, alertas_86: alertas86, alertas_alergenos: alertasAlergenos })
+    const okResult = { ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, latencia_brain_ms: brainResult.latencia_brain_ms, comanda_id: comandaId, mesa_id: mesa?.id ?? null, nombre_cuenta: nombreCuentaUsada, alertas_86: alertas86, alertas_alergenos: alertasAlergenos }
+    // Cachear resultado para idempotencia (si vuelve la misma recording_id, devuelve esto)
+    if (recordingId) recentRecordings.set(recordingId, { ts: Date.now(), result: okResult })
+    return NextResponse.json(okResult)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || (err as { status?: number })?.status === 401

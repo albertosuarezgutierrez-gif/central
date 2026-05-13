@@ -472,17 +472,22 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     return () => { speakingRef.current = false }
   }, [screen, brain]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const mediaRef    = useRef<MediaRecorder|null>(null)
-  const chunksRef   = useRef<Blob[]>([])
+  const mediaRef     = useRef<MediaRecorder|null>(null)
+  const chunksRef    = useRef<Blob[]>([])
   const recordingRef = useRef(false)
   // screenRef: espejo síncrono de `screen` para guards en callbacks sin stale closures
   const screenRef    = useRef<Screen>('idle')
-  // processingRef: mutex para evitar doble fetch concurrente
+  // processingRef: mutex para evitar doble fetch concurrente (legacy, sustituido por fetchInFlightRef)
   const processingRef = useRef(false)
   const silenceTimerRef  = useRef<ReturnType<typeof setTimeout>|null>(null)
   const analyserRef      = useRef<AnalyserNode|null>(null)
   const audioCtxRef      = useRef<AudioContext|null>(null)
   const vadFrameRef      = useRef<number|null>(null)
+  // ── Anti-duplicado: lock global + cooldown + duración mínima ────────
+  const fetchInFlightRef  = useRef(false)           // bloquea si hay fetch activo
+  const cooldownRef       = useRef(false)            // 1.5s tras stop antes de nuevo start
+  const recordStartRef    = useRef(0)                // timestamp inicio grabación
+  const recordingIdRef    = useRef('')               // idempotency key por grabación
 
   // ── Auriculares 3.5mm — PTT por botón de cable ──────────────────
   const silentAudioRef       = useRef<HTMLAudioElement|null>(null)
@@ -511,6 +516,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }, [])
 
   const startRecording = useCallback(async () => {
+    // Bloquear si hay fetch activo (anti-duplicado principal)
+    if (fetchInFlightRef.current) return
+    // Bloquear durante cooldown post-grab (evita doble-tap accidental)
+    if (cooldownRef.current) return
     // Guard via screenRef (síncrono) — evita stale closures cuando el PTT llega muy rápido
     const cur = screenRef.current
     // Permitir grabar desde idle O desde asking (responder pregunta de BRAIN)
@@ -528,6 +537,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     // Lock extra: evitar doble MediaRecorder si el PTT llega antes de que React actualice
     if (recordingRef.current) return
     try {
+      // Generar ID único por grabación (idempotencia servidor)
+      recordingIdRef.current = crypto.randomUUID()
+      recordStartRef.current = Date.now()
       const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
       chunksRef.current = []
       const mr = new MediaRecorder(stream, {mimeType:'audio/webm;codecs=opus'})
@@ -584,6 +596,26 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (!recordingRef.current || !mediaRef.current) return
     // Mutex: evitar doble fetch si stopRecording se llama dos veces casi simultáneamente
     if (processingRef.current) return
+
+    // ── Duración mínima 600ms — evita blobs de ruido por tap accidental ──
+    const durMs = Date.now() - recordStartRef.current
+    if (durMs < 600) {
+      recordingRef.current = false
+      const mr = mediaRef.current
+      mr.onstop = () => {}; mr.stop()
+      mr.stream.getTracks().forEach(t => t.stop())
+      chunksRef.current = []
+      // Limpiar VAD
+      if (vadFrameRef.current) { clearTimeout(vadFrameRef.current); vadFrameRef.current = null }
+      if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null }
+      if (audioCtxRef.current) { try { audioCtxRef.current.close() } catch {} audioCtxRef.current = null }
+      analyserRef.current = null
+      setScreenSafe('idle')
+      cooldownRef.current = true
+      setTimeout(() => { cooldownRef.current = false }, 500)
+      return
+    }
+
     processingRef.current = true
     recordingRef.current = false; setScreenSafe('processing')
     // Limpiar VAD
@@ -600,14 +632,21 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     mr.stream.getTracks().forEach(t=>t.stop())
     if (!chunksRef.current.length) { processingRef.current = false; setScreenSafe('idle'); return }
 
+    // ── Cooldown 1.5s — impide nueva grabación mientras procesa ─────────
+    cooldownRef.current = true
+    setTimeout(() => { cooldownRef.current = false }, 1500)
+
     const blob = new Blob(chunksRef.current, {type:'audio/webm'})
     const fd   = new FormData()
     fd.append('audio', blob, 'audio.webm')
     fd.append('camarero_id', session.id)
     fd.append('turno_id', turnoId||'demo')
+    fd.append('recording_id', recordingIdRef.current)  // idempotency key
     if (pendingItems.length > 0) fd.append('pending_items', JSON.stringify(pendingItems))
     if (clarificacionCtx)        fd.append('pending_context', clarificacionCtx)
 
+    // ── Lock global: bloquea cualquier nuevo fetch hasta terminar ────────
+    fetchInFlightRef.current = true
     try {
       const r = await fetch('/api/transcribe', {method:'POST', body:fd})
       const d = await r.json()
@@ -742,6 +781,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           sesion_header: sesHeader,
         })
       }
+    } finally {
+      // ── Siempre liberar el lock, pase lo que pase ───────────────────
+      fetchInFlightRef.current = false
     }
     processingRef.current = false
   }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, brain, mesasPlano, encolar, setScreenSafe])
