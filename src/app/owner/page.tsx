@@ -11,6 +11,7 @@ import SupervisorTab from '@/components/owner/SupervisorTab'
 import DiagnosticoTab from '@/components/owner/DiagnosticoTab'
 import SoporteTab from '@/components/owner/SoporteTab'
 import MensajesOwnerTab from '@/components/owner/MensajesOwnerTab'
+import FichajesTab from '@/components/owner/FichajesTab'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -5513,6 +5514,7 @@ const GRUPOS = [
       { id: 'facturas',       label: 'Facturas',       icon: ICONS.receipt       }, // consulta periódica (contabilidad)
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
       { id: 'mensajes',       label: 'Mensajes',       icon: ICONS.users         }, // auditoría de chat entre roles
+      { id: 'fichajes',       label: 'Fichajes',       icon: ICONS.clock         }, // registro jornada RD-ley 8/2019
     ]
   },
 ]
@@ -6240,6 +6242,7 @@ export default function OwnerPage() {
           {tab === 'notificaciones' && <NotificacionesTab/>}
           {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
           {tab === 'mensajes'       && <MensajesOwnerTab sh={sh} />}
+          {tab === 'fichajes'       && <FichajesTab/>}
           {tab === 'restaurante'    && <RestauranteTab/>}
           {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
         </div>

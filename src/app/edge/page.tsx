@@ -16,6 +16,7 @@ import ComandaModModal, { ItemMod } from '@/components/ComandaModModal'
 import ComensalesModal from '@/components/edge/ComensalesModal'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import { useMensajes } from '@/hooks/useMensajes'
+import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -1807,9 +1808,13 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
             right={<button onClick={onInstall} style={{background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:8,padding:'6px 12px',fontSize:12,fontWeight:600,color:C.ink3,cursor:'pointer'}}>Instalar</button>}/>
         )}
         <div style={{paddingTop:20,paddingBottom:32}}>
-          <button onClick={onLogout} style={{width:'100%',padding:13,background:'transparent',border:`1px solid ${C.verm}44`,borderRadius:10,fontFamily:SN,fontSize:13,fontWeight:600,color:C.verm,cursor:'pointer'}}>
-            Cerrar sesión
-          </button>
+          {/* Fichaje */}
+          <FicharSalidaBtn session={session} />
+          <div style={{marginTop:10}}>
+            <button onClick={onLogout} style={{width:'100%',padding:13,background:'transparent',border:`1px solid ${C.verm}44`,borderRadius:10,fontFamily:SN,fontSize:13,fontWeight:600,color:C.verm,cursor:'pointer'}}>
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </div>
     </div>

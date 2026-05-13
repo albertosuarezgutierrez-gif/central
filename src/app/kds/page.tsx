@@ -6,6 +6,7 @@ import { Comanda } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { useMensajes } from '@/hooks/useMensajes'
+import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 
 const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
 const SE="'Newsreader',Georgia,serif"
@@ -474,7 +475,28 @@ function KDSInner() {
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
           </a>
           <button
-            onClick={() => { localStorage.removeItem('ia_rest_session'); localStorage.removeItem('ia_kds_token'); window.location.href = '/login' }}
+            onClick={() => {
+              const sesStr = localStorage.getItem('ia_rest_session')
+              if (sesStr) {
+                fetch('/api/turnos/activo', { headers: { 'x-ia-session': sesStr } })
+                  .then(r => r.json())
+                  .then(d => {
+                    if (d.turno) {
+                      const ok = window.confirm('¿Fichar salida antes de cerrar sesión?')
+                      if (ok) {
+                        fetch('/api/turnos/fichar', { method: 'DELETE', headers: { 'x-ia-session': sesStr } })
+                          .finally(() => { localStorage.removeItem('ia_rest_session'); localStorage.removeItem('ia_kds_token'); window.location.href = '/login' })
+                      } else {
+                        localStorage.removeItem('ia_rest_session'); localStorage.removeItem('ia_kds_token'); window.location.href = '/login'
+                      }
+                    } else {
+                      localStorage.removeItem('ia_rest_session'); localStorage.removeItem('ia_kds_token'); window.location.href = '/login'
+                    }
+                  })
+              } else {
+                window.location.href = '/login'
+              }
+            }}
             title="Salir"
             style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', border:`1px solid ${K.rule}`, borderRadius:6, color:K.fg3, fontSize:13, flexShrink:0 }}
           >

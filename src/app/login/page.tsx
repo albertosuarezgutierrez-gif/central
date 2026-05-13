@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { storeRestauranteCode } from '@/hooks/useAuth'
+import FicharEntradaModal from '@/components/FicharEntradaModal'
 
 const C = { bg:'#F6F1E7', e1:'#FBF8F1', e2:'#EFE7D6', fg:'#1A1714', fg3:'#6B5F52', rule:'#D8CDB6', rS:'#B8A98B', red:'#D9442B', teal:'#2B6A6E', green:'#3F7D44' }
 const SE = "'Newsreader',Georgia,serif"
@@ -61,6 +62,8 @@ export default function LoginPage() {
   const [checkoutSuccess, setCheckoutSuccess] = useState(false)
   const [tokenLocked, setTokenLocked] = useState(false) // llegó por ?t= → no puede cambiar restaurante
   const [tokenError, setTokenError] = useState('')
+  // Modal de fichaje de entrada
+  const [fichajeSession, setFichajeSession] = useState<{ id: string; restaurante_id: string; nombre: string; rol: string } | null>(null)
 
   useEffect(() => {
     setRestauranteCode(detectRestauranteCode())
@@ -121,6 +124,10 @@ export default function LoginPage() {
         // Owner nuevo → guía de onboarding
         if (d.camarero.rol === 'owner' && d.camarero.onboarding_completado !== true) {
           window.location.href = '/onboarding'
+        } else if (['camarero','cocina','jefe_sala','running'].includes(d.camarero.rol)) {
+          // Roles de trabajo → mostrar modal de fichaje antes de entrar
+          setFichajeSession(d.camarero)
+          setLoading(false)
         } else {
           navigateByRol(d.camarero)
         }
@@ -227,6 +234,7 @@ export default function LoginPage() {
   }
 
   return (
+    <>
     <div style={{ minHeight:'100dvh', background:C.bg, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'24px 24px 48px', userSelect:'none' }}>
       {/* Banner bienvenida post-checkout */}
       {checkoutSuccess && (
@@ -385,5 +393,23 @@ export default function LoginPage() {
         </>
       )}
     </div>
+
+    {/* Modal de fichaje de entrada */}
+    {fichajeSession && (
+      <FicharEntradaModal
+        session={fichajeSession}
+        onFichado={(_turnoId) => {
+          const s = fichajeSession
+          setFichajeSession(null)
+          navigateByRol(s)
+        }}
+        onSaltar={() => {
+          const s = fichajeSession
+          setFichajeSession(null)
+          navigateByRol(s)
+        }}
+      />
+    )}
+    </>
   )
 }
