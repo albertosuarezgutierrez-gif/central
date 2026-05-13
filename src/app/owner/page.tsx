@@ -10,6 +10,7 @@ import FueraCartaSection from '@/components/owner/FueraCartaSection'
 import SupervisorTab from '@/components/owner/SupervisorTab'
 import DiagnosticoTab from '@/components/owner/DiagnosticoTab'
 import SoporteTab from '@/components/owner/SoporteTab'
+import MensajesOwnerTab from '@/components/owner/MensajesOwnerTab'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -5453,6 +5454,7 @@ const GRUPOS = [
       { id: 'soporte',        label: 'Soporte',        icon: ICONS.phone         }, // chat con IA de soporte
       { id: 'facturas',       label: 'Facturas',       icon: ICONS.receipt       }, // consulta periódica (contabilidad)
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
+      { id: 'mensajes',       label: 'Mensajes',       icon: ICONS.users         }, // auditoría de chat entre roles
     ]
   },
 ]
@@ -6119,6 +6121,7 @@ export default function OwnerPage() {
           {tab === 'flujos'         && <FlujoTab/>}
           {tab === 'notificaciones' && <NotificacionesTab/>}
           {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
+          {tab === 'mensajes'       && <MensajesOwnerTab sh={sh} />}
           {tab === 'restaurante'    && <RestauranteTab/>}
           {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
         </div>

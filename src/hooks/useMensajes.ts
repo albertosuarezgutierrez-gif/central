@@ -21,10 +21,13 @@ export function useMensajes(
   camareroId: string,
   rolActual: string,
   turnoId?: string | null,
+  onMensajeNuevo?: (m: Mensaje) => void,
 ) {
   const [mensajes, setMensajes]     = useState<Mensaje[]>([])
   const [noLeidos, setNoLeidos]     = useState(0)
   const sesRef = useRef('')
+  const onNuevoRef = useRef(onMensajeNuevo)
+  onNuevoRef.current = onMensajeNuevo
 
   // Carga inicial — sin filtro de turnoId para que los mensajes de KDS
   // (que no tienen turnoId) también aparezcan. Scoping por restaurante_id es suficiente.
@@ -60,11 +63,20 @@ export function useMensajes(
         table: 'mensajes_turno',
         filter: `restaurante_id=eq.${restauranteId}`,
       }, (payload: any) => {
+        const nuevo = payload.new as Mensaje
         setMensajes(prev => {
           // Evitar duplicados (el sender ya tiene el mensaje en estado local)
-          if (prev.some(m => m.id === payload.new.id)) return prev
-          return [...prev, payload.new as Mensaje]
+          if (prev.some(m => m.id === nuevo.id)) return prev
+          return [...prev, nuevo]
         })
+        // Disparar callback solo si el mensaje NO es mío y va dirigido a mí
+        const esMio = nuevo.camarero_id === camareroId
+        const esPaMi = nuevo.rol_destino === 'todos'
+          || nuevo.rol_destino === rolActual
+          || nuevo.destinatario_id === camareroId
+        if (!esMio && esPaMi) {
+          onNuevoRef.current?.(nuevo)
+        }
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }

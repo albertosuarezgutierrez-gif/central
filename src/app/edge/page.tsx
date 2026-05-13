@@ -191,6 +191,11 @@ function EdgeChatTab({ session, mensajes, marcarMensajeLeido, chatTexto, setChat
               <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginTop: 2, paddingRight: esMio ? 4 : 0, paddingLeft: esMio ? 0 : 4 }}>
                 {new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                 {esMio && m.rol_destino !== 'todos' && <span style={{ color: C.ink4 }}> · para {rolLabel(m.rol_destino)}</span>}
+                {esMio && (
+                  <span style={{ marginLeft: 4, color: (m.leido_por ?? []).filter(id => id !== session.id).length > 0 ? '#4FC3F7' : C.ink4 }}>
+                    {(m.leido_por ?? []).filter(id => id !== session.id).length > 0 ? '✓✓' : '✓'}
+                  </span>
+                )}
               </span>
             </div>
           )
@@ -327,8 +332,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const productos86                        = useProductos86(turnoId??undefined)
   const { comandas }                       = useComandas(turnoId??undefined)
   const servicioPendiente                  = useServicioPendiente(session.restaurante_id)
+  const handleMensajeNuevo = useCallback((m: import('@/hooks/useMensajes').Mensaje) => {
+    if (ttsOff) return
+    const quien = m.nombre_origen ?? m.rol_origen
+    speak(`Mensaje de ${quien}: ${m.texto}`)
+  }, [ttsOff])
+
   const { mensajes, noLeidos, enviar: enviarMensaje, marcarLeido: marcarMensajeLeido } =
-    useMensajes(session.restaurante_id, session.id, session.rol, turnoId)
+    useMensajes(session.restaurante_id, session.id, session.rol, turnoId, handleMensajeNuevo)
   const [chatTexto, setChatTexto]          = useState('')
   const [chatDestino, setChatDestino]      = useState<'todos'|'cocina'|'camarero'|'jefe_sala'>('todos')
   const chatEndRef                         = useRef<HTMLDivElement>(null)

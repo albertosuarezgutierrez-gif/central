@@ -226,6 +226,7 @@ function KDSInner() {
   const [chatAbierto, setChatAbierto] = useState(false)
   const [chatTexto, setChatTexto] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
+  const [bannerMensaje, setBannerMensaje] = useState<{ texto: string; origen: string } | null>(null)
   const prevCountRef = useRef(0)
   // Map zona_id → nombre del running que la cubre (para preview en botón MARCHAR)
   const [runningPorZona, setRunningPorZona] = useState<Record<string, string>>({})
@@ -378,9 +379,13 @@ function KDSInner() {
   const colorSeccion = seccionActiva?.color_kds ?? K.gr
   const esAdmin = session?.rol === 'jefe_sala' || session?.rol === 'super_admin'
 
+  const handleMensajeNuevoKds = useCallback((m: import('@/hooks/useMensajes').Mensaje) => {
+    setBannerMensaje({ texto: m.texto, origen: m.nombre_origen ?? m.rol_origen })
+  }, [])
+
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { mensajes, noLeidos, enviar: enviarMensaje, marcarLeido: marcarMensajeLeido } =
-    useMensajes(session?.restaurante_id ?? '', session?.id ?? '', session?.rol ?? 'cocina')
+    useMensajes(session?.restaurante_id ?? '', session?.id ?? '', session?.rol ?? 'cocina', undefined, handleMensajeNuevoKds)
 
   if (checking || !session) return <div style={{ minHeight: '100dvh', background: K.bg }} />
 
@@ -775,6 +780,50 @@ function KDSInner() {
         session={session}
         onConfirmed={handleVozConfirmada}
       />
+
+
+      {/* ══ BANNER MENSAJE BLOQUEANTE ══════════ */}
+      {bannerMensaje && (
+        <div style={{
+          position: 'fixed', inset: 0, zIndex: 9999,
+          background: 'rgba(0,0,0,0.75)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          padding: 24,
+        }}>
+          <div style={{
+            background: '#1F1A15', border: `2px solid ${K.amb}`,
+            borderRadius: 16, padding: '32px 28px', maxWidth: 480, width: '100%',
+            boxShadow: `0 0 40px ${K.amb}44`,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+              <span style={{ fontSize: 22 }}>📢</span>
+              <span style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 13, fontWeight: 700,
+                color: K.amb, letterSpacing: 1, textTransform: 'uppercase' }}>
+                Mensaje de sala
+              </span>
+            </div>
+            <div style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 13, color: K.fg3,
+              marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              {bannerMensaje.origen}
+            </div>
+            <div style={{ fontFamily: 'Newsreader, Georgia, serif', fontSize: 26,
+              fontStyle: 'italic', color: K.fg, lineHeight: 1.3, marginBottom: 28 }}>
+              &ldquo;{bannerMensaje.texto}&rdquo;
+            </div>
+            <button
+              onClick={() => setBannerMensaje(null)}
+              style={{
+                width: '100%', padding: '14px 0',
+                background: K.red, border: 'none', borderRadius: 10,
+                fontFamily: 'Inter Tight, sans-serif', fontSize: 16, fontWeight: 700,
+                color: '#fff', cursor: 'pointer', letterSpacing: 0.5,
+              }}
+            >
+              ENTENDIDO
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ══ PANEL CHAT — slide-in desde la derecha ══════════ */}
       {chatAbierto && (
