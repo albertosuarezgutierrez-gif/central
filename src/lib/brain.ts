@@ -182,12 +182,18 @@ export async function parsearComanda(texto: string, restaurante_id?: string): Pr
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 512,
-    system: BASE_PROMPT + zonasContext + menuContext,
-    messages: [{ role: 'user', content: texto }],
-  })
+  // Timeout 20s — si Haiku no responde, lanzar error para que el router maneje
+  const response = await Promise.race([
+    client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 512,
+      system: BASE_PROMPT + zonasContext + menuContext,
+      messages: [{ role: 'user', content: texto }],
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('BRAIN timeout: Haiku no respondió en 20s')), 20_000)
+    )
+  ])
 
   const content = response.content[0]
   if (content.type !== 'text') throw new Error('Respuesta inesperada de BRAIN')

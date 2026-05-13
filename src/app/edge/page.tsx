@@ -489,6 +489,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const recordStartRef    = useRef(0)                // timestamp inicio grabación
   const recordingIdRef    = useRef('')               // idempotency key por grabación
   const pttManualRef      = useRef(false)            // true = usuario mantiene botón pulsado → VAD desactivado
+  const abortFetchRef     = useRef<AbortController|null>(null)  // cancela fetch en vuelo
+  const maxRecTimerRef    = useRef<ReturnType<typeof setTimeout>|null>(null)  // auto-stop 90s
+  const watchdogRef       = useRef<ReturnType<typeof setTimeout>|null>(null)  // watchdog processing
+  const [audioLevel, setAudioLevel] = useState(0)  // nivel RMS visual (0-100)
+  const levelTimerRef     = useRef<ReturnType<typeof setTimeout>|null>(null)
 
   // ── Auriculares 3.5mm — PTT por botón de cable ──────────────────
   const silentAudioRef       = useRef<HTMLAudioElement|null>(null)
@@ -549,7 +554,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       setScreenSafe('recording')
       if (navigator.vibrate) navigator.vibrate(50)
 
-      // ── VAD: auto-stop por silencio (~1.5s sin voz) ──────────────
+      // ── Auto-stop máximo 90s (seguridad — no puede quedar grabando para siempre) ──
+      if (maxRecTimerRef.current) clearTimeout(maxRecTimerRef.current)
+      maxRecTimerRef.current = setTimeout(() => {
+        if (recordingRef.current) stopRecording()
+      }, 90_000)
+
+      // ── VAD + medidor de nivel audio ──────────────────────────────
       try {
         const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
         const analyser = audioCtx.createAnalyser()
@@ -560,29 +571,42 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         analyserRef.current = analyser
         const buf = new Uint8Array(analyser.frequencyBinCount)
         let silentMs = 0
-        const SILENCE_THRESHOLD = 8      // RMS < 8 → silencio
-        const SILENCE_DURATION  = 1500   // 1.5s de silencio → parar
-        const FRAME_INTERVAL    = 80     // muestrear cada 80ms
+        // Umbral adaptativo: medir ruido ambiente en los primeros 400ms
+        let ambientRms = 8  // default conservador
+        let calibrated = false
+        const SILENCE_DURATION  = 2500   // 2.5s — más margen en ambiente ruidoso
+        const FRAME_INTERVAL    = 80
         let lastFrame = Date.now()
+
         const vadLoop = () => {
           if (!recordingRef.current) return
-          // Si el camarero mantiene el botón pulsado → NO auto-stop (él controla con soltar)
+          analyser.getByteTimeDomainData(buf)
+          let sum = 0
+          for (let i = 0; i < buf.length; i++) sum += Math.abs(buf[i] - 128)
+          const rms = sum / buf.length
+
+          // Actualizar medidor visual (escalar RMS 0-30 → 0-100)
+          if (levelTimerRef.current) clearTimeout(levelTimerRef.current)
+          const lvl = Math.min(100, Math.round((rms / 30) * 100))
+          setAudioLevel(lvl)
+          levelTimerRef.current = setTimeout(() => setAudioLevel(0), 150)
+
+          // Si el camarero mantiene el botón pulsado → NO auto-stop
           if (pttManualRef.current) {
             silentMs = 0
             vadFrameRef.current = setTimeout(vadLoop, FRAME_INTERVAL) as unknown as number
             return
           }
-          analyser.getByteTimeDomainData(buf)
-          let sum = 0
-          for (let i = 0; i < buf.length; i++) sum += Math.abs(buf[i] - 128)
-          const rms = sum / buf.length
+
           const now = Date.now()
           const delta = now - lastFrame
           lastFrame = now
+
+          // Umbral adaptativo: threshold = ruido ambiente + margen
+          const SILENCE_THRESHOLD = Math.max(6, ambientRms * 1.4)
           if (rms < SILENCE_THRESHOLD) {
             silentMs += delta
             if (silentMs >= SILENCE_DURATION) {
-              // Silencio sostenido (auricular, no botón) → parar grabación
               if (recordingRef.current) stopRecording()
               return
             }
@@ -591,9 +615,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           }
           vadFrameRef.current = setTimeout(vadLoop, FRAME_INTERVAL) as unknown as number
         }
-        // Empezar VAD después de 400ms para evitar falso-positivo inicial
-        vadFrameRef.current = setTimeout(vadLoop, 400) as unknown as number
-      } catch { /* VAD no disponible, modo normal sin auto-stop */ }
+
+        // Calibrar ruido ambiente en los primeros 400ms antes de activar VAD
+        vadFrameRef.current = setTimeout(() => {
+          analyser.getByteTimeDomainData(buf)
+          let sum = 0
+          for (let i = 0; i < buf.length; i++) sum += Math.abs(buf[i] - 128)
+          ambientRms = sum / buf.length
+          calibrated = true
+          vadLoop()
+        }, 400) as unknown as number
+      } catch { /* VAD no disponible — modo normal sin auto-stop */ }
       // ─────────────────────────────────────────────────────────────
     } catch { setError('Sin acceso al micrófono'); setScreenSafe('error') }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -625,11 +657,22 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
     processingRef.current = true
     recordingRef.current = false; setScreenSafe('processing')
-    // Limpiar VAD
+    // Limpiar timers de grabación
+    if (maxRecTimerRef.current) { clearTimeout(maxRecTimerRef.current); maxRecTimerRef.current = null }
     if (vadFrameRef.current) { clearTimeout(vadFrameRef.current); vadFrameRef.current = null }
     if (silenceTimerRef.current) { clearTimeout(silenceTimerRef.current); silenceTimerRef.current = null }
     if (audioCtxRef.current) { try { audioCtxRef.current.close() } catch {} audioCtxRef.current = null }
-    analyserRef.current = null
+    analyserRef.current = null; setAudioLevel(0)
+    // ── Watchdog: si processing dura más de 35s, forzar reset ───────────────
+    if (watchdogRef.current) clearTimeout(watchdogRef.current)
+    watchdogRef.current = setTimeout(() => {
+      if (screenRef.current === 'processing') {
+        console.warn('[PTT] watchdog: processing timeout → reset')
+        processingRef.current = false; fetchInFlightRef.current = false
+        setError('Tiempo de espera agotado. Inténtalo de nuevo.')
+        setScreenSafe('error')
+      }
+    }, 35_000)
     const mr = mediaRef.current
     // Timeout en onstop: en Android WebView puede no dispararse nunca → PROCESANDO colgado
     await Promise.race([
@@ -654,8 +697,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
     // ── Lock global: bloquea cualquier nuevo fetch hasta terminar ────────
     fetchInFlightRef.current = true
+    const abortCtrl = new AbortController()
+    abortFetchRef.current = abortCtrl
     try {
-      const r = await fetch('/api/transcribe', {method:'POST', body:fd})
+      const r = await fetch('/api/transcribe', {method:'POST', body:fd, signal:abortCtrl.signal})
       const d = await r.json()
       if (d.ok) {
         setTranscript(d.texto); setBrain(d.brain); setLatencia(d.latencia_ms)
@@ -789,10 +834,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         })
       }
     } finally {
-      // ── Siempre liberar el lock, pase lo que pase ───────────────────
+      // ── Siempre liberar todos los locks, pase lo que pase ───────────
       fetchInFlightRef.current = false
+      abortFetchRef.current = null
+      processingRef.current = false
+      if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null }
     }
-    processingRef.current = false
   }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, brain, mesasPlano, encolar, setScreenSafe])
 
   useEffect(() => {
@@ -899,7 +946,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   useEffect(() => {
     if (typeof window === 'undefined') return
     ;(window as any).resetPTT = () => {
+      // Cancelar fetch en vuelo y todos los timers
+      if (abortFetchRef.current) { abortFetchRef.current.abort(); abortFetchRef.current = null }
+      if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null }
+      if (maxRecTimerRef.current) { clearTimeout(maxRecTimerRef.current); maxRecTimerRef.current = null }
       speakingRef.current=false; processingRef.current=false; recordingRef.current=false
+      fetchInFlightRef.current=false; cooldownRef.current=false
+      setAudioLevel(0)
       setScreenSafe('idle'); setBrain(null); setTranscript('')
     }
     return () => { delete (window as any).resetPTT }
@@ -1330,6 +1383,18 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <div style={{position:'relative',width:88,height:88,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <div style={{position:'absolute',width:80,height:80,borderRadius:'50%',border:`1.5px solid ${isListening?C.verm+'60':'#D9442B22'}`,animation:'hout 2s ease-out infinite'}}/>
               <div style={{position:'absolute',width:80,height:80,borderRadius:'50%',border:`1.5px solid ${isListening?C.verm+'60':'#D9442B22'}`,animation:'hout 2s ease-out .7s infinite'}}/>
+              {/* Anillo de nivel de audio — crece con la voz */}
+              {isListening && audioLevel > 10 && (
+                <div style={{
+                  position:'absolute',
+                  width: 76 + audioLevel * 0.5,
+                  height: 76 + audioLevel * 0.5,
+                  borderRadius:'50%',
+                  background:`radial-gradient(circle, ${C.verm}${Math.round(audioLevel * 0.8).toString(16).padStart(2,'0')} 0%, transparent 70%)`,
+                  transition:'width .08s,height .08s',
+                  pointerEvents:'none', zIndex:1,
+                }}/>
+              )}
               <button
                 onPointerDown={e=>{e.preventDefault(); if(!isProcessing){pttManualRef.current=true; activateMediaSession(); startRecording()}}}
                 onPointerUp={e=>{e.preventDefault(); pttManualRef.current=false; stopRecording()}}
@@ -1338,10 +1403,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 style={{width:76,height:76,borderRadius:'50%',
                   background:isListening?C.verm:`linear-gradient(145deg,#E85540,${C.verm})`,
                   border:'none',cursor:isProcessing?'default':'pointer',position:'relative',zIndex:2,
-                  boxShadow:isListening?`0 2px 12px ${C.verm}55`:`0 4px 20px ${C.verm}44`,
+                  boxShadow:isListening?`0 2px 12px ${C.verm}55, 0 0 0 ${Math.round(audioLevel*0.3)}px ${C.verm}33`:`0 4px 20px ${C.verm}44`,
                   display:'flex',alignItems:'center',justifyContent:'center',
-                  transform:isListening?'scale(.91)':'scale(1)',
-                  transition:'all .15s cubic-bezier(.34,1.56,.64,1)',
+                  transform:isListening?`scale(${0.91 + audioLevel*0.001})`:'scale(1)',
+                  transition:'all .08s cubic-bezier(.34,1.56,.64,1)',
                   opacity:isProcessing?.5:1,touchAction:'none',userSelect:'none'}}>
                 <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.95)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="9" y="3" width="6" height="12" rx="3" fill={isListening?'rgba(255,255,255,.95)':'none'}/>
