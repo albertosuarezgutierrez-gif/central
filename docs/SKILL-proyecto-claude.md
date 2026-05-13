@@ -292,7 +292,7 @@ serve(async (req) => {
 ### Pendientes de configuración (no de desarrollo)
 1. `STRIPE_MODE=live` en Vercel env vars
 2. `STRIPE_CLIENT_ID` + `STRIPE_WEBHOOK_SECRET_QR` en Vercel
-3. `ALTER TABLE leads ADD COLUMN consent_rgpd BOOLEAN, consent_at TIMESTAMPTZ, consent_ip TEXT`
+3. ~~`ALTER TABLE leads ADD COLUMN consent_rgpd BOOLEAN, consent_at TIMESTAMPTZ, consent_ip TEXT`~~ ✅ Ejecutado mayo 2026
 4. Email IONOS Mail Basic → `noreply@iarest.es` → configurar en Resend
 
 ### Patrón Supervisor — fuente única owner+jefe_sala
