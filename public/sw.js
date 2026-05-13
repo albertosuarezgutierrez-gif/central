@@ -1,7 +1,7 @@
-// ia.rest · Service Worker v5
+// ia.rest · Service Worker v6
 // Estrategia: HTML siempre network, _next/static cache-first (immutable), push
 
-const STATIC_CACHE = 'iarest-static-v5'
+const STATIC_CACHE = 'iarest-static-v6'
 const OFFLINE_URL = '/offline.html'
 
 // Solo pre-cachear assets estáticos que no cambian entre deploys
