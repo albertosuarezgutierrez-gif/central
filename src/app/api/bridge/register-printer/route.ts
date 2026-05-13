@@ -24,24 +24,51 @@ export async function POST(req: Request) {
 
     if (!ip_address) return NextResponse.json({ error: 'IP requerida' }, { status: 400 })
 
-    // Insertar o actualizar impresora
-    const { data, error } = await supabase
+    // Verificar si ya existe impresora con esa IP en ese restaurante
+    const { data: existing } = await supabase
       .from('impresoras')
-      .upsert({
-        restaurante_id:  bt.restaurante_id,
-        nombre:          nombre || `Impresora ${ip_address}`,
-        ip_address,
-        port:            port || 9100,
-        connection_type: connection_type || 'ip_local',
-        seccion_id:      seccion_id || null,
-        secciones_ids:   seccion_id ? [seccion_id] : [],
-        activa:          true,
-        configurada:     true,
-      }, {
-        onConflict: 'restaurante_id,ip_address',
-      })
       .select('id')
+      .eq('restaurante_id', bt.restaurante_id)
+      .eq('ip_address', ip_address)
       .single()
+
+    let result
+    if (existing) {
+      // Actualizar la existente
+      result = await supabase
+        .from('impresoras')
+        .update({
+          nombre:          nombre || `Impresora ${ip_address}`,
+          port:            port || 9100,
+          connection_type: connection_type || 'ip_local',
+          seccion_id:      seccion_id || null,
+          secciones_ids:   seccion_id ? [seccion_id] : [],
+          activa:          true,
+          configurada:     true,
+        })
+        .eq('id', existing.id)
+        .select('id')
+        .single()
+    } else {
+      // Insertar nueva
+      result = await supabase
+        .from('impresoras')
+        .insert({
+          restaurante_id:  bt.restaurante_id,
+          nombre:          nombre || `Impresora ${ip_address}`,
+          ip_address,
+          port:            port || 9100,
+          connection_type: connection_type || 'ip_local',
+          seccion_id:      seccion_id || null,
+          secciones_ids:   seccion_id ? [seccion_id] : [],
+          activa:          true,
+          configurada:     true,
+        })
+        .select('id')
+        .single()
+    }
+
+    const { data, error } = result
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

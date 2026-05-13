@@ -105,7 +105,7 @@ async function scanForPrinters(onProgress) {
     for (let i = start; i < start + BATCH && i <= 254; i++) {
       const ip = `${subnet}.${i}`
       batch.push(
-        checkTCP(ip, 9100, 1000).then(open => {
+        checkTCP(ip, 9100, 500).then(open => {
           if (open) results.push({ ip, port: 9100 })
           onProgress({ type: 'progress', checked: i, found: results.length })
         })
