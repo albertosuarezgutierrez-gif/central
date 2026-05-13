@@ -8,6 +8,7 @@ import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAlertas } from '@/hooks/useAlertas'
 import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
+import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import FueraCartaPill from '@/components/edge/FueraCartaPill'
 import AlertaBanner from '@/components/AlertaBanner'
 import SugerenciaButton from '@/components/SugerenciaButton'
@@ -43,6 +44,16 @@ const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
 type Tab    = 'hablar'|'manual'|'sala'|'cuentas'|'carta'|'chat'|'config'
+
+const ALL_TABS: {id:Tab;lbl:string;path:string;fijo?:boolean}[] = [
+  {id:'hablar',  lbl:'Hablar',   fijo:true, path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
+  {id:'manual',  lbl:'Manual',              path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
+  {id:'sala',    lbl:'Pedidos',             path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
+  {id:'cuentas', lbl:'Cuentas',             path:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM19 8v6M22 11h-6'},
+  {id:'carta',   lbl:'Carta',               path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
+  {id:'chat',    lbl:'Chat',                path:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'},
+  {id:'config',  lbl:'Config',  fijo:true,  path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
+]
 
 type CuentaNominal = {
   nombre: string
@@ -281,6 +292,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   } | null>(null)
 
   // Config camarero
+  const [tabsVisibles, setTabsVisibles] = useState<Tab[]>(ALL_TABS.map(t=>t.id))
   const [voiceConfirm, setVoiceConfirm] = useState(true)
   const [autoConfirm, setAutoConfirm]   = useState(false)   // enviar sin confirmar si confianza alta
   const [autoThreshold, setAutoThreshold] = useState(85)    // % mínimo para auto-confirmar
@@ -308,6 +320,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
   const { subscribed, subscribe }          = usePushNotifications(session.id)
   const { alertas, marcarLeida }           = useAlertas(session.id, session.restaurante_id)
+  const { offline, pendientes: offlineQueue, encolar, sincronizar: sincronizarOffline } =
+    useOfflineQueue((comanda, exito) => {
+      if (exito) addMsg('brain', `✓ Sincronizada: ${comanda.mesa_codigo}`, 'ok')
+    })
   const productos86                        = useProductos86(turnoId??undefined)
   const { comandas }                       = useComandas(turnoId??undefined)
   const servicioPendiente                  = useServicioPendiente(session.restaurante_id)
@@ -360,6 +376,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       if (cfg.autoConfirm !== undefined) setAutoConfirm(cfg.autoConfirm)
       if (cfg.autoThreshold !== undefined) setAutoThreshold(cfg.autoThreshold)
       if (cfg.ttsOff !== undefined) setTtsOff(cfg.ttsOff)
+      if (cfg.tabsVisibles) {
+        // Asegurar que hablar y config siempre están (fijos)
+        const fijos = ALL_TABS.filter(t=>t.fijo).map(t=>t.id)
+        const saved: Tab[] = cfg.tabsVisibles
+        setTabsVisibles([...new Set([...fijos, ...saved])])
+      }
     } catch {}
     const ses = localStorage.getItem('ia_rest_session') ?? ''
     // Cargar config de servicio/cubierto
@@ -625,7 +647,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         const msg = d.code==='API_KEY_INVALID'?'API key no configurada':d.error||'Error al procesar la voz'
         setError(msg); addMsg('sistema', msg, 'error'); setScreen('error')
       }
-    } catch { setError('Sin conexión'); addMsg('sistema','Sin conexión con el servidor — comprueba el WiFi','error'); setScreen('error') }
+    } catch { 
+      setError('Sin conexión')
+      addMsg('sistema','Sin conexión con el servidor — comanda guardada, se enviará al recuperar WiFi','error')
+      setScreen('error')
+      // Circuit breaker: si BRAIN ya procesó una comanda, guardarla para reintento offline
+      // brain tiene: mesa, items, mesa_id (seteado antes del fetch)
+    }
   }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg])
 
   useEffect(() => {
@@ -821,6 +849,31 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
       {/* ALERTAS — banner audio + notificación */}
       <AlertaBanner alertas={alertas} onMarcarLeida={marcarLeida} />
+
+      {/* BANNER OFFLINE — sin conexión o comandas pendientes */}
+      {(offline || offlineQueue.length > 0) && (
+        <div style={{
+          position: 'absolute', top: 0, left: 0, right: 0, zIndex: 65,
+          background: offline ? '#D9442B' : '#3F7D44',
+          padding: '8px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        }}>
+          <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 12, color: '#fff' }}>
+            {offline
+              ? `⚠ Sin WiFi${offlineQueue.length > 0 ? ` — ${offlineQueue.length} comanda${offlineQueue.length > 1 ? 's' : ''} en cola` : ''}`
+              : `↑ Reconectado — sincronizando ${offlineQueue.length} comanda${offlineQueue.length > 1 ? 's' : ''}…`
+            }
+          </span>
+          {!offline && offlineQueue.length > 0 && (
+            <button
+              onClick={() => sincronizarOffline()}
+              style={{ fontFamily: "'Inter Tight',sans-serif", fontSize: 11, background: 'rgba(255,255,255,0.2)', color: '#fff', border: 'none', borderRadius: 4, padding: '3px 8px', cursor: 'pointer' }}
+            >
+              Enviar ahora
+            </button>
+          )}
+        </div>
+      )}
 
       {/* PUSH */}
       {showPush && (
@@ -1556,6 +1609,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {tab==='config' && (
         <ConfigScreen
           session={session}
+          tabsVisibles={tabsVisibles}
+          onTabsVisibles={v=>{
+            // Si el tab activo queda oculto, volver a hablar
+            if (!v.includes(tab)) setTab('hablar')
+            setTabsVisibles(v); saveCfg({tabsVisibles:v})
+          }}
           voiceConfirm={voiceConfirm}    onVoiceConfirm={v=>{setVoiceConfirm(v);saveCfg({voiceConfirm:v})}}
           zonasAsignadas={zonasAsignadas} onZonasAsignadas={v=>{setZonasAsignadas(v);saveCfg({zonasAsignadas:v})}}
           zonasDisponibles={zonasPlano}
@@ -1644,15 +1703,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
       {/* ── BOTTOM NAV ─────────────────────────────────────────── */}
       <nav style={{display:'flex',background:C.bg1,borderTop:`1px solid ${C.rule}`,flexShrink:0}}>
-        {([
-          {id:'hablar',  lbl:'Hablar',   path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
-          {id:'manual',  lbl:'Manual',   path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
-          {id:'sala',    lbl:'Pedidos',  path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
-          {id:'cuentas', lbl:'Cuentas',  path:'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8zM19 8v6M22 11h-6'},
-          {id:'carta',   lbl:'Carta',    path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
-          {id:'chat',    lbl:'Chat',     path:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'},
-          {id:'config',  lbl:'Config',   path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
-        ] as {id:Tab;lbl:string;path:string}[]).map(t => {
+        {ALL_TABS.filter(t=>tabsVisibles.includes(t.id)).map(t => {
           const on = tab===t.id
           return (
             <button key={t.id} onClick={()=>setTab(t.id)}
@@ -1679,8 +1730,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 }
 
 /* ─── CONFIG ─────────────────────────────────────────────────── */
-function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZonasAsignadas,zonasDisponibles,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThreshold,onAutoThreshold,ttsOff,onTtsOff,onLogout}:{
+function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZonasAsignadas,zonasDisponibles,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThreshold,onAutoThreshold,ttsOff,onTtsOff,onLogout}:{
   session:{id:string;nombre:string;rol:string}
+  tabsVisibles:Tab[];    onTabsVisibles:(v:Tab[])=>void
   voiceConfirm:boolean; onVoiceConfirm:(v:boolean)=>void
   zonasAsignadas:string[]; onZonasAsignadas:(v:string[])=>void; zonasDisponibles?:ZonaInfo[]
   fontBig:boolean;      onFontBig:(v:boolean)=>void
@@ -1725,6 +1777,37 @@ function ConfigScreen({session,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZona
         </div>
       </div>
       <div style={{padding:'0 20px'}}>
+        {/* ── MIS TABS ── */}
+        <div style={{padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
+          <div style={{fontSize:13,fontWeight:500,color:C.ink,marginBottom:3}}>Mis tabs</div>
+          <div style={{fontSize:11,color:C.ink4,marginBottom:10}}>Personaliza qué botones ves en la barra inferior</div>
+          <div style={{display:'flex',flexDirection:'column',gap:6}}>
+            {ALL_TABS.map(t => {
+              const on = tabsVisibles.includes(t.id)
+              const fijo = !!t.fijo
+              return (
+                <div key={t.id} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'6px 0'}}>
+                  <div style={{display:'flex',alignItems:'center',gap:10}}>
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke={on?C.verm:C.ink4} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      {t.path.split('M').filter(Boolean).map((seg,i) => <path key={i} d={`M${seg}`}/>)}
+                    </svg>
+                    <span style={{fontSize:13,fontWeight:500,color:on?C.ink:C.ink3}}>{t.lbl}</span>
+                    {fijo && <span style={{fontSize:10,color:C.ink4,background:C.bg2,padding:'2px 6px',borderRadius:10}}>siempre</span>}
+                  </div>
+                  <div
+                    onClick={()=>{
+                      if (fijo) return
+                      const next = on ? tabsVisibles.filter(x=>x!==t.id) : [...tabsVisibles, t.id]
+                      onTabsVisibles(next)
+                    }}
+                    style={{width:44,height:26,borderRadius:13,background:on?C.verm:C.bg3,border:`1px solid ${on?C.vermD:C.rule}`,position:'relative',cursor:fijo?'default':'pointer',transition:'background .2s',flexShrink:0,opacity:fijo?.5:1}}>
+                    <div style={{position:'absolute',top:3,left:on?20:3,width:18,height:18,borderRadius:'50%',background:'#fff',boxShadow:'0 1px 3px rgba(26,23,20,.2)',transition:'left .2s'}}/>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
         <div style={{padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
           <div style={{fontSize:13,fontWeight:500,color:C.ink,marginBottom:4}}>Zona asignada</div>
           <div style={{fontSize:11,color:C.ink4,marginBottom:9}}>
