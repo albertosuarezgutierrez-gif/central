@@ -173,23 +173,18 @@ export default function ManualComanda({
         }
       `}</style>
 
-      {/* ── HEADER ── */}
-      <div style={{ height:52, padding:'0 14px', borderBottom:`1px solid ${L.rule}`, background:L.bone, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
-        <svg width="22" height="22" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1F1A15"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
-        <span style={{ fontFamily:SE, fontSize:17, fontWeight:500, color:L.ink }}>
-          ia<span style={{color:L.red}}>.</span>rest
-          <span style={{ fontFamily:SN, fontSize:11, color:L.ink3, fontWeight:400, marginLeft:6 }}>
-            {step === 'mesa' ? 'Elige mesa' : `Mesa ${mesaSel?.codigo ?? ''}`}
-          </span>
-        </span>
-
-        {/* breadcrumb mesa → carta */}
+      {/* ── HEADER — solo navegación, sin logo ni usuario (redundantes con nav global) ── */}
+      <div style={{ height:44, padding:'0 14px', borderBottom:`1px solid ${L.rule}`, background:L.bone, display:'flex', alignItems:'center', gap:10, flexShrink:0 }}>
+        {/* Breadcrumb paso */}
         {step === 'carta' && (
           <button onPointerDown={() => setStep('mesa')}
             style={{ fontFamily:SM, fontSize:9, color:L.ink3, background:'none', border:`1px solid ${L.rule}`, borderRadius:3, padding:'3px 8px', cursor:'pointer', letterSpacing:'.06em' }}>
             ← MESAS
           </button>
         )}
+        <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink2 }}>
+          {step === 'mesa' ? 'Elige mesa' : `Mesa ${mesaSel?.codigo ?? ''}`}
+        </span>
 
         <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:8 }}>
           {/* Badge carrito en móvil */}
@@ -198,15 +193,6 @@ export default function ManualComanda({
               style={{ position:'relative', background:L.red, border:'none', borderRadius:999, width:34, height:34, display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer' }}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={L.bone} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
               <span style={{ position:'absolute', top:-4, right:-4, background:L.ink, color:L.bone, borderRadius:999, width:16, height:16, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SM, fontSize:9, fontWeight:700 }}>{totalItems}</span>
-            </button>
-          )}
-          <span style={{ fontFamily:SM, fontSize:10, color:L.ink3 }}>{session.nombre.split(' ')[0]}</span>
-          {/* Switch a voz */}
-          {onVoiceMode && (
-            <button onPointerDown={onVoiceMode}
-              style={{ display:'flex', alignItems:'center', gap:5, background:L.bg2, border:`1px solid ${L.rule}`, borderRadius:4, padding:'5px 10px', cursor:'pointer', fontFamily:SN, fontSize:11, fontWeight:600, color:L.ink3 }}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/></svg>
-              Voz
             </button>
           )}
         </div>
