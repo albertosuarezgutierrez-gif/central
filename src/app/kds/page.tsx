@@ -402,48 +402,37 @@ function KDSInner() {
         @media(min-width:1024px){.kds-grid{grid-template-columns:repeat(3,1fr)!important}}
         @media(min-width:1400px){.kds-grid{grid-template-columns:repeat(4,1fr)!important}}
         .sec-tab{cursor:pointer;padding:4px 10px;border-radius:3px;font-family:${SM};font-size:9px;font-weight:700;letter-spacing:.1em;text-decoration:none;transition:background .15s,color .15s}
+        .kds-view-tab{cursor:pointer;background:none;border:none;border-bottom:2px solid transparent;padding:9px 14px;font-family:${SN};font-size:12px;font-weight:500;color:${K.fg3};letter-spacing:.02em;transition:color .15s,border-color .15s;white-space:nowrap;margin-bottom:-1px}
+        .kds-view-tab.kds-vact{color:${K.fg};font-weight:600;border-bottom-color:${K.red}}
+        .kds-view-tab:hover:not(.kds-vact){color:${K.fg2}}
       `}</style>
 
-      <div style={{ padding:'0 16px', minHeight:52, borderBottom:`1px solid ${K.rule}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:K.c1, flexShrink:0, position:'sticky', top:0, zIndex:10, flexWrap:'wrap', gap:8, paddingTop:6, paddingBottom:6 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:12 }}>
-          <svg width="22" height="22" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1A1714"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
-          <span style={{ fontFamily:SN, fontSize:12, color:vistaProduccion?K.amb:vistaPase?K.gr:K.fg2, fontWeight:500, letterSpacing:'.04em' }}>
-            {vistaProduccion ? 'KDS · PRODUCCIÓN' : vistaPase ? 'KDS · PASE' : ('KDS'+(seccionActiva ? ` · ${seccionActiva.nombre.toUpperCase()}` : ' · TODAS'))}
-          </span>
-          <span style={{ width:6, height:6, borderRadius:999, background:vistaProduccion?K.amb:vistaPase?K.gr:colorSeccion }} />
-        </div>
-
-        {esAdmin && secciones.length > 0 && (
-          <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
-            <a href="/kds" className="sec-tab"
-              style={{ background:!seccionFiltro&&!vistaPase ? '#2F2820' : 'transparent', color:!seccionFiltro&&!vistaPase ? K.fg : K.fg3 }}>
-              TODAS
-            </a>
-            {secciones.map(s => (
-              <a key={s.id} href={`/kds?seccion=${s.id}`} onClick={()=>setVistaPase(false)} className="sec-tab"
-                style={{ background:seccionFiltro===s.id&&!vistaPase ? '#2F2820' : 'transparent', color:seccionFiltro===s.id&&!vistaPase ? s.color_kds : K.fg3 }}>
-                {s.nombre.toUpperCase()}
-              </a>
-            ))}
-            <button onClick={()=>{ setVistaPase(v=>!v); setVistaProduccion(false) }}
-              style={{ cursor:'pointer', padding:'4px 10px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.1em', border:'none',
-                background:vistaPase?K.gr:'transparent', color:vistaPase?'#fff':K.fg3, transition:'background .15s,color .15s' }}>
-              PASE
-            </button>
-            <button onClick={()=>{ setVistaProduccion(v=>!v); setVistaPase(false) }}
-              style={{ cursor:'pointer', padding:'4px 10px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.1em', border:'none',
-                background:vistaProduccion?K.amb:'transparent', color:vistaProduccion?'#1A1714':K.fg3, transition:'background .15s,color .15s' }}>
-              PROD
-            </button>
-            <button onClick={()=>setVistaCompacta(v=>!v)}
-              style={{ cursor:'pointer', padding:'4px 10px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.1em', border:'none',
-                background:vistaCompacta?K.tl:'transparent', color:vistaCompacta?'#fff':K.fg3, transition:'background .15s,color .15s' }}>
-              ≡ COMP
-            </button>
+      {/* ══ HEADER ══ */}
+      <div style={{ background:K.c1, flexShrink:0, position:'sticky', top:0, zIndex:10, borderBottom:`1px solid ${K.rule}` }}>
+        {/* Fila 1: logo + filtros sección + controles */}
+        <div style={{ padding:'6px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', flexWrap:'wrap', gap:8 }}>
+          <div style={{ display:'flex', alignItems:'center', gap:10 }}>
+            <svg width="22" height="22" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1A1714"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
+            <span style={{ fontFamily:SN, fontSize:12, color:K.fg2, fontWeight:600 }}>KDS</span>
+            {/* Filtros de sección — solo en vista Línea */}
+            {esAdmin && secciones.length > 0 && !vistaPase && !vistaProduccion && (
+              <div style={{ display:'flex', gap:4, flexWrap:'wrap' }}>
+                <a href="/kds" className="sec-tab"
+                  style={{ background:!seccionFiltro ? '#2F2820' : 'transparent', color:!seccionFiltro ? K.fg : K.fg3 }}>
+                  TODAS
+                </a>
+                {secciones.map(s => (
+                  <a key={s.id} href={`/kds?seccion=${s.id}`} className="sec-tab"
+                    style={{ background:seccionFiltro===s.id ? '#2F2820' : 'transparent', color:seccionFiltro===s.id ? s.color_kds : K.fg3 }}>
+                    {s.nombre.toUpperCase()}
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
-        )}
-
-        <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          {/* Derecha: controles audio, reloj, chat, etc. */}
+          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          {/* Parte derecha de fila-1: controles de audio, reloj, chat, etc. */}
           <button onClick={()=>setSonidoOn(v=>!v)} title={sonidoOn?'Silenciar':'Activar sonido'}
             style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.08em', border:'none',
               background:sonidoOn?'rgba(43,106,110,.2)':'transparent', color:sonidoOn?K.tl:K.fg3, transition:'background .15s,color .15s' }}>
@@ -489,8 +478,32 @@ function KDSInner() {
           >
             ⏏
           </button>
+          </div>{/* cierra controles */}
+        </div>{/* cierra fila-1 */}
+        {/* Fila 2: tabs de vista — siempre visibles */}
+        <div style={{ display:'flex', alignItems:'center', borderTop:`1px solid ${K.rule}`, paddingLeft:8, overflow:'auto', scrollbarWidth:'none' }}>
+          {(['linea','pase','produccion','compacto'] as const).map(v => {
+            const labels: Record<string,string> = { linea:'Línea', pase:'Pase', produccion:'Producción', compacto:'Compacto' }
+            const active =
+              v==='linea'      ? (!vistaPase && !vistaProduccion && !vistaCompacta) :
+              v==='pase'       ? vistaPase :
+              v==='produccion' ? vistaProduccion :
+                                 (!vistaPase && !vistaProduccion && vistaCompacta)
+            return (
+              <button key={v}
+                className={`kds-view-tab${active?' kds-vact':''}`}
+                onClick={()=>{
+                  if(v==='pase')       { setVistaPase(true);  setVistaProduccion(false); setVistaCompacta(false) }
+                  else if(v==='produccion') { setVistaPase(false); setVistaProduccion(true);  setVistaCompacta(false) }
+                  else if(v==='compacto')   { setVistaPase(false); setVistaProduccion(false); setVistaCompacta(true)  }
+                  else                      { setVistaPase(false); setVistaProduccion(false); setVistaCompacta(false) }
+                }}>
+                {labels[v]}
+              </button>
+            )
+          })}
         </div>
-      </div>
+      </div>{/* cierra header-wrapper */}
 
       <div style={{ flex:1, padding:10, overflowY:'auto' }}>
         {vistaProduccion ? (
