@@ -6,15 +6,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import { createClient } from '@supabase/supabase-js'
 
 export const runtime = 'nodejs'
 
-const adminClient = () =>
-  createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
-  )
+const adminClient = () => createServerClient()
 
 export async function POST(req: NextRequest) {
   const supabase = createServerClient()

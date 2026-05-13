@@ -1,11 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
 
-const sb = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const sb = () => createServerClient()
 
 export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
@@ -98,9 +95,11 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const rid = getRestauranteId(req)
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 })
-  const { error } = await sb().from('impresoras').delete().eq('id', id)
+  // Verificar que la impresora pertenece a este restaurante antes de borrar
+  const { error } = await sb().from('impresoras').delete().eq('id', id).eq('restaurante_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

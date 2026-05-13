@@ -3,12 +3,9 @@
 // Sin autenticación — para la página pública /estado y status.iarest.es (futuro)
 
 import { NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase'
 
-const sb = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const sb = () => createServerClient()
 
 export const revalidate = 60 // caché 60 segundos en Vercel
 

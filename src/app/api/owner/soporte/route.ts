@@ -7,14 +7,11 @@
 // PATCH { ticket_id, estado } → cerrar / escalar ticket
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId, getSession } from '@/lib/session'
 import Anthropic from '@anthropic-ai/sdk'
 
-const sb = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const sb = () => createServerClient()
 
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 

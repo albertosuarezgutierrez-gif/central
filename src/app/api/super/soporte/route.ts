@@ -4,13 +4,10 @@
 // PATCH { ticket_id, estado } — Alberto cierra o reabre un ticket
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 
-const sb = () => createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+const sb = () => createServerClient()
 
 function esSuper(req: NextRequest): boolean {
   const session = getSession(req)
