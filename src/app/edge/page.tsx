@@ -353,7 +353,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         if (!acc[c.mesa_id] || c.created_at > acc[c.mesa_id].created_at) acc[c.mesa_id] = c
         return acc
       }, {} as Record<string, typeof comandas[0]>)
-  ).slice(-4) // máximo 4 mesas activas visibles
+  ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4) // 4 mesas más recientes
 
   // Todas las mesas ocupadas del turno (de cualquier camarero) para el grid
   const mesasOcupadas = comandas
@@ -1681,7 +1681,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             setScreen('sent'); pedirCuenta()
           }}
           onAnadirPorVoz={(id, codigo, _comandaId)=>{
-            setMesaDetalle(null); setTab('hablar')
+            setMesaDetalle(null); setMesaFijada(id); setTab('hablar')
             addMsg('sistema', `Añadiendo a ${codigo}. Mantén PTT.`, 'pregunta')
           }}
           onAbrirMesa={(mesaId, mesaCodigo, cap) => {
