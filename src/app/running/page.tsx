@@ -9,6 +9,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { useMensajes } from '@/hooks/useMensajes'
 
 const C = {
   bg:   '#F6F1E7',
@@ -27,6 +28,7 @@ const C = {
   ambS: '#FDF3DC',
   gr:   '#3F7D44',
   grS:  '#D4E4D2',
+  teal: '#2B6A6E',
 }
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
@@ -252,6 +254,13 @@ export default function RunningPage() {
   const [time, setTime]       = useState(new Date())
   const canalRef = useRef<ReturnType<typeof supabase.channel> | null>(null)
 
+  // Chat entre roles
+  const [chatAbierto, setChatAbierto] = useState(false)
+  const [chatTexto, setChatTexto]     = useState('')
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const { mensajes, noLeidos, enviar: enviarMensajeChat, marcarLeido: marcarMensajeLeido } =
+    useMensajes(session?.restaurante_id ?? '', session?.id ?? '', session?.rol ?? 'running')
+
   const sh = useCallback(() => ({
     'Content-Type': 'application/json',
     'x-ia-session': typeof window !== 'undefined'
@@ -401,6 +410,29 @@ export default function RunningPage() {
           }}>
             Mis zonas
           </button>
+          {/* Botón chat con badge */}
+          <button
+            onClick={() => {
+              setChatAbierto(v => !v)
+              if (!chatAbierto) mensajes.filter(m => !m.leido_por?.includes(session.id)).forEach(m => marcarMensajeLeido(m.id))
+            }}
+            style={{
+              position: 'relative', width: 36, height: 36,
+              background: chatAbierto ? C.verm : C.bg2,
+              border: `1px solid ${chatAbierto ? C.verm : C.rule}`,
+              borderRadius: 8, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}
+          >
+            <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={chatAbierto ? '#fff' : C.ink2} strokeWidth={2}>
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+            </svg>
+            {noLeidos > 0 && !chatAbierto && (
+              <span style={{ position:'absolute', top:-5, right:-5, minWidth:16, height:16, borderRadius:8, background:C.verm, color:'#fff', fontSize:9, fontWeight:700, display:'flex', alignItems:'center', justifyContent:'center', padding:'0 3px' }}>
+                {noLeidos}
+              </span>
+            )}
+          </button>
           <button onClick={logout} style={{
             background: 'none', border: `1px solid ${C.rule}`,
             borderRadius: 6, padding: '6px 10px',
@@ -516,6 +548,112 @@ export default function RunningPage() {
           <span style={{ color: C.rule }}>|</span>
           <span>Solo lectura · sin comandas</span>
         </div>
+
+        {/* Panel Chat lateral */}
+        {chatAbierto && (
+          <div style={{
+            position: 'fixed', top: 0, right: 0, bottom: 0, width: 320, maxWidth: '92vw',
+            background: C.bg1, borderLeft: `1px solid ${C.rule}`, zIndex: 200,
+            display: 'flex', flexDirection: 'column', boxShadow: '-4px 0 20px rgba(0,0,0,.10)',
+          }}>
+            {/* Header */}
+            <div style={{ padding: '14px 16px', borderBottom: `1px solid ${C.rule}`, display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: C.bg }}>
+              <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.ink, letterSpacing: '.05em' }}>MENSAJES DEL TURNO</span>
+              <button onClick={() => setChatAbierto(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink3, fontSize: 18, lineHeight: 1 }}>✕</button>
+            </div>
+
+            {/* Mensajes */}
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {mensajes.length === 0 && (
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontFamily: SE, fontStyle: 'italic', color: C.ink3, fontSize: 14, textAlign: 'center' }}>Sin mensajes aún</span>
+                </div>
+              )}
+              {mensajes.map(m => {
+                const esMio = m.camarero_id === session.id
+                const rolColor = ({ camarero: C.teal, cocina: C.verm, jefe_sala: C.amb, running: C.gr } as Record<string,string>)[m.rol_origen] ?? C.ink3
+                const rolLabel = ({ camarero: 'Sala', cocina: 'Cocina', jefe_sala: 'Jefe', running: 'Running' } as Record<string,string>)[m.rol_origen] ?? m.rol_origen
+                return (
+                  <div key={m.id} style={{ display: 'flex', flexDirection: 'column', alignItems: esMio ? 'flex-end' : 'flex-start' }}>
+                    {!esMio && (
+                      <span style={{ fontFamily: SN, fontSize: 10, color: rolColor, marginBottom: 2, paddingLeft: 4 }}>
+                        {m.nombre_origen} · {rolLabel}{m.mesa_ref ? ` · ${m.mesa_ref}` : ''}
+                      </span>
+                    )}
+                    <div style={{
+                      maxWidth: '85%', padding: '7px 11px',
+                      borderRadius: esMio ? '12px 12px 4px 12px' : '12px 12px 12px 4px',
+                      background: esMio ? C.gr : C.bg,
+                      border: esMio ? 'none' : `1px solid ${C.rule}`,
+                      color: esMio ? '#fff' : C.ink,
+                      fontFamily: SN, fontSize: 13, lineHeight: 1.4,
+                    }}>
+                      {m.texto}
+                    </div>
+                    <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginTop: 2, paddingLeft: esMio ? 0 : 4, paddingRight: esMio ? 4 : 0 }}>
+                      {new Date(m.created_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                )
+              })}
+              <div ref={chatEndRef} />
+            </div>
+
+            {/* Plantillas rápidas */}
+            <div style={{ padding: '6px 10px', borderTop: `1px solid ${C.rule}`, display: 'flex', gap: 5, flexWrap: 'wrap', background: C.bg }}>
+              {['Ya está servida la mesa', 'Necesito ayuda en sala', '¿Hay marcha lista?', 'La mesa pidió más pan'].map(t => (
+                <button key={t} onClick={() => setChatTexto(t)} style={{
+                  padding: '3px 8px', borderRadius: 14, border: `1px solid ${C.rule}`,
+                  background: C.bg1, fontFamily: SN, fontSize: 11, color: C.ink2, cursor: 'pointer',
+                }}>{t}</button>
+              ))}
+            </div>
+
+            {/* Input */}
+            <div style={{ padding: '8px 10px', borderTop: `1px solid ${C.rule}`, display: 'flex', gap: 8, alignItems: 'flex-end', background: C.bg1 }}>
+              <textarea
+                value={chatTexto}
+                onChange={e => setChatTexto(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    if (chatTexto.trim()) {
+                      enviarMensajeChat(chatTexto.trim(), { rol_destino: 'jefe_sala' })
+                      setChatTexto('')
+                      setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+                    }
+                  }
+                }}
+                placeholder="Mensaje a jefe de sala…"
+                rows={1}
+                style={{
+                  flex: 1, padding: '8px 12px', borderRadius: 20,
+                  border: `1px solid ${C.rule}`, background: C.bg,
+                  fontFamily: SN, fontSize: 13, color: C.ink, resize: 'none', outline: 'none', lineHeight: 1.4,
+                }}
+              />
+              <button
+                onClick={() => {
+                  if (!chatTexto.trim()) return
+                  enviarMensajeChat(chatTexto.trim(), { rol_destino: 'jefe_sala' })
+                  setChatTexto('')
+                  setTimeout(() => chatEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100)
+                }}
+                disabled={!chatTexto.trim()}
+                style={{
+                  width: 38, height: 38, borderRadius: '50%', border: 'none', flexShrink: 0,
+                  background: chatTexto.trim() ? C.gr : C.rule,
+                  cursor: chatTexto.trim() ? 'pointer' : 'default',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <svg width={16} height={16} viewBox="0 0 24 24" fill="none" stroke={chatTexto.trim() ? '#fff' : C.ink4} strokeWidth={2}>
+                  <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </>
   )
