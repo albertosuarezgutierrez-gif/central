@@ -1,4 +1,4 @@
-// Hook compartido para mensajes_turno — usado en /edge y /kds
+// Hook compartido para mensajes_turno — usado en /edge, /kds, /jefe, /running
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { supabase } from '@/lib/supabase'
 
@@ -26,15 +26,16 @@ export function useMensajes(
   const [noLeidos, setNoLeidos]     = useState(0)
   const sesRef = useRef('')
 
+  // Carga inicial — sin filtro de turnoId para que los mensajes de KDS
+  // (que no tienen turnoId) también aparezcan. Scoping por restaurante_id es suficiente.
   const cargar = useCallback(async () => {
     const ses = localStorage.getItem('ia_rest_session') ?? ''
     sesRef.current = ses
-    const params = turnoId ? `?turno_id=${turnoId}` : ''
-    const r = await fetch(`/api/mensajes${params}`, { headers: { 'x-ia-session': ses } })
+    const r = await fetch('/api/mensajes', { headers: { 'x-ia-session': ses } })
     if (!r.ok) return
     const d = await r.json()
     setMensajes(d.mensajes ?? [])
-  }, [turnoId])
+  }, []) // sin dependencias — no recrear en cada cambio de turnoId
 
   // Contar no leídos: mensajes que no son míos y que yo no he leído
   useEffect(() => {
@@ -46,8 +47,11 @@ export function useMensajes(
     setNoLeidos(cuenta)
   }, [mensajes, camareroId, rolActual])
 
-  // Realtime subscription
+  // Realtime subscription — solo depende de restauranteId, no de cargar.
+  // Si cargar fuera dependencia, cada cambio de turnoId destruiría y recrearía
+  // el canal dejándolo en estado inválido.
   useEffect(() => {
+    if (!restauranteId) return
     cargar()
     const ch = (supabase.channel(`mensajes-${restauranteId}`) as any)
       .on('postgres_changes', {
@@ -56,10 +60,22 @@ export function useMensajes(
         table: 'mensajes_turno',
         filter: `restaurante_id=eq.${restauranteId}`,
       }, (payload: any) => {
-        setMensajes(prev => [...prev, payload.new as Mensaje])
+        setMensajes(prev => {
+          // Evitar duplicados (el sender ya tiene el mensaje en estado local)
+          if (prev.some(m => m.id === payload.new.id)) return prev
+          return [...prev, payload.new as Mensaje]
+        })
       })
       .subscribe()
     return () => { supabase.removeChannel(ch) }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [restauranteId]) // SOLO restauranteId — nunca recrear el canal por otros motivos
+
+  // Polling de seguridad cada 10s — garantiza consistencia si Realtime falla
+  useEffect(() => {
+    if (!restauranteId) return
+    const interval = setInterval(cargar, 10_000)
+    return () => clearInterval(interval)
   }, [restauranteId, cargar])
 
   const enviar = useCallback(async (
@@ -70,7 +86,7 @@ export function useMensajes(
     await fetch('/api/mensajes', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },
-      body: JSON.stringify({ texto, turno_id: turnoId, ...opts }),
+      body: JSON.stringify({ texto, turno_id: turnoId ?? null, ...opts }),
     })
   }, [turnoId])
 

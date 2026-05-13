@@ -128,7 +128,8 @@ export async function POST(req: NextRequest) {
         .insert({ mesa_id: mesa.id, camarero_id: camareroId, turno_id: turnoId,
           tipo: brainResult.tipo, estado: brainResult.tipo === 'cuenta' ? 'nueva' : 'en_cocina',
           restaurante_id: rid,
-          ...(brainResult.num_comensales ? { num_comensales: brainResult.num_comensales } : {}) })
+          ...(brainResult.num_comensales ? { num_comensales: brainResult.num_comensales } : {}),
+          ...(brainResult.nota_general ? { nota_general: brainResult.nota_general } : {}) })
         .select().single()
       if (comandaError) throw comandaError
       comandaId = comanda.id

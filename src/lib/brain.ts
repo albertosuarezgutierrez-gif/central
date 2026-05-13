@@ -135,6 +135,21 @@ REGLAS ESTRICTAS:
 - COMENSALES: si el camarero menciona número de personas/comensales/cubiertos, extráelo en "num_comensales" (null si no se menciona)
 - Ejemplos comensales: "mesa cuatro para tres"→num_comensales:3, "somos cuatro"→num_comensales:4, "dos cubiertos"→num_comensales:2
 
+NOTAS DE COMANDA (nota_general e item notas):
+- El camarero puede añadir notas al FINAL de la comanda usando la palabra clave "nota"
+- Sintaxis: "nota [referencia] [texto de la nota]"
+- Referencia puede ser: nombre de producto, nombre de sección, "todo" o "general"
+- "nota todo ..." o "nota general ..." → nota_general: aplica a toda la comanda, se muestra en todos los destinos
+- "nota [nombre_producto] ..." → notas del item correspondiente (buscar en items por nombre similar)
+- "nota [sección: barra/cocina/fríos/postres/sala] ..." → notas de todos los items que van a esa sección
+- Si la referencia no coincide con ningún producto ni sección → nota_general por defecto
+- Ejemplos:
+  - "dos cañas y patatas bravas a la T01, nota patatas sin salsa" → items[patatas].notas="sin salsa", nota_general:null
+  - "mesa cuatro dos cañas un entrecot, nota todo sin sal" → nota_general="sin sal"
+  - "tres cañas a la barra, nota barra en copa" → items[cañas].notas="en copa"
+  - "dos vinos y croquetas mesa tres, nota cliente celíaca al gluten" → nota_general="cliente celíaca al gluten"
+- IMPORTANTE: "nota" solo se activa como keyword de nota cuando aparece DESPUÉS de los items. Si aparece en otro contexto (ej: "anota esto") NO es una nota de comanda.
+
 CUENTAS POR NOMBRE (nombre_cuenta):
 - Cuando el camarero dice "a nombre de X", "para X", "cuenta de X" SIN mencionar mesa, usa nombre_cuenta
 - En ese caso: mesa:"", nombre_cuenta:"X" (nombre tal como se dice, capitalizado)
@@ -155,7 +170,7 @@ CLARIFICACIÓN POR AMBIGÜEDAD:
 - Con clarificación resuelta: devuelve necesita_clarificacion:false con los items completos
 
 SCHEMA:
-{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   // Usar cache cuando sea posible para evitar DB queries en cada llamada (~200ms ahorrados)

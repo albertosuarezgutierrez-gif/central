@@ -69,6 +69,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
   const [enviando, setEnviando] = useState(false)
   const [errorMsg, setErrorMsg] = useState('')
   const [ticketNum, setTicketNum] = useState<number|null>(null)
+  const [notaGeneral, setNotaGeneral] = useState('')
   const [zonas, setZonas] = useState<string[]>([])
   const [zonaFiltro, setZonaFiltro] = useState('todas')
 
@@ -143,7 +144,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
       const r = await fetch('/api/comanda', {
         method: 'POST',
         headers: sh(),
-        body: JSON.stringify({ mesa_id: mesaSel.id, items, tipo: 'comanda' }),
+        body: JSON.stringify({ mesa_id: mesaSel.id, items, tipo: 'comanda', ...(notaGeneral.trim() ? { nota_general: notaGeneral.trim() } : {}) }),
       })
       const d = await r.json()
       if (d.ok) {
@@ -161,7 +162,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     }
   }
 
-  const reset = () => { setStep('mesa'); setMesaSel(null); setLineas([]); setErrorMsg(''); setTicketNum(null) }
+  const reset = () => { setStep('mesa'); setMesaSel(null); setLineas([]); setErrorMsg(''); setTicketNum(null); setNotaGeneral('') }
 
   const mesasFiltradas = zonaFiltro === 'todas' ? mesas : mesas.filter(m => m.zona === zonaFiltro)
   const prodsFiltrados = productos.filter(p => (p.categoria || p.seccion || 'Otros') === catActiva)
@@ -348,9 +349,27 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             </div>
           ))}
         </div>
-        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'baseline',padding:'10px 12px',borderTop:`2px solid ${T.rule}`,marginBottom:20 }}>
+        <div style={{ display:'flex',justifyContent:'space-between',alignItems:'baseline',padding:'10px 12px',borderTop:`2px solid ${T.rule}`,marginBottom:12 }}>
           <span style={{ fontFamily:SM,fontSize:11,color:T.fg3,letterSpacing:'.06em' }}>TOTAL</span>
           <span style={{ fontFamily:SE,fontSize:22,fontWeight:500,color:T.fg }}>{totalPrecio.toFixed(2)}€</span>
+        </div>
+        <div style={{ marginBottom:16 }}>
+          <label style={{ fontFamily:SM,fontSize:10,color:T.fg3,letterSpacing:'.08em',display:'block',marginBottom:6 }}>NOTA DE COMANDA (opcional)</label>
+          <input
+            type="text"
+            value={notaGeneral}
+            onChange={e => setNotaGeneral(e.target.value)}
+            placeholder="ej: sin sal en todo · alérgica al gluten · es su cumpleaños"
+            style={{ width:'100%', padding:'9px 12px', background:L.bg2, border:'none',
+              boxShadow:`rgba(232,163,59,0.4) 0px 0px 0px 1px`,
+              borderRadius:8, fontFamily:SN, fontSize:13, color:T.fg,
+              outline:'none', boxSizing:'border-box' }}
+          />
+          {notaGeneral.trim() && (
+            <div style={{ marginTop:6, fontFamily:SN, fontSize:11, color:C.amber }}>
+              ⚠ Esta nota aparecerá en todos los tickets de esta comanda
+            </div>
+          )}
         </div>
       </div>
       <div style={{ padding:'10px 14px 24px',display:'flex',gap:8,flexShrink:0 }}>

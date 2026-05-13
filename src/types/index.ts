@@ -90,6 +90,7 @@ export interface BrainResult {
   tipo: 'comanda' | 'marchar' | '86' | 'cuenta' | 'aviso'
   items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato?: string | null }[]
   num_comensales?: number | null   // extraído de voz: "mesa 4 para 3 personas"
+  nota_general?: string | null     // nota que se propaga a todos los destinos de la comanda
   necesita_clarificacion?: boolean
   pregunta_clarificacion?: string | null
   opciones_clarificacion?: { nombre: string; precio?: number | null; cantidad: number }[]

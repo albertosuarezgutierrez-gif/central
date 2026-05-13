@@ -671,6 +671,11 @@ function KDSInner() {
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ fontFamily:SE, fontSize:22, fontWeight:500, color:K.fg, lineHeight:1, minWidth:50 }}>{c.mesa?.codigo}</span>
                     <span style={{ fontFamily:SM, fontSize:11, color:col, fontWeight:700, animation:urgente?'pulse 1.5s ease-in-out infinite':'none' }}>{edadStr(c.created_at)}</span>
+                    {(c as unknown as {nota_general?:string}).nota_general&&(
+                      <span style={{ fontFamily:SN, fontSize:10, fontWeight:700, color:K.amb, background:"rgba(232,163,59,.15)", border:"1px solid rgba(232,163,59,.4)", borderRadius:4, padding:"2px 7px", letterSpacing:".03em" }}>
+                        ⚠ {(c as unknown as {nota_general:string}).nota_general}
+                      </span>
+                    )}
                     <div style={{ flex:1, display:'flex', flexWrap:'wrap', gap:4 }}>
                       {(c.items||[]).map(it=>(
                         <span key={it.id} onClick={()=>toggle(it.id,it.estado)}
@@ -718,6 +723,11 @@ function KDSInner() {
                     <span style={{ fontFamily:SM, fontSize:22, fontWeight:700, color:col, animation:urgente?'pulse 1.5s ease-in-out infinite':'none' }}>{edadStr(c.created_at)}</span>
                   </div>
                   <div style={{ borderTop:`1px solid ${K.rS}`, paddingTop:10 }}>
+                  {(c as unknown as {nota_general?:string}).nota_general&&(
+                    <div style={{ margin:"0 0 10px 0", padding:"7px 12px", background:"rgba(232,163,59,.12)", border:"1px solid rgba(232,163,59,.4)", borderRadius:6, fontFamily:SN, fontSize:12, fontWeight:700, color:K.amb, letterSpacing:".03em" }}>
+                      ⚠ NOTA · {(c as unknown as {nota_general:string}).nota_general}
+                    </div>
+                  )}
                     {(c.items||[]).map(it=>(
                       <div key={it.id} onClick={()=>toggle(it.id,it.estado)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:`1px solid ${K.rule}`, cursor:'pointer', opacity:it.estado==='listo'?.4:1, transition:'opacity .15s', minHeight:44 }}>
                         <div style={{ width:20, height:20, borderRadius:3, border:`2px solid ${it.estado==='listo'?K.gr:K.rS}`, background:it.estado==='listo'?K.gr:'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>

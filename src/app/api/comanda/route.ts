@@ -10,6 +10,7 @@ export async function POST(req: NextRequest) {
     const {
       mesa_id, nombre_cuenta, items, tipo = 'comanda',
       num_comensales,
+      nota_general,
       incluir_servicio = true,
     } = await req.json()
 
@@ -104,6 +105,7 @@ export async function POST(req: NextRequest) {
         tipo, estado: tipo === 'cuenta' ? 'nueva' : 'en_cocina',
         restaurante_id: rid,
         ...(num_comensales ? { num_comensales } : {}),
+        ...(nota_general ? { nota_general } : {}),
       })
       .select().single()
     if (cmdErr) throw cmdErr
