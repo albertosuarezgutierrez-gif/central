@@ -1,5 +1,5 @@
 'use client'
-// ia.rest · Panel Jefe de Sala — v2.1 (fix: no flicker, restaurante_id, fonts)
+// ia.rest · Panel Jefe de Sala — v2.2 (feat: chat entre roles)
 // Rol: jefe_sala (PIN 0000) · También accesible por owner y super_admin
 
 import { useState, useEffect, useCallback, useRef } from 'react'
@@ -9,6 +9,7 @@ import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import SupervisorTab from '@/components/owner/SupervisorTab'
+import { useMensajes } from '@/hooks/useMensajes'
 
 const C = {
   paper:'#F6F1E7', paper2:'#EFE7D6', paper3:'#E5DAC2', bone:'#FBF8F1',
@@ -23,7 +24,7 @@ const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'|'supervisor'|'mas'
+type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'|'supervisor'|'chat'|'mas'
 
 // Tabs principales en bottom nav — máximo 5, ordenadas de más a menos uso diario
 const NAV_PRINCIPAL: {id:Tab;label:string;icon:string}[] = [
@@ -36,6 +37,7 @@ const NAV_PRINCIPAL: {id:Tab;label:string;icon:string}[] = [
 
 // Tabs secundarias — accesibles desde el menú "Más" (uso ocasional o técnico)
 const NAV_SECUNDARIO: {id:Tab;label:string;icon:string;desc:string}[] = [
+  {id:'chat',      label:'Chat',           icon:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z',          desc:'Mensajes entre roles del turno'},
   {id:'comandas',  label:'Comandas',       icon:'M5 4h11l3 3v13H5z',                                                       desc:'Lista completa de comandas activas'},
   {id:'analytics', label:'Analytics',      icon:'M18 20V10M12 20V4M6 20v-6',                                                desc:'Métricas del servicio'},
   {id:'audit',     label:'Modificaciones', icon:'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10',                              desc:'Cambios en comandas · audit trail'},
@@ -76,6 +78,176 @@ function NavIcon({path}:{path:string}){
 function fmtEur(n:number){ return `${n>=0?'':'-'}${Math.abs(n).toFixed(2).replace('.',',')} €` }
 function fmtTime(iso:string){ return new Date(iso).toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'}) }
 
+// ─── CHAT JEFE TAB ────────────────────────────────────────────────────────────
+function ChatJefeTab({
+  session, mensajes, noLeidos, chatTexto, setChatTexto,
+  chatDestino, setChatDestino, chatEndRef, enviarMensaje, marcarMensajeLeido
+}:{
+  session: Session
+  mensajes: ReturnType<typeof useMensajes>['mensajes']
+  noLeidos: number
+  chatTexto: string
+  setChatTexto: (v:string)=>void
+  chatDestino: 'todos'|'cocina'|'camarero'|'running'
+  setChatDestino: (v:'todos'|'cocina'|'camarero'|'running')=>void
+  chatEndRef: React.RefObject<HTMLDivElement | null>
+  enviarMensaje: (texto:string, opts?:{rol_destino?:string;mesa_ref?:string})=>Promise<void>
+  marcarMensajeLeido: (id:string)=>Promise<void>
+}) {
+  const SN = "'Inter Tight',system-ui,sans-serif"
+  const SE = "'Newsreader',Georgia,serif"
+  const SM = "'JetBrains Mono',ui-monospace,monospace"
+  const SC = "'Caveat',cursive"
+
+  const rolLabel = (r:string) => ({camarero:'Sala',cocina:'Cocina',jefe_sala:'Jefe',running:'Running',super_admin:'Admin',owner:'Owner'}[r] ?? r)
+  const rolColor = (r:string) => ({camarero:C.teal,cocina:C.red,jefe_sala:C.amber,running:C.green,owner:C.amber}[r] ?? C.ink3)
+  const destinoLabel = (d:string) => ({todos:'Todos',cocina:'Cocina',camarero:'Sala',running:'Running'}[d] ?? d)
+  const destinoColor = (d:string) => ({todos:C.ink2,cocina:C.red,camarero:C.teal,running:C.green}[d] ?? C.ink3)
+
+  // Auto-scroll y marcar leídos al abrir
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    mensajes
+      .filter(m => !m.leido_por?.includes(session.id) && m.camarero_id !== session.id)
+      .forEach(m => marcarMensajeLeido(m.id))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mensajes.length])
+
+  const handleEnviar = async () => {
+    const t = chatTexto.trim()
+    if (!t) return
+    setChatTexto('')
+    await enviarMensaje(t, { rol_destino: chatDestino })
+  }
+
+  const PLANTILLAS = [
+    'Mesas 9 y 10 reserva en 20 min',
+    'Buen ritmo, seguimos',
+    'Horno fuera 15 min — sin calientes',
+    'Cerrad cuenta rápido',
+    '¿Cuánto falta para la siguiente?',
+  ]
+
+  return (
+    <div style={{display:'flex',flexDirection:'column',height:'100%',maxHeight:'calc(100dvh - 110px)'}}>
+      {/* Header con stats */}
+      <div style={{padding:'10px 0 8px',borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',justifyContent:'space-between',flexShrink:0}}>
+        <div>
+          <span style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink}}>Chat del turno</span>
+          <span style={{fontFamily:SN,fontSize:11,color:C.ink3,marginLeft:10}}>
+            {mensajes.length} mensaje{mensajes.length!==1?'s':''}
+            {noLeidos>0 && <span style={{marginLeft:6,color:C.red,fontWeight:600}}>· {noLeidos} sin leer</span>}
+          </span>
+        </div>
+      </div>
+
+      {/* Selector destino */}
+      <div style={{padding:'8px 0',borderBottom:`1px solid ${C.rule}`,display:'flex',gap:6,alignItems:'center',flexShrink:0}}>
+        <span style={{fontFamily:SN,fontSize:11,color:C.ink3,letterSpacing:'.06em'}}>PARA:</span>
+        {(['todos','cocina','camarero','running'] as const).map(d=>(
+          <button key={d} onClick={()=>setChatDestino(d)} style={{
+            padding:'4px 12px',borderRadius:20,cursor:'pointer',
+            border:`1px solid ${chatDestino===d ? destinoColor(d) : C.rule}`,
+            background: chatDestino===d ? destinoColor(d) : 'transparent',
+            color: chatDestino===d ? '#fff' : C.ink3,
+            fontFamily:SN,fontSize:12,fontWeight:chatDestino===d?600:400,
+          }}>{destinoLabel(d)}</button>
+        ))}
+      </div>
+
+      {/* Timeline de mensajes */}
+      <div style={{flex:1,overflowY:'auto',padding:'12px 0',display:'flex',flexDirection:'column',gap:10}}>
+        {mensajes.length===0 && (
+          <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',gap:8,paddingTop:60}}>
+            <svg width={36} height={36} viewBox="0 0 24 24" fill="none" stroke={C.rule} strokeWidth={1.5}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+            <span style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink4}}>Sin mensajes en el turno</span>
+            <span style={{fontFamily:SC,fontSize:14,color:C.ink4}}>el jefe arranca la conversación</span>
+          </div>
+        )}
+        {mensajes.map(m => {
+          const esMio = m.camarero_id === session.id
+          const esJefe = m.rol_origen === 'jefe_sala' || m.rol_origen === 'owner'
+          return (
+            <div key={m.id} style={{display:'flex',flexDirection:'column',alignItems:esMio?'flex-end':'flex-start'}}>
+              {/* Etiqueta de rol — siempre visible en el timeline del jefe */}
+              <div style={{display:'flex',alignItems:'center',gap:6,marginBottom:3,paddingLeft:esMio?0:4,paddingRight:esMio?4:0}}>
+                <span style={{fontFamily:SN,fontSize:10,color:rolColor(m.rol_origen),fontWeight:600}}>
+                  {m.nombre_origen}
+                </span>
+                <span style={{fontFamily:SN,fontSize:10,color:C.ink4}}>
+                  {rolLabel(m.rol_origen)}
+                  {m.mesa_ref && <span style={{color:C.ink3}}> · {m.mesa_ref}</span>}
+                </span>
+                {m.rol_destino && m.rol_destino!=='todos' && (
+                  <span style={{fontFamily:SN,fontSize:9,color:destinoColor(m.rol_destino),border:`1px solid ${destinoColor(m.rol_destino)}`,borderRadius:10,padding:'1px 6px'}}>
+                    → {destinoLabel(m.rol_destino)}
+                  </span>
+                )}
+              </div>
+              {/* Burbuja */}
+              <div style={{
+                maxWidth:'75%',padding:'9px 14px',
+                borderRadius:esMio?'16px 16px 4px 16px':'16px 16px 16px 4px',
+                background: esMio ? (esJefe ? C.amber : C.red) : C.bone,
+                border: esMio ? 'none' : `1px solid ${C.rule}`,
+                color: esMio ? '#fff' : C.ink,
+                fontFamily:SN,fontSize:14,lineHeight:1.5,
+              }}>
+                {m.texto}
+              </div>
+              <span style={{fontFamily:SM,fontSize:9,color:C.ink4,marginTop:3,paddingLeft:esMio?0:4,paddingRight:esMio?4:0}}>
+                {fmtTime(m.created_at)}
+              </span>
+            </div>
+          )
+        })}
+        <div ref={chatEndRef}/>
+      </div>
+
+      {/* Plantillas rápidas */}
+      <div style={{padding:'6px 0',borderTop:`1px solid ${C.rule}`,display:'flex',gap:6,overflowX:'auto',flexShrink:0}}>
+        {PLANTILLAS.map(t=>(
+          <button key={t} onClick={()=>setChatTexto(t)} style={{
+            whiteSpace:'nowrap',padding:'4px 10px',borderRadius:20,
+            border:`1px solid ${C.rule}`,background:C.bone,
+            fontFamily:SN,fontSize:11,color:C.ink2,cursor:'pointer',flexShrink:0,
+          }}>{t}</button>
+        ))}
+      </div>
+
+      {/* Input */}
+      <div style={{padding:'10px 0 4px',borderTop:`1px solid ${C.rule}`,display:'flex',gap:8,alignItems:'flex-end',flexShrink:0}}>
+        <textarea
+          value={chatTexto}
+          onChange={e=>setChatTexto(e.target.value)}
+          onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleEnviar()}}}
+          placeholder={`Mensaje a ${destinoLabel(chatDestino).toLowerCase()}...`}
+          rows={1}
+          style={{
+            flex:1,padding:'9px 14px',borderRadius:22,
+            border:`1px solid ${C.rule}`,background:C.bone,
+            fontFamily:SN,fontSize:14,color:C.ink,resize:'none',
+            outline:'none',lineHeight:1.4,
+          }}
+        />
+        <button
+          onClick={handleEnviar}
+          disabled={!chatTexto.trim()}
+          style={{
+            width:42,height:42,borderRadius:'50%',border:'none',flexShrink:0,
+            background:chatTexto.trim()?C.red:C.rule,cursor:chatTexto.trim()?'pointer':'default',
+            display:'flex',alignItems:'center',justifyContent:'center',transition:'background .15s',
+          }}
+        >
+          <svg width={18} height={18} viewBox="0 0 24 24" fill="none" stroke={chatTexto.trim()?'#fff':C.ink4} strokeWidth={2}>
+            <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── MAIN EXPORT ──────────────────────────────────────────────────────────────
 export default function JefeSalaPage() {
   // useAuth ya inicializa síncronamente → sin parpadeo blanco
@@ -85,6 +257,13 @@ export default function JefeSalaPage() {
 
   // Productos 86 con filtro de restaurante
   const productos86 = useProductos86(undefined, session?.restaurante_id)
+
+  // Chat entre roles
+  const [chatTexto, setChatTexto]   = useState('')
+  const [chatDestino, setChatDestino] = useState<'todos'|'cocina'|'camarero'|'running'>('todos')
+  const chatEndRef = useRef<HTMLDivElement>(null)
+  const { mensajes, noLeidos, enviar: enviarMensaje, marcarLeido: marcarMensajeLeido } =
+    useMensajes(session?.restaurante_id ?? '', session?.id ?? '', session?.rol ?? 'jefe_sala')
 
   // Pantalla de carga mínima (solo mientras checking=true Y no hay sesión síncrona)
   if (!session) {
@@ -150,8 +329,11 @@ export default function JefeSalaPage() {
         {/* SIDEBAR desktop — muestra todos los tabs sin restricción de espacio */}
         <div className="jefe-sidebar" style={{display:'none',flexDirection:'column',background:C.bone,borderRight:`1px solid ${C.rule}`,padding:'12px 8px',gap:2,width:160,flexShrink:0}}>
           {NAVS_TODOS.map(n=>(
-            <button key={n.id} className={tab===n.id?'act':''} onClick={()=>setTab(n.id)}>
+            <button key={n.id} className={tab===n.id?'act':''} onClick={()=>setTab(n.id)} style={{position:'relative'}}>
               <NavIcon path={n.icon}/>{n.label}
+              {n.id==='chat' && noLeidos>0 && tab!=='chat' && (
+                <span style={{position:'absolute',top:4,right:4,minWidth:16,height:16,borderRadius:8,background:C.red,color:'#fff',fontFamily:'Inter Tight,system-ui,sans-serif',fontSize:10,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 4px'}}>{noLeidos}</span>
+              )}
             </button>
           ))}
           <div style={{flex:1}}/>
@@ -173,6 +355,20 @@ export default function JefeSalaPage() {
           {tab==='audit'    && <AuditTab sh={sh} restauranteId={session.restaurante_id}/>}
           {tab==='analytics'  && <Analytics/>}
           {tab==='supervisor' && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} />}
+          {tab==='chat' && (
+            <ChatJefeTab
+              session={session}
+              mensajes={mensajes}
+              noLeidos={noLeidos}
+              chatTexto={chatTexto}
+              setChatTexto={setChatTexto}
+              chatDestino={chatDestino}
+              setChatDestino={setChatDestino}
+              chatEndRef={chatEndRef}
+              enviarMensaje={enviarMensaje}
+              marcarMensajeLeido={marcarMensajeLeido}
+            />
+          )}
           {tab==='mas' && (
             <div style={{padding:'24px 16px'}}>
               <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink,marginBottom:20}}>Más opciones</div>
@@ -196,8 +392,11 @@ export default function JefeSalaPage() {
       {/* BOTTOM NAV mobile — solo 5 tabs para que el área de toque sea usable */}
       <div className="jefe-bottom" style={{display:'flex',borderTop:`1px solid ${C.rule}`,background:C.bone,position:'sticky',bottom:0,zIndex:10}}>
         {NAV_PRINCIPAL.map(n=>(
-          <button key={n.id} className={tab===n.id||((tab==='comandas'||tab==='analytics'||tab==='audit'||tab==='stream')&&n.id==='mas')?'act':''} onClick={()=>setTab(n.id)}>
+          <button key={n.id} className={tab===n.id||((tab==='comandas'||tab==='analytics'||tab==='audit'||tab==='stream'||tab==='chat')&&n.id==='mas')?'act':''} onClick={()=>setTab(n.id)} style={{position:'relative'}}>
             <NavIcon path={n.icon}/>{n.label}
+            {n.id==='mas' && noLeidos>0 && tab!=='chat' && (
+              <span style={{position:'absolute',top:4,right:'50%',transform:'translateX(14px)',minWidth:16,height:16,borderRadius:8,background:C.red,color:'#fff',fontSize:9,fontWeight:700,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 3px'}}>{noLeidos}</span>
+            )}
           </button>
         ))}
       </div>
@@ -664,3 +863,4 @@ function AuditTab({ sh, restauranteId }:{ sh:()=>Record<string,string>; restaura
     </div>
   )
 }
+
