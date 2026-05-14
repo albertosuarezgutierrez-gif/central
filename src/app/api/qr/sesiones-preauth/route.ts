@@ -1,32 +1,20 @@
-// GET /api/qr/sesiones-preauth?restaurante_id=xxx
+// GET /api/qr/sesiones-preauth
 // Devuelve sesiones QR con tarjeta capturada (pre_auth) sin pagar
 // Para el panel del owner donde puede cobrar manualmente
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession, getRestauranteId } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
-async function getRestauranteId(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get('x-session-token') || req.headers.get('x-ia-session')
-  if (!token) return null
-  const supabase = createServerClient()
-  const { data } = await supabase
-    .from('sesiones_activas')
-    .select('restaurante_id, rol')
-    .eq('token', token)
-    .eq('activa', true)
-    .single()
-  if (!data) return null
-  if (!['owner', 'jefe_sala', 'super_admin'].includes(data.rol)) return null
-  return data.restaurante_id
-}
+const ROLES_PERMITIDOS = ['owner', 'jefe_sala', 'super_admin']
 
 export async function GET(req: NextRequest) {
-  const restauranteId = await getRestauranteId(req)
-  if (!restauranteId) {
+  const session = getSession(req)
+  if (!session || !ROLES_PERMITIDOS.includes(session.rol)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
-
+  const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
 
   // Sesiones activas con pre-auth completado y sin pagar
@@ -54,7 +42,7 @@ export async function GET(req: NextRequest) {
     mesa_codigo: s.mesas?.codigo || '?',
     mesa_nombre: s.mesas?.nombre,
     creado_en: s.creado_en,
-    minutos_abierta: (ahora - new Date(s.creado_en).getTime()) / 60000,
+    minutos_abierta: Math.floor((ahora - new Date(s.creado_en).getTime()) / 60000),
     inactividad_alertada: s.inactividad_alerta_enviada,
     tiene_tarjeta: !!s.preauth_payment_method_id,
   }))

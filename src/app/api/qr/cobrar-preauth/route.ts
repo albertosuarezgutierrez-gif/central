@@ -4,33 +4,21 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
+import { getSession, getRestauranteId } from '@/lib/session'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
 const COMISION_RATE = 0.005
-
-async function getRestauranteId(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get('x-session-token') || req.headers.get('x-ia-session')
-  if (!token) return null
-  const supabase = createServerClient()
-  const { data } = await supabase
-    .from('sesiones_activas')
-    .select('restaurante_id, rol')
-    .eq('token', token)
-    .eq('activa', true)
-    .single()
-  if (!data) return null
-  if (!['owner', 'camarero', 'jefe_sala', 'super_admin'].includes(data.rol)) return null
-  return data.restaurante_id
-}
+const ROLES_PERMITIDOS = ['owner', 'camarero', 'jefe_sala', 'super_admin']
 
 export async function POST(req: NextRequest) {
-  const restauranteId = await getRestauranteId(req)
-  if (!restauranteId) {
+  const session = getSession(req)
+  if (!session || !ROLES_PERMITIDOS.includes(session.rol)) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
+  const restauranteId = getRestauranteId(req)
 
   try {
     const { sesion_id, importe_eur } = await req.json()
@@ -88,7 +76,7 @@ export async function POST(req: NextRequest) {
           sesion_id,
           restaurante_id: restauranteId,
           tipo: 'qr_cobro_preauth',
-          cobrado_por: 'owner',
+          cobrado_por: session.id,
         },
       },
       stripeOptions
@@ -128,7 +116,6 @@ export async function POST(req: NextRequest) {
     })
   } catch (error: any) {
     console.error('[cobrar-preauth] Error:', error)
-    // Errores de Stripe (tarjeta rechazada, etc.)
     if (error.type === 'StripeCardError') {
       return NextResponse.json({
         error: 'Tarjeta rechazada: ' + error.message,

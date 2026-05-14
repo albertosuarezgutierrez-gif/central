@@ -735,7 +735,7 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
   useEffect(() => {
     if (!session) return
     const token = typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') : null
-    fetch('/api/super/cobro-resumen', { headers: { 'x-session-token': token || '' } })
+    fetch('/api/super/cobro-resumen', { headers: { 'x-ia-session': token || '' } })
       .then(r => r.json())
       .then(d => { setData(d); setLoading(false) })
       .catch(() => setLoading(false))

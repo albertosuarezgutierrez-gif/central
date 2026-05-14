@@ -2,25 +2,14 @@
 // Panel financiero Alberto — volumen y comisiones por restaurante
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
-async function isSuperAdmin(req: NextRequest): Promise<boolean> {
-  const token = req.headers.get('x-session-token')
-  if (!token) return false
-  const supabase = createServerClient()
-  const { data } = await supabase
-    .from('sesiones_activas')
-    .select('rol')
-    .eq('token', token)
-    .eq('activa', true)
-    .single()
-  return data?.rol === 'super_admin'
-}
-
 export async function GET(req: NextRequest) {
-  const ok = await isSuperAdmin(req)
-  if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const session = getSession(req)
+  if (!session || session.rol !== 'super_admin')
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const supabase = createServerClient()
 

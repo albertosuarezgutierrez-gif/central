@@ -1,20 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession, getRestauranteId } from '@/lib/session'
 
-// ─── Helpers ──────────────────────────────────────────────────
-function getSession(req: NextRequest) {
-  return req.headers.get('x-ia-session')
-}
-
-async function getRestauranteId(supabase: ReturnType<typeof createServerClient>, token: string) {
-  const { data } = await supabase
-    .from('sesiones_activas')
-    .select('restaurante_id, rol')
-    .eq('session_token', token)
-    .gt('expires_at', new Date().toISOString())
-    .single()
-  return data
-}
+const ROLES_LECTURA  = ['owner', 'admin', 'super_admin', 'jefe_sala', 'camarero']
+const ROLES_ESCRITURA = ['owner', 'admin', 'super_admin', 'jefe_sala', 'camarero']
+const ROLES_BORRADO   = ['owner', 'admin', 'super_admin']
 
 function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
@@ -22,15 +12,12 @@ function err(msg: string, status = 400) {
 
 // ─── GET /api/owner/reservas?fecha=YYYY-MM-DD ─────────────────
 export async function GET(req: NextRequest) {
-  const token = getSession(req)
-  if (!token) return err('Sin sesión', 401)
+  const session = getSession(req)
+  if (!session) return err('Sin sesión', 401)
+  if (!ROLES_LECTURA.includes(session.rol)) return err('Sin permisos', 403)
 
   const supabase = createServerClient()
-  const session = await getRestauranteId(supabase, token)
-  if (!session) return err('Sesión inválida', 401)
-  if (!['owner', 'admin', 'super_admin', 'jefe_sala'].includes(session.rol)) {
-    return err('Sin permisos', 403)
-  }
+  const rid = getRestauranteId(req)
 
   const { searchParams } = new URL(req.url)
   const fecha = searchParams.get('fecha') || new Date().toISOString().slice(0, 10)
@@ -43,18 +30,17 @@ export async function GET(req: NextRequest) {
       notas, estado, canal, created_at, thefork_id,
       mesa_id, mesas(id, codigo, nombre)
     `)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('restaurante_id', rid)
     .eq('fecha_reserva', fecha)
     .not('estado', 'in', '("cancelada","no_show")')
     .order('hora_reserva', { ascending: true })
 
   if (error) return err(error.message, 500)
 
-  // También cargar mesas disponibles para el selector
   const { data: mesas } = await supabase
     .from('mesas')
     .select('id, codigo, nombre, zona, capacidad')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('restaurante_id', rid)
     .order('codigo')
 
   return NextResponse.json({ reservas: data || [], mesas: mesas || [] })
@@ -62,15 +48,12 @@ export async function GET(req: NextRequest) {
 
 // ─── POST /api/owner/reservas ─── Crear ──────────────────────
 export async function POST(req: NextRequest) {
-  const token = getSession(req)
-  if (!token) return err('Sin sesión', 401)
+  const session = getSession(req)
+  if (!session) return err('Sin sesión', 401)
+  if (!ROLES_ESCRITURA.includes(session.rol)) return err('Sin permisos', 403)
 
   const supabase = createServerClient()
-  const session = await getRestauranteId(supabase, token)
-  if (!session) return err('Sesión inválida', 401)
-  if (!['owner', 'admin', 'super_admin', 'jefe_sala', 'camarero'].includes(session.rol)) {
-    return err('Sin permisos', 403)
-  }
+  const rid = getRestauranteId(req)
 
   const body = await req.json()
   const { nombre_cliente, telefono, num_personas, fecha_reserva,
@@ -84,7 +67,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('reservas')
     .insert({
-      restaurante_id: session.restaurante_id,
+      restaurante_id: rid,
       nombre_cliente: nombre_cliente.trim(),
       telefono:       telefono?.trim() || null,
       num_personas,
@@ -105,32 +88,23 @@ export async function POST(req: NextRequest) {
 
 // ─── PATCH /api/owner/reservas ─── Actualizar ────────────────
 export async function PATCH(req: NextRequest) {
-  const token = getSession(req)
-  if (!token) return err('Sin sesión', 401)
+  const session = getSession(req)
+  if (!session) return err('Sin sesión', 401)
+  if (!ROLES_ESCRITURA.includes(session.rol)) return err('Sin permisos', 403)
 
   const supabase = createServerClient()
-  const session = await getRestauranteId(supabase, token)
-  if (!session) return err('Sesión inválida', 401)
-  if (!['owner', 'admin', 'super_admin', 'jefe_sala', 'camarero'].includes(session.rol)) {
-    return err('Sin permisos', 403)
-  }
+  const rid = getRestauranteId(req)
 
   const body = await req.json()
   const { id, ...patch } = body
-
   if (!id) return err('id requerido')
 
   // Verificar que pertenece al restaurante
   const { data: existing } = await supabase
-    .from('reservas')
-    .select('id')
-    .eq('id', id)
-    .eq('restaurante_id', session.restaurante_id)
-    .single()
-
+    .from('reservas').select('id')
+    .eq('id', id).eq('restaurante_id', rid).single()
   if (!existing) return err('Reserva no encontrada', 404)
 
-  // Campos permitidos para actualizar
   const allowed = ['nombre_cliente', 'telefono', 'num_personas', 'fecha_reserva',
     'hora_reserva', 'duracion_min', 'notas', 'estado', 'mesa_id', 'canal']
   const updateData: Record<string, unknown> = {}
@@ -139,38 +113,28 @@ export async function PATCH(req: NextRequest) {
   }
 
   const { data, error } = await supabase
-    .from('reservas')
-    .update(updateData)
-    .eq('id', id)
-    .select()
-    .single()
-
+    .from('reservas').update(updateData).eq('id', id).select().single()
   if (error) return err(error.message, 500)
   return NextResponse.json({ reserva: data })
 }
 
 // ─── DELETE /api/owner/reservas ─── Cancelar ─────────────────
 export async function DELETE(req: NextRequest) {
-  const token = getSession(req)
-  if (!token) return err('Sin sesión', 401)
+  const session = getSession(req)
+  if (!session) return err('Sin sesión', 401)
+  if (!ROLES_BORRADO.includes(session.rol)) return err('Sin permisos', 403)
 
   const supabase = createServerClient()
-  const session = await getRestauranteId(supabase, token)
-  if (!session) return err('Sesión inválida', 401)
-  if (!['owner', 'admin', 'super_admin'].includes(session.rol)) {
-    return err('Sin permisos', 403)
-  }
+  const rid = getRestauranteId(req)
 
-  const body = await req.json()
-  const { id } = body
+  const { id } = await req.json()
   if (!id) return err('id requerido')
 
-  // Soft-delete: marcar como cancelada
   const { error } = await supabase
     .from('reservas')
     .update({ estado: 'cancelada' })
     .eq('id', id)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('restaurante_id', rid)
 
   if (error) return err(error.message, 500)
   return NextResponse.json({ ok: true })

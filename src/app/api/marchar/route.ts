@@ -229,39 +229,47 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 6. Imprimir ticket normal (siempre) via crearPrintJobs
+  // 6. Imprimir ticket de MARCHAR (salida a sala) — tipo 'marchar' para que incluya "*** MARCHAR ***"
+  //    Solo si no hay ya print_jobs de marchar recientes para esta comanda (evita duplicados)
   try {
-    // Cargar items de la comanda si no se pasaron
     let itemsParaPrint = items ?? []
-    console.log('[MARCHAR] items recibidos:', itemsParaPrint.length, 'restaurante_id:', receptor.restaurante_id)
     if (!itemsParaPrint.length) {
-      const { data: ciData, error: ciError } = await supabase
+      const { data: ciData } = await supabase
         .from('comanda_items')
         .select('nombre, cantidad, seccion_id')
         .eq('comanda_id', comanda_id)
-      console.log('[MARCHAR] items BD:', ciData?.length ?? 0, 'error:', ciError?.message)
       itemsParaPrint = (ciData ?? []).map((ci: { nombre: string; cantidad: number; seccion_id: string | null }) => ({
         nombre: ci.nombre,
         cantidad: ci.cantidad,
         seccion_id: ci.seccion_id ?? undefined,
       }))
     }
-    console.log('[MARCHAR] crearPrintJobs con', itemsParaPrint.length, 'items')
     if (itemsParaPrint.length > 0) {
-      await crearPrintJobs(
-        {
-          id:              comanda_id,
-          tipo:            'comanda',
-          mesa_codigo,
-          camarero_nombre: receptor.camarero_nombre ?? 'Sala',
-          restaurante_id:  receptor.restaurante_id,
-          zona_tipo:       receptor.zona_id ?? null,
-        },
-        itemsParaPrint
-      )
+      // Verificar si ya existe un print_job de marchar reciente (últimos 30s) para evitar duplicados
+      const hace30s = new Date(Date.now() - 30_000).toISOString()
+      const { data: jobsRecientes } = await supabase
+        .from('print_jobs')
+        .select('id')
+        .eq('comanda_id', comanda_id)
+        .gte('created_at', hace30s)
+        .limit(1)
+
+      if (!jobsRecientes?.length) {
+        await crearPrintJobs(
+          {
+            id:              comanda_id,
+            tipo:            'marchar',   // ← 'marchar' genera el footer "*** MARCHAR ***"
+            mesa_codigo,
+            camarero_nombre: receptor.camarero_nombre ?? 'Sala',
+            restaurante_id:  receptor.restaurante_id,
+            zona_tipo:       receptor.zona_id ?? null,
+          },
+          itemsParaPrint
+        )
+      }
     }
   } catch (e) {
-    console.error('[MARCHAR] Error imprimiendo ticket normal:', e)
+    console.error('[MARCHAR] Error imprimiendo ticket marchar:', e)
   }
 
   // 6b. Imprimir ticket de pase si hay reglas configuradas
