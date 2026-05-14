@@ -78,9 +78,9 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
   const [nombreMesa, setNombreMesa] = useState('')
   const [editandoNombre, setEditandoNombre] = useState(false)
 
-  // Scroll-safe: onScroll detecta scroll real, bloquea onClick 200ms tras scroll
-  const scrollingRef  = useRef(false)
-  const scrollTimer   = useRef<ReturnType<typeof setTimeout>|null>(null)
+  // Scroll-safe: medir distancia entre pointerDown y pointerUp
+  // Si el dedo se movió >8px no es un tap sino scroll → no abrir mesa
+  const ptrStart = useRef<{x:number, y:number} | null>(null)
 
   const sh = useCallback(() => ({
     'Content-Type': 'application/json',
@@ -279,24 +279,24 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
           ))}
         </div>
       </div>
-      <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px', touchAction:'pan-y' }}
-        onScroll={() => {
-          scrollingRef.current = true
-          if (scrollTimer.current) clearTimeout(scrollTimer.current)
-          scrollTimer.current = setTimeout(() => { scrollingRef.current = false }, 200)
-        }}
-      >
+      <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px', touchAction:'pan-y' }}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:9 }}>
           {mesasFiltradas.map(m => {
             const isSel = mesaSel?.id === m.id
             const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
             return (
               <button key={m.id}
-                onClick={() => {
-                  if (scrollingRef.current) return
+                onPointerDown={e => { ptrStart.current = { x: e.clientX, y: e.clientY } }}
+                onPointerUp={e => {
+                  if (!ptrStart.current) return
+                  const dx = Math.abs(e.clientX - ptrStart.current.x)
+                  const dy = Math.abs(e.clientY - ptrStart.current.y)
+                  ptrStart.current = null
+                  if (dx > 8 || dy > 8) return  // era scroll, no tap
                   if (m.estado === 'reservada') return
                   setMesaSel(m); setStep('carta')
                 }}
+                onPointerCancel={() => { ptrStart.current = null }}
                 style={{
                   padding:'12px 6px 10px', borderRadius:12, border:'none',
                   background: m.estado === 'reservada' ? 'rgba(59,130,246,.08)' : (isSel ? '#F4D8CF' : bgEst),
