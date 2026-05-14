@@ -233,17 +233,20 @@ export async function POST(req: NextRequest) {
   try {
     // Cargar items de la comanda si no se pasaron
     let itemsParaPrint = items ?? []
+    console.log('[MARCHAR] items recibidos:', itemsParaPrint.length, 'restaurante_id:', receptor.restaurante_id)
     if (!itemsParaPrint.length) {
-      const { data: ciData } = await supabase
+      const { data: ciData, error: ciError } = await supabase
         .from('comanda_items')
         .select('nombre, cantidad, seccion_id')
         .eq('comanda_id', comanda_id)
+      console.log('[MARCHAR] items BD:', ciData?.length ?? 0, 'error:', ciError?.message)
       itemsParaPrint = (ciData ?? []).map((ci: { nombre: string; cantidad: number; seccion_id: string | null }) => ({
         nombre: ci.nombre,
         cantidad: ci.cantidad,
         seccion_id: ci.seccion_id ?? undefined,
       }))
     }
+    console.log('[MARCHAR] crearPrintJobs con', itemsParaPrint.length, 'items')
     if (itemsParaPrint.length > 0) {
       await crearPrintJobs(
         {
