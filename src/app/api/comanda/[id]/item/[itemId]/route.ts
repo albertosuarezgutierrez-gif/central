@@ -1,6 +1,6 @@
 // PATCH /api/comanda/[id]/item/[itemId] — modificar cantidad/notas
 // DELETE /api/comanda/[id]/item/[itemId] — eliminar item
-// Ambos registran en audit_log con flag es_propietario
+// Ambos verifican restaurante_id y registran en audit_log
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
@@ -19,16 +19,20 @@ export async function PATCH(
 
     const { cantidad, notas } = await req.json() as { cantidad?: number; notas?: string }
 
-    // Leer estado actual del item
+    // Leer estado actual del item (verificando restaurante_id)
     const { data: itemActual } = await supabase
-      .from('comanda_items').select('nombre, cantidad, notas').eq('id', item_id).single()
+      .from('comanda_items')
+      .select('nombre, cantidad, notas')
+      .eq('id', item_id)
+      .eq('restaurante_id', rid)
+      .single()
     if (!itemActual) return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 })
 
     // Actualizar
     const update: Record<string, unknown> = {}
     if (cantidad !== undefined) update.cantidad = cantidad
     if (notas !== undefined) update.notas = notas
-    await supabase.from('comanda_items').update(update).eq('id', item_id)
+    await supabase.from('comanda_items').update(update).eq('id', item_id).eq('restaurante_id', rid)
 
     // Audit log
     await supabase.rpc('log_comanda_accion', {
@@ -54,21 +58,27 @@ export async function DELETE(
   try {
     const { id: comanda_id, itemId: item_id } = await params
     const supabase = createServerClient()
+    const rid = getRestauranteId(req)
     const session = getSession(req)
     if (!session) return NextResponse.json({ error: 'Sin sesión' }, { status: 401 })
 
+    // Leer item verificando restaurante_id antes de borrar
     const { data: itemActual } = await supabase
-      .from('comanda_items').select('nombre, cantidad').eq('id', item_id).single()
+      .from('comanda_items')
+      .select('nombre, cantidad')
+      .eq('id', item_id)
+      .eq('restaurante_id', rid)
+      .single()
 
-    await supabase.from('comanda_items').delete().eq('id', item_id)
+    if (!itemActual) return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 })
 
-    if (itemActual) {
-      await supabase.rpc('log_comanda_accion', {
-        p_comanda_id: comanda_id, p_camarero_id: session.id,
-        p_accion: 'eliminar_item', p_item_nombre: itemActual.nombre,
-        p_cant_antes: itemActual.cantidad, p_cant_despues: 0,
-      })
-    }
+    await supabase.from('comanda_items').delete().eq('id', item_id).eq('restaurante_id', rid)
+
+    await supabase.rpc('log_comanda_accion', {
+      p_comanda_id: comanda_id, p_camarero_id: session.id,
+      p_accion: 'eliminar_item', p_item_nombre: itemActual.nombre,
+      p_cant_antes: itemActual.cantidad, p_cant_despues: 0,
+    })
 
     return NextResponse.json({ ok: true })
   } catch (err) {

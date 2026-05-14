@@ -377,7 +377,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   useEffect(() => {
     const ses = localStorage.getItem('ia_rest_session') ?? ''
-    fetch('/api/turno', { headers: { 'x-ia-session': ses } }).then(r=>r.json()).then(d => { if (d.turno) setTurnoId(d.turno.id) })
+    const fetchTurno = () =>
+      fetch('/api/turno', { headers: { 'x-ia-session': ses } })
+        .then(r => r.json())
+        .then(d => setTurnoId(d.turno?.id ?? null))
+        .catch(() => {})
+    fetchTurno()
+    // Refresca cada 60s para detectar apertura/cierre de turno por el owner
+    const turnoInterval = setInterval(fetchTurno, 60_000)
     try {
       const cfg = JSON.parse(localStorage.getItem('ia_cfg')||'{}')
       if (cfg.voiceConfirm !== undefined) setVoiceConfirm(cfg.voiceConfirm)
@@ -394,7 +401,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         setTabsVisibles([...new Set([...fijos, ...saved])])
       }
     } catch {}
-    const ses = localStorage.getItem('ia_rest_session') ?? ''
     // Cargar config de servicio/cubierto
     fetch('/api/owner/config/servicio', { headers: { 'x-ia-session': ses } })
       .then(r => r.json())
@@ -430,6 +436,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         id: z.id, tipo: z.tipo, nombre: z.nombre,
       })))
     }).catch(() => {})
+    return () => clearInterval(turnoInterval)
   }, [])
 
   const saveCfg = useCallback((patch: Record<string,unknown>) => {

@@ -11,35 +11,18 @@
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { getRestauranteId } from '@/lib/session'
-
-function getSession(req: NextRequest) {
-  return req.headers.get('x-ia-session')
-}
-
-async function getCamareroId(supabase: ReturnType<typeof createServerClient>, token: string) {
-  const { data } = await supabase
-    .from('sesiones_activas')
-    .select('camarero_id, restaurante_id, rol')
-    .eq('session_token', token)
-    .gt('expires_at', new Date().toISOString())
-    .single()
-  return data
-}
+import { getRestauranteId, getSession } from '@/lib/session'
 
 function err(msg: string, status = 400) {
   return NextResponse.json({ error: msg }, { status })
 }
 
 export async function POST(req: NextRequest) {
-  const token = getSession(req)
-  if (!token) return err('Sin sesión', 401)
+  const session = getSession(req)
+  if (!session?.id) return err('Sin sesión', 401)
 
   const supabase = createServerClient()
-  const session = await getCamareroId(supabase, token)
-  if (!session) return err('Sesión inválida', 401)
-
-  const rid = getRestauranteId(req) || session.restaurante_id
+  const rid = getRestauranteId(req)
 
   const body = await req.json()
   const { zona, alias_cliente, telefono_cliente } = body as {
@@ -130,14 +113,22 @@ export async function POST(req: NextRequest) {
   }
 
   // ─── 3. Crear comanda con alias ───────────────────────────────
+  // Obtener turno activo
+  const { data: turnoActivo } = await supabase
+    .from('turnos').select('id')
+    .eq('restaurante_id', rid).eq('estado', 'activo')
+    .order('created_at', { ascending: false }).limit(1).maybeSingle()
+  if (!turnoActivo) return err('Sin turno activo — abre el turno antes de asignar mesas', 400)
+
   const { data: comanda, error: errComanda } = await supabase
     .from('comandas')
     .insert({
       restaurante_id:   rid,
       mesa_id:          mesaId,
-      camarero_id:      session.camarero_id,
+      camarero_id:      session.id,
+      turno_id:         turnoActivo.id,
       estado:           'nueva',
-      tipo:             'mesa',
+      tipo:             'comanda',
       alias_cliente:    alias_cliente.trim(),
       telefono_cliente: telefono_cliente?.trim() || null,
     })
@@ -145,6 +136,13 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (errComanda) return err(errComanda.message, 500)
+
+  // Marcar mesa como activa
+  await supabase.from('mesas').update({
+    estado: 'activa',
+    camarero_id: session.id,
+    ultima_comanda: new Date().toISOString(),
+  }).eq('id', mesaId).eq('restaurante_id', rid)
 
   // ─── 4. Si había reserva → marcar como sentada ───────────────
   if (reservaId) {

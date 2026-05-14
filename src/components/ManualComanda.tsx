@@ -127,14 +127,7 @@ export default function ManualComanda({
       })
       const d = await r.json()
       if (d.ok) {
-        // Marchar automaticamente para que salga el ticket de impresion
-        if (d.comanda_id && mesaSel?.codigo) {
-          fetch('/api/marchar', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json', ...h() },
-            body: JSON.stringify({ comanda_id: d.comanda_id, mesa_codigo: mesaSel.codigo }),
-          }).catch(() => {})
-        }
+        // /api/comanda ya crea print_jobs internamente — no llamar /api/marchar aquí
         setSent(true)
         onSent()
         setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false) }, 2000)

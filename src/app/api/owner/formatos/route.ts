@@ -14,9 +14,9 @@ export async function GET(req: NextRequest) {
     .eq('restaurante_id', rid)
     .order('orden')
 
-  if (producto_id) query.eq('producto_id', producto_id)
+  const finalQuery = producto_id ? query.eq('producto_id', producto_id) : query
 
-  const { data, error } = await query
+  const { data, error } = await finalQuery
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ formatos: data })
 }

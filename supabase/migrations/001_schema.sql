@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS comandas (
   mesa_id        uuid REFERENCES mesas(id),
   camarero_id    uuid REFERENCES camareros(id),
   turno_id       uuid REFERENCES turnos(id),
-  estado         text DEFAULT 'nueva' CHECK (estado IN ('nueva','en_cocina','lista','entregada','cancelada')),
+  estado         text DEFAULT 'nueva' CHECK (estado IN ('nueva','en_cocina','lista','entregada','cancelada','cerrada')),
   tipo           text DEFAULT 'comanda' CHECK (tipo IN ('comanda','cuenta','marchar','86','aviso')),
   numero_ticket  bigint GENERATED ALWAYS AS IDENTITY,
   created_at     timestamptz DEFAULT now(),

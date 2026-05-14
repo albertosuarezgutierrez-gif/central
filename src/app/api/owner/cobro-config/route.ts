@@ -2,25 +2,18 @@
 // Configuración del módulo ia.rest cobro por restaurante
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getRestauranteId, getSession } from '@/lib/session'
 
 export const runtime = 'nodejs'
 
-async function getRestauranteId(req: NextRequest): Promise<string | null> {
-  const token = req.headers.get('x-session-token')
-  if (!token) return null
-  const supabase = createServerClient()
-  const { data } = await supabase
-    .from('sesiones_activas')
-    .select('restaurante_id')
-    .eq('token', token)
-    .eq('activa', true)
-    .single()
-  return data?.restaurante_id ?? null
-}
+
 
 export async function GET(req: NextRequest) {
-  const restauranteId = await getRestauranteId(req)
-  if (!restauranteId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const session = getSession(req)
+  if (!session || !['owner', 'super_admin'].includes(session.rol))
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const restauranteId = getRestauranteId(req)
+  // restauranteId siempre tiene valor (fallback demo)
 
   const supabase = createServerClient()
 
@@ -75,8 +68,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const restauranteId = await getRestauranteId(req)
-  if (!restauranteId) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const session = getSession(req)
+  if (!session || !['owner', 'super_admin'].includes(session.rol))
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const restauranteId = getRestauranteId(req)
+  // restauranteId siempre tiene valor (fallback demo)
 
   const body = await req.json()
   const allowed = ['modo_cobro', 'timer_inactividad_min']

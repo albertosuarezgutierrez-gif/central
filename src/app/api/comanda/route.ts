@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
       comanda: 'activa', marchar: 'marchar', cuenta: 'cuenta', aviso: 'aviso', '86': 'activa'
     }
     const { data: mesaData } = await supabase
-      .from('mesas').select('zona_id,codigo,zonas(nombre)').eq('id', mesa_id).single()
+      .from('mesas').select('zona_id,codigo,zonas(nombre,tipo)').eq('id', mesa_id).single()
 
     await supabase.from('mesas').update({
       estado: mesaEstados[tipo] ?? 'activa',
@@ -199,7 +199,8 @@ export async function POST(req: NextRequest) {
       }))
       await crearPrintJobs({
         id: comanda.id, tipo, mesa_codigo: mesaData?.codigo ?? 'Mesa',
-        camarero_nombre: 'Sala', restaurante_id: rid, zona_tipo: (mesaData as Record<string, unknown>)?.zona_tipo as string ?? null,
+        camarero_nombre: 'Sala', restaurante_id: rid,
+        zona_tipo: ((mesaData?.zonas as unknown) as { tipo?: string } | null)?.tipo ?? null,
       }, itemsPrint)
     } catch (e) { console.error('[COMANDA] Print error:', e) }
     return NextResponse.json({
