@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
   if (reservaActiva && reservaActiva.mesa_id) {
     // Verificar que la mesa de la reserva es de la zona correcta
-    const mesaReserva = reservaActiva.mesas as { id: string; codigo: string; zona: string; capacidad: number } | null
+    const mesaReserva = (reservaActiva.mesas as unknown) as { id: string; codigo: string; zona: string; capacidad: number } | null
     if (mesaReserva && mesaReserva.zona.toLowerCase() === zona.toLowerCase()) {
       mesaId    = reservaActiva.mesa_id
       mesaCodigo = mesaReserva.codigo
