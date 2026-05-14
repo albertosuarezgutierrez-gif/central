@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 
-// GET /api/bridge/printers?token=XXX
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
   if (!token) return NextResponse.json({ error: 'Token requerido' }, { status: 401 })
