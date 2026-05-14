@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     if (!bt) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
 
-    const { ip_address, port, nombre, connection_type, seccion_id, mac_address } = await req.json()
+    const { ip_address, port, nombre, connection_type, seccion_id, mac_address, modelo, fabricante, perfil_escpos } = await req.json()
 
     if (!ip_address) return NextResponse.json({ error: 'IP requerida' }, { status: 400 })
 
@@ -45,6 +45,9 @@ export async function POST(req: Request) {
 
     const fields = {
       nombre:          nombre || `Impresora ${ip_address}`,
+        modelo:          modelo ?? null,
+        fabricante:      fabricante ?? null,
+        perfil_escpos:   perfil_escpos ?? 'generico',
       port:            port || 9100,
       connection_type: connection_type || 'ip_local',
       seccion_id:      seccion_id || null,
