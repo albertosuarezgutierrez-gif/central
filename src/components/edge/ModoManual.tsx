@@ -285,7 +285,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
             return (
               <button key={m.id}
-                onTouchEnd={() => { if (!hasMoved.current) { setMesaSel(m); setStep('carta') } }}
+                onTouchEnd={e => { if (!hasMoved.current) { e.preventDefault(); setMesaSel(m); setStep('carta') } }}
                 onClick={() => { setMesaSel(m); setStep('carta') }}
                 style={{
                   padding:'12px 6px 10px', borderRadius:12, border:'none',
