@@ -1,5 +1,5 @@
 # ============================================================
-# ia.rest · Bridge Wizard v4
+# ia.rest · Bridge Wizard v5 — con MAC address
 # ============================================================
 param(
     [Parameter(Mandatory=$true)][string]$Token,
@@ -16,6 +16,19 @@ function Write-ERR($msg)  { Write-Host "  [ERR] $msg" -ForegroundColor Red }
 function Write-INFO($msg) { Write-Host "  $msg" -ForegroundColor Gray }
 function Write-WARN($msg) { Write-Host "  [!] $msg" -ForegroundColor Yellow }
 
+function Get-MacForIp($ip) {
+    # Ping para poblar caché ARP
+    ping -n 1 -w 300 $ip | Out-Null
+    $arp = arp -a $ip 2>$null
+    if ($arp) {
+        $match = [regex]::Match($arp, '([0-9a-fA-F]{2}[-:]){5}[0-9a-fA-F]{2}')
+        if ($match.Success) {
+            return $match.Value.Replace('-',':').ToLower()
+        }
+    }
+    return $null
+}
+
 Clear-Host
 Write-Host ""
 Write-Host "  ia.rest · Configuracion de impresoras" -ForegroundColor White
@@ -28,9 +41,8 @@ try {
     $resp = Invoke-RestMethod -Uri "$API/api/bridge/verify" -Method POST `
         -Body (@{token=$Token}|ConvertTo-Json) -ContentType "application/json" -TimeoutSec 15
     Write-OK "Conectado · $($resp.nombre)"
-    $restauranteId = $resp.restaurante_id
 } catch {
-    Write-ERR "Token invalido o sin internet. Comprueba el token en /owner."
+    Write-ERR "Token invalido o sin internet."
     Read-Host "  Enter para salir"; exit 1
 }
 
@@ -47,12 +59,11 @@ if ($impresorasExistentes -gt 0) {
     Write-Host ""
     $resp2 = Read-Host "  Buscar impresoras adicionales? (s/n)"
     if ($resp2 -ne "s" -and $resp2 -ne "S") {
-        Write-INFO "Abriendo panel..."
         Start-Process "$API/owner?setup=1"
         Start-Sleep -Seconds 2; exit 0
     }
 } else {
-    Write-INFO "Sin impresoras registradas. Iniciando busqueda..."
+    Write-INFO "Sin impresoras — iniciando busqueda..."
 }
 
 # ── PASO 2: Detectar subnet ───────────────────────────────────
@@ -66,12 +77,12 @@ try {
     Write-OK "Red: $subnet.0/24 (este PC: $localIP)"
 } catch {
     Write-ERR "No se pudo detectar la red."
-    Read-Host "  Enter para salir"; exit 1
+    Read-Host "  Enter"; exit 1
 }
 
 # ── PASO 3: Escanear ─────────────────────────────────────────
 Write-Header "PASO 3 · Buscando impresoras (puerto 9100)"
-Write-INFO "Escaneando... (30 segundos aprox.)"
+Write-INFO "Escaneando red... (30 segundos aprox.)"
 Write-Host ""
 
 $found = [System.Collections.ArrayList]@()
@@ -105,7 +116,7 @@ Write-Host ""
 
 if ($found.Count -eq 0) {
     Write-WARN "No se encontraron impresoras."
-    Write-INFO "Comprueba que estan encendidas y en la misma red WiFi."
+    Write-INFO "Comprueba que estan encendidas y en la misma WiFi."
     Write-Host ""
     $m = Read-Host "  Introducir IP manualmente? (s/n)"
     if ($m -eq "s" -or $m -eq "S") {
@@ -113,54 +124,73 @@ if ($found.Count -eq 0) {
         if ($ip -match "^\d+\.\d+\.\d+\.\d+$") { [void]$found.Add($ip) }
         else { Write-ERR "IP no valida."; Read-Host "  Enter"; exit 1 }
     } else {
-        Write-INFO "Puedes añadirlas desde /owner → Hardware."
+        Write-INFO "Puedes anadirlas desde /owner → Hardware."
         Read-Host "  Enter"; exit 0
     }
 }
 
-# ── PASO 4: Registrar automáticamente ────────────────────────
+# ── PASO 4: Registrar con MAC ─────────────────────────────────
 Write-Header "PASO 4 · Registrando impresoras"
+Write-INFO "Obteniendo identificador unico (MAC) de cada impresora..."
+Write-Host ""
+
 $registradas = [System.Collections.ArrayList]@()
 $n = $impresorasExistentes + 1
 
 foreach ($ip in $found) {
     $nombre = "Impresora $n"
-    Write-INFO "  $nombre → $ip"
+    
+    # Obtener MAC
+    $mac = Get-MacForIp $ip
+    if ($mac) {
+        Write-INFO "  $ip → MAC: $mac"
+    } else {
+        Write-WARN "  $ip → MAC no disponible (se registrara sin ella)"
+    }
+    
     try {
+        $body = @{
+            ip_address      = $ip
+            port            = 9100
+            nombre          = $nombre
+            connection_type = "ip_local"
+        }
+        if ($mac) { $body.mac_address = $mac }
+        
         $r = Invoke-RestMethod -Uri "$API/api/bridge/register-printer" -Method POST `
             -Headers @{"x-bridge-token"=$Token} -ContentType "application/json" `
-            -Body (@{ip_address=$ip;port=9100;nombre=$nombre;connection_type="ip_local"}|ConvertTo-Json) `
-            -TimeoutSec 15
-        Write-OK "Registrada: $nombre ($ip)"
-        [void]$registradas.Add(@{id=$r.id;nombre=$nombre;ip=$ip})
+            -Body ($body | ConvertTo-Json) -TimeoutSec 15
+        
+        Write-OK "Registrada: $nombre ($ip$(if($mac){' · MAC: '+$mac}))"
+        [void]$registradas.Add(@{id=$r.id; nombre=$nombre; ip=$ip})
         $n++
-    } catch { Write-ERR "Error registrando $ip`: $_" }
+    } catch {
+        Write-ERR "Error registrando $ip`: $_"
+    }
 }
 
 # ── PASO 5: Test print ────────────────────────────────────────
 if ($registradas.Count -gt 0) {
-    Write-Header "PASO 5 · Enviando ticket de prueba"
+    Write-Header "PASO 5 · Ticket de prueba"
     foreach ($imp in $registradas) {
         try {
             Invoke-RestMethod -Uri "$API/api/print" -Method POST `
                 -ContentType "application/json" `
                 -Body (@{trigger="test";impresora_id=$imp.id}|ConvertTo-Json) `
                 -TimeoutSec 10 | Out-Null
-            Write-OK "Ticket enviado a $($imp.nombre)"
-        } catch { Write-WARN "Sin respuesta de $($imp.nombre) — verifica que esta encendida" }
+            Write-OK "Ticket enviado → $($imp.nombre)"
+        } catch {
+            Write-WARN "Sin respuesta de $($imp.nombre) — verifica que esta encendida"
+        }
         Start-Sleep -Milliseconds 500
     }
 }
 
 # ── Fin ───────────────────────────────────────────────────────
 Write-Header "Listo"
-Write-OK "$($registradas.Count) impresora(s) registrada(s)"
-Write-INFO ""
-Write-INFO "Abriendo ia.rest..."
-Write-INFO "En el panel podras:"
-Write-INFO "  · Pulsar TEST para identificar cada impresora"
-Write-INFO "  · Cambiarle el nombre"
-Write-INFO "  · Crear los flujos de trabajo"
+Write-OK "$($registradas.Count) impresora(s) registrada(s) con MAC guardada"
+Write-INFO "El bridge las localizara automaticamente aunque cambien de IP."
 Write-Host ""
+Write-INFO "Abriendo ia.rest..."
 Start-Process "$API/owner?setup=1"
 Start-Sleep -Seconds 3

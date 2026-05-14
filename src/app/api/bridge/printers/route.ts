@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 
 // GET /api/bridge/printers?token=XXX
-// El wizard comprueba cuántas impresoras hay ya registradas
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
   if (!token) return NextResponse.json({ error: 'Token requerido' }, { status: 401 })
@@ -20,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const { data: impresoras } = await supabase
     .from('impresoras')
-    .select('id, nombre, ip_address, port, connection_type')
+    .select('id, nombre, ip_address, port, connection_type, mac_address')
     .eq('restaurante_id', bt.restaurante_id)
     .eq('activa', true)
     .in('connection_type', ['ip_local', 'usb_bridge'])
