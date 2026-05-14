@@ -754,10 +754,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             }).then(r => r.json()).then(data => {
               setMesaRapidaLoading(false)
               if (data.mesa) {
-                addMsg('sistema', `Mesa ${data.mesa.codigo} asignada a ${a}`, 'ok')
-                setMesaDetalle({ id: data.mesa.id, codigo: data.mesa.codigo, capacidad: 4 })
+                const msg = data.desde_reserva
+                  ? `Mesa ${data.mesa.codigo} reservada a nombre de ${a}. Abierta.`
+                  : `Mesa ${data.mesa.codigo} asignada a ${a}.`
+                addMsg('sistema', msg, 'ok')
+                if (!ttsOff) speak(msg)
+                if (navigator.vibrate) navigator.vibrate([30, 50, 30])
+                // No abrir sheet automáticamente — el camarero ya sabe su mesa
               } else {
-                addMsg('sistema', data.error || 'Sin mesas libres', 'aviso')
+                const errMsg = data.otras_zonas?.length
+                  ? `Sin mesas libres en ${z}. Disponible en: ${data.otras_zonas.join(', ')}.`
+                  : data.error || 'Sin mesas libres.'
+                addMsg('sistema', errMsg, 'aviso')
+                if (!ttsOff) speak(errMsg)
               }
             }).catch(() => setMesaRapidaLoading(false))
           } else {
@@ -1023,7 +1032,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       }
       setMesaRapidaModal(false)
       setMesaRapidaForm({ zona: '', alias: '', telefono: '' })
-      if (d.mesa) setMesaDetalle({ id: d.mesa.id, codigo: d.mesa.codigo, capacidad: 4 })
+      if (d.mesa) {
+        const msg = d.desde_reserva
+          ? `Mesa ${d.mesa.codigo} reservada a nombre de ${mesaRapidaForm.alias.trim()}. Abierta.`
+          : `Mesa ${d.mesa.codigo} asignada a ${mesaRapidaForm.alias.trim()}.`
+        if (!ttsOff) speak(msg)
+        if (navigator.vibrate) navigator.vibrate([30, 50, 30])
+        setMesaDetalle({ id: d.mesa.id, codigo: d.mesa.codigo, capacidad: 4 })
+      }
     } catch { setMesaRapidaErr('Error de red') }
     finally { setMesaRapidaLoading(false) }
   }
