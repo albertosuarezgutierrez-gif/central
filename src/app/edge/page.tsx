@@ -1890,7 +1890,7 @@ function VoiceProfileSection({ session }: { session: { id: string; restaurante_i
 
       const r = await fetch('/api/voice-profile/enroll', {
         method: 'POST',
-        headers: { 'x-restaurante-id': session.restaurante_id },
+        headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
         body: fd,
       })
       const d = await r.json()
@@ -1916,7 +1916,6 @@ function VoiceProfileSection({ session }: { session: { id: string; restaurante_i
   const resetPerfil = async () => {
     await fetch(`/api/voice-profile/reset?camarero_id=${session.id}`, {
       method: 'DELETE',
-      headers: { 'x-restaurante-id': session.restaurante_id },
     })
     setEstado('sin_calibrar')
     setFrases(0)

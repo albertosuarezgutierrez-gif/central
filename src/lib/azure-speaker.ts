@@ -82,11 +82,16 @@ export async function verificarAzure(
   audioBlob: Blob
 ): Promise<number | null> {
   try {
+    // Usar el tipo real del blob. Si es WebM, Azure puede rechazarlo (→ null gracioso).
+    // El enrollment siempre usa WAV (generado por capturarWAV() en el cliente).
+    const contentType = audioBlob.type?.includes('wav') ? 'audio/wav'
+                      : audioBlob.type?.includes('ogg') ? 'audio/ogg; codecs=opus'
+                      : audioBlob.type || 'audio/wav'
     const r = await fetch(`${BASE()}/${profileId}/verify`, {
       method: 'POST',
       headers: {
         'Ocp-Apim-Subscription-Key': KEY(),
-        'Content-Type': 'audio/wav',
+        'Content-Type': contentType,
       },
       body: await audioBlob.arrayBuffer(),
     })

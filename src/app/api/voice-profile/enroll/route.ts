@@ -21,10 +21,11 @@ import {
 export const maxDuration = 30
 
 export async function POST(req: NextRequest) {
+  let camareroId: string | null = null  // guardado aquí para usarlo en el catch
   try {
     const formData   = await req.formData()
     const audio      = formData.get('audio') as Blob | null
-    const camareroId = formData.get('camarero_id') as string | null
+    camareroId       = formData.get('camarero_id') as string | null
 
     if (!audio || !camareroId) {
       return NextResponse.json({ error: 'Faltan campos: audio y camarero_id' }, { status: 400 })
@@ -142,20 +143,18 @@ export async function POST(req: NextRequest) {
     const msg = err instanceof Error ? err.message : String(err)
     console.error('[VOICE-ENROLL]', err)
 
-    // Marcar error en BD si tenemos el camarero_id
-    try {
-      const formData   = await req.formData().catch(() => null)
-      const camareroId = formData?.get('camarero_id') as string | null
-      if (camareroId) {
+    // Marcar error en BD usando camareroId guardado al inicio
+    if (camareroId) {
+      try {
         const supabase = createServerClient()
         await supabase.from('voice_profiles').upsert({
-          camarero_id: camareroId,
-          restaurante_id: req.headers.get('x-restaurante-id') ?? '',
-          estado: 'error',
-          error_msg: msg.substring(0, 200),
+          camarero_id:    camareroId,
+          restaurante_id: getRestauranteId(req),
+          estado:         'error',
+          error_msg:      msg.substring(0, 200),
         }, { onConflict: 'camarero_id' })
-      }
-    } catch { /* no propagar */ }
+      } catch { /* no propagar */ }
+    }
 
     return NextResponse.json({ error: msg }, { status: 500 })
   }
