@@ -281,7 +281,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
       </div>
       <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px' }}
         onTouchStart={e => { touchStartY.current = e.touches[0].clientY; hasMoved.current = false }}
-        onTouchMove={e  => { if (Math.abs(e.touches[0].clientY - touchStartY.current) > 8) hasMoved.current = true }}
+        onTouchMove={e  => { if (Math.abs(e.touches[0].clientY - touchStartY.current) > 12) hasMoved.current = true }}
       >
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:9 }}>
           {mesasFiltradas.map(m => {
@@ -289,6 +289,13 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
             return (
               <button key={m.id}
+                onTouchStart={e => {
+                  touchStartY.current = e.touches[0].clientY
+                  hasMoved.current = false
+                }}
+                onTouchMove={e => {
+                  if (Math.abs(e.touches[0].clientY - touchStartY.current) > 12) hasMoved.current = true
+                }}
                 onTouchEnd={e => {
                   if (!hasMoved.current) {
                     e.preventDefault()
