@@ -8,6 +8,7 @@ import { supabase } from '@/lib/supabase'
 import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
 import FueraCartaSection from '@/components/owner/FueraCartaSection'
 import SupervisorTab from '@/components/owner/SupervisorTab'
+import BridgeSetupWizard from '@/components/owner/BridgeSetupWizard'
 import DiagnosticoTab from '@/components/owner/DiagnosticoTab'
 import SoporteTab from '@/components/owner/SoporteTab'
 import MensajesOwnerTab from '@/components/owner/MensajesOwnerTab'
@@ -5978,6 +5979,7 @@ export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [tab, setTab] = useState('camareros')
+  const [showBridgeSetup, setShowBridgeSetup] = useState(false)
   const [setupStatus, setSetupStatus] = useState<{ tiene_camareros:boolean; tiene_productos:boolean; tiene_mesas:boolean; turno_activo:boolean } | null>(null)
   const [showChecklist, setShowChecklist] = useState(true)
 
@@ -5987,6 +5989,9 @@ export default function OwnerPage() {
     // Check onboarding status — redirect if not completed yet
     const params = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '')
     const skipOnboarding = params.get('onboarding') === 'done'
+    if (params.get('setup') === '1') setShowBridgeSetup(true)
+    const tabParam = params.get('tab')
+    if (tabParam) setTab(tabParam)
     if (!skipOnboarding) {
       fetch('/api/owner/restaurante', { headers: h })
         .then(r => r.json())
@@ -6213,6 +6218,10 @@ export default function OwnerPage() {
           </button>
         </div>
       </header>
+
+      {showBridgeSetup && (
+        <BridgeSetupWizard setTab={setTab} session={session} />
+      )}
 
       {setupStatus && showChecklist && (
         <SetupChecklist

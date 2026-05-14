@@ -1,5 +1,6 @@
 # ============================================================
-# ia.rest · Bridge Wizard de impresoras v2
+# ia.rest · Bridge Wizard de impresoras v3
+# Auto-detecta y registra impresoras sin preguntar nada
 # ============================================================
 param(
     [Parameter(Mandatory=$true)]
@@ -33,10 +34,8 @@ try {
     $resp = Invoke-RestMethod -Uri "$API/api/bridge/verify" `
         -Method POST -Body $body -ContentType "application/json" -TimeoutSec 15
     Write-OK "Conectado · Restaurante: $($resp.nombre)"
-    $restauranteNombre = $resp.nombre
 } catch {
     Write-ERR "Token invalido o sin conexion a internet."
-    Write-INFO "Comprueba el token en /owner -> Config -> Impresoras."
     Read-Host "  Pulsa Enter para salir"
     exit 1
 }
@@ -60,7 +59,7 @@ try {
 
 # ── PASO 3: Escanear puerto 9100 ──────────────────────────────
 Write-Header "PASO 3 · Buscando impresoras (puerto 9100)"
-Write-INFO "Escaneando $subnet.1 - $subnet.254 ..."
+Write-INFO "Escaneando red... (30 segundos aprox.)"
 Write-Host ""
 
 $found    = [System.Collections.ArrayList]@()
@@ -106,11 +105,9 @@ Write-Host ""
 
 if ($found.Count -eq 0) {
     Write-WARN "No se encontraron impresoras en la red."
-    Write-Host ""
     Write-INFO "Posibles causas:"
-    Write-INFO "  · La impresora esta apagada o no conectada al WiFi"
-    Write-INFO "  · La impresora usa un puerto diferente al 9100"
-    Write-INFO "  · Esta en otra red WiFi"
+    Write-INFO "  · Impresora apagada o en otra red WiFi"
+    Write-INFO "  · Puerto diferente al 9100"
     Write-Host ""
     $manual = Read-Host "  Introducir IP manualmente? (s/n)"
     if ($manual -eq "s" -or $manual -eq "S") {
@@ -122,32 +119,28 @@ if ($found.Count -eq 0) {
             Read-Host "  Pulsa Enter para salir"; exit 1
         }
     } else {
-        Write-INFO "Puedes anadir impresoras manualmente desde /owner -> Hardware."
+        Write-INFO "Puedes añadir impresoras manualmente desde /owner -> Hardware."
         Read-Host "  Pulsa Enter para salir"; exit 0
     }
 }
 
-# ── PASO 4: Nombrar y registrar ───────────────────────────────
-Write-Header "PASO 4 · Dar nombre a las impresoras"
-Write-INFO "Solo necesitas poner un nombre a cada impresora."
-Write-INFO "Ej: Barra, Cocina caliente, Postres, Bebidas"
+# ── PASO 4: Registrar automaticamente ────────────────────────
+Write-Header "PASO 4 · Registrando impresoras"
+Write-INFO "$($found.Count) impresora(s) encontrada(s) — registrando automaticamente..."
 Write-Host ""
 
-$registradas = [System.Collections.ArrayList]@()
+$registradas  = [System.Collections.ArrayList]@()
+$contador     = 1
 
 foreach ($ip in $found) {
-    Write-Host "  Impresora en $ip" -ForegroundColor Cyan
-    $nombre = Read-Host "  Nombre (Enter para omitir)"
-    if ([string]::IsNullOrWhiteSpace($nombre)) {
-        Write-INFO "  Omitida."
-        Write-Host ""
-        continue
-    }
+    $nombre = "Impresora $contador"
+    Write-INFO "  Registrando $nombre ($ip)..."
+
     try {
         $regBody = @{
             ip_address      = $ip
             port            = 9100
-            nombre          = $nombre.Trim()
+            nombre          = $nombre
             connection_type = "ip_local"
         } | ConvertTo-Json
 
@@ -159,62 +152,46 @@ foreach ($ip in $found) {
             -ContentType "application/json" `
             -TimeoutSec 15
 
-        Write-OK "Registrada: $nombre ($ip)"
+        Write-OK "$nombre registrada (ID: $($regResp.id.Substring(0,8))...)"
         [void]$registradas.Add(@{ id = $regResp.id; nombre = $nombre; ip = $ip })
+        $contador++
     } catch {
-        Write-ERR "Error al registrar $nombre`: $($_.Exception.Message)"
+        Write-ERR "Error registrando $ip`: $($_.Exception.Message)"
     }
-    Write-Host ""
 }
 
-# ── PASO 5: Test de impresion ─────────────────────────────────
+# ── PASO 5: Test print en cada una ───────────────────────────
 if ($registradas.Count -gt 0) {
-    Write-Header "PASO 5 · Probando impresoras"
-    Write-INFO "Enviando ticket de prueba a cada impresora..."
-    Write-Host ""
-
+    Write-Header "PASO 5 · Enviando ticket de prueba"
     foreach ($imp in $registradas) {
-        Write-INFO "  Enviando test a $($imp.nombre) ($($imp.ip))..."
+        Write-INFO "  Test a $($imp.nombre) ($($imp.ip))..."
         try {
-            $testBody = @{
-                trigger     = "test"
-                impresora_id = $imp.id
-            } | ConvertTo-Json
-
             Invoke-RestMethod `
                 -Uri "$API/api/print" `
                 -Method POST `
-                -Body $testBody `
+                -Body (@{ trigger = "test"; impresora_id = $imp.id } | ConvertTo-Json) `
                 -ContentType "application/json" `
                 -TimeoutSec 10 | Out-Null
-
-            Write-OK "Test enviado a $($imp.nombre) — comprueba que imprimio"
+            Write-OK "Ticket enviado a $($imp.nombre)"
         } catch {
-            Write-WARN "No se pudo enviar test a $($imp.nombre): $($_.Exception.Message)"
+            Write-WARN "Sin respuesta de $($imp.nombre) — comprueba que esta encendida"
         }
         Start-Sleep -Milliseconds 500
     }
 }
 
-# ── RESUMEN + ABRIR FLUJOS ────────────────────────────────────
+# ── Abrir panel de configuracion ─────────────────────────────
 Write-Header "Configuracion completada"
-
-if ($registradas.Count -gt 0) {
-    Write-OK "$($registradas.Count) impresora(s) configurada(s) correctamente"
-    Write-Host ""
-    Write-INFO "Abriendo panel de Flujos de trabajo en el navegador..."
-    Write-INFO "Alli asigna cada seccion (Barra, Cocina...) a su impresora."
-    Write-Host ""
-
-    $flujoUrl = "$API/owner?tab=flujos&setup=1"
-    Start-Process $flujoUrl
-
-    Write-Host "  URL: $flujoUrl" -ForegroundColor DarkGray
-} else {
-    Write-WARN "No se registro ninguna impresora."
-    Write-INFO "Puedes anadirlas manualmente desde /owner -> Hardware."
-}
-
+Write-OK "$($registradas.Count) impresora(s) registrada(s) como Impresora 1, 2, 3..."
 Write-Host ""
-Write-Host "  Wizard completado. Esta ventana se cerrara en 5 segundos." -ForegroundColor DarkGray
+Write-INFO "Abriendo panel de ia.rest..."
+Write-INFO "Ahi podras:"
+Write-INFO "  · Pulsar TEST para saber cual es cual"
+Write-INFO "  · Cambiar el nombre si quieres"
+Write-INFO "  · Crear los flujos de trabajo"
+Write-Host ""
+
+Start-Process "$API/owner?setup=1"
+
+Write-Host "  Esta ventana se cerrara en 5 segundos." -ForegroundColor DarkGray
 Start-Sleep -Seconds 5
