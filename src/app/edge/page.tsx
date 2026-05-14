@@ -488,6 +488,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     return () => { speakingRef.current = false }
   }, [screen, brain]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // brainRef: espejo síncrono de `brain` para guards en stopRecording sin stale closures
+  // Necesario para evitar que `brain` aparezca en las dependencias de stopRecording,
+  // lo que lo recrearía con cada comanda y desregistraría los handlers de auricular.
+  const brainRef     = useRef<BrainResult|null>(null)
   const mediaRef     = useRef<MediaRecorder|null>(null)
   const chunksRef    = useRef<Blob[]>([])
   const recordingRef = useRef(false)
@@ -545,17 +549,22 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (cooldownRef.current) return
     // Guard via screenRef (síncrono) — evita stale closures cuando el PTT llega muy rápido
     const cur = screenRef.current
-    // Permitir grabar desde idle O desde asking (responder pregunta de BRAIN)
-    // Si screen === 'sent', el camarero quiere la siguiente comanda → auto-reset y seguir
+    // Permitir grabar desde: idle, asking, sent, speaking (interrumpe TTS)
     if (cur === 'sent') {
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
       speakingRef.current = false
-      setBrain(null); setTranscript(''); setError('')
+      setBrain(null); brainRef.current = null; setTranscript(''); setError('')
       setAlertas86([]); setAlertasAlerg([]); setPendingItems([])
       setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
       setChipsClarificacion([]); setMesaClarificacion(null)
       setPedidoCuenta({ loading: false, error: '', factura: null })
       // continúa sin return — empieza a grabar directamente
+    } else if (cur === 'speaking') {
+      // Bug-fix: interrumpir TTS para grabar la siguiente comanda sin esperar
+      window.speechSynthesis?.cancel()
+      speakingRef.current = false
+      // No reseteamos brain/transcript — visible en UI mientras graba la siguiente
+      // continúa sin return
     } else if (cur !== 'idle' && cur !== 'asking') return
     // Lock extra: evitar doble MediaRecorder si el PTT llega antes de que React actualice
     if (recordingRef.current) return
@@ -565,7 +574,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       recordStartRef.current = Date.now()
       const stream = await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true}})
       chunksRef.current = []
-      const mr = new MediaRecorder(stream, {mimeType:'audio/webm;codecs=opus'})
+      // Bug-fix iOS: audio/webm no está soportado en Safari — detectar formato disponible
+      const mimeType = ['audio/webm;codecs=opus','audio/webm','audio/mp4','audio/ogg;codecs=opus','']
+        .find(t => !t || MediaRecorder.isTypeSupported(t)) ?? ''
+      const mr = new MediaRecorder(stream, mimeType ? { mimeType } : {})
       mr.ondataavailable = e => { if (e.data.size>0) chunksRef.current.push(e.data) }
       mr.start(100); mediaRef.current=mr; recordingRef.current=true
       setScreenSafe('recording')
@@ -590,7 +602,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         let silentMs = 0
         // Umbral adaptativo: medir ruido ambiente en los primeros 400ms
         let ambientRms = 8  // default conservador
-        let calibrated = false
         const SILENCE_DURATION  = 2500   // 2.5s — más margen en ambiente ruidoso
         const FRAME_INTERVAL    = 80
         let lastFrame = Date.now()
@@ -639,7 +650,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           let sum = 0
           for (let i = 0; i < buf.length; i++) sum += Math.abs(buf[i] - 128)
           ambientRms = sum / buf.length
-          calibrated = true
           vadLoop()
         }, 400) as unknown as number
       } catch { /* VAD no disponible — modo normal sin auto-stop */ }
@@ -731,7 +741,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       const r = await fetch('/api/transcribe', {method:'POST', body:fd, signal:abortCtrl.signal})
       const d = await r.json()
       if (d.ok) {
-        setTranscript(d.texto); setBrain(d.brain); setLatencia(d.latencia_ms)
+        setTranscript(d.texto); setBrain(d.brain); brainRef.current = d.brain; setLatencia(d.latencia_ms)
         setLastComandaId(d.comanda_id??null); setAlertas86(d.alertas_86??[]); setAlertasAlerg(d.alertas_alergenos??[])
         addMsg('camarero', d.texto)
 
@@ -857,7 +867,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           !paxEnVoz &&
           d.comanda_id  // comanda ya creada, pero sin pax
 
-        if (necesitaPax && mesaIdRes) {
+        // Bug-fix: no abrir modal de comensales si autoConfirm va a ir a sent directamente
+        if (necesitaPax && mesaIdRes && !autoConfirm) {
           setPendingVozComanda({ mesaId: mesaIdRes, mesaCodigo: d.brain?.mesa||'?', paxYaConocido: null })
           // Mostramos confirm sheet igual pero con el modal de comensales encima
         }
@@ -890,13 +901,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       addMsg('sistema','Sin conexión con el servidor — comanda guardada, se enviará al recuperar WiFi','error')
       setScreenSafe('error')
       // Circuit breaker: encolar para reintento offline si BRAIN ya procesó items
-      if (brain && brain.items?.length > 0 && brain.mesa) {
+      // Usamos brainRef.current (síncrono) en lugar de brain (estado React, stale en callbacks)
+      const brainSnap = brainRef.current
+      if (brainSnap && brainSnap.items?.length > 0 && brainSnap.mesa) {
         const sesHeader = localStorage.getItem('ia_rest_session') ?? ''
-        const mesaObj = mesasPlano.find(m => m.codigo === brain.mesa)
+        const mesaObj = mesasPlano.find(m => m.codigo === brainSnap.mesa)
         if (mesaObj) encolar({
-          mesa_codigo: brain.mesa,
+          mesa_codigo: brainSnap.mesa,
           mesa_id: mesaObj.id,
-          items: brain.items,
+          items: brainSnap.items,
           sesion_header: sesHeader,
         })
       }
@@ -907,11 +920,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       processingRef.current = false
       if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null }
     }
-  }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, brain, mesasPlano, encolar, setScreenSafe])
+  // brain eliminado de deps → stopRecording NO se recrea en cada comanda → handlers de auricular estables
+  }, [session.id, turnoId, pendingItems, voiceConfirm, startRecording, addMsg, ttsOff, autoConfirm, autoThreshold, servicioConfig, mesasPlano, encolar, setScreenSafe])
 
   useEffect(() => {
-    const dn = (e:KeyboardEvent) => { if(e.code==='Space'&&!e.repeat&&screen==='idle'){e.preventDefault();startRecording()} }
-    const up = (e:KeyboardEvent) => { if(e.code==='Space'&&screen==='recording') stopRecording() }
+    // Bug-fix: usar screenRef.current (síncrono) en lugar de screen (closure stale)
+    const dn = (e:KeyboardEvent) => { if(e.code==='Space'&&!e.repeat&&screenRef.current==='idle'){e.preventDefault();startRecording()} }
+    const up = (e:KeyboardEvent) => { if(e.code==='Space'&&screenRef.current==='recording') stopRecording() }
     window.addEventListener('keydown',dn); window.addEventListener('keyup',up)
     return () => { window.removeEventListener('keydown',dn); window.removeEventListener('keyup',up) }
   }, [startRecording, stopRecording])
@@ -924,10 +939,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (typeof navigator === 'undefined' || !('mediaSession' in navigator)) return
     if ((window as any).isNativeApp) return // APK nativo — no interferir
     const toggle = () => {
-      if (screen === 'idle')      { activateMediaSession(); startRecording() }
-      else if (screen === 'recording') stopRecording()
+      if (screenRef.current === 'idle' || screenRef.current === 'speaking') { activateMediaSession(); startRecording() }
+      else if (screenRef.current === 'recording') stopRecording()
     }
-    const stop = () => { if (screen === 'recording') stopRecording() }
+    const stop = () => { if (screenRef.current === 'recording') stopRecording() }
     try {
       navigator.mediaSession.setActionHandler('play',  toggle)
       navigator.mediaSession.setActionHandler('pause', stop)
@@ -1112,9 +1127,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }, [mesasPlano, mesaClarificacion, addMsg])
 
   const reset = () => {
+    // Bug-fix: si el camarero cancela en la pantalla confirm, la comanda ya existe en BD.
+    // Hay que marcarla como cancelada para que no llegue al KDS de cocina.
+    if (screenRef.current === 'confirm' && lastComandaId) {
+      fetch(`/api/comanda/${lastComandaId}/cancelar`, {
+        method: 'PATCH',
+        headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+      }).catch(() => {}) // fire and forget — no bloquear la UI
+    }
     if (typeof window!=='undefined') window.speechSynthesis?.cancel()
     speakingRef.current=false; processingRef.current=false; recordingRef.current=false
-    setScreenSafe('idle'); setBrain(null); setTranscript('')
+    setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('')
     setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
     setAlertas86([]); setAlertasAlerg([]); setPendingItems([])
     setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
@@ -1132,7 +1155,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }
 
   const isListening  = screen==='recording'
-  const isProcessing = screen==='processing'||screen==='speaking'
+  // Bug-fix: 'speaking' ya no bloquea el botón — el camarero puede interrumpir el TTS
+  // para grabar la siguiente comanda directamente (startRecording maneja la interrupción)
+  const isProcessing = screen==='processing'
 
   return (
     <div style={{height:'100dvh',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',fontFamily:SN,position:'relative',fontSize:fontBig?'1.1rem':'1rem',color:C.ink}}>
@@ -1514,7 +1539,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 }}/>
               )}
               <button
-                onPointerDown={e=>{e.preventDefault(); if(!isProcessing){pttManualRef.current=true; activateMediaSession(); startRecording()}}}
+                onPointerDown={e=>{e.preventDefault(); e.currentTarget.setPointerCapture(e.pointerId); if(!isProcessing){pttManualRef.current=true; activateMediaSession(); startRecording()}}}
                 onPointerUp={e=>{e.preventDefault(); pttManualRef.current=false; stopRecording()}}
                 onPointerLeave={e=>{e.preventDefault(); if(recordingRef.current){pttManualRef.current=false; stopRecording()}}}
                 disabled={isProcessing}

@@ -3,17 +3,26 @@ import { transcribir } from '@/lib/ear'
 import { routearComanda } from '@/lib/brain-router'
 import { crearPrintJobs } from '@/lib/courier'
 import { createServerClient } from '@/lib/supabase'
-import { getRestauranteId } from '@/lib/session'
+import { getSession, getRestauranteId } from '@/lib/session'
 import { azureDisponible, verificarAzure } from '@/lib/azure-speaker'
 
 // ── Cache de idempotencia en memoria (dura hasta redeploy) ──────────────
-// Protege contra peticiones duplicadas que lleguen en rafaga (red lenta + reintento)
+// Protege contra peticiones duplicadas que lleguen en ráfaga (red lenta + reintento)
+// NOTA: en entornos serverless multi-instancia esta cache no se comparte entre lambdas.
+// Para idempotencia total se necesitaría persistir en Supabase (pendiente migración).
 const recentRecordings = new Map<string, { ts: number; result: object }>()
 const IDEMPOTENCY_TTL_MS = 30_000 // 30s
 
 export async function POST(req: NextRequest) {
   const start = Date.now()
   try {
+    // Bug-fix: validar sesión explícitamente — getRestauranteId hace fallback al demo
+    // si la sesión está rota, lo que crearía comandas sin restaurante_id real.
+    const session = getSession(req)
+    if (!session) {
+      return NextResponse.json({ error: 'Sesión inválida — vuelve a iniciar sesión' }, { status: 401 })
+    }
+
     const formData = await req.formData()
     const audio = formData.get('audio') as Blob
     const camareroId = formData.get('camarero_id') as string
@@ -484,6 +493,8 @@ export async function POST(req: NextRequest) {
       msgEs = 'Tiempo de espera agotado — inténtalo de nuevo'
     } else if (msg.includes('JSON') || msg.includes('parse')) {
       msgEs = 'No se pudo interpretar la respuesta — inténtalo de nuevo'
+    } else if (msg.includes('audio') || msg.includes('codec') || msg.includes('media')) {
+      msgEs = 'Formato de audio no soportado — actualiza la app o usa Chrome'
     } else if (msg.length < 120 && !msg.match(/[A-Z][a-z]+ \w+ properties/)) {
       // Solo mostrar el mensaje original si parece legible (no un error JS técnico)
       msgEs = msg
