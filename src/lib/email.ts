@@ -1,0 +1,161 @@
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+
+const FROM = 'ia.rest <hola@iarest.es>'
+const BASE = 'https://www.iarest.es'
+
+// ── Colores del design system ────────────────────────────────
+const C = {
+  bg:   '#F6F1E7',
+  bg2:  '#EDE8DC',
+  fg:   '#1A1714',
+  fg2:  '#3D342A',
+  fg3:  '#7A6D5E',
+  verm: '#D9442B',
+  rule: '#D4CBB8',
+}
+
+// ── HTML base para todos los emails ──────────────────────────
+function layout(content: string, preheader = '') {
+  return `<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ia.rest</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: ${C.bg}; font-family: 'Inter', Arial, sans-serif; color: ${C.fg}; }
+  a { color: ${C.verm}; text-decoration: none; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 40px 24px 60px; }
+  .logo { font-family: Georgia, serif; font-style: italic; font-size: 22px; color: ${C.verm}; margin-bottom: 32px; display: block; }
+  .card { background: #fff; border: 1px solid ${C.rule}; border-radius: 12px; padding: 32px; margin-bottom: 24px; }
+  h1 { font-family: Georgia, serif; font-style: italic; font-size: 26px; color: ${C.fg}; font-weight: 400; line-height: 1.2; margin-bottom: 12px; }
+  p { font-size: 15px; color: ${C.fg2}; line-height: 1.6; margin-bottom: 16px; }
+  .btn { display: inline-block; background: ${C.verm}; color: #fff !important; font-size: 15px; font-weight: 700; padding: 14px 28px; border-radius: 8px; margin: 8px 0; }
+  .token-box { background: ${C.bg2}; border: 1px solid ${C.rule}; border-radius: 8px; padding: 14px 18px; font-family: 'Courier New', monospace; font-size: 14px; color: ${C.fg}; letter-spacing: .03em; margin: 16px 0; word-break: break-all; }
+  .step { display: flex; gap: 12px; margin-bottom: 12px; }
+  .step-n { width: 24px; height: 24px; border-radius: 50%; background: ${C.verm}; color: #fff; font-size: 11px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .step-txt { font-size: 14px; color: ${C.fg2}; line-height: 1.5; }
+  .footer { font-size: 12px; color: ${C.fg3}; text-align: center; padding-top: 24px; border-top: 1px solid ${C.rule}; line-height: 1.6; }
+  .divider { border: none; border-top: 1px solid ${C.rule}; margin: 24px 0; }
+</style>
+</head>
+<body>
+${preheader ? `<div style="display:none;max-height:0;overflow:hidden;">${preheader}</div>` : ''}
+<div class="wrap">
+  <a href="${BASE}" class="logo">ia.rest</a>
+  ${content}
+  <div class="footer">
+    <p><a href="${BASE}">www.iarest.es</a> · <a href="mailto:hola@iarest.es">hola@iarest.es</a></p>
+    <p style="margin-top:6px">ia.rest · TPV por Voz para Hostelería</p>
+  </div>
+</div>
+</body>
+</html>`
+}
+
+// ── EMAIL 1: Bienvenida con token de bridge ──────────────────
+export async function enviarEmailBienvenida({
+  email,
+  nombreRestaurante,
+  bridgeToken,
+}: {
+  email: string
+  nombreRestaurante: string
+  bridgeToken: string
+}) {
+  const html = layout(`
+    <div class="card">
+      <h1>Bienvenido a ia.rest, ${nombreRestaurante}.</h1>
+      <p>Tu cuenta está activa. Tienes <strong>14 días de prueba gratuita</strong> para probarlo todo sin límites.</p>
+      <hr class="divider">
+      <p><strong>Empieza aquí:</strong></p>
+      <div class="step"><div class="step-n">1</div><div class="step-txt">Configura tu carta, zonas y secciones de cocina en tu panel de control.</div></div>
+      <div class="step"><div class="step-n">2</div><div class="step-txt">Descarga el instalador para conectar tus impresoras de cocina.</div></div>
+      <div class="step"><div class="step-n">3</div><div class="step-txt">Da los PINs a tu equipo y empieza el primer servicio.</div></div>
+      <hr class="divider">
+      <a href="${BASE}/owner" class="btn">Abrir mi panel →</a>
+    </div>
+
+    <div class="card">
+      <p style="font-size:13px;color:${C.fg3};margin-bottom:8px;text-transform:uppercase;letter-spacing:.06em;font-weight:700">Tu referencia de instalación</p>
+      <p>Necesitas este código para instalar el bridge en el ordenador del TPV y conectar tus impresoras.</p>
+      <div class="token-box">${bridgeToken}</div>
+      <a href="${BASE}/instalar" class="btn">Descargar instalador →</a>
+      <p style="font-size:13px;color:${C.fg3};margin-top:12px">El instalador detecta tus impresoras automáticamente en menos de 5 minutos.</p>
+    </div>
+  `, `Bienvenido a ia.rest — tu cuenta de ${nombreRestaurante} está lista`)
+
+  return resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `Bienvenido a ia.rest — tu cuenta está lista`,
+    html,
+  })
+}
+
+// ── EMAIL 2: Recordatorio trial día 12 ──────────────────────
+export async function enviarEmailRecordatorioTrial({
+  email,
+  nombreRestaurante,
+  diasRestantes,
+  urlFacturacion,
+}: {
+  email: string
+  nombreRestaurante: string
+  diasRestantes: number
+  urlFacturacion: string
+}) {
+  const html = layout(`
+    <div class="card">
+      <h1>Tu prueba termina en ${diasRestantes} días.</h1>
+      <p>Hola ${nombreRestaurante}, el periodo de prueba de ia.rest termina pronto. Para seguir usando el sistema sin interrupciones, activa tu suscripción.</p>
+      <p>Si tienes cualquier pregunta antes de decidir, responde a este email y te ayudamos.</p>
+      <a href="${urlFacturacion}" class="btn">Activar suscripción →</a>
+    </div>
+    <div class="card">
+      <p style="font-size:14px;color:${C.fg3}">¿No quieres continuar? No hace falta que hagas nada — tu cuenta se pausará automáticamente al terminar el periodo de prueba, sin ningún cargo.</p>
+    </div>
+  `, `Tu prueba de ia.rest termina en ${diasRestantes} días`)
+
+  return resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `Tu prueba de ia.rest termina en ${diasRestantes} días`,
+    html,
+  })
+}
+
+// ── EMAIL 3: Confirmación de pago y activación ───────────────
+export async function enviarEmailConfirmacionPago({
+  email,
+  nombreRestaurante,
+  importe,
+  proximaFactura,
+}: {
+  email: string
+  nombreRestaurante: string
+  importe: number
+  proximaFactura: string
+}) {
+  const html = layout(`
+    <div class="card">
+      <h1>Suscripción activa.</h1>
+      <p>Hola ${nombreRestaurante}, tu suscripción a ia.rest está activa. Gracias por confiar en nosotros.</p>
+      <hr class="divider">
+      <p><strong>Importe:</strong> ${importe.toFixed(2)} €/mes</p>
+      <p><strong>Próxima factura:</strong> ${proximaFactura}</p>
+      <hr class="divider">
+      <a href="${BASE}/owner" class="btn">Ir a mi panel →</a>
+    </div>
+  `, `Suscripción activa — ${nombreRestaurante}`)
+
+  return resend.emails.send({
+    from: FROM,
+    to: email,
+    subject: `Suscripción activa — ia.rest`,
+    html,
+  })
+}
