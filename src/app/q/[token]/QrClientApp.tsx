@@ -213,7 +213,7 @@ export default function QrClientApp({ token }: { token: string }) {
   const confirmarPedido = useCallback(async () => {
     if (!data || !sesionId || !cart.length) return
     const items = cart.map(i => ({
-      producto_id: i.id, cantidad: i.qty,
+      producto_id: i.id, nombre: i.nombre, cantidad: i.qty,
       precio_unitario: i.precio, notas: ''
     }))
     const res = await callEF('qr-order', {

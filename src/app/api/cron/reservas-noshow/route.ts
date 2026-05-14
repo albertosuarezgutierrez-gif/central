@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
     byRest[r.restaurante_id].push(r)
   }
 
-  const pushUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? ''}/api/push/send-internal`
+  const pushUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/api/push/send`
 
   for (const [restaurante_id, reservasRest] of Object.entries(byRest)) {
     const nombres = reservasRest.map(r => r.nombre_cliente).join(', ')
@@ -59,13 +59,16 @@ export async function GET(req: NextRequest) {
     try {
       await fetch(pushUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-ia-restaurante-id': restaurante_id,
+        },
         body: JSON.stringify({
           restaurante_id,
-          roles:   ['owner', 'jefe_sala'],
-          titulo:  'Reserva no presentada',
-          mensaje: msg,
-          tipo:    'noshow',
+          roles:  ['owner', 'jefe_sala'],
+          title:  'Reserva no presentada',
+          body:   msg,
+          data:   { tipo: 'noshow' },
         }),
       })
     } catch (e) {
