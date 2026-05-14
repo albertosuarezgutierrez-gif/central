@@ -734,6 +734,7 @@ interface CuentaParams {
   comanda_id:           string
   restaurante_id:       string
   mesa_label:           string
+  zona_id?:             string | null
   zona_tipo?:           string | null
   zona_nombre?:         string | null
   camarero_nombre:      string
@@ -844,8 +845,8 @@ export function generarEscPosCuenta(p: CuentaParams): Buffer {
 
 /**
  * Encuentra la impresora de caja y crea un print_job para el ticket de cuenta.
- * Prioridad: es_caja=true + misma zona > es_caja=true > primera activa.
- * Retorna { job_id, impresora_nombre } o null si no hay impresoras.
+ * Prioridad: es_caja=true + zona_id en zonas_caja > es_caja=true sin zona > primera activa fallback.
+ * Si zona_id no matchea ninguna caja → usa la caja con zonas_caja vacío (comodín) → primera activa.
  */
 export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   job_id: string
@@ -853,28 +854,36 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
 } | null> {
   const supabase = createServerClient()
 
-  // Cargar impresoras activas (es_caja primero, luego resto como fallback)
+  // Cargar impresoras activas con zonas_caja
   const { data: impresoras } = await supabase
     .from('impresoras')
-    .select('id, nombre, es_caja, connection_type, ip_address, port, secciones_ids, seccion_id')
+    .select('id, nombre, es_caja, zonas_caja, connection_type, ip_address, port')
     .eq('restaurante_id', p.restaurante_id)
     .eq('activa', true)
-    .order('es_caja', { ascending: false }) // es_caja=true primero
+    .order('es_caja', { ascending: false })
 
   if (!impresoras?.length) {
     console.warn('[COURIER-CUENTA] No hay impresoras activas para restaurante', p.restaurante_id)
     return null
   }
 
-  // Elegir impresora: preferir es_caja=true, si hay varias → la de la zona
   const cajas = impresoras.filter(i => i.es_caja)
+
   let elegida = cajas.length > 0 ? cajas[0] : impresoras[0]
 
-  // Si hay múltiples cajas y tenemos zona, buscar la más específica
-  if (cajas.length > 1 && p.zona_tipo) {
-    // Para futura expansión: impresora con zona_tipo matching
-    // Por ahora: primera es_caja es suficiente
-    elegida = cajas[0]
+  // Si hay múltiples cajas, buscar la que cubre la zona de la mesa
+  if (cajas.length > 1 && p.zona_id) {
+    // 1. Caja con zona_id explícita en zonas_caja
+    const cajaZona = cajas.find(c =>
+      Array.isArray(c.zonas_caja) && c.zonas_caja.includes(p.zona_id!)
+    )
+    if (cajaZona) {
+      elegida = cajaZona
+    } else {
+      // 2. Caja comodín (zonas_caja vacío = todas las zonas)
+      const cajaComodin = cajas.find(c => !c.zonas_caja || c.zonas_caja.length === 0)
+      if (cajaComodin) elegida = cajaComodin
+    }
   }
 
   const payload = {

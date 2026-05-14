@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data, error } = await sb()
     .from('impresoras')
-    .select('id, nombre, seccion_id, secciones_ids, cloud_device_id, modelo, activa, ultimo_ping, configurada, connection_type, ip_address, port, impresora_fallback_id, es_caja')
+    .select('id, nombre, seccion_id, secciones_ids, cloud_device_id, modelo, activa, ultimo_ping, configurada, connection_type, ip_address, port, impresora_fallback_id, es_caja, zonas_caja')
     .eq('restaurante_id', rid)
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
-  const { nombre, secciones_ids, seccion_id: seccionLegacy, cloud_device_id, ip_address, port, connection_type, modelo, es_caja } = await req.json()
+  const { nombre, secciones_ids, seccion_id: seccionLegacy, cloud_device_id, ip_address, port, connection_type, modelo, es_caja, zonas_caja } = await req.json()
 
   // Resolver secciones: preferir secciones_ids (array) sobre seccion_id legacy
   const secciones: string[] = secciones_ids?.length > 0
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     configurada: true,
     connection_type: isTCP ? 'ip_local' : 'star_cloudprnt',
     es_caja: es_caja === true,
+    zonas_caja: Array.isArray(zonas_caja) ? zonas_caja : [],
   }
   if (isTCP) {
     row.ip_address = ip_address.trim()
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest) {
   const { id, secciones_ids, seccion_id: seccionLegacy, ...fields } = await req.json()
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 })
 
-  const allowed = ['nombre', 'cloud_device_id', 'activa', 'modelo', 'ip_address', 'port', 'connection_type', 'impresora_fallback_id', 'es_caja']
+  const allowed = ['nombre', 'cloud_device_id', 'activa', 'modelo', 'ip_address', 'port', 'connection_type', 'impresora_fallback_id', 'es_caja', 'zonas_caja']
   const update: Record<string, unknown> = Object.fromEntries(
     Object.entries(fields).filter(([k]) => allowed.includes(k))
   )

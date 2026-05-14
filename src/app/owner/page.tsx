@@ -36,7 +36,7 @@ type VpEstado = 'sin_calibrar' | 'calibrando' | 'activo' | 'error'
 type Mesa = { id: string; codigo: string; nombre: string | null; zona: string; capacidad: number; estado: string; pos_x: number | null; pos_y: number | null; forma: 'round' | 'square' | 'bar' | null }
 type Turno = { id: string; nombre: string; estado: string; created_at: string; fecha: string }
 type TurnoStats = { total_comandas: number; avg_latencia_ms: number | null; mesas_activas: { codigo: string; count: number }[] }
-type Impresora = { id: string; nombre: string; seccion_id: string; secciones_ids: string[]; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null; es_caja: boolean }
+type Impresora = { id: string; nombre: string; seccion_id: string; secciones_ids: string[]; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null; es_caja: boolean; zonas_caja: string[] }
 type BridgeToken = { id: string; token: string; nombre: string; activo: boolean; ultimo_ping: string | null }
 type PrintJob = { id: string; status: string; seccion_id: string; created_at: string; sent_at: string | null; acked_at: string | null; attempts: number; error_msg: string | null; impresoras?: { nombre: string } }
 type Reserva = {
@@ -2523,11 +2523,12 @@ function ImpresorasTab() {
   const [copiedTokenId, setCopiedTokenId] = useState<string | null>(null)
   const [loading, setLoading]           = useState(true)
   const [editando, setEditando]         = useState<Impresora | null>(null)
+  const [zonasHw, setZonasHw]           = useState<{id:string;nombre:string;tipo:string}[]>([])
   const [modal, setModal]               = useState<null | 'create' | 'bridge' | { del: Impresora }>(null)
   const [testResult, setTestResult]     = useState<Record<string, { status: 'testing'|'ok'|'error'|'timeout', msg?: string }>>({})  // impresora_id → resultado test
   const [form, setForm]                 = useState({
     nombre: '', secciones_ids: ['calientes'] as string[], connection_type: 'ip_local',
-    ip_address: '', port: '9100', cloud_device_id: '', modelo: '', es_caja: false
+    ip_address: '', port: '9100', cloud_device_id: '', modelo: '', es_caja: false, zonas_caja: [] as string[]
   })
   const [err, setErr]   = useState('')
   const [saving, setSaving] = useState(false)
@@ -2564,14 +2565,16 @@ function ImpresorasTab() {
   }
 
   const loadAll = useCallback(async () => {
-    const [rImp, rJobs, rBridge] = await Promise.all([
+    const [rImp, rJobs, rBridge, rZonas] = await Promise.all([
       fetch('/api/owner/impresoras', { headers: sh() }).then(r => r.json()),
       fetch('/api/owner/print-jobs', { headers: sh() }).then(r => r.json()).catch(() => ({ jobs: [] })),
       fetch('/api/owner/bridge-tokens', { headers: sh() }).then(r => r.json()).catch(() => ({ tokens: [] })),
+      fetch('/api/owner/zonas', { headers: sh() }).then(r => r.json()).catch(() => ({ zonas: [] })),
     ])
     setImpresoras(rImp.impresoras || [])
     setJobs(rJobs.jobs || [])
     setBridgeTokens(rBridge.tokens || [])
+    setZonasHw(rZonas.zonas || [])
     setLoading(false)
   }, [])
 
@@ -2606,6 +2609,7 @@ function ImpresorasTab() {
         modelo:         editando.modelo,
         impresora_fallback_id: editando.impresora_fallback_id || null,
         es_caja:        editando.es_caja ?? false,
+        zonas_caja:     editando.zonas_caja ?? [],
       })
     })
     setSaving(false)
@@ -2631,13 +2635,14 @@ function ImpresorasTab() {
         ip_address:      form.ip_address || null,
         port:            parseInt(form.port) || 9100,
         es_caja:         form.es_caja,
+        zonas_caja:      form.zonas_caja,
       })
     })
     const d = await r.json()
     setSaving(false)
     if (!r.ok) return setErr(d.error || 'Error')
     setModal(null)
-    setForm({ nombre: '', secciones_ids: ['calientes'], connection_type: 'ip_local', ip_address: '', port: '9100', cloud_device_id: '', modelo: '', es_caja: false })
+    setForm({ nombre: '', secciones_ids: ['calientes'], connection_type: 'ip_local', ip_address: '', port: '9100', cloud_device_id: '', modelo: '', es_caja: false, zonas_caja: [] })
     await loadAll()
   }
 
@@ -2842,8 +2847,8 @@ function ImpresorasTab() {
                       </select>
                     </div>
                     {/* es_caja toggle */}
-                    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer', marginBottom:12 }}
-                      onClick={() => setEditando(ed => ed ? {...ed, es_caja: !ed.es_caja} : null)}>
+                    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer', marginBottom: editando.es_caja && zonasHw.length > 0 ? 6 : 12 }}
+                      onClick={() => setEditando(ed => ed ? {...ed, es_caja: !ed.es_caja, zonas_caja: ed.es_caja ? [] : ed.zonas_caja} : null)}>
                       <div style={{ width:18, height:18, borderRadius:4, border:`2px solid #C97A00`, background: editando.es_caja ? '#C97A00' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
                         {editando.es_caja && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
                       </div>
@@ -2852,6 +2857,34 @@ function ImpresorasTab() {
                         <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:'#92620A', marginTop:1 }}>Recibe el ticket cuando el camarero pulsa "Pedir cuenta"</div>
                       </div>
                     </div>
+                    {/* Zonas asignadas — visible solo si es_caja=true */}
+                    {editando.es_caja && zonasHw.length > 0 && (
+                      <div style={{ paddingLeft:8, marginBottom:12 }}>
+                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, fontWeight:700, color:'#92620A', marginBottom:6, textTransform:'uppercase', letterSpacing:'.06em' }}>
+                          Zonas que cubre esta impresora
+                        </div>
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                          {zonasHw.map(z => {
+                            const sel = (editando.zonas_caja ?? []).includes(z.id)
+                            return (
+                              <button key={z.id} type="button"
+                                onClick={() => setEditando(ed => ed ? {
+                                  ...ed,
+                                  zonas_caja: sel
+                                    ? (ed.zonas_caja ?? []).filter(x => x !== z.id)
+                                    : [...(ed.zonas_caja ?? []), z.id]
+                                } : null)}
+                                style={{ padding:'5px 12px', borderRadius:20, border:`1.5px solid ${sel ? '#C97A00' : '#D8CDB6'}`, background: sel ? '#C97A00' : 'transparent', color: sel ? '#fff' : '#6B5F52', fontSize:12, fontWeight:sel?700:400, cursor:'pointer' }}>
+                                {sel ? '✓ ' : ''}{z.nombre}
+                              </button>
+                            )
+                          })}
+                        </div>
+                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:10, color:'#92620A', marginTop:4 }}>
+                          Sin selección = cubre todas las zonas
+                        </div>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Btn variant="ghost" onClick={() => setEditando(null)}>Cancelar</Btn>
                       <Btn variant="primary" onClick={saveEdit} disabled={saving}><Icon d={ICONS.check} size={14}/>{saving ? 'Guardando...' : 'Guardar'}</Btn>
@@ -2870,8 +2903,8 @@ function ImpresorasTab() {
                           </div>
                         )}
                         {imp.es_caja && (
-                          <div style={{ fontFamily: SM, fontSize: 10, color: '#C97A00', fontWeight: 700, marginTop: 2 }}>
-                            🧾 Impresora de caja
+                          <div style={{ fontFamily: 'system-ui,sans-serif', fontSize: 10, color: '#C97A00', fontWeight: 700, marginTop: 2 }}>
+                            🧾 Caja{imp.zonas_caja?.length > 0 ? ` · ${imp.zonas_caja.map(zid => zonasHw.find(z=>z.id===zid)?.nombre ?? zid).join(', ')}` : ' · todas las zonas'}
                           </div>
                         )}
                       </div>
@@ -3026,7 +3059,7 @@ function ImpresorasTab() {
             <Field label="Modelo (opcional)" value={form.modelo} onChange={v => setForm(f => ({...f, modelo: v}))} placeholder="ESC/POS genérica · Star TSP143 · Epson TM-T20"/>
             {/* es_caja: impresora para tickets de cuenta */}
             <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer' }}
-              onClick={() => setForm(f => ({...f, es_caja: !f.es_caja}))}>
+              onClick={() => setForm(f => ({...f, es_caja: !f.es_caja, zonas_caja: f.es_caja ? [] : f.zonas_caja}))}>
               <div style={{ width:18, height:18, borderRadius:4, border:`2px solid #C97A00`, background: form.es_caja ? '#C97A00' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>
                 {form.es_caja && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
               </div>
@@ -3035,6 +3068,32 @@ function ImpresorasTab() {
                 <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:'#92620A', marginTop:1 }}>Recibe el ticket cuando el camarero pulsa "Pedir cuenta"</div>
               </div>
             </div>
+            {/* Zonas asignadas — visible solo si es_caja=true */}
+            {form.es_caja && zonasHw.length > 0 && (
+              <div style={{ paddingLeft:8 }}>
+                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, fontWeight:700, color:'#92620A', marginBottom:6, textTransform:'uppercase', letterSpacing:'.06em' }}>
+                  Zonas que cubre esta impresora
+                </div>
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {zonasHw.map(z => {
+                    const sel = form.zonas_caja.includes(z.id)
+                    return (
+                      <button key={z.id} type="button"
+                        onClick={() => setForm(f => ({
+                          ...f,
+                          zonas_caja: sel ? f.zonas_caja.filter(x => x !== z.id) : [...f.zonas_caja, z.id]
+                        }))}
+                        style={{ padding:'5px 12px', borderRadius:20, border:`1.5px solid ${sel ? '#C97A00' : '#D8CDB6'}`, background: sel ? '#C97A00' : 'transparent', color: sel ? '#fff' : '#6B5F52', fontSize:12, fontWeight:sel?700:400, cursor:'pointer' }}>
+                        {sel ? '✓ ' : ''}{z.nombre}
+                      </button>
+                    )
+                  })}
+                </div>
+                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:10, color:'#92620A', marginTop:4 }}>
+                  Sin selección = cubre todas las zonas
+                </div>
+              </div>
+            )}
             {form.connection_type === 'ip_local' && (
               <div style={{ background: C.paper2, borderRadius: 6, padding: '10px 12px', fontFamily: SM, fontSize: 11, color: C.ink3, lineHeight: 1.5 }}>
                 Necesitas el bridge local corriendo en la red del restaurante.<br/>
