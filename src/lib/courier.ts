@@ -25,6 +25,7 @@ interface PrintPayload {
   camarero: string
   ticket_num: number
   seccion: string
+  zona_nombre?: string | null  // nombre de la zona para mostrar en ticket
   items: { nombre: string; cantidad: number; notas?: string }[]
   tipo: string
   ts: string
@@ -80,11 +81,16 @@ export function generarEscPos(payload: PrintPayload): Buffer {
 
   bufs.push(t(SEP), b(LF))
 
-  // Mesa y ticket
-  const mesaStr   = ('MESA ' + payload.mesa).padEnd(18)
+  // Mesa / zona y ticket
   const ticketStr = '#' + String(payload.ticket_num).padStart(4, '0')
+  const zonaLabel = payload.zona_nombre
+    ? payload.zona_nombre.toUpperCase().slice(0, 14)
+    : null
+  const mesaLabel = zonaLabel
+    ? (zonaLabel + ' \xB7 ' + payload.mesa.toUpperCase())
+    : ('MESA ' + payload.mesa.toUpperCase())
   bufs.push(b(ESC, 0x45, 0x01))
-  bufs.push(t(mesaStr + ticketStr), b(LF))
+  bufs.push(t(mesaLabel.padEnd(26) + ticketStr), b(LF))
   bufs.push(b(ESC, 0x45, 0x00))
 
   // Hora y camarero
@@ -130,7 +136,14 @@ export function generarTextoPlano(payload: PrintPayload): string {
   lines.push(SEP)
   lines.push(payload.seccion.toUpperCase().padStart(22))
   lines.push(SEP)
-  lines.push(`MESA ${payload.mesa}`.padEnd(20) + `#${String(payload.ticket_num).padStart(4, '0')}`)
+  const ticketLabel = `#${String(payload.ticket_num).padStart(4, '0')}`
+  const zonaDisplay = payload.zona_nombre
+    ? payload.zona_nombre.toUpperCase().slice(0, 14)
+    : null
+  const mesaDisplay = zonaDisplay
+    ? `${zonaDisplay} · ${payload.mesa.toUpperCase()}`
+    : `MESA ${payload.mesa}`
+  lines.push(mesaDisplay.padEnd(26) + ticketLabel)
   lines.push(`${hora}  ${payload.camarero.toUpperCase()}`)
   lines.push(SEP)
   lines.push('')
@@ -243,9 +256,11 @@ interface ComandaInfo {
   tipo: string
   mesa_codigo: string
   camarero_nombre: string
-  ticket_num?: number
-  restaurante_id?: string   // necesario para consultar reglas_envio
-  zona_tipo?: string | null // zona de la mesa (salon, terraza, barra…)
+  ticket_num?: number       // legacy fallback
+  numero_ticket?: number    // número de comanda del turno (preferido)
+  restaurante_id?: string
+  zona_tipo?: string | null
+  zona_nombre?: string | null
 }
 
 /**
@@ -382,8 +397,8 @@ export async function crearPrintJobs(
     porDestino[key].items.push(item)
   }
 
-  // 5. Obtener número de ticket
-  const ticketNum = await getNextTicketNum(supabase)
+  // 5. Número de comanda del turno (preferido) o contador de print_jobs (fallback)
+  const ticketNum = comanda.numero_ticket ?? await getNextTicketNum(supabase)
   const ts = new Date().toISOString()
 
   // 6. Crear un print_job por impresora destino
@@ -397,10 +412,11 @@ export async function crearPrintJobs(
     }
 
     const payload: PrintPayload = {
-      mesa:       comanda.mesa_codigo,
-      camarero:   comanda.camarero_nombre,
-      ticket_num: ticketNum,
-      seccion:    grupo.seccion_label,
+      mesa:        comanda.mesa_codigo,
+      camarero:    comanda.camarero_nombre,
+      ticket_num:  ticketNum,
+      seccion:     grupo.seccion_label,
+      zona_nombre: comanda.zona_nombre ?? null,
       items: grupo.items.map(i => ({
         nombre:   i.nombre,
         cantidad: i.cantidad,
@@ -507,7 +523,7 @@ export async function crearPrintJobMarchar(
     .select('id, nombre, connection_type, seccion_id')
     .in('id', paseIds)
 
-  const ticketNum = await getNextTicketNum(supabase)
+  const ticketNum = comanda.numero_ticket ?? await getNextTicketNum(supabase)
   const ts = new Date().toISOString()
 
   for (const [impresoraId, grupo] of Object.entries(porPase)) {
@@ -515,10 +531,11 @@ export async function crearPrintJobMarchar(
     if (!imp) continue
 
     const payload: PrintPayload = {
-      mesa:       comanda.mesa_codigo,
-      camarero:   comanda.camarero_nombre,
-      ticket_num: ticketNum,
-      seccion:    'PASE',
+      mesa:        comanda.mesa_codigo,
+      camarero:    comanda.camarero_nombre,
+      ticket_num:  ticketNum,
+      seccion:     'PASE',
+      zona_nombre: comanda.zona_nombre ?? null,
       items: grupo.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, notas: i.notas ?? undefined })),
       tipo: 'marchar',
       ts,
