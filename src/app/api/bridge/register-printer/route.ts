@@ -23,7 +23,7 @@ export async function POST(req: Request) {
     if (!ip_address) return NextResponse.json({ error: 'IP requerida' }, { status: 400 })
 
     // Buscar existente por MAC primero (más fiable), luego por IP
-    let existing = null
+    let existing: { id: string } | null = null
     if (mac_address) {
       const { data } = await supabase
         .from('impresoras')
