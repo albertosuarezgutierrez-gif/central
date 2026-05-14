@@ -42,15 +42,21 @@ const DEFAULT_CONFIG: NotifConfig = {
 }
 
 // ── Helpers de texto TTS ──────────────────────────────────────
-function textoAudioCompleto(mesa: string, items: { nombre: string; cantidad: number }[]): string {
+function mesaParaAudio(mesa: string, zonaNombre?: string | null): string {
+  // Produce texto natural para TTS evitando abreviaciones
+  if (zonaNombre) return `${zonaNombre}, mesa ${mesa}`
+  return `mesa ${mesa}`
+}
+
+function textoAudioCompleto(mesa: string, items: { nombre: string; cantidad: number }[], zonaNombre?: string | null): string {
   const itemsStr = items
     .map(i => `${i.cantidad > 1 ? `${i.cantidad} ` : ''}${i.nombre}`)
     .join(', ')
-  return `Saliendo. Mesa ${mesa}. ${itemsStr}.`
+  return `Saliendo. ${mesaParaAudio(mesa, zonaNombre)}. ${itemsStr}.`
 }
 
-function textoAudioCorto(mesa: string): string {
-  return `Mesa ${mesa}, lista para servir.`
+function textoAudioCorto(mesa: string, zonaNombre?: string | null): string {
+  return `${mesaParaAudio(mesa, zonaNombre)}, lista para servir.`
 }
 
 function resumenItems(items: { nombre: string; cantidad: number }[]): string {
@@ -67,7 +73,8 @@ async function enviarPush(
   canal: Canal,
   items: { nombre: string; cantidad: number }[],
   config: NotifConfig,
-  baseUrl: string
+  baseUrl: string,
+  zonaNombre?: string | null
 ) {
   if (canal === 'sin_notificacion') return
   if (canal === 'solo_audio') {
@@ -101,16 +108,16 @@ async function enviarPush(
 
   switch (canal) {
     case 'push_audio_completo':
-      await sendPush(titulo, textoAudioCompleto(mesa, items))
+      await sendPush(titulo, textoAudioCompleto(mesa, items, zonaNombre))
       break
     case 'push_audio_corto':
-      await sendPush(titulo, textoAudioCorto(mesa))
+      await sendPush(titulo, textoAudioCorto(mesa, zonaNombre))
       break
     case 'solo_visual':
-      await sendPush(`Mesa ${mesa} — en camino`, cuerpo)
+      await sendPush(zonaNombre ? `${zonaNombre}, mesa ${mesa} — en camino` : `Mesa ${mesa} — en camino`, cuerpo)
       break
     case 'igual_que_running':
-      await sendPush(titulo, textoAudioCompleto(mesa, items))
+      await sendPush(titulo, textoAudioCompleto(mesa, items, zonaNombre))
       break
   }
 }
@@ -203,7 +210,7 @@ export async function POST(req: NextRequest) {
       req, receptor.running_id,
       titulo, resumenItems(items ?? []),
       mesa_codigo, config.running_canal,
-      items ?? [], config, baseUrl
+      items ?? [], config, baseUrl, receptor.zona_nombre
     )
 
     // Notificación SECUNDARIA → camarero (según config)
@@ -216,7 +223,7 @@ export async function POST(req: NextRequest) {
         `Mesa ${mesa_codigo} — en camino`,
         `${receptor.running_nombre ?? 'Running'} lleva el pedido`,
         mesa_codigo, canalCam,
-        items ?? [], config, baseUrl
+        items ?? [], config, baseUrl, receptor.zona_nombre
       )
     }
   } else if (receptor.camarero_id) {
@@ -225,7 +232,7 @@ export async function POST(req: NextRequest) {
       req, receptor.camarero_id,
       titulo, resumenItems(items ?? []),
       mesa_codigo, config.camarero_sin_running,
-      items ?? [], config, baseUrl
+      items ?? [], config, baseUrl, receptor.zona_nombre
     )
   }
 
@@ -237,9 +244,10 @@ export async function POST(req: NextRequest) {
           id:              comanda_id,
           tipo:            'marchar',
           mesa_codigo,
-          camarero_nombre: receptor.camarero_nombre ?? 'Sala',
+          camarero_nombre: receptor.camarero_nombre ?? 'Equipo',
           restaurante_id:  receptor.restaurante_id,
           zona_tipo:       receptor.zona_id ?? null,
+          zona_nombre:     receptor.zona_nombre ?? null,
         },
         items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad }))
       )

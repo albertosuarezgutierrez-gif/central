@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     // Paso 1: buscar por codigo exacto (T04, P02, B01…)
     let { data: mesa } = await supabase.from('mesas')
-      .select('id, codigo, estado, alergenos_mesa, numero, zona')
+      .select('id, codigo, estado, alergenos_mesa, numero, zona, zona_id, zonas(nombre)')
       .eq('codigo', brainResult.mesa)
       .eq('restaurante_id', rid)
       .maybeSingle()
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         const zonaHint = prefix ? prefixToZona[prefix] : null
 
         const { data: candidatas } = await supabase.from('mesas')
-          .select('id, codigo, estado, alergenos_mesa, numero, zona')
+          .select('id, codigo, estado, alergenos_mesa, numero, zona, zona_id, zonas(nombre)')
           .eq('restaurante_id', rid)
           .eq('numero', num)
 
@@ -297,9 +297,11 @@ export async function POST(req: NextRequest) {
             id: comanda.id,
             tipo: brainResult.tipo,
             mesa_codigo: mesa.codigo,
-            camarero_nombre: camarero?.nombre ?? 'Sala',
+            camarero_nombre: camarero?.nombre ?? 'Equipo',
+            numero_ticket: comanda.numero_ticket ?? undefined,
             restaurante_id: rid,
-            zona_tipo: (mesa as Record<string, unknown>).zona as string ?? null,
+            zona_tipo:   (mesa as Record<string, unknown>).zona as string ?? null,
+            zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
           },
           brainResult.items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad,
             notas: item.notas ?? null, seccion_id: (item as Record<string, unknown>).seccion_id as string ?? null }))
@@ -364,7 +366,8 @@ export async function POST(req: NextRequest) {
             id: comanda.id,
             tipo: brainResult.tipo,
             mesa_codigo: `★ ${nombreNorm}`,
-            camarero_nombre: camarero?.nombre ?? 'Sala',
+            camarero_nombre: camarero?.nombre ?? 'Equipo',
+            numero_ticket: comanda.numero_ticket ?? undefined,
             restaurante_id: rid,
             zona_tipo: null,
           },
