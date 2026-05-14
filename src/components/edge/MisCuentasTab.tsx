@@ -1,5 +1,5 @@
 'use client'
-// ia.rest · MisCuentasTab — Cuentas pendientes de cobro para el camarero
+// ia.rest · MisCuentasTab — Cuentas pendientes de cobro (estado=cuenta_pedida)
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 
 const C = {
@@ -20,7 +20,7 @@ interface CuentaItem {
   id: string; nombre: string; cantidad: number
   precio_unitario: number | null; notas: string | null; estado: string
 }
-interface Cuenta {
+export interface Cuenta {
   id: string; estado: string; tipo: string; created_at: string
   numero_ticket: number; num_comensales: number | null
   total_estimado: number; minutos_esperando: number
@@ -40,18 +40,20 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
   const [cuentas, setCuentas] = useState<Cuenta[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError]     = useState('')
-  const touchRef = useRef({ startY: 0, moved: false })
-  const sesStr = JSON.stringify(session)
+  // sesStr estable para no recrear cargar en cada render
+  const sesRef = useRef(JSON.stringify(session))
 
   const cargar = useCallback(async () => {
     try {
       const r = await fetch('/api/edge/mis-cuentas', {
-        headers: { 'x-ia-session': sesStr },
+        headers: { 'x-ia-session': sesRef.current },
       })
       const d = await r.json()
       if (r.ok) {
-        setCuentas(d.cuentas ?? [])
-        onCountChange((d.cuentas ?? []).length)
+        const lista: Cuenta[] = d.cuentas ?? []
+        setCuentas(lista)
+        onCountChange(lista.length)
+        setError('')
       } else {
         setError(d.error ?? 'Error al cargar cuentas')
       }
@@ -60,9 +62,9 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
     } finally {
       setLoading(false)
     }
-  }, [sesStr, onCountChange])
+  }, [onCountChange])
 
-  // Carga inicial + polling cada 15s (las cuentas cambian con frecuencia)
+  // Carga inicial + polling cada 15s
   useEffect(() => {
     cargar()
     const iv = setInterval(cargar, 15_000)
@@ -94,7 +96,7 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bg }}>
-      {/* Header KPIs */}
+      {/* ── Header KPIs ── */}
       <div style={{
         padding: '10px 16px', flexShrink: 0,
         background: C.bg1, borderBottom: `1px solid ${C.rule}`,
@@ -127,13 +129,14 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
             }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
+              <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/>
             </svg>
           </button>
         </div>
       </div>
 
-      {/* Lista */}
+      {/* ── Lista ── */}
       <div style={{ flex: 1, overflowY: 'auto', scrollbarWidth: 'none' as const, padding: '10px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
 
         {cuentas.length === 0 && (
@@ -145,19 +148,23 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
 
         {/* Mis cuentas primero */}
         {misCuentas.length > 0 && (
-          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.1em', textTransform: 'uppercase', paddingLeft: 2, marginBottom: -2 }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.1em', textTransform: 'uppercase' as const, paddingLeft: 2, marginBottom: -2 }}>
             Mis mesas
           </div>
         )}
-        {misCuentas.map(c => <CuentaCard key={c.id} cuenta={c} esMia touchRef={touchRef} onVerMesa={onVerMesa} />)}
+        {misCuentas.map(c => (
+          <CuentaCard key={c.id} cuenta={c} esMia onVerMesa={onVerMesa} />
+        ))}
 
-        {/* Cuentas de otros camareros */}
+        {/* Otras mesas */}
         {otrasCuentas.length > 0 && (
-          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.1em', textTransform: 'uppercase', paddingLeft: 2, marginTop: misCuentas.length ? 8 : 0, marginBottom: -2 }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.1em', textTransform: 'uppercase' as const, paddingLeft: 2, marginTop: misCuentas.length ? 8 : 0, marginBottom: -2 }}>
             Otras mesas
           </div>
         )}
-        {otrasCuentas.map(c => <CuentaCard key={c.id} cuenta={c} esMia={false} touchRef={touchRef} onVerMesa={onVerMesa} />)}
+        {otrasCuentas.map(c => (
+          <CuentaCard key={c.id} cuenta={c} esMia={false} onVerMesa={onVerMesa} />
+        ))}
 
         <div style={{ height: 8 }} />
       </div>
@@ -165,20 +172,21 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
   )
 }
 
-/* ─── Tarjeta individual de cuenta ────────────────────────── */
+/* ─── Tarjeta individual ────────────────────────────────── */
+// touchRef LOCAL en cada card → evita conflictos entre tarjetas durante scroll
 function CuentaCard({
-  cuenta, esMia, touchRef, onVerMesa
+  cuenta, esMia, onVerMesa,
 }: {
   cuenta: Cuenta
   esMia: boolean
-  touchRef: React.MutableRefObject<{ startY: number; moved: boolean }>
   onVerMesa: (mesaId: string, mesaCodigo: string, capacidad?: number) => void
 }) {
-  const mesa   = cuenta.mesa
-  const min    = cuenta.minutos_esperando
-  const urgente = min >= 5
-  const col    = urgente ? C.verm : esMia ? C.gr : C.amb
-  const bg     = urgente ? C.vermS : esMia ? C.grS : C.ambS
+  const touchRef = useRef({ startY: 0, moved: false })
+  const mesa     = cuenta.mesa
+  const min      = cuenta.minutos_esperando
+  const urgente  = min >= 5
+  const col      = urgente ? C.verm : esMia ? C.gr : C.amb
+  const bg       = urgente ? C.vermS : esMia ? C.grS : C.ambS
 
   const abrirMesa = () => {
     if (!mesa) return
@@ -203,11 +211,8 @@ function CuentaCard({
       }}
     >
       {/* Cabecera */}
-      <div style={{
-        display: 'flex', alignItems: 'center', gap: 10,
-        padding: '10px 14px 8px', borderBottom: `1px solid ${C.rule}`,
-      }}>
-        {/* Mesa */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px 8px', borderBottom: `1px solid ${C.rule}` }}>
+        {/* Código mesa */}
         <div style={{ minWidth: 40 }}>
           <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 24, fontWeight: 500, color: col, lineHeight: 1 }}>
             {mesa?.codigo ?? '?'}
@@ -219,10 +224,10 @@ function CuentaCard({
           )}
         </div>
 
-        {/* Info */}
+        {/* Info central */}
         <div style={{ flex: 1 }}>
-          <div style={{ fontFamily: SM, fontSize: 9, color: col, textTransform: 'uppercase', letterSpacing: '.07em', fontWeight: 700 }}>
-            {urgente ? `⚠ Esperando ${min}m` : 'Cuenta solicitada'}
+          <div style={{ fontFamily: SM, fontSize: 9, color: col, textTransform: 'uppercase' as const, letterSpacing: '.07em', fontWeight: 700 }}>
+            {urgente ? `⚠ Esperando ${min}m` : cuenta.estado === 'cuenta_pedida' ? '⏳ Cuenta pedida' : 'Cuenta por voz'}
           </div>
           <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginTop: 2 }}>
             {cuenta.items.length} producto{cuenta.items.length !== 1 ? 's' : ''}
@@ -233,15 +238,15 @@ function CuentaCard({
           </div>
         </div>
 
-        {/* Total + botón cobrar */}
+        {/* Total + CTA */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 5 }}>
           <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, fontWeight: 500, color: C.ink, lineHeight: 1 }}>
-            {cuenta.total_estimado.toFixed(2).replace('.', ',')}€
+            {cuenta.total_estimado > 0
+              ? `${cuenta.total_estimado.toFixed(2).replace('.', ',')}€`
+              : <span style={{ fontSize: 13, color: C.ink4 }}>Ver total</span>
+            }
           </div>
-          <div style={{
-            background: col, borderRadius: 6, padding: '4px 10px',
-            fontFamily: SM, fontSize: 9, color: '#fff', fontWeight: 700,
-          }}>
+          <div style={{ background: col, borderRadius: 6, padding: '4px 10px', fontFamily: SM, fontSize: 9, color: '#fff', fontWeight: 700 }}>
             COBRAR →
           </div>
         </div>
@@ -249,6 +254,11 @@ function CuentaCard({
 
       {/* Resumen items (máx 3) */}
       <div style={{ padding: '6px 14px 8px', display: 'flex', flexDirection: 'column', gap: 3, background: bg + '55' }}>
+        {cuenta.items.length === 0 && (
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, fontStyle: 'italic' }}>
+            Abre la mesa para ver el detalle completo
+          </div>
+        )}
         {cuenta.items.slice(0, 3).map((it, i) => (
           <div key={i} style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
             <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: col, lineHeight: 1, minWidth: 16, textAlign: 'center' }}>

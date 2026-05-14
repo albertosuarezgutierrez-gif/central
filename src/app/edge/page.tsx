@@ -349,7 +349,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const ultimasComandas = Object.values(
     comandas
-      .filter(c => c.camarero_id === session.id && ['nueva','en_cocina','lista'].includes(c.estado))
+      .filter(c => c.camarero_id === session.id && ['nueva','en_cocina','lista','cuenta_pedida'].includes(c.estado))
       .reduce((acc, c) => {
         // Quedarse con la comanda más reciente por mesa
         if (!acc[c.mesa_id] || c.created_at > acc[c.mesa_id].created_at) acc[c.mesa_id] = c
@@ -359,7 +359,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   // Todas las mesas ocupadas del turno (de cualquier camarero) para el grid
   const mesasOcupadas = comandas
-    .filter(c => ['nueva','en_cocina'].includes(c.estado))
+    .filter(c => ['nueva','en_cocina','cuenta_pedida'].includes(c.estado))
     .reduce((acc: Record<string,typeof comandas[0]>, c) => {
       // Una entrada por mesa (la más reciente)
       if (!acc[c.mesa_id] || new Date(c.created_at) > new Date(acc[c.mesa_id].created_at)) {
@@ -442,6 +442,20 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     return () => clearInterval(turnoInterval)
   }, [])
 
+  // ── Polling background cuentas pendientes → mantiene badge actualizado
+  //    aunque el camarero esté en cualquier otro tab (Hablar, Manual, etc.)
+  useEffect(() => {
+    const ses = localStorage.getItem('ia_rest_session') ?? ''
+    const checkCuentas = () =>
+      fetch('/api/edge/mis-cuentas', { headers: { 'x-ia-session': ses } })
+        .then(r => r.json())
+        .then(d => { if (Array.isArray(d.cuentas)) setCuentasCount(d.cuentas.length) })
+        .catch(() => {})
+    checkCuentas()
+    const iv = setInterval(checkCuentas, 30_000)
+    return () => clearInterval(iv)
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const saveCfg = useCallback((patch: Record<string,unknown>) => {
     try {
       const cfg = JSON.parse(localStorage.getItem('ia_cfg')||'{}')
@@ -465,7 +479,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         }
       }
       const min = Math.floor((Date.now() - new Date(comanda.created_at).getTime()) / 60000)
-      const estado: MesaPlano['estado'] = comanda.tipo === 'cuenta' ? 'cuenta'
+      const estado: MesaPlano['estado'] = comanda.tipo === 'cuenta' || comanda.estado === 'cuenta_pedida' ? 'cuenta'
         : comanda.estado === 'en_cocina' ? 'en_cocina'
         : min > 60 ? 'urgente' : 'activa'
       return {
@@ -1349,7 +1363,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   <div>
                     <div style={{fontFamily:SE,fontStyle:'italic',fontSize:14,fontWeight:500,color:col,lineHeight:1}}>{mesa}</div>
                     <div style={{fontFamily:SM,fontSize:7,color:col,textTransform:'uppercase',lineHeight:1,marginTop:1}}>
-                      {c.estado==='en_cocina'?'cocina':c.estado==='lista'?'lista ✓':'activa'} · {min}m
+                      {c.estado==='en_cocina'?'cocina':c.estado==='lista'?'lista ✓':c.estado==='cuenta_pedida'?'cuenta ⏳':'activa'} · {min}m
                     </div>
                   </div>
                 </div>
@@ -1600,13 +1614,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {tab==='sala' && (() => {
         // Mis comandas del turno ordenadas por estado (lista primero, luego cocina, luego resto)
         const misCmds = comandas
-          .filter(c => c.camarero_id === session.id && ['nueva','en_cocina','lista'].includes(c.estado))
+          .filter(c => c.camarero_id === session.id && ['nueva','en_cocina','lista','cuenta_pedida'].includes(c.estado))
           .sort((a,b) => {
             const ord = {lista:0, en_cocina:1, nueva:2}
             return (ord[a.estado as keyof typeof ord]??9) - (ord[b.estado as keyof typeof ord]??9)
           })
-        const nCocina = misCmds.filter(c=>c.estado==='en_cocina').length
-        const nLista  = misCmds.filter(c=>c.estado==='lista').length
+        const nCocina   = misCmds.filter(c=>c.estado==='en_cocina').length
+        const nLista    = misCmds.filter(c=>c.estado==='lista').length
+        const nCuentaPed= misCmds.filter(c=>c.estado==='cuenta_pedida').length
 
         return (
           <div style={{flex:1,display:'flex',flexDirection:'column',overflow:'hidden'}}>
@@ -1626,6 +1641,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                     <span style={{fontFamily:SM,fontSize:9,color:'#8A6010',fontWeight:700}}>{nCocina} COCINA</span>
                   </div>
                 )}
+                {nCuentaPed>0 && (
+                  <div style={{display:'flex',alignItems:'center',gap:4,background:C.vermS,border:`1px solid ${C.verm}55`,borderRadius:8,padding:'3px 8px'}}>
+                    <div style={{width:6,height:6,borderRadius:'50%',background:C.verm,animation:'ldot 1.2s infinite'}}/>
+                    <span style={{fontFamily:SM,fontSize:9,color:C.verm,fontWeight:700}}>{nCuentaPed} CUENTA{nCuentaPed>1?'S':''}</span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1641,11 +1662,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 const items  = (c.items || []) as {nombre:string;cantidad:number;notas?:string}[]
                 const mesa   = c.mesa?.codigo || '?'
                 const min    = Math.floor((Date.now() - new Date(c.created_at).getTime()) / 60000)
-                const isLista   = c.estado === 'lista'
-                const isCocina  = c.estado === 'en_cocina'
-                const col    = isLista ? C.gr : isCocina ? C.amb : C.ink4
-                const bg     = isLista ? C.grS : isCocina ? C.ambS : C.bg2
-                const label  = isLista ? '✓ Lista para servir' : isCocina ? 'En cocina…' : 'Nueva'
+                const isLista      = c.estado === 'lista'
+                const isCocina     = c.estado === 'en_cocina'
+                const isCuentaPed  = c.estado === 'cuenta_pedida'
+                const col    = isLista ? C.gr : isCocina ? C.amb : isCuentaPed ? C.verm : C.ink4
+                const bg     = isLista ? C.grS : isCocina ? C.ambS : isCuentaPed ? C.vermS : C.bg2
+                const label  = isLista ? '✓ Lista para servir' : isCocina ? 'En cocina…' : isCuentaPed ? '⏳ Cuenta pedida' : 'Nueva'
                 return (
                   <div key={c.id}
                     onTouchStart={e=>{mesaTouchRef.current={startY:e.touches[0].clientY,moved:false}}}
