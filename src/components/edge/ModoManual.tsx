@@ -279,8 +279,40 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
           ))}
         </div>
       </div>
-      <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px', touchAction:'pan-y' }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(62px, 1fr))', gap:6 }}>
+      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'row' }}>
+
+        {/* ── Franja de scroll lateral izquierda ── */}
+        <div
+          style={{
+            width: 18, flexShrink: 0,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            background: 'transparent', cursor: 'ns-resize',
+          }}
+          onTouchStart={e => {
+            const scrollEl = e.currentTarget.nextElementSibling as HTMLDivElement
+            if (!scrollEl) return
+            const startY = e.touches[0].clientY
+            const startScroll = scrollEl.scrollTop
+            const onMove = (ev: TouchEvent) => {
+              scrollEl.scrollTop = startScroll - (ev.touches[0].clientY - startY)
+            }
+            const onEnd = () => {
+              document.removeEventListener('touchmove', onMove)
+              document.removeEventListener('touchend', onEnd)
+            }
+            document.addEventListener('touchmove', onMove, { passive: true })
+            document.addEventListener('touchend', onEnd, { passive: true })
+          }}
+        >
+          <div style={{
+            width: 3, height: 40, borderRadius: 99,
+            background: L.rule, opacity: 0.6,
+          }}/>
+        </div>
+
+        {/* ── Grid de mesas ── */}
+        <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px 6px', touchAction:'pan-y' }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:9 }}>
           {mesasFiltradas.map(m => {
             const isSel = mesaSel?.id === m.id
             const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
@@ -306,7 +338,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
                   setMesaSel(m); setStep('carta')
                 }}
                 style={{
-                  padding:'8px 4px 7px', borderRadius:10, border:'none',
+                  padding:'12px 6px 10px', borderRadius:12, border:'none',
                   background: m.estado === 'reservada' ? 'rgba(59,130,246,.08)' : (isSel ? '#F4D8CF' : bgEst),
                   boxShadow: m.estado === 'reservada' ? '0 0 0 1.5px rgba(59,130,246,.4)' : shadowMesa(m.estado, isSel),
                   cursor: m.estado === 'reservada' ? 'not-allowed' : 'pointer',
@@ -316,7 +348,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
                   opacity: m.estado === 'reservada' ? 0.75 : 1,
                   touchAction: 'manipulation',
                 }}>
-                <span style={{ fontFamily:SE, fontSize:16, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : (L.fg)), lineHeight:1 }}>
+                <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : (L.fg)), lineHeight:1 }}>
                   {m.estado === 'reservada' ? '🔒' : m.codigo}
                 </span>
                 <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
@@ -332,7 +364,8 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             )
           })}
         </div>
-      </div>
+        </div> {/* fin grid scroll container */}
+      </div> {/* fin flex row con franja */}
     </div>
   )
 
