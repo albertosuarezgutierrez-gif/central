@@ -3,7 +3,7 @@ import { NextResponse } from 'next/server'
 // GET /api/bridge/version
 // El bridge comprueba aqui si hay una version nueva
 // Para actualizar: cambiar CURRENT_VERSION y subir nuevo bridge-local.js
-const CURRENT_VERSION = '4.1'
+const CURRENT_VERSION = '4.2'
 
 export async function GET() {
   return NextResponse.json({
