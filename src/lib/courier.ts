@@ -412,7 +412,7 @@ export async function crearPrintJobs(
     const printDataRaw = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
       ? generarEscPos(payload)
       : generarTextoPlano(payload)
-    const printData = Buffer.from(printDataRaw, 'binary').toString('base64')
+    const printData = Buffer.from(printDataRaw, 'utf8').toString('base64')
 
     const { data: job, error } = await supabase
       .from('print_jobs')
@@ -435,7 +435,7 @@ export async function crearPrintJobs(
         const printDataFallbackRaw = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
           ? generarEscPos(payload)
           : generarTextoPlano(payload)
-        const printDataFallback = Buffer.from(printDataFallbackRaw, 'binary').toString('base64')
+        const printDataFallback = Buffer.from(printDataFallbackRaw, 'utf8').toString('base64')
         const { data: jobFallback } = await supabase
           .from('print_jobs')
           .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, payload, print_data: printDataFallback, status: 'pendiente' })
@@ -527,7 +527,7 @@ export async function crearPrintJobMarchar(
     const printDataRawM = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
       ? generarEscPos(payload)
       : generarTextoPlano(payload)
-    const printData = Buffer.from(printDataRawM, 'binary').toString('base64')
+    const printData = Buffer.from(printDataRawM, 'utf8').toString('base64')
 
     const { data: job } = await supabase
       .from('print_jobs')
