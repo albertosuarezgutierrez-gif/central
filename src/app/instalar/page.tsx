@@ -2,13 +2,13 @@
 import { useEffect, useState } from 'react'
 
 const C = {
-  bg:   '#14110E',
-  bg2:  '#1F1A15',
-  bg3:  '#2A231C',
-  rule: '#3A332C',
-  fg:   '#F6F1E7',
-  fg2:  '#D8CDB6',
-  fg3:  '#9A8D7C',
+  bg:   '#F6F1E7',
+  bg2:  '#EDE8DC',
+  bg3:  '#E4DDD0',
+  rule: '#D4CBB8',
+  fg:   '#1A1714',
+  fg2:  '#2C2520',
+  fg3:  '#7A6D5E',
   verm: '#D9442B',
   gr:   '#3F7D44',
 }
