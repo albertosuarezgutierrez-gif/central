@@ -1,26 +1,45 @@
 'use client'
-// ia.rest · MisCuentasTab — Mis mesas abiertas con botones tipo grid (dark theme)
+// ia.rest · MisCuentasTab — Mis mesas abiertas (botones idénticos a ModoManual, paleta crema)
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 
-const C = {
-  bg:   '#14110E',
-  e1:   '#1F1A15',
-  e2:   '#2A241D',
-  e3:   '#2F2820',
-  fg:   '#F6F1E7',
-  fg2:  '#C9BFAA',
-  fg3:  '#8D8270',
-  rule: '#2F2820',
-  rS:   '#4A3F33',
-  red:  '#D9442B',
-  rD:   '#A8311E',
-  gr:   '#3F7D44',
-  amb:  '#E8A33B',
+/* ─── Paleta crema — igual que el resto de /edge ── */
+const L = {
+  bg:  '#F6F1E7', bg2: '#EFE7D6', bg3: '#E5DAC2',
+  fg:  '#1A1714', fg2: '#3A332C', fg3: '#6B5F52', fg4: '#9A8D7C',
+  rule:'#D8CDB6', rS: '#B8A98B',
+}
+const A = {
+  red:  '#D9442B', redD: '#A8311E', redS: '#F4D8CF',
+  gr:   '#3F7D44', grS:  'rgba(63,125,68,.10)',
+  amb:  '#E8A33B', ambS: 'rgba(232,163,59,.10)',
 }
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SE = "'Newsreader',Georgia,serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
+
+/* Mismos estados que ModoManual */
+const ESTADO_FG: Record<string, string> = {
+  activa:  A.gr,  marchar: '#2D7A2D', lista: A.gr,
+  aviso:   A.amb, urgente: A.red,     cuenta: L.fg3,
+  en_cocina: A.amb,
+}
+const ESTADO_BG: Record<string, string> = {
+  activa:   'rgba(63,125,68,.10)',   marchar: 'rgba(63,125,68,.16)',
+  lista:    'rgba(63,125,68,.12)',   en_cocina: 'rgba(232,163,59,.10)',
+  aviso:    'rgba(232,163,59,.10)',  urgente: 'rgba(217,68,43,.10)',
+  cuenta:   L.bg3,
+}
+function shadowBtn(estado: string): string {
+  const map: Record<string, string> = {
+    activa:    `rgba(63,125,68,0.35) 0px 0px 0px 1px, rgba(63,125,68,0.15) 0px 5px 14px -3px`,
+    lista:     `rgba(63,125,68,0.40) 0px 0px 0px 1px, rgba(63,125,68,0.18) 0px 5px 14px -3px`,
+    en_cocina: `rgba(232,163,59,0.40) 0px 0px 0px 1px, rgba(232,163,59,0.15) 0px 5px 14px -3px`,
+    urgente:   `rgba(217,68,43,0.45) 0px 0px 0px 1px, rgba(217,68,43,0.20) 0px 5px 14px -3px`,
+    cuenta:    `rgba(107,95,82,0.40) 0px 0px 0px 1px, rgba(107,95,82,0.12) 0px 5px 14px -3px`,
+  }
+  return map[estado] ?? `rgba(200,184,154,0.5) 0px 0px 0px 1px`
+}
 
 export interface Comanda {
   id: string; estado: string; tipo: string; created_at: string
@@ -42,48 +61,19 @@ function esCuentaPedida(c: Comanda) {
   return c.estado === 'cuenta_pedida' || c.tipo === 'cuenta'
 }
 
-// Color y sombra del botón según estado
-function colorMesa(c: Comanda): { fg: string; border: string; shadow: string; bg: string } {
-  if (esCuentaPedida(c)) return {
-    fg:     C.red,
-    border: `rgba(217,68,43,0.55) 0px 0px 0px 1.5px, rgba(217,68,43,0.20) 0px 5px 14px -3px`,
-    shadow: `rgba(217,68,43,0.22) 0px 4px 20px`,
-    bg:     'rgba(217,68,43,.10)',
-  }
-  if (c.estado === 'lista') return {
-    fg:     C.gr,
-    border: `rgba(63,125,68,0.50) 0px 0px 0px 1.5px, rgba(63,125,68,0.18) 0px 5px 14px -3px`,
-    shadow: 'none',
-    bg:     'rgba(63,125,68,.10)',
-  }
-  if (c.estado === 'en_cocina') return {
-    fg:     C.amb,
-    border: `rgba(232,163,59,0.45) 0px 0px 0px 1px, rgba(232,163,59,0.15) 0px 5px 14px -3px`,
-    shadow: 'none',
-    bg:     'rgba(232,163,59,.08)',
-  }
-  // activa / nueva / enviada
-  return {
-    fg:     C.gr,
-    border: `rgba(63,125,68,0.30) 0px 0px 0px 1px, rgba(63,125,68,0.10) 0px 4px 10px -3px`,
-    shadow: 'none',
-    bg:     'rgba(63,125,68,.07)',
-  }
-}
-
-function labelEstado(c: Comanda): string {
-  if (esCuentaPedida(c)) return 'CUENTA'
-  if (c.estado === 'lista')     return 'LISTA ✓'
-  if (c.estado === 'en_cocina') return 'COCINA'
-  return 'ACTIVA'
+/* Qué "estado visual" asignar al botón */
+function estadoVisual(c: Comanda): string {
+  if (esCuentaPedida(c)) return c.minutos_esperando >= 5 ? 'urgente' : 'cuenta'
+  if (c.estado === 'lista')     return 'lista'
+  if (c.estado === 'en_cocina') return 'en_cocina'
+  return 'activa'
 }
 
 export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Props) {
   const [comandas, setComandasState] = useState<Comanda[]>([])
   const [loading, setLoading]        = useState(true)
   const [error, setError]            = useState('')
-  const sesRef = useRef(JSON.stringify(session))
-  // Scroll-safe pointer tracking
+  const sesRef   = useRef(JSON.stringify(session))
   const ptrStart = useRef<{ x: number; y: number } | null>(null)
 
   const cargar = useCallback(async () => {
@@ -113,66 +103,67 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
     return () => clearInterval(iv)
   }, [cargar])
 
+  /* ── Loading ── */
   if (loading) return (
-    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: C.bg }}>
-      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.fg3 }}>Cargando mesas…</div>
+    <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', background: L.bg }}>
+      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: L.fg4 }}>Cargando mesas…</div>
     </div>
   )
 
+  /* ── Error ── */
   if (error) return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: C.bg, padding: 24 }}>
-      <div style={{ fontFamily: SM, fontSize: 12, color: C.red }}>{error}</div>
-      <button onClick={cargar} style={{ background: 'transparent', border: `1px solid ${C.rS}`, color: C.fg3, padding: '8px 18px', borderRadius: 8, fontFamily: SN, fontSize: 12, cursor: 'pointer' }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, background: L.bg, padding: 24 }}>
+      <div style={{ fontFamily: SM, fontSize: 12, color: A.red }}>{error}</div>
+      <button onClick={cargar} style={{ background: 'transparent', border: `1px solid ${L.rS}`, color: L.fg3, padding: '8px 18px', borderRadius: 8, fontFamily: SN, fontSize: 12, cursor: 'pointer' }}>
         Reintentar
       </button>
     </div>
   )
 
-  // Cuentas pedidas primero, luego el resto ordenado por minutos DESC
-  const pendientes = comandas.filter(esCuentaPedida)
-  const activas    = comandas.filter(c => !esCuentaPedida(c))
+  /* Cuentas pedidas primero, luego activas ordenadas por tiempo desc */
+  const pedidas = comandas.filter(esCuentaPedida)
+  const activas = comandas.filter(c => !esCuentaPedida(c))
     .sort((a, b) => b.minutos_esperando - a.minutos_esperando)
-
-  const totalPendiente = pendientes.reduce((s, c) => s + c.total_estimado, 0)
+  const totalPedidas = pedidas.reduce((s, c) => s + c.total_estimado, 0)
 
   return (
-    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: C.bg }}>
+    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', background: L.bg }}>
 
       {/* ── Header ── */}
       <div style={{
         padding: '10px 16px', flexShrink: 0,
-        background: C.e1, borderBottom: `1px solid ${C.rule}`,
+        background: L.bg2, borderBottom: `1px solid ${L.rule}`,
         display: 'flex', alignItems: 'center', gap: 10,
       }}>
-        <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.fg, flex: 1 }}>
+        <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: L.fg, flex: 1 }}>
           Mis mesas
         </div>
         <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          {pendientes.length > 0 && (
+          {pedidas.length > 0 && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: 4,
-              background: 'rgba(217,68,43,.15)', border: `1px solid ${C.red}55`,
+              background: A.redS, border: `1px solid ${A.red}55`,
               borderRadius: 8, padding: '3px 8px',
             }}>
-              <div style={{ width: 6, height: 6, borderRadius: '50%', background: C.red, animation: 'ldot 1.2s infinite' }} />
-              <span style={{ fontFamily: SM, fontSize: 9, color: C.red, fontWeight: 700 }}>
-                {pendientes.length} CUENTA{pendientes.length > 1 ? 'S' : ''}
+              <div style={{ width: 6, height: 6, borderRadius: '50%', background: A.red, animation: 'ldot 1.2s infinite' }} />
+              <span style={{ fontFamily: SM, fontSize: 9, color: A.red, fontWeight: 700 }}>
+                {pedidas.length} CUENTA{pedidas.length > 1 ? 'S' : ''}
               </span>
             </div>
           )}
-          {pendientes.length > 0 && totalPendiente > 0 && (
-            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 15, color: C.red }}>
-              {totalPendiente.toFixed(2).replace('.', ',')} €
+          {pedidas.length > 0 && totalPedidas > 0 && (
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 15, color: A.red }}>
+              {totalPedidas.toFixed(2).replace('.', ',')} €
             </div>
           )}
           {comandas.length > 0 && (
-            <div style={{ fontFamily: SM, fontSize: 9, color: C.fg3, background: C.e2, border: `1px solid ${C.rS}`, borderRadius: 8, padding: '3px 8px' }}>
+            <div style={{ fontFamily: SM, fontSize: 9, color: L.fg3, background: L.bg3, border: `1px solid ${L.rule}`, borderRadius: 8, padding: '3px 8px' }}>
               {comandas.length} mesa{comandas.length > 1 ? 's' : ''}
             </div>
           )}
           <button
             onClick={cargar}
-            style={{ background: 'transparent', border: `1px solid ${C.rS}`, borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: C.fg3, display: 'flex', alignItems: 'center' }}
+            style={{ background: 'transparent', border: `1px solid ${L.rS}`, borderRadius: 8, padding: '5px 8px', cursor: 'pointer', color: L.fg4, display: 'flex', alignItems: 'center' }}
           >
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M23 4v6h-6"/><path d="M1 20v-6h6"/>
@@ -182,24 +173,27 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
         </div>
       </div>
 
-      {/* ── Contenido ── */}
-      {comandas.length === 0 ? (
+      {/* ── Sin mesas ── */}
+      {comandas.length === 0 && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 20px' }}>
-          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: C.fg3, marginBottom: 6 }}>Sin mesas abiertas</div>
-          <div style={{ fontFamily: SC, fontSize: 15, color: C.fg3 }}>Tus comandas aparecerán aquí</div>
+          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: L.fg4, marginBottom: 6 }}>Sin mesas abiertas</div>
+          <div style={{ fontFamily: SC, fontSize: 15, color: L.fg4 }}>Tus comandas aparecerán aquí</div>
         </div>
-      ) : (
+      )}
+
+      {/* ── Grid ── */}
+      {comandas.length > 0 && (
         <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'row' }}>
 
-          {/* Franja scroll lateral (igual que ModoManual) */}
+          {/* Franja scroll lateral — igual que ModoManual */}
           <div
             style={{ width: 18, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'transparent', cursor: 'ns-resize' }}
             onTouchStart={e => {
-              const scrollEl = e.currentTarget.nextElementSibling as HTMLDivElement
-              if (!scrollEl) return
+              const el = e.currentTarget.nextElementSibling as HTMLDivElement
+              if (!el) return
               const startY = e.touches[0].clientY
-              const startScroll = scrollEl.scrollTop
-              const onMove = (ev: TouchEvent) => { scrollEl.scrollTop = startScroll - (ev.touches[0].clientY - startY) }
+              const startScroll = el.scrollTop
+              const onMove = (ev: TouchEvent) => { el.scrollTop = startScroll - (ev.touches[0].clientY - startY) }
               const onEnd = () => {
                 document.removeEventListener('touchmove', onMove)
                 document.removeEventListener('touchend', onEnd)
@@ -208,38 +202,39 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
               document.addEventListener('touchend', onEnd, { passive: true })
             }}
           >
-            <div style={{ width: 3, height: 40, borderRadius: 99, background: C.rS, opacity: 0.6 }} />
+            <div style={{ width: 3, height: 40, borderRadius: 99, background: L.rS, opacity: 0.6 }} />
           </div>
 
-          {/* Grid de botones */}
           <div style={{ flex: 1, overflow: 'auto', padding: '12px 14px 24px 6px', touchAction: 'pan-y' }}>
 
-            {/* Sección: Cuentas pendientes de cobro */}
-            {pendientes.length > 0 && (
+            {/* Sección cuentas pedidas */}
+            {pedidas.length > 0 && (
               <>
-                <div style={{ fontFamily: SM, fontSize: 9, color: C.red, letterSpacing: '.1em', textTransform: 'uppercase' as const, marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: C.red, animation: 'ldot 1.2s infinite' }} />
-                  Pendientes de cobro
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 9 }}>
+                  <div style={{ width: 5, height: 5, borderRadius: '50%', background: A.red, animation: 'ldot 1.2s infinite' }} />
+                  <span style={{ fontFamily: SM, fontSize: 9, color: A.red, letterSpacing: '.1em', textTransform: 'uppercase' as const, fontWeight: 700 }}>
+                    Pendientes de cobro
+                  </span>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: 9, marginBottom: 16 }}>
-                  {pendientes.map(c => (
-                    <MesaBtn key={c.id} comanda={c} ptrStart={ptrStart} onVerMesa={onVerMesa} />
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: 9, marginBottom: activas.length ? 18 : 0 }}>
+                  {pedidas.map(c => (
+                    <BtnMesa key={c.id} comanda={c} ptrStart={ptrStart} onVerMesa={onVerMesa} />
                   ))}
                 </div>
               </>
             )}
 
-            {/* Sección: Mesas activas */}
+            {/* Sección mesas activas */}
             {activas.length > 0 && (
               <>
-                {pendientes.length > 0 && (
-                  <div style={{ fontFamily: SM, fontSize: 9, color: C.fg3, letterSpacing: '.1em', textTransform: 'uppercase' as const, marginBottom: 8 }}>
+                {pedidas.length > 0 && (
+                  <div style={{ fontFamily: SM, fontSize: 9, color: L.fg3, letterSpacing: '.1em', textTransform: 'uppercase' as const, marginBottom: 9 }}>
                     Activas
                   </div>
                 )}
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(88px, 1fr))', gap: 9 }}>
                   {activas.map(c => (
-                    <MesaBtn key={c.id} comanda={c} ptrStart={ptrStart} onVerMesa={onVerMesa} />
+                    <BtnMesa key={c.id} comanda={c} ptrStart={ptrStart} onVerMesa={onVerMesa} />
                   ))}
                 </div>
               </>
@@ -252,18 +247,20 @@ export default function MisCuentasTab({ session, onVerMesa, onCountChange }: Pro
   )
 }
 
-/* ─── Botón de mesa ─────────────────────────────────────── */
-function MesaBtn({
+/* ─── Botón de mesa — mismos colores/sombras que ModoManual ── */
+function BtnMesa({
   comanda, ptrStart, onVerMesa,
 }: {
   comanda: Comanda
   ptrStart: React.MutableRefObject<{ x: number; y: number } | null>
   onVerMesa: (mesaId: string, mesaCodigo: string, capacidad?: number) => void
 }) {
-  const mesa   = comanda.mesa
-  const col    = colorMesa(comanda)
-  const label  = labelEstado(comanda)
-  const esCta  = esCuentaPedida(comanda)
+  const mesa  = comanda.mesa
+  const ev    = estadoVisual(comanda)
+  const fg    = ESTADO_FG[ev] ?? L.fg3
+  const bg    = ESTADO_BG[ev] ?? L.bg2
+  const shdw  = shadowBtn(ev)
+  const esCta = esCuentaPedida(comanda)
 
   const abrir = () => {
     if (!mesa) return
@@ -289,58 +286,43 @@ function MesaBtn({
         abrir()
       }}
       style={{
-        padding: '12px 6px 10px',
+        padding: '13px 6px 11px',
         borderRadius: 12,
         border: 'none',
-        background: col.bg,
-        boxShadow: col.border,
+        background: bg,
+        boxShadow: shdw,
         cursor: 'pointer',
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4,
         transition: 'all .15s cubic-bezier(.4,0,.2,1)',
         touchAction: 'manipulation',
-        animation: esCta ? 'urgPulse 1.8s ease-in-out infinite' : 'none',
+        animation: ev === 'urgente' ? 'urgPulse 1.8s ease-in-out infinite' : 'none',
       }}
     >
-      {/* Código de mesa */}
-      <span style={{
-        fontFamily: SE, fontSize: 22, fontWeight: 500,
-        color: col.fg, lineHeight: 1,
-      }}>
+      {/* Código mesa — idéntico a ModoManual */}
+      <span style={{ fontFamily: SE, fontSize: 22, fontWeight: 500, color: fg, lineHeight: 1 }}>
         {mesa?.codigo ?? '?'}
       </span>
 
       {/* Estado */}
-      <span style={{
-        fontFamily: SM, fontSize: 8,
-        color: col.fg, letterSpacing: '.06em', textTransform: 'uppercase' as const,
-        fontWeight: esCta ? 700 : 400,
-      }}>
-        {label}
+      <span style={{ fontFamily: SM, fontSize: 8, color: fg, letterSpacing: '.06em', textTransform: 'uppercase' as const, fontWeight: esCta ? 700 : 400 }}>
+        {ev === 'urgente' ? 'CUENTA ⚠' : ev === 'cuenta' ? 'CUENTA' : ev === 'lista' ? 'LISTA ✓' : ev === 'en_cocina' ? 'COCINA' : 'ACTIVA'}
       </span>
 
       {/* Total */}
       {comanda.total_estimado > 0 && (
-        <span style={{
-          fontFamily: SE, fontStyle: 'italic', fontSize: 13,
-          color: esCta ? col.fg : C.fg2, lineHeight: 1, marginTop: 1,
-        }}>
+        <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 13, color: esCta ? fg : L.fg2, lineHeight: 1 }}>
           {comanda.total_estimado.toFixed(2).replace('.', ',')}€
         </span>
       )}
 
       {/* Tiempo */}
-      <span style={{
-        fontFamily: SM, fontSize: 8, color: C.fg3, lineHeight: 1,
-      }}>
+      <span style={{ fontFamily: SM, fontSize: 8, color: L.fg4, lineHeight: 1 }}>
         {comanda.minutos_esperando}m
       </span>
 
-      {/* Nombre cuenta si existe */}
+      {/* Nombre cuenta (si existe) */}
       {comanda.nombre_cuenta && (
-        <span style={{
-          fontFamily: SC, fontSize: 10, color: C.fg3, lineHeight: 1,
-          maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const,
-        }}>
+        <span style={{ fontFamily: SC, fontSize: 10, color: L.fg3, lineHeight: 1, maxWidth: 76, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' as const }}>
           {comanda.nombre_cuenta}
         </span>
       )}
