@@ -1369,19 +1369,40 @@ export default function OnboardingPage() {
           <span style={{ fontFamily: SE, fontSize: 17, fontStyle: 'italic', color: C.fg }}>ia.rest</span>
         </div>
 
-        {/* Progress dots */}
-        <div className="ob-dots" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+        {/* Progress steps */}
+        <div className="ob-dots" style={{ display: 'flex', alignItems: 'center', gap: 0 }}>
           {STEPS.map((st, i) => (
             <React.Fragment key={i}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              {/* Línea conectora */}
+              {i > 0 && (
                 <div style={{
-                  width: i === step ? 28 : 8,
-                  height: 8, borderRadius: 20,
-                  background: i < step ? C.green : i === step ? C.red : C.rule2,
-                  transition: 'all .3s ease',
+                  width: 20, height: 2,
+                  background: i <= step ? C.green : C.rule2,
+                  transition: 'background .3s',
+                  flexShrink: 0,
                 }}/>
+              )}
+              {/* Paso */}
+              <div
+                onClick={() => i < step && setStep(i)}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 5,
+                  cursor: i < step ? 'pointer' : 'default',
+                }}
+              >
+                <div style={{
+                  width: 24, height: 24, borderRadius: '50%',
+                  background: i < step ? C.green : i === step ? C.red : C.rule2,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  flexShrink: 0,
+                  transition: 'all .3s ease',
+                  fontSize: 10, fontFamily: SM, fontWeight: 700,
+                  color: i < step ? '#fff' : i === step ? '#fff' : C.fg3,
+                }}>
+                  {i < step ? '✓' : i + 1}
+                </div>
                 {i === step && (
-                  <span style={{ fontFamily: SN, fontSize: 11, color: C.fg3, whiteSpace: 'nowrap' }}>
+                  <span style={{ fontFamily: SN, fontSize: 11, color: C.fg2, whiteSpace: 'nowrap', fontWeight: 600 }}>
                     {st.label}
                   </span>
                 )}
