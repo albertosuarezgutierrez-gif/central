@@ -58,6 +58,36 @@ const KW_CUENTA  = ['cuenta', 'cobro', 'cobrar', 'pagar', 'ticket', 'factura']
 const KW_MARCHAR = ['marchar', 'marcha', 'pasa', 'pasar', 'listo', 'lista', 'sale ', 'salen']
 const KW_86      = ['86', 'agotado', 'agotada', 'sin stock', 'se acabo', 'se acabó', 'no hay']
 
+const KW_MESA_RAPIDA = [
+  'asigname mesa', 'asígname mesa', 'asigna mesa', 'abre mesa',
+  'mesa para', 'mesa rapida', 'mesa rápida', 'nueva mesa para',
+  'pon mesa para', 'mesa a nombre de', 'mesa a nombre',
+]
+
+const ZONAS_ES: Record<string, string> = {
+  terraza: 'terraza', barra: 'barra', salon: 'salon', salón: 'salon',
+  interior: 'interior', exterior: 'exterior', jardin: 'jardin', jardín: 'jardin',
+  vip: 'vip', privado: 'privado', privada: 'privado',
+}
+
+function extraerMesaRapida(tNorm: string): { zona: string | null; alias: string | null } | null {
+  let zona: string | null = null
+  for (const [kw, val] of Object.entries(ZONAS_ES)) {
+    if (tNorm.includes(kw)) { zona = val; break }
+  }
+  let alias: string | null = null
+  const matchNombre = tNorm.match(/(?:a nombre de|a nombre|para)\s+([a-záéíóúüñ\s]{3,40}?)(?:\s+en\s+\w+)?$/)
+  if (matchNombre) {
+    alias = matchNombre[1].trim().replace(/\s+/g, ' ')
+    if (Object.keys(ZONAS_ES).includes(alias)) alias = null
+  }
+  if (!zona && !alias) return null
+  return {
+    zona,
+    alias: alias ? alias.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : null,
+  }
+}
+
 // ── Detección de mesa ─────────────────────────────────────────────────────────
 
 function detectarMesa(tNorm: string, cache: MenuCache): string | null {
@@ -203,10 +233,19 @@ function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[
 export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | null {
   const tNorm = norm(texto)
 
-  // ── Guardia: si hay palabras de nota → Claude (seguridad operacional)
   if (KW_NOTA.some(k => tNorm.includes(k))) return null
 
-  // ── 1. CUENTA ────────────────────────────────────────────────────────────
+  // ── 0. MESA RÁPIDA ───────────────────────────────────────────────────────
+  if (KW_MESA_RAPIDA.some(k => tNorm.includes(k))) {
+    const extraido = extraerMesaRapida(tNorm)
+    if (extraido && (extraido.zona || extraido.alias)) {
+      return {
+        mesa: '', tipo: 'aviso', items: [], confianza: 0.91, raw: texto,
+        intent: 'mesa_rapida', zona: extraido.zona, alias_cliente: extraido.alias,
+      }
+    }
+    return null
+  }
   if (KW_CUENTA.some(k => tNorm.includes(k))) {
     const mesa = detectarMesa(tNorm, cache)
     if (mesa) return { mesa, tipo: 'cuenta', items: [], confianza: 0.95, raw: texto }

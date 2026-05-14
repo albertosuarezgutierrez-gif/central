@@ -19,7 +19,7 @@ const MINIMAP_W = 160
 const MINIMAP_H = 100
 
 export type MesaEstado =
-  'libre' | 'activa' | 'en_cocina' | 'lista' | 'marchar' | 'urgente' | 'aviso' | 'cuenta'
+  'libre' | 'activa' | 'en_cocina' | 'lista' | 'marchar' | 'urgente' | 'aviso' | 'cuenta' | 'reservada'
 
 export interface MesaPlano {
   id: string
@@ -36,6 +36,7 @@ export interface MesaPlano {
   es_mia?: boolean
   servicio_pendiente?: boolean   // 🍞 running no ha llevado el cubierto aún
   nombre_cuenta?: string | null  // alias opcional de la comanda (ej: "Pepe")
+  reserva_hora?: string | null   // hora de reserva si estado=reservada (ej: "21:00")
 }
 
 export interface ZonaInfo {
@@ -60,6 +61,10 @@ interface Props {
 function colorPorTiempo(min: number | null | undefined, estado: MesaEstado): {
   border: string; bg: string; fg: string; dot: string; urgente: boolean
 } {
+  if (estado === 'reservada') return {
+    border: 'rgba(59,130,246,0.55)', bg: 'rgba(59,130,246,0.08)', fg: '#1D4ED8',
+    dot: '#3B82F6', urgente: false,
+  }
   if (!min || min < 1 || estado === 'libre') return {
     border: 'rgba(216,205,182,0.25)', bg: '#FBF8F1', fg: '#9A8D7C',
     dot: 'rgba(216,205,182,0.3)', urgente: false,
@@ -183,6 +188,25 @@ function MesaIcon({
             {tiempo}
           </div>
         )}
+        {/* Badge reservada: candado + hora */}
+        {mesa.estado === 'reservada' && (
+          <div style={{
+            position: 'absolute', inset: 0,
+            borderRadius: 'inherit',
+            display: 'flex', flexDirection: 'column',
+            alignItems: 'center', justifyContent: 'center',
+            gap: 1,
+          }}>
+            <div style={{ fontSize: 11 * scale, lineHeight: 1 }}>🔒</div>
+            {mesa.reserva_hora && (
+              <div style={{
+                fontFamily: "'JetBrains Mono',monospace", fontSize: 7 * scale,
+                color: '#1D4ED8', fontWeight: 700, lineHeight: 1,
+              }}>{mesa.reserva_hora}</div>
+            )}
+          </div>
+        )}
+
         {/* Dot estado */}
         <div style={{
           width: 5 * scale, height: 5 * scale, borderRadius: '50%',

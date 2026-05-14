@@ -40,14 +40,17 @@ function shadowMesa(estado: string, selected = false): string {
 const ESTADO_FG: Record<string,string> = {
   libre:'#4A3F33', activa:'#3F7D44', marchar:'#2D7A2D',
   aviso:'#E8A33B', urgente:'#D9442B', cuenta:'#6B5F52',
+  reservada:'#1D4ED8',
 }
 const ESTADO_BG_DARK: Record<string,string> = {
   libre:'#1F1A15', activa:'rgba(63,125,68,.12)', marchar:'rgba(63,125,68,.20)',
   aviso:'rgba(232,163,59,.12)', urgente:'rgba(217,68,43,.12)', cuenta:'#1F1A15',
+  reservada:'rgba(59,130,246,.12)',
 }
 const ESTADO_BG_LIGHT: Record<string,string> = {
   libre:'#EFE7D6', activa:'rgba(63,125,68,.10)', marchar:'rgba(63,125,68,.16)',
   aviso:'rgba(232,163,59,.10)', urgente:'rgba(217,68,43,.10)', cuenta:'#E5DAC2',
+  reservada:'rgba(59,130,246,.08)',
 }
 
 interface Props {
@@ -285,19 +288,36 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
             return (
               <button key={m.id}
-                onTouchEnd={e => { if (!hasMoved.current) { e.preventDefault(); setMesaSel(m); setStep('carta') } }}
-                onClick={() => { setMesaSel(m); setStep('carta') }}
+                onTouchEnd={e => {
+                  if (!hasMoved.current) {
+                    e.preventDefault()
+                    if (m.estado === 'reservada') return
+                    setMesaSel(m); setStep('carta')
+                  }
+                }}
+                onClick={() => {
+                  if (m.estado === 'reservada') return
+                  setMesaSel(m); setStep('carta')
+                }}
                 style={{
                   padding:'12px 6px 10px', borderRadius:12, border:'none',
-                  background: isSel ? '#F4D8CF' : bgEst,
-                  boxShadow: shadowMesa(m.estado, isSel),
-                  cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                  background: m.estado === 'reservada' ? 'rgba(59,130,246,.08)' : (isSel ? '#F4D8CF' : bgEst),
+                  boxShadow: m.estado === 'reservada' ? '0 0 0 1.5px rgba(59,130,246,.4)' : shadowMesa(m.estado, isSel),
+                  cursor: m.estado === 'reservada' ? 'not-allowed' : 'pointer',
+                  display:'flex', flexDirection:'column', alignItems:'center', gap:4,
                   transition:'all .15s cubic-bezier(.4,0,.2,1)',
                   transform: isSel ? 'scale(0.95)' : 'scale(1)',
+                  opacity: m.estado === 'reservada' ? 0.75 : 1,
                 }}>
-                <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: isSel ? C.red : (L.fg), lineHeight:1 }}>
-                  {m.codigo}
+                <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : (L.fg)), lineHeight:1 }}>
+                  {m.estado === 'reservada' ? '🔒' : m.codigo}
                 </span>
+                <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
+                  {m.estado === 'reservada' ? (m as {reserva_hora?:string|null}).reserva_hora || 'res.' : m.estado}
+                </span>
+                {m.estado !== 'reservada' && (
+                  <span style={{ fontFamily:SE, fontSize:8, color: isSel ? C.red : T.fg3, lineHeight:1 }}>{m.codigo}</span>
+                )}
                 <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
                   {m.estado}
                 </span>

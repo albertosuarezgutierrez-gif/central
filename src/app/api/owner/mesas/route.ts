@@ -9,7 +9,22 @@ export async function GET(req: NextRequest) {
     .select('id, codigo, nombre, zona, capacidad, estado, pos_x, pos_y, forma, qr_habilitado, qr_modo_pago, qr_precio_fijo_persona, qr_precio_fijo_concepto, qr_token')
     .eq('restaurante_id', rid).order('codigo', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ mesas: data })
+
+  // Inyectar estado 'reservada' en mesas bloqueadas por reserva activa
+  const { data: bloqueadas } = await supabase
+    .rpc('get_mesas_bloqueadas', { p_restaurante_id: rid })
+  const bloqMap: Record<string, string> = {}
+  for (const b of (bloqueadas ?? []) as { mesa_id: string; hora_reserva: string }[]) {
+    bloqMap[b.mesa_id] = b.hora_reserva.slice(0, 5)
+  }
+
+  const mesas = (data ?? []).map(m => ({
+    ...m,
+    estado:       bloqMap[m.id] ? 'reservada' : m.estado,
+    reserva_hora: bloqMap[m.id] ?? null,
+  }))
+
+  return NextResponse.json({ mesas })
 }
 
 export async function POST(req: NextRequest) {

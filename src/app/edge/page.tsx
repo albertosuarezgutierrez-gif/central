@@ -303,6 +303,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [alergenosMesa, setAlergenosMesa]   = useState<string[]>([])
   const [zonasAsignadas, setZonasAsignadas] = useState<string[]>([])   // [] = todas
   const [fontBig, setFontBig]               = useState(false)
+  const [mesaRapidaModal, setMesaRapidaModal] = useState(false)
+  const [mesaRapidaForm, setMesaRapidaForm]   = useState({ zona: '', alias: '', telefono: '' })
+  const [mesaRapidaLoading, setMesaRapidaLoading] = useState(false)
+  const [mesaRapidaErr, setMesaRapidaErr]     = useState('')
   const [productosCarta, setProductosCarta] = useState<ProductoCarta[]>([])
   const [cartaBusqueda, setCartaBusqueda]   = useState('')
 
@@ -440,11 +444,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (!mesasPlano.length) return
     setMesasPlano(prev => prev.map(m => {
       const comanda = mesasOcupadas[m.id]
-      if (!comanda) return {
-        ...m, estado: 'libre' as const,
-        num_comensales: null, es_mia: false,
-        minutos_abierta: null, servicio_pendiente: false,
-        nombre_cuenta: null,
+      if (!comanda) {
+        if (m.estado === 'reservada') return m  // preservar candado + hora reserva
+        return {
+          ...m, estado: 'libre' as const,
+          num_comensales: null, es_mia: false,
+          minutos_abierta: null, servicio_pendiente: false,
+          nombre_cuenta: null, reserva_hora: null,
+        }
       }
       const min = Math.floor((Date.now() - new Date(comanda.created_at).getTime()) / 60000)
       const estado: MesaPlano['estado'] = comanda.tipo === 'cuenta' ? 'cuenta'
@@ -458,6 +465,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         minutos_abierta: min,
         servicio_pendiente: servicioPendiente.has(m.id),
         nombre_cuenta: (comanda as {nombre_cuenta?: string | null}).nombre_cuenta ?? null,
+        reserva_hora: null,
       }
     }))
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -733,6 +741,36 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
         setChipsClarificacion([]); setMesaClarificacion(null)
 
+        // ── Intent: MESA RÁPIDA por voz ─────────────────────────────────
+        if (d.brain?.intent === 'mesa_rapida') {
+          const z = d.brain.zona || ''
+          const a = d.brain.alias_cliente || ''
+          if (z && a) {
+            setMesaRapidaLoading(true)
+            fetch('/api/mesa/asignar-rapida', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+              body: JSON.stringify({ zona: z, alias_cliente: a }),
+            }).then(r => r.json()).then(data => {
+              setMesaRapidaLoading(false)
+              if (data.mesa) {
+                addMsg('sistema', `Mesa ${data.mesa.codigo} asignada a ${a}`, 'ok')
+                setMesaDetalle({ id: data.mesa.id, codigo: data.mesa.codigo, capacidad: 4 })
+              } else {
+                addMsg('sistema', data.error || 'Sin mesas libres', 'aviso')
+              }
+            }).catch(() => setMesaRapidaLoading(false))
+          } else {
+            // Faltan datos → abrir modal pre-relleno
+            setMesaRapidaForm({ zona: z, alias: a, telefono: '' })
+            setMesaRapidaErr('')
+            setMesaRapidaModal(true)
+          }
+          setScreenSafe('idle'); setBrain(null); setTranscript('')
+          processingRef.current = false
+          return
+        }
+
         // Si BRAIN no encontró mesa o no creó comanda → preguntar
         // Excepción: si usó nombre_cuenta, la comanda ya se creó sin mesa
         const esNominal = !!(d.nombre_cuenta && d.comanda_id)
@@ -965,6 +1003,31 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   }
 
   // Marchar rápido desde doble-tap en plano
+  // ── Mesa Rápida ────────────────────────────────────────────────────────
+  const asignarMesaRapida = async () => {
+    const { zona, alias, telefono } = mesaRapidaForm
+    if (!zona.trim() || !alias.trim()) { setMesaRapidaErr('Zona y nombre son obligatorios'); return }
+    setMesaRapidaLoading(true); setMesaRapidaErr('')
+    try {
+      const r = await fetch('/api/mesa/asignar-rapida', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+        body: JSON.stringify({ zona: zona.trim(), alias_cliente: alias.trim(), telefono_cliente: telefono.trim() || undefined }),
+      })
+      const d = await r.json()
+      if (!r.ok) {
+        setMesaRapidaErr(d.otras_zonas?.length
+          ? `Sin mesas libres en ${zona}. Disponible en: ${d.otras_zonas.join(', ')}`
+          : d.error || 'Error al asignar mesa')
+        return
+      }
+      setMesaRapidaModal(false)
+      setMesaRapidaForm({ zona: '', alias: '', telefono: '' })
+      if (d.mesa) setMesaDetalle({ id: d.mesa.id, codigo: d.mesa.codigo, capacidad: 4 })
+    } catch { setMesaRapidaErr('Error de red') }
+    finally { setMesaRapidaLoading(false) }
+  }
+
   const marcharRapido = async (mesa: MesaPlano) => {
     const comanda = mesasOcupadas[mesa.id]
     if (!comanda || !['en_cocina','nueva','lista'].includes(comanda.estado ?? '')) return
@@ -1225,6 +1288,22 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 → fijada · mantén para soltar
               </div>
             )}
+            <button
+              onClick={() => {
+                setMesaRapidaForm({ zona: zonasPlano[0]?.tipo || '', alias: '', telefono: '' })
+                setMesaRapidaErr('')
+                setMesaRapidaModal(true)
+              }}
+              style={{
+                flexShrink:0, marginLeft: mesaFijada ? 6 : 'auto',
+                display:'flex', alignItems:'center', gap:4,
+                background:'transparent', border:`1px solid ${C.rule}`,
+                borderRadius:8, padding:'4px 9px', cursor:'pointer',
+                fontFamily:SM, fontSize:8, color:C.ink3, letterSpacing:'.05em',
+              }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2"><path d="M12 5v14M5 12h14"/></svg>
+              Mesa rápida
+            </button>
           </div>
 
           {/* ── Chat ─────────────────────────────────────────── */}
@@ -1697,6 +1776,96 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           ttsOff={ttsOff}               onTtsOff={v=>{setTtsOff(v);saveCfg({ttsOff:v})}}
           onLogout={logout}
         />
+      )}
+
+      {/* ── MODAL: Mesa Rápida ─────────────────────────────────────── */}
+      {mesaRapidaModal && (
+        <div style={{
+          position:'fixed', inset:0, zIndex:60,
+          background:'rgba(26,23,20,.72)', backdropFilter:'blur(4px)',
+          display:'flex', alignItems:'flex-end', justifyContent:'center',
+        }}
+          onClick={e=>{ if(e.target===e.currentTarget) setMesaRapidaModal(false) }}
+        >
+          <div style={{
+            background:C.bg1, borderRadius:'18px 18px 0 0',
+            padding:'20px 18px 36px', width:'100%', maxWidth:480,
+            display:'flex', flexDirection:'column', gap:14,
+          }}>
+            <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div style={{fontFamily:SE,fontStyle:'italic',fontSize:20,fontWeight:500,color:C.ink}}>Mesa rápida</div>
+              <button onClick={()=>setMesaRapidaModal(false)}
+                style={{background:'transparent',border:'none',cursor:'pointer',color:C.ink3,padding:4}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 6 6 18M6 6l12 12"/></svg>
+              </button>
+            </div>
+            <div style={{fontFamily:SN,fontSize:12,color:C.ink3,marginTop:-6}}>
+              Asigna la primera mesa libre a nombre de un cliente.
+            </div>
+
+            {/* Zona */}
+            <div>
+              <div style={{fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',marginBottom:6,textTransform:'uppercase' as const}}>Zona</div>
+              <div style={{display:'flex',flexWrap:'wrap' as const,gap:6}}>
+                {zonasPlano.map(z => (
+                  <button key={z.id}
+                    onClick={() => setMesaRapidaForm(f=>({...f, zona: z.tipo}))}
+                    style={{
+                      padding:'6px 14px', borderRadius:20,
+                      background: mesaRapidaForm.zona===z.tipo ? C.verm : C.bg2,
+                      color: mesaRapidaForm.zona===z.tipo ? '#fff' : C.ink3,
+                      border: mesaRapidaForm.zona===z.tipo ? 'none' : `1px solid ${C.rule}`,
+                      fontFamily:SN, fontSize:13, cursor:'pointer',
+                    }}>
+                    {z.nombre}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Nombre */}
+            <div>
+              <div style={{fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',marginBottom:6,textTransform:'uppercase' as const}}>Nombre del cliente</div>
+              <input type="text" placeholder="Ej: Alberto Suárez"
+                value={mesaRapidaForm.alias}
+                onChange={e=>setMesaRapidaForm(f=>({...f,alias:e.target.value}))}
+                style={{width:'100%',padding:'11px 13px',borderRadius:10,border:`1px solid ${C.rule}`,background:C.bg2,fontFamily:SN,fontSize:14,color:C.ink,outline:'none',boxSizing:'border-box' as const}}
+              />
+            </div>
+
+            {/* Teléfono */}
+            <div>
+              <div style={{fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',marginBottom:6,textTransform:'uppercase' as const}}>
+                Teléfono <span style={{fontWeight:400,opacity:.7}}>(opcional)</span>
+              </div>
+              <input type="tel" placeholder="+34 600 000 000"
+                value={mesaRapidaForm.telefono}
+                onChange={e=>setMesaRapidaForm(f=>({...f,telefono:e.target.value}))}
+                style={{width:'100%',padding:'11px 13px',borderRadius:10,border:`1px solid ${C.rule}`,background:C.bg2,fontFamily:SN,fontSize:14,color:C.ink,outline:'none',boxSizing:'border-box' as const}}
+              />
+            </div>
+
+            {mesaRapidaErr && (
+              <div style={{fontFamily:SN,fontSize:12,color:C.verm,background:C.vermS,borderRadius:8,padding:'8px 12px'}}>
+                {mesaRapidaErr}
+              </div>
+            )}
+
+            <button
+              onClick={asignarMesaRapida}
+              disabled={mesaRapidaLoading || !mesaRapidaForm.zona || !mesaRapidaForm.alias.trim()}
+              style={{
+                padding:'14px', borderRadius:12, border:'none',
+                background: (!mesaRapidaForm.zona || !mesaRapidaForm.alias.trim()) ? C.rule : C.verm,
+                color: (!mesaRapidaForm.zona || !mesaRapidaForm.alias.trim()) ? C.ink4 : '#fff',
+                fontFamily:SN, fontSize:15, fontWeight:600,
+                cursor: mesaRapidaLoading || !mesaRapidaForm.zona || !mesaRapidaForm.alias.trim() ? 'not-allowed' : 'pointer',
+                opacity: mesaRapidaLoading ? .7 : 1,
+              }}>
+              {mesaRapidaLoading ? 'Asignando…' : 'Asignar mesa'}
+            </button>
+          </div>
+        </div>
       )}
 
       {/* ── MESA DETALLE SHEET ─────────────────────────────────── */}

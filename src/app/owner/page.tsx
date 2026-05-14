@@ -5376,6 +5376,38 @@ function ReservasTab() {
   const [err, setErr] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // ── Config tiempos ──────────────────────────────────────────
+  const [bloqueo, setBloqueo] = useState('30')
+  const [gracia, setGracia]   = useState('15')
+  const [cfgSaving, setCfgSaving] = useState(false)
+  const [cfgOk, setCfgOk]     = useState(false)
+
+  useEffect(() => {
+    fetch('/api/owner/restaurante', { headers: sh() })
+      .then(r => r.json())
+      .then(d => {
+        if (d.restaurante) {
+          setBloqueo(String(d.restaurante.reserva_bloqueo_previo_min ?? 30))
+          setGracia(String(d.restaurante.reserva_tiempo_gracia_min ?? 15))
+        }
+      }).catch(() => {})
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const saveConfig = async () => {
+    setCfgSaving(true); setCfgOk(false)
+    await fetch('/api/owner/restaurante', {
+      method: 'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        reserva_bloqueo_previo_min: parseInt(bloqueo) || 30,
+        reserva_tiempo_gracia_min:  parseInt(gracia)  || 15,
+      }),
+    }).catch(() => {})
+    setCfgSaving(false); setCfgOk(true)
+    setTimeout(() => setCfgOk(false), 2500)
+  }
+
   const load = useCallback(async (f = fecha) => {
     setLoading(true)
     const r = await fetch(`/api/owner/reservas?fecha=${f}`, { headers: sh() })
@@ -5473,6 +5505,25 @@ function ReservasTab() {
 
   return (
     <div>
+      {/* Config tiempos de reserva */}
+      <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '14px 16px', marginBottom: 20, display: 'flex', gap: 14, flexWrap: 'wrap' as const, alignItems: 'flex-end' }}>
+        <div style={{ flex: 1, minWidth: 120 }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.08em', marginBottom: 5, textTransform: 'uppercase' as const }}>Bloqueo previo (min)</div>
+          <input type="number" min={0} max={120} value={bloqueo} onChange={e => setBloqueo(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.rule}`, background: C.paper, fontFamily: SM, fontSize: 13, color: C.ink, outline: 'none', boxSizing: 'border-box' as const }} />
+          <div style={{ fontFamily: SN, fontSize: 10, color: C.ink4, marginTop: 3 }}>Mesa bloqueada X min antes de la reserva</div>
+        </div>
+        <div style={{ flex: 1, minWidth: 120 }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.08em', marginBottom: 5, textTransform: 'uppercase' as const }}>Tiempo de gracia (min)</div>
+          <input type="number" min={0} max={120} value={gracia} onChange={e => setGracia(e.target.value)}
+            style={{ width: '100%', padding: '8px 10px', borderRadius: 8, border: `1px solid ${C.rule}`, background: C.paper, fontFamily: SM, fontSize: 13, color: C.ink, outline: 'none', boxSizing: 'border-box' as const }} />
+          <div style={{ fontFamily: SN, fontSize: 10, color: C.ink4, marginTop: 3 }}>Sin llegada → no-show automático</div>
+        </div>
+        <Btn variant="ghost" onClick={saveConfig} disabled={cfgSaving}>
+          {cfgOk ? '✓ Guardado' : cfgSaving ? 'Guardando…' : 'Guardar config'}
+        </Btn>
+      </div>
+
       {/* Header */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <div>

@@ -96,6 +96,10 @@ export interface BrainResult {
   opciones_clarificacion?: { nombre: string; precio?: number | null; cantidad: number }[]
   confianza: number
   raw: string
+  // Mesa rápida por voz
+  intent?: 'mesa_rapida'
+  zona?: string | null
+  alias_cliente?: string | null
 }
 
 export interface Producto86 {
