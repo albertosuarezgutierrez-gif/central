@@ -14,7 +14,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import { crearPrintJobMarchar } from '@/lib/courier'
+import { crearPrintJobMarchar, crearPrintJobs } from '@/lib/courier'
 
 export const dynamic = 'force-dynamic'
 
@@ -229,7 +229,39 @@ export async function POST(req: NextRequest) {
     )
   }
 
-  // 6. Imprimir ticket de pase si hay reglas configuradas
+  // 6. Imprimir ticket normal (siempre) via crearPrintJobs
+  try {
+    // Cargar items de la comanda si no se pasaron
+    let itemsParaPrint = items ?? []
+    if (!itemsParaPrint.length) {
+      const { data: ciData } = await supabase
+        .from('comanda_items')
+        .select('nombre, cantidad, seccion_id')
+        .eq('comanda_id', comanda_id)
+      itemsParaPrint = (ciData ?? []).map((ci: { nombre: string; cantidad: number; seccion_id: string | null }) => ({
+        nombre: ci.nombre,
+        cantidad: ci.cantidad,
+        seccion_id: ci.seccion_id ?? undefined,
+      }))
+    }
+    if (itemsParaPrint.length > 0) {
+      await crearPrintJobs(
+        {
+          id:              comanda_id,
+          tipo:            'comanda',
+          mesa_codigo,
+          camarero_nombre: receptor.camarero_nombre ?? 'Sala',
+          restaurante_id:  receptor.restaurante_id,
+          zona_tipo:       receptor.zona_id ?? null,
+        },
+        itemsParaPrint
+      )
+    }
+  } catch (e) {
+    console.error('[MARCHAR] Error imprimiendo ticket normal:', e)
+  }
+
+  // 6b. Imprimir ticket de pase si hay reglas configuradas
   if (items && items.length > 0) {
     try {
       await crearPrintJobMarchar(
