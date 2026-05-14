@@ -109,10 +109,11 @@ const Badge = ({ children, color = C.paper2 }: { children: React.ReactNode; colo
 )
 
 const Btn = ({
-  children, onClick, variant = 'default', size = 'md', disabled = false
+  children, onClick, variant = 'default', size = 'md', disabled = false, style: extraStyle
 }: {
   children: React.ReactNode; onClick?: () => void;
   variant?: 'default' | 'primary' | 'danger' | 'ghost'; size?: 'sm' | 'md'; disabled?: boolean
+  style?: React.CSSProperties
 }) => {
   const bg = variant === 'primary' ? C.red : variant === 'danger' ? C.redS : variant === 'ghost' ? 'transparent' : C.bone
   const fg = variant === 'primary' ? C.bone : variant === 'danger' ? C.redD : C.ink2
@@ -124,7 +125,7 @@ const Btn = ({
         background: bg, color: fg, border, borderRadius: 4,
         fontFamily: SN, fontSize: size === 'sm' ? 12 : 13, fontWeight: 600,
         padding: pad, cursor: disabled ? 'not-allowed' : 'pointer', opacity: disabled ? .5 : 1,
-        transition: 'all .15s' }}>
+        transition: 'all .15s', ...extraStyle }}>
       {children}
     </button>
   )
@@ -2454,7 +2455,7 @@ function ImpresorasTab() {
         tries++
         const r2 = await fetch('/api/owner/impresoras', { headers: sh() })
         const d2 = await r2.json()
-        const prev = content.length
+        const prev = impresoras.length
         setImpresoras(d2.impresoras ?? [])
         if ((d2.impresoras ?? []).length > 0 || tries >= 13) {
           clearInterval(poll)
@@ -4111,6 +4112,9 @@ function FacturasTab() {
           </div>
         </div>
       )}
+
+      {/* ── FACTURAS COMPLETAS (serie F) ── */}
+      <FacturasClienteSection desde={desde} hasta={hasta} />
     </div>
   )
 }
@@ -4134,6 +4138,129 @@ const TIPO_META: Record<string,{label:string;color:string}> = {
 const MOTIVO_META: Record<string,string> = {
   error_pedido:'Error al pedir', cliente_cambio:'Cliente cambió de opinión',
   producto_no_disponible:'Producto no disponible', orden_supervisor:'Orden supervisor', otro:'Otro',
+}
+
+/* ─── Facturas Cliente (serie F) ─── */
+function FacturasClienteSection({ desde, hasta }: { desde: string; hasta: string }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [facturas, setFacturas] = useState<FacturaCliente[]>([])
+  const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState<FacturaCliente | null>(null)
+
+  interface FacturaCliente {
+    id: string; numero_completo: string; serie: string; numero: number
+    cliente_nif: string; cliente_razon_social: string; cliente_direccion: string | null; cliente_email: string | null
+    emisor_nif: string; emisor_razon_social: string
+    base_imponible: number; iva_pct: number; cuota_iva: number; total: number
+    items: { nombre: string; cantidad: number; precio_unitario: number | null; subtotal: number }[]
+    motivo: string | null; created_at: string
+  }
+
+  useEffect(() => {
+    setLoading(true)
+    fetch(`/api/factura/cliente/lista?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+      .then(r => r.json())
+      .then(d => setFacturas(d.facturas ?? []))
+      .catch(() => null)
+      .finally(() => setLoading(false))
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [desde, hasta])
+
+  const formatEuro = (n: number) => n.toFixed(2).replace('.', ',') + ' €'
+  const formatFecha = (s: string) => new Date(s).toLocaleString('es-ES', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+          Facturas completas (serie F) — IVA deducible
+        </div>
+        <Badge color={C.greenS}>{loading ? '…' : facturas.length}</Badge>
+      </div>
+
+      {loading ? (
+        <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, padding: 16 }}>Cargando...</div>
+      ) : facturas.length === 0 ? (
+        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, padding: '14px 0' }}>
+          Sin facturas completas en el periodo. Las facturas completas se emiten desde una comanda cerrada.
+        </div>
+      ) : (
+        <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 13 }}>
+            <thead>
+              <tr style={{ background: C.paper2 }}>
+                {['Número', 'Fecha', 'Cliente', 'NIF', 'Base', 'IVA', 'Total'].map(h => (
+                  <th key={h} style={{ textAlign: 'left', padding: '10px 14px', fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, borderBottom: `1px solid ${C.rule}`, textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {facturas.map((f, i) => (
+                <tr key={f.id} onClick={() => setSelected(f)}
+                  style={{ background: i % 2 === 0 ? C.bone : C.paper, cursor: 'pointer' }}>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, fontSize: 12, color: C.green }}>{f.numero_completo}</td>
+                  <td style={{ padding: '10px 14px', color: C.ink3, fontSize: 12 }}>{formatFecha(f.created_at)}</td>
+                  <td style={{ padding: '10px 14px', fontWeight: 600 }}>{f.cliente_razon_social}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, fontSize: 12, color: C.ink3 }}>{f.cliente_nif}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM }}>{formatEuro(f.base_imponible)}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, color: C.ink3 }}>{formatEuro(f.cuota_iva)}</td>
+                  <td style={{ padding: '10px 14px', fontFamily: SM, fontWeight: 700 }}>{formatEuro(f.total)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {selected && (
+        <div onClick={() => setSelected(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,20,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: 32, width: 480, maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto' }}>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.green, letterSpacing: '.1em', marginBottom: 8 }}>FACTURA COMPLETA · IVA DEDUCIBLE</div>
+            <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, marginBottom: 20 }}>{selected.numero_completo}</div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px 16px', marginBottom: 20 }}>
+              {[
+                ['Emisor', selected.emisor_razon_social],
+                ['NIF emisor', selected.emisor_nif],
+                ['Cliente', selected.cliente_razon_social],
+                ['NIF cliente', selected.cliente_nif],
+                ['Dirección', selected.cliente_direccion ?? '—'],
+                ['Email', selected.cliente_email ?? '—'],
+                ['Base imponible', formatEuro(selected.base_imponible)],
+                [`IVA ${selected.iva_pct}%`, formatEuro(selected.cuota_iva)],
+                ['TOTAL', formatEuro(selected.total)],
+                ['Motivo', selected.motivo ?? '—'],
+                ['Fecha emisión', formatFecha(selected.created_at)],
+              ].map(([k, v]) => (
+                <div key={k}>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase' }}>{k}</div>
+                  <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{v}</div>
+                </div>
+              ))}
+            </div>
+
+            {selected.items?.length > 0 && (
+              <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: 14, marginBottom: 14 }}>
+                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 8 }}>CONCEPTOS</div>
+                {selected.items.map((it, i) => (
+                  <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: i < selected.items.length-1 ? `1px solid ${C.rule}` : 'none', fontSize: 12 }}>
+                    <span>{it.cantidad}× {it.nombre}</span>
+                    <span style={{ fontFamily: SM }}>{formatEuro(it.subtotal)}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+              <Btn onClick={() => setSelected(null)}>Cerrar</Btn>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 function ModificacionesTab({ restauranteId }: { restauranteId: string }) {

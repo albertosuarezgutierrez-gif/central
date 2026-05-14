@@ -2,6 +2,8 @@
 // ia.rest · MesaDetalleSheet
 import React, { useState, useEffect, useCallback } from 'react'
 import CobrarSheet from './CobrarSheet'
+import TicketAliasModal from '@/components/owner/TicketAliasModal'
+import FacturaClienteModal from '@/components/owner/FacturaClienteModal'
 
 const C = {
   bg:'#F6F1E7', bg1:'#FBF8F1', bg2:'#EFE7D6', bg3:'#E5DAC2',
@@ -63,6 +65,10 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
   const [savingAnadir, setSavingAnadir] = useState(false)
   const [editNombre, setEditNombre]     = useState(false)
   const [nombreInput, setNombreInput]   = useState('')
+  const [aliasOpen, setAliasOpen]       = useState(false)
+  const [facturaOpen, setFacturaOpen]   = useState(false)
+  const [hasAlias, setHasAlias]         = useState(false)
+  const [hasFactCliente, setHasFactCliente] = useState(false)
 
   const session_str = JSON.stringify(session)
 
@@ -107,6 +113,18 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
 
   useEffect(() => { if (mesaId) cargarComanda() }, [mesaId, cargarComanda])
   useEffect(() => { if (vista==='audit' && comanda?.id) cargarAudit() }, [vista, comanda?.id, cargarAudit])
+
+  // Verificar si hay alias/factura para comanda cerrada
+  useEffect(() => {
+    if (!comanda?.id || comanda.estado !== 'cerrada') return
+    Promise.all([
+      fetch(`/api/comanda/${comanda.id}/ticket-alias`).then(r=>r.json()).then(d=>d.alias!=null),
+      fetch(`/api/factura/cliente?comanda_id=${comanda.id}`).then(r=>r.json()).then(d=>d.factura!=null),
+    ]).then(([alias, fact]) => {
+      setHasAlias(alias)
+      setHasFactCliente(fact)
+    }).catch(()=>null)
+  }, [comanda?.id, comanda?.estado])
 
   const flash = (msg: string) => {
     setSavedMsg(msg)
@@ -498,29 +516,62 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
         {/* ACCIONES FIJAS — solo en modo COMANDA */}
         {comanda && !vistaAnadir && (
           <div style={{padding:'10px 16px 20px',borderTop:`1px solid ${C.rule}`,flexShrink:0,display:'flex',gap:8,background:C.bg1}}>
-            <button onClick={()=>{ onAnadirPorVoz(mesaId!, mesaCodigo, comanda.id); onClose() }}
-              style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/>
-              </svg>
-              <span style={{fontSize:10,fontWeight:600,color:C.teal}}>Añadir voz</span>
-            </button>
-            <button onClick={()=>{setVistaAnadir(true);setCartAnadir([]);setSearchAnadir('');setCatAnadir('todo')}}
-              style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-              </svg>
-              <span style={{fontSize:10,fontWeight:600,color:C.ink3}}>＋ Añadir</span>
-            </button>
-            <button onClick={()=>setCobrarOpen(true)}
-              style={{flex:2,padding:'11px 12px',background:C.verm,border:'none',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
-              </svg>
-              <span style={{fontSize:13,fontWeight:700,color:'#fff'}}>
-                Cobrar{comanda.total_estimado>0?` · ${comanda.total_estimado.toFixed(2).replace('.',',')} €`:''}
-              </span>
-            </button>
+            {comanda.estado !== 'cerrada' && <>
+              <button onClick={()=>{ onAnadirPorVoz(mesaId!, mesaCodigo, comanda.id); onClose() }}
+                style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/>
+                </svg>
+                <span style={{fontSize:10,fontWeight:600,color:C.teal}}>Añadir voz</span>
+              </button>
+              <button onClick={()=>{setVistaAnadir(true);setCartAnadir([]);setSearchAnadir('');setCatAnadir('todo')}}
+                style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                </svg>
+                <span style={{fontSize:10,fontWeight:600,color:C.ink3}}>＋ Añadir</span>
+              </button>
+              <button onClick={()=>setCobrarOpen(true)}
+                style={{flex:2,padding:'11px 12px',background:C.verm,border:'none',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                </svg>
+                <span style={{fontSize:13,fontWeight:700,color:'#fff'}}>
+                  Cobrar{comanda.total_estimado>0?` · ${comanda.total_estimado.toFixed(2).replace('.',',')} €`:''}
+                </span>
+              </button>
+            </>}
+
+            {/* ── COMANDA CERRADA: opciones de ticket y factura ── */}
+            {comanda.estado === 'cerrada' && ['owner','jefe_sala'].includes(session.rol) && (
+              <div style={{width:'100%',display:'flex',flexDirection:'column',gap:8}}>
+                <div style={{fontFamily:SN,fontSize:11,color:C.ink4,textAlign:'center',letterSpacing:'0.5px',textTransform:'uppercase'}}>
+                  Comanda cerrada
+                </div>
+                <div style={{display:'flex',gap:8}}>
+                  <button
+                    onClick={()=>setAliasOpen(true)}
+                    style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${hasAlias ? C.amb : C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hasAlias ? C.amb : C.ink3} strokeWidth="2" strokeLinecap="round">
+                      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                    </svg>
+                    <span style={{fontSize:10,fontWeight:600,color:hasAlias ? C.amb : C.ink3}}>
+                      {hasAlias ? 'Editar ticket' : 'Personalizar'}
+                    </span>
+                  </button>
+                  <button
+                    onClick={()=>setFacturaOpen(true)}
+                    style={{flex:2,padding:'11px 12px',background:hasFactCliente ? C.grS : C.bg2,border:`1px solid ${hasFactCliente ? C.gr : C.rule}`,borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hasFactCliente ? C.gr : C.ink3} strokeWidth="2" strokeLinecap="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                    </svg>
+                    <span style={{fontSize:13,fontWeight:600,color:hasFactCliente ? C.gr : C.ink3}}>
+                      {hasFactCliente ? 'Ver factura emitida' : 'Emitir factura'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -548,6 +599,30 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
             onPedirCuenta(comanda.id, mesaCodigo)
           }}
           onCancel={()=>setCobrarOpen(false)}
+        />
+      )}
+
+      {/* TICKET ALIAS MODAL */}
+      {aliasOpen && comanda && (
+        <TicketAliasModal
+          comandaId={comanda.id}
+          mesaLabel={mesaCodigo}
+          items={comanda.items}
+          session={session}
+          onClose={()=>setAliasOpen(false)}
+          onGuardado={()=>{ setHasAlias(true); setAliasOpen(false) }}
+        />
+      )}
+
+      {/* FACTURA CLIENTE MODAL */}
+      {facturaOpen && comanda && (
+        <FacturaClienteModal
+          comandaId={comanda.id}
+          mesaLabel={mesaCodigo}
+          total={comanda.total_estimado}
+          session={session}
+          onClose={()=>setFacturaOpen(false)}
+          onEmitida={()=>{ setHasFactCliente(true); setFacturaOpen(false) }}
         />
       )}
     </>
