@@ -276,9 +276,22 @@ export default function CartaPublicClient({ code }: { code: string }) {
         padding: '24px 20px',
         textAlign: 'center',
       }}>
-        <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.12em', textTransform: 'uppercase' }}>
-          Carta digital · ia.rest
-        </div>
+        <a
+          href="https://www.iarest.es"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, opacity: 0.5 }}
+        >
+          <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.12em', textTransform: 'uppercase' }}>
+            Carta digital gestionada con
+          </span>
+          <span style={{ fontFamily: SE, fontSize: 11, fontStyle: 'italic', color: C.ink3, fontWeight: 600 }}>
+            ia.rest
+          </span>
+          <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.08em' }}>
+            · www.iarest.es
+          </span>
+        </a>
       </div>
     </div>
   )

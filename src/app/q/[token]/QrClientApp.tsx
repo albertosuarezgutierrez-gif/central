@@ -762,6 +762,26 @@ export default function QrClientApp({ token }: { token: string }) {
           </button>
         </div>
       )}
+
+      {/* ── FOOTER ia.rest ── */}
+      <div style={{ flexShrink: 0, padding: '14px 0 10px', textAlign: 'center', borderTop: `1px solid ${C.rule}22` }}>
+        <a
+          href="https://www.iarest.es"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, opacity: 0.45 }}
+        >
+          <span style={{ fontFamily: 'monospace', fontSize: 9, color: C.creamDim, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+            Gestionado con
+          </span>
+          <span style={{ fontFamily: 'serif', fontSize: 10, fontStyle: 'italic', color: C.cream, fontWeight: 600 }}>
+            ia.rest
+          </span>
+          <span style={{ fontFamily: 'monospace', fontSize: 9, color: C.creamDim, letterSpacing: '0.05em' }}>
+            · www.iarest.es
+          </span>
+        </a>
+      </div>
     </div>
   )
 }

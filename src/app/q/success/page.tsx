@@ -26,6 +26,16 @@ export default function QrSuccess() {
         <div style={{ background:`${C.green}15`, borderRadius:11, padding:'13px 18px', border:`1px solid ${C.green}33` }}>✓ ¡Gracias! Nos alegra saberlo</div>
       )}
       <div style={{ fontFamily:'cursive', fontSize:14, color:C.creamDim }}>¡Hasta la próxima! 🍷</div>
+      <a
+        href="https://www.iarest.es"
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ textDecoration:'none', display:'inline-flex', alignItems:'center', gap:5, opacity:0.4, marginTop:8 }}
+      >
+        <span style={{ fontFamily:'monospace', fontSize:9, color:C.creamDim, letterSpacing:'0.1em', textTransform:'uppercase' }}>Gestionado con</span>
+        <span style={{ fontFamily:'serif', fontSize:11, fontStyle:'italic', color:C.cream, fontWeight:600 }}>ia.rest</span>
+        <span style={{ fontFamily:'monospace', fontSize:9, color:C.creamDim }}>· www.iarest.es</span>
+      </a>
     </div>
   )
 }
