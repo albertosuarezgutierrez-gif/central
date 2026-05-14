@@ -52,6 +52,14 @@ export async function PATCH(
 
     if (updateErr) throw updateErr
 
+    // Cancelar también los print_jobs pendientes — evita que cocina reciba el ticket
+    // (los ya enviados a la impresora no se pueden recuperar, pero los en cola sí)
+    await supabase
+      .from('print_jobs')
+      .update({ status: 'cancelado' })
+      .eq('comanda_id', id)
+      .eq('status', 'pendiente')
+
     return NextResponse.json({ ok: true })
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 })

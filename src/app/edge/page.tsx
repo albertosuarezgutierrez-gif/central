@@ -713,7 +713,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     cooldownRef.current = true
     setTimeout(() => { cooldownRef.current = false }, 1500)
 
-    const blob = new Blob(chunksRef.current, {type:'audio/webm'})
+    // Bug-fix: usar el mimeType real del MediaRecorder (puede ser mp4 en iOS, no siempre webm)
+    const actualMimeType = mediaRef.current?.mimeType || 'audio/webm'
+    const blob = new Blob(chunksRef.current, { type: actualMimeType })
 
     // ── Guardia: sin turno activo no se puede crear comanda ─────────────
     if (!turnoId) {
@@ -804,12 +806,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             setMesaRapidaErr('')
             setMesaRapidaModal(true)
           }
-          setScreenSafe('idle'); setBrain(null); setTranscript('')
-          processingRef.current = false
-          return
-        }
-
-        // Si BRAIN no encontró mesa o no creó comanda → preguntar
+          setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('')
         // Excepción: si usó nombre_cuenta, la comanda ya se creó sin mesa
         const esNominal = !!(d.nombre_cuenta && d.comanda_id)
         const mesaInvalida = !esNominal && !d.comanda_id && (
@@ -1011,7 +1008,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // ── Timeout reset estado asking (15s sin respuesta → idle) ───────
   useEffect(() => {
     if (screen !== 'asking') return
-    const t = setTimeout(() => { setScreenSafe('idle'); setBrain(null); setTranscript('') }, 15000)
+    const t = setTimeout(() => { setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('') }, 15000)
     return () => clearTimeout(t)
   }, [screen])
 
@@ -1028,6 +1025,16 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   useEffect(() => {
     if (typeof window === 'undefined') return
     ;(window as any).resetPTT = () => {
+      // Si estamos en confirm, cancelar la comanda recién creada
+      if (screenRef.current === 'confirm') {
+        const cid = lastComandaId
+        if (cid) {
+          fetch(`/api/comanda/${cid}/cancelar`, {
+            method: 'PATCH',
+            headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+          }).catch(() => {})
+        }
+      }
       // Cancelar fetch en vuelo y todos los timers
       if (abortFetchRef.current) { abortFetchRef.current.abort(); abortFetchRef.current = null }
       if (watchdogRef.current) { clearTimeout(watchdogRef.current); watchdogRef.current = null }
@@ -1035,10 +1042,10 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       speakingRef.current=false; processingRef.current=false; recordingRef.current=false
       fetchInFlightRef.current=false; cooldownRef.current=false
       setAudioLevel(0)
-      setScreenSafe('idle'); setBrain(null); setTranscript('')
+      setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('')
     }
     return () => { delete (window as any).resetPTT }
-  }, [])
+  }, [lastComandaId])
 
   const logout = () => {
     fetch('/api/auth',{method:'DELETE'}); localStorage.removeItem('ia_rest_session')
@@ -1116,6 +1123,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         setPreguntaBrain('¿Qué mesa?')
         setScreenSafe('sent')
         setBrain({ mesa: mesa.codigo, tipo: 'comanda', items: [chip], confianza: 1, raw: chip.nombre })
+        brainRef.current = { mesa: mesa.codigo, tipo: 'comanda', items: [chip], confianza: 1, raw: chip.nombre }
         setLastComandaId(d.comanda_id ?? d.id ?? null)
         if (navigator.vibrate) navigator.vibrate([30,50,30])
       } else {
@@ -1272,7 +1280,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {tab !== 'manual' && <div style={{padding:'10px 16px',borderBottom:`1px solid ${C.rule}`,background:C.bg1,flexShrink:0,display:'flex',justifyContent:'space-between',alignItems:'center',boxShadow:'0 1px 0 rgba(26,23,20,.06)'}}>
         <div style={{fontFamily:SE,fontStyle:'italic',fontSize:21,color:C.verm,letterSpacing:'-.4px',lineHeight:1}}>ia.rest</div>
         <div style={{display:'flex',alignItems:'center',gap:6}}>
-          {(isListening||isProcessing) && (
+          {(isListening||isProcessing||screen==='speaking') && (
             <div style={{display:'flex',alignItems:'center',gap:5,background:isListening?`${C.teal}18`:`${C.amb}22`,border:`1px solid ${isListening?C.teal:C.amb}44`,borderRadius:12,padding:'3px 9px'}}>
               <div style={{width:5,height:5,borderRadius:'50%',background:isListening?C.teal:C.amb,animation:'ldot 1s infinite'}}/>
               <span style={{fontFamily:SM,fontSize:9,color:isListening?C.teal:C.amb}}>{isListening?'EAR':'BRAIN'}</span>
