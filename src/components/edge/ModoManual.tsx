@@ -279,30 +279,13 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
           ))}
         </div>
       </div>
-      <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px' }}
-        onTouchStart={e => { touchStartY.current = e.touches[0].clientY; hasMoved.current = false }}
-        onTouchMove={e  => { if (Math.abs(e.touches[0].clientY - touchStartY.current) > 12) hasMoved.current = true }}
-      >
+      <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px', touchAction:'pan-y' }}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:9 }}>
           {mesasFiltradas.map(m => {
             const isSel = mesaSel?.id === m.id
             const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
             return (
               <button key={m.id}
-                onTouchStart={e => {
-                  touchStartY.current = e.touches[0].clientY
-                  hasMoved.current = false
-                }}
-                onTouchMove={e => {
-                  if (Math.abs(e.touches[0].clientY - touchStartY.current) > 12) hasMoved.current = true
-                }}
-                onTouchEnd={e => {
-                  if (!hasMoved.current) {
-                    e.preventDefault()
-                    if (m.estado === 'reservada') return
-                    setMesaSel(m); setStep('carta')
-                  }
-                }}
                 onClick={() => {
                   if (m.estado === 'reservada') return
                   setMesaSel(m); setStep('carta')
@@ -316,6 +299,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
                   transition:'all .15s cubic-bezier(.4,0,.2,1)',
                   transform: isSel ? 'scale(0.95)' : 'scale(1)',
                   opacity: m.estado === 'reservada' ? 0.75 : 1,
+                  touchAction: 'manipulation',
                 }}>
                 <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : (L.fg)), lineHeight:1 }}>
                   {m.estado === 'reservada' ? '🔒' : m.codigo}
