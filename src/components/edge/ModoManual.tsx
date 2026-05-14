@@ -288,15 +288,22 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
               <button key={m.id}
                 onPointerDown={e => { ptrStart.current = { x: e.clientX, y: e.clientY } }}
                 onPointerUp={e => {
+                  if (e.pointerType !== 'touch') return
                   if (!ptrStart.current) return
                   const dx = Math.abs(e.clientX - ptrStart.current.x)
                   const dy = Math.abs(e.clientY - ptrStart.current.y)
                   ptrStart.current = null
-                  if (dx > 8 || dy > 8) return  // era scroll, no tap
+                  if (dx > 8 || dy > 8) return
                   if (m.estado === 'reservada') return
                   setMesaSel(m); setStep('carta')
                 }}
                 onPointerCancel={() => { ptrStart.current = null }}
+                onClick={e => {
+                  // Solo ratón — touch ya lo maneja onPointerUp
+                  if ((e.nativeEvent as PointerEvent).pointerType === 'touch') return
+                  if (m.estado === 'reservada') return
+                  setMesaSel(m); setStep('carta')
+                }}
                 style={{
                   padding:'12px 6px 10px', borderRadius:12, border:'none',
                   background: m.estado === 'reservada' ? 'rgba(59,130,246,.08)' : (isSel ? '#F4D8CF' : bgEst),
