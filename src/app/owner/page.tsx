@@ -1235,6 +1235,7 @@ type RestauranteConfig = {
   nif: string | null; razon_social: string | null; logo_url?: string | null
   direccion: string | null; ciudad: string | null; telefono: string | null
   plan: string; activo: boolean
+  google_review_url: string | null; instagram_url: string | null; web_url: string | null
 }
 type HealthCheck = {
   ok: boolean
@@ -1250,7 +1251,7 @@ function RestauranteTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '' })
+  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '' })
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoMsg, setLogoMsg] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -1263,12 +1264,15 @@ function RestauranteTab() {
       if (rd.restaurante) {
         setRest(rd.restaurante)
         setForm({
-          nombre:       rd.restaurante.nombre       ?? '',
-          nif:          rd.restaurante.nif           ?? '',
-          razon_social: rd.restaurante.razon_social  ?? '',
-          direccion:    rd.restaurante.direccion     ?? '',
-          ciudad:       rd.restaurante.ciudad        ?? '',
-          telefono:     rd.restaurante.telefono      ?? '',
+          nombre:            rd.restaurante.nombre            ?? '',
+          nif:               rd.restaurante.nif               ?? '',
+          razon_social:      rd.restaurante.razon_social       ?? '',
+          direccion:         rd.restaurante.direccion          ?? '',
+          ciudad:            rd.restaurante.ciudad             ?? '',
+          telefono:          rd.restaurante.telefono           ?? '',
+          google_review_url: rd.restaurante.google_review_url  ?? '',
+          instagram_url:     rd.restaurante.instagram_url      ?? '',
+          web_url:           rd.restaurante.web_url            ?? '',
         })
       }
       setHealth(hd)
@@ -1426,6 +1430,97 @@ function RestauranteTab() {
             Sin NIF — las facturas Verifactu usaran B00000000 hasta que configures uno.
           </div>
         )}
+      </div>
+
+      {/* ── Presencia digital · Reseñas y redes ── */}
+      <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, padding: 24, background: C.bone }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+          <div style={{ fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' }}>
+            PRESENCIA DIGITAL · RESEÑAS Y REDES
+          </div>
+        </div>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 16, lineHeight: 1.5 }}>
+          Cuando un cliente paga con el QR, se le invita a dejar reseña en Google y compartir el restaurante.
+          Rellena estos campos para activar ese flujo automático.
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+          {/* Google Review */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" style={{ flexShrink: 0 }}>
+                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+              </svg>
+              Enlace de reseña Google
+            </label>
+            <input
+              value={form.google_review_url}
+              onChange={e => setForm(f => ({ ...f, google_review_url: e.target.value }))}
+              placeholder="https://g.page/r/tu-restaurante/review"
+              style={{ fontFamily: SN, fontSize: 13, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '8px 10px', background: C.bone, color: C.ink, outline: 'none' }}
+            />
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, lineHeight: 1.5 }}>
+              En Google Maps → tu ficha → «Pedir reseñas» → copia el enlace corto.
+              Los clientes de 4-5★ irán aquí directamente.
+            </div>
+            {form.google_review_url && (
+              <a href={form.google_review_url} target="_blank" rel="noopener noreferrer"
+                style={{ fontFamily: SM, fontSize: 11, color: C.ink3, textDecoration: 'underline', width: 'fit-content' }}>
+                Verificar enlace →
+              </a>
+            )}
+          </div>
+
+          {/* Instagram */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 13 }}>📷</span>
+              Instagram
+            </label>
+            <input
+              value={form.instagram_url}
+              onChange={e => setForm(f => ({ ...f, instagram_url: e.target.value }))}
+              placeholder="https://instagram.com/tu_restaurante"
+              style={{ fontFamily: SN, fontSize: 13, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '8px 10px', background: C.bone, color: C.ink, outline: 'none' }}
+            />
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>
+              Se muestra en la pantalla de WhatsApp para que el cliente te siga.
+            </div>
+          </div>
+
+          {/* Web */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <span style={{ fontSize: 13 }}>🌐</span>
+              Web del restaurante
+            </label>
+            <input
+              value={form.web_url}
+              onChange={e => setForm(f => ({ ...f, web_url: e.target.value }))}
+              placeholder="https://www.mirestaurante.es"
+              style={{ fontFamily: SN, fontSize: 13, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '8px 10px', background: C.bone, color: C.ink, outline: 'none' }}
+            />
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>
+              Se incluye en el mensaje de WhatsApp cuando un cliente comparte el restaurante.
+            </div>
+          </div>
+
+          {/* Estado */}
+          <div style={{
+            padding: '10px 14px', borderRadius: 6,
+            background: form.google_review_url ? C.greenS : C.amberS,
+            border: `1px solid ${form.google_review_url ? '#B8D4BA' : '#E8A33B44'}`,
+            fontFamily: SM, fontSize: 11,
+            color: form.google_review_url ? C.green : '#7A5A1A',
+          }}>
+            {form.google_review_url
+              ? '✓ Funnel de reseñas activo — los clientes QR serán dirigidos a Google tras pagar.'
+              : '⚠ Sin enlace Google: añádelo para que los clientes puedan valorarte directamente.'}
+          </div>
+        </div>
       </div>
 
       {/* Botón guardar */}
