@@ -344,8 +344,48 @@ export async function POST(req: NextRequest) {
         ).catch(err => console.error('[COURIER]', err))
       }
 
-      const nuevoEstado = ({ comanda: 'activa', marchar: 'marchar', '86': mesa.estado, cuenta: 'cuenta', aviso: 'aviso' })[brainResult.tipo] as string
-      await supabase.from('mesas').update({ estado: nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('restaurante_id', rid)
+      const nuevoEstado = ({ comanda: 'activa', marchar: 'marchar', '86': mesa.estado, cuenta: 'cuenta_pedida', aviso: 'aviso' })[brainResult.tipo] as string
+      await supabase.from('mesas').update({ estado: brainResult.tipo === 'cuenta' ? 'cuenta' : nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('restaurante_id', rid)
+
+      // ── PEDIR CUENTA por voz ───────────────────────────────
+      if (brainResult.tipo === 'cuenta' && comanda?.id) {
+        // Cambiar estado comanda a cuenta_pedida + imprimir ticket
+        await supabase.from('comandas').update({ estado: 'cuenta_pedida' }).eq('id', comanda.id)
+
+        // Datos para ticket de cuenta
+        const { data: itemsCuenta } = await supabase
+          .from('comanda_items').select('nombre, cantidad, precio_unitario')
+          .eq('comanda_id', comanda.id).eq('restaurante_id', rid)
+
+        const { data: restData } = await supabase
+          .from('restaurantes').select('nombre, direccion').eq('id', rid).single()
+
+        const { data: camNombre } = await supabase
+          .from('camareros').select('nombre').eq('id', camareroId).single()
+
+        const totalCuenta = (itemsCuenta ?? []).reduce(
+          (s: number, it: { precio_unitario: number | null; cantidad: number }) =>
+            s + (it.precio_unitario ?? 0) * it.cantidad, 0
+        )
+
+        import('@/lib/courier').then(({ crearPrintJobCuenta }) => {
+          crearPrintJobCuenta({
+            comanda_id: comanda.id,
+            restaurante_id: rid,
+            mesa_label: mesa.codigo,
+            zona_tipo: (mesa as Record<string, unknown>).zona as string ?? null,
+            zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
+            camarero_nombre: camNombre?.nombre ?? 'Equipo',
+            numero_ticket: comanda.numero_ticket ?? 0,
+            restaurante_nombre: restData?.nombre ?? 'Restaurante',
+            restaurante_direccion: restData?.direccion ?? null,
+            items: (itemsCuenta ?? []).map((it: { nombre: string; cantidad: number; precio_unitario: number | null }) => ({
+              nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario ?? 0,
+            })),
+            total: Math.round(totalCuenta * 100) / 100,
+          }).catch((e: unknown) => console.error('[COURIER-CUENTA-VOZ]', e))
+        }).catch((e: unknown) => console.error('[COURIER-CUENTA-IMPORT]', e))
+      }
 
       if (brainResult.tipo === '86') {
         await supabase.from('productos_86').insert(

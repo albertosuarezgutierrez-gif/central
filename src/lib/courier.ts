@@ -725,3 +725,228 @@ async function getNextTicketNum(
     return ++_ticketCounter
   }
 }
+
+// ============================================================
+// TICKET DE CUENTA (PEDIR CUENTA)
+// ============================================================
+
+interface CuentaParams {
+  comanda_id:           string
+  restaurante_id:       string
+  mesa_label:           string
+  zona_tipo?:           string | null
+  zona_nombre?:         string | null
+  camarero_nombre:      string
+  numero_ticket:        number
+  restaurante_nombre:   string
+  restaurante_direccion?: string | null
+  items: {
+    nombre:          string
+    cantidad:        number
+    precio_unitario: number
+  }[]
+  total: number
+}
+
+/**
+ * Genera ESC/POS para el ticket de cuenta (pre-cobro).
+ * Incluye listado de items con precios + total + pie ia.rest.
+ */
+export function generarEscPosCuenta(p: CuentaParams): Buffer {
+  const ESC = 0x1B, GS = 0x1D, LF = 0x0A
+  const t = (s: string) => Buffer.from(s.substring(0, 48), 'latin1')
+  const b = (...bytes: number[]) => Buffer.from(bytes)
+
+  const SEP = '-'.repeat(40)
+  const ahora = new Date()
+  const hora  = ahora.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+  const fecha = ahora.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' })
+
+  const fmt = (v: number) => v.toFixed(2).replace('.', ',') + ' EUR'
+
+  const bufs: Buffer[] = []
+
+  // Init
+  bufs.push(b(ESC, 0x40), b(ESC, 0x74, 0x00))
+
+  // Cabecera restaurante (centrado)
+  bufs.push(b(ESC, 0x61, 0x01)) // center
+  bufs.push(b(ESC, 0x45, 0x01)) // bold on
+  bufs.push(t(p.restaurante_nombre.toUpperCase()), b(LF))
+  bufs.push(b(ESC, 0x45, 0x00)) // bold off
+  if (p.restaurante_direccion) {
+    bufs.push(t(p.restaurante_direccion), b(LF))
+  }
+  bufs.push(b(LF))
+
+  // "CUENTA" centrado grande
+  bufs.push(b(GS, 0x21, 0x11))  // 2x size
+  bufs.push(b(ESC, 0x45, 0x01))
+  bufs.push(t('CUENTA'), b(LF))
+  bufs.push(b(GS, 0x21, 0x00), b(ESC, 0x45, 0x00))
+  bufs.push(b(LF))
+
+  // Mesa + fecha/hora (izquierda)
+  bufs.push(b(ESC, 0x61, 0x00)) // left
+  const mesaLine = (p.zona_nombre ? p.zona_nombre.toUpperCase() + ' - ' : '') + 'Mesa ' + p.mesa_label.toUpperCase()
+  bufs.push(b(ESC, 0x45, 0x01), t(mesaLine), b(ESC, 0x45, 0x00), b(LF))
+  bufs.push(t(fecha + '  ' + hora + '  ' + p.camarero_nombre), b(LF))
+  bufs.push(t(SEP), b(LF))
+
+  // Items
+  bufs.push(b(LF))
+  for (const item of p.items) {
+    const precioTotal = item.precio_unitario * item.cantidad
+    const izq  = `${item.cantidad}x ${item.nombre.substring(0, 26)}`
+    const der  = fmt(precioTotal)
+    const pad  = Math.max(1, 40 - izq.length - der.length)
+    const line = izq + ' '.repeat(pad) + der
+    bufs.push(b(ESC, 0x45, 0x01))
+    bufs.push(t(line), b(LF))
+    bufs.push(b(ESC, 0x45, 0x00))
+    // Precio unitario si cantidad > 1
+    if (item.cantidad > 1) {
+      const uLine = '   (' + fmt(item.precio_unitario) + ' / ud.)'
+      bufs.push(t(uLine), b(LF))
+    }
+  }
+
+  // Separador + TOTAL
+  bufs.push(b(LF))
+  bufs.push(t(SEP), b(LF))
+  const totalLabel = 'TOTAL'
+  const totalStr   = fmt(p.total)
+  const totalPad   = Math.max(1, 40 - totalLabel.length - totalStr.length)
+  bufs.push(b(GS, 0x21, 0x01))  // 2x alto
+  bufs.push(b(ESC, 0x45, 0x01))
+  bufs.push(t(totalLabel + ' '.repeat(totalPad) + totalStr), b(LF))
+  bufs.push(b(GS, 0x21, 0x00), b(ESC, 0x45, 0x00))
+  bufs.push(t(SEP), b(LF))
+  bufs.push(b(LF))
+
+  // Nota factura
+  bufs.push(b(ESC, 0x61, 0x01)) // center
+  bufs.push(t('Solicite factura al camarero'), b(LF))
+  bufs.push(t('si la necesita'), b(LF))
+  bufs.push(b(LF))
+
+  // Pie ia.rest
+  bufs.push(t('- - - - - - - - - - - - - - - - - - -'), b(LF))
+  bufs.push(t('Gestion con ia.rest'), b(LF))
+  bufs.push(t('www.iarest.es'), b(LF))
+  bufs.push(b(LF), b(LF), b(LF))
+
+  // Corte
+  bufs.push(b(GS, 0x56, 0x01))
+
+  return Buffer.concat(bufs)
+}
+
+/**
+ * Encuentra la impresora de caja y crea un print_job para el ticket de cuenta.
+ * Prioridad: es_caja=true + misma zona > es_caja=true > primera activa.
+ * Retorna { job_id, impresora_nombre } o null si no hay impresoras.
+ */
+export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
+  job_id: string
+  impresora_nombre: string
+} | null> {
+  const supabase = createServerClient()
+
+  // Cargar impresoras activas (es_caja primero, luego resto como fallback)
+  const { data: impresoras } = await supabase
+    .from('impresoras')
+    .select('id, nombre, es_caja, connection_type, ip_address, port, secciones_ids, seccion_id')
+    .eq('restaurante_id', p.restaurante_id)
+    .eq('activa', true)
+    .order('es_caja', { ascending: false }) // es_caja=true primero
+
+  if (!impresoras?.length) {
+    console.warn('[COURIER-CUENTA] No hay impresoras activas para restaurante', p.restaurante_id)
+    return null
+  }
+
+  // Elegir impresora: preferir es_caja=true, si hay varias → la de la zona
+  const cajas = impresoras.filter(i => i.es_caja)
+  let elegida = cajas.length > 0 ? cajas[0] : impresoras[0]
+
+  // Si hay múltiples cajas y tenemos zona, buscar la más específica
+  if (cajas.length > 1 && p.zona_tipo) {
+    // Para futura expansión: impresora con zona_tipo matching
+    // Por ahora: primera es_caja es suficiente
+    elegida = cajas[0]
+  }
+
+  const payload = {
+    mesa:       p.mesa_label,
+    camarero:   p.camarero_nombre,
+    ticket_num: p.numero_ticket,
+    seccion:    'CUENTA',
+    zona_nombre: p.zona_nombre ?? null,
+    tipo:       'cuenta',
+    ts:         new Date().toISOString(),
+    items:      p.items.map(it => ({ nombre: it.nombre, cantidad: it.cantidad })),
+    total:      p.total,
+  }
+
+  // Generar ESC/POS o texto plano según tipo conexión
+  const TIPOS_TCP = ['ip_local', 'usb_bridge', 'tcp']
+  const esTcp = TIPOS_TCP.includes(elegida.connection_type ?? '')
+
+  let print_data: string
+  if (esTcp) {
+    const buf = generarEscPosCuenta(p)
+    print_data = buf.toString('base64')
+  } else {
+    // Texto plano fallback (CloudPRNT / otros)
+    const lines = [
+      '========================================',
+      p.restaurante_nombre.toUpperCase().padStart(24),
+      '========================================',
+      '',
+      '              CUENTA',
+      '',
+      `Mesa: ${p.mesa_label}`,
+      `Fecha: ${new Date().toLocaleDateString('es-ES')}`,
+      '----------------------------------------',
+      ...p.items.map(it => {
+        const total = (it.precio_unitario * it.cantidad).toFixed(2) + ' EUR'
+        const izq   = `${it.cantidad}x ${it.nombre.substring(0, 26)}`
+        return izq.padEnd(32) + total
+      }),
+      '----------------------------------------',
+      'TOTAL'.padEnd(32) + p.total.toFixed(2) + ' EUR',
+      '========================================',
+      '',
+      '  Solicite factura al camarero',
+      '',
+      '     Gestion con ia.rest',
+      '       www.iarest.es',
+      '',
+    ]
+    print_data = Buffer.from(lines.join('\n'), 'utf8').toString('base64')
+  }
+
+  const { data: job, error } = await supabase
+    .from('print_jobs')
+    .insert({
+      impresora_id:   elegida.id,
+      seccion_id:     null, // ticket de cuenta no tiene sección
+      restaurante_id: p.restaurante_id,
+      comanda_id:     p.comanda_id,
+      payload,
+      print_data,
+      status:        'pendiente',
+    })
+    .select('id')
+    .single()
+
+  if (error) {
+    console.error('[COURIER-CUENTA] Error insert print_job:', error)
+    return null
+  }
+
+  console.log(`[COURIER-CUENTA] ✓ Job ${job.id} → impresora "${elegida.nombre}" (es_caja:${elegida.es_caja})`)
+
+  return { job_id: job.id, impresora_nombre: elegida.nombre }
+}

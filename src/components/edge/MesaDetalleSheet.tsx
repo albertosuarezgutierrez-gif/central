@@ -167,13 +167,31 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
     flash(`"${item.nombre}" eliminado`); setSaving(false)
   }
 
-  const estadoColor = (estado: string) => ({
-    nueva: C.teal, en_cocina: C.amb, lista: C.gr, cuenta: C.verm
-  }[estado] ?? C.ink3)
+  const [pedirCuentaLoading, setPedirCuentaLoading] = useState(false)
 
-  const estadoBg = (estado: string) => ({
-    nueva: `${C.teal}18`, en_cocina: C.ambS, lista: C.grS, cuenta: C.vermS
-  }[estado] ?? C.bg2)
+  const pedirCuenta = async () => {
+    if (!comanda || pedirCuentaLoading) return
+    setPedirCuentaLoading(true)
+    try {
+      const r = await fetch(`/api/comanda/${comanda.id}/pedir-cuenta`, {
+        method: 'POST',
+        headers: { 'x-ia-session': session_str },
+      })
+      const d = await r.json()
+      if (!r.ok) { flash(`Error: ${d.error ?? 'desconocido'}`); return }
+      await cargarComanda()
+      flash(d.sin_impresora ? '🧾 Cuenta pedida (sin impresora de caja)' : '🧾 Cuenta pedida — ticket imprimiendo…')
+    } catch { flash('Error al pedir cuenta') }
+    finally { setPedirCuentaLoading(false) }
+  }
+
+  const estadoColor = (estado: string) => (({
+    nueva: C.teal, en_cocina: C.amb, lista: C.gr, cuenta: C.verm, cuenta_pedida: '#C97A00'
+  } as Record<string, string>)[estado] ?? C.ink3)
+
+  const estadoBg = (estado: string) => (({
+    nueva: `${C.teal}18`, en_cocina: C.ambS, lista: C.grS, cuenta: C.vermS, cuenta_pedida: '#FEF3C7'
+  } as Record<string, string>)[estado] ?? C.bg2)
 
   if (!mesaId) return null
 
@@ -209,7 +227,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                   <span style={{fontSize:9,fontWeight:700,padding:'2px 8px',borderRadius:20,
                     background:estadoBg(comanda.estado),color:estadoColor(comanda.estado),
                     textTransform:'uppercase',letterSpacing:'.7px'}}>
-                    {({'nueva':'Nueva','en_cocina':'En cocina','lista':'Lista ✓','cuenta':'Cuenta','cerrada':'Cerrada'} as Record<string,string>)[comanda.estado]||comanda.estado}
+                    {({'nueva':'Nueva','en_cocina':'En cocina','lista':'Lista ✓','cuenta':'Cuenta','cuenta_pedida':'⏳ Cuenta pedida','cerrada':'Cerrada'} as Record<string,string>)[comanda.estado]||comanda.estado}
                   </span>
                 )}
               </div>
@@ -517,20 +535,34 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
         {comanda && !vistaAnadir && (
           <div style={{padding:'10px 16px 20px',borderTop:`1px solid ${C.rule}`,flexShrink:0,display:'flex',gap:8,background:C.bg1}}>
             {comanda.estado !== 'cerrada' && <>
+              {/* Voz — pequeño */}
               <button onClick={()=>{ onAnadirPorVoz(mesaId!, mesaCodigo, comanda.id); onClose() }}
-                style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                style={{padding:'10px 10px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',alignItems:'center',gap:5,cursor:'pointer',flexShrink:0}}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/>
                 </svg>
-                <span style={{fontSize:10,fontWeight:600,color:C.teal}}>Añadir voz</span>
+                <span style={{fontSize:10,fontWeight:600,color:C.teal,whiteSpace:'nowrap' as const}}>Voz</span>
               </button>
-              <button onClick={()=>{setVistaAnadir(true);setCartAnadir([]);setSearchAnadir('');setCatAnadir('todo')}}
-                style={{flex:1,padding:'11px 8px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:10,display:'flex',flexDirection:'column',alignItems:'center',gap:3,cursor:'pointer'}}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+              {/* Pedir cuenta */}
+              <button
+                onClick={pedirCuenta}
+                disabled={pedirCuentaLoading || comanda.estado === 'cuenta_pedida'}
+                style={{
+                  flex:1,padding:'11px 8px',
+                  background: comanda.estado === 'cuenta_pedida' ? '#FEF3C7' : '#FEF3C7',
+                  border:`1.5px solid ${comanda.estado === 'cuenta_pedida' ? '#C97A00' : '#E8A33B'}`,
+                  borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',gap:6,
+                  cursor: comanda.estado === 'cuenta_pedida' ? 'default' : pedirCuentaLoading ? 'default' : 'pointer',
+                  opacity: pedirCuentaLoading ? 0.6 : 1,
+                }}>
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C97A00" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
                 </svg>
-                <span style={{fontSize:10,fontWeight:600,color:C.ink3}}>＋ Añadir</span>
+                <span style={{fontSize:12,fontWeight:700,color:'#C97A00',whiteSpace:'nowrap' as const}}>
+                  {pedirCuentaLoading ? 'Enviando…' : comanda.estado === 'cuenta_pedida' ? '✓ Cuenta' : 'Pedir cuenta'}
+                </span>
               </button>
+              {/* Cobrar */}
               <button onClick={()=>setCobrarOpen(true)}
                 style={{flex:2,padding:'11px 12px',background:C.verm,border:'none',borderRadius:10,display:'flex',alignItems:'center',justifyContent:'center',gap:8,cursor:'pointer'}}>
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

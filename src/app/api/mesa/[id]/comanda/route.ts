@@ -24,7 +24,7 @@ export async function GET(
       `)
       .eq('mesa_id', mesa_id)
       .eq('restaurante_id', rid)
-      .in('estado', ['nueva', 'en_cocina', 'cuenta'])
+      .in('estado', ['nueva', 'en_cocina', 'cuenta', 'cuenta_pedida'])
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()

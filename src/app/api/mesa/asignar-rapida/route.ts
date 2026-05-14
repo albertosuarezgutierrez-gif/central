@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
       .from('comandas')
       .select('mesa_id')
       .eq('restaurante_id', rid)
-      .in('estado', ['nueva', 'en_cocina', 'cuenta'])
+      .in('estado', ['nueva', 'en_cocina', 'cuenta', 'cuenta_pedida'])
 
     const ocupadas = new Set((activas ?? []).map(c => c.mesa_id))
 

@@ -148,7 +148,7 @@ async function evalTicketSinTocar(supabase: ReturnType<typeof createServerClient
 async function evalCuentaSinCobrar(supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]) {
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
   const { data: cuentas } = await supabase.from('comandas').select('id, created_at, mesa:mesas(codigo)')
-    .eq('restaurante_id', rid).eq('tipo', 'cuenta').eq('estado', 'nueva').lt('created_at', hace)
+    .eq('restaurante_id', rid).in('estado', ['cuenta_pedida']).lt('updated_at', hace)
   for (const c of cuentas ?? []) {
     const ref = `cuenta_sin_cobrar_${c.id}`
     if (await yaAlertado(supabase, rid, getCond(regla), ref)) continue

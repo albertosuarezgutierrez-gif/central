@@ -36,7 +36,7 @@ type VpEstado = 'sin_calibrar' | 'calibrando' | 'activo' | 'error'
 type Mesa = { id: string; codigo: string; nombre: string | null; zona: string; capacidad: number; estado: string; pos_x: number | null; pos_y: number | null; forma: 'round' | 'square' | 'bar' | null }
 type Turno = { id: string; nombre: string; estado: string; created_at: string; fecha: string }
 type TurnoStats = { total_comandas: number; avg_latencia_ms: number | null; mesas_activas: { codigo: string; count: number }[] }
-type Impresora = { id: string; nombre: string; seccion_id: string; secciones_ids: string[]; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null }
+type Impresora = { id: string; nombre: string; seccion_id: string; secciones_ids: string[]; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null; es_caja: boolean }
 type BridgeToken = { id: string; token: string; nombre: string; activo: boolean; ultimo_ping: string | null }
 type PrintJob = { id: string; status: string; seccion_id: string; created_at: string; sent_at: string | null; acked_at: string | null; attempts: number; error_msg: string | null; impresoras?: { nombre: string } }
 type Reserva = {
@@ -2527,7 +2527,7 @@ function ImpresorasTab() {
   const [testResult, setTestResult]     = useState<Record<string, { status: 'testing'|'ok'|'error'|'timeout', msg?: string }>>({})  // impresora_id → resultado test
   const [form, setForm]                 = useState({
     nombre: '', secciones_ids: ['calientes'] as string[], connection_type: 'ip_local',
-    ip_address: '', port: '9100', cloud_device_id: '', modelo: ''
+    ip_address: '', port: '9100', cloud_device_id: '', modelo: '', es_caja: false
   })
   const [err, setErr]   = useState('')
   const [saving, setSaving] = useState(false)
@@ -2605,6 +2605,7 @@ function ImpresorasTab() {
         cloud_device_id: editando.cloud_device_id,
         modelo:         editando.modelo,
         impresora_fallback_id: editando.impresora_fallback_id || null,
+        es_caja:        editando.es_caja ?? false,
       })
     })
     setSaving(false)
@@ -2629,13 +2630,14 @@ function ImpresorasTab() {
         connection_type: form.connection_type,
         ip_address:      form.ip_address || null,
         port:            parseInt(form.port) || 9100,
+        es_caja:         form.es_caja,
       })
     })
     const d = await r.json()
     setSaving(false)
     if (!r.ok) return setErr(d.error || 'Error')
     setModal(null)
-    setForm({ nombre: '', secciones_ids: ['calientes'], connection_type: 'ip_local', ip_address: '', port: '9100', cloud_device_id: '', modelo: '' })
+    setForm({ nombre: '', secciones_ids: ['calientes'], connection_type: 'ip_local', ip_address: '', port: '9100', cloud_device_id: '', modelo: '', es_caja: false })
     await loadAll()
   }
 
@@ -2839,6 +2841,17 @@ function ImpresorasTab() {
                         ))}
                       </select>
                     </div>
+                    {/* es_caja toggle */}
+                    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer', marginBottom:12 }}
+                      onClick={() => setEditando(ed => ed ? {...ed, es_caja: !ed.es_caja} : null)}>
+                      <div style={{ width:18, height:18, borderRadius:4, border:`2px solid #C97A00`, background: editando.es_caja ? '#C97A00' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
+                        {editando.es_caja && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
+                      </div>
+                      <div>
+                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:13, fontWeight:700, color:'#C97A00' }}>Impresora de caja (cuenta)</div>
+                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:'#92620A', marginTop:1 }}>Recibe el ticket cuando el camarero pulsa "Pedir cuenta"</div>
+                      </div>
+                    </div>
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Btn variant="ghost" onClick={() => setEditando(null)}>Cancelar</Btn>
                       <Btn variant="primary" onClick={saveEdit} disabled={saving}><Icon d={ICONS.check} size={14}/>{saving ? 'Guardando...' : 'Guardar'}</Btn>
@@ -2854,6 +2867,11 @@ function ImpresorasTab() {
                         {imp.impresora_fallback_id && (
                           <div style={{ fontFamily: SM, fontSize: 10, color: C.amber, marginTop: 2 }}>
                             ↩ fallback: {impresoras.find(i => i.id === imp.impresora_fallback_id)?.nombre ?? imp.impresora_fallback_id}
+                          </div>
+                        )}
+                        {imp.es_caja && (
+                          <div style={{ fontFamily: SM, fontSize: 10, color: '#C97A00', fontWeight: 700, marginTop: 2 }}>
+                            🧾 Impresora de caja
                           </div>
                         )}
                       </div>
@@ -3006,6 +3024,17 @@ function ImpresorasTab() {
               </div>
             )}
             <Field label="Modelo (opcional)" value={form.modelo} onChange={v => setForm(f => ({...f, modelo: v}))} placeholder="ESC/POS genérica · Star TSP143 · Epson TM-T20"/>
+            {/* es_caja: impresora para tickets de cuenta */}
+            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer' }}
+              onClick={() => setForm(f => ({...f, es_caja: !f.es_caja}))}>
+              <div style={{ width:18, height:18, borderRadius:4, border:`2px solid #C97A00`, background: form.es_caja ? '#C97A00' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>
+                {form.es_caja && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
+              </div>
+              <div>
+                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:13, fontWeight:700, color:'#C97A00' }}>Impresora de caja (cuenta)</div>
+                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:'#92620A', marginTop:1 }}>Recibe el ticket cuando el camarero pulsa "Pedir cuenta"</div>
+              </div>
+            </div>
             {form.connection_type === 'ip_local' && (
               <div style={{ background: C.paper2, borderRadius: 6, padding: '10px 12px', fontFamily: SM, fontSize: 11, color: C.ink3, lineHeight: 1.5 }}>
                 Necesitas el bridge local corriendo en la red del restaurante.<br/>
