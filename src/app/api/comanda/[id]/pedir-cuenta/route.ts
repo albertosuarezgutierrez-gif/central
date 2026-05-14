@@ -109,9 +109,8 @@ export async function POST(
   // Mesa info
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mesa = (comanda.mesa as any) as { codigo: string; zona_id?: string | null; zona?: { id: string; nombre: string; tipo: string } | null } | null
-  const mesa_label = mesa?.codigo ?? 'Mesa'
-  const zona_id    = (mesa?.zona as { id?: string } | null)?.id ?? null
-  const zona_tipo  = (mesa?.zona as { tipo?: string } | null)?.tipo ?? null
+  const mesa_label  = mesa?.codigo ?? 'Mesa'
+  const zona_tipo   = (mesa?.zona as { tipo?: string } | null)?.tipo ?? null
   const zona_nombre = (mesa?.zona as { nombre?: string } | null)?.nombre ?? null
 
   // Camarero nombre
@@ -131,7 +130,6 @@ export async function POST(
       comanda_id,
       restaurante_id,
       mesa_label,
-      zona_id,
       zona_tipo,
       zona_nombre,
       camarero_nombre,

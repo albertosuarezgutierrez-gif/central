@@ -80,15 +80,17 @@ export async function POST(req: NextRequest) {
     nombre, zona_tipo, zona_tipos, seccion_ids, producto_ids,
     destino_tipo, destino_ref, destino_kds_ref, destino_nombre,
     prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id,
-    hora_desde, hora_hasta,
+    hora_desde, hora_hasta, tipos_ticket,
   } = body
 
   if (!destino_tipo || !destino_ref)
     return NextResponse.json({ error: 'destino_tipo y destino_ref son obligatorios' }, { status: 400 })
 
-  const seccionIds: string[]  = Array.isArray(seccion_ids) ? seccion_ids : []
-  const productoIds: string[] = Array.isArray(producto_ids) ? producto_ids : []
-  const zonaTipos: string[]   = Array.isArray(zona_tipos) ? zona_tipos : (zona_tipo ? [zona_tipo] : [])
+  const seccionIds: string[]    = Array.isArray(seccion_ids) ? seccion_ids : []
+  const productoIds: string[]   = Array.isArray(producto_ids) ? producto_ids : []
+  const zonaTipos: string[]     = Array.isArray(zona_tipos) ? zona_tipos : (zona_tipo ? [zona_tipo] : [])
+  const tiposTicket: string[]   = Array.isArray(tipos_ticket) && tipos_ticket.length > 0
+    ? tipos_ticket : ['comanda']
 
   const supabase = createServerClient()
   const { data, error } = await supabase.from('reglas_envio').insert({
@@ -104,10 +106,11 @@ export async function POST(req: NextRequest) {
     destino_nombre:      destino_nombre || null,
     prioridad:           prioridad ?? 5,
     es_fallback:         es_fallback ?? false,
-    imprimir_al_marchar: imprimir_al_marchar ?? false,
+    imprimir_al_marchar: tiposTicket.includes('marchar'),
     impresora_pase_id:   impresora_pase_id || null,
     hora_desde:          hora_desde || null,
     hora_hasta:          hora_hasta || null,
+    tipos_ticket:        tiposTicket,
   }).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -126,11 +129,16 @@ export async function PATCH(req: NextRequest) {
     'destino_tipo', 'destino_ref', 'destino_kds_ref', 'destino_nombre',
     'zona_tipo', 'zona_tipos', 'seccion_id', 'seccion_ids', 'producto_ids',
     'imprimir_al_marchar', 'impresora_pase_id', 'hora_desde', 'hora_hasta',
+    'tipos_ticket',
   ]
   const update: Record<string, unknown> = {}
   for (const k of allowed) if (k in fields) update[k] = fields[k]
   if ('seccion_ids' in fields) update['seccion_id'] = (fields.seccion_ids as string[]).length === 1 ? (fields.seccion_ids as string[])[0] : null
   if ('zona_tipos' in fields) update['zona_tipo'] = (fields.zona_tipos as string[]).length === 1 ? (fields.zona_tipos as string[])[0] : null
+  // Mantener sync imprimir_al_marchar cuando se actualiza tipos_ticket
+  if ('tipos_ticket' in fields) {
+    update['imprimir_al_marchar'] = (fields.tipos_ticket as string[]).includes('marchar')
+  }
 
   const supabase = createServerClient()
   const { data, error } = await supabase.from('reglas_envio').update(update).eq('id', id).eq('restaurante_id', rid).select().single()

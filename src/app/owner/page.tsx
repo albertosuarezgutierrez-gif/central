@@ -2846,45 +2846,6 @@ function ImpresorasTab() {
                         ))}
                       </select>
                     </div>
-                    {/* es_caja toggle */}
-                    <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer', marginBottom: editando.es_caja && zonasHw.length > 0 ? 6 : 12 }}
-                      onClick={() => setEditando(ed => ed ? {...ed, es_caja: !ed.es_caja, zonas_caja: ed.es_caja ? [] : ed.zonas_caja} : null)}>
-                      <div style={{ width:18, height:18, borderRadius:4, border:`2px solid #C97A00`, background: editando.es_caja ? '#C97A00' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>
-                        {editando.es_caja && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
-                      </div>
-                      <div>
-                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:13, fontWeight:700, color:'#C97A00' }}>Impresora de caja (cuenta)</div>
-                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:'#92620A', marginTop:1 }}>Recibe el ticket cuando el camarero pulsa "Pedir cuenta"</div>
-                      </div>
-                    </div>
-                    {/* Zonas asignadas — visible solo si es_caja=true */}
-                    {editando.es_caja && zonasHw.length > 0 && (
-                      <div style={{ paddingLeft:8, marginBottom:12 }}>
-                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, fontWeight:700, color:'#92620A', marginBottom:6, textTransform:'uppercase', letterSpacing:'.06em' }}>
-                          Zonas que cubre esta impresora
-                        </div>
-                        <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                          {zonasHw.map(z => {
-                            const sel = (editando.zonas_caja ?? []).includes(z.id)
-                            return (
-                              <button key={z.id} type="button"
-                                onClick={() => setEditando(ed => ed ? {
-                                  ...ed,
-                                  zonas_caja: sel
-                                    ? (ed.zonas_caja ?? []).filter(x => x !== z.id)
-                                    : [...(ed.zonas_caja ?? []), z.id]
-                                } : null)}
-                                style={{ padding:'5px 12px', borderRadius:20, border:`1.5px solid ${sel ? '#C97A00' : '#D8CDB6'}`, background: sel ? '#C97A00' : 'transparent', color: sel ? '#fff' : '#6B5F52', fontSize:12, fontWeight:sel?700:400, cursor:'pointer' }}>
-                                {sel ? '✓ ' : ''}{z.nombre}
-                              </button>
-                            )
-                          })}
-                        </div>
-                        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:10, color:'#92620A', marginTop:4 }}>
-                          Sin selección = cubre todas las zonas
-                        </div>
-                      </div>
-                    )}
                     <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
                       <Btn variant="ghost" onClick={() => setEditando(null)}>Cancelar</Btn>
                       <Btn variant="primary" onClick={saveEdit} disabled={saving}><Icon d={ICONS.check} size={14}/>{saving ? 'Guardando...' : 'Guardar'}</Btn>
@@ -2900,11 +2861,6 @@ function ImpresorasTab() {
                         {imp.impresora_fallback_id && (
                           <div style={{ fontFamily: SM, fontSize: 10, color: C.amber, marginTop: 2 }}>
                             ↩ fallback: {impresoras.find(i => i.id === imp.impresora_fallback_id)?.nombre ?? imp.impresora_fallback_id}
-                          </div>
-                        )}
-                        {imp.es_caja && (
-                          <div style={{ fontFamily: 'system-ui,sans-serif', fontSize: 10, color: '#C97A00', fontWeight: 700, marginTop: 2 }}>
-                            🧾 Caja{imp.zonas_caja?.length > 0 ? ` · ${imp.zonas_caja.map(zid => zonasHw.find(z=>z.id===zid)?.nombre ?? zid).join(', ')}` : ' · todas las zonas'}
                           </div>
                         )}
                       </div>
@@ -3057,43 +3013,6 @@ function ImpresorasTab() {
               </div>
             )}
             <Field label="Modelo (opcional)" value={form.modelo} onChange={v => setForm(f => ({...f, modelo: v}))} placeholder="ESC/POS genérica · Star TSP143 · Epson TM-T20"/>
-            {/* es_caja: impresora para tickets de cuenta */}
-            <div style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 12px', background:'#FEF3C7', border:'1.5px solid #E8A33B', borderRadius:8, cursor:'pointer' }}
-              onClick={() => setForm(f => ({...f, es_caja: !f.es_caja, zonas_caja: f.es_caja ? [] : f.zonas_caja}))}>
-              <div style={{ width:18, height:18, borderRadius:4, border:`2px solid #C97A00`, background: form.es_caja ? '#C97A00' : 'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>
-                {form.es_caja && <svg width="10" height="10" viewBox="0 0 12 12" fill="none"><polyline points="2,6 5,9 10,3" stroke="#fff" strokeWidth="2" strokeLinecap="round"/></svg>}
-              </div>
-              <div>
-                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:13, fontWeight:700, color:'#C97A00' }}>Impresora de caja (cuenta)</div>
-                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:'#92620A', marginTop:1 }}>Recibe el ticket cuando el camarero pulsa "Pedir cuenta"</div>
-              </div>
-            </div>
-            {/* Zonas asignadas — visible solo si es_caja=true */}
-            {form.es_caja && zonasHw.length > 0 && (
-              <div style={{ paddingLeft:8 }}>
-                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, fontWeight:700, color:'#92620A', marginBottom:6, textTransform:'uppercase', letterSpacing:'.06em' }}>
-                  Zonas que cubre esta impresora
-                </div>
-                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
-                  {zonasHw.map(z => {
-                    const sel = form.zonas_caja.includes(z.id)
-                    return (
-                      <button key={z.id} type="button"
-                        onClick={() => setForm(f => ({
-                          ...f,
-                          zonas_caja: sel ? f.zonas_caja.filter(x => x !== z.id) : [...f.zonas_caja, z.id]
-                        }))}
-                        style={{ padding:'5px 12px', borderRadius:20, border:`1.5px solid ${sel ? '#C97A00' : '#D8CDB6'}`, background: sel ? '#C97A00' : 'transparent', color: sel ? '#fff' : '#6B5F52', fontSize:12, fontWeight:sel?700:400, cursor:'pointer' }}>
-                        {sel ? '✓ ' : ''}{z.nombre}
-                      </button>
-                    )
-                  })}
-                </div>
-                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:10, color:'#92620A', marginTop:4 }}>
-                  Sin selección = cubre todas las zonas
-                </div>
-              </div>
-            )}
             {form.connection_type === 'ip_local' && (
               <div style={{ background: C.paper2, borderRadius: 6, padding: '10px 12px', fontFamily: SM, fontSize: 11, color: C.ink3, lineHeight: 1.5 }}>
                 Necesitas el bridge local corriendo en la red del restaurante.<br/>
@@ -3226,6 +3145,7 @@ type ReglaEnvio = {
   impresora_pase_id: string | null
   hora_desde: string | null
   hora_hasta: string | null
+  tipos_ticket: string[]
 }
 type CatImp      = { id: string; nombre: string; seccion_id: string; connection_type: string }
 type CatSec      = { id: string; nombre: string; color_kds: string; icono: string }
@@ -3269,6 +3189,7 @@ function FlujoTab() {
     impresora_pase_id:   '',
     hora_desde:          '',
     hora_hasta:          '',
+    tipos_ticket:        ['comanda'] as string[],
   })
 
   const load = useCallback(async () => {
@@ -3290,7 +3211,7 @@ function FlujoTab() {
     setForm({ nombre:'', zona_tipos:[], seccion_ids:[], producto_ids:[],
       dest_imp:true, dest_kds:false, destino_imp_ref:'', destino_kds_ref:'',
       es_fallback:false, imprimir_al_marchar:false, impresora_pase_id:'',
-      hora_desde:'', hora_hasta:'' })
+      hora_desde:'', hora_hasta:'', tipos_ticket:['comanda'] })
     setSecAbiertas(new Set())
     setErr('')
     setModal(true)
@@ -3441,7 +3362,7 @@ function FlujoTab() {
     if (!form.dest_imp && !form.dest_kds) return setErr('Selecciona al menos un destino')
     if (form.dest_imp && !form.destino_imp_ref) return setErr('Selecciona la impresora')
     if (form.dest_kds && !form.destino_kds_ref) return setErr('Selecciona la sección KDS')
-    if (form.imprimir_al_marchar && !form.impresora_pase_id) return setErr('Selecciona la impresora de pase')
+    if (form.tipos_ticket.includes('marchar') && !form.impresora_pase_id) return setErr('Selecciona la impresora de pase para marchar')
 
     setSaving(true); setErr('')
 
@@ -3474,10 +3395,11 @@ function FlujoTab() {
         destino_tipo, destino_ref, destino_nombre, destino_kds_ref,
         es_fallback:         form.es_fallback,
         prioridad:           form.es_fallback ? 0 : noFallbacks.length + 1,
-        imprimir_al_marchar: form.imprimir_al_marchar,
+        imprimir_al_marchar: form.tipos_ticket.includes('marchar'),
         impresora_pase_id:   form.impresora_pase_id || null,
         hora_desde:          form.hora_desde || null,
         hora_hasta:          form.hora_hasta || null,
+        tipos_ticket:        form.tipos_ticket.length > 0 ? form.tipos_ticket : ['comanda'],
       }),
     })
     if (!r.ok) setErr('Error al guardar')
@@ -3826,16 +3748,41 @@ function FlujoTab() {
                 </div>
               )}
 
-              {/* Imprimir al marchar */}
+              {/* Tipos de ticket */}
               <div style={{ borderTop:`1px solid ${C.rule}`, paddingTop:10, marginTop:4 }}>
-                <div onClick={()=>setForm(f=>({...f,imprimir_al_marchar:!f.imprimir_al_marchar,impresora_pase_id:''}))} style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
-                  <Chk checked={form.imprimir_al_marchar} onClick={()=>setForm(f=>({...f,imprimir_al_marchar:!f.imprimir_al_marchar,impresora_pase_id:''}))}/>
-                  <span style={{ fontFamily:SN, fontSize:13, color:C.ink, fontWeight:500 }}>Imprimir ticket de pase al marchar</span>
+                <div style={{ fontFamily:SN, fontSize:12, fontWeight:700, color:C.ink3, marginBottom:8, textTransform:'uppercase', letterSpacing:'.06em' }}>
+                  Esta regla aplica a
                 </div>
-                <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginLeft:26, marginTop:2 }}>Cuando cocina pulsa MARCHAR, imprime un resumen en sala</div>
-                {form.imprimir_al_marchar && (
+                <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+                  {[
+                    { key:'comanda', label:'🍽️ Comanda', desc:'Nuevos pedidos' },
+                    { key:'marchar', label:'🚀 Marchar', desc:'Ticket de pase' },
+                    { key:'cuenta',  label:'🧾 Cuenta',  desc:'Ticket de cuenta' },
+                  ].map(({ key, label, desc }) => {
+                    const sel = form.tipos_ticket.includes(key)
+                    return (
+                      <button key={key} type="button"
+                        onClick={() => setForm(f => ({
+                          ...f,
+                          tipos_ticket: sel
+                            ? f.tipos_ticket.filter(t => t !== key)
+                            : [...f.tipos_ticket, key],
+                          impresora_pase_id: key==='marchar' && sel ? '' : f.impresora_pase_id,
+                        }))}
+                        style={{ padding:'7px 14px', borderRadius:8, border:`1.5px solid ${sel ? C.red : C.rule}`, background:sel?C.redS:'transparent', cursor:'pointer', textAlign:'left' as const }}>
+                        <div style={{ fontFamily:SN, fontSize:12, fontWeight:sel?700:500, color:sel?C.red:C.ink }}>{label}</div>
+                        <div style={{ fontFamily:SN, fontSize:10, color:sel?C.red:C.ink4 }}>{desc}</div>
+                      </button>
+                    )
+                  })}
+                </div>
+                {form.tipos_ticket.length === 0 && (
+                  <div style={{ fontFamily:SN, fontSize:11, color:C.red, marginTop:6 }}>⚠️ Selecciona al menos un tipo</div>
+                )}
+                {/* Impresora de pase — solo si marchar está seleccionado */}
+                {form.tipos_ticket.includes('marchar') && (
                   <div style={{ marginTop:10 }}>
-                    <label style={labelSt}>Impresora de pase</label>
+                    <label style={labelSt}>Impresora de pase (marchar)</label>
                     <select value={form.impresora_pase_id} onChange={e=>setForm(f=>({...f,impresora_pase_id:e.target.value}))} style={inputSt}>
                       <option value="">— Selecciona impresora —</option>
                       {impresoras.map(i=><option key={i.id} value={i.id}>🖨️ {i.nombre}</option>)}
@@ -3923,6 +3870,14 @@ function ReglaRow({ r, isDragging, isDragOver, onDragStart, onDragOver, onDragLe
         {r.imprimir_al_marchar && (
           <span style={{ display:'inline-block', marginTop:3, background:'#D4E4D2', border:'1px solid #3F7D44', borderRadius:4, padding:'1px 6px', fontSize:10, fontFamily:"'Inter Tight',system-ui,sans-serif", color:'#3F7D44' }}>🖨️ pase al marchar</span>
         )}
+        {/* tipos_ticket badges */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:3, marginTop:3 }}>
+          {(r.tipos_ticket?.length > 0 ? r.tipos_ticket : ['comanda']).map((t: string) => (
+            <span key={t} style={{ display:'inline-block', background: t==='cuenta'?'#FEF3C7':t==='marchar'?'#D4E4D2':'#EFE7D6', border:`1px solid ${t==='cuenta'?'#C97A00':t==='marchar'?'#3F7D44':'#D8CDB6'}`, borderRadius:4, padding:'1px 6px', fontSize:10, fontFamily:"'Inter Tight',system-ui,sans-serif", color: t==='cuenta'?'#C97A00':t==='marchar'?'#3F7D44':'#6B5F52' }}>
+              {t==='comanda'?'🍽️ comanda':t==='marchar'?'🚀 marchar':'🧾 cuenta'}
+            </span>
+          ))}
+        </div>
       </div>
 
       <div style={{ display:'flex', gap:6, flexShrink:0 }}>

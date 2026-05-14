@@ -191,6 +191,7 @@ interface ReglaEnvio {
   impresora_pase_id:   string | null
   hora_desde:          string | null     // "HH:MM"
   hora_hasta:          string | null     // "HH:MM"
+  tipos_ticket:        string[]          // comanda | marchar | cuenta
 }
 
 function horaEnRango(desde: string | null, hasta: string | null): boolean {
@@ -285,15 +286,16 @@ export async function crearPrintJobs(
   if (comanda.restaurante_id) {
     const { data: reglasDB } = await supabase
       .from('reglas_envio')
-      .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
+      .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta, tipos_ticket')
       .eq('restaurante_id', comanda.restaurante_id)
       .eq('activa', true)
     reglas = (reglasDB ?? []).map((r: Record<string, unknown>) => ({
       ...r,
-      zona_tipos:   (r['zona_tipos'] as string[]) ?? [],
-      seccion_ids:  (r['seccion_ids'] as string[]) ?? [],
-      producto_ids: (r['producto_ids'] as string[]) ?? [],
-      es_fallback:  r['es_fallback'] ?? false,
+      zona_tipos:    (r['zona_tipos'] as string[]) ?? [],
+      seccion_ids:   (r['seccion_ids'] as string[]) ?? [],
+      producto_ids:  (r['producto_ids'] as string[]) ?? [],
+      tipos_ticket:  (r['tipos_ticket'] as string[])?.length > 0 ? (r['tipos_ticket'] as string[]) : ['comanda'],
+      es_fallback:   r['es_fallback'] ?? false,
       destino_kds_ref: r['destino_kds_ref'] as string | null ?? null,
     })) as ReglaEnvio[]
   }
@@ -734,7 +736,6 @@ interface CuentaParams {
   comanda_id:           string
   restaurante_id:       string
   mesa_label:           string
-  zona_id?:             string | null
   zona_tipo?:           string | null
   zona_nombre?:         string | null
   camarero_nombre:      string
@@ -845,8 +846,7 @@ export function generarEscPosCuenta(p: CuentaParams): Buffer {
 
 /**
  * Encuentra la impresora de caja y crea un print_job para el ticket de cuenta.
- * Prioridad: es_caja=true + zona_id en zonas_caja > es_caja=true sin zona > primera activa fallback.
- * Si zona_id no matchea ninguna caja → usa la caja con zonas_caja vacío (comodín) → primera activa.
+ * Prioridad: regla con tipos_ticket@>'cuenta' + zona match > regla cuenta comodín > primera impresora activa.
  */
 export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   job_id: string
@@ -854,108 +854,118 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
 } | null> {
   const supabase = createServerClient()
 
-  // Cargar impresoras activas con zonas_caja
-  const { data: impresoras } = await supabase
-    .from('impresoras')
-    .select('id, nombre, es_caja, zonas_caja, connection_type, ip_address, port')
+  // ── 1. Buscar reglas de flujo que apliquen a 'cuenta' ────
+  const { data: reglasDB } = await supabase
+    .from('reglas_envio')
+    .select('id, zona_tipo, zona_tipos, destino_tipo, destino_ref, prioridad, es_fallback, hora_desde, hora_hasta, tipos_ticket')
     .eq('restaurante_id', p.restaurante_id)
     .eq('activa', true)
-    .order('es_caja', { ascending: false })
+    .contains('tipos_ticket', ['cuenta'])
+    .order('es_fallback', { ascending: true })
+    .order('prioridad', { ascending: false })
 
-  if (!impresoras?.length) {
-    console.warn('[COURIER-CUENTA] No hay impresoras activas para restaurante', p.restaurante_id)
-    return null
-  }
+  const reglasCuenta = (reglasDB ?? []) as {
+    id: string; zona_tipo: string|null; zona_tipos: string[]; destino_tipo: string
+    destino_ref: string; prioridad: number; es_fallback: boolean
+    hora_desde: string|null; hora_hasta: string|null; tipos_ticket: string[]
+  }[]
 
-  const cajas = impresoras.filter(i => i.es_caja)
+  let impresoraId: string | null = null
 
-  let elegida = cajas.length > 0 ? cajas[0] : impresoras[0]
+  if (reglasCuenta.length > 0) {
+    // Filtrar por horario activo
+    const activas = reglasCuenta.filter(r => horaEnRango(r.hora_desde, r.hora_hasta))
 
-  // Si hay múltiples cajas, buscar la que cubre la zona de la mesa
-  if (cajas.length > 1 && p.zona_id) {
-    // 1. Caja con zona_id explícita en zonas_caja
-    const cajaZona = cajas.find(c =>
-      Array.isArray(c.zonas_caja) && c.zonas_caja.includes(p.zona_id!)
-    )
-    if (cajaZona) {
-      elegida = cajaZona
-    } else {
-      // 2. Caja comodín (zonas_caja vacío = todas las zonas)
-      const cajaComodin = cajas.find(c => !c.zonas_caja || c.zonas_caja.length === 0)
-      if (cajaComodin) elegida = cajaComodin
+    // Buscar regla con zona match
+    let regla = activas.find(r => {
+      const zonas = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+      return zonas.length > 0 && p.zona_tipo && zonas.includes(p.zona_tipo)
+    })
+    // Fallback: regla comodín (sin zona)
+    if (!regla) {
+      regla = activas.find(r => {
+        const zonas = r.zona_tipos?.length > 0 ? r.zona_tipos : (r.zona_tipo ? [r.zona_tipo] : [])
+        return zonas.length === 0
+      })
+    }
+    if (regla && regla.destino_tipo === 'impresora') {
+      impresoraId = regla.destino_ref
     }
   }
 
-  const payload = {
-    mesa:       p.mesa_label,
-    camarero:   p.camarero_nombre,
-    ticket_num: p.numero_ticket,
-    seccion:    'CUENTA',
-    zona_nombre: p.zona_nombre ?? null,
-    tipo:       'cuenta',
-    ts:         new Date().toISOString(),
-    items:      p.items.map(it => ({ nombre: it.nombre, cantidad: it.cantidad })),
-    total:      p.total,
+  // ── 2. Fallback: primera impresora activa ────────────────
+  if (!impresoraId) {
+    const { data: imp } = await supabase
+      .from('impresoras').select('id')
+      .eq('restaurante_id', p.restaurante_id).eq('activa', true)
+      .order('created_at').limit(1).single()
+    impresoraId = imp?.id ?? null
   }
 
-  // Generar ESC/POS o texto plano según tipo conexión
+  if (!impresoraId) {
+    console.warn('[COURIER-CUENTA] Sin impresora disponible para restaurante', p.restaurante_id)
+    return null
+  }
+
+  // ── 3. Obtener datos de la impresora elegida ─────────────
+  const { data: elegida } = await supabase
+    .from('impresoras').select('id, nombre, connection_type')
+    .eq('id', impresoraId).single()
+
+  if (!elegida) return null
+
+  // ── 4. Generar ticket ────────────────────────────────────
   const TIPOS_TCP = ['ip_local', 'usb_bridge', 'tcp']
   const esTcp = TIPOS_TCP.includes(elegida.connection_type ?? '')
-
   let print_data: string
+
   if (esTcp) {
-    const buf = generarEscPosCuenta(p)
-    print_data = buf.toString('base64')
+    print_data = generarEscPosCuenta(p).toString('base64')
   } else {
-    // Texto plano fallback (CloudPRNT / otros)
     const lines = [
       '========================================',
       p.restaurante_nombre.toUpperCase().padStart(24),
       '========================================',
-      '',
-      '              CUENTA',
-      '',
+      '', '              CUENTA', '',
       `Mesa: ${p.mesa_label}`,
       `Fecha: ${new Date().toLocaleDateString('es-ES')}`,
       '----------------------------------------',
       ...p.items.map(it => {
-        const total = (it.precio_unitario * it.cantidad).toFixed(2) + ' EUR'
-        const izq   = `${it.cantidad}x ${it.nombre.substring(0, 26)}`
-        return izq.padEnd(32) + total
+        const tot = (it.precio_unitario * it.cantidad).toFixed(2) + ' EUR'
+        return `${it.cantidad}x ${it.nombre.substring(0, 26)}`.padEnd(32) + tot
       }),
       '----------------------------------------',
       'TOTAL'.padEnd(32) + p.total.toFixed(2) + ' EUR',
       '========================================',
-      '',
-      '  Solicite factura al camarero',
-      '',
-      '     Gestion con ia.rest',
-      '       www.iarest.es',
-      '',
+      '', '  Solicite factura al camarero',
+      '', '     Gestion con ia.rest', '       www.iarest.es', '',
     ]
     print_data = Buffer.from(lines.join('\n'), 'utf8').toString('base64')
+  }
+
+  // ── 5. Crear print_job ───────────────────────────────────
+  const payload = {
+    mesa: p.mesa_label, camarero: p.camarero_nombre,
+    ticket_num: p.numero_ticket, seccion: 'CUENTA',
+    zona_nombre: p.zona_nombre ?? null, tipo: 'cuenta',
+    ts: new Date().toISOString(),
+    items: p.items.map(it => ({ nombre: it.nombre, cantidad: it.cantidad })),
+    total: p.total,
   }
 
   const { data: job, error } = await supabase
     .from('print_jobs')
     .insert({
-      impresora_id:   elegida.id,
-      seccion_id:     null, // ticket de cuenta no tiene sección
-      restaurante_id: p.restaurante_id,
-      comanda_id:     p.comanda_id,
-      payload,
-      print_data,
-      status:        'pendiente',
+      impresora_id:    elegida.id,
+      seccion_id:      null,
+      restaurante_id:  p.restaurante_id,
+      comanda_id:      p.comanda_id,
+      payload, print_data, status: 'pendiente',
     })
-    .select('id')
-    .single()
+    .select('id').single()
 
-  if (error) {
-    console.error('[COURIER-CUENTA] Error insert print_job:', error)
-    return null
-  }
+  if (error) { console.error('[COURIER-CUENTA] Error print_job:', error); return null }
 
-  console.log(`[COURIER-CUENTA] ✓ Job ${job.id} → impresora "${elegida.nombre}" (es_caja:${elegida.es_caja})`)
-
+  console.log(`[COURIER-CUENTA] ✓ Job ${job.id} → "${elegida.nombre}"`)
   return { job_id: job.id, impresora_nombre: elegida.nombre }
 }
