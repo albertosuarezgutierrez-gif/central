@@ -127,6 +127,14 @@ export default function ManualComanda({
       })
       const d = await r.json()
       if (d.ok) {
+        // Marchar automaticamente para que salga el ticket de impresion
+        if (d.comanda_id) {
+          fetch('/api/marchar', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', ...h() },
+            body: JSON.stringify({ comanda_id: d.comanda_id }),
+          }).catch(() => {})
+        }
         setSent(true)
         onSent()
         setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false) }, 2000)
