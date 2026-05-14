@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 // ============================================================
-// ia.rest · Bridge local v4
-// - Polling jobs via TCP ESC/POS (base original que funcionaba)
-// - MAC rediscovery: si impresora cambia IP la encuentra sola
-// - scan_requested: owner pulsa boton y bridge escanea red
+// ia.rest · Bridge local v4.1
 // ============================================================
+const VERSION = '4.1'
 
-const net = require('net')
-const os  = require('os')
-const { exec } = require('child_process')
+const net  = require('net')
+const os   = require('os')
+const fs   = require('fs')
+const path = require('path')
+const { exec, execSync } = require('child_process')
 
 const API      = (process.env.IAREST_API  || 'https://www.iarest.es').replace(/\/$/, '')
 const TOKEN    = process.env.BRIDGE_TOKEN || ''
@@ -16,7 +16,7 @@ const POLL_MS  = parseInt(process.env.POLL_MS || '3000', 10)
 const TIMEOUT_MS = 5000
 
 if (!TOKEN) {
-  console.error('[BRIDGE] BRIDGE_TOKEN no configurado. Copia el token desde /owner -> Impresoras.')
+  console.error('[BRIDGE] BRIDGE_TOKEN no configurado.')
   process.exit(1)
 }
 
@@ -31,7 +31,53 @@ function log(level, msg) {
   console.log(`${COL.gray}${ts}${COL.reset} ${color}[${level.toUpperCase()}]${COL.reset} ${msg}`)
 }
 
-// ── TCP send ─────────────────────────────────────────────────
+// ── Auto-update ───────────────────────────────────────────────
+async function checkUpdate() {
+  try {
+    log('info', `Version ${VERSION} — comprobando actualizaciones...`)
+    const res = await fetch(`${API}/api/bridge/version`, {
+      signal: AbortSignal.timeout(8000),
+    })
+    if (!res.ok) return false
+
+    const { version, url } = await res.json()
+    if (version === VERSION) {
+      log('ok', `Bridge actualizado (v${VERSION})`)
+      return false
+    }
+
+    log('info', `Nueva version disponible: v${version}. Actualizando...`)
+
+    // Descargar nueva version
+    const dlRes = await fetch(url || `${API}/bridge-local.js`, {
+      signal: AbortSignal.timeout(15000),
+    })
+    if (!dlRes.ok) { log('warn', 'No se pudo descargar la actualizacion'); return false }
+
+    const newCode = await dlRes.text()
+
+    // Guardar en el mismo archivo
+    const selfPath = process.argv[1] || __filename
+    fs.writeFileSync(selfPath, newCode, 'utf8')
+    log('ok', `Actualizado a v${version}. Reiniciando...`)
+
+    // Reiniciar el proceso
+    const args = process.argv.slice(1)
+    const child = require('child_process').spawn(process.execPath, args, {
+      detached: true,
+      stdio:    'inherit',
+      env:      process.env,
+    })
+    child.unref()
+    process.exit(0)
+
+  } catch (err) {
+    log('warn', `Auto-update: ${err.message}`)
+    return false
+  }
+}
+
+// ── TCP send ──────────────────────────────────────────────────
 function enviarAlaPrinter(ip, port, data) {
   return new Promise((resolve, reject) => {
     if (!ip) return reject(new Error('IP no configurada'))
@@ -45,7 +91,7 @@ function enviarAlaPrinter(ip, port, data) {
         setTimeout(() => { socket.end(); sent = true; resolve(true) }, 200)
       })
     })
-    socket.on('timeout', () => { socket.destroy(); reject(new Error(`Timeout - impresora no responde`)) })
+    socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout - impresora no responde')) })
     socket.on('error',   err => { if (!sent) reject(err) })
     socket.on('close',   ()  => { if (!sent) reject(new Error('Socket cerrado antes de enviar')) })
   })
@@ -54,18 +100,17 @@ function enviarAlaPrinter(ip, port, data) {
 // ── Confirmar job ─────────────────────────────────────────────
 async function confirmar(jobId, status, errorMsg) {
   try {
-    const res = await fetch(`${API}/api/print`, {
+    await fetch(`${API}/api/print`, {
       method:  'POST',
       headers: { 'Content-Type': 'application/json' },
       body:    JSON.stringify({ job_id: jobId, status, error_msg: errorMsg }),
     })
-    if (!res.ok) log('warn', `Confirmacion fallida job ${jobId.slice(0,8)}: HTTP ${res.status}`)
   } catch (err) {
     log('warn', `Error confirmando job ${jobId.slice(0,8)}: ${err.message}`)
   }
 }
 
-// ── TCP probe (rediscovery) ───────────────────────────────────
+// ── TCP probe ─────────────────────────────────────────────────
 function tcpProbe(ip, port, ms = 500) {
   return new Promise(resolve => {
     const s = new net.Socket()
@@ -76,7 +121,7 @@ function tcpProbe(ip, port, ms = 500) {
   })
 }
 
-// ── Leer MAC via ARP ──────────────────────────────────────────
+// ── MAC via ARP ───────────────────────────────────────────────
 function getMac(ip) {
   return new Promise(resolve => {
     const cmd = process.platform === 'win32' ? `arp -a ${ip}` : `arp -n ${ip}`
@@ -88,7 +133,7 @@ function getMac(ip) {
   })
 }
 
-// ── Subnet local ─────────────────────────────────────────────
+// ── Subnet local ──────────────────────────────────────────────
 function getSubnet() {
   const ifaces = os.networkInterfaces()
   for (const name of Object.keys(ifaces)) {
@@ -105,12 +150,11 @@ function getSubnet() {
 // ── Escanear subnet ───────────────────────────────────────────
 async function scanSubnet(subnet) {
   const found = []
-  const batch = 50
   const ips   = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
-  for (let i = 0; i < ips.length; i += batch) {
-    const results = await Promise.all(ips.slice(i, i + batch).map(async ip => {
-      return (await tcpProbe(ip, 9100, 400)) ? ip : null
-    }))
+  for (let i = 0; i < ips.length; i += 50) {
+    const results = await Promise.all(
+      ips.slice(i, i + 50).map(async ip => (await tcpProbe(ip, 9100, 400)) ? ip : null)
+    )
     found.push(...results.filter(Boolean))
   }
   return found
@@ -122,14 +166,13 @@ async function rediscover() {
   if (scanning) return
   scanning = true
   try {
-    log('info', 'Chequeando impresoras...')
     const r = await fetch(`${API}/api/bridge/printers?token=${TOKEN}`, {
       signal: AbortSignal.timeout(10000),
     })
     if (!r.ok) return
     const { impresoras } = await r.json()
     if (!impresoras?.length) {
-      log('info', 'Sin impresoras registradas. Usa /owner -> Impresoras -> Buscar en red.')
+      log('info', 'Sin impresoras. Usa /owner -> Impresoras -> Buscar en red.')
       return
     }
 
@@ -137,26 +180,26 @@ async function rediscover() {
     for (const imp of impresoras) {
       if (!imp.ip_address) { offline.push(imp); continue }
       const ok = await tcpProbe(imp.ip_address, imp.port || 9100, 1000)
-      if (ok) log('ok',   `${imp.nombre} - ${imp.ip_address} OK`)
-      else  { log('warn', `${imp.nombre} - ${imp.ip_address} sin respuesta`); offline.push(imp) }
+      if (ok) log('ok',   `${imp.nombre} ${imp.ip_address} OK`)
+      else  { log('warn', `${imp.nombre} ${imp.ip_address} sin respuesta`); offline.push(imp) }
     }
 
     if (!offline.length) { log('ok', 'Todas las impresoras accesibles'); return }
 
     const subnet = getSubnet()
     if (!subnet) return
-    log('info', `Buscando ${offline.length} impresora(s) offline en ${subnet}.0/24...`)
+    log('info', `Buscando ${offline.length} impresora(s) offline...`)
 
-    const found   = await scanSubnet(subnet)
-    const knownIps = new Set(impresoras.filter(i => !offline.includes(i)).map(i => i.ip_address))
-    const newIps   = found.filter(ip => !knownIps.has(ip))
+    const found  = await scanSubnet(subnet)
+    const known  = new Set(impresoras.filter(i => !offline.includes(i)).map(i => i.ip_address))
+    const newIps = found.filter(ip => !known.has(ip))
 
     for (const ip of newIps) {
-      const mac = await getMac(ip)
+      const mac   = await getMac(ip)
       if (!mac) continue
       const match = offline.find(i => i.mac_address && i.mac_address.toLowerCase() === mac)
       if (!match) continue
-      log('ok', `${match.nombre}: IP ${match.ip_address} -> ${ip} (MAC ${mac})`)
+      log('ok', `${match.nombre}: IP actualizada ${match.ip_address} -> ${ip}`)
       await fetch(`${API}/api/bridge/update-ip`, {
         method:  'POST',
         headers: { 'Content-Type': 'application/json', 'x-bridge-token': TOKEN },
@@ -165,7 +208,7 @@ async function rediscover() {
       match.ip_address = ip
     }
   } catch (err) {
-    log('warn', `Rediscovery error: ${err.message}`)
+    log('warn', `Rediscovery: ${err.message}`)
   } finally {
     scanning = false
   }
@@ -173,7 +216,6 @@ async function rediscover() {
 
 // ── Polling principal ─────────────────────────────────────────
 let running = false
-
 async function poll() {
   if (running) return
   running = true
@@ -183,31 +225,28 @@ async function poll() {
     })
     if (!res.ok) {
       if (res.status === 401) { log('error', 'Token invalido.'); process.exit(1) }
-      log('warn', `Polling: HTTP ${res.status}`)
+      log('warn', `Polling HTTP ${res.status}`)
       return
     }
 
     const data = await res.json()
-    const { jobs } = data
-
-    // Owner solicito escaneo desde el panel
     if (data.scan_requested) {
       log('info', 'Escaneo solicitado desde el panel...')
       rediscover().catch(() => {})
     }
 
-    if (!jobs?.length) return
+    if (!data.jobs?.length) return
+    log('info', `${data.jobs.length} job(s) recibido(s)`)
 
-    log('info', `${jobs.length} job(s) recibido(s)`)
-    for (const job of jobs) {
+    for (const job of data.jobs) {
       const tag = `[${job.id.slice(0,8)}] ${job.ip}:${job.port}`
       try {
         log('info', `Enviando -> ${tag}`)
         await enviarAlaPrinter(job.ip, job.port, job.print_data)
-        log('ok',   `Impreso  OK ${tag}`)
+        log('ok',   `Impreso OK ${tag}`)
         await confirmar(job.id, 'impreso')
       } catch (err) {
-        log('error', `Fallo    ✗ ${tag} - ${err.message}`)
+        log('error', `Fallo ✗ ${tag} - ${err.message}`)
         await confirmar(job.id, 'error', err.message)
       }
     }
@@ -219,11 +258,12 @@ async function poll() {
 }
 
 // ── Arranque ──────────────────────────────────────────────────
-console.log(`${COL.bold}[ia.rest Bridge] v4 · token: ${TOKEN.slice(0,8)}...${COL.reset}`)
-console.log(`${COL.gray}API: ${API} · Poll: cada ${POLL_MS}ms${COL.reset}`)
+console.log(`${COL.bold}[ia.rest Bridge] v${VERSION} · token: ${TOKEN.slice(0,8)}...${COL.reset}`)
+console.log(`${COL.gray}API: ${API}${COL.reset}`)
 console.log('')
 
-rediscover().then(() => {
+// 1. Auto-update → 2. Rediscovery → 3. Polling
+checkUpdate().then(() => rediscover()).then(() => {
   log('ok', 'Bridge listo. Esperando jobs...')
   setInterval(poll, POLL_MS)
   poll()
