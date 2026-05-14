@@ -1,14 +1,15 @@
 #!/usr/bin/env node
 // ============================================================
-// ia.rest · Bridge local v4.1
+// ia.rest · Bridge local v4.2
+// Sin wizard externo - todo en este archivo
+// Al arrancar: auto-update + escaneo red + registro impresoras
 // ============================================================
-const VERSION = '4.1'
+const VERSION = '4.2'
 
 const net  = require('net')
 const os   = require('os')
 const fs   = require('fs')
-const path = require('path')
-const { exec, execSync } = require('child_process')
+const { exec } = require('child_process')
 
 const API      = (process.env.IAREST_API  || 'https://www.iarest.es').replace(/\/$/, '')
 const TOKEN    = process.env.BRIDGE_TOKEN || ''
@@ -34,46 +35,24 @@ function log(level, msg) {
 // ── Auto-update ───────────────────────────────────────────────
 async function checkUpdate() {
   try {
-    log('info', `Version ${VERSION} — comprobando actualizaciones...`)
-    const res = await fetch(`${API}/api/bridge/version`, {
-      signal: AbortSignal.timeout(8000),
-    })
-    if (!res.ok) return false
-
+    log('info', `v${VERSION} - comprobando actualizaciones...`)
+    const res = await fetch(`${API}/api/bridge/version`, { signal: AbortSignal.timeout(8000) })
+    if (!res.ok) return
     const { version, url } = await res.json()
-    if (version === VERSION) {
-      log('ok', `Bridge actualizado (v${VERSION})`)
-      return false
-    }
-
-    log('info', `Nueva version disponible: v${version}. Actualizando...`)
-
-    // Descargar nueva version
-    const dlRes = await fetch(url || `${API}/bridge-local.js`, {
-      signal: AbortSignal.timeout(15000),
-    })
-    if (!dlRes.ok) { log('warn', 'No se pudo descargar la actualizacion'); return false }
-
-    const newCode = await dlRes.text()
-
-    // Guardar en el mismo archivo
-    const selfPath = process.argv[1] || __filename
-    fs.writeFileSync(selfPath, newCode, 'utf8')
+    if (version === VERSION) { log('ok', `Bridge actualizado (v${VERSION})`); return }
+    log('info', `Nueva version v${version} disponible. Actualizando...`)
+    const dl = await fetch(url || `${API}/bridge-local.js`, { signal: AbortSignal.timeout(15000) })
+    if (!dl.ok) return
+    const code = await dl.text()
+    fs.writeFileSync(process.argv[1] || __filename, code, 'utf8')
     log('ok', `Actualizado a v${version}. Reiniciando...`)
-
-    // Reiniciar el proceso
-    const args = process.argv.slice(1)
-    const child = require('child_process').spawn(process.execPath, args, {
-      detached: true,
-      stdio:    'inherit',
-      env:      process.env,
+    const child = require('child_process').spawn(process.execPath, process.argv.slice(1), {
+      detached: true, stdio: 'inherit', env: process.env,
     })
     child.unref()
     process.exit(0)
-
   } catch (err) {
     log('warn', `Auto-update: ${err.message}`)
-    return false
   }
 }
 
@@ -93,7 +72,7 @@ function enviarAlaPrinter(ip, port, data) {
     })
     socket.on('timeout', () => { socket.destroy(); reject(new Error('Timeout - impresora no responde')) })
     socket.on('error',   err => { if (!sent) reject(err) })
-    socket.on('close',   ()  => { if (!sent) reject(new Error('Socket cerrado antes de enviar')) })
+    socket.on('close',   ()  => { if (!sent) reject(new Error('Socket cerrado')) })
   })
 }
 
@@ -101,12 +80,12 @@ function enviarAlaPrinter(ip, port, data) {
 async function confirmar(jobId, status, errorMsg) {
   try {
     await fetch(`${API}/api/print`, {
-      method:  'POST',
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ job_id: jobId, status, error_msg: errorMsg }),
+      body: JSON.stringify({ job_id: jobId, status, error_msg: errorMsg }),
     })
   } catch (err) {
-    log('warn', `Error confirmando job ${jobId.slice(0,8)}: ${err.message}`)
+    log('warn', `Error confirmando ${jobId.slice(0,8)}: ${err.message}`)
   }
 }
 
@@ -140,7 +119,7 @@ function getSubnet() {
     for (const iface of ifaces[name]) {
       if (iface.family === 'IPv4' && !iface.internal) {
         const p = iface.address.split('.')
-        return `${p[0]}.${p[1]}.${p[2]}`
+        return { subnet: `${p[0]}.${p[1]}.${p[2]}`, localIp: iface.address }
       }
     }
   }
@@ -152,63 +131,117 @@ async function scanSubnet(subnet) {
   const found = []
   const ips   = Array.from({ length: 254 }, (_, i) => `${subnet}.${i + 1}`)
   for (let i = 0; i < ips.length; i += 50) {
-    const results = await Promise.all(
+    const res = await Promise.all(
       ips.slice(i, i + 50).map(async ip => (await tcpProbe(ip, 9100, 400)) ? ip : null)
     )
-    found.push(...results.filter(Boolean))
+    found.push(...res.filter(Boolean))
   }
   return found
 }
 
-// ── Rediscovery por MAC ───────────────────────────────────────
+// ── Registrar impresora nueva ─────────────────────────────────
+async function registrarImpresora(ip, mac, nombre) {
+  try {
+    const body = { ip_address: ip, port: 9100, nombre, connection_type: 'ip_local' }
+    if (mac) body.mac_address = mac
+    const r = await fetch(`${API}/api/bridge/register-printer`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-bridge-token': TOKEN },
+      body: JSON.stringify(body),
+    })
+    const d = await r.json()
+    if (d.ok) {
+      log('ok', `Registrada: ${nombre} (${ip})${mac ? ' MAC:' + mac : ''}`)
+      // Enviar ticket de prueba
+      await fetch(`${API}/api/print`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ trigger: 'test', impresora_id: d.id }),
+      }).catch(() => {})
+      log('ok', `Ticket de prueba enviado a ${nombre}`)
+      return d.id
+    }
+  } catch (err) {
+    log('warn', `Error registrando ${ip}: ${err.message}`)
+  }
+  return null
+}
+
+// ── Discovery completo (rediscovery + nuevas) ─────────────────
 let scanning = false
-async function rediscover() {
+async function discover() {
   if (scanning) return
   scanning = true
   try {
+    // Obtener impresoras registradas
     const r = await fetch(`${API}/api/bridge/printers?token=${TOKEN}`, {
       signal: AbortSignal.timeout(10000),
     })
     if (!r.ok) return
     const { impresoras } = await r.json()
-    if (!impresoras?.length) {
-      log('info', 'Sin impresoras. Usa /owner -> Impresoras -> Buscar en red.')
+
+    const net2 = getSubnet()
+    if (!net2) { log('warn', 'No se pudo detectar la red local'); return }
+
+    log('info', `Escaneando red ${net2.subnet}.0/24...`)
+    const found = await scanSubnet(net2.subnet)
+
+    if (found.length === 0) {
+      log('warn', 'No se encontraron impresoras en la red')
+      log('info', 'Verifica que las impresoras esten encendidas y en la misma red WiFi')
       return
     }
 
-    const offline = []
-    for (const imp of impresoras) {
-      if (!imp.ip_address) { offline.push(imp); continue }
-      const ok = await tcpProbe(imp.ip_address, imp.port || 9100, 1000)
-      if (ok) log('ok',   `${imp.nombre} ${imp.ip_address} OK`)
-      else  { log('warn', `${imp.nombre} ${imp.ip_address} sin respuesta`); offline.push(imp) }
+    log('info', `${found.length} dispositivo(s) encontrado(s) en puerto 9100`)
+
+    const registradas   = impresoras || []
+    const knownIps      = new Set(registradas.map(i => i.ip_address))
+    const knownMacs     = new Map(registradas.filter(i => i.mac_address).map(i => [i.mac_address.toLowerCase(), i]))
+
+    let contador = registradas.length + 1
+
+    for (const ip of found) {
+      // Obtener MAC
+      const mac = await getMac(ip)
+
+      // ¿IP ya registrada?
+      if (knownIps.has(ip)) {
+        const imp = registradas.find(i => i.ip_address === ip)
+        log('ok', `${imp?.nombre || ip} - ${ip} OK`)
+        // Actualizar MAC si no la tenía
+        if (mac && imp && !imp.mac_address) {
+          await fetch(`${API}/api/bridge/update-ip`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-bridge-token': TOKEN },
+            body: JSON.stringify({ impresora_id: imp.id, mac_address: mac, new_ip: ip }),
+          }).catch(() => {})
+          log('ok', `MAC guardada para ${imp.nombre}: ${mac}`)
+        }
+        continue
+      }
+
+      // ¿MAC conocida con IP diferente? → actualizar IP
+      if (mac && knownMacs.has(mac)) {
+        const imp = knownMacs.get(mac)
+        log('ok', `${imp.nombre}: IP actualizada ${imp.ip_address} -> ${ip}`)
+        await fetch(`${API}/api/bridge/update-ip`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-bridge-token': TOKEN },
+          body: JSON.stringify({ impresora_id: imp.id, mac_address: mac, new_ip: ip }),
+        }).catch(() => {})
+        imp.ip_address = ip
+        continue
+      }
+
+      // Nueva impresora no registrada → registrar automáticamente
+      log('info', `Nueva impresora encontrada: ${ip}${mac ? ' (MAC: ' + mac + ')' : ''}`)
+      const nombre = `Impresora ${contador}`
+      await registrarImpresora(ip, mac, nombre)
+      contador++
     }
 
-    if (!offline.length) { log('ok', 'Todas las impresoras accesibles'); return }
-
-    const subnet = getSubnet()
-    if (!subnet) return
-    log('info', `Buscando ${offline.length} impresora(s) offline...`)
-
-    const found  = await scanSubnet(subnet)
-    const known  = new Set(impresoras.filter(i => !offline.includes(i)).map(i => i.ip_address))
-    const newIps = found.filter(ip => !known.has(ip))
-
-    for (const ip of newIps) {
-      const mac   = await getMac(ip)
-      if (!mac) continue
-      const match = offline.find(i => i.mac_address && i.mac_address.toLowerCase() === mac)
-      if (!match) continue
-      log('ok', `${match.nombre}: IP actualizada ${match.ip_address} -> ${ip}`)
-      await fetch(`${API}/api/bridge/update-ip`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json', 'x-bridge-token': TOKEN },
-        body:    JSON.stringify({ impresora_id: match.id, mac_address: mac, new_ip: ip }),
-      }).catch(() => {})
-      match.ip_address = ip
-    }
   } catch (err) {
-    log('warn', `Rediscovery: ${err.message}`)
+    log('warn', `Discovery: ${err.message}`)
   } finally {
     scanning = false
   }
@@ -230,9 +263,11 @@ async function poll() {
     }
 
     const data = await res.json()
+
+    // Owner pulsó "Buscar en red"
     if (data.scan_requested) {
       log('info', 'Escaneo solicitado desde el panel...')
-      rediscover().catch(() => {})
+      discover().catch(() => {})
     }
 
     if (!data.jobs?.length) return
@@ -262,11 +297,12 @@ console.log(`${COL.bold}[ia.rest Bridge] v${VERSION} · token: ${TOKEN.slice(0,8
 console.log(`${COL.gray}API: ${API}${COL.reset}`)
 console.log('')
 
-// 1. Auto-update → 2. Rediscovery → 3. Polling
-checkUpdate().then(() => rediscover()).then(() => {
-  log('ok', 'Bridge listo. Esperando jobs...')
-  setInterval(poll, POLL_MS)
-  poll()
-})
+checkUpdate()
+  .then(() => discover())
+  .then(() => {
+    log('ok', 'Bridge listo. Esperando jobs...')
+    setInterval(poll, POLL_MS)
+    poll()
+  })
 
 process.on('SIGINT', () => { log('info', 'Deteniendo bridge...'); process.exit(0) })
