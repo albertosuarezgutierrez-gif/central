@@ -287,13 +287,14 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             return (
               <button key={m.id}
                 onPointerDown={e => { ptrStart.current = { x: e.clientX, y: e.clientY } }}
+                onPointerMove={e => {
+                  if (!ptrStart.current) return
+                  if (Math.abs(e.clientY - ptrStart.current.y) > 6) ptrStart.current = null
+                }}
                 onPointerUp={e => {
                   if (e.pointerType !== 'touch') return
                   if (!ptrStart.current) return
-                  const dx = Math.abs(e.clientX - ptrStart.current.x)
-                  const dy = Math.abs(e.clientY - ptrStart.current.y)
                   ptrStart.current = null
-                  if (dx > 8 || dy > 8) return
                   if (m.estado === 'reservada') return
                   setMesaSel(m); setStep('carta')
                 }}
