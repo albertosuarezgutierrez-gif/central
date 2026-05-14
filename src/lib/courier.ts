@@ -283,7 +283,6 @@ export async function crearPrintJobs(
   }
 
   const hayReglas = reglas.length > 0
-  console.log('[COURIER] reglas:', reglas.length, 'impresoras:', (impresoras??[]).length, 'restaurante_id:', comanda.restaurante_id)
 
   // 3. Cargar impresoras activas (siempre las necesitamos)
   const impresorasQuery = supabase.from('impresoras')
@@ -292,6 +291,7 @@ export async function crearPrintJobs(
   const { data: impresoras } = await (comanda.restaurante_id
     ? impresorasQuery.eq('restaurante_id', comanda.restaurante_id)
     : impresorasQuery)
+  console.log('[COURIER] reglas:', reglas.length, 'impresoras:', (impresoras??[]).length, 'rid:', comanda.restaurante_id)
 
   // Mapa seccion → impresora (lógica legacy, soporta multi-sección)
   const impresoraMap: Record<string, { id: string; connection_type: string; fallback_id?: string | null }> = {}
