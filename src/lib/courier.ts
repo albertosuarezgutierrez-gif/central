@@ -56,65 +56,66 @@ const CMD = {
  * Genera string ESC/POS para una impresora genérica 80mm.
  * Devuelve texto con bytes de control embebidos.
  */
-export function generarEscPos(payload: PrintPayload): string {
+export function generarEscPos(payload: PrintPayload): Buffer {
   const now = new Date(payload.ts)
   const hora = now.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const SEP  = '-'.repeat(42)
+  const bufs: Buffer[] = []
 
-  const lines: string[] = []
+  const t = (s: string) => Buffer.from(s, 'utf8')
+  const b = (...bytes: number[]) => Buffer.from(bytes)
+
+  // Comandos ESC/POS como bytes puros
+  const ESC = 0x1B, GS = 0x1D, LF = 0x0A
+  const init       = b(ESC, 0x40)
+  const bold_on    = b(ESC, 0x45, 0x01)
+  const bold_off   = b(ESC, 0x45, 0x00)
+  const center     = b(ESC, 0x61, 0x01)
+  const left       = b(ESC, 0x61, 0x00)
+  const big        = b(GS,  0x21, 0x11)
+  const medium     = b(GS,  0x21, 0x01)
+  const normal     = b(GS,  0x21, 0x00)
+  const cut        = b(GS,  0x56, 0x41, 0x10)
+  const lf         = b(LF)
 
   // Inicializar
-  lines.push(CMD.init)
+  bufs.push(init)
 
-  // Cabecera: SECCIÓN en grande centrado
-  lines.push(CMD.center)
-  lines.push(CMD.big)
-  lines.push(CMD.bold_on)
-  lines.push(payload.seccion.toUpperCase())
-  lines.push(CMD.lf)
-  lines.push(CMD.normal)
-  lines.push(CMD.bold_off)
-  lines.push(CMD.left)
+  // Cabecera: SECCIÓN
+  bufs.push(center, big, bold_on)
+  bufs.push(t(payload.seccion.toUpperCase()), lf)
+  bufs.push(normal, bold_off, left)
+  bufs.push(t(SEP), lf)
 
-  // Separador
-  lines.push(SEP + CMD.lf)
-
-  // Mesa + número ticket en la misma línea
-  lines.push(CMD.medium)
-  const mesaStr  = `MESA ${payload.mesa}`.padEnd(18)
-  const ticketStr = `#${String(payload.ticket_num).padStart(4, '0')}`
-  lines.push(CMD.bold_on + mesaStr + ticketStr + CMD.bold_off)
-  lines.push(CMD.lf)
-  lines.push(CMD.normal)
+  // Mesa + ticket
+  bufs.push(medium, bold_on)
+  const mesaStr   = ('MESA ' + payload.mesa).padEnd(18)
+  const ticketStr = '#' + String(payload.ticket_num).padStart(4, '0')
+  bufs.push(t(mesaStr + ticketStr), bold_off, lf, normal)
 
   // Hora + camarero
-  lines.push(`${hora}  ${payload.camarero.toUpperCase()}` + CMD.lf)
-  lines.push(SEP + CMD.lf)
-  lines.push(CMD.lf)
+  bufs.push(t(hora + '  ' + payload.camarero.toUpperCase()), lf)
+  bufs.push(t(SEP), lf, lf)
 
   // Items
   for (const item of payload.items) {
     const qty  = String(item.cantidad).padStart(2)
     const name = item.nombre.toUpperCase()
-    lines.push(CMD.bold_on + `${qty}x  ${name}` + CMD.bold_off + CMD.lf)
+    bufs.push(bold_on, t(qty + 'x  ' + name), bold_off, lf)
     if (item.notas) {
-      lines.push(`     ➝ ${item.notas}` + CMD.lf)
+      bufs.push(t('     > ' + item.notas), lf)
     }
   }
 
-  // Tipo especial
+  // Marchar
   if (payload.tipo === 'marchar') {
-    lines.push(CMD.lf)
-    lines.push(CMD.center + CMD.bold_on + '*** MARCHAR ***' + CMD.bold_off + CMD.left + CMD.lf)
+    bufs.push(lf, center, bold_on, t('*** MARCHAR ***'), bold_off, left, lf)
   }
 
   // Pie
-  lines.push(CMD.lf)
-  lines.push(SEP + CMD.lf)
-  lines.push(CMD.lf + CMD.lf + CMD.lf)
-  lines.push(CMD.cut_partial)
+  bufs.push(lf, t(SEP), lf, lf, lf, lf, cut)
 
-  return lines.join('')
+  return Buffer.concat(bufs)
 }
 
 /**
@@ -409,10 +410,9 @@ export async function crearPrintJobs(
       ts,
     }
 
-    const printDataRaw = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
-      ? generarEscPos(payload)
-      : generarTextoPlano(payload)
-    const printData = Buffer.from(printDataRaw, 'utf8').toString('base64')
+    const printData = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
+      ? generarEscPos(payload).toString('base64')
+      : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
 
     const { data: job, error } = await supabase
       .from('print_jobs')
@@ -432,10 +432,9 @@ export async function crearPrintJobs(
       if (imp.fallback_id && impresoraById[imp.fallback_id]) {
         console.warn(`[COURIER] Error en impresora principal, intentando fallback "${imp.fallback_id}"`)
         imp = impresoraById[imp.fallback_id]
-        const printDataFallbackRaw = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
-          ? generarEscPos(payload)
-          : generarTextoPlano(payload)
-        const printDataFallback = Buffer.from(printDataFallbackRaw, 'utf8').toString('base64')
+        const printDataFallback = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
+          ? generarEscPos(payload).toString('base64')
+          : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
         const { data: jobFallback } = await supabase
           .from('print_jobs')
           .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, payload, print_data: printDataFallback, status: 'pendiente' })
@@ -524,10 +523,9 @@ export async function crearPrintJobMarchar(
       tipo: 'marchar',
       ts,
     }
-    const printDataRawM = imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge'
-      ? generarEscPos(payload)
-      : generarTextoPlano(payload)
-    const printData = Buffer.from(printDataRawM, 'utf8').toString('base64')
+    const printData = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
+      ? generarEscPos(payload).toString('base64')
+      : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
 
     const { data: job } = await supabase
       .from('print_jobs')
