@@ -8,9 +8,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Todas las comandas abiertas del restaurante (no cerradas ni canceladas).
-  // Se incluyen todos los tipos (comanda, cuenta, etc.).
-  // En el componente se separan en "Mis mesas" / "Otras mesas".
+  // Solo las comandas abiertas del camarero logueado
   const { data, error } = await supabase
     .from('comandas')
     .select(`
@@ -20,6 +18,7 @@ export async function GET(req: NextRequest) {
       items:comanda_items(id, nombre, cantidad, precio_unitario, notas, estado)
     `)
     .eq('restaurante_id', session.restaurante_id)
+    .eq('camarero_id', session.id)
     .not('estado', 'in', '(cerrada,cancelada)')
     .order('created_at', { ascending: false })
 
