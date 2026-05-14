@@ -299,7 +299,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
                   transition:'all .15s cubic-bezier(.4,0,.2,1)',
                   transform: isSel ? 'scale(0.95)' : 'scale(1)',
                   opacity: m.estado === 'reservada' ? 0.75 : 1,
-                  touchAction: 'manipulation',
+                  touchAction: 'auto',
                 }}>
                 <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : (L.fg)), lineHeight:1 }}>
                   {m.estado === 'reservada' ? '🔒' : m.codigo}
