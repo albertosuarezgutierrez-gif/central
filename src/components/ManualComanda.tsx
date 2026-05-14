@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 
 const L = {
@@ -60,6 +60,9 @@ export default function ManualComanda({
   const [error, setError] = useState('')
   const [formatoPicker, setFormatoPicker] = useState<Producto|null>(null)
   const [showCart, setShowCart] = useState(false)
+
+  // Scroll-safe: cancela tap si el dedo se movió >6px (es scroll, no tap)
+  const ptrStart = useRef<{x:number, y:number} | null>(null)
 
   // Auto-filtrar según zonas asignadas del camarero
   useEffect(() => {
@@ -270,12 +273,28 @@ export default function ManualComanda({
             </div>
 
             {/* Grid mesas */}
-            <div style={{ flex:1, overflow:'auto', padding:'4px 14px 20px' }}>
+            <div style={{ flex:1, overflow:'auto', padding:'4px 14px 20px', touchAction:'pan-y' }}>
               <div style={{ display:'grid', gridTemplateColumns:`repeat(${nCols}, 1fr)`, gap:10 }}>
                 {mesasEnriquecidas.map(m => {
                   const t = tiempoStr(m.minutos)
                   return (
-                    <button key={m.id} onPointerDown={() => selectMesa(m)}
+                    <button key={m.id}
+                      onPointerDown={e => { ptrStart.current = { x: e.clientX, y: e.clientY } }}
+                      onPointerMove={e => {
+                        if (!ptrStart.current) return
+                        if (Math.abs(e.clientY - ptrStart.current.y) > 6) ptrStart.current = null
+                      }}
+                      onPointerUp={e => {
+                        if (e.pointerType !== 'touch') return
+                        if (!ptrStart.current) return
+                        ptrStart.current = null
+                        selectMesa(m)
+                      }}
+                      onPointerCancel={() => { ptrStart.current = null }}
+                      onClick={e => {
+                        if ((e.nativeEvent as PointerEvent).pointerType === 'touch') return
+                        selectMesa(m)
+                      }}
                       style={{ padding: nCols===3?'13px 8px 11px':'16px 10px 14px', borderRadius:12, border:'none', background:bgCard(m.estado), boxShadow:shadowCard(m.estado), cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', gap:4, transition:'all .15s cubic-bezier(.4,0,.2,1)', WebkitTapHighlightColor:'transparent' }}>
                       <span style={{ fontFamily:SE, fontStyle:'italic', fontSize: nCols===3?'1.25rem':'1.4rem', fontWeight:500, color:L.ink, lineHeight:1 }}>
                         {m.codigo}
