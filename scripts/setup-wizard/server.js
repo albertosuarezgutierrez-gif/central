@@ -176,7 +176,7 @@ function installAutostart(token) {
     try { fs.mkdirSync(CFG_DIR, { recursive: true }) } catch {}
     const exePath = process.execPath
     const batPath = path.join(CFG_DIR, 'iarest-bridge.bat')
-    const bat = [`@echo off`, `set BRIDGE_TOKEN=${token}`, `set IAREST_API=${API}`, `start /B "" "${exePath}" --bridge`].join('\r\n')
+    const bat = [`@echo off`, `set BRIDGE_TOKEN=${token}`, `set IAREST_API=${API}`, `start "" /B /WAIT:no "${exePath}" --bridge`].join('\r\n')
     fs.writeFileSync(batPath, bat)
     const cmd = `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "iarest-bridge" /t REG_SZ /d "${batPath}" /f`
     exec(cmd, { timeout: 5000 }, err => {
@@ -202,7 +202,7 @@ function launchBridgeNow(token) {
     // Crear el bat si no existe
     if (!fs.existsSync(batPath)) {
       const exePath = process.execPath
-      const bat = [`@echo off`, `set BRIDGE_TOKEN=${token}`, `set IAREST_API=${API}`, `start /B "" "${exePath}" --bridge`].join('\r\n')
+      const bat = [`@echo off`, `set BRIDGE_TOKEN=${token}`, `set IAREST_API=${API}`, `start "" /B /WAIT:no "${exePath}" --bridge`].join('\r\n')
       try { fs.mkdirSync(CFG_DIR, { recursive: true }) } catch {}
       fs.writeFileSync(batPath, bat)
       saveConfig({ token })
