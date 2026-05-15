@@ -179,6 +179,7 @@ const Modal = ({ title, onClose, children }: { title: string; onClose: () => voi
 type Seccion = { id: string; nombre: string; color_kds?: string; icono?: string; activa?: boolean; orden?: number }
 function CamarerosTab() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [subTab, setSubTab] = useState<'personal' | 'turnos'>('personal')
   const [camareros, setCamareros] = useState<Camarero[]>([])
   const [secciones, setSecciones] = useState<Seccion[]>([])
   const [loading, setLoading] = useState(true)
@@ -267,15 +268,37 @@ function CamarerosTab() {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      {/* Header con subtabs */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
         <div>
           <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: C.ink3, textTransform: 'uppercase' }}>Personal</div>
-          <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, marginTop: 2 }}>Camareros</div>
+          <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, marginTop: 2 }}>
+            {subTab === 'personal' ? 'Equipo' : 'Turnos de cocina'}
+          </div>
         </div>
-        <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/>Añadir</Btn>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 3, gap: 2 }}>
+            {(['personal', 'turnos'] as const).map(t => (
+              <button key={t} onClick={() => setSubTab(t)} style={{
+                fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                textTransform: 'uppercase' as const, padding: '5px 12px', borderRadius: 6, border: 'none', cursor: 'pointer',
+                background: subTab === t ? C.ink : 'transparent',
+                color: subTab === t ? C.paper : C.ink4,
+                transition: 'all .15s',
+              }}>
+                {t === 'personal' ? 'Equipo' : 'Turnos'}
+              </button>
+            ))}
+          </div>
+          {subTab === 'personal' && (
+            <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/>Añadir</Btn>
+          )}
+        </div>
       </div>
 
-      <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, overflow: 'hidden' }}>
+      {subTab === 'turnos' && <TurnosCocinaPanel sh={sh} codigoAcceso={codigoAcceso} />}
+
+      {subTab === 'personal' && <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, overflow: 'hidden' }}>
         {/* Table header — desktop */}
         <div className='cam-table-hdr' style={{
           padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
@@ -391,10 +414,10 @@ function CamarerosTab() {
             </div>
           </div>
         ))}
-      </div>
+      </div>}
 
       {/* Create / Edit modal */}
-      {modal && (modal === 'create' || (typeof modal === 'object' && 'edit' in modal)) && (
+      {subTab === 'personal' && modal && (modal === 'create' || (typeof modal === 'object' && 'edit' in modal)) && (
         <Modal title={modal === 'create' ? 'Nuevo camarero' : 'Editar camarero'} onClose={() => setModal(null)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Field label="Nombre" value={form.nombre} onChange={v => setForm(f => ({ ...f, nombre: v }))} placeholder="Marta"/>
@@ -422,7 +445,7 @@ function CamarerosTab() {
       )}
 
       {/* QR modal */}
-      {modal && typeof modal === 'object' && 'qr' in modal && (() => {
+      {subTab === 'personal' && modal && typeof modal === 'object' && 'qr' in modal && (() => {
         const cam = (modal as { qr: Camarero }).qr
         const loginUrl = codigoAcceso ? `https://www.iarest.es/login?r=${codigoAcceso}` : ''
         const qrImgUrl = loginUrl ? `https://api.qrserver.com/v1/create-qr-code/?size=220x220&margin=12&data=${encodeURIComponent(loginUrl)}` : ''
@@ -447,7 +470,7 @@ function CamarerosTab() {
         )
       })()}
 
-      {modal && typeof modal === 'object' && 'del' in modal && (
+      {subTab === 'personal' && modal && typeof modal === 'object' && 'del' in modal && (
         <Modal title="Borrar camarero" onClose={() => setModal(null)}>
           <p style={{ fontFamily: SN, fontSize: 14, color: C.ink2, marginTop: 0, lineHeight: 1.5 }}>
             ¿Borrar a <strong>{(modal as { del: Camarero }).del.nombre}</strong>? Esta acción no se puede deshacer.
@@ -472,6 +495,167 @@ function CamarerosTab() {
             {!delErr && <Btn variant="danger" onClick={del}><Icon d={ICONS.trash} size={14}/>Borrar</Btn>}
           </div>
         </Modal>
+      )}
+    </div>
+  )
+}
+
+// ── TurnosCocinaPanel ─────────────────────────────────────────────────────
+type FichajeRow = {
+  id: string
+  camarero_id: string
+  entrada_at: string
+  salida_at: string | null
+  horas_totales: string | null
+  camareros: { nombre: string; rol: string }
+}
+type ActivoRow = {
+  id: string
+  camarero_id: string
+  entrada_at: string
+  camareros: { nombre: string; rol: string }
+}
+
+function TurnosCocinaPanel({ sh, codigoAcceso }: { sh: () => Record<string,string>; codigoAcceso: string }) {
+  const [fichajes, setFichajes] = useState<FichajeRow[]>([])
+  const [activos, setActivos]   = useState<ActivoRow[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [filtroRol, setFiltroRol] = useState<'cocina' | 'todos'>('cocina')
+  const [desde, setDesde] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 6)
+    return d.toISOString().split('T')[0]
+  })
+  const [hasta, setHasta] = useState(() => new Date().toISOString().split('T')[0])
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    const r = await fetch(`/api/turnos/historial?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+    const d = await r.json()
+    setFichajes(d.fichajes ?? [])
+    setActivos(d.activos ?? [])
+    setLoading(false)
+  }, [desde, hasta])
+
+  useEffect(() => { load() }, [load])
+
+  const fichajeFiltrados = fichajes.filter(f =>
+    filtroRol === 'todos' ? true : f.camareros?.rol === filtroRol
+  )
+  const activosFiltrados = activos.filter(a =>
+    filtroRol === 'todos' ? true : a.camareros?.rol === filtroRol
+  )
+
+  const fmtHora = (iso: string) => new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })
+  const fmtFecha = (iso: string) => new Date(iso).toLocaleDateString('es', { weekday: 'short', day: 'numeric', month: 'short' })
+  const tiempoActivo = (iso: string) => {
+    const mins = Math.floor((Date.now() - new Date(iso).getTime()) / 60000)
+    return mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h ${mins%60}m`
+  }
+
+  const ROL_COLOR: Record<string, string> = { cocina: '#E8A33B', camarero: '#60a5fa', jefe_sala: '#D9442B', running: '#3F7D44' }
+  const ROL_LABEL: Record<string, string> = { cocina: 'Cocina', camarero: 'Camarero', jefe_sala: 'Jefe sala', running: 'Running' }
+
+  return (
+    <div>
+      {/* Ahora en cocina */}
+      {activosFiltrados.length > 0 && (
+        <div style={{ marginBottom: 20, padding: '14px 16px', background: '#1E1916', border: '1px solid #2A2520', borderRadius: 10 }}>
+          <div style={{ fontFamily: SM, fontSize: 10, letterSpacing: '.12em', color: '#6B5F52', textTransform: 'uppercase', marginBottom: 12 }}>
+            Ahora en cocina
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 10 }}>
+            {activosFiltrados.map(a => (
+              <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
+                background: '#14110E', border: '1px solid #2A2520', borderRadius: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3F7D44', flexShrink: 0 }} />
+                <span style={{ fontFamily: "'Inter Tight',system-ui,sans-serif", fontSize: 13, fontWeight: 600, color: '#F6F1E7' }}>
+                  {a.camareros?.nombre}
+                </span>
+                <span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 11, color: '#E8A33B' }}>
+                  {tiempoActivo(a.entrada_at)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' as const, alignItems: 'center' }}>
+        <div style={{ display: 'flex', background: '#1A1714', border: '1px solid #2A2520', borderRadius: 8, padding: 3, gap: 2 }}>
+          {(['cocina', 'todos'] as const).map(r => (
+            <button key={r} onClick={() => setFiltroRol(r)} style={{
+              fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+              textTransform: 'uppercase' as const, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
+              background: filtroRol === r ? '#F6F1E7' : 'transparent',
+              color: filtroRol === r ? '#14110E' : '#6B5F52',
+            }}>
+              {r === 'cocina' ? 'Solo cocina' : 'Todo el personal'}
+            </button>
+          ))}
+        </div>
+        <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
+          style={{ fontFamily: SM, fontSize: 11, padding: '6px 10px', background: '#1A1714', border: '1px solid #2A2520', borderRadius: 8, color: '#F6F1E7' }} />
+        <span style={{ fontFamily: SM, fontSize: 11, color: '#6B5F52' }}>→</span>
+        <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
+          style={{ fontFamily: SM, fontSize: 11, padding: '6px 10px', background: '#1A1714', border: '1px solid #2A2520', borderRadius: 8, color: '#F6F1E7' }} />
+        {codigoAcceso && (
+          <a href={`/cocina/fichar?r=${codigoAcceso}`} target="_blank" rel="noreferrer"
+            style={{ marginLeft: 'auto', fontFamily: SM, fontSize: 10, letterSpacing: '.08em',
+              textTransform: 'uppercase', color: '#E8A33B', textDecoration: 'none', padding: '6px 12px',
+              border: '1px solid #E8A33B44', borderRadius: 8, background: '#E8A33B11' }}>
+            Pantalla fichaje ↗
+          </a>
+        )}
+      </div>
+
+      {/* Tabla fichajes */}
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: SM, fontSize: 12, color: '#6B5F52' }}>Cargando...</div>
+      ) : fichajeFiltrados.length === 0 ? (
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: "'Inter Tight',system-ui,sans-serif", fontSize: 14, color: '#6B5F52' }}>
+          No hay fichajes en este período
+        </div>
+      ) : (
+        <div style={{ border: '1px solid #2A2520', borderRadius: 10, overflow: 'hidden' }}>
+          {/* Header tabla */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 70px',
+            padding: '10px 16px', borderBottom: '1px solid #2A2520',
+            fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: '#6B5F52', textTransform: 'uppercase' as const,
+            background: '#1A1714' }}>
+            <span>Nombre</span><span>Fecha</span><span>Entrada</span><span>Salida</span><span style={{ textAlign: 'right' }}>Horas</span>
+          </div>
+          {fichajeFiltrados.map((f, i) => {
+            const sinSalida = !f.salida_at
+            return (
+              <div key={f.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 70px',
+                padding: '12px 16px', alignItems: 'center',
+                borderBottom: i < fichajeFiltrados.length - 1 ? '1px solid #1E1B17' : 'none',
+                background: sinSalida ? '#E8A33B08' : 'transparent' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  {sinSalida && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3F7D44', flexShrink: 0 }} />}
+                  <span style={{ fontFamily: "'Inter Tight',system-ui,sans-serif", fontSize: 13, fontWeight: 600, color: '#F6F1E7' }}>
+                    {f.camareros?.nombre}
+                  </span>
+                  <span style={{ fontFamily: SM, fontSize: 9, padding: '2px 6px', borderRadius: 4,
+                    background: `${ROL_COLOR[f.camareros?.rol] ?? '#888'}22`,
+                    color: ROL_COLOR[f.camareros?.rol] ?? '#888',
+                    border: `1px solid ${ROL_COLOR[f.camareros?.rol] ?? '#888'}44` }}>
+                    {ROL_LABEL[f.camareros?.rol] ?? f.camareros?.rol}
+                  </span>
+                </div>
+                <span style={{ fontFamily: SM, fontSize: 11, color: '#D8CDB6' }}>{fmtFecha(f.entrada_at)}</span>
+                <span style={{ fontFamily: SM, fontSize: 12, color: '#F6F1E7' }}>{fmtHora(f.entrada_at)}</span>
+                <span style={{ fontFamily: SM, fontSize: 12, color: sinSalida ? '#E8A33B' : '#F6F1E7' }}>
+                  {f.salida_at ? fmtHora(f.salida_at) : '— activo'}
+                </span>
+                <span style={{ fontFamily: SM, fontSize: 12, color: '#D8CDB6', textAlign: 'right', fontWeight: 600 }}>
+                  {f.horas_totales ?? (sinSalida ? tiempoActivo(f.entrada_at) : '—')}
+                </span>
+              </div>
+            )
+          })}
+        </div>
       )}
     </div>
   )
