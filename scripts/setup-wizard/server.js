@@ -183,7 +183,13 @@ function installAutostart(token) {
       if (err) return resolve({ ok: false, error: err.message })
       saveConfig({ token, autostartPath: batPath })
       console.log('[Wizard] Autostart registrado. El bridge arrancará al próximo login.')
-      resolve({ ok: true, batPath })
+      // Añadir excepción en Windows Defender para que no bloquee el bridge al reiniciar
+      const exclCmd = `powershell -NoProfile -NonInteractive -Command "Add-MpPreference -ExclusionPath '${CFG_DIR}' -ErrorAction SilentlyContinue"`
+      exec(exclCmd, { timeout: 8000 }, (err) => {
+        if (err) console.warn('[Wizard] No se pudo añadir excepción Defender (no crítico):', err.message)
+        else console.log('[Wizard] Excepción Windows Defender añadida para', CFG_DIR)
+      })
+      resolve({ ok: true, batPath, cfgDir: CFG_DIR })
     })
   })
 }

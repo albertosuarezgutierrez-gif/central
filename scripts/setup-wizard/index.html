@@ -152,7 +152,16 @@
     <div class="done-icon">✓</div>
     <div style="font-family:'Newsreader',serif;font-style:italic;font-size:26px;text-align:center" id="doneTitle">Todo listo.</div>
     <p style="font-size:13px;color:var(--fg3);text-align:center;line-height:1.6" id="doneSub"></p>
-    <div class="alert-info" style="width:100%">
+    <div class="alert-info" style="width:100%" id="avastBlock">
+      <strong style="color:#8ab0d8;display:block;margin-bottom:6px">⚠ Si tienes Avast u otro antivirus —</strong>
+      Añade esta carpeta como excepción para que el bridge no se detenga al reiniciar el PC:<br>
+      <div style="display:flex;align-items:center;gap:8px;margin-top:8px;background:rgba(0,0,0,.2);border-radius:6px;padding:8px 10px;">
+        <code id="exclPath" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:#fff;flex:1;word-break:break-all"></code>
+        <button onclick="copyPath()" style="background:rgba(138,176,216,.2);border:1px solid rgba(138,176,216,.3);color:#8ab0d8;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;white-space:nowrap" id="btnCopy">Copiar</button>
+      </div>
+      <div style="margin-top:8px;font-size:11px;color:rgba(138,176,216,.7)">Avast → Configuración → Excepciones → Añadir excepción → pega la ruta</div>
+    </div>
+    <div class="alert-info" style="width:100%;margin-top:-8px">
       <strong style="color:#8ab0d8">Siguiente paso —</strong> entra en el panel como propietario y configura qué comandas van a cada impresora:<br>
       <strong style="color:#8ab0d8;font-family:'JetBrains Mono',monospace;font-size:11px">Owner → Flujos de trabajo</strong>
     </div>
@@ -397,7 +406,7 @@ $('btnInstall').addEventListener('click', async () => {
   try {
     const r=await fetch('/api/install-autostart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:S.token})})
     const d=await r.json()
-    if(d.ok) { $('svcRow').className='check-row ok'; $('svcIcon').textContent='✓'; $('svcDetail').textContent='Bridge arrancará con Windows ✓'; setTimeout(()=>showDone(true),800) }
+    if(d.ok) { $('svcRow').className='check-row ok'; $('svcIcon').textContent='✓'; $('svcDetail').textContent='Bridge arrancará con Windows ✓'; setTimeout(()=>showDone(true, d.cfgDir),800) }
     else throw new Error(d.error)
   } catch(e) {
     $('svcRow').className='check-row fail'; $('svcIcon').textContent='✗'
@@ -407,11 +416,29 @@ $('btnInstall').addEventListener('click', async () => {
 $('btnSkip').addEventListener('click', () => showDone(false))
 
 // ── Paso 4: Listo ─────────────────────────────────────────────
-function showDone(withAutostart) {
+function showDone(withAutostart, cfgDir) {
   const n=S.printers.length
   $('doneTitle').textContent=`${S.restaurantName} está listo.`
   $('doneSub').textContent=`${n} impresora${n!==1?'s':''} configurada${n!==1?'s':''} · Bridge ${withAutostart?'con inicio automático':'instalado'}`
+  // Mostrar ruta de excepción antivirus
+  const path = cfgDir || `C:\Users\${window.location.hostname === 'localhost' ? '...' : '...'}\AppData\Roaming\.iarest`
+  $('exclPath').textContent = path
   setStep(4)
+}
+
+function copyPath() {
+  const txt = $('exclPath').textContent
+  navigator.clipboard.writeText(txt).then(() => {
+    $('btnCopy').textContent = '✓ Copiado'
+    setTimeout(() => { $('btnCopy').textContent = 'Copiar' }, 2000)
+  }).catch(() => {
+    // fallback
+    const el = document.createElement('textarea')
+    el.value = txt; document.body.appendChild(el); el.select()
+    document.execCommand('copy'); document.body.removeChild(el)
+    $('btnCopy').textContent = '✓ Copiado'
+    setTimeout(() => { $('btnCopy').textContent = 'Copiar' }, 2000)
+  })
 }
 $('btnOpen').addEventListener('click', () => window.open('https://www.iarest.es/owner','_blank'))
 

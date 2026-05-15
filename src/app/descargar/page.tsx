@@ -19,11 +19,11 @@ const C = {
 }
 
 const steps = [
-  { n: '1', title: 'Descarga el instalador', desc: 'Haz clic en el botón de abajo. El instalador incluye todo lo necesario.' },
-  { n: '2', title: 'Ejecuta el .exe',        desc: 'Doble clic en el archivo descargado. Si Windows avisa, haz clic en "Más información → Ejecutar de todas formas".' },
-  { n: '3', title: 'Pega tu token',          desc: 'Cópialo desde /owner → Config → Impresoras → Bridge local y pégalo en el instalador.' },
-  { n: '4', title: 'Busca tus impresoras',   desc: 'El wizard escanea tu red y encuentra las impresoras automáticamente. Solo pon un nombre a cada una.' },
-  { n: '5', title: 'Configura los flujos',   desc: 'Asigna qué sección va a qué impresora desde el panel de Flujos de trabajo. Listo.' },
+  { n: '1', title: 'Desactiva el antivirus temporalmente', desc: 'Si tienes Avast, Kaspersky u otro antivirus, desactívalo 10 minutos antes de instalar. El instalador abrirá el asistente en tu navegador.' },
+  { n: '2', title: 'Descarga y ejecuta el instalador', desc: 'Doble clic en el archivo descargado. Si Windows avisa, haz clic en \"Más información → Ejecutar de todas formas\".' },
+  { n: '3', title: 'Pega tu token y busca impresoras', desc: 'Cópialo desde Owner → Config → Bridge. El asistente escanea tu red y encuentra las impresoras automáticamente.' },
+  { n: '4', title: 'Añade la excepción en el antivirus', desc: 'El asistente te mostrará la ruta exacta al terminar. Añádela como excepción en tu antivirus antes de reactivarlo.' },
+  { n: '5', title: 'Configura los flujos', desc: 'Desde Owner → Flujos de trabajo, asigna qué comandas van a cada impresora. Listo.' },
 ]
 
 const faqs = [
