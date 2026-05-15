@@ -170,7 +170,7 @@
 
 </div>
 <script>
-const S = { step:0, token:'', restaurantName:'', printers:[] }
+const S = { step:0, token:'', restaurantName:'', printers:[], secciones:[] }
 const $  = id => document.getElementById(id)
 const gc = () => fetch('/api/config').then(r=>r.json()).catch(()=>({}))
 
@@ -299,19 +299,32 @@ function startScan() {
   es.onerror = () => { es.close(); $('scanLbl').textContent='Error durante el escaneo.'; $('scanActions').classList.remove('hidden') }
 }
 
-$('btnUsePrinters').addEventListener('click', () => {
+$('btnUsePrinters').addEventListener('click', async () => {
   S.printers = foundPrinters.map((p,i) => ({...p, nombre:`Impresora ${i+1}`, seccion_id:''}))
+  await loadSecciones()
   buildConfigStep(); setStep(2)
 })
 $('btnManual').addEventListener('click', () => $('manualForm').classList.remove('hidden'))
-$('btnAddManual').addEventListener('click', () => {
+$('btnAddManual').addEventListener('click', async () => {
   const ip=$('manualIP').value.trim(); const port=parseInt($('manualPort').value)||9100
   if (!ip) return
   S.printers=[{ip, port, nombre:'Impresora 1', seccion_id:'', mac:null, stability:guessStability(ip), vendor:null}]
+  await loadSecciones()
   buildConfigStep(); setStep(2)
 })
 function guessStability(ip) {
   const l=parseInt(ip.split('.')[3]); return (l<=20||l===100||l===200||l===254)?'static':'dynamic'
+}
+
+// ── Cargar secciones reales del restaurante ───────────────────
+S.secciones = []
+async function loadSecciones() {
+  if (!S.token) return
+  try {
+    const r = await fetch(`https://www.iarest.es/api/bridge/secciones?token=${S.token}`)
+    const d = await r.json()
+    if (d.ok && d.secciones?.length) S.secciones = d.secciones
+  } catch {}
 }
 
 // ── PASO 2: Configurar ────────────────────────────────────────
@@ -321,6 +334,18 @@ function buildConfigStep() {
   S.printers.forEach((p,i) => {
     const div=document.createElement('div')
     div.style.cssText='background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;'
+
+    // Select de secciones si hay, input de texto si no
+    const seccionField = S.secciones.length > 0
+      ? `<div class="field" style="flex:1">
+          <label>Sección de cocina</label>
+          <select id="ps${i}">
+            <option value="">— Todas las secciones —</option>
+            ${S.secciones.map(s => `<option value="${s.id}">${s.nombre}</option>`).join('')}
+          </select>
+        </div>`
+      : `<div class="field" style="flex:1"><label>Sección</label><input type="text" id="ps${i}" value="${p.seccion_id}" placeholder="Ej: calientes"/></div>`
+
     div.innerHTML=`
       <div style="display:flex;align-items:center;justify-content:space-between">
         <span style="font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--fg3)">${p.ip}:${p.port}${p.vendor?' · '+p.vendor:''}</span>
@@ -328,14 +353,15 @@ function buildConfigStep() {
       </div>
       <div style="display:flex;gap:10px;">
         <div class="field" style="flex:1"><label>Nombre</label><input type="text" id="pn${i}" value="${p.nombre}" placeholder="Ej: Cocina caliente"/></div>
-        <div class="field" style="flex:1"><label>Sección</label><input type="text" id="ps${i}" value="${p.seccion_id}" placeholder="Ej: calientes"/></div>
+        ${seccionField}
       </div>`
     c.appendChild(div)
     if (p.stability==='dynamic') {
       const warn=document.createElement('div'); warn.className='ip-warn'
       warn.innerHTML=`<strong>⚠ ${p.ip} — IP puede cambiar</strong><br>
         Si el router se reinicia, esta impresora puede obtener otra IP.<br>
-        <strong>Solución:</strong> asigna IP fija por MAC en tu router (<a href="http://192.168.1.1" target="_blank" style="color:var(--amb)">192.168.1.1</a>).`
+        <strong>Solución:</strong> asigna IP fija por MAC en tu router (<a href="http://192.168.1.1" target="_blank" style="color:var(--amb)">192.168.1.1</a>).
+        MAC: <strong>${p.mac||'desconocida'}</strong>`
       w.appendChild(warn)
     } else {
       const ok=document.createElement('div'); ok.className='ip-ok'
