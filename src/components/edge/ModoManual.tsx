@@ -6,9 +6,8 @@ const C = {
   bg:'#14110E', e1:'#1F1A15', e2:'#2A241D', e3:'#2F2820',
   fg:'#F6F1E7', fg2:'#C9BFAA', fg3:'#8D8270',
   rule:'#2F2820', rS:'#4A3F33',
-  red:'#D9442B', rD:'#A8311E',
-  gr:'#3F7D44', grS:'rgba(63,125,68,.15)',
-  amber:'#E8A33B',
+  red:'#D9442B', rD:'#A8311E', grS:'rgba(63,125,68,.15)',
+  gr:'#3F7D44', amber:'#E8A33B',
 }
 const L = {
   bg:'#F6F1E7', bg2:'#EFE7D6', bg3:'#E5DAC2',
@@ -42,11 +41,6 @@ const ESTADO_FG: Record<string,string> = {
   aviso:'#E8A33B', urgente:'#D9442B', cuenta:'#6B5F52',
   reservada:'#1D4ED8',
 }
-const ESTADO_BG_DARK: Record<string,string> = {
-  libre:'#1F1A15', activa:'rgba(63,125,68,.12)', marchar:'rgba(63,125,68,.20)',
-  aviso:'rgba(232,163,59,.12)', urgente:'rgba(217,68,43,.12)', cuenta:'#1F1A15',
-  reservada:'rgba(59,130,246,.12)',
-}
 const ESTADO_BG_LIGHT: Record<string,string> = {
   libre:'#EFE7D6', activa:'rgba(63,125,68,.10)', marchar:'rgba(63,125,68,.16)',
   aviso:'rgba(232,163,59,.10)', urgente:'rgba(217,68,43,.10)', cuenta:'#E5DAC2',
@@ -78,8 +72,11 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
   const [nombreMesa, setNombreMesa] = useState('')
   const [editandoNombre, setEditandoNombre] = useState(false)
 
-  // Scroll-safe: medir distancia entre pointerDown y pointerUp
-  // Si el dedo se movió >8px no es un tap sino scroll → no abrir mesa
+  // ── Filtro "Mis mesas" ──────────────────────────────────────
+  const [misFiltro, setMisFiltro] = useState(false)       // activo o no
+  const [misMesasIds, setMisMesasIds] = useState<Set<string>>(new Set()) // IDs con comanda abierta
+
+  // Scroll-safe
   const ptrStart = useRef<{x:number, y:number} | null>(null)
 
   const sh = useCallback(() => ({
@@ -87,6 +84,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     'x-ia-session': JSON.stringify(session),
   }), [session])
 
+  // Carga mesas y carta
   useEffect(() => {
     fetch('/api/owner/mesas', { headers: sh() })
       .then(r => r.json())
@@ -118,6 +116,27 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
           })))
         }
       })
+  }, [sh])
+
+  // Polling "mis mesas" abiertas → para el chip con contador y el filtro
+  useEffect(() => {
+    const cargar = () =>
+      fetch('/api/edge/mis-cuentas', { headers: sh() })
+        .then(r => r.json())
+        .then(d => {
+          if (Array.isArray(d.cuentas)) {
+            const ids = new Set<string>(
+              (d.cuentas as { mesa: { id: string } | null }[])
+                .map(c => c.mesa?.id)
+                .filter((id): id is string => !!id)
+            )
+            setMisMesasIds(ids)
+          }
+        })
+        .catch(() => {})
+    cargar()
+    const iv = setInterval(cargar, 20_000)
+    return () => clearInterval(iv)
   }, [sh])
 
   const addProducto = (p: Producto, fmt: Formato | null = null) => {
@@ -153,11 +172,15 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
       const r = await fetch('/api/comanda', {
         method: 'POST',
         headers: sh(),
-        body: JSON.stringify({ mesa_id: mesaSel.id, items, tipo: 'comanda', ...(notaGeneral.trim() ? { nota_general: notaGeneral.trim() } : {}), ...(nombreMesa.trim() ? { nombre_cuenta: nombreMesa.trim() } : {}) }),
+        body: JSON.stringify({
+          mesa_id: mesaSel.id, items, tipo: 'comanda',
+          ...(notaGeneral.trim() ? { nota_general: notaGeneral.trim() } : {}),
+          ...(nombreMesa.trim()  ? { nombre_cuenta: nombreMesa.trim()  } : {}),
+        }),
       })
       const d = await r.json()
       if (d.ok) {
-        // /api/comanda ya crea los print_jobs internamente — no llamar /api/marchar aquí
+        // /api/comanda ya crea print_jobs internamente — no llamar /api/marchar aquí
         setTicketNum(d.numero_ticket)
         setStep('enviado')
       } else {
@@ -172,9 +195,16 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     }
   }
 
-  const reset = () => { setStep('mesa'); setMesaSel(null); setLineas([]); setErrorMsg(''); setTicketNum(null); setNotaGeneral(''); setNombreMesa(''); setEditandoNombre(false) }
+  const reset = () => {
+    setStep('mesa'); setMesaSel(null); setLineas([])
+    setErrorMsg(''); setTicketNum(null); setNotaGeneral(''); setNombreMesa(''); setEditandoNombre(false)
+  }
 
-  const mesasFiltradas = zonaFiltro === 'todas' ? mesas : mesas.filter(m => m.zona === zonaFiltro)
+  // ── Filtrado de mesas ──────────────────────────────────────
+  const mesasFiltradas = misFiltro
+    ? mesas.filter(m => misMesasIds.has(m.id))
+    : (zonaFiltro === 'todas' ? mesas : mesas.filter(m => m.zona === zonaFiltro))
+
   const prodsFiltrados = productos.filter(p => (p.categoria || p.seccion || 'Otros') === catActiva)
 
   const wrapStyle: React.CSSProperties = {
@@ -182,11 +212,23 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     background: T.bg, fontFamily: SN,
   }
 
+  // ── Estilos chip reutilizables ─────────────────────────────
+  const chipBase: React.CSSProperties = {
+    fontFamily: SM, fontSize: 9, padding: '4px 12px', borderRadius: 9999,
+    border: 'none', cursor: 'pointer', letterSpacing: '.06em',
+    transition: 'all .15s', display: 'flex', alignItems: 'center', gap: 4,
+  }
+  const chipOff: React.CSSProperties = {
+    ...chipBase, boxShadow: `${T.rS} 0px 0px 0px 1px`,
+    background: 'transparent', color: T.fg3,
+  }
+  const chipOn: React.CSSProperties = {
+    ...chipBase, background: C.red, boxShadow: 'none', color: C.fg,
+  }
+
   const Header = () => (
     <div style={{ flexShrink:0, background:L.bg2, borderBottom:`1px solid ${T.rule}` }}>
-      {/* Fila principal */}
       <div style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 14px' }}>
-        {/* Volver a mesas */}
         {step !== 'mesa' && (
           <button onPointerDown={() => { setStep('mesa'); setLineas([]) }}
             style={{ background:'none', border:'none', boxShadow:`${T.rS} 0px 0px 0px 1px`, borderRadius:9999,
@@ -194,13 +236,11 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             ← MESAS
           </button>
         )}
-        {/* Código de mesa */}
         {mesaSel && (
           <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:20, color:T.fg, fontWeight:500, lineHeight:1 }}>
             {mesaSel.codigo}
           </span>
         )}
-        {/* Nombre editable */}
         {mesaSel && step === 'carta' && (
           editandoNombre ? (
             <input
@@ -228,7 +268,6 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             </button>
           )
         )}
-        {/* Spacer + total + revisar */}
         <div style={{ flex:1 }}/>
         {lineas.length > 0 && (
           <span style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:C.red, flexShrink:0 }}>
@@ -242,7 +281,6 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             Revisar →
           </button>
         )}
-        {/* Botón VOZ si estamos en step mesa */}
         {step === 'mesa' && onBack && (
           <button onPointerDown={onBack}
             style={{ background:'none', border:'none', boxShadow:`${T.rS} 0px 0px 0px 1px`, borderRadius:9999,
@@ -254,48 +292,99 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     </div>
   )
 
+  // ══ STEP: MESA ════════════════════════════════════════════
   if (step === 'mesa') return (
     <div style={wrapStyle}>
       <Header/>
-      <div style={{ padding:'12px 14px 4px', flexShrink:0 }}>
-        <div style={{ fontFamily:SE, fontSize:18, color:T.fg, fontWeight:500, marginBottom:10 }}>¿Qué mesa?</div>
+
+      {/* ── Chips de filtro ── */}
+      <div style={{ padding:'10px 14px 6px', flexShrink:0 }}>
+
+        {/* Título */}
+        {!misFiltro && (
+          <div style={{ fontFamily:SE, fontSize:18, color:T.fg, fontWeight:500, marginBottom:8 }}>¿Qué mesa?</div>
+        )}
+        {misFiltro && (
+          <div style={{ fontFamily:SE, fontSize:18, color:T.fg, fontWeight:500, marginBottom:8, display:'flex', alignItems:'baseline', gap:8 }}>
+            Mis mesas
+            {misMesasIds.size > 0 && (
+              <span style={{ fontFamily:SM, fontSize:10, color:T.fg3 }}>
+                {misMesasIds.size} abiert{misMesasIds.size===1?'a':'as'}
+              </span>
+            )}
+          </div>
+        )}
+
         <div style={{ display:'flex', gap:6, flexWrap:'wrap' }}>
-          <button onPointerDown={() => setZonaFiltro('todas')}
-            style={{ fontFamily:SM, fontSize:9, padding:'4px 12px', borderRadius:9999, border:'none',
-              boxShadow: zonaFiltro==='todas' ? 'none' : `${T.rS} 0px 0px 0px 1px`,
-              background: zonaFiltro==='todas' ? C.red : 'transparent',
-              color: zonaFiltro==='todas' ? C.fg : T.fg3, cursor:'pointer', letterSpacing:'.06em', transition:'all .15s' }}>
+
+          {/* Chip MIS MESAS — siempre primero */}
+          <button
+            onPointerDown={() => {
+              setMisFiltro(true)
+              setZonaFiltro('todas') // reset zona al entrar en mis mesas
+            }}
+            style={misFiltro ? chipOn : {
+              ...chipOff,
+              ...(misMesasIds.size > 0 ? {
+                boxShadow: `rgba(63,125,68,0.5) 0px 0px 0px 1px`,
+                color: C.gr,
+              } : {}),
+            }}
+          >
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none"
+              stroke={misFiltro ? C.fg : (misMesasIds.size > 0 ? C.gr : T.fg3)} strokeWidth="2"
+              strokeLinecap="round" strokeLinejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+              <circle cx="12" cy="7" r="4"/>
+            </svg>
+            MIS MESAS
+            {misMesasIds.size > 0 && !misFiltro && (
+              <span style={{
+                background: C.gr, color: '#fff', borderRadius: 9999,
+                fontFamily: SN, fontSize: 8, fontWeight: 700,
+                padding: '1px 5px', lineHeight: 1.4,
+              }}>
+                {misMesasIds.size}
+              </span>
+            )}
+          </button>
+
+          {/* Chip TODAS */}
+          <button
+            onPointerDown={() => { setMisFiltro(false); setZonaFiltro('todas') }}
+            style={!misFiltro && zonaFiltro==='todas' ? chipOn : chipOff}
+          >
             TODAS
           </button>
-          {zonas.map(z => (
-            <button key={z} onPointerDown={() => setZonaFiltro(z)}
-              style={{ fontFamily:SM, fontSize:9, padding:'4px 12px', borderRadius:9999, border:'none',
-                boxShadow: zonaFiltro===z ? 'none' : `${T.rS} 0px 0px 0px 1px`,
-                background: zonaFiltro===z ? C.red : 'transparent',
-                color: zonaFiltro===z ? C.fg : T.fg3, cursor:'pointer', letterSpacing:'.06em',
-                textTransform:'uppercase', transition:'all .15s' }}>
+
+          {/* Chips de zona */}
+          {!misFiltro && zonas.map(z => (
+            <button key={z} onPointerDown={() => { setMisFiltro(false); setZonaFiltro(z) }}
+              style={!misFiltro && zonaFiltro===z ? chipOn : { ...chipOff, textTransform:'uppercase' as const }}>
               {z}
             </button>
           ))}
         </div>
-      </div>
-      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'row' }}>
 
-        {/* ── Franja de scroll lateral izquierda ── */}
+        {/* Aviso si mis mesas vacío */}
+        {misFiltro && misMesasIds.size === 0 && (
+          <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:13, color:T.fg3, marginTop:12, textAlign:'center' }}>
+            No tienes mesas abiertas ahora mismo
+          </div>
+        )}
+      </div>
+
+      {/* ── Grid de mesas ── */}
+      <div style={{ flex:1, overflow:'hidden', display:'flex', flexDirection:'row' }}>
+        {/* Franja scroll lateral */}
         <div
-          style={{
-            width: 18, flexShrink: 0,
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            background: 'transparent', cursor: 'ns-resize',
-          }}
+          style={{ width:18, flexShrink:0, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', cursor:'ns-resize' }}
           onTouchStart={e => {
             const scrollEl = e.currentTarget.nextElementSibling as HTMLDivElement
             if (!scrollEl) return
             const startY = e.touches[0].clientY
             const startScroll = scrollEl.scrollTop
-            const onMove = (ev: TouchEvent) => {
-              scrollEl.scrollTop = startScroll - (ev.touches[0].clientY - startY)
-            }
+            const onMove = (ev: TouchEvent) => { scrollEl.scrollTop = startScroll - (ev.touches[0].clientY - startY) }
             const onEnd = () => {
               document.removeEventListener('touchmove', onMove)
               document.removeEventListener('touchend', onEnd)
@@ -304,71 +393,67 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
             document.addEventListener('touchend', onEnd, { passive: true })
           }}
         >
-          <div style={{
-            width: 3, height: 40, borderRadius: 99,
-            background: L.rule, opacity: 0.6,
-          }}/>
+          <div style={{ width:3, height:40, borderRadius:99, background:L.rule, opacity:0.6 }}/>
         </div>
 
-        {/* ── Grid de mesas ── */}
         <div style={{ flex:1, overflow:'auto', padding:'10px 14px 20px 6px', touchAction:'pan-y' }}>
           <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(80px, 1fr))', gap:9 }}>
-          {mesasFiltradas.map(m => {
-            const isSel = mesaSel?.id === m.id
-            const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
-            return (
-              <button key={m.id}
-                onPointerDown={e => { ptrStart.current = { x: e.clientX, y: e.clientY } }}
-                onPointerMove={e => {
-                  if (!ptrStart.current) return
-                  if (Math.abs(e.clientY - ptrStart.current.y) > 6) ptrStart.current = null
-                }}
-                onPointerUp={e => {
-                  if (e.pointerType !== 'touch') return
-                  if (!ptrStart.current) return
-                  ptrStart.current = null
-                  if (m.estado === 'reservada') return
-                  setMesaSel(m); setStep('carta')
-                }}
-                onPointerCancel={() => { ptrStart.current = null }}
-                onClick={e => {
-                  // Solo ratón — touch ya lo maneja onPointerUp
-                  if ((e.nativeEvent as PointerEvent).pointerType === 'touch') return
-                  if (m.estado === 'reservada') return
-                  setMesaSel(m); setStep('carta')
-                }}
-                style={{
-                  padding:'12px 6px 10px', borderRadius:12, border:'none',
-                  background: m.estado === 'reservada' ? 'rgba(59,130,246,.08)' : (isSel ? '#F4D8CF' : bgEst),
-                  boxShadow: m.estado === 'reservada' ? '0 0 0 1.5px rgba(59,130,246,.4)' : shadowMesa(m.estado, isSel),
-                  cursor: m.estado === 'reservada' ? 'not-allowed' : 'pointer',
-                  display:'flex', flexDirection:'column', alignItems:'center', gap:4,
-                  transition:'all .15s cubic-bezier(.4,0,.2,1)',
-                  transform: isSel ? 'scale(0.95)' : 'scale(1)',
-                  opacity: m.estado === 'reservada' ? 0.75 : 1,
-                  touchAction: 'manipulation',
-                }}>
-                <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : (L.fg)), lineHeight:1 }}>
-                  {m.estado === 'reservada' ? '🔒' : m.codigo}
-                </span>
-                <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
-                  {m.estado === 'reservada' ? (m as {reserva_hora?:string|null}).reserva_hora || 'res.' : m.estado}
-                </span>
-                {m.estado !== 'reservada' && (
-                  <span style={{ fontFamily:SE, fontSize:8, color: isSel ? C.red : T.fg3, lineHeight:1 }}>{m.codigo}</span>
-                )}
-                <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
-                  {m.estado}
-                </span>
-              </button>
-            )
-          })}
+            {mesasFiltradas.map(m => {
+              const isSel = mesaSel?.id === m.id
+              const bgEst = ESTADO_BG_LIGHT[m.estado] ?? L.bg2
+              return (
+                <button key={m.id}
+                  onPointerDown={e => { ptrStart.current = { x: e.clientX, y: e.clientY } }}
+                  onPointerMove={e => {
+                    if (!ptrStart.current) return
+                    if (Math.abs(e.clientY - ptrStart.current.y) > 6) ptrStart.current = null
+                  }}
+                  onPointerUp={e => {
+                    if (e.pointerType !== 'touch') return
+                    if (!ptrStart.current) return
+                    ptrStart.current = null
+                    if (m.estado === 'reservada') return
+                    setMesaSel(m); setStep('carta')
+                  }}
+                  onPointerCancel={() => { ptrStart.current = null }}
+                  onClick={e => {
+                    if ((e.nativeEvent as PointerEvent).pointerType === 'touch') return
+                    if (m.estado === 'reservada') return
+                    setMesaSel(m); setStep('carta')
+                  }}
+                  style={{
+                    padding:'12px 6px 10px', borderRadius:12, border:'none',
+                    background: m.estado === 'reservada' ? 'rgba(59,130,246,.08)' : (isSel ? '#F4D8CF' : bgEst),
+                    boxShadow: m.estado === 'reservada' ? '0 0 0 1.5px rgba(59,130,246,.4)' : shadowMesa(m.estado, isSel),
+                    cursor: m.estado === 'reservada' ? 'not-allowed' : 'pointer',
+                    display:'flex', flexDirection:'column', alignItems:'center', gap:4,
+                    transition:'all .15s cubic-bezier(.4,0,.2,1)',
+                    transform: isSel ? 'scale(0.95)' : 'scale(1)',
+                    opacity: m.estado === 'reservada' ? 0.75 : 1,
+                    touchAction:'manipulation',
+                  }}>
+                  <span style={{ fontFamily:SE, fontSize:20, fontWeight:500, color: m.estado === 'reservada' ? '#1D4ED8' : (isSel ? C.red : L.fg), lineHeight:1 }}>
+                    {m.estado === 'reservada' ? '🔒' : m.codigo}
+                  </span>
+                  <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
+                    {m.estado === 'reservada' ? (m as {reserva_hora?:string|null}).reserva_hora || 'res.' : m.estado}
+                  </span>
+                  {m.estado !== 'reservada' && (
+                    <span style={{ fontFamily:SE, fontSize:8, color: isSel ? C.red : T.fg3, lineHeight:1 }}>{m.codigo}</span>
+                  )}
+                  <span style={{ fontFamily:SM, fontSize:8, color: isSel ? C.red : (ESTADO_FG[m.estado] ?? T.fg3), letterSpacing:'.06em', textTransform:'uppercase' }}>
+                    {m.estado}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
         </div>
-        </div> {/* fin grid scroll container */}
-      </div> {/* fin flex row con franja */}
+      </div>
     </div>
   )
 
+  // ══ STEP: CARTA ═══════════════════════════════════════════
   if (step === 'carta') return (
     <div style={wrapStyle}>
       <Header/>
@@ -438,6 +523,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     </div>
   )
 
+  // ══ STEP: RESUMEN ═════════════════════════════════════════
   if (step === 'resumen') return (
     <div style={wrapStyle}>
       <Header/>
@@ -504,6 +590,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     </div>
   )
 
+  // ══ STEP: ENVIADO ═════════════════════════════════════════
   if (step === 'enviado') return (
     <div style={{ ...wrapStyle, alignItems:'center', justifyContent:'center', gap:16 }}>
       <div style={{ width:64,height:64,borderRadius:9999,background:C.grS,border:`2px solid ${C.gr}`,display:'flex',alignItems:'center',justifyContent:'center' }}>
@@ -526,6 +613,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
     </div>
   )
 
+  // ══ STEP: ERROR ═══════════════════════════════════════════
   return (
     <div style={{ ...wrapStyle, alignItems:'center', justifyContent:'center', gap:16 }}>
       <div style={{ fontFamily:SM,fontSize:12,color:C.red,textAlign:'center',maxWidth:240 }}>{errorMsg}</div>

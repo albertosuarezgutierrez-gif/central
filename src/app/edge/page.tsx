@@ -17,7 +17,6 @@ import ComensalesModal from '@/components/edge/ComensalesModal'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
-import MisCuentasTab from '@/components/edge/MisCuentasTab'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -45,7 +44,7 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
-type Tab    = 'hablar'|'manual'|'sala'|'carta'|'chat'|'cuentas'|'config'
+type Tab    = 'hablar'|'manual'|'sala'|'carta'|'chat'|'config'
 
 const ALL_TABS: {id:Tab;lbl:string;path:string;fijo?:boolean}[] = [
   {id:'hablar',  lbl:'Hablar',   fijo:true, path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
@@ -53,7 +52,6 @@ const ALL_TABS: {id:Tab;lbl:string;path:string;fijo?:boolean}[] = [
   {id:'sala',    lbl:'Pedidos',             path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
   {id:'carta',   lbl:'Carta',               path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
   {id:'chat',    lbl:'Chat',                path:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'},
-  {id:'cuentas', lbl:'Cuentas',             path:'M17 9V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2m2 4h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2H9a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2zm7-5a2 2 0 1 1-4 0 2 2 0 0 1 4 0z'},
   {id:'config',  lbl:'Config',  fijo:true,  path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
 ]
 
@@ -511,7 +509,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         if (!acc[c.mesa_id] || c.created_at > acc[c.mesa_id].created_at) acc[c.mesa_id] = c
         return acc
       }, {} as Record<string, typeof comandas[0]>)
-  ).sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 4) // 4 mesas más recientes
+  ).sort((a, b) => new Date((b as {created_at:string}).created_at).getTime() - new Date((a as {created_at:string}).created_at).getTime()).slice(0, 4) // 4 mesas más recientes
 
   // Todas las mesas ocupadas del turno (de cualquier camarero) para el grid
   const mesasOcupadas = comandas
@@ -1500,7 +1498,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 <div style={{fontFamily:SE,fontStyle:'italic',fontSize:19,color:C.ink3,lineHeight:1.4,marginBottom:6}}>Mantén pulsado y habla.</div>
                 {mesaFijada && (
                   <div style={{fontFamily:SM,fontSize:10,color:C.verm,background:C.vermS,display:'inline-block',padding:'3px 10px',borderRadius:8}}>
-                    → siguiente comanda va a {ultimasComandas.find(c=>c.mesa_id===mesaFijada)?.mesa?.codigo||'mesa fijada'}
+                    → siguiente comanda va a {(ultimasComandas as {mesa_id:string;mesa?:{codigo:string}}[]).find(c=>c.mesa_id===mesaFijada)?.mesa?.codigo||'mesa fijada'}
                   </div>
                 )}
               </div>
@@ -1811,17 +1809,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         )
       })()}
 
-
-      {/* ══ TAB: CUENTAS — cuentas pendientes de cobro ═════════ */}
-      {tab==='cuentas' && (
-        <MisCuentasTab
-          session={session}
-          onVerMesa={(mesaId, mesaCodigo, cap) => {
-            setMesaDetalle({ id: mesaId, codigo: mesaCodigo, capacidad: cap })
-          }}
-          onCountChange={setCuentasCount}
-        />
-      )}
 
       {/* ══ TAB: CHAT — mensajes entre roles del turno ══════════ */}
       {tab==='chat' && (
@@ -2158,7 +2145,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   <span style={{fontFamily:SN,fontSize:9,fontWeight:700,color:'#fff'}}>{noLeidos>9?'9+':noLeidos}</span>
                 </div>
               )}
-              {t.id==='cuentas' && cuentasCount>0 && !on && (
+              {t.id==='manual' && cuentasCount>0 && !on && (
                 <div style={{position:'absolute',top:5,right:'18%',minWidth:16,height:16,borderRadius:8,background:C.verm,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 4px'}}>
                   <span style={{fontFamily:SN,fontSize:9,fontWeight:700,color:'#fff'}}>{cuentasCount>9?'9+':cuentasCount}</span>
                 </div>
