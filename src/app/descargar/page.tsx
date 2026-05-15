@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
+import { BRIDGE_VERSION, BRIDGE_SIZE, BRIDGE_EXE_URL, BRIDGE_EXE_NAME } from '@/lib/bridge-config'
 
 export const metadata: Metadata = {
   title: 'Descargar Bridge de impresoras · ia.rest',
@@ -50,7 +51,7 @@ export default function DescargarPage() {
         <div style={{ textAlign: 'center', marginBottom: 64 }}>
           <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 20, padding: '6px 14px', fontSize: 13, color: C.ink3, marginBottom: 24 }}>
             <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3F7D44', display: 'inline-block' }} />
-            Bridge v5.1 · Incluye Node.js
+            Bridge v{BRIDGE_VERSION} · Incluye Node.js
           </div>
           <h1 style={{ fontSize: 'clamp(32px, 5vw, 52px)', fontWeight: 800, lineHeight: 1.1, marginBottom: 16, fontFamily: "'Newsreader', serif" }}>
             Bridge de <span style={{ color: C.red }}>impresoras</span>
@@ -61,7 +62,7 @@ export default function DescargarPage() {
 
           {/* Download button */}
           <a
-            href="https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/bridge-v5.1/iarest-setup-v5.1.exe"
+            href={BRIDGE_EXE_URL}
             download
             style={{
               display: 'inline-flex', alignItems: 'center', gap: 10,
@@ -77,7 +78,7 @@ export default function DescargarPage() {
           </a>
 
           <div style={{ marginTop: 12, fontSize: 13, color: C.ink3 }}>
-            v5.1 · ~37 MB · Windows 10/11 · Incluye Node.js
+            v{BRIDGE_VERSION} · ~{BRIDGE_SIZE} · Windows 10/11 · Incluye Node.js
           </div>
 
           {/* Mac/Linux */}

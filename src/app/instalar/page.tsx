@@ -1,5 +1,6 @@
 'use client'
 import { useEffect, useState } from 'react'
+import { BRIDGE_VERSION, BRIDGE_SIZE, BRIDGE_EXE_URL } from '@/lib/bridge-config'
 
 const C = {
   bg:   '#F6F1E7',
@@ -16,9 +17,6 @@ const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-const EXE_URL = 'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/bridge-v5.1/iarest-setup-v5.1.exe'
-const EXE_VERSION = '5.1'
-const EXE_SIZE = '37 MB'
 
 export default function InstalarPage() {
   const [downloaded, setDownloaded] = useState(false)
@@ -30,7 +28,7 @@ export default function InstalarPage() {
   }, [])
 
   const handleDownload = () => {
-    window.location.href = EXE_URL
+    window.location.href = BRIDGE_EXE_URL
     setDownloaded(true)
   }
 
@@ -109,12 +107,12 @@ export default function InstalarPage() {
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              Descargar iarest-setup-v{EXE_VERSION}.exe
+              Descargar iarest-setup-v{BRIDGE_VERSION}.exe
             </button>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
               <span style={{ fontFamily: SM, fontSize: 10, color: C.fg3 }}>Windows 10 / 11 · 64 bits</span>
-              <span style={{ fontFamily: SM, fontSize: 10, color: C.fg3 }}>v{EXE_VERSION} · {EXE_SIZE}</span>
+              <span style={{ fontFamily: SM, fontSize: 10, color: C.fg3 }}>v{BRIDGE_VERSION} · {BRIDGE_SIZE}</span>
             </div>
           </div>
         ) : (
@@ -122,7 +120,7 @@ export default function InstalarPage() {
             <p style={{ fontFamily: SN, fontSize: 14, color: C.fg2 }}>
               El instalador es para Windows. Ábrelo desde el PC del TPV del restaurante.
             </p>
-            <a href={EXE_URL} style={{ fontFamily: SM, fontSize: 12, color: C.verm, textDecoration: 'none' }}>
+            <a href={BRIDGE_EXE_URL} style={{ fontFamily: SM, fontSize: 12, color: C.verm, textDecoration: 'none' }}>
               Descargar igualmente →
             </a>
           </div>
@@ -136,7 +134,7 @@ export default function InstalarPage() {
             fontFamily: SN, fontSize: 13, color: '#6DBF74', lineHeight: 1.5,
             animation: 'fadeUp .3s ease',
           }}>
-            ✓ Descarga iniciada — busca <span style={{ fontFamily: SM }}>iarest-setup-v{EXE_VERSION}.exe</span> en tu carpeta de Descargas y dale doble clic.
+            ✓ Descarga iniciada — busca <span style={{ fontFamily: SM }}>iarest-setup-v{BRIDGE_VERSION}.exe</span> en tu carpeta de Descargas y dale doble clic.
           </div>
         )}
 
