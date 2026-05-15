@@ -21,7 +21,7 @@ const PORT     = 9371
 const API      = 'https://www.iarest.es'
 const CFG_DIR  = path.join(os.homedir(), '.iarest')
 const CFG_FILE = path.join(CFG_DIR, 'bridge.json')
-const VERSION  = '5.1.1'  // debe coincidir con bridge-config.ts
+const VERSION  = '5.1.2'  // debe coincidir con bridge-config.ts
 
 // ── Config persistente ────────────────────────────────────────
 function loadConfig() {
