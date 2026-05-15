@@ -334,7 +334,8 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
         {/* Bridge tokens */}
         {bridge.tokens.map((b, i) => {
           const bEstado = activandoBridge[b.nombre]
-          const mostrarBoton = (b.estado === 'offline' || b.estado === 'sin_actividad') && bEstado !== 'ok'
+          const bEstadoRaw = activandoBridge[b.nombre] as string | undefined
+          const mostrarBoton = (b.estado === 'offline' || b.estado === 'sin_actividad') && bEstadoRaw !== 'ok'
           return (
           <div key={i}>
             <Row
