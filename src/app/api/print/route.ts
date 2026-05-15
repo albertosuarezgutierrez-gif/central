@@ -29,7 +29,8 @@ const TIPOS_TCP = ['ip_local', 'usb_bridge']
 
 // ── GET — Bridge solicita jobs pendientes ────────────────────
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get('token')
+  const token   = req.nextUrl.searchParams.get('token')
+  const version = req.nextUrl.searchParams.get('v') ?? null
   if (!token) {
     return NextResponse.json({ error: 'Token requerido' }, { status: 401 })
   }
@@ -47,9 +48,12 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
   }
 
-  // Actualizar último ping del bridge
+  // Actualizar último ping del bridge (y versión si viene)
   await sb.from('bridge_tokens')
-    .update({ ultimo_ping: new Date().toISOString() })
+    .update({
+      ultimo_ping:    new Date().toISOString(),
+      ...(version ? { bridge_version: version } : {}),
+    })
     .eq('id', bridge.id)
 
   // Si hay escaneo solicitado, informar al bridge y limpiar flag

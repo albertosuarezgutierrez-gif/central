@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     // ── 1. Bridge tokens y heartbeat ─────────────────────────────
     const { data: bridges } = await sb()
       .from('bridge_tokens')
-      .select('id, nombre, activo, ultimo_ping')
+      .select('id, nombre, activo, ultimo_ping, bridge_version')
       .eq('restaurante_id', rid)
       .eq('activo', true)
 
@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
         ultimo_ping: b.ultimo_ping,
         minutos_desde_ping: minutos,
         ok,
+        bridge_version: b.bridge_version ?? null,
         estado: ok ? 'online'
           : minutos === null ? 'sin_actividad'
           : minutos < 30 ? 'advertencia'

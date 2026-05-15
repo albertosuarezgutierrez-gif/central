@@ -3,7 +3,7 @@
 // Panel de diagnóstico del sistema para /owner y /jefe
 // El dueño puede ver qué pasa sin necesitar llamar a soporte
 
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 /* ─── Tokens de diseño (idénticos a owner/page.tsx) ─── */
 const C = {
@@ -24,6 +24,7 @@ interface BridgeToken {
   ultimo_ping: string | null
   minutos_desde_ping: number | null
   ok: boolean
+  bridge_version: string | null
   estado: 'online' | 'advertencia' | 'offline' | 'sin_actividad'
 }
 
@@ -269,11 +270,29 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
               'Sin actividad'
             }
             detalle={
-              b.estado === 'offline'
-                ? 'Comprueba que el PC/tablet con el bridge está encendido y conectado a la red'
-                : b.ultimo_ping
-                ? `Último contacto ${relativo(b.ultimo_ping)}`
-                : 'Nunca se ha conectado'
+              <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span>
+                  {b.estado === 'offline'
+                    ? 'Comprueba que el PC/tablet con el bridge está encendido y conectado a la red'
+                    : b.ultimo_ping
+                    ? `Último contacto ${relativo(b.ultimo_ping)}`
+                    : 'Nunca se ha conectado'}
+                </span>
+                {b.bridge_version && (
+                  <span style={{
+                    fontFamily: SM,
+                    fontSize: 10,
+                    padding: '1px 6px',
+                    borderRadius: 4,
+                    background: b.ok ? C.greenS : C.amberS,
+                    color: b.ok ? C.green : C.amberD,
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap',
+                  }}>
+                    v{b.bridge_version}
+                  </span>
+                )}
+              </span>
             }
             ok={b.ok}
             esAdvertencia={b.estado === 'advertencia'}
@@ -395,7 +414,7 @@ function Section({ titulo, children }: { titulo: string; children: React.ReactNo
 }
 
 function Row({ label, valor, detalle, ok, esAdvertencia = false }: {
-  label: string; valor: string; detalle?: string; ok: boolean; esAdvertencia?: boolean
+  label: string; valor: string; detalle?: string | React.ReactNode; ok: boolean; esAdvertencia?: boolean
 }) {
   const color = ok ? C.green : esAdvertencia ? C.amber : C.red
   const dot   = ok ? C.green : esAdvertencia ? C.amber : C.red

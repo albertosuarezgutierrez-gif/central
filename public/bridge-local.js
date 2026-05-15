@@ -260,7 +260,7 @@ async function poll() {
   if (running) return
   running = true
   try {
-    const res = await fetch(`${API}/api/print?token=${TOKEN}`, { signal: AbortSignal.timeout(10000) })
+    const res = await fetch(`${API}/api/print?token=${TOKEN}&v=${VERSION}`, { signal: AbortSignal.timeout(10000) })
     if (!res.ok) {
       if (res.status === 401) { log('error', 'Token invalido.'); process.exit(1) }
       log('warn', `Polling HTTP ${res.status}`); return
