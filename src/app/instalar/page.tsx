@@ -16,8 +16,8 @@ const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-const EXE_URL = 'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/setup-v1.0/iarest-setup.exe'
-const EXE_VERSION = '1.0'
+const EXE_URL = 'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/bridge-v3.1/iarest-setup-v3.1.exe'
+const EXE_VERSION = '3.1'
 const EXE_SIZE = '37 MB'
 
 export default function InstalarPage() {
@@ -109,7 +109,7 @@ export default function InstalarPage() {
                 <polyline points="7 10 12 15 17 10"/>
                 <line x1="12" y1="15" x2="12" y2="3"/>
               </svg>
-              Descargar iarest-setup.exe
+              Descargar iarest-setup-v{EXE_VERSION}.exe
             </button>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
@@ -136,7 +136,7 @@ export default function InstalarPage() {
             fontFamily: SN, fontSize: 13, color: '#6DBF74', lineHeight: 1.5,
             animation: 'fadeUp .3s ease',
           }}>
-            ✓ Descarga iniciada — busca <span style={{ fontFamily: SM }}>iarest-setup.exe</span> en tu carpeta de Descargas y dale doble clic.
+            ✓ Descarga iniciada — busca <span style={{ fontFamily: SM }}>iarest-setup-v{EXE_VERSION}.exe</span> en tu carpeta de Descargas y dale doble clic.
           </div>
         )}
 
