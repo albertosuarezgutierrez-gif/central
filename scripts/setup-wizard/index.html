@@ -36,11 +36,12 @@
   .btn-ghost{background:transparent;border:1px solid var(--rule);border-radius:10px;color:var(--fg3);cursor:pointer;font-size:13px;font-weight:500;padding:10px 20px;transition:border-color .15s,color .15s;width:100%}
   .btn-ghost:hover{border-color:var(--fg3);color:var(--fg)}
   .check-row{display:flex;align-items:flex-start;gap:12px;padding:10px 12px;border-radius:8px;background:var(--bg);border:1px solid var(--rule);transition:border-color .3s}
-  .check-row.ok{border-color:var(--gr)}.check-row.fail{border-color:var(--red)}.check-row.warn{border-color:var(--amb)}
+  .check-row.ok{border-color:var(--gr)}.check-row.fail{border-color:var(--red)}.check-row.warn{border-color:var(--amb)}.check-row.active{border-color:var(--verm)}
   .check-icon{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;border:1px solid var(--rule);background:var(--bg2);transition:all .3s;margin-top:1px}
   .check-row.ok .check-icon{background:var(--grS);border-color:var(--gr);color:var(--gr)}
   .check-row.fail .check-icon{background:rgba(192,57,43,.15);border-color:var(--red);color:var(--red)}
   .check-row.warn .check-icon{background:var(--ambS);border-color:var(--amb);color:var(--amb)}
+  .check-row.active .check-icon{background:var(--vermS);border-color:var(--verm);color:var(--verm)}
   .check-name{font-size:13px;font-weight:600;color:var(--fg2)}
   .check-detail{font-size:11px;color:var(--fg3);font-family:'JetBrains Mono',monospace;margin-top:2px}
   .check-hint{font-size:11px;color:var(--amb);margin-top:3px;line-height:1.4}
@@ -150,7 +151,7 @@
       <div class="check-icon" id="svcIcon">⟳</div>
       <div><div class="check-name">Inicio con Windows</div><div class="check-detail" id="svcDetail">Se añade al inicio de sesión — sin admin</div></div>
     </div>
-    <button class="btn" id="btnInstall">Instalar inicio automático →</button>
+    <button class="btn" id="btnInstall">Instalar y arrancar bridge →</button>
     <button class="btn-ghost" id="btnSkip">Saltar — lo instalaré más tarde</button>
   </div>
 
@@ -159,6 +160,11 @@
     <div class="done-icon">✓</div>
     <div style="font-family:'Newsreader',serif;font-style:italic;font-size:26px;text-align:center" id="doneTitle">Todo listo.</div>
     <p style="font-size:13px;color:var(--fg3);text-align:center;line-height:1.6" id="doneSub"></p>
+    <!-- FIX v2.1: estado del bridge en tiempo real -->
+    <div id="bridgeStatus" class="check-row" style="width:100%;justify-content:center;">
+      <div class="check-icon spin" id="bridgeIcon">⟳</div>
+      <div><div class="check-name">Bridge ia.rest</div><div class="check-detail" id="bridgeDetail">Conectando...</div></div>
+    </div>
     <button class="btn" id="btnOpen">Abrir panel ia.rest →</button>
   </div>
 
@@ -183,12 +189,15 @@ async function runPreflight() {
   const list = $('preflightList')
 
   let allOk = true
+  let prevToken = null
   list.innerHTML = ''
 
   for (const c of data.checks) {
     const isWarn = c.isWarning
     const cls    = c.ok ? (isWarn ? 'warn' : 'ok') : 'fail'
     if (!c.ok && !isWarn) allOk = false
+    // FIX v2.1: extraer prevToken del check de instalación previa
+    if (c.id === 'previous' && c.prevToken) prevToken = c.prevToken
 
     const row = document.createElement('div')
     row.className = `check-row ${cls}`
@@ -213,13 +222,14 @@ async function runPreflight() {
 
   $('tokenSection').classList.remove('hidden')
   $('tokenSection').style.display = 'flex'
+
+  // FIX v2.1: auto-rellenar token si hay instalación previa
+  if (prevToken) {
+    $('tokenInput').value = prevToken
+  }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
-  // Preflight inmediato
-  const pfl = document.createElement('div')
-  runPreflight()
-})
+document.addEventListener('DOMContentLoaded', () => { runPreflight() })
 
 // Verificar token
 $('btnVerify').addEventListener('click', async () => {
@@ -250,19 +260,15 @@ function startScan() {
   const es = new EventSource('/api/scan')
   es.onmessage = e => {
     const d = JSON.parse(e.data)
-    if (d.type==='start') {
-      $('scanLbl').textContent = `Escaneando ${d.subnet}.1 – 254...`
-    }
+    if (d.type==='start') { $('scanLbl').textContent = `Escaneando ${d.subnet}.1 – 254...` }
     else if (d.type==='progress') {
       const pct = Math.round(d.checked/254*100)
       $('scanBar').style.width = pct+'%'
       $('scanLbl').textContent = `${pct}% escaneado${d.found>0?' · '+d.found+' encontrada'+(d.found>1?'s':''):''}`
     }
     else if (d.type==='done') {
-      $('scanBar').style.width='100%'
-      es.close()
+      $('scanBar').style.width='100%'; es.close()
       $('scanActions').classList.remove('hidden')
-
       if (d.found.length===0) {
         $('scanLbl').textContent='No se encontraron impresoras. Comprueba el cable ethernet.'
       } else {
@@ -304,7 +310,6 @@ $('btnAddManual').addEventListener('click', () => {
   S.printers=[{ip, port, nombre:'Impresora 1', seccion_id:'', mac:null, stability:guessStability(ip), vendor:null}]
   buildConfigStep(); setStep(2)
 })
-
 function guessStability(ip) {
   const l=parseInt(ip.split('.')[3]); return (l<=20||l===100||l===200||l===254)?'static':'dynamic'
 }
@@ -313,7 +318,6 @@ function guessStability(ip) {
 function buildConfigStep() {
   const c = $('configList'); c.innerHTML=''
   const w = $('ipWarnings'); w.innerHTML=''
-
   S.printers.forEach((p,i) => {
     const div=document.createElement('div')
     div.style.cssText='background:var(--bg);border:1px solid var(--rule);border-radius:10px;padding:14px;display:flex;flex-direction:column;gap:10px;'
@@ -327,20 +331,14 @@ function buildConfigStep() {
         <div class="field" style="flex:1"><label>Sección</label><input type="text" id="ps${i}" value="${p.seccion_id}" placeholder="Ej: calientes"/></div>
       </div>`
     c.appendChild(div)
-
-    // Aviso IP dinámica
     if (p.stability==='dynamic') {
-      const warn=document.createElement('div')
-      warn.className='ip-warn'
+      const warn=document.createElement('div'); warn.className='ip-warn'
       warn.innerHTML=`<strong>⚠ ${p.ip} — IP puede cambiar</strong><br>
-        Si el router se reinicia, esta impresora puede obtener otra IP y los tickets dejarán de llegar.<br>
-        <strong>Solución recomendada:</strong> entra en tu router (normalmente <a href="http://192.168.1.1" target="_blank" style="color:var(--amb)">192.168.1.1</a>), 
-        busca <em>DHCP Reservation</em> o <em>IP fija por MAC</em>, 
-        y asigna la IP <strong>${p.ip}</strong> a la MAC <strong>${p.mac||'de esta impresora'}</strong> de forma permanente.`
+        Si el router se reinicia, esta impresora puede obtener otra IP.<br>
+        <strong>Solución:</strong> asigna IP fija por MAC en tu router (<a href="http://192.168.1.1" target="_blank" style="color:var(--amb)">192.168.1.1</a>).`
       w.appendChild(warn)
     } else {
-      const ok=document.createElement('div')
-      ok.className='ip-ok'
+      const ok=document.createElement('div'); ok.className='ip-ok'
       ok.textContent=`✓ ${p.ip} — IP parece estable`
       w.appendChild(ok)
     }
@@ -355,21 +353,16 @@ $('btnTest').addEventListener('click', () => {
 // ── PASO 3: Test ──────────────────────────────────────────────
 async function runTests() {
   const list=$('testList'); list.innerHTML=''
-  $('confirmPrint').classList.add('hidden')
-  hideEl('testErr')
+  $('confirmPrint').classList.add('hidden'); hideEl('testErr')
+  const p = S.printers[0]; if (!p) return
 
-  const p = S.printers[0]
-  if (!p) return
-
-  // Test internet
-  const r1=addTestRow('internet','Conexión a ia.rest')
+  addTestRow('internet','Conexión a ia.rest')
   setRow('internet','active','Verificando...')
   try {
     const r=await fetch('https://www.iarest.es/api/estado'); if(!r.ok&&r.status!==401) throw new Error(`HTTP ${r.status}`)
     setRow('internet','ok','ia.rest accesible ✓')
-  } catch(e) { setRow('internet','fail',e.message); showTestErr(`Sin conexión con ia.rest. Comprueba el WiFi del ordenador.`); return }
+  } catch(e) { setRow('internet','fail',e.message); showTestErr(`Sin conexión con ia.rest.`); return }
 
-  // Test TCP
   addTestRow('tcp',`Puerto TCP ${p.port} en ${p.ip}`)
   setRow('tcp','active',`Conectando ${p.ip}:${p.port}...`)
   try {
@@ -377,29 +370,18 @@ async function runTests() {
     const d=await r.json()
     if(d.step==='tcp'&&!d.ok) throw new Error(d.error)
     setRow('tcp','ok',`${p.ip}:${p.port} responde ✓`)
-  } catch(e) {
-    setRow('tcp','fail',e.message)
-    showTestErr(`No se puede conectar a la impresora.\n${e.hint||'Comprueba que está encendida y conectada al router por cable ethernet.'}`)
-    return
-  }
+  } catch(e) { setRow('tcp','fail',e.message); showTestErr(`No se puede conectar a la impresora.`); return }
 
-  // Test print
   addTestRow('print','Envío de ticket de prueba')
   setRow('print','active','Enviando ticket ESC/POS...')
   try {
     const r=await fetch('/api/test-printer',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ip:p.ip,port:p.port,restaurantName:S.restaurantName})})
     const d=await r.json()
     if(!d.ok) throw new Error(d.error)
-    // Actualizar MAC y stability con datos reales del servidor
     if(d.mac) { S.printers[0].mac=d.mac; S.printers[0].stability=d.stability; S.printers[0].vendor=d.vendor }
     setRow('print','ok','Ticket enviado a la impresora ✓')
-  } catch(e) {
-    setRow('print','fail',e.message)
-    showTestErr(`El ticket no se pudo enviar: ${e.message}`)
-    return
-  }
+  } catch(e) { setRow('print','fail',e.message); showTestErr(`El ticket no se pudo enviar: ${e.message}`); return }
 
-  // Confirmación manual
   addTestRow('confirm','Confirmación: ¿ha salido el ticket?')
   setRow('confirm','active','Esperando confirmación...')
   $('confirmPrint').classList.remove('hidden')
@@ -407,69 +389,104 @@ async function runTests() {
   $('btnYes').onclick = async () => {
     $('confirmPrint').classList.add('hidden')
     setRow('confirm','ok','Ticket recibido — ciclo completo ✓')
-    // Registrar impresoras en ia.rest
     await fetch('/api/register-printers',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:S.token,printers:S.printers})})
     setStep(4)
   }
-
   $('btnNo').onclick = () => {
-    $('confirmPrint').classList.add('hidden')
-    setRow('confirm','fail','Ticket no recibido')
+    $('confirmPrint').classList.add('hidden'); setRow('confirm','fail','Ticket no recibido')
     showTestErr(`El ticket no llegó a la impresora.\n\nPosibles causas:\n• La impresora no tiene papel\n• Está apagada o en modo reposo\n• Ágora u otro programa ocupa el puerto 9100\n• El cable ethernet está suelto`)
-    const retry=document.createElement('button')
-    retry.className='btn'; retry.textContent='Repetir prueba'
-    retry.onclick=()=>{ $('testErr').classList.add('hidden'); list.innerHTML=''; runTests() }
+    const retry=document.createElement('button'); retry.className='btn'; retry.textContent='Repetir prueba'
+    retry.onclick=()=>{ hideEl('testErr'); list.innerHTML=''; runTests() }
     $('testErr').after(retry)
   }
 }
 
 function addTestRow(id, label) {
-  const row=document.createElement('div')
-  row.className='check-row'; row.id=`tr_${id}`
+  const row=document.createElement('div'); row.className='check-row'; row.id=`tr_${id}`
   row.innerHTML=`<div class="check-icon" id="ti_${id}">·</div><div><div class="check-name">${label}</div><div class="check-detail" id="td_${id}">Pendiente</div></div>`
-  $('testList').appendChild(row)
-  return row
+  $('testList').appendChild(row); return row
 }
-
 function setRow(id, state, detail) {
   const row=$(`tr_${id}`); const icon=$(`ti_${id}`); const det=$(`td_${id}`)
   row.className=`check-row ${state}`
   icon.textContent={ok:'✓',fail:'✗',active:'●',pending:'·'}[state]||'·'
   if(detail) det.textContent=detail
 }
-
 function showTestErr(msg) {
-  const el=$('testErr')
-  el.className='alert-err'
-  el.style.whiteSpace='pre-line'
-  el.textContent=msg
-  el.classList.remove('hidden')
+  const el=$('testErr'); el.className='alert-err'; el.style.whiteSpace='pre-line'; el.textContent=msg; el.classList.remove('hidden')
 }
 
 // ── PASO 4: Autostart ─────────────────────────────────────────
+// FIX v2.1: texto del botón actualizado, lanza bridge inmediatamente
 $('btnInstall').addEventListener('click', async () => {
   $('svcRow').className='check-row active'
-  $('svcIcon').textContent='●'; $('svcDetail').textContent='Instalando...'
+  $('svcIcon').textContent='●'; $('svcDetail').textContent='Instalando y arrancando bridge...'
   $('btnInstall').disabled=true
   try {
     const r=await fetch('/api/install-autostart',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:S.token})})
     const d=await r.json()
-    if(d.ok) { $('svcRow').className='check-row ok'; $('svcIcon').textContent='✓'; $('svcDetail').textContent='Bridge se iniciará con Windows ✓'; setTimeout(()=>showDone(true),800) }
-    else throw new Error(d.error)
+    if(d.ok) {
+      $('svcRow').className='check-row ok'; $('svcIcon').textContent='✓'
+      $('svcDetail').textContent='Bridge activo · arranca con Windows ✓'
+      setTimeout(()=>showDone(true), 800)
+    } else throw new Error(d.error)
   } catch(e) {
     $('svcRow').className='check-row fail'; $('svcIcon').textContent='✗'
     $('svcDetail').textContent='Error: '+e.message; $('btnInstall').disabled=false
   }
 })
-$('btnSkip').addEventListener('click', () => showDone(false))
+
+// FIX v2.1: "Saltar" ahora lanza el bridge igualmente (sin autostart)
+$('btnSkip').addEventListener('click', async () => {
+  try {
+    await fetch('/api/launch-bridge',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({token:S.token})})
+  } catch {}
+  showDone(false)
+})
 
 // ── PASO 5: Listo ─────────────────────────────────────────────
+// FIX v2.1: muestra estado del bridge en tiempo real
 function showDone(withAutostart) {
   const n=S.printers.length
   $('doneTitle').textContent=`${S.restaurantName} está listo.`
-  $('doneSub').textContent=`${n} impresora${n!==1?'s':''} configurada${n!==1?'s':''} · Bridge ${withAutostart?'con inicio automático':'configurado'}`
+  $('doneSub').textContent=`${n} impresora${n!==1?'s':''} configurada${n!==1?'s':''} · Bridge ${withAutostart?'con inicio automático':'activo'}`
   setStep(5)
+  pollBridgeStatus()
 }
+
+// Verifica que el bridge ya está haciendo ping a ia.rest
+async function pollBridgeStatus() {
+  const maxRetries = 20  // 20 × 3s = 60s máximo
+  let retries = 0
+  const check = async () => {
+    try {
+      const r = await fetch('https://www.iarest.es/api/bridge/verify', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({ token: S.token, checkPing: true })
+      })
+      const d = await r.json()
+      if (d.connected) {
+        $('bridgeStatus').className = 'check-row ok'
+        $('bridgeIcon').textContent = '✓'
+        $('bridgeIcon').classList.remove('spin')
+        $('bridgeDetail').textContent = 'Conectado · recibiendo comandas ✓'
+        return
+      }
+    } catch {}
+    retries++
+    if (retries < maxRetries) {
+      setTimeout(check, 3000)
+    } else {
+      $('bridgeStatus').className = 'check-row warn'
+      $('bridgeIcon').textContent = '!'
+      $('bridgeIcon').classList.remove('spin')
+      $('bridgeDetail').textContent = 'Tardando más de lo esperado — revisa el panel'
+    }
+  }
+  setTimeout(check, 3000)
+}
+
 $('btnOpen').addEventListener('click', () => window.open('https://www.iarest.es/owner','_blank'))
 
 // ── Utils ─────────────────────────────────────────────────────
