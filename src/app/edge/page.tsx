@@ -495,8 +495,6 @@ function EdgeChatTab({ session, mensajes, marcarMensajeLeido, chatTexto, setChat
   )
 }
 
-}
-
 /* ═══════════════════════════════════════════════════════════════ */
 export default function EdgePage() {
   const { session, checking } = useAuth()
