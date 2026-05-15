@@ -16,8 +16,8 @@ const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
 const SM = "'JetBrains Mono',ui-monospace,monospace"
 
-const EXE_URL = 'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/bridge-v3.1/iarest-setup-v3.1.exe'
-const EXE_VERSION = '3.1'
+const EXE_URL = 'https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/bridge-v5.1/iarest-setup-v5.1.exe'
+const EXE_VERSION = '5.1'
 const EXE_SIZE = '37 MB'
 
 export default function InstalarPage() {
