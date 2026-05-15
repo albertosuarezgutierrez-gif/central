@@ -71,6 +71,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
   const [zonaFiltro, setZonaFiltro] = useState('todas')
   const [nombreMesa, setNombreMesa] = useState('')
   const [editandoNombre, setEditandoNombre] = useState(false)
+  const [notaAbiertaIdx, setNotaAbiertaIdx] = useState<number|null>(null)  // índice del ítem con input de nota abierto
 
   // ── Filtro "Mis mesas" ──────────────────────────────────────
   const [misFiltro, setMisFiltro] = useState(false)       // activo o no
@@ -197,7 +198,7 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
 
   const reset = () => {
     setStep('mesa'); setMesaSel(null); setLineas([])
-    setErrorMsg(''); setTicketNum(null); setNotaGeneral(''); setNombreMesa(''); setEditandoNombre(false)
+    setErrorMsg(''); setTicketNum(null); setNotaGeneral(''); setNombreMesa(''); setEditandoNombre(false); setNotaAbiertaIdx(null)
   }
 
   // ── Filtrado de mesas ──────────────────────────────────────
@@ -533,36 +534,77 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
           <span style={{ fontFamily:SM, fontSize:11, color:T.fg3, marginLeft:10 }}>{lineas.reduce((a,l)=>a+l.cantidad,0)} items</span>
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
-          {lineas.map((l,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'8px 12px',
-              background: L.bg2, border:'none',
-              boxShadow: `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
-              borderRadius:10 }}>
-              <div style={{ display:'flex', gap:4, alignItems:'center', paddingTop:2, flexShrink:0 }}>
-                <button onPointerDown={() => updateCantidad(i,-1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
-                <span style={{ fontFamily:SM,fontSize:13,fontWeight:700,color:T.fg,width:24,textAlign:'center' }}>{l.cantidad}</span>
-                <button onPointerDown={() => updateCantidad(i,+1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
+          {lineas.map((l,i) => {
+            const notaOpen = notaAbiertaIdx === i
+            const tieneNota = l.notas.trim().length > 0
+            return (
+              <div key={i} style={{ borderRadius:10, overflow:'hidden',
+                boxShadow: `rgba(184,169,139,0.45) 0px 0px 0px 1px`, background: L.bg2 }}>
+                {/* Fila principal */}
+                <div style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px' }}>
+                  {/* Cantidad */}
+                  <div style={{ display:'flex', gap:4, alignItems:'center', flexShrink:0 }}>
+                    <button onPointerDown={() => updateCantidad(i,-1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
+                    <span style={{ fontFamily:SM,fontSize:13,fontWeight:700,color:T.fg,width:24,textAlign:'center' }}>{l.cantidad}</span>
+                    <button onPointerDown={() => updateCantidad(i,+1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
+                  </div>
+                  {/* Nombre + chip nota si existe */}
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontFamily:SN,fontSize:13,fontWeight:600,color:T.fg,whiteSpace:'nowrap',overflow:'hidden',textOverflow:'ellipsis' }}>{l.producto.nombre}</div>
+                    {l.formato && <div style={{ fontFamily:SM,fontSize:10,color:T.fg3 }}>{l.formato.nombre}</div>}
+                    {tieneNota && !notaOpen && (
+                      <div style={{ marginTop:2, display:'inline-flex', alignItems:'center', gap:4,
+                        background:'rgba(232,163,59,0.12)', border:'1px solid rgba(232,163,59,0.35)',
+                        borderRadius:20, padding:'1px 8px' }}>
+                        <span style={{ fontFamily:SN, fontSize:10, color:C.amber }}>{l.notas}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Precio */}
+                  <span style={{ fontFamily:SM,fontSize:11,color:T.fg3,flexShrink:0 }}>
+                    {((l.formato?l.formato.precio:(l.producto.precio??0))*l.cantidad).toFixed(2)}€
+                  </span>
+                  {/* Botón nota (icono lápiz) */}
+                  <button
+                    onPointerDown={() => setNotaAbiertaIdx(notaOpen ? null : i)}
+                    style={{ width:28,height:28,borderRadius:9999,border:'none',flexShrink:0,cursor:'pointer',
+                      display:'flex',alignItems:'center',justifyContent:'center',
+                      background: tieneNota || notaOpen ? 'rgba(232,163,59,0.18)' : L.bg3,
+                      boxShadow: tieneNota || notaOpen ? `rgba(232,163,59,0.5) 0px 0px 0px 1px` : `${T.rS} 0px 0px 0px 1px`,
+                      transition:'all .15s' }}>
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"
+                      stroke={tieneNota || notaOpen ? C.amber : T.fg3} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                    </svg>
+                  </button>
+                  {/* Borrar */}
+                  <button onPointerDown={() => removeLinea(i)} style={{ background:'none',border:'none',color:C.red,fontSize:18,cursor:'pointer',lineHeight:1,flexShrink:0 }}>×</button>
+                </div>
+                {/* Panel nota desplegable */}
+                {notaOpen && (
+                  <div style={{ padding:'0 12px 10px', display:'flex', gap:6, alignItems:'center' }}>
+                    <input
+                      autoFocus
+                      type="text"
+                      value={l.notas}
+                      onChange={e => setLineas(prev => prev.map((ln,j) => j===i ? {...ln, notas: e.target.value} : ln))}
+                      onKeyDown={e => { if (e.key === 'Enter') setNotaAbiertaIdx(null) }}
+                      placeholder="en copa · sin sal · bien hecho…"
+                      style={{ flex:1, padding:'7px 10px', background:L.bg,
+                        border:'none', boxShadow:`rgba(232,163,59,0.45) 0px 0px 0px 1.5px`,
+                        borderRadius:8, fontFamily:SN, fontSize:12, color:T.fg, outline:'none' }}
+                    />
+                    <button onPointerDown={() => setNotaAbiertaIdx(null)}
+                      style={{ padding:'7px 12px', background:tieneNota?C.amber:L.bg3, border:'none',
+                        borderRadius:8, color:tieneNota?'#000':T.fg3, fontFamily:SN, fontSize:12,
+                        fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+                      {tieneNota ? '✓' : '✕'}
+                    </button>
+                  </div>
+                )}
               </div>
-              <div style={{ flex:1 }}>
-                <div style={{ fontFamily:SN,fontSize:13,fontWeight:600,color:T.fg }}>{l.producto.nombre}</div>
-                {l.formato && <div style={{ fontFamily:SM,fontSize:10,color:T.fg3 }}>{l.formato.nombre}</div>}
-                <input
-                  type="text"
-                  value={l.notas}
-                  onChange={e => setLineas(prev => prev.map((ln,j) => j===i ? {...ln, notas: e.target.value} : ln))}
-                  placeholder="nota (ej: en copa, sin sal…)"
-                  style={{ marginTop:4, width:'100%', padding:'4px 8px', background:L.bg,
-                    border:'none', boxShadow:`rgba(232,163,59,0.35) 0px 0px 0px 1px`,
-                    borderRadius:6, fontFamily:SN, fontSize:11, color:T.fg,
-                    outline:'none', boxSizing:'border-box' as React.CSSProperties['boxSizing'] }}
-                />
-              </div>
-              <span style={{ fontFamily:SM,fontSize:11,color:T.fg3,flexShrink:0 }}>
-                {((l.formato?l.formato.precio:(l.producto.precio??0))*l.cantidad).toFixed(2)}€
-              </span>
-              <button onPointerDown={() => removeLinea(i)} style={{ background:'none',border:'none',color:C.red,fontSize:18,cursor:'pointer',lineHeight:1,flexShrink:0 }}>×</button>
-            </div>
-          ))}
+            )
+          })}
         </div>
         <div style={{ display:'flex',justifyContent:'space-between',alignItems:'baseline',padding:'10px 12px',borderTop:`2px solid ${T.rule}`,marginBottom:12 }}>
           <span style={{ fontFamily:SM,fontSize:11,color:T.fg3,letterSpacing:'.06em' }}>TOTAL</span>
