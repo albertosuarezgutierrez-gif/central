@@ -112,6 +112,23 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
   const [ultimaActualizacion, setUltimaActualizacion] = useState<Date | null>(null)
   const [activandoBridge, setActivandoBridge] = useState<Record<string, 'idle'|'activando'|'ok'|'nolocal'>>({})
 
+  const cargar = useCallback(async () => {
+    try {
+      const res = await fetch('/api/owner/diagnostico', {
+        headers: { 'x-ia-restaurante-id': restauranteId },
+      })
+      if (!res.ok) throw new Error(`Error ${res.status}`)
+      const json = await res.json()
+      setData(json)
+      setUltimaActualizacion(new Date())
+      setError(null)
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'No se pudo cargar el diagnóstico')
+    } finally {
+      setCargando(false)
+    }
+  }, [restauranteId])
+
   const activarBridge = useCallback(async (nombre: string) => {
     setActivandoBridge(prev => ({ ...prev, [nombre]: 'activando' }))
     try {
@@ -129,23 +146,6 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
       setActivandoBridge(prev => ({ ...prev, [nombre]: 'nolocal' }))
     }
   }, [cargar])
-
-  const cargar = useCallback(async () => {
-    try {
-      const res = await fetch('/api/owner/diagnostico', {
-        headers: { 'x-ia-restaurante-id': restauranteId },
-      })
-      if (!res.ok) throw new Error(`Error ${res.status}`)
-      const json = await res.json()
-      setData(json)
-      setUltimaActualizacion(new Date())
-      setError(null)
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'No se pudo cargar el diagnóstico')
-    } finally {
-      setCargando(false)
-    }
-  }, [restauranteId])
 
   // Cargar al montar y cada 60 segundos
   useEffect(() => {

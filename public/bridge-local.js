@@ -306,6 +306,7 @@ const mgmtServer = http.createServer((req, res) => {
     'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
     'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Private-Network': 'true',  // requerido Chrome 101+ para fetch https→localhost
     'Content-Type': 'application/json',
   }
 
