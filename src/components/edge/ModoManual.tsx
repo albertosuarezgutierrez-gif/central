@@ -534,11 +534,11 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
         </div>
         <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
           {lineas.map((l,i) => (
-            <div key={i} style={{ display:'flex', alignItems:'center', gap:10, padding:'8px 12px',
+            <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:10, padding:'8px 12px',
               background: L.bg2, border:'none',
               boxShadow: `rgba(184,169,139,0.45) 0px 0px 0px 1px`,
               borderRadius:10 }}>
-              <div style={{ display:'flex', gap:4, alignItems:'center' }}>
+              <div style={{ display:'flex', gap:4, alignItems:'center', paddingTop:2, flexShrink:0 }}>
                 <button onPointerDown={() => updateCantidad(i,-1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
                 <span style={{ fontFamily:SM,fontSize:13,fontWeight:700,color:T.fg,width:24,textAlign:'center' }}>{l.cantidad}</span>
                 <button onPointerDown={() => updateCantidad(i,+1)} style={{ width:24,height:24,borderRadius:9999,background:L.bg3,border:'none',boxShadow:`${T.rS} 0px 0px 0px 1px`,color:T.fg,fontSize:16,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
@@ -546,11 +546,21 @@ export default function ModoManual({ session, turnoId, onBack }: Props) {
               <div style={{ flex:1 }}>
                 <div style={{ fontFamily:SN,fontSize:13,fontWeight:600,color:T.fg }}>{l.producto.nombre}</div>
                 {l.formato && <div style={{ fontFamily:SM,fontSize:10,color:T.fg3 }}>{l.formato.nombre}</div>}
+                <input
+                  type="text"
+                  value={l.notas}
+                  onChange={e => setLineas(prev => prev.map((ln,j) => j===i ? {...ln, notas: e.target.value} : ln))}
+                  placeholder="nota (ej: en copa, sin sal…)"
+                  style={{ marginTop:4, width:'100%', padding:'4px 8px', background:L.bg,
+                    border:'none', boxShadow:`rgba(232,163,59,0.35) 0px 0px 0px 1px`,
+                    borderRadius:6, fontFamily:SN, fontSize:11, color:T.fg,
+                    outline:'none', boxSizing:'border-box' as React.CSSProperties['boxSizing'] }}
+                />
               </div>
-              <span style={{ fontFamily:SM,fontSize:11,color:T.fg3 }}>
+              <span style={{ fontFamily:SM,fontSize:11,color:T.fg3,flexShrink:0 }}>
                 {((l.formato?l.formato.precio:(l.producto.precio??0))*l.cantidad).toFixed(2)}€
               </span>
-              <button onPointerDown={() => removeLinea(i)} style={{ background:'none',border:'none',color:C.red,fontSize:18,cursor:'pointer',lineHeight:1 }}>×</button>
+              <button onPointerDown={() => removeLinea(i)} style={{ background:'none',border:'none',color:C.red,fontSize:18,cursor:'pointer',lineHeight:1,flexShrink:0 }}>×</button>
             </div>
           ))}
         </div>

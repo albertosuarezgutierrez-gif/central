@@ -45,6 +45,7 @@ export async function POST(req: NextRequest) {
           camarero_id, turno_id,
           tipo, estado: tipo === 'cuenta' ? 'nueva' : 'en_cocina',
           restaurante_id: rid,
+          ...(nota_general ? { nota_general } : {}),
         })
         .select().single()
       if (cmdErr) throw cmdErr

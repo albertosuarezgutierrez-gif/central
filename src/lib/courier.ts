@@ -26,6 +26,7 @@ interface PrintPayload {
   ticket_num: number
   seccion: string
   zona_nombre?: string | null  // nombre de la zona para mostrar en ticket
+  nota_general?: string | null // nota que se imprime en todos los tickets de esta comanda
   items: { nombre: string; cantidad: number; notas?: string }[]
   tipo: string
   ts: string
@@ -97,6 +98,14 @@ export function generarEscPos(payload: PrintPayload): Buffer {
   bufs.push(t(hora + '  ' + payload.camarero.toUpperCase()), b(LF))
   bufs.push(t(SEP), b(LF), b(LF))
 
+  // Nota general de comanda (se imprime en TODOS los tickets)
+  if (payload.nota_general) {
+    bufs.push(b(ESC, 0x45, 0x01))
+    bufs.push(t('!! NOTA: ' + payload.nota_general.substring(0, 28).toUpperCase()), b(LF))
+    bufs.push(b(ESC, 0x45, 0x00))
+    bufs.push(b(LF))
+  }
+
   // Items
   for (const item of payload.items) {
     const qty  = String(item.cantidad).padStart(2)
@@ -147,6 +156,12 @@ export function generarTextoPlano(payload: PrintPayload): string {
   lines.push(`${hora}  ${payload.camarero.toUpperCase()}`)
   lines.push(SEP)
   lines.push('')
+
+  // Nota general de comanda
+  if (payload.nota_general) {
+    lines.push(`!! NOTA: ${payload.nota_general.substring(0, 28).toUpperCase()}`)
+    lines.push('')
+  }
 
   for (const item of payload.items) {
     lines.push(`${String(item.cantidad).padStart(2)}x  ${item.nombre.toUpperCase()}`)
@@ -262,6 +277,7 @@ interface ComandaInfo {
   restaurante_id?: string
   zona_tipo?: string | null
   zona_nombre?: string | null
+  nota_general?: string | null // nota de la comanda → se imprime en todos sus tickets
 }
 
 /**
@@ -419,6 +435,7 @@ export async function crearPrintJobs(
       ticket_num:  ticketNum,
       seccion:     grupo.seccion_label,
       zona_nombre: comanda.zona_nombre ?? null,
+      nota_general: comanda.nota_general ?? null,
       items: grupo.items.map(i => ({
         nombre:   i.nombre,
         cantidad: i.cantidad,
@@ -538,6 +555,7 @@ export async function crearPrintJobMarchar(
       ticket_num:  ticketNum,
       seccion:     'PASE',
       zona_nombre: comanda.zona_nombre ?? null,
+      nota_general: comanda.nota_general ?? null,
       items: grupo.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, notas: i.notas ?? undefined })),
       tipo: 'marchar',
       ts,
