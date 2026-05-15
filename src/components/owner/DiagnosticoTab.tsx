@@ -242,7 +242,17 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
         {impresoras.map((imp, i) => {
           const ping = imp.ultimo_ping ? new Date(imp.ultimo_ping).getTime() : null
           const minPing = ping ? Math.floor((Date.now() - ping) / 60000) : null
-          const ok = imp.activa && imp.configurada && (imp.connection_type === 'cloudprnt' ? minPing !== null && minPing < 5 : true)
+          const bridgeOnline = bridge.tokens.some(b => b.estado === 'online')
+          const ok = imp.activa && imp.configurada && (
+            imp.connection_type === 'cloudprnt'
+              ? minPing !== null && minPing < 5
+              : bridgeOnline  // ip_local depende del bridge
+          )
+          const valorImpresora = ok ? 'Online'
+            : !imp.activa ? 'Desactivada'
+            : !imp.configurada ? 'Sin configurar'
+            : imp.connection_type !== 'cloudprnt' && !bridgeOnline ? 'Bridge desconectado'
+            : 'Sin actividad reciente'
           const ipLabel = imp.ip_address ? `${imp.ip_address}:${imp.port}` : null
           const lastOctet = imp.ip_address ? parseInt(imp.ip_address.split('.')[3] ?? '0') : 0
           const ipDinamica = lastOctet > 20 && lastOctet !== 100 && lastOctet !== 200 && lastOctet !== 254
@@ -250,7 +260,7 @@ export default function DiagnosticoTab({ restauranteId }: Props) {
             <div key={i}>
               <Row
                 label={imp.nombre}
-                valor={ok ? 'Online' : !imp.activa ? 'Desactivada' : !imp.configurada ? 'Sin configurar' : 'Sin actividad reciente'}
+                valor={valorImpresora}
                 detalle={
                   imp.connection_type === 'cloudprnt' && minPing !== null
                     ? `CloudPRNT · último ping ${minPing}m`
