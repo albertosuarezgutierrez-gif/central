@@ -351,6 +351,30 @@ mgmtServer.listen(MGMT_PORT, '127.0.0.1', () => {
   log('ok', `Servidor de gestión local en puerto ${MGMT_PORT}`)
 })
 
+// ── Crash handlers: salida limpia para que el watchdog VBS/bat reinicie ──
+process.on('uncaughtException', (err) => {
+  log('warn', `Error fatal — reiniciando en 5s: ${err.message}`)
+  process.exit(1)
+})
+process.on('unhandledRejection', (err) => {
+  log('warn', `Promesa rechazada — reiniciando en 5s: ${String(err)}`)
+  process.exit(1)
+})
+
+// ── Watchdog de actividad: si lleva 10 min sin poll, reinicia ──
+let lastPollOk = Date.now()
+const _pollOrig = poll
+poll = async function() {
+  await _pollOrig()
+  lastPollOk = Date.now()
+}
+setInterval(() => {
+  if (Date.now() - lastPollOk > 10 * 60 * 1000) {
+    log('warn', 'Watchdog: sin actividad 10 min — reiniciando...')
+    process.exit(1)
+  }
+}, 60_000)
+
 discover().then(() => {
   log('ok', 'Bridge listo. Esperando jobs...')
   setInterval(poll, POLL_MS)

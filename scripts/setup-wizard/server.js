@@ -180,16 +180,28 @@ function installAutostart(token) {
 
     // VBS launcher: wscript crea procesos independientes del Job Object del wizard
     // El bridge sobrevive al cerrar el wizard — no queda vinculado al proceso padre
+    // VBS watchdog: Do/Loop reinicia el bridge si se cae (Wait=True espera al proceso)
     const vbs = [
       `Set oShell = CreateObject("WScript.Shell")`,
       `oShell.Environment("Process")("BRIDGE_TOKEN") = "${token}"`,
       `oShell.Environment("Process")("IAREST_API") = "${API}"`,
-      `oShell.Run chr(34) & "${exePath}" & chr(34) & " --bridge", 0, False`,
+      `Do`,
+      `  oShell.Run chr(34) & "${exePath}" & chr(34) & " --bridge", 0, True`,
+      `  WScript.Sleep 5000`,
+      `Loop`,
     ].join('\r\n')
     fs.writeFileSync(vbsPath, vbs)
 
-    // Bat de fallback
-    const bat = [`@echo off`, `set BRIDGE_TOKEN=${token}`, `set IAREST_API=${API}`, `start "" /B "${exePath}" --bridge`].join('\r\n')
+    // Bat de fallback (loop watchdog también)
+    const bat = [
+      `@echo off`,
+      `set BRIDGE_TOKEN=${token}`,
+      `set IAREST_API=${API}`,
+      `:loop`,
+      `"${exePath}" --bridge`,
+      `timeout /t 5 /nobreak > nul`,
+      `goto loop`,
+    ].join('\r\n')
     fs.writeFileSync(batPath, bat)
 
     // Autostart apunta al VBS
@@ -217,7 +229,10 @@ function launchBridgeNow(token) {
         `Set oShell = CreateObject("WScript.Shell")`,
         `oShell.Environment("Process")("BRIDGE_TOKEN") = "${token}"`,
         `oShell.Environment("Process")("IAREST_API") = "${API}"`,
-        `oShell.Run chr(34) & "${exePath}" & chr(34) & " --bridge", 0, False`,
+        `Do`,
+        `  oShell.Run chr(34) & "${exePath}" & chr(34) & " --bridge", 0, True`,
+        `  WScript.Sleep 5000`,
+        `Loop`,
       ].join('\r\n')
       try { fs.mkdirSync(CFG_DIR, { recursive: true }) } catch {}
       fs.writeFileSync(vbsPath, vbs)
@@ -240,6 +255,16 @@ if (process.argv.includes('--bridge')) {
   const TOKEN = process.env.BRIDGE_TOKEN || cfg.token || ''
   if (!TOKEN) { console.error('[ia.rest Bridge] Token no configurado.'); process.exit(1) }
   console.log(`[ia.rest Bridge] v${VERSION} · token: ${TOKEN.slice(0,8)}...`)
+
+  // ── Capa 2: crash handler — salida limpia para que el watchdog VBS reinicie ──
+  process.on('uncaughtException', (err) => {
+    console.error('[Bridge] Error fatal — reiniciando en 5s:', err.message)
+    process.exit(1)
+  })
+  process.on('unhandledRejection', (err) => {
+    console.error('[Bridge] Promesa rechazada — reiniciando en 5s:', err)
+    process.exit(1)
+  })
 
   const macToIP = {}
   if (cfg.printers) cfg.printers.forEach(p => { if (p.mac) macToIP[p.mac] = p.ip })
@@ -306,6 +331,23 @@ if (process.argv.includes('--bridge')) {
   setInterval(poll, 3000)
   poll()
   process.on('SIGINT', () => process.exit(0))
+
+  // ── Capa 3: watchdog de actividad — si lleva 10 min sin poll exitoso, reinicia ──
+  // Cubre el caso de bridge "colgado" (proceso vivo pero sin respuesta de red)
+  let lastPollOk = Date.now()
+  const _origPoll = poll
+  async function pollWithHB() {
+    const antes = lastPollOk
+    await _origPoll()
+    // Si poll no lanzó excepción = señal de vida
+    lastPollOk = Date.now()
+  }
+  setInterval(() => {
+    if (Date.now() - lastPollOk > 10 * 60 * 1000) {
+      console.error('[Bridge] Watchdog: sin actividad 10 min — reiniciando...')
+      process.exit(1)
+    }
+  }, 60_000)
 
 } else {
   startWizard()
