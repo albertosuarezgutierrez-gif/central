@@ -211,7 +211,7 @@ h1 .sl{display:block;font-size:clamp(38px,5.5vw,64px);color:var(--cream2);opacit
 .mdesc{font-size:13px;color:var(--cream3);line-height:1.65;letter-spacing:-.005em;flex:1}
 .mbadge{align-self:flex-start;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:9999px;margin-top:4px}
 .mbadge.b-addon{background:rgba(232,163,59,.12);color:var(--amber);border:1px solid rgba(232,163,59,.28)}
-.mbadge.b-new{background:rgba(74,145,80,.12);color:#4A9150;border:1px solid rgba(74,145,80,.28)}
+.mbadge.b-soon{background:rgba(74,145,80,.08);color:#4A9150;border:1px solid rgba(74,145,80,.22);opacity:.85}
 .mbadge.b-legal{background:rgba(217,68,43,.08);color:var(--red);border:1px solid rgba(217,68,43,.22)}
 .mbadge.b-core{background:rgba(26,23,20,.06);color:var(--cream3);border:1px solid var(--b)}
 .trust{border-top:1px solid var(--b);border-bottom:1px solid var(--b);padding:24px 40px;display:flex;align-items:center;justify-content:center;gap:48px;background:rgba(239,231,214,.6)}
@@ -644,7 +644,7 @@ export default function Page() {
           {[
             {ico:"🎙️",t:"Pedidos por voz",d:"El camarero dicta en español real. Whisper (Groq) transcribe en 0,3s, Claude estructura mesa, platos y notas. Sin tocar pantalla.",badge:null,cls:"mc-red"},
             {ico:"📱",t:"QR en mesa",d:"El cliente pide desde su móvil escaneando el QR. El ticket llega al mismo KDS que el resto — igual que si lo dictara el camarero.",badge:{t:"Add-on · 12€/mesa/mes",cls:"b-addon"},cls:"mc-amber"},
-            {ico:"🛵",t:"Delivery integrado",d:"Los pedidos de Glovo, Uber Eats y Just Eat entran directamente al KDS. Sin reescribir comandas, sin tabletas extra.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-green"},
+            {ico:"🛵",t:"Delivery integrado",d:"Los pedidos de Glovo, Uber Eats y Just Eat entrarán directamente al KDS. Sin reescribir comandas, sin tabletas extra.",badge:{t:"Próximamente",cls:"b-soon"},cls:"mc-green"},
             {ico:"📺",t:"KDS en cocina",d:"Pantalla compartida para cocina. Prioridades automáticas, alertas de alergia y timers por pase. Funciona en cualquier tablet de 70€.",badge:null,cls:""},
             {ico:"🖨️",t:"Impresoras térmicas",d:"ESC/POS TCP y Star CloudPRNT. El Bridge local gestiona la conexión LAN — sin drivers, sin configuración, desde el primer día.",badge:null,cls:""},
             {ico:"💳",t:"Cobro completo",d:"Stripe Terminal, Bizum, efectivo y 6 métodos de pago. División de cuenta por ítems o partes iguales. Cierre de caja al instante.",badge:null,cls:""},
@@ -752,7 +752,7 @@ export default function Page() {
         <div className="faqlist">
           {[
             {q:"¿Funciona si hay ruido en sala?",a:"Sí. Usamos Whisper large-v3 vía Groq, el mejor modelo de transcripción para español. Funciona bien con ruido de fondo, música y conversaciones cercanas. Recomendamos hablar a 15–20 cm del micrófono, algo natural cuando ya llevas la comanda en mente."},
-            {q:"¿Cómo funciona la integración con Glovo y Uber Eats?",a:"Los pedidos de delivery entran automáticamente al KDS igual que cualquier comanda de sala. Sin tabletas extra, sin reescribir. El repartidor ve el estado en tiempo real y el sistema consolida todos los canales — sala, QR y delivery — en una sola pantalla para cocina."},
+            {q:"¿Cómo funcionará la integración con Glovo y Uber Eats?",a:"Estamos preparando la integración directa con las principales plataformas de delivery. Los pedidos entrarán automáticamente al KDS igual que cualquier comanda de sala — sin tabletas extra, sin reescribir. Estará disponible próximamente. Si tienes delivery activo y quieres ser de los primeros en probarlo, escríbenos."},
             {q:"¿Qué pasa si se cae internet en mitad del servicio?",a:"Las comandas ya enviadas siguen visibles en cocina. Para nuevas comandas cae a modo manual: el camarero puede abrir cualquier comanda anterior y modificarla."},
             {q:"¿Necesito hardware nuevo? ¿Impresoras, tablets específicas?",a:"No. ia.rest funciona en cualquier móvil o tablet con navegador. Para el KDS en cocina, una tablet de 70€ es suficiente. Para impresoras de tickets, garantizamos compatibilidad 100% con modelos ESC/POS TCP (IP local) y Star CloudPRNT LAN/WiFi como la Star TSP143IIILAN o TSP143IIIW. Si ya tienes otra impresora, probablemente funcione, pero solo garantizamos las anteriores."},
             {q:"¿El sistema entiende la carta de mi restaurante?",a:'Sí. Durante el onboarding (10 minutos) introduces tus platos y el sistema los aprende. Si el camarero dice "una de la casa" y en tu carta se llama "Ensaladilla de la abuela", el ticket sale con el nombre correcto.'},
@@ -773,7 +773,7 @@ export default function Page() {
 
       {/* TRUST */}
       <div className="trust">
-        {[["🔒","Datos en España","· Supabase EU-West"],["🇪🇸","Soporte en español","· Respuesta el mismo día"],["📋","VeriFactu AEAT 2026","· Incluido en todos los perfiles"],["🛵","Delivery integrado","· Glovo, Uber Eats y más"],["⏱️","Fichaje RD-ley 8/2019","· Control horario incluido"],["💳","Sin permanencia","· Cancela cuando quieras"]].map(([ico,b,t])=>(
+        {[["🔒","Datos en España","· Supabase EU-West"],["🇪🇸","Soporte en español","· Respuesta el mismo día"],["📋","VeriFactu AEAT 2026","· Incluido en todos los perfiles"],["🛵","Delivery","· Glovo y Uber Eats · Próximamente"],["⏱️","Fichaje RD-ley 8/2019","· Control horario incluido"],["💳","Sin permanencia","· Cancela cuando quieras"]].map(([ico,b,t])=>(
           <div key={b} className="ti"><span className="ico">{ico}</span><span><strong>{b}</strong>{t}</span></div>
         ))}
       </div>
@@ -804,7 +804,7 @@ export default function Page() {
           const qrPrice=pQR>0?(pAnnual?Math.round(pQR*12*0.82):pQR*12):0;
           const total=basePrice+qrPrice;
           const examples:Array<[number,string]>=[[1,"1 perfil"],[3,"3 perfiles"],[6,"6 perfiles"]];
-          const feats=["Voz + KDS en cocina","Delivery (Glovo, Uber Eats)","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","Alertas en tiempo real","Panel owner + supervisor","QR en mesa (add-on)","14 días de prueba gratis"];
+          const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","Alertas en tiempo real","Panel owner + supervisor","QR en mesa (add-on)","Delivery (próximamente)","14 días de prueba gratis"];
           return (
             <div className="pcalc reveal">
               <div className="pcalc-inner">
