@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
 
   if (error) {
     // Módulo de reservas aún no implementado — silencioso hasta que exista
-    if (error.message.includes('does not exist') || error.message.includes('no existe')) {
+    if (error.message.includes('does not exist') || error.message.includes('no existe') || error.message.includes('Could not find')) {
       return NextResponse.json({ ok: true, liberadas: 0, nota: 'módulo reservas pendiente' })
     }
     console.error('[reservas-noshow] Error:', error.message)
