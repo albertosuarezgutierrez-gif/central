@@ -228,16 +228,56 @@ function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[
   return { items, confianza: confianzaTotal / items.length }
 }
 
+// ── Extracción de nota explícita ─────────────────────────────────────────────
+// Detecta "nota [texto]" como separador explícito en el comando de voz.
+// Ejemplos:
+//   "ve uno, dos cervezas, nota en copa"     → nota="en copa"
+//   "s1 una paella nota sin sal para niño"   → nota="sin sal para niño"
+//   "nota lo siguiente: sin cebolla"         → nota="lo siguiente: sin cebolla"
+//   "b1 tres cañas y nota alérgica al gluten"→ nota="alérgica al gluten"
+//
+// Retorna null si no hay "nota" explícita (→ se mantiene el fallback a Claude
+// para notas IMPLÍCITAS como "muy hecho", "sin sal" sin la palabra "nota").
+
+function extraerNotaExplicita(tNorm: string): { nota: string; textoSinNota: string } | null {
+  // Patrón: "nota" como palabra completa, con al menos 2 chars de contenido tras ella
+  // Acepta posición: al inicio, tras coma, o tras espacio
+  const match = tNorm.match(/(?:(?:,\s*)|\s+|^)\b(nota)\b\s+(.{2,120})$/)
+  if (!match) return null
+  const nota = match[2].trim()
+    .replace(/^(?:lo siguiente[,:]?\s*|que\s+)/i, '') // quitar "lo siguiente:", "que"
+    .trim()
+  if (!nota) return null
+  const idxNota = tNorm.lastIndexOf(match[0])
+  const textoSinNota = tNorm.slice(0, idxNota).trim().replace(/[,\s]+$/, '').trim()
+  return { nota, textoSinNota }
+}
+
 // ── Función principal ─────────────────────────────────────────────────────────
 
 export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | null {
   const tNorm = norm(texto)
 
-  if (KW_NOTA.some(k => tNorm.includes(k))) return null
+  // ── Nota explícita: "nota [texto]" como separador ─────────────────────────
+  // Si el camarero dice "ve uno, dos cervezas, nota en copa":
+  //   - Extraemos nota_general = "en copa"
+  //   - Seguimos parseando "ve uno, dos cervezas" por patrones
+  // Si hay notas IMPLÍCITAS (muy hecho, sin sal…) SIN la palabra "nota" → Claude
+  let notaGeneral: string | null = null
+  let tParseado = tNorm
+
+  const notaExtraida = extraerNotaExplicita(tNorm)
+  if (notaExtraida) {
+    notaGeneral = notaExtraida.nota
+    tParseado   = notaExtraida.textoSinNota
+  } else if (KW_NOTA.some(k => tNorm.includes(k))) {
+    // Nota implícita sin keyword "nota" → Claude para máxima precisión
+    return null
+  }
 
   // ── 0. MESA RÁPIDA ───────────────────────────────────────────────────────
-  if (KW_MESA_RAPIDA.some(k => tNorm.includes(k))) {
-    const extraido = extraerMesaRapida(tNorm)
+  if (KW_MESA_RAPIDA.some(k => tParseado.includes(k))) {
+    const extraido = extraerMesaRapida(tParseado)
     if (extraido && (extraido.zona || extraido.alias)) {
       return {
         mesa: '', tipo: 'aviso', items: [], confianza: 0.91, raw: texto,
@@ -246,25 +286,25 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
     }
     return null
   }
-  if (KW_CUENTA.some(k => tNorm.includes(k))) {
-    const mesa = detectarMesa(tNorm, cache)
+  if (KW_CUENTA.some(k => tParseado.includes(k))) {
+    const mesa = detectarMesa(tParseado, cache)
     if (mesa) return { mesa, tipo: 'cuenta', items: [], confianza: 0.95, raw: texto }
   }
 
   // ── 2. MARCHAR ───────────────────────────────────────────────────────────
-  if (KW_MARCHAR.some(k => tNorm.includes(k))) {
+  if (KW_MARCHAR.some(k => tParseado.includes(k))) {
     // Multi-intent: "marchar mesa X y un producto" → Claude
-    const tieneItems = /\b(y|,)\s+\w+/.test(tNorm) &&
-      !KW_MARCHAR.some(k => tNorm.replace(k, '').trim().startsWith('mesa'))
+    const tieneItems = /\b(y|,)\s+\w+/.test(tParseado) &&
+      !KW_MARCHAR.some(k => tParseado.replace(k, '').trim().startsWith('mesa'))
     if (tieneItems) return null
 
-    const mesa = detectarMesa(tNorm, cache)
+    const mesa = detectarMesa(tParseado, cache)
     if (mesa) return { mesa, tipo: 'marchar', items: [], confianza: 0.95, raw: texto }
   }
 
   // ── 3. 86 ────────────────────────────────────────────────────────────────
-  if (KW_86.some(k => tNorm.includes(k))) {
-    let textoSin = tNorm
+  if (KW_86.some(k => tParseado.includes(k))) {
+    let textoSin = tParseado
     for (const k of KW_86) textoSin = textoSin.replace(k, ' ')
     textoSin = textoSin.trim()
     for (const p of cache.productos) {
@@ -278,10 +318,10 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
   }
 
   // ── 4. COMANDA ───────────────────────────────────────────────────────────
-  const mesa = detectarMesa(tNorm, cache)
+  const mesa = detectarMesa(tParseado, cache)
 
   // Limpiar referencia a mesa del texto de items
-  let textoItems = tNorm
+  let textoItems = tParseado
   if (mesa) {
     textoItems = textoItems
       .replace(/(?:a la mesa|para la mesa|a la|para la|en la|mesa|barra|terraza|salon|salo n)\s+\w+/g, ' ')
@@ -311,6 +351,7 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
       formato: i.formato ?? undefined,
     })),
     num_comensales: null,
+    nota_general: notaGeneral,   // ← incluida si el camarero dijo "nota [texto]"
     confianza: confianzaFinal,
     raw: texto,
   }

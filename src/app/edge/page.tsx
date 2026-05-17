@@ -65,6 +65,7 @@ interface ProductoCarta {
 interface BrainResult {
   mesa: string; tipo: string
   items: { nombre: string; cantidad: number; notas?: string }[]
+  nota_general?: string | null
   confianza: number; raw: string
 }
 interface ChatMsg {
@@ -75,9 +76,10 @@ interface ChatMsg {
 function buildTTS(b: BrainResult, a86: string[] = [], aAlerg: {producto:string;alergenos:string[]}[] = []): string {
   const s86 = a86.length ? `Atención, ochenta y seis: ${a86.join(' y ')}. ` : ''
   const sAl = aAlerg.length ? `Alérgeno detectado: ${aAlerg.map(a=>`${a.producto} contiene ${a.alergenos.join(' y ')}`).join('. ')}. ` : ''
+  const sNota = b.nota_general ? `. Nota: ${b.nota_general}` : ''
   const items = b.items ?? []
   if (!items.length) return `${s86}${sAl}${b.tipo} para ${b.mesa}. ¿Confirmamos?`
-  return `${s86}${sAl}${b.mesa}: ${items.map(it=>`${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}. ¿Confirmamos?`
+  return `${s86}${sAl}${b.mesa}: ${items.map(it=>`${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}${sNota}. ¿Confirmamos?`
 }
 
 function speak(text: string): Promise<void> {
@@ -1713,6 +1715,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 {transcript&&(
                   <div style={{padding:'4px 14px 6px',borderTop:`1px solid ${C.rule}`,fontFamily:SC,fontSize:13,color:C.teal}}>
                     💬 {transcript}
+                  </div>
+                )}
+                {brain.nota_general&&(
+                  <div style={{padding:'6px 14px',borderTop:`1px solid ${C.rule}`,background:C.ambS,display:'flex',alignItems:'center',gap:6}}>
+                    <span style={{fontFamily:SM,fontSize:9,color:'#7A5A1A',letterSpacing:'.08em',fontWeight:700,textTransform:'uppercase' as const}}>NOTA</span>
+                    <span style={{fontFamily:SC,fontSize:13,color:'#7A5A1A',fontStyle:'italic'}}>{brain.nota_general}</span>
                   </div>
                 )}
                 <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
