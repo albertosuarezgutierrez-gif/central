@@ -20,15 +20,15 @@ const C = {
 
 const steps = [
   { n: '1', title: 'Desactiva el antivirus temporalmente', desc: 'Si tienes Avast, Kaspersky u otro antivirus, desactívalo 10 minutos antes de instalar. El instalador abrirá el asistente en tu navegador.' },
-  { n: '2', title: 'Descarga y ejecuta el instalador', desc: 'Doble clic en el archivo descargado. Si Windows avisa, haz clic en \"Más información → Ejecutar de todas formas\".' },
+  { n: '2', title: 'Descarga y ejecuta el instalador', desc: 'Doble clic en el archivo descargado. Si Windows avisa, haz clic en "Más información → Ejecutar de todas formas".' },
   { n: '3', title: 'Pega tu token y busca impresoras', desc: 'Cópialo desde Owner → Config → Bridge. El asistente escanea tu red y encuentra las impresoras automáticamente.' },
   { n: '4', title: 'Añade la excepción en el antivirus', desc: 'El asistente te mostrará la ruta exacta al terminar. Añádela como excepción en tu antivirus antes de reactivarlo.' },
-  { n: '5', title: 'Configura los flujos', desc: 'Desde Owner → Flujos de trabajo, asigna qué comandas van a cada impresora. Listo.' },
+  { n: '5', title: 'Listo — el Bridge ya arranca solo', desc: 'El instalador registra el Bridge como tarea del sistema. Se inicia automáticamente cada vez que enciendes el PC y se recupera solo si falla. No tienes que hacer nada más.' },
 ]
 
 const faqs = [
   { q: '¿Qué impresoras son compatibles?', a: 'Todas las impresoras ESC/POS conectadas por red WiFi o LAN con IP fija. Modelos validados: Star TSP143IIILAN, Star TSP143IIIW, Epson TM-T20III LAN, Sunmi NT311.' },
-  { q: '¿Necesito dejar el ordenador encendido?', a: 'Sí, el Bridge debe estar en ejecución para que las comandas lleguen a la impresora. Se recomienda un mini PC o el propio ordenador de caja.' },
+  { q: '¿Tengo que recordar arrancar el Bridge cada día?', a: 'No. El instalador lo configura como tarea automática de Windows. Arranca solo al encender el PC y, si se cae por cualquier motivo, se reinicia solo en segundos.' },
   { q: '¿Funciona en Mac o Linux?', a: 'Sí, descarga el script para Mac/Linux más abajo.' },
   { q: '¿Qué pasa si se cae la conexión a internet?', a: 'Las comandas se guardan en cola y se imprimen en cuanto vuelva la conexión.' },
 ]
