@@ -4,11 +4,11 @@ import { useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
 const ESTADOS = [
-  { key: 'pendiente',   label: 'Pedido recibido',    icon: '📋' },
-  { key: 'confirmado',  label: 'Confirmado',          icon: '✓'  },
-  { key: 'en_cocina',   label: 'En cocina',           icon: '👨‍🍳' },
-  { key: 'listo',       label: 'Listo',               icon: '✅' },
-  { key: 'entregado',   label: 'Entregado',           icon: '🎉' },
+  { key: 'pendiente',  label: 'Pedido recibido', sub: 'Esperando confirmación' },
+  { key: 'confirmado', label: 'Confirmado',       sub: 'Lo hemos recibido' },
+  { key: 'en_cocina',  label: 'En cocina',        sub: 'Preparando tu pedido' },
+  { key: 'listo',      label: 'Listo',            sub: 'Preparado para entregar' },
+  { key: 'entregado',  label: 'Entregado',        sub: '¡Disfrútalo!' },
 ]
 
 interface Pedido {
@@ -22,131 +22,132 @@ interface Pedido {
   created_at: string
 }
 
-export default function TrackingPage({
-  params,
-}: {
-  params: { slug: string; id: string }
-}) {
+export default function TrackingPage({ params }: { params: { slug: string; id: string } }) {
   const [pedido, setPedido] = useState<Pedido | null>(null)
   const [cargando, setCargando] = useState(true)
 
   useEffect(() => {
-    // Carga inicial
     fetch(`/api/storefront/pedido?id=${params.id}`)
       .then(r => r.json())
-      .then(data => {
-        if (data.pedido) setPedido(data.pedido)
-        setCargando(false)
-      })
+      .then(d => { if (d.pedido) setPedido(d.pedido) })
+      .finally(() => setCargando(false))
 
-    // Suscripción realtime
-    const channel = supabase
-      .channel(`pedido-${params.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'pedidos_online',
-          filter: `id=eq.${params.id}`,
-        },
-        payload => {
-          setPedido(prev => prev ? { ...prev, ...(payload.new as Partial<Pedido>) } : prev)
-        }
-      )
+    const ch = supabase.channel(`tracking-${params.id}`)
+      .on('postgres_changes', {
+        event: 'UPDATE', schema: 'public', table: 'pedidos_online',
+        filter: `id=eq.${params.id}`,
+      }, payload => {
+        setPedido(prev => prev ? { ...prev, ...(payload.new as Partial<Pedido>) } : prev)
+      })
       .subscribe()
 
-    return () => { supabase.removeChannel(channel) }
+    return () => { supabase.removeChannel(ch) }
   }, [params.id])
 
-  if (cargando) {
-    return (
-      <div className="min-h-screen bg-[#F6F1E7] flex items-center justify-center">
-        <div className="w-10 h-10 border-4 border-[#D9442B] border-t-transparent rounded-full animate-spin" />
-      </div>
-    )
-  }
+  if (cargando) return (
+    <div className="min-h-screen bg-[#14110E] flex items-center justify-center">
+      <div className="w-8 h-8 rounded-full border-[3px] border-[#D9442B] border-t-transparent animate-spin" />
+    </div>
+  )
 
-  if (!pedido) {
-    return (
-      <div className="min-h-screen bg-[#F6F1E7] flex items-center justify-center">
-        <p className="text-[#6B5E4C]">Pedido no encontrado</p>
-      </div>
-    )
-  }
+  if (!pedido) return (
+    <div className="min-h-screen bg-[#14110E] flex items-center justify-center" style={{ fontFamily: 'Inter Tight, sans-serif' }}>
+      <p className="text-[#9C8E7E]">Pedido no encontrado</p>
+    </div>
+  )
 
   const estadoIdx = ESTADOS.findIndex(e => e.key === pedido.estado)
+  const estadoActual = ESTADOS[estadoIdx]
 
   return (
-    <div className="min-h-screen bg-[#F6F1E7]" style={{ fontFamily: 'Inter Tight, sans-serif' }}>
+    <div className="min-h-screen bg-[#14110E]" style={{ fontFamily: 'Inter Tight, sans-serif' }}>
       <div className="max-w-md mx-auto px-4 py-8">
-        {/* Cabecera */}
+
+        {/* Estado principal */}
         <div className="text-center mb-8">
-          <p className="text-sm text-[#9C8E7E] mb-1">Pedido #{pedido.numero}</p>
-          <h1 className="text-2xl font-bold text-[#14110E]" style={{ fontFamily: 'Newsreader, serif' }}>
-            {pedido.tipo === 'delivery' ? 'En camino' : 'Seguimiento'}
+          <p className="text-xs text-[#9C8E7E] uppercase tracking-widest mb-2">Pedido #{pedido.numero}</p>
+          <h1 className="text-2xl font-bold text-[#F6F1E7] mb-1" style={{ fontFamily: 'Newsreader, serif' }}>
+            {estadoActual?.label ?? pedido.estado}
           </h1>
+          <p className="text-sm text-[#9C8E7E]">{estadoActual?.sub}</p>
+          {pedido.estado !== 'entregado' && (
+            <p className="text-xs text-[#4A3F35] mt-2 animate-pulse">Actualizando en tiempo real…</p>
+          )}
         </div>
 
-        {/* Timeline de estados */}
-        <div className="bg-white rounded-2xl p-6 border border-[#E8E0D4] mb-6">
-          {ESTADOS.filter(e => e.key !== 'cancelado').map((estado, idx) => {
-            const completado = idx <= estadoIdx
-            const activo = idx === estadoIdx
-            return (
-              <div key={estado.key} className="flex items-center gap-4 mb-4 last:mb-0">
-                <div
-                  className="w-10 h-10 rounded-full flex items-center justify-center text-lg flex-shrink-0 transition-all"
-                  style={{
-                    backgroundColor: completado ? '#D9442B' : '#F0EBE3',
-                    transform: activo ? 'scale(1.1)' : 'scale(1)',
-                  }}
-                >
-                  {completado ? (idx === estadoIdx ? estado.icon : '✓') : <span className="text-[#C0B5A8] text-xs">{idx + 1}</span>}
+        {/* Barra de progreso */}
+        <div className="bg-[#1E1A16] rounded-2xl border border-[#2A2420] p-5 mb-4">
+          <div className="space-y-0">
+            {ESTADOS.map((estado, idx) => {
+              const completado = idx <= estadoIdx
+              const activo = idx === estadoIdx
+              const ultimo = idx === ESTADOS.length - 1
+              return (
+                <div key={estado.key} className="flex gap-4">
+                  {/* Línea vertical + círculo */}
+                  <div className="flex flex-col items-center">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold flex-shrink-0 transition-all"
+                      style={{
+                        background: completado ? '#D9442B' : '#2A2420',
+                        color: completado ? '#F6F1E7' : '#4A3F35',
+                        transform: activo ? 'scale(1.15)' : 'scale(1)',
+                        boxShadow: activo ? '0 0 0 3px #D9442B30' : 'none',
+                      }}
+                    >
+                      {completado && !activo ? '✓' : idx + 1}
+                    </div>
+                    {!ultimo && (
+                      <div className="w-0.5 h-6 mt-1 mb-1 transition-all"
+                        style={{ background: idx < estadoIdx ? '#D9442B' : '#2A2420' }} />
+                    )}
+                  </div>
+                  {/* Texto */}
+                  <div className={`flex-1 ${!ultimo ? 'pb-1' : ''} pt-1`}>
+                    <p className="text-sm font-semibold"
+                      style={{ color: completado ? '#F6F1E7' : '#4A3F35' }}>
+                      {estado.label}
+                    </p>
+                    {activo && (
+                      <p className="text-xs text-[#D9442B] mt-0.5">{estado.sub}</p>
+                    )}
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p
-                    className="font-semibold"
-                    style={{ color: completado ? '#14110E' : '#C0B5A8' }}
-                  >
-                    {estado.label}
-                  </p>
-                  {activo && (
-                    <p className="text-xs text-[#D9442B] animate-pulse">En curso...</p>
-                  )}
-                </div>
-                {idx < ESTADOS.length - 2 && (
-                  <div
-                    className="absolute ml-5 mt-10 w-0.5 h-4"
-                    style={{ backgroundColor: idx < estadoIdx ? '#D9442B' : '#E8E0D4' }}
-                  />
-                )}
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Resumen del pedido */}
-        <div className="bg-white rounded-2xl p-5 border border-[#E8E0D4]">
-          <h2 className="font-bold text-[#14110E] mb-3" style={{ fontFamily: 'Newsreader, serif' }}>
-            Tu pedido
-          </h2>
-          <div className="space-y-2 mb-3">
-            {pedido.items.map((item, i) => (
-              <div key={i} className="flex justify-between text-sm text-[#6B5E4C]">
-                <span>{item.cantidad}× {item.nombre}</span>
-                <span>{(item.precio_unitario * item.cantidad).toFixed(2)} €</span>
-              </div>
-            ))}
-          </div>
-          <div className="border-t border-[#E8E0D4] pt-3 flex justify-between font-bold text-[#14110E]">
-            <span>Total</span>
-            <span>{pedido.total.toFixed(2)} €</span>
+              )
+            })}
           </div>
         </div>
 
-        <p className="text-center text-xs text-[#C0B5A8] mt-6">
-          Esta página se actualiza automáticamente
+        {/* Resumen */}
+        <div className="bg-[#1E1A16] rounded-2xl border border-[#2A2420] overflow-hidden">
+          <div className="px-4 py-3 border-b border-[#2A2420]">
+            <p className="text-xs font-bold text-[#9C8E7E] uppercase tracking-wide">
+              {pedido.tipo === 'delivery' ? 'Delivery' : 'Recogida en local'}
+            </p>
+          </div>
+          {pedido.items.map((item, i) => (
+            <div key={i}
+              className={`flex justify-between px-4 py-2.5 text-sm ${i < pedido.items.length - 1 ? 'border-b border-[#2A2420]' : ''}`}>
+              <span className="text-[#D8CDB6]">
+                <span className="text-[#9C8E7E] mr-2">{item.cantidad}×</span>
+                {item.nombre}
+              </span>
+              <span className="text-[#9C8E7E]">
+                {(item.precio_unitario * item.cantidad).toFixed(2)} €
+              </span>
+            </div>
+          ))}
+          <div className="px-4 py-3 border-t border-[#2A2420] flex justify-between">
+            <span className="text-sm font-bold text-[#F6F1E7]">Total</span>
+            <span className="text-sm font-bold text-[#D9442B]"
+              style={{ fontFamily: 'JetBrains Mono, monospace' }}>
+              {pedido.total.toFixed(2)} €
+            </span>
+          </div>
+        </div>
+
+        <p className="text-center text-xs text-[#2A2420] mt-6">
+          Esta página se actualiza sola
         </p>
       </div>
     </div>
