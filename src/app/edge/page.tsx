@@ -2609,7 +2609,11 @@ function ForceUpdateRow() {
         if (reg?.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' })
           setState('updating')
-          setTimeout(() => window.location.reload(), 800)
+          setTimeout(() => {
+            const url = new URL(window.location.href)
+            url.searchParams.set('v', Date.now().toString())
+            window.location.replace(url.toString())
+          }, 800)
           return
         }
         // 2. Forzar comprobación de actualización del SW
@@ -2617,7 +2621,11 @@ function ForceUpdateRow() {
         if (reg?.waiting) {
           reg.waiting.postMessage({ type: 'SKIP_WAITING' })
           setState('updating')
-          setTimeout(() => window.location.reload(), 800)
+          setTimeout(() => {
+            const url = new URL(window.location.href)
+            url.searchParams.set('v', Date.now().toString())
+            window.location.replace(url.toString())
+          }, 800)
           return
         }
       }
@@ -2628,16 +2636,28 @@ function ForceUpdateRow() {
         const current = (window as any).__APP_VERSION__ ?? null
         if (current && version !== current) {
           setState('updating')
-          setTimeout(() => window.location.reload(), 500)
+          setTimeout(() => {
+            const url = new URL(window.location.href)
+            url.searchParams.set('v', Date.now().toString())
+            window.location.replace(url.toString())
+          }, 500)
           return
         }
       }
-      // 4. Hard reload como fallback
+      // 4. Hard reload con cache-bust como fallback
       setState('updating')
-      setTimeout(() => window.location.reload(), 300)
+      setTimeout(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.set('v', Date.now().toString())
+        window.location.replace(url.toString())
+      }, 300)
     } catch {
       setState('updating')
-      setTimeout(() => window.location.reload(), 300)
+      setTimeout(() => {
+        const url = new URL(window.location.href)
+        url.searchParams.set('v', Date.now().toString())
+        window.location.replace(url.toString())
+      }, 300)
     }
   }
 
