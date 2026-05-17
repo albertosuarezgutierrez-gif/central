@@ -1,6 +1,7 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
+import CobrarSheet from '@/components/edge/CobrarSheet'
 
 const L = {
   bg:'#F6F1E7', bg2:'#EFE7D6', bg3:'#E5DAC2', bone:'#FBF8F1',
@@ -61,6 +62,10 @@ export default function ManualComanda({
   const [formatoPicker, setFormatoPicker] = useState<Producto|null>(null)
   const [showCart, setShowCart] = useState(false)
   const [notaIdx, setNotaIdx] = useState<number|null>(null)  // ítem con input de nota abierto
+  const [cobrarOpen, setCobrarOpen] = useState(false)
+  const [cuentaEnviada, setCuentaEnviada] = useState(false)
+  const [cuentaLoading, setCuentaLoading] = useState(false)
+  const [comandaActiva, setComandaActiva] = useState<{ id: string; total: number; estado: string } | null>(null)
 
   // Scroll-safe: cancela tap si el dedo se movió >6px (es scroll, no tap)
   const ptrStart = useRef<{x:number, y:number} | null>(null)
@@ -120,6 +125,34 @@ export default function ManualComanda({
 
   const selectMesa = (m: Mesa) => { setMesaId(m.id); setMesaSel(m); setStep('carta') }
 
+  // Fetch comanda activa cuando cambia la mesa
+  useEffect(() => {
+    if (!mesaId) { setComandaActiva(null); return }
+    fetch(`/api/mesa/${mesaId}/comanda`, { headers: h() })
+      .then(r => r.json())
+      .then(d => {
+        if (d.comanda) {
+          setComandaActiva({ id: d.comanda.id, total: d.comanda.total_estimado ?? 0, estado: d.comanda.estado })
+          setCuentaEnviada(d.comanda.estado === 'cuenta_pedida')
+        } else {
+          setComandaActiva(null)
+        }
+      })
+      .catch(() => setComandaActiva(null))
+  }, [mesaId]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const pedirCuenta = async () => {
+    if (!comandaActiva || cuentaEnviada || cuentaLoading) return
+    setCuentaLoading(true)
+    try {
+      await fetch(`/api/comanda/${comandaActiva.id}/pedir-cuenta`, {
+        method: 'POST', headers: h(),
+      })
+      setCuentaEnviada(true)
+    } catch { /* silencioso */ }
+    finally { setCuentaLoading(false) }
+  }
+
   const send = async () => {
     if (!mesaId || !cart.length) return
     setSending(true); setError('')
@@ -134,7 +167,13 @@ export default function ManualComanda({
         // /api/comanda ya crea print_jobs internamente — no llamar /api/marchar aquí
         setSent(true)
         onSent()
-        setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false); setNotaIdx(null) }, 2000)
+        // Refetch comanda activa (puede haberse creado nueva)
+        fetch(`/api/mesa/${mesaId}/comanda`, { headers: h() })
+          .then(r => r.json())
+          .then(dd => {
+            if (dd.comanda) setComandaActiva({ id: dd.comanda.id, total: dd.comanda.total_estimado ?? 0, estado: dd.comanda.estado })
+          }).catch(() => {})
+        setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false); setNotaIdx(null); setComandaActiva(null); setCuentaEnviada(false) }, 2000)
       } else { setError(d.error ?? 'Error') }
     } catch { setError('Error de red') }
     finally { setSending(false) }
@@ -404,22 +443,46 @@ export default function ManualComanda({
           <div className="cp" style={{
             borderTop:`1px solid ${L.rule}`, background:L.bone,
             display:'flex', flexDirection:'column',
-            maxHeight: showCart ? '55vh' : cart.length ? '100px' : '64px',
+            maxHeight: showCart ? '55vh' : (cart.length || comandaActiva) ? '54px' : '0px',
             transition:'max-height .25s ease',
             overflow:'hidden', flexShrink:0,
           }}>
             {/* Header carrito — siempre visible, toca para expandir en móvil */}
-            <div onPointerDown={() => cart.length && setShowCart(sc => !sc)}
-              style={{ padding:'10px 14px', borderBottom:`1px solid ${L.rule}`, display:'flex', alignItems:'center', gap:8, flexShrink:0, cursor: cart.length ? 'pointer' : 'default' }}>
-              <span style={{ fontFamily:SM, fontSize:10, color:L.ink3, letterSpacing:'.08em' }}>
-                COMANDA · {mesaSel?.codigo}
-                {totalItems > 0 && ` · ${totalItems} items`}
-              </span>
-              {cart.length > 0 && total > 0 && (
-                <span style={{ fontFamily:SE, fontSize:15, fontWeight:500, color:L.ink, marginLeft:'auto' }}>{total.toFixed(2)}€</span>
+            <div onPointerDown={() => (cart.length || comandaActiva) && setShowCart(sc => !sc)}
+              style={{ padding:'0 10px 0 14px', height:54, borderBottom: showCart ? `1px solid ${L.rule}` : 'none', display:'flex', alignItems:'center', gap:8, flexShrink:0, cursor: (cart.length || comandaActiva) ? 'pointer' : 'default' }}>
+              <div style={{ flex:1, minWidth:0 }}>
+                <span style={{ fontFamily:SM, fontSize:10, color:L.ink3, letterSpacing:'.08em' }}>
+                  COMANDA · {mesaSel?.codigo}
+                  {totalItems > 0 && ` · ${totalItems} items`}
+                </span>
+                {cart.length > 0 && total > 0 && (
+                  <div style={{ fontFamily:SE, fontSize:15, fontWeight:500, color:L.ink }}>{total.toFixed(2)}€</div>
+                )}
+              </div>
+              {(cart.length > 0 || comandaActiva) && (
+                <span style={{ fontFamily:SM, fontSize:10, color:L.ink4, flexShrink:0 }}>{showCart ? '▲' : '▼'}</span>
               )}
-              {cart.length > 0 && (
-                <span style={{ fontFamily:SM, fontSize:10, color:L.ink4 }}>{showCart ? '▲' : '▼'}</span>
+              {/* Botón Enviar inline — visible solo cuando plegado y hay items */}
+              {!showCart && cart.length > 0 && (
+                <button
+                  onPointerDown={e => { e.stopPropagation(); send() }}
+                  disabled={sending || sent}
+                  style={{
+                    flexShrink:0, padding:'8px 13px', borderRadius:9, border:'none',
+                    background: sent ? L.gr : L.ink,
+                    color: L.bone, fontFamily:SN, fontSize:12, fontWeight:700,
+                    cursor: sending||sent ? 'default' : 'pointer',
+                    display:'flex', alignItems:'center', gap:5,
+                    WebkitTapHighlightColor:'transparent', touchAction:'manipulation',
+                    transition:'background .15s',
+                  }}>
+                  {sent ? '✓ Enviado' : sending ? '…' : (
+                    <>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                      Enviar
+                    </>
+                  )}
+                </button>
               )}
             </div>
 
@@ -495,14 +558,37 @@ export default function ManualComanda({
               })}
             </div>
 
-            {/* Footer envío */}
-            {cart.length > 0 && (
-              <div style={{ padding:'10px 14px 14px', flexShrink:0, borderTop: showCart ? `1px solid ${L.rule}` : 'none' }}>
+            {/* Footer: Cuenta + Cobrar (solo cuando hay comanda activa en mesa) */}
+            {comandaActiva && showCart && (
+              <div style={{ padding:'10px 14px 12px', flexShrink:0, borderTop:`1px solid ${L.rule}`, display:'flex', gap:8 }}>
                 {error && <div style={{ fontFamily:SN, fontSize:11, color:L.red, marginBottom:6 }}>{error}</div>}
-                <button onPointerDown={send} disabled={sending || sent}
-                  style={{ width:'100%', padding:'13px', borderRadius:4, border:'none', fontFamily:SN, fontSize:14, fontWeight:700, cursor: sending||sent ? 'default' : 'pointer', transition:'all .2s', animation: sent ? 'sent .4s ease' : 'none',
-                    background: sent ? L.gr : L.ink, color: L.bone }}>
-                  {sent ? '✓ Enviado a cocina' : sending ? 'Enviando...' : `Enviar a cocina — ${mesaSel?.codigo}`}
+                {/* Pedir cuenta */}
+                <button
+                  onPointerDown={pedirCuenta}
+                  disabled={cuentaEnviada || cuentaLoading}
+                  style={{
+                    flex:1, padding:'11px 8px', borderRadius:10, cursor: cuentaEnviada ? 'default' : 'pointer',
+                    background: cuentaEnviada ? '#EAF3DE' : '#FEF3C7',
+                    border: `1.5px solid ${cuentaEnviada ? L.gr : L.amb}`,
+                    color: cuentaEnviada ? '#2A5C2E' : '#92610A',
+                    fontFamily:SN, fontSize:13, fontWeight:700,
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+                    WebkitTapHighlightColor:'transparent',
+                  }}>
+                  {cuentaEnviada ? '✓ Cuenta' : cuentaLoading ? '…' : '🧾 Cuenta'}
+                </button>
+                {/* Cobrar */}
+                <button
+                  onPointerDown={() => setCobrarOpen(true)}
+                  style={{
+                    flex:1, padding:'11px 8px', borderRadius:10, cursor:'pointer',
+                    background: L.red, border:'none', color:'#fff',
+                    fontFamily:SN, fontSize:13, fontWeight:700,
+                    display:'flex', alignItems:'center', justifyContent:'center', gap:5,
+                    WebkitTapHighlightColor:'transparent',
+                  }}>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+                  Cobrar
                 </button>
               </div>
             )}
@@ -529,6 +615,24 @@ export default function ManualComanda({
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── COBRAR SHEET ── */}
+      {cobrarOpen && comandaActiva && mesaSel && (
+        <CobrarSheet
+          comandaId={comandaActiva.id}
+          mesaLabel={mesaSel.codigo}
+          total={comandaActiva.total}
+          session={session}
+          onCerrado={(_result) => {
+            setCobrarOpen(false)
+            setComandaActiva(null)
+            setCuentaEnviada(false)
+            setShowCart(false)
+            onSent()
+          }}
+          onCancel={() => setCobrarOpen(false)}
+        />
       )}
     </div>
   )
