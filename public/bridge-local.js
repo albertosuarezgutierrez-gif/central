@@ -1,15 +1,19 @@
 #!/usr/bin/env node
 // ============================================================
-// ia.rest · Bridge local v5.1
+// ia.rest · Bridge local v5.1.3
 // - Polling + TCP ESC/POS
 // - Discovery: escanea subnet, registra impresoras
 // - Model detection: HTTP probe + OUI MAC table
+// - Auto-restart real con spawn (fix crash handlers)
+// - Polling inmediato sin esperar al discover
+// - Watchdog lastPollOk actualizado al inicio del poll
 // ============================================================
-const VERSION = '5.1'
+const VERSION = '5.1.3'
 
-const net  = require('net')
-const os   = require('os')
-const http = require('http')
+const net    = require('net')
+const os     = require('os')
+const http   = require('http')
+const { spawn } = require('child_process')
 
 const API     = (process.env.IAREST_API  || 'https://www.iarest.es').replace(/\/$/, '')
 const TOKEN   = process.env.BRIDGE_TOKEN || ''
@@ -351,34 +355,51 @@ mgmtServer.listen(MGMT_PORT, '127.0.0.1', () => {
   log('ok', `Servidor de gestión local en puerto ${MGMT_PORT}`)
 })
 
-// ── Crash handlers: salida limpia para que el watchdog VBS/bat reinicie ──
-process.on('uncaughtException', (err) => {
-  log('warn', `Error fatal — reiniciando en 5s: ${err.message}`)
-  process.exit(1)
-})
-process.on('unhandledRejection', (err) => {
-  log('warn', `Promesa rechazada — reiniciando en 5s: ${String(err)}`)
-  process.exit(1)
-})
+// ── Auto-restart real: relanza el propio proceso ──────────────
+let _restarting = false
+function autoRestart(motivo, delaySec = 5) {
+  if (_restarting) return
+  _restarting = true
+  log('warn', `${motivo} — reiniciando en ${delaySec}s...`)
+  setTimeout(() => {
+    try {
+      const child = spawn(process.execPath, process.argv.slice(1), {
+        env:      process.env,
+        detached: true,
+        stdio:    'inherit',
+      })
+      child.unref()
+    } catch (e) {
+      log('error', `No se pudo relanzar el proceso: ${e.message}`)
+    }
+    process.exit(0)
+  }, delaySec * 1000)
+}
+
+// ── Crash handlers ────────────────────────────────────────────
+process.on('uncaughtException',  (err) => autoRestart(`Error fatal: ${err.message}`))
+process.on('unhandledRejection', (err) => autoRestart(`Promesa rechazada: ${String(err)}`))
 
 // ── Watchdog de actividad: si lleva 10 min sin poll, reinicia ──
+// IMPORTANTE: inicializar ANTES de que empiece el discover para que el contador
+// no expire mientras el escaneo de red está en marcha.
 let lastPollOk = Date.now()
 const _pollOrig = poll
 poll = async function() {
+  lastPollOk = Date.now()   // ← actualizar AL INICIO (no al final) para que no expire durante la ejecución
   await _pollOrig()
-  lastPollOk = Date.now()
 }
 setInterval(() => {
   if (Date.now() - lastPollOk > 10 * 60 * 1000) {
-    log('warn', 'Watchdog: sin actividad 10 min — reiniciando...')
-    process.exit(1)
+    autoRestart('Watchdog: sin actividad 10 min')
   }
 }, 60_000)
 
-discover().then(() => {
-  log('ok', 'Bridge listo. Esperando jobs...')
-  setInterval(poll, POLL_MS)
-  poll()
-})
+// ── Arranque: polling inmediato, discover en background ───────
+// El polling no espera al discover (que puede tardar varios minutos en redes lentas).
+log('ok', 'Bridge listo. Esperando jobs...')
+setInterval(poll, POLL_MS)
+poll()
+discover().catch(() => {})   // en background, sin bloquear
 
 process.on('SIGINT', () => { log('info', 'Deteniendo bridge...'); process.exit(0) })
