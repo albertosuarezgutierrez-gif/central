@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const client = new Anthropic()
+    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     const prompt = `Eres un experto en hostelería y traducción gastronómica.
 Traduce el siguiente producto de carta de restaurante español a los idiomas indicados.
@@ -51,7 +51,7 @@ Reglas:
 - Sé conciso y natural, como aparecería en una carta real`
 
     const response = await client.messages.create({
-      model: 'claude-opus-4-5',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 800,
       messages: [{ role: 'user', content: prompt }],
     })
