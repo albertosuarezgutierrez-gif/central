@@ -3308,6 +3308,268 @@ function ImpresorasTab() {
     </div>
   )
 }
+/* ─── SelectorSeccionKDS: selector con CRUD inline ─── */
+function SelectorSeccionKDS({ value, onChange, secciones, onSeccionesChange, sh }: {
+  value: string
+  onChange: (id: string) => void
+  secciones: CatSec[]
+  onSeccionesChange: (s: CatSec[]) => void
+  sh: () => Record<string, string>
+}) {
+  const [abierto,  setAbierto]  = useState(false)
+  const [modo,     setModo]     = useState<null | 'nueva' | string>(null)
+  const [texto,    setTexto]    = useState('')
+  const [icono,    setIcono]    = useState('🍽️')
+  const [color,    setColor]    = useState('#D9442B')
+  const [borrando, setBorrando] = useState<string | null>(null)
+  const [saving,   setSaving]   = useState(false)
+  const [errInl,   setErrInl]   = useState('')
+  const refWrap  = useRef<HTMLDivElement>(null)
+  const refInput = useRef<HTMLInputElement>(null)
+
+  const seleccionada = secciones.find(s => s.id === value)
+
+  useEffect(() => {
+    const fn = (e: MouseEvent) => {
+      if (refWrap.current && !refWrap.current.contains(e.target as Node)) cerrar()
+    }
+    if (abierto) document.addEventListener('mousedown', fn)
+    return () => document.removeEventListener('mousedown', fn)
+  }, [abierto])
+
+  useEffect(() => {
+    if (modo !== null) setTimeout(() => refInput.current?.focus(), 30)
+  }, [modo])
+
+  function cerrar() { setAbierto(false); setModo(null); setTexto(''); setErrInl(''); setBorrando(null) }
+
+  function abrirEditar(s: CatSec, e: React.MouseEvent) {
+    e.stopPropagation(); setBorrando(null)
+    setModo(s.id); setTexto(s.nombre); setIcono(s.icono); setColor(s.color_kds); setErrInl('')
+  }
+
+  function abrirBorrar(id: string, e: React.MouseEvent) {
+    e.stopPropagation(); setModo(null); setBorrando(id); setErrInl('')
+  }
+
+  async function guardar() {
+    if (!texto.trim()) { setErrInl('Nombre obligatorio'); return }
+    setSaving(true); setErrInl('')
+    try {
+      if (modo === 'nueva') {
+        const r = await fetch('/api/owner/secciones', {
+          method: 'POST',
+          headers: { ...sh(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: texto.trim(), icono, color_kds: color }),
+        })
+        const d = await r.json()
+        if (!r.ok) { setErrInl(d.error ?? 'Error al crear'); return }
+        const nueva: CatSec = d.seccion
+        onSeccionesChange([...secciones, nueva])
+        onChange(nueva.id)
+        setModo(null); setTexto('')
+      } else if (modo) {
+        const r = await fetch('/api/owner/secciones', {
+          method: 'PUT',
+          headers: { ...sh(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: modo, nombre: texto.trim(), icono, color_kds: color }),
+        })
+        if (!r.ok) { const d = await r.json(); setErrInl(d.error ?? 'Error al guardar'); return }
+        onSeccionesChange(secciones.map(s => s.id === modo ? { ...s, nombre: texto.trim(), icono, color_kds: color } : s))
+        setModo(null); setTexto('')
+      }
+    } finally { setSaving(false) }
+  }
+
+  async function confirmarBorrar(id: string) {
+    setSaving(true); setErrInl('')
+    try {
+      const r = await fetch('/api/owner/secciones', {
+        method: 'DELETE',
+        headers: { ...sh(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id }),
+      })
+      const d = await r.json()
+      if (!r.ok) { setErrInl(d.error ?? 'Error al borrar'); return }
+      onSeccionesChange(secciones.filter(s => s.id !== id))
+      if (value === id) onChange('')
+      setBorrando(null)
+    } finally { setSaving(false) }
+  }
+
+  const inpSt: React.CSSProperties = {
+    padding: '7px 10px', borderRadius: 6, border: `1.5px solid ${C.red}`,
+    background: C.bone, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none', boxSizing: 'border-box' as const,
+  }
+  const btnSm = (bg: string, fg: string): React.CSSProperties => ({
+    padding: '6px 12px', borderRadius: 6, background: bg, color: fg,
+    border: 'none', cursor: 'pointer', fontFamily: SN, fontSize: 12, fontWeight: 600,
+  })
+  const iconBtn: React.CSSProperties = {
+    padding: '7px 8px', background: 'transparent', border: 'none',
+    cursor: 'pointer', color: C.ink4, display: 'flex', alignItems: 'center', borderRadius: 6,
+  }
+
+  return (
+    <div ref={refWrap} style={{ position: 'relative', width: '100%' }}>
+      {/* Trigger */}
+      <button type="button"
+        onClick={() => abierto ? cerrar() : setAbierto(true)}
+        style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between',
+          gap:8, padding:'8px 10px', borderRadius:6, cursor:'pointer', outline:'none',
+          background:C.bone, fontFamily:SN, fontSize:13, color:seleccionada ? C.ink : C.ink4,
+          border:`1px solid ${abierto ? C.red : C.rule}`, boxSizing:'border-box' as const }}>
+        <span style={{ display:'flex', alignItems:'center', gap:6, minWidth:0 }}>
+          {seleccionada ? (
+            <>
+              <span style={{ fontSize:16 }}>{seleccionada.icono}</span>
+              <span style={{ overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>
+                KDS · {seleccionada.nombre}
+              </span>
+              <span style={{ width:8, height:8, borderRadius:'50%', background:seleccionada.color_kds, flexShrink:0 }}/>
+            </>
+          ) : <span>— Selecciona —</span>}
+        </span>
+        <span style={{ color:C.ink4, fontSize:10 }}>{abierto ? '▲' : '▼'}</span>
+      </button>
+
+      {/* Panel */}
+      {abierto && (
+        <div style={{ position:'absolute', top:'calc(100% + 4px)', left:0, right:0, zIndex:300,
+          background:C.paper, border:`1px solid ${C.rule}`, borderRadius:10,
+          boxShadow:'0 8px 32px rgba(26,23,20,.16)', overflow:'hidden' }}>
+
+          <div style={{ maxHeight:240, overflowY:'auto' }}>
+            {secciones.length === 0 && (
+              <div style={{ padding:'14px 12px', fontFamily:SN, fontSize:13, color:C.ink4, textAlign:'center', fontStyle:'italic' }}>
+                Sin secciones. Crea la primera abajo.
+              </div>
+            )}
+
+            {secciones.map(s => {
+              const esSel      = value === s.id
+              const esEditando = modo === s.id
+              const esBorrando = borrando === s.id
+
+              if (esEditando) return (
+                <div key={s.id} style={{ padding:'10px 12px', background:C.bone, borderBottom:`1px solid ${C.rule}` }}>
+                  <p style={{ fontFamily:SN, fontSize:11, color:C.ink3, marginBottom:6 }}>Editando sección</p>
+                  <div style={{ display:'flex', gap:6, marginBottom:6 }}>
+                    <input type="text" style={{ ...inpSt, flex:'0 0 36px', padding:'7px 4px', textAlign:'center' }}
+                      value={icono} onChange={e => setIcono(e.target.value)} maxLength={2} />
+                    <input ref={refInput} type="text" style={{ ...inpSt, flex:1 }}
+                      value={texto}
+                      onChange={e => { setTexto(e.target.value); setErrInl('') }}
+                      onKeyDown={e => { if (e.key==='Enter') guardar(); if (e.key==='Escape') { setModo(null); setTexto('') } }}
+                      placeholder="Nombre de la sección" />
+                    <input type="color" value={color} onChange={e => setColor(e.target.value)}
+                      style={{ width:36, height:36, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer', padding:2, background:C.bone, flexShrink:0 }} />
+                  </div>
+                  {errInl && <p style={{ fontFamily:SN, fontSize:11, color:C.red, marginBottom:6 }}>{errInl}</p>}
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button onClick={guardar} disabled={saving} style={btnSm(C.green, '#fff')}>
+                      {saving ? 'Guardando…' : '✓ Guardar'}
+                    </button>
+                    <button onClick={() => { setModo(null); setTexto('') }} style={btnSm(C.paper2, C.ink3)}>Cancelar</button>
+                  </div>
+                </div>
+              )
+
+              if (esBorrando) return (
+                <div key={s.id} style={{ padding:'10px 12px', background:C.redS, borderBottom:`1px solid ${C.rule}` }}>
+                  <p style={{ fontFamily:SN, fontSize:12, color:C.ink2, marginBottom:8 }}>
+                    ¿Borrar <strong>{s.icono} {s.nombre}</strong>?
+                  </p>
+                  {errInl && <p style={{ fontFamily:SN, fontSize:11, color:C.red, marginBottom:6 }}>{errInl}</p>}
+                  <div style={{ display:'flex', gap:6 }}>
+                    <button onClick={() => confirmarBorrar(s.id)} disabled={saving} style={btnSm(C.red, '#fff')}>
+                      {saving ? 'Borrando…' : 'Sí, borrar'}
+                    </button>
+                    <button onClick={() => { setBorrando(null); setErrInl('') }} style={btnSm(C.paper2, C.ink3)}>No</button>
+                  </div>
+                </div>
+              )
+
+              return (
+                <div key={s.id}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+                    padding:'0 4px 0 12px', borderBottom:`1px solid ${C.rule}`,
+                    background:esSel ? C.bone : C.paper, cursor:'pointer', minHeight:40 }}
+                  onClick={() => { onChange(s.id); cerrar() }}>
+                  <span style={{ display:'flex', alignItems:'center', gap:8, flex:1, padding:'8px 0', fontFamily:SN, fontSize:13, color:C.ink }}>
+                    <span style={{ fontSize:16 }}>{s.icono}</span>
+                    <span>KDS · {s.nombre}</span>
+                    <span style={{ width:8, height:8, borderRadius:'50%', background:s.color_kds, flexShrink:0 }}/>
+                    {s.activa === false && (
+                      <span style={{ fontSize:10, background:C.paper2, color:C.ink4, padding:'1px 5px', borderRadius:3 }}>inactiva</span>
+                    )}
+                  </span>
+                  <span style={{ display:'flex', gap:0, flexShrink:0 }} onClick={e => e.stopPropagation()}>
+                    <button type="button" style={iconBtn}
+                      onClick={e => abrirEditar(s, e)}
+                      onMouseEnter={e => (e.currentTarget.style.color = C.ink2)}
+                      onMouseLeave={e => (e.currentTarget.style.color = C.ink4)}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M11.5 2.5a1.5 1.5 0 0 1 2.12 2.12L5.5 12.74l-2.83.71.71-2.83L11.5 2.5z"/>
+                      </svg>
+                    </button>
+                    <button type="button" style={iconBtn}
+                      onClick={e => abrirBorrar(s.id, e)}
+                      onMouseEnter={e => (e.currentTarget.style.color = C.red)}
+                      onMouseLeave={e => (e.currentTarget.style.color = C.ink4)}>
+                      <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
+                        <path d="M6 2h4a1 1 0 0 1 1 1H5a1 1 0 0 1 1-1zM2 4h12v1H3.5l.9 9h7.2l.9-9H14V4H2zm4 2h1l.4 6H7L6 6zm3 0h1l-.4 6h-1l.4-6z"/>
+                      </svg>
+                    </button>
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+
+          {/* Footer nueva sección */}
+          {modo === 'nueva' ? (
+            <div style={{ padding:'10px 12px', borderTop:`1px solid ${C.rule}`, background:C.bone }}>
+              <p style={{ fontFamily:SN, fontSize:11, color:C.ink4, textTransform:'uppercase', letterSpacing:'0.06em', marginBottom:8 }}>
+                Nueva sección KDS
+              </p>
+              <div style={{ display:'flex', gap:6, marginBottom:6 }}>
+                <input type="text" style={{ ...inpSt, flex:'0 0 36px', padding:'7px 4px', textAlign:'center' }}
+                  value={icono} onChange={e => setIcono(e.target.value)} maxLength={2} />
+                <input ref={refInput} type="text" style={{ ...inpSt, flex:1 }}
+                  value={texto}
+                  onChange={e => { setTexto(e.target.value); setErrInl('') }}
+                  onKeyDown={e => { if (e.key==='Enter') guardar(); if (e.key==='Escape') { setModo(null); setTexto('') } }}
+                  placeholder="Ej: Plancha, Freidora, Sushi…" />
+                <input type="color" value={color} onChange={e => setColor(e.target.value)}
+                  style={{ width:36, height:36, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer', padding:2, background:C.bone, flexShrink:0 }} />
+              </div>
+              {errInl && <p style={{ fontFamily:SN, fontSize:11, color:C.red, marginBottom:6 }}>{errInl}</p>}
+              <div style={{ display:'flex', gap:6 }}>
+                <button onClick={guardar} disabled={saving} style={btnSm(C.red, '#fff')}>
+                  {saving ? 'Creando…' : '+ Crear sección'}
+                </button>
+                <button onClick={() => { setModo(null); setTexto('') }} style={btnSm(C.paper2, C.ink3)}>Cancelar</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button"
+              onClick={() => { setModo('nueva'); setTexto(''); setIcono('🍽️'); setColor('#D9442B'); setErrInl(''); setBorrando(null) }}
+              style={{ width:'100%', display:'flex', alignItems:'center', gap:8, padding:'10px 12px',
+                background:'transparent', border:'none', borderTop:`1px solid ${C.rule}`,
+                cursor:'pointer', fontFamily:SN, fontSize:13, color:C.ink4, textAlign:'left' as const }}
+              onMouseEnter={e => { e.currentTarget.style.background = C.bone; e.currentTarget.style.color = C.red }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = C.ink4 }}>
+              <strong style={{ fontSize:16, lineHeight:'1' }}>+</strong>
+              Nueva sección KDS
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── Tab: Flujos de trabajo ─── */
 
 type ReglaEnvio = {
@@ -3332,7 +3594,7 @@ type ReglaEnvio = {
   tipos_ticket: string[]
 }
 type CatImp      = { id: string; nombre: string; seccion_id: string; connection_type: string }
-type CatSec      = { id: string; nombre: string; color_kds: string; icono: string }
+type CatSec      = { id: string; nombre: string; color_kds: string; icono: string; activa?: boolean }
 type CatZona     = { id: string; tipo: string; nombre: string }
 type CatProducto = { id: string; nombre: string; seccion: string; precio: number }
 
@@ -3924,11 +4186,13 @@ function FlujoTab() {
               {form.dest_kds && (
                 <div style={{ marginBottom:10 }}>
                   <label style={labelSt}>Sección KDS</label>
-                  <select value={form.destino_kds_ref} onChange={e=>setForm(f=>({...f,destino_kds_ref:e.target.value}))} style={inputSt}>
-                    <option value="">— Selecciona —</option>
-                    {secciones.map(s=><option key={s.id} value={s.id}>📺 KDS · {s.nombre}</option>)}
-                  </select>
-                  {secciones.length===0 && <div style={{ fontFamily:SN, fontSize:11, color:C.amber, marginTop:3 }}>⚠️ No hay secciones de cocina configuradas</div>}
+                  <SelectorSeccionKDS
+                    value={form.destino_kds_ref}
+                    onChange={(id) => setForm(f => ({ ...f, destino_kds_ref: id }))}
+                    secciones={secciones}
+                    onSeccionesChange={setSecciones}
+                    sh={sh}
+                  />
                 </div>
               )}
 
