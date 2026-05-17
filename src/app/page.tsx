@@ -192,6 +192,28 @@ h1 .sl{display:block;font-size:clamp(38px,5.5vw,64px);color:var(--cream2);opacit
 .faqitem.open .faqa{max-height:300px}
 .faqa-inner{padding:0 28px 24px;font-size:15px;color:var(--cream2);line-height:1.7;letter-spacing:-.01em}
 .faqa-inner strong{color:var(--cream);font-weight:600}
+.mods{max-width:1120px;margin:0 auto;padding:100px 40px}
+.mods-head{text-align:center;margin-bottom:60px}
+.mods-head h2{font-family:var(--head);font-style:italic;font-size:clamp(32px,4.5vw,52px);font-weight:400;line-height:1.08;letter-spacing:-.03em;color:var(--cream)}
+.mods-head h2 em{color:var(--red)}
+.mods-head p{margin-top:16px;font-size:16px;color:var(--cream3);letter-spacing:-.01em;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.6}
+.mgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+.mcard{background:var(--bg2);border:1px solid var(--b);border-radius:18px;padding:26px 24px;display:flex;flex-direction:column;gap:10px;transition:border-color .2s,box-shadow .2s}
+.mcard:hover{border-color:rgba(26,23,20,.2);box-shadow:rgba(26,23,20,.06) 0 8px 24px -8px}
+.mcard.mc-red{border-color:rgba(217,68,43,.22);background:linear-gradient(145deg,rgba(217,68,43,.05) 0%,var(--bg2) 55%)}
+.mcard.mc-red:hover{border-color:rgba(217,68,43,.38)}
+.mcard.mc-amber{border-color:rgba(232,163,59,.22);background:linear-gradient(145deg,rgba(232,163,59,.05) 0%,var(--bg2) 55%)}
+.mcard.mc-amber:hover{border-color:rgba(232,163,59,.38)}
+.mcard.mc-green{border-color:rgba(74,145,80,.22);background:linear-gradient(145deg,rgba(74,145,80,.04) 0%,var(--bg2) 55%)}
+.mcard.mc-green:hover{border-color:rgba(74,145,80,.35)}
+.mico2{font-size:26px;line-height:1;margin-bottom:2px}
+.mtit{font-family:var(--head);font-size:17px;font-weight:500;letter-spacing:-.02em;color:var(--cream);line-height:1.2}
+.mdesc{font-size:13px;color:var(--cream3);line-height:1.65;letter-spacing:-.005em;flex:1}
+.mbadge{align-self:flex-start;font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;padding:3px 9px;border-radius:9999px;margin-top:4px}
+.mbadge.b-addon{background:rgba(232,163,59,.12);color:var(--amber);border:1px solid rgba(232,163,59,.28)}
+.mbadge.b-new{background:rgba(74,145,80,.12);color:#4A9150;border:1px solid rgba(74,145,80,.28)}
+.mbadge.b-legal{background:rgba(217,68,43,.08);color:var(--red);border:1px solid rgba(217,68,43,.22)}
+.mbadge.b-core{background:rgba(26,23,20,.06);color:var(--cream3);border:1px solid var(--b)}
 .trust{border-top:1px solid var(--b);border-bottom:1px solid var(--b);padding:24px 40px;display:flex;align-items:center;justify-content:center;gap:48px;background:rgba(239,231,214,.6)}
 .ti{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--cream2)}
 .ti .ico{font-size:18px}
@@ -298,6 +320,9 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
   /* BA section — evitar overflow en badge de tiempo */
   .bar2{flex-wrap:wrap;gap:8px}
   .bat{margin-left:0;white-space:normal}
+  /* Módulos grid */
+  .mgrid{grid-template-columns:repeat(2,1fr)}
+  .mods{padding:60px 20px}
 }
 .pcalc{max-width:860px;margin:0 auto}
 .pcalc-inner{display:grid;grid-template-columns:1fr 1fr;gap:48px;background:var(--bg2);border:1px solid rgba(217,68,43,.22);border-radius:24px;padding:52px;margin-bottom:24px;box-shadow:rgba(217,68,43,.07) 0 20px 60px -20px}
@@ -471,6 +496,7 @@ export default function Page() {
         <a href="/" className="logo">ia<b>.</b>rest</a>
         <ul className="nav-c">
           <li><a href="#como">Cómo funciona</a></li>
+          <li><a href="#modulos">Módulos</a></li>
           <li><a href="#testimonios">Restaurantes</a></li>
           <li><a href="#precios">Precios</a></li>
           <li><a href="#contacto">Contacto</a></li>
@@ -607,6 +633,34 @@ export default function Page() {
         </div>
       </section>
 
+      {/* MÓDULOS */}
+      <section className="mods" id="modulos">
+        <div className="mods-head reveal">
+          <div className="section-tag">Todo lo que incluye</div>
+          <h2>Un sistema completo<br/>para <em>cada punto del servicio</em></h2>
+          <p>Desde la primera comanda hasta el cierre de caja. Sala, cocina, barra, delivery y Hacienda.</p>
+        </div>
+        <div className="mgrid">
+          {[
+            {ico:"🎙️",t:"Pedidos por voz",d:"El camarero dicta en español real. Whisper (Groq) transcribe en 0,3s, Claude estructura mesa, platos y notas. Sin tocar pantalla.",badge:null,cls:"mc-red"},
+            {ico:"📱",t:"QR en mesa",d:"El cliente pide desde su móvil escaneando el QR. El ticket llega al mismo KDS que el resto — igual que si lo dictara el camarero.",badge:{t:"Add-on · 12€/mesa/mes",cls:"b-addon"},cls:"mc-amber"},
+            {ico:"🛵",t:"Delivery integrado",d:"Los pedidos de Glovo, Uber Eats y Just Eat entran directamente al KDS. Sin reescribir comandas, sin tabletas extra.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-green"},
+            {ico:"📺",t:"KDS en cocina",d:"Pantalla compartida para cocina. Prioridades automáticas, alertas de alergia y timers por pase. Funciona en cualquier tablet de 70€.",badge:null,cls:""},
+            {ico:"🖨️",t:"Impresoras térmicas",d:"ESC/POS TCP y Star CloudPRNT. El Bridge local gestiona la conexión LAN — sin drivers, sin configuración, desde el primer día.",badge:null,cls:""},
+            {ico:"💳",t:"Cobro completo",d:"Stripe Terminal, Bizum, efectivo y 6 métodos de pago. División de cuenta por ítems o partes iguales. Cierre de caja al instante.",badge:null,cls:""},
+            {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019. Cada trabajador ficha entrada y salida con su PIN. Registro disponible para inspección.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
+            {ico:"📋",t:"VeriFactu AEAT",d:"Facturas homologadas con hash SHA-256 encadenado y QR verificable. Obligatorio desde enero 2026 para sociedades, julio 2026 para autónomos.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
+          ].map((m,i)=>(
+            <div key={i} className={`mcard reveal${m.cls?" "+m.cls:""}`} style={{animationDelay:`${i*0.05}s`}}>
+              <div className="mico2">{m.ico}</div>
+              <div className="mtit">{m.t}</div>
+              <div className="mdesc">{m.d}</div>
+              {m.badge&&<div className={`mbadge ${m.badge.cls}`}>{m.badge.t}</div>}
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* BEFORE/AFTER */}
       <section className="ba">
         <div className="section-tag">Antes y después</div>
@@ -698,9 +752,11 @@ export default function Page() {
         <div className="faqlist">
           {[
             {q:"¿Funciona si hay ruido en sala?",a:"Sí. Usamos Whisper large-v3 vía Groq, el mejor modelo de transcripción para español. Funciona bien con ruido de fondo, música y conversaciones cercanas. Recomendamos hablar a 15–20 cm del micrófono, algo natural cuando ya llevas la comanda en mente."},
+            {q:"¿Cómo funciona la integración con Glovo y Uber Eats?",a:"Los pedidos de delivery entran automáticamente al KDS igual que cualquier comanda de sala. Sin tabletas extra, sin reescribir. El repartidor ve el estado en tiempo real y el sistema consolida todos los canales — sala, QR y delivery — en una sola pantalla para cocina."},
             {q:"¿Qué pasa si se cae internet en mitad del servicio?",a:"Las comandas ya enviadas siguen visibles en cocina. Para nuevas comandas cae a modo manual: el camarero puede abrir cualquier comanda anterior y modificarla."},
             {q:"¿Necesito hardware nuevo? ¿Impresoras, tablets específicas?",a:"No. ia.rest funciona en cualquier móvil o tablet con navegador. Para el KDS en cocina, una tablet de 70€ es suficiente. Para impresoras de tickets, garantizamos compatibilidad 100% con modelos ESC/POS TCP (IP local) y Star CloudPRNT LAN/WiFi como la Star TSP143IIILAN o TSP143IIIW. Si ya tienes otra impresora, probablemente funcione, pero solo garantizamos las anteriores."},
             {q:"¿El sistema entiende la carta de mi restaurante?",a:'Sí. Durante el onboarding (10 minutos) introduces tus platos y el sistema los aprende. Si el camarero dice "una de la casa" y en tu carta se llama "Ensaladilla de la abuela", el ticket sale con el nombre correcto.'},
+            {q:"¿Cómo funciona el fichaje digital?",a:"Cada trabajador ficha entrada y salida con su PIN desde cualquier dispositivo. Los registros cumplen el RD-ley 8/2019 (obligatorio para todos los empleados desde 2019). El panel de propietario muestra el historial completo y las horas totales por trabajador, listo para una inspección."},
             {q:"¿Cómo funciona lo de VeriFactu y Hacienda?",a:"VeriFactu es el sistema obligatorio de la AEAT para emitir facturas. Obligatorio para sociedades desde enero de 2026 y autónomos desde julio de 2026. Multa de hasta 50.000 €/ejercicio por software no homologado. ia.rest genera facturas con hash encadenado SHA-256 y QR verificable. Incluido en todos los perfiles."},
             {q:"¿Puedo cancelar en cualquier momento?",a:"Sí, siempre. Sin permanencia ni penalizaciones. El servicio sigue activo hasta final del período pagado. Datos exportables en CSV. No te vamos a llamar para retenerte."},
           ].map((f,i)=>(
@@ -717,7 +773,7 @@ export default function Page() {
 
       {/* TRUST */}
       <div className="trust">
-        {[["🔒","Datos en España","· Supabase EU-West"],["🇪🇸","Soporte en español","· Respuesta el mismo día"],["📋","VeriFactu AEAT 2026","· Incluido en todos los perfiles"],["💳","Sin permanencia","· Cancela cuando quieras"]].map(([ico,b,t])=>(
+        {[["🔒","Datos en España","· Supabase EU-West"],["🇪🇸","Soporte en español","· Respuesta el mismo día"],["📋","VeriFactu AEAT 2026","· Incluido en todos los perfiles"],["🛵","Delivery integrado","· Glovo, Uber Eats y más"],["⏱️","Fichaje RD-ley 8/2019","· Control horario incluido"],["💳","Sin permanencia","· Cancela cuando quieras"]].map(([ico,b,t])=>(
           <div key={b} className="ti"><span className="ico">{ico}</span><span><strong>{b}</strong>{t}</span></div>
         ))}
       </div>
@@ -748,7 +804,7 @@ export default function Page() {
           const qrPrice=pQR>0?(pAnnual?Math.round(pQR*12*0.82):pQR*12):0;
           const total=basePrice+qrPrice;
           const examples:Array<[number,string]>=[[1,"1 perfil"],[3,"3 perfiles"],[6,"6 perfiles"]];
-          const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Alertas en tiempo real","Panel owner","QR en mesa (add-on)","14 días de prueba gratis"];
+          const feats=["Voz + KDS en cocina","Delivery (Glovo, Uber Eats)","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","Alertas en tiempo real","Panel owner + supervisor","QR en mesa (add-on)","14 días de prueba gratis"];
           return (
             <div className="pcalc reveal">
               <div className="pcalc-inner">
