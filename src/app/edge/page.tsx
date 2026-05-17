@@ -2488,13 +2488,30 @@ function VoiceProfileSection({ session }: { session: { id: string; restaurante_i
             </div>
 
             {/* Progress */}
-            <div style={{ display: 'flex', gap: 6, marginBottom: 24 }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
               {FRASES_CALIBRACION.map((_, i) => (
                 <div key={i} style={{
-                  flex: 1, height: 4, borderRadius: 2,
-                  background: i < frases ? C.gr : i === paso ? C.verm : C.rule,
+                  flex: 1, height: 5, borderRadius: 3,
+                  background: i < frases ? C.gr : i === paso ? C.amb : C.bg3,
                   transition: 'background .3s',
                 }} />
+              ))}
+            </div>
+            {/* Contador explícito para que no haya confusión */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+              {[0,1,2,3,4].map(i => (
+                <div key={i} style={{
+                  width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  background: i < frases ? C.gr : i === paso ? C.amb : C.bg3,
+                  border: `1.5px solid ${i < frases ? C.gr : i === paso ? C.amb : C.rule}`,
+                  transition: 'all .3s',
+                }}>
+                  {i < frases
+                    ? <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth={2.5}><polyline points="4 12 10 18 20 6"/></svg>
+                    : <span style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: 11, fontWeight: 700, color: i === paso ? '#7A5A1A' : C.ink4 }}>{i+1}</span>
+                  }
+                </div>
               ))}
             </div>
 
