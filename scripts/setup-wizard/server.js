@@ -266,6 +266,45 @@ if (process.argv.includes('--bridge')) {
     process.exit(1)
   })
 
+  // ── Servidor de gestión local (localhost:47801) ──────────────
+  // Permite al panel /owner activar el bridge desde el mismo PC
+  const MGMT_PORT = 47801
+  const ALLOWED_ORIGIN = 'https://www.iarest.es'
+  const mgmtServer = http.createServer((req, res) => {
+    const remoteAddr = req.socket.remoteAddress
+    const isLocal = remoteAddr === '127.0.0.1' || remoteAddr === '::1' || remoteAddr === '::ffff:127.0.0.1'
+    if (!isLocal) { res.writeHead(403); res.end('Forbidden'); return }
+    const corsHeaders = {
+      'Access-Control-Allow-Origin': ALLOWED_ORIGIN,
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type',
+      'Access-Control-Allow-Private-Network': 'true',
+      'Content-Type': 'application/json',
+    }
+    if (req.method === 'OPTIONS') { res.writeHead(204, corsHeaders); res.end(); return }
+    const url = req.url?.split('?')[0] || '/'
+    if (url === '/status' && req.method === 'GET') {
+      res.writeHead(200, corsHeaders)
+      res.end(JSON.stringify({ ok: true, version: VERSION, uptime: process.uptime() }))
+      return
+    }
+    if (url === '/ping' && req.method === 'POST') {
+      console.log('[Bridge] Activación remota desde el panel — forzando poll...')
+      poll().catch(() => {})
+      res.writeHead(200, corsHeaders)
+      res.end(JSON.stringify({ ok: true, message: 'Poll forzado' }))
+      return
+    }
+    res.writeHead(404, corsHeaders)
+    res.end(JSON.stringify({ error: 'Not found' }))
+  })
+  mgmtServer.on('error', (err) => {
+    if (err.code !== 'EADDRINUSE') console.warn('[Bridge] Gestión:', err.message)
+  })
+  mgmtServer.listen(MGMT_PORT, '127.0.0.1', () => {
+    console.log(`[Bridge] Servidor de gestión local en puerto ${MGMT_PORT}`)
+  })
+
   const macToIP = {}
   if (cfg.printers) cfg.printers.forEach(p => { if (p.mac) macToIP[p.mac] = p.ip })
 
