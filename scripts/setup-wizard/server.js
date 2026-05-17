@@ -178,27 +178,27 @@ function installAutostart(token) {
     const vbsPath = path.join(CFG_DIR, 'launch-bridge.vbs')
     const batPath = path.join(CFG_DIR, 'iarest-bridge.bat')
 
-    // VBS launcher: wscript crea procesos independientes del Job Object del wizard
-    // El bridge sobrevive al cerrar el wizard — no queda vinculado al proceso padre
-    // VBS watchdog: Do/Loop reinicia el bridge si se cae (Wait=True espera al proceso)
+    // VBS watchdog: usa node + bridge-local.js (en carpeta excluida de AV)
+    // node.exe es proceso de confianza — no levanta falsos positivos en Avast/Defender
+    const bridgeJs = path.join(CFG_DIR, 'bridge-local.js')
     const vbs = [
       `Set oShell = CreateObject("WScript.Shell")`,
       `oShell.Environment("Process")("BRIDGE_TOKEN") = "${token}"`,
       `oShell.Environment("Process")("IAREST_API") = "${API}"`,
       `Do`,
-      `  oShell.Run chr(34) & "${exePath}" & chr(34) & " --bridge", 0, True`,
+      `  oShell.Run "node " & chr(34) & "${bridgeJs}" & chr(34), 0, True`,
       `  WScript.Sleep 5000`,
       `Loop`,
     ].join('\r\n')
     fs.writeFileSync(vbsPath, vbs)
 
-    // Bat de fallback (loop watchdog también)
+    // Bat de fallback (loop watchdog con node)
     const bat = [
       `@echo off`,
       `set BRIDGE_TOKEN=${token}`,
       `set IAREST_API=${API}`,
       `:loop`,
-      `"${exePath}" --bridge`,
+      `node "${bridgeJs}"`,
       `timeout /t 5 /nobreak > nul`,
       `goto loop`,
     ].join('\r\n')
@@ -225,12 +225,13 @@ function launchBridgeNow(token) {
     const vbsPath = path.join(CFG_DIR, 'launch-bridge.vbs')
     // Crear VBS si no existe
     if (!fs.existsSync(vbsPath)) {
+      const bridgeJs = path.join(CFG_DIR, 'bridge-local.js')
       const vbs = [
         `Set oShell = CreateObject("WScript.Shell")`,
         `oShell.Environment("Process")("BRIDGE_TOKEN") = "${token}"`,
         `oShell.Environment("Process")("IAREST_API") = "${API}"`,
         `Do`,
-        `  oShell.Run chr(34) & "${exePath}" & chr(34) & " --bridge", 0, True`,
+        `  oShell.Run "node " & chr(34) & "${bridgeJs}" & chr(34), 0, True`,
         `  WScript.Sleep 5000`,
         `Loop`,
       ].join('\r\n')

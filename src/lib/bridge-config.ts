@@ -5,7 +5,7 @@
 // El resto de la web (páginas, API) lo lee de aquí automáticamente.
 // ============================================================
 
-export const BRIDGE_VERSION  = '5.2.0'
+export const BRIDGE_VERSION  = '5.2.1'
 export const BRIDGE_SIZE     = '37 MB'
 export const BRIDGE_RELEASE  = `bridge-v${BRIDGE_VERSION}`
 export const BRIDGE_EXE_NAME = `iarest-setup-v${BRIDGE_VERSION}.exe`
