@@ -17,7 +17,6 @@ interface Producto {
   nombre: string
   descripcion?: string
   precio: number
-  imagen_url?: string
   seccion: string
   alergenos?: string[]
 }
@@ -532,13 +531,6 @@ export default function StorefrontApp({ slug }: { slug: string }) {
                     key={producto.id}
                     className="bg-white rounded-2xl p-4 flex items-center gap-3 border border-[#E8E0D4] active:scale-[0.99] transition-transform"
                   >
-                    {producto.imagen_url && (
-                      <img
-                        src={producto.imagen_url}
-                        alt={producto.nombre}
-                        className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
-                      />
-                    )}
                     <div className="flex-1 min-w-0">
                       <p className="font-semibold text-[#14110E] truncate">{producto.nombre}</p>
                       {producto.descripcion && (

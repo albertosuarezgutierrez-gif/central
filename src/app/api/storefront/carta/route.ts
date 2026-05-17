@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   // 2. Productos del restaurante (no agotados, ordenados)
   const { data: productos } = await supabase
     .from('productos')
-    .select('id, nombre, descripcion, precio, imagen_url, seccion, stock_agotado_at, es_fuera_carta, alergenos')
+    .select('id, nombre, descripcion, precio, seccion, stock_agotado_at, es_fuera_carta, alergenos')
     .eq('restaurante_id', config.restaurante_id)
     .eq('activo', true)
     .is('stock_agotado_at', null)
