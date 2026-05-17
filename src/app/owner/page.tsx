@@ -2534,11 +2534,23 @@ function SeccionesTab() {
   const [form, setForm]           = useState({ nombre: '', color_kds: '#D9442B', icono: '🍽️' })
   const [err, setErr]             = useState('')
   const [saving, setSaving]       = useState(false)
+  const [kdsToken, setKdsToken]   = useState<string | null>(null)
+  const [copiedId, setCopiedId]   = useState<string | null>(null)
+
+  const copiarEnlace = (seccionId: string) => {
+    if (!kdsToken) return
+    const url = `${window.location.origin}/kds?token=${kdsToken}&seccion=${seccionId}`
+    navigator.clipboard.writeText(url).then(() => {
+      setCopiedId(seccionId)
+      setTimeout(() => setCopiedId(null), 2200)
+    })
+  }
 
   const load = useCallback(async () => {
     const r = await fetch('/api/owner/secciones', { headers: sh() })
     const d = await r.json()
     setSecciones(d.secciones || [])
+    if (d.kds_token) setKdsToken(d.kds_token)
     setLoading(false)
   }, [])
   useEffect(() => { load() }, [load])
@@ -2604,6 +2616,14 @@ function SeccionesTab() {
                 <div style={{ fontFamily:SM, fontSize:10, color:C.ink3, marginTop:2 }}>{s.id}</div>
               </div>
               <div style={{ display:'flex', gap:6, alignItems:'center', flexShrink:0, flexWrap:'wrap' }}>
+                {kdsToken && (
+                  <button
+                    onClick={() => copiarEnlace(s.id)}
+                    title="Copiar enlace directo a este KDS"
+                    style={{ background: copiedId===s.id ? '#3F7D44' : 'none', border:`1px solid ${copiedId===s.id?'#3F7D44':C.rule}`, borderRadius:3, padding:'3px 8px', fontFamily:SM, fontSize:9, letterSpacing:'.08em', color: copiedId===s.id ? '#fff' : C.ink3, cursor:'pointer', textTransform:'uppercase', transition:'all .2s' }}>
+                    {copiedId===s.id ? '✓ Copiado' : '🔗 Enlace KDS'}
+                  </button>
+                )}
                 <button onClick={() => toggleActiva(s)} style={{ background:'none', border:`1px solid ${C.rule}`, borderRadius:3, padding:'3px 8px', fontFamily:SM, fontSize:9, letterSpacing:'.08em', color:C.ink3, cursor:'pointer', textTransform:'uppercase' }}>
                   {s.activa===false?'Activar':'Ocultar'}
                 </button>

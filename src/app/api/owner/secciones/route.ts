@@ -5,13 +5,20 @@ import { getRestauranteId } from '@/lib/session'
 export async function GET(req: NextRequest) {
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
-  const { data, error } = await supabase
-    .from('secciones_cocina')
-    .select('id, nombre, color_kds, icono, orden, activa')
-    .eq('restaurante_id', rid)
-    .order('orden', { ascending: true })
+  const [{ data, error }, { data: rest }] = await Promise.all([
+    supabase
+      .from('secciones_cocina')
+      .select('id, nombre, color_kds, icono, orden, activa')
+      .eq('restaurante_id', rid)
+      .order('orden', { ascending: true }),
+    supabase
+      .from('restaurantes')
+      .select('kds_token')
+      .eq('id', rid)
+      .single(),
+  ])
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ secciones: data })
+  return NextResponse.json({ secciones: data, kds_token: rest?.kds_token ?? null })
 }
 
 export async function POST(req: NextRequest) {
