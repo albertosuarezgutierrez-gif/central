@@ -3,3 +3,5 @@
 node_modules/
 .next/
 *.log
+scripts/setup-wizard/dist/
+scripts/setup-wizard/node_modules/
