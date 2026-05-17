@@ -21,6 +21,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { generarTextoPlano } from '@/lib/courier'
+import { notifyError } from '@/lib/notify'
 
 const supabase = () => createServerClient()
 
@@ -190,14 +191,34 @@ export async function POST(req: NextRequest) {
     .eq('id', job_id)
     .single()
 
+  const newAttempts = (current?.attempts ?? 0) + 1
+
   await sb.from('print_jobs')
     .update({
       status,
-      attempts:  (current?.attempts ?? 0) + 1,
+      attempts:  newAttempts,
       acked_at:  status === 'impreso' ? new Date().toISOString() : undefined,
       error_msg: status === 'error'   ? (error_msg ?? 'Error desconocido') : undefined,
     })
     .eq('id', job_id)
+
+  // Alerta si el job falla 3+ veces
+  if (status === 'error' && newAttempts >= 3) {
+    const { data: job } = await sb
+      .from('print_jobs')
+      .select('restaurante_id, comanda_id')
+      .eq('id', job_id)
+      .single()
+
+    notifyError({
+      tipo: 'print_job_fallido',
+      modulo: 'bridge',
+      mensaje: `Impresión fallida ${newAttempts} veces consecutivas`,
+      detalle: { job_id, comanda_id: current?.comanda_id, error: error_msg, intentos: newAttempts },
+      restaurante_id: job?.restaurante_id ?? null,
+      nivel: newAttempts >= 5 ? 'critico' : 'aviso',
+    })
+  }
 
   // Si impreso: actualizar comanda_items
   if (status === 'impreso' && current?.comanda_id) {

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
 import { crearPrintJobs } from '@/lib/courier'
+import { notifyError } from '@/lib/notify'
 
 // POST /api/comanda — comanda manual (sin voz)
 export async function POST(req: NextRequest) {
@@ -211,6 +212,13 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error('[COMANDA MANUAL]', err)
+    notifyError({
+      tipo: 'comanda_error',
+      modulo: 'comanda',
+      mensaje: `Error creando comanda: ${err instanceof Error ? err.message : 'Error interno'}`,
+      detalle: { error: String(err) },
+      nivel: 'critico',
+    })
     return NextResponse.json(
       { error: err instanceof Error ? err.message : 'Error interno' },
       { status: 500 }

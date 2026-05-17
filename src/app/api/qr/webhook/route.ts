@@ -3,6 +3,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
+import { notifyError } from '@/lib/notify'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -19,6 +20,13 @@ export async function POST(req: NextRequest) {
   try {
     event = getStripe().webhooks.constructEvent(body, sig, webhookSecret)
   } catch (err) {
+    notifyError({
+      tipo: 'stripe_webhook_fail',
+      modulo: 'stripe',
+      mensaje: 'Stripe webhook: firma inválida o error de verificación',
+      detalle: { error: String(err) },
+      nivel: 'critico',
+    })
     return NextResponse.json({ error: 'Webhook signature failed' }, { status: 400 })
   }
 
