@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { copyToClipboard } from '@/lib/clipboard'
+import { IDIOMAS_CARTA, CodigoIdioma } from '@/lib/useIdiomasCarta'
 
 // ─── Design tokens ────────────────────────────────────────────
 const C = {
@@ -33,6 +34,8 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(true)
   const [generating, setGenerating] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [langPDF, setLangPDF] = useState<CodigoIdioma>('es')
+  const [langPDFOpen, setLangPDFOpen] = useState(false)
 
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
 
@@ -118,7 +121,14 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
     }
   }
 
-  const openPDF = () => rest && window.open(`/carta/${rest.slug}?imprimir=1`, '_blank')
+  const openPDF = (lang: CodigoIdioma = langPDF) => {
+    if (!rest) return
+    const url = lang === 'es'
+      ? `/carta/${rest.slug}?imprimir=1`
+      : `/carta/${rest.slug}?imprimir=1&lang=${lang}`
+    window.open(url, '_blank')
+    setLangPDFOpen(false)
+  }
 
   const copyUrl = async () => {
     await copyToClipboard(cartaUrl)
@@ -259,17 +269,64 @@ export default function CartaPublicPanel({ onClose }: { onClose: () => void }) {
                 {generating ? 'Generando…' : `Descargar QR${rest.logo_url ? ' (con logo)' : ''}`}
               </button>
 
-              <button onClick={openPDF} style={{
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-                background: C.red, color: C.paper, border: 'none', borderRadius: 6,
-                padding: '13px 20px', fontFamily: SN, fontSize: 14, fontWeight: 600,
-                cursor: 'pointer',
-              }}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                  <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8"/>
-                </svg>
-                Descargar carta en PDF
-              </button>
+              {/* ── Botón PDF con selector de idioma ── */}
+              <div style={{ position: 'relative' }}>
+                <div style={{ display: 'flex', borderRadius: 6, overflow: 'hidden', border: '1px solid #A8311E' }}>
+                  <button
+                    onClick={() => openPDF(langPDF)}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      background: C.red, color: C.paper, border: 'none',
+                      padding: '13px 16px', fontFamily: SN, fontSize: 14, fontWeight: 600,
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8"/>
+                    </svg>
+                    PDF {langPDF !== 'es' ? `· ${langPDF.toUpperCase()}` : '· ES'}
+                  </button>
+                  <button
+                    onClick={() => setLangPDFOpen(v => !v)}
+                    style={{
+                      background: C.red, color: C.paper, border: 'none',
+                      borderLeft: '1px solid rgba(255,255,255,0.2)',
+                      padding: '13px 12px', cursor: 'pointer', fontSize: 10,
+                    }}
+                    title="Elegir idioma del PDF"
+                  >
+                    ▼
+                  </button>
+                </div>
+                {langPDFOpen && (
+                  <div style={{
+                    position: 'absolute', bottom: 'calc(100% + 6px)', left: 0, right: 0,
+                    background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.12)', zIndex: 20, overflow: 'hidden',
+                  }}>
+                    <div style={{ padding: '8px 12px', fontFamily: SN, fontSize: 10, color: C.ink3, borderBottom: `1px solid ${C.rule}`, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+                      Idioma del PDF
+                    </div>
+                    {IDIOMAS_CARTA.map(({ code, flag, label }) => (
+                      <button
+                        key={code}
+                        onClick={() => { setLangPDF(code as CodigoIdioma); openPDF(code as CodigoIdioma) }}
+                        style={{
+                          width: '100%', display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '9px 14px', background: langPDF === code ? C.paper : 'transparent',
+                          border: 'none', cursor: 'pointer', fontFamily: SN, fontSize: 13,
+                          color: C.ink2, borderBottom: `1px solid ${C.rule}`,
+                          fontWeight: langPDF === code ? 600 : 400,
+                        }}
+                      >
+                        <span style={{ fontSize: 16 }}>{flag}</span>
+                        <span>{label}</span>
+                        {langPDF === code && <span style={{ marginLeft: 'auto', color: C.green, fontSize: 12 }}>✓</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               <a href={cartaUrl} target="_blank" rel="noopener noreferrer" style={{
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,

@@ -13,6 +13,7 @@ import DiagnosticoTab from '@/components/owner/DiagnosticoTab'
 import SoporteTab from '@/components/owner/SoporteTab'
 import MensajesOwnerTab from '@/components/owner/MensajesOwnerTab'
 import FichajesTab from '@/components/owner/FichajesTab'
+import ModalTraducciones from '@/components/owner/ModalTraducciones'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -2122,6 +2123,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const [secciones, setSecciones] = useState<Seccion[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
+  const [modalTrad, setModalTrad] = useState<null | { id: string; nombre: string; descripcion?: string | null }>(null)
   const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '', familia: '' })
   const [err, setErr] = useState('')
 
@@ -2459,6 +2461,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                         </button>
                       </div>
                       <div className="col-acciones" style={{ display: 'flex', gap: 4, justifyContent: 'flex-end', flexShrink: 0 }}>
+                        <Btn size="sm" variant="ghost" onClick={() => setModalTrad({ id: p.id, nombre: p.nombre, descripcion: p.descripcion })}>🌐</Btn>
                         <Btn size="sm" variant="ghost" onClick={() => openEdit(p)}><Icon d={ICONS.edit} size={13}/></Btn>
                         <Btn size="sm" variant="danger" onClick={() => openDel(p)}><Icon d={ICONS.trash} size={13}/></Btn>
                       </div>
@@ -2515,6 +2518,14 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
             <Btn variant="danger" onClick={del}><Icon d={ICONS.trash} size={14}/>Borrar</Btn>
           </div>
         </Modal>
+      )}
+
+      {modalTrad && (
+        <ModalTraducciones
+          producto={modalTrad}
+          sh={sh}
+          onClose={() => setModalTrad(null)}
+        />
       )}
 
       {qrPanelOpen && <CartaPublicPanel onClose={() => setQrPanelOpen(false)} />}

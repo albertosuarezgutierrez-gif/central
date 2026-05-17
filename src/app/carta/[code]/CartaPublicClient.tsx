@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { IDIOMAS_CARTA, CodigoIdioma, IDIOMAS_VALIDOS } from '@/lib/useIdiomasCarta'
 
 // ─── Types ───────────────────────────────────────────────────
 type Producto = {
@@ -74,6 +75,8 @@ function NotFoundScreen() {
 export default function CartaPublicClient({ code }: { code: string }) {
   const searchParams = useSearchParams()
   const autoprint = searchParams.get('imprimir') === '1'
+  const langParam = searchParams.get('lang') ?? 'es'
+  const idioma = (IDIOMAS_VALIDOS.includes(langParam as CodigoIdioma) ? langParam : 'es') as CodigoIdioma
 
   const [restaurante, setRestauranteData] = useState<Restaurante | null>(null)
   const [productos, setProductos] = useState<Producto[]>([])
@@ -81,7 +84,8 @@ export default function CartaPublicClient({ code }: { code: string }) {
   const [notFound, setNotFound] = useState(false)
 
   useEffect(() => {
-    fetch(`/api/carta/${code}`)
+    const url = idioma !== 'es' ? `/api/carta/${code}?lang=${idioma}` : `/api/carta/${code}`
+    fetch(url)
       .then(r => r.json())
       .then(d => {
         if (d.error) { setNotFound(true); setLoading(false); return }
@@ -90,7 +94,7 @@ export default function CartaPublicClient({ code }: { code: string }) {
         setLoading(false)
       })
       .catch(() => { setNotFound(true); setLoading(false) })
-  }, [code])
+  }, [code, idioma])
 
   // Auto-print cuando viene desde el botón PDF del owner
   useEffect(() => {
@@ -149,10 +153,44 @@ export default function CartaPublicClient({ code }: { code: string }) {
       <div className="no-print" style={{
         background: C.ink, color: C.paper,
         padding: '10px 20px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 10,
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10,
+        position: 'sticky', top: 0, zIndex: 10, flexWrap: 'wrap',
       }}>
         <div style={{ fontFamily: SM, fontSize: 10, letterSpacing: '.15em', opacity: .5 }}>ia.rest</div>
+        {/* Selector de idioma — cambia URL para recargar con traducciones */}
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {IDIOMAS_CARTA.map(({ code, flag, label }) => (
+            <a
+              key={code}
+              href={code === 'es' ? `#` : `#lang-${code}`}
+              onClick={e => {
+                e.preventDefault()
+                const url = new URL(window.location.href)
+                if (code === 'es') url.searchParams.delete('lang')
+                else url.searchParams.set('lang', code)
+                window.history.pushState({}, '', url.toString())
+                window.location.reload()
+              }}
+              title={label}
+              style={{
+                padding: '3px 8px',
+                borderRadius: 12,
+                background: idioma === code ? C.red : 'transparent',
+                color: idioma === code ? C.paper : 'rgba(246,241,231,0.5)',
+                border: idioma === code ? 'none' : '1px solid rgba(246,241,231,0.15)',
+                fontSize: 13,
+                fontWeight: idioma === code ? 700 : 400,
+                cursor: 'pointer',
+                textDecoration: 'none',
+                display: 'inline-flex',
+                alignItems: 'center',
+                transition: 'all 0.15s',
+              }}
+            >
+              {flag}
+            </a>
+          ))}
+        </div>
         <button
           onClick={() => window.print()}
           style={{
@@ -163,7 +201,7 @@ export default function CartaPublicClient({ code }: { code: string }) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M16 13H8M16 17H8"/>
           </svg>
-          Guardar PDF
+          Guardar PDF{idioma !== 'es' ? ' (' + idioma.toUpperCase() + ')' : ''}
         </button>
       </div>
 

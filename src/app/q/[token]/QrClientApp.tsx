@@ -5,6 +5,9 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 
+import SelectorIdioma from '@/components/qr/SelectorIdioma'
+import { leerIdioma, guardarIdioma, CodigoIdioma } from '@/lib/useIdiomasCarta'
+
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
@@ -65,7 +68,30 @@ export default function QrClientApp({ token }: { token: string }) {
   const stripeRef = useRef<any>(null)
   const cardElementRef = useRef<any>(null)
 
+  const [idioma, setIdioma] = useState<CodigoIdioma>('es')
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  // Inicializar idioma desde preferencia guardada
+  useEffect(() => {
+    setIdioma(leerIdioma(token))
+  }, [token])
+
+  // Función para cambiar idioma y recargar productos
+  const cambiarIdioma = async (lang: CodigoIdioma) => {
+    setIdioma(lang)
+    guardarIdioma(lang, token)
+    if (!data) return
+    try {
+      const res = await fetch(`/api/qr/carta-i18n?token=${token}&lang=${lang}`)
+      const d = await res.json()
+      if (d.ok && d.productos) {
+        setData(prev => prev ? { ...prev, productos: d.productos } : prev)
+      }
+    } catch {
+      // fallo silencioso — mantiene productos anteriores
+    }
+  }
 
   useEffect(() => {
     fetch(`${SUPABASE_URL}/functions/v1/qr-session?token=${token}`, {
@@ -474,8 +500,12 @@ export default function QrClientApp({ token }: { token: string }) {
       {screen === 'menu' && (
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
           <div style={{ padding: '14px 18px 0', borderBottom: `1px solid ${C.rule}`, flexShrink: 0 }}>
-            <div style={{ fontSize: 20, fontStyle: 'italic', marginBottom: 11 }}>La carta</div>
-            <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 11 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ fontSize: 20, fontStyle: 'italic' }}>La carta</div>
+            </div>
+            {/* Selector de idioma */}
+            <SelectorIdioma idioma={idioma} onChange={cambiarIdioma} />
+            <div style={{ display: 'flex', gap: 7, overflowX: 'auto', paddingBottom: 11, marginTop: 4 }}>
               {cats.map(c => (
                 <button key={c} style={{ padding: '6px 14px', background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 20, color: C.cream, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', flexShrink: 0 }}>{c}</button>
               ))}
