@@ -768,6 +768,29 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [comandas, session.id, servicioPendiente])
 
+  // ── Timer para actualizar colores de tiempo en PlanoSala ──────────────
+  // minutos_abierta se congela entre eventos Realtime; este timer lo recalcula
+  // cada 60s para que los dots <15' / 15-30' / 30-45' / >45' sean precisos
+  useEffect(() => {
+    const t = setInterval(() => {
+      setMesasPlano(prev => {
+        const next = prev.map(m => {
+          const comanda = mesasOcupadas[m.id]
+          if (!comanda || m.estado === 'libre' || m.estado === 'reservada') return m
+          const min = Math.floor((Date.now() - new Date(comanda.created_at).getTime()) / 60000)
+          const estado: MesaPlano['estado'] = comanda.tipo === 'cuenta' || comanda.estado === 'cuenta_pedida' ? 'cuenta'
+            : comanda.estado === 'en_cocina' ? 'en_cocina'
+            : min > 60 ? 'urgente' : 'activa'
+          return { ...m, minutos_abierta: min, estado }
+        })
+        mesasPlanoRef.current = next
+        return next
+      })
+    }, 60_000)
+    return () => clearInterval(t)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mesasOcupadas])
+
   useEffect(() => {
     if (screen !== 'speaking' || !brain) return
     speakingRef.current = true
