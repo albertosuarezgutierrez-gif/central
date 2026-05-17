@@ -69,6 +69,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
   const [facturaOpen, setFacturaOpen]   = useState(false)
   const [hasAlias, setHasAlias]         = useState(false)
   const [hasFactCliente, setHasFactCliente] = useState(false)
+  const [menuOpen, setMenuOpen]         = useState(false)
 
   const session_str = JSON.stringify(session)
 
@@ -217,8 +218,8 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
         {/* HEADER */}
         <div style={{padding:'12px 20px 10px',borderBottom:`1px solid ${C.rule}`,flexShrink:0}}>
           <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start'}}>
-            <div>
-              <div style={{display:'flex',alignItems:'center',gap:10}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{display:'flex',alignItems:'center',gap:10,flexWrap:'wrap' as const}}>
                 <span style={{fontFamily:SE,fontStyle:'italic',fontSize:24,color:C.ink}}>
                   {parseInt(mesaCodigo.replace(/[^0-9]/g,''),10)||mesaCodigo}
                 </span>
@@ -229,6 +230,95 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                     textTransform:'uppercase',letterSpacing:'.7px'}}>
                     {({'nueva':'Nueva','en_cocina':'En cocina','lista':'Lista ✓','cuenta':'Cuenta','cuenta_pedida':'⏳ Cuenta pedida','cerrada':'Cerrada'} as Record<string,string>)[comanda.estado]||comanda.estado}
                   </span>
+                )}
+                {/* Botón ⋮ menú acciones rápidas */}
+                {comanda && comanda.estado !== 'cerrada' && (
+                  <div style={{position:'relative' as const,marginLeft:'auto'}}>
+                    <button
+                      onClick={()=>setMenuOpen(v=>!v)}
+                      style={{background:menuOpen?C.bg2:'none',border:`1px solid ${menuOpen?C.rule:'transparent'}`,borderRadius:8,
+                        padding:'4px 8px',cursor:'pointer',fontFamily:SN,fontSize:18,color:C.ink3,lineHeight:1,
+                        display:'flex',alignItems:'center',justifyContent:'center',minWidth:32}}>
+                      ⋮
+                    </button>
+                    {menuOpen && (
+                      <>
+                        {/* Overlay para cerrar */}
+                        <div onClick={()=>setMenuOpen(false)} style={{position:'fixed' as const,inset:0,zIndex:60}}/>
+                        {/* Menú */}
+                        <div style={{
+                          position:'absolute' as const,top:'calc(100% + 6px)',right:0,zIndex:70,
+                          background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:12,
+                          boxShadow:'0 8px 24px rgba(26,23,20,.16)',
+                          minWidth:190,overflow:'hidden' as const,
+                          animation:'fadeIn .12s ease',
+                        }}>
+                          <style>{`@keyframes fadeIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}`}</style>
+                          {/* Historial */}
+                          <button onClick={()=>{setVista('audit');cargarAudit();setMenuOpen(false)}}
+                            style={{width:'100%',padding:'12px 16px',background:'none',border:'none',
+                              display:'flex',alignItems:'center',gap:10,cursor:'pointer',
+                              borderBottom:`1px solid ${C.rule}`,textAlign:'left' as const}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round">
+                              <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:C.ink2}}>Ver historial</span>
+                          </button>
+                          {/* Añadir items */}
+                          <button onClick={()=>{setVistaAnadir(true);setCartAnadir([]);setSearchAnadir('');setCatAnadir('todo');setMenuOpen(false)}}
+                            style={{width:'100%',padding:'12px 16px',background:'none',border:'none',
+                              display:'flex',alignItems:'center',gap:10,cursor:'pointer',
+                              borderBottom:`1px solid ${C.rule}`,textAlign:'left' as const}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2" strokeLinecap="round">
+                              <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:C.ink2}}>Añadir productos</span>
+                          </button>
+                          {/* Añadir por voz */}
+                          <button onClick={()=>{onAnadirPorVoz(mesaId!, mesaCodigo, comanda.id);onClose();setMenuOpen(false)}}
+                            style={{width:'100%',padding:'12px 16px',background:'none',border:'none',
+                              display:'flex',alignItems:'center',gap:10,cursor:'pointer',
+                              borderBottom:`1px solid ${C.rule}`,textAlign:'left' as const}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round">
+                              <rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:C.teal,fontWeight:600}}>Añadir por voz</span>
+                          </button>
+                          {/* Separador — acciones de cuenta */}
+                          <div style={{padding:'6px 16px 2px',fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',textTransform:'uppercase' as const}}>
+                            Cuenta
+                          </div>
+                          {/* Pedir cuenta */}
+                          <button
+                            onClick={()=>{pedirCuenta();setMenuOpen(false)}}
+                            disabled={pedirCuentaLoading || comanda.estado === 'cuenta_pedida'}
+                            style={{width:'100%',padding:'12px 16px',background:comanda.estado==='cuenta_pedida'?'#FEF3C755':'none',
+                              border:'none',display:'flex',alignItems:'center',gap:10,cursor:comanda.estado==='cuenta_pedida'?'default':'pointer',
+                              borderBottom:`1px solid ${C.rule}`,textAlign:'left' as const,
+                              opacity:pedirCuentaLoading||comanda.estado==='cuenta_pedida'?.7:1}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#C97A00" strokeWidth="2" strokeLinecap="round">
+                              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+                              <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:'#C97A00',fontWeight:700}}>
+                              {comanda.estado==='cuenta_pedida'?'✓ Cuenta pedida':'Pedir cuenta'}
+                            </span>
+                          </button>
+                          {/* Cobrar */}
+                          <button onClick={()=>{setCobrarOpen(true);setMenuOpen(false)}}
+                            style={{width:'100%',padding:'12px 16px',background:`${C.verm}0A`,border:'none',
+                              display:'flex',alignItems:'center',gap:10,cursor:'pointer',textAlign:'left' as const}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.verm} strokeWidth="2" strokeLinecap="round">
+                              <rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:C.verm,fontWeight:700}}>
+                              Cobrar{comanda.total_estimado>0?` · ${comanda.total_estimado.toFixed(2).replace('.',',')} €`:''}
+                            </span>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
                 )}
               </div>
               {/* Nombre/alias editable */}
