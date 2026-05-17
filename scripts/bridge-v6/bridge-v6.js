@@ -3,20 +3,20 @@
 // ia.rest Bridge v6 — Cloud Edition
 // Sin servidor local · Sin puertos abiertos · Sin antivirus issues
 //
-// Arquitectura: Supabase Realtime (WSS) como canal de comunicación
-//   1. Bridge se conecta a Supabase Realtime usando anon key (pública)
-//   2. Se suscribe a cambios en print_jobs de su restaurante_id
-//   3. Cuando llega un job → imprime por TCP directo
-//   4. Reconecta automáticamente si se cae la conexión
-//   5. Ping cada 30s para mantener ultimo_ping actualizado en BD
+// PRIMER USO: pide el token → guarda → instala autostart → arranca
+// USOS SIGUIENTES: arranca directamente sin pedir nada
+//
+// Instalación automática como servicio Windows via registro
 // ═══════════════════════════════════════════════════════════════
 
-const net  = require('net')
-const http = require('http')
+const net   = require('net')
 const https = require('https')
-const fs   = require('fs')
-const path = require('path')
-const os   = require('os')
+const http  = require('http')
+const fs    = require('fs')
+const path  = require('path')
+const os    = require('os')
+const { execSync, exec, spawn } = require('child_process')
+const readline = require('readline')
 
 const VERSION      = '6.0.0'
 const API          = 'https://www.iarest.es'
@@ -25,12 +25,15 @@ const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 
 const CONFIG_DIR  = path.join(os.homedir(), '.iarest')
 const CONFIG_FILE = path.join(CONFIG_DIR, 'bridge-v6.json')
+const EXE_PATH    = process.execPath  // Ruta del EXE actual
+
+// ── Colores para terminal ─────────────────────────────────────
+const R = '\x1b[31m', G = '\x1b[32m', Y = '\x1b[33m', B = '\x1b[36m', W = '\x1b[37m', X = '\x1b[0m'
 
 // ── Config ────────────────────────────────────────────────────
 function loadConfig() {
-  try {
-    if (fs.existsSync(CONFIG_FILE)) return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8'))
-  } catch {}
+  try { if (fs.existsSync(CONFIG_FILE)) return JSON.parse(fs.readFileSync(CONFIG_FILE, 'utf8')) }
+  catch {}
   return {}
 }
 function saveConfig(data) {
@@ -42,15 +45,11 @@ function saveConfig(data) {
 function sendESCPOS(ip, port, data) {
   return new Promise((resolve, reject) => {
     const socket = new net.Socket()
-    const timeout = setTimeout(() => { socket.destroy(); reject(new Error(`TCP timeout ${ip}:${port}`)) }, 8000)
+    const t = setTimeout(() => { socket.destroy(); reject(new Error(`TCP timeout ${ip}:${port}`)) }, 8000)
     socket.connect(parseInt(port) || 9100, ip, () => {
-      socket.write(data, () => {
-        clearTimeout(timeout)
-        socket.end()
-        resolve()
-      })
+      socket.write(data, () => { clearTimeout(t); socket.end(); resolve() })
     })
-    socket.on('error', (e) => { clearTimeout(timeout); reject(e) })
+    socket.on('error', (e) => { clearTimeout(t); reject(e) })
   })
 }
 
@@ -64,7 +63,7 @@ function fetchJSON(url, opts = {}) {
       port: parsed.port || (parsed.protocol === 'https:' ? 443 : 80),
       path: parsed.pathname + parsed.search,
       method: opts.method || 'GET',
-      headers: { 'Content-Type': 'application/json', ...opts.headers },
+      headers: { 'Content-Type': 'application/json', 'User-Agent': `iarest-bridge/${VERSION}`, ...opts.headers },
     }
     const req = mod.request(options, (res) => {
       let body = ''
@@ -75,28 +74,113 @@ function fetchJSON(url, opts = {}) {
       })
     })
     req.on('error', reject)
-    if (opts.body) req.write(JSON.stringify(opts.body))
+    if (opts.body) req.write(typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body))
     req.end()
   })
 }
 
-// ── MAC recovery (por si cambia la IP) ───────────────────────
-const macToIP = {}
-function getLocalIP() {
-  const ifaces = os.networkInterfaces()
-  for (const name of Object.keys(ifaces)) {
-    for (const iface of ifaces[name]) {
-      if (iface.family === 'IPv4' && !iface.internal) return iface.address
-    }
+// ── Autostart Windows (registro) ─────────────────────────────
+function installAutostart(token) {
+  if (process.platform !== 'win32') return false
+  try {
+    // Crear un .bat que lanza el bridge con el token
+    const batPath = path.join(CONFIG_DIR, 'start-bridge.bat')
+    const batContent = [
+      '@echo off',
+      `set BRIDGE_TOKEN=${token}`,
+      `start "" /MIN "${EXE_PATH}" --bridge`,
+      'exit',
+    ].join('\r\n')
+    fs.writeFileSync(batPath, batContent)
+
+    // Registrar en HKCU\Run → arranca con el usuario sin UAC
+    const regCmd = `reg add "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run" /v "iarest-bridge-v6" /t REG_SZ /d "\"${batPath}\"" /f`
+    execSync(regCmd, { stdio: 'ignore' })
+    return true
+  } catch (e) {
+    console.warn(`${Y}[WARN] No se pudo instalar autostart: ${e.message}${X}`)
+    return false
   }
-  return '192.168.1.1'
 }
 
-// ── Imprimir un job ───────────────────────────────────────────
-async function printJob(job) {
+// ── Validar token con el servidor ────────────────────────────
+async function validarToken(token) {
+  try {
+    const r = await fetchJSON(`${API}/api/bridge/info?token=${token}&v=${VERSION}`)
+    if (r.body?.ok && r.body?.restaurante_id) return r.body
+    return null
+  } catch { return null }
+}
+
+// ── Setup interactivo (primer uso) ───────────────────────────
+async function setup() {
+  console.clear()
+  console.log(`\n${B}╔═══════════════════════════════════════════╗${X}`)
+  console.log(`${B}║${X}  ${W}ia.rest Bridge v${VERSION} · Cloud Edition${X}     ${B}║${X}`)
+  console.log(`${B}╚═══════════════════════════════════════════╝${X}\n`)
+  console.log(`${W}Configuración inicial${X}`)
+  console.log(`─────────────────────────────────────────────`)
+  console.log(`${Y}Necesitas tu token de acceso.${X}`)
+  console.log(`Encuéntralo en: ${B}www.iarest.es/owner${X} → Diagnóstico\n`)
+
+  const rl = readline.createInterface({ input: process.stdin, output: process.stdout })
+  
+  return new Promise((resolve) => {
+    const pregunta = () => {
+      rl.question(`${W}Pega tu token aquí y pulsa Enter:${X}\n> `, async (token) => {
+        token = token.trim()
+        if (!token || token.length < 20) {
+          console.log(`${R}Token demasiado corto. Inténtalo de nuevo.${X}\n`)
+          return pregunta()
+        }
+
+        console.log(`\n${Y}Verificando token...${X}`)
+        const info = await validarToken(token)
+        
+        if (!info) {
+          console.log(`${R}Token inválido o sin conexión. Comprueba el token en /owner → Diagnóstico${X}\n`)
+          return pregunta()
+        }
+
+        console.log(`${G}✓ Token válido${X}`)
+        console.log(`${G}✓ Restaurante conectado: ${info.restaurante_id.slice(0,8)}...${X}`)
+        
+        if (info.impresoras?.length > 0) {
+          console.log(`${G}✓ Impresoras encontradas:${X}`)
+          info.impresoras.forEach(i => console.log(`   · ${i.nombre} → ${i.ip_address}:${i.port || 9100}`))
+        } else {
+          console.log(`${Y}⚠ Sin impresoras configuradas (puedes añadirlas desde /owner)${X}`)
+        }
+
+        // Guardar config
+        saveConfig({ token, restaurante_id: info.restaurante_id, setup_at: new Date().toISOString() })
+        console.log(`\n${G}✓ Configuración guardada${X}`)
+
+        // Instalar autostart
+        const autoOk = installAutostart(token)
+        if (autoOk) {
+          console.log(`${G}✓ Autostart instalado (arrancará automáticamente con Windows)${X}`)
+        }
+
+        console.log(`\n${B}╔═══════════════════════════════════════════╗${X}`)
+        console.log(`${B}║${X}  ${G}Bridge instalado y listo ✓${X}               ${B}║${X}`)
+        console.log(`${B}╚═══════════════════════════════════════════╝${X}\n`)
+        console.log(`${W}Iniciando bridge...${X}\n`)
+
+        rl.close()
+        resolve(token)
+      })
+    }
+    pregunta()
+  })
+}
+
+// ── Imprimir job ──────────────────────────────────────────────
+async function printJob(job, TOKEN) {
   let ip = job.ip || job.ip_address
   const port = job.port || 9100
   const data = Buffer.from(job.print_data, 'base64')
+  const hora = new Date().toLocaleTimeString('es-ES')
 
   try {
     await sendESCPOS(ip, port, data)
@@ -105,28 +189,9 @@ async function printJob(job) {
       headers: { 'x-bridge-token': TOKEN },
       body: { job_id: job.id, status: 'impreso' }
     })
-    console.log(`[OK] ${new Date().toLocaleTimeString('es-ES')} Job ${job.id.slice(0,8)} → ${ip}:${port}`)
+    console.log(`${G}[OK]${X} ${hora} · Job ${job.id.slice(0,8)} → ${ip}:${port}`)
   } catch (e) {
-    console.warn(`[WARN] Print failed: ${e.message}`)
-    // Intentar recuperar por MAC
-    const mac = job.mac_address || Object.keys(macToIP).find(m => macToIP[m] === ip)
-    if (mac) {
-      const cfg = loadConfig()
-      const saved = cfg.printers?.find(p => p.mac === mac)
-      if (saved?.ip && saved.ip !== ip) {
-        try {
-          await sendESCPOS(saved.ip, port, data)
-          await fetchJSON(`${API}/api/print`, {
-            method: 'POST',
-            headers: { 'x-bridge-token': TOKEN },
-            body: { job_id: job.id, status: 'impreso' }
-          })
-          console.log(`[OK Recovery] ${job.id.slice(0,8)} → ${saved.ip}`)
-          return
-        } catch {}
-      }
-    }
-    // Marcar como error
+    console.warn(`${Y}[WARN]${X} Print failed: ${e.message}`)
     await fetchJSON(`${API}/api/print`, {
       method: 'POST',
       headers: { 'x-bridge-token': TOKEN },
@@ -135,168 +200,123 @@ async function printJob(job) {
   }
 }
 
-// ── Ping a BD (mantiene ultimo_ping actualizado) ──────────────
-async function ping() {
-  try {
-    await fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}`, {
-      headers: { 'x-bridge-token': TOKEN }
-    })
-  } catch {}
+// ── Ping ──────────────────────────────────────────────────────
+async function ping(TOKEN) {
+  try { await fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}`) }
+  catch {}
 }
 
-// ── Realtime WebSocket (sin dependencias externas) ────────────
-// Implementamos el protocolo Phoenix/Supabase Realtime manualmente
-// para no necesitar npm install en el EXE compilado
+// ── Realtime WebSocket ────────────────────────────────────────
 const WebSocket = require('ws')
-
-let ws = null
-let wsReady = false
-let reconnectTimer = null
-let heartbeatTimer = null
+let ws = null, wsReady = false, reconnectTimer = null, heartbeatTimer = null
 let joinRef = 1
-let restauranteId = null
 
-function wsConnect() {
+function wsConnect(TOKEN, restauranteId) {
   if (ws) { try { ws.terminate() } catch {} }
   clearTimeout(reconnectTimer)
   clearInterval(heartbeatTimer)
 
   const wsUrl = `${SUPABASE_URL.replace('https://', 'wss://')}/realtime/v1/websocket?apikey=${ANON_KEY}&vsn=1.0.0`
-  console.log(`[WS] Conectando a Supabase Realtime...`)
-
   ws = new WebSocket(wsUrl)
 
   ws.on('open', () => {
     wsReady = true
-    console.log(`[WS] Conectado`)
-
-    // Heartbeat cada 25s
     heartbeatTimer = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
+      if (ws.readyState === WebSocket.OPEN)
         ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null }))
-      }
     }, 25000)
-
-    // Suscribirse al canal de print_jobs del restaurante
-    subscribeChannel()
+    // Suscribir
+    ws.send(JSON.stringify({
+      topic: `realtime:public:print_jobs:restaurante_id=eq.${restauranteId}`,
+      event: 'phx_join',
+      payload: {
+        config: {
+          postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'print_jobs', filter: `restaurante_id=eq.${restauranteId}` }]
+        }
+      },
+      ref: String(joinRef++)
+    }))
+    console.log(`${G}[WS]${X} Realtime conectado · esperando jobs...`)
   })
 
   ws.on('message', (raw) => {
     try {
       const msg = JSON.parse(raw)
-      handleMessage(msg)
+      const record = msg.payload?.data?.record || msg.payload?.record
+      if (record?.status === 'pendiente' && record?.restaurante_id === restauranteId) {
+        console.log(`${B}[WS]${X} Nuevo job: ${record.id?.slice(0,8)}`)
+        fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}`)
+          .then(r => { if (r.body?.jobs?.length) r.body.jobs.forEach(j => printJob(j, TOKEN)) })
+          .catch(e => console.error('Fetch job error:', e.message))
+      }
     } catch {}
   })
 
   ws.on('close', () => {
     wsReady = false
     clearInterval(heartbeatTimer)
-    console.log(`[WS] Desconectado — reconectando en 5s...`)
-    reconnectTimer = setTimeout(wsConnect, 5000)
+    console.log(`${Y}[WS]${X} Desconectado — reconectando en 5s...`)
+    reconnectTimer = setTimeout(() => wsConnect(TOKEN, restauranteId), 5000)
   })
 
-  ws.on('error', (e) => {
-    console.warn(`[WS] Error: ${e.message}`)
-  })
+  ws.on('error', (e) => console.warn(`${Y}[WS]${X} ${e.message}`))
 }
 
-function subscribeChannel() {
-  if (!restauranteId) return
-  const channel = `realtime:public:print_jobs:restaurante_id=eq.${restauranteId}`
-  const msg = {
-    topic: channel,
-    event: 'phx_join',
-    payload: {
-      config: {
-        broadcast: { ack: false, self: false },
-        presence: { key: '' },
-        postgres_changes: [
-          { event: 'INSERT', schema: 'public', table: 'print_jobs', filter: `restaurante_id=eq.${restauranteId}` }
-        ]
-      }
-    },
-    ref: String(joinRef++)
-  }
-  ws.send(JSON.stringify(msg))
-  console.log(`[WS] Suscrito a print_jobs · restaurante ${restauranteId.slice(0,8)}...`)
-}
-
-function handleMessage(msg) {
-  // Nuevo print_job insertado
-  if (msg.event === 'postgres_changes' || msg.event === '*') {
-    const record = msg.payload?.data?.record || msg.payload?.record
-    if (record && record.status === 'pendiente' && record.restaurante_id === restauranteId) {
-      console.log(`[WS] Nuevo job detectado: ${record.id?.slice(0,8)}`)
-      // Fetch completo del job (incluye ip, print_data, etc.)
-      fetchAndPrint(record.id).catch(e => console.error('[WS] Print error:', e.message))
-    }
-  }
-}
-
-async function fetchAndPrint(jobId) {
-  const r = await fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}&job_id=${jobId}`)
-  if (r.body?.jobs?.length) {
-    for (const job of r.body.jobs) await printJob(job)
-  }
-}
-
-// ── Bootstrap ─────────────────────────────────────────────────
-const TOKEN = process.env.BRIDGE_TOKEN || loadConfig().token || ''
-if (!TOKEN) {
-  console.error('[ia.rest Bridge v6] Token no configurado.')
-  console.error('Ejecuta el wizard de configuración primero.')
-  process.exit(1)
-}
-
-console.log(`\n[ia.rest Bridge] v${VERSION} · Cloud Edition`)
-console.log(`API: ${API}`)
-console.log(`Token: ${TOKEN.slice(0,8)}...`)
-console.log('')
-
-// 1. Resolver restaurante_id desde el token
+// ── MAIN ──────────────────────────────────────────────────────
 ;(async () => {
-  try {
-    const r = await fetchJSON(`${API}/api/bridge/info?token=${TOKEN}`)
-    if (!r.body?.restaurante_id) throw new Error('Token inválido o sin restaurante_id')
-    restauranteId = r.body.restaurante_id
+  // Banner
+  console.log(`\n${B}  ia.rest Bridge${X} ${W}v${VERSION}${X} ${B}· Cloud Edition${X}`)
+  console.log(`  API: ${API}\n`)
 
-    // Cargar MACs de la config
-    const cfg = loadConfig()
-    if (cfg.printers) cfg.printers.forEach(p => { if (p.mac && p.ip) macToIP[p.mac] = p.ip })
+  // Determinar token
+  let TOKEN = process.env.BRIDGE_TOKEN || loadConfig().token || ''
 
-    console.log(`[OK] Bridge listo. Esperando jobs... (restaurante ${restauranteId.slice(0,8)})`)
+  // Primer uso — setup interactivo
+  if (!TOKEN) {
+    TOKEN = await setup()
+  }
 
-    // 2. Ping inmediato
-    await ping()
-
-    // 3. Conectar Realtime
-    wsConnect()
-
-    // 4. Ping cada 30s (mantiene ultimo_ping en BD)
-    setInterval(ping, 30000)
-
-    // 5. Poll de respaldo cada 60s (por si falla el WS)
-    setInterval(async () => {
-      try {
-        const r = await fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}`)
-        if (r.body?.jobs?.length) {
-          console.log(`[Poll backup] ${r.body.jobs.length} jobs pendientes`)
-          for (const job of r.body.jobs) await printJob(job)
-        }
-      } catch {}
-    }, 60000)
-
-  } catch (e) {
-    console.error('[Bridge] Error de inicio:', e.message)
+  // Validar token
+  console.log(`${Y}Conectando...${X}`)
+  const info = await validarToken(TOKEN)
+  if (!info) {
+    console.error(`${R}[ERROR]${X} Token inválido o sin conexión a internet.`)
+    console.error(`Ejecuta de nuevo para reconfigurar, o comprueba tu conexión.`)
+    // Borrar token inválido
+    saveConfig({ token: '' })
     process.exit(1)
   }
+
+  const restauranteId = info.restaurante_id
+  console.log(`${G}[OK]${X} Bridge listo · restaurante ${restauranteId.slice(0,8)}...`)
+
+  if (info.impresoras?.length > 0) {
+    info.impresoras.forEach(i => console.log(`${G}[OK]${X} ${i.nombre} → ${i.ip_address}:${i.port || 9100}`))
+  }
+
+  // Ping inmediato
+  await ping(TOKEN)
+
+  // Conectar Realtime
+  wsConnect(TOKEN, restauranteId)
+
+  // Ping cada 30s
+  setInterval(() => ping(TOKEN), 30000)
+
+  // Poll backup cada 60s
+  setInterval(async () => {
+    try {
+      const r = await fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}`)
+      if (r.body?.jobs?.length) {
+        for (const job of r.body.jobs) await printJob(job, TOKEN)
+      }
+    } catch {}
+  }, 60000)
+
+  console.log(`\n${G}Listo. Esperando comandas...${X}`)
+  console.log(`${W}(Deja esta ventana minimizada — no la cierres)${X}\n`)
+
 })()
 
-process.on('uncaughtException', (e) => {
-  console.error('[Bridge] Error fatal:', e.message)
-  process.exit(1)
-})
-process.on('unhandledRejection', (e) => {
-  console.error('[Bridge] Promesa rechazada:', e)
-  process.exit(1)
-})
+process.on('uncaughtException', (e) => { console.error(`${R}[ERROR]${X}`, e.message); process.exit(1) })
+process.on('unhandledRejection', (e) => { console.error(`${R}[ERROR]${X}`, e); process.exit(1) })
