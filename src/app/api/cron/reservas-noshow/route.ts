@@ -30,6 +30,10 @@ export async function GET(req: NextRequest) {
     .rpc('liberar_reservas_vencidas')
 
   if (error) {
+    // Módulo de reservas aún no implementado — silencioso hasta que exista
+    if (error.message.includes('does not exist') || error.message.includes('no existe')) {
+      return NextResponse.json({ ok: true, liberadas: 0, nota: 'módulo reservas pendiente' })
+    }
     console.error('[reservas-noshow] Error:', error.message)
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
