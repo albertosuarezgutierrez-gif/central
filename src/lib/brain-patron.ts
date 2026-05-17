@@ -337,7 +337,9 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
 
   const { items, confianza } = resultado
   const confianzaFinal = mesa ? confianza : confianza * 0.65
-  if (confianzaFinal < 0.75) return null
+  // Umbral más permisivo cuando hay nota explícita: el camarero dijo "nota" conscientemente
+  const umbralMin = notaGeneral ? 0.50 : 0.75
+  if (confianzaFinal < umbralMin) return null
 
   return {
     mesa: mesa ?? 'T00',
