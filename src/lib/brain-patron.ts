@@ -97,23 +97,23 @@ function detectarMesa(tNorm: string, cache: MenuCache): string | null {
     for (const alias of aliases) {
       const re = new RegExp(`(?:^|\\s)${alias}\\s+(\\w+)`)
       const m = tNorm.match(re)
-      if (m) { const n = toNum(m[1]); if (n) return `${zona.prefijo}${String(n).padStart(2, '0')}` }
+      if (m) { const n = toNum(m[1]); if (n) return `${zona.prefijo}${n}` }
     }
   }
 
   // 2. "mesa N", "a la N", "a la mesa N", "para la N", "numero N"
   const mesaRe = /(?:a la mesa|para la mesa|a la|mesa|numero)\s+(\w+)/
   const m1 = tNorm.match(mesaRe)
-  if (m1) { const n = toNum(m1[1]); if (n) return `T${String(n).padStart(2, '0')}` }
+  if (m1) { const n = toNum(m1[1]); if (n) return `T${n}` }
 
   // 3. "la cuatro" suelto (al final o cerca del final)
   const laRe = /\bla\s+(\w+)(?:\s*$|\s+(?:vamos|venga|ojo|por favor))/
   const m2 = tNorm.match(laRe)
-  if (m2) { const n = toNum(m2[1]); if (n) return `T${String(n).padStart(2, '0')}` }
+  if (m2) { const n = toNum(m2[1]); if (n) return `T${n}` }
 
   // 4. Número dígito solo al final
   const m3 = tNorm.match(/\b(\d{1,2})\s*$/)
-  if (m3) { const n = parseInt(m3[1]); if (n >= 1 && n <= 99) return `T${String(n).padStart(2, '0')}` }
+  if (m3) { const n = parseInt(m3[1]); if (n >= 1 && n <= 99) return `T${n}` }
 
   // 5. Código directo tipo "B1", "T3", "S06" al inicio o en cualquier posición
   // Cubre "B1 la cuenta", "T3 marchar", etc. — el camarero dice el código completo
@@ -197,7 +197,28 @@ interface ItemDetectado {
   formato: string | null
 }
 
-const FORMATOS = ['tapa', 'media racion', 'media', 'racion', 'ración', 'entera', 'grande']
+// Formatos hosteleros canónicos (de más específico a menos para evitar falso-positivo)
+// norm() ya elimina tildes antes de que lleguen aquí
+const FORMATOS = [
+  'media racion', 'media ración', 'medias raciones',
+  'racion entera', 'ración entera',
+  'racion', 'ración', 'raciones',
+  'tapa', 'tapita', 'tapas',
+  'entera', 'enteras',
+  'grande', 'grandes',
+  'chico', 'chica', 'pequeño', 'pequeña',
+  'media',
+]
+// Tokens individuales de cada formato (para limpiar de palabrasBusqueda)
+const FORMATO_TOKENS = new Set([
+  'tapa', 'tapita', 'tapas',
+  'media', 'medias',
+  'racion', 'raciones', 'ración',
+  'entera', 'enteras',
+  'grande', 'grandes',
+  'chico', 'chica', 'pequeño', 'pequeña',
+  'de', // "tapa de X" → el "de" se queda después de filtrar el formato
+])
 
 function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[]; confianza: number } | null {
   const segmentos = tNorm.split(/\s+y\s+|\s*,\s*/).map(s => s.trim()).filter(Boolean)
@@ -223,14 +244,27 @@ function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[
 
     if (palabrasBusqueda.length === 0) continue
 
-    // Extraer formato si existe
+    // Extraer formato si existe y eliminar sus tokens de palabrasBusqueda
+    // FIX: antes buscábamos producto con "tapa jamon" → no matchea.
+    // Ahora: detectar formato → quitar sus tokens → buscar solo el producto.
     let formato: string | null = null
     const segFull = palabrasBusqueda.join(' ')
+    let palabrasBusquedaLimpia = palabrasBusqueda
     for (const fmt of FORMATOS) {
-      if (segFull.includes(fmt)) { formato = fmt; break }
+      if (segFull.includes(fmt)) {
+        formato = fmt
+        // Eliminar tokens del formato (y el "de" conector) de palabrasBusqueda
+        const fmtTokens = new Set(fmt.split(' ').map(t => norm(t)))
+        palabrasBusquedaLimpia = palabrasBusqueda.filter(w => {
+          const wn = norm(w)
+          return !fmtTokens.has(wn) && !FORMATO_TOKENS.has(wn)
+        })
+        if (palabrasBusquedaLimpia.length === 0) palabrasBusquedaLimpia = palabrasBusqueda
+        break
+      }
     }
 
-    const resultado = buscarProducto(palabrasBusqueda, cache)
+    const resultado = buscarProducto(palabrasBusquedaLimpia, cache)
     if (!resultado) return null // No reconocido → Claude
 
     items.push({ producto: resultado.prod, cantidad, formato })

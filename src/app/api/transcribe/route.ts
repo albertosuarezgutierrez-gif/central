@@ -33,6 +33,14 @@ export async function POST(req: NextRequest) {
     if (!audio || !camareroId || !turnoId)
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
+    // ── Seguridad: camarero_id debe coincidir con la sesión autenticada ──────
+    // Evita que un camarero envíe comandas con el ID de otro camarero.
+    if (camareroId !== session.id) {
+      console.warn('[TRANSCRIBE] camarero_id mismatch:', camareroId, '!= session.id:', session.id)
+      return NextResponse.json({ error: 'Sesión inválida — recarga la app' }, { status: 403 })
+    }
+    // ────────────────────────────────────────────────────────────────────────
+
     // ── Idempotencia: si ya procesamos esta grabacion, devolver resultado cacheado ──
     if (recordingId) {
       const cached = recentRecordings.get(recordingId)

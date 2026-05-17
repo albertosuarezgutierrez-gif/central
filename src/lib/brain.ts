@@ -131,7 +131,9 @@ REGLAS ESTRICTAS:
 - Usa la CARTA ACTIVA para mapear alias al nombre canónico exacto
 - Para tipo "86": los items son los productos agotados
 - FORMATOS: si un producto tiene formatos (tapa/media/racion), extrae el formato mencionado en "formato" (null si no se menciona)
-- Ejemplos formato: "una tapa de bravas"→formato:"tapa", "media de croquetas"→formato:"media", "una ración"→formato:"racion"
+- El formato es INDEPENDIENTE del nombre del producto en carta. Busca el producto por su nombre, ignora la palabra del formato.
+- Ejemplos: "una tapa de bravas"→nombre:"Patatas Bravas",formato:"tapa"; "media de croquetas"→nombre:"Croquetas",formato:"media"; "ración de jamón"→nombre:"Jamón Ibérico",formato:"racion"
+- Variantes válidas de formato: tapa/tapita/tapas, media/medias, racion/ración/raciones/ración entera, entera, grande, chico/pequeño
 - COMENSALES: si el camarero menciona número de personas/comensales/cubiertos, extráelo en "num_comensales" (null si no se menciona)
 - Ejemplos comensales: "mesa cuatro para tres"→num_comensales:3, "somos cuatro"→num_comensales:4, "dos cubiertos"→num_comensales:2
 
@@ -149,6 +151,12 @@ NOTAS DE COMANDA (nota_general e item notas):
   - "tres cañas a la barra, nota barra en copa" → items[cañas].notas="en copa"
   - "dos vinos y croquetas mesa tres, nota cliente celíaca al gluten" → nota_general="cliente celíaca al gluten"
 - IMPORTANTE: "nota" solo se activa como keyword de nota cuando aparece DESPUÉS de los items. Si aparece en otro contexto (ej: "anota esto") NO es una nota de comanda.
+
+CUENTA POR MESA (tipo cuenta):
+- Cuando el camarero dice "cuenta para B1", "la B1 la cuenta", "B1 cuenta", "cobro mesa 3", el tipo es "cuenta" y mesa es el código detectado.
+- El camarero SIEMPRE menciona la mesa primero o junto a la palabra cuenta: "B1 la cuenta", "cuenta B1", "cuenta mesa tres"
+- NO crees items cuando sea tipo cuenta — items:[]
+- El estado de la mesa cambiará a "cuenta_pedida" automáticamente.
 
 CUENTAS POR NOMBRE (nombre_cuenta):
 - Cuando el camarero dice "a nombre de X", "para X", "cuenta de X" SIN mencionar mesa, usa nombre_cuenta
