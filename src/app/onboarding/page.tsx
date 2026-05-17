@@ -44,11 +44,12 @@ type NuevoPersonal = {
 }
 
 type Zona = {
-  nombre:  string
-  prefijo: string
-  tipo:    string
-  count:   number
-  _id:     number
+  nombre:   string
+  prefijo:  string
+  tipo:     string
+  count:    number
+  qr_activo: boolean
+  _id:      number
 }
 
 /* ── Helpers ────────────────────────────────────────────────── */
@@ -958,7 +959,7 @@ function StepImpresoras({ onNext }: { onNext: () => void }) {
 function StepMesas({ session, onComplete }: { session: any; onComplete: () => void }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [zonas, setZonas] = useState<Zona[]>([])
-  const [form, setForm] = useState({ nombre: '', prefijo: '', tipo: 'salon', count: 6 })
+  const [form, setForm] = useState({ nombre: '', prefijo: '', tipo: 'salon', count: 6, qr_activo: false })
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [done, setDone] = useState(false)
@@ -986,7 +987,7 @@ function StepMesas({ session, onComplete }: { session: any; onComplete: () => vo
     const e = validate()
     if (Object.keys(e).length) { setErrors(e); return }
     setZonas(zs => [...zs, { ...form, prefijo: form.prefijo.toUpperCase(), _id: Date.now() }])
-    setForm({ nombre: '', prefijo: '', tipo: 'salon', count: 6 })
+    setForm(f => ({ ...f, nombre: '', prefijo: '', count: 6 }))
     setErrors({})
   }
 
@@ -1072,6 +1073,39 @@ function StepMesas({ session, onComplete }: { session: any; onComplete: () => vo
         <p style={{ fontFamily: SC, fontSize: 14, color: C.fg3, margin: '0 0 10px' }}>
           El prefijo identifica las mesas por voz: "mesa S1", "mesa T3", "barra B2"
         </p>
+
+        {/* QR toggle */}
+        <div
+          onClick={() => setForm(f => ({ ...f, qr_activo: !f.qr_activo }))}
+          style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '10px 12px', marginBottom: 10, cursor: 'pointer',
+            background: form.qr_activo ? 'rgba(155,107,232,.1)' : C.e2,
+            border: `1px solid ${form.qr_activo ? 'rgba(155,107,232,.4)' : C.rule2}`,
+            borderRadius: 8, transition: 'all .15s',
+          }}
+        >
+          <div>
+            <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: form.qr_activo ? '#9B6BE8' : C.fg2 }}>
+              📱 Activar QR ordering en esta zona
+            </span>
+            <p style={{ fontFamily: SC, fontSize: 13, color: form.qr_activo ? '#9B6BE8' : C.fg3, margin: '2px 0 0' }}>
+              Los clientes piden desde su móvil · +12 €/mesa/mes
+            </p>
+          </div>
+          <div style={{
+            width: 36, height: 18, borderRadius: 18, flexShrink: 0,
+            background: form.qr_activo ? '#9B6BE8' : C.e3,
+            position: 'relative', transition: 'background .2s',
+          }}>
+            <div style={{
+              position: 'absolute', top: 2, left: form.qr_activo ? 18 : 2,
+              width: 14, height: 14, borderRadius: '50%', background: '#fff',
+              transition: 'left .2s',
+            }} />
+          </div>
+        </div>
+
         <button onClick={addZona}
           style={{ background: C.e2, border: '1px solid ' + C.rule2, color: C.fg2, borderRadius: 7, padding: '7px 14px', cursor: 'pointer', fontFamily: SN, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
           <Icon d={ICONS.plus} size={14}/> Añadir zona
@@ -1089,6 +1123,11 @@ function StepMesas({ session, onComplete }: { session: any; onComplete: () => vo
                   <span style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.fg }}>{z.nombre}</span>
                   <span style={{ fontFamily: SM, fontSize: 13, color: C.red, fontWeight: 700 }}>{z.prefijo}</span>
                   <span style={{ fontFamily: SN, fontSize: 12, color: C.fg3 }}>{z.count} mesas</span>
+                  {z.qr_activo && (
+                    <span style={{ fontFamily: SN, fontSize: 11, color: '#9B6BE8', background: 'rgba(155,107,232,.12)', border: '1px solid rgba(155,107,232,.3)', borderRadius: 6, padding: '2px 7px', fontWeight: 600 }}>
+                      📱 QR +{z.count * 12}€/mes
+                    </span>
+                  )}
                 </div>
                 <button onClick={() => removeZona(z._id)}
                   style={{ background: 'none', border: 'none', color: C.fg3, cursor: 'pointer', padding: 4 }}>
@@ -1233,6 +1272,190 @@ function StepPrimerTurno({ session, onComplete }: { session: any; onComplete: ()
 /* ══════════════════════════════════════════════════════════
    MAIN WIZARD
 ══════════════════════════════════════════════════════════ */
+
+/* ══════════════════════════════════════════════════════════
+   STEP 8 — DATOS FISCALES (VeriFactu)
+══════════════════════════════════════════════════════════ */
+function StepFiscal({ session, onNext }: { session: any; onNext: () => void }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [form, setForm] = useState({ razon_social: '', nif: '', direccion: '', cp: '', municipio: 'España' })
+  const [saving, setSaving] = useState(false)
+  const [err, setErr] = useState('')
+
+  const guardar = async () => {
+    if (!form.razon_social.trim() || !form.nif.trim()) {
+      setErr('Razón social y NIF son obligatorios para VeriFactu')
+      return
+    }
+    setSaving(true)
+    try {
+      await fetch('/api/owner/restaurante', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({
+          razon_social: form.razon_social.trim(),
+          nif:          form.nif.trim().toUpperCase(),
+          direccion:    form.direccion.trim(),
+          codigo_postal: form.cp.trim(),
+          municipio:    form.municipio.trim(),
+        }),
+      })
+      onNext()
+    } catch (e: any) {
+      setErr(e.message || 'Error al guardar')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const inp = (style?: object) => ({
+    width: '100%', background: C.e2, border: '1px solid ' + C.rule2,
+    color: C.fg, borderRadius: 7, padding: '9px 12px',
+    fontFamily: SN, fontSize: 14, outline: 'none', boxSizing: 'border-box' as const,
+    ...style,
+  })
+
+  return (
+    <div>
+      <div style={{ background: 'rgba(232,163,59,.08)', border: '1px solid rgba(232,163,59,.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+        <p style={{ fontFamily: SN, fontSize: 13, color: C.amber, margin: 0 }}>
+          ⚠ VeriFactu es <strong>obligatorio</strong> para sociedades desde el <strong>1 ene 2026</strong> y para autónomos desde el <strong>1 jul 2026</strong>. Multas hasta 50.000 €/ejercicio.
+        </p>
+      </div>
+
+      <div style={{ background: C.e1, border: '1px solid ' + C.rule, borderRadius: 12, padding: '16px 18px', marginBottom: 16 }}>
+        <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.fg2, margin: '0 0 14px' }}>Datos del negocio</p>
+        <div style={{ marginBottom: 10 }}>
+          <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Razón social *</p>
+          <input value={form.razon_social} onChange={e => setForm(f => ({ ...f, razon_social: e.target.value }))} placeholder="Ej: Bar La Marina S.L." style={inp()} />
+        </div>
+        <div style={{ marginBottom: 10 }}>
+          <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>NIF / CIF *</p>
+          <input value={form.nif} onChange={e => setForm(f => ({ ...f, nif: e.target.value.toUpperCase() }))} placeholder="Ej: B12345678 o 12345678Z" style={inp({ fontFamily: "'JetBrains Mono',monospace", letterSpacing: 1 })} />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div>
+            <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Código postal</p>
+            <input value={form.cp} onChange={e => setForm(f => ({ ...f, cp: e.target.value }))} placeholder="41001" style={inp()} />
+          </div>
+          <div>
+            <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Municipio</p>
+            <input value={form.municipio} onChange={e => setForm(f => ({ ...f, municipio: e.target.value }))} placeholder="Sevilla" style={inp()} />
+          </div>
+        </div>
+        <div>
+          <p style={{ fontFamily: SN, fontSize: 11, color: C.fg3, margin: '0 0 5px', textTransform: 'uppercase', letterSpacing: 1 }}>Dirección fiscal</p>
+          <input value={form.direccion} onChange={e => setForm(f => ({ ...f, direccion: e.target.value }))} placeholder="Calle, número..." style={inp()} />
+        </div>
+      </div>
+
+      <div style={{ background: 'rgba(63,125,68,.08)', border: '1px solid rgba(63,125,68,.3)', borderRadius: 10, padding: '10px 14px', marginBottom: 16 }}>
+        <p style={{ fontFamily: SN, fontSize: 13, color: C.green, margin: 0 }}>
+          ✓ ia.rest genera automáticamente el hash SHA-256 encadenado y el QR AEAT en cada factura. Cumplimiento total sin configuración adicional.
+        </p>
+      </div>
+
+      {err && <p style={{ fontFamily: SN, fontSize: 13, color: '#F07060', marginBottom: 12 }}>⚠ {err}</p>}
+
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={onNext} style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+          Configuraré los datos después
+        </button>
+        <button onClick={guardar} disabled={saving}
+          style={{ background: C.red, border: 'none', color: '#fff', borderRadius: 8, padding: '11px 24px', cursor: 'pointer', fontFamily: SN, fontSize: 14, fontWeight: 600 }}>
+          {saving ? 'Guardando…' : 'Guardar →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════
+   STEP 9 — MÉTODOS DE PAGO
+══════════════════════════════════════════════════════════ */
+const METODOS_ONBOARDING = [
+  { tipo: 'efectivo',         nombre: 'Efectivo',            icono: '💵', desc: 'Pago en metálico',                     activo: true  },
+  { tipo: 'tarjeta',          nombre: 'Tarjeta (datáfono)',  icono: '💳', desc: 'TPV físico o tap-to-pay',               activo: true  },
+  { tipo: 'bizum',            nombre: 'Bizum',               icono: '📱', desc: 'El cliente paga por Bizum',             activo: true  },
+  { tipo: 'invitacion',       nombre: 'Invitación',          icono: '🎁', desc: 'Cortesía o invitación del local',       activo: true  },
+  { tipo: 'cuenta_corriente', nombre: 'Cuenta empresa',      icono: '🏢', desc: 'Para clientes corporativos con factura', activo: false },
+  { tipo: 'stripe',           nombre: 'Tarjeta online (Stripe)', icono: '💳', desc: 'Cobro digital con Stripe Terminal', activo: false },
+]
+
+function StepMetodosPago({ session, onNext }: { session: any; onNext: () => void }) {
+  const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
+  const [metodos, setMetodos] = useState(METODOS_ONBOARDING.map(m => ({ ...m })))
+  const [saving, setSaving] = useState(false)
+
+  const toggleMetodo = (tipo: string) => {
+    setMetodos(ms => ms.map(m => m.tipo === tipo ? { ...m, activo: !m.activo } : m))
+  }
+
+  const guardar = async () => {
+    setSaving(true)
+    try {
+      for (const m of metodos) {
+        await fetch('/api/owner/metodos-pago', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...sh() },
+          body: JSON.stringify({ tipo: m.tipo, activo: m.activo }),
+        })
+      }
+      onNext()
+    } catch {
+      onNext() // Si falla, continuar igualmente
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+        {metodos.map(m => (
+          <div key={m.tipo}
+            onClick={() => toggleMetodo(m.tipo)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: '12px 14px', cursor: 'pointer',
+              background: m.activo ? 'rgba(63,125,68,.08)' : C.e1,
+              border: `1px solid ${m.activo ? 'rgba(63,125,68,.35)' : C.rule}`,
+              borderRadius: 10, transition: 'all .15s',
+            }}
+          >
+            <span style={{ fontSize: 22, flexShrink: 0 }}>{m.icono}</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.fg, margin: 0 }}>{m.nombre}</p>
+              <p style={{ fontFamily: SN, fontSize: 12, color: C.fg3, margin: 0 }}>{m.desc}</p>
+            </div>
+            <div style={{
+              width: 36, height: 18, borderRadius: 18, flexShrink: 0,
+              background: m.activo ? C.green : C.e3, position: 'relative', transition: 'background .2s',
+            }}>
+              <div style={{
+                position: 'absolute', top: 2, left: m.activo ? 18 : 2,
+                width: 14, height: 14, borderRadius: '50%', background: '#fff', transition: 'left .2s',
+              }} />
+            </div>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontFamily: SN, fontSize: 12, color: C.fg3, marginBottom: 16 }}>
+        💡 Puedes cambiarlos en cualquier momento desde /owner → Config → Métodos de pago
+      </p>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <button onClick={onNext} style={{ background: 'none', border: 'none', color: C.fg3, fontFamily: SN, fontSize: 13, cursor: 'pointer', textDecoration: 'underline' }}>
+          Dejar por defecto
+        </button>
+        <button onClick={guardar} disabled={saving}
+          style={{ background: C.red, border: 'none', color: '#fff', borderRadius: 8, padding: '11px 24px', cursor: 'pointer', fontFamily: SN, fontSize: 14, fontWeight: 600 }}>
+          {saving ? 'Guardando…' : 'Guardar →'}
+        </button>
+      </div>
+    </div>
+  )
+}
+
 const STEPS = [
   {
     n:        '01',
@@ -1275,6 +1498,20 @@ const STEPS = [
     title:    'Tickets físicos en cocina.',
     subtitle: 'Si tienes impresoras térmicas, conéctalas ahora. Ya tienes tus secciones creadas para asignarlas directamente.',
     caveat:   'El KDS funciona sin impresora · Puedes añadirlas cuando quieras',
+  },
+  {
+    n:        '08',
+    label:    'Fiscal',
+    title:    'Datos para VeriFactu.',
+    subtitle: 'NIF y razón social para que las facturas lleven el hash SHA-256 y el QR verificable por la AEAT.',
+    caveat:   'Obligatorio desde enero 2026 para sociedades · julio 2026 para autónomos',
+  },
+  {
+    n:        '09',
+    label:    'Cobros',
+    title:    'Métodos de pago.',
+    subtitle: 'Activa los métodos que usas en tu restaurante. Los camareros los verán al cobrar una mesa.',
+    caveat:   'Puedes cambiarlos en cualquier momento desde /owner → Config',
   },
   {
     n:        '07',
@@ -1437,13 +1674,15 @@ export default function OnboardingPage() {
 
         {/* Step content */}
         <div key={'content-' + step} style={{ animation: 'fadeIn .35s ease .1s both' }}>
-          {step === 0 && <StepCarta session={session} onNext={() => setStep(1)}/>}
-          {step === 1 && <StepCocina onNext={() => setStep(2)}/>}
-          {step === 2 && <StepMesas session={session} onComplete={() => setStep(3)}/>}
-          {step === 3 && <StepSecciones onNext={() => setStep(4)}/>}
-          {step === 4 && <StepPersonal session={session} onNext={() => setStep(5)}/>}
-          {step === 5 && <StepImpresoras onNext={() => setStep(6)}/>}
-          {step === 6 && <StepPrimerTurno session={session} onComplete={complete}/>}
+          {step === 0 && <StepCarta       session={session} onNext={() => setStep(1)}/>}
+          {step === 1 && <StepCocina      onNext={() => setStep(2)}/>}
+          {step === 2 && <StepMesas       session={session} onComplete={() => setStep(3)}/>}
+          {step === 3 && <StepSecciones   onNext={() => setStep(4)}/>}
+          {step === 4 && <StepPersonal    session={session} onNext={() => setStep(5)}/>}
+          {step === 5 && <StepImpresoras  onNext={() => setStep(6)}/>}
+          {step === 6 && <StepFiscal      session={session} onNext={() => setStep(7)}/>}
+          {step === 7 && <StepMetodosPago session={session} onNext={() => setStep(8)}/>}
+          {step === 8 && <StepPrimerTurno session={session} onComplete={complete}/>}
         </div>
 
         {/* Step counter */}
