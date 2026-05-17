@@ -250,3 +250,57 @@ CREATE TRIGGER trg_stock_comanda_item
 COMMENT ON FUNCTION trg_decrementar_stock_comanda_item IS
   'Trigger: decrementa stock de fuera_carta cuando se inserta un comanda_item. '
   'Cubre todos los flujos: voz, manual y QR.';
+
+-- ─────────────────────────────────────────────────────────────────────────────
+-- FIX (mismo día): seccion NOT NULL DEFAULT 'otras' — corrección columna
+-- ─────────────────────────────────────────────────────────────────────────────
+CREATE OR REPLACE FUNCTION crear_fuera_carta(
+  p_restaurante_id UUID,
+  p_nombre         TEXT,
+  p_precio         NUMERIC,
+  p_descripcion    TEXT    DEFAULT NULL,
+  p_categoria      TEXT    DEFAULT 'Especiales',
+  p_alergenos      TEXT[]  DEFAULT '{}',
+  p_seccion_id     UUID    DEFAULT NULL,
+  p_dias           INT     DEFAULT 1,
+  p_stock          INT     DEFAULT NULL
+)
+RETURNS UUID
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_id     UUID;
+  v_expira TIMESTAMPTZ;
+  v_orden  INT;
+BEGIN
+  IF p_dias <= 0 THEN
+    v_expira := (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid')
+                 + INTERVAL '1 day' - INTERVAL '1 second')
+                 AT TIME ZONE 'Europe/Madrid';
+  ELSE
+    v_expira := (date_trunc('day', now() AT TIME ZONE 'Europe/Madrid')
+                 + (p_dias || ' days')::INTERVAL
+                 + INTERVAL '1 day' - INTERVAL '1 second')
+                 AT TIME ZONE 'Europe/Madrid';
+  END IF;
+  SELECT COALESCE(MAX(orden), 0) + 1 INTO v_orden
+    FROM productos WHERE restaurante_id = p_restaurante_id;
+  INSERT INTO productos (
+    restaurante_id, nombre, precio, descripcion, categoria,
+    alergenos, seccion, activo, es_fuera_carta, expira_at, orden,
+    stock_raciones, stock_restante
+  ) VALUES (
+    p_restaurante_id, p_nombre, p_precio, p_descripcion, p_categoria,
+    p_alergenos,
+    COALESCE(p_seccion_id::TEXT, 'otras'),
+    true, true, v_expira, v_orden,
+    p_stock, p_stock
+  )
+  RETURNING id INTO v_id;
+  RETURN v_id;
+END;
+$$;
+
+-- Eliminar versión antigua sin p_stock (overload huérfano)
+DROP FUNCTION IF EXISTS crear_fuera_carta(uuid, text, numeric, text, text, text[], uuid, integer);
