@@ -523,6 +523,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [tab, setTab]     = useState<Tab>('hablar')
   const [screen, setScreen] = useState<Screen>('idle')
   const [cuentasCount, setCuentasCount] = useState(0)
+  const [iniciandoTurno, setIniciandoTurno] = useState(false)
   const [transcript, setTranscript] = useState('')
   const [brain, setBrain]           = useState<BrainResult|null>(null)
   const [error, setError]           = useState('')
@@ -721,6 +722,23 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     }).catch(() => {})
     return () => clearInterval(turnoInterval)
   }, [])
+
+  // ── Activar turno propio (fichaje de entrada) — el camarero inicia su turno sin necesitar al owner
+  const activarTurno = async () => {
+    setIniciandoTurno(true)
+    try {
+      const ses = localStorage.getItem('ia_rest_session') ?? ''
+      const r = await fetch('/api/turnos/fichar', { method: 'POST', headers: { 'x-ia-session': ses } })
+      const d = await r.json()
+      if (d.ok) {
+        // Turno creado — re-fetch inmediato para obtener el turnoId (capa 2 de /api/turno)
+        const r2 = await fetch('/api/turno', { headers: { 'x-ia-session': ses } })
+        const d2 = await r2.json()
+        if (d2.turno?.id) setTurnoId(d2.turno.id)
+      }
+    } catch {}
+    setIniciandoTurno(false)
+  }
 
   // ── Polling background cuentas pendientes → mantiene badge actualizado
   //    aunque el camarero esté en cualquier otro tab (Hablar, Manual, etc.)
@@ -1073,13 +1091,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     const actualMimeType = mediaRef.current?.mimeType || 'audio/webm'
     const blob = new Blob(chunksRef.current, { type: actualMimeType })
 
-    // ── Guardia: sin turno activo no se puede crear comanda ─────────────
+    // ── Guardia: sin turno activo → activar turno automáticamente ──────
     if (!turnoId) {
       processingRef.current = false
-      const aviso = 'Sin turno activo — abre el turno en el panel antes de tomar comandas'
-      setError(aviso)
-      addMsg('sistema', aviso, 'error')
-      setScreenSafe('error')
+      setScreenSafe('idle')
+      activarTurno()
       return
     }
 
@@ -2039,6 +2055,32 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
           {/* ── PTT ─────────────────────────────────────────── */}
           <div style={{padding:'8px 20px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,flexShrink:0,borderTop:`1px solid ${C.rule}`,background:C.bg1}}>
+
+            {/* Banner "Iniciar turno" — visible cuando no hay turno activo */}
+            {!turnoId && (
+              <div style={{width:'100%',marginBottom:4}}>
+                <button
+                  onClick={activarTurno}
+                  disabled={iniciandoTurno}
+                  style={{width:'100%',padding:'12px 0',background:iniciandoTurno?C.bg2:`${C.gr}18`,border:`1.5px solid ${C.gr}55`,borderRadius:12,fontFamily:SN,fontSize:13,fontWeight:700,color:iniciandoTurno?C.ink4:C.gr,cursor:iniciandoTurno?'default':'pointer',display:'flex',alignItems:'center',justifyContent:'center',gap:8,transition:'all .15s'}}
+                >
+                  {iniciandoTurno ? (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{animation:'spin 1s linear infinite'}}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                      Iniciando turno…
+                    </>
+                  ) : (
+                    <>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8"/></svg>
+                      Iniciar turno
+                    </>
+                  )}
+                </button>
+                <div style={{fontFamily:SM,fontSize:9,color:C.ink4,textAlign:'center',marginTop:5,letterSpacing:'.5px'}}>
+                  Ficha tu entrada · el dueño puede ver y modificar tu turno
+                </div>
+              </div>
+            )}
             <div style={{position:'relative',width:88,height:88,display:'flex',alignItems:'center',justifyContent:'center'}}>
               <div style={{position:'absolute',width:80,height:80,borderRadius:'50%',border:`1.5px solid ${isListening?C.verm+'60':'#D9442B22'}`,animation:'hout 2s ease-out infinite'}}/>
               <div style={{position:'absolute',width:80,height:80,borderRadius:'50%',border:`1.5px solid ${isListening?C.verm+'60':'#D9442B22'}`,animation:'hout 2s ease-out .7s infinite'}}/>
