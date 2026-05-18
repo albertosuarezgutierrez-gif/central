@@ -56,6 +56,26 @@ const KW_NOTA = [
 
 const KW_CUENTA  = ['cuenta', 'cobro', 'cobrar', 'pagar', 'ticket', 'factura']
 const KW_MARCHAR = ['marchar', 'marcha', 'pasa', 'pasar', 'listo', 'lista', 'sale ', 'salen']
+
+// Mapa de keywords de tipo de vino → familia (para fast-lane)
+// Si el camarero dice "un tinto" y solo hay un vino_tinto, el patron lo resuelve sin Claude
+const VINO_TIPO_KEYWORDS: Array<{ kw: string[]; familia: string }> = [
+  { kw: ['tinto', 'tinta'],                                   familia: 'vino_tinto'  },
+  { kw: ['blanco', 'blanca'],                                  familia: 'vino_blanco' },
+  { kw: ['rosado', 'rosada'],                                  familia: 'vino_rosado' },
+  { kw: ['cava'],                                              familia: 'cava'        },
+  { kw: ['champan', 'champagne', 'champaña'],                  familia: 'champagne'   },
+  { kw: ['jerez', 'fino', 'manzanilla', 'amontillado'],        familia: 'jerez'       },
+  { kw: ['vermut', 'vermu', 'vermú'],                          familia: 'vermut'      },
+]
+
+/** Detecta si el texto contiene keyword de tipo de vino y devuelve la familia */
+function detectarFamiliaVino(tNorm: string): string | null {
+  for (const entry of VINO_TIPO_KEYWORDS) {
+    if (entry.kw.some(k => tNorm.includes(k))) return entry.familia
+  }
+  return null
+}
 const KW_86      = ['86', 'agotado', 'agotada', 'sin stock', 'se acabo', 'se acabó', 'no hay']
 
 const KW_MESA_RAPIDA = [
@@ -264,7 +284,18 @@ function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[
       }
     }
 
-    const resultado = buscarProducto(palabrasBusquedaLimpia, cache)
+    // Si el camarero dijo un tipo de vino (tinto/blanco/rosado/cava...),
+    // filtra el cache por familia antes de buscar → evita ambigüedad entre tipos
+    const familiaVino = detectarFamiliaVino(tNorm)
+    let cacheEfectivo = cache
+    if (familiaVino) {
+      const productosFiltrados = cache.productos.filter(p => p.familia === familiaVino)
+      if (productosFiltrados.length > 0) {
+        cacheEfectivo = { ...cache, productos: productosFiltrados }
+        // Si hay un único producto de ese tipo → lo seleccionamos directamente sin clarificar
+      }
+    }
+    const resultado = buscarProducto(palabrasBusquedaLimpia, cacheEfectivo)
     if (!resultado) return null // No reconocido → Claude
 
     items.push({ producto: resultado.prod, cantidad, formato })

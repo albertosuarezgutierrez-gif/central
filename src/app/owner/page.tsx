@@ -2132,46 +2132,64 @@ function WineStatsSection({ sh }: { sh: () => Record<string, string> }) {
   if (!data || data.vinos.length === 0) return null
 
   return (
-    <div style={{ marginBottom: 24, border: `1px solid #3D2E24`, borderRadius: 8, overflow: 'hidden' }}>
+    <div style={{ marginBottom: 24, border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', background: C.bone }}>
       <button
         onClick={() => setOpen(o => !o)}
-        style={{ width: '100%', background: '#1C1410', border: 'none', padding: '12px 16px',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+        style={{ width: '100%', background: C.paper2, border: 'none', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer',
+          borderBottom: open ? `1px solid ${C.rule}` : 'none' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontSize: 16 }}>🍷</span>
-          <div>
-            <div style={{ fontFamily: 'var(--font-sm,monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#D9442B', textTransform: 'uppercase' }}>
+          <span style={{ fontSize: 15 }}>🍷</span>
+          <div style={{ textAlign: 'left' as const }}>
+            <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: C.red, textTransform: 'uppercase' as const }}>
               Sommeliero · {data.totales.referencias} referencia{data.totales.referencias !== 1 ? 's' : ''}
             </div>
-            <div style={{ fontFamily: 'var(--font-sn,sans-serif)', fontSize: 12, color: '#D8CDB6', marginTop: 1 }}>
-              {data.totales.unidades} copas/botellas · {data.totales.facturado.toFixed(2)} € facturado
+            <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 1 }}>
+              {data.totales.unidades} unidades · {data.totales.facturado.toFixed(2)} € facturado
             </div>
           </div>
         </div>
-        <span style={{ color: '#D8CDB6', fontSize: 12, transform: open ? 'rotate(180deg)' : 'none', transition: '.2s' }}>▼</span>
+        <span style={{ color: C.ink4, fontSize: 11, transform: open ? 'rotate(180deg)' : 'none', transition: '.2s' }}>▼</span>
       </button>
       {open && (
-        <div style={{ background: '#14110E', overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-sn,sans-serif)', fontSize: 12 }}>
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 12 }}>
             <thead>
-              <tr style={{ borderBottom: '1px solid #3D2E24' }}>
-                {['Vino', 'Bodega', 'D.O.', 'Añada', 'Precio', 'Uds.', 'Facturado'].map(h => (
-                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: 'var(--font-sm,monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: '#6B5F52', textTransform: 'uppercase' }}>{h}</th>
+              <tr style={{ borderBottom: `1px solid ${C.rule}`, background: C.bone }}>
+                {['Vino', 'Tipo', 'Bodega', 'D.O.', 'Añada', 'Precio', 'Uds.', 'Facturado'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: SM, fontSize: 10,
+                    fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const, whiteSpace: 'nowrap' as const }}>{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
-              {(data.vinos as Record<string,unknown>[]).map((v, i) => (
-                <tr key={String(v.id)} style={{ borderBottom: i < data.vinos.length - 1 ? '1px solid #1C1410' : 'none' }}>
-                  <td style={{ padding: '9px 12px', color: '#F6F1E7', fontWeight: 600 }}>{String(v.nombre)}</td>
-                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{String(v.bodega || '—')}</td>
-                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{String(v.denominacion_origen || '—')}</td>
-                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{String(v.anada || '—')}</td>
-                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{v.precio != null ? Number(v.precio).toFixed(2) + ' €' : '—'}</td>
-                  <td style={{ padding: '9px 12px', color: '#F6F1E7', fontWeight: 700 }}>{String(v.unidades_vendidas)}</td>
-                  <td style={{ padding: '9px 12px', color: '#3F7D44', fontWeight: 700 }}>{Number(v.facturado_eur).toFixed(2)} €</td>
-                </tr>
-              ))}
+              {(data.vinos as Record<string,unknown>[]).map((v, i) => {
+                const tipoLabel: Record<string,string> = {
+                  vino_tinto: 'TINTO', vino_blanco: 'BLANCO', vino_rosado: 'ROSADO',
+                  cava: 'CAVA', champagne: 'CHAMPÁN', jerez: 'JEREZ', vermut: 'VERMUT',
+                }
+                const tipo = tipoLabel[String(v.familia || '')] || '—'
+                const tipoColor: Record<string,string> = {
+                  TINTO: C.red, BLANCO: C.amber, ROSADO: '#C47BB2', CAVA: C.green, 'CHAMPÁN': C.amber, JEREZ: C.ink3, VERMUT: C.ink3,
+                }
+                return (
+                  <tr key={String(v.id)} style={{ borderBottom: i < data.vinos.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
+                    <td style={{ padding: '9px 12px', color: C.ink, fontWeight: 600, whiteSpace: 'nowrap' as const }}>{String(v.nombre)}</td>
+                    <td style={{ padding: '9px 12px' }}>
+                      <span style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, letterSpacing: '.08em',
+                        color: tipoColor[tipo] || C.ink3, background: C.paper2, padding: '2px 6px', borderRadius: 999 }}>
+                        {tipo}
+                      </span>
+                    </td>
+                    <td style={{ padding: '9px 12px', color: C.ink3 }}>{String(v.bodega || '—')}</td>
+                    <td style={{ padding: '9px 12px', color: C.ink3, whiteSpace: 'nowrap' as const }}>{String(v.denominacion_origen || '—')}</td>
+                    <td style={{ padding: '9px 12px', color: C.ink3 }}>{String(v.anada || '—')}</td>
+                    <td style={{ padding: '9px 12px', color: C.ink2, fontFamily: SM, whiteSpace: 'nowrap' as const }}>{v.precio != null ? Number(v.precio).toFixed(2) + ' €' : '—'}</td>
+                    <td style={{ padding: '9px 12px', color: C.ink, fontWeight: 700 }}>{String(v.unidades_vendidas)}</td>
+                    <td style={{ padding: '9px 12px', color: C.green, fontWeight: 700, fontFamily: SM, whiteSpace: 'nowrap' as const }}>{Number(v.facturado_eur).toFixed(2)} €</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
         </div>
@@ -2575,9 +2593,37 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
               </div>
             </div>
             {(form.familia.startsWith('vino') || ['vinos','vino','bodega','carta de vinos','vinos tintos','vinos blancos','vinos rosados','espumosos','cava','champagne'].includes((form.seccion||'').toLowerCase())) && (
-              <div style={{ background: '#1C1410', border: '1px solid #3D2E24', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-                <div style={{ fontFamily: 'var(--font-sm, monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: '#D9442B', textTransform: 'uppercase', marginBottom: 2 }}>
+              <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: C.red, textTransform: 'uppercase' as const, marginBottom: 2 }}>
                   🍷 Ficha de vino
+                </div>
+                {/* Tipo de vino — auto-setea familia para el BRAIN */}
+                <div>
+                  <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const, display: 'block', marginBottom: 6 }}>Tipo de vino</label>
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
+                    {([
+                      { label: '🔴 Tinto',    familia: 'vino_tinto'  },
+                      { label: '⚪ Blanco',   familia: 'vino_blanco' },
+                      { label: '🌸 Rosado',   familia: 'vino_rosado' },
+                      { label: '🫧 Cava',     familia: 'cava'        },
+                      { label: '🥂 Champán',  familia: 'champagne'   },
+                      { label: '🍶 Jerez',    familia: 'jerez'       },
+                      { label: '🌿 Vermut',   familia: 'vermut'      },
+                    ] as {label:string;familia:string}[]).map(t => (
+                      <button key={t.familia} type="button"
+                        onClick={() => setForm(f => ({ ...f, familia: t.familia }))}
+                        style={{ fontFamily: SN, fontSize: 12, padding: '5px 12px', borderRadius: 999, cursor: 'pointer', transition: 'all .12s',
+                          background: form.familia === t.familia ? C.red : C.bone,
+                          color:      form.familia === t.familia ? C.paper : C.ink2,
+                          border:     `1px solid ${form.familia === t.familia ? C.redD : C.rule}`,
+                          fontWeight: form.familia === t.familia ? 700 : 400 }}>
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginTop: 4 }}>
+                    El tipo permite que el camarero diga «un tinto» o «un cava» y el BRAIN filtre correctamente.
+                  </div>
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                   <Field label="Bodega" value={wineForm.bodega} onChange={v => setWineForm(f => ({ ...f, bodega: v }))} placeholder="Vega Sicilia"/>

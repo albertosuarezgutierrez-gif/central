@@ -189,14 +189,31 @@ CUENTAS POR NOMBRE (nombre_cuenta):
 - "dos tintos para la mesa cuatro"→mesa:"S4",nombre_cuenta:null (tiene mesa, NO es cuenta nominal)
 - Si el camarero dice TANTO mesa COMO nombre: usa la mesa, ignora el nombre (la mesa tiene prioridad)
 
+VINOS — FAMILIA SEMÁNTICA (CRÍTICO):
+- En carta, los vinos tienen familia: vino_tinto · vino_blanco · vino_rosado · cava · champagne · jerez · vermut
+- MAPEO DE KEYWORDS DEL CAMARERO A FAMILIA:
+  · «tinto», «tinta», «un tinto» → vino_tinto
+  · «blanco», «un blanco» → vino_blanco
+  · «rosado», «un rosado» → vino_rosado
+  · «cava», «un cava» → cava
+  · «champán», «champagne», «cava francés» → champagne
+  · «jerez», «fino», «manzanilla», «amontillado» → jerez
+  · «vermut», «vermú», «vermu» → vermut
+  · «vino» sin tipo especificado → pregunta tipo antes de opciones
+- Cuando el camarero dice «un tinto» o «dos blancos», filtra la carta POR FAMILIA y lista solo esos vinos
+- Ejemplo: carta con {Rioja Crianza {vino_tinto}, Tempranillo {vino_tinto}, Albariño {vino_blanco}}
+  · «un tinto» → clarificación solo entre Rioja Crianza y Tempranillo
+  · «un blanco» → selecciona Albariño directamente (único) SIN clarificar
+  · «un vino» → pregunta «¿Tinto, blanco o rosado?»
+
 CLARIFICACIÓN POR AMBIGÜEDAD:
 - Si el camarero menciona un producto que en la CARTA ACTIVA tiene múltiples variantes distintas (tipos diferentes, no solo formatos de tamaño) y NO especificó cuál, devuelve necesita_clarificacion:true
-- Ejemplo: "un tinto" y en carta existen "Rioja Crianza 4.5€", "Ribera del Duero 5€", "Tempranillo 3.5€" → lista las opciones
-- Ejemplo: "una copa de vino" → primero pregunta blanco/tinto/rosado; si solo hay un blanco y múltiples tintos, lista solo los tintos si dijo "tinto"
-- opciones_clarificacion: array con los productos EXACTOS de la carta que coinciden, con precio y cantidad inferida del texto (ej: "dos tintos" → cantidad:2 en todas las opciones)
-- La pregunta debe ser corta: "¿Qué tinto?" o "¿Qué tipo de vino?"
+- Ejemplo: «un tinto» y en carta existen «Rioja Crianza 4.5€ {vino_tinto}», «Ribera del Duero 5€ {vino_tinto}» → lista solo los tintos
+- Ejemplo: «una copa de vino» → pregunta «¿Tinto, blanco o rosado?»; luego filtra por familia
+- opciones_clarificacion: array con los productos EXACTOS de la carta que coinciden, con precio y cantidad inferida del texto (ej: «dos tintos» → cantidad:2 en todas las opciones)
+- La pregunta debe ser corta: «¿Qué tinto?» o «¿Tinto, blanco o rosado?»
 - NO preguntes si: el producto es único en carta, si ya especificó, o si las variantes son solo tamaño
-- Si hay texto "→ respuesta:" en el input, es respuesta a clarificación anterior — úsala para completar sin volver a preguntar
+- Si hay texto «→ respuesta:» en el input, es respuesta a clarificación anterior — úsala para completar sin volver a preguntar
 - Con clarificación resuelta: devuelve necesita_clarificacion:false con los items completos
 
 SCHEMA:
