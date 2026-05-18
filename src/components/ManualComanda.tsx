@@ -66,6 +66,9 @@ export default function ManualComanda({
   const [cuentaEnviada, setCuentaEnviada] = useState(false)
   const [cuentaLoading, setCuentaLoading] = useState(false)
   const [comandaActiva, setComandaActiva] = useState<{ id: string; total: number; estado: string } | null>(null)
+  // Recomendaciones activas: Set de producto_id + mapa id→nota
+  const [recsIds, setRecsIds] = useState<Set<string>>(new Set())
+  const [recsNota, setRecsNota] = useState<Record<string, string>>({})  // producto_id → nota
 
   // Scroll-safe: cancela tap si el dedo se movió >6px (es scroll, no tap)
   const ptrStart = useRef<{x:number, y:number} | null>(null)
@@ -89,13 +92,19 @@ export default function ManualComanda({
       fetch('/api/owner/mesas', { headers }).then(r => r.json()),
       fetch('/api/owner/carta', { headers }).then(r => r.json()),
       fetch('/api/owner/formatos', { headers }).then(r => r.json()),
-    ]).then(([m, c, f]) => {
+      fetch('/api/recomendaciones', { headers }).then(r => r.ok ? r.json() : { recomendaciones: [] }),
+    ]).then(([m, c, f, rec]) => {
       const ms = m.mesas ?? []
       setMesas(ms)
       const zs = [...new Set<string>(ms.map((x: Mesa) => x.zona))].filter(Boolean)
       setZonas(zs)
       setProductos((c.productos ?? []).filter((p: Producto) => p.activo))
       setFormatos(f.formatos ?? [])
+      const recs: { producto_id: string; nota: string | null }[] = rec.recomendaciones ?? []
+      setRecsIds(new Set(recs.map(r => r.producto_id)))
+      const notaMap: Record<string, string> = {}
+      recs.forEach(r => { if (r.nota) notaMap[r.producto_id] = r.nota })
+      setRecsNota(notaMap)
     })
   }, [h])
 
@@ -394,9 +403,11 @@ export default function ManualComanda({
                 {filtered.map(p => {
                   const fmts = getFormatos(p.id)
                   const inCart = cart.filter(c => c.producto_id === p.id).reduce((s,c) => s+c.cantidad, 0)
+                  const esRec = recsIds.has(p.id)
+                  const notaRec = recsNota[p.id]
                   return (
                     <div key={p.id} style={{
-                      background:L.bone, border:`1px solid ${inCart>0?L.red:L.rule}`,
+                      background:L.bone, border:`1px solid ${inCart>0 ? L.red : esRec ? L.amb+'99' : L.rule}`,
                       borderRadius:10, padding:'10px 10px 8px',
                       display:'flex', flexDirection:'column', gap:4,
                       position:'relative',
@@ -405,8 +416,16 @@ export default function ManualComanda({
                       {inCart > 0 && (
                         <div style={{ position:'absolute', top:6, right:6, background:L.red, color:L.bone, borderRadius:999, padding:'1px 6px', fontFamily:SM, fontSize:9, fontWeight:700 }}>×{inCart}</div>
                       )}
+                      {/* Badge recomendación ★ */}
+                      {esRec && inCart === 0 && (
+                        <div style={{ position:'absolute', top:6, right:6, background:L.amb, color:'#fff', borderRadius:999, width:18, height:18, display:'flex', alignItems:'center', justifyContent:'center', fontSize:10, lineHeight:1 }}>★</div>
+                      )}
                       {/* Nombre */}
-                      <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink, lineHeight:1.25, paddingRight: inCart>0?22:0 }}>{p.nombre}</span>
+                      <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink, lineHeight:1.25, paddingRight: (inCart>0||esRec)?22:0 }}>{p.nombre}</span>
+                      {/* Nota del chef si es recomendación */}
+                      {esRec && notaRec && (
+                        <span style={{ fontFamily:"'Caveat',cursive", fontSize:12, color:L.amb, lineHeight:1.3 }}>{notaRec}</span>
+                      )}
                       {/* Precio o formatos */}
                       {fmts.length > 0 ? (
                         <span style={{ fontFamily:SM, fontSize:9, color:L.ink3, lineHeight:1.4 }}>
