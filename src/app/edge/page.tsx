@@ -882,6 +882,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       setBrain(null); brainRef.current = null; setTranscript(''); setError('')
       processingRef.current = false; fetchInFlightRef.current = false
       // continúa sin return
+    } else if (cur === 'confirm') {
+      // Bug-fix: pulsar PTT desde confirm cancela la comanda pendiente y graba de nuevo
+      if (lastComandaId) {
+        fetch(`/api/comanda/${lastComandaId}/cancelar`, {
+          method: 'PATCH',
+          headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+        }).catch(() => {})
+      }
+      setBrain(null); brainRef.current = null; setTranscript(''); setError('')
+      processingRef.current = false; fetchInFlightRef.current = false
+      // continúa sin return
     } else if (cur !== 'idle' && cur !== 'asking') return
     // Lock extra: evitar doble MediaRecorder si el PTT llega antes de que React actualice
     if (recordingRef.current) return
@@ -1375,6 +1386,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       setScreenSafe('idle')
       setError('')
     }, 5000)
+    return () => clearTimeout(t)
+  }, [screen])
+
+  // ── Auto-reset confirm → idle tras 20s ───────────────────────────
+  // Bug-fix: mismo patrón que error — si el camarero no confirma/cancela
+  // la pantalla queda bloqueada permanentemente con voiceConfirm=ON.
+  // 20s da tiempo suficiente para leer y decidir antes del reset.
+  useEffect(() => {
+    if (screen !== 'confirm') return
+    const t = setTimeout(() => {
+      setScreenSafe('idle')
+      setBrain(null); brainRef.current = null; setTranscript('')
+    }, 20000)
     return () => clearTimeout(t)
   }, [screen])
 
