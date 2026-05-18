@@ -14,6 +14,7 @@ import SoporteTab from '@/components/owner/SoporteTab'
 import MensajesOwnerTab from '@/components/owner/MensajesOwnerTab'
 import FichajesTab from '@/components/owner/FichajesTab'
 import ModalTraducciones from '@/components/owner/ModalTraducciones'
+import RecomendacionesTab from '@/components/owner/RecomendacionesTab'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -6517,8 +6518,9 @@ const GRUPOS = [
     // Carta: productos primero (actualizar carta, precios, 86), secciones es setup
     id: 'carta', label: 'Carta', icon: ICONS.book,
     tabs: [
-      { id: 'carta',     label: 'Productos', icon: ICONS.book    }, // frecuente
-      { id: 'secciones', label: 'Secciones', icon: ICONS.sparkle }, // setup inicial
+      { id: 'carta',          label: 'Productos',    icon: ICONS.book    }, // frecuente
+      { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle }, // diario
+      { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle }, // setup inicial
     ]
   },
   {
@@ -7335,6 +7337,7 @@ export default function OwnerPage() {
           {tab === 'mesas'          && <MesasTab/>}
           {tab === 'secciones'      && <SeccionesTab/>}
           {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
+          {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
           {tab === 'turno'          && <TurnoTab/>}
           {tab === 'caja'           && <CajaTab/>}
           {tab === 'analytics'      && <Analytics compact />}

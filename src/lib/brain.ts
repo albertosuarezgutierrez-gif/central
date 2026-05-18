@@ -2,6 +2,28 @@ import { BrainResult } from '@/types'
 import { createServerClient } from '@/lib/supabase'
 import { getMenuCache } from '@/lib/brain-cache'
 
+/** Construye el bloque de recomendaciones activas para el prompt (sin DB si no hay). */
+async function buildRecomendacionesContext(restaurante_id?: string): Promise<string> {
+  if (!restaurante_id) return ''
+  try {
+    const db = createServerClient()
+    const { data } = await db
+      .from('v_recomendaciones_activas')
+      .select('producto_nombre, precio, nota, hora_hasta, cantidad_restante')
+      .eq('restaurante_id', restaurante_id)
+      .limit(10)
+    if (!data?.length) return ''
+    const lineas = data.map(r => {
+      let l = `- ${r.producto_nombre} (${Number(r.precio).toFixed(2)}€)`
+      if (r.nota) l += ` — "${r.nota}"`
+      if (r.cantidad_restante !== null) l += ` — ${r.cantidad_restante} disponibles`
+      if (r.hora_hasta) l += ` — hasta ${r.hora_hasta.slice(0,5)}`
+      return l
+    }).join('\n')
+    return `\n\nRECOMENDACIONES DEL DÍA (solo informa si el cliente pregunta o el contexto lo sugiere):\n${lineas}`
+  } catch { return '' }
+}
+
 /** Construye el bloque de carta para el prompt usando el cache de menú (evita DB queries). */
 async function buildMenuContext(restaurante_id?: string): Promise<string> {
   // Si tenemos restaurante_id, usar el cache para evitar 2 DB queries por llamada
@@ -182,10 +204,11 @@ SCHEMA:
 
 export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
   // Usar cache cuando sea posible para evitar DB queries en cada llamada (~200ms ahorrados)
-  const [Anthropic, menuContext, zonasContext] = await Promise.all([
+  const [Anthropic, menuContext, zonasContext, recomContext] = await Promise.all([
     import('@anthropic-ai/sdk').then(m => m.default),
     buildMenuContext(restaurante_id),
     buildZonasContext(restaurante_id),
+    buildRecomendacionesContext(restaurante_id),
   ])
 
   const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
@@ -195,7 +218,7 @@ export async function parsearComanda(texto: string, restaurante_id?: string): Pr
     client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 512,
-      system: BASE_PROMPT + zonasContext + menuContext,
+      system: BASE_PROMPT + zonasContext + menuContext + recomContext,
       messages: [{ role: 'user', content: texto }],
     }),
     new Promise<never>((_, reject) =>
