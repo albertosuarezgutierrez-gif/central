@@ -31,9 +31,10 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
 
   const nombres = (productos ?? []).map(p => p.nombre).join(', ')
   const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho'
+  const vinoVocab = 'Ribera del Duero, Rioja, Albariño, Rueda, Priorat, Rías Baixas, Jerez, Cava, Verdejo, Mencía, Monastrell, Tempranillo, Garnacha, copa de tinto, botella de blanco, media botella, vino de la casa, crianza, reserva, gran reserva, rosado, espumoso, champán, Vega Sicilia, Torres, Marqués de Riscal, Marqués de Murrieta, Protos, Pesquera, Abadía Retuerta, tinto de la casa, blanco de la casa'
   const prompt  = nombres
-    ? `Carta: ${nombres}. Vocabulario hostelero: ${vocab}.`
-    : `Vocabulario hostelero: ${vocab}.`
+    ? `Carta: ${nombres}. Vocabulario hostelero: ${vocab}. Vinos y D.O. españolas: ${vinoVocab}.`
+    : `Vocabulario hostelero: ${vocab}. Vinos y D.O. españolas: ${vinoVocab}.`
 
   whisperPromptCache.set(restauranteId, { ts: Date.now(), prompt })
   return prompt

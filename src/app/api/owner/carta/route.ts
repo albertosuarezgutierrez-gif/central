@@ -22,13 +22,14 @@ export async function POST(req: NextRequest) {
   if (url.searchParams.get('action') === 'bulk') return POST_BULK(req)
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
-  const { nombre, descripcion, precio, categoria, activo, orden, familia, nombre_alternativo } = await req.json()
+  const { nombre, descripcion, precio, categoria, activo, orden, familia, nombre_alternativo, metadata } = await req.json()
   if (!nombre?.trim()) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
   const { data, error } = await supabase.from('productos')
     .insert({ nombre: nombre.trim(), descripcion, precio: precio ?? null,
       categoria: categoria || 'Sin categoría', activo: activo ?? true, orden: orden ?? 0,
       familia: familia ?? null,
       nombre_alternativo: Array.isArray(nombre_alternativo) ? nombre_alternativo : [],
+      metadata: metadata && typeof metadata === 'object' ? metadata : {},
       restaurante_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

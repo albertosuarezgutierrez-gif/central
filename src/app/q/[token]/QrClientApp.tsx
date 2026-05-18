@@ -13,9 +13,14 @@ const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 type Screen = 'loading' | 'error' | 'welcome' | 'comensales' | 'preauth' | 'menu' | 'cart' | 'cooking' | 'bill' | 'split_modo' | 'split_igual' | 'split_items' | 'tip' | 'paying'
 
+interface WineMetadata {
+  tipo?: string; bodega?: string; varietal?: string; do?: string
+  añada?: string; temperatura_servicio?: string; maridaje?: string
+}
 interface Producto {
   id: string; nombre: string; descripcion: string; precio: number
   categoria: string; alergenos: string[]; imagen_url?: string
+  familia?: string; metadata?: WineMetadata
 }
 
 interface CartItem extends Producto { qty: number }
@@ -515,17 +520,59 @@ export default function QrClientApp({ token }: { token: string }) {
             {data.productos.map(prod => {
               const inCart = cart.find(p => p.id === prod.id)
               return (
-                <div key={prod.id} style={{ display: 'flex', alignItems: 'center', gap: 11, padding: '12px 0', borderBottom: `1px solid ${C.rule}` }}>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 14, fontWeight: 600 }}>{prod.nombre}</div>
-                    <div style={{ fontSize: 11, color: C.creamDim, marginTop: 1 }}>{prod.descripcion}</div>
-                  </div>
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmt(prod.precio)}</div>
-                    <button onClick={() => addToCart(prod)} style={{ width: 30, height: 30, borderRadius: 7, background: inCart ? C.vermilion : C.bg3, border: inCart ? 'none' : `1px solid ${C.rule}`, color: 'white', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {inCart ? inCart.qty : '+'}
-                    </button>
-                  </div>
+                <div key={prod.id} style={{ padding: '12px 0', borderBottom: `1px solid ${C.rule}` }}>
+                  {(prod.familia?.startsWith('vino') || prod.metadata?.tipo === 'vino') ? (
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 11 }}>
+                        <div style={{ flex: 1 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                            <span style={{ fontSize: 13 }}>🍷</span>
+                            <span style={{ fontSize: 14, fontWeight: 700, color: 'white' }}>{prod.nombre}</span>
+                          </div>
+                          {(prod.metadata?.bodega || prod.metadata?.do) && (
+                            <div style={{ fontSize: 11, color: '#D9442B', marginTop: 2, fontWeight: 600 }}>
+                              {[prod.metadata?.bodega, prod.metadata?.do].filter(Boolean).join(' · ')}
+                            </div>
+                          )}
+                          {prod.metadata?.varietal && (
+                            <div style={{ fontSize: 11, color: C.creamDim, marginTop: 1 }}>{prod.metadata.varietal}</div>
+                          )}
+                          {(prod.metadata?.añada || prod.metadata?.temperatura_servicio) && (
+                            <div style={{ fontSize: 11, color: C.creamDim, marginTop: 1 }}>
+                              {prod.metadata?.añada && <span>Añada {prod.metadata.añada}</span>}
+                              {prod.metadata?.añada && prod.metadata?.temperatura_servicio && <span style={{ color: C.rule }}> · </span>}
+                              {prod.metadata?.temperatura_servicio && <span>{prod.metadata.temperatura_servicio}</span>}
+                            </div>
+                          )}
+                          {prod.metadata?.maridaje && (
+                            <div style={{ fontSize: 10, color: C.creamDim, marginTop: 2, fontStyle: 'italic' }}>Maridaje: {prod.metadata.maridaje}</div>
+                          )}
+                          {prod.descripcion && (
+                            <div style={{ fontSize: 11, color: C.creamDim, marginTop: 2 }}>{prod.descripcion}</div>
+                          )}
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                          <div style={{ fontFamily: 'monospace', fontSize: 13, color: 'white' }}>{fmt(prod.precio)}</div>
+                          <button onClick={() => addToCart(prod)} style={{ width: 30, height: 30, borderRadius: 7, background: inCart ? C.vermilion : C.bg3, border: inCart ? 'none' : `1px solid ${C.rule}`, color: 'white', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            {inCart ? inCart.qty : '+'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: 14, fontWeight: 600 }}>{prod.nombre}</div>
+                        <div style={{ fontSize: 11, color: C.creamDim, marginTop: 1 }}>{prod.descripcion}</div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                        <div style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmt(prod.precio)}</div>
+                        <button onClick={() => addToCart(prod)} style={{ width: 30, height: 30, borderRadius: 7, background: inCart ? C.vermilion : C.bg3, border: inCart ? 'none' : `1px solid ${C.rule}`, color: 'white', fontSize: 17, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {inCart ? inCart.qty : '+'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}

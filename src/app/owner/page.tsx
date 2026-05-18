@@ -2118,6 +2118,68 @@ function FormatsEditor({ productoId, sh }: { productoId: string; sh: () => Recor
   )
 }
 
+function WineStatsSection({ sh }: { sh: () => Record<string, string> }) {
+  const [data, setData] = useState<{ vinos: Record<string,unknown>[]; totales: { unidades: number; facturado: number; referencias: number } } | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const load = useCallback(async () => {
+    const r = await fetch('/api/owner/vinos-stats', { headers: sh() })
+    if (r.ok) setData(await r.json())
+  }, [sh])
+
+  useEffect(() => { load() }, [load])
+
+  if (!data || data.vinos.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 24, border: `1px solid #3D2E24`, borderRadius: 8, overflow: 'hidden' }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{ width: '100%', background: '#1C1410', border: 'none', padding: '12px 16px',
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between', cursor: 'pointer' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 16 }}>🍷</span>
+          <div>
+            <div style={{ fontFamily: 'var(--font-sm,monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '.12em', color: '#D9442B', textTransform: 'uppercase' }}>
+              Sommeliero · {data.totales.referencias} referencia{data.totales.referencias !== 1 ? 's' : ''}
+            </div>
+            <div style={{ fontFamily: 'var(--font-sn,sans-serif)', fontSize: 12, color: '#D8CDB6', marginTop: 1 }}>
+              {data.totales.unidades} copas/botellas · {data.totales.facturado.toFixed(2)} € facturado
+            </div>
+          </div>
+        </div>
+        <span style={{ color: '#D8CDB6', fontSize: 12, transform: open ? 'rotate(180deg)' : 'none', transition: '.2s' }}>▼</span>
+      </button>
+      {open && (
+        <div style={{ background: '#14110E', overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: 'var(--font-sn,sans-serif)', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid #3D2E24' }}>
+                {['Vino', 'Bodega', 'D.O.', 'Añada', 'Precio', 'Uds.', 'Facturado'].map(h => (
+                  <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontFamily: 'var(--font-sm,monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: '#6B5F52', textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {(data.vinos as Record<string,unknown>[]).map((v, i) => (
+                <tr key={String(v.id)} style={{ borderBottom: i < data.vinos.length - 1 ? '1px solid #1C1410' : 'none' }}>
+                  <td style={{ padding: '9px 12px', color: '#F6F1E7', fontWeight: 600 }}>{String(v.nombre)}</td>
+                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{String(v.bodega || '—')}</td>
+                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{String(v.denominacion_origen || '—')}</td>
+                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{String(v.anada || '—')}</td>
+                  <td style={{ padding: '9px 12px', color: '#D8CDB6' }}>{v.precio != null ? Number(v.precio).toFixed(2) + ' €' : '—'}</td>
+                  <td style={{ padding: '9px 12px', color: '#F6F1E7', fontWeight: 700 }}>{String(v.unidades_vendidas)}</td>
+                  <td style={{ padding: '9px 12px', color: '#3F7D44', fontWeight: 700 }}>{Number(v.facturado_eur).toFixed(2)} €</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
 function CartaTab({ restauranteId }: { restauranteId: string }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [view, setView] = useState<CartaView>('lista')
@@ -2127,6 +2189,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
   const [modalTrad, setModalTrad] = useState<null | { id: string; nombre: string; descripcion?: string | null }>(null)
   const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '', familia: '' })
+  const [wineForm, setWineForm] = useState({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '' })
   const [err, setErr] = useState('')
 
   // Scanner state
@@ -2156,7 +2219,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const primeraSeccion = secciones[0]?.id || SECCIONES_DEFAULT[0]
 
   // ── CRUD ──
-  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '', familia: '' }); setErr(''); setModal('create') }
+  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '', familia: '' }); setWineForm({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '' }); setErr(''); setModal('create') }
   const openEdit = (p: Producto) => {
     setForm({
       nombre: p.nombre, descripcion: p.descripcion || '',
@@ -2165,6 +2228,8 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       nombre_alternativo: (p.nombre_alternativo || []).join(', '),
       familia: p.familia || '',
     })
+    const m = (p as Record<string,unknown>).metadata as Record<string,string> | null ?? {}
+    setWineForm({ bodega: m.bodega || '', varietal: m.varietal || '', do: m.do || '', anada: m.anada || m['añada'] || '', temperatura: m.temperatura_servicio || '', maridaje: m.maridaje || '' })
     setErr(''); setModal({ edit: p })
   }
   const openDel = (p: Producto) => setModal({ del: p })
@@ -2183,6 +2248,17 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       categoria: form.seccion,
       nombre_alternativo: aliases,
       familia: form.familia.trim() || null,
+      metadata: (form.familia.startsWith('vino') || ['vinos','vino','bodega','carta de vinos','vinos tintos','vinos blancos','vinos rosados','espumosos','cava','champagne'].includes((form.seccion||'').toLowerCase()))
+        ? {
+            tipo: 'vino',
+            bodega: wineForm.bodega.trim() || undefined,
+            varietal: wineForm.varietal.trim() || undefined,
+            do: wineForm.do.trim() || undefined,
+            añada: wineForm.anada.trim() || undefined,
+            temperatura_servicio: wineForm.temperatura.trim() || undefined,
+            maridaje: wineForm.maridaje.trim() || undefined,
+          }
+        : undefined,
     }
     const r = await fetch('/api/owner/carta', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(body) })
     const d = await r.json()
@@ -2420,6 +2496,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       {/* ── LISTA VIEW ── */}
       {view === 'lista' && (
         <>
+          <WineStatsSection sh={sh} />
           <FueraCartaSection restauranteId={restauranteId} />
           {productos.length === 0 ? (
             <div style={{ padding: '48px 0', textAlign: 'center' }}>
@@ -2497,6 +2574,21 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                 Ejemplos: <span style={{color:C.ink2}}>vino_tinto · vino_blanco · cerveza · refresco · postre · vermut</span>
               </div>
             </div>
+            {(form.familia.startsWith('vino') || ['vinos','vino','bodega','carta de vinos','vinos tintos','vinos blancos','vinos rosados','espumosos','cava','champagne'].includes((form.seccion||'').toLowerCase())) && (
+              <div style={{ background: '#1C1410', border: '1px solid #3D2E24', borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+                <div style={{ fontFamily: 'var(--font-sm, monospace)', fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: '#D9442B', textTransform: 'uppercase', marginBottom: 2 }}>
+                  🍷 Ficha de vino
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  <Field label="Bodega" value={wineForm.bodega} onChange={v => setWineForm(f => ({ ...f, bodega: v }))} placeholder="Vega Sicilia"/>
+                  <Field label="Varietal (uva)" value={wineForm.varietal} onChange={v => setWineForm(f => ({ ...f, varietal: v }))} placeholder="Tempranillo, Cab. Sauv."/>
+                  <Field label="D.O. / Denominación" value={wineForm.do} onChange={v => setWineForm(f => ({ ...f, do: v }))} placeholder="Ribera del Duero"/>
+                  <Field label="Añada" value={wineForm.anada} onChange={v => setWineForm(f => ({ ...f, anada: v }))} placeholder="2018"/>
+                  <Field label="Temperatura servicio" value={wineForm.temperatura} onChange={v => setWineForm(f => ({ ...f, temperatura: v }))} placeholder="16-18°C"/>
+                  <Field label="Maridaje" value={wineForm.maridaje} onChange={v => setWineForm(f => ({ ...f, maridaje: v }))} placeholder="Carnes rojas, caza"/>
+                </div>
+              </div>
+            )}
             <Field label="Descripción (opcional)" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion: v }))} placeholder="Caseras, con bechamel de la abuela"/>
             {modal !== 'create' && typeof modal === 'object' && 'edit' in modal && (
               <FormatsEditor productoId={(modal as { edit: Producto }).edit.id} sh={sh} />

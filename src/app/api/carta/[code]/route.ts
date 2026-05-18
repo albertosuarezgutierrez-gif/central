@@ -43,7 +43,7 @@ export async function GET(
     // Sin traducción: query directa
     const { data, error: prodErr } = await supabase
       .from('productos')
-      .select('id, nombre, descripcion, precio, categoria')
+      .select('id, nombre, descripcion, precio, categoria, familia, metadata, alergenos')
       .eq('restaurante_id', rest.id)
       .eq('activo', true)
       .order('categoria')
