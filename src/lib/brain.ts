@@ -93,6 +93,59 @@ async function buildZonasContext(restaurante_id?: string): Promise<string> {
   } catch { return '' }
 }
 
+/**
+ * Memoria de sesión: ejemplos confirmados del turno activo.
+ * Consulta ia_training_log del turno actual con calidad >= 3.
+ * Estos ejemplos reflejan el estilo de habla real del camarero en ESTE turno.
+ */
+async function buildSesionContext(
+  restaurante_id?: string,
+  turno_id?: string,
+  camarero_id?: string
+): Promise<string> {
+  if (!restaurante_id || !turno_id) return ''
+  try {
+    const supabase = createServerClient()
+    const query = supabase
+      .from('ia_training_log')
+      .select('input_raw, output_brain, calidad, camarero_id')
+      .eq('restaurante_id', restaurante_id)
+      .eq('turno_id', turno_id)
+      .gte('calidad', 3)
+      .not('output_brain', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(8)
+
+    const { data } = await query
+    if (!data?.length) return ''
+
+    // Filtrar: solo comandas con items reales (no cuentas/marchar/86)
+    const ejemplos = data
+      .filter(r => {
+        const b = r.output_brain as { tipo?: string; items?: unknown[]; confianza?: number }
+        return b?.tipo === 'comanda' && Array.isArray(b.items) && b.items.length > 0
+      })
+      .slice(0, 6)
+      .map(r => {
+        const b = r.output_brain as {
+          mesa?: string
+          items?: { nombre: string; cantidad: number; notas?: string }[]
+          nota_general?: string | null
+        }
+        const itemsStr = (b.items ?? [])
+          .map(it => `${it.cantidad}x${it.nombre}${it.notas ? ` (${it.notas})` : ''}`)
+          .join(', ')
+        const nota = b.nota_general ? ` | nota_general:"${b.nota_general}"` : ''
+        const quienStr = camarero_id && r.camarero_id === camarero_id ? '' : ' [otro camarero]'
+        return `  - "${r.input_raw}" → mesa:${b.mesa ?? '?'} items:[${itemsStr}]${nota}${quienStr}`
+      })
+
+    if (!ejemplos.length) return ''
+
+    return `\nEJEMPLOS REALES DE ESTE TURNO (patrones confirmados por los camareros):\n${ejemplos.join('\n')}\nUsa estos ejemplos para calibrar cómo hablan en este restaurante hoy.\n`
+  } catch { return '' }
+}
+
 // ── Prompt base ─────────────────────────────────────────────────────────────
 
 const BASE_PROMPT = `Eres BRAIN, el agente de ia.rest. Conviertes transcripciones de voz de camareros españoles en comandas JSON estructuradas.
@@ -231,45 +284,78 @@ async function callAnthropic(systemPrompt: string, userText: string): Promise<st
 
 // ── Función principal con cascada de proveedores ────────────────────────────
 
-export async function parsearComanda(texto: string, restaurante_id?: string): Promise<BrainResult> {
-  const [menuContext, zonasContext, recomContext] = await Promise.all([
+export async function parsearComanda(
+  texto: string,
+  restaurante_id?: string,
+  turno_id?: string,
+  camarero_id?: string
+): Promise<BrainResult> {
+  // Lanzar todas las consultas de contexto en paralelo (carta + zonas + recom + sesión)
+  const [menuContext, zonasContext, recomContext, sesionContext] = await Promise.all([
     buildMenuContext(restaurante_id),
     buildZonasContext(restaurante_id),
     buildRecomendacionesContext(restaurante_id),
+    buildSesionContext(restaurante_id, turno_id, camarero_id),
   ])
 
-  const systemPrompt = BASE_PROMPT + zonasContext + menuContext + recomContext
+  const systemPromptBase = BASE_PROMPT + zonasContext + menuContext + recomContext
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
-  // ── Intento 1: NVIDIA NIM (gratis) ────────────────────────────────────────
+  if (sesionContext) {
+    console.log(`[BRAIN] memoria sesión disponible (${sesionContext.split('\n').filter(l => l.startsWith('  -')).length} ejemplos)`)
+  }
+
+  // ── Intento 1: NVIDIA NIM (gratis, sin memoria de sesión para latencia óptima) ──
   if (hasNvidia) {
     try {
       const raw = await Promise.race([
-        callNvidia(systemPrompt, texto),
+        callNvidia(systemPromptBase, texto),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('NVIDIA timeout 8s')), 8_000)
         ),
       ])
       const result = parseAndValidate(raw)
       const model = process.env.NVIDIA_BRAIN_MODEL ?? 'meta/llama-3.3-70b-instruct'
+
+      // Si confianza es baja y tenemos memoria de sesión, reintentar con contexto enriquecido
+      if ((result.confianza ?? 1) < 0.72 && sesionContext) {
+        console.warn(`[BRAIN] NVIDIA confianza baja (${result.confianza}), reintentando con memoria de sesión`)
+        try {
+          const rawRetry = await Promise.race([
+            callNvidia(systemPromptBase + sesionContext, texto),
+            new Promise<never>((_, reject) =>
+              setTimeout(() => reject(new Error('NVIDIA retry timeout 8s')), 8_000)
+            ),
+          ])
+          const retryResult = parseAndValidate(rawRetry)
+          if ((retryResult.confianza ?? 0) > (result.confianza ?? 0)) {
+            console.log(`[BRAIN] ✓ nvidia+sesión mejoró: ${result.confianza?.toFixed(2)} → ${retryResult.confianza?.toFixed(2)}`)
+            return { ...retryResult, raw: texto }
+          }
+        } catch { /* si el retry falla, usar el resultado original */ }
+      }
+
       console.log(`[BRAIN] ✓ nvidia/${model}:`, result.tipo, result.mesa, result.items.length, 'items')
       return { ...result, raw: texto }
     } catch (e) {
-      // NVIDIA falló — continuar a Anthropic sin interrumpir al camarero
       console.warn('[BRAIN] NVIDIA falló, fallback a Anthropic:', (e as Error).message)
     }
   }
 
-  // ── Intento 2: Claude Haiku (fallback de pago) ────────────────────────────
+  // ── Intento 2: Claude Haiku con memoria de sesión ─────────────────────────
+  // Si NVIDIA falló completamente, Haiku lleva el contexto enriquecido
+  const systemPromptFallback = sesionContext
+    ? systemPromptBase + sesionContext
+    : systemPromptBase
   try {
     const raw = await Promise.race([
-      callAnthropic(systemPrompt, texto),
+      callAnthropic(systemPromptFallback, texto),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Anthropic timeout 20s')), 20_000)
       ),
     ])
     const result = parseAndValidate(raw)
-    const via = hasNvidia ? 'anthropic[fallback]' : 'anthropic'
+    const via = hasNvidia ? 'anthropic[fallback+sesión]' : 'anthropic'
     console.log(`[BRAIN] ✓ ${via}:`, result.tipo, result.mesa, result.items.length, 'items')
     return { ...result, raw: texto }
   } catch (e) {

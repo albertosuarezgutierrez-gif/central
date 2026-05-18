@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     const texto = pendingContext
       ? `${pendingContext} → respuesta: ${textoRaw}`
       : textoRaw
-    const brainResult = await routearComanda(texto, rid)
+    const brainResult = await routearComanda(texto, rid, turnoId || undefined, camareroId || undefined)
 
     // Guardia: asegurar que items siempre es array (defensa en profundidad)
     if (!Array.isArray(brainResult.items)) brainResult.items = []

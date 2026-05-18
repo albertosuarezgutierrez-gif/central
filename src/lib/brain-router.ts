@@ -28,7 +28,9 @@ const THRESHOLD_CONFIANZA = 0.80
 
 export async function routearComanda(
   texto: string,
-  restaurante_id: string
+  restaurante_id: string,
+  turno_id?: string,
+  camarero_id?: string
 ): Promise<BrainResultRouted> {
   const start = Date.now()
 
@@ -58,8 +60,8 @@ export async function routearComanda(
   //   }
   // }
 
-  // ── Capa 4: Claude Haiku (fallback) ──────────────────────────────────────
-  const claudeResult = await parsearComanda(texto, restaurante_id)
+  // ── Capa 4: Claude Haiku + memoria de sesión (fallback) ──────────────────
+  const claudeResult = await parsearComanda(texto, restaurante_id, turno_id, camarero_id)
   const latencia = Date.now() - start
   console.log(`[BRAIN-ROUTER] claude_api: ${claudeResult.tipo} ${claudeResult.mesa} conf=${claudeResult.confianza?.toFixed(2) ?? '?'} ${latencia}ms`)
   return {
