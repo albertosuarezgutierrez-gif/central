@@ -95,13 +95,14 @@ export async function POST(req: NextRequest) {
 
     // Capa 2: Azure speaker verification (paralela a la transcripción)
     const speakerPromise: Promise<void> = azureDisponible()
-      ? supabase
-          .from('voice_profiles')
-          .select('azure_profile_id, estado')
-          .eq('camarero_id', camareroId)
-          .eq('estado', 'activo')
-          .maybeSingle()
-          .then(async ({ data: vp }) => {
+      ? Promise.resolve(
+          supabase
+            .from('voice_profiles')
+            .select('azure_profile_id, estado')
+            .eq('camarero_id', camareroId)
+            .eq('estado', 'activo')
+            .maybeSingle()
+        ).then(async ({ data: vp }) => {
             if (!vp?.azure_profile_id) return
             speakerMatch = await verificarAzure(vp.azure_profile_id, audio)
             if (speakerMatch !== null) {
@@ -110,8 +111,7 @@ export async function POST(req: NextRequest) {
                 ultimo_score_at: new Date().toISOString(),
               }).eq('camarero_id', camareroId).then(() => {})
             }
-          })
-          .catch(() => { /* no bloquear */ })
+          }).catch(() => { /* no bloquear */ })
       : Promise.resolve()
 
     // Capa 1: Whisper con verbose_json → métricas de calidad de audio
