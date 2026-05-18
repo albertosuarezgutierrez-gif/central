@@ -8,6 +8,7 @@ import { useInstallPrompt } from '@/hooks/useInstallPrompt'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
 import { useAlertas } from '@/hooks/useAlertas'
 import { useServiceWorkerUpdate } from '@/hooks/useServiceWorkerUpdate'
+import { useAutoReload } from '@/hooks/useAutoReload'
 import { useOfflineQueue } from '@/hooks/useOfflineQueue'
 import FueraCartaPill from '@/components/edge/FueraCartaPill'
 import RecomendacionesPill from '@/components/edge/RecomendacionesPill'
@@ -582,6 +583,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const { prompt: installPrompt, install } = useInstallPrompt()
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
+  useAutoReload(5 * 60 * 1000) // recarga automática si el camarero vuelve tras ≥5 min en background
   const { subscribed, subscribe }          = usePushNotifications(session.id)
   const { alertas, marcarLeida }           = useAlertas(session.id, session.restaurante_id)
   const { offline, pendientes: offlineQueue, encolar, sincronizar: sincronizarOffline } =
