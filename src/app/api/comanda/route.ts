@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
         for (const [artId, consumo] of Object.entries(consumoPorArticulo)) {
           const { data: art } = await supabase
             .from('stock_articulos')
-            .select('stock_actual, stock_minimo')
+            .select('stock_actual, stock_minimo, alerta_activa, proveedor_email, proveedor_nombre, pedido_auto, cantidad_pedido, unidad_compra, nombre')
             .eq('id', artId).eq('restaurante_id', rid).single()
           if (!art) continue
 
@@ -201,6 +201,24 @@ export async function POST(req: NextRequest) {
             stock_resultante:  nuevo,
             comanda_id:        comanda.id,
           })
+
+          // Pedido automático: si acaba de cruzar el mínimo y tiene pedido_auto activo
+          if (alerta && !art.alerta_activa && art.pedido_auto && art.proveedor_email) {
+            const cantPedido = art.cantidad_pedido ?? (Number(art.stock_minimo) * 3)
+            await supabase.from('pedidos_proveedor').insert({
+              restaurante_id:    rid,
+              stock_articulo_id: artId,
+              proveedor_nombre:  art.proveedor_nombre,
+              proveedor_email:   art.proveedor_email,
+              cantidad:          cantPedido,
+              unidad_compra:     art.unidad_compra,
+              notas:             `Pedido automático. Stock actual: ${nuevo.toFixed(1)} ${art.unidad_compra}`,
+              origen:            'auto',
+              estado:            'pendiente',
+            })
+            // El email lo envía la Edge Function de Telegram/notificaciones o
+            // el dueño lo aprueba desde el panel de Bodega → historial de pedidos
+          }
         }
       }
     }
