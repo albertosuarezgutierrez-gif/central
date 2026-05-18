@@ -7841,7 +7841,7 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
   const [articulos, setArticulos] = useState<StockArticulo[]>([])
   const [productos, setProductos] = useState<ProductoSimple[]>([])
   const [loading,  setLoading]   = useState(true)
-  const [modal,    setModal]     = useState<null | 'crear' | { edit: StockArticulo } | { entrada: StockArticulo }>(null)
+  const [modal,    setModal]     = useState<null | 'crear' | 'ocr' | { edit: StockArticulo } | { entrada: StockArticulo }>(null)
   const [err,      setErr]       = useState('')
   // Form crear/editar
   const emptyForm = { nombre:'', unidad_compra:'unidad', stock_inicial:'', stock_minimo:'', coste_unitario:'', notas:'' }
@@ -7850,6 +7850,18 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
   // Form entrada
   const [entradaQty, setEntradaQty] = useState('')
   const [entradaNota, setEntradaNota] = useState('')
+  // Estado OCR
+  const [ocrLoading, setOcrLoading] = useState(false)
+  const [ocrPreview, setOcrPreview] = useState<string | null>(null)
+  const [ocrResult, setOcrResult] = useState<{
+    proveedor: string | null; fecha: string | null
+    articulos: { nombre: string; cantidad: number; unidad: string; precio_unitario: number | null }[]
+  } | null>(null)
+  // Líneas OCR editables con matching a artículos existentes
+  const [ocrLineas, setOcrLineas] = useState<{
+    nombre: string; cantidad: string; unidad: string; precio_unitario: string
+    articulo_id: string | null; crear: boolean; seleccionado: boolean
+  }[]>([])
 
   const UNIDADES = ['unidad','kg','litro','barril','caja','botella','pieza','sobre','lata','bolsa']
 
@@ -7875,6 +7887,94 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
     setErr(''); setModal({ edit: a })
   }
   const openEntrada = (a: StockArticulo) => { setEntradaQty(''); setEntradaNota(''); setModal({ entrada: a }) }
+
+  const openOcr = () => {
+    setOcrPreview(null); setOcrResult(null); setOcrLineas([]); setErr(''); setModal('ocr')
+  }
+
+  const procesarImagen = async (file: File) => {
+    setOcrLoading(true); setOcrResult(null); setOcrLineas([])
+    // Preview
+    const reader = new FileReader()
+    reader.onload = e => setOcrPreview(e.target?.result as string)
+    reader.readAsDataURL(file)
+    // Base64 para API
+    const b64 = await new Promise<string>((res, rej) => {
+      const r = new FileReader()
+      r.onload = () => res((r.result as string).split(',')[1])
+      r.onerror = () => rej(new Error('Error leyendo archivo'))
+      r.readAsDataURL(file)
+    })
+    const r = await fetch('/api/owner/stock/ocr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sh() },
+      body: JSON.stringify({ images: [{ data: b64, mediaType: file.type || 'image/jpeg' }] }),
+    })
+    const d = await r.json()
+    setOcrLoading(false)
+    if (!r.ok) { setErr(d.error || 'Error al procesar imagen'); return }
+    setOcrResult(d)
+    // Mapear artículos extraídos → intentar match con existentes
+    const lineas = (d.articulos ?? []).map((a: { nombre: string; cantidad: number; unidad: string; precio_unitario: number | null }) => {
+      const nombreNorm = a.nombre.toLowerCase()
+      const match = articulos.find(art =>
+        art.nombre.toLowerCase().includes(nombreNorm.slice(0, 6)) ||
+        nombreNorm.includes(art.nombre.toLowerCase().slice(0, 6))
+      )
+      return {
+        nombre: a.nombre,
+        cantidad: String(a.cantidad),
+        unidad: a.unidad || 'unidad',
+        precio_unitario: a.precio_unitario ? String(a.precio_unitario) : '',
+        articulo_id: match ? match.id : null,
+        crear: !match,
+        seleccionado: true,
+      }
+    })
+    setOcrLineas(lineas)
+  }
+
+  const confirmarOcr = async () => {
+    const seleccionadas = ocrLineas.filter(l => l.seleccionado)
+    if (seleccionadas.length === 0) return
+    setOcrLoading(true)
+    let errores = 0
+    for (const linea of seleccionadas) {
+      const qty = parseFloat(linea.cantidad)
+      if (!qty || qty <= 0) continue
+      if (linea.articulo_id && !linea.crear) {
+        // Entrada en artículo existente
+        await fetch('/api/owner/stock?action=entrada', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sh() },
+          body: JSON.stringify({
+            articulo_id: linea.articulo_id,
+            cantidad: qty,
+            coste_unitario: linea.precio_unitario ? parseFloat(linea.precio_unitario) : undefined,
+            notas: ocrResult?.proveedor ? `Albarán ${ocrResult.proveedor}${ocrResult?.fecha ? ' · ' + ocrResult.fecha : ''}` : 'Entrada por albarán',
+          }),
+        }).then(r => { if (!r.ok) errores++ })
+      } else if (linea.crear) {
+        // Crear artículo nuevo + entrada
+        const r = await fetch('/api/owner/stock', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', ...sh() },
+          body: JSON.stringify({
+            nombre: linea.nombre,
+            unidad_compra: linea.unidad,
+            stock_inicial: qty,
+            coste_unitario: linea.precio_unitario ? parseFloat(linea.precio_unitario) : null,
+            notas: ocrResult?.proveedor ? `Proveedor: ${ocrResult.proveedor}` : null,
+          }),
+        })
+        if (!r.ok) errores++
+      }
+    }
+    setOcrLoading(false)
+    await load()
+    setModal(null)
+    if (errores > 0) setErr(`Se procesaron ${seleccionadas.length - errores} líneas (${errores} con error)`)
+  }
 
   const guardar = async () => {
     const isEdit = modal && typeof modal === 'object' && 'edit' in modal
@@ -7916,9 +8016,14 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
             {articulos.filter(a=>a.activo).length} artículos · descuento automático al vender
           </div>
         </div>
-        <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
-          + Artículo
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={openOcr} style={{ fontFamily:SN, fontSize:13, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
+            📸 Albarán
+          </button>
+          <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
+            + Artículo
+          </button>
+        </div>
       </div>
 
       {/* Alertas de stock mínimo */}
@@ -7988,6 +8093,146 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Modal OCR — Leer albarán con IA */}
+      {modal === 'ocr' && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget && !ocrLoading) setModal(null) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:560, maxHeight:'92vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink, marginBottom:4 }}>📸 Leer albarán</div>
+            <div style={{ fontFamily:SN, fontSize:12, color:C.ink3, marginBottom:18 }}>La IA extrae los artículos automáticamente. Revisa y confirma antes de entrar al stock.</div>
+
+            {/* Upload zona */}
+            {!ocrResult && (
+              <label style={{ display:'block', border:`2px dashed ${C.rule}`, borderRadius:10, padding:'28px 20px', textAlign:'center' as const, cursor:'pointer', background:C.bone, transition:'all .15s' }}>
+                <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) procesarImagen(f) }} />
+                {ocrLoading ? (
+                  <div>
+                    <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:16, color:C.ink3, marginBottom:6 }}>Leyendo albarán…</div>
+                    <div style={{ fontFamily:SM, fontSize:10, color:C.ink4 }}>Claude está extrayendo los artículos</div>
+                  </div>
+                ) : ocrPreview ? (
+                  <div>
+                    <img src={ocrPreview} alt="preview" style={{ maxHeight:160, maxWidth:'100%', borderRadius:6, marginBottom:8 }} />
+                    <div style={{ fontFamily:SM, fontSize:10, color:C.ink4 }}>Toca para cambiar la imagen</div>
+                  </div>
+                ) : (
+                  <div>
+                    <div style={{ fontSize:32, marginBottom:8 }}>📄</div>
+                    <div style={{ fontFamily:SN, fontSize:14, color:C.ink2, marginBottom:4 }}>Sube la foto del albarán</div>
+                    <div style={{ fontFamily:SM, fontSize:10, color:C.ink4 }}>JPG, PNG · desde cámara o galería</div>
+                  </div>
+                )}
+              </label>
+            )}
+
+            {/* Resultado OCR — tabla editable */}
+            {ocrResult && ocrLineas.length > 0 && (
+              <div>
+                {/* Info cabecera extraída */}
+                {(ocrResult.proveedor || ocrResult.fecha) && (
+                  <div style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:8, padding:'8px 12px', marginBottom:14, display:'flex', gap:16, flexWrap:'wrap' as const }}>
+                    {ocrResult.proveedor && <span style={{ fontFamily:SM, fontSize:10, color:C.ink3 }}>🏭 {ocrResult.proveedor}</span>}
+                    {ocrResult.fecha && <span style={{ fontFamily:SM, fontSize:10, color:C.ink3 }}>📅 {ocrResult.fecha}</span>}
+                  </div>
+                )}
+
+                <div style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.12em', marginBottom:8 }}>
+                  {ocrLineas.length} artículos detectados — selecciona los que quieres entrar
+                </div>
+
+                <div style={{ display:'flex', flexDirection:'column', gap:6, marginBottom:16 }}>
+                  {ocrLineas.map((linea, i) => (
+                    <div key={i} style={{
+                      background: linea.seleccionado ? C.bone : C.paper2,
+                      border: `1px solid ${linea.seleccionado ? (linea.articulo_id && !linea.crear ? C.green+'44' : C.amber+'44') : C.rule}`,
+                      borderRadius:8, padding:'10px 12px', opacity: linea.seleccionado ? 1 : 0.5,
+                    }}>
+                      <div style={{ display:'flex', alignItems:'flex-start', gap:10 }}>
+                        {/* Checkbox */}
+                        <input type="checkbox" checked={linea.seleccionado}
+                          onChange={e => setOcrLineas(ls => ls.map((x,j) => j===i ? {...x, seleccionado: e.target.checked} : x))}
+                          style={{ marginTop:2, flexShrink:0, accentColor: C.red }} />
+                        <div style={{ flex:1, minWidth:0 }}>
+                          {/* Nombre */}
+                          <input value={linea.nombre}
+                            onChange={e => setOcrLineas(ls => ls.map((x,j) => j===i ? {...x, nombre: e.target.value} : x))}
+                            style={{ width:'100%', padding:'4px 8px', borderRadius:5, border:`1px solid ${C.rule}`, background:'transparent', fontFamily:SN, fontSize:13, color:C.ink, outline:'none', marginBottom:6, boxSizing:'border-box' as const }} />
+                          {/* Cantidad + Unidad + Precio */}
+                          <div style={{ display:'grid', gridTemplateColumns:'80px 90px 1fr', gap:6 }}>
+                            <div>
+                              <div style={{ fontFamily:SM, fontSize:8, color:C.ink4, marginBottom:2 }}>CANTIDAD</div>
+                              <input type="number" min="0.01" step="0.1" value={linea.cantidad}
+                                onChange={e => setOcrLineas(ls => ls.map((x,j) => j===i ? {...x, cantidad: e.target.value} : x))}
+                                style={{ width:'100%', padding:'4px 8px', borderRadius:5, border:`1px solid ${C.rule}`, background:'transparent', fontFamily:SN, fontSize:13, color:C.ink, outline:'none', boxSizing:'border-box' as const }} />
+                            </div>
+                            <div>
+                              <div style={{ fontFamily:SM, fontSize:8, color:C.ink4, marginBottom:2 }}>UNIDAD</div>
+                              <select value={linea.unidad}
+                                onChange={e => setOcrLineas(ls => ls.map((x,j) => j===i ? {...x, unidad: e.target.value} : x))}
+                                style={{ width:'100%', padding:'4px 8px', borderRadius:5, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:12, color:C.ink, outline:'none' }}>
+                                {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <div style={{ fontFamily:SM, fontSize:8, color:C.ink4, marginBottom:2 }}>€/UNIDAD</div>
+                              <input type="number" min="0" step="0.01" value={linea.precio_unitario} placeholder="—"
+                                onChange={e => setOcrLineas(ls => ls.map((x,j) => j===i ? {...x, precio_unitario: e.target.value} : x))}
+                                style={{ width:'100%', padding:'4px 8px', borderRadius:5, border:`1px solid ${C.rule}`, background:'transparent', fontFamily:SN, fontSize:13, color:C.ink, outline:'none', boxSizing:'border-box' as const }} />
+                            </div>
+                          </div>
+                          {/* Vinculación artículo stock */}
+                          <div style={{ marginTop:6, display:'flex', alignItems:'center', gap:8 }}>
+                            <select
+                              value={linea.articulo_id ?? ''}
+                              onChange={e => setOcrLineas(ls => ls.map((x,j) => j===i ? {...x, articulo_id: e.target.value || null, crear: !e.target.value} : x))}
+                              style={{ flex:1, padding:'4px 8px', borderRadius:5, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SM, fontSize:10, color:C.ink3, outline:'none' }}>
+                              <option value="">— Artículo nuevo —</option>
+                              {articulos.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                            </select>
+                            {linea.articulo_id && !linea.crear ? (
+                              <span style={{ fontFamily:SM, fontSize:9, color:'#5BBF62', flexShrink:0 }}>✓ vinculado</span>
+                            ) : (
+                              <span style={{ fontFamily:SM, fontSize:9, color:C.amber, flexShrink:0 }}>+ nuevo</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Leer otra foto */}
+                <label style={{ display:'inline-flex', alignItems:'center', gap:6, fontFamily:SM, fontSize:10, color:C.ink3, cursor:'pointer', marginBottom:16 }}>
+                  <input type="file" accept="image/*" style={{ display:'none' }} onChange={e => { const f = e.target.files?.[0]; if (f) procesarImagen(f) }} />
+                  📸 Leer otra foto
+                </label>
+              </div>
+            )}
+
+            {!ocrResult && !ocrLoading && !ocrPreview && (
+              <div style={{ fontFamily:SN, fontSize:12, color:C.ink4, textAlign:'center' as const, padding:'12px 0' }}>
+                Admite fotos de albaranes, facturas o notas de pedido
+              </div>
+            )}
+
+            {err && <div style={{ fontFamily:SN, fontSize:12, color:C.red, margin:'8px 0' }}>{err}</div>}
+
+            <div style={{ display:'flex', gap:8, marginTop:8 }}>
+              <button onClick={() => { if (!ocrLoading) setModal(null) }}
+                style={{ flex:1, padding:'9px', borderRadius:8, border:`1px solid ${C.rule}`, background:'none', color:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer' }}>
+                Cancelar
+              </button>
+              {ocrLineas.some(l => l.seleccionado) && (
+                <button onClick={confirmarOcr} disabled={ocrLoading}
+                  style={{ flex:2, padding:'9px', borderRadius:8, border:`1px solid ${C.green}`, background: ocrLoading ? C.bone : C.green, color: ocrLoading ? C.ink4 : C.paper, fontFamily:SN, fontSize:13, fontWeight:600, cursor: ocrLoading ? 'not-allowed' : 'pointer' }}>
+                  {ocrLoading ? 'Procesando…' : `✓ Confirmar ${ocrLineas.filter(l=>l.seleccionado).length} entradas`}
+                </button>
+              )}
+            </div>
+          </div>
         </div>
       )}
 
