@@ -1909,7 +1909,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             </div>
 
             {/* Lista de comandas */}
-            <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 14px',display:'flex',flexDirection:'column',gap:10}}>
+            <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 14px',display:'flex',flexDirection:'column',gap:10,background:C.bg3}}>
               {misCmds.length === 0 && (
                 <div style={{textAlign:'center',padding:'40px 20px'}}>
                   <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink4,marginBottom:6}}>Sin pedidos activos</div>
@@ -1931,7 +1931,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                     onTouchStart={e=>{mesaTouchRef.current={startY:e.touches[0].clientY,moved:false}}}
                     onTouchMove={e=>{if(Math.abs(e.touches[0].clientY-mesaTouchRef.current.startY)>8)mesaTouchRef.current.moved=true}}
                     onTouchEnd={e=>{if(!mesaTouchRef.current.moved){e.preventDefault();setMesaDetalle({id:c.mesa_id,codigo:mesa,capacidad:(c.mesa as {capacidad?:number})?.capacidad})}}}
-                    style={{background:C.bg1,border:`1px solid ${col}44`,borderLeft:`3px solid ${col}`,borderRadius:10,overflow:'hidden',cursor:'pointer',boxShadow:'0 1px 4px rgba(26,23,20,.06)'}}>
+                    style={{background:bg,border:`1px solid ${col}99`,borderLeft:`4px solid ${col}`,borderRadius:10,overflow:'hidden',cursor:'pointer',boxShadow:'0 2px 6px rgba(26,23,20,.12)'}}>
                     {/* Cabecera comanda */}
                     <div style={{display:'flex',alignItems:'center',gap:8,padding:'9px 12px 7px',borderBottom:`1px solid ${C.rule}`}}>
                       <div style={{fontFamily:SE,fontStyle:'italic',fontSize:22,fontWeight:500,color:col,lineHeight:1,minWidth:28}}>{mesa}</div>

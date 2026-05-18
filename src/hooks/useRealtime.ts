@@ -38,7 +38,7 @@ export function useComandas(turnoId?: string, restauranteId?: string) {
     let query = supabase
       .from('comandas')
       .select('*, mesa:mesas(id, codigo, zona, capacidad), camarero:camareros(id, nombre), items:comanda_items(*)')
-      .in('estado', ['nueva', 'en_cocina', 'cuenta_pedida'])
+      .in('estado', ['nueva', 'en_cocina', 'lista', 'cuenta_pedida'])
       .order('created_at', { ascending: true })
 
     if (turnoId) query = query.eq('turno_id', turnoId)
