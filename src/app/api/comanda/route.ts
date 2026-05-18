@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
 
       // Imprimir ticket automaticamente
       try {
-        const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string }) => ({
-          nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id,
+        const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string; formato_nombre?: string }) => ({
+          nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id, formato_nombre: i.formato_nombre ?? null,
         }))
         await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: camarero_nombre, restaurante_id: rid, nota_general: nota_general ?? null }, itemsPrint)
       } catch (e) { console.error('[COMANDA] Print error:', e) }
@@ -273,8 +273,8 @@ export async function POST(req: NextRequest) {
     // Imprimir ticket automaticamente
     // Reutilizamos mesaData ya cargada arriba (tiene codigo y zona_id)
     try {
-      const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string }) => ({
-        nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id,
+      const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string; formato_nombre?: string }) => ({
+        nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id, formato_nombre: i.formato_nombre ?? null,
       }))
       await crearPrintJobs({
         id: comanda.id, tipo, mesa_codigo: mesaData?.codigo ?? 'Mesa',

@@ -18,6 +18,7 @@ interface ItemParaPrint {
   notas?: string | null
   seccion_id?: string | null
   producto_id?: string | null   // para matching por producto v3
+  formato_nombre?: string | null // nombre del formato (Tapa / Media ración / Ración)
 }
 
 interface PrintPayload {
@@ -27,7 +28,7 @@ interface PrintPayload {
   seccion: string
   zona_nombre?: string | null  // nombre de la zona para mostrar en ticket
   nota_general?: string | null // nota que se imprime en todos los tickets de esta comanda
-  items: { nombre: string; cantidad: number; notas?: string }[]
+  items: { nombre: string; cantidad: number; notas?: string; formato_nombre?: string | null }[]
   tipo: string
   ts: string
 }
@@ -110,8 +111,12 @@ export function generarEscPos(payload: PrintPayload): Buffer {
   for (const item of payload.items) {
     const qty  = String(item.cantidad).padStart(2)
     const name = item.nombre.toUpperCase()
+    // Sufijo de formato: (TAPA) / (MEDIA) / (RACION)
+    const fmtSufijo = item.formato_nombre
+      ? (' (' + item.formato_nombre.toUpperCase() + ')').substring(0, 12)
+      : ''
     bufs.push(b(ESC, 0x45, 0x01))
-    bufs.push(t(qty + 'x  ' + name), b(LF))
+    bufs.push(t(qty + 'x  ' + name + fmtSufijo), b(LF))
     bufs.push(b(ESC, 0x45, 0x00))
     if (item.notas) {
       bufs.push(t('     > ' + item.notas), b(LF))
@@ -164,7 +169,8 @@ export function generarTextoPlano(payload: PrintPayload): string {
   }
 
   for (const item of payload.items) {
-    lines.push(`${String(item.cantidad).padStart(2)}x  ${item.nombre.toUpperCase()}`)
+    const fmtSufijo = item.formato_nombre ? ` (${item.formato_nombre.toUpperCase()})` : ''
+    lines.push(`${String(item.cantidad).padStart(2)}x  ${item.nombre.toUpperCase()}${fmtSufijo}`)
     if (item.notas) lines.push(`     -> ${item.notas}`)
   }
 
@@ -437,9 +443,10 @@ export async function crearPrintJobs(
       zona_nombre: comanda.zona_nombre ?? null,
       nota_general: comanda.nota_general ?? null,
       items: grupo.items.map(i => ({
-        nombre:   i.nombre,
-        cantidad: i.cantidad,
-        notas:    i.notas ?? undefined,
+        nombre:        i.nombre,
+        cantidad:      i.cantidad,
+        notas:         i.notas ?? undefined,
+        formato_nombre: i.formato_nombre ?? undefined,
       })),
       tipo: comanda.tipo,
       ts,
@@ -556,7 +563,7 @@ export async function crearPrintJobMarchar(
       seccion:     'PASE',
       zona_nombre: comanda.zona_nombre ?? null,
       nota_general: comanda.nota_general ?? null,
-      items: grupo.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, notas: i.notas ?? undefined })),
+      items: grupo.items.map(i => ({ nombre: i.nombre, cantidad: i.cantidad, notas: i.notas ?? undefined, formato_nombre: i.formato_nombre ?? undefined })),
       tipo: 'marchar',
       ts,
     }

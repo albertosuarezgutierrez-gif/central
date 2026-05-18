@@ -382,11 +382,13 @@ export async function POST(req: NextRequest) {
       // ─────────────────────────────────────────────────────────────────────
       void servicioInsertado
 
+      // formatoMap y norm hoistados para reutilizar en crearPrintJobs
+      const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
+
       if (brainResult.items.length > 0) {
         const itemsConFormato = brainResult.items.filter(i => i.formato)
-        const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
         const precioMap: Record<string, { id: string; precio: number }> = {}
-        const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 
         // Precio base de TODOS los productos (lookup automático desde carta)
         const todosNombres = [...new Set(brainResult.items.map(i => i.nombre))]
@@ -462,8 +464,18 @@ export async function POST(req: NextRequest) {
               zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
               nota_general: brainResult.nota_general ?? null,
             },
-            brainResult.items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad,
-              notas: item.notas ?? null, seccion_id: (item as Record<string, unknown>).seccion_id as string ?? null }))
+            brainResult.items.map(item => {
+              const fmtData = item.formato
+                ? (formatoMap[`${norm(item.nombre)}:${norm(item.formato)}`] ?? null)
+                : null
+              return {
+                nombre:        item.nombre,
+                cantidad:      item.cantidad,
+                notas:         item.notas ?? null,
+                seccion_id:    (item as Record<string, unknown>).seccion_id as string ?? null,
+                formato_nombre: fmtData?.nombre ?? null,
+              }
+            })
           ).catch(err => console.error('[COURIER]', err))
         }
       }
