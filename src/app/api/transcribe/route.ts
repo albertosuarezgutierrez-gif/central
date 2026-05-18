@@ -120,15 +120,27 @@ export async function POST(req: NextRequest) {
     const [{ texto: textoRaw, latencia_ms: latenciaEar, no_speech_prob, avg_logprob }] =
       await Promise.all([transcribir(audio, whisperPrompt), speakerPromise])
 
-    // ── Calcular aviso de ruido/baja confianza ───────────────────────────────
-    // no_speech_prob > 0.55 → Whisper cree que es ruido, no voz
-    // avg_logprob < -1.0   → muy baja confianza en lo transcrito
-    // speakerMatch < 0.40  → (si hay Azure) la voz no coincide con el perfil
-    const esRuidoWhisper =
+    // ── Calcular aviso de ruido/baja confianza — 4 capas ────────────────────
+    //
+    // Capa A — métricas Whisper verbose_json (disponibles con OpenAI; Groq turbo las omite)
+    const esRuidoMetricas =
       (no_speech_prob !== null && no_speech_prob > 0.55) ||
-      (avg_logprob    !== null && avg_logprob < -1.0)
+      (avg_logprob    !== null && avg_logprob    < -1.0)
+    //
+    // Capa B — alucinaciones conocidas de Whisper en español
+    // (Whisper genera estas frases cuando graba ruido/silencio, muy bien documentado)
+    const ALUCINACIONES = ['gracias', 'suscríbete', 'hasta pronto', 'hasta la próxima',
+      'subtítulos', 'muchas gracias', 'de nada', 'bye', 'thank you', 'thanks', 'you']
+    const textoNorm = textoRaw.trim().toLowerCase().replace(/[.!?,]/g, '')
+    const esAlucinacion = ALUCINACIONES.some(a => textoNorm === a || textoNorm.startsWith(a + ' '))
+    //
+    // Capa C — texto demasiado corto sin items (grabación cortada o ruido)
+    const esTextoVacio = textoRaw.trim().length < 4
+    //
+    // Capa D — Azure speaker match bajo (voz no coincide con el perfil)
     const esSpeakerBajo = speakerMatch !== null && speakerMatch < 0.40
-    const avisoRuido    = esRuidoWhisper || esSpeakerBajo
+    //
+    const avisoRuido = esRuidoMetricas || esAlucinacion || esTextoVacio || esSpeakerBajo
     // ────────────────────────────────────────────────────────────────────────
     // Si hay contexto previo de clarificación, se lo pasamos a BRAIN para que resuelva
     const texto = pendingContext

@@ -1081,7 +1081,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       if (d.ok) {
         // ── AUTO-RETRY por ruido: primer intento con ruido → reintentar automáticamente ──
         // Solo reintenta 1 vez. En el segundo intento procesa sea como sea (aviso en banner).
-        if (d.aviso_ruido && ruidoRetryRef.current < 1 && d.brain?.items?.length === 0) {
+        if (d.aviso_ruido && ruidoRetryRef.current < 1) {
           ruidoRetryRef.current += 1
           setScreenSafe('idle')
           speak('No te entendí bien, ¿puedes repetir?').then(() => {
