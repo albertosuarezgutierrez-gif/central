@@ -27,9 +27,11 @@ export async function POST(req: NextRequest) {
     const audio = formData.get('audio') as Blob
     const camareroId = formData.get('camarero_id') as string
     const turnoId = formData.get('turno_id') as string
-    const recordingId = formData.get('recording_id') as string | null  // idempotency key
+    const recordingId    = formData.get('recording_id') as string | null  // idempotency key
     const pendingItemsRaw = formData.get('pending_items') as string | null  // flujo conversacional
     const pendingContext  = formData.get('pending_context') as string | null  // flujo clarificacion
+    // voiceConfirm=ON → frontend envía require_confirm=true → no crear print_jobs hasta /confirmar
+    const requireConfirm  = formData.get('require_confirm') === 'true'
     if (!audio || !camareroId || !turnoId)
       return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
@@ -195,16 +197,19 @@ export async function POST(req: NextRequest) {
           .select()
           .eq('mesa_id', mesa.id)
           .eq('restaurante_id', rid)
-          .in('estado', ['activa', 'en_cocina', 'marchar', 'nueva'])
+          .in('estado', ['activa', 'en_cocina', 'marchar', 'nueva', 'pendiente_confirmacion'])
           .order('created_at', { ascending: false })
           .limit(1)
           .single()
         comanda = existente ?? null
         if (comanda) comandaId = comanda.id
       } else {
+        // requireConfirm=true → comanda nace en 'pendiente_confirmacion', sin print_jobs.
+        // PATCH /confirmar la activa cuando el camarero confirma en pantalla.
+        const estadoInicial = requireConfirm ? 'pendiente_confirmacion' : 'en_cocina'
         const { data: nuevaComanda, error: comandaError } = await supabase.from('comandas')
           .insert({ mesa_id: mesa.id, camarero_id: camareroId, turno_id: turnoId,
-            tipo: brainResult.tipo, estado: 'en_cocina',
+            tipo: brainResult.tipo, estado: estadoInicial,
             restaurante_id: rid,
             ...(brainResult.num_comensales ? { num_comensales: brainResult.num_comensales } : {}),
             ...(brainResult.nota_general ? { nota_general: brainResult.nota_general } : {}) })
@@ -352,7 +357,8 @@ export async function POST(req: NextRequest) {
         )
       }
 
-      if (['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
+      // Solo crear print_jobs si no requiere confirmación — si la requiere, /confirmar los crea
+      if (!requireConfirm && ['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
         const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
         crearPrintJobs(
           {
@@ -372,10 +378,12 @@ export async function POST(req: NextRequest) {
       }
 
       const nuevoEstado = ({ comanda: 'activa', marchar: 'marchar', '86': mesa.estado, cuenta: 'cuenta_pedida', aviso: 'aviso' })[brainResult.tipo] as string
-      await supabase.from('mesas').update({ estado: brainResult.tipo === 'cuenta' ? 'cuenta' : nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('restaurante_id', rid)
+      // No actualizar mesa si requireConfirm — se actualiza al confirmar en /confirmar
+      if (!requireConfirm) await supabase.from('mesas').update({ estado: brainResult.tipo === 'cuenta' ? 'cuenta' : nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('restaurante_id', rid)
 
       // ── PEDIR CUENTA por voz ───────────────────────────────
-      if (brainResult.tipo === 'cuenta' && comanda?.id) {
+      // Si requireConfirm, el ticket de cuenta espera a la confirmación del camarero
+      if (!requireConfirm && brainResult.tipo === 'cuenta' && comanda?.id) {
         // Cambiar estado comanda a cuenta_pedida + imprimir ticket
         await supabase.from('comandas').update({ estado: 'cuenta_pedida' }).eq('id', comanda.id)
 
@@ -471,7 +479,8 @@ export async function POST(req: NextRequest) {
             }
           })
         )
-        // Enviar a impresora igual que con mesa (courier)
+        // Solo enviar a impresora si no requiere confirmación
+        if (!requireConfirm) {
         const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
         crearPrintJobs(
           {
@@ -486,6 +495,7 @@ export async function POST(req: NextRequest) {
           },
           brainResult.items.map(item => ({ nombre: item.nombre, cantidad: item.cantidad, notas: item.notas ?? null, seccion_id: null }))
         ).catch(err => console.error('[COURIER nominal]', err))
+        } // end if(!requireConfirm)
       }
     }
     // ────────────────────────────────────────────────────────────────────────

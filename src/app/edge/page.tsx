@@ -1046,6 +1046,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     fd.append('recording_id', recordingIdRef.current)  // idempotency key
     if (pendingItems.length > 0) fd.append('pending_items', JSON.stringify(pendingItems))
     if (clarificacionCtx)        fd.append('pending_context', clarificacionCtx)
+    // voiceConfirm=ON → backend crea comanda en pendiente_confirmacion sin print_jobs
+    // Los jobs se crean en PATCH /confirmar cuando el camarero confirma en pantalla
+    if (voiceConfirm) fd.append('require_confirm', 'true')
 
     // ── Lock global: bloquea cualquier nuevo fetch hasta terminar ────────
     fetchInFlightRef.current = true
@@ -1204,6 +1207,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
         // Auto-confirmar si confianza suficiente y opción activada
         if (autoConfirm && conf * 100 >= autoThreshold && d.comanda_id) {
+          // voiceConfirm=true → comanda en pendiente_confirmacion → confirmar en background
+          if (voiceConfirm) {
+            fetch(`/api/comanda/${d.comanda_id}/confirmar`, {
+              method: 'PATCH',
+              headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+            }).catch(err => console.error('[CONFIRMAR auto]', err))
+          }
           setScreenSafe('sent')
           addMsg('brain', `✓ Auto-enviado · ${d.brain?.mesa||'?'}`, 'ok')
         } else if (voiceConfirm && !ttsOff && hasTTS) {
@@ -1765,7 +1775,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
                   {/* FIX-04: onPointerDown evita doble-disparo en móvil (no hay delay de click sintético) */}
                   <button onPointerDown={reset} style={{flex:1,padding:12,background:'none',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>✗ Cancelar</button>
-                  <button onPointerDown={()=>{ setScreenSafe('sent')
+                  <button onPointerDown={()=>{
+                    // Confirmar en backend — crea print_jobs y activa la comanda
+                    if (lastComandaId) {
+                      fetch(`/api/comanda/${lastComandaId}/confirmar`, {
+                        method: 'PATCH',
+                        headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+                      }).catch(err => console.error('[CONFIRMAR]', err))
+                    }
+                    setScreenSafe('sent')
                     addMsg('brain',`✓ Enviado · ${brain?.mesa ?? '?'}`,'ok')
                     setPushMsg(`🍳 Cocina recibió · ${brain?.mesa ?? '?'}`); setShowPush(true); setTimeout(()=>setShowPush(false),4000)
                   }} style={{flex:2,padding:12,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:13,fontWeight:700,cursor:'pointer'}}>
@@ -1797,7 +1815,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <div style={{padding:'4px 14px 6px',display:'flex',gap:6,flexShrink:0,overflowX:'auto',scrollbarWidth:'none' as const,background:C.bg1,borderTop:`1px solid ${C.rule}`}}>
               {['✓ Sí','✗ No','Repite'].map(r=>(
                 // FIX-04: onPointerDown evita doble-disparo en móvil
-                <button key={r} onPointerDown={r==='✓ Sí'?()=>{setScreenSafe('sent');addMsg('brain',`✓ Enviado · ${brain?.mesa ?? '?'}`,'ok')}:r==='✗ No'?reset:()=>{reset();setScreenSafe('idle')}}
+                <button key={r} onPointerDown={r==='✓ Sí'?()=>{
+                  if (lastComandaId) {
+                    fetch(`/api/comanda/${lastComandaId}/confirmar`, {
+                      method: 'PATCH',
+                      headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
+                    }).catch(err => console.error('[CONFIRMAR quick]', err))
+                  }
+                  setScreenSafe('sent'); addMsg('brain',`✓ Enviado · ${brain?.mesa ?? '?'}`,'ok')
+                }:r==='✗ No'?reset:()=>{reset();setScreenSafe('idle')}}
                   style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1px solid ${C.rule}`,background:C.bg2,fontSize:12,fontWeight:600,color:r==='✓ Sí'?C.gr:r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
                   {r}
                 </button>
