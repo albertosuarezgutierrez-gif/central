@@ -6982,7 +6982,10 @@ export default function OwnerPage() {
   const [tab, setTab] = useState('camareros')
   const [showBridgeSetup, setShowBridgeSetup] = useState(false)
   const [setupStatus, setSetupStatus] = useState<{ tiene_camareros:boolean; tiene_productos:boolean; tiene_mesas:boolean; turno_activo:boolean } | null>(null)
-  const [showChecklist, setShowChecklist] = useState(true)
+  const [showChecklist, setShowChecklist] = useState(() => {
+    if (typeof window === 'undefined') return true
+    return localStorage.getItem('ia_setup_checklist_dismissed') !== '1'
+  })
   const [datosFiscales, setDatosFiscales] = useState<{ nif: string|null; razon_social: string|null; direccion: string|null } | null>(null)
 
   useEffect(() => {
@@ -7276,7 +7279,10 @@ export default function OwnerPage() {
         <SetupChecklist
           status={setupStatus}
           setTab={setTab}
-          onDismiss={() => setShowChecklist(false)}
+          onDismiss={() => {
+            localStorage.setItem('ia_setup_checklist_dismissed', '1')
+            setShowChecklist(false)
+          }}
         />
       )}
 
