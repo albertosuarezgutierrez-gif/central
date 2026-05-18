@@ -35,11 +35,25 @@ export async function POST(req: NextRequest) {
       if (cam?.nombre) camarero_nombre = cam.nombre
     }
 
-    const { data: turno } = await supabase
+    // Fix #1b: misma lógica 2 capas que /api/turno — nunca .single() con módulo fichaje
+    let turno_id = ''
+    const { data: turnoServicio } = await supabase
       .from('turnos').select('id')
       .eq('restaurante_id', rid).eq('estado', 'activo')
-      .single()
-    const turno_id = turno?.id ?? ''
+      .is('camarero_id', null)
+      .order('created_at', { ascending: false })
+      .limit(1).maybeSingle()
+    if (turnoServicio?.id) {
+      turno_id = turnoServicio.id
+    } else if (camarero_id) {
+      const { data: turnoPropio } = await supabase
+        .from('turnos').select('id')
+        .eq('restaurante_id', rid).eq('estado', 'activo')
+        .eq('camarero_id', camarero_id)
+        .order('created_at', { ascending: false })
+        .limit(1).maybeSingle()
+      turno_id = turnoPropio?.id ?? ''
+    }
     if (!turno_id) {
       return NextResponse.json({ error: 'Sin turno activo' }, { status: 400 })
     }

@@ -82,14 +82,27 @@ export async function POST(req: NextRequest) {
     // ────────────────────────────────────────────────────────────────────────
 
     // ── Idempotencia: si ya procesamos esta grabacion, devolver resultado cacheado ──
+    // Capa 1: cache en memoria (instantáneo, misma instancia serverless)
+    // Capa 2: BD Supabase (cross-instancia — evita duplicados en Vercel multi-lambda)
     if (recordingId) {
       const cached = recentRecordings.get(recordingId)
       if (cached && Date.now() - cached.ts < IDEMPOTENCY_TTL_MS) {
         return NextResponse.json(cached.result)
       }
-      // Limpiar entradas viejas
       for (const [k, v] of recentRecordings) {
         if (Date.now() - v.ts > IDEMPOTENCY_TTL_MS) recentRecordings.delete(k)
+      }
+      // Capa 2: lookup en BD para instancias distintas
+      const supabaseIdem = createServerClient()
+      const { data: txExistente } = await supabaseIdem
+        .from('transcripciones')
+        .select('id')
+        .eq('recording_id', recordingId)
+        .maybeSingle()
+      if (txExistente) {
+        return NextResponse.json({ ok: true, texto: '', brain: null, comanda_id: null,
+          latencia_ms: 0, aviso_ruido: false, alertas_86: [], alertas_alergenos: [],
+          _idempotente: true })
       }
     }
 
@@ -436,7 +449,9 @@ export async function POST(req: NextRequest) {
 
         if (brainResult.tipo === 'marchar') {
           // ── B1 FIX: usar /api/marchar para notificaciones al running + marchar_log ──
-          const baseUrl = process.env.APP_URL ?? 'https://www.iarest.es'
+          // Fix #3: APP_URL explícita > VERCEL_URL automático de Vercel > prod hardcoded
+          const baseUrl = process.env.APP_URL
+            ?? (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://www.iarest.es')
           fetch(`${baseUrl}/api/marchar`, {
             method: 'POST',
             headers: {
@@ -552,7 +567,8 @@ export async function POST(req: NextRequest) {
           camarero_id: camareroId,
           turno_id: turnoId,
           tipo: brainResult.tipo === 'cuenta' ? 'comanda' : brainResult.tipo,
-          estado: 'en_cocina',
+          // Fix #2: respetar requireConfirm también en cuentas nominales
+          estado: requireConfirm ? 'pendiente_confirmacion' : 'en_cocina',
           restaurante_id: rid,
         })
         .select().single()
@@ -610,6 +626,8 @@ export async function POST(req: NextRequest) {
       fuente_brain: brainResult.fuente,
       latencia_brain_ms: brainResult.latencia_brain_ms,
       speaker_match: speakerMatch,
+      // Fix #10: persistir recording_id para idempotencia cross-instancia
+      ...(recordingId ? { recording_id: recordingId } : {}),
     })
 
     if (alertasAlergenos.length > 0 && comandaId && mesa) {

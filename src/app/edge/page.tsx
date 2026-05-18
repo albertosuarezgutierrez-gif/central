@@ -656,8 +656,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         .then(d => setTurnoId(d.turno?.id ?? null))
         .catch(() => {})
     fetchTurno()
-    // Refresca cada 60s para detectar apertura/cierre de turno por el owner
-    const turnoInterval = setInterval(fetchTurno, 60_000)
+    // Fix #9: reducido a 20s para detectar apertura/cierre de turno más rápido
+    const turnoInterval = setInterval(fetchTurno, 20_000)
     try {
       const cfg = JSON.parse(localStorage.getItem('ia_cfg')||'{}')
       if (cfg.voiceConfirm !== undefined) setVoiceConfirm(cfg.voiceConfirm)
@@ -891,6 +891,14 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       // Bug-fix: interrumpir TTS para grabar la siguiente comanda sin esperar
       window.speechSynthesis?.cancel()
       speakingRef.current = false
+      // Fix #5: en iOS, getUserMedia desde el handler de speaking puede fallar.
+      // Mostrar asking para que el camarero pulse PTT con gesto directo (requerido por Safari).
+      if (isIOS) {
+        setScreenSafe('asking')
+        setPreguntaBrain('Pulsa para grabar la siguiente comanda')
+        setChipsClarificacion([])
+        return
+      }
       // No reseteamos brain/transcript — visible en UI mientras graba la siguiente
       // continúa sin return
     } else if (cur === 'error') {
@@ -1397,9 +1405,16 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // ── Timeout reset estado asking (15s sin respuesta → idle) ───────
   useEffect(() => {
     if (screen !== 'asking') return
-    const t = setTimeout(() => { setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('') }, 15000)
+    const t = setTimeout(() => {
+      // Fix #14: avisar antes de reset silencioso
+      addMsg('sistema', 'Sin respuesta — nueva comanda cuando quieras.', 'aviso')
+      setScreenSafe('idle')
+      setBrain(null); brainRef.current = null; setTranscript('')
+      setChipsClarificacion([]); setClarificacionCtx(null)
+      setMesaClarificacion(null); setPreguntaBrain('¿Qué mesa?')
+    }, 15000)
     return () => clearTimeout(t)
-  }, [screen])
+  }, [screen, addMsg])
 
   // ── Auto-reset sent → idle tras 3s ───────────────────────────────
   // Permite pulsar PTT para la siguiente comanda sin tocar "Nueva comanda".
@@ -1425,9 +1440,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // Bug-fix: mismo patrón que error — si el camarero no confirma/cancela
   // la pantalla queda bloqueada permanentemente con voiceConfirm=ON.
   // 20s da tiempo suficiente para leer y decidir antes del reset.
+  // Fix #6: no resetear si hay un fetch de confirmación en vuelo.
   useEffect(() => {
     if (screen !== 'confirm') return
     const t = setTimeout(() => {
+      if (fetchInFlightRef.current) return
       setScreenSafe('idle')
       setBrain(null); brainRef.current = null; setTranscript('')
     }, 20000)
@@ -1499,20 +1516,28 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     finally { setMesaRapidaLoading(false) }
   }
 
+  // Fix #11: debounce anti-doble-tap — Set de comanda_ids en vuelo
+  const marcharEnVueloRef = useRef<Set<string>>(new Set())
   const marcharRapido = async (mesa: MesaPlano) => {
     const comanda = mesasOcupadas[mesa.id]
     if (!comanda || !['en_cocina','nueva','lista','cuenta_pedida'].includes(comanda.estado ?? '')) return
+    if (marcharEnVueloRef.current.has(comanda.id)) return
     const items = (comanda.items ?? []).map((it: {nombre:string;cantidad:number}) => ({
       nombre: it.nombre, cantidad: it.cantidad,
     }))
     if (!items.length) return
+    marcharEnVueloRef.current.add(comanda.id)
     const ses = localStorage.getItem('ia_rest_session') ?? ''
-    await fetch('/api/marchar', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },
-      body: JSON.stringify({ comanda_id: comanda.id, mesa_codigo: mesa.codigo, items }),
-    })
-    addMsg('sistema', `✓ Marchado · ${mesa.codigo}`, 'ok')
+    try {
+      await fetch('/api/marchar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },
+        body: JSON.stringify({ comanda_id: comanda.id, mesa_codigo: mesa.codigo, items }),
+      })
+      addMsg('sistema', `✓ Marchado · ${mesa.codigo}`, 'ok')
+    } finally {
+      setTimeout(() => marcharEnVueloRef.current.delete(comanda.id), 3000)
+    }
   }
   const seleccionarChip = useCallback(async (chip: {nombre:string;precio?:number|null;cantidad:number}) => {
     // Buscar mesa_id a partir del codigo guardado
@@ -1523,30 +1548,40 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     }
     const ses = localStorage.getItem('ia_rest_session') ?? ''
     try {
+      // Fix #4: respetar voiceConfirm — igual que el flujo PTT normal
       const r = await fetch('/api/comanda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },
-        body: JSON.stringify({ mesa_id: mesa.id, items: [{ nombre: chip.nombre, cantidad: chip.cantidad }] }),
+        body: JSON.stringify({
+          mesa_id: mesa.id,
+          items: [{ nombre: chip.nombre, cantidad: chip.cantidad }],
+          ...(voiceConfirm ? { require_confirm: true } : {}),
+        }),
       })
       const d = await r.json()
       if (r.ok) {
-        addMsg('brain', `✓ ${chip.cantidad}× ${chip.nombre} · ${mesa.codigo}`, 'ok')
+        const comandaId = d.comanda_id ?? d.id ?? null
         setChipsClarificacion([])
         setClarificacionCtx(null)
         setMesaClarificacion(null)
         setPreguntaBrain('¿Qué mesa?')
-        setScreenSafe('sent')
         setBrain({ mesa: mesa.codigo, tipo: 'comanda', items: [chip], confianza: 1, raw: chip.nombre })
         brainRef.current = { mesa: mesa.codigo, tipo: 'comanda', items: [chip], confianza: 1, raw: chip.nombre }
-        setLastComandaId(d.comanda_id ?? d.id ?? null)
+        setLastComandaId(comandaId)
         if (navigator.vibrate) navigator.vibrate([30,50,30])
+        if (voiceConfirm && comandaId) {
+          setScreenSafe('confirm')
+        } else {
+          addMsg('brain', `✓ ${chip.cantidad}× ${chip.nombre} · ${mesa.codigo}`, 'ok')
+          setScreenSafe('sent')
+        }
       } else {
         addMsg('sistema', d.error ?? 'Error al crear comanda', 'error')
       }
     } catch {
       addMsg('sistema', 'Sin conexión', 'error')
     }
-  }, [mesaClarificacion, addMsg])
+  }, [mesaClarificacion, addMsg, voiceConfirm])
 
   const reset = () => {
     // Bug-fix: si el camarero cancela en la pantalla confirm, la comanda ya existe en BD.

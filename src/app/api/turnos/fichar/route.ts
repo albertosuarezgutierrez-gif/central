@@ -1,12 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
-function getSession(req: NextRequest) {
-  try {
-    const h = req.headers.get('x-ia-session')
-    return h ? JSON.parse(h) : null
-  } catch { return null }
-}
+// Fix #7: usar getSession de @/lib/session (patrón crítico del proyecto)
 
 function getIP(req: NextRequest): string {
   const fwd = req.headers.get('x-forwarded-for')
