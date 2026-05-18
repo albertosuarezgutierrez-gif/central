@@ -2015,7 +2015,7 @@ function ResumenTab() {
 
 /* ─── Tab: Carta ─── */
 type Producto = { id: string; nombre: string; descripcion: string | null; precio: number | null; categoria: string; seccion: string; nombre_alternativo: string[]; familia: string | null; activo: boolean; orden: number }
-type ProductoDraft = Omit<Producto, 'id' | 'orden' | 'activo'> & { _key: string }
+type ProductoDraft = Omit<Producto, 'id' | 'orden' | 'activo'> & { _key: string; formatos?: { nombre: string; precio: number }[] }
 type ProdFormato = { id: string; nombre: string; precio: number; activo: boolean; orden: number }
 
 type CartaView = 'lista' | 'escanear'
@@ -2517,13 +2517,13 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
 
               <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as 'touch', borderRadius: 8, border: `1px solid ${C.rule}` }}>
               <div style={{ minWidth: 480, background: C.bone }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 90px 40px',
+                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 120px 40px',
                   padding: '10px 14px', borderBottom: `1px solid ${C.rule}`,
                   fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>
-                  <span>Nombre</span><span>Categoría</span><span>Precio</span><span/>
+                  <span>Nombre</span><span>Categoría</span><span>Precio / Formatos</span><span/>
                 </div>
                 {extracted.map((p) => (
-                  <div key={p._key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 90px 40px',
+                  <div key={p._key} style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 120px 40px',
                     padding: '8px 14px', gap: 6, alignItems: 'center',
                     borderBottom: `1px solid ${C.rule}` }}>
                     <input value={p.nombre} onChange={e => updateDraft(p._key, 'nombre', e.target.value)}
@@ -2537,10 +2537,23 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                         : SECCIONES_DEFAULT.map(s => <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>)
                       }
                     </select>
-                    <input value={p.precio != null ? String(p.precio) : ''} onChange={e => updateDraft(p._key, 'precio', e.target.value === '' ? null : parseFloat(e.target.value))}
-                      placeholder="—" type="number" step="0.01"
-                      style={{ fontFamily: SM, fontSize: 13, background: C.paper, border: `1px solid ${C.rule}`,
-                        borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }} />
+                    {/* Precio único o badge de formatos detectados */}
+                    {p.formatos && p.formatos.length >= 2 ? (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        {p.formatos.map((f, fi) => (
+                          <div key={fi} style={{ display: 'flex', justifyContent: 'space-between',
+                            fontFamily: SM, fontSize: 10, color: C.amber }}>
+                            <span style={{ color: C.ink3 }}>{f.nombre.substring(0, 8)}</span>
+                            <span style={{ fontWeight: 700 }}>{Number(f.precio).toFixed(2)}€</span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <input value={p.precio != null ? String(p.precio) : ''} onChange={e => updateDraft(p._key, 'precio', e.target.value === '' ? null : parseFloat(e.target.value))}
+                        placeholder="—" type="number" step="0.01"
+                        style={{ fontFamily: SM, fontSize: 13, background: C.paper, border: `1px solid ${C.rule}`,
+                          borderRadius: 4, padding: '5px 8px', color: C.ink, outline: 'none', width: '100%' }} />
+                    )}
                     <button onClick={() => removeDraft(p._key)}
                       style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.ink4, display: 'flex', padding: 4 }}>
                       <Icon d={ICONS.x} size={14}/>

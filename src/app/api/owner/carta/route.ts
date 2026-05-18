@@ -55,22 +55,65 @@ export async function PUT(req: NextRequest) {
   return NextResponse.json({ producto: data })
 }
 
-// POST ?action=bulk — inserción masiva desde onboarding (incluye alérgenos)
+// POST ?action=bulk — inserción masiva desde onboarding (incluye alérgenos y formatos)
 export async function POST_BULK(req: NextRequest) {
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
   const { productos } = await req.json()
   if (!Array.isArray(productos) || productos.length === 0)
     return NextResponse.json({ error: 'Sin productos' }, { status: 400 })
-  const rows = productos.map((p: Record<string, unknown>, i: number) => ({
+
+  type ProdInput = {
+    nombre: unknown; descripcion?: unknown; precio?: unknown
+    categoria?: unknown; alergenos?: unknown
+    formatos?: { nombre: string; precio: number }[]
+  }
+
+  const rows = (productos as ProdInput[]).map((p, i) => ({
     nombre: p.nombre, descripcion: p.descripcion || null,
-    precio: p.precio ?? null, categoria: p.categoria || 'Sin categoría',
+    // Si hay formatos, precio base = ración (último formato) o null
+    precio: Array.isArray(p.formatos) && p.formatos.length > 0
+      ? (p.formatos[p.formatos.length - 1].precio ?? null)
+      : (p.precio ?? null),
+    categoria: p.categoria || 'Sin categoría',
     alergenos: Array.isArray(p.alergenos) ? p.alergenos : [],
     activo: true, orden: i, restaurante_id: rid,
   }))
+
   const { data, error } = await supabase.from('productos').insert(rows).select()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ productos: data })
+
+  // Crear producto_formatos para productos con múltiples precios
+  const formatosToInsert: {
+    producto_id: string; restaurante_id: string
+    nombre: string; precio: number; orden: number; activo: boolean
+  }[] = []
+
+  for (let i = 0; i < (productos as ProdInput[]).length; i++) {
+    const p = (productos as ProdInput[])[i]
+    const inserted = data?.[i]
+    if (!inserted || !Array.isArray(p.formatos) || p.formatos.length < 2) continue
+    p.formatos.forEach((f, j) => {
+      if (f.nombre && f.precio != null) {
+        formatosToInsert.push({
+          producto_id: inserted.id,
+          restaurante_id: rid,
+          nombre: f.nombre,
+          precio: Number(f.precio),
+          orden: j,
+          activo: true,
+        })
+      }
+    })
+  }
+
+  if (formatosToInsert.length > 0) {
+    const { error: fmtErr } = await supabase.from('producto_formatos').insert(formatosToInsert)
+    if (fmtErr) console.error('[POST_BULK] Error insertando formatos:', fmtErr.message)
+  }
+
+  invalidarCache(rid)
+  return NextResponse.json({ productos: data, formatos_creados: formatosToInsert.length })
 }
 
 export async function DELETE(req: NextRequest) {
@@ -107,9 +150,36 @@ async function handleExtract(req: NextRequest) {
       source: { type: 'base64' as const, media_type: normalizeType(img.mediaType), data: img.data },
     }))
     const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001', max_tokens: 4096,
+      model: 'claude-haiku-4-5-20251001', max_tokens: 6000,
       messages: [{ role: 'user', content: [...imageBlocks, { type: 'text',
-        text: `Eres un asistente de restauración española. Extrae TODOS los platos, tapas, bebidas y postres de esta carta.\n\nDevuelve SOLO un JSON válido con esta estructura exacta, sin texto adicional ni markdown:\n{"productos":[{"nombre":"Nombre tal como aparece","descripcion":"Descripción o null","precio":9.50,"categoria":"Entrantes"}]}\n\nReglas:\n- precio: número decimal o null si no aparece\n- categoria: infiere de la sección (Entrantes, Principales, Postres, Bebidas, Tapas, Bocadillos, Pizzas, Ensaladas, Carnes, Pescados, etc.)\n- Incluye TODOS los productos visibles\n- Si hay varias páginas, combina todo en un único array`,
+        text: `Eres un experto en hostelería española. Extrae TODOS los platos, tapas, bebidas y postres de esta carta de restaurante.
+
+IMPORTANTE — FORMATOS DE PRECIO (muy común en cartas españolas):
+Muchos productos aparecen con 2 o 3 precios en columnas: Tapa / Media / Ración, o T / M / R, o 1/2 / Entera.
+En ese caso, usa el campo "formatos" con los precios de cada tamaño. Deja "precio" como null.
+
+Devuelve SOLO un JSON válido sin texto adicional ni markdown:
+{"productos":[{
+  "nombre": "string",
+  "descripcion": "string|null",
+  "precio": null,
+  "categoria": "string",
+  "alergenos": ["string"],
+  "formatos": [
+    {"nombre": "Tapa", "precio": 4.50},
+    {"nombre": "Media ración", "precio": 8.00},
+    {"nombre": "Ración", "precio": 14.00}
+  ]
+}]}
+
+Reglas:
+- Si el producto tiene UN SOLO precio: pon el número en "precio" y "formatos": []
+- Si el producto tiene VARIOS PRECIOS (tapa/media/ración, T/M/R, 1/2/entera, pequeño/grande, copa/botella): pon "precio": null y rellena "formatos"
+- nombre del formato: usa "Tapa", "Media ración", "Ración", "Copa", "Botella", "Media botella", "Pequeño", "Grande" según lo que veas
+- categoria: infiere de la sección (Entrantes, Tapas, Principales, Carnes, Pescados, Mariscos, Postres, Bebidas, Vinos, Cervezas, Raciones, etc.)
+- alergenos: array con los EU presentes exactamente: ["Gluten","Crustáceos","Huevo","Pescado","Cacahuetes","Soja","Lácteos","Frutos de cáscara","Apio","Mostaza","Sésamo","Dióxido de azufre","Altramuces","Moluscos"]. Array vacío [] si no hay.
+- Incluye ABSOLUTAMENTE TODOS los productos visibles en todas las páginas
+- No inventes productos que no estén en la carta`,
       }] }],
     })
     const raw = msg.content[0].type === 'text' ? msg.content[0].text : ''
