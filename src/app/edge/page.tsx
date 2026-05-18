@@ -2427,11 +2427,14 @@ function VoiceProfileSection({ session }: { session: { id: string; restaurante_i
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || 'Error al procesar')
 
-      setFrases(d.frases_completadas)
       setEstado(d.estado)
       if (d.estado === 'activo') {
-        setModal(false)
+        // Forzar todos los pasos a verde y mostrar pantalla de éxito
+        // El usuario cerrará con el botón "Perfecto"
+        setFrases(FRASES_CALIBRACION.length)
+        setPaso(FRASES_CALIBRACION.length)
       } else {
+        setFrases(d.frases_completadas)
         setPaso(p => p + 1)
       }
     } catch (err) {
