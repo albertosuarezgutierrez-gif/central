@@ -2203,10 +2203,11 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const [view, setView] = useState<CartaView>('lista')
   const [productos, setProductos] = useState<Producto[]>([])
   const [secciones, setSecciones] = useState<Seccion[]>([])
+  const [listaProvs, setListaProvs] = useState<{ id: string; nombre: string; categoria: string | null }[]>([])
   const [loading, setLoading] = useState(true)
   const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
   const [modalTrad, setModalTrad] = useState<null | { id: string; nombre: string; descripcion?: string | null }>(null)
-  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '', familia: '' })
+  const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '', familia: '', proveedor_id: '' })
   const [wineForm, setWineForm] = useState({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '', descripcion_cata: '', maridaje_tags: [] as string[] })
   const [wineEnriching, setWineEnriching] = useState(false)
 
@@ -2256,14 +2257,17 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const SECCIONES_DEFAULT = ['entrantes', 'principales', 'postres', 'bebidas', 'cafes', 'copas', 'otras']
 
   const load = useCallback(async () => {
-    const [rCarta, rSec] = await Promise.all([
-      fetch('/api/owner/carta', { headers: sh() }),
-      fetch('/api/owner/secciones', { headers: sh() }),
+    const [rCarta, rSec, rProv] = await Promise.all([
+      fetch('/api/owner/carta',       { headers: sh() }),
+      fetch('/api/owner/secciones',   { headers: sh() }),
+      fetch('/api/owner/proveedores', { headers: sh() }),
     ])
     const dCarta = await rCarta.json()
     const dSec   = await rSec.json()
+    const dProv  = await rProv.json()
     setProductos(dCarta.productos || [])
     setSecciones(dSec.secciones || [])
+    setListaProvs(dProv.proveedores || [])
     setLoading(false)
   }, [])
 
@@ -2272,7 +2276,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const primeraSeccion = secciones[0]?.id || SECCIONES_DEFAULT[0]
 
   // ── CRUD ──
-  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '', familia: '' }); setWineForm({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '', descripcion_cata: '', maridaje_tags: [] }); setErr(''); setModal('create') }
+  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '', familia: '', proveedor_id: '' }); setWineForm({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '', descripcion_cata: '', maridaje_tags: [] }); setErr(''); setModal('create') }
   const openEdit = (p: Producto) => {
     setForm({
       nombre: p.nombre, descripcion: p.descripcion || '',
@@ -2280,6 +2284,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       seccion: p.seccion || 'otras',
       nombre_alternativo: (p.nombre_alternativo || []).join(', '),
       familia: p.familia || '',
+      proveedor_id: (p as Record<string,unknown>).proveedor_id as string || '',
     })
     const m = (p as Record<string,unknown>).metadata as Record<string,string> | null ?? {}
     setWineForm({ bodega: m.bodega || '', varietal: m.varietal || '', do: m.do || '', anada: m.anada || m['añada'] || '', temperatura: m.temperatura_servicio || '', maridaje: m.maridaje || '', descripcion_cata: m.descripcion_cata || '', maridaje_tags: Array.isArray(m.maridaje_tags) ? m.maridaje_tags : [] })
@@ -2301,6 +2306,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       categoria: form.seccion,
       nombre_alternativo: aliases,
       familia: form.familia.trim() || null,
+      proveedor_id: form.proveedor_id || null,
       metadata: (form.familia.startsWith('vino') || ['vinos','vino','bodega','carta de vinos','vinos tintos','vinos blancos','vinos rosados','espumosos','cava','champagne'].includes((form.seccion||'').toLowerCase()))
         ? {
             tipo: 'vino',
@@ -2581,6 +2587,11 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                       <div style={{ minWidth: 0 }}>
                         <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: p.activo ? C.ink : C.ink4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</div>
                         {p.descripcion && <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.descripcion}</div>}
+                        {Boolean((p as unknown as Record<string,unknown>).proveedor_id) && (() => {
+                          const pid = (p as unknown as Record<string,string>).proveedor_id
+                          const prov = listaProvs.find(lp => lp.id === pid)
+                          return prov ? <div style={{ fontFamily:SM, fontSize:9, color:'#2B8A8F', marginTop:2 }}>🏭 {prov.nombre}</div> : null
+                        })()}
                       </div>
                       <div style={{ fontFamily: SM, fontSize: 13, fontWeight: 700, color: C.ink2, textAlign: 'right' as const, flexShrink: 0 }}>
                         {p.precio != null ? `${p.precio.toFixed(2)} €` : '—'}
@@ -2629,6 +2640,24 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                 Ejemplos: <span style={{color:C.ink2}}>vino_tinto · vino_blanco · cerveza · refresco · postre · vermut</span>
               </div>
             </div>
+            {/* Proveedor del producto */}
+            {listaProvs.length > 0 && (
+              <div>
+                <label style={{ fontFamily:SM, fontSize:10, fontWeight:700, letterSpacing:'.1em', color:C.ink3, textTransform:'uppercase' as const, display:'block', marginBottom:6 }}>Proveedor</label>
+                <select value={form.proveedor_id} onChange={e => setForm(f => ({ ...f, proveedor_id: e.target.value }))}
+                  style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, outline:'none' }}>
+                  <option value="">— Sin proveedor —</option>
+                  {listaProvs.map(p => (
+                    <option key={p.id} value={p.id}>{p.nombre}{p.categoria ? ` · ${p.categoria}` : ''}</option>
+                  ))}
+                </select>
+                {form.proveedor_id && (
+                  <div style={{ fontFamily:SM, fontSize:9, color:C.ink3, marginTop:4 }}>
+                    {listaProvs.find(p => p.id === form.proveedor_id)?.nombre}
+                  </div>
+                )}
+              </div>
+            )}
             {(form.familia.startsWith('vino') || ['vinos','vino','bodega','carta de vinos','vinos tintos','vinos blancos','vinos rosados','espumosos','cava','champagne'].includes((form.seccion||'').toLowerCase())) && (
               <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.14em', color: C.red, textTransform: 'uppercase' as const, marginBottom: 2 }}>
