@@ -40,10 +40,13 @@ export async function POST(req: NextRequest) {
 
   const arrayBuffer = await file.arrayBuffer()
 
+  // Normalizar MIME type: Chrome envía 'audio/webm;codecs=opus' pero el bucket solo acepta el base type
+  const baseMime = (file.type || 'audio/webm').split(';')[0].trim()
+
   const { error: upErr } = await supabase.storage
     .from(BUCKET)
     .upload(path, arrayBuffer, {
-      contentType: file.type || 'audio/webm',
+      contentType: baseMime,
       upsert: false,
     })
 
