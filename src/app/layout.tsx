@@ -169,9 +169,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
-        {/* Analytics — pendiente. Opción elegida: Plausible (sin cookies, RGPD, UE, 9€/mes).
-            Activar cuando haya clientes reales: crear cuenta en plausible.io + descomentar:
-            <script defer data-domain="iarest.es" src="https://plausible.io/js/script.js" /> */}
+        {/* Google Analytics 4 — G-EN2YQLRLEX */}
+        <script async src="https://www.googletagmanager.com/gtag/js?id=G-EN2YQLRLEX" />
+        <script dangerouslySetInnerHTML={{ __html: `
+          window.dataLayer = window.dataLayer || [];
+          function gtag(){dataLayer.push(arguments);}
+          gtag('js', new Date());
+          gtag('config', 'G-EN2YQLRLEX', { page_path: window.location.pathname });
+        `}} />
       </head>
       <body>
         {children}
