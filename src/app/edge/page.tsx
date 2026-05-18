@@ -84,7 +84,8 @@ function buildTTS(b: BrainResult, a86: string[] = [], aAlerg: {producto:string;a
   const sNota = b.nota_general ? `. Nota: ${b.nota_general}` : ''
   const items = b.items ?? []
   if (!items.length) return `${s86}${sAl}${b.tipo} para ${b.mesa}. ¿Confirmamos?`
-  return `${s86}${sAl}${b.mesa}: ${items.map(it=>`${it.cantidad===1?'una de':it.cantidad} ${it.nombre}`).join(', ')}${sNota}. ¿Confirmamos?`
+  const itemsStr = items.map(it=>`${it.cantidad===1?'una de':it.cantidad} ${it.nombre}${it.notas ? `, ${it.notas}` : ''}`).join(', ')
+  return `${s86}${sAl}${b.mesa}: ${itemsStr}${sNota}. ¿Confirmamos?`
 }
 
 function speak(text: string): Promise<void> {

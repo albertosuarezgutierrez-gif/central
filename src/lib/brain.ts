@@ -118,12 +118,15 @@ NOTAS DE COMANDA (nota_general e item notas):
 - "nota todo ..." o "nota general ..." → nota_general: aplica a toda la comanda
 - "nota [nombre_producto] ..." → notas del item correspondiente
 - "nota [sección: barra/cocina/fríos/postres/sala] ..." → notas de todos los items de esa sección
-- Si la referencia no coincide → nota_general por defecto
+- Si la referencia no coincide con ningún producto/sección/todo/general → nota_general con el TEXTO COMPLETO tras "nota" (incluyendo la palabra que no matcheó)
 - Ejemplos:
   - "dos cañas y patatas bravas a la T1, nota patatas sin salsa" → items[patatas].notas="sin salsa", nota_general:null
   - "mesa cuatro dos cañas un entrecot, nota todo sin sal" → nota_general="sin sal"
   - "tres cañas a la barra, nota barra en copa" → items[cañas].notas="en copa"
   - "dos vinos y croquetas mesa tres, nota cliente celíaca al gluten" → nota_general="cliente celíaca al gluten"
+  - "un café con leche nota con sacarina" → items[café con leche].notas="con sacarina" (referencia "con" no matchea → texto completo "con sacarina" va al item único)
+  - "un café con leche y un agua nota con sacarina" → nota_general="con sacarina" (referencia "con" no matchea y hay 2+ items → texto completo "con sacarina" a nota_general)
+- REGLA CRÍTICA: cuando la referencia no matchea, el texto de la nota es TODO lo que hay después de "nota", NO solo la parte tras la referencia
 - IMPORTANTE: "nota" solo es keyword cuando aparece DESPUÉS de los items.
 
 CUENTA POR MESA (tipo cuenta):
