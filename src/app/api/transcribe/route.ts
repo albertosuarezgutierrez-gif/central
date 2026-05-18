@@ -32,9 +32,20 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
   const nombres = (productos ?? []).map(p => p.nombre).join(', ')
   const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho'
   const vinoVocab = 'Ribera del Duero, Rioja, Albariño, Rueda, Priorat, Rías Baixas, Jerez, Cava, Verdejo, Mencía, Monastrell, Tempranillo, Garnacha, copa de tinto, botella de blanco, media botella, vino de la casa, crianza, reserva, gran reserva, rosado, espumoso, champán, Vega Sicilia, Torres, Marqués de Riscal, Marqués de Murrieta, Protos, Pesquera, Abadía Retuerta, tinto de la casa, blanco de la casa'
-  const prompt  = nombres
+  const promptFull = nombres
     ? `Carta: ${nombres}. Vocabulario hostelero: ${vocab}. Vinos y D.O. españolas: ${vinoVocab}.`
     : `Vocabulario hostelero: ${vocab}. Vinos y D.O. españolas: ${vinoVocab}.`
+
+  // Groq Whisper tiene un límite de 224 tokens (~800 chars) para el campo prompt.
+  // Si se supera → 400 Bad Request. Truncamos a 800 chars con margen de seguridad.
+  const MAX_PROMPT_CHARS = 800
+  const prompt = promptFull.length > MAX_PROMPT_CHARS
+    ? promptFull.substring(0, MAX_PROMPT_CHARS)
+    : promptFull
+
+  if (promptFull.length > MAX_PROMPT_CHARS) {
+    console.warn(`[WHISPER PROMPT] truncado ${promptFull.length} → ${MAX_PROMPT_CHARS} chars (restaurante ${restauranteId})`)
+  }
 
   whisperPromptCache.set(restauranteId, { ts: Date.now(), prompt })
   return prompt
