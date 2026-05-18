@@ -2207,7 +2207,42 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const [modal, setModal] = useState<null | 'create' | { edit: Producto } | { del: Producto }>(null)
   const [modalTrad, setModalTrad] = useState<null | { id: string; nombre: string; descripcion?: string | null }>(null)
   const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '', familia: '' })
-  const [wineForm, setWineForm] = useState({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '' })
+  const [wineForm, setWineForm] = useState({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '', descripcion_cata: '', maridaje_tags: [] as string[] })
+  const [wineEnriching, setWineEnriching] = useState(false)
+
+  const enriquecerVino = async () => {
+    if (!form.nombre.trim()) return
+    setWineEnriching(true)
+    try {
+      const tipoLabel: Record<string,string> = { vino_tinto:'tinto', vino_blanco:'blanco', vino_rosado:'rosado', cava:'espumoso', champagne:'espumoso', jerez:'generoso', vermut:'vermut' }
+      const r = await fetch('/api/owner/wine-enrich', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({
+          nombre: form.nombre.trim(),
+          bodega: wineForm.bodega.trim() || undefined,
+          tipo: tipoLabel[form.familia] ?? undefined,
+          do: wineForm.do.trim() || undefined,
+          varietal: wineForm.varietal.trim() || undefined,
+          añada: wineForm.anada.trim() || undefined,
+        }),
+      })
+      const d = await r.json()
+      if (!r.ok) return
+      setWineForm(f => ({
+        ...f,
+        descripcion_cata: d.descripcion_cata ?? f.descripcion_cata,
+        maridaje: d.maridaje_texto ?? f.maridaje,
+        temperatura: d.temperatura_servicio ?? f.temperatura,
+        maridaje_tags: d.maridaje_tags ?? f.maridaje_tags,
+      }))
+      if (d.descripcion_cata && !form.descripcion) {
+        setForm(f => ({ ...f, descripcion: d.descripcion_cata }))
+      }
+    } finally {
+      setWineEnriching(false)
+    }
+  }
   const [err, setErr] = useState('')
 
   // Scanner state
@@ -2237,7 +2272,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const primeraSeccion = secciones[0]?.id || SECCIONES_DEFAULT[0]
 
   // ── CRUD ──
-  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '', familia: '' }); setWineForm({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '' }); setErr(''); setModal('create') }
+  const openCreate = () => { setForm({ nombre: '', descripcion: '', precio: '', seccion: primeraSeccion, nombre_alternativo: '', familia: '' }); setWineForm({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '', descripcion_cata: '', maridaje_tags: [] }); setErr(''); setModal('create') }
   const openEdit = (p: Producto) => {
     setForm({
       nombre: p.nombre, descripcion: p.descripcion || '',
@@ -2247,7 +2282,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       familia: p.familia || '',
     })
     const m = (p as Record<string,unknown>).metadata as Record<string,string> | null ?? {}
-    setWineForm({ bodega: m.bodega || '', varietal: m.varietal || '', do: m.do || '', anada: m.anada || m['añada'] || '', temperatura: m.temperatura_servicio || '', maridaje: m.maridaje || '' })
+    setWineForm({ bodega: m.bodega || '', varietal: m.varietal || '', do: m.do || '', anada: m.anada || m['añada'] || '', temperatura: m.temperatura_servicio || '', maridaje: m.maridaje || '', descripcion_cata: m.descripcion_cata || '', maridaje_tags: Array.isArray(m.maridaje_tags) ? m.maridaje_tags : [] })
     setErr(''); setModal({ edit: p })
   }
   const openDel = (p: Producto) => setModal({ del: p })
@@ -2275,6 +2310,8 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
             añada: wineForm.anada.trim() || undefined,
             temperatura_servicio: wineForm.temperatura.trim() || undefined,
             maridaje: wineForm.maridaje.trim() || undefined,
+            maridaje_tags: wineForm.maridaje_tags.length > 0 ? wineForm.maridaje_tags : undefined,
+            descripcion_cata: wineForm.descripcion_cata.trim() || undefined,
           }
         : undefined,
     }
@@ -2631,8 +2668,40 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                   <Field label="D.O. / Denominación" value={wineForm.do} onChange={v => setWineForm(f => ({ ...f, do: v }))} placeholder="Ribera del Duero"/>
                   <Field label="Añada" value={wineForm.anada} onChange={v => setWineForm(f => ({ ...f, anada: v }))} placeholder="2018"/>
                   <Field label="Temperatura servicio" value={wineForm.temperatura} onChange={v => setWineForm(f => ({ ...f, temperatura: v }))} placeholder="16-18°C"/>
-                  <Field label="Maridaje" value={wineForm.maridaje} onChange={v => setWineForm(f => ({ ...f, maridaje: v }))} placeholder="Carnes rojas, caza"/>
+                  <Field label="Maridaje (texto)" value={wineForm.maridaje} onChange={v => setWineForm(f => ({ ...f, maridaje: v }))} placeholder="Carnes rojas, caza"/>
                 </div>
+                {/* Botón enriquecer con IA */}
+                <button type="button" onClick={enriquecerVino} disabled={wineEnriching || !form.nombre.trim()}
+                  style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:6, padding:'8px 16px', borderRadius:8, cursor: wineEnriching || !form.nombre.trim() ? 'not-allowed' : 'pointer',
+                    background: wineEnriching ? C.bone : C.red, color: wineEnriching ? C.ink3 : C.paper,
+                    border:`1px solid ${wineEnriching ? C.rule : C.redD}`, fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.06em', opacity: !form.nombre.trim() ? 0.5 : 1, transition:'all .15s' }}>
+                  {wineEnriching
+                    ? <><span style={{animation:'spin 1s linear infinite',display:'inline-block'}}>⟳</span> Consultando sommelier IA…</>
+                    : <>✨ Enriquecer con IA <span style={{fontWeight:400,opacity:.7}}>(cata · maridaje · temp.)</span></>}
+                </button>
+                {/* Descripción de cata generada por IA */}
+                {wineForm.descripcion_cata && (
+                  <div style={{ background:C.paper2, border:`1px solid ${C.rule}`, borderRadius:8, padding:'10px 14px' }}>
+                    <div style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', marginBottom:4 }}>Nota de cata IA</div>
+                    <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:13, color:C.ink2, lineHeight:1.5 }}>{wineForm.descripcion_cata}</div>
+                  </div>
+                )}
+                {/* Chips de maridaje tags */}
+                {wineForm.maridaje_tags.length > 0 && (() => {
+                  const TAG_LABELS: Record<string,string> = { carne_roja:'🥩 Carne roja', carne_blanca:'🍗 Carne blanca', pescado:'🐟 Pescado', marisco:'🦞 Marisco', pasta:'🍝 Pasta', arroz:'🍚 Arroz', queso:'🧀 Queso', verduras:'🥗 Verduras', postre:'🎂 Postre', aperitivo:'🥂 Aperitivo', cualquier_plato:'🍽 Cualquier plato' }
+                  return (
+                    <div>
+                      <div style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', marginBottom:6 }}>Maridaje IA</div>
+                      <div style={{ display:'flex', gap:6, flexWrap:'wrap' as const }}>
+                        {wineForm.maridaje_tags.map(tag => (
+                          <span key={tag} style={{ fontFamily:SM, fontSize:10, padding:'3px 10px', borderRadius:999, background:C.amberS, border:`1px solid ${C.amber}55`, color:'#7A5A1A', fontWeight:600 }}>
+                            {TAG_LABELS[tag] ?? tag}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })()}
               </div>
             )}
             <Field label="Descripción (opcional)" value={form.descripcion} onChange={v => setForm(f => ({ ...f, descripcion: v }))} placeholder="Caseras, con bechamel de la abuela"/>

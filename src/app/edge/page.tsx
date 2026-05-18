@@ -64,6 +64,7 @@ interface ProductoCarta {
   id: string; nombre: string; precio: number | null
   categoria: string; descripcion?: string | null
   alergenos?: string[] | null; activo: boolean
+  familia?: string | null; metadata?: Record<string, unknown> | null
 }
 
 interface BrainResult {
@@ -573,6 +574,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [mesaRapidaErr, setMesaRapidaErr]     = useState('')
   const [productosCarta, setProductosCarta] = useState<ProductoCarta[]>([])
   const [cartaBusqueda, setCartaBusqueda]   = useState('')
+  const [cartaFiltroMaridaje, setCartaFiltroMaridaje] = useState<string | null>(null)
 
   const addMsg = useCallback((from:ChatMsg['from'], texto:string, tipo?:ChatMsg['tipo']) => {
     setChatMsgs(prev => [...prev.slice(-4), {id:Date.now().toString(), from, texto, ts:new Date(), tipo}])
@@ -2135,15 +2137,39 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
       {/* ══ TAB: CARTA — consulta de carta para camarero ════════ */}
       {tab==='carta' && (() => {
+        const MARIDAJE_CHIPS = [
+          { tag: 'carne_roja',   emoji: '🥩', label: 'Carne roja'   },
+          { tag: 'carne_blanca', emoji: '🍗', label: 'Aves'          },
+          { tag: 'pescado',      emoji: '🐟', label: 'Pescado'       },
+          { tag: 'marisco',      emoji: '🦞', label: 'Marisco'       },
+          { tag: 'pasta',        emoji: '🍝', label: 'Pasta'         },
+          { tag: 'queso',        emoji: '🧀', label: 'Queso'         },
+          { tag: 'verduras',     emoji: '🥗', label: 'Verduras'      },
+          { tag: 'postre',       emoji: '🎂', label: 'Postre'        },
+          { tag: 'aperitivo',    emoji: '🥂', label: 'Aperitivo'     },
+        ]
         const nombres86 = new Set(productos86.map(p => p.nombre.toLowerCase()))
         const filtro    = cartaBusqueda.trim().toLowerCase()
-        const todos     = filtro
+        // ¿Hay vinos con maridaje_tags en la carta?
+        const hayVinosConTags = productosCarta.some(p =>
+          p.familia?.startsWith('vino') &&
+          Array.isArray((p.metadata?.maridaje_tags as string[]) ?? []) &&
+          ((p.metadata?.maridaje_tags as string[]) ?? []).length > 0
+        )
+        // Aplicar filtros: texto + maridaje
+        let todos = filtro
           ? productosCarta.filter(p =>
               p.nombre.toLowerCase().includes(filtro) ||
               (p.descripcion ?? '').toLowerCase().includes(filtro) ||
               p.categoria.toLowerCase().includes(filtro)
             )
           : productosCarta
+        if (cartaFiltroMaridaje) {
+          todos = todos.filter(p => {
+            const tags = (p.metadata?.maridaje_tags as string[]) ?? []
+            return tags.includes(cartaFiltroMaridaje)
+          })
+        }
         // Agrupar por categoría manteniendo el orden original
         const cats: string[] = []
         const porCat: Record<string, ProductoCarta[]> = {}
@@ -2161,7 +2187,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 </svg>
                 <input
                   value={cartaBusqueda}
-                  onChange={e => setCartaBusqueda(e.target.value)}
+                  onChange={e => { setCartaBusqueda(e.target.value); setCartaFiltroMaridaje(null) }}
                   placeholder="Buscar en carta…"
                   style={{border:'none',background:'transparent',outline:'none',flex:1,fontFamily:SN,fontSize:13,color:C.ink}}
                 />
@@ -2169,6 +2195,32 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   <span onClick={()=>setCartaBusqueda('')} style={{color:C.ink4,cursor:'pointer',fontSize:15,lineHeight:1}}>×</span>
                 )}
               </div>
+              {/* Chips maridaje — solo si hay vinos con tags */}
+              {hayVinosConTags && !cartaBusqueda && (
+                <div style={{marginTop:8,display:'flex',gap:6,flexWrap:'wrap' as const,alignItems:'center'}}>
+                  <span style={{fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.06em',textTransform:'uppercase' as const,flexShrink:0}}>Maridaje:</span>
+                  {MARIDAJE_CHIPS.map(chip => {
+                    const active = cartaFiltroMaridaje === chip.tag
+                    return (
+                      <button key={chip.tag} type="button"
+                        onClick={() => setCartaFiltroMaridaje(active ? null : chip.tag)}
+                        style={{ fontFamily:SM, fontSize:10, padding:'3px 10px', borderRadius:999, cursor:'pointer', transition:'all .12s',
+                          background: active ? C.amb : C.bg1,
+                          color:      active ? '#7A5A1A' : C.ink3,
+                          border:     `1px solid ${active ? C.amb : C.rule}`,
+                          fontWeight: active ? 700 : 400 }}>
+                        {chip.emoji} {chip.label}
+                      </button>
+                    )
+                  })}
+                  {cartaFiltroMaridaje && (
+                    <button type="button" onClick={() => setCartaFiltroMaridaje(null)}
+                      style={{fontFamily:SM,fontSize:9,color:C.ink4,background:'none',border:'none',cursor:'pointer',padding:'2px 4px'}}>
+                      ✕ limpiar
+                    </button>
+                  )}
+                </div>
+              )}
               {productos86.length > 0 && (
                 <div style={{marginTop:6,display:'flex',gap:6,flexWrap:'wrap' as const}}>
                   {productos86.slice(0,5).map(p => (
@@ -2191,8 +2243,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 </div>
               ) : cats.length === 0 ? (
                 <div style={{textAlign:'center',padding:'48px 20px'}}>
-                  <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink4}}>Sin resultados para "{cartaBusqueda}"</div>
-                  <button onClick={()=>setCartaBusqueda('')} style={{marginTop:12,background:'none',border:`1px solid ${C.rule}`,color:C.ink3,padding:'6px 14px',borderRadius:8,fontFamily:SN,fontSize:12,cursor:'pointer'}}>Limpiar búsqueda</button>
+                  {cartaFiltroMaridaje ? (
+                    <>
+                      <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink4}}>Sin vinos para este maridaje</div>
+                      <button onClick={()=>setCartaFiltroMaridaje(null)} style={{marginTop:12,background:'none',border:`1px solid ${C.rule}`,color:C.ink3,padding:'6px 14px',borderRadius:8,fontFamily:SN,fontSize:12,cursor:'pointer'}}>Ver todos los vinos</button>
+                    </>
+                  ) : (
+                    <>
+                      <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink4}}>Sin resultados para "{cartaBusqueda}"</div>
+                      <button onClick={()=>setCartaBusqueda('')} style={{marginTop:12,background:'none',border:`1px solid ${C.rule}`,color:C.ink3,padding:'6px 14px',borderRadius:8,fontFamily:SN,fontSize:12,cursor:'pointer'}}>Limpiar búsqueda</button>
+                    </>
+                  )}
                 </div>
               ) : (
                 cats.map(cat => (
@@ -2206,6 +2267,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                     {porCat[cat].map((p, i) => {
                       const es86 = nombres86.has(p.nombre.toLowerCase())
                       const alerg = Array.isArray(p.alergenos) ? p.alergenos : []
+                      const tags = (p.metadata?.maridaje_tags as string[]) ?? []
+                      const TAG_EMOJI: Record<string,string> = { carne_roja:'🥩', carne_blanca:'🍗', pescado:'🐟', marisco:'🦞', pasta:'🍝', arroz:'🍚', queso:'🧀', verduras:'🥗', postre:'🎂', aperitivo:'🥂', cualquier_plato:'🍽' }
                       return (
                         <div key={p.id} style={{
                           display:'flex',alignItems:'flex-start',gap:10,
@@ -2234,6 +2297,16 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                                 {alerg.map((a:string) => (
                                   <span key={a} style={{fontFamily:SM,fontSize:8,color:'#7A5A1A',background:C.ambS,border:`1px solid ${C.amb}44`,padding:'1px 6px',borderRadius:3}}>
                                     ⚠ {a}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                            {/* Maridaje chips — solo en vinos */}
+                            {tags.length > 0 && (
+                              <div style={{display:'flex',gap:4,marginTop:5,flexWrap:'wrap' as const}}>
+                                {tags.map(tag => (
+                                  <span key={tag} style={{fontFamily:SM,fontSize:9,color:C.ink4,background:C.bg2,border:`1px solid ${C.rule}`,padding:'1px 6px',borderRadius:3}}>
+                                    {TAG_EMOJI[tag] ?? '•'} {tag.replace('_',' ')}
                                   </span>
                                 ))}
                               </div>
