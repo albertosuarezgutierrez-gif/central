@@ -571,9 +571,9 @@ export async function POST(req: NextRequest) {
       const ridErr = req.headers.get('x-restaurante-id') ?? 'unknown'
       await supabaseErr.from('system_errors').insert({
         restaurante_id: ridErr !== 'unknown' ? ridErr : null,
-        origen: 'transcribe',
+        funcion_origen: 'transcribe',
         mensaje: msg.substring(0, 500),
-        contexto: JSON.stringify({ is401, url: req.url }),
+        contexto: { is401, url: req.url },
       })
     } catch { /* no propagar errores de logging */ }
 
