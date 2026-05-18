@@ -11,14 +11,23 @@ android {
         applicationId "es.iarest.app"
         minSdk 26
         targetSdk 34
-        versionCode 10
-        versionName "1.9"
+        versionCode 11
+        versionName "2.0"
+    }
+
+    signingConfigs {
+        release {
+            storeFile file("iarest-release.keystore")
+            storePassword "iarest2026"
+            keyAlias "iarest"
+            keyPassword "iarest2026"
+        }
     }
 
     buildTypes {
         release {
             minifyEnabled false
-            signingConfig signingConfigs.debug
+            signingConfig signingConfigs.release
         }
         debug {
             applicationIdSuffix ""
