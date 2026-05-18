@@ -99,7 +99,7 @@ Deno.serve(async (req) => {
     // Buscar comandas nuevas sin ningún print_job asociado
     const { data: comandasSinPrint } = await supabase
       .from('comandas')
-      .select('id, restaurante_id, mesa_nombre, created_at')
+      .select('id, restaurante_id, created_at, nombre_cuenta, mesa:mesas(codigo)')
       .eq('estado', 'nueva')
       .lt('created_at', tresMinAtras)
 
@@ -126,7 +126,7 @@ Deno.serve(async (req) => {
           tipo: 'comanda_sin_imprimir',
           modulo: 'comanda',
           nivel: 'aviso',
-          mensaje: `Comanda mesa ${comanda.mesa_nombre ?? '?'} reimpresa automáticamente`,
+          mensaje: `Comanda mesa ${(comanda.mesa as any)?.codigo ?? comanda.nombre_cuenta ?? '?'} reimpresa automáticamente`,
           detalle: { comanda_id: comanda.id, created_at: comanda.created_at },
           restaurante_id: comanda.restaurante_id,
           resuelta: true,
@@ -140,7 +140,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             tipo: 'comanda_auto_reimpresa',
             modulo: 'comanda',
-            mensaje: `⚡ Auto-fix: comanda mesa ${comanda.mesa_nombre ?? '?'} reimpresa`,
+            mensaje: `⚡ Auto-fix: comanda mesa ${(comanda.mesa as any)?.codigo ?? comanda.nombre_cuenta ?? '?'} reimpresa`,
             detalle: { comanda_id: comanda.id },
             restaurante_id: comanda.restaurante_id,
             nivel: 'resuelto',
@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
         await notificar({
           tipo: 'comanda_sin_imprimir',
           modulo: 'comanda',
-          mensaje: `Comanda mesa ${comanda.mesa_nombre ?? '?'} sin imprimir > 3 min (no se pudo auto-fix)`,
+          mensaje: `Comanda mesa ${(comanda.mesa as any)?.codigo ?? comanda.nombre_cuenta ?? '?'} sin imprimir > 3 min (no se pudo auto-fix)`,
           detalle: { comanda_id: comanda.id, error: reencolarError.message },
           restaurante_id: comanda.restaurante_id,
           nivel: 'aviso',
