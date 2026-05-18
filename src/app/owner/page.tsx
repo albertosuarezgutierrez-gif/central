@@ -6936,7 +6936,8 @@ const GRUPOS = [
     tabs: [
       { id: 'carta',          label: 'Productos',    icon: ICONS.book    },
       { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle },
-      { id: 'bodega',         label: 'Bodega',       icon: ICONS.sparkle },
+      { id: 'bodega',         label: 'Almacén',      icon: ICONS.sparkle },
+      { id: 'proveedores',    label: 'Proveedores',  icon: ICONS.sparkle },
       { id: 'escandallos',    label: 'Costes',       icon: ICONS.chart   },
       { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle },
     ]
@@ -7806,6 +7807,7 @@ export default function OwnerPage() {
             {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'bodega'         && <BodegaTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'escandallos'    && <EscandallosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
@@ -8831,6 +8833,166 @@ function EscandallosTab({ sh, restauranteId }: { sh: () => Record<string,string>
               <button onClick={() => setModal(null)} style={{ flex: 1, padding: '9px', borderRadius: 8, border: `1px solid ${C.rule}`, background: 'none', color: C.ink3, fontFamily: SN, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
               <button onClick={guardar} style={{ flex: 2, padding: '9px', borderRadius: 8, border: `1px solid ${C.redD}`, background: C.red, color: C.paper, fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                 {modal === 'crear' ? 'Crear escandallo' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// PROVEEDORES TAB
+// ══════════════════════════════════════════════════════════════════════
+type Proveedor = {
+  id: string; nombre: string; email: string | null; telefono: string | null
+  web: string | null; contacto_nombre: string | null; categoria: string | null
+  notas: string | null; activo: boolean; created_at: string
+}
+
+const CATEGORIAS_PROV = ['Carnes y aves','Pescados y mariscos','Frutas y verduras','Lácteos','Bebidas y licores','Vinos','Cervezas','Aceites y conservas','Panadería','Limpieza','Material desechable','Otros']
+
+function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>; restauranteId: string }) {
+  const [proveedores, setProveedores] = useState<Proveedor[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [modal,       setModal]       = useState<null | 'crear' | { edit: Proveedor }>(null)
+  const [err,         setErr]         = useState('')
+
+  const empty = { nombre:'', email:'', telefono:'', web:'', contacto_nombre:'', categoria:'', notas:'' }
+  const [form, setForm] = useState(empty)
+
+  const load = async () => {
+    setLoading(true)
+    const r = await fetch('/api/owner/proveedores', { headers: sh() })
+    const d = await r.json()
+    setProveedores(d.proveedores ?? [])
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+
+  const openCreate = () => { setForm(empty); setErr(''); setModal('crear') }
+  const openEdit   = (p: Proveedor) => {
+    setForm({ nombre: p.nombre, email: p.email??'', telefono: p.telefono??'', web: p.web??'', contacto_nombre: p.contacto_nombre??'', categoria: p.categoria??'', notas: p.notas??'' })
+    setErr(''); setModal({ edit: p })
+  }
+
+  const guardar = async () => {
+    if (!form.nombre.trim()) return setErr('El nombre es obligatorio')
+    const isEdit = modal && typeof modal === 'object' && 'edit' in modal
+    const body = { ...(isEdit ? { id: (modal as {edit:Proveedor}).edit.id } : {}), ...form }
+    const r = await fetch('/api/owner/proveedores', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type':'application/json', ...sh() }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (!r.ok) return setErr(d.error || 'Error')
+    await load(); setModal(null)
+  }
+
+  const F = ({ label, value, onChange, placeholder, type = 'text' }: { label: string; value: string; onChange: (v:string) => void; placeholder?: string; type?: string }) => (
+    <div>
+      <label style={{ fontFamily:SM, fontSize:8, fontWeight:700, color:C.ink4, textTransform:'uppercase' as const, letterSpacing:'.12em', display:'block', marginBottom:3 }}>{label}</label>
+      <input type={type} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder}
+        style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+    </div>
+  )
+
+  return (
+    <div style={{ padding:'20px 16px', maxWidth:700, margin:'0 auto' }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div>
+          <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:22, color:C.ink }}>Proveedores</div>
+          <div style={{ fontFamily:SM, fontSize:10, color:C.ink4, marginTop:2 }}>
+            {proveedores.length} proveedor{proveedores.length !== 1 ? 'es' : ''} activos
+          </div>
+        </div>
+        <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
+          + Proveedor
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{ textAlign:'center', padding:48, fontFamily:SE, fontStyle:'italic', color:C.ink4 }}>Cargando…</div>
+      ) : proveedores.length === 0 ? (
+        <div style={{ textAlign:'center', padding:48 }}>
+          <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:18, color:C.ink4, marginBottom:8 }}>Sin proveedores aún</div>
+          <div style={{ fontFamily:SN, fontSize:13, color:C.ink3, marginBottom:20 }}>
+            Añade tus proveedores para asignarlos a los artículos del almacén y enviar pedidos automáticos.
+          </div>
+          <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, padding:'9px 22px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>+ Añadir primer proveedor</button>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {proveedores.map(p => (
+            <div key={p.id} style={{ background:C.bone, border:`1px solid ${C.rule}`, borderRadius:10, padding:'14px 16px' }}>
+              <div style={{ display:'flex', alignItems:'flex-start', gap:12 }}>
+                <div style={{ flex:1, minWidth:0 }}>
+                  <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' as const, marginBottom:4 }}>
+                    <span style={{ fontFamily:SN, fontSize:15, fontWeight:600, color:C.ink }}>{p.nombre}</span>
+                    {p.contacto_nombre && <span style={{ fontFamily:SN, fontSize:12, color:C.ink3 }}>({p.contacto_nombre})</span>}
+                    {p.categoria && <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, background:C.paper2, border:`1px solid ${C.rule}`, padding:'1px 7px', borderRadius:3 }}>{p.categoria}</span>}
+                  </div>
+                  <div style={{ display:'flex', gap:16, flexWrap:'wrap' as const }}>
+                    {p.email && (
+                      <a href={`mailto:${p.email}`} style={{ fontFamily:SM, fontSize:10, color:'#2B8A8F', textDecoration:'none' }}>
+                        ✉ {p.email}
+                      </a>
+                    )}
+                    {p.telefono && (
+                      <a href={`tel:${p.telefono}`} style={{ fontFamily:SM, fontSize:10, color:C.ink3, textDecoration:'none' }}>
+                        📞 {p.telefono}
+                      </a>
+                    )}
+                    {p.web && (
+                      <a href={p.web.startsWith('http') ? p.web : `https://${p.web}`} target="_blank" rel="noopener noreferrer" style={{ fontFamily:SM, fontSize:10, color:C.amber, textDecoration:'none' }}>
+                        🌐 {p.web.replace(/^https?:\/\//, '')}
+                      </a>
+                    )}
+                  </div>
+                  {p.notas && <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:4, fontStyle:'italic' }}>{p.notas}</div>}
+                </div>
+                <button onClick={() => openEdit(p)} style={{ fontFamily:SM, fontSize:10, padding:'5px 10px', background:'none', color:C.ink3, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer', flexShrink:0 }}>✎</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal crear/editar */}
+      {modal && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:480, maxHeight:'92vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink, marginBottom:18 }}>
+              {modal === 'crear' ? 'Nuevo proveedor' : `Editar: ${(modal as {edit:Proveedor}).edit.nombre}`}
+            </div>
+
+            <div style={{ display:'flex', flexDirection:'column', gap:12, marginBottom:16 }}>
+              <F label="Nombre *" value={form.nombre} onChange={v => setForm(f=>({...f,nombre:v}))} placeholder="Distribuciones García, Makro, Bodega El Viejo…" />
+              <F label="Persona de contacto" value={form.contacto_nombre} onChange={v => setForm(f=>({...f,contacto_nombre:v}))} placeholder="Juan García" />
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10 }}>
+                <F label="Email" value={form.email} onChange={v => setForm(f=>({...f,email:v}))} placeholder="pedidos@proveedor.com" type="email" />
+                <F label="Teléfono" value={form.telefono} onChange={v => setForm(f=>({...f,telefono:v}))} placeholder="600 000 000" />
+              </div>
+              <F label="Página web" value={form.web} onChange={v => setForm(f=>({...f,web:v}))} placeholder="www.proveedor.com" />
+              <div>
+                <label style={{ fontFamily:SM, fontSize:8, fontWeight:700, color:C.ink4, textTransform:'uppercase' as const, letterSpacing:'.12em', display:'block', marginBottom:3 }}>CATEGORÍA DE PRODUCTO</label>
+                <select value={form.categoria} onChange={e => setForm(f=>({...f,categoria:e.target.value}))}
+                  style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, outline:'none' }}>
+                  <option value="">— Sin categoría —</option>
+                  {CATEGORIAS_PROV.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontFamily:SM, fontSize:8, fontWeight:700, color:C.ink4, textTransform:'uppercase' as const, letterSpacing:'.12em', display:'block', marginBottom:3 }}>NOTAS</label>
+                <textarea value={form.notas} onChange={e => setForm(f=>({...f,notas:e.target.value}))} placeholder="Condiciones especiales, días de reparto, referencia cliente…" rows={2}
+                  style={{ width:'100%', padding:'7px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:12, color:C.ink, resize:'vertical' as const, outline:'none', boxSizing:'border-box' as const }} />
+              </div>
+            </div>
+
+            {err && <div style={{ fontFamily:SN, fontSize:12, color:C.red, marginBottom:10 }}>{err}</div>}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setModal(null)} style={{ flex:1, padding:'9px', borderRadius:8, border:`1px solid ${C.rule}`, background:'none', color:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={guardar} style={{ flex:2, padding:'9px', borderRadius:8, border:`1px solid ${C.redD}`, background:C.red, color:C.paper, fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                {modal === 'crear' ? 'Crear proveedor' : 'Guardar cambios'}
               </button>
             </div>
           </div>
