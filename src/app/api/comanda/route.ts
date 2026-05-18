@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       num_comensales,
       nota_general,
       incluir_servicio = true,
+      require_confirm = false,
     } = await req.json()
 
     if (!mesa_id && !nombre_cuenta) {
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
           mesa_id: null,
           nombre_cuenta: nombre_cuenta.trim(),
           camarero_id, turno_id,
-          tipo, estado: tipo === 'cuenta' ? 'nueva' : 'en_cocina',
+          tipo, estado: tipo === 'cuenta' ? 'nueva' : (require_confirm ? 'pendiente_confirmacion' : 'en_cocina'),
           restaurante_id: rid,
           ...(nota_general ? { nota_general } : {}),
         })
