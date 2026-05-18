@@ -16,6 +16,8 @@ import FichajesTab from '@/components/owner/FichajesTab'
 import ModalTraducciones from '@/components/owner/ModalTraducciones'
 import RecomendacionesTab from '@/components/owner/RecomendacionesTab'
 import ManualVozTab from '@/components/owner/ManualVozTab'
+import ForecasterTab from '@/components/owner/ForecasterTab'
+import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -7010,6 +7012,13 @@ const GRUPOS = [
     ]
   },
   {
+    id: 'ia', label: 'IA', icon: ICONS.sparkle,
+    tabs: [
+      { id: 'forecaster', label: 'Forecaster',  icon: ICONS.chart  },
+      { id: 'turnos-nim', label: 'Turnos IA',   icon: ICONS.clock  },
+    ]
+  },
+  {
     // Auditoría: separado del resto porque es legal/fiscal — consulta periódica o ante incidencias
     id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle,
     tabs: [
@@ -7529,6 +7538,7 @@ export default function OwnerPage() {
   )
 
   return (
+    <>
     <div style={{ minHeight: '100dvh', background: C.paper, fontFamily: SN }}>
       <style>{`
         * { box-sizing: border-box; }
@@ -7864,10 +7874,14 @@ export default function OwnerPage() {
             {tab === 'manual'         && <ManualVozTab restauranteId={session.restaurante_id} session={{ id: session.id, nombre: session.nombre, rol: session.rol }} />}
             {tab === 'restaurante'    && <RestauranteTab/>}
             {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
+            {tab === 'forecaster'    && <ForecasterTab sh={sh} />}
+            {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>
       </div>
     </div>
+    <OwnerCopiloto />
+    </>
   )
 }
 
@@ -8559,13 +8573,14 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
             </div>
           </div>
         </div>
-      )}
+      )}{/* modal bodega fin */}
+      <PrediccionAlmacenNIM sh={sh} />
     </div>
   )
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// ESCANDALLOS TAB — Coste real por plato y margen en tiempo real
+// ESCANDALLOS TAB
 // ══════════════════════════════════════════════════════════════════════
 type Escandallo = {
   id: string; nombre: string; producto_id: string | null; rendimiento: number
@@ -8898,7 +8913,8 @@ function EscandallosTab({ sh, restauranteId }: { sh: () => Record<string,string>
             </div>
           </div>
         </div>
-      )}
+      )}{/* modal escandallos fin */}
+      <AnalizadorEscandallosNIM sh={sh} />
     </div>
   )
 }
@@ -9104,6 +9120,150 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
                 {modal === 'crear' ? 'Crear proveedor' : 'Guardar cambios'}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// NIM WRAPPERS — Importan componentes lazy para evitar bundle del server
+// ══════════════════════════════════════════════════════════════════════
+
+function AnalizadorEscandallosNIM({ sh }: { sh: () => Record<string,string> }) {
+  const [Comp, setComp] = React.useState<React.ComponentType<{ sh: () => Record<string,string> }> | null>(null)
+  React.useEffect(() => {
+    import('@/components/owner/AnalizadorEscandallos').then(m => setComp(() => m.default))
+  }, [])
+  if (!Comp) return null
+  return <Comp sh={sh} />
+}
+
+function PrediccionAlmacenNIM({ sh }: { sh: () => Record<string,string> }) {
+  const [Comp, setComp] = React.useState<React.ComponentType<{ sh: () => Record<string,string> }> | null>(null)
+  React.useEffect(() => {
+    import('@/components/owner/PrediccionAlmacen').then(m => setComp(() => m.default))
+  }, [])
+  if (!Comp) return null
+  return <Comp sh={sh} />
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// TurnosAnalisisTab — Análisis NIM de turnos y optimización de horarios
+// ──────────────────────────────────────────────────────────────────────
+function TurnosAnalisisTab({ sh }: { sh: () => Record<string,string> }) {
+  const [data, setData] = React.useState<{
+    resumenDias: { dia: string; horas_media: number; turnos: number }[]
+    analisis: {
+      horas_criticas?: { hora: string; situacion: string; diferencia: string }[]
+      dia_mas_intenso?: string
+      sobredotacion?: string | null
+      infradotacion?: string | null
+      ahorro_estimado_horas?: number
+      recomendacion?: string
+    } | null
+  } | null>(null)
+  const [loading, setLoading] = React.useState(false)
+  const [err, setErr] = React.useState('')
+
+  async function analizar() {
+    setLoading(true); setErr('')
+    try {
+      const res = await fetch('/api/owner/turnos/analisis', { headers: sh() })
+      const d = await res.json()
+      if (d.error) setErr(d.error); else setData(d)
+    } catch { setErr('Error de conexión') } finally { setLoading(false) }
+  }
+
+  const a = data?.analisis
+
+  return (
+    <div style={{ maxWidth: 640 }}>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ fontFamily: SE, fontSize: 22, color: C.ink, margin: '0 0 4px 0', fontStyle: 'italic' }}>Análisis de turnos IA</h2>
+        <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '0 0 16px 0' }}>Detecta sobredotación e infradotación en los últimos 30 días</p>
+        <button onClick={analizar} disabled={loading} style={{
+          background: C.red, color: C.paper, border: 'none', borderRadius: 8,
+          padding: '9px 18px', fontSize: 13, fontFamily: SN, cursor: loading ? 'not-allowed' : 'pointer',
+          opacity: loading ? 0.6 : 1, fontWeight: 600,
+        }}>
+          {loading ? 'Analizando…' : '🧠 Analizar eficiencia de turnos'}
+        </button>
+      </div>
+
+      {err && <div style={{ color: C.amber, fontFamily: SN, fontSize: 13, marginBottom: 12 }}>{err}</div>}
+
+      {a && (
+        <div>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+            {a.dia_mas_intenso && (
+              <div style={{ flex: 1, minWidth: 140, background: C.bone, borderRadius: 8, padding: '10px 14px', border: `1px solid ${C.rule}` }}>
+                <div style={{ fontFamily: SN, color: C.ink4, fontSize: 10, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Día más intenso</div>
+                <div style={{ fontFamily: SN, color: C.ink, fontSize: 14, fontWeight: 600 }}>{a.dia_mas_intenso}</div>
+              </div>
+            )}
+            {a.ahorro_estimado_horas != null && (
+              <div style={{ flex: 1, minWidth: 140, background: C.bone, borderRadius: 8, padding: '10px 14px', border: `1px solid ${C.rule}` }}>
+                <div style={{ fontFamily: SN, color: C.ink4, fontSize: 10, marginBottom: 3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Ahorro potencial</div>
+                <div style={{ fontFamily: SN, color: C.green, fontSize: 14, fontWeight: 600 }}>{a.ahorro_estimado_horas}h/mes</div>
+              </div>
+            )}
+          </div>
+
+          {(a.sobredotacion || a.infradotacion) && (
+            <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' }}>
+              {a.sobredotacion && (
+                <div style={{ flex: 1, background: 'rgba(232,163,59,0.08)', borderRadius: 8, padding: '10px 14px', border: `1px solid ${C.amber}` }}>
+                  <div style={{ fontFamily: SN, color: C.amber, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>SOBREDOTACIÓN</div>
+                  <div style={{ fontFamily: SN, color: C.ink3, fontSize: 12 }}>{a.sobredotacion}</div>
+                </div>
+              )}
+              {a.infradotacion && (
+                <div style={{ flex: 1, background: 'rgba(217,68,43,0.06)', borderRadius: 8, padding: '10px 14px', border: `1px solid ${C.red}` }}>
+                  <div style={{ fontFamily: SN, color: C.red, fontSize: 11, fontWeight: 700, marginBottom: 4 }}>INFRADOTACIÓN</div>
+                  <div style={{ fontFamily: SN, color: C.ink3, fontSize: 12 }}>{a.infradotacion}</div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {a.horas_criticas && a.horas_criticas.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>Franjas críticas</div>
+              {a.horas_criticas.map(h => (
+                <div key={h.hora} style={{
+                  background: C.bone, borderRadius: 6, padding: '7px 12px', marginBottom: 5,
+                  borderLeft: `3px solid ${h.situacion === 'sobredotado' ? C.amber : C.red}`,
+                  display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap',
+                }}>
+                  <span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 12, color: C.ink, fontWeight: 700 }}>{h.hora}</span>
+                  <span style={{ fontFamily: SN, fontSize: 11, color: h.situacion === 'sobredotado' ? C.amber : C.red, fontWeight: 700, textTransform: 'uppercase' }}>{h.situacion}</span>
+                  <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{h.diferencia}</span>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {a.recomendacion && (
+            <div style={{ background: 'rgba(63,125,68,0.08)', borderRadius: 8, padding: '10px 14px', border: `1px solid ${C.green}` }}>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.green }}>💡 {a.recomendacion}</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {data && (
+        <div style={{ marginTop: 24 }}>
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>Horas medias por día (30 días)</div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {data.resumenDias.map(d => (
+              <div key={d.dia} style={{ background: C.bone, borderRadius: 8, padding: '8px 12px', border: `1px solid ${C.rule}`, textAlign: 'center', minWidth: 70 }}>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink, fontWeight: 600 }}>{d.dia}</div>
+                <div style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 13, color: C.red }}>{d.horas_media}h</div>
+                <div style={{ fontFamily: SN, fontSize: 10, color: C.ink4 }}>{d.turnos} turno{d.turnos !== 1 ? 's' : ''}</div>
+              </div>
+            ))}
           </div>
         </div>
       )}
