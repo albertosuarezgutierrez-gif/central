@@ -70,6 +70,10 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
   const [hasAlias, setHasAlias]         = useState(false)
   const [hasFactCliente, setHasFactCliente] = useState(false)
   const [menuOpen, setMenuOpen]         = useState(false)
+  const [cambiarMesaOpen, setCambiarMesaOpen] = useState(false)
+  const [mesasLibres, setMesasLibres]   = useState<{id:string;codigo:string;zona:string|null}[]>([])
+  const [loadingMesas, setLoadingMesas] = useState(false)
+  const [cambiandoMesa, setCambiandoMesa] = useState(false)
 
   const session_str = JSON.stringify(session)
 
@@ -111,6 +115,37 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
     const d = await r.json()
     setAudit(d.audit ?? [])
   }, [comanda?.id, session_str])
+
+  const cargarMesasLibres = useCallback(async () => {
+    setLoadingMesas(true)
+    try {
+      const r = await fetch('/api/owner/mesas', { headers: { 'x-ia-session': session_str } })
+      const d = await r.json()
+      const libres = (d.mesas ?? [])
+        .filter((m: {id:string;estado:string}) => m.estado === 'libre' || m.estado === 'disponible')
+        .filter((m: {id:string}) => m.id !== mesaId)
+      setMesasLibres(libres)
+    } catch { setMesasLibres([]) }
+    setLoadingMesas(false)
+  }, [session_str, mesaId])
+
+  const ejecutarCambioMesa = async (mesaDestinoId: string, mesaDestinoCodigo: string) => {
+    if (!comanda || cambiandoMesa) return
+    setCambiandoMesa(true)
+    try {
+      const r = await fetch(`/api/comanda/${comanda.id}/mesa`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': session_str },
+        body: JSON.stringify({ mesa_destino_id: mesaDestinoId }),
+      })
+      const d = await r.json()
+      if (!r.ok) { flash(`Error: ${d.error ?? 'desconocido'}`); return }
+      flash(`Mesa cambiada → ${mesaDestinoCodigo} ✓`)
+      setCambiarMesaOpen(false)
+      onClose()
+    } catch { flash('Error al cambiar mesa') }
+    finally { setCambiandoMesa(false) }
+  }
 
   useEffect(() => { if (mesaId) cargarComanda() }, [mesaId, cargarComanda])
   useEffect(() => { if (vista==='audit' && comanda?.id) cargarAudit() }, [vista, comanda?.id, cargarAudit])
@@ -283,6 +318,17 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                               <rect x="9" y="3" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><line x1="12" y1="18" x2="12" y2="22"/>
                             </svg>
                             <span style={{fontFamily:SN,fontSize:13,color:C.teal,fontWeight:600}}>Añadir por voz</span>
+                          </button>
+                          {/* Cambiar mesa */}
+                          <button onClick={()=>{cargarMesasLibres();setCambiarMesaOpen(true);setMenuOpen(false)}}
+                            style={{width:'100%',padding:'12px 16px',background:'none',border:'none',
+                              display:'flex',alignItems:'center',gap:10,cursor:'pointer',
+                              borderBottom:`1px solid ${C.rule}`,textAlign:'left' as const}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.amb} strokeWidth="2" strokeLinecap="round">
+                              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/>
+                              <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:C.amb,fontWeight:600}}>Cambiar mesa</span>
                           </button>
                           {/* Separador — acciones de cuenta */}
                           <div style={{padding:'6px 16px 2px',fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',textTransform:'uppercase' as const}}>
@@ -707,6 +753,86 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
         )}
       </div>
 
+
+      {/* MODAL CAMBIAR MESA */}
+      {cambiarMesaOpen && comanda && (
+        <>
+          <div onClick={()=>setCambiarMesaOpen(false)}
+            style={{position:'fixed',inset:0,background:'rgba(26,23,20,.5)',zIndex:60,backdropFilter:'blur(2px)'}}/>
+          <div style={{
+            position:'fixed',bottom:0,left:0,right:0,zIndex:70,
+            background:C.bg1,borderTop:`1px solid ${C.rule}`,
+            borderRadius:'20px 20px 0 0',
+            maxHeight:'70dvh',display:'flex',flexDirection:'column',
+            boxShadow:'0 -8px 32px rgba(26,23,20,.18)',
+            fontFamily:SN,color:C.ink,
+            animation:'slideUp .25s cubic-bezier(.32,1,.28,1)',
+          }}>
+            <div style={{width:36,height:3,background:C.rule,borderRadius:2,margin:'10px auto 0',flexShrink:0}}/>
+            {/* Header */}
+            <div style={{padding:'14px 20px 12px',borderBottom:`1px solid ${C.rule}`,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink}}>Cambiar mesa</div>
+                <div style={{fontSize:11,color:C.ink3,marginTop:2}}>
+                  <span style={{fontWeight:600,color:C.amb}}>{mesaCodigo}</span>
+                  {' '}→ selecciona destino libre
+                </div>
+              </div>
+              <button onClick={()=>setCambiarMesaOpen(false)}
+                style={{background:'none',border:'none',fontSize:22,color:C.ink3,cursor:'pointer',padding:4,lineHeight:1}}>×</button>
+            </div>
+            {/* Lista mesas libres */}
+            <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'10px 16px 20px'}}>
+              {loadingMesas && (
+                <div style={{textAlign:'center',padding:24,color:C.ink4,fontFamily:SM,fontSize:11}}>cargando mesas…</div>
+              )}
+              {!loadingMesas && mesasLibres.length === 0 && (
+                <div style={{textAlign:'center',padding:24}}>
+                  <div style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink3}}>Sin mesas libres</div>
+                  <div style={{fontSize:12,color:C.ink4,marginTop:6}}>Todas las demás mesas están ocupadas</div>
+                </div>
+              )}
+              {/* Agrupar por zona */}
+              {!loadingMesas && (() => {
+                const zonas = [...new Set(mesasLibres.map(m => m.zona ?? 'Sin zona'))]
+                return zonas.map(zona => {
+                  const mesas = mesasLibres.filter(m => (m.zona ?? 'Sin zona') === zona)
+                  return (
+                    <div key={zona} style={{marginBottom:16}}>
+                      <div style={{fontSize:9,fontFamily:SM,color:C.ink4,letterSpacing:'.08em',textTransform:'uppercase' as const,marginBottom:8,paddingLeft:2}}>
+                        {zona}
+                      </div>
+                      <div style={{display:'flex',flexWrap:'wrap' as const,gap:8}}>
+                        {mesas.map(m => (
+                          <button
+                            key={m.id}
+                            disabled={cambiandoMesa}
+                            onClick={()=>ejecutarCambioMesa(m.id, m.codigo)}
+                            style={{
+                              padding:'14px 18px',
+                              background:cambiandoMesa?C.bg2:C.grS,
+                              border:`1.5px solid ${C.gr}55`,
+                              borderRadius:12,
+                              fontFamily:SE,fontStyle:'italic',fontSize:20,
+                              color:C.gr,fontWeight:600,
+                              cursor:cambiandoMesa?'default':'pointer',
+                              minWidth:70,textAlign:'center' as const,
+                              opacity:cambiandoMesa?.6:1,
+                              transition:'background .15s',
+                            }}>
+                            {parseInt(m.codigo.replace(/[^0-9]/g,''),10)||m.codigo}
+                            <div style={{fontFamily:SN,fontStyle:'normal',fontSize:9,color:C.gr,opacity:.8,marginTop:2}}>{m.codigo}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })
+              })()}
+            </div>
+          </div>
+        </>
+      )}
 
       {/* COBRAR SHEET */}
       {cobrarOpen && comanda && (
