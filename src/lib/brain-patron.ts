@@ -289,7 +289,9 @@ function detectarItems(tNorm: string, cache: MenuCache): { items: ItemDetectado[
 function extraerNotaExplicita(tNorm: string): { nota: string; textoSinNota: string } | null {
   // Patrón: "nota" como palabra completa, con al menos 2 chars de contenido tras ella
   // Acepta posición: al inicio, tras coma, o tras espacio
-  const match = tNorm.match(/(?:(?:,\s*)|\s+|^)\b(nota)\b\s+(.{2,120})$/)
+  // [!,;.¡]* tolera puntuación tras "nota" cuando el camarero lo enfatiza
+  // Ej: "nota! en copa", "nota, en copa", "nota. sin sal"
+  const match = tNorm.match(/(?:(?:,\s*)|\s+|^)\b(nota)\b[!¡,;.]*\s+(.{2,120})$/)
   if (!match) return null
   const nota = match[2].trim()
     .replace(/^(?:lo siguiente[,:]?\s*|que\s+)/i, '') // quitar "lo siguiente:", "que"
