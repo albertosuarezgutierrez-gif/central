@@ -186,15 +186,33 @@ export async function POST(req: NextRequest) {
 
     let comandaId: string | null = null
     if (mesa) {
-      const { data: comanda, error: comandaError } = await supabase.from('comandas')
-        .insert({ mesa_id: mesa.id, camarero_id: camareroId, turno_id: turnoId,
-          tipo: brainResult.tipo, estado: brainResult.tipo === 'cuenta' ? 'nueva' : 'en_cocina',
-          restaurante_id: rid,
-          ...(brainResult.num_comensales ? { num_comensales: brainResult.num_comensales } : {}),
-          ...(brainResult.nota_general ? { nota_general: brainResult.nota_general } : {}) })
-        .select().single()
-      if (comandaError) throw comandaError
-      comandaId = comanda.id
+      // ── Para 'cuenta': buscar comanda activa existente (NO insertar nueva vacía)
+      // Si insertamos nueva, los items están vacíos → ticket sin productos → total €0,00
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let comanda: any = null
+      if (brainResult.tipo === 'cuenta') {
+        const { data: existente } = await supabase.from('comandas')
+          .select()
+          .eq('mesa_id', mesa.id)
+          .eq('restaurante_id', rid)
+          .in('estado', ['activa', 'en_cocina', 'marchar', 'nueva'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .single()
+        comanda = existente ?? null
+        if (comanda) comandaId = comanda.id
+      } else {
+        const { data: nuevaComanda, error: comandaError } = await supabase.from('comandas')
+          .insert({ mesa_id: mesa.id, camarero_id: camareroId, turno_id: turnoId,
+            tipo: brainResult.tipo, estado: 'en_cocina',
+            restaurante_id: rid,
+            ...(brainResult.num_comensales ? { num_comensales: brainResult.num_comensales } : {}),
+            ...(brainResult.nota_general ? { nota_general: brainResult.nota_general } : {}) })
+          .select().single()
+        if (comandaError) throw comandaError
+        comanda = nuevaComanda
+        comandaId = nuevaComanda.id
+      }
 
       // ── Servicio/cubierto automático (voz) ───────────────────────────────
       // Si BRAIN capturó num_comensales Y es la primera comanda de esta mesa
@@ -377,24 +395,31 @@ export async function POST(req: NextRequest) {
             s + (it.precio_unitario ?? 0) * it.cantidad, 0
         )
 
-        try {
-          await crearPrintJobCuenta({
-            comanda_id: comanda.id,
-            restaurante_id: rid,
-            mesa_label: mesa.codigo,
-            zona_tipo: (mesa as Record<string, unknown>).zona as string ?? null,
-            zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
-            camarero_nombre: camNombre?.nombre ?? 'Equipo',
-            numero_ticket: comanda.numero_ticket ?? 0,
-            restaurante_nombre: restData?.nombre ?? 'Restaurante',
-            restaurante_direccion: restData?.direccion ?? null,
-            items: (itemsCuenta ?? []).map((it: { nombre: string; cantidad: number; precio_unitario: number | null }) => ({
-              nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario ?? 0,
-            })),
-            total: Math.round(totalCuenta * 100) / 100,
-          })
-        } catch (e: unknown) {
-          console.error('[COURIER-CUENTA-VOZ]', e)
+        if (!itemsCuenta?.length) {
+          console.warn(`[COURIER-CUENTA-VOZ] Comanda ${comanda.id} sin items — no se crea print_job`)
+        } else {
+          try {
+            const printResult = await crearPrintJobCuenta({
+              comanda_id: comanda.id,
+              restaurante_id: rid,
+              mesa_label: mesa.codigo,
+              zona_tipo: (mesa as Record<string, unknown>).zona as string ?? null,
+              zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
+              camarero_nombre: camNombre?.nombre ?? 'Equipo',
+              numero_ticket: comanda.numero_ticket ?? 0,
+              restaurante_nombre: restData?.nombre ?? 'Restaurante',
+              restaurante_direccion: restData?.direccion ?? null,
+              items: itemsCuenta.map((it: { nombre: string; cantidad: number; precio_unitario: number | null }) => ({
+                nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario ?? 0,
+              })),
+              total: Math.round(totalCuenta * 100) / 100,
+            })
+            if (!printResult?.job_id) {
+              console.warn(`[COURIER-CUENTA-VOZ] Sin impresora para comanda ${comanda.id} (mesa ${mesa.codigo})`)
+            }
+          } catch (e: unknown) {
+            console.error('[COURIER-CUENTA-VOZ] Error creando print_job:', e)
+          }
         }
       }
 
