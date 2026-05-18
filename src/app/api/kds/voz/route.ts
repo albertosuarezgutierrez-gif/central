@@ -65,25 +65,15 @@ export async function POST(req: NextRequest) {
     const { texto, latencia_ms: latenciaEar } = await transcribir(audio)
 
     // ── BRAIN-KDS: extraer mesa de la frase ────────────────────────────────
-    const [Anthropic, zonasContext] = await Promise.all([
-      import('@anthropic-ai/sdk').then(m => m.default),
+    const [{ callAI: aiKds, cleanJSON }, zonasContext] = await Promise.all([
+      import('@/lib/ai-client'),
       buildZonasKDS(rid),
     ])
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 128,
-      system: KDS_PROMPT + zonasContext,
-      messages: [{ role: 'user', content: texto }],
-    })
-
-    const content = response.content[0]
-    if (content.type !== 'text') throw new Error('BRAIN-KDS respuesta inesperada')
 
     let kdsResult: { mesa: string; confianza: number; raw: string }
     try {
-      kdsResult = JSON.parse(content.text)
+      const raw = await aiKds(KDS_PROMPT + zonasContext, texto, 128)
+      kdsResult = JSON.parse(cleanJSON(raw))
     } catch {
       return NextResponse.json(
         { error: 'No entendí la mesa. Intenta de nuevo.', texto },

@@ -53,31 +53,20 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Sin camareros en este restaurante' }, { status: 404 })
     }
 
-    // 4. Extraer nombre con BRAIN (Claude Haiku)
-    const Anthropic = (await import('@anthropic-ai/sdk')).default
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
+    // 4. Extraer nombre con BRAIN (NVIDIA/Anthropic)
+    const { callAI: aiCall, cleanJSON } = await import('@/lib/ai-client')
     const nombresDisponibles = camareros.map(c => c.nombre).join(', ')
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 128,
-      system: `Eres un asistente de reconocimiento de identidad para un restaurante.
+    const system_voz = `Eres un asistente de reconocimiento de identidad para un restaurante.
 El usuario ha dicho algo por voz. Tu tarea: extraer el nombre de la persona que quiere iniciar sesión.
 Camareros registrados en este restaurante: ${nombresDisponibles}
 Responde SOLO con JSON: {"nombre_detectado": "nombre exacto del camarero o null si no se identifica", "confianza": 0.0-1.0}
 Si el texto menciona un nombre que se parece a algún camarero (ignorando mayúsculas/acentos), devuelve el nombre exacto del registro.
-Si no se identifica ningún nombre, devuelve null.`,
-      messages: [{ role: 'user', content: `Texto de voz: "${texto}"` }],
-    })
-
-    const content = response.content[0]
-    if (content.type !== 'text') {
-      return NextResponse.json({ error: 'Error BRAIN', texto }, { status: 500 })
-    }
+Si no se identifica ningún nombre, devuelve null.`
 
     let brainResult: { nombre_detectado: string | null; confianza: number }
     try {
-      brainResult = JSON.parse(content.text)
+      const raw = await aiCall(system_voz, `Texto de voz: "${texto}"`, 128)
+      brainResult = JSON.parse(cleanJSON(raw))
     } catch {
       return NextResponse.json({ error: 'Error parseo BRAIN', texto }, { status: 500 })
     }

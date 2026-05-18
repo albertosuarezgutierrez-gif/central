@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAI, cleanJSON } from '@/lib/ai-client'
 
 export const maxDuration = 30
 
@@ -72,8 +72,6 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 2. Llamar a Claude como sommelier ───────────────────────────
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
   const partes = [
     `Nombre: ${nombre.trim()}`,
     bodega   ? `Bodega: ${bodega.trim()}`   : null,
@@ -107,14 +105,8 @@ Si el vino es muy versátil, añade "cualquier_plato".`
   }
 
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 300,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const raw = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
-    enriched = JSON.parse(raw.replace(/```json|```/g, '').trim())
+    const raw = await callAI('Eres sommelier experto en vinos españoles. Responde SOLO con JSON válido, sin markdown.', prompt, 300)
+    enriched = JSON.parse(cleanJSON(raw))
 
     // Sanear tags: solo los canónicos
     enriched.maridaje_tags = (enriched.maridaje_tags ?? [])

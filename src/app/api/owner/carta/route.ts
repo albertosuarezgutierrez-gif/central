@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
 import { invalidarCache } from '@/lib/brain-cache'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAIVision, cleanJSON } from '@/lib/ai-client'
 
 export const maxDuration = 60
 
@@ -136,23 +136,16 @@ async function handleExtract(req: NextRequest) {
     const { images } = await req.json()
     if (!images?.length) return NextResponse.json({ error: 'Sin imágenes' }, { status: 400 })
     if (images.length > 10) return NextResponse.json({ error: 'Máximo 10 páginas' }, { status: 400 })
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-    // Normalize media types — some browsers send 'image/jpg' which Anthropic rejects
-    const VALID_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
-    type ValidType = typeof VALID_TYPES[number]
-    const normalizeType = (t: string): ValidType => {
+    const normalizeType = (t: string): string => {
       if (t === 'image/jpg') return 'image/jpeg'
-      if (VALID_TYPES.includes(t as ValidType)) return t as ValidType
-      return 'image/jpeg'
+      const VALID = ['image/jpeg','image/png','image/gif','image/webp']
+      return VALID.includes(t) ? t : 'image/jpeg'
     }
-    const imageBlocks = images.map((img: { data: string; mediaType: string }) => ({
-      type: 'image' as const,
-      source: { type: 'base64' as const, media_type: normalizeType(img.mediaType), data: img.data },
+    const imageInputs = images.map((img: { data: string; mediaType: string }) => ({
+      data: img.data,
+      mediaType: normalizeType(img.mediaType),
     }))
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001', max_tokens: 6000,
-      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text',
-        text: `Eres un experto en hostelería española. Extrae TODOS los platos, tapas, bebidas y postres de esta carta de restaurante.
+    const extractPrompt = `Eres un experto en hostelería española. Extrae TODOS los platos, tapas, bebidas y postres de esta carta de restaurante.
 
 IMPORTANTE — FORMATOS DE PRECIO (muy común en cartas españolas):
 Muchos productos aparecen con 2 o 3 precios en columnas: Tapa / Media / Ración, o T / M / R, o 1/2 / Entera.
@@ -174,15 +167,11 @@ Devuelve SOLO un JSON válido sin texto adicional ni markdown:
 
 Reglas:
 - Si el producto tiene UN SOLO precio: pon el número en "precio" y "formatos": []
-- Si el producto tiene VARIOS PRECIOS (tapa/media/ración, T/M/R, 1/2/entera, pequeño/grande, copa/botella): pon "precio": null y rellena "formatos"
-- nombre del formato: usa "Tapa", "Media ración", "Ración", "Copa", "Botella", "Media botella", "Pequeño", "Grande" según lo que veas
+- Si el producto tiene VARIOS PRECIOS: pon "precio": null y rellena "formatos"
 - categoria: infiere de la sección (Entrantes, Tapas, Principales, Carnes, Pescados, Mariscos, Postres, Bebidas, Vinos, Cervezas, Raciones, etc.)
-- alergenos: array con los EU presentes exactamente: ["Gluten","Crustáceos","Huevo","Pescado","Cacahuetes","Soja","Lácteos","Frutos de cáscara","Apio","Mostaza","Sésamo","Dióxido de azufre","Altramuces","Moluscos"]. Array vacío [] si no hay.
-- Incluye ABSOLUTAMENTE TODOS los productos visibles en todas las páginas
-- No inventes productos que no estén en la carta`,
-      }] }],
-    })
-    const raw = msg.content[0].type === 'text' ? msg.content[0].text : ''
+- alergenos: exactamente: ["Gluten","Crustáceos","Huevo","Pescado","Cacahuetes","Soja","Lácteos","Frutos de cáscara","Apio","Mostaza","Sésamo","Dióxido de azufre","Altramuces","Moluscos"]. Array vacío [] si no hay.
+- Incluye ABSOLUTAMENTE TODOS los productos visibles en todas las páginas`
+    const raw = await callAIVision('Extrae productos de carta de restaurante. Responde SOLO con JSON.', imageInputs, extractPrompt, 6000)
     try {
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim())
       return NextResponse.json({ productos: parsed.productos || [] })

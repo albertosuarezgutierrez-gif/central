@@ -9,11 +9,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId, getSession } from '@/lib/session'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAI } from '@/lib/ai-client'
 
 const sb = () => createServerClient()
 
-const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
 // ── System prompt del agente de soporte ──────────────────────────────────────
 function buildSystemPrompt(diagnostico: Record<string, unknown>, restauranteNombre: string): string {
@@ -137,20 +136,12 @@ export async function POST(req: NextRequest) {
     content: m.texto,
   }))
 
-  // 6. Llamar a Claude
+  // 6. Llamar a IA (NVIDIA/Anthropic)
   let respuestaIA = 'Lo siento, en este momento no puedo procesar tu consulta. Por favor, inténtalo de nuevo en unos minutos.'
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 600,
-      system: buildSystemPrompt(diagnostico, restauranteNombre),
-      messages: mensajesHistorial,
-    })
-    if (msg.content[0].type === 'text') {
-      respuestaIA = msg.content[0].text
-    }
+    respuestaIA = await callAI(buildSystemPrompt(diagnostico, restauranteNombre), mensajesHistorial, 600)
   } catch (e) {
-    console.error('[soporte-ia] Error llamando a Anthropic:', e)
+    console.error('[soporte-ia] Error IA:', e)
   }
 
   // 7. Guardar respuesta de la IA

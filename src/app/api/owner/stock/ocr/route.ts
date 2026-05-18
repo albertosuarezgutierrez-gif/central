@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAIVision, cleanJSON } from '@/lib/ai-client'
 
 export const maxDuration = 60
 
@@ -19,23 +19,14 @@ export async function POST(req: NextRequest) {
   if (!images?.length) return NextResponse.json({ error: 'Sin imagen' }, { status: 400 })
   if (images.length > 4) return NextResponse.json({ error: 'Máximo 4 imágenes' }, { status: 400 })
 
-  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-  const VALID_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
-  type ValidType = typeof VALID_TYPES[number]
-  const normalizeType = (t: string): ValidType => {
+  const normalizeType = (t: string): string => {
     if (t === 'image/jpg') return 'image/jpeg'
-    if (VALID_TYPES.includes(t as ValidType)) return t as ValidType
-    return 'image/jpeg'
+    const VALID = ['image/jpeg','image/png','image/gif','image/webp']
+    return VALID.includes(t) ? t : 'image/jpeg'
   }
-
-  const imageBlocks = images.map((img: { data: string; mediaType: string }) => ({
-    type: 'image' as const,
-    source: {
-      type: 'base64' as const,
-      media_type: normalizeType(img.mediaType),
-      data: img.data,
-    },
+  const imageInputs = images.map((img: { data: string; mediaType: string }) => ({
+    data: img.data,
+    mediaType: normalizeType(img.mediaType),
   }))
 
   const prompt = `Eres asistente de gestión de restaurante español. Analiza este albarán o factura de proveedor.
@@ -64,20 +55,8 @@ Reglas:
 - Si hay totales o subtotales, NO los incluyas como artículos`
 
   try {
-    const msg = await anthropic.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 2000,
-      messages: [{
-        role: 'user',
-        content: [
-          ...imageBlocks,
-          { type: 'text', text: prompt },
-        ],
-      }],
-    })
-
-    const raw = msg.content[0].type === 'text' ? msg.content[0].text.trim() : ''
-    const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim())
+    const raw = await callAIVision('Analiza albaranes y facturas de proveedor. Responde SOLO con JSON.', imageInputs, prompt, 2000)
+    const parsed = JSON.parse(cleanJSON(raw))
 
     return NextResponse.json({
       ok: true,

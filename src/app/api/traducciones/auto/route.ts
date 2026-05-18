@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAI, cleanJSON } from '@/lib/ai-client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 30
@@ -24,8 +24,6 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       )
     }
-
-    const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
     const prompt = `Eres un experto en hostelería y traducción gastronómica.
 Traduce el siguiente producto de carta de restaurante español a los idiomas indicados.
@@ -50,17 +48,11 @@ Reglas:
 - Mantén nombres propios y técnicos (ej: gazpacho, jamón ibérico, pulpo a la gallega)
 - Sé conciso y natural, como aparecería en una carta real`
 
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 800,
-      messages: [{ role: 'user', content: prompt }],
-    })
-
-    const text = response.content[0]?.type === 'text' ? response.content[0].text : ''
+    const raw = await callAI('Eres experto en hostelería y traducción gastronómica. Responde SOLO con JSON válido.', prompt, 800)
     let traducciones: Record<string, { nombre: string; descripcion: string }>
 
     try {
-      traducciones = JSON.parse(text.trim())
+      traducciones = JSON.parse(cleanJSON(raw))
     } catch {
       return NextResponse.json(
         { error: 'Claude devolvió respuesta no parseable', raw: text },
