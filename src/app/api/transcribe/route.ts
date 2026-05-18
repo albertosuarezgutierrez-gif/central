@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribir } from '@/lib/ear'
 import { routearComanda } from '@/lib/brain-router'
-import { crearPrintJobs } from '@/lib/courier'
+import { crearPrintJobs, crearPrintJobCuenta } from '@/lib/courier'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { azureDisponible, verificarAzure } from '@/lib/azure-speaker'
@@ -377,8 +377,8 @@ export async function POST(req: NextRequest) {
             s + (it.precio_unitario ?? 0) * it.cantidad, 0
         )
 
-        import('@/lib/courier').then(({ crearPrintJobCuenta }) => {
-          crearPrintJobCuenta({
+        try {
+          await crearPrintJobCuenta({
             comanda_id: comanda.id,
             restaurante_id: rid,
             mesa_label: mesa.codigo,
@@ -392,8 +392,10 @@ export async function POST(req: NextRequest) {
               nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario ?? 0,
             })),
             total: Math.round(totalCuenta * 100) / 100,
-          }).catch((e: unknown) => console.error('[COURIER-CUENTA-VOZ]', e))
-        }).catch((e: unknown) => console.error('[COURIER-CUENTA-IMPORT]', e))
+          })
+        } catch (e: unknown) {
+          console.error('[COURIER-CUENTA-VOZ]', e)
+        }
       }
 
       if (brainResult.tipo === '86') {
