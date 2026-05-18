@@ -2960,6 +2960,20 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
         )}
         {/* ── Actualizar app ── */}
         <ForceUpdateRow />
+        {/* ── Manual de Voz ── */}
+        <div style={{padding:'13px 0',borderBottom:`1px solid ${C.rule}`}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+            <div>
+              <div style={{fontSize:13,fontWeight:500,color:C.ink}}>Manual de Voz</div>
+              <div style={{fontSize:11,color:C.ink4,marginTop:2}}>Protocolo, novedades y sugerencias</div>
+            </div>
+            <a href="/owner?tab=manual" style={{
+              background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:8,
+              padding:'6px 12px',fontSize:12,fontWeight:600,color:C.ink3,
+              cursor:'pointer',textDecoration:'none',display:'inline-block',
+            }}>Ver manual</a>
+          </div>
+        </div>
         <div style={{paddingTop:20,paddingBottom:32}}>
           {/* Fichaje */}
           <FicharSalidaBtn session={session} />

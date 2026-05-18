@@ -15,6 +15,7 @@ import MensajesOwnerTab from '@/components/owner/MensajesOwnerTab'
 import FichajesTab from '@/components/owner/FichajesTab'
 import ModalTraducciones from '@/components/owner/ModalTraducciones'
 import RecomendacionesTab from '@/components/owner/RecomendacionesTab'
+import ManualVozTab from '@/components/owner/ManualVozTab'
 
 /* ─── Design Tokens ─── */
 const C = {
@@ -6558,6 +6559,7 @@ const GRUPOS = [
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
       { id: 'mensajes',       label: 'Mensajes',       icon: ICONS.users         }, // auditoría de chat entre roles
       { id: 'fichajes',       label: 'Fichajes',       icon: ICONS.clock         }, // registro jornada RD-ley 8/2019
+      { id: 'manual',         label: 'Manual Voz',     icon: ICONS.book          }, // protocolo de voz + novedades
     ]
   },
 ]
@@ -7348,6 +7350,7 @@ export default function OwnerPage() {
           {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
           {tab === 'mensajes'       && <MensajesOwnerTab sh={sh} />}
           {tab === 'fichajes'       && <FichajesTab/>}
+          {tab === 'manual'         && <ManualVozTab restauranteId={session.restaurante_id} session={{ id: session.id, nombre: session.nombre, rol: session.rol }} />}
           {tab === 'restaurante'    && <RestauranteTab/>}
           {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
         </div>
