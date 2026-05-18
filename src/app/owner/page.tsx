@@ -6934,10 +6934,11 @@ const GRUPOS = [
     // Carta: productos primero (actualizar carta, precios, 86), secciones es setup
     id: 'carta', label: 'Carta', icon: ICONS.book,
     tabs: [
-      { id: 'carta',          label: 'Productos',    icon: ICONS.book    }, // frecuente
-      { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle }, // diario
-      { id: 'bodega',         label: 'Bodega',       icon: ICONS.sparkle }, // stock/estocaje
-      { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle }, // setup inicial
+      { id: 'carta',          label: 'Productos',    icon: ICONS.book    },
+      { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle },
+      { id: 'bodega',         label: 'Bodega',       icon: ICONS.sparkle },
+      { id: 'escandallos',    label: 'Costes',       icon: ICONS.chart   },
+      { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle },
     ]
   },
   {
@@ -7805,6 +7806,7 @@ export default function OwnerPage() {
             {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'bodega'         && <BodegaTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'escandallos'    && <EscandallosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
             {tab === 'analytics'      && <Analytics compact />}
@@ -8350,6 +8352,304 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
               <button onClick={() => setModal(null)} style={{ flex:1, padding:'9px', borderRadius:8, border:`1px solid ${C.rule}`, background:'none', color:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer' }}>Cancelar</button>
               <button onClick={registrarEntrada} style={{ flex:2, padding:'9px', borderRadius:8, border:`1px solid ${C.green}`, background:C.green, color:C.paper, fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer' }}>
                 ✓ Confirmar entrada
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// ESCANDALLOS TAB — Coste real por plato y margen en tiempo real
+// ══════════════════════════════════════════════════════════════════════
+type Escandallo = {
+  id: string; nombre: string; producto_id: string | null; rendimiento: number
+  precio_venta: number | null; coste_ingredientes: number; coste_por_racion: number
+  margen_eur: number | null; margen_pct: number | null; activo: boolean; notas: string | null
+  ingredientes: {
+    id: string; stock_articulo_id: string; articulo_nombre: string; articulo_unidad: string
+    cantidad: number; coste_unitario: number | null; coste_linea: number; notas: string | null
+  }[]
+}
+
+function EscandallosTab({ sh, restauranteId }: { sh: () => Record<string,string>; restauranteId: string }) {
+  const [escandallos, setEscandallos] = useState<Escandallo[]>([])
+  const [articulos,   setArticulos]   = useState<{ id: string; nombre: string; unidad_compra: string; coste_unitario: number | null }[]>([])
+  const [productos,   setProductos]   = useState<{ id: string; nombre: string; precio: number | null }[]>([])
+  const [loading,     setLoading]     = useState(true)
+  const [modal,       setModal]       = useState<null | 'crear' | { edit: Escandallo }>(null)
+  const [expanded,    setExpanded]    = useState<string | null>(null)
+  const [err,         setErr]         = useState('')
+
+  const emptyForm = { nombre: '', producto_id: '', rendimiento: '1', notas: '' }
+  const [form, setForm] = useState(emptyForm)
+  const [ingredientes, setIngredientes] = useState<{ stock_articulo_id: string; cantidad: string; notas: string }[]>([])
+
+  const load = async () => {
+    setLoading(true)
+    const [rE, rA, rP] = await Promise.all([
+      fetch('/api/owner/escandallos', { headers: sh() }).then(r => r.json()),
+      fetch('/api/owner/stock',       { headers: sh() }).then(r => r.json()),
+      fetch('/api/owner/carta',       { headers: sh() }).then(r => r.json()),
+    ])
+    setEscandallos(rE.escandallos ?? [])
+    setArticulos(rA.articulos ?? [])
+    setProductos((rP.productos ?? []).filter((p: {activo: boolean}) => p.activo))
+    setLoading(false)
+  }
+  useEffect(() => { load() }, [])
+
+  const openCreate = () => {
+    setForm(emptyForm); setIngredientes([]); setErr(''); setModal('crear')
+  }
+  const openEdit = (e: Escandallo) => {
+    setForm({ nombre: e.nombre, producto_id: e.producto_id ?? '', rendimiento: String(e.rendimiento), notas: e.notas ?? '' })
+    setIngredientes(e.ingredientes.map(i => ({ stock_articulo_id: i.stock_articulo_id, cantidad: String(i.cantidad), notas: i.notas ?? '' })))
+    setErr(''); setModal({ edit: e })
+  }
+
+  const guardar = async () => {
+    if (!form.nombre.trim()) return setErr('El nombre es obligatorio')
+    const body = {
+      ...(modal && typeof modal === 'object' && 'edit' in modal ? { id: (modal as { edit: Escandallo }).edit.id } : {}),
+      nombre: form.nombre.trim(),
+      producto_id: form.producto_id || null,
+      rendimiento: parseFloat(form.rendimiento) || 1,
+      notas: form.notas.trim() || null,
+      ingredientes: ingredientes.filter(i => i.stock_articulo_id && i.cantidad).map(i => ({
+        stock_articulo_id: i.stock_articulo_id,
+        cantidad: parseFloat(i.cantidad),
+        notas: i.notas.trim() || null,
+      })),
+    }
+    const isEdit = modal && typeof modal === 'object' && 'edit' in modal
+    const r = await fetch('/api/owner/escandallos', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (!r.ok) return setErr(d.error || 'Error')
+    await load(); setModal(null)
+  }
+
+  const eliminar = async (id: string) => {
+    await fetch('/api/owner/escandallos', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id }) })
+    await load()
+  }
+
+  // Color según margen
+  const colorMargen = (pct: number | null) => {
+    if (pct == null) return C.ink4
+    if (pct >= 65) return '#5BBF62'   // verde
+    if (pct >= 40) return C.amber      // ámbar
+    return C.red                       // rojo
+  }
+
+  const sinCoste = articulos.filter(a => !a.coste_unitario || a.coste_unitario === 0).length
+
+  return (
+    <div style={{ padding: '20px 16px', maxWidth: 720, margin: '0 auto' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div>
+          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: C.ink }}>Escandallos</div>
+          <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginTop: 2 }}>
+            Coste real por plato · margen en tiempo real
+          </div>
+        </div>
+        <button onClick={openCreate} style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 18px', background: C.red, color: C.paper, border: `1px solid ${C.redD}`, borderRadius: 8, cursor: 'pointer' }}>
+          + Escandallo
+        </button>
+      </div>
+
+      {/* Aviso si hay artículos sin coste */}
+      {sinCoste > 0 && (
+        <div style={{ background: C.amberS, border: `1px solid ${C.amber}44`, borderRadius: 8, padding: '10px 14px', marginBottom: 16 }}>
+          <span style={{ fontFamily: SM, fontSize: 10, color: '#7A5A1A' }}>
+            ⚠ {sinCoste} artículo{sinCoste > 1 ? 's' : ''} de bodega sin coste unitario — los márgenes no serán exactos. Añade el coste en Bodega.
+          </span>
+        </div>
+      )}
+
+      {/* Lista */}
+      {loading ? (
+        <div style={{ textAlign: 'center', padding: 48, fontFamily: SE, fontStyle: 'italic', color: C.ink4 }}>Cargando escandallos…</div>
+      ) : escandallos.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: 48 }}>
+          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink4, marginBottom: 8 }}>Sin escandallos aún</div>
+          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, marginBottom: 20 }}>Define la receta de cada plato y ve el coste y margen real.</div>
+          <button onClick={openCreate} style={{ fontFamily: SN, fontSize: 13, padding: '9px 22px', background: C.red, color: C.paper, border: `1px solid ${C.redD}`, borderRadius: 8, cursor: 'pointer' }}>+ Crear primer escandallo</button>
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {escandallos.map(e => {
+            const isOpen = expanded === e.id
+            const mc = colorMargen(e.margen_pct)
+            return (
+              <div key={e.id} style={{ background: C.bone, border: `1px solid ${e.margen_pct != null && e.margen_pct < 40 ? C.red + '44' : C.rule}`, borderRadius: 10, overflow: 'hidden' }}>
+                {/* Cabecera */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : e.id)}>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' as const }}>
+                      <span style={{ fontFamily: SN, fontSize: 15, fontWeight: 600, color: C.ink }}>{e.nombre}</span>
+                      {e.rendimiento !== 1 && (
+                        <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, background: C.paper2, border: `1px solid ${C.rule}`, padding: '1px 7px', borderRadius: 3 }}>×{e.rendimiento} raciones</span>
+                      )}
+                    </div>
+                    {/* KPIs en línea */}
+                    <div style={{ display: 'flex', gap: 16, marginTop: 5, flexWrap: 'wrap' as const }}>
+                      <div>
+                        <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4 }}>COSTE </span>
+                        <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.ink2 }}>{e.coste_por_racion.toFixed(2).replace('.', ',')}€</span>
+                      </div>
+                      {e.precio_venta != null && (
+                        <div>
+                          <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4 }}>VENTA </span>
+                          <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.ink2 }}>{e.precio_venta.toFixed(2).replace('.', ',')}€</span>
+                        </div>
+                      )}
+                      {e.margen_pct != null && (
+                        <div>
+                          <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4 }}>MARGEN </span>
+                          <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, fontWeight: 700, color: mc }}>{e.margen_pct}%</span>
+                          {e.margen_eur != null && <span style={{ fontFamily: SM, fontSize: 9, color: mc, marginLeft: 4 }}>({e.margen_eur > 0 ? '+' : ''}{e.margen_eur.toFixed(2)}€)</span>}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+                    <button onClick={e2 => { e2.stopPropagation(); openEdit(e) }} style={{ fontFamily: SM, fontSize: 10, padding: '5px 10px', background: 'none', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 6, cursor: 'pointer' }}>✎</button>
+                    <span style={{ fontFamily: SM, fontSize: 12, color: C.ink4, alignSelf: 'center' }}>{isOpen ? '▲' : '▼'}</span>
+                  </div>
+                </div>
+
+                {/* Detalle ingredientes */}
+                {isOpen && (
+                  <div style={{ borderTop: `1px solid ${C.rule}`, padding: '12px 16px', background: C.paper2 }}>
+                    {e.ingredientes.length === 0 ? (
+                      <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, fontStyle: 'italic' }}>Sin ingredientes definidos</div>
+                    ) : (
+                      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                        <thead>
+                          <tr>
+                            {['Ingrediente', 'Cantidad', '€/unidad', 'Coste línea'].map(h => (
+                              <th key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase' as const, letterSpacing: '.1em', padding: '4px 8px', textAlign: 'left' as const, borderBottom: `1px solid ${C.rule}` }}>{h}</th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {e.ingredientes.map((ing, i) => (
+                            <tr key={ing.id} style={{ borderBottom: i < e.ingredientes.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
+                              <td style={{ padding: '7px 8px', color: C.ink, fontWeight: 500 }}>{ing.articulo_nombre}</td>
+                              <td style={{ padding: '7px 8px', color: C.ink3 }}>{ing.cantidad} {ing.articulo_unidad}</td>
+                              <td style={{ padding: '7px 8px', color: C.ink3 }}>{ing.coste_unitario != null ? `${Number(ing.coste_unitario).toFixed(4)}€` : <span style={{ color: C.ink4 }}>sin coste</span>}</td>
+                              <td style={{ padding: '7px 8px', color: ing.coste_linea > 0 ? C.ink2 : C.ink4, fontFamily: SE, fontStyle: 'italic', fontSize: 14 }}>{ing.coste_linea > 0 ? `${ing.coste_linea.toFixed(3)}€` : '—'}</td>
+                            </tr>
+                          ))}
+                          <tr style={{ borderTop: `2px solid ${C.rule}`, background: C.bone }}>
+                            <td colSpan={3} style={{ padding: '8px 8px', fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase' as const, letterSpacing: '.1em' }}>
+                              Coste total receta{e.rendimiento > 1 ? ` (${e.rendimiento} raciones)` : ''}
+                            </td>
+                            <td style={{ padding: '8px 8px', fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.ink, fontWeight: 700 }}>{e.coste_ingredientes.toFixed(3)}€</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    )}
+                    <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                      <button onClick={() => { if (confirm('¿Eliminar este escandallo?')) eliminar(e.id) }} style={{ fontFamily: SM, fontSize: 9, color: C.ink4, background: 'none', border: `1px solid ${C.rule}`, borderRadius: 6, padding: '4px 12px', cursor: 'pointer' }}>Eliminar</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal crear/editar */}
+      {modal && (
+        <div style={{ position: 'fixed', inset: 0, background: '#00000077', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
+          <div style={{ background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto' as const, boxShadow: '0 20px 60px #00000044' }}>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 19, color: C.ink, marginBottom: 18 }}>
+              {modal === 'crear' ? 'Nuevo escandallo' : `Editar: ${(modal as { edit: Escandallo }).edit.nombre}`}
+            </div>
+
+            {/* Nombre */}
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' as const, letterSpacing: '.1em', display: 'block', marginBottom: 4 }}>Nombre del escandallo *</label>
+              <input value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Croqueta de jamón · Salmorejo · Chuletón" style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 13, color: C.ink, boxSizing: 'border-box' as const, outline: 'none' }} />
+            </div>
+
+            {/* Vincular producto + rendimiento */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 10, marginBottom: 12 }}>
+              <div>
+                <label style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' as const, letterSpacing: '.1em', display: 'block', marginBottom: 4 }}>Producto de carta (opcional)</label>
+                <select value={form.producto_id} onChange={e => setForm(f => ({ ...f, producto_id: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none' }}>
+                  <option value="">— Sin vincular —</option>
+                  {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}{p.precio != null ? ` · ${p.precio.toFixed(2)}€` : ''}</option>)}
+                </select>
+              </div>
+              <div style={{ width: 80 }}>
+                <label style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' as const, letterSpacing: '.1em', display: 'block', marginBottom: 4 }}>Raciones</label>
+                <input type="number" min="0.1" step="0.5" value={form.rendimiento} onChange={e => setForm(f => ({ ...f, rendimiento: e.target.value }))} style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 13, color: C.ink, boxSizing: 'border-box' as const, outline: 'none' }} />
+              </div>
+            </div>
+
+            {/* Ingredientes */}
+            <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 14px', marginBottom: 16 }}>
+              <div style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' as const, letterSpacing: '.1em', marginBottom: 10 }}>Ingredientes</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 10 }}>
+                Selecciona artículos de tu bodega con la cantidad usada en la receta.
+              </div>
+              {ingredientes.map((ing, i) => (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px auto', gap: 6, marginBottom: 6, alignItems: 'center' }}>
+                  <select value={ing.stock_articulo_id} onChange={e => setIngredientes(is => is.map((x, j) => j === i ? { ...x, stock_articulo_id: e.target.value } : x))}
+                    style={{ padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 12, color: C.ink, outline: 'none' }}>
+                    <option value="">— ingrediente —</option>
+                    {articulos.map(a => <option key={a.id} value={a.id}>{a.nombre} ({a.unidad_compra}){a.coste_unitario ? ` · ${Number(a.coste_unitario).toFixed(4)}€` : ''}</option>)}
+                  </select>
+                  <input type="number" min="0.001" step="0.01" value={ing.cantidad} onChange={e => setIngredientes(is => is.map((x, j) => j === i ? { ...x, cantidad: e.target.value } : x))}
+                    placeholder="cantidad" style={{ width: '100%', padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 12, color: C.ink, boxSizing: 'border-box' as const, outline: 'none' }} />
+                  <button type="button" onClick={() => setIngredientes(is => is.filter((_, j) => j !== i))}
+                    style={{ padding: '5px 8px', background: 'none', border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink4, cursor: 'pointer', fontFamily: SM, fontSize: 11 }}>✕</button>
+                </div>
+              ))}
+              {/* Preview coste en tiempo real */}
+              {ingredientes.some(i => i.stock_articulo_id && i.cantidad) && (() => {
+                const costeTotal = ingredientes.reduce((sum, ing) => {
+                  if (!ing.stock_articulo_id || !ing.cantidad) return sum
+                  const art = articulos.find(a => a.id === ing.stock_articulo_id)
+                  if (!art?.coste_unitario) return sum
+                  return sum + (parseFloat(ing.cantidad) * art.coste_unitario)
+                }, 0)
+                const rend = parseFloat(form.rendimiento) || 1
+                const costePorRacion = costeTotal / rend
+                const prod = productos.find(p => p.id === form.producto_id)
+                const margen = prod?.precio != null ? ((prod.precio - costePorRacion) / prod.precio * 100) : null
+                return (
+                  <div style={{ marginTop: 10, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '8px 12px', display: 'flex', gap: 16, flexWrap: 'wrap' as const }}>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>Coste receta: <strong style={{ color: C.ink }}>{costeTotal.toFixed(3)}€</strong></span>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>Por ración: <strong style={{ color: C.ink }}>{costePorRacion.toFixed(3)}€</strong></span>
+                    {margen != null && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>Margen: <strong style={{ color: colorMargen(margen) }}>{margen.toFixed(1)}%</strong></span>}
+                  </div>
+                )
+              })()}
+              <button type="button" onClick={() => setIngredientes(is => [...is, { stock_articulo_id: '', cantidad: '', notas: '' }])}
+                style={{ fontFamily: SM, fontSize: 10, padding: '5px 12px', background: 'none', border: `1px dashed ${C.rule}`, borderRadius: 6, color: C.ink3, cursor: 'pointer', marginTop: 6 }}>
+                + Añadir ingrediente
+              </button>
+            </div>
+
+            {/* Notas */}
+            <div style={{ marginBottom: 16 }}>
+              <input value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} placeholder="Notas opcionales" style={{ width: '100%', padding: '8px 10px', borderRadius: 6, border: `1px solid ${C.rule}`, background: C.bone, fontFamily: SN, fontSize: 13, color: C.ink, boxSizing: 'border-box' as const, outline: 'none' }} />
+            </div>
+
+            {err && <div style={{ fontFamily: SN, fontSize: 12, color: C.red, marginBottom: 10 }}>{err}</div>}
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setModal(null)} style={{ flex: 1, padding: '9px', borderRadius: 8, border: `1px solid ${C.rule}`, background: 'none', color: C.ink3, fontFamily: SN, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={guardar} style={{ flex: 2, padding: '9px', borderRadius: 8, border: `1px solid ${C.redD}`, background: C.red, color: C.paper, fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {modal === 'crear' ? 'Crear escandallo' : 'Guardar cambios'}
               </button>
             </div>
           </div>
