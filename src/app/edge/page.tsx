@@ -583,7 +583,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   const { prompt: installPrompt, install } = useInstallPrompt()
   const { updateAvailable, applyUpdate } = useServiceWorkerUpdate()
-  useAutoReload(5 * 60 * 1000) // recarga automática si el camarero vuelve tras ≥5 min en background
+  useAutoReload(30 * 60 * 1000) // recarga automática si el camarero vuelve tras ≥30 min en background (30 min = sin duda fuera de servicio activo)
   const { subscribed, subscribe }          = usePushNotifications(session.id)
   const { alertas, marcarLeida }           = useAlertas(session.id, session.restaurante_id)
   const { offline, pendientes: offlineQueue, encolar, sincronizar: sincronizarOffline } =

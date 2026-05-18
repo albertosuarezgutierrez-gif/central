@@ -103,3 +103,36 @@ O en Stripe Dashboard → Customers con suscripción activa.
 ---
 
 *Última actualización: mayo 2026*
+
+---
+
+## Estrategia de actualizaciones — App Camarero (/edge)
+
+### Mecanismo dual (activo desde mayo 2026)
+
+| Mecanismo | Cuándo actúa | Comportamiento |
+|---|---|---|
+| **Banner SW** (`useServiceWorkerUpdate`) | En cualquier momento que el SW detecta versión nueva | Muestra banner vermilion "Nueva versión disponible" + botón "Actualizar ahora" — el camarero decide cuándo |
+| **Auto-reload** (`useAutoReload`) | Al volver al app tras **≥30 min** en background | Recarga silenciosa automática sin intervención del camarero |
+
+### Por qué 30 minutos (no menos)
+
+**< 30 min** → el camarero puede estar mid-service: bloquea el móvil mientras atiende al cliente, vuelve, y un reload borraría la comanda en curso (estado React local, no enviada aún a Supabase). Con 30 min es imposible estar en mitad de una toma de pedido activa.
+
+**30 min garantiza:**
+- Cierre de cocina → reapertura → versión nueva ✅
+- Entre servicios (comida/cena) → versión nueva ✅  
+- Mid-service (bloqueo de pantalla normal) → **NO recarga** ✅
+
+### El banner SW — no eliminar
+
+Aunque el auto-reload cubre pausas largas, el banner es necesario porque:
+1. Si el camarero tiene el móvil en mano todo el turno → nunca va a background 30 min → el auto-reload nunca se activa
+2. Sin el banner, podría trabajar horas con versión desactualizada
+3. El banner es **controlado**: el camarero elige el momento seguro para actualizar (entre comandas)
+
+### Riesgo eliminado con el umbral de 30 min
+
+> ⚠️ Con umbral de 5 min (versión descartada): camarero bloquea móvil 6 min mientras el cliente decide, vuelve → reload → pierde comanda dictada no enviada. Inaceptable mid-service.
+
+*Actualizado: mayo 2026*
