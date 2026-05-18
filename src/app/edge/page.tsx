@@ -19,6 +19,7 @@ import ComensalesModal from '@/components/edge/ComensalesModal'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
+import CuentasTab from '@/components/edge/CuentasTab'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 const C = {
@@ -46,12 +47,13 @@ const SM = "'JetBrains Mono',ui-monospace,monospace"
 const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
-type Tab    = 'hablar'|'manual'|'sala'|'carta'|'chat'|'config'
+type Tab    = 'hablar'|'manual'|'sala'|'cuentas'|'carta'|'chat'|'config'
 
 const ALL_TABS: {id:Tab;lbl:string;path:string;fijo?:boolean}[] = [
   {id:'hablar',  lbl:'Hablar',   fijo:true, path:'M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3zM5 11a7 7 0 0 0 14 0M12 18v4'},
   {id:'manual',  lbl:'Manual',              path:'M3 3h7v7H3zM14 3h7v7h-7zM3 14h7v7H3zM14 14h7M17.5 14v7'},
   {id:'sala',    lbl:'Pedidos',             path:'M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2M9 12h6M9 16h4'},
+  {id:'cuentas', lbl:'Cuentas',             path:'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h4'},
   {id:'carta',   lbl:'Carta',               path:'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4'},
   {id:'chat',    lbl:'Chat',                path:'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z'},
   {id:'config',  lbl:'Config',  fijo:true,  path:'M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z'},
@@ -2102,6 +2104,16 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       })()}
 
 
+      {/* ══ TAB: CUENTAS — pedir cuenta y cobrar ════════════════ */}
+      {tab==='cuentas' && (
+        <CuentasTab
+          comandas={comandas}
+          mesasPlano={mesasPlano}
+          session={session}
+          onCobrado={()=>setTab('hablar')}
+        />
+      )}
+
       {/* ══ TAB: CHAT — mensajes entre roles del turno ══════════ */}
       {tab==='chat' && (
         <EdgeChatTab
@@ -2443,7 +2455,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   <span style={{fontFamily:SN,fontSize:9,fontWeight:700,color:'#fff'}}>{noLeidos>9?'9+':noLeidos}</span>
                 </div>
               )}
-              {t.id==='manual' && cuentasCount>0 && !on && (
+              {t.id==='cuentas' && cuentasCount>0 && !on && (
                 <div className="edge-nav-badge" style={{position:'absolute',top:5,right:'18%',minWidth:16,height:16,borderRadius:8,background:C.verm,display:'flex',alignItems:'center',justifyContent:'center',padding:'0 4px'}}>
                   <span style={{fontFamily:SN,fontSize:9,fontWeight:700,color:'#fff'}}>{cuentasCount>9?'9+':cuentasCount}</span>
                 </div>
