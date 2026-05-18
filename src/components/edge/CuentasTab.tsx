@@ -68,9 +68,8 @@ export default function CuentasTab({ comandas, mesasPlano, session, onCobrado }:
     c => ['nueva', 'en_cocina', 'lista'].includes(c.estado) && (c.items?.length ?? 0) > 0
   )
 
-  // Mesas ocupadas (por id) para filtrar las libres
+  // Mesas ocupadas (por id)
   const mesasOcupadasIds = new Set([...cuentasPedidas, ...abiertas].map(c => c.mesa_id))
-  const libres = mesasPlano.filter(m => !mesasOcupadasIds.has(m.id) && m.estado === 'libre')
 
   /* ── KPIs ───────────────────────────────────────────────── */
   const totalPendiente = [...cuentasPedidas, ...abiertas].reduce(
@@ -475,37 +474,11 @@ export default function CuentasTab({ comandas, mesasPlano, session, onCobrado }:
           </>
         )}
 
-        {/* ── LIBRES ── */}
-        {libres.length > 0 && (
-          <>
-            <SecLabel label="Libres" />
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
-              {libres.map(m => (
-                <div
-                  key={m.id}
-                  style={{
-                    background: C.grS,
-                    border: `1px solid ${C.gr}44`,
-                    borderRadius: 8,
-                    padding: '7px 11px',
-                    fontFamily: SM,
-                    fontSize: 11,
-                    color: C.gr,
-                    fontWeight: 700,
-                  }}
-                >
-                  {m.codigo}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
         {/* Estado vacío */}
         {cuentasPedidas.length === 0 && abiertas.length === 0 && (
           <div style={{
             display: 'flex', flexDirection: 'column', alignItems: 'center',
-            justifyContent: 'center', padding: '48px 20px', color: C.ink4,
+            justifyContent: 'center', padding: '60px 20px', color: C.ink4,
           }}>
             <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke={C.rule} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginBottom: 12 }}>
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -518,9 +491,7 @@ export default function CuentasTab({ comandas, mesasPlano, session, onCobrado }:
           </div>
         )}
 
-        <div style={{ fontFamily: SN, fontSize: 10, color: C.ink4, paddingTop: 4, paddingBottom: 8 }}>
-          {libres.length > 0 ? `${libres.length} mesa${libres.length > 1 ? 's' : ''} libre${libres.length > 1 ? 's' : ''}` : ''}
-        </div>
+        <div style={{ paddingBottom: 8 }} />
       </div>
 
       {/* ── CobrarSheet overlay ── */}
