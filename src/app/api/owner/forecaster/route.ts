@@ -9,6 +9,7 @@ export async function GET(req: NextRequest) {
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
 
+  // ── Histórico 90 días ──────────────────────────────────────────────────────
   const hace90 = new Date(); hace90.setDate(hace90.getDate() - 90)
   const { data: comandas } = await supabase
     .from('comandas').select('id, created_at')
@@ -47,15 +48,42 @@ export async function GET(req: NextRequest) {
     revenue_media: Math.round(d.rev / Math.max(d.semanas.size, 1)),
   }))
 
+  // ── Eventos del entorno próximos 14 días ───────────────────────────────────
+  const en14d = new Date(Date.now() + 14 * 86400000)
+  const { data: eventos } = await supabase
+    .from('eventos_entorno')
+    .select('id, nombre, fecha_inicio, tipo, fuente, aforo_estimado, impacto_estimado, venue_nombre, venue_direccion')
+    .eq('restaurante_id', restauranteId)
+    .gte('fecha_inicio', new Date().toISOString())
+    .lte('fecha_inicio', en14d.toISOString())
+    .order('fecha_inicio', { ascending: true })
+    .limit(15)
+
+  // ── IA: predicción con contexto de eventos ─────────────────────────────────
+  const contextEventos = eventos?.length
+    ? '\nEventos próximos en la zona:\n' + eventos.map(e => {
+        const pct = e.impacto_estimado >= 1
+          ? '+' + Math.round((e.impacto_estimado - 1) * 100) + '% afluencia'
+          : Math.round((e.impacto_estimado - 1) * 100) + '% afluencia (impacto negativo)'
+        const fecha = new Date(e.fecha_inicio).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+        return '· ' + fecha + ': ' + e.nombre + ' (' + pct + ')' + (e.aforo_estimado ? ' · Aforo ~' + e.aforo_estimado + ' personas' : '')
+      }).join('\n')
+    : ''
+
   const raw = await callAI(
     `Eres analista de negocio para hostelería española. Genera predicción próximos 7 días en JSON:
-{"prediccion_semana":[{"dia":"Lunes DD mes","comandas_esperadas":N,"revenue_estimado":N,"nivel":"bajo|medio|alto","consejo":"frase corta"}],"producto_estrella_semana":"nombre","dia_mas_fuerte":"día","alerta":"insight o null","consejo_stock":"qué preparar"}
+{"prediccion_semana":[{"dia":"Lunes DD mes","comandas_esperadas":N,"revenue_estimado":N,"nivel":"bajo|medio|alto","consejo":"frase corta accionable"}],"producto_estrella_semana":"nombre","dia_mas_fuerte":"día","alerta":"insight importante o null","consejo_stock":"qué preparar más esta semana"}
+Ten en cuenta los eventos externos para ajustar la predicción de los días afectados.
 Hoy: ${new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}`,
-    `Datos (promedio semanal 90d): ${JSON.stringify(resumeDias)}\nTop: ${JSON.stringify(topProductos)}\nHora pico: ${horaPico}:00h`
+    `Datos históricos (promedio semanal 90d): ${JSON.stringify(resumeDias)}\nTop productos: ${JSON.stringify(topProductos)}\nHora pico: ${horaPico}:00h${contextEventos}`
   )
 
   let prediccion = null
   try { prediccion = JSON.parse(cleanJSON(raw ?? '')) } catch { /* sin prediccion */ }
 
-  return NextResponse.json({ historico: { resumeDias, topProductos, horaPico, totalComandas: comandas.length }, prediccion })
+  return NextResponse.json({
+    historico: { resumeDias, topProductos, horaPico, totalComandas: comandas.length },
+    prediccion,
+    eventos: eventos ?? [],
+  })
 }
