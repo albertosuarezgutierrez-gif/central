@@ -153,7 +153,58 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('comanda_items').insert(itemsToInsert)
 
-    // Estado mesa + zona_id
+    // ── Descontar stock automáticamente ─────────────────────────────
+    // Para cada item con producto_id, buscar si tiene rendimiento vinculado
+    const productoIds = itemsToInsert
+      .filter(i => i.producto_id)
+      .map(i => ({ id: i.producto_id as string, cantidad: i.cantidad }))
+
+    if (productoIds.length > 0) {
+      const { data: rendimientos } = await supabase
+        .from('stock_rendimientos')
+        .select('stock_articulo_id, producto_id, consumo_por_venta')
+        .in('producto_id', productoIds.map(p => p.id))
+        .eq('restaurante_id', rid)
+
+      if (rendimientos && rendimientos.length > 0) {
+        // Agrupar consumo total por artículo
+        const consumoPorArticulo: Record<string, number> = {}
+        for (const r of rendimientos) {
+          const vendido = productoIds.find(p => p.id === r.producto_id)?.cantidad ?? 0
+          const consumo = Number(r.consumo_por_venta) * vendido
+          consumoPorArticulo[r.stock_articulo_id] =
+            (consumoPorArticulo[r.stock_articulo_id] ?? 0) + consumo
+        }
+
+        // Actualizar cada artículo afectado
+        for (const [artId, consumo] of Object.entries(consumoPorArticulo)) {
+          const { data: art } = await supabase
+            .from('stock_articulos')
+            .select('stock_actual, stock_minimo')
+            .eq('id', artId).eq('restaurante_id', rid).single()
+          if (!art) continue
+
+          const nuevo = Math.max(0, Number(art.stock_actual) - consumo)
+          const alerta = nuevo < Number(art.stock_minimo)
+
+          await supabase.from('stock_articulos').update({
+            stock_actual: nuevo,
+            alerta_activa: alerta,
+            updated_at: new Date().toISOString(),
+          }).eq('id', artId).eq('restaurante_id', rid)
+
+          await supabase.from('stock_movimientos').insert({
+            restaurante_id:    rid,
+            stock_articulo_id: artId,
+            tipo:              'venta',
+            cantidad:          -consumo,
+            stock_resultante:  nuevo,
+            comanda_id:        comanda.id,
+          })
+        }
+      }
+    }
+    // ────────────────────────────────────────────────────────────────
     const mesaEstados: Record<string, string> = {
       comanda: 'activa', marchar: 'marchar', cuenta: 'cuenta', aviso: 'aviso', '86': 'activa'
     }

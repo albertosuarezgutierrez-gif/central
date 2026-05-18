@@ -6936,6 +6936,7 @@ const GRUPOS = [
     tabs: [
       { id: 'carta',          label: 'Productos',    icon: ICONS.book    }, // frecuente
       { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle }, // diario
+      { id: 'bodega',         label: 'Bodega',       icon: ICONS.sparkle }, // stock/estocaje
       { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle }, // setup inicial
     ]
   },
@@ -7803,6 +7804,7 @@ export default function OwnerPage() {
             {tab === 'secciones'      && <SeccionesTab/>}
             {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'bodega'         && <BodegaTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
             {tab === 'analytics'      && <Analytics compact />}
@@ -7819,6 +7821,295 @@ export default function OwnerPage() {
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// BODEGA TAB — Control de stock / estocaje universal
+// ══════════════════════════════════════════════════════════════════════
+type StockArticulo = {
+  id: string; nombre: string; unidad_compra: string
+  stock_actual: number; stock_minimo: number; coste_unitario: number | null
+  alerta_activa: boolean; activo: boolean; notas: string | null
+  productos_vinculados: { producto_id: string; producto_nombre: string; consumo_por_venta: number }[]
+  consumo_7dias: number
+}
+type ProductoSimple = { id: string; nombre: string; categoria: string }
+
+function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; restauranteId: string }) {
+  const [articulos, setArticulos] = useState<StockArticulo[]>([])
+  const [productos, setProductos] = useState<ProductoSimple[]>([])
+  const [loading,  setLoading]   = useState(true)
+  const [modal,    setModal]     = useState<null | 'crear' | { edit: StockArticulo } | { entrada: StockArticulo }>(null)
+  const [err,      setErr]       = useState('')
+  // Form crear/editar
+  const emptyForm = { nombre:'', unidad_compra:'unidad', stock_inicial:'', stock_minimo:'', coste_unitario:'', notas:'' }
+  const [form, setForm] = useState(emptyForm)
+  const [rendimientos, setRendimientos] = useState<{producto_id:string;consumo:string}[]>([])
+  // Form entrada
+  const [entradaQty, setEntradaQty] = useState('')
+  const [entradaNota, setEntradaNota] = useState('')
+
+  const UNIDADES = ['unidad','kg','litro','barril','caja','botella','pieza','sobre','lata','bolsa']
+
+  const load = async () => {
+    setLoading(true)
+    const [rA, rP] = await Promise.all([
+      fetch('/api/owner/stock', { headers: sh() }).then(r => r.json()),
+      fetch('/api/owner/carta', { headers: sh() }).then(r => r.json()),
+    ])
+    setArticulos(rA.articulos ?? [])
+    setProductos((rP.productos ?? []).filter((p: ProductoSimple & { activo: boolean }) => p.activo))
+    setLoading(false)
+  }
+
+  useEffect(() => { load() }, [])
+
+  const openCreate = () => {
+    setForm(emptyForm); setRendimientos([]); setErr(''); setModal('crear')
+  }
+  const openEdit = (a: StockArticulo) => {
+    setForm({ nombre: a.nombre, unidad_compra: a.unidad_compra, stock_inicial: '', stock_minimo: String(a.stock_minimo), coste_unitario: a.coste_unitario ? String(a.coste_unitario) : '', notas: a.notas ?? '' })
+    setRendimientos(a.productos_vinculados.map(p => ({ producto_id: p.producto_id, consumo: String(p.consumo_por_venta) })))
+    setErr(''); setModal({ edit: a })
+  }
+  const openEntrada = (a: StockArticulo) => { setEntradaQty(''); setEntradaNota(''); setModal({ entrada: a }) }
+
+  const guardar = async () => {
+    const isEdit = modal && typeof modal === 'object' && 'edit' in modal
+    const body = {
+      ...(isEdit ? { id: (modal as { edit: StockArticulo }).edit.id } : {}),
+      nombre: form.nombre.trim(),
+      unidad_compra: form.unidad_compra,
+      stock_inicial: form.stock_inicial !== '' ? parseFloat(form.stock_inicial) : 0,
+      stock_minimo:  form.stock_minimo  !== '' ? parseFloat(form.stock_minimo)  : 0,
+      coste_unitario: form.coste_unitario !== '' ? parseFloat(form.coste_unitario) : null,
+      notas: form.notas.trim() || null,
+      rendimientos: rendimientos.filter(r => r.producto_id && r.consumo !== '').map(r => ({ producto_id: r.producto_id, consumo: parseFloat(r.consumo) })),
+    }
+    if (!body.nombre) return setErr('El nombre es obligatorio')
+    const r = await fetch('/api/owner/stock', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type':'application/json', ...sh() }, body: JSON.stringify(body) })
+    const d = await r.json()
+    if (!r.ok) return setErr(d.error || 'Error')
+    await load(); setModal(null)
+  }
+
+  const registrarEntrada = async () => {
+    if (!modal || typeof modal !== 'object' || !('entrada' in modal)) return
+    const qty = parseFloat(entradaQty)
+    if (!qty || qty <= 0) return setErr('Cantidad inválida')
+    const r = await fetch('/api/owner/stock?action=entrada', { method:'POST', headers:{'Content-Type':'application/json',...sh()}, body: JSON.stringify({ articulo_id: (modal as { entrada: StockArticulo }).entrada.id, cantidad: qty, notas: entradaNota || null }) })
+    if (!r.ok) return setErr('Error al registrar')
+    await load(); setModal(null)
+  }
+
+  const alertas = articulos.filter(a => a.alerta_activa && a.activo)
+
+  return (
+    <div style={{ padding:'20px 16px', maxWidth:700, margin:'0 auto' }}>
+      {/* Header */}
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:20 }}>
+        <div>
+          <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:22, color:C.ink }}>Bodega & Stock</div>
+          <div style={{ fontFamily:SM, fontSize:10, color:C.ink4, marginTop:2 }}>
+            {articulos.filter(a=>a.activo).length} artículos · descuento automático al vender
+          </div>
+        </div>
+        <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
+          + Artículo
+        </button>
+      </div>
+
+      {/* Alertas de stock mínimo */}
+      {alertas.length > 0 && (
+        <div style={{ background:C.redS, border:`1px solid ${C.red}44`, borderRadius:8, padding:'10px 14px', marginBottom:16 }}>
+          <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.red, textTransform:'uppercase' as const, letterSpacing:'.08em', marginBottom:6 }}>
+            ⚠ Stock mínimo alcanzado
+          </div>
+          {alertas.map(a => (
+            <div key={a.id} style={{ fontFamily:SN, fontSize:12, color:C.red, marginBottom:2 }}>
+              {a.nombre} — quedan {Number(a.stock_actual).toFixed(1)} {a.unidad_compra}
+              <button onClick={() => openEntrada(a)} style={{ marginLeft:8, fontFamily:SM, fontSize:9, color:C.red, background:'none', border:`1px solid ${C.red}55`, borderRadius:4, padding:'1px 8px', cursor:'pointer' }}>+ Entrada</button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lista */}
+      {loading ? (
+        <div style={{ textAlign:'center', padding:48, fontFamily:SE, fontStyle:'italic', color:C.ink4 }}>Cargando bodega…</div>
+      ) : articulos.filter(a=>a.activo).length === 0 ? (
+        <div style={{ textAlign:'center', padding:48 }}>
+          <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:18, color:C.ink4, marginBottom:8 }}>Sin artículos aún</div>
+          <div style={{ fontFamily:SN, fontSize:13, color:C.ink3, marginBottom:20 }}>Añade lo que compras: botellas, barriles, piezas…</div>
+          <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, padding:'9px 22px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>+ Añadir primer artículo</button>
+        </div>
+      ) : (
+        <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
+          {articulos.filter(a=>a.activo).map(a => {
+            const bajo = a.stock_actual <= a.stock_minimo && a.stock_minimo > 0
+            return (
+              <div key={a.id} style={{ background:C.bone, border:`1px solid ${bajo ? C.red+'44' : C.rule}`, borderRadius:10, padding:'13px 16px' }}>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', gap:10 }}>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:8, flexWrap:'wrap' as const }}>
+                      <span style={{ fontFamily:SN, fontSize:15, fontWeight:600, color:C.ink }}>{a.nombre}</span>
+                      <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, background:C.paper2, border:`1px solid ${C.rule}`, padding:'1px 7px', borderRadius:3 }}>{a.unidad_compra}</span>
+                      {bajo && <span style={{ fontFamily:SM, fontSize:9, color:C.red, background:C.redS, border:`1px solid ${C.red}44`, padding:'1px 7px', borderRadius:3, fontWeight:700 }}>⚠ MÍNIMO</span>}
+                    </div>
+                    {/* Stock visual */}
+                    <div style={{ display:'flex', alignItems:'baseline', gap:6, marginTop:6 }}>
+                      <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:26, fontWeight:500, color: bajo ? C.red : C.ink, lineHeight:1 }}>{Number(a.stock_actual).toFixed(1)}</span>
+                      <span style={{ fontFamily:SM, fontSize:10, color:C.ink3 }}>{a.unidad_compra}</span>
+                      {a.stock_minimo > 0 && <span style={{ fontFamily:SM, fontSize:9, color:C.ink4 }}>mín. {a.stock_minimo}</span>}
+                    </div>
+                    {/* Productos vinculados */}
+                    {a.productos_vinculados.length > 0 && (
+                      <div style={{ marginTop:6, display:'flex', gap:5, flexWrap:'wrap' as const }}>
+                        {a.productos_vinculados.map(p => (
+                          <span key={p.producto_id} style={{ fontFamily:SM, fontSize:9, color:C.ink3, background:C.paper2, border:`1px solid ${C.rule}`, padding:'1px 7px', borderRadius:3 }}>
+                            {p.producto_nombre} · {p.consumo_por_venta}/{a.unidad_compra}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {a.consumo_7dias > 0 && (
+                      <div style={{ fontFamily:SM, fontSize:9, color:C.ink4, marginTop:4 }}>
+                        Consumo 7d: {Number(a.consumo_7dias).toFixed(2)} {a.unidad_compra}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display:'flex', gap:6, flexShrink:0 }}>
+                    <button onClick={() => openEntrada(a)} style={{ fontFamily:SM, fontSize:10, fontWeight:700, padding:'5px 12px', background:C.green, color:C.paper, border:`1px solid ${C.greenS}`, borderRadius:6, cursor:'pointer' }}>+ Entrada</button>
+                    <button onClick={() => openEdit(a)} style={{ fontFamily:SM, fontSize:10, padding:'5px 10px', background:'none', color:C.ink3, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer' }}>✎</button>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal crear/editar */}
+      {(modal === 'crear' || (modal && typeof modal === 'object' && 'edit' in modal)) && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink, marginBottom:18 }}>
+              {modal === 'crear' ? 'Nuevo artículo de stock' : `Editar: ${(modal as { edit: StockArticulo }).edit.nombre}`}
+            </div>
+
+            {/* Nombre */}
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>Nombre del artículo *</label>
+              <input value={form.nombre} onChange={e => setForm(f=>({...f,nombre:e.target.value}))} placeholder="Mojama El Ronqueador 500g" style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+            </div>
+
+            {/* Unidad + Stock mínimo */}
+            <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+              <div>
+                <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>Unidad de compra</label>
+                <select value={form.unidad_compra} onChange={e => setForm(f=>({...f,unidad_compra:e.target.value}))} style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, outline:'none' }}>
+                  {UNIDADES.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>Stock mínimo (alerta)</label>
+                <input type="number" min="0" step="0.1" value={form.stock_minimo} onChange={e => setForm(f=>({...f,stock_minimo:e.target.value}))} placeholder="0" style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+              </div>
+            </div>
+
+            {/* Stock inicial + Coste */}
+            {modal === 'crear' && (
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:12 }}>
+                <div>
+                  <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>Stock inicial</label>
+                  <input type="number" min="0" step="0.1" value={form.stock_inicial} onChange={e => setForm(f=>({...f,stock_inicial:e.target.value}))} placeholder="0" style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+                </div>
+                <div>
+                  <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>Coste unitario (€)</label>
+                  <input type="number" min="0" step="0.01" value={form.coste_unitario} onChange={e => setForm(f=>({...f,coste_unitario:e.target.value}))} placeholder="0.00" style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Notas */}
+            <div style={{ marginBottom:16 }}>
+              <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>Notas (opcional)</label>
+              <input value={form.notas} onChange={e => setForm(f=>({...f,notas:e.target.value}))} placeholder="Ej: proveedor habitual, ref. interna…" style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:13, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+            </div>
+
+            {/* Rendimientos */}
+            <div style={{ background:C.paper2, border:`1px solid ${C.rule}`, borderRadius:8, padding:'12px 14px', marginBottom:16 }}>
+              <div style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', marginBottom:10 }}>
+                Rendimiento → productos de carta
+              </div>
+              <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginBottom:10 }}>
+                Define cuánto del artículo consume 1 venta de cada producto.<br/>
+                <span style={{ color:C.amber }}>Ej: 1 mojama → 10 tapas = consumo 0,10 por tapa</span>
+              </div>
+              {rendimientos.map((r, i) => (
+                <div key={i} style={{ display:'grid', gridTemplateColumns:'1fr auto auto', gap:6, marginBottom:6, alignItems:'center' }}>
+                  <select value={r.producto_id} onChange={e => setRendimientos(rs => rs.map((x,j) => j===i ? {...x,producto_id:e.target.value} : x))}
+                    style={{ padding:'6px 8px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:12, color:C.ink, outline:'none' }}>
+                    <option value="">— producto —</option>
+                    {productos.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                  </select>
+                  <input type="number" min="0.001" step="0.01" value={r.consumo} onChange={e => setRendimientos(rs => rs.map((x,j) => j===i ? {...x,consumo:e.target.value} : x))}
+                    placeholder="consumo" style={{ width:80, padding:'6px 8px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:12, color:C.ink, outline:'none' }} />
+                  <button type="button" onClick={() => setRendimientos(rs => rs.filter((_,j) => j!==i))}
+                    style={{ padding:'5px 8px', background:'none', border:`1px solid ${C.rule}`, borderRadius:6, color:C.ink4, cursor:'pointer', fontFamily:SM, fontSize:11 }}>✕</button>
+                </div>
+              ))}
+              <button type="button" onClick={() => setRendimientos(rs => [...rs, { producto_id:'', consumo:'' }])}
+                style={{ fontFamily:SM, fontSize:10, padding:'5px 12px', background:'none', border:`1px dashed ${C.rule}`, borderRadius:6, color:C.ink3, cursor:'pointer', marginTop:4 }}>
+                + Vincular producto
+              </button>
+            </div>
+
+            {err && <div style={{ fontFamily:SN, fontSize:12, color:C.red, marginBottom:10 }}>{err}</div>}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setModal(null)} style={{ flex:1, padding:'9px', borderRadius:8, border:`1px solid ${C.rule}`, background:'none', color:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={guardar} style={{ flex:2, padding:'9px', borderRadius:8, border:`1px solid ${C.redD}`, background:C.red, color:C.paper, fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                {modal === 'crear' ? 'Crear artículo' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal entrada de stock */}
+      {modal && typeof modal === 'object' && 'entrada' in modal && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:380, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink, marginBottom:6 }}>Registrar entrada</div>
+            <div style={{ fontFamily:SN, fontSize:13, color:C.ink3, marginBottom:18 }}>
+              {(modal as { entrada: StockArticulo }).entrada.nombre}
+              <span style={{ color:C.ink4 }}> · stock actual: {Number((modal as { entrada: StockArticulo }).entrada.stock_actual).toFixed(1)} {(modal as { entrada: StockArticulo }).entrada.unidad_compra}</span>
+            </div>
+            <div style={{ marginBottom:12 }}>
+              <label style={{ fontFamily:SM, fontSize:9, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', display:'block', marginBottom:4 }}>
+                Cantidad que entra ({(modal as { entrada: StockArticulo }).entrada.unidad_compra})
+              </label>
+              <input type="number" min="0.1" step="0.1" autoFocus value={entradaQty} onChange={e => setEntradaQty(e.target.value)}
+                placeholder="Ej: 3" style={{ width:'100%', padding:'10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SE, fontStyle:'italic', fontSize:22, color:C.ink, boxSizing:'border-box' as const, outline:'none', textAlign:'center' as const }} />
+            </div>
+            <div style={{ marginBottom:16 }}>
+              <input value={entradaNota} onChange={e => setEntradaNota(e.target.value)} placeholder="Nota (opcional): proveedor, albarán…"
+                style={{ width:'100%', padding:'8px 10px', borderRadius:6, border:`1px solid ${C.rule}`, background:C.bone, fontFamily:SN, fontSize:12, color:C.ink, boxSizing:'border-box' as const, outline:'none' }} />
+            </div>
+            {err && <div style={{ fontFamily:SN, fontSize:12, color:C.red, marginBottom:10 }}>{err}</div>}
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={() => setModal(null)} style={{ flex:1, padding:'9px', borderRadius:8, border:`1px solid ${C.rule}`, background:'none', color:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer' }}>Cancelar</button>
+              <button onClick={registrarEntrada} style={{ flex:2, padding:'9px', borderRadius:8, border:`1px solid ${C.green}`, background:C.green, color:C.paper, fontFamily:SN, fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                ✓ Confirmar entrada
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
