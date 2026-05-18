@@ -27,6 +27,14 @@ export async function POST(req: NextRequest) {
     let camarero_id = ''
     try { camarero_id = JSON.parse(sessionHeader ?? '{}').id ?? '' } catch {}
 
+    // Resolver nombre real del camarero para el ticket
+    let camarero_nombre = 'Equipo'
+    if (camarero_id) {
+      const { data: cam } = await supabase
+        .from('camareros').select('nombre').eq('id', camarero_id).single()
+      if (cam?.nombre) camarero_nombre = cam.nombre
+    }
+
     const { data: turno } = await supabase
       .from('turnos').select('id')
       .eq('restaurante_id', rid).eq('estado', 'activo')
@@ -67,7 +75,7 @@ export async function POST(req: NextRequest) {
         const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string }) => ({
           nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id,
         }))
-        await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: 'Sala', restaurante_id: rid, nota_general: nota_general ?? null }, itemsPrint)
+        await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: camarero_nombre, restaurante_id: rid, nota_general: nota_general ?? null }, itemsPrint)
       } catch (e) { console.error('[COMANDA] Print error:', e) }
       return NextResponse.json({ ok: true, comanda_id: comanda.id, numero_ticket: comanda.numero_ticket, nombre_cuenta: nombre_cuenta.trim() })
     }
@@ -270,7 +278,7 @@ export async function POST(req: NextRequest) {
       }))
       await crearPrintJobs({
         id: comanda.id, tipo, mesa_codigo: mesaData?.codigo ?? 'Mesa',
-        camarero_nombre: 'Sala', restaurante_id: rid,
+        camarero_nombre: camarero_nombre, restaurante_id: rid,
         zona_tipo: ((mesaData?.zonas as unknown) as { tipo?: string } | null)?.tipo ?? null,
         nota_general: nota_general ?? null,
       }, itemsPrint)
