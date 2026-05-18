@@ -861,7 +861,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (cooldownRef.current) return
     // Guard via screenRef (síncrono) — evita stale closures cuando el PTT llega muy rápido
     const cur = screenRef.current
-    // Permitir grabar desde: idle, asking, sent, speaking (interrumpe TTS)
+    // Permitir grabar desde: idle, asking, sent, speaking (interrumpe TTS), error (reintentar)
     if (cur === 'sent') {
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
       speakingRef.current = false
@@ -876,6 +876,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       window.speechSynthesis?.cancel()
       speakingRef.current = false
       // No reseteamos brain/transcript — visible en UI mientras graba la siguiente
+      // continúa sin return
+    } else if (cur === 'error') {
+      // Bug-fix: permitir PTT desde error — sin esto queda bloqueado permanentemente
+      setBrain(null); brainRef.current = null; setTranscript(''); setError('')
+      processingRef.current = false; fetchInFlightRef.current = false
       // continúa sin return
     } else if (cur !== 'idle' && cur !== 'asking') return
     // Lock extra: evitar doble MediaRecorder si el PTT llega antes de que React actualice
@@ -1358,6 +1363,18 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   useEffect(() => {
     if (screen !== 'sent') return
     const t = setTimeout(() => setScreenSafe('idle'), 3000)
+    return () => clearTimeout(t)
+  }, [screen])
+
+  // ── Auto-reset error → idle tras 5s ──────────────────────────────
+  // Bug-fix: 'error' no tenía auto-reset → PTT bloqueado permanentemente
+  // tras cualquier fallo de red/servidor. El camarero pulsaba sin feedback.
+  useEffect(() => {
+    if (screen !== 'error') return
+    const t = setTimeout(() => {
+      setScreenSafe('idle')
+      setError('')
+    }, 5000)
     return () => clearTimeout(t)
   }, [screen])
 
