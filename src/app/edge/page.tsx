@@ -2506,7 +2506,8 @@ function VoiceProfileSection({ session }: { session: { id: string; restaurante_i
         setPaso(FRASES_CALIBRACION.length)
       } else {
         setFrases(d.frases_completadas)
-        setPaso(p => p + 1)
+        // Sincronizar paso con BD (no sólo incrementar) para que badge y modal coincidan
+        setPaso(d.frases_completadas)
       }
     } catch (err) {
       // No cambiar el estado global del perfil — solo mostrar el error de esta frase

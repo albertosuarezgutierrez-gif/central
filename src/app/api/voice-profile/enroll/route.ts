@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       const frases = (existing?.frases_completadas ?? 0) + 1
       const nuevoEstado = frases >= 5 ? 'activo' : 'calibrando'
 
-      await supabase.from('voice_profiles').upsert({
+      const { error: upsertError } = await supabase.from('voice_profiles').upsert({
         camarero_id:        camareroId,
         restaurante_id:     restauranteId,
         estado:             nuevoEstado,
@@ -71,6 +71,11 @@ export async function POST(req: NextRequest) {
         azure_profile_id:   `sim_${camareroId.slice(0, 8)}`,
         updated_at:         new Date().toISOString(),
       }, { onConflict: 'camarero_id' })
+
+      if (upsertError) {
+        console.error('[VOICE-ENROLL] upsert simulado falló:', upsertError)
+        throw new Error(`Error al guardar perfil: ${upsertError.message}`)
+      }
 
       return NextResponse.json({
         ok: true,
@@ -122,12 +127,17 @@ export async function POST(req: NextRequest) {
     const segundosEnrollados = (vpRow?.segundos_enrollados ?? 0) + (audio.size / 32000) // estimación
     const nuevoEstado        = enrolled ? 'activo' : 'calibrando'
 
-    await supabase.from('voice_profiles').update({
+    const { error: updateError } = await supabase.from('voice_profiles').update({
       estado:             nuevoEstado,
       frases_completadas: frasesCompletadas,
       segundos_enrollados: segundosEnrollados,
       error_msg:          null,
     }).eq('camarero_id', camareroId)
+
+    if (updateError) {
+      console.error('[VOICE-ENROLL] update Azure falló:', updateError)
+      throw new Error(`Error al guardar progreso: ${updateError.message}`)
+    }
 
     return NextResponse.json({
       ok: true,
