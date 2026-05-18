@@ -159,8 +159,10 @@ function parseAndValidate(raw: string): BrainResult {
     .replace(/^```\s*/i, '')
     .replace(/\s*```$/i, '')
     // algunos modelos añaden texto antes del JSON — extraer primer { ... }
-    .replace(/^[^{]*/s, '')
-    .replace(/[^}]*$/s, '')
+    // eslint-disable-next-line
+    .replace(new RegExp('^[^{]*', 's'), '')
+    // eslint-disable-next-line
+    .replace(new RegExp('[^}]*$', 's'), '')
     .trim()
 
   const parsed = JSON.parse(clean)

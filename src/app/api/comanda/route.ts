@@ -135,7 +135,7 @@ export async function POST(req: NextRequest) {
       .from('comandas')
       .insert({
         mesa_id, camarero_id, turno_id,
-        tipo, estado: tipo === 'cuenta' ? 'nueva' : 'en_cocina',
+        tipo, estado: tipo === 'cuenta' ? 'nueva' : (require_confirm ? 'pendiente_confirmacion' : 'en_cocina'),
         restaurante_id: rid,
         ...(num_comensales ? { num_comensales } : {}),
         ...(nota_general ? { nota_general } : {}),

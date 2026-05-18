@@ -55,7 +55,7 @@ Reglas:
       traducciones = JSON.parse(cleanJSON(raw))
     } catch {
       return NextResponse.json(
-        { error: 'Claude devolvió respuesta no parseable', raw: text },
+        { error: 'Claude devolvió respuesta no parseable', raw },
         { status: 502 }
       )
     }

@@ -32,7 +32,7 @@ Reglas:
 - Incluye ABSOLUTAMENTE TODOS los productos visibles en todas las páginas`
     const msg = await callAIVision('Extrae carta de restaurante. Responde SOLO con JSON.', imageInputs, onboardingPrompt, 6000)
 
-    const raw = msgText ?? ''
+    const raw = msg ?? ''
     try {
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim())
       return NextResponse.json({ productos: parsed.productos || [] })
