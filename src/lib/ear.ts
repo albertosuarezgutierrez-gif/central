@@ -14,13 +14,13 @@ export interface TranscripcionResult {
 }
 
 /** Transcribe audio. Intenta Groq Whisper primero, fallback automático a OpenAI si falla. */
-export async function transcribir(audioBlob: Blob): Promise<TranscripcionResult> {
+export async function transcribir(audioBlob: Blob, prompt?: string): Promise<TranscripcionResult> {
   const start = Date.now()
 
   // ── Intentar Groq primero ──────────────────────────────────────────────────
   if (process.env.GROQ_API_KEY && process.env.EAR_PROVIDER !== 'openai') {
     try {
-      const resultado = await transcribirConGroq(audioBlob)
+      const resultado = await transcribirConGroq(audioBlob, prompt)
       return { ...resultado, proveedor: 'groq' }
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
@@ -43,7 +43,7 @@ export async function transcribir(audioBlob: Blob): Promise<TranscripcionResult>
 
   // ── Fallback: OpenAI Whisper ───────────────────────────────────────────────
   try {
-    const resultado = await transcribirConOpenAI(audioBlob)
+    const resultado = await transcribirConOpenAI(audioBlob, prompt)
     return { ...resultado, proveedor: 'openai' }
   } catch (err) {
     notifyError({
@@ -58,7 +58,7 @@ export async function transcribir(audioBlob: Blob): Promise<TranscripcionResult>
 }
 
 // ── Groq Whisper ──────────────────────────────────────────────────────────────
-async function transcribirConGroq(audioBlob: Blob): Promise<Omit<TranscripcionResult, 'proveedor'>> {
+async function transcribirConGroq(audioBlob: Blob, prompt?: string): Promise<Omit<TranscripcionResult, 'proveedor'>> {
   const start = Date.now()
   const Groq = (await import('groq-sdk')).default
   const groq = new Groq({ apiKey: process.env.GROQ_API_KEY || '' })
@@ -75,6 +75,7 @@ async function transcribirConGroq(audioBlob: Blob): Promise<Omit<TranscripcionRe
         model:           'whisper-large-v3-turbo',
         language:        'es',
         response_format: 'verbose_json',
+        ...(prompt ? { prompt } : {}),
       }) as unknown as {
         text: string
         segments?: Array<{ no_speech_prob?: number; avg_logprob?: number }>
@@ -107,13 +108,14 @@ async function transcribirConGroq(audioBlob: Blob): Promise<Omit<TranscripcionRe
 }
 
 // ── OpenAI Whisper (fallback) ─────────────────────────────────────────────────
-async function transcribirConOpenAI(audioBlob: Blob): Promise<Omit<TranscripcionResult, 'proveedor'>> {
+async function transcribirConOpenAI(audioBlob: Blob, prompt?: string): Promise<Omit<TranscripcionResult, 'proveedor'>> {
   const start = Date.now()
   const formData = new FormData()
   formData.append('file', new File([audioBlob], 'audio.webm', { type: audioBlob.type }))
   formData.append('model', 'whisper-1')
   formData.append('language', 'es')
   formData.append('response_format', 'verbose_json')
+  if (prompt) formData.append('prompt', prompt)
 
   const res = await fetch('https://api.openai.com/v1/audio/transcriptions', {
     method:  'POST',

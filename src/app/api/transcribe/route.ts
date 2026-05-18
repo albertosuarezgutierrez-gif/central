@@ -13,6 +13,32 @@ import { azureDisponible, verificarAzure } from '@/lib/azure-speaker'
 const recentRecordings = new Map<string, { ts: number; result: object }>()
 const IDEMPOTENCY_TTL_MS = 30_000 // 30s
 
+// ── Cache de prompt Whisper por restaurante (5 min) ─────────────────────
+// Evita hit a BD en cada comanda. El prompt incluye nombres de carta + vocabulario hostelero.
+const whisperPromptCache = new Map<string, { ts: number; prompt: string }>()
+const PROMPT_CACHE_TTL_MS = 5 * 60_000 // 5 min
+
+async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<typeof createServerClient>): Promise<string> {
+  const cached = whisperPromptCache.get(restauranteId)
+  if (cached && Date.now() - cached.ts < PROMPT_CACHE_TTL_MS) return cached.prompt
+
+  const { data: productos } = await supabase
+    .from('productos')
+    .select('nombre')
+    .eq('restaurante_id', restauranteId)
+    .eq('activo', true)
+    .limit(60)
+
+  const nombres = (productos ?? []).map(p => p.nombre).join(', ')
+  const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho'
+  const prompt  = nombres
+    ? `Carta: ${nombres}. Vocabulario hostelero: ${vocab}.`
+    : `Vocabulario hostelero: ${vocab}.`
+
+  whisperPromptCache.set(restauranteId, { ts: Date.now(), prompt })
+  return prompt
+}
+
 export async function POST(req: NextRequest) {
   const start = Date.now()
   try {
@@ -89,8 +115,10 @@ export async function POST(req: NextRequest) {
       : Promise.resolve()
 
     // Capa 1: Whisper con verbose_json → métricas de calidad de audio
+    // El prompt con la carta mejora el reconocimiento en entornos ruidosos
+    const whisperPrompt = await buildWhisperPrompt(rid, supabase).catch(() => undefined)
     const [{ texto: textoRaw, latencia_ms: latenciaEar, no_speech_prob, avg_logprob }] =
-      await Promise.all([transcribir(audio), speakerPromise])
+      await Promise.all([transcribir(audio, whisperPrompt), speakerPromise])
 
     // ── Calcular aviso de ruido/baja confianza ───────────────────────────────
     // no_speech_prob > 0.55 → Whisper cree que es ruido, no voz

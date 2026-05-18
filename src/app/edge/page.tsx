@@ -826,6 +826,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const recordingIdRef    = useRef('')               // idempotency key por grabación
   const pttManualRef      = useRef(false)            // true = usuario mantiene botón pulsado → VAD desactivado
   const abortFetchRef     = useRef<AbortController|null>(null)  // cancela fetch en vuelo
+  const ruidoRetryRef     = useRef(0)               // contador de reintentos por ruido (max 1)
   const maxRecTimerRef    = useRef<ReturnType<typeof setTimeout>|null>(null)  // auto-stop 90s
   const watchdogRef       = useRef<ReturnType<typeof setTimeout>|null>(null)  // watchdog processing
   const mesaTouchRef      = useRef({startY:0, moved:false})                   // scroll-safe tap mesas
@@ -870,7 +871,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
       speakingRef.current = false
       setBrain(null); brainRef.current = null; setTranscript(''); setError('')
-      setAlertas86([]); setAlertasAlerg([]); setPendingItems([]); setAvisoRuido(false)
+      setAlertas86([]); setAlertasAlerg([]); setPendingItems([]); setAvisoRuido(false); ruidoRetryRef.current = 0
       setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
       setChipsClarificacion([]); setMesaClarificacion(null)
       setPedidoCuenta({ loading: false, error: '', factura: null })
@@ -1078,6 +1079,18 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       const r = await fetch('/api/transcribe', {method:'POST', body:fd, signal:abortCtrl.signal, headers:{'x-ia-session':localStorage.getItem('ia_rest_session')??''}})
       const d = await r.json()
       if (d.ok) {
+        // ── AUTO-RETRY por ruido: primer intento con ruido → reintentar automáticamente ──
+        // Solo reintenta 1 vez. En el segundo intento procesa sea como sea (aviso en banner).
+        if (d.aviso_ruido && ruidoRetryRef.current < 1 && d.brain?.items?.length === 0) {
+          ruidoRetryRef.current += 1
+          setScreenSafe('idle')
+          speak('No te entendí bien, ¿puedes repetir?').then(() => {
+            setTimeout(() => startRecording(), 400)
+          })
+          return
+        }
+        ruidoRetryRef.current = 0  // reset en respuesta buena
+
         setTranscript(d.texto); setBrain(d.brain); brainRef.current = d.brain; setLatencia(d.latencia_ms)
         setLastComandaId(d.comanda_id??null); setAlertas86(d.alertas_86??[]); setAlertasAlerg(d.alertas_alergenos??[]); setAvisoRuido(d.aviso_ruido??false)
         addMsg('camarero', d.texto)
@@ -1533,7 +1546,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     speakingRef.current=false; processingRef.current=false; recordingRef.current=false
     setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('')
     setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
-    setAlertas86([]); setAlertasAlerg([]); setPendingItems([]); setAvisoRuido(false)
+    setAlertas86([]); setAlertasAlerg([]); setPendingItems([]); setAvisoRuido(false); ruidoRetryRef.current = 0
     setClarificacionCtx(null); setPreguntaBrain('¿Qué mesa?')
     setChipsClarificacion([]); setMesaClarificacion(null)
   }
