@@ -111,6 +111,24 @@ async function buildPersonalContext(restaurante_id?: string): Promise<string> {
   } catch { return '' }
 }
 
+async function buildSeccionesContext(restaurante_id?: string): Promise<string> {
+  if (!restaurante_id) return ''
+  try {
+    const supabase = createServerClient()
+    const { data } = await supabase
+      .from('secciones_cocina')
+      .select('id, nombre, impresora_id')
+      .eq('activa', true)
+      .eq('restaurante_id', restaurante_id)
+      .order('orden')
+    if (!data?.length) return ''
+    const lines = data.map((s: { id: string; nombre: string; impresora_id: string | null }) =>
+      `  "${s.nombre}" → id:${s.id}${s.impresora_id ? ' (con impresora)' : ''}`
+    ).join('\n')
+    return `\nSECCIONES DE COCINA (para mensajes por sección):\n${lines}\n`
+  } catch { return '' }
+}
+
 /**
  * Memoria de sesión: ejemplos confirmados del turno activo.
  * Consulta ia_training_log del turno actual con calidad >= 3.
@@ -225,15 +243,16 @@ MENSAJES / AVISOS entre roles (tipo aviso):
   → tipo:"aviso", mesa:"cocina", nota_general:"[texto del mensaje]", items:[]
 - Cuando el camarero empieza con el nombre de un compañero del PERSONAL ACTIVO:
   → tipo:"aviso", mesa:"", destinatario_nombre:"[nombre exacto del PERSONAL ACTIVO]", nota_general:"[texto]", items:[]
-- Destinatarios de rol: "cocina" | "barra" | "sala" | "todos"
+- Cuando el camarero usa el nombre de una SECCIÓN DE COCINA como destino:
+  → tipo:"aviso", mesa:"[nombre exacto de la sección]", nota_general:"[texto]", items:[]
+- Destinatarios de rol genérico: "cocina" | "barra" | "sala" | "todos"
 - El texto del mensaje va SIEMPRE en nota_general (nunca en items)
-- Si hay referencia a mesa en el texto del mensaje, inclúyela en nota_general
 - Ejemplos:
-  - "mensaje a cocina, S1 tiene prisa" → tipo:"aviso", mesa:"cocina", nota_general:"S1 tiene prisa", items:[], confianza:0.95
-  - "avisa a barra que T4 quiere agua" → tipo:"aviso", mesa:"barra", nota_general:"T4 quiere agua", items:[], confianza:0.95
-  - "Pablo, T4 esperando el segundo" → tipo:"aviso", mesa:"", destinatario_nombre:"Pablo", nota_general:"T4 esperando el segundo", items:[], confianza:0.95
-  - "Antonio, ¿puedes pasar por S3?" → tipo:"aviso", mesa:"", destinatario_nombre:"Antonio", nota_general:"¿puedes pasar por S3?", items:[], confianza:0.95
-  - "di a todos que vamos a cerrar" → tipo:"aviso", mesa:"todos", nota_general:"vamos a cerrar", items:[], confianza:0.95
+  - "mensaje a cocina, S1 tiene prisa" → tipo:"aviso", mesa:"cocina", nota_general:"S1 tiene prisa"
+  - "avisa a barra que T4 quiere agua" → tipo:"aviso", mesa:"barra", nota_general:"T4 quiere agua"
+  - "Pablo, T4 esperando el segundo" → tipo:"aviso", mesa:"", destinatario_nombre:"Pablo", nota_general:"T4 esperando el segundo"
+  - "cocina caliente, S1 tiene prisa" → tipo:"aviso", mesa:"Cocina Caliente", nota_general:"S1 tiene prisa"
+  - "di a todos que vamos a cerrar" → tipo:"aviso", mesa:"todos", nota_general:"vamos a cerrar"
 
 MARCHAR POR PRODUCTO (tipo marchar con items):
 - "marcha las croquetas S1" → tipo:"marchar", mesa:"S1", items:[{nombre:"Croquetas",cantidad:1}], confianza:0.92
@@ -330,15 +349,16 @@ export async function parsearComanda(
   camarero_id?: string
 ): Promise<BrainResult> {
   // Lanzar todas las consultas de contexto en paralelo (carta + zonas + recom + sesión + personal)
-  const [menuContext, zonasContext, recomContext, sesionContext, personalContext] = await Promise.all([
+  const [menuContext, zonasContext, recomContext, sesionContext, personalContext, seccionesContext] = await Promise.all([
     buildMenuContext(restaurante_id),
     buildZonasContext(restaurante_id),
     buildRecomendacionesContext(restaurante_id),
     buildSesionContext(restaurante_id, turno_id, camarero_id),
     buildPersonalContext(restaurante_id),
+    buildSeccionesContext(restaurante_id),
   ])
 
-  const systemPromptBase = BASE_PROMPT + zonasContext + personalContext + menuContext + recomContext
+  const systemPromptBase = BASE_PROMPT + zonasContext + personalContext + seccionesContext + menuContext + recomContext
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
   if (sesionContext) {

@@ -371,11 +371,19 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
     return null
   }
 
-  // ── 0.5. NOMBRE PROPIO AL INICIO → mensaje privado ──────────────────────
-  // "Pablo, T4 esperando" → el primer token es un nombre del personal + coma
-  // Siempre escala al LLM para que extraiga el texto limpio del mensaje
+  // ── 0.5. NOMBRE PROPIO O SECCIÓN AL INICIO → mensaje directo ────────────
+  // "Pablo, T4 esperando" → nombre del personal → LLM resuelve
+  // "cocina caliente, S1 tiene prisa" → nombre de sección → LLM resuelve
   const primerToken = tParseado.split(/[\s,]/)[0]
   if (primerToken.length >= 3 && cache.byNombre.has(primerToken)) {
+    return null
+  }
+  // Sección: comprobar primer token O primeros dos tokens
+  if (primerToken.length >= 4 && cache.bySeccion.has(primerToken)) {
+    return null
+  }
+  const primerosDos = tParseado.split(/,/)[0].trim() // "cocina caliente" antes de la coma
+  if (primerosDos.length >= 4 && cache.bySeccion.has(norm(primerosDos))) {
     return null
   }
 

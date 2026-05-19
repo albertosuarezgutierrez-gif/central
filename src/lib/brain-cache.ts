@@ -34,14 +34,23 @@ export interface PersonalCacheItem {
   rol: string
 }
 
+export interface SeccionCacheItem {
+  id: string
+  nombre: string
+  nombre_norm: string
+  impresora_id: string | null
+}
+
 export interface MenuCache {
   productos: ProductoCacheItem[]
   zonas: ZonaCacheItem[]
   personal: PersonalCacheItem[]
+  secciones: SeccionCacheItem[]
   // Índices de búsqueda rápida
   byAlias: Map<string, ProductoCacheItem>   // alias normalizado → producto
   byPrefijo: Map<string, ZonaCacheItem>     // prefijo → zona
   byNombre: Map<string, PersonalCacheItem>  // nombre_norm → personal
+  bySeccion: Map<string, SeccionCacheItem>  // nombre_norm → sección
 }
 
 // ── Store del cache ───────────────────────────────────────────────────────────
@@ -61,7 +70,7 @@ function norm(s: string): string {
 async function cargarCache(restaurante_id: string): Promise<MenuCache> {
   const supabase = createServerClient()
 
-  const [{ data: productos }, { data: formatos }, { data: zonas }, { data: personal }] = await Promise.all([
+  const [{ data: productos }, { data: formatos }, { data: zonas }, { data: personal }, { data: secciones }] = await Promise.all([
     supabase
       .from('productos')
       .select('id, nombre, nombre_alternativo, precio, seccion, familia')
@@ -83,6 +92,12 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
       .select('id, nombre, rol')
       .eq('activo', true)
       .eq('restaurante_id', restaurante_id),
+    supabase
+      .from('secciones_cocina')
+      .select('id, nombre, impresora_id')
+      .eq('activa', true)
+      .eq('restaurante_id', restaurante_id)
+      .order('orden'),
   ])
 
   // Map formato por producto
@@ -151,7 +166,24 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
     byNombre.set(norm(p.nombre), p)
   }
 
-  return { productos: productosCache, zonas: zonasCache, personal: personalCache, byAlias, byPrefijo, byNombre }
+  // Secciones de cocina
+  const seccionesCache: SeccionCacheItem[] = (secciones ?? []).map((s: Record<string, unknown>) => ({
+    id: s.id as string,
+    nombre: s.nombre as string,
+    nombre_norm: norm(s.nombre as string),
+    impresora_id: (s.impresora_id as string) ?? null,
+  }))
+  const bySeccion = new Map<string, SeccionCacheItem>()
+  for (const s of seccionesCache) {
+    bySeccion.set(s.nombre_norm, s)
+    // Indexar también primer token: "cocina caliente" → "cocina" (si único)
+    const primerToken = s.nombre_norm.split(' ')[0]
+    if (primerToken.length >= 4 && !bySeccion.has(primerToken)) {
+      bySeccion.set(primerToken, s)
+    }
+  }
+
+  return { productos: productosCache, zonas: zonasCache, personal: personalCache, secciones: seccionesCache, byAlias, byPrefijo, byNombre, bySeccion }
 }
 
 // ── API pública ───────────────────────────────────────────────────────────────

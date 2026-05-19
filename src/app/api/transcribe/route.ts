@@ -22,7 +22,7 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
   const cached = whisperPromptCache.get(restauranteId)
   if (cached && Date.now() - cached.ts < PROMPT_CACHE_TTL_MS) return cached.prompt
 
-  const [{ data: productos }, { data: personal }] = await Promise.all([
+  const [{ data: productos }, { data: personal }, { data: secciones }] = await Promise.all([
     supabase
       .from('productos')
       .select('nombre, nombre_alternativo')
@@ -35,6 +35,12 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
       .eq('restaurante_id', restauranteId)
       .eq('activo', true)
       .limit(20),
+    supabase
+      .from('secciones_cocina')
+      .select('nombre')
+      .eq('restaurante_id', restauranteId)
+      .eq('activa', true)
+      .limit(10),
   ])
 
   // Priorizar productos con motes (aliases) — ayudan más a Whisper
@@ -51,11 +57,13 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
   const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho, mensaje a cocina, avisa a barra'
   const vinoVocab = 'Ribera del Duero, Rioja, Albariño, Rueda, Priorat, Rías Baixas, Jerez, Cava, Verdejo, Mencía, Monastrell, Tempranillo, Garnacha, copa de tinto, botella de blanco, media botella, vino de la casa, crianza, reserva, gran reserva, rosado, espumoso, champán, Vega Sicilia, Torres, Marqués de Riscal, Marqués de Murrieta, Protos, Pesquera, Abadía Retuerta, tinto de la casa, blanco de la casa'
   const personalNombres = (personal ?? []).map((c: { nombre: string }) => c.nombre.split(' ')[0]).join(', ')
+  const seccionNombres = (secciones ?? []).map((s: { nombre: string }) => s.nombre).join(', ')
   const promptFull = [
     nombres ? `Carta: ${nombres}.` : '',
     `Vocabulario hostelero: ${vocab}.`,
     `Vinos y D.O. españolas: ${vinoVocab}.`,
     personalNombres ? `Personal: ${personalNombres}.` : '',
+    seccionNombres ? `Secciones cocina: ${seccionNombres}.` : '',
   ].filter(Boolean).join(' ')
 
   // Groq Whisper tiene un límite de 224 tokens (~800 chars) para el campo prompt.
@@ -604,19 +612,16 @@ export async function POST(req: NextRequest) {
       }
 
       // ── AVISO / MENSAJE entre roles ───────────────────────────────────────
-      // tipo:"aviso" → INSERT en mensajes_turno, NO crea comanda
-      // mesa = destinatario de rol: "cocina"|"barra"|"sala"|"todos"
-      // destinatario_nombre = nombre de persona específica → resolver a camarero_id
       if (brainResult.tipo === 'aviso' && brainResult.nota_general) {
         const ROL_MAP: Record<string, string> = {
           cocina: 'cocina', barra: 'camarero', sala: 'camarero', todos: 'todos',
         }
         let rolDestino = 'todos'
         let destinatarioId: string | null = null
+        let seccionImpresoraId: string | null = null
 
         if (brainResult.destinatario_nombre) {
-          // Mensaje privado a persona → buscar camarero_id por nombre
-          const nombreNorm = brainResult.destinatario_nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          // Mensaje privado a persona
           const { data: destinatario } = await supabase
             .from('camareros')
             .select('id, rol')
@@ -629,10 +634,42 @@ export async function POST(req: NextRequest) {
             destinatarioId = destinatario.id
             rolDestino = destinatario.rol ?? 'camarero'
           }
-          console.log(`[AVISO-VOZ] mensaje privado a "${brainResult.destinatario_nombre}" (${nombreNorm}) → id:${destinatarioId}`)
         } else {
-          const destinatarioRaw = (brainResult.mesa ?? 'todos').toLowerCase()
-          rolDestino = ROL_MAP[destinatarioRaw] ?? 'todos'
+          const destRaw = (brainResult.mesa ?? 'todos').toLowerCase()
+          if (ROL_MAP[destRaw]) {
+            rolDestino = ROL_MAP[destRaw]
+          } else {
+            // Puede ser nombre de sección — buscar en secciones_cocina
+            const { data: seccion } = await supabase
+              .from('secciones_cocina')
+              .select('id, impresora_id')
+              .eq('restaurante_id', rid)
+              .ilike('nombre', `${brainResult.mesa}%`)
+              .limit(1)
+              .maybeSingle()
+            if (seccion) {
+              seccionImpresoraId = seccion.impresora_id
+              rolDestino = 'cocina'
+              // Si la sección tiene impresora → print_job de tipo aviso
+              if (seccion.impresora_id) {
+                try {
+                  await supabase.from('print_jobs').insert({
+                    restaurante_id: rid,
+                    impresora_id:   seccion.impresora_id,
+                    tipo:           'aviso',
+                    estado:         'pendiente',
+                    payload: {
+                      tipo:    'aviso',
+                      mensaje: brainResult.nota_general,
+                      origen:  session.nombre,
+                      mesa:    mesa?.codigo ?? null,
+                      seccion: brainResult.mesa,
+                    },
+                  })
+                } catch (e) { console.error('[AVISO-SECCION] print_job:', e) }
+              }
+            }
+          }
         }
 
         try {
@@ -649,9 +686,36 @@ export async function POST(req: NextRequest) {
             mesa_ref:        mesa?.codigo ?? null,
             leido_por:       [camareroId],
           })
-        } catch (e) {
-          console.error('[AVISO-VOZ] Error insertando mensaje:', e)
-        }
+        } catch (e) { console.error('[AVISO-VOZ] mensajes_turno:', e) }
+        void seccionImpresoraId
+      }
+
+      // ── MARCHAR GRANULAR: si hay items, actualizar estado en comanda_items ─
+      if (brainResult.tipo === 'marchar' && brainResult.items.length > 0 && mesa) {
+        try {
+          // Buscar comanda activa de esta mesa
+          const { data: comanda } = await supabase
+            .from('comandas')
+            .select('id')
+            .eq('mesa_id', mesa.id)
+            .eq('restaurante_id', rid)
+            .in('estado', ['en_cocina', 'nueva', 'lista'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
+
+          if (comanda) {
+            for (const item of brainResult.items) {
+              await supabase
+                .from('comanda_items')
+                .update({ estado: 'listo' })
+                .eq('comanda_id', comanda.id)
+                .eq('restaurante_id', rid)
+                .ilike('nombre', `%${item.nombre}%`)
+                .eq('estado', 'pendiente')
+            }
+          }
+        } catch (e) { console.error('[MARCHAR-GRANULAR]', e) }
       }
     }
 
