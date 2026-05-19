@@ -1,13 +1,22 @@
 'use client'
 import React, { useState, useEffect } from 'react'
 import SmartScanModal from './SmartScanModal'
-import type { Session } from '@/hooks/useAuth'
 
 // Roles que siempre pueden escanear sin toggle
 const ROLES_SIEMPRE = ['owner', 'super_admin', 'jefe_sala']
 
+// Solo los campos que SmartScanFAB realmente usa — sin exigir restaurante_nombre
+interface SessionMinima {
+  id: string
+  nombre: string
+  rol: string
+  restaurante_id: string
+  cuenta_id?: string
+  seccion_id?: string | null
+}
+
 interface Props {
-  session: Session
+  session: SessionMinima
   /** Posición vertical desde abajo (default: 80px para dejar espacio al nav) */
   bottom?: number
   /** Posición horizontal desde la derecha */
