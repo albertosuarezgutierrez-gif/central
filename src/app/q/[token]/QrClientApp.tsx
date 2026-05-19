@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 import { SE, SN, SM } from '@/lib/colors'
 // QrClientApp — App completa del cliente en la mesa
 // Flujo: bienvenida → carta → carrito → cocina ↔ carta (multi-pedido) → cuenta → propina → pago

@@ -1,3 +1,5 @@
+'use client'
+import React from 'react'
 // components/owner/ModalTraducciones.tsx
 // Editor de traducciones de un producto para el panel owner
 'use client'

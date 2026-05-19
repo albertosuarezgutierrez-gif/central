@@ -39,7 +39,7 @@ export default function CartaPortal({ sh }: Props) {
       </div>
       <input value={busqueda} onChange={e => setBusqueda(e.target.value)} placeholder="Buscar producto o categoría..."
         style={{ width: '100%', fontFamily: SN, fontSize: 13, background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 12px', color: C.ink, outline: 'none', marginBottom: 16 }} />
-      {Object.entries(porCategoria).map(([cat, prods]) => (
+      {(Object.entries(porCategoria) as [string, Producto[]][]).map(([cat, prods]) => (
         <div key={cat} style={{ marginBottom: 20 }}>
           <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, fontWeight: 700, letterSpacing: '.1em', marginBottom: 8, paddingBottom: 4, borderBottom: `1px solid ${C.ruleS}` }}>{cat.toUpperCase()}</div>
           {prods.map(p => (
