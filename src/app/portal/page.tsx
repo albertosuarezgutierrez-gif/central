@@ -45,7 +45,7 @@ function Placeholder({ label }: { label: string }) {
 }
 
 export default function PortalPage() {
-  const { session, loading } = useAuth()
+  const { session, checking } = useAuth()
   const [tab, setTab] = useState<string | null>(null)
 
   const modulosGestion: string[] = session?.modulos_gestion ?? []
@@ -66,7 +66,7 @@ export default function PortalPage() {
     window.location.href = '/login'
   }
 
-  if (loading) return (
+  if (checking) return (
     <div style={{ minHeight: '100dvh', background: C.paper, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, letterSpacing: '.12em' }}>Cargando…</span>
     </div>

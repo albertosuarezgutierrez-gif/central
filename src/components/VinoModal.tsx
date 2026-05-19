@@ -4,7 +4,6 @@
 // Props: open, onClose, session, tema ('dark'|'light')
 
 import { useState, useEffect, useCallback } from 'react'
-import { Session } from '@/hooks/useAuth'
 import { C } from '@/lib/colors'
 
 // Familias excluidas de los chips de platos
@@ -17,7 +16,7 @@ const FAMILIAS_EXCLUIR = new Set([
 interface Props {
   open: boolean
   onClose: () => void
-  session: Session
+  session: { id: string; restaurante_id: string; nombre?: string }
   tema?: 'dark' | 'light'
 }
 

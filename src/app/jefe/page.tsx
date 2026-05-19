@@ -1,4 +1,5 @@
 'use client'
+import React from 'react'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 // ia.rest · Panel Jefe de Sala — v2.2 (feat: chat entre roles)
 // Rol: jefe_sala (PIN 0000) · También accesible por owner y super_admin
