@@ -17,6 +17,7 @@ import ModalTraducciones from '@/components/owner/ModalTraducciones'
 import RecomendacionesTab from '@/components/owner/RecomendacionesTab'
 import ManualVozTab from '@/components/owner/ManualVozTab'
 import ForecasterTab from '@/components/owner/ForecasterTab'
+import RRHHTab from '@/components/owner/RRHHTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import SmartScanFAB from '@/components/SmartScanFAB'
 
@@ -7108,6 +7109,7 @@ const GRUPOS = [
       { id: 'supervisor', label: 'Supervisor',   icon: ICONS.clock  }, // diario durante servicio
       { id: 'camareros',  label: 'Camareros',    icon: ICONS.users  }, // semanal/mensual
       { id: 'mesas',      label: 'Mesas',        icon: ICONS.grid   }, // setup inicial, raro
+      { id: 'rrhh',       label: 'Candidatos',   icon: ICONS.users  }, // selección RRHH
     ]
   },
   {
@@ -7991,6 +7993,7 @@ export default function OwnerPage() {
             {tab === 'reservas'       && <ReservasTab/>}
             {tab === 'camareros'      && <CamarerosTab/>}
             {tab === 'mesas'          && <MesasTab/>}
+            {tab === 'rrhh'           && <RRHHTab sh={sh} />}
             {tab === 'secciones'      && <SeccionesTab/>}
             {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
