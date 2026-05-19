@@ -1,15 +1,16 @@
 'use client'
-// src/app/portal/page.tsx
-// Portal de gestión para usuarios especializados sin rol de sala
-// Muestra solo los módulos asignados en camareros.modulos_gestion
-
+// src/app/portal/page.tsx — v2 (módulos completos)
 import { useState, useEffect } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
 import { useAuth } from '@/hooks/useAuth'
 import dynamic from 'next/dynamic'
 
-const RRHHTab     = dynamic(() => import('@/components/owner/RRHHTab'), { ssr: false })
-const ForecasterTab = dynamic(() => import('@/components/owner/ForecasterTab'), { ssr: false })
+const RRHHTab          = dynamic(() => import('@/components/owner/RRHHTab'), { ssr: false })
+const ForecasterTab    = dynamic(() => import('@/components/owner/ForecasterTab'), { ssr: false })
+const AlmacenPortal    = dynamic(() => import('@/components/portal/AlmacenPortal'), { ssr: false })
+const CartaPortal      = dynamic(() => import('@/components/portal/CartaPortal'), { ssr: false })
+const ContabilidadPortal = dynamic(() => import('@/components/portal/ContabilidadPortal'), { ssr: false })
+const EscanerPortal    = dynamic(() => import('@/components/portal/EscanerPortal'), { ssr: false })
 
 const MODULOS_PORTAL = [
   { id: 'almacen',      label: 'Almacén',       icon: 'M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2' },
@@ -21,9 +22,6 @@ const MODULOS_PORTAL = [
   { id: 'analytics',    label: 'Analytics',      icon: 'M18 20V10M12 20V4M6 20v-6' },
 ]
 
-// Módulos con componente propio ya listo
-const CON_COMPONENTE = new Set(['rrhh', 'analytics'])
-
 function NavIcon({ path }: { path: string }) {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -32,13 +30,13 @@ function NavIcon({ path }: { path: string }) {
   )
 }
 
-function Placeholder({ label }: { label: string }) {
+function PlaceholderModulo({ label, link }: { label: string; link: string }) {
   return (
     <div style={{ padding: 40, textAlign: 'center' }}>
-      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: C.ink, marginBottom: 10 }}>{label}</div>
+      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: C.ink, marginBottom: 8 }}>{label}</div>
       <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
-        Este módulo estará disponible en el portal próximamente.<br />
-        Por ahora puedes acceder desde el <a href="/owner" style={{ color: C.red }}>panel del dueño</a>.
+        Disponible próximamente en el portal.<br />
+        <a href={link} style={{ color: C.red }}>Acceder desde el panel del dueño</a>
       </div>
     </div>
   )
@@ -140,9 +138,13 @@ export default function PortalPage() {
 
         {/* CONTENIDO */}
         <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
-          {tab === 'rrhh'      && <RRHHTab sh={sh} />}
-          {tab === 'analytics' && <ForecasterTab sh={sh} />}
-          {tab && !CON_COMPONENTE.has(tab) && <Placeholder label={modulosVisibles.find(m => m.id === tab)?.label ?? tab} />}
+          {tab === 'almacen'      && <AlmacenPortal sh={sh} />}
+          {tab === 'carta'        && <CartaPortal sh={sh} />}
+          {tab === 'contabilidad' && <ContabilidadPortal sh={sh} />}
+          {tab === 'escaner'      && session && <EscanerPortal sh={sh} session={session} />}
+          {tab === 'rrhh'         && <RRHHTab sh={sh} />}
+          {tab === 'analytics'    && <ForecasterTab sh={sh} />}
+          {tab === 'reservas'     && <PlaceholderModulo label="Reservas" link="/owner?tab=reservas" />}
         </div>
       </div>
     </div>

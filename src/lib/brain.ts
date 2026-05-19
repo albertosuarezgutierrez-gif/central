@@ -286,7 +286,8 @@ MENSAJES / AVISOS entre roles (tipo aviso):
 MARCHAR POR PRODUCTO (tipo marchar con items):
 - "marcha las croquetas S1" → tipo:"marchar", mesa:"S1", items:[{nombre:"Croquetas",cantidad:1}], confianza:0.92
 - "pasa el entrecot T4" → tipo:"marchar", mesa:"T4", items:[{nombre:"Entrecot",cantidad:1}], confianza:0.92
-- "marcha los postres S2" → tipo:"marchar", mesa:"S2", items:[{nombre:"[producto de carta]",cantidad:1}]
+- "marcha croquetas y entrecot S1" → tipo:"marchar", mesa:"S1", items:[{nombre:"Croquetas",cantidad:1},{nombre:"Entrecot",cantidad:1}], confianza:0.85
+- "pasa las bravas y los calamares T2" → tipo:"marchar", mesa:"T2", items:[{nombre:"Bravas",cantidad:1},{nombre:"Calamares",cantidad:1}]
 - "marcha S1" sin producto → tipo:"marchar", mesa:"S1", items:[]
 
 RECOMENDACIÓN DE VINO (tipo recomendacion_vino):

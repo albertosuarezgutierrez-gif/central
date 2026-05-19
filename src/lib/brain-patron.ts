@@ -425,18 +425,33 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
     }
     textoSinMarchar = textoSinMarchar.trim()
 
-    // ¿Queda texto con un producto? → marchar ese producto específico
+    // ¿Queda texto con productos? → buscar uno o varios (multi-item)
     if (textoSinMarchar.length > 1) {
-      const palabrasProd = textoSinMarchar
-        .split(/\s+/)
-        .filter(w => w.length > 1 && !STOPWORDS.has(norm(w)))
-      const resultProd = palabrasProd.length > 0 ? buscarProducto(palabrasProd, cache) : null
-      if (resultProd && mesa) {
+      // Separar por "y", "mas", "," para detectar múltiples productos
+      const fragmentos = textoSinMarchar
+        .split(/\s+(?:y|mas|más|,)\s+|,\s*/)
+        .map(f => f.trim())
+        .filter(f => f.length > 1)
+
+      const itemsEncontrados: { nombre: string; cantidad: number }[] = []
+
+      for (const frag of fragmentos) {
+        const palabrasProd = frag
+          .split(/\s+/)
+          .filter(w => w.length > 1 && !STOPWORDS.has(norm(w)))
+        const resultProd = palabrasProd.length > 0 ? buscarProducto(palabrasProd, cache) : null
+        if (resultProd) {
+          itemsEncontrados.push({ nombre: resultProd.prod.nombre, cantidad: 1 })
+        }
+      }
+
+      // Si encontramos al menos un producto y tenemos mesa → marchar
+      if (itemsEncontrados.length > 0 && mesa) {
         return {
           mesa,
           tipo: 'marchar',
-          items: [{ nombre: resultProd.prod.nombre, cantidad: 1 }],
-          confianza: 0.88,
+          items: itemsEncontrados,
+          confianza: itemsEncontrados.length > 1 ? 0.85 : 0.88,
           raw: texto,
         }
       }
