@@ -370,7 +370,6 @@ function CamarerosTab() {
               </span>
               <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
                 <Btn size="sm" variant="ghost" onClick={() => toggleEscanear(c)}
-                  title={c.puede_escanear ? 'Revocar acceso escáner IA' : 'Autorizar escáner IA'}
                   style={{ background: c.puede_escanear ? '#D9442B22' : 'transparent', border: `1px solid ${c.puede_escanear ? '#D9442B44' : C.rule}` }}>
                   <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={c.puede_escanear ? '#D9442B' : C.ink4} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
@@ -435,7 +434,6 @@ function CamarerosTab() {
                 </div>
                 <div style={{ display: 'flex', gap: 6 }}>
                   <Btn size="sm" variant="ghost" onClick={() => toggleEscanear(c)}
-                    title={c.puede_escanear ? 'Revocar escáner IA' : 'Autorizar escáner IA'}
                     style={{ background: c.puede_escanear ? '#D9442B22' : 'transparent', border: `1px solid ${c.puede_escanear ? '#D9442B44' : C.rule}` }}>
                     <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={c.puede_escanear ? '#D9442B' : C.ink4} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                       <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>

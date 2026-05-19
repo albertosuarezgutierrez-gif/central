@@ -89,17 +89,66 @@ function buildTTS(b: BrainResult, a86: string[] = [], aAlerg: {producto:string;a
   return `${s86}${sAl}${b.mesa}: ${itemsStr}${sNota}. ¿Confirmamos?`
 }
 
-function speak(text: string): Promise<void> {
+// ── VOX: TTS neural via servidor (Microsoft Edge Neural Voices) ──────────────
+// Primario: /api/vox → Edge Neural (es-ES-ElviraNeural) → audio/mpeg reproducido con Audio API
+// Fallback: Web Speech API del navegador (voz del SO)
+let _audioCtx: AudioContext | null = null
+let _currentSource: AudioBufferSourceNode | null = null
+
+function stopVox() {
+  try { _currentSource?.stop(); _currentSource = null } catch { /* ok */ }
+  if (typeof window !== 'undefined') {
+    try { window.speechSynthesis?.cancel() } catch { /* ok */ }
+  }
+}
+
+function speakFallback(text: string): Promise<void> {
   return new Promise(resolve => {
-    if (typeof window==='undefined'||!window.speechSynthesis){resolve();return}
+    if (typeof window === 'undefined' || !window.speechSynthesis) { resolve(); return }
     window.speechSynthesis.cancel()
     const utt = new SpeechSynthesisUtterance(text)
-    utt.lang='es-ES'; utt.rate=1.05; utt.pitch=1; utt.volume=1
-    const v = window.speechSynthesis.getVoices().find(v=>v.lang.startsWith('es')&&v.name.toLowerCase().includes('female'))
-           ?? window.speechSynthesis.getVoices().find(v=>v.lang.startsWith('es'))
+    utt.lang = 'es-ES'; utt.rate = 1.05; utt.pitch = 1; utt.volume = 1
+    const v = window.speechSynthesis.getVoices().find(v => v.lang.startsWith('es') && v.name.toLowerCase().includes('female'))
+           ?? window.speechSynthesis.getVoices().find(v => v.lang.startsWith('es'))
     if (v) utt.voice = v
-    utt.onend=()=>resolve(); utt.onerror=()=>resolve()
+    utt.onend = () => resolve(); utt.onerror = () => resolve()
     window.speechSynthesis.speak(utt)
+  })
+}
+
+function speak(text: string): Promise<void> {
+  stopVox()
+  return new Promise(async (resolve) => {
+    try {
+      // Obtener audio del servidor
+      const res = await fetch('/api/vox', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text }),
+      })
+      if (!res.ok) throw new Error(`VOX HTTP ${res.status}`)
+      const arrayBuffer = await res.arrayBuffer()
+      if (!arrayBuffer.byteLength) throw new Error('VOX audio vacío')
+
+      // Reproducir con Web Audio API (sin restricciones de autoplay que tiene <audio>)
+      if (!_audioCtx || _audioCtx.state === 'closed') {
+        _audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)()
+      }
+      if (_audioCtx.state === 'suspended') await _audioCtx.resume()
+
+      const audioBuffer = await _audioCtx.decodeAudioData(arrayBuffer)
+      const source = _audioCtx.createBufferSource()
+      source.buffer = audioBuffer
+      source.connect(_audioCtx.destination)
+      _currentSource = source
+      source.onended = () => { _currentSource = null; resolve() }
+      source.start(0)
+    } catch (err) {
+      // Fallback a Web Speech API del navegador
+      console.warn('[VOX] fallback a Web Speech API:', err)
+      await speakFallback(text)
+      resolve()
+    }
   })
 }
 
@@ -903,7 +952,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     const cur = screenRef.current
     // Permitir grabar desde: idle, asking, sent, speaking (interrumpe TTS), error (reintentar)
     if (cur === 'sent') {
-      if (typeof window !== 'undefined') window.speechSynthesis?.cancel()
+      stopVox()
       speakingRef.current = false
       setBrain(null); brainRef.current = null; setTranscript(''); setError('')
       setAlertas86([]); setAlertasAlerg([]); setPendingItems([]); setAvisoRuido(false); ruidoRetryRef.current = 0
@@ -912,8 +961,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       setPedidoCuenta({ loading: false, error: '', factura: null })
       // continúa sin return — empieza a grabar directamente
     } else if (cur === 'speaking') {
-      // Bug-fix: interrumpir TTS para grabar la siguiente comanda sin esperar
-      window.speechSynthesis?.cancel()
+      // Bug-fix: interrumpir TTS (VOX neural o Web Speech) para grabar
+      stopVox()
       speakingRef.current = false
       // Fix #5: en iOS, getUserMedia desde el handler de speaking puede fallar.
       // Mostrar asking para que el camarero pulse PTT con gesto directo (requerido por Safari).
@@ -1649,7 +1698,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
       }).catch(() => {}) // fire and forget — no bloquear la UI
     }
-    if (typeof window!=='undefined') window.speechSynthesis?.cancel()
+    stopVox()
     speakingRef.current=false; processingRef.current=false; recordingRef.current=false
     setScreenSafe('idle'); setBrain(null); brainRef.current = null; setTranscript('')
     setError(''); setPedidoCuenta({loading:false,error:'',factura:null})
