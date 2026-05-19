@@ -10,7 +10,7 @@ interface Doc {
   created_at: string; camarero_nombre: string | null
   datos: Record<string, unknown> | null
 }
-interface SessionMin { id: string; restaurante_id: string; nombre?: string }
+interface SessionMin { id: string; nombre: string; rol: string; restaurante_id: string }
 interface Props { sh: () => Record<string, string>; session: SessionMin }
 
 const TIPO_LABEL: Record<string, string> = {
