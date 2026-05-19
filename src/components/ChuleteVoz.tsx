@@ -145,7 +145,10 @@ function BloqueMarchar() {
       <Sep />
       <Row pattern="marcha [producto] [mesa]"
         examples={['marcha las croquetas S1', 'pasa el entrecot T4']} />
-      <Tip color={TEAL} text="por producto → item tachado en KDS automáticamente" />
+      <Sep />
+      <Row pattern="marcha [prod] y [prod] [mesa]"
+        examples={['marcha croquetas y entrecot S1', 'pasa bravas y calamares T2']} />
+      <Tip color={TEAL} text="multi-item → cada producto tachado en KDS automáticamente" />
     </Block>
   )
 }

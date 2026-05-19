@@ -18,7 +18,11 @@ export default function ContabilidadPortal({ sh }: Props) {
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/factura/cliente?mes=${mes}`, { headers: sh() })
+    const [año, m] = mes.split('-')
+    const desde = `${año}-${m}-01`
+    const ultimo = new Date(parseInt(año), parseInt(m), 0).getDate()
+    const hasta = `${año}-${m}-${String(ultimo).padStart(2, '0')}`
+    fetch(`/api/factura/cliente/lista?desde=${desde}&hasta=${hasta}`, { headers: sh() })
       .then(r => r.json())
       .then(d => { setFacturas(d.facturas ?? []); setLoading(false) })
       .catch(() => setLoading(false))

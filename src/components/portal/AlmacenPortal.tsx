@@ -30,10 +30,10 @@ export default function AlmacenPortal({ sh }: Props) {
   const registrarEntrada = async () => {
     if (!entradaModal || !qty) return
     setGuardando(true)
-    await fetch('/api/owner/stock', {
-      method: 'PATCH',
+    await fetch('/api/owner/stock?action=entrada', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json', ...sh() },
-      body: JSON.stringify({ id: entradaModal.id, cantidad: parseFloat(qty), tipo: 'entrada', nota }),
+      body: JSON.stringify({ articulo_id: entradaModal.id, cantidad: parseFloat(qty), notas: nota }),
     })
     setEntradaModal(null); setQty(''); setNota('')
     setGuardando(false); cargar()

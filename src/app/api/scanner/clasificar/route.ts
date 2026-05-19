@@ -127,3 +127,34 @@ export async function POST(req: NextRequest) {
     nim_error: nimError,
   })
 }
+
+export async function GET() {
+  const supabase = createServerClient()
+  const session  = await getSession(supabase)
+  const rid      = await getRestauranteId(session)
+
+  const { data, error } = await supabase
+    .from('documentos_escaneados')
+    .select('id, tipo, confianza, estado, created_at, datos, camareros(nombre)')
+    .eq('restaurante_id', rid)
+    .order('created_at', { ascending: false })
+    .limit(50)
+
+  if (error) return NextResponse.json({ documentos: [] })
+
+  const documentos = (data ?? []).map((d: {
+    id: string; tipo: string; confianza: number; estado: string;
+    created_at: string; datos: Record<string, unknown> | null;
+    camareros: { nombre: string } | null
+  }) => ({
+    id: d.id,
+    tipo: d.tipo,
+    confianza: d.confianza,
+    estado: d.estado,
+    created_at: d.created_at,
+    datos: d.datos,
+    camarero_nombre: d.camareros?.nombre ?? null,
+  }))
+
+  return NextResponse.json({ documentos })
+}
