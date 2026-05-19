@@ -41,7 +41,7 @@ serve(async () => {
 
   let insertados = 0
   const hoy    = new Date()
-  const en90d  = new Date(Date.now() + 90 * 86400000)
+  const en180d = new Date(Date.now() + 180 * 86400000)
 
   for (const rest of restaurantes) {
     // ── 2. Ticketmaster (90 días) ─────────────────────────────────────────────
@@ -53,7 +53,7 @@ serve(async () => {
           `&countryCode=ES` +
           `&radius=5&unit=km` +
           `&startDateTime=${hoy.toISOString().slice(0, 19)}Z` +
-          `&endDateTime=${en90d.toISOString().slice(0, 19)}Z` +
+          `&endDateTime=${en180d.toISOString().slice(0, 19)}Z` +
           `&size=20&sort=date,asc`
 
         const res  = await fetch(url)
@@ -126,37 +126,85 @@ serve(async () => {
   }
 
 
-  // ── 4. Claude web_search: ferias, festivos y eventos locales ─────────────
+  // ── 4. Claude web_search: ferias, festivos, fútbol (1x/semana) ─────────────
   if (ANTHROPIC_KEY) {
     for (const rest of restaurantes) {
-      const ciudad = (rest as Record<string,unknown>).ciudad as string ?? rest.cp_local ?? "España"
-      const fechaHoy = hoy.toISOString().split("T")[0]
-      const fecha90  = en90d.toISOString().split("T")[0]
+      const ciudad   = (rest as Record<string,unknown>).ciudad as string ?? rest.cp_local ?? 'España'
+      const fechaHoy = hoy.toISOString().split('T')[0]
+      const fecha180 = en180d.toISOString().split('T')[0]
+
+      // Comprobar si ya corrió esta semana
       const { data: yaHecho } = await supabase
-        .from("eventos_entorno").select("id")
-        .eq("restaurante_id", rest.id).eq("fuente", "claude-websearch")
-        .gte("created_at", new Date(Date.now() - 6 * 86400000).toISOString()).limit(1)
+        .from('eventos_entorno').select('id')
+        .eq('restaurante_id', rest.id).eq('fuente', 'claude-websearch')
+        .gte('created_at', new Date(Date.now() - 6 * 86400000).toISOString()).limit(1)
       if (yaHecho?.length) continue
+
+      // Leer todos los eventos ya guardados (cualquier fuente) para este período
+      const { data: existentes } = await supabase
+        .from('eventos_entorno')
+        .select('nombre, fecha_inicio')
+        .eq('restaurante_id', rest.id)
+        .gte('fecha_inicio', `${fechaHoy}T00:00:00Z`)
+        .lte('fecha_inicio', `${fecha180}T23:59:59Z`)
+        .order('fecha_inicio', { ascending: true })
+
+      // Resumen compacto para el prompt: "2026-06-04 Corpus Christi, 2026-06-07 Real Betis vs Athletic"
+      const resumenExistentes = (existentes ?? [])
+        .map(e => `${e.fecha_inicio.slice(0,10)} ${e.nombre}`)
+        .join(' | ')
+
       try {
-        const res = await fetch("https://api.anthropic.com/v1/messages", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
-          body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000,
-            tools: [{ type: "web_search_20250305", name: "web_search" }],
-            messages: [{ role: "user", content: `Busca eventos en ${ciudad} entre ${fechaHoy} y ${fecha90} (próximos 90 días) que aumenten afluencia en bares y restaurantes: partidos de fútbol, conciertos en estadios, ferias locales, Semana Santa, festivos municipales, festivales de música. Solo eventos con más de 1000 personas o festivo oficial. Responde SOLO con JSON: {"eventos":[{"fecha":"YYYY-MM-DD","nombre":"nombre corto","tipo":"deportes|concierto|feria|festivo|otro","aforo_estimado":15000}]}` }] }),
+        const res = await fetch('https://api.anthropic.com/v1/messages', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
+          body: JSON.stringify({
+            model: 'claude-haiku-4-5-20251001', max_tokens: 2000,
+            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
+            messages: [{ role: 'user', content:
+              `Busca eventos CONFIRMADOS en ${ciudad} entre ${fechaHoy} y ${fecha180} (próximos 6 meses) relevantes para bares y restaurantes: partidos LaLiga (Sevilla FC, Real Betis), conciertos en recintos >1000 personas, ferias locales, festivos municipales y nacionales, festivales.
+
+EVENTOS YA REGISTRADOS (NO repetir ni incluir nada similar a estos):
+${resumenExistentes || 'Ninguno aún'}
+
+Incluye solo eventos con fecha fija confirmada que NO estén ya en la lista anterior. Usa criterio estricto de similitud: si el evento es el mismo partido o festivo aunque el nombre varíe ligeramente, NO lo incluyas.
+
+Responde SOLO con JSON válido sin markdown:
+{"eventos":[{"fecha":"YYYY-MM-DD","nombre":"nombre corto descriptivo","tipo":"deportes|concierto|feria|festivo|otro","aforo_estimado":25000}]}
+Si no hay nada nuevo: {"eventos":[]}` }],
+          }),
         })
         if (!res.ok) continue
         const data = await res.json()
-        const text = (data.content ?? []).filter((b: {type:string}) => b.type === "text").map((b: {text:string}) => b.text).join("")
+        const text = (data.content ?? [])
+          .filter((b: {type:string}) => b.type === 'text')
+          .map((b: {text:string}) => b.text).join('')
+
         let parsed: {eventos: Array<{fecha:string;nombre:string;tipo:string;aforo_estimado?:number}>}
-        try { parsed = JSON.parse(text.replace(/```json|```/g,"").trim()) } catch { continue }
+        try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()) } catch { continue }
+
         for (const ev of parsed.eventos ?? []) {
           if (!ev.fecha || !ev.nombre) continue
+
+          // Dedup extra: comparar con existentes por fecha exacta + nombre similar
+          const fechaEv = ev.fecha
+          const nombreEvNorm = ev.nombre.toLowerCase().replace(/[^a-záéíóúñ0-9]/g, '')
+          const yaExiste = (existentes ?? []).some(e => {
+            if (e.fecha_inicio.slice(0,10) !== fechaEv) return false
+            const nombreNorm = e.nombre.toLowerCase().replace(/[^a-záéíóúñ0-9]/g, '')
+            // Coincidencia si uno contiene al otro (ej. "realbetisvsathletic" ⊂ "realbetisvsathleticlaliga")
+            return nombreNorm.includes(nombreEvNorm.slice(0, 10)) ||
+                   nombreEvNorm.includes(nombreNorm.slice(0, 10))
+          })
+          if (yaExiste) continue
+
           const aforo = ev.aforo_estimado ?? 5000
-          await supabase.from("eventos_entorno").upsert({ restaurante_id: rest.id, nombre: ev.nombre,
-            fecha_inicio: `${ev.fecha}T00:00:00Z`, tipo: ev.tipo ?? "otro", fuente: "claude-websearch",
+          await supabase.from('eventos_entorno').upsert({
+            restaurante_id: rest.id, nombre: ev.nombre,
+            fecha_inicio: `${ev.fecha}T00:00:00Z`,
+            tipo: ev.tipo ?? 'otro', fuente: 'claude-websearch',
             aforo_estimado: aforo, impacto_estimado: calcularImpacto(aforo), raw: ev,
-          }, { onConflict: "restaurante_id,nombre,fecha_inicio", ignoreDuplicates: true })
+          }, { onConflict: 'restaurante_id,nombre,fecha_inicio', ignoreDuplicates: true })
           insertados++
         }
       } catch(e) { console.error(`Claude websearch error ${rest.nombre}:`, e) }
