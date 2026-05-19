@@ -7733,8 +7733,8 @@ export default function OwnerPage() {
         }
 
         /* ── Camareros: cards en móvil ─────────────────────── */
-        .cam-table-hdr { display:grid; grid-template-columns:1fr 100px 120px 80px 80px 100px; }
-        .cam-table-row { display:grid; grid-template-columns:1fr 100px 120px 80px 80px 100px; }
+        .cam-table-hdr { display:grid; grid-template-columns:1fr 100px 120px 80px 90px 148px; }
+        .cam-table-row { display:grid; grid-template-columns:1fr 100px 120px 80px 90px 148px; }
         .cam-card { display:none; }
 
         /* ── Carta: items ──────────────────────────────────── */
