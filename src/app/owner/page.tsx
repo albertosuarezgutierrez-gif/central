@@ -313,7 +313,7 @@ function CamarerosTab() {
         <div className='cam-table-hdr' style={{
           padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
           fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>
-          <span>Nombre</span><span>Rol</span><span>Sección</span><span>PIN</span><span>Estado</span><span style={{ textAlign: 'right' }}>Acciones</span>
+          <span>Nombre</span><span>Rol</span><span>Sección</span><span>PIN</span><span>Estado</span><span style={{ display:'flex', gap:6, justifyContent:'flex-end', alignItems:'center' }}><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>SCAN</span><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>QR</span><span style={{width:28}}></span><span style={{width:28}}></span></span>
         </div>
 
         {camareros.length === 0 && (
@@ -358,15 +358,15 @@ function CamarerosTab() {
                 </button>
               </span>
               <span style={{ display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
-                <Btn size="sm" variant="ghost" onClick={() => toggleEscanear(c)}
+                <Btn size="sm" variant="ghost" title="Permiso escáner IA" onClick={() => toggleEscanear(c)}
                   style={{ background: c.puede_escanear ? '#D9442B22' : 'transparent', border: `1px solid ${c.puede_escanear ? '#D9442B44' : C.rule}` }}>
                   <svg width={13} height={13} viewBox="0 0 24 24" fill="none" stroke={c.puede_escanear ? '#D9442B' : C.ink4} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
                     <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/>
                   </svg>
                 </Btn>
-                <Btn size="sm" variant="ghost" onClick={() => openQr(c)}><Icon d={ICONS.qr} size={13}/></Btn>
-                <Btn size="sm" variant="ghost" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={13}/></Btn>
-                <Btn size="sm" variant="danger" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={13}/></Btn>
+                <Btn size="sm" variant="ghost" title="Código QR acceso" onClick={() => openQr(c)}><Icon d={ICONS.qr} size={13}/></Btn>
+                <Btn size="sm" variant="ghost" title="Editar" onClick={() => openEdit(c)}><Icon d={ICONS.edit} size={13}/></Btn>
+                <Btn size="sm" variant="danger" title="Eliminar" onClick={() => openDel(c)}><Icon d={ICONS.trash} size={13}/></Btn>
               </span>
             </div>
 
@@ -3519,7 +3519,7 @@ function ImpresorasTab() {
         <div style={{ border: `1px solid ${C.rule}`, borderRadius: 8, background: C.bone, marginBottom: 32 }}>
           {/* Cabecera tabla — desktop */}
           <div className="imp-table-hdr" style={{ padding: '10px 16px', borderBottom: `1px solid ${C.rule}`, fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>
-            <span>Impresora</span><span>Sección</span><span>Conexión</span><span>Ping</span><span style={{ textAlign: 'right' }}>Acciones</span>
+            <span>Impresora</span><span>Sección</span><span>Conexión</span><span>Ping</span><span style={{ display:'flex', gap:6, justifyContent:'flex-end', alignItems:'center' }}><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>SCAN</span><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>QR</span><span style={{width:28}}></span><span style={{width:28}}></span></span>
           </div>
           {impresoras.map((imp, i) => {
             const secsBadges = seccionStyles(imp.secciones_ids?.length > 0 ? imp.secciones_ids : (imp.seccion_id ? [imp.seccion_id] : []))
