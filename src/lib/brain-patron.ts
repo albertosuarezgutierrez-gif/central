@@ -371,6 +371,14 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
     return null
   }
 
+  // ── 0.5. NOMBRE PROPIO AL INICIO → mensaje privado ──────────────────────
+  // "Pablo, T4 esperando" → el primer token es un nombre del personal + coma
+  // Siempre escala al LLM para que extraiga el texto limpio del mensaje
+  const primerToken = tParseado.split(/[\s,]/)[0]
+  if (primerToken.length >= 3 && cache.byNombre.has(primerToken)) {
+    return null
+  }
+
   // ── 0. MESA RÁPIDA ───────────────────────────────────────────────────────
   if (KW_MESA_RAPIDA.some(k => tParseado.includes(k))) {
     const extraido = extraerMesaRapida(tParseado)
@@ -389,12 +397,37 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
 
   // ── 2. MARCHAR ───────────────────────────────────────────────────────────
   if (KW_MARCHAR.some(k => tParseado.includes(k))) {
-    // Multi-intent: "marchar mesa X y un producto" → Claude
-    const tieneItems = /\b(y|,)\s+\w+/.test(tParseado) &&
-      !KW_MARCHAR.some(k => tParseado.replace(k, '').trim().startsWith('mesa'))
-    if (tieneItems) return null
-
     const mesa = detectarMesa(tParseado, cache)
+
+    // Limpiar keyword de marchar y referencia a mesa del texto
+    let textoSinMarchar = tParseado
+    for (const k of KW_MARCHAR) textoSinMarchar = textoSinMarchar.replace(k, ' ')
+    if (mesa) {
+      textoSinMarchar = textoSinMarchar
+        .replace(/(?:a la mesa|para la mesa|a la|mesa|barra|terraza|salon)?\s*\w*\s*\d{1,2}/g, ' ')
+        .replace(new RegExp(`\\b${mesa.toLowerCase()}\\b`), ' ')
+    }
+    textoSinMarchar = textoSinMarchar.trim()
+
+    // ¿Queda texto con un producto? → marchar ese producto específico
+    if (textoSinMarchar.length > 1) {
+      const palabrasProd = textoSinMarchar
+        .split(/\s+/)
+        .filter(w => w.length > 1 && !STOPWORDS.has(norm(w)))
+      const resultProd = palabrasProd.length > 0 ? buscarProducto(palabrasProd, cache) : null
+      if (resultProd && mesa) {
+        return {
+          mesa,
+          tipo: 'marchar',
+          items: [{ nombre: resultProd.prod.nombre, cantidad: 1 }],
+          confianza: 0.88,
+          raw: texto,
+        }
+      }
+      // Texto con producto pero sin mesa clara → Claude
+      if (textoSinMarchar.length > 2) return null
+    }
+
     if (mesa) return { mesa, tipo: 'marchar', items: [], confianza: 0.95, raw: texto }
   }
 

@@ -22,12 +22,20 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
   const cached = whisperPromptCache.get(restauranteId)
   if (cached && Date.now() - cached.ts < PROMPT_CACHE_TTL_MS) return cached.prompt
 
-  const { data: productos } = await supabase
-    .from('productos')
-    .select('nombre, nombre_alternativo')
-    .eq('restaurante_id', restauranteId)
-    .eq('activo', true)
-    .limit(60)
+  const [{ data: productos }, { data: personal }] = await Promise.all([
+    supabase
+      .from('productos')
+      .select('nombre, nombre_alternativo')
+      .eq('restaurante_id', restauranteId)
+      .eq('activo', true)
+      .limit(60),
+    supabase
+      .from('camareros')
+      .select('nombre')
+      .eq('restaurante_id', restauranteId)
+      .eq('activo', true)
+      .limit(20),
+  ])
 
   // Priorizar productos con motes (aliases) — ayudan más a Whisper
   const sorted = [...(productos ?? [])].sort((a, b) => {
@@ -40,11 +48,15 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
     const motes = Array.isArray(p.nombre_alternativo) ? p.nombre_alternativo.filter(Boolean) : []
     return motes.length > 0 ? `${p.nombre}/${motes.join('/')}` : p.nombre
   }).join(', ')
-  const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho'
+  const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho, mensaje a cocina, avisa a barra'
   const vinoVocab = 'Ribera del Duero, Rioja, Albariño, Rueda, Priorat, Rías Baixas, Jerez, Cava, Verdejo, Mencía, Monastrell, Tempranillo, Garnacha, copa de tinto, botella de blanco, media botella, vino de la casa, crianza, reserva, gran reserva, rosado, espumoso, champán, Vega Sicilia, Torres, Marqués de Riscal, Marqués de Murrieta, Protos, Pesquera, Abadía Retuerta, tinto de la casa, blanco de la casa'
-  const promptFull = nombres
-    ? `Carta: ${nombres}. Vocabulario hostelero: ${vocab}. Vinos y D.O. españolas: ${vinoVocab}.`
-    : `Vocabulario hostelero: ${vocab}. Vinos y D.O. españolas: ${vinoVocab}.`
+  const personalNombres = (personal ?? []).map((c: { nombre: string }) => c.nombre.split(' ')[0]).join(', ')
+  const promptFull = [
+    nombres ? `Carta: ${nombres}.` : '',
+    `Vocabulario hostelero: ${vocab}.`,
+    `Vinos y D.O. españolas: ${vinoVocab}.`,
+    personalNombres ? `Personal: ${personalNombres}.` : '',
+  ].filter(Boolean).join(' ')
 
   // Groq Whisper tiene un límite de 224 tokens (~800 chars) para el campo prompt.
   // Si se supera → 400 Bad Request. Truncamos a 800 chars con margen de seguridad.
@@ -592,15 +604,37 @@ export async function POST(req: NextRequest) {
       }
 
       // ── AVISO / MENSAJE entre roles ───────────────────────────────────────
-      // tipo:"aviso" → insertar en mensajes_turno, NO crear comanda
-      // mesa del brainResult = destinatario: "cocina" | "barra" | "sala" | "todos" | código de mesa
+      // tipo:"aviso" → INSERT en mensajes_turno, NO crea comanda
+      // mesa = destinatario de rol: "cocina"|"barra"|"sala"|"todos"
+      // destinatario_nombre = nombre de persona específica → resolver a camarero_id
       if (brainResult.tipo === 'aviso' && brainResult.nota_general) {
-        const destinatarioRaw = (brainResult.mesa ?? 'todos').toLowerCase()
-        // Mapear destinatario a rol_destino compatible con mensajes_turno
         const ROL_MAP: Record<string, string> = {
           cocina: 'cocina', barra: 'camarero', sala: 'camarero', todos: 'todos',
         }
-        const rolDestino = ROL_MAP[destinatarioRaw] ?? 'todos'
+        let rolDestino = 'todos'
+        let destinatarioId: string | null = null
+
+        if (brainResult.destinatario_nombre) {
+          // Mensaje privado a persona → buscar camarero_id por nombre
+          const nombreNorm = brainResult.destinatario_nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          const { data: destinatario } = await supabase
+            .from('camareros')
+            .select('id, rol')
+            .eq('restaurante_id', rid)
+            .eq('activo', true)
+            .ilike('nombre', `${brainResult.destinatario_nombre}%`)
+            .limit(1)
+            .maybeSingle()
+          if (destinatario) {
+            destinatarioId = destinatario.id
+            rolDestino = destinatario.rol ?? 'camarero'
+          }
+          console.log(`[AVISO-VOZ] mensaje privado a "${brainResult.destinatario_nombre}" (${nombreNorm}) → id:${destinatarioId}`)
+        } else {
+          const destinatarioRaw = (brainResult.mesa ?? 'todos').toLowerCase()
+          rolDestino = ROL_MAP[destinatarioRaw] ?? 'todos'
+        }
+
         try {
           await supabase.from('mensajes_turno').insert({
             restaurante_id:  rid,
@@ -609,7 +643,7 @@ export async function POST(req: NextRequest) {
             rol_origen:      session.rol,
             nombre_origen:   session.nombre,
             rol_destino:     rolDestino,
-            destinatario_id: null,   // broadcast al rol
+            destinatario_id: destinatarioId,
             tipo:            'voz',
             texto:           brainResult.nota_general,
             mesa_ref:        mesa?.codigo ?? null,

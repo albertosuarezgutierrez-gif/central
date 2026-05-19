@@ -93,6 +93,24 @@ async function buildZonasContext(restaurante_id?: string): Promise<string> {
   } catch { return '' }
 }
 
+async function buildPersonalContext(restaurante_id?: string): Promise<string> {
+  if (!restaurante_id) return ''
+  try {
+    const supabase = createServerClient()
+    const { data } = await supabase
+      .from('camareros')
+      .select('id, nombre, rol')
+      .eq('activo', true)
+      .eq('restaurante_id', restaurante_id)
+      .order('nombre')
+    if (!data?.length) return ''
+    const lines = data.map((c: { id: string; nombre: string; rol: string }) =>
+      `  ${c.nombre} (${c.rol}) → id:${c.id}`
+    ).join('\n')
+    return `\nPERSONAL ACTIVO (para mensajes por nombre):\n${lines}\n`
+  } catch { return '' }
+}
+
 /**
  * Memoria de sesión: ejemplos confirmados del turno activo.
  * Consulta ia_training_log del turno actual con calidad >= 3.
@@ -205,17 +223,26 @@ CLARIFICACIÓN POR AMBIGÜEDAD:
 MENSAJES / AVISOS entre roles (tipo aviso):
 - Cuando el camarero dice "mensaje a cocina [texto]", "avisa a cocina [texto]", "di a cocina [texto]":
   → tipo:"aviso", mesa:"cocina", nota_general:"[texto del mensaje]", items:[]
-- Destinatarios posibles: "cocina" | "barra" | "sala" | "todos"
+- Cuando el camarero empieza con el nombre de un compañero del PERSONAL ACTIVO:
+  → tipo:"aviso", mesa:"", destinatario_nombre:"[nombre exacto del PERSONAL ACTIVO]", nota_general:"[texto]", items:[]
+- Destinatarios de rol: "cocina" | "barra" | "sala" | "todos"
 - El texto del mensaje va SIEMPRE en nota_general (nunca en items)
-- Si hay referencia a mesa (ej: "ese uno" = S1), inclúyela en el texto del mensaje
+- Si hay referencia a mesa en el texto del mensaje, inclúyela en nota_general
 - Ejemplos:
-  - "mensaje a cocina, ese uno esperando croquetas" → tipo:"aviso", mesa:"cocina", nota_general:"S1 esperando croquetas", items:[], confianza:0.95
+  - "mensaje a cocina, S1 tiene prisa" → tipo:"aviso", mesa:"cocina", nota_general:"S1 tiene prisa", items:[], confianza:0.95
   - "avisa a barra que T4 quiere agua" → tipo:"aviso", mesa:"barra", nota_general:"T4 quiere agua", items:[], confianza:0.95
-  - "di a cocina que la dos va despacio" → tipo:"aviso", mesa:"cocina", nota_general:"la 2 va despacio", items:[], confianza:0.95
-  - "mensaje a todos que ya vamos a cerrar" → tipo:"aviso", mesa:"todos", nota_general:"ya vamos a cerrar", items:[], confianza:0.95
+  - "Pablo, T4 esperando el segundo" → tipo:"aviso", mesa:"", destinatario_nombre:"Pablo", nota_general:"T4 esperando el segundo", items:[], confianza:0.95
+  - "Antonio, ¿puedes pasar por S3?" → tipo:"aviso", mesa:"", destinatario_nombre:"Antonio", nota_general:"¿puedes pasar por S3?", items:[], confianza:0.95
+  - "di a todos que vamos a cerrar" → tipo:"aviso", mesa:"todos", nota_general:"vamos a cerrar", items:[], confianza:0.95
+
+MARCHAR POR PRODUCTO (tipo marchar con items):
+- "marcha las croquetas S1" → tipo:"marchar", mesa:"S1", items:[{nombre:"Croquetas",cantidad:1}], confianza:0.92
+- "pasa el entrecot T4" → tipo:"marchar", mesa:"T4", items:[{nombre:"Entrecot",cantidad:1}], confianza:0.92
+- "marcha los postres S2" → tipo:"marchar", mesa:"S2", items:[{nombre:"[producto de carta]",cantidad:1}]
+- "marcha S1" sin producto → tipo:"marchar", mesa:"S1", items:[]
 
 SCHEMA:
-{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","destinatario_nombre":null,"items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
 
 // ── Proveedores ─────────────────────────────────────────────────────────────
 
@@ -302,15 +329,16 @@ export async function parsearComanda(
   turno_id?: string,
   camarero_id?: string
 ): Promise<BrainResult> {
-  // Lanzar todas las consultas de contexto en paralelo (carta + zonas + recom + sesión)
-  const [menuContext, zonasContext, recomContext, sesionContext] = await Promise.all([
+  // Lanzar todas las consultas de contexto en paralelo (carta + zonas + recom + sesión + personal)
+  const [menuContext, zonasContext, recomContext, sesionContext, personalContext] = await Promise.all([
     buildMenuContext(restaurante_id),
     buildZonasContext(restaurante_id),
     buildRecomendacionesContext(restaurante_id),
     buildSesionContext(restaurante_id, turno_id, camarero_id),
+    buildPersonalContext(restaurante_id),
   ])
 
-  const systemPromptBase = BASE_PROMPT + zonasContext + menuContext + recomContext
+  const systemPromptBase = BASE_PROMPT + zonasContext + personalContext + menuContext + recomContext
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
   if (sesionContext) {

@@ -27,12 +27,21 @@ export interface ZonaCacheItem {
   tipo: string      // 'salon', 'terraza', 'barra'
 }
 
+export interface PersonalCacheItem {
+  id: string
+  nombre: string
+  nombre_norm: string   // sin tildes, minúsculas, primer token
+  rol: string
+}
+
 export interface MenuCache {
   productos: ProductoCacheItem[]
   zonas: ZonaCacheItem[]
+  personal: PersonalCacheItem[]
   // Índices de búsqueda rápida
   byAlias: Map<string, ProductoCacheItem>   // alias normalizado → producto
   byPrefijo: Map<string, ZonaCacheItem>     // prefijo → zona
+  byNombre: Map<string, PersonalCacheItem>  // nombre_norm → personal
 }
 
 // ── Store del cache ───────────────────────────────────────────────────────────
@@ -52,7 +61,7 @@ function norm(s: string): string {
 async function cargarCache(restaurante_id: string): Promise<MenuCache> {
   const supabase = createServerClient()
 
-  const [{ data: productos }, { data: formatos }, { data: zonas }] = await Promise.all([
+  const [{ data: productos }, { data: formatos }, { data: zonas }, { data: personal }] = await Promise.all([
     supabase
       .from('productos')
       .select('id, nombre, nombre_alternativo, precio, seccion, familia')
@@ -69,6 +78,11 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
       .eq('activa', true)
       .eq('restaurante_id', restaurante_id)
       .order('orden'),
+    supabase
+      .from('camareros')
+      .select('id, nombre, rol')
+      .eq('activo', true)
+      .eq('restaurante_id', restaurante_id),
   ])
 
   // Map formato por producto
@@ -124,7 +138,20 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
     }
   }
 
-  return { productos: productosCache, zonas: zonasCache, byAlias, byPrefijo }
+  // Personal — índice por primer nombre y nombre completo (ambos normalizados)
+  const personalCache: PersonalCacheItem[] = (personal ?? []).map((c: Record<string, unknown>) => ({
+    id: c.id as string,
+    nombre: c.nombre as string,
+    nombre_norm: norm((c.nombre as string).split(' ')[0]),
+    rol: (c.rol as string) ?? 'camarero',
+  }))
+  const byNombre = new Map<string, PersonalCacheItem>()
+  for (const p of personalCache) {
+    byNombre.set(p.nombre_norm, p)
+    byNombre.set(norm(p.nombre), p)
+  }
+
+  return { productos: productosCache, zonas: zonasCache, personal: personalCache, byAlias, byPrefijo, byNombre }
 }
 
 // ── API pública ───────────────────────────────────────────────────────────────
