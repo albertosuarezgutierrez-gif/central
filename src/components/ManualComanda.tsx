@@ -253,10 +253,17 @@ export default function ManualComanda({
 
       {/* ── STEP: MESAS ── */}
       {step === 'mesa' && (() => {
-        // Enriquecer mesas con datos de tiempo desde mesasPlano si disponible
+        // Enriquecer mesas con datos de tiempo y estado desde mesasPlano (Realtime) si disponible
+        // FIX: sobrescribir estado con el de mesasPlano — el array local `mesas` se carga una vez
+        // al montar y no se actualiza; mesasPlano sí se sincroniza via Realtime desde edge/page.tsx
         const mesasEnriquecidas = mesasFiltradas.map(m => {
           const plano = mesasPlano?.find(p => p.id === m.id)
-          return { ...m, minutos: plano?.minutos_abierta ?? null, capacidad: plano?.capacidad ?? null }
+          return {
+            ...m,
+            estado: plano?.estado ?? m.estado,
+            minutos: plano?.minutos_abierta ?? null,
+            capacidad: plano?.capacidad ?? null,
+          }
         })
         // Zonas para tabs — usar zonasPlano si hay, si no usar zonas string[]
         const zonaTabsAll = zonasPlano && zonasPlano.length > 0
@@ -302,7 +309,7 @@ export default function ManualComanda({
                 Todas
               </button>
               {zonaTabs.map(z => {
-                const cnt = mesas.filter(m => m.zona === z.key && m.estado !== 'libre').length
+                const cnt = mesas.filter(m => m.zona === z.key && (mesasPlano?.find(p => p.id === m.id)?.estado ?? m.estado) !== 'libre').length
                 return (
                   <button key={z.key}
                     onPointerDown={() => setZonaFiltro(z.key)}
