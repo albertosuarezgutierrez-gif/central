@@ -348,9 +348,10 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 ## Módulos en producción (mayo 2026)
 
 - Voice/Brain: PTT, Groq Whisper EAR, BRAIN v2 (patron+nim_8b_fast+claude_api), VOX ElviraNeural
-- Mensajes por voz: por rol/nombre propio/sección (cocina caliente, barra uno) → destinatario_id privado o print_job si sección tiene impresora (67c05d6)
-- Marchar granular: "marcha croquetas S1" → UPDATE comanda_items.estado=listo → item tachado en KDS automáticamente (67c05d6)
-- Chuleta Voz (7c67c04+7a77669): ChuleteVoz.tsx 4 roles. MENSAJE incluye secciones. MARCHAR con nota KDS. Regla de oro: 1 acción·1 mesa·1 pulso
+- Mensajes voz: rol/nombre/sección → print_job si sección tiene impresora (67c05d6)
+- Marchar granular: "marcha croquetas S1" → comanda_items.estado=listo → tachado KDS (67c05d6)
+- Recomendación de vino: "recomendación de vino para solomillo" → buildVinosContext → Elvira habla con carta+precio (01c4688)
+- Chuleta Voz (01c4688): 5 bloques comanda/mensaje/marchar/86/vino(morado) en owner+camarero
 - Turnos: 2 tipos coexistentes (servicio camarero_id IS NULL + fichaje camarero_id)
 - Cobro: Stripe Terminal card_present + Bizum MONEI
 - VeriFactu: hash SHA-256 encadenado, QR AEAT, facturas_cliente con NIF propio
