@@ -78,8 +78,14 @@ function detectarFamiliaVino(tNorm: string): string | null {
 }
 const KW_86      = ['86', 'agotado', 'agotada', 'sin stock', 'se acabo', 'se acabó', 'no hay']
 
-// Mensajes/avisos entre roles: nunca deben parsearse como comanda
-const KW_MENSAJE = [
+// Recomendaciones de vino: nunca son comandas
+const KW_VINO = [
+  'recomendacion de vino', 'recomienda un vino', 'recomienda vino',
+  'qué vino', 'que vino', 'vino para', 'vino con',
+  'maridaje', 'maridar', 'qué vino va', 'que vino va',
+  'vino recomendado', 'sommelier', 'sumiller',
+  'vino tinto para', 'vino blanco para', 'vino rosado para',
+]
   'mensaje a cocina', 'mensaje para cocina',
   'mensaje a barra',  'mensaje para barra',
   'mensaje a sala',   'mensaje para sala',
@@ -437,6 +443,12 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
     }
 
     if (mesa) return { mesa, tipo: 'marchar', items: [], confianza: 0.95, raw: texto }
+  }
+
+  // ── 3.4. RECOMENDACIÓN DE VINO ───────────────────────────────────────────
+  // "recomendación de vino para solomillo" → siempre al LLM (carta vinos necesaria)
+  if (KW_VINO.some(k => tParseado.includes(k))) {
+    return null
   }
 
   // ── 3.5. MENSAJE / AVISO ─────────────────────────────────────────────────

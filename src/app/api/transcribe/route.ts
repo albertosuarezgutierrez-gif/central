@@ -867,7 +867,20 @@ export async function POST(req: NextRequest) {
       })
     } catch { /* nunca bloquear la comanda */ }
 
-    const okResult = { ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente, latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar, latencia_brain_ms: brainResult.latencia_brain_ms, comanda_id: comandaId, mesa_id: mesa?.id ?? null, nombre_cuenta: nombreCuentaUsada, alertas_86: alertas86, alertas_alergenos: alertasAlergenos, aviso_ruido: avisoRuido, speaker_match: speakerMatch, no_speech_prob, avg_logprob }
+    const okResult = {
+      ok: true, texto, brain: brainResult, fuente_brain: brainResult.fuente,
+      latencia_ms: latenciaTotal, latencia_ear_ms: latenciaEar,
+      latencia_brain_ms: brainResult.latencia_brain_ms,
+      comanda_id: comandaId, mesa_id: mesa?.id ?? null,
+      nombre_cuenta: nombreCuentaUsada,
+      alertas_86: alertas86, alertas_alergenos: alertasAlergenos,
+      aviso_ruido: avisoRuido, speaker_match: speakerMatch,
+      no_speech_prob, avg_logprob,
+      // Recomendación de vino → el cliente la lee via VOX directamente
+      voz_recomendacion: brainResult.tipo === 'recomendacion_vino'
+        ? (brainResult.nota_general ?? null)
+        : null,
+    }
     // Cachear resultado para idempotencia (si vuelve la misma recording_id, devuelve esto)
     if (recordingId) recentRecordings.set(recordingId, { ts: Date.now(), result: okResult })
     return NextResponse.json(okResult)

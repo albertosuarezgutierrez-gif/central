@@ -40,7 +40,7 @@ export interface Comanda {
   camarero?: Camarero
   turno_id: string
   estado: ComandaEstado
-  tipo: 'comanda' | 'cuenta' | 'marchar' | '86' | 'aviso'
+  tipo: 'comanda' | 'cuenta' | 'marchar' | '86' | 'aviso' | 'recomendacion_vino'
   numero_ticket: number
   num_comensales?: number | null
   items?: ComandaItem[]
@@ -87,7 +87,7 @@ export interface Transcripcion {
 export interface BrainResult {
   mesa: string
   nombre_cuenta?: string | null    // cuenta nominal: "a nombre de Alberto" → nombre_cuenta:"Alberto", mesa:""
-  tipo: 'comanda' | 'marchar' | '86' | 'cuenta' | 'aviso'
+  tipo: 'comanda' | 'marchar' | '86' | 'cuenta' | 'aviso' | 'recomendacion_vino'
   items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato?: string | null }[]
   num_comensales?: number | null   // extraído de voz: "mesa 4 para 3 personas"
   nota_general?: string | null     // nota global o texto del mensaje en tipo aviso

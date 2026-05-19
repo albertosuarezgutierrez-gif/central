@@ -1229,6 +1229,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           processingRef.current = false
           return
         }
+        // ── RECOMENDACIÓN DE VINO ─────────────────────────────────────────
+        if (d.brain?.tipo === 'recomendacion_vino' && d.voz_recomendacion) {
+          addMsg('brain', `🍷 ${d.voz_recomendacion}`, 'ok')
+          if (!ttsOff) speak(d.voz_recomendacion)
+          setScreenSafe('sent')
+          processingRef.current = false
+          return
+        }
+
         // Excepción: si usó nombre_cuenta, la comanda ya se creó sin mesa
         const esNominal = !!(d.nombre_cuenta && d.comanda_id)
         const mesaInvalida = !esNominal && !d.comanda_id && (

@@ -105,6 +105,22 @@ function ReglaDeOro() {
 
 // ── Bloques por tipo ──────────────────────────────────────────────────────────
 
+const PURPLE   = '#7B5EA7'
+const PURPLES  = 'rgba(123,94,167,.12)'
+
+function BloqueVino() {
+  return (
+    <Block color={PURPLE} bg={PURPLES} badge="VINO" sub="recomendación al momento">
+      <Row pattern="recomendación de vino para [plato]"
+        examples={['recomendación de vino para solomillo', 'recomendación de vino para dorada a la sal']} />
+      <Sep />
+      <Row pattern="¿qué vino va con [plato]?"
+        examples={['¿qué vino va con el cochinillo?', 'vino para caza mayor']} />
+      <Tip color={PURPLE} text="Elvira responde con vino de tu carta, D.O. y precio incluidos" />
+    </Block>
+  )
+}
+
 function BloqueComanda() {
   return (
     <Block color={AMBER} bg={AMBERS} badge="COMANDA" sub="lo que pide la mesa">
@@ -182,15 +198,17 @@ export default function ChuleteVoz({ rol }: Props) {
         <BloqueMensaje />
         <BloqueMarchar />
         <Bloque86 />
+        <BloqueVino />
         <ReglaDeOro />
       </>)}
 
-      {/* CAMARERO: comanda + mensaje + marchar + 86 + regla */}
+      {/* CAMARERO: comanda + mensaje + marchar + 86 + vino + regla */}
       {rol === 'camarero' && (<>
         <BloqueComanda />
         <BloqueMensaje />
         <BloqueMarchar />
         <Bloque86 />
+        <BloqueVino />
         <ReglaDeOro />
       </>)}
 

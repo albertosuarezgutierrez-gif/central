@@ -129,6 +129,35 @@ async function buildSeccionesContext(restaurante_id?: string): Promise<string> {
   } catch { return '' }
 }
 
+async function buildVinosContext(restaurante_id?: string): Promise<string> {
+  if (!restaurante_id) return ''
+  try {
+    const supabase = createServerClient()
+    const { data } = await supabase
+      .from('vinos_catalogo')
+      .select('nombre, bodega, tipo, denominacion_origen, varietal, maridaje_tags, maridaje_texto, descripcion_cata, precio_copa, precio_botella')
+      .eq('restaurante_id', restaurante_id)
+      .order('nombre')
+      .limit(40)
+    if (!data?.length) return ''
+    const lines = data.map((v: {
+      nombre: string; bodega: string; tipo: string; denominacion_origen: string;
+      varietal: string; maridaje_tags: string[]; maridaje_texto: string;
+      descripcion_cata: string; precio_copa?: number; precio_botella?: number;
+    }) => {
+      const precios = [
+        v.precio_copa ? `copa ${v.precio_copa}€` : null,
+        v.precio_botella ? `botella ${v.precio_botella}€` : null,
+      ].filter(Boolean).join(' / ')
+      return `  ${v.nombre} | ${v.bodega} | ${v.tipo} | D.O.${v.denominacion_origen} | ${v.varietal}` +
+        (v.maridaje_texto ? ` | maridaje: ${v.maridaje_texto}` : '') +
+        (v.descripcion_cata ? ` | "${v.descripcion_cata.slice(0, 80)}..."` : '') +
+        (precios ? ` | ${precios}` : '')
+    }).join('\n')
+    return `\nCARTA DE VINOS DEL RESTAURANTE:\n${lines}\n`
+  } catch { return '' }
+}
+
 /**
  * Memoria de sesión: ejemplos confirmados del turno activo.
  * Consulta ia_training_log del turno actual con calidad >= 3.
@@ -260,8 +289,21 @@ MARCHAR POR PRODUCTO (tipo marchar con items):
 - "marcha los postres S2" → tipo:"marchar", mesa:"S2", items:[{nombre:"[producto de carta]",cantidad:1}]
 - "marcha S1" sin producto → tipo:"marchar", mesa:"S1", items:[]
 
+RECOMENDACIÓN DE VINO (tipo recomendacion_vino):
+- Cuando el camarero pide recomendación de vino para un plato:
+  "recomendación de vino para solomillo" / "¿qué vino va con la dorada?" / "vino para caza mayor"
+  → tipo:"recomendacion_vino", mesa:"", items:[], nota_general:"[recomendación completa]"
+- La nota_general debe ser una respuesta CORTA (máx 2 frases) que el camarero pueda decir al cliente
+- Usa SIEMPRE vinos de la CARTA DE VINOS DEL RESTAURANTE si están disponibles
+- Si hay vino perfecto para el plato → nómbralo con bodega, D.O. y precio
+- Si no hay vino específico en carta → recomienda tipo/D.O. genérica
+- Ejemplos de respuesta en nota_general:
+  "Para el solomillo, el Vega Sicilia Único 2015, Ribera del Duero, taninos sedosos que abrazan la carne. Botella a 95€."
+  "Para la dorada a la sal, un Albariño Rías Baixas. Fresco, con acidez que realza el pescado. Copa a 4€."
+  "Para el cochinillo, un Ribera del Duero crianza, taninos suaves. El Protos está a 28€ botella."
+
 SCHEMA:
-{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","destinatario_nombre":null,"items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso|recomendacion_vino","destinatario_nombre":null,"items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
 
 // ── Proveedores ─────────────────────────────────────────────────────────────
 
@@ -349,16 +391,20 @@ export async function parsearComanda(
   camarero_id?: string
 ): Promise<BrainResult> {
   // Lanzar todas las consultas de contexto en paralelo (carta + zonas + recom + sesión + personal)
-  const [menuContext, zonasContext, recomContext, sesionContext, personalContext, seccionesContext] = await Promise.all([
+  // Cargar vinos solo si la transcripción lo sugiere (ahorra latencia)
+  const necesitaVinos = /recomend|maridaj|vino para|vino con|sommelier|sumiller|que vino/i.test(texto)
+
+  const [menuContext, zonasContext, recomContext, sesionContext, personalContext, seccionesContext, vinosContext] = await Promise.all([
     buildMenuContext(restaurante_id),
     buildZonasContext(restaurante_id),
     buildRecomendacionesContext(restaurante_id),
     buildSesionContext(restaurante_id, turno_id, camarero_id),
     buildPersonalContext(restaurante_id),
     buildSeccionesContext(restaurante_id),
+    necesitaVinos ? buildVinosContext(restaurante_id) : Promise.resolve(''),
   ])
 
-  const systemPromptBase = BASE_PROMPT + zonasContext + personalContext + seccionesContext + menuContext + recomContext
+  const systemPromptBase = BASE_PROMPT + zonasContext + personalContext + seccionesContext + (necesitaVinos ? vinosContext : '') + menuContext + recomContext
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
   if (sesionContext) {
