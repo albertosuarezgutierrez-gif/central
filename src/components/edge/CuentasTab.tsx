@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // ia.rest · CuentasTab v1.0
 // Tab de gestión de cuentas para /edge — pedir cuenta y cobrar desde móvil
 
@@ -8,27 +9,6 @@ import { Comanda } from '@/types'
 import { MesaPlano } from '@/components/PlanoSala'
 
 /* ─── Paleta crema (igual que /edge) ───────────────────────── */
-const C = {
-  bg:   '#F6F1E7',
-  bg1:  '#FBF8F1',
-  bg2:  '#EFE7D6',
-  bg3:  '#E5DAC2',
-  ink:  '#1A1714',
-  ink2: '#3A332C',
-  ink3: '#6B5F52',
-  ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  verm: '#D9442B',
-  vermD:'#A8311E',
-  vermS:'#F4D8CF',
-  amb:  '#E8A33B',
-  ambS: '#F7E3B6',
-  gr:   '#3F7D44',
-  grS:  '#D4E4D2',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 interface Props {
   comandas: Comanda[]

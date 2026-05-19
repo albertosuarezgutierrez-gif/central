@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // /bienvenida — Pantalla post-pago con datos clave del restaurante
 // Accesible vía: /bienvenida?r=CODIGO tras el checkout de Stripe
 
@@ -15,9 +16,6 @@ const C = {
   amber: '#E8A33B', amberS: 'rgba(232,163,59,.1)',
   pur: '#9B6BE8', purS: 'rgba(155,107,232,.1)',
 }
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 function CopyBox({ label, value, sub, mono = true }: { label: string; value: string; sub?: string; mono?: boolean }) {
   const [copied, setCopied] = useState(false)

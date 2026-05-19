@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Suspense } from 'react'

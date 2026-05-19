@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ManualComanda from '@/components/ManualComanda'
@@ -23,29 +24,6 @@ import SmartScanFAB from '@/components/SmartScanFAB'
 import CuentasTab from '@/components/edge/CuentasTab'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
-const C = {
-  bg:   '#F6F1E7',  // crema base
-  bg1:  '#FBF8F1',  // crema elevación 1
-  bg2:  '#EFE7D6',  // crema elevación 2
-  bg3:  '#E5DAC2',  // crema elevación 3
-  ink:  '#1A1714',  // tinta principal
-  ink2: '#3A332C',  // tinta media
-  ink3: '#6B5F52',  // tinta gris
-  ink4: '#9A8D7C',  // tinta muy suave
-  rule: '#D8CDB6',  // bordes
-  verm: '#D9442B',  // vermilion (acento marca)
-  vermD:'#A8311E',  // vermilion deep
-  vermS:'#F4D8CF',  // vermilion suave (bg)
-  amb:  '#E8A33B',  // ámbar
-  ambS: '#F7E3B6',  // ámbar suave
-  gr:   '#3F7D44',  // verde ok
-  grS:  '#D4E4D2',  // verde suave
-  teal: '#2B6A6E',  // teal (EAR/VOX)
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SC = "'Caveat',cursive"
 
 type Screen = 'idle'|'recording'|'processing'|'speaking'|'asking'|'confirm'|'sent'|'error'
 type Tab    = 'hablar'|'manual'|'sala'|'cuentas'|'carta'|'chat'|'config'

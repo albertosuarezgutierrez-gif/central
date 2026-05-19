@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // src/components/owner/DiagnosticoTab.tsx
 // Panel de diagnóstico del sistema para /owner y /jefe
 // El dueño puede ver qué pasa sin necesitar llamar a soporte
@@ -7,17 +8,6 @@ import React, { useState, useEffect, useCallback } from 'react'
 import HealerWidget from '@/components/owner/HealerWidget'
 
 /* ─── Tokens de diseño (idénticos a owner/page.tsx) ─── */
-const C = {
-  paper:'#F6F1E7', paper2:'#EFE7D6', paper3:'#E5DAC2', bone:'#FBF8F1',
-  ink:'#1A1714', ink2:'#3A332C', ink3:'#6B5F52', ink4:'#9A8D7C',
-  rule:'#D8CDB6',
-  red:'#D9442B', redD:'#A8311E', redS:'#F4D8CF',
-  amber:'#E8A33B', amberD:'#A8761A', amberS:'#F7E3B6',
-  green:'#3F7D44', greenS:'#D4E4D2',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 /* ─── Tipos ─── */
 interface BridgeToken {

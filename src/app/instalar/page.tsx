@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import { useEffect, useState } from 'react'
 import { BRIDGE_VERSION, BRIDGE_SIZE, BRIDGE_EXE_URL } from '@/lib/bridge-config'
 
@@ -13,9 +14,6 @@ const C = {
   verm: '#D9442B',
   gr:   '#3F7D44',
 }
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 
 export default function InstalarPage() {

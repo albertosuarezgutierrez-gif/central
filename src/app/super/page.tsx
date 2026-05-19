@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth, Session } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
@@ -6,22 +7,6 @@ import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 
-const C = {
-  bg: '#F6F1E7', bg2: '#EFE7D6', bg3: '#E5DAC2', ink: '#1A1714',
-  ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6', ruleS: '#B8A98B',
-  red: '#D9442B', redD: '#A8311E', redS: '#F4D8CF',
-  amber: '#E8A33B', amberS: '#F7E3B6',
-  green: '#3F7D44', greenS: '#D4E4D2',
-  blue: '#2B6A9E', blueS: 'rgba(43,106,158,0.12)',
-  teal: '#2B6A6E', tealS: 'rgba(43,106,110,0.12)',
-  dark: '#14110E', dark2: '#1F1A15',
-  // fg para usar sobre fondos oscuros (cards dark)
-  dkFg: '#F6F1E7', dkFg2: '#C9BFAA', dkFg3: '#8D8270', dkRule: '#2E2820',
-}
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 interface Restaurante {
   id: string

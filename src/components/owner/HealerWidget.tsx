@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 // ia.rest · src/components/owner/HealerWidget.tsx
 // Widget compacto del Auto-Healer para el panel /owner
@@ -29,16 +30,6 @@ interface Reciente {
   created_at: string
 }
 
-const C = {
-  bg: '#F6F1E7', bg2: '#EFE7D6', ink: '#1A1714', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  red: '#D9442B', redS: '#F4D8CF',
-  green: '#3F7D44', greenS: '#D4E4D2',
-  amber: '#E8A33B', amberS: '#FAF0DC',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SE = "'Newsreader',Georgia,serif"
 
 function fmtRelativo(iso: string) {
   const diff = Date.now() - new Date(iso).getTime()

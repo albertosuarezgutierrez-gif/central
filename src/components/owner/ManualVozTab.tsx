@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // src/components/owner/ManualVozTab.tsx
 // Manual de protocolo de voz — visible en /owner y para jefe de sala
 // Incluye: protocolo por rol, novedades con badge NUEVO, sugerencias de mejora
@@ -6,19 +7,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 
 /* ─── Tokens de diseño ─── */
-const C = {
-  paper: '#F6F1E7', paper2: '#EFE7D6', paper3: '#E5DAC2', bone: '#FBF8F1',
-  ink: '#1A1714', ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  red: '#D9442B', redS: '#F4D8CF',
-  amber: '#E8A33B', amberS: '#F7E3B6',
-  green: '#3F7D44', greenS: '#D4E4D2',
-  teal: '#2B6A6E', tealS: '#D0E6E8',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SC = "'Caveat',cursive"
 
 /* ─── Tipos ─── */
 interface Novedad {

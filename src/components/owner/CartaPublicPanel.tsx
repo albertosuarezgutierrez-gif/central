@@ -1,21 +1,11 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useState, useEffect, useCallback } from 'react'
 import { copyToClipboard } from '@/lib/clipboard'
 import { IDIOMAS_CARTA, CodigoIdioma } from '@/lib/useIdiomasCarta'
 
 // ─── Design tokens ────────────────────────────────────────────
-const C = {
-  paper: '#F6F1E7', bone: '#FBF8F1',
-  ink: '#1A1714', ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  red: '#D9442B',
-  amber: '#E8A33B', amberS: '#F7E3B6',
-  green: '#3F7D44', greenS: '#D4E4D2',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 type Rest = { nombre: string; slug: string; logo_url: string | null }
 

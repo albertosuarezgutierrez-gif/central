@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // MensajesOwnerTab — auditoría de mensajes entre roles
 // Retención: 5 días · Descarga PDF del rango seleccionado
 // Mayo 2026
@@ -19,9 +20,6 @@ const C = {
   green: '#3F7D44',
   rule:  '#2E2820',
 }
-const SN = 'Inter Tight, sans-serif'
-const SE = 'Newsreader, Georgia, serif'
-const SM = 'JetBrains Mono, monospace'
 
 type Msg = {
   id: string

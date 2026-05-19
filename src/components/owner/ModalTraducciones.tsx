@@ -1,6 +1,7 @@
 // components/owner/ModalTraducciones.tsx
 // Editor de traducciones de un producto para el panel owner
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useState, useEffect, useCallback } from 'react'
 import { IDIOMAS_CARTA, CodigoIdioma } from '@/lib/useIdiomasCarta'
@@ -17,18 +18,6 @@ interface Props {
   onClose: () => void
 }
 
-const C = {
-  paper: '#F6F1E7', bone: '#FBF8F1',
-  ink: '#1A1714', ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  red: '#D9442B', redD: '#A8311E',
-  amber: '#E8A33B', amberS: '#F7E3B6',
-  green: '#3F7D44', greenS: '#D4E4D2',
-  teal: '#2B6A6E', tealS: '#D0E8EA',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 export default function ModalTraducciones({ producto, sh, onClose }: Props) {
   const [traducciones, setTraducciones] = useState<Partial<Record<CodigoIdioma, TraduccionLocal>>>({})

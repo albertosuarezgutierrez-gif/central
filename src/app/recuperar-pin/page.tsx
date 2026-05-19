@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 
 import { useState } from 'react'
 
@@ -11,8 +12,6 @@ const C = {
   rule:'#D8CDB6', rS:'#B8A98B',
   red:'#D9442B', green:'#3F7D44',
 }
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
 
 export default function RecuperarPinPage() {
   const [email, setEmail]     = useState('')

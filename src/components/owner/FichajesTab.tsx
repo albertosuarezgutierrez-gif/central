@@ -1,9 +1,7 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 const C  = { bg:'#14110E', bg2:'#1E1916', card:'#221E1A', rule:'#2E2923', ink:'#F6F1E7', ink2:'#EFE7D6', ink3:'#D8CDB6', ink4:'#8C7B6B', verm:'#D9442B', gr:'#3F7D44', amb:'#E8A33B', bone:'#F6F1E7' }
 
 interface Fichaje {

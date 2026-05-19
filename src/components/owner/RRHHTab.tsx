@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 
 // ── Design system ─────────────────────────────────────────────────────────
@@ -14,8 +15,6 @@ const C = {
   amber: '#E8A33B',
   green: '#3F7D44',
 }
-const TT = 'Newsreader'
-const SM = '"Inter Tight", sans-serif'
 const MN = '"JetBrains Mono", monospace'
 
 // ── Tipos ─────────────────────────────────────────────────────────────────

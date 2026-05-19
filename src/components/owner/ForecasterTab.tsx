@@ -1,16 +1,7 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { useEffect, useState } from 'react'
 
-const C = {
-  ink: '#1A1714', ink3: '#6B5F52', ink4: '#9A8D7C',
-  paper: '#F6F1E7', rule: '#D8CDB6',
-  red: '#D9442B', amber: '#E8A33B', green: '#3F7D44',
-  bone: '#FBF8F1', dark1: '#1F1A15',
-  blue: '#2B6A9E',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 const NIVEL_BG: Record<string, string>    = { bajo: '#1F1A15', medio: 'rgba(232,163,59,0.08)', alto: 'rgba(217,68,43,0.08)' }
 const NIVEL_COLOR: Record<string, string> = { bajo: C.ink4,    medio: C.amber,                alto: C.red }

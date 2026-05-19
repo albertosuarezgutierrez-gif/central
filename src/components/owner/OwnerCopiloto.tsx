@@ -1,8 +1,7 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-const C = { red: '#D9442B', ink: '#1A1714', ink3: '#6B5F52', ink4: '#9A8D7C', paper: '#F6F1E7', rule: '#3A332C', dark: '#14110E', dark1: '#1F1A15', dkFg: '#F6F1E7', dkFg2: '#C9BFAA', dkFg3: '#8D8270' }
-const SN = "'Inter Tight',system-ui,sans-serif"
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 

@@ -1,9 +1,7 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import React, { useState, useEffect } from 'react'
 
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 const C = {
   bg:   '#14110E',

@@ -1,22 +1,10 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // ia.rest · CobrarSheet v2
 // Sheet de cobro con numpad táctil para efectivo, cálculo de cambio en tiempo real
 
 import React, { useState, useEffect, useCallback } from 'react'
 
-const C = {
-  bg:'#F6F1E7',bg1:'#FBF8F1',bg2:'#EFE7D6',bg3:'#E5DAC2',
-  ink:'#1A1714',ink2:'#3A332C',ink3:'#6B5F52',ink4:'#9A8D7C',
-  rule:'#D8CDB6',
-  verm:'#D9442B',vermD:'#A8311E',vermS:'#F4D8CF',
-  amb:'#E8A33B',ambS:'#F7E3B6',
-  gr:'#3F7D44',grS:'#D4E4D2',
-  teal:'#2B6A6E',
-  numBg:'#1A1714', numKey:'#2A2420', numKeyHL:'#3A3028',
-}
-const SN="'Inter Tight',system-ui,sans-serif"
-const SE="'Newsreader',Georgia,serif"
-const SM="'JetBrains Mono',ui-monospace,monospace"
 
 interface MetodoPago { id:string; nombre:string; tipo:string; icono:string; color:string }
 interface ComandaItem { id:string; nombre:string; cantidad:number; precio_unitario:number|null; notas?:string|null }

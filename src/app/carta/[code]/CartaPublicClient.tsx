@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useState, useEffect } from 'react'
 import { useSearchParams } from 'next/navigation'
@@ -15,22 +16,6 @@ type Producto = {
 type Restaurante = { nombre: string; slug: string; logo_url?: string | null }
 
 // ─── Design tokens (paleta crema, orientada al cliente) ───────
-const C = {
-  paper: '#F6F1E7',
-  paper2: '#EFE7D6',
-  bone: '#FBF8F1',
-  ink: '#1A1714',
-  ink2: '#3A332C',
-  ink3: '#6B5F52',
-  ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  red: '#D9442B',
-  redD: '#A8311E',
-  amber: '#E8A33B',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 // Orden preferido de categorías en la carta
 const CAT_ORDER = [

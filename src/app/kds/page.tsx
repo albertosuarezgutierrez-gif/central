@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useCallback, useRef, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -9,9 +10,6 @@ import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 
 const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
-const SE="'Newsreader',Georgia,serif"
-const SN="'Inter Tight',system-ui,sans-serif"
-const SM="'JetBrains Mono',ui-monospace,monospace"
 
 type Seccion = { id: string; nombre: string; color_kds: string }
 type PttState = 'idle' | 'recording' | 'processing' | 'ok' | 'error'

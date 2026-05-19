@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // ============================================================
 // ia.rest · ComensalesModal
 // Pregunta cuántos comensales al abrir primera comanda en mesa.
@@ -8,26 +9,6 @@
 
 import { useState, useEffect } from 'react'
 
-const C = {
-  bg:   '#F6F1E7',
-  bg1:  '#FBF8F1',
-  bg2:  '#EFE7D6',
-  ink:  '#1A1714',
-  ink2: '#3A332C',
-  ink3: '#6B5F52',
-  rule: '#D8CDB6',
-  verm: '#D9442B',
-  vermD:'#A8311E',
-  vermS:'#F4D8CF',
-  amb:  '#E8A33B',
-  ambS: '#FDF3DC',
-  gr:   '#3F7D44',
-  grS:  '#D4E4D2',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SC = "'Caveat',cursive"
 
 interface ServicioConfig {
   activo: boolean

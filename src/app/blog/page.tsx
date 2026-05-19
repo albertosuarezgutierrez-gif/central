@@ -1,3 +1,4 @@
+import { SE, SN, SM } from '@/lib/colors'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -12,8 +13,6 @@ export const metadata: Metadata = {
   },
 }
 
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
 
 const articulos = [
   {

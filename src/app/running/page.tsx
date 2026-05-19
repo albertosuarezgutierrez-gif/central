@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // ============================================================
 // ia.rest · /running — Pantalla del Running
 // v2: tarjetas de SERVICIO (cubierto) en prioridad máxima,
@@ -11,29 +12,6 @@ import { supabase } from '@/lib/supabase'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { useMensajes } from '@/hooks/useMensajes'
 
-const C = {
-  bg:   '#F6F1E7',
-  bg1:  '#FBF8F1',
-  bg2:  '#EFE7D6',
-  bg3:  '#E5DAC2',
-  ink:  '#1A1714',
-  ink2: '#3A332C',
-  ink3: '#6B5F52',
-  ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  verm: '#D9442B',
-  vermD:'#A8311E',
-  vermS:'#F4D8CF',
-  amb:  '#E8A33B',
-  ambS: '#FDF3DC',
-  gr:   '#3F7D44',
-  grS:  '#D4E4D2',
-  teal: '#2B6A6E',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SC = "'Caveat',cursive"
 
 interface MarcharItem {
   id: string

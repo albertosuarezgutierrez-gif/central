@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import CobrarSheet from '@/components/edge/CobrarSheet'
@@ -11,9 +12,6 @@ const L = {
   gr:'#3F7D44', grS:'#D4E4D2',
   amb:'#E8A33B', ambS:'#F7E3B6',
 }
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 const ESTADO_DOT: Record<string,string> = {
   libre: L.ruleS, activa: L.gr, marchar: '#2D5C32',

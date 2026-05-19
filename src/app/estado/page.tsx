@@ -3,6 +3,7 @@
 // Accesible sin login en www.iarest.es/estado
 // Argumento comercial: "somos tan seguros que el uptime es público"
 
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
@@ -10,18 +11,6 @@ export const metadata: Metadata = {
   description: 'Estado en tiempo real de los servicios de ia.rest — TPV con IA para restaurantes.',
 }
 
-const C = {
-  paper: '#F6F1E7', paper2: '#EFE7D6', paper3: '#E5DAC2',
-  ink: '#1A1714', ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  red: '#D9442B', redS: '#F4D8CF',
-  amber: '#E8A33B', amberS: '#F7E3B6',
-  green: '#3F7D44', greenS: '#D4E4D2',
-  dark: '#14110E',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 interface EstadoData {
   ok: boolean

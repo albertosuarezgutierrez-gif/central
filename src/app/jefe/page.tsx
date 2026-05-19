@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 // ia.rest · Panel Jefe de Sala — v2.2 (feat: chat entre roles)
 // Rol: jefe_sala (PIN 0000) · También accesible por owner y super_admin
 
@@ -11,18 +12,6 @@ import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import SupervisorTab from '@/components/owner/SupervisorTab'
 import { useMensajes } from '@/hooks/useMensajes'
 
-const C = {
-  paper:'#F6F1E7', paper2:'#EFE7D6', paper3:'#E5DAC2', bone:'#FBF8F1',
-  ink:'#1A1714', ink2:'#3A332C', ink3:'#6B5F52', ink4:'#9A8D7C',
-  rule:'#D8CDB6', ruleS:'#B8A98B',
-  red:'#D9442B', redD:'#A8311E', redS:'#F4D8CF',
-  amber:'#E8A33B', amberS:'#F7E3B6',
-  green:'#3F7D44', greenS:'#D4E4D2',
-  teal:'#2B6A6E',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 type Tab = 'salon'|'cocina'|'comandas'|'stream'|'caja'|'audit'|'analytics'|'supervisor'|'chat'|'mas'
 

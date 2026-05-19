@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // QrClientApp — App completa del cliente en la mesa
 // Flujo: bienvenida → carta → carrito → cocina ↔ carta (multi-pedido) → cuenta → propina → pago
 // El cliente puede hacer múltiples comandas en la misma sesión. Todas se agrupan en la cuenta final.

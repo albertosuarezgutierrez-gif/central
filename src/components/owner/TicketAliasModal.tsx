@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // ia.rest · TicketAliasModal
 // Permite a owner/jefe_sala renombrar conceptos en el ticket impreso
 // Los totales y la factura VeriFactu NO se modifican jamás
@@ -14,9 +15,6 @@ const C = {
   amb: '#E8A33B', ambS: '#3A2A0E',
   gr: '#3F7D44', grS: '#1A2E1C',
 }
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SE = "'Newsreader',Georgia,serif"
 
 interface ComandaItem {
   id: string

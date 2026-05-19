@@ -1,12 +1,10 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { storeRestauranteCode } from '@/hooks/useAuth'
 import FicharEntradaModal from '@/components/FicharEntradaModal'
 
 const C = { bg:'#F6F1E7', e1:'#FBF8F1', e2:'#EFE7D6', fg:'#1A1714', fg3:'#6B5F52', rule:'#D8CDB6', rS:'#B8A98B', red:'#D9442B', teal:'#2B6A6E', green:'#3F7D44' }
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 function detectRestauranteCode(): string | null {
   if (typeof window === 'undefined') return null

@@ -1,9 +1,7 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 import { useState } from 'react'
 
-const C = { red: '#D9442B', amber: '#E8A33B', green: '#3F7D44', ink: '#1A1714', ink3: '#6B5F52', ink4: '#9A8D7C', paper: '#F6F1E7', bone: '#FBF8F1', rule: '#D8CDB6' }
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 interface Item { nombre: string; cantidad_sugerida: number; razon?: string; dias_para_rotura?: number }
 interface Prediccion { pedido_urgente: Item[]; pedido_esta_semana: Item[]; sin_accion: string[]; resumen: string; ahorro_tip?: string }

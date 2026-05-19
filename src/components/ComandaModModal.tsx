@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 // ============================================================
 // ComandaModModal — Modal de modificación/eliminación de ítems
@@ -9,18 +10,6 @@
 import { useState } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const C = {
-  bg:   '#F6F1E7', bg1: '#FBF8F1', bg2: '#EFE7D6',
-  ink:  '#1A1714', ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6',
-  verm: '#D9442B', vermD: '#A8311E', vermS: '#F4D8CF',
-  amb:  '#E8A33B', ambS: '#F7E3B6',
-  gr:   '#3F7D44', grS: '#D4E4D2',
-  teal: '#2B6A6E',
-}
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 type TipoAccion   = 'eliminar_item' | 'modificar_cantidad'
 type MotivoCat    = 'error_pedido' | 'cliente_cambio' | 'producto_no_disponible' | 'orden_supervisor' | 'otro'

@@ -1,3 +1,4 @@
+import { SE, SN, SM } from '@/lib/colors'
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import { BRIDGE_VERSION, BRIDGE_SIZE, BRIDGE_EXE_URL, BRIDGE_EXE_NAME } from '@/lib/bridge-config'

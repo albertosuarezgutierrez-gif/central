@@ -1,4 +1,5 @@
 'use client'
+import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 // ─── Tipos ──────────────────────────────────────────────────────
 interface Sugerencia {
@@ -25,19 +26,6 @@ interface Props {
 }
 
 // ─── Config ──────────────────────────────────────────────────────
-const C = {
-  bg: '#F6F1E7', bg2: '#EFE7D6', bg3: '#E5DAC2', ink: '#1A1714',
-  ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
-  rule: '#D8CDB6', ruleS: '#B8A98B',
-  red: '#D9442B', redD: '#A8311E', redS: '#F4D8CF',
-  green: '#3F7D44', greenS: '#D4E4D2',
-  amb: '#E8A33B', ambS: '#FAF0D7',
-  dark: '#14110E',
-}
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SC = "'Caveat',cursive"
 
 const CAT_CONFIG = {
   bug:     { label: 'Bug',     emoji: '🐛', bg: '#F4D8CF', color: C.red },

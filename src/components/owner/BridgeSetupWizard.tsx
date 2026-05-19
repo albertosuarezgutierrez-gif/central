@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // ============================================================
 // ia.rest · BridgeSetupWizard
 // Guía paso a paso que aparece tras instalar el bridge (?setup=1)
@@ -19,7 +20,6 @@ const C = {
   rule:  '#2E2925',
   green: '#3F7D44',
 }
-const SN = "'Inter Tight', sans-serif"
 
 type Impresora = {
   id: string

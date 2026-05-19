@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // ia.rest · Super Admin → Restaurante [id]
 // Gestión completa de un restaurante desde el panel super admin
 // 9 tabs: Vista · Carta · Mesas · Personal · Secciones · Impresoras · Facturas · Alertas · Config
@@ -17,9 +18,6 @@ const C = {
   green: '#3F7D44', greenS: 'rgba(63,125,68,0.12)',
   blue: '#2B6A9E', blueS: 'rgba(43,106,158,0.12)',
 }
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 type TabId = 'vista'|'carta'|'mesas'|'personal'|'secciones'|'impresoras'|'facturas'|'alertas'|'config'
 const TABS: {id:TabId; label:string}[] = [

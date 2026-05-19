@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 // ia.rest · FacturaClienteModal v2
 // Emite factura completa (serie F) con datos fiscales del cliente
 // Autocomplete en tiempo real por NIF o nombre — guarda cliente para reutilizar
@@ -14,9 +15,6 @@ const C = {
   gr: '#3F7D44', grS: '#1A2E1C',
   blue: '#2B6A9E', blueS: '#0E2A40',
 }
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SE = "'Newsreader',Georgia,serif"
 
 interface ClienteFiscal {
   id?: string

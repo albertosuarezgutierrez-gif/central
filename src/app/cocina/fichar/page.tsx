@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useCallback } from 'react'
 
 // ── Design tokens ──────────────────────────────────────────────────────────
@@ -16,9 +17,6 @@ const C = {
   grD:  '#2E5C32',
   amb:  '#E8A33B',
 }
-const SE = "'Newsreader',Georgia,serif"
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 interface CocineroSession {

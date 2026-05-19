@@ -1,4 +1,5 @@
 'use client'
+import { SE, SN, SM } from '@/lib/colors'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -21,10 +22,6 @@ const C = {
   green:  '#3F7D44',
   greenS: '#152418',
 }
-const SN = "'Inter Tight',system-ui,sans-serif"
-const SE = "'Newsreader',Georgia,serif"
-const SM = "'JetBrains Mono',ui-monospace,monospace"
-const SC = "'Caveat',cursive"
 
 /* ── Types ────────────────────────────────────────────────── */
 type ProductoExtraido = {
