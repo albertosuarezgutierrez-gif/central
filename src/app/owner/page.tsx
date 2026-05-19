@@ -2688,7 +2688,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                 ? secciones.map(s => ({ value: s.id, label: s.nombre }))
                 : SECCIONES_DEFAULT.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))
               }/>
-            <Field label="Aliases (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="bravas, una de bravas, patatas"/>
+            <Field label="Motes / apodos del local (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="huevos del abuelo, el especial, el combo"/>
             <div>
               <Field label="Familia BRAIN (opcional)" value={form.familia} onChange={v => setForm(f => ({ ...f, familia: v }))} placeholder="vino_tinto"/>
               <div style={{fontFamily:SM,fontSize:10,color:C.ink3,marginTop:4,lineHeight:1.5}}>

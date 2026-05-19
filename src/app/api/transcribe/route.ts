@@ -24,12 +24,22 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
 
   const { data: productos } = await supabase
     .from('productos')
-    .select('nombre')
+    .select('nombre, nombre_alternativo')
     .eq('restaurante_id', restauranteId)
     .eq('activo', true)
     .limit(60)
 
-  const nombres = (productos ?? []).map(p => p.nombre).join(', ')
+  // Priorizar productos con motes (aliases) — ayudan más a Whisper
+  const sorted = [...(productos ?? [])].sort((a, b) => {
+    const aHas = Array.isArray(a.nombre_alternativo) && a.nombre_alternativo.length > 0
+    const bHas = Array.isArray(b.nombre_alternativo) && b.nombre_alternativo.length > 0
+    return (bHas ? 1 : 0) - (aHas ? 1 : 0)
+  })
+  // Formato: "Nombre canónico/mote1/mote2" para que Whisper conozca ambas formas
+  const nombres = sorted.map(p => {
+    const motes = Array.isArray(p.nombre_alternativo) ? p.nombre_alternativo.filter(Boolean) : []
+    return motes.length > 0 ? `${p.nombre}/${motes.join('/')}` : p.nombre
+  }).join(', ')
   const vocab   = 'mesa, caña, cerveza, vino, agua, tónica, marchar, cuenta, 86, ración, media ración, sin gluten, sin sal, muy hecho, poco hecho'
   const vinoVocab = 'Ribera del Duero, Rioja, Albariño, Rueda, Priorat, Rías Baixas, Jerez, Cava, Verdejo, Mencía, Monastrell, Tempranillo, Garnacha, copa de tinto, botella de blanco, media botella, vino de la casa, crianza, reserva, gran reserva, rosado, espumoso, champán, Vega Sicilia, Torres, Marqués de Riscal, Marqués de Murrieta, Protos, Pesquera, Abadía Retuerta, tinto de la casa, blanco de la casa'
   const promptFull = nombres
@@ -411,6 +421,32 @@ export async function POST(req: NextRequest) {
           if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
         }
 
+        // Fallback: si algún nombre no matcheó, buscar por nombre_alternativo (motes/apodos)
+        // Cubre el caso raro en que el LLM devuelve el alias en lugar del nombre canónico
+        const nombresNoMatcheados = todosNombres.filter(n => !precioMap[norm(n)])
+        if (nombresNoMatcheados.length > 0) {
+          const { data: prodsPorAlias } = await supabase
+            .from('productos').select('id,nombre,precio,nombre_alternativo')
+            .eq('restaurante_id', rid).eq('activo', true)
+          for (const p of prodsPorAlias ?? []) {
+            const aliases: string[] = Array.isArray(p.nombre_alternativo) ? p.nombre_alternativo : []
+            for (const alias of aliases) {
+              const aliasNorm = norm(alias)
+              if (nombresNoMatcheados.some(n => norm(n) === aliasNorm)) {
+                if (p.precio != null) {
+                  // Registrar tanto por nombre canónico como por el alias buscado
+                  precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
+                  precioMap[aliasNorm] = { id: p.id, precio: Number(p.precio) }
+                  // Reparar el nombre en brainResult para que el insert use el nombre canónico
+                  for (const item of brainResult.items) {
+                    if (norm(item.nombre) === aliasNorm) item.nombre = p.nombre
+                  }
+                }
+              }
+            }
+          }
+        }
+
         if (itemsConFormato.length > 0) {
           const nombresUnicos = [...new Set(itemsConFormato.map(i => i.nombre))]
           const { data: prods } = await supabase
@@ -585,6 +621,28 @@ export async function POST(req: NextRequest) {
         const precioMap: Record<string, { id: string; precio: number }> = {}
         for (const p of todosProds ?? []) {
           if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
+        }
+        // Fallback por nombre_alternativo (motes/apodos)
+        const nombresNoMatcheados2 = todosNombres.filter(n => !precioMap[norm(n)])
+        if (nombresNoMatcheados2.length > 0) {
+          const { data: prodsPorAlias2 } = await supabase
+            .from('productos').select('id,nombre,precio,nombre_alternativo')
+            .eq('restaurante_id', rid).eq('activo', true)
+          for (const p of prodsPorAlias2 ?? []) {
+            const aliases2: string[] = Array.isArray(p.nombre_alternativo) ? p.nombre_alternativo : []
+            for (const alias of aliases2) {
+              const aliasNorm = norm(alias)
+              if (nombresNoMatcheados2.some(n => norm(n) === aliasNorm)) {
+                if (p.precio != null) {
+                  precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
+                  precioMap[aliasNorm] = { id: p.id, precio: Number(p.precio) }
+                  for (const item of brainResult.items) {
+                    if (norm(item.nombre) === aliasNorm) item.nombre = p.nombre
+                  }
+                }
+              }
+            }
+          }
         }
         await supabase.from('comanda_items').insert(
           brainResult.items.map(item => {
