@@ -905,12 +905,25 @@ const ESTADO_COLOR: Record<EstadoLead, string> = {
   cliente:     '#3F7D44',
   descartado:  '#6B5F52',
 }
-interface Lead { id: string; nombre: string; restaurante: string; telefono: string; email?: string; estado: EstadoLead; notas: string | null; created_at: string }
+const EVENTO_EMOJIS = ['💬','✉️','📞','📅','🤝','💡','⚠️','✅','📋','🔍']
+interface LeadEvento { tipo: string; texto: string; fecha: string }
+interface Lead {
+  id: string; nombre: string; restaurante: string; telefono: string; email?: string
+  estado: EstadoLead; notas: string | null; created_at: string
+  tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
+  eventos: LeadEvento[]
+}
 
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '', 'Content-Type': 'application/json' })
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
+  const [expandido, setExpandido] = useState<string | null>(null)
+  const [modalNuevo, setModalNuevo] = useState(false)
+  const [eventoTexto, setEventoTexto] = useState<Record<string, string>>({})
+  const [eventoTipo, setEventoTipo] = useState<Record<string, string>>({})
+  const [form, setForm] = useState({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
+  const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     fetch('/api/super/leads', { headers: sh() })
@@ -927,20 +940,131 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
     if (d.lead) setLeads(prev => prev.map(l => l.id === lead.id ? d.lead : l))
   }
 
+  const addEvento = async (lead: Lead) => {
+    const texto = (eventoTexto[lead.id] || '').trim()
+    if (!texto) return
+    const tipo = eventoTipo[lead.id] || '💬'
+    const r = await fetch(`/api/super/leads/${lead.id}`, { method: 'PATCH', headers: sh(), body: JSON.stringify({ evento: { tipo, texto } }) })
+    const d = await r.json()
+    if (d.lead) {
+      setLeads(prev => prev.map(l => l.id === lead.id ? d.lead : l))
+      setEventoTexto(p => ({ ...p, [lead.id]: '' }))
+    }
+  }
+
+  const crearLeadPersonal = async () => {
+    if (!form.nombre || !form.restaurante) return
+    setSaving(true)
+    const r = await fetch('/api/super/leads', { method: 'POST', headers: sh(), body: JSON.stringify(form) })
+    const d = await r.json()
+    if (d.lead) {
+      setLeads(prev => [d.lead, ...prev])
+      setModalNuevo(false)
+      setForm({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
+      setExpandido(d.lead.id)
+    }
+    setSaving(false)
+  }
+
   const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  const fmtFecha = (f: string) => f
+
+  const personales = leads.filter(l => l.tipo === 'personal')
+  const online = leads.filter(l => l.tipo !== 'personal')
+
+  const CardLead = ({ lead, big }: { lead: Lead; big?: boolean }) => {
+    const abierto = expandido === lead.id
+    return (
+      <div style={{ background: C.bg2, border: `1px solid ${abierto ? C.red : C.rule}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s' }}>
+        {/* Cabecera */}
+        <div style={{ padding: big ? '18px 22px' : '14px 18px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', cursor: 'pointer' }} onClick={() => setExpandido(abierto ? null : lead.id)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: big ? 6 : 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {big && <span style={{ fontSize: 16 }}>🏆</span>}
+              <span style={{ fontFamily: SN, fontSize: big ? 18 : 15, fontWeight: 600, color: C.ink }}>{lead.nombre}</span>
+              <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>·</span>
+              <span style={{ fontFamily: SM, fontSize: big ? 14 : 13, color: C.ink2 }}>{lead.restaurante}</span>
+              {lead.locales && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3, background: `${C.rule}`, padding: '2px 7px', borderRadius: 8 }}>{lead.locales}</span>}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              {lead.telefono && <a href={`tel:${lead.telefono}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none', fontWeight: 600 }}>📞 {lead.telefono}</a>}
+              {lead.email && <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 13, color: C.ink2, textDecoration: 'none' }}>✉ {lead.email}</a>}
+              {lead.contacto && <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>👤 {lead.contacto}</span>}
+              {lead.tpv && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>TPV: {lead.tpv}</span>}
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{fmt(lead.created_at)}</span>
+            </div>
+            {lead.notas && !abierto && <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, fontStyle: 'italic' }}>{lead.notas.substring(0, 80)}{lead.notas.length > 80 ? '…' : ''}</div>}
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+            <button onClick={e => { e.stopPropagation(); cambiarEstado(lead) }} style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${ESTADO_COLOR[lead.estado]}`, background: `${ESTADO_COLOR[lead.estado]}18`, color: ESTADO_COLOR[lead.estado], fontFamily: SM, fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.04em', textTransform: 'uppercase' }}>
+              {lead.estado} →
+            </button>
+            {(lead.eventos?.length > 0) && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>{lead.eventos.length} evento{lead.eventos.length !== 1 ? 's' : ''} {abierto ? '▲' : '▼'}</span>}
+            {(!lead.eventos?.length) && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>{abierto ? '▲' : '▼'}</span>}
+          </div>
+        </div>
+
+        {/* Panel expandido */}
+        {abierto && (
+          <div style={{ borderTop: `1px solid ${C.rule}`, padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {lead.notas && <div style={{ fontFamily: SM, fontSize: 13, color: C.ink2, fontStyle: 'italic', padding: '10px 14px', background: `${C.rule}30`, borderRadius: 8 }}>{lead.notas}</div>}
+
+            {/* Historial */}
+            {lead.eventos?.length > 0 && (
+              <div>
+                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Historial</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {[...lead.eventos].reverse().map((ev, i) => (
+                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+                      <span style={{ fontSize: 14, lineHeight: 1.4 }}>{ev.tipo}</span>
+                      <div style={{ flex: 1 }}>
+                        <span style={{ fontFamily: SN, fontSize: 13, color: C.ink }}>{ev.texto}</span>
+                        <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginLeft: 8 }}>{fmtFecha(ev.fecha)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Añadir evento */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <select value={eventoTipo[lead.id] || '💬'} onChange={e => setEventoTipo(p => ({ ...p, [lead.id]: e.target.value }))} style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '6px 8px', color: C.ink, fontSize: 14, cursor: 'pointer' }}>
+                {EVENTO_EMOJIS.map(e => <option key={e} value={e}>{e}</option>)}
+              </select>
+              <input
+                value={eventoTexto[lead.id] || ''}
+                onChange={e => setEventoTexto(p => ({ ...p, [lead.id]: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && addEvento(lead)}
+                placeholder="Añadir nota o evento…"
+                style={{ flex: 1, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '7px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none' }}
+              />
+              <button onClick={() => addEvento(lead)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 6, padding: '7px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>+ Añadir</button>
+            </div>
+          </div>
+        )}
+      </div>
+    )
+  }
 
   return (
     <div>
-      <div style={{ marginBottom: 32 }}>
-        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>COMERCIAL</div>
-        <h1 style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>Leads</h1>
-        <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: 0 }}>
-          Contactos del formulario de la landing. {leads.length} recibido{leads.length !== 1 ? 's' : ''}.
-        </p>
+      {/* Header */}
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+        <div>
+          <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>COMERCIAL</div>
+          <h1 style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 40, fontWeight: 500, margin: '0 0 6px', color: C.ink }}>Leads</h1>
+          <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: 0 }}>
+            {personales.length} personales · {online.length} desde la landing
+          </p>
+        </div>
+        <button onClick={() => setModalNuevo(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+          + Lead personal
+        </button>
       </div>
 
-      {/* Leyenda estados */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+      {/* Leyenda */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
         {ESTADOS_LEAD.map(e => (
           <div key={e} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: SM, color: C.ink3 }}>
             <div style={{ width: 7, height: 7, borderRadius: '50%', background: ESTADO_COLOR[e] }} />
@@ -951,37 +1075,82 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
 
       {loading ? (
         <div style={{ textAlign: 'center', padding: 48, color: C.ink3, fontFamily: SM, fontSize: 13 }}>Cargando…</div>
-      ) : leads.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: 64 }}>
-          <div style={{ fontSize: 36, marginBottom: 16 }}>📭</div>
-          <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontStyle: 'italic', fontSize: 20, color: C.ink, marginBottom: 8 }}>Aún no hay leads</div>
-          <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Cuando alguien rellene el formulario de la landing, aparecerá aquí.</div>
-        </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {leads.map(lead => (
-            <div key={lead.id} style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center' }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                  <span style={{ fontFamily: SN, fontSize: 16, fontWeight: 500, color: C.ink }}>{lead.nombre}</span>
-                  <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>·</span>
-                  <span style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>{lead.restaurante}</span>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-                  <a href={`tel:${lead.telefono}`} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none', fontWeight: 600 }}>📞 {lead.telefono}</a>
-                  {lead.email && <a href={`mailto:${lead.email}`} style={{ fontFamily: SM, fontSize: 13, color: C.ink2, textDecoration: 'none' }}>✉ {lead.email}</a>}
-                  <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{fmt(lead.created_at)}</span>
-                </div>
-                {lead.notas && <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, fontStyle: 'italic' }}>{lead.notas}</div>}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+
+          {/* PERSONALES */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.amber, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🏆 Personales</span>
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>— grupos y contactos directos</span>
+              <div style={{ flex: 1, height: 1, background: `${C.amber}40` }} />
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.amber }}>{personales.length}</span>
+            </div>
+            {personales.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: C.ink3, fontFamily: SM, fontSize: 13, fontStyle: 'italic' }}>
+                Aún no hay leads personales. Usa el botón "+ Lead personal" para añadir.
               </div>
-              <button
-                onClick={() => cambiarEstado(lead)}
-                style={{ padding: '6px 14px', borderRadius: 20, border: `1px solid ${ESTADO_COLOR[lead.estado]}`, background: `${ESTADO_COLOR[lead.estado]}18`, color: ESTADO_COLOR[lead.estado], fontFamily: SM, fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.04em', textTransform: 'uppercase' }}
-              >
-                {lead.estado} →
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {personales.map(l => <CardLead key={l.id} lead={l} big />)}
+              </div>
+            )}
+          </div>
+
+          {/* ONLINE */}
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink2, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🌐 Online</span>
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>— formulario de la landing</span>
+              <div style={{ flex: 1, height: 1, background: C.rule }} />
+              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{online.length}</span>
+            </div>
+            {online.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '32px 0', color: C.ink3, fontFamily: SM, fontSize: 13, fontStyle: 'italic' }}>
+                Aún no hay contactos desde la landing.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {online.map(l => <CardLead key={l.id} lead={l} />)}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Modal nuevo lead personal */}
+      {modalNuevo && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setModalNuevo(false)}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 24, fontWeight: 500, color: C.ink, marginBottom: 20 }}>Nuevo lead personal</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {([
+                ['nombre', 'Nombre contacto *'],
+                ['restaurante', 'Grupo / Restaurante *'],
+                ['telefono', 'Teléfono'],
+                ['email', 'Email'],
+                ['locales', 'Nº locales (ej: 6 locales)'],
+                ['tpv', 'TPV actual (ej: Ágora)'],
+                ['contacto', 'Persona de contacto'],
+                ['notas', 'Notas'],
+              ] as [keyof typeof form, string][]).map(([k, label]) => (
+                <div key={k}>
+                  <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginBottom: 4 }}>{label}</div>
+                  <input
+                    value={form[k]}
+                    onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))}
+                    style={{ width: '100%', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
+                  />
+                </div>
+              ))}
+            </div>
+            <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalNuevo(false)} style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 18px', color: C.ink3, fontFamily: SM, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={crearLeadPersonal} disabled={saving || !form.nombre || !form.restaurante} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: (saving || !form.nombre || !form.restaurante) ? .5 : 1 }}>
+                {saving ? 'Guardando…' : 'Crear lead'}
               </button>
             </div>
-          ))}
+          </div>
         </div>
       )}
     </div>
