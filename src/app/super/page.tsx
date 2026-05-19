@@ -1,7 +1,7 @@
 'use client'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
-import { useAuth, Session } from '@/hooks/useAuth'
+import { Session } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
@@ -46,8 +46,55 @@ const PLAN_COLOR: Record<string, string> = {
 }
 
 export default function SuperPage() {
-  const { session, checking } = useAuth(['super_admin'] as any)
+  const [session, setSession] = useState<Session | null>(null)
   const router = useRouter()
+  const [checking, setChecking] = useState(true)
+  // PIN screen
+  const [superPin, setSuperPin] = useState('')
+  const [pinError, setPinError] = useState('')
+  const [pinLoading, setPinLoading] = useState(false)
+  const [pinBlocked, setPinBlocked] = useState('')
+
+  // Inicializar: leer sesión guardada
+  useEffect(() => {
+    const raw = localStorage.getItem('ia_rest_session')
+    if (raw) {
+      try {
+        const s = JSON.parse(raw)
+        if (s.rol === 'super_admin') { setSession(s); setChecking(false); return }
+      } catch { /* ignore */ }
+    }
+    setChecking(false)
+  }, [])
+
+  // Auto-submit al llegar a 6 dígitos
+  useEffect(() => {
+    if (superPin.length === 6 && !pinLoading) doSuperLogin(superPin)
+  }, [superPin]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const doSuperLogin = async (pin: string) => {
+    setPinLoading(true); setPinError(''); setPinBlocked('')
+    try {
+      const r = await fetch('/api/auth/super-pin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin }),
+      })
+      const d = await r.json()
+      if (r.status === 429) { setPinBlocked(d.error); setSuperPin(''); setPinLoading(false); return }
+      if (!r.ok || !d.camarero) { setPinError(d.error ?? 'PIN incorrecto'); setSuperPin(''); setPinLoading(false); return }
+      localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
+      setSession(d.camarero)
+    } catch { setPinError('Error de red'); setSuperPin('') }
+    setPinLoading(false)
+  }
+
+  const addDigit = (d: string) => {
+    if (pinLoading || pinBlocked) return
+    if (superPin.length >= 6) return
+    setSuperPin(p => p + d)
+  }
+  const delDigit = () => { if (!pinLoading) setSuperPin(p => p.slice(0, -1)) }
   const [trainingStats, setTrainingStats] = useState<any>(null)
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([])
   const [loading, setLoading] = useState(true)
@@ -188,6 +235,62 @@ export default function SuperPage() {
   }
 
   if (checking) return null
+
+  // PIN screen propio — nunca redirige a /login
+  if (!session) {
+    const pad = ['1','2','3','4','5','6','7','8','9','','0','⌫']
+    return (
+      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN }}>
+        <div style={{ textAlign:'center', width:280 }}>
+          {/* Logo */}
+          <div style={{ fontFamily:SM, fontSize:22, fontWeight:800, color:C.fg, letterSpacing:'-0.03em', marginBottom:4 }}>
+            ia<span style={{ color:C.red }}>.</span>rest
+          </div>
+          <div style={{ fontSize:11, color:C.ink3, fontFamily:SE, letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:32 }}>
+            Acceso operador
+          </div>
+
+          {/* Puntos PIN */}
+          <div style={{ display:'flex', justifyContent:'center', gap:12, marginBottom:28 }}>
+            {[0,1,2,3,4,5].map(i => (
+              <div key={i} style={{
+                width:13, height:13, borderRadius:'50%',
+                background: pinLoading ? C.red : i < superPin.length ? C.red : 'rgba(246,241,231,0.15)',
+                transition:'background .12s, transform .1s',
+                transform: i < superPin.length ? 'scale(1.2)' : 'scale(1)',
+              }}/>
+            ))}
+          </div>
+
+          {/* Error / bloqueado */}
+          {(pinError || pinBlocked) && (
+            <div style={{ fontSize:12, color: pinBlocked ? C.amber : '#ff6b6b', marginBottom:16, minHeight:18 }}>
+              {pinBlocked || pinError}
+            </div>
+          )}
+
+          {/* Teclado */}
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
+            {pad.map((d, i) => d === '' ? <div key={i}/> : (
+              <button key={i} onClick={() => d === '⌫' ? delDigit() : addDigit(d)}
+                disabled={!!pinBlocked || pinLoading}
+                style={{
+                  background: d === '⌫' ? 'transparent' : 'rgba(255,255,255,0.06)',
+                  border: d === '⌫' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  borderRadius:12, padding:'16px 0',
+                  color: d === '⌫' ? C.ink2 : C.fg,
+                  fontSize: d === '⌫' ? 18 : 20, fontWeight:600,
+                  cursor: pinBlocked ? 'not-allowed' : 'pointer',
+                  fontFamily:SN, opacity: pinBlocked ? 0.4 : 1,
+                  transition:'background .12s',
+                }}
+              >{d}</button>
+            ))}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: SN }}>

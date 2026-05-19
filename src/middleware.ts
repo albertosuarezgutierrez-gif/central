@@ -20,7 +20,8 @@ export function middleware(req: NextRequest) {
 
   const isSuper =
     (pathname.startsWith('/super') && !pathname.startsWith('/super/gate')) ||
-    pathname.startsWith('/api/super')
+    pathname.startsWith('/api/super') ||
+    pathname === '/api/auth/super-pin'
 
   if (isSuper) {
     // Si no hay clave configurada → bloquear siempre (fail secure)
@@ -40,5 +41,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/super/:path*', '/api/super/:path*'],
+  matcher: ['/super/:path*', '/api/super/:path*', '/api/auth/super-pin'],
 }
