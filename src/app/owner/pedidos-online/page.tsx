@@ -15,7 +15,7 @@ interface Session { id:string; nombre:string; rol:string; restaurante_id:string 
 
 const ESTADO_CFG: Record<string,{label:string;bg:string;fg:string;next:string;nextLabel:string}> = {
   pendiente:  {label:'Pendiente', bg:C.ambS, fg:C.amb, next:'confirmado', nextLabel:'Confirmar'},
-  confirmado: {label:'Confirmado',bg:C.blS,  fg:C.bl,  next:'en_cocina',  nextLabel:'Enviar a cocina'},
+  confirmado: {label:'Confirmado',bg:C.blueS,  fg:C.blue,  next:'en_cocina',  nextLabel:'Enviar a cocina'},
   en_cocina:  {label:'En cocina', bg:'#EDE9FE',fg:'#7C3AED',next:'listo',nextLabel:'Marcar listo'},
   listo:      {label:'Listo',     bg:C.grS,  fg:C.gr,  next:'entregado', nextLabel:'Entregado ✓'},
   entregado:  {label:'Entregado', bg:C.bg2,  fg:C.ink4,next:'',          nextLabel:''},

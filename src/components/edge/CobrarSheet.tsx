@@ -57,7 +57,7 @@ function NumpadEfectivo({
 
   const canConfirm = parsed >= total
 
-  const keyStyle = (col = C.numKey): React.CSSProperties => ({
+  const keyStyle = (col: string = C.dark2): React.CSSProperties => ({
     background: col,
     border: 'none',
     borderRadius: 12,
@@ -76,7 +76,7 @@ function NumpadEfectivo({
   })
 
   return (
-    <div style={{ background: C.numBg, borderRadius: 16, overflow: 'hidden', margin: '0 20px 14px' }}>
+    <div style={{ background: C.dark1, borderRadius: 16, overflow: 'hidden', margin: '0 20px 14px' }}>
 
       {/* DISPLAY ──────────────────────────────────── */}
       <div style={{ padding: '16px 18px 12px', borderBottom: '1px solid #2A2420' }}>
@@ -163,7 +163,7 @@ function NumpadEfectivo({
         {['7','8','9','4','5','6','1','2','3',',','0','⌫'].map(k => (
           <button key={k} onClick={() => press(k)}
             style={{
-              ...keyStyle(k === '⌫' ? C.verm+'CC' : C.numKey),
+              ...keyStyle(k === '⌫' ? C.verm+'CC' : C.dark2),
               fontSize: k === '⌫' ? 18 : 22,
             }}>
             {k}

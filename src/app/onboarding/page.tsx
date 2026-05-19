@@ -1,5 +1,5 @@
 'use client'
-import { SE, SN, SM } from '@/lib/colors'
+import { SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 

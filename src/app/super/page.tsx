@@ -243,7 +243,7 @@ export default function SuperPage() {
       <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN }}>
         <div style={{ textAlign:'center', width:280 }}>
           {/* Logo */}
-          <div style={{ fontFamily:SM, fontSize:22, fontWeight:800, color:C.fg, letterSpacing:'-0.03em', marginBottom:4 }}>
+          <div style={{ fontFamily:SM, fontSize:22, fontWeight:800, color:C.dkFg, letterSpacing:'-0.03em', marginBottom:4 }}>
             ia<span style={{ color:C.red }}>.</span>rest
           </div>
           <div style={{ fontSize:11, color:C.ink3, fontFamily:SE, letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:32 }}>
@@ -278,7 +278,7 @@ export default function SuperPage() {
                   background: d === '⌫' ? 'transparent' : 'rgba(255,255,255,0.06)',
                   border: d === '⌫' ? 'none' : '1px solid rgba(255,255,255,0.08)',
                   borderRadius:12, padding:'16px 0',
-                  color: d === '⌫' ? C.ink2 : C.fg,
+                  color: d === '⌫' ? C.dkFg3 : C.dkFg,
                   fontSize: d === '⌫' ? 18 : 20, fontWeight:600,
                   cursor: pinBlocked ? 'not-allowed' : 'pointer',
                   fontFamily:SN, opacity: pinBlocked ? 0.4 : 1,

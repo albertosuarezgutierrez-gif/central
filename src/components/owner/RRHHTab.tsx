@@ -1,5 +1,6 @@
 'use client'
-import { SE, SN, SM } from '@/lib/colors'
+import { SE, SN, SM, SC } from '@/lib/colors'
+const TT = SE  // serif italic font alias
 import React, { useState, useEffect, useCallback } from 'react'
 
 // ── Design system ─────────────────────────────────────────────────────────
