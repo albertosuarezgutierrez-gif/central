@@ -590,6 +590,35 @@ export async function POST(req: NextRequest) {
           brainResult.items.map((item) => ({ nombre: item.nombre, turno_id: turnoId, restaurante_id: rid }))
         )
       }
+
+      // ── AVISO / MENSAJE entre roles ───────────────────────────────────────
+      // tipo:"aviso" → insertar en mensajes_turno, NO crear comanda
+      // mesa del brainResult = destinatario: "cocina" | "barra" | "sala" | "todos" | código de mesa
+      if (brainResult.tipo === 'aviso' && brainResult.nota_general) {
+        const destinatarioRaw = (brainResult.mesa ?? 'todos').toLowerCase()
+        // Mapear destinatario a rol_destino compatible con mensajes_turno
+        const ROL_MAP: Record<string, string> = {
+          cocina: 'cocina', barra: 'camarero', sala: 'camarero', todos: 'todos',
+        }
+        const rolDestino = ROL_MAP[destinatarioRaw] ?? 'todos'
+        try {
+          await supabase.from('mensajes_turno').insert({
+            restaurante_id:  rid,
+            turno_id:        turnoId ?? null,
+            camarero_id:     camareroId,
+            rol_origen:      session.rol,
+            nombre_origen:   session.nombre,
+            rol_destino:     rolDestino,
+            destinatario_id: null,   // broadcast al rol
+            tipo:            'voz',
+            texto:           brainResult.nota_general,
+            mesa_ref:        mesa?.codigo ?? null,
+            leido_por:       [camareroId],
+          })
+        } catch (e) {
+          console.error('[AVISO-VOZ] Error insertando mensaje:', e)
+        }
+      }
     }
 
     // ── CUENTA NOMINAL: si BRAIN devuelve nombre_cuenta sin mesa ────────────

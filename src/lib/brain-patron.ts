@@ -78,6 +78,22 @@ function detectarFamiliaVino(tNorm: string): string | null {
 }
 const KW_86      = ['86', 'agotado', 'agotada', 'sin stock', 'se acabo', 'se acabó', 'no hay']
 
+// Mensajes/avisos entre roles: nunca deben parsearse como comanda
+const KW_MENSAJE = [
+  'mensaje a cocina', 'mensaje para cocina',
+  'mensaje a barra',  'mensaje para barra',
+  'mensaje a sala',   'mensaje para sala',
+  'mensaje a todos',  'mensaje para todos',
+  'avisa a cocina',   'avisa cocina',
+  'avisa a barra',    'avisa barra',
+  'avisa a sala',     'avisa sala',
+  'di a cocina',      'dile a cocina',
+  'comunica a cocina','manda mensaje',
+  'aviso a cocina',   'aviso para cocina',
+  'aviso a barra',    'aviso para barra',
+  'aviso a sala',     'aviso para sala',
+]
+
 const KW_MESA_RAPIDA = [
   'asigname mesa', 'asígname mesa', 'asigna mesa', 'abre mesa',
   'mesa para', 'mesa rapida', 'mesa rápida', 'nueva mesa para',
@@ -380,6 +396,12 @@ export function reconocerPatron(texto: string, cache: MenuCache): BrainResult | 
 
     const mesa = detectarMesa(tParseado, cache)
     if (mesa) return { mesa, tipo: 'marchar', items: [], confianza: 0.95, raw: texto }
+  }
+
+  // ── 3.5. MENSAJE / AVISO ─────────────────────────────────────────────────
+  // "mensaje a cocina, S1 esperando croquetas" → NO es comanda. Siempre a Claude.
+  if (KW_MENSAJE.some(k => tParseado.includes(k))) {
+    return null
   }
 
   // ── 3. 86 ────────────────────────────────────────────────────────────────

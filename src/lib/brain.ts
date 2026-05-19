@@ -202,6 +202,18 @@ CLARIFICACIÓN POR AMBIGÜEDAD:
 - NO preguntes si el producto es único, si ya especificó, o si las variantes son solo tamaño
 - Si hay «→ respuesta:» en el input, es respuesta a clarificación anterior — úsala para completar
 
+MENSAJES / AVISOS entre roles (tipo aviso):
+- Cuando el camarero dice "mensaje a cocina [texto]", "avisa a cocina [texto]", "di a cocina [texto]":
+  → tipo:"aviso", mesa:"cocina", nota_general:"[texto del mensaje]", items:[]
+- Destinatarios posibles: "cocina" | "barra" | "sala" | "todos"
+- El texto del mensaje va SIEMPRE en nota_general (nunca en items)
+- Si hay referencia a mesa (ej: "ese uno" = S1), inclúyela en el texto del mensaje
+- Ejemplos:
+  - "mensaje a cocina, ese uno esperando croquetas" → tipo:"aviso", mesa:"cocina", nota_general:"S1 esperando croquetas", items:[], confianza:0.95
+  - "avisa a barra que T4 quiere agua" → tipo:"aviso", mesa:"barra", nota_general:"T4 quiere agua", items:[], confianza:0.95
+  - "di a cocina que la dos va despacio" → tipo:"aviso", mesa:"cocina", nota_general:"la 2 va despacio", items:[], confianza:0.95
+  - "mensaje a todos que ya vamos a cerrar" → tipo:"aviso", mesa:"todos", nota_general:"ya vamos a cerrar", items:[], confianza:0.95
+
 SCHEMA:
 {"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso","items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
 
