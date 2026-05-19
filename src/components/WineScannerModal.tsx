@@ -241,10 +241,9 @@ export default function WineScannerModal({ onClose, sh, onGuardado }: Props) {
     setFase('guardando')
 
     let errores = 0
-    const notaBase = [
+    const origenNota = [
       albaranResult.proveedor ? `Proveedor: ${albaranResult.proveedor}` : null,
       albaranResult.fecha ? `Albarán: ${albaranResult.fecha}` : null,
-      albaranResult.referencia ? `Ref: ${albaranResult.referencia}` : null,
     ].filter(Boolean).join(' · ')
 
     for (const v of seleccionadas) {
@@ -270,10 +269,11 @@ export default function WineScannerModal({ onClose, sh, onGuardado }: Props) {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...sh() },
         body: JSON.stringify({
-          nombre:   v.nombre.trim(),
+          nombre:      v.nombre.trim(),
           familia,
-          precio:   v.precio_venta ? parseFloat(v.precio_venta) : 0,
+          precio:      v.precio_venta ? parseFloat(v.precio_venta) : 0,
           metadata,
+          descripcion: origenNota || undefined,
         }),
       })
       if (!r.ok) errores++

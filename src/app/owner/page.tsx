@@ -2917,7 +2917,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
         <WineScannerModal
           sh={sh}
           onClose={() => setWineScannerOpen(false)}
-          onGuardado={() => { load(); setWineScannerOpen(false) }}
+          onGuardado={() => load()}
         />
       )}
     </div>
