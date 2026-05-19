@@ -1,7 +1,7 @@
 'use client'
 import { useState, useRef, useEffect, useCallback } from 'react'
 
-const C = { red: '#D9442B', ink: '#1A1714', ink3: '#6B5F52', ink4: '#9A8D7C', paper: '#F6F1E7', rule: '#3A332C', dark: '#14110E', dark1: '#1F1A15' }
+const C = { red: '#D9442B', ink: '#1A1714', ink3: '#6B5F52', ink4: '#9A8D7C', paper: '#F6F1E7', rule: '#3A332C', dark: '#14110E', dark1: '#1F1A15', dkFg: '#F6F1E7', dkFg2: '#C9BFAA', dkFg3: '#8D8270' }
 const SN = "'Inter Tight',system-ui,sans-serif"
 
 interface Msg { role: 'user' | 'assistant'; content: string }
@@ -84,7 +84,7 @@ export default function OwnerCopiloto() {
             <span style={{ fontSize: 16 }}>🧠</span>
             <div>
               <div style={{ fontFamily: SN, color: C.paper, fontSize: 13, fontWeight: 600 }}>Copiloto</div>
-              <div style={{ fontFamily: SN, color: C.ink4, fontSize: 10 }}>Datos últimos 30 días</div>
+              <div style={{ fontFamily: SN, color: C.dkFg3, fontSize: 10 }}>Datos últimos 30 días</div>
             </div>
           </div>
 
@@ -92,7 +92,7 @@ export default function OwnerCopiloto() {
           <div style={{ flex: 1, overflowY: 'auto', padding: 12, scrollbarWidth: 'none' }}>
             {msgs.length === 0 && (
               <div>
-                <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 10 }}>Pregúntame sobre tu negocio</p>
+                <p style={{ fontFamily: SN, fontSize: 12, color: C.dkFg3, marginBottom: 10 }}>Pregúntame sobre tu negocio</p>
                 {SUGERENCIAS.map(s => (
                   <button key={s} onClick={() => enviar(s)}
                     style={{
@@ -119,7 +119,7 @@ export default function OwnerCopiloto() {
               </div>
             ))}
             {loading && (
-              <div style={{ fontFamily: SN, color: C.ink4, fontSize: 12, padding: '4px 0' }}>pensando…</div>
+              <div style={{ fontFamily: SN, color: C.dkFg3, fontSize: 12, padding: '4px 0' }}>pensando…</div>
             )}
             <div ref={bottomRef} />
           </div>

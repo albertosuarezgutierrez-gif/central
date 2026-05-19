@@ -225,7 +225,7 @@ function ReglaEditor({regla,onSave,onCancel,saving,error}:{
 
       <div style={{display:'flex',gap:8,justifyContent:'flex-end',paddingTop:4}}>
         <button onClick={onCancel} disabled={saving} style={{fontFamily:SN,fontSize:13,fontWeight:600,padding:'8px 16px',background:C.paper2,border:`1px solid ${C.rule}`,borderRadius:4,color:C.ink2,cursor:'pointer'}}>Cancelar</button>
-        <button onClick={()=>onSave(f)} disabled={saving||!f.nombre?.trim()} style={{fontFamily:SN,fontSize:13,fontWeight:600,padding:'8px 16px',background:saving?C.rule:C.dark,border:'none',borderRadius:4,color:C.darkFg,cursor:saving?'wait':'pointer',opacity:!f.nombre?.trim()?.5:1}}>
+        <button onClick={()=>onSave(f)} disabled={saving||!f.nombre?.trim()} style={{fontFamily:SN,fontSize:13,fontWeight:600,padding:'8px 16px',background:saving?C.rule:C.dark,border:'none',borderRadius:4,color:saving?C.ink2:C.darkFg,cursor:saving?'wait':'pointer',opacity:!f.nombre?.trim()?.5:1}}>
           {saving?'Guardando…':'Guardar regla'}
         </button>
       </div>
