@@ -104,7 +104,13 @@ export async function GET(req: NextRequest) {
     .lt('created_at', ninetySecondsAgo)
     .order('created_at', { ascending: true })
     .limit(10)
-  const jobs = [...(pendientes ?? []), ...(staleEncolados ?? [])]
+  // Priorizar jobs de tipo 'cambio' (anulación/modificación) — cocina debe verlos antes
+  const allJobs = [...(pendientes ?? []), ...(staleEncolados ?? [])]
+  const jobs = [...allJobs].sort((a, b) => {
+    const aCambio = a.payload?.tipo === 'cambio' ? 0 : 1
+    const bCambio = b.payload?.tipo === 'cambio' ? 0 : 1
+    return aCambio - bCambio
+  })
 
   if (!jobs?.length) {
     return NextResponse.json({ jobs: [] })
@@ -201,7 +207,7 @@ export async function POST(req: NextRequest) {
 
   const { data: current } = await sb
     .from('print_jobs')
-    .select('attempts, comanda_id, seccion_id')
+    .select('attempts, comanda_id, seccion_id, payload, restaurante_id')
     .eq('id', job_id)
     .single()
 
@@ -235,14 +241,32 @@ export async function POST(req: NextRequest) {
   }
 
   // Si impreso: actualizar comanda_items
+  // ── FIX: no filtrar por seccion_id (es null en los items cuando vienen del LLM sin sección)
+  // ── FIX: no actualizar items de jobs tipo 'cambio' (anulación/modificación → no tocan print_status)
   if (status === 'impreso' && current?.comanda_id) {
-    await sb.from('comanda_items')
-      .update({
-        print_status: 'impreso',
-        printed_at:   new Date().toISOString(),
-      })
-      .eq('comanda_id', current.comanda_id)
-      .eq('seccion_id', current.seccion_id)
+    const tipo = (current.payload as Record<string, unknown>)?.tipo as string || 'comanda'
+
+    if (tipo !== 'cambio') {
+      // Usar los nombres de items del payload para precisión en setups multi-impresora
+      const itemsEnJob = ((current.payload as Record<string, unknown>)?.items as Array<{ nombre: string }> ?? [])
+        .map(i => i.nombre)
+
+      let query = sb.from('comanda_items')
+        .update({ print_status: 'impreso', printed_at: new Date().toISOString() })
+        .eq('comanda_id', current.comanda_id)
+        .eq('print_status', 'pendiente')
+        .is('eliminado_at', null)
+
+      // No marcar items ya cancelados explícitamente
+      query = query.not('estado_item', 'eq', 'cancelado')
+
+      // Si tenemos la lista de items del job, filtrar por nombre (evita sobre-marcar en multi-impresora)
+      if (itemsEnJob.length > 0) {
+        query = query.in('nombre', itemsEnJob)
+      }
+
+      await query
+    }
   }
 
   return NextResponse.json({ ok: true })

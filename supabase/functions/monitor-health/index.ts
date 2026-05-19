@@ -497,6 +497,96 @@ Deno.serve(async (req) => {
     resultados.avisos_preventivos = avisosPreventivos
   } catch (e) { console.error('Check patrones horarios:', e) }
 
+  // ── CHECK 11: Desincronización print_jobs/comanda_items ───────────────────
+  // print_job IMPRESO pero comanda_items aún PENDIENTE → auto-sincronizar
+  // Causa: bug en ack handler cuando seccion_id era null (ya corregido en código)
+  // El healer actúa como red de seguridad para jobs ya ackeados antes del fix
+  try {
+    const treintaMinAtras = new Date(Date.now() - 30 * 60 * 1000).toISOString()
+
+    // Buscar jobs impresos con items aún pendientes (excluir tipo 'cambio')
+    const { data: jobsDesync } = await supabase
+      .from('print_jobs')
+      .select('id, comanda_id, restaurante_id, payload, acked_at')
+      .eq('status', 'impreso')
+      .not('comanda_id', 'is', null)
+      .gte('acked_at', treintaMinAtras)
+
+    let itemsSincronizados = 0
+
+    for (const job of jobsDesync ?? []) {
+      const tipo = (job.payload as Record<string, unknown>)?.tipo as string || 'comanda'
+      if (tipo === 'cambio') continue
+
+      // Comprobar si hay items pendientes en esta comanda
+      const { count: pendientes } = await supabase
+        .from('comanda_items')
+        .select('id', { count: 'exact', head: true })
+        .eq('comanda_id', job.comanda_id)
+        .eq('print_status', 'pendiente')
+        .is('eliminado_at', null)
+
+      if ((pendientes ?? 0) === 0) continue
+
+      // Auto-fix: marcar items como impresos usando nombres del payload
+      const itemsEnJob = ((job.payload as Record<string, unknown>)?.items as Array<{ nombre: string }> ?? [])
+        .map((i: { nombre: string }) => i.nombre)
+
+      let query = supabase.from('comanda_items')
+        .update({ print_status: 'impreso', printed_at: job.acked_at })
+        .eq('comanda_id', job.comanda_id)
+        .eq('print_status', 'pendiente')
+        .is('eliminado_at', null)
+        .not('estado_item', 'eq', 'cancelado')
+
+      if (itemsEnJob.length > 0) {
+        query = query.in('nombre', itemsEnJob)
+      }
+
+      const { error: syncErr } = await query
+
+      if (!syncErr) {
+        itemsSincronizados += pendientes ?? 0
+        await registrarCuracion({
+          tipo: 'print_status_desync',
+          modulo: 'bridge',
+          mensaje: `${pendientes} items sincronizados a impreso (job acked pero items pendientes)`,
+          detalle: { job_id: job.id, comanda_id: job.comanda_id, items_sync: pendientes },
+          restaurante_id: job.restaurante_id,
+        })
+      }
+    }
+    resultados.items_desync_sincronizados = itemsSincronizados
+  } catch (e) { console.error('Check desync print_status:', e) }
+
+  // ── CHECK 12: Jobs de tipo 'cambio' sin ackear > 2 min → alerta manual ─────
+  // Si la impresora no recibe el ticket de anulación, cocina podría seguir
+  // preparando un pedido ya cancelado. Alertar para intervención manual.
+  try {
+    const dosMinAtras = new Date(Date.now() - 2 * 60 * 1000).toISOString()
+
+    const { data: cambiosSinAck } = await supabase
+      .from('print_jobs')
+      .select('id, comanda_id, restaurante_id, created_at')
+      .in('status', ['pendiente', 'encolado'])
+      .lt('created_at', dosMinAtras)
+      .filter('payload->>tipo', 'eq', 'cambio')
+
+    for (const job of cambiosSinAck ?? []) {
+      const minutos = Math.round((Date.now() - new Date(job.created_at).getTime()) / 60000)
+
+      await notificar({
+        tipo: 'cambio_sin_confirmar',
+        modulo: 'bridge',
+        mensaje: `Cambio/anulación no confirmado por impresora (${minutos} min) — avisa a cocina manualmente`,
+        detalle: { job_id: job.id, comanda_id: job.comanda_id, minutos },
+        restaurante_id: job.restaurante_id,
+        nivel: minutos > 5 ? 'critico' : 'aviso',
+      })
+    }
+    resultados.cambios_sin_ack = cambiosSinAck?.length ?? 0
+  } catch (e) { console.error('Check cambios sin ack:', e) }
+
   return new Response(JSON.stringify({
     ok: true,
     timestamp: new Date().toISOString(),

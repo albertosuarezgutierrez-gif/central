@@ -116,19 +116,26 @@ export async function GET(
     .update({ ultimo_ping: new Date().toISOString() })
     .eq('id', impresora.id);
 
-  // Buscar el job pendiente más antiguo para esta impresora
-  const { data: job } = await supabase
+  // Buscar jobs pendientes — priorizando tipo 'cambio' (anulaciones van antes)
+  const { data: jobsPendientes } = await supabase
     .from('print_jobs')
-    .select('job_token')
+    .select('job_token, payload')
     .eq('impresora_id', impresora.id)
     .in('status', ['pendiente', 'encolado'])
     .order('created_at', { ascending: true })
-    .limit(1)
-    .single();
+    .limit(5);
 
-  if (!job) {
+  if (!jobsPendientes?.length) {
     return NextResponse.json({ jobReady: false });
   }
+
+  // Priorizar 'cambio' antes que 'comanda' — cocina ve anulaciones primero
+  const sortedJobs = [...jobsPendientes].sort((a, b) => {
+    const aCambio = (a.payload as Record<string, unknown>)?.tipo === 'cambio' ? 0 : 1;
+    const bCambio = (b.payload as Record<string, unknown>)?.tipo === 'cambio' ? 0 : 1;
+    return aCambio - bCambio;
+  });
+  const job = sortedJobs[0];
 
   // Marcar el momento del polling
   await supabase.from('print_jobs')
@@ -161,17 +168,34 @@ export async function POST(
     .eq('job_token', token);
 
   // Marcar los items de la comanda como impresos
+  // ── FIX: no filtrar por seccion_id (null en items del LLM sin sección explícita)
+  // ── FIX: no actualizar items de jobs tipo 'cambio' (son notas de anulación/modificación)
   const { data: job } = await supabase
     .from('print_jobs')
-    .select('comanda_id, seccion_id')
+    .select('comanda_id, seccion_id, payload')
     .eq('job_token', token)
     .single();
 
-  if (job) {
-    await supabase.from('comanda_items')
-      .update({ print_status: 'impreso', printed_at: new Date().toISOString() })
-      .eq('comanda_id', job.comanda_id)
-      .eq('seccion_id', job.seccion_id);
+  if (job?.comanda_id) {
+    const tipo = (job.payload as Record<string, unknown>)?.tipo as string || 'comanda';
+
+    if (tipo !== 'cambio') {
+      const itemsEnJob = ((job.payload as Record<string, unknown>)?.items as Array<{ nombre: string }> ?? [])
+        .map((i: { nombre: string }) => i.nombre);
+
+      let query = supabase.from('comanda_items')
+        .update({ print_status: 'impreso', printed_at: new Date().toISOString() })
+        .eq('comanda_id', job.comanda_id)
+        .eq('print_status', 'pendiente')
+        .is('eliminado_at', null)
+        .not('estado_item', 'eq', 'cancelado');
+
+      if (itemsEnJob.length > 0) {
+        query = query.in('nombre', itemsEnJob);
+      }
+
+      await query;
+    }
   }
 
   return NextResponse.json({ ok: true });
