@@ -31,7 +31,7 @@ serve(async () => {
   // 1. Restaurantes con CP o coordenadas
   const { data: restaurantes, error: errR } = await supabase
     .from('restaurantes')
-    .select('id, nombre, cp_local, latitud, longitud')
+    .select('id, nombre, ciudad, cp_local, latitud, longitud')
     .eq('activo', true)
     .or('cp_local.not.is.null,latitud.not.is.null')
 

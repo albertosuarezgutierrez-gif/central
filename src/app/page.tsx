@@ -214,6 +214,7 @@ h1 .sl{display:block;font-size:clamp(38px,5.5vw,64px);color:var(--cream2);opacit
 .mbadge.b-soon{background:rgba(74,145,80,.08);color:#4A9150;border:1px solid rgba(74,145,80,.22);opacity:.85}
 .mbadge.b-legal{background:rgba(217,68,43,.08);color:var(--red);border:1px solid rgba(217,68,43,.22)}
 .mbadge.b-core{background:rgba(26,23,20,.06);color:var(--cream3);border:1px solid var(--b)}
+.mbadge.b-new{background:rgba(217,68,43,.12);color:var(--red);border:1px solid rgba(217,68,43,.35);font-weight:700}
 .trust{border-top:1px solid var(--b);border-bottom:1px solid var(--b);padding:24px 40px;display:flex;align-items:center;justify-content:center;gap:48px;background:rgba(239,231,214,.6)}
 .ti{display:flex;align-items:center;gap:10px;font-size:14px;color:var(--cream2)}
 .ti .ico{font-size:18px}
@@ -654,6 +655,7 @@ export default function Page() {
             {ico:"📸",t:"Escáner IA",d:"Fotografía un documento. La IA lo clasifica y extrae los datos.",badge:null,cls:""},
             {ico:"💬",t:"Chat entre roles",d:"Mensajería interna durante el turno entre sala, cocina y barra.",badge:null,cls:"mc-amber"},
             {ico:"👥",t:"Selección de personal IA",d:"Análisis automático de candidaturas con puntuación por rol.",badge:null,cls:""},
+            {ico:"📡",t:"Forecaster IA",d:"Anticipa la afluencia de los próximos 6 meses cruzando tu histórico con eventos reales: partidos, conciertos, ferias y festivos de tu ciudad.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-red"},
             {ico:"🔔",t:"Supervisor de tiempos",d:"Alertas automáticas cuando el servicio se desvía del estándar.",badge:null,cls:""},
             {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
             {ico:"📋",t:"VeriFactu AEAT",d:"Facturas homologadas con firma encadenada y QR verificable.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
@@ -812,7 +814,7 @@ export default function Page() {
           const qrPrice=pQR>0?(pAnnual?Math.round(pQR*12*0.82):pQR*12):0;
           const total=basePrice+qrPrice;
           const examples:Array<[number,string]>=[[1,"1 perfil"],[3,"3 perfiles"],[6,"6 perfiles"]];
-          const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","QR en mesa (add-on)","Pedidos online · 4 canales","Almacén e inventario","Escandallos por receta","Proveedores + OCR albaranes","Escáner IA de documentos","Chat interno entre roles","Selección de personal IA","Supervisor de tiempos","14 días de prueba gratis"];
+          const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","QR en mesa (add-on)","Pedidos online · 4 canales","Almacén e inventario","Escandallos por receta","Proveedores + OCR albaranes","Escáner IA de documentos","Chat interno entre roles","Selección de personal IA","Forecaster IA · 6 meses","Supervisor de tiempos","14 días de prueba gratis"];
           return (
             <div className="pcalc reveal">
               <div className="pcalc-inner">
