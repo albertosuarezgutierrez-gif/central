@@ -238,15 +238,17 @@ export default function SuperPage() {
 
   // PIN screen propio — nunca redirige a /login
   if (!session) {
+    // Colores hardcoded oscuros — independiente del tema claro de C
+    const D = { bg:'#14110E', fg:'#F6F1E7', fg3:'#8D8270', key:'#2A241D', keyB:'rgba(255,255,255,0.09)', red:'#D9442B', amber:'#E8A33B' }
     const pad = ['1','2','3','4','5','6','7','8','9','','0','⌫']
     return (
-      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN }}>
+      <div style={{ minHeight:'100vh', background:D.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN }}>
         <div style={{ textAlign:'center', width:280 }}>
           {/* Logo */}
-          <div style={{ fontFamily:SM, fontSize:22, fontWeight:800, color:C.dkFg, letterSpacing:'-0.03em', marginBottom:4 }}>
-            ia<span style={{ color:C.red }}>.</span>rest
+          <div style={{ fontFamily:SM, fontSize:22, fontWeight:800, color:D.fg, letterSpacing:'-0.03em', marginBottom:4 }}>
+            ia<span style={{ color:D.red }}>.</span>rest
           </div>
-          <div style={{ fontSize:11, color:C.ink3, fontFamily:SE, letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:32 }}>
+          <div style={{ fontSize:11, color:D.fg3, fontFamily:SE, letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:32 }}>
             Acceso operador
           </div>
 
@@ -255,7 +257,7 @@ export default function SuperPage() {
             {[0,1,2,3,4,5].map(i => (
               <div key={i} style={{
                 width:13, height:13, borderRadius:'50%',
-                background: pinLoading ? C.red : i < superPin.length ? C.red : 'rgba(246,241,231,0.15)',
+                background: pinLoading ? D.red : i < superPin.length ? D.red : 'rgba(246,241,231,0.18)',
                 transition:'background .12s, transform .1s',
                 transform: i < superPin.length ? 'scale(1.2)' : 'scale(1)',
               }}/>
@@ -264,7 +266,7 @@ export default function SuperPage() {
 
           {/* Error / bloqueado */}
           {(pinError || pinBlocked) && (
-            <div style={{ fontSize:12, color: pinBlocked ? C.amber : '#ff6b6b', marginBottom:16, minHeight:18 }}>
+            <div style={{ fontSize:12, color: pinBlocked ? D.amber : '#ff6b6b', marginBottom:16, minHeight:18 }}>
               {pinBlocked || pinError}
             </div>
           )}
@@ -275,10 +277,10 @@ export default function SuperPage() {
               <button key={i} onClick={() => d === '⌫' ? delDigit() : addDigit(d)}
                 disabled={!!pinBlocked || pinLoading}
                 style={{
-                  background: d === '⌫' ? 'transparent' : 'rgba(255,255,255,0.06)',
-                  border: d === '⌫' ? 'none' : '1px solid rgba(255,255,255,0.08)',
+                  background: d === '⌫' ? 'transparent' : D.keyB,
+                  border: d === '⌫' ? 'none' : '1px solid rgba(255,255,255,0.1)',
                   borderRadius:12, padding:'16px 0',
-                  color: d === '⌫' ? C.dkFg3 : C.dkFg,
+                  color: d === '⌫' ? D.fg3 : D.fg,
                   fontSize: d === '⌫' ? 18 : 20, fontWeight:600,
                   cursor: pinBlocked ? 'not-allowed' : 'pointer',
                   fontFamily:SN, opacity: pinBlocked ? 0.4 : 1,
