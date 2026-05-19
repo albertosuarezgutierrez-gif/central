@@ -649,6 +649,7 @@ export default function Page() {
             {ico:"🖨️",t:"Impresoras térmicas",d:"Impresión automática sin drivers ni configuración.",badge:null,cls:""},
             {ico:"💳",t:"Cobro completo",d:"Tarjeta, Bizum, efectivo. División de cuenta y cierre de caja.",badge:null,cls:""},
             {ico:"📦",t:"Almacén e inventario",d:"Stock en tiempo real, escandallos por receta y alertas de reposición.",badge:null,cls:"mc-red"},
+            {ico:"🍷",t:"Sumiller digital",d:"Tu carta de vinos siempre actualizada. El camarero sabe qué recomendar, cuánto queda y cuánto gana con cada botella.",badge:null,cls:""},
             {ico:"🚚",t:"Proveedores y albaranes",d:"Gestión de proveedores, pedidos y digitalización de albaranes.",badge:null,cls:""},
             {ico:"📸",t:"Escáner IA",d:"Fotografía un documento. La IA lo clasifica y extrae los datos.",badge:null,cls:""},
             {ico:"💬",t:"Chat entre roles",d:"Mensajería interna durante el turno entre sala, cocina y barra.",badge:null,cls:"mc-amber"},
