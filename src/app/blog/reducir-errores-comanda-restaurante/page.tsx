@@ -164,7 +164,7 @@ export default function ArticuloErroresComanda() {
           <div style={{
             background: '#1A1714', borderRadius: 6, padding: '20px 24px', margin: '24px 0',
           }}>
-            <p style={{ margin: '0 0 4px', fontSize: 12, color: '#6B5F52', fontFamily: SM, letterSpacing: '0.05em' }}>FLUJO CON VOZ</p>
+            <p style={{ margin: '0 0 4px', fontSize: 12, color: '#8D8270', fontFamily: SM, letterSpacing: '0.05em' }}>FLUJO CON VOZ</p>
             <p style={{ margin: 0, fontSize: 14, color: '#D8CDB6', lineHeight: 1.8 }}>
               Camarero dicta → <span style={{ color: '#E8A33B' }}>Whisper transcribe (0,3s)</span> → <span style={{ color: '#E8A33B' }}>BRAIN estructura</span> → <span style={{ color: '#3F7D44' }}>VOX confirma en voz alta</span> → camarero valida → <span style={{ color: '#D9442B' }}>cocina recibe</span>
             </p>

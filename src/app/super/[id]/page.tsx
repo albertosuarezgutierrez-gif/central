@@ -15,7 +15,7 @@ const C = {
   red: '#D9442B', redD: '#A8311E', redS: 'rgba(217,68,43,0.12)',
   amber: '#E8A33B', amberS: 'rgba(232,163,59,0.12)',
   green: '#3F7D44', greenS: 'rgba(63,125,68,0.12)',
-  blue: '#2B6A6E',
+  blue: '#2B6A9E', blueS: 'rgba(43,106,158,0.12)',
 }
 const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"

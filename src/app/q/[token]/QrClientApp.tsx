@@ -366,7 +366,7 @@ export default function QrClientApp({ token }: { token: string }) {
           <button
             onClick={() => setCallModal(true)}
             disabled={calling}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', background: calling ? C.bg3 : C.amber, border:'none', borderRadius:20, cursor: calling ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:600, color:'#1A1714', transition:'all 0.2s' }}
+            style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', background: calling ? C.bg3 : C.amber, border:'none', borderRadius:20, cursor: calling ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:600, color: calling ? C.creamDim : '#1A1714', transition:'all 0.2s' }}
           >
             <span style={{ fontSize:14 }}>{calling ? '⏳' : '🙋'}</span>
             {calling ? 'Avisando...' : 'Camarero'}

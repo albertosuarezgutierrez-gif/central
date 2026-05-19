@@ -47,7 +47,7 @@ function EspecialesDrawer({ especiales, onCerrar }: { especiales: Especial[]; on
             <span style={{ color: '#F6F1E7', fontFamily: 'Newsreader, Georgia, serif', fontWeight: 600, fontSize: 16 }}>Especiales de hoy</span>
             <span style={{ background: '#D9442B22', color: '#D9442B', fontSize: 11, fontFamily: 'monospace', padding: '1px 6px', borderRadius: 5 }}>{especiales.length}</span>
           </div>
-          <button onClick={onCerrar} style={{ background: '#14110E', color: '#6B5F52', border: '1px solid #2C2520', padding: '5px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>Cerrar</button>
+          <button onClick={onCerrar} style={{ background: '#14110E', color: '#9A8D7C', border: '1px solid #2C2520', padding: '5px 12px', borderRadius: 8, fontSize: 12, cursor: 'pointer' }}>Cerrar</button>
         </div>
 
         {/* Lista */}

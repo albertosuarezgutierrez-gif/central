@@ -11,8 +11,13 @@ const C = {
   ink2: '#3A332C', ink3: '#6B5F52', ink4: '#9A8D7C',
   rule: '#D8CDB6', ruleS: '#B8A98B',
   red: '#D9442B', redD: '#A8311E', redS: '#F4D8CF',
+  amber: '#E8A33B', amberS: '#F7E3B6',
   green: '#3F7D44', greenS: '#D4E4D2',
+  blue: '#2B6A9E', blueS: 'rgba(43,106,158,0.12)',
+  teal: '#2B6A6E', tealS: 'rgba(43,106,110,0.12)',
   dark: '#14110E', dark2: '#1F1A15',
+  // fg para usar sobre fondos oscuros (cards dark)
+  dkFg: '#F6F1E7', dkFg2: '#C9BFAA', dkFg3: '#8D8270', dkRule: '#2E2820',
 }
 const SE = "'Newsreader',Georgia,serif"
 const SN = "'Inter Tight',system-ui,sans-serif"
@@ -812,16 +817,16 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
       {/* KPIs globales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 36 }}>
         {[
-          { label: 'Volumen mes', value: fmtK(totales.volumen_mes), sub: mesActual, color: C.ink },
+          { label: 'Volumen mes', value: fmtK(totales.volumen_mes), sub: mesActual, color: C.dkFg },
           { label: 'Comisión mes', value: fmt(totales.comision_mes), sub: '0,5% de ' + fmtK(totales.volumen_mes), color: C.green },
-          { label: 'Volumen año', value: fmtK(totales.volumen_anio), sub: new Date().getFullYear().toString(), color: C.ink },
+          { label: 'Volumen año', value: fmtK(totales.volumen_anio), sub: new Date().getFullYear().toString(), color: C.dkFg },
           { label: 'Comisión año', value: fmt(totales.comision_anio), sub: 'acumulado ' + new Date().getFullYear(), color: C.green },
           { label: 'Transacciones', value: (totales.txn_mes || 0).toString(), sub: 'este mes', color: C.blue },
         ].map((kpi, i) => (
-          <div key={i} style={{ background: C.dark2, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.rule}` }}>
-            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', marginBottom: 8 }}>{kpi.label.toUpperCase()}</div>
+          <div key={i} style={{ background: C.dark2, borderRadius: 14, padding: '18px 20px', border: `1px solid ${C.dkRule}` }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, letterSpacing: '.08em', marginBottom: 8 }}>{kpi.label.toUpperCase()}</div>
             <div style={{ fontFamily: SE, fontSize: 26, fontWeight: 700, fontStyle: 'italic', color: kpi.color }}>{kpi.value}</div>
-            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 4 }}>{kpi.sub}</div>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.dkFg3, marginTop: 4 }}>{kpi.sub}</div>
           </div>
         ))}
       </div>
@@ -829,31 +834,31 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
       {/* Tabla por restaurante */}
       <div style={{ marginBottom: 36 }}>
         <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.1em', marginBottom: 14 }}>RESTAURANTES · MES ACTUAL</div>
-        <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: 'hidden' }}>
+        <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.dkRule}`, overflow: 'hidden' }}>
           {/* Header tabla */}
-          <div className="super-rest-table-hdr" style={{ gap: 0, padding: '10px 20px', borderBottom: `1px solid ${C.rule}` }}>
+          <div className="super-rest-table-hdr" style={{ gap: 0, padding: '10px 20px', borderBottom: `1px solid ${C.dkRule}` }}>
             {['Restaurante', 'Ciudad', 'Volumen', 'Comisión', 'Txn', 'Descuento'].map(h => (
-              <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.08em' }}>{h.toUpperCase()}</div>
+              <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.dkFg3, letterSpacing: '.08em' }}>{h.toUpperCase()}</div>
             ))}
           </div>
           {(restaurantes || []).length === 0 && (
-            <div style={{ padding: '24px 20px', fontFamily: SN, fontSize: 13, color: C.ink3 }}>Sin cobros QR registrados este mes</div>
+            <div style={{ padding: '24px 20px', fontFamily: SN, fontSize: 13, color: C.dkFg3 }}>Sin cobros QR registrados este mes</div>
           )}
           {(restaurantes || []).map((r: any, i: number) => (
-            <div key={r.restaurante_id} className="super-rest-table-row" style={{ gap: 0, padding: '12px 20px', borderBottom: i < restaurantes.length - 1 ? `1px solid ${C.rule}` : 'none', background: i % 2 === 0 ? 'transparent' : C.dark }}>
+            <div key={r.restaurante_id} className="super-rest-table-row" style={{ gap: 0, padding: '12px 20px', borderBottom: i < restaurantes.length - 1 ? `1px solid ${C.dkRule}` : 'none', background: i % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.03)' }}>
               <div>
-                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{r.restaurante_nombre}</div>
+                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.dkFg }}>{r.restaurante_nombre}</div>
                 <div style={{ display: 'flex', gap: 6, marginTop: 3 }}>
-                  <span style={{ fontFamily: SM, fontSize: 9, color: C.ink3 }}>{r.codigo_acceso}</span>
-                  {r.ia_cobro_activo && <span style={{ fontFamily: SM, fontSize: 9, color: C.green, background: C.greenS, borderRadius: 10, padding: '1px 6px' }}>COBRO ON</span>}
-                  <span style={{ fontFamily: SM, fontSize: 9, color: C.ink3, background: C.dark2, borderRadius: 10, padding: '1px 6px' }}>{r.modo_cobro}</span>
+                  <span style={{ fontFamily: SM, fontSize: 9, color: C.dkFg3 }}>{r.codigo_acceso}</span>
+                  {r.ia_cobro_activo && <span style={{ fontFamily: SM, fontSize: 9, color: C.green, background: 'rgba(63,125,68,0.15)', borderRadius: 10, padding: '1px 6px' }}>COBRO ON</span>}
+                  <span style={{ fontFamily: SM, fontSize: 9, color: C.dkFg3, background: 'rgba(255,255,255,0.07)', borderRadius: 10, padding: '1px 6px' }}>{r.modo_cobro}</span>
                 </div>
               </div>
-              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, paddingTop: 2 }}>{r.ciudad || '—'}</div>
-              <div style={{ fontFamily: SM, fontSize: 13, color: r.volumen_mes_actual > 0 ? C.ink : C.ink4 }}>{fmtK(r.volumen_mes_actual)}</div>
-              <div style={{ fontFamily: SM, fontSize: 13, color: r.comision_mes_actual > 0 ? C.green : C.ink4 }}>{fmt(r.comision_mes_actual)}</div>
-              <div style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>{r.txn_mes_actual || '—'}</div>
-              <div style={{ fontFamily: SM, fontSize: 13, color: r.descuento_mes_actual > 0 ? C.amber : C.ink4 }}>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.dkFg2, paddingTop: 2 }}>{r.ciudad || '—'}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: r.volumen_mes_actual > 0 ? C.dkFg : C.dkFg3 }}>{fmtK(r.volumen_mes_actual)}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: r.comision_mes_actual > 0 ? C.green : C.dkFg3 }}>{fmt(r.comision_mes_actual)}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: C.dkFg2 }}>{r.txn_mes_actual || '—'}</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: r.descuento_mes_actual > 0 ? C.amber : C.dkFg3 }}>
                 {r.descuento_mes_actual > 0 ? `-${r.descuento_mes_actual}€` : '—'}
               </div>
             </div>
@@ -865,26 +870,26 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
       {historico && historico.length > 0 && (
         <div>
           <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.1em', marginBottom: 14 }}>HISTÓRICO · PLATAFORMA COMPLETA</div>
-          <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.rule}`, overflow: 'hidden' }}>
-            <div className="super-hist-hdr" style={{ padding: '10px 20px', borderBottom: `1px solid ${C.rule}` }}>
+          <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.dkRule}`, overflow: 'hidden' }}>
+            <div className="super-hist-hdr" style={{ padding: '10px 20px', borderBottom: `1px solid ${C.dkRule}` }}>
               {['Mes', 'Volumen', 'Comisión', 'Txn'].map(h => (
-                <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink3, letterSpacing: '.08em' }}>{h.toUpperCase()}</div>
+                <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.dkFg3, letterSpacing: '.08em' }}>{h.toUpperCase()}</div>
               ))}
             </div>
             {historico.map((h: any, i: number) => {
               const d = new Date(h.mes + 'T12:00:00Z')
               const label = d.toLocaleString('es', { month: 'long', year: 'numeric' })
               return (
-                <div key={h.mes} className="super-hist-row" style={{ padding: '11px 20px', borderBottom: i < historico.length - 1 ? `1px solid ${C.rule}` : 'none' }}>
-                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, textTransform: 'capitalize' }}>{label}</div>
+                <div key={h.mes} className="super-hist-row" style={{ padding: '11px 20px', borderBottom: i < historico.length - 1 ? `1px solid ${C.dkRule}` : 'none' }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.dkFg2, textTransform: 'capitalize' }}>{label}</div>
                   <div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                       <div style={{ height: 6, borderRadius: 3, background: C.red, width: `${Math.min(100, (h.volumen / (historico[0]?.volumen || 1)) * 100)}%`, minWidth: 4, maxWidth: 160 }} />
-                      <span style={{ fontFamily: SM, fontSize: 12, color: C.ink }}>{fmtK(h.volumen)}</span>
+                      <span style={{ fontFamily: SM, fontSize: 12, color: C.dkFg }}>{fmtK(h.volumen)}</span>
                     </div>
                   </div>
                   <div style={{ fontFamily: SM, fontSize: 12, color: C.green }}>{fmt(h.comision)}</div>
-                  <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>{h.txn || '—'}</div>
+                  <div style={{ fontFamily: SM, fontSize: 12, color: C.dkFg3 }}>{h.txn || '—'}</div>
                 </div>
               )
             })}
@@ -1274,7 +1279,7 @@ function SoporteSuperTab({ session, C, SE, SN, SM, onBadge }: { session: any; C:
                   </div>
                 )}
                 <div style={{
-                  background: m.rol === 'usuario' ? C.bg3 : m.rol === 'alberto' ? C.redS : C.bone,
+                  background: m.rol === 'usuario' ? C.bg3 : m.rol === 'alberto' ? C.redS : C.bg2,
                   border: `1px solid ${m.rol === 'alberto' ? C.red : C.rule}`,
                   borderRadius: 8, padding: '8px 12px',
                   fontFamily: SN, fontSize: 13, color: C.ink2, lineHeight: 1.5, whiteSpace: 'pre-wrap',

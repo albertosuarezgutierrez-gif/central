@@ -63,7 +63,7 @@ function RecDrawer({ recs, onCerrar, onServido }: {
             <span style={{ color:'#F6F1E7', fontFamily:"'Newsreader',Georgia,serif", fontWeight:600, fontSize:16 }}>Recomendaciones</span>
             <span style={{ background:'#E8A33B22', color:'#E8A33B', fontSize:11, fontFamily:'monospace', padding:'1px 6px', borderRadius:5 }}>{recs.length}</span>
           </div>
-          <button onClick={onCerrar} style={{ background:'#14110E', color:'#6B5F52', border:'1px solid #2C2520', padding:'5px 12px', borderRadius:8, fontSize:12, cursor:'pointer' }}>Cerrar</button>
+          <button onClick={onCerrar} style={{ background:'#14110E', color:'#9A8D7C', border:'1px solid #2C2520', padding:'5px 12px', borderRadius:8, fontSize:12, cursor:'pointer' }}>Cerrar</button>
         </div>
 
         {/* Lista */}
