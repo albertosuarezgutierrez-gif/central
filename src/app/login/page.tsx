@@ -23,14 +23,21 @@ function detectRestauranteCode(): string | null {
   return null
 }
 
-function navigateByRol(camarero: { rol: string; seccion_id?: string | null }) {
+function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modulos_gestion?: string[] }) {
   const dest: Record<string, string> = {
     super_admin: '/super', owner: '/owner', admin: '/hub',
     jefe_sala: '/jefe',
     camarero: '/edge', cocina: camarero.seccion_id ? `/kds?seccion=${camarero.seccion_id}` : '/kds',
     running: '/running'
   }
-  window.location.href = dest[camarero.rol] ?? '/edge'
+  // Si tiene módulos de gestión pero no tiene ruta de sala → /portal
+  const tieneModulos = (camarero.modulos_gestion ?? []).length > 0
+  const rutaSala = dest[camarero.rol]
+  if (!rutaSala && tieneModulos) {
+    window.location.href = '/portal'
+    return
+  }
+  window.location.href = rutaSala ?? (tieneModulos ? '/portal' : '/edge')
 }
 
 interface VozSugerencia { id: string; nombre: string; rol: string; seccion_id?: string | null }
