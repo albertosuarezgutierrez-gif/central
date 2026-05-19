@@ -115,18 +115,18 @@ const Badge = ({ children, color = C.paper2 }: { children: React.ReactNode; colo
 )
 
 const Btn = ({
-  children, onClick, variant = 'default', size = 'md', disabled = false, style: extraStyle
+  children, onClick, variant = 'default', size = 'md', disabled = false, style: extraStyle, title
 }: {
   children: React.ReactNode; onClick?: () => void;
   variant?: 'default' | 'primary' | 'danger' | 'ghost'; size?: 'sm' | 'md'; disabled?: boolean
-  style?: React.CSSProperties
+  style?: React.CSSProperties; title?: string
 }) => {
   const bg = variant === 'primary' ? C.red : variant === 'danger' ? C.redS : variant === 'ghost' ? 'transparent' : C.bone
   const fg = variant === 'primary' ? C.bone : variant === 'danger' ? C.redD : C.ink2
   const border = variant === 'ghost' ? 'none' : `1px solid ${variant === 'primary' ? C.redD : variant === 'danger' ? '#E8B4AD' : C.rule}`
   const pad = size === 'sm' ? '5px 10px' : '8px 14px'
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button onClick={onClick} disabled={disabled} title={title}
       style={{ display: 'flex', alignItems: 'center', gap: 6,
         background: bg, color: fg, border, borderRadius: 4,
         fontFamily: SN, fontSize: size === 'sm' ? 12 : 13, fontWeight: 600,
