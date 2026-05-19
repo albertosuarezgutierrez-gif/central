@@ -350,37 +350,35 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 - Voice/Brain: PTT, Groq Whisper EAR, BRAIN v2 (patron+nim_8b_fast+claude_api), VOX ElviraNeural
 - Mensajes voz: rol/nombre/sección → print_job si sección tiene impresora (67c05d6)
 - Marchar granular: "marcha croquetas S1" → comanda_items.estado=listo → tachado KDS (67c05d6)
-- Recomendación de vino: "recomendación de vino para solomillo" → buildVinosContext → Elvira habla con carta+precio (01c4688)
-- Chuleta Voz (01c4688): 5 bloques comanda/mensaje/marchar/86/vino(morado) en owner+camarero
+- Chuleta Voz: 5 bloques comanda/mensaje/marchar/86/vino en /owner /edge /running /kds (01c4688)
+- Permisos personal (e367f80): camareros.puede_comandar + modulos_gestion JSONB. RPC login_pin actualizada. Modal owner sección PERMISOS con tooltips por campo.
+- Headers /jefe+/edge: icono 🍷 vino + icono perfil condicional (jefe→/edge si puede_comandar, camarero→/jefe si jefe_sala)
+- VinoModal.tsx (6233fba): modal reutilizable dark/light. Chips de platos reales de carta. /api/vinos/recomendar (callAI + vinos_catalogo, truncado 200 chars). Integrado en /edge y /jefe.
+- useModulo() hook (6233fba): comprueba modulos_activos del restaurante. Caché en memoria. Por defecto todos activos → sin impacto en instalaciones existentes.
+- restaurantes.modulos_activos JSONB: 20 módulos, default todos activos. API /api/owner/modulos GET+PUT. Núcleo protegido (voz/mesas/comandas/cobro/impresion/turnos/verifactu no desactivables).
 - Turnos: 2 tipos coexistentes (servicio camarero_id IS NULL + fichaje camarero_id)
 - Cobro: Stripe Terminal card_present + Bizum MONEI
-- VeriFactu: hash SHA-256 encadenado, QR AEAT, facturas_cliente con NIF propio
+- VeriFactu: hash SHA-256 encadenado, QR AEAT, facturas_cliente — obligatorio por ley, siempre activo
 - Hardware Bridge v6.0.1: bridge-local.js polling TCP, ESC/POS, Cloud Edition WSS
 - APK v2.0: firmada RSA2048/SHA384, versionCode=11, descarga en www.iarest.es/descargar
 - QR add-on: 6 EFs (solo sin_pago completamente funcional; cobro inline bloqueado P2)
 - Storefront v1.0: 4 canales (online Stripe + teléfono/mostrador sin Stripe)
 - Almacén/Escandallos/Vinos/OCR albarán/Pedidos proveedor
 - Escáner IA v1.0: SmartScanFAB, NIM visión, documentos_escaneados
-- Supervisor de tiempos: 6 condiciones, /owner + /jefe
-- Auto-Healer v1.0: monitor cada 5min, tasa 97.9%, AutoCurasPanel /super
-- Producto formatos (T/M/R): producto_formatos, comanda_items.formato_nombre
-- Multi-cuenta: tabla cuentas, selector si N locales
-- Contrato SaaS v1.0: /public/contrato-iarest-v1.pdf, contract_acceptances
-- Sugerencias: tabla+vista+SugerenciaButton en /edge, /kds, /owner
-- RRHH v1.0: candidatos, cv_analisis, IA 9 roles hostelería, RRHHTab /owner
-- SaaS onboarding: landing, 6 pasos, Stripe checkout
+- Supervisor de tiempos, Auto-Healer v1.0, Producto formatos T/M/R
+- Multi-cuenta, Contrato SaaS v1.0, Sugerencias, RRHH v1.0
 
 ## Pendientes prioritarios
 
-- P1: STRIPE_MODE=live (cuando arranque producción real)
-- P2: STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR (bloqueante QR cobro inline)
+- P1: STRIPE_MODE=live
+- P2: STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR (bloqueante QR cobro)
 - P3: STRIPE_WEBHOOK_SECRET_STOREFRONT
-- T2: Renombrar camareros → personal ANTES de implementar API pública (#12)
-- #12: API pública
-- Pantalla pago inline /q/[token] (solo sin_pago funciona ahora)
+- T2: camareros→personal ANTES de API pública (#12)
+- Panel módulos /owner → Config → activar/desactivar módulos por restaurante
+- Ruta /portal para usuarios con modulos_gestion sin rol de sala (contable, gestor stock...)
+- VOZ: marchar multi-item en un pulso
 - AZURE_SPEECH_KEY + REGION (voice profiles)
-- T3: Cashdro HTTP API real
-- VOZ: marchar multi-item en un solo pulso ("marcha croquetas y entrecot S1")
+- T3: Cashdro HTTP
 
 ---
 
