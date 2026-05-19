@@ -1,19 +1,18 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 
 // ── Design system ─────────────────────────────────────────────────────────
 const C = {
-  bg:     '#14110E',
-  bone:   '#1C1815',
-  paper:  '#F6F1E7',
-  ink2:   '#D8CDB6',
-  ink3:   '#A89880',
-  ink4:   '#6B5A48',
-  rule:   '#2C2420',
-  red:    '#D9442B',
-  redDp:  '#A8311E',
-  amber:  '#E8A33B',
-  green:  '#3F7D44',
+  bg:    '#14110E',
+  bone:  '#1C1815',
+  paper: '#F6F1E7',
+  ink2:  '#D8CDB6',
+  ink3:  '#A89880',
+  ink4:  '#6B5A48',
+  rule:  '#2C2420',
+  red:   '#D9442B',
+  amber: '#E8A33B',
+  green: '#3F7D44',
 }
 const TT = 'Newsreader'
 const SM = '"Inter Tight", sans-serif'
@@ -52,10 +51,10 @@ const ROLES = [
 ]
 
 const ESTADOS = [
-  { v: 'activo',      l: 'Activo',      color: C.amber },
-  { v: 'entrevista',  l: 'Entrevista',  color: '#5B8DD9' },
-  { v: 'contratado',  l: 'Contratado',  color: C.green },
-  { v: 'descartado',  l: 'Descartado',  color: C.ink4 },
+  { v: 'activo',     l: 'Activo',     color: C.amber },
+  { v: 'entrevista', l: 'Entrevista', color: '#5B8DD9' },
+  { v: 'contratado', l: 'Contratado', color: C.green },
+  { v: 'descartado', l: 'Descartado', color: C.ink4 },
 ]
 
 const RECOM_COLOR: Record<string, string> = {
@@ -63,7 +62,6 @@ const RECOM_COLOR: Record<string, string> = {
   segunda_entrevista: C.amber,
   descartar:          C.red,
 }
-
 const RECOM_LABEL: Record<string, string> = {
   contratar:          'Contratar',
   segunda_entrevista: '2ª entrevista',
@@ -75,35 +73,267 @@ function scoreColor(s: number) {
   if (s >= 50) return C.amber
   return C.red
 }
-
 function rolLabel(v: string) {
   return ROLES.find(r => r.v === v)?.l ?? v
 }
 
-// ── Componente principal ───────────────────────────────────────────────────
-export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
-  const [candidatos, setCandidatos] = useState<Candidato[]>([])
-  const [loading, setLoading] = useState(true)
-  const [vista, setVista] = useState<'lista' | 'nuevo' | 'detalle'>('lista')
-  const [seleccionado, setSeleccionado] = useState<Candidato | null>(null)
-  const [filtroEstado, setFiltroEstado] = useState('')
-  const [filtroRol, setFiltroRol] = useState('')
+// ── Estilos compartidos ───────────────────────────────────────────────────
+const inputStyle: React.CSSProperties = {
+  background:   '#1C1815',
+  border:       '1px solid #2C2420',
+  borderRadius: 6,
+  color:        '#F6F1E7',
+  fontFamily:   SM,
+  fontSize:     14,
+  padding:      '10px 12px',
+  width:        '100%',
+  boxSizing:    'border-box',
+  outline:      'none',
+}
+const labelStyle: React.CSSProperties = {
+  display:       'flex',
+  flexDirection: 'column',
+  gap:           6,
+}
+const labelTxt: React.CSSProperties = {
+  fontFamily:    SM,
+  fontSize:      11,
+  fontWeight:    700,
+  letterSpacing: '.12em',
+  textTransform: 'uppercase',
+  color:         '#A89880',
+}
+const secTitleStyle: React.CSSProperties = {
+  fontFamily:    SM,
+  fontSize:      10,
+  fontWeight:    700,
+  letterSpacing: '.14em',
+  textTransform: 'uppercase',
+  color:         '#6B5A48',
+  marginBottom:  8,
+}
 
-  // Formulario nuevo
-  const [form, setForm] = useState({
-    nombre: '', email: '', telefono: '',
-    rol_solicitado: 'camarero', cv_texto: ''
+// ══════════════════════════════════════════════════════════════════════════
+// Sub-componente DetalleView
+// Necesario separado para poder usar useState sin violar las reglas de hooks
+// ══════════════════════════════════════════════════════════════════════════
+function DetalleView({
+  candidato: c,
+  sh,
+  onBack,
+  onEstadoChange,
+  onEliminar,
+}: {
+  candidato: Candidato
+  sh: () => Record<string, string>
+  onBack: () => void
+  onEstadoChange: (id: string, estado: string) => Promise<void>
+  onEliminar: (id: string) => Promise<void>
+}) {
+  const [nota, setNota]               = useState(c.notas_internas ?? '')
+  const [notaGuardada, setNotaGuardada] = useState(false)
+
+  async function guardarNota() {
+    await fetch(`/api/rrhh/candidatos/${c.id}`, {
+      method:  'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ notas_internas: nota }),
+    })
+    setNotaGuardada(true)
+  }
+
+  return (
+    <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 4px' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
+        <button onClick={onBack} style={{
+          background: 'none', border: 'none', color: C.ink3,
+          cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4,
+        }}>←</button>
+        <div>
+          <h2 style={{ fontFamily: TT, fontSize: 22, color: C.paper, margin: 0, fontStyle: 'italic' }}>
+            {c.nombre}
+          </h2>
+          <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, marginTop: 2 }}>
+            {rolLabel(c.rol_solicitado)} · {new Date(c.fecha_subida).toLocaleDateString('es-ES')}
+          </div>
+        </div>
+      </div>
+
+      {/* Score + recomendación */}
+      {c.score != null && (
+        <div style={{
+          background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10,
+          padding: '16px 20px', marginBottom: 16,
+          display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
+        }}>
+          <div style={{ textAlign: 'center', minWidth: 64 }}>
+            <div style={{
+              fontFamily: TT, fontSize: 44, fontWeight: 700, fontStyle: 'italic',
+              color: scoreColor(c.score), lineHeight: 1,
+            }}>{c.score}</div>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4,
+              textTransform: 'uppercase', letterSpacing: '.1em', marginTop: 4 }}>Score</div>
+          </div>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            {c.recomendacion && (
+              <div style={{
+                display: 'inline-block',
+                background: RECOM_COLOR[c.recomendacion] + '22',
+                border: `1px solid ${RECOM_COLOR[c.recomendacion]}`,
+                color: RECOM_COLOR[c.recomendacion],
+                borderRadius: 20, padding: '4px 12px',
+                fontFamily: SM, fontSize: 12, fontWeight: 700, marginBottom: 8,
+              }}>
+                {RECOM_LABEL[c.recomendacion] ?? c.recomendacion}
+              </div>
+            )}
+            {c.resumen && (
+              <p style={{ fontFamily: SM, fontSize: 13, color: C.ink2, margin: 0, lineHeight: 1.6 }}>
+                {c.resumen}
+              </p>
+            )}
+          </div>
+          {c.experiencia_anos != null && (
+            <div style={{ textAlign: 'center', minWidth: 48 }}>
+              <div style={{ fontFamily: TT, fontSize: 28, color: C.ink2, fontStyle: 'italic' }}>
+                {c.experiencia_anos}
+              </div>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4,
+                textTransform: 'uppercase', letterSpacing: '.1em' }}>Años</div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Alerta */}
+      {c.alerta && (
+        <div style={{
+          background: '#3B2E15', border: `1px solid ${C.amber}`, borderRadius: 8,
+          padding: '10px 14px', marginBottom: 16,
+          fontFamily: SM, fontSize: 13, color: C.amber,
+        }}>⚠ {c.alerta}</div>
+      )}
+
+      {/* Idiomas */}
+      {c.idiomas?.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div style={secTitleStyle}>Idiomas</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {c.idiomas.map((lang, i) => (
+              <span key={i} style={{
+                background: C.bone, border: `1px solid ${C.rule}`,
+                borderRadius: 20, padding: '4px 10px',
+                fontFamily: SM, fontSize: 12, color: C.ink2,
+              }}>{lang.idioma} — {lang.nivel}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Puntos fuertes / débiles */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
+        {c.puntos_fuertes?.length > 0 && (
+          <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
+            <div style={{ ...secTitleStyle, color: C.green, marginBottom: 10 }}>✓ Puntos fuertes</div>
+            {c.puntos_fuertes.map((p, i) => (
+              <div key={i} style={{ fontFamily: SM, fontSize: 12, color: C.ink2,
+                marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid ${C.green}` }}>{p}</div>
+            ))}
+          </div>
+        )}
+        {c.puntos_debiles?.length > 0 && (
+          <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
+            <div style={{ ...secTitleStyle, color: C.amber, marginBottom: 10 }}>△ A valorar</div>
+            {c.puntos_debiles.map((p, i) => (
+              <div key={i} style={{ fontFamily: SM, fontSize: 12, color: C.ink2,
+                marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid ${C.amber}` }}>{p}</div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Estado */}
+      <div style={{ marginBottom: 16 }}>
+        <div style={secTitleStyle}>Estado</div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          {ESTADOS.map(e => (
+            <button key={e.v} onClick={() => onEstadoChange(c.id, e.v)} style={{
+              background:   c.estado === e.v ? e.color + '22' : 'transparent',
+              border:       `1px solid ${c.estado === e.v ? e.color : C.rule}`,
+              color:        c.estado === e.v ? e.color : C.ink3,
+              borderRadius: 6, padding: '6px 14px',
+              fontFamily:   SM, fontSize: 12, fontWeight: c.estado === e.v ? 700 : 400,
+              cursor:       'pointer', transition: 'all .15s',
+            }}>{e.l}</button>
+          ))}
+        </div>
+      </div>
+
+      {/* Notas */}
+      <div style={{ marginBottom: 20 }}>
+        <div style={secTitleStyle}>Notas internas</div>
+        <textarea value={nota}
+          onChange={e => { setNota(e.target.value); setNotaGuardada(false) }}
+          onBlur={guardarNota}
+          placeholder="Observaciones, detalles de entrevista, pendientes..."
+          rows={4}
+          style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
+        />
+        {notaGuardada && (
+          <div style={{ fontFamily: SM, fontSize: 11, color: C.green, marginTop: 4 }}>Guardado</div>
+        )}
+      </div>
+
+      {/* Contacto */}
+      {(c.email || c.telefono) && (
+        <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
+          {c.email && (
+            <a href={`mailto:${c.email}`} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none' }}>
+              ✉ {c.email}
+            </a>
+          )}
+          {c.telefono && (
+            <a href={`tel:${c.telefono}`} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none' }}>
+              ☎ {c.telefono}
+            </a>
+          )}
+        </div>
+      )}
+
+      {/* Eliminar */}
+      <button onClick={() => onEliminar(c.id)} style={{
+        background: 'none', border: `1px solid ${C.rule}`,
+        color: C.ink4, borderRadius: 6, padding: '8px 16px',
+        fontFamily: SM, fontSize: 12, cursor: 'pointer',
+      }}>Eliminar candidato</button>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════
+// Componente principal RRHHTab
+// ══════════════════════════════════════════════════════════════════════════
+export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
+  const [candidatos,    setCandidatos]    = useState<Candidato[]>([])
+  const [loading,       setLoading]       = useState(true)
+  const [vista,         setVista]         = useState<'lista' | 'nuevo' | 'detalle'>('lista')
+  const [seleccionado,  setSeleccionado]  = useState<Candidato | null>(null)
+  const [filtroEstado,  setFiltroEstado]  = useState('')
+  const [filtroRol,     setFiltroRol]     = useState('')
+  const [form,          setForm]          = useState({
+    nombre: '', email: '', telefono: '', rol_solicitado: 'camarero', cv_texto: '',
   })
-  const [analizando, setAnalizando] = useState(false)
-  const [error, setError] = useState('')
+  const [analizando,    setAnalizando]    = useState(false)
+  const [error,         setError]         = useState('')
 
   const cargar = useCallback(async () => {
     setLoading(true)
     try {
-      const params = new URLSearchParams()
-      if (filtroEstado) params.set('estado', filtroEstado)
-      if (filtroRol) params.set('rol', filtroRol)
-      const res = await fetch(`/api/rrhh/candidatos?${params}`, { headers: sh })
+      const p = new URLSearchParams()
+      if (filtroEstado) p.set('estado', filtroEstado)
+      if (filtroRol)    p.set('rol', filtroRol)
+      const res  = await fetch(`/api/rrhh/candidatos?${p}`, { headers: sh() })
       const data = await res.json()
       setCandidatos(data.candidatos ?? [])
     } catch { /* silencioso */ }
@@ -112,64 +342,45 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
 
   useEffect(() => { cargar() }, [cargar])
 
-  // ── Guardar candidato + analizar ─────────────────────────────────────────
   async function handleNuevo() {
     if (!form.nombre.trim() || !form.cv_texto.trim()) {
       setError('El nombre y el texto del CV son obligatorios.')
       return
     }
-    setAnalizando(true)
-    setError('')
+    setAnalizando(true); setError('')
     try {
-      const res = await fetch('/api/rrhh/candidatos', {
-        method: 'POST',
-        headers: { ...sh, 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+      const res  = await fetch('/api/rrhh/candidatos', {
+        method:  'POST',
+        headers: { ...sh(), 'Content-Type': 'application/json' },
+        body:    JSON.stringify(form),
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error ?? 'Error'); setAnalizando(false); return }
       setForm({ nombre: '', email: '', telefono: '', rol_solicitado: 'camarero', cv_texto: '' })
       setVista('lista')
       await cargar()
-    } catch {
-      setError('Error de red')
-    }
+    } catch { setError('Error de red') }
     setAnalizando(false)
   }
 
-  // ── Cambiar estado ────────────────────────────────────────────────────────
   async function cambiarEstado(id: string, estado: string) {
     await fetch(`/api/rrhh/candidatos/${id}`, {
-      method: 'PATCH',
-      headers: { ...sh, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ estado }),
+      method:  'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ estado }),
     })
     await cargar()
-    if (seleccionado?.id === id) {
-      setSeleccionado(prev => prev ? { ...prev, estado } : null)
-    }
+    setSeleccionado(prev => prev?.id === id ? { ...prev, estado } : prev)
   }
 
-  // ── Eliminar ──────────────────────────────────────────────────────────────
   async function eliminar(id: string) {
     if (!confirm('¿Eliminar candidato? Esta acción no se puede deshacer.')) return
-    await fetch(`/api/rrhh/candidatos/${id}`, { method: 'DELETE', headers: sh })
+    await fetch(`/api/rrhh/candidatos/${id}`, { method: 'DELETE', headers: sh() })
     setVista('lista')
     await cargar()
   }
 
-  // ── Guardar notas ─────────────────────────────────────────────────────────
-  async function guardarNota(id: string, texto: string) {
-    await fetch(`/api/rrhh/candidatos/${id}`, {
-      method: 'PATCH',
-      headers: { ...sh, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ notas_internas: texto }),
-    })
-  }
-
-  // ────────────────────────────────────────────────────────────────────────
-  // RENDER: formulario nuevo candidato
-  // ────────────────────────────────────────────────────────────────────────
+  // ── Vista: formulario nuevo ───────────────────────────────────────────
   if (vista === 'nuevo') {
     return (
       <div style={{ maxWidth: 640, margin: '0 auto', padding: '0 4px' }}>
@@ -184,64 +395,62 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-          {/* Nombre */}
           <label style={labelStyle}>
             <span style={labelTxt}>Nombre completo *</span>
-            <input value={form.nombre} onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))}
+            <input value={form.nombre}
+              onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))}
               placeholder="Ej: María García López" style={inputStyle} />
           </label>
 
-          {/* Rol */}
           <label style={labelStyle}>
             <span style={labelTxt}>Puesto solicitado *</span>
             <select value={form.rol_solicitado}
               onChange={e => setForm(p => ({ ...p, rol_solicitado: e.target.value }))}
-              style={{ ...inputStyle, appearance: 'none' as const }}>
+              style={{ ...inputStyle, appearance: 'none' }}>
               {ROLES.map(r => <option key={r.v} value={r.v}>{r.l}</option>)}
             </select>
           </label>
 
-          {/* Email + Teléfono en fila */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <label style={labelStyle}>
               <span style={labelTxt}>Email</span>
-              <input value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
-                placeholder="candidato@email.com" style={inputStyle} type="email" />
+              <input value={form.email} type="email"
+                onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
+                placeholder="candidato@email.com" style={inputStyle} />
             </label>
             <label style={labelStyle}>
               <span style={labelTxt}>Teléfono</span>
-              <input value={form.telefono} onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))}
+              <input value={form.telefono}
+                onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))}
                 placeholder="6XX XXX XXX" style={inputStyle} />
             </label>
           </div>
 
-          {/* CV texto */}
           <label style={labelStyle}>
             <span style={labelTxt}>Texto del CV *</span>
-            <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, marginBottom: 6, display: 'block' }}>
-              Copia y pega el contenido del CV, o transcribe los datos principales del candidato.
+            <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, marginBottom: 4, display: 'block' }}>
+              Copia y pega el contenido del CV, o transcribe los datos del candidato.
             </span>
             <textarea value={form.cv_texto}
               onChange={e => setForm(p => ({ ...p, cv_texto: e.target.value }))}
               placeholder="Datos de formación, experiencia laboral, idiomas, habilidades..."
               rows={10}
-              style={{ ...inputStyle, resize: 'vertical' as const, fontFamily: MN, fontSize: 12, lineHeight: 1.6 }}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: MN, fontSize: 12, lineHeight: 1.6 }}
             />
           </label>
 
           {error && (
-            <div style={{ background: '#3B1A18', border: `1px solid ${C.red}`, borderRadius: 6,
-              padding: '10px 14px', color: '#F4A89A', fontFamily: SM, fontSize: 13 }}>
-              {error}
-            </div>
+            <div style={{
+              background: '#3B1A18', border: `1px solid ${C.red}`, borderRadius: 6,
+              padding: '10px 14px', color: '#F4A89A', fontFamily: SM, fontSize: 13,
+            }}>{error}</div>
           )}
 
           <button onClick={handleNuevo} disabled={analizando} style={{
-            background: analizando ? C.ink4 : C.red,
-            color: C.paper, border: 'none', borderRadius: 8,
-            padding: '14px 0', fontFamily: SM, fontWeight: 700,
-            fontSize: 15, cursor: analizando ? 'not-allowed' : 'pointer',
-            transition: 'background .15s',
+            background:  analizando ? C.ink4 : C.red,
+            color:       C.paper, border: 'none', borderRadius: 8,
+            padding:     '14px 0', fontFamily: SM, fontWeight: 700,
+            fontSize:    15, cursor: analizando ? 'not-allowed' : 'pointer',
           }}>
             {analizando ? '⏳ Analizando con IA...' : '✦ Analizar CV con IA'}
           </button>
@@ -250,207 +459,22 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
     )
   }
 
-  // ────────────────────────────────────────────────────────────────────────
-  // RENDER: detalle de candidato
-  // ────────────────────────────────────────────────────────────────────────
+  // ── Vista: detalle ────────────────────────────────────────────────────
   if (vista === 'detalle' && seleccionado) {
-    const c = seleccionado
-    const estadoInfo = ESTADOS.find(e => e.v === c.estado)
-    const [nota, setNota] = useState(c.notas_internas ?? '')
-    const [notaGuardada, setNotaGuardada] = useState(false)
-
     return (
-      <div style={{ maxWidth: 680, margin: '0 auto', padding: '0 4px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-          <button onClick={() => setVista('lista')} style={{
-            background: 'none', border: 'none', color: C.ink3,
-            cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4,
-          }}>←</button>
-          <div>
-            <h2 style={{ fontFamily: TT, fontSize: 22, color: C.paper, margin: 0, fontStyle: 'italic' }}>
-              {c.nombre}
-            </h2>
-            <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, marginTop: 2 }}>
-              {rolLabel(c.rol_solicitado)} · {new Date(c.fecha_subida).toLocaleDateString('es-ES')}
-            </div>
-          </div>
-        </div>
-
-        {/* Score + recomendación */}
-        {c.score != null && (
-          <div style={{
-            background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10,
-            padding: '16px 20px', marginBottom: 16,
-            display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
-          }}>
-            {/* Score visual */}
-            <div style={{ textAlign: 'center', minWidth: 64 }}>
-              <div style={{
-                fontFamily: TT, fontSize: 44, fontWeight: 700, fontStyle: 'italic',
-                color: scoreColor(c.score), lineHeight: 1,
-              }}>{c.score}</div>
-              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4,
-                textTransform: 'uppercase', letterSpacing: '.1em', marginTop: 4 }}>Score</div>
-            </div>
-            <div style={{ flex: 1, minWidth: 200 }}>
-              {c.recomendacion && (
-                <div style={{
-                  display: 'inline-block',
-                  background: RECOM_COLOR[c.recomendacion] + '22',
-                  border: `1px solid ${RECOM_COLOR[c.recomendacion]}`,
-                  color: RECOM_COLOR[c.recomendacion],
-                  borderRadius: 20, padding: '4px 12px',
-                  fontFamily: SM, fontSize: 12, fontWeight: 700,
-                  marginBottom: 8,
-                }}>
-                  {RECOM_LABEL[c.recomendacion] ?? c.recomendacion}
-                </div>
-              )}
-              {c.resumen && (
-                <p style={{ fontFamily: SM, fontSize: 13, color: C.ink2, margin: 0, lineHeight: 1.6 }}>
-                  {c.resumen}
-                </p>
-              )}
-            </div>
-            {c.experiencia_anos != null && (
-              <div style={{ textAlign: 'center', minWidth: 48 }}>
-                <div style={{ fontFamily: TT, fontSize: 28, color: C.ink2, fontStyle: 'italic' }}>
-                  {c.experiencia_anos}
-                </div>
-                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4,
-                  textTransform: 'uppercase', letterSpacing: '.1em' }}>Años</div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* Alerta */}
-        {c.alerta && (
-          <div style={{
-            background: '#3B2E15', border: `1px solid ${C.amber}`, borderRadius: 8,
-            padding: '10px 14px', marginBottom: 16,
-            fontFamily: SM, fontSize: 13, color: C.amber,
-          }}>
-            ⚠ {c.alerta}
-          </div>
-        )}
-
-        {/* Idiomas */}
-        {c.idiomas?.length > 0 && (
-          <div style={{ marginBottom: 16 }}>
-            <div style={secTitleStyle}>Idiomas</div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-              {c.idiomas.map((lang, i) => (
-                <span key={i} style={{
-                  background: C.bone, border: `1px solid ${C.rule}`,
-                  borderRadius: 20, padding: '4px 10px',
-                  fontFamily: SM, fontSize: 12, color: C.ink2,
-                }}>
-                  {lang.idioma} — {lang.nivel}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Puntos fuertes / débiles */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
-          {c.puntos_fuertes?.length > 0 && (
-            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
-              <div style={{ ...secTitleStyle, color: C.green, marginBottom: 10 }}>✓ Puntos fuertes</div>
-              {c.puntos_fuertes.map((p, i) => (
-                <div key={i} style={{ fontFamily: SM, fontSize: 12, color: C.ink2,
-                  marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid ${C.green}` }}>
-                  {p}
-                </div>
-              ))}
-            </div>
-          )}
-          {c.puntos_debiles?.length > 0 && (
-            <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
-              <div style={{ ...secTitleStyle, color: C.amber, marginBottom: 10 }}>△ A valorar</div>
-              {c.puntos_debiles.map((p, i) => (
-                <div key={i} style={{ fontFamily: SM, fontSize: 12, color: C.ink2,
-                  marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid ${C.amber}` }}>
-                  {p}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* Cambiar estado */}
-        <div style={{ marginBottom: 16 }}>
-          <div style={secTitleStyle}>Estado</div>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {ESTADOS.map(e => (
-              <button key={e.v} onClick={() => cambiarEstado(c.id, e.v)} style={{
-                background: c.estado === e.v ? e.color + '22' : 'transparent',
-                border: `1px solid ${c.estado === e.v ? e.color : C.rule}`,
-                color: c.estado === e.v ? e.color : C.ink3,
-                borderRadius: 6, padding: '6px 14px',
-                fontFamily: SM, fontSize: 12, fontWeight: c.estado === e.v ? 700 : 400,
-                cursor: 'pointer', transition: 'all .15s',
-              }}>
-                {e.l}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Notas internas */}
-        <div style={{ marginBottom: 20 }}>
-          <div style={secTitleStyle}>Notas internas</div>
-          <textarea
-            value={nota}
-            onChange={e => { setNota(e.target.value); setNotaGuardada(false) }}
-            onBlur={async () => {
-              await guardarNota(c.id, nota)
-              setNotaGuardada(true)
-            }}
-            placeholder="Observaciones, detalles de entrevista, pendientes..."
-            rows={4}
-            style={{ ...inputStyle, resize: 'vertical' as const, width: '100%', boxSizing: 'border-box' as const }}
-          />
-          {notaGuardada && (
-            <div style={{ fontFamily: SM, fontSize: 11, color: C.green, marginTop: 4 }}>Guardado</div>
-          )}
-        </div>
-
-        {/* Contacto */}
-        {(c.email || c.telefono) && (
-          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
-            {c.email && (
-              <a href={`mailto:${c.email}`} style={{
-                fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none',
-              }}>✉ {c.email}</a>
-            )}
-            {c.telefono && (
-              <a href={`tel:${c.telefono}`} style={{
-                fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none',
-              }}>☎ {c.telefono}</a>
-            )}
-          </div>
-        )}
-
-        {/* Eliminar */}
-        <button onClick={() => eliminar(c.id)} style={{
-          background: 'none', border: `1px solid ${C.rule}`,
-          color: C.ink4, borderRadius: 6, padding: '8px 16px',
-          fontFamily: SM, fontSize: 12, cursor: 'pointer',
-        }}>
-          Eliminar candidato
-        </button>
-      </div>
+      <DetalleView
+        candidato={seleccionado}
+        sh={sh}
+        onBack={() => setVista('lista')}
+        onEstadoChange={cambiarEstado}
+        onEliminar={eliminar}
+      />
     )
   }
 
-  // ────────────────────────────────────────────────────────────────────────
-  // RENDER: lista principal
-  // ────────────────────────────────────────────────────────────────────────
+  // ── Vista: lista ──────────────────────────────────────────────────────
   return (
     <div>
-      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
         <h2 style={{ fontFamily: TT, fontSize: 22, color: C.paper, margin: 0, fontStyle: 'italic' }}>
@@ -464,7 +488,6 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
         </button>
       </div>
 
-      {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
           style={{ ...inputStyle, maxWidth: 160, padding: '8px 12px' }}>
@@ -478,7 +501,6 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
         </select>
       </div>
 
-      {/* Lista */}
       {loading ? (
         <div style={{ color: C.ink4, fontFamily: SM, fontSize: 13, textAlign: 'center', padding: 40 }}>
           Cargando...
@@ -489,7 +511,7 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
             Sin candidatos
           </div>
           <div style={{ fontFamily: SM, fontSize: 13 }}>
-            Pulsa "+ Nuevo candidato" para añadir el primer CV.
+            Pulsa &quot;+ Nuevo candidato&quot; para añadir el primer CV.
           </div>
         </div>
       ) : (
@@ -512,18 +534,15 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
                 <div style={{
                   minWidth: 48, height: 48, borderRadius: 8,
                   background: c.score != null ? scoreColor(c.score) + '18' : C.rule,
-                  border: `1px solid ${c.score != null ? scoreColor(c.score) : C.rule}`,
+                  border:     `1px solid ${c.score != null ? scoreColor(c.score) : C.rule}`,
                   display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
                 }}>
                   <div style={{
                     fontFamily: TT, fontSize: 18, fontWeight: 700, fontStyle: 'italic',
                     color: c.score != null ? scoreColor(c.score) : C.ink4, lineHeight: 1,
-                  }}>
-                    {c.score ?? '—'}
-                  </div>
-                  <div style={{ fontFamily: SM, fontSize: 8, color: C.ink4, letterSpacing: '.08em', textTransform: 'uppercase' }}>
-                    score
-                  </div>
+                  }}>{c.score ?? '—'}</div>
+                  <div style={{ fontFamily: SM, fontSize: 8, color: C.ink4,
+                    letterSpacing: '.08em', textTransform: 'uppercase' }}>score</div>
                 </div>
 
                 {/* Info */}
@@ -535,37 +554,30 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
                   <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, marginTop: 2 }}>
                     {rolLabel(c.rol_solicitado)}
                     {c.experiencia_anos != null && ` · ${c.experiencia_anos}a exp.`}
-                    {c.idiomas?.length > 0 && ` · ${c.idiomas.map((l: { idioma: string }) => l.idioma).join(', ')}`}
+                    {c.idiomas?.length > 0 && ` · ${c.idiomas.map(l => l.idioma).join(', ')}`}
                   </div>
                 </div>
 
-                {/* Recomendación */}
                 {c.recomendacion && (
                   <div style={{
                     flexShrink: 0,
                     background: RECOM_COLOR[c.recomendacion] + '18',
-                    border: `1px solid ${RECOM_COLOR[c.recomendacion]}44`,
-                    color: RECOM_COLOR[c.recomendacion],
+                    border:     `1px solid ${RECOM_COLOR[c.recomendacion]}44`,
+                    color:      RECOM_COLOR[c.recomendacion],
                     borderRadius: 16, padding: '3px 10px',
                     fontFamily: SM, fontSize: 11, fontWeight: 700,
-                  }}>
-                    {RECOM_LABEL[c.recomendacion]}
-                  </div>
+                  }}>{RECOM_LABEL[c.recomendacion]}</div>
                 )}
 
-                {/* Estado */}
                 <div style={{
                   flexShrink: 0,
                   background: (estadoInfo?.color ?? C.ink4) + '18',
-                  border: `1px solid ${(estadoInfo?.color ?? C.ink4)}44`,
-                  color: estadoInfo?.color ?? C.ink4,
+                  border:     `1px solid ${(estadoInfo?.color ?? C.ink4)}44`,
+                  color:      estadoInfo?.color ?? C.ink4,
                   borderRadius: 16, padding: '3px 10px',
                   fontFamily: SM, fontSize: 11,
-                }}>
-                  {estadoInfo?.l ?? c.estado}
-                </div>
+                }}>{estadoInfo?.l ?? c.estado}</div>
 
-                {/* Alerta */}
                 {c.alerta && (
                   <div style={{ flexShrink: 0, color: C.amber, fontSize: 16 }}>⚠</div>
                 )}
@@ -576,43 +588,4 @@ export default function RRHHTab({ sh }: { sh: Record<string, string> }) {
       )}
     </div>
   )
-}
-
-// ── Estilos reutilizables ─────────────────────────────────────────────────
-const inputStyle: React.CSSProperties = {
-  background: '#1C1815',
-  border: '1px solid #2C2420',
-  borderRadius: 6,
-  color: '#F6F1E7',
-  fontFamily: '"Inter Tight", sans-serif',
-  fontSize: 14,
-  padding: '10px 12px',
-  width: '100%',
-  boxSizing: 'border-box',
-  outline: 'none',
-}
-
-const labelStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  gap: 6,
-}
-
-const labelTxt: React.CSSProperties = {
-  fontFamily: '"Inter Tight", sans-serif',
-  fontSize: 11,
-  fontWeight: 700,
-  letterSpacing: '.12em',
-  textTransform: 'uppercase',
-  color: '#A89880',
-}
-
-const secTitleStyle: React.CSSProperties = {
-  fontFamily: '"Inter Tight", sans-serif',
-  fontSize: 10,
-  fontWeight: 700,
-  letterSpacing: '.14em',
-  textTransform: 'uppercase',
-  color: '#6B5A48',
-  marginBottom: 8,
 }
