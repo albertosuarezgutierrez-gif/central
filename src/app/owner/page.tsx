@@ -20,6 +20,7 @@ import ManualVozTab from '@/components/owner/ManualVozTab'
 import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
+import ModulosTab from '@/components/owner/ModulosTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
 import WineScannerModal from '@/components/WineScannerModal'
 
@@ -7205,12 +7206,13 @@ const GRUPOS = [
     // flujos y QR son setup importantes, el resto es configuración que se toca raramente
     id: 'config', label: 'Config', icon: ICONS.shield,
     tabs: [
-      { id: 'impresoras',     label: 'Impresoras',     icon: ICONS.printer       }, // se revisa si hay problemas
-      { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          }, // setup + ajustes puntuales
-      { id: 'qr',             label: 'QR Mesa',        icon: ICONS.qr            }, // al habilitar/deshabilitar mesas
-      { id: 'notificaciones', label: 'Notificaciones', icon: ICONS.alertTriangle }, // setup inicial
-      { id: 'restaurante',    label: 'Restaurante',    icon: ICONS.shield        }, // setup inicial (NIF, logo)
-      { id: 'suscripcion',    label: 'Suscripción',    icon: ICONS.receipt       }, // mensual / raramente
+      { id: 'impresoras',     label: 'Impresoras',     icon: ICONS.printer       },
+      { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          },
+      { id: 'qr',             label: 'QR Mesa',        icon: ICONS.qr            },
+      { id: 'modulos',        label: 'Módulos',        icon: ICONS.sparkle       }, // ← activar/desactivar módulos
+      { id: 'notificaciones', label: 'Notificaciones', icon: ICONS.alertTriangle },
+      { id: 'restaurante',    label: 'Restaurante',    icon: ICONS.shield        },
+      { id: 'suscripcion',    label: 'Suscripción',    icon: ICONS.receipt       },
     ]
   },
   {
@@ -8070,6 +8072,7 @@ export default function OwnerPage() {
             {tab === 'facturas'       && <FacturasTab/>}
             {tab === 'impresoras'     && <ImpresorasTab/>}
             {tab === 'flujos'         && <FlujoTab/>}
+            {tab === 'modulos'        && <ModulosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'notificaciones' && <NotificacionesTab/>}
             {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
             {tab === 'mensajes'       && <MensajesOwnerTab sh={sh} />}
