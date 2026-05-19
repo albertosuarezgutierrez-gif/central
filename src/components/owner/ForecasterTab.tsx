@@ -126,15 +126,22 @@ export default function ForecasterTab({ sh }: { sh: () => Record<string, string>
         </div>
       )}
 
-      {/* Eventos del entorno — sección completa */}
+      {/* Eventos del entorno — 3 franjas temporales */}
       {ev.length > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
-            🗺️ Eventos en tu zona · próximos 14 días
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+            🗺️ Eventos en tu zona · próximos 90 días
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {ev.map(e => {
-              const fecha  = new Date(e.fecha_inicio).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
+          {(() => {
+            const ahora   = Date.now()
+            const en7d    = ahora + 7  * 86400000
+            const en30d   = ahora + 30 * 86400000
+            const proxSem = ev.filter(e => new Date(e.fecha_inicio).getTime() <= en7d)
+            const proxMes = ev.filter(e => { const t = new Date(e.fecha_inicio).getTime(); return t > en7d && t <= en30d })
+            const horizonte = ev.filter(e => new Date(e.fecha_inicio).getTime() > en30d)
+
+            const renderEvento = (e: Evento) => {
+              const fecha = new Date(e.fecha_inicio).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })
               return (
                 <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', background: C.bone, borderRadius: 8, border: `1px solid ${C.rule}`, flexWrap: 'wrap' }}>
                   <span style={{ fontSize: 18 }}>{TIPO_EMOJI[e.tipo] ?? '📅'}</span>
@@ -148,10 +155,45 @@ export default function ForecasterTab({ sh }: { sh: () => Record<string, string>
                   <ImpactoBadge impacto={e.impacto_estimado} tipo={e.tipo} />
                 </div>
               )
-            })}
-          </div>
+            }
+
+            return (
+              <>
+                {proxSem.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontFamily: SN, fontSize: 10, color: C.red, marginBottom: 6, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                      Esta semana
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {proxSem.map(renderEvento)}
+                    </div>
+                  </div>
+                )}
+                {proxMes.length > 0 && (
+                  <div style={{ marginBottom: 14 }}>
+                    <div style={{ fontFamily: SN, fontSize: 10, color: C.amber, marginBottom: 6, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                      Próximas 4 semanas
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {proxMes.map(renderEvento)}
+                    </div>
+                  </div>
+                )}
+                {horizonte.length > 0 && (
+                  <div style={{ marginBottom: 6 }}>
+                    <div style={{ fontFamily: SN, fontSize: 10, color: C.ink4, marginBottom: 6, fontWeight: 700, letterSpacing: '.04em', textTransform: 'uppercase' }}>
+                      En el horizonte
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6, opacity: 0.7 }}>
+                      {horizonte.map(renderEvento)}
+                    </div>
+                  </div>
+                )}
+              </>
+            )
+          })()}
           <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 8, fontStyle: 'italic' }}>
-            Fuentes: Ticketmaster · Open-Meteo · Actualizado cada mañana a las 08:00h
+            Fuentes: Ticketmaster · Open-Meteo · Claude web search · Actualizado cada lunes a las 08:00h
           </p>
         </div>
       )}

@@ -8,8 +8,14 @@
     {
       "source": "/app/:file*.apk",
       "headers": [
-        { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
-        { "key": "Content-Disposition", "value": "attachment; filename=\"iarest.apk\"" }
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"iarest.apk\""
+        }
       ]
     }
   ],
@@ -33,6 +39,10 @@
     {
       "path": "/api/backup/drive",
       "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/eventos-entorno",
+      "schedule": "0 7 * * 1"
     }
   ]
 }

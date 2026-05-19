@@ -50,15 +50,15 @@ export async function GET(req: NextRequest) {
   }))
 
   // ── Eventos del entorno próximos 14 días ───────────────────────────────────
-  const en14d = new Date(Date.now() + 14 * 86400000)
+  const en90d = new Date(Date.now() + 90 * 86400000)
   const { data: eventos } = await supabase
     .from('eventos_entorno')
     .select('id, nombre, fecha_inicio, tipo, fuente, aforo_estimado, impacto_estimado, venue_nombre, venue_direccion')
     .eq('restaurante_id', restauranteId)
     .gte('fecha_inicio', new Date().toISOString())
-    .lte('fecha_inicio', en14d.toISOString())
+    .lte('fecha_inicio', en90d.toISOString())
     .order('fecha_inicio', { ascending: true })
-    .limit(15)
+    .limit(40)
 
   // ── IA: predicción con contexto de eventos ─────────────────────────────────
   const contextEventos = eventos?.length

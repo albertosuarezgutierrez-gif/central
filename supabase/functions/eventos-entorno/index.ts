@@ -1,11 +1,12 @@
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')!
-const SERVICE_KEY  = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
-const TM_API_KEY   = Deno.env.get('TICKETMASTER_API_KEY') ?? ''
-const TG_TOKEN     = Deno.env.get('TELEGRAM_TOKEN') ?? ''
-const TG_CHAT      = Deno.env.get('TELEGRAM_CHAT_ID') ?? ''
+const SUPABASE_URL    = Deno.env.get('SUPABASE_URL')!
+const SERVICE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+const TM_API_KEY      = Deno.env.get('TICKETMASTER_API_KEY') ?? ''
+const TG_TOKEN        = Deno.env.get('TELEGRAM_TOKEN') ?? ''
+const TG_CHAT         = Deno.env.get('TELEGRAM_CHAT_ID') ?? ''
+const ANTHROPIC_KEY   = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
 
 function calcularImpacto(aforo: number): number {
   if (aforo > 20000) return 1.60
@@ -40,10 +41,10 @@ serve(async () => {
 
   let insertados = 0
   const hoy    = new Date()
-  const en14d  = new Date(Date.now() + 14 * 86400000)
+  const en90d  = new Date(Date.now() + 90 * 86400000)
 
   for (const rest of restaurantes) {
-    // ── 2. Ticketmaster ───────────────────────────────────────────────────────
+    // ── 2. Ticketmaster (90 días) ─────────────────────────────────────────────
     if (TM_API_KEY && rest.cp_local) {
       try {
         const url = `https://app.ticketmaster.com/discovery/v2/events.json` +
@@ -52,8 +53,8 @@ serve(async () => {
           `&countryCode=ES` +
           `&radius=5&unit=km` +
           `&startDateTime=${hoy.toISOString().slice(0, 19)}Z` +
-          `&endDateTime=${en14d.toISOString().slice(0, 19)}Z` +
-          `&size=10&sort=date,asc`
+          `&endDateTime=${en90d.toISOString().slice(0, 19)}Z` +
+          `&size=20&sort=date,asc`
 
         const res  = await fetch(url)
         const data = await res.json()
@@ -121,6 +122,44 @@ serve(async () => {
       } catch (e) {
         console.error(`Clima error ${rest.nombre}:`, e)
       }
+    }
+  }
+
+
+  // ── 4. Claude web_search: ferias, festivos y eventos locales ─────────────
+  if (ANTHROPIC_KEY) {
+    for (const rest of restaurantes) {
+      const ciudad = (rest as Record<string,unknown>).ciudad as string ?? rest.cp_local ?? "España"
+      const fechaHoy = hoy.toISOString().split("T")[0]
+      const fecha90  = en90d.toISOString().split("T")[0]
+      const { data: yaHecho } = await supabase
+        .from("eventos_entorno").select("id")
+        .eq("restaurante_id", rest.id).eq("fuente", "claude-websearch")
+        .gte("created_at", new Date(Date.now() - 6 * 86400000).toISOString()).limit(1)
+      if (yaHecho?.length) continue
+      try {
+        const res = await fetch("https://api.anthropic.com/v1/messages", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "x-api-key": ANTHROPIC_KEY, "anthropic-version": "2023-06-01" },
+          body: JSON.stringify({ model: "claude-haiku-4-5-20251001", max_tokens: 2000,
+            tools: [{ type: "web_search_20250305", name: "web_search" }],
+            messages: [{ role: "user", content: `Busca eventos en ${ciudad} entre ${fechaHoy} y ${fecha90} (próximos 90 días) que aumenten afluencia en bares y restaurantes: partidos de fútbol, conciertos en estadios, ferias locales, Semana Santa, festivos municipales, festivales de música. Solo eventos con más de 1000 personas o festivo oficial. Responde SOLO con JSON: {"eventos":[{"fecha":"YYYY-MM-DD","nombre":"nombre corto","tipo":"deportes|concierto|feria|festivo|otro","aforo_estimado":15000}]}` }] }),
+        })
+        if (!res.ok) continue
+        const data = await res.json()
+        const text = (data.content ?? []).filter((b: {type:string}) => b.type === "text").map((b: {text:string}) => b.text).join("")
+        let parsed: {eventos: Array<{fecha:string;nombre:string;tipo:string;aforo_estimado?:number}>}
+        try { parsed = JSON.parse(text.replace(/```json|```/g,"").trim()) } catch { continue }
+        for (const ev of parsed.eventos ?? []) {
+          if (!ev.fecha || !ev.nombre) continue
+          const aforo = ev.aforo_estimado ?? 5000
+          await supabase.from("eventos_entorno").upsert({ restaurante_id: rest.id, nombre: ev.nombre,
+            fecha_inicio: `${ev.fecha}T00:00:00Z`, tipo: ev.tipo ?? "otro", fuente: "claude-websearch",
+            aforo_estimado: aforo, impacto_estimado: calcularImpacto(aforo), raw: ev,
+          }, { onConflict: "restaurante_id,nombre,fecha_inicio", ignoreDuplicates: true })
+          insertados++
+        }
+      } catch(e) { console.error(`Claude websearch error ${rest.nombre}:`, e) }
     }
   }
 
