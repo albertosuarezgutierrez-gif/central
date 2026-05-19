@@ -21,6 +21,7 @@ import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import SmartScanFAB from '@/components/SmartScanFAB'
+import WineScannerModal from '@/components/WineScannerModal'
 
 /* ─── Design Tokens ─── */
 
@@ -2228,6 +2229,7 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
   const [form, setForm] = useState({ nombre: '', descripcion: '', precio: '', seccion: '', nombre_alternativo: '', familia: '', proveedor_id: '', stock_actual: '', stock_minimo: '', cantidad_reposicion: '', unidad_stock: 'ud', modo_reposicion: 'desactivado' })
   const [wineForm, setWineForm] = useState({ bodega: '', varietal: '', do: '', anada: '', temperatura: '', maridaje: '', descripcion_cata: '', maridaje_tags: [] as string[] })
   const [wineEnriching, setWineEnriching] = useState(false)
+  const [wineScannerOpen, setWineScannerOpen] = useState(false)
 
   const enriquecerVino = async () => {
     if (!form.nombre.trim()) return
@@ -2452,6 +2454,10 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
           <Btn onClick={() => { setView(view === 'escanear' ? 'lista' : 'escanear'); setExtracted(null); setImages([]) }}
             variant={view === 'escanear' ? 'primary' : 'default'}>
             <Icon d={ICONS.sparkle} size={14}/><span className="carta-hdr-btn-lbl">Escanear</span>
+          </Btn>
+          <Btn onClick={() => setWineScannerOpen(true)}>
+            <span style={{ fontSize: 14 }}>🍷</span>
+            <span className="carta-hdr-btn-lbl">Vino</span>
           </Btn>
           <Btn variant="primary" onClick={openCreate}><Icon d={ICONS.plus} size={15}/></Btn>
         </div>
@@ -2906,6 +2912,14 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
       )}
 
       {qrPanelOpen && <CartaPublicPanel onClose={() => setQrPanelOpen(false)} />}
+
+      {wineScannerOpen && (
+        <WineScannerModal
+          sh={sh}
+          onClose={() => setWineScannerOpen(false)}
+          onGuardado={() => { load(); setWineScannerOpen(false) }}
+        />
+      )}
     </div>
   )
 }
