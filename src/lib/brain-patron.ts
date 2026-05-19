@@ -86,6 +86,8 @@ const KW_VINO = [
   'vino recomendado', 'sommelier', 'sumiller',
   'vino tinto para', 'vino blanco para', 'vino rosado para',
 ]
+
+const KW_MENSAJE = [
   'mensaje a cocina', 'mensaje para cocina',
   'mensaje a barra',  'mensaje para barra',
   'mensaje a sala',   'mensaje para sala',
