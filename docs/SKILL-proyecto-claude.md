@@ -348,8 +348,9 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 ## Módulos en producción (mayo 2026)
 
 - Voice/Brain: PTT, Groq Whisper EAR, BRAIN v2 (patron+nim_8b_fast+claude_api), VOX ElviraNeural
-- Mensajes por voz: "mensaje a cocina" / "Pablo, T4 espera" → tipo:aviso → INSERT mensajes_turno con destinatario_id (commit fb8a7eb+6f4a20b)
-- Chuleta Voz (commit 7c67c04): ChuleteVoz.tsx por rol. owner=tab Manual "⚡Chuleta Voz". camarero=/edge tab manual. running/kds=botón header→modal. Regla de oro: 1 acción·1 mesa·1 pulso
+- Mensajes por voz: por rol/nombre propio/sección (cocina caliente, barra uno) → destinatario_id privado o print_job si sección tiene impresora (67c05d6)
+- Marchar granular: "marcha croquetas S1" → UPDATE comanda_items.estado=listo → item tachado en KDS automáticamente (67c05d6)
+- Chuleta Voz (7c67c04+7a77669): ChuleteVoz.tsx 4 roles. MENSAJE incluye secciones. MARCHAR con nota KDS. Regla de oro: 1 acción·1 mesa·1 pulso
 - Turnos: 2 tipos coexistentes (servicio camarero_id IS NULL + fichaje camarero_id)
 - Cobro: Stripe Terminal card_present + Bizum MONEI
 - VeriFactu: hash SHA-256 encadenado, QR AEAT, facturas_cliente con NIF propio
@@ -378,6 +379,7 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 - Pantalla pago inline /q/[token] (solo sin_pago funciona ahora)
 - AZURE_SPEECH_KEY + REGION (voice profiles)
 - T3: Cashdro HTTP API real
+- VOZ: marchar multi-item en un solo pulso ("marcha croquetas y entrecot S1")
 
 ---
 
