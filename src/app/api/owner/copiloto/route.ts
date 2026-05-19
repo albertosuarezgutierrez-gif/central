@@ -6,7 +6,18 @@ import { logTraining } from '@/lib/training-log'
 
 export async function POST(req: NextRequest) {
   const session = getSession(req)
-  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  if (!session) {
+    // Log para Auto-Healer: si esto se repite >3 veces en 1h, Check 9 lo escala a crítico
+    const sb = createServerClient()
+    await sb.from('incidencias_sistema').insert({
+      tipo: 'copiloto_auth_fallida',
+      modulo: 'copiloto',
+      nivel: 'aviso',
+      mensaje: 'Petición al copiloto sin sesión válida (x-ia-session ausente o inválido)',
+      restaurante_id: null,
+    }).then(() => {})
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
   const restauranteId = getRestauranteId(req)
 
   const { pregunta, historial } = await req.json()

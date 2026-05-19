@@ -13,10 +13,10 @@ const SUGERENCIAS = [
 ]
 
 function getHeaders(): Record<string, string> {
-  if (typeof window === 'undefined') return {}
+  if (typeof window === 'undefined') return { 'Content-Type': 'application/json' }
   try {
-    const raw = localStorage.getItem('session_token') ?? sessionStorage.getItem('session_token') ?? ''
-    return raw ? { 'x-session-token': raw, 'Content-Type': 'application/json' } : { 'Content-Type': 'application/json' }
+    const session = localStorage.getItem('ia_rest_session') ?? ''
+    return { 'Content-Type': 'application/json', 'x-ia-session': session }
   } catch { return { 'Content-Type': 'application/json' } }
 }
 
@@ -42,8 +42,13 @@ export default function OwnerCopiloto() {
       const res = await fetch('/api/owner/copiloto', {
         method: 'POST',
         headers: getHeaders(),
-        body: JSON.stringify({ pregunta, historial: nuevos }),
+        body: JSON.stringify({ pregunta, historial: msgs }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        setMsgs(prev => [...prev, { role: 'assistant', content: err.error ?? `Error ${res.status}.` }])
+        return
+      }
       const data = await res.json()
       setMsgs(prev => [...prev, { role: 'assistant', content: data.respuesta ?? 'Sin respuesta.' }])
     } catch {
