@@ -452,7 +452,8 @@ export async function crearPrintJobs(
       ts,
     }
 
-    const printData = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
+    const TIPOS_ESC = ['ip_local', 'usb_bridge', 'tcp']
+    const printData = TIPOS_ESC.includes(imp.connection_type)
       ? generarEscPos(payload).toString('base64')
       : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
 
@@ -475,7 +476,7 @@ export async function crearPrintJobs(
       if (imp.fallback_id && impresoraById[imp.fallback_id]) {
         console.warn(`[COURIER] Error en impresora principal, intentando fallback "${imp.fallback_id}"`)
         imp = impresoraById[imp.fallback_id]
-        const printDataFallback = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
+        const printDataFallback = TIPOS_ESC.includes(imp.connection_type)
           ? generarEscPos(payload).toString('base64')
           : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
         const { data: jobFallback } = await supabase
@@ -568,7 +569,7 @@ export async function crearPrintJobMarchar(
       tipo: 'marchar',
       ts,
     }
-    const printData = (imp.connection_type === 'ip_local' || imp.connection_type === 'usb_bridge')
+    const printData = ['ip_local', 'usb_bridge', 'tcp'].includes(imp.connection_type)
       ? generarEscPos(payload).toString('base64')
       : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
 
@@ -594,21 +595,23 @@ async function resolverSecciones(
   const sinSeccion = items.filter(i => !i.seccion_id)
   if (sinSeccion.length === 0) return items
 
-  // Intentar mapear nombre → seccion vía productos
+  // Intentar mapear nombre → seccion_cocina_id vía productos
   const nombres = [...new Set(sinSeccion.map(i => i.nombre))]
   const { data: productos } = await supabase
     .from('productos')
-    .select('nombre, seccion')
+    .select('nombre, seccion_cocina_id')
     .in('nombre', nombres)
 
   const seccionMap: Record<string, string> = {}
   for (const p of productos ?? []) {
-    seccionMap[p.nombre] = p.seccion ?? 'calientes'
+    if (p.seccion_cocina_id) seccionMap[p.nombre] = p.seccion_cocina_id
   }
 
   return items.map(item => ({
     ...item,
-    seccion_id: item.seccion_id ?? seccionMap[item.nombre] ?? 'calientes',
+    // Si no hay sección conocida, dejar null — el courier avisará con warning
+    // pero NO forzar 'calientes' que puede no existir en este restaurante
+    seccion_id: item.seccion_id ?? seccionMap[item.nombre] ?? null,
   }))
 }
 

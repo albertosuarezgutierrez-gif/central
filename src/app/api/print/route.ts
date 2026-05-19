@@ -26,7 +26,7 @@ import { notifyError } from '@/lib/notify'
 const supabase = () => createServerClient()
 
 // Tipos de conexión que el bridge maneja via TCP
-const TIPOS_TCP = ['ip_local', 'usb_bridge']
+const TIPOS_TCP = ['ip_local', 'usb_bridge', 'tcp']
 
 // ── GET — Bridge solicita jobs pendientes ────────────────────
 export async function GET(req: NextRequest) {
