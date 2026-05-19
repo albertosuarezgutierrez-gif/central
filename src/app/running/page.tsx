@@ -10,6 +10,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import ChuleteVoz from '@/components/ChuleteVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 
 
@@ -234,6 +235,7 @@ export default function RunningPage() {
 
   // Chat entre roles
   const [chatAbierto, setChatAbierto] = useState(false)
+  const [chuleteAbierto, setChuleteAbierto] = useState(false)
   const [chatTexto, setChatTexto]     = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
   const { mensajes, noLeidos, enviar: enviarMensajeChat, marcarLeido: marcarMensajeLeido } =
@@ -422,7 +424,37 @@ export default function RunningPage() {
           }}>
             Salir
           </button>
+          {/* Botón Chuleta Voz */}
+          <button onClick={() => setChuleteAbierto(v => !v)} title="Chuleta Voz" style={{
+            background: chuleteAbierto ? C.amb : C.bg2,
+            border: `1px solid ${chuleteAbierto ? C.amb : C.rule}`,
+            borderRadius: 8, width: 36, height: 36, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={chuleteAbierto ? '#fff' : C.ink2} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+            </svg>
+          </button>
         </header>
+
+        {/* Modal Chuleta Voz */}
+        {chuleteAbierto && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 200, background: 'rgba(0,0,0,.6)',
+            display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}
+            onClick={() => setChuleteAbierto(false)}>
+            <div style={{ background: C.bg1, borderRadius: '16px 16px 0 0', width: '100%', maxWidth: 480,
+              maxHeight: '85vh', overflowY: 'auto', scrollbarWidth: 'none' as const }}
+              onClick={e => e.stopPropagation()}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '14px 16px 0', borderBottom: `0.5px solid ${C.rule}`, paddingBottom: 10 }}>
+                <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 15, color: C.ink }}>Chuleta Voz</span>
+                <button onClick={() => setChuleteAbierto(false)} style={{ background: 'none', border: 'none',
+                  color: C.ink3, cursor: 'pointer', fontSize: 18, lineHeight: 1 }}>×</button>
+              </div>
+              <ChuleteVoz rol="running" />
+            </div>
+          </div>
+        )}
 
         {/* Panel zonas */}
         {showZonas && (

@@ -3,6 +3,7 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ManualComanda from '@/components/ManualComanda'
+import ChuleteVoz from '@/components/ChuleteVoz'
 import MesaDetalleSheet from '@/components/edge/MesaDetalleSheet'
 import { useProductos86, useComandas, useServicioPendiente } from '@/hooks/useRealtime'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
@@ -2161,6 +2162,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ══ TAB: MANUAL ══════════════════════════════════════════ */}
       {tab==='manual' && (
         <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
+          <div style={{overflowY:'auto',scrollbarWidth:'none' as const}}>
+            <ChuleteVoz rol="camarero" />
+          </div>
           <ManualComanda
             session={session}
             onSent={()=>{}}

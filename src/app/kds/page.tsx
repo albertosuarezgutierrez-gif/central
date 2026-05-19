@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Comanda } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import ChuleteVoz from '@/components/ChuleteVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 
@@ -248,6 +249,7 @@ function KDSInner() {
   const [vistaCompacta, setVistaCompacta] = useState(false)
   const [sonidoOn, setSonidoOn] = useState(true)
   const [chatAbierto, setChatAbierto] = useState(false)
+  const [chuleteAbierto, setChuleteAbierto] = useState(false)
   const [chatTexto, setChatTexto] = useState('')
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [bannerMensaje, setBannerMensaje] = useState<{ texto: string; origen: string } | null>(null)
@@ -496,10 +498,10 @@ function KDSInner() {
               </div>
             )}
           </button>
-          <a href="/manuals/manual_cocina.pdf" download title="Manual de cocina"
-            style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', border:`1px solid ${K.rule}`, borderRadius:6, color:K.fg3, flexShrink:0, textDecoration:'none' }}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          </a>
+          <button onClick={() => setChuleteAbierto(v => !v)} title="Chuleta Voz"
+            style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background: chuleteAbierto ? K.amb : 'transparent', border:`1px solid ${chuleteAbierto ? K.amb : K.rule}`, borderRadius:6, color: chuleteAbierto ? '#fff' : K.fg3, flexShrink:0 }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </button>
           <button
             onClick={() => {
               const sesStr = localStorage.getItem('ia_rest_session')
@@ -844,6 +846,25 @@ function KDSInner() {
         onConfirmed={handleVozConfirmada}
       />
 
+
+      {/* ══ MODAL CHULETA VOZ ══════════════════ */}
+      {chuleteAbierto && (
+        <div style={{ position:'fixed', inset:0, zIndex:200, background:'rgba(0,0,0,.6)',
+          display:'flex', alignItems:'flex-end', justifyContent:'center' }}
+          onClick={() => setChuleteAbierto(false)}>
+          <div style={{ background:K.bg, borderRadius:'16px 16px 0 0', width:'100%', maxWidth:480,
+            maxHeight:'85vh', overflowY:'auto', scrollbarWidth:'none' as const }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between',
+              padding:'14px 16px 10px', borderBottom:`0.5px solid ${K.rule}` }}>
+              <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:15, color:K.fg }}>Chuleta Voz</span>
+              <button onClick={() => setChuleteAbierto(false)} style={{ background:'none', border:'none',
+                color:K.fg3, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
+            </div>
+            <ChuleteVoz rol="cocina" />
+          </div>
+        </div>
+      )}
 
       {/* ══ BANNER MENSAJE BLOQUEANTE ══════════ */}
       {bannerMensaje && (

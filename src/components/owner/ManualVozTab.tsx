@@ -5,6 +5,7 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 // Incluye: protocolo por rol, novedades con badge NUEVO, sugerencias de mejora
 
 import React, { useState, useEffect, useCallback } from 'react'
+import ChuleteVoz from '@/components/ChuleteVoz'
 
 /* ─── Tokens de diseño ─── */
 
@@ -424,7 +425,7 @@ function NovedadesPanel({
 export default function ManualVozTab({ restauranteId, session }: Props) {
   const ses = typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') ?? '' : ''
 
-  const [mainTab, setMainTab]     = useState<'protocolo' | 'novedades' | 'sugerencias'>('protocolo')
+  const [mainTab, setMainTab]     = useState<'chuleta' | 'protocolo' | 'novedades' | 'sugerencias'>('chuleta')
   const [rolTab, setRolTab]       = useState<'camarero' | 'cocina' | 'jefe'>('camarero')
   const [novedades, setNovedades] = useState<Novedad[]>([])
   const [cargando, setCargando]   = useState(false)
@@ -510,6 +511,7 @@ export default function ManualVozTab({ restauranteId, session }: Props) {
       {/* Tabs principales */}
       <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: `1px solid ${C.rule}`, paddingBottom: 0 }}>
         {([
+          { id: 'chuleta',     label: '⚡ Chuleta Voz' },
           { id: 'protocolo',   label: '📋 Protocolo' },
           { id: 'novedades',   label: `🔔 Novedades${nuevosCount > 0 ? ` (${nuevosCount})` : ''}` },
           { id: 'sugerencias', label: '💡 Sugerencias' },
@@ -527,6 +529,10 @@ export default function ManualVozTab({ restauranteId, session }: Props) {
       </div>
 
       {/* ── PROTOCOLO ── */}
+      {mainTab === 'chuleta' && (
+        <ChuleteVoz rol="owner" />
+      )}
+
       {mainTab === 'protocolo' && (
         <div>
           {/* Selector de rol */}
