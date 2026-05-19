@@ -129,20 +129,23 @@ function BloqueMarchar() {
       <Sep />
       <Row pattern="marcha [producto] [mesa]"
         examples={['marcha las croquetas S1', 'pasa el entrecot T4']} />
-      <Tip color={TEAL} text="por producto cuando la comanda sale en partes" />
+      <Tip color={TEAL} text="por producto → item tachado en KDS automáticamente" />
     </Block>
   )
 }
 
 function BloqueMensaje() {
   return (
-    <Block color={BLUE} bg={BLUES} badge="MENSAJE" sub="avisa a un compañero">
+    <Block color={BLUE} bg={BLUES} badge="MENSAJE" sub="avisa a un compañero o sección">
       <Row pattern="[nombre], [texto]"
         examples={['Pablo, T4 esperando el segundo']} />
       <Sep />
+      <Row pattern="[sección], [texto]"
+        examples={['cocina caliente, S1 tiene prisa', 'barra uno, T4 quiere agua']} />
+      <Sep />
       <Row pattern="mensaje a [destino], [texto]"
-        examples={['mensaje a cocina, S1 tiene prisa', 'avisa a barra, T4 quiere agua']} />
-      <Tip color={BLUE} text="nombre al inicio = mensaje privado directo" />
+        examples={['mensaje a cocina, S1 tiene prisa', 'avisa a todos, vamos a cerrar']} />
+      <Tip color={BLUE} text="nombre = privado · sección = partida (imprime si tiene impresora)" />
     </Block>
   )
 }
