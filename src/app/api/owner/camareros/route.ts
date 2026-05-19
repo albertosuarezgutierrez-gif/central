@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data, error } = await supabase
     .from('camareros')
-    .select('id, nombre, pin, rol, activo, seccion_id, created_at, puede_escanear')
+    .select('id, nombre, pin, rol, activo, seccion_id, created_at, puede_escanear, puede_comandar, modulos_gestion')
     .eq('restaurante_id', rid)
     .neq('rol', 'owner').neq('rol', 'super_admin')
     .order('created_at', { ascending: true })
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 export async function PUT(req: NextRequest) {
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
-  const { id, nombre, pin, rol, activo, seccion_id } = await req.json()
+  const { id, nombre, pin, rol, activo, seccion_id, puede_escanear, puede_comandar, modulos_gestion } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
   if (pin) {
     if (!/^\d{4}$/.test(pin))
@@ -49,6 +49,9 @@ export async function PUT(req: NextRequest) {
   if (rol !== undefined) updates.rol = rol
   if (activo !== undefined) updates.activo = activo
   if (seccion_id !== undefined) updates.seccion_id = seccion_id
+  if (puede_escanear !== undefined) updates.puede_escanear = puede_escanear
+  if (puede_comandar !== undefined) updates.puede_comandar = puede_comandar
+  if (modulos_gestion !== undefined) updates.modulos_gestion = modulos_gestion
   const { data, error } = await supabase.from('camareros')
     .update(updates).eq('id', id).eq('restaurante_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

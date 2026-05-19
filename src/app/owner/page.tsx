@@ -26,7 +26,7 @@ import WineScannerModal from '@/components/WineScannerModal'
 /* ─── Design Tokens ─── */
 
 /* ─── Types ─── */
-type Camarero = { id: string; nombre: string; pin: string; rol: string; activo: boolean; seccion_id?: string | null; puede_escanear?: boolean }
+type Camarero = { id: string; nombre: string; pin: string; rol: string; activo: boolean; seccion_id?: string | null; puede_escanear?: boolean; puede_comandar?: boolean; modulos_gestion?: string[] }
 type VpEstado = 'sin_calibrar' | 'calibrando' | 'activo' | 'error'
 type Mesa = { id: string; codigo: string; nombre: string | null; zona: string; capacidad: number; estado: string; pos_x: number | null; pos_y: number | null; forma: 'round' | 'square' | 'bar' | null }
 type Turno = { id: string; nombre: string; estado: string; created_at: string; fecha: string }
@@ -180,7 +180,7 @@ function CamarerosTab() {
   const [loading, setLoading] = useState(true)
   const [voiceProfiles, setVoiceProfiles] = useState<Record<string, VpEstado>>({})
   const [modal, setModal] = useState<null | 'create' | { edit: Camarero } | { del: Camarero } | { qr: Camarero }>(null)
-  const [form, setForm] = useState({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '' })
+  const [form, setForm] = useState({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '', puede_escanear: false, puede_comandar: false, modulos_gestion: [] as string[] })
   const [showPins, setShowPins] = useState<Record<string, boolean>>({})
   const [err, setErr] = useState('')
   const [delErr, setDelErr] = useState('')
@@ -214,8 +214,8 @@ function CamarerosTab() {
 
   useEffect(() => { load() }, [load])
 
-  const openCreate = () => { setForm({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '' }); setErr(''); setModal('create') }
-  const openEdit = (c: Camarero) => { setForm({ nombre: c.nombre, pin: c.pin, rol: c.rol, activo: c.activo, seccion_id: c.seccion_id || '' }); setErr(''); setModal({ edit: c }) }
+  const openCreate = () => { setForm({ nombre: '', pin: '', rol: 'camarero', activo: true, seccion_id: '', puede_escanear: false, puede_comandar: false, modulos_gestion: [] }); setErr(''); setModal('create') }
+  const openEdit = (c: Camarero) => { setForm({ nombre: c.nombre, pin: c.pin, rol: c.rol, activo: c.activo, seccion_id: c.seccion_id || '', puede_escanear: c.puede_escanear ?? false, puede_comandar: c.puede_comandar ?? false, modulos_gestion: c.modulos_gestion ?? [] }); setErr(''); setModal({ edit: c }) }
   const openDel = (c: Camarero) => { setDelErr(''); setModal({ del: c }) }
   const openQr  = (c: Camarero) => { setModal({ qr: c }) }
 
@@ -241,7 +241,7 @@ function CamarerosTab() {
 
     const isEdit = modal && typeof modal === 'object' && 'edit' in modal
     const url = '/api/owner/camareros'
-    const bodyData = { ...form, seccion_id: form.rol === 'cocina' && form.seccion_id ? form.seccion_id : null }
+    const bodyData = { ...form, seccion_id: form.rol === 'cocina' && form.seccion_id ? form.seccion_id : null, puede_comandar: form.puede_comandar, modulos_gestion: form.modulos_gestion }
     const body = isEdit
       ? { id: (modal as { edit: Camarero }).edit.id, ...bodyData }
       : bodyData
@@ -455,6 +455,70 @@ function CamarerosTab() {
                 💡 Las zonas que cubre el running se configuran desde la pantalla <strong>/running</strong> o en esta ficha tras guardarlo.
               </div>
             )}
+
+            {/* ── PERMISOS ─────────────────────────────────────────── */}
+            <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: 14 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', fontWeight: 700, marginBottom: 12 }}>PERMISOS</div>
+
+              {/* Puede escanear */}
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 10 }}>
+                <input type="checkbox" checked={form.puede_escanear ?? false}
+                  onChange={e => setForm(f => ({ ...f, puede_escanear: e.target.checked }))}
+                  style={{ marginTop: 2, flexShrink: 0 }} />
+                <div>
+                  <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>Puede escanear documentos</div>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2, lineHeight: 1.4 }}>
+                    Accede a la cámara para subir albaranes, facturas, CVs y cartas. El sistema los clasifica con IA automáticamente.
+                  </div>
+                </div>
+              </label>
+
+              {/* Puede comandar — solo si es jefe_sala */}
+              {form.rol === 'jefe_sala' && (
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 10 }}>
+                  <input type="checkbox" checked={form.puede_comandar}
+                    onChange={e => setForm(f => ({ ...f, puede_comandar: e.target.checked }))}
+                    style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>Puede cambiar a modo camarero</div>
+                    <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2, lineHeight: 1.4 }}>
+                      Aparece un botón en su app para pasar a la vista de camarero y tomar comandas por voz. Útil en servicios con poco personal.
+                    </div>
+                  </div>
+                </label>
+              )}
+
+              {/* Módulos de gestión */}
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, fontWeight: 500, marginBottom: 8, marginTop: 4 }}>Acceso a gestión</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 10, lineHeight: 1.4 }}>
+                Los módulos marcados aparecen en el portal de gestión de este usuario. Cada módulo activo cuenta como usuario facturable.
+              </div>
+              {([
+                { key: 'almacen',       label: 'Almacén',       desc: 'Stock, movimientos, reposición automática. Requiere actualización diaria para ser útil.' },
+                { key: 'carta',         label: 'Carta',         desc: 'Gestión de productos, precios y carta del restaurante.' },
+                { key: 'reservas',      label: 'Reservas',      desc: 'Gestión de reservas, cubiertas y asignación de mesas. Recomendado para jefe de sala.' },
+                { key: 'contabilidad',  label: 'Contabilidad',  desc: 'Facturas, VeriFactu, exportación a A3/Sage/Holded. Ideal para el contable del grupo.' },
+                { key: 'rrhh',          label: 'RRHH',          desc: 'Candidatos, análisis de CVs con IA. Para el responsable de selección.' },
+                { key: 'escaner',       label: 'Escáner IA',    desc: 'Escaneo e importación de albaranes y facturas de proveedor.' },
+                { key: 'analytics',     label: 'Analytics',     desc: 'Métricas de ventas, tiempos y rendimiento del servicio.' },
+              ] as { key: string; label: string; desc: string }[]).map(m => (
+                <label key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 9 }}>
+                  <input type="checkbox"
+                    checked={(form.modulos_gestion ?? []).includes(m.key)}
+                    onChange={e => setForm(f => ({
+                      ...f,
+                      modulos_gestion: e.target.checked
+                        ? [...(f.modulos_gestion ?? []), m.key]
+                        : (f.modulos_gestion ?? []).filter(x => x !== m.key)
+                    }))}
+                    style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink, fontWeight: 500 }}>{m.label}</div>
+                    <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 1, lineHeight: 1.4 }}>{m.desc}</div>
+                  </div>
+                </label>
+              ))}
+            </div>
             {err && !err.includes('PIN') && <div style={{ fontFamily: SM, fontSize: 11, color: C.red }}>{err}</div>}
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 8 }}>
               <Btn variant="ghost" onClick={() => setModal(null)}>Cancelar</Btn>

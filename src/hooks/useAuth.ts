@@ -11,6 +11,8 @@ export interface Session {
   restaurante_nombre: string
   cuenta_id?: string
   seccion_id?: string | null
+  puede_comandar?: boolean
+  modulos_gestion?: string[]
 }
 
 const REDIRECT: Record<Rol, string> = {

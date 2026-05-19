@@ -81,6 +81,8 @@ export async function POST(req: NextRequest) {
       restaurante_id: cam.restaurante_id,
       restaurante_nombre: cam.restaurante_nombre ?? restaurante_nombre,
       seccion_id: cam.seccion_id ?? null,
+      puede_comandar: cam.puede_comandar ?? false,
+      modulos_gestion: cam.modulos_gestion ?? [],
       onboarding_completado,
     }
   })

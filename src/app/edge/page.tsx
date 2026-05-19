@@ -551,6 +551,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     !('MSStream' in window)
 
   const [tab, setTab]     = useState<Tab>('hablar')
+  const [vinoOpen, setVinoOpen] = useState(false)
   const [screen, setScreen] = useState<Screen>('idle')
   const [cuentasCount, setCuentasCount] = useState(0)
   const [iniciandoTurno, setIniciandoTurno] = useState(false)
@@ -1880,10 +1881,22 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <span style={{fontSize:12,fontWeight:600,color:C.ink}}>{session.nombre.split(' ')[0]}</span>
           </div>
           <SugerenciaButton session={session} tema="light" variant="inline" />
-          <a href="/manuals/manual_camarero.pdf" download title="Manual del camarero"
-            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,cursor:'pointer',flexShrink:0,textDecoration:'none',color:C.ink3}}>
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
-          </a>
+          {/* 🍷 Recomendador de vino */}
+          <button onClick={()=>setVinoOpen(v=>!v)} title="Recomendar vino"
+            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
+              background:vinoOpen?'#3D1A10':C.bg2,border:`1px solid ${vinoOpen?C.verm:C.rule}`,
+              borderRadius:16,cursor:'pointer',color:vinoOpen?'#fff':C.ink3,flexShrink:0}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 22h8M12 11v11M9 3.5A6 6 0 0 0 6 9c0 3.3 2.7 6 6 6s6-2.7 6-6a6 6 0 0 0-3-5.2"/><path d="M9 3h6"/></svg>
+          </button>
+          {/* 👤 Volver a supervisión — solo si es jefe_sala */}
+          {session.rol === 'jefe_sala' && (
+            <a href="/jefe" title="Volver a supervisión"
+              style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
+                background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,cursor:'pointer',
+                color:C.ink3,flexShrink:0,textDecoration:'none'}}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </a>
+          )}
         </div>
       </div>}
 

@@ -242,6 +242,7 @@ export default function JefeSalaPage() {
   // useAuth ya inicializa síncronamente → sin parpadeo blanco
   const { session, checking } = useAuth(['jefe_sala', 'owner', 'super_admin'])
   const [tab, setTab] = useState<Tab>('salon')
+  const [vinoOpen, setVinoOpen] = useState(false)
   const ahora = useReloj()
 
   // Productos 86 con filtro de restaurante
@@ -312,6 +313,25 @@ export default function JefeSalaPage() {
             {ahora.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit'})}
           </span>
           <span className="jefe-hdr-name" style={{fontSize:13,color:C.ink3,fontWeight:500}}>{session.nombre}</span>
+
+          {/* 🍷 Recomendador de vino */}
+          <button onClick={()=>setVinoOpen(v=>!v)} title="Recomendar vino"
+            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
+              background:vinoOpen?'#3D1A10':'#F5EDE8',border:`1px solid ${vinoOpen?C.red:'#D9C4BC'}`,
+              borderRadius:6,cursor:'pointer',color:vinoOpen?'#fff':'#8B4A3A',flexShrink:0}}>
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M8 22h8M12 11v11M9 3.5A6 6 0 0 0 6 9c0 3.3 2.7 6 6 6s6-2.7 6-6a6 6 0 0 0-3-5.2"/><path d="M9 3h6"/></svg>
+          </button>
+
+          {/* 👤 Cambiar a modo camarero — solo si puede_comandar */}
+          {session.puede_comandar && (
+            <a href="/edge" title="Cambiar a modo camarero"
+              style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
+                background:'#E8F0F5',border:'1px solid #B8CDD8',borderRadius:6,cursor:'pointer',
+                color:'#1A4A6B',flexShrink:0,textDecoration:'none'}}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+            </a>
+          )}
+
           <button onClick={logout} style={{fontFamily:SN,fontSize:10,fontWeight:600,color:C.ink3,background:'transparent',border:`1px solid ${C.rule}`,borderRadius:3,padding:'4px 8px',cursor:'pointer'}}>
             Salir
           </button>
