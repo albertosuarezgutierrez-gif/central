@@ -313,7 +313,7 @@ function CamarerosTab() {
         <div className='cam-table-hdr' style={{
           padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
           fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, textTransform: 'uppercase' as const }}>
-          <span>Nombre</span><span>Rol</span><span>Sección</span><span>PIN</span><span>Estado</span><span style={{ display:'flex', gap:6, justifyContent:'flex-end', alignItems:'center' }}><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>SCAN</span><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>QR</span><span style={{width:28}}></span><span style={{width:28}}></span></span>
+          <span>Nombre</span><span>Rol</span><span>PIN</span><span>Estado</span><span style={{ display:'flex', gap:6, justifyContent:'flex-end', alignItems:'center' }}><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>SCAN</span><span style={{width:28,textAlign:'center',fontSize:8,letterSpacing:'.06em',opacity:.7}}>QR</span><span style={{width:28}}></span><span style={{width:28}}></span></span>
         </div>
 
         {camareros.length === 0 && (
@@ -340,7 +340,6 @@ function CamarerosTab() {
                   return null
                 })()}
               </span>
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{c.seccion_id ? secciones.find(s => s.id === c.seccion_id)?.nombre || c.seccion_id : '—'}</span>
               <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 <span style={{ fontFamily: SM, fontSize: 13, color: C.ink2 }}>{showPins[c.id] ? c.pin : '••••'}</span>
                 <button onClick={() => setShowPins(p => ({ ...p, [c.id]: !p[c.id] }))}
@@ -7797,8 +7796,8 @@ export default function OwnerPage() {
         }
 
         /* ── Camareros: cards en móvil ─────────────────────── */
-        .cam-table-hdr { display:grid; grid-template-columns:1fr 100px 120px 80px 90px 148px; }
-        .cam-table-row { display:grid; grid-template-columns:1fr 100px 120px 80px 90px 148px; }
+        .cam-table-hdr { display:grid; grid-template-columns:1fr 100px 80px 90px 148px; }
+        .cam-table-row { display:grid; grid-template-columns:1fr 100px 80px 90px 148px; }
         .cam-card { display:none; }
 
         /* ── Carta: items ──────────────────────────────────── */
