@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ManualComanda from '@/components/ManualComanda'
 import ChuleteVoz from '@/components/ChuleteVoz'
+import VinoModal from '@/components/VinoModal'
 import MesaDetalleSheet from '@/components/edge/MesaDetalleSheet'
 import { useProductos86, useComandas, useServicioPendiente } from '@/hooks/useRealtime'
 import { useInstallPrompt } from '@/hooks/useInstallPrompt'
@@ -1713,6 +1714,8 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
 
   return (
     <div className="edge-root" style={{height:'100dvh',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',fontFamily:SN,position:'relative',color:C.ink,zoom:fontBig?'110%':'100%'}}>
+      {/* Modal recomendador de vino */}
+      <VinoModal open={vinoOpen} onClose={()=>setVinoOpen(false)} session={session} tema="dark" />
       <style>{`
         @keyframes ldot{0%,100%{opacity:1}50%{opacity:.3}}
         @keyframes hout{0%{transform:scale(1);opacity:.4}100%{transform:scale(2);opacity:0}}

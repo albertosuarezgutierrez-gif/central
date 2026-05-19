@@ -8,6 +8,7 @@ import { useAuth, Session } from '@/hooks/useAuth'
 import { useMesas, useComandas, useTranscripciones, useProductos86, useReloj } from '@/hooks/useRealtime'
 import Analytics from '@/components/Analytics'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import VinoModal from '@/components/VinoModal'
 import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import SupervisorTab from '@/components/owner/SupervisorTab'
 import { useMensajes } from '@/hooks/useMensajes'
@@ -296,6 +297,8 @@ export default function JefeSalaPage() {
         button, a { touch-action: manipulation; }
       `}</style>
       <SugerenciaButton session={session} tema="light"/>
+      {/* Modal recomendador de vino */}
+      <VinoModal open={vinoOpen} onClose={()=>setVinoOpen(false)} session={session} tema="light" />
 
       {/* HEADER */}
       <div style={{height:52,padding:'0 14px',borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',justifyContent:'space-between',background:C.bone,flexShrink:0,position:'sticky',top:0,zIndex:10}}>
