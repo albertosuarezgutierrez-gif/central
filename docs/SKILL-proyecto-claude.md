@@ -351,22 +351,17 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 - Mensajes voz: rol/nombre/sección → print_job si sección tiene impresora (67c05d6)
 - Marchar granular: "marcha croquetas S1" → comanda_items.estado=listo → tachado KDS (67c05d6)
 - Chuleta Voz: 5 bloques comanda/mensaje/marchar/86/vino en /owner /edge /running /kds (01c4688)
-- Permisos personal (e367f80): camareros.puede_comandar + modulos_gestion JSONB. RPC login_pin actualizada. Modal owner sección PERMISOS con tooltips por campo.
-- Headers /jefe+/edge: icono 🍷 vino + icono perfil condicional (jefe→/edge si puede_comandar, camarero→/jefe si jefe_sala)
-- VinoModal.tsx (6233fba): modal reutilizable dark/light. Chips de platos reales de carta. /api/vinos/recomendar (callAI + vinos_catalogo, truncado 200 chars). Integrado en /edge y /jefe.
-- useModulo() hook (6233fba): comprueba modulos_activos del restaurante. Caché en memoria. Por defecto todos activos → sin impacto en instalaciones existentes.
-- restaurantes.modulos_activos JSONB: 20 módulos, default todos activos. API /api/owner/modulos GET+PUT. Núcleo protegido (voz/mesas/comandas/cobro/impresion/turnos/verifactu no desactivables).
-- Turnos: 2 tipos coexistentes (servicio camarero_id IS NULL + fichaje camarero_id)
-- Cobro: Stripe Terminal card_present + Bizum MONEI
-- VeriFactu: hash SHA-256 encadenado, QR AEAT, facturas_cliente — obligatorio por ley, siempre activo
-- Hardware Bridge v6.0.1: bridge-local.js polling TCP, ESC/POS, Cloud Edition WSS
-- APK v2.0: firmada RSA2048/SHA384, versionCode=11, descarga en www.iarest.es/descargar
-- QR add-on: 6 EFs (solo sin_pago completamente funcional; cobro inline bloqueado P2)
-- Storefront v1.0: 4 canales (online Stripe + teléfono/mostrador sin Stripe)
-- Almacén/Escandallos/Vinos/OCR albarán/Pedidos proveedor
-- Escáner IA v1.0: SmartScanFAB, NIM visión, documentos_escaneados
-- Supervisor de tiempos, Auto-Healer v1.0, Producto formatos T/M/R
-- Multi-cuenta, Contrato SaaS v1.0, Sugerencias, RRHH v1.0
+- Permisos personal (e367f80): camareros.puede_comandar + modulos_gestion JSONB. RPC login_pin actualizada. Modal /owner PERMISOS con tooltips.
+- Headers /jefe+/edge: icono 🍷 vino + icono perfil condicional (jefe→/edge si puede_comandar; camarero→/jefe si jefe_sala)
+- VinoModal.tsx: modal reutilizable dark/light. Chips platos reales. /api/vinos/recomendar (callAI+vinos_catalogo ≤200 chars). /edge+/jefe
+- useModulo() hook: comprueba modulos_activos. Caché en memoria. Default todos activos → sin impacto existente.
+- restaurantes.modulos_activos JSONB: 20 módulos default todos. API /api/owner/modulos GET+PUT. Núcleo protegido.
+- ModulosTab /owner Config: 3 grupos (núcleo/base/opcional), toggles, tooltips impacto, VeriFactu badge ley.
+- /portal: gestión para usuarios con modulos_gestion sin rol sala. Login redirige automático. RRHH+Analytics reales.
+- Fix TS build (0a40815 PROD): VinoModal session type, portal checking, jefe import React.
+- Turnos · Cobro Stripe+MONEI · VeriFactu (obligatorio ley) · Bridge v6.0.1 · APK v2.0
+- QR(sin_pago ok) · Storefront v1.0 · Almacén/Escandallos/Vinos · Escáner IA · Supervisor · Auto-Healer
+- Producto formatos T/M/R · Multi-cuenta · Contrato SaaS v1.0 · Sugerencias · RRHH v1.0
 
 ## Pendientes prioritarios
 
@@ -374,11 +369,10 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 - P2: STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR (bloqueante QR cobro)
 - P3: STRIPE_WEBHOOK_SECRET_STOREFRONT
 - T2: camareros→personal ANTES de API pública (#12)
-- Panel módulos /owner → Config → activar/desactivar módulos por restaurante
-- Ruta /portal para usuarios con modulos_gestion sin rol de sala (contable, gestor stock...)
 - VOZ: marchar multi-item en un pulso
 - AZURE_SPEECH_KEY + REGION (voice profiles)
 - T3: Cashdro HTTP
+- /portal: completar módulos Almacén, Carta, Reservas, Contabilidad, Escáner
 
 ---
 
