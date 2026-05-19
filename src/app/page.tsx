@@ -642,21 +642,21 @@ export default function Page() {
         </div>
         <div className="mgrid">
           {[
-            {ico:"🎙️",t:"Pedidos por voz",d:"El camarero dicta en español natural. La IA transcribe en menos de 0,3s y estructura mesa, platos, cantidades y notas de alergias. Sin tocar pantalla.",badge:null,cls:"mc-red"},
-            {ico:"📱",t:"QR en mesa",d:"El cliente pide desde su móvil escaneando el QR. El ticket llega al mismo KDS que el resto — igual que si lo dictara el camarero.",badge:{t:"Add-on · 12€/mesa/mes",cls:"b-addon"},cls:"mc-amber"},
-            {ico:"🏪",t:"Pedidos online",d:"Tu restaurante acepta pedidos web, recogida en local, teléfono y mostrador desde un único panel. Cada canal entra directamente al KDS sin pasos intermedios.",badge:null,cls:"mc-green"},
-            {ico:"📺",t:"KDS en cocina",d:"Pantalla compartida para cocina. Prioridades automáticas, alertas de alergia y timers por pase. Funciona en cualquier tablet de 70€.",badge:null,cls:""},
-            {ico:"🖨️",t:"Impresoras térmicas",d:"Compatible con las impresoras térmicas más habituales del sector. El Bridge local gestiona la conexión a tu red — sin drivers, sin configuración, desde el primer día.",badge:null,cls:""},
-            {ico:"💳",t:"Cobro completo",d:"Stripe Terminal, Bizum, efectivo y varios métodos de pago. División de cuenta por ítems o partes iguales. Cierre de caja al instante.",badge:null,cls:""},
-            {ico:"📦",t:"Almacén e inventario",d:"Control de stock en tiempo real con alertas de reposición automáticas. Escandallos por plato para conocer el coste real de cada receta y el margen exacto.",badge:null,cls:"mc-red"},
-            {ico:"🚚",t:"Proveedores y albaranes",d:"Gestión completa de proveedores y pedidos. El escáner IA digitaliza albaranes con la cámara del móvil: extrae productos, cantidades y precios sin teclear nada.",badge:null,cls:""},
-            {ico:"📸",t:"Escáner IA",d:"Fotografía cualquier documento desde el móvil — albarán, factura o carta — y la IA lo clasifica y extrae los datos automáticamente. Disponible en sala y gestión.",badge:null,cls:""},
-            {ico:"💬",t:"Chat entre roles",d:"Mensajería interna durante el turno entre sala, cocina y barra. Avisos, incidencias o cambios de última hora sin usar móviles personales ni grupos de WhatsApp.",badge:null,cls:"mc-amber"},
-            {ico:"👥",t:"Selección de personal IA",d:"Recibe candidaturas y analiza CVs automáticamente: puntuación por rol, idiomas detectados y recomendación de contratación para cada puesto de hostelería.",badge:null,cls:""},
-            {ico:"🔔",t:"Supervisor de tiempos",d:"Monitor automático de tiempos de servicio con alertas configurables. Detecta mesas lentas, pases tardíos o anomalías de turno antes de que afecten al cliente.",badge:null,cls:""},
-            {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019. Cada trabajador ficha entrada y salida con su PIN. Registro disponible para inspección en cualquier momento.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
-            {ico:"📋",t:"VeriFactu AEAT",d:"Facturas electrónicas homologadas con firma encadenada y QR verificable por la AEAT. Obligatorio desde enero 2026 para sociedades, julio 2026 para autónomos.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
-            {ico:"🛵",t:"Delivery integrado",d:"Los pedidos de Glovo, Uber Eats y Just Eat entrarán directamente al KDS. Sin reescribir comandas, sin tabletas extra.",badge:{t:"Próximamente",cls:"b-soon"},cls:""},
+            {ico:"🎙️",t:"Pedidos por voz",d:"El camarero habla. La comanda llega a cocina. Sin tocar pantalla.",badge:null,cls:"mc-red"},
+            {ico:"📱",t:"QR en mesa",d:"El cliente pide desde su móvil. El ticket llega al KDS igual que el resto.",badge:{t:"Add-on · 12€/mesa/mes",cls:"b-addon"},cls:"mc-amber"},
+            {ico:"🏪",t:"Pedidos online",d:"Web, recogida, teléfono y mostrador en un solo panel.",badge:null,cls:"mc-green"},
+            {ico:"📺",t:"KDS en cocina",d:"Pantalla de cocina con prioridades, alertas y timers por pase.",badge:null,cls:""},
+            {ico:"🖨️",t:"Impresoras térmicas",d:"Impresión automática sin drivers ni configuración.",badge:null,cls:""},
+            {ico:"💳",t:"Cobro completo",d:"Tarjeta, Bizum, efectivo. División de cuenta y cierre de caja.",badge:null,cls:""},
+            {ico:"📦",t:"Almacén e inventario",d:"Stock en tiempo real, escandallos por receta y alertas de reposición.",badge:null,cls:"mc-red"},
+            {ico:"🚚",t:"Proveedores y albaranes",d:"Gestión de proveedores, pedidos y digitalización de albaranes.",badge:null,cls:""},
+            {ico:"📸",t:"Escáner IA",d:"Fotografía un documento. La IA lo clasifica y extrae los datos.",badge:null,cls:""},
+            {ico:"💬",t:"Chat entre roles",d:"Mensajería interna durante el turno entre sala, cocina y barra.",badge:null,cls:"mc-amber"},
+            {ico:"👥",t:"Selección de personal IA",d:"Análisis automático de candidaturas con puntuación por rol.",badge:null,cls:""},
+            {ico:"🔔",t:"Supervisor de tiempos",d:"Alertas automáticas cuando el servicio se desvía del estándar.",badge:null,cls:""},
+            {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
+            {ico:"📋",t:"VeriFactu AEAT",d:"Facturas homologadas con firma encadenada y QR verificable.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
+            {ico:"🛵",t:"Delivery integrado",d:"Glovo, Uber Eats y Just Eat directo al KDS.",badge:{t:"Próximamente",cls:"b-soon"},cls:""},
             <div key={i} className={`mcard reveal${m.cls?" "+m.cls:""}`} style={{animationDelay:`${i*0.05}s`}}>
               <div className="mico2">{m.ico}</div>
               <div className="mtit">{m.t}</div>
