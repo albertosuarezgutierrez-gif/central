@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
 import { invalidarCache } from '@/lib/brain-cache'
-import { callAIVision, cleanJSON } from '@/lib/ai-client'
+import Anthropic from '@anthropic-ai/sdk'
 
 export const maxDuration = 60
 
@@ -136,20 +136,49 @@ async function handleExtract(req: NextRequest) {
     const { images } = await req.json()
     if (!images?.length) return NextResponse.json({ error: 'Sin imágenes' }, { status: 400 })
     if (images.length > 10) return NextResponse.json({ error: 'Máximo 10 páginas' }, { status: 400 })
-    const normalizeType = (t: string): string => {
+    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+    // Normalize media types — some browsers send 'image/jpg' which Anthropic rejects
+    const VALID_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
+    type ValidType = typeof VALID_TYPES[number]
+    const normalizeType = (t: string): ValidType => {
       if (t === 'image/jpg') return 'image/jpeg'
-      const VALID = ['image/jpeg','image/png','image/gif','image/webp']
-      return VALID.includes(t) ? t : 'image/jpeg'
+      if (VALID_TYPES.includes(t as ValidType)) return t as ValidType
+      return 'image/jpeg'
     }
-    const imageInputs = images.map((img: { data: string; mediaType: string }) => ({
-      data: img.data,
-      mediaType: normalizeType(img.mediaType),
+    const imageBlocks = images.map((img: { data: string; mediaType: string }) => ({
+      type: 'image' as const,
+      source: { type: 'base64' as const, media_type: normalizeType(img.mediaType), data: img.data },
     }))
-    const extractPrompt = `Eres un experto en hostelería española. Extrae TODOS los platos, tapas, bebidas y postres de esta carta de restaurante.
+    const msg = await anthropic.messages.create({
+      model: 'claude-haiku-4-5-20251001', max_tokens: 6000,
+      messages: [{ role: 'user', content: [...imageBlocks, { type: 'text',
+        text: `Eres un experto en hostelería española analizando cartas de bar/restaurante.
 
-IMPORTANTE — FORMATOS DE PRECIO (muy común en cartas españolas):
-Muchos productos aparecen con 2 o 3 precios en columnas: Tapa / Media / Ración, o T / M / R, o 1/2 / Entera.
-En ese caso, usa el campo "formatos" con los precios de cada tamaño. Deja "precio" como null.
+PATRÓN MUY COMÚN EN CARTAS ESPAÑOLAS — LEE CON ATENCIÓN:
+Las cartas suelen tener una fila de encabezados de precio UNA SOLA VEZ arriba de cada sección, y luego cada producto solo tiene los números en columnas alineadas. Ejemplos reales:
+
+Ejemplo 1 (3 columnas):
+         TAPA    MEDIA   RACIÓN
+Jamón    4,50    8,00    14,00
+Queso    3,50    6,50    11,00
+
+Ejemplo 2 (2 columnas):
+         TAPA    PLATO
+Gambas   5,50    12,00
+Croquetas 2,50   9,00
+
+Ejemplo 3 (solo números, header implícito):
+TAPAS Y RACIONES      T      R
+Patatas bravas       3,50   8,50
+
+Tu trabajo: detectar qué columna corresponde a qué formato mirando el encabezado de la sección, y asignarlo a cada producto.
+
+Variantes de nombres de formato que debes reconocer:
+- Tapa / T / Tpa → "Tapa"
+- Media / M / 1/2 / Med → "Media ración"
+- Ración / R / Racion / Plato / Plt / P → "Ración"
+- Copa / C → "Copa"  |  Botella / Bot / B → "Botella"  |  Media botella / 1/2 Bot → "Media botella"
+- Pequeño / Pqño / S → "Pequeño"  |  Grande / G / L → "Grande"
 
 Devuelve SOLO un JSON válido sin texto adicional ni markdown:
 {"productos":[{
@@ -166,12 +195,17 @@ Devuelve SOLO un JSON válido sin texto adicional ni markdown:
 }]}
 
 Reglas:
-- Si el producto tiene UN SOLO precio: pon el número en "precio" y "formatos": []
-- Si el producto tiene VARIOS PRECIOS: pon "precio": null y rellena "formatos"
-- categoria: infiere de la sección (Entrantes, Tapas, Principales, Carnes, Pescados, Mariscos, Postres, Bebidas, Vinos, Cervezas, Raciones, etc.)
-- alergenos: exactamente: ["Gluten","Crustáceos","Huevo","Pescado","Cacahuetes","Soja","Lácteos","Frutos de cáscara","Apio","Mostaza","Sésamo","Dióxido de azufre","Altramuces","Moluscos"]. Array vacío [] si no hay.
-- Incluye ABSOLUTAMENTE TODOS los productos visibles en todas las páginas`
-    const raw = await callAIVision('Extrae productos de carta de restaurante. Responde SOLO con JSON.', imageInputs, extractPrompt, 6000)
+- Si el producto tiene UN SOLO precio: "precio": número, "formatos": []
+- Si tiene VARIOS precios en columnas: "precio": null, "formatos": array con los formatos del encabezado
+- Si un formato no tiene precio para ese producto (—, -, vacío): omítelo del array de formatos
+- categoria: infiere de la sección visible (Tapas, Raciones, Carnes, Pescados, Postres, Bebidas, Vinos, Cervezas, Bocadillos, Entrantes, Ensaladas, Arroces, etc.)
+- alergenos EU cuando sean visibles: ["Gluten","Crustáceos","Huevo","Pescado","Cacahuetes","Soja","Lácteos","Frutos de cáscara","Apio","Mostaza","Sésamo","Dióxido de azufre","Altramuces","Moluscos"]. [] si no aparecen.
+- Incluye ABSOLUTAMENTE TODOS los productos visibles
+- Si hay varias páginas, combina en un único array sin duplicados
+- No inventes productos que no estén en la carta`,
+      }] }],
+    })
+    const raw = msg.content[0].type === 'text' ? msg.content[0].text : ''
     try {
       const parsed = JSON.parse(raw.replace(/```json|```/g, '').trim())
       return NextResponse.json({ productos: parsed.productos || [] })
