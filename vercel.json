@@ -29,6 +29,10 @@
     {
       "path": "/api/cron/cobro-descuento",
       "schedule": "0 2 1 * *"
+    },
+    {
+      "path": "/api/backup/drive",
+      "schedule": "0 3 * * *"
     }
   ]
 }
