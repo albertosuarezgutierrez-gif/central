@@ -657,6 +657,7 @@ export default function Page() {
             {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
             {ico:"📋",t:"VeriFactu AEAT",d:"Facturas homologadas con firma encadenada y QR verificable.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
             {ico:"🛵",t:"Delivery integrado",d:"Glovo, Uber Eats y Just Eat directo al KDS.",badge:{t:"Próximamente",cls:"b-soon"},cls:""},
+          ].map((m,i)=>(
             <div key={i} className={`mcard reveal${m.cls?" "+m.cls:""}`} style={{animationDelay:`${i*0.05}s`}}>
               <div className="mico2">{m.ico}</div>
               <div className="mtit">{m.t}</div>
