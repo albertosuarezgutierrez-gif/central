@@ -5,88 +5,41 @@ import { getSession } from '@/lib/session'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-// ── Google Auth (Service Account → JWT → AccessToken) ─────────────────────────
-async function getGoogleAccessToken(): Promise<string> {
-  const raw = process.env.GOOGLE_DRIVE_SA_KEY!
+// ── OAuth2: refresh_token → access_token ──────────────────────────────────────
+async function getAccessToken(): Promise<string> {
+  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN
+  if (!refreshToken) throw new Error('GOOGLE_DRIVE_REFRESH_TOKEN no configurado. Ve a /super y autoriza Drive.')
 
-  let sa: Record<string, string>
-  try {
-    sa = JSON.parse(raw)
-  } catch {
-    sa = JSON.parse(raw.replace(/\n/g, '\\n'))
-  }
-
-  // La clave privada puede tener \\n literales — convertir a newlines reales
-  const privateKeyPem = sa.private_key.replace(/\\n/g, '\n')
-
-  const now = Math.floor(Date.now() / 1000)
-  const encode = (obj: object) =>
-    Buffer.from(JSON.stringify(obj)).toString('base64url')
-
-  const header = { alg: 'RS256', typ: 'JWT' }
-  const payload = {
-    iss: sa.client_email,
-    scope: 'https://www.googleapis.com/auth/drive.file',
-    aud: 'https://oauth2.googleapis.com/token',
-    iat: now,
-    exp: now + 3600,
-  }
-
-  const signingInput = `${encode(header)}.${encode(payload)}`
-
-  const keyData = privateKeyPem
-    .replace(/-----BEGIN PRIVATE KEY-----/g, '')
-    .replace(/-----END PRIVATE KEY-----/g, '')
-    .replace(/\s/g, '')
-
-  const binaryKey = Buffer.from(keyData, 'base64')
-  const cryptoKey = await crypto.subtle.importKey(
-    'pkcs8',
-    binaryKey,
-    { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
-    false,
-    ['sign']
-  )
-
-  const signature = await crypto.subtle.sign(
-    'RSASSA-PKCS1-v1_5',
-    cryptoKey,
-    new TextEncoder().encode(signingInput)
-  )
-
-  const jwt = `${signingInput}.${Buffer.from(signature).toString('base64url')}`
-
-  const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+  const res = await fetch('https://oauth2.googleapis.com/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
-      grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
-      assertion: jwt,
+      client_id: process.env.GOOGLE_OAUTH_CLIENT_ID!,
+      client_secret: process.env.GOOGLE_OAUTH_CLIENT_SECRET!,
+      refresh_token: refreshToken,
+      grant_type: 'refresh_token',
     }),
   })
-
-  const tokenData = await tokenRes.json()
-  if (!tokenData.access_token) {
-    throw new Error(`Error token Google: ${JSON.stringify(tokenData)}`)
-  }
-  return tokenData.access_token
+  const data = await res.json()
+  if (!data.access_token) throw new Error(`Error refresh token: ${JSON.stringify(data)}`)
+  return data.access_token
 }
 
-// ── Crear carpeta en Drive ─────────────────────────────────────────────────────
-async function createDriveFolder(accessToken: string, name: string, parentId: string): Promise<string> {
+// ── Crear subcarpeta en Drive ──────────────────────────────────────────────────
+async function createFolder(accessToken: string, name: string, parentId: string): Promise<string> {
   const res = await fetch('https://www.googleapis.com/drive/v3/files', {
     method: 'POST',
     headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ name, mimeType: 'application/vnd.google-apps.folder', parents: [parentId] }),
   })
   const data = await res.json()
-  if (!data.id) throw new Error(`Error carpeta Drive: ${JSON.stringify(data)}`)
+  if (!data.id) throw new Error(`Error creando carpeta: ${JSON.stringify(data)}`)
   return data.id
 }
 
 // ── Subir JSON a Drive ─────────────────────────────────────────────────────────
-async function uploadJsonToDrive(accessToken: string, folderId: string, filename: string, content: string): Promise<string> {
-  const boundary = 'backup_multipart_boundary'
+async function uploadJson(accessToken: string, folderId: string, filename: string, content: string): Promise<string> {
+  const boundary = 'backup_boundary_iarest'
   const meta = JSON.stringify({ name: filename, parents: [folderId], mimeType: 'application/json' })
   const body =
     `--${boundary}\r\nContent-Type: application/json\r\n\r\n${meta}` +
@@ -102,7 +55,7 @@ async function uploadJsonToDrive(accessToken: string, folderId: string, filename
     body,
   })
   const data = await res.json()
-  if (!data.id) throw new Error(`Error upload Drive: ${JSON.stringify(data)}`)
+  if (!data.id) throw new Error(`Error subiendo archivo: ${JSON.stringify(data)}`)
   return data.id
 }
 
@@ -110,8 +63,7 @@ async function uploadJsonToDrive(accessToken: string, folderId: string, filename
 function autorizado(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
   if (!secret) return false
-  const auth = req.headers.get('authorization')
-  if (auth === `Bearer ${secret}`) return true
+  if (req.headers.get('authorization') === `Bearer ${secret}`) return true
   const session = getSession(req)
   return !!(session && session.rol === 'super_admin')
 }
@@ -128,23 +80,34 @@ async function runBackup(req: NextRequest): Promise<NextResponse> {
   const ts = now.toISOString().slice(0, 19).replace('T', '_').replace(/:/g, '-')
   const fechaStr = ts.slice(0, 10)
 
-  const accessToken = await getGoogleAccessToken()
-  const subFolderId = await createDriveFolder(accessToken, fechaStr, folderId)
+  const accessToken = await getAccessToken()
+  const subFolderId = await createFolder(accessToken, fechaStr, folderId)
 
   const backup: Record<string, unknown> = { exportado_en: now.toISOString(), version: '1.0' }
   const errores: string[] = []
 
-  const tablasCompletas = ['restaurantes','camareros','productos','producto_formatos','mesas','zonas','secciones_cocina','impresoras','cuentas','cobro_config']
+  // Tablas completas
+  const tablasCompletas = [
+    'restaurantes', 'camareros', 'productos', 'producto_formatos',
+    'mesas', 'zonas', 'secciones_cocina', 'impresoras', 'cuentas', 'cobro_config',
+  ]
   for (const tabla of tablasCompletas) {
     const { data, error } = await supabase.from(tabla).select('*')
     if (error) { errores.push(`${tabla}: ${error.message}`); backup[tabla] = [] }
     else backup[tabla] = data
   }
 
+  // Tablas últimos 30 días
   const hace30dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()
-  const tablasRecientes = ['comandas','comanda_items','turnos','facturas_verifactu','pagos','transcripciones','movimientos_caja','ia_training_log']
+  const tablasRecientes = [
+    'comandas', 'comanda_items', 'turnos', 'facturas_verifactu',
+    'pagos', 'transcripciones', 'movimientos_caja', 'ia_training_log',
+  ]
   for (const tabla of tablasRecientes) {
-    const { data, error } = await supabase.from(tabla).select('*').gte('created_at', hace30dias).order('created_at', { ascending: false })
+    const { data, error } = await supabase
+      .from(tabla).select('*')
+      .gte('created_at', hace30dias)
+      .order('created_at', { ascending: false })
     if (error) { errores.push(`${tabla}: ${error.message}`); backup[tabla] = [] }
     else backup[tabla] = data
   }
@@ -152,10 +115,13 @@ async function runBackup(req: NextRequest): Promise<NextResponse> {
   if (errores.length > 0) backup['_errores'] = errores
 
   const filename = `backup_iarest_${ts}.json`
-  const fileId = await uploadJsonToDrive(accessToken, subFolderId, filename, JSON.stringify(backup, null, 2))
+  const fileId = await uploadJson(accessToken, subFolderId, filename, JSON.stringify(backup, null, 2))
 
-  const totalRegistros = Object.values(backup).filter(Array.isArray).reduce((acc, arr) => acc + (arr as unknown[]).length, 0)
-  console.log(`[backup/drive] OK — ${filename} — ${totalRegistros} registros`)
+  const totalRegistros = Object.values(backup)
+    .filter(Array.isArray)
+    .reduce((acc, arr) => acc + (arr as unknown[]).length, 0)
+
+  console.log(`[backup/drive] ✅ ${filename} — ${totalRegistros} registros — ${errores.length} errores`)
 
   return NextResponse.json({
     ok: true,
