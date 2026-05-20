@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   for (const item of topItems ?? []) conteo[item.nombre] = (conteo[item.nombre] ?? 0) + (item.cantidad ?? 1)
   const top5 = Object.entries(conteo).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
-  const system = `Eres el copiloto de negocio de ia.rest para "${restaurante?.nombre ?? 'el restaurante'}".
+  const system = `Eres el Asistente ia.rest, el asistente de negocio de ia.rest para "${restaurante?.nombre ?? 'el restaurante'}".
 Datos actuales (últimos 30 días):
 - Mesas: ${restaurante?.num_mesas ?? '?'}
 - Comandas: ${totalComandas ?? 0}

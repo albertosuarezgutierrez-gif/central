@@ -31,6 +31,8 @@ export default function OwnerCopiloto() {
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [msgs])
   useEffect(() => { if (abierto) setTimeout(() => inputRef.current?.focus(), 100) }, [abierto])
 
+  const limpiar = useCallback(() => { setMsgs([]); setInput('') }, [])
+
   const enviar = useCallback(async (texto?: string) => {
     const pregunta = texto ?? input
     if (!pregunta.trim() || loading) return
@@ -61,7 +63,7 @@ export default function OwnerCopiloto() {
       {/* Botón flotante */}
       <button
         onClick={() => setAbierto(v => !v)}
-        title="Copiloto IA"
+        title="Asistente ia.rest"
         style={{
           position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
           width: 50, height: 50, borderRadius: '50%', border: 'none',
@@ -86,10 +88,26 @@ export default function OwnerCopiloto() {
           {/* Header */}
           <div style={{ padding: '12px 14px', borderBottom: `1px solid ${C.rule}`, display: 'flex', alignItems: 'center', gap: 8 }}>
             <span style={{ fontSize: 16 }}>🧠</span>
-            <div>
-              <div style={{ fontFamily: SN, color: C.paper, fontSize: 13, fontWeight: 600 }}>Copiloto</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontFamily: SN, color: C.paper, fontSize: 13, fontWeight: 600 }}>Asistente ia.rest</div>
               <div style={{ fontFamily: SN, color: C.dkFg3, fontSize: 10 }}>Datos últimos 30 días</div>
             </div>
+            {msgs.length > 0 && (
+              <button
+                onClick={limpiar}
+                title="Limpiar conversación"
+                style={{
+                  background: 'none', border: 'none', cursor: 'pointer',
+                  color: C.dkFg3, fontSize: 15, padding: '2px 4px',
+                  borderRadius: 4, lineHeight: 1,
+                  transition: 'color .15s',
+                }}
+                onMouseEnter={e => (e.currentTarget.style.color = C.paper)}
+                onMouseLeave={e => (e.currentTarget.style.color = C.dkFg3)}
+              >
+                ↺
+              </button>
+            )}
           </div>
 
           {/* Mensajes */}
