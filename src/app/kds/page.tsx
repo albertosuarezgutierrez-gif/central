@@ -9,6 +9,7 @@ import SugerenciaButton from '@/components/SugerenciaButton'
 import ChuleteVoz from '@/components/ChuleteVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
+import AsistenteCocinaPanel from '@/components/AsistenteCocinaPanel'
 
 const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
 
@@ -251,6 +252,7 @@ function KDSInner() {
   const [chatAbierto, setChatAbierto] = useState(false)
   const [chuleteAbierto, setChuleteAbierto] = useState(false)
   const [chatTexto, setChatTexto] = useState('')
+  const [asistenteAbierto, setAsistenteAbierto] = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [bannerMensaje, setBannerMensaje] = useState<{ texto: string; origen: string } | null>(null)
   const prevCountRef = useRef(0)
@@ -485,6 +487,21 @@ function KDSInner() {
           </div>
           <span style={{ fontFamily:SM, fontSize:16, fontWeight:700, color:K.fg }}>{time.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
           <SugerenciaButton session={effectiveSession} tema="dark" variant="inline" />
+          {/* Botón Asistente IA Cocina */}
+          <button
+            onClick={() => setAsistenteAbierto(v => !v)}
+            title="Asistente IA cocina"
+            style={{
+              cursor: 'pointer', width: 30, height: 30,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              background: asistenteAbierto ? K.gr : 'transparent',
+              border: `1px solid ${asistenteAbierto ? K.gr : K.rule}`,
+              borderRadius: 6, color: asistenteAbierto ? '#fff' : K.fg3, flexShrink: 0,
+              fontSize: 14,
+            }}
+          >
+            🍳
+          </button>
           {/* Botón chat con badge */}
           <button
             onClick={() => { setChatAbierto(v => !v); if (!chatAbierto) mensajes.filter(m => !m.leido_por?.includes(effectiveSession!.id)).forEach(m => marcarMensajeLeido(m.id)) }}
@@ -999,6 +1016,12 @@ function KDSInner() {
           </div>
         </div>
       )}
+
+      {/* Asistente IA Cocina */}
+      <AsistenteCocinaPanel
+        open={asistenteAbierto}
+        onClose={() => setAsistenteAbierto(false)}
+      />
     </div>
     </>
   )
