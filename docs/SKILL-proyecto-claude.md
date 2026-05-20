@@ -369,10 +369,11 @@ AZURE_SPEECH_KEY + REGION     # voice profiles (opcional)
 - P2: STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR (bloqueante QR cobro)
 - P3: STRIPE_WEBHOOK_SECRET_STOREFRONT
 - T2: camareros→personal ANTES de API pública (#12)
-- VOZ: marchar multi-item en un pulso
-- AZURE_SPEECH_KEY + REGION (voice profiles)
-- T3: Cashdro HTTP
-- /portal: completar módulos Almacén, Carta, Reservas, Contabilidad, Escáner
+- AZURE_SPEECH_KEY + REGION en Vercel (voice profiles)
+- Cashdro: conectar cashdroAbrirCajon() al cobro efectivo en /edge
+- Multi-idioma Whisper: ✅ implementado (restaurantes.idioma_whisper)
+- Rotación token QR: ✅ implementado (al abrir turno)
+- T3 Cashdro: ✅ lib + API + BD implementados
 
 ---
 
