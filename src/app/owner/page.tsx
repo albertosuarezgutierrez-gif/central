@@ -8062,8 +8062,8 @@ export default function OwnerPage() {
       {datosFiscales && (!datosFiscales.nif || !datosFiscales.razon_social || !datosFiscales.direccion) && (
         <div style={{
           margin: '0 16px 0',
-          background: '#2a1a00',
-          border: '1px solid #7c4d00',
+          background: C.amberS,
+          border: `1px solid ${C.amber}55`,
           borderRadius: 8,
           padding: '12px 18px',
           display: 'flex',
@@ -8075,10 +8075,10 @@ export default function OwnerPage() {
             <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
           <div style={{ flex: 1 }}>
-            <span style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 13, fontWeight: 600, color: '#E8A33B' }}>
+            <span style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 13, fontWeight: 600, color: C.amberD }}>
               Datos fiscales incompletos —{' '}
             </span>
-            <span style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 13, color: '#D8CDB6' }}>
+            <span style={{ fontFamily: 'Inter Tight, sans-serif', fontSize: 13, color: C.ink2 }}>
               Los tickets impresos deben incluir{' '}
               {[!datosFiscales.razon_social && 'Razón social', !datosFiscales.nif && 'CIF/NIF', !datosFiscales.direccion && 'Dirección'].filter(Boolean).join(', ')}.
               {' '}Sin estos datos el ticket no es válido fiscalmente.
@@ -8096,7 +8096,7 @@ export default function OwnerPage() {
               fontFamily: 'Inter Tight, sans-serif',
               fontSize: 12,
               fontWeight: 700,
-              color: '#14110E',
+              color: C.paper,
             }}>
             Completar ahora
           </button>
