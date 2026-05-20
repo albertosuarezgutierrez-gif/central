@@ -11,6 +11,8 @@ const AlmacenPortal    = dynamic(() => import('@/components/portal/AlmacenPortal
 const CartaPortal      = dynamic(() => import('@/components/portal/CartaPortal'), { ssr: false })
 const ContabilidadPortal = dynamic(() => import('@/components/portal/ContabilidadPortal'), { ssr: false })
 const EscanerPortal    = dynamic(() => import('@/components/portal/EscanerPortal'), { ssr: false })
+const ReservasPortal   = dynamic(() => import('@/components/portal/ReservasPortal'), { ssr: false })
+const OwnerCopiloto    = dynamic(() => import('@/components/owner/OwnerCopiloto'), { ssr: false })
 
 const MODULOS_PORTAL = [
   { id: 'almacen',      label: 'Almacén',       icon: 'M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2' },
@@ -20,6 +22,7 @@ const MODULOS_PORTAL = [
   { id: 'rrhh',         label: 'RRHH',           icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
   { id: 'escaner',      label: 'Escáner IA',     icon: 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
   { id: 'analytics',    label: 'Analytics',      icon: 'M18 20V10M12 20V4M6 20v-6' },
+  { id: 'asistente',    label: 'Asistente IA',   icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
 ]
 
 function NavIcon({ path }: { path: string }) {
@@ -140,11 +143,12 @@ export default function PortalPage() {
         <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
           {tab === 'almacen'      && <AlmacenPortal sh={sh} />}
           {tab === 'carta'        && <CartaPortal sh={sh} />}
+          {tab === 'reservas'     && <ReservasPortal sh={sh} />}
           {tab === 'contabilidad' && <ContabilidadPortal sh={sh} />}
           {tab === 'escaner'      && session && <EscanerPortal sh={sh} session={session} />}
           {tab === 'rrhh'         && <RRHHTab sh={sh} />}
           {tab === 'analytics'    && <ForecasterTab sh={sh} />}
-          {tab === 'reservas'     && <PlaceholderModulo label="Reservas" link="/owner?tab=reservas" />}
+          {tab === 'asistente'    && <OwnerCopiloto />}
         </div>
       </div>
     </div>

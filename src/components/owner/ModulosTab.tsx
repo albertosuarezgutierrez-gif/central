@@ -38,6 +38,7 @@ const MODULOS = [
   { id: 'reservas',       label: 'Reservas',         grupo: 'opcional', desc: 'Gestión de reservas, cubiertas y asignación de mesas.' },
   { id: 'rrhh',           label: 'RRHH',             grupo: 'opcional', desc: 'Candidatos y análisis de CVs con IA. Para el responsable de selección.' },
   { id: 'contabilidad',   label: 'Contabilidad',     grupo: 'opcional', desc: 'Asientos automáticos y exportación a A3/Sage/Holded. Necesita VeriFactu activo.' },
+  { id: 'asistente',      label: 'Asistente IA',     grupo: 'opcional', desc: 'Chat con IA para resolver dudas de gestión, horarios y tareas del día.' },
 ]
 
 const NUCLEO = new Set(MODULOS.filter(m => m.grupo === 'nucleo').map(m => m.id))

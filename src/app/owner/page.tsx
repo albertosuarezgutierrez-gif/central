@@ -501,6 +501,7 @@ function CamarerosTab() {
                 { key: 'rrhh',          label: 'RRHH',          desc: 'Candidatos, análisis de CVs con IA. Para el responsable de selección.' },
                 { key: 'escaner',       label: 'Escáner IA',    desc: 'Escaneo e importación de albaranes y facturas de proveedor.' },
                 { key: 'analytics',     label: 'Analytics',     desc: 'Métricas de ventas, tiempos y rendimiento del servicio.' },
+                { key: 'asistente',     label: 'Asistente IA',  desc: 'Chat con IA para resolver dudas de gestión y tareas del día.' },
               ] as { key: string; label: string; desc: string }[]).map(m => (
                 <label key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 9 }}>
                   <input type="checkbox"
