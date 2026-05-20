@@ -290,9 +290,20 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .csent p strong{color:var(--amber)}
 .cerr{font-family:var(--mono);font-size:12px;color:var(--amber);margin-top:8px;text-align:center}
 .cnota{font-family:var(--soft);font-size:14px;color:var(--cream3);text-align:center;margin-top:16px}
+.ham{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:8px;z-index:300}
+.ham span{display:block;width:22px;height:2px;background:var(--cream);border-radius:2px;transition:all .25s}
+.ham.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.ham.open span:nth-child(2){opacity:0}
+.ham.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mob-drawer{position:fixed;top:0;left:0;right:0;bottom:0;z-index:250;background:rgba(251,248,241,.98);backdrop-filter:blur(24px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:32px;opacity:0;pointer-events:none;transition:opacity .25s}
+.mob-drawer.open{opacity:1;pointer-events:all}
+.mob-drawer a{font-family:var(--head);font-style:italic;font-size:32px;color:var(--cream);text-decoration:none;letter-spacing:-.02em;transition:color .2s}
+.mob-drawer a:hover{color:var(--red)}
+.mob-cta{margin-top:8px;padding:14px 36px;border-radius:9999px;background:var(--red);color:#fff;font-size:16px;font-weight:600;font-family:var(--ui);border:none;cursor:pointer;letter-spacing:-.01em}
 @media(max-width:768px){
   nav{padding:0 20px}.nav-c{display:none}
   .nav-r{display:none}
+  .ham{display:flex}
   .hero{padding:0 20px 80px}
   .dstage{grid-template-columns:1fr;min-height:auto}
   .ddiv{width:100%;height:1px}
@@ -365,6 +376,7 @@ const COMANDAS = [
 
 export default function Page() {
   const [openFaq, setOpenFaq] = useState<number|null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [leadNombre, setLeadNombre] = useState("");
   const [pUsers, setPUsers] = useState(3);
   const [pAnnual, setPAnnual] = useState(false);
@@ -404,6 +416,8 @@ export default function Page() {
       setLeadSending(false);
     }
   };
+
+  const navTo = (id: string) => { setMenuOpen(false); setTimeout(()=>document.getElementById(id)?.scrollIntoView({behavior:"smooth"}),50); };
 
   // NAV scroll
   useEffect(() => {
@@ -492,6 +506,17 @@ export default function Page() {
     <>
       <style dangerouslySetInnerHTML={{__html:CSS}}/>
 
+      {/* MOBILE DRAWER */}
+      <div className={`mob-drawer${menuOpen?" open":""}`}>
+        <button className="ham open" onClick={()=>setMenuOpen(false)} style={{position:"absolute",top:16,right:20}}><span/><span/><span/></button>
+        <a href="#como" onClick={()=>navTo("como")}>Cómo funciona</a>
+        <a href="#modulos" onClick={()=>navTo("modulos")}>Módulos</a>
+        <a href="#testimonios" onClick={()=>navTo("testimonios")}>Restaurantes</a>
+        <a href="#precios" onClick={()=>navTo("precios")}>Precios</a>
+        <a href="#contacto" onClick={()=>navTo("contacto")}>Contacto</a>
+        <button className="mob-cta" onClick={()=>navTo("contacto")}>Solicitar 14 días gratis →</button>
+      </div>
+
       {/* NAV */}
       <nav ref={navRef}>
         <a href="/" className="logo">ia<b>.</b>rest</a>
@@ -505,6 +530,7 @@ export default function Page() {
         <div className="nav-r">
           <button className="nbr" onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Quiero probarlo</button>
         </div>
+        <button className={`ham${menuOpen?" open":""}`} onClick={()=>setMenuOpen(m=>!m)} aria-label="Menú"><span/><span/><span/></button>
       </nav>
 
       {/* HERO */}
