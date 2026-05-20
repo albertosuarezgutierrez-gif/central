@@ -42,7 +42,7 @@ export default function ForecasterTab({ sh }: { sh: () => Record<string, string>
     fetch('/api/owner/forecaster', { headers: sh() })
       .then(r => r.json())
       .then(d => { if (d.error) setErr(d.error); else setData(d) })
-      .catch(() => setErr('Error cargando forecaster'))
+      .catch(() => setErr('Error cargando eventos'))
       .finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -57,7 +57,7 @@ export default function ForecasterTab({ sh }: { sh: () => Record<string, string>
     <div style={{ maxWidth: 680 }}>
       {/* Cabecera */}
       <div style={{ marginBottom: 20 }}>
-        <h2 style={{ fontFamily: SE, fontSize: 22, color: C.ink, margin: '0 0 4px 0', fontStyle: 'italic' }}>Forecaster IA</h2>
+        <h2 style={{ fontFamily: SE, fontSize: 22, color: C.ink, margin: '0 0 4px 0', fontStyle: 'italic' }}>Eventos IA</h2>
         <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: 0 }}>
           Predicción próximos 7 días · {data?.historico.totalComandas} comandas analizadas
           {ev.length > 0 && ` · ${ev.length} evento${ev.length > 1 ? 's' : ''} en tu zona`}

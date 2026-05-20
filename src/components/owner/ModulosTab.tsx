@@ -26,7 +26,7 @@ const MODULOS = [
   // INCLUIDOS EN CUOTA
   { id: 'kds',            label: 'KDS Cocina',       grupo: 'base', desc: 'Pantalla de cocina con estados por plato.' },
   { id: 'supervisor',     label: 'Supervisor',       grupo: 'base', desc: 'Alertas de tiempos: mesas sin comanda, cuentas sin cobrar, etc.' },
-  { id: 'forecaster',     label: 'Forecaster IA',    grupo: 'base', desc: 'Predicción de demanda con eventos y meteorología.' },
+  { id: 'forecaster',     label: 'Eventos IA',    grupo: 'base', desc: 'Predicción de demanda con eventos y meteorología.' },
   { id: 'fichajes',       label: 'Fichajes',         grupo: 'base', desc: 'Control de jornada laboral (RD-ley 8/2019).' },
   { id: 'escaner',        label: 'Escáner IA',       grupo: 'base', desc: 'Sube fotos de albaranes, facturas y cartas. La IA los clasifica.' },
   { id: 'analytics',      label: 'Analytics',        grupo: 'base', desc: 'Métricas de ventas, tiempos y rendimiento del servicio.' },

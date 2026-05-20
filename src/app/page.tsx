@@ -681,7 +681,7 @@ export default function Page() {
             {ico:"📸",t:"Escáner IA",d:"Fotografía un documento. La IA lo clasifica y extrae los datos.",badge:null,cls:""},
             {ico:"💬",t:"Chat entre roles",d:"Mensajería interna durante el turno entre sala, cocina y barra.",badge:null,cls:"mc-amber"},
             {ico:"👥",t:"Selección de personal IA",d:"Análisis automático de candidaturas con puntuación por rol.",badge:null,cls:""},
-            {ico:"📡",t:"Forecaster IA",d:"Anticipa la afluencia de los próximos 6 meses cruzando tu histórico con eventos reales: partidos, conciertos, ferias y festivos de tu ciudad.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-red"},
+            {ico:"📡",t:"Eventos IA",d:"Anticipa la afluencia de los próximos 6 meses cruzando tu histórico con eventos reales: partidos, conciertos, ferias y festivos de tu ciudad.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-red"},
             {ico:"🔔",t:"Supervisor de tiempos",d:"Alertas automáticas cuando el servicio se desvía del estándar.",badge:null,cls:""},
             {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
             {ico:"📋",t:"VeriFactu AEAT",d:"Facturas homologadas con firma encadenada y QR verificable.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
@@ -840,7 +840,7 @@ export default function Page() {
           const qrPrice=pQR>0?(pAnnual?Math.round(pQR*12*0.82):pQR*12):0;
           const total=basePrice+qrPrice;
           const examples:Array<[number,string]>=[[1,"1 perfil"],[3,"3 perfiles"],[6,"6 perfiles"]];
-          const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","QR en mesa (add-on)","Pedidos online · 4 canales","Almacén e inventario","Escandallos por receta","Proveedores + OCR albaranes","Escáner IA de documentos","Chat interno entre roles","Selección de personal IA","Forecaster IA · 6 meses","Supervisor de tiempos","14 días de prueba gratis"];
+          const feats=["Voz + KDS en cocina","Cobro Stripe + Bizum","VeriFactu incluido","Impresoras térmicas","Fichaje RD-ley 8/2019","QR en mesa (add-on)","Pedidos online · 4 canales","Almacén e inventario","Escandallos por receta","Proveedores + OCR albaranes","Escáner IA de documentos","Chat interno entre roles","Selección de personal IA","Eventos IA · 6 meses","Supervisor de tiempos","14 días de prueba gratis"];
           return (
             <div className="pcalc reveal">
               <div className="pcalc-inner">

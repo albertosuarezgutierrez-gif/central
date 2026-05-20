@@ -7218,7 +7218,7 @@ const GRUPOS = [
   {
     id: 'ia', label: 'IA', icon: ICONS.sparkle,
     tabs: [
-      { id: 'forecaster', label: 'Forecaster',  icon: ICONS.chart  },
+      { id: 'forecaster', label: 'Eventos IA',  icon: ICONS.chart  },
       { id: 'turnos-nim', label: 'Turnos IA',   icon: ICONS.clock  },
     ]
   },
