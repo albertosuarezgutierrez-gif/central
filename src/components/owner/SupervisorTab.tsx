@@ -357,9 +357,9 @@ export default function SupervisorTab({rol,restauranteId,sh}:{rol:string;restaur
               <ReglaEditor regla={editando} onSave={handleSave} onCancel={()=>{setEditando(null);setError(null)}} saving={saving} error={error}/>
             </div>
           ) : (
-            <ReglaCard key={r.id} regla={r} onToggle={handleToggle}
+            <ReglaCard key={r.id} regla={r} onToggle={(r)=>{void handleToggle(r)}}
               onEdit={r=>{setEditando(r);setCreating(false)}}
-              onDelete={handleDelete} canDelete={canDelete}/>
+              onDelete={(r)=>{void handleDelete(r)}} canDelete={canDelete}/>
           ))}
         </div>
       )}
@@ -368,7 +368,7 @@ export default function SupervisorTab({rol,restauranteId,sh}:{rol:string;restaur
         <div style={{marginTop:24,padding:'14px 16px',background:C.paper2,borderRadius:8,border:`1px solid ${C.rule}`}}>
           <p style={{fontFamily:SN,fontSize:11,fontWeight:700,letterSpacing:'.08em',textTransform:'uppercase',color:C.ink3,margin:'0 0 8px'}}>Variables en el mensaje</p>
           <div style={{display:'flex',flexWrap:'wrap',gap:5}}>
-            {['{mesa}','{tiempo}','{plato}','{n}','{camarero}'].map(v=><Chip key={v}>{v}</Chip>)}
+            {['{mesa}','{tiempo}','{plato}','{n}','{camarero}'].map(v=><span key={v}><Chip>{v}</Chip></span>)}
           </div>
         </div>
       )}

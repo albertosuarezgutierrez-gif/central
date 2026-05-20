@@ -1187,7 +1187,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {personales.map(l => <CardLead key={l.id} lead={l} big />)}
+                {(personales as Lead[]).map(l => <CardLead key={l.id} lead={l} big />)}
               </div>
             )}
           </div>
@@ -1206,7 +1206,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {online.map(l => <CardLead key={l.id} lead={l} />)}
+                {(online as Lead[]).map(l => <CardLead key={l.id} lead={l} />)}
               </div>
             )}
           </div>

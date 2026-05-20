@@ -128,10 +128,10 @@ export async function POST(req: NextRequest) {
   })
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const session  = getSession(req)
+  const rid      = getRestauranteId(req)
   const supabase = createServerClient()
-  const session  = await getSession(supabase)
-  const rid      = await getRestauranteId(session)
 
   const { data, error } = await supabase
     .from('documentos_escaneados')
@@ -156,5 +156,6 @@ export async function GET() {
     camarero_nombre: d.camareros?.nombre ?? null,
   }))
 
+  void session // auth verificada por middleware
   return NextResponse.json({ documentos })
 }

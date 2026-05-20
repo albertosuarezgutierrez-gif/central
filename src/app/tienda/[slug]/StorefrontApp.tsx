@@ -92,7 +92,7 @@ export default function StorefrontApp({ slug }: { slug:string }) {
       entries => entries.forEach(e => { if (e.isIntersecting) setSec(e.target.id.replace('sec-','')) }),
       { rootMargin:'-35% 0px -60% 0px' }
     )
-    Object.values(secRefs.current).forEach(el => { if (el) obs.observe(el) })
+    (Object.values(secRefs.current) as (HTMLDivElement|null)[]).forEach(el => { if (el) obs.observe(el) })
     return () => obs.disconnect()
   }, [secciones])
 

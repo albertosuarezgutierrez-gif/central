@@ -195,7 +195,7 @@ export default function PedidosOnlinePage() {
             <div style={{ fontFamily:SE, fontSize:16, color:C.ink2, marginBottom:4 }}>Sin pedidos activos</div>
             <div style={{ fontFamily:SN, fontSize:12, color:C.ink4 }}>Los nuevos pedidos aparecen aquí al momento</div>
           </div>
-        ) : filtrados.map(p => (
+        ) : (filtrados as PedidoOnline[]).map(p => (
           <TarjetaPedido key={p.id} pedido={p} session={session} onActualizar={onActualizar} />
         ))}
       </div>

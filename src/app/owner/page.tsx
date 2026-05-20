@@ -3472,7 +3472,7 @@ function ImpresorasTab() {
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 2 }}>Asignar a:</div>
                     {impresoras.map(imp => (
-                      <Btn key={imp.id} onClick={() => asignarIpImpresora(imp.id, r.ip)}
+                      <Btn key={imp.id} onClick={() => { void asignarIpImpresora(imp.id, r.ip) }}
                         disabled={assigningIp === r.ip}
                         style={{ fontSize: 11, padding: '4px 10px' }}>
                         {assigningIp === r.ip ? '⟳' : imp.nombre}

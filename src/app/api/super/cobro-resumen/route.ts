@@ -49,6 +49,6 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     restaurantes: resumen ?? [],
     totales,
-    historico: Object.values(historicoPorMes).sort((a, b) => b.mes.localeCompare(a.mes)),
+    historico: (Object.values(historicoPorMes) as { mes: string; volumen: number; comision: number; txn: number }[]).sort((a, b) => b.mes.localeCompare(a.mes)),
   })
 }
