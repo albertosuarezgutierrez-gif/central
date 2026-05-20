@@ -2,7 +2,6 @@
 import React from 'react'
 // components/owner/ModalTraducciones.tsx
 // Editor de traducciones de un producto para el panel owner
-'use client'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useState, useEffect, useCallback } from 'react'
