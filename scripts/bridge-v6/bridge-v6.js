@@ -17,6 +17,7 @@ const path  = require('path')
 const os    = require('os')
 const { execSync, exec, spawn } = require('child_process')
 const readline = require('readline')
+const { CashlogyManager } = require('./azkoyen-cashlogy')
 
 const VERSION      = '6.0.1'
 const API          = 'https://www.iarest.es'
@@ -26,6 +27,70 @@ const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const CONFIG_DIR  = path.join(os.homedir(), '.iarest')
 const CONFIG_FILE = path.join(CONFIG_DIR, 'bridge-v6.json')
 const EXE_PATH    = process.execPath  // Ruta del EXE actual
+
+// ── Cashlogy Manager (global, persiste entre polls) ──────────
+let cashlogyManager = null
+
+async function initCashlogy(TOKEN, restauranteId) {
+  cashlogyManager = new CashlogyManager({ configFile: path.join(CONFIG_DIR, 'cashlogy.json') })
+  await cashlogyManager.init(async (status, info) => {
+    console.log(`${status === 'online' ? G : Y}[CASHLOGY]${X} Estado: ${status}`, info.ip ?? '')
+    // Reportar estado a Supabase para que /owner lo vea en tiempo real
+    try {
+      await fetchJSON(`${API}/api/bridge/cashlogy/status`, {
+        method: 'POST',
+        headers: { 'x-bridge-token': TOKEN },
+        body: { status, ip: info.ip ?? null, version: info.version ?? null, restaurante_id: restauranteId },
+      }).catch(() => {})
+    } catch {}
+  })
+}
+
+// ── Handler de comandos Cashlogy ────────────────────────────
+async function handleCashlogyCommand(job, TOKEN) {
+  const tipo = job.payload?.tipo
+  const hora = new Date().toLocaleTimeString('es-ES')
+
+  try {
+    let result = null
+
+    if (tipo === 'cashlogy_discover') {
+      console.log(`${B}[CASHLOGY]${X} ${hora} · Descubrimiento manual`)
+      if (cashlogyManager) await cashlogyManager.discover()
+      result = { ok: cashlogyManager?.isOnline(), ip: cashlogyManager?.ip }
+
+    } else if (tipo === 'cashlogy_status') {
+      result = cashlogyManager ? await cashlogyManager.getStatus() : { ok: false, error: 'Manager no iniciado' }
+
+    } else if (tipo === 'cashlogy_charge') {
+      const { importe, op_num, operacion_id } = job.payload
+      console.log(`${B}[CASHLOGY]${X} ${hora} · Cobro ${(importe/100).toFixed(2)}€ op:${op_num}`)
+      result = cashlogyManager
+        ? await cashlogyManager.charge(importe, op_num)
+        : { ok: false, error: 'Cashlogy no disponible', estado: 'error' }
+
+      // Reportar resultado de la operación a ia.rest
+      if (operacion_id) {
+        await fetchJSON(`${API}/api/bridge/cashlogy/result`, {
+          method: 'POST',
+          headers: { 'x-bridge-token': TOKEN },
+          body: { operacion_id, ...result },
+        }).catch(() => {})
+      }
+
+    } else if (tipo === 'cashlogy_close') {
+      result = cashlogyManager ? await cashlogyManager.closeTill() : { ok: false, error: 'No disponible' }
+    }
+
+    const estado = result?.ok ? 'done' : 'error'
+    console.log(`${result?.ok ? G : Y}[CASHLOGY]${X} ${hora} · ${tipo} → ${estado}`)
+    await reportPrintResult(job.id, estado, result?.ok ? null : (result?.error ?? 'error'), TOKEN)
+
+  } catch (e) {
+    console.error(`${R}[CASHLOGY ERR]${X}`, e.message)
+    await reportPrintResult(job.id, 'error', e.message, TOKEN)
+  }
+}
 
 // ── Colores para terminal ─────────────────────────────────────
 const R = '\x1b[31m', G = '\x1b[32m', Y = '\x1b[33m', B = '\x1b[36m', W = '\x1b[37m', X = '\x1b[0m'
@@ -249,6 +314,11 @@ async function reportPrintResult(job_id, status, error_msg, TOKEN) {
 }
 
 async function printJob(job, TOKEN) {
+  // Cashlogy — comandos de caja automática
+  if (job.payload?.tipo?.startsWith('cashlogy_')) {
+    return handleCashlogyCommand(job, TOKEN)
+  }
+
   let ip = job.ip || job.ip_address
   const port = job.port || 9100
   const data = Buffer.from(job.print_data, 'base64')
