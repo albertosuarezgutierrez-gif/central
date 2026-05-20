@@ -1,0 +1,54 @@
+name: QA Check
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: qa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  qa:
+    name: Análisis estático · Patrones conocidos
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # ── QA Check: detecta patrones problemáticos conocidos ─────────────────
+      # Reglas activas (ver scripts/qa-check.ts y Drive → qa-protocolo.md):
+      #   - no-hover-only-interaction   → BUG-001: hover no funciona en móvil
+      #   - no-direct-supabase-client   → auth rota en API routes
+      #   - no-x-session-token          → patrón auth obsoleto
+      #   - invalid-comanda-estado      → estado BD incorrecto
+      #   - use-is-null-for-camarero    → .eq(null) vs .is(null)
+      #   - no-marchar-after-comanda    → duplicación impresión
+      #   - await-params-dynamic-routes → params Promise en App Router
+      #   - no-ink-on-dark-background   → colores incorrectos
+      - name: QA Check — patrones conocidos
+        run: npx ts-node --skipProject --esm scripts/qa-check.ts
+
+      # ── Resumen si falla ───────────────────────────────────────────────────
+      - name: Instrucciones si falla
+        if: failure()
+        run: |
+          echo ""
+          echo "═══════════════════════════════════════════════════════════"
+          echo "  QA Check falló. Ver errores arriba."
+          echo "  Referencia completa: Drive → qa-protocolo.md"
+          echo "  ID Drive: 14A56bgou0JOBBnjV4ls1cPciMXz7aoTP"
+          echo "═══════════════════════════════════════════════════════════"

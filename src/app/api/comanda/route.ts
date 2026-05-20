@@ -237,7 +237,7 @@ export async function POST(req: NextRequest) {
               unidad_compra:     art.unidad_compra,
               notas:             `Pedido automático. Stock actual: ${nuevo.toFixed(1)} ${art.unidad_compra}`,
               origen:            'auto',
-              estado:            'pendiente',
+              estado:            'pendiente', // qa-ignore: tabla pedidos_proveedor, no comandas
             })
             // El email lo envía la Edge Function de Telegram/notificaciones o
             // el dueño lo aprueba desde el panel de Bodega → historial de pedidos

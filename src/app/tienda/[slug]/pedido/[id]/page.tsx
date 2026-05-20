@@ -2,6 +2,7 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
 
@@ -20,7 +21,8 @@ interface Pedido {
   total:number; created_at:string
 }
 
-export default function TrackingPage({ params }:{ params:{ slug:string; id:string } }) {
+export default function TrackingPage() {
+  const params = useParams<{ slug: string; id: string }>()
   const [pedido, setPedido] = useState<Pedido|null>(null)
   const [cargando, setLoad] = useState(true)
 

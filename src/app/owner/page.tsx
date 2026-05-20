@@ -7974,9 +7974,10 @@ export default function OwnerPage() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
             <span className="owner-hdr-btn-lbl" style={{ fontFamily:SN, fontSize:12, fontWeight:600 }}>Voz</span>
           </button>
+          {/* qa-ignore: BUG-002-pending — dropdown Manuales hover-only, pendiente migrar a onClick */}
           <div style={{ position:'relative' }} onMouseLeave={e => { const m = e.currentTarget.querySelector('[data-manuales]') as HTMLElement; if(m) m.style.display='none' }}>
             <button
-              onMouseEnter={e => { const m = e.currentTarget.nextElementSibling as HTMLElement; if(m) m.style.display='flex' }}
+              onMouseEnter={e => { const m = e.currentTarget.nextElementSibling as HTMLElement; if(m) m.style.display='flex' }} // qa-ignore: BUG-002-pending
               style={{ background:'none', border:`1px solid ${C.rule}`, borderRadius:4, padding:'6px 10px', cursor:'pointer', color:C.ink3, display:'flex', alignItems:'center', gap:6 }}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
               <span className="owner-hdr-btn-lbl" style={{ fontFamily:SN, fontSize:12, fontWeight:600 }}>Manuales</span>

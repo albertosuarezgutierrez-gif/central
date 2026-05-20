@@ -661,7 +661,7 @@ export async function POST(req: NextRequest) {
                     restaurante_id: rid,
                     impresora_id:   seccion.impresora_id,
                     tipo:           'aviso',
-                    estado:         'pendiente',
+                    estado:         'pendiente', // qa-ignore: tabla print_jobs, no comandas
                     payload: {
                       tipo:    'aviso',
                       mensaje: brainResult.nota_general,
