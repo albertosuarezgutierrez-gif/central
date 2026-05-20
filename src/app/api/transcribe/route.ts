@@ -171,9 +171,13 @@ export async function POST(req: NextRequest) {
 
     // Capa 1: Whisper con verbose_json → métricas de calidad de audio
     // El prompt con la carta mejora el reconocimiento en entornos ruidosos
-    const whisperPrompt = await buildWhisperPrompt(rid, supabase).catch(() => undefined)
+    const [whisperPrompt, restauranteData] = await Promise.all([
+      buildWhisperPrompt(rid, supabase).catch(() => undefined),
+      supabase.from('restaurantes').select('idioma_whisper').eq('id', rid).maybeSingle(),
+    ])
+    const idiomaWhisper = (restauranteData.data as { idioma_whisper?: string } | null)?.idioma_whisper ?? 'es'
     const [{ texto: textoRaw, latencia_ms: latenciaEar, no_speech_prob, avg_logprob }] =
-      await Promise.all([transcribir(audio, whisperPrompt), speakerPromise])
+      await Promise.all([transcribir(audio, whisperPrompt, idiomaWhisper), speakerPromise])
 
     // ── Calcular aviso de ruido/baja confianza — 4 capas ────────────────────
     //

@@ -17,21 +17,12 @@ export async function POST(req: NextRequest) {
     const Groq = (await import('groq-sdk')).default
     const groq = new Groq({ apiKey: process.env.GROQ_API_KEY })
     const file = new File([audio], 'audio.webm', { type: audio.type || 'audio/webm' })
-    const tx = await groq.audio.transcriptions.create({
-      file,
-      model: 'whisper-large-v3-turbo',
-      language: 'es',
-      response_format: 'json',
-    })
-    const texto = tx.text.trim()
-    if (!texto) {
-      return NextResponse.json({ error: 'No se entendió nada', texto: '' }, { status: 422 })
-    }
 
-    // 2. Resolver restaurante
+    // 2. Resolver restaurante y su idioma
     const supabase = createServerClient()
     let restaurante_id = '00000000-0000-0000-0000-000000000001'
     let restaurante_nombre = 'Restaurante Demo'
+    let idiomaWhisper = 'es'
 
     if (restaurante_code && restaurante_code !== 'ia-rest') {
       const { data: rest } = await supabase
@@ -39,7 +30,22 @@ export async function POST(req: NextRequest) {
       if (rest?.length) {
         restaurante_id = rest[0].id
         restaurante_nombre = rest[0].nombre
+        // Leer idioma del restaurante
+        const { data: rData } = await supabase
+          .from('restaurantes').select('idioma_whisper').eq('id', restaurante_id).maybeSingle()
+        idiomaWhisper = (rData as { idioma_whisper?: string } | null)?.idioma_whisper ?? 'es'
       }
+    }
+
+    const tx = await groq.audio.transcriptions.create({
+      file,
+      model: 'whisper-large-v3-turbo',
+      ...(idiomaWhisper !== 'auto' ? { language: idiomaWhisper } : {}),
+      response_format: 'json',
+    })
+    const texto = tx.text.trim()
+    if (!texto) {
+      return NextResponse.json({ error: 'No se entendió nada', texto: '' }, { status: 422 })
     }
 
     // 3. Obtener camareros del restaurante

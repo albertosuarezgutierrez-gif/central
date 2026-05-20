@@ -1522,7 +1522,7 @@ function RestauranteTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '' })
+  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es' })
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoMsg, setLogoMsg] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -1544,6 +1544,7 @@ function RestauranteTab() {
           google_review_url: rd.restaurante.google_review_url  ?? '',
           instagram_url:     rd.restaurante.instagram_url      ?? '',
           web_url:           rd.restaurante.web_url            ?? '',
+          idioma_whisper:    rd.restaurante.idioma_whisper      ?? 'es',
         })
       }
       setHealth(hd)
@@ -1790,6 +1791,33 @@ function RestauranteTab() {
             {form.google_review_url
               ? '✓ Funnel de reseñas activo — los clientes QR serán dirigidos a Google tras pagar.'
               : '⚠ Sin enlace Google: añádelo para que los clientes puedan valorarte directamente.'}
+          </div>
+
+          {/* Idioma reconocimiento de voz */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <label style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, textTransform: 'uppercase' }}>
+              Idioma de voz (Whisper)
+            </label>
+            <select
+              value={form.idioma_whisper}
+              onChange={e => setForm(f => ({ ...f, idioma_whisper: e.target.value }))}
+              style={{ fontFamily: SN, fontSize: 13, border: `1px solid ${C.rule}`, borderRadius: 4, padding: '8px 10px', background: C.bone, color: C.ink, outline: 'none' }}
+            >
+              <option value="es">🇪🇸 Español (recomendado)</option>
+              <option value="en">🇬🇧 English</option>
+              <option value="fr">🇫🇷 Français</option>
+              <option value="de">🇩🇪 Deutsch</option>
+              <option value="it">🇮🇹 Italiano</option>
+              <option value="pt">🇵🇹 Português</option>
+              <option value="ca">🏴 Català</option>
+              <option value="zh">🇨🇳 中文</option>
+              <option value="ja">🇯🇵 日本語</option>
+              <option value="ar">🇸🇦 عربي</option>
+              <option value="auto">🌐 Detección automática</option>
+            </select>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>
+              El idioma que hablan los camareros al dar comandas por voz. &quot;Detección automática&quot; es más lenta y menos precisa.
+            </div>
           </div>
         </div>
       </div>

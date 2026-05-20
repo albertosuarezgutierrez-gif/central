@@ -73,5 +73,22 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ turno: data })
+
+  // Rotar tokens QR de todas las mesas del restaurante
+  // Cada turno genera tokens nuevos — los QR escaneados en turnos anteriores dejan de funcionar
+  const { data: mesas } = await supabase
+    .from('mesas')
+    .select('id')
+    .eq('restaurante_id', rid)
+    .eq('qr_habilitado', true)
+
+  if (mesas?.length) {
+    await Promise.all(mesas.map(m =>
+      supabase.from('mesas')
+        .update({ qr_token: crypto.randomUUID() })
+        .eq('id', m.id)
+    ))
+  }
+
+  return NextResponse.json({ turno: data, qr_tokens_rotados: mesas?.length ?? 0 })
 }
