@@ -189,6 +189,28 @@ function BloqueCuenta() {
   )
 }
 
+// ── Bloque Asistente IA Cocina ───────────────────────────────────────────────
+function BloqueAsistenteCocina() {
+  return (
+    <Block color="#2B6A6E" bg="#0D2B2E" badge="ASISTENTE IA" sub="Preguntas al jefe de cocina — /kds → ✦">
+      <Row pattern="¿Cuántos [producto] pendientes?" examples={['¿Cuántos solomillos pendientes?', '¿Cuántas croquetas quedan por marchar?']} />
+      <Sep />
+      <Row pattern="¿Qué tiene la mesa [código]?" examples={['¿Qué tiene la mesa S4?', '¿Qué le falta salir a la T3?']} />
+      <Sep />
+      <Row pattern="¿Hay alérgicos?" examples={['¿Hay alérgicos en cocina ahora?', '¿La mesa 4 tiene alergia a algo?']} />
+      <Sep />
+      <Row pattern="¿Qué lleva más tiempo?" examples={['¿Qué lleva más tiempo sin salir?', '¿Hay algo que lleve más de 20 minutos?']} />
+      <Sep />
+      <Row pattern="¿Cuánto queda de [producto]?" examples={['¿Cuánto queda de merluza?', '¿Hay stock bajo de algo?']} />
+      <Sep />
+      <Row pattern="¿Qué elaboraciones caducan?" examples={['¿Qué elaboraciones caducan hoy?', '¿Cuánto le queda a la ensaladilla?']} />
+      <Sep />
+      <Row pattern="¿Cómo va [partida]?" examples={['¿Cómo va la cocina caliente?', '¿Cuánto tiene barra pendiente?']} />
+      <Tip color="#2B6A6E" text="Habla o escribe · PTT = mantén pulsado 🎤" />
+    </Block>
+  )
+}
+
 // ── Bloque Próximamente ───────────────────────────────────────────────────────
 
 function BloqueProximamente() {
@@ -285,8 +307,9 @@ export default function ChuleteVoz({ rol }: Props) {
         <ReglaDeOro />
       </>)}
 
-      {/* COCINA: mensaje + regla */}
+      {/* COCINA: asistente IA + mensaje + regla */}
       {rol === 'cocina' && (<>
+        <BloqueAsistenteCocina />
         <BloqueMensaje />
         <ReglaDeOro />
       </>)}
