@@ -4679,7 +4679,7 @@ function FlujoTab() {
       {modal && (
         <div style={{ position:'fixed', inset:0, background:'rgba(26,23,20,.45)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:200, padding:16 }}
           onClick={e=>{ if (e.target===e.currentTarget) setModal(false) }}>
-          <div style={{ background:C.paper, borderRadius:14, padding:'20px 16px', width:'100%', maxWidth:500, boxShadow:'0 8px 32px rgba(26,23,20,.2)', maxHeight:'92dvh', overflowY:'auto' }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:680, boxShadow:'0 8px 32px rgba(26,23,20,.2)', maxHeight:'92dvh', overflowY:'auto' }}>
 
             <div style={{ fontFamily:SE, fontSize:18, fontWeight:700, color:C.ink, marginBottom:16 }}>Nueva regla de flujo</div>
 
@@ -5249,7 +5249,7 @@ function FacturasTab() {
         <div onClick={() => setSelected(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,20,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: 32, width: 480, maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto' }}>
+            style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: 32, width: '100%', maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.1em', marginBottom: 8 }}>FACTURA SIMPLIFICADA</div>
             <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, letterSpacing: '-.01em', marginBottom: 20 }}>
               T-{String(selected.numero_factura).padStart(8, '0')}
@@ -5414,7 +5414,7 @@ function FacturasClienteSection({ desde, hasta }: { desde: string; hasta: string
         <div onClick={() => setSelected(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(26,23,20,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div onClick={e => e.stopPropagation()}
-            style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: 32, width: 480, maxWidth: '95vw', maxHeight: '85vh', overflowY: 'auto' }}>
+            style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 12, padding: 32, width: '100%', maxWidth: 640, maxHeight: '85vh', overflowY: 'auto' }}>
             <div style={{ fontFamily: SM, fontSize: 11, color: C.green, letterSpacing: '.1em', marginBottom: 8 }}>FACTURA COMPLETA · IVA DEDUCIBLE</div>
             <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, marginBottom: 20 }}>{selected.numero_completo}</div>
 
@@ -5858,7 +5858,7 @@ function CajaTab() {
       {/* MODAL: Movimiento manual */}
       {modalOpen && (
         <div style={{position:'fixed',inset:0,background:'rgba(26,23,20,.5)',zIndex:200,display:'flex',alignItems:'flex-end',justifyContent:'center',padding:20}}>
-          <div style={{width:'100%',maxWidth:480,background:C.bone,borderRadius:16,padding:24,boxShadow:'0 -4px 32px rgba(26,23,20,.2)'}}>
+          <div style={{width:'100%',maxWidth:560,background:C.bone,borderRadius:16,padding:24,boxShadow:'0 -4px 32px rgba(26,23,20,.2)'}}>
             <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,marginBottom:16}}>Movimiento manual</div>
             <div style={{display:'flex',flexDirection:'column',gap:10}}>
               <select value={form.tipo} onChange={e=>setForm(f=>({...f,tipo:e.target.value}))}
@@ -5889,7 +5889,7 @@ function CajaTab() {
       {/* MODAL: Arqueo / Cierre con desglose de billetes y monedas */}
       {arqueoOpen && (
         <div style={{position:'fixed',inset:0,background:'rgba(26,23,20,.6)',zIndex:200,display:'flex',alignItems:'flex-start',justifyContent:'center',padding:'20px 16px',overflowY:'auto'}}>
-          <div style={{width:'100%',maxWidth:500,background:C.bone,borderRadius:16,padding:24,boxShadow:'0 8px 48px rgba(26,23,20,.3)',marginTop:20,marginBottom:20}}>
+          <div style={{width:'100%',maxWidth:640,background:C.bone,borderRadius:16,padding:24,boxShadow:'0 8px 48px rgba(26,23,20,.3)',marginTop:20,marginBottom:20}}>
 
             {/* Cabecera */}
             <div style={{marginBottom:4}}>
@@ -8933,7 +8933,7 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
       {(modal === 'crear' || (modal && typeof modal === 'object' && 'edit' in modal)) && (
         <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
-          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:480, maxHeight:'90vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:620, maxHeight:'90vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
             <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink, marginBottom:18 }}>
               {modal === 'crear' ? 'Nuevo artículo de stock' : `Editar: ${(modal as { edit: StockArticulo }).edit.nombre}`}
             </div>
@@ -9430,7 +9430,7 @@ function EscandallosTab({ sh, restauranteId }: { sh: () => Record<string,string>
       {modal && (
         <div style={{ position: 'fixed', inset: 0, background: '#00000077', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
           onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
-          <div style={{ background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 520, maxHeight: '92vh', overflowY: 'auto' as const, boxShadow: '0 20px 60px #00000044' }}>
+          <div style={{ background: C.paper, borderRadius: 14, padding: 24, width: '100%', maxWidth: 640, maxHeight: '92vh', overflowY: 'auto' as const, boxShadow: '0 20px 60px #00000044' }}>
             <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 19, color: C.ink, marginBottom: 18 }}>
               {modal === 'crear' ? 'Nuevo escandallo' : `Editar: ${(modal as { edit: Escandallo }).edit.nombre}`}
             </div>
@@ -9670,7 +9670,7 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
       {modal && (
         <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={e => { if (e.target === e.currentTarget) setModal(null) }}>
-          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:480, maxHeight:'92vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:620, maxHeight:'92vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
             <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink, marginBottom:18 }}>
               {modal === 'crear' ? 'Nuevo proveedor' : `Editar: ${(modal as {edit:Proveedor}).edit.nombre}`}
             </div>
