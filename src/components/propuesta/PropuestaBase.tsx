@@ -334,6 +334,26 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
                 <div style={{ fontSize:14, color:C.cream, lineHeight:1.55 }}>{config.sinKDSMensaje}</div>
               </div>
             )}
+
+            {/* 4 vistas del KDS */}
+            <div style={{ background:C.bg3, borderRadius:12, padding:'18px' }}>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.ink4, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:12 }}>4 vistas del KDS — cada rol ve lo que necesita</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+                {[
+                  { vista:'Producción', desc:'Cada cocinero ve solo su partida. Sin ruido.', color:C.teal, star:true },
+                  { vista:'Línea', desc:'El jefe de cocina ve todas las mesas y tiempos.', color:C.green, star:false },
+                  { vista:'Pase', desc:'Por plato, no por mesa. Para organizar la salida.', color:C.amber, star:false },
+                  { vista:'Compacto', desc:'Máxima densidad. Para volumen alto.', color:C.ink3, star:false },
+                ].map(v => (
+                  <div key={v.vista} style={{ background:C.bg2, borderRadius:8, padding:'10px 12px', borderLeft:`3px solid ${v.color}` }}>
+                    <div style={{ fontSize:12, fontWeight:700, color:v.color, marginBottom:3 }}>
+                      {v.star ? '⭐ ' : ''}{v.vista}
+                    </div>
+                    <div style={{ fontSize:11, color:C.ink3, lineHeight:1.4 }}>{v.desc}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -452,16 +472,17 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
                 Una cadena que ningún especialista puede hacer solo
               </div>
               {[
-                { paso:'El albarán llega', next:'OCR lo lee → stock actualizado' },
-                { paso:'Stock a 0 de un producto', next:'Desaparece de la carta automáticamente' },
-                { paso:'Cocina no recibe comanda', next:'Jefe de cocina pregunta: "¿Qué hay disponible?"' },
-                { paso:'Asistente IA responde', next:'Análisis detecta que ese plato no se vendía de todas formas' },
-                { paso:'Eventos IA avisa', next:'Esta semana hay pico de demanda — prepara stock' },
+                { paso:'El albarán llega', next:'OCR lo lee → stock actualizado automáticamente' },
+                { paso:'Stock a 0 de un producto', next:'Desaparece de la carta — el camarero no puede comandarlo (86 automático)' },
+                { paso:'Elaboración propia registrada', next:'Etiqueta APPCC impresa → camareros avisados cuando caduca' },
+                { paso:'Asistente IA responde', next:'Jefe cocina: "¿Qué lleva más tiempo sin salir?" — sin moverse' },
+                { paso:'Análisis detecta', next:'Ese plato no se vendía de todas formas — retirar de la carta' },
+                { paso:'Eventos IA avisa', next:'Esta semana hay Feria — prepara stock y personal con 30 días de antelación' },
               ].map((item, i) => (
-                <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom: i < 4 ? 12 : 0 }}>
+                <div key={i} style={{ display:'flex', alignItems:'flex-start', gap:12, marginBottom: i < 5 ? 12 : 0 }}>
                   <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0 }}>
                     <div style={{ width:28, height:28, borderRadius:'50%', background:C.red, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SM, fontSize:12, fontWeight:700, color:'#fff' }}>{i+1}</div>
-                    {i < 4 && <div style={{ width:2, height:24, background:`${C.red}44`, marginTop:4 }} />}
+                    {i < 5 && <div style={{ width:2, height:24, background:`${C.red}44`, marginTop:4 }} />}
                   </div>
                   <div style={{ paddingTop:4 }}>
                     <div style={{ fontSize:14, fontWeight:600, color:C.paper }}>{item.paso}</div>
@@ -510,6 +531,26 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
               <div style={{ fontSize:13, color:C.ink3, lineHeight:1.5 }}>
                 Cuentan: camareros, cocina, jefes de sala. El propietario no cuenta. Trial 14 días sin tarjeta.
                 {config.precioMensaje && ` ${config.precioMensaje}`}
+              </div>
+            </div>
+
+            {/* Para el contable */}
+            <div style={{ background:`${C.green}15`, border:`1px solid ${C.green}33`, borderRadius:12, padding:'18px' }}>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.green, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:12 }}>📊 Para el contable — ROI del piloto</div>
+              {[
+                { concepto:'Albaranes (700/mes × €0,30)', ahorro:'210 €/mes por local' },
+                { concepto:'Reducción mermas recepción (~1% stock)', ahorro:'Variable sobre compras' },
+                { concepto:'Vinos sin vender → recomendados activamente', ahorro:'Aumento venta directa' },
+                { concepto:'APPCC automático (multa inspección evitada)', ahorro:'Hasta 3.000€/inspección' },
+                { concepto:'Elaboraciones caducadas → vendidas a tiempo', ahorro:'Reducción merma cocina' },
+              ].map(row => (
+                <div key={row.concepto} style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', padding:'6px 0', borderBottom:`0.5px solid ${C.green}22` }}>
+                  <span style={{ fontSize:13, color:C.cream }}>{row.concepto}</span>
+                  <span style={{ fontSize:13, fontWeight:700, color:C.green, textAlign:'right', marginLeft:16, flexShrink:0 }}>{row.ahorro}</span>
+                </div>
+              ))}
+              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:14, color:C.green, marginTop:12 }}>
+                El sistema se paga solo en el primer mes.
               </div>
             </div>
             <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
