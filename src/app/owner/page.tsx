@@ -8193,7 +8193,24 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
   const [productos,   setProductos]   = useState<ProductoSimple[]>([])
   const [listaProvs,  setListaProvs]  = useState<{ id: string; nombre: string; email: string | null; telefono: string | null; categoria: string | null }[]>([])
   const [loading,  setLoading]   = useState(true)
-  const [modal,    setModal]     = useState<null | 'crear' | 'ocr' | 'pedidos' | { edit: StockArticulo } | { entrada: StockArticulo }>(null)
+  const [modal,    setModal]     = useState<null | 'crear' | 'ocr' | 'pedidos' | 'recibir' | { edit: StockArticulo } | { entrada: StockArticulo }>(null)
+  // Estado recepción mercancía
+  const [recItems, setRecItems] = useState<{
+    stock_articulo_id: string | null
+    nombre_articulo: string
+    cantidad_pedida: number | null
+    cantidad_recibida: string
+    unidad: string
+    precio_facturado: string
+    fecha_caducidad: string
+    estado: 'ok' | 'merma' | 'precio_diferente' | 'no_pedido'
+  }[]>([])
+  const [recProveedorId, setRecProveedorId] = useState<string | null>(null)
+  const [recPedidoId, setRecPedidoId]       = useState<string | null>(null)
+  const [recAlbaran, setRecAlbaran]         = useState('')
+  const [recLoading, setRecLoading]         = useState(false)
+  const [recStep, setRecStep]               = useState<'fuente' | 'checklist'>('fuente')
+  const [recPedidosPend, setRecPedidosPend] = useState<{ id: string; proveedor_nombre: string | null; cantidad: number; unidad_compra: string; stock_articulos: { nombre: string; id: string } | null; enviado_at: string | null }[]>([])
   const [err,      setErr]       = useState('')
   // Form crear/editar
   const emptyForm = { nombre:'', unidad_compra:'unidad', stock_inicial:'', stock_minimo:'', coste_unitario:'', notas:'', proveedor_id:'', cantidad_pedido:'', pedido_auto: false }
@@ -8281,6 +8298,93 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
 
   const openOcr = () => {
     setOcrPreview(null); setOcrResult(null); setOcrLineas([]); setErr(''); setModal('ocr')
+  }
+
+  const openRecibir = async () => {
+    setRecStep('fuente'); setRecItems([]); setRecProveedorId(null); setRecPedidoId(null)
+    setRecAlbaran(''); setRecLoading(true); setModal('recibir')
+    const r = await fetch('/api/owner/stock/pedido?estado=enviado', { headers: sh() })
+    const d = await r.json().catch(() => ({ pedidos: [] }))
+    setRecPedidosPend((d.pedidos ?? []).filter((p: { estado: string }) => p.estado === 'enviado'))
+    setRecLoading(false)
+  }
+
+  const cargarDesdeArticulos = () => {
+    const items = articulos.filter(a => a.activo && a.stock_actual <= a.stock_minimo && a.stock_minimo > 0)
+    setRecItems(items.map(a => ({
+      stock_articulo_id: a.id,
+      nombre_articulo: a.nombre,
+      cantidad_pedida: Number(a.cantidad_pedido) || null,
+      cantidad_recibida: String(a.cantidad_pedido || ''),
+      unidad: a.unidad_compra,
+      precio_facturado: '',
+      fecha_caducidad: '',
+      estado: 'ok' as const,
+    })))
+    setRecStep('checklist')
+  }
+
+  const cargarDesdePedido = (pedido: typeof recPedidosPend[0]) => {
+    setRecPedidoId(pedido.id)
+    setRecProveedorId(null)
+    setRecItems([{
+      stock_articulo_id: pedido.stock_articulos?.id ?? null,
+      nombre_articulo: pedido.stock_articulos?.nombre ?? 'Artículo',
+      cantidad_pedida: Number(pedido.cantidad),
+      cantidad_recibida: String(pedido.cantidad),
+      unidad: pedido.unidad_compra,
+      precio_facturado: '',
+      fecha_caducidad: '',
+      estado: 'ok' as const,
+    }])
+    setRecStep('checklist')
+  }
+
+  const confirmarRecepcion = async () => {
+    const itemsValidos = recItems.filter(it => {
+      const qty = parseFloat(it.cantidad_recibida)
+      return !isNaN(qty) && qty >= 0
+    })
+    if (itemsValidos.length === 0) return setErr('Añade al menos un artículo')
+    setRecLoading(true); setErr('')
+    try {
+      const crearR = await fetch('/api/owner/recepciones', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({
+          pedido_proveedor_id: recPedidoId,
+          albaran_numero: recAlbaran || null,
+          items: itemsValidos.map(it => ({
+            stock_articulo_id: it.stock_articulo_id,
+            nombre_articulo: it.nombre_articulo,
+            cantidad_pedida: it.cantidad_pedida,
+            cantidad_recibida: parseFloat(it.cantidad_recibida),
+            unidad: it.unidad,
+            precio_facturado: it.precio_facturado ? parseFloat(it.precio_facturado) : null,
+            fecha_caducidad: it.fecha_caducidad || null,
+            estado: it.estado,
+          })),
+        }),
+      })
+      const crearD = await crearR.json()
+      if (!crearR.ok) throw new Error(crearD.error)
+
+      const confR = await fetch('/api/owner/recepciones/confirmar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({ recepcion_id: crearD.recepcion_id }),
+      })
+      const confD = await confR.json()
+      if (!confR.ok) throw new Error(confD.error)
+
+      await load(); setModal(null)
+      const inc = confD.incidencias ?? 0
+      if (inc > 0) setErr(`Recepción confirmada con ${inc} incidencia${inc > 1 ? 's' : ''}`)
+    } catch (e) {
+      setErr(String(e))
+    } finally {
+      setRecLoading(false)
+    }
   }
 
   const procesarImagen = async (file: File) => {
@@ -8417,6 +8521,9 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
           <button onClick={() => openPedidos()} style={{ fontFamily:SN, fontSize:13, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
             📋 Pedidos
           </button>
+          <button onClick={openRecibir} style={{ fontFamily:SN, fontSize:13, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
+            📦 Recibir
+          </button>
           <button onClick={openOcr} style={{ fontFamily:SN, fontSize:13, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
             📸 Albarán
           </button>
@@ -8494,6 +8601,173 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* Modal Recibir mercancía — checklist ✅/✏️/❌ */}
+      {modal === 'recibir' && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget && !recLoading) setModal(null) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:580, maxHeight:'92vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:4 }}>
+              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink }}>📦 Recibir mercancía</div>
+              <button onClick={() => setModal(null)} style={{ background:'none', border:'none', cursor:'pointer', color:C.ink3, fontSize:18 }}>✕</button>
+            </div>
+            <div style={{ fontFamily:SN, fontSize:12, color:C.ink3, marginBottom:18 }}>
+              Marca lo que ha llegado. Solo se actualiza el stock al confirmar.
+            </div>
+
+            {recLoading && recStep === 'fuente' && (
+              <div style={{ textAlign:'center', padding:32, fontFamily:SE, fontStyle:'italic', color:C.ink3 }}>Cargando pedidos…</div>
+            )}
+
+            {/* PASO 1 — Elegir fuente */}
+            {!recLoading && recStep === 'fuente' && (
+              <div style={{ display:'flex', flexDirection:'column' as const, gap:10 }}>
+                {/* Pedidos enviados pendientes */}
+                {recPedidosPend.length > 0 && (
+                  <div>
+                    <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', marginBottom:8 }}>
+                      Pedidos enviados pendientes de recibir
+                    </div>
+                    {recPedidosPend.map(p => (
+                      <div key={p.id}
+                        onClick={() => cargarDesdePedido(p)}
+                        style={{ padding:'12px 14px', border:`1px solid ${C.green}66`, borderRadius:8, background:C.bone, cursor:'pointer', marginBottom:6, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                        <div>
+                          <div style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:C.ink }}>{p.stock_articulos?.nombre ?? 'Artículo'}</div>
+                          <div style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>
+                            {p.proveedor_nombre ?? 'Proveedor'} · {p.cantidad} {p.unidad_compra}
+                            {p.enviado_at ? ` · enviado ${new Date(p.enviado_at).toLocaleDateString('es')}` : ''}
+                          </div>
+                        </div>
+                        <span style={{ fontFamily:SM, fontSize:11, color:C.green, fontWeight:700 }}>Cargar →</span>
+                      </div>
+                    ))}
+                    <div style={{ height:1, background:C.rule, margin:'14px 0' }} />
+                  </div>
+                )}
+
+                {/* Cargar stock bajo */}
+                <div onClick={cargarDesdeArticulos}
+                  style={{ padding:'12px 14px', border:`1px solid ${C.amber}66`, borderRadius:8, background:C.bone, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <div style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:C.ink }}>⚠️ Artículos por debajo del mínimo</div>
+                    <div style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>
+                      {articulos.filter(a => a.activo && a.stock_actual <= a.stock_minimo && a.stock_minimo > 0).length} artículos con stock bajo
+                    </div>
+                  </div>
+                  <span style={{ fontFamily:SM, fontSize:11, color:C.amber, fontWeight:700 }}>Cargar →</span>
+                </div>
+
+                {/* Manual en blanco */}
+                <div onClick={() => { setRecItems([{ stock_articulo_id: null, nombre_articulo: '', cantidad_pedida: null, cantidad_recibida: '', unidad: 'unidad', precio_facturado: '', fecha_caducidad: '', estado: 'ok' }]); setRecStep('checklist') }}
+                  style={{ padding:'12px 14px', border:`1px solid ${C.rule}`, borderRadius:8, background:C.bone, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <div style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:C.ink }}>✏️ Introducir manualmente</div>
+                    <div style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>Empezar con lista vacía</div>
+                  </div>
+                  <span style={{ fontFamily:SM, fontSize:11, color:C.ink3, fontWeight:700 }}>Abrir →</span>
+                </div>
+              </div>
+            )}
+
+            {/* PASO 2 — Checklist */}
+            {recStep === 'checklist' && (
+              <div>
+                {/* Nº albarán */}
+                <div style={{ marginBottom:14 }}>
+                  <label style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.08em', display:'block', marginBottom:5 }}>Nº Albarán (opcional)</label>
+                  <input value={recAlbaran} onChange={e => setRecAlbaran(e.target.value)} placeholder="ALB-2026-001"
+                    style={{ width:'100%', padding:'8px 12px', border:`1px solid ${C.rule}`, borderRadius:8, fontFamily:SN, fontSize:13, color:C.ink, background:C.bone, outline:'none', boxSizing:'border-box' as const }} />
+                </div>
+
+                {/* Items */}
+                <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.ink3, textTransform:'uppercase' as const, letterSpacing:'.1em', marginBottom:8 }}>
+                  {recItems.length} artículo{recItems.length !== 1 ? 's' : ''}
+                </div>
+
+                <div style={{ display:'flex', flexDirection:'column' as const, gap:8, marginBottom:14 }}>
+                  {recItems.map((it, i) => (
+                    <div key={i} style={{
+                      padding:'12px 14px', borderRadius:10,
+                      border: `1.5px solid ${it.estado === 'ok' ? C.green+'55' : it.estado === 'no_pedido' ? C.amber+'55' : C.red+'55'}`,
+                      background: it.estado === 'ok' ? '#F0FFF4' : it.estado === 'no_pedido' ? '#FFFBEB' : '#FFF5F5',
+                    }}>
+                      {/* Nombre */}
+                      <div style={{ display:'flex', gap:8, alignItems:'center', marginBottom:8 }}>
+                        <input value={it.nombre_articulo} onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, nombre_articulo: e.target.value} : x))}
+                          placeholder="Nombre artículo" style={{ flex:1, padding:'5px 9px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:13, color:C.ink, background:'transparent', outline:'none' }} />
+                        {/* Vincular a artículo stock */}
+                        <select value={it.stock_articulo_id ?? ''} onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, stock_articulo_id: e.target.value || null} : x))}
+                          style={{ padding:'5px 8px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:11, color:C.ink3, background:C.bone, outline:'none', maxWidth:130 }}>
+                          <option value="">— sin vincular —</option>
+                          {articulos.map(a => <option key={a.id} value={a.id}>{a.nombre}</option>)}
+                        </select>
+                      </div>
+                      {/* Cantidades + estado */}
+                      <div style={{ display:'grid', gridTemplateColumns:'80px 80px 90px 1fr', gap:8, alignItems:'flex-end' }}>
+                        <div>
+                          <div style={{ fontFamily:SM, fontSize:9, color:C.ink4, marginBottom:3 }}>PEDIDO</div>
+                          <input type="number" min="0" step="0.1" value={it.cantidad_pedida ?? ''} readOnly
+                            style={{ width:'100%', padding:'5px 8px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:13, color:C.ink4, background:C.paper2, outline:'none', boxSizing:'border-box' as const }} />
+                        </div>
+                        <div>
+                          <div style={{ fontFamily:SM, fontSize:9, color:C.ink4, marginBottom:3 }}>RECIBIDO</div>
+                          <input type="number" min="0" step="0.1" value={it.cantidad_recibida}
+                            onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, cantidad_recibida: e.target.value} : x))}
+                            style={{ width:'100%', padding:'5px 8px', border:`1.5px solid ${C.ink}33`, borderRadius:6, fontFamily:SN, fontSize:13, color:C.ink, background:'white', outline:'none', boxSizing:'border-box' as const }} />
+                        </div>
+                        <div>
+                          <div style={{ fontFamily:SM, fontSize:9, color:C.ink4, marginBottom:3 }}>€/UNIDAD</div>
+                          <input type="number" min="0" step="0.01" value={it.precio_facturado} placeholder="—"
+                            onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, precio_facturado: e.target.value} : x))}
+                            style={{ width:'100%', padding:'5px 8px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:13, color:C.ink, background:'transparent', outline:'none', boxSizing:'border-box' as const }} />
+                        </div>
+                        {/* Botones estado */}
+                        <div style={{ display:'flex', gap:5 }}>
+                          {([['ok','✅'],['merma','⬇️'],['precio_diferente','💰'],['no_pedido','❓']] as [typeof it.estado, string][]).map(([est, ico]) => (
+                            <button key={est} onClick={() => setRecItems(ls => ls.map((x,j) => j===i ? {...x, estado: est} : x))}
+                              title={est}
+                              style={{ width:30, height:30, borderRadius:6, border:`1px solid ${it.estado === est ? C.ink : C.rule}`, background: it.estado === est ? C.ink : 'transparent', cursor:'pointer', fontSize:14 }}>
+                              {ico}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      {/* Caducidad */}
+                      <div style={{ marginTop:8, display:'flex', alignItems:'center', gap:8 }}>
+                        <span style={{ fontFamily:SM, fontSize:9, color:C.ink4 }}>CADUCIDAD</span>
+                        <input type="date" value={it.fecha_caducidad}
+                          onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, fecha_caducidad: e.target.value} : x))}
+                          style={{ padding:'3px 8px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:11, color:C.ink3, background:'transparent', outline:'none' }} />
+                        <button onClick={() => setRecItems(ls => ls.filter((_,j) => j !== i))}
+                          style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:C.ink4, fontSize:16 }}>🗑</button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Añadir ítem manual */}
+                <button onClick={() => setRecItems(ls => [...ls, { stock_articulo_id: null, nombre_articulo: '', cantidad_pedida: null, cantidad_recibida: '', unidad: 'unidad', precio_facturado: '', fecha_caducidad: '', estado: 'ok' }])}
+                  style={{ fontFamily:SN, fontSize:12, color:C.ink3, background:'none', border:`1px dashed ${C.rule}`, borderRadius:8, padding:'7px 14px', cursor:'pointer', width:'100%', marginBottom:16 }}>
+                  + Añadir artículo
+                </button>
+
+                {err && <div style={{ background:'#FEE2E2', borderRadius:6, padding:'8px 12px', fontFamily:SN, fontSize:12, color:C.red, marginBottom:10 }}>{err}</div>}
+
+                <div style={{ display:'flex', gap:10 }}>
+                  <button onClick={() => setRecStep('fuente')} style={{ flex:1, padding:'10px', fontFamily:SN, fontSize:13, background:C.bone, color:C.ink3, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
+                    ← Volver
+                  </button>
+                  <button onClick={confirmarRecepcion} disabled={recLoading}
+                    style={{ flex:2, padding:'10px', fontFamily:SN, fontSize:13, fontWeight:700, background: recLoading ? C.rule : C.green, color:'#fff', border:'none', borderRadius:8, cursor: recLoading ? 'default' : 'pointer' }}>
+                    {recLoading ? 'Confirmando…' : '✅ Confirmar recepción'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
