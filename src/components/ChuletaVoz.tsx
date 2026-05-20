@@ -1,5 +1,5 @@
 'use client'
-// src/components/ChuleteVoz.tsx
+// src/components/ChuletaVoz.tsx
 // Chuleta Voz — guía rápida de comandos de voz por rol.
 // Consume lib/voice-commands-guide.ts como fuente de verdad.
 // Activos → visible directo. Próximos → bloque colapsado al final.
@@ -273,7 +273,7 @@ function BloqueProximamente() {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function ChuleteVoz({ rol }: Props) {
+export default function ChuletaVoz({ rol }: Props) {
   const titulo = {
     owner:    'Chuleta Voz — visión completa',
     camarero: 'Chuleta Voz',

@@ -11,7 +11,7 @@ const SN = 'Inter Tight, system-ui, sans-serif'
 const SE = 'Newsreader, Georgia, serif'
 const SM = 'Inter Tight, system-ui, sans-serif'
 
-// Chuleta de patrones — igual que ChuleteVoz del camarero
+// Chuleta de patrones — igual que ChuletaVoz del camarero
 const PATRONES = [
   { icon:'🔢', label:'Pendientes', ejemplo:'¿Cuántos solomillos pendientes?' },
   { icon:'🍽️', label:'Mesa',      ejemplo:'¿Qué tiene la mesa S4?' },

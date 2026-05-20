@@ -5,7 +5,7 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 // Incluye: protocolo por rol, novedades con badge NUEVO, sugerencias de mejora
 
 import React, { useState, useEffect, useCallback } from 'react'
-import ChuleteVoz from '@/components/ChuleteVoz'
+import ChuletaVoz from '@/components/ChuletaVoz'
 
 /* ─── Tokens de diseño ─── */
 
@@ -536,7 +536,7 @@ export default function ManualVozTab({ restauranteId, session }: Props) {
 
       {/* ── PROTOCOLO ── */}
       {mainTab === 'chuleta' && (
-        <ChuleteVoz rol="owner" />
+        <ChuletaVoz rol="owner" />
       )}
 
       {mainTab === 'protocolo' && (

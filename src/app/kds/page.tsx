@@ -6,7 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Comanda } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
-import ChuleteVoz from '@/components/ChuleteVoz'
+import ChuletaVoz from '@/components/ChuletaVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 import AsistenteCocinaPanel from '@/components/AsistenteCocinaPanel'
@@ -886,7 +886,7 @@ function KDSInner() {
               <button onClick={() => setChuleteAbierto(false)} style={{ background:'none', border:'none',
                 color:K.fg3, cursor:'pointer', fontSize:18, lineHeight:1 }}>×</button>
             </div>
-            <ChuleteVoz rol="cocina" />
+            <ChuletaVoz rol="cocina" />
           </div>
         </div>
       )}
