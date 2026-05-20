@@ -7261,7 +7261,6 @@ const GRUPOS = [
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
       { id: 'mensajes',       label: 'Mensajes',       icon: ICONS.users         }, // auditoría de chat entre roles
       { id: 'fichajes',       label: 'Fichajes',       icon: ICONS.clock         }, // registro jornada RD-ley 8/2019
-      { id: 'manual',         label: 'Manual Voz',     icon: ICONS.book          }, // protocolo de voz + novedades
     ]
   },
 ]
@@ -7683,6 +7682,7 @@ export default function OwnerPage() {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [tab, setTab] = useState('camareros')
   const [showBridgeSetup, setShowBridgeSetup] = useState(false)
+  const [manualVozOpen, setManualVozOpen] = useState(false)
   const [setupStatus, setSetupStatus] = useState<{ tiene_camareros:boolean; tiene_productos:boolean; tiene_mesas:boolean; turno_activo:boolean } | null>(null)
   const [showChecklist, setShowChecklist] = useState(() => {
     if (typeof window === 'undefined') return true
@@ -7975,7 +7975,16 @@ export default function OwnerPage() {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 16v-8M9 13l3 3 3-3"/><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
               <span className="owner-hdr-btn-lbl" style={{ fontFamily:SN, fontSize:12, fontWeight:600 }}>Manuales</span>
             </button>
-            <div data-manuales="true" style={{ display:'none', position:'absolute', top:'calc(100% + 6px)', right:0, flexDirection:'column', gap:2, background:'#fff', border:`1px solid ${C.rule}`, borderRadius:6, padding:4, boxShadow:'0 4px 16px rgba(0,0,0,.08)', zIndex:200, minWidth:140 }}>
+            <div data-manuales="true" style={{ display:'none', position:'absolute', top:'calc(100% + 6px)', right:0, flexDirection:'column', gap:2, background:'#fff', border:`1px solid ${C.rule}`, borderRadius:6, padding:4, boxShadow:'0 4px 16px rgba(0,0,0,.08)', zIndex:200, minWidth:168 }}>
+              <button
+                onClick={() => { setManualVozOpen(true); const m = document.querySelector('[data-manuales]') as HTMLElement; if(m) m.style.display='none' }}
+                style={{ display:'flex', alignItems:'center', gap:8, padding:'7px 10px', borderRadius:4, color:C.red, fontFamily:SN, fontSize:12, fontWeight:600, background:'transparent', border:'none', cursor:'pointer', width:'100%', textAlign:'left' }}
+                onMouseOver={e => (e.currentTarget.style.background=C.paper2)}
+                onMouseOut={e => (e.currentTarget.style.background='transparent')}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2M12 19v4M8 23h8"/></svg>
+                Protocolo de Voz
+              </button>
+              <div style={{ height:1, background:C.rule, margin:'2px 4px' }} />
               {[
                 { href:'/manuals/manual_camarero.pdf', label:'Camarero' },
                 { href:'/manuals/manual_cocina.pdf',   label:'Cocina'   },
@@ -7998,6 +8007,23 @@ export default function OwnerPage() {
           </button>
         </div>
       </header>
+
+      {/* Modal Protocolo de Voz */}
+      {manualVozOpen && (
+        <div style={{ position:'fixed', inset:0, zIndex:1100, background:'rgba(0,0,0,.55)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'60px 16px 24px', overflowY:'auto' }}
+          onClick={e => { if(e.target === e.currentTarget) setManualVozOpen(false) }}>
+          <div style={{ background:C.paper, borderRadius:14, width:'100%', maxWidth:680, boxShadow:'0 16px 48px rgba(0,0,0,.35)', position:'relative' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'14px 18px', borderBottom:`1px solid ${C.rule}` }}>
+              <div style={{ fontFamily:SM, fontSize:14, fontWeight:700, color:C.ink }}>Protocolo de Voz</div>
+              <button onClick={() => setManualVozOpen(false)}
+                style={{ background:'none', border:'none', cursor:'pointer', color:C.ink3, fontSize:22, lineHeight:1, padding:'2px 6px' }}>×</button>
+            </div>
+            <div style={{ padding:'16px 18px', overflowY:'auto', maxHeight:'calc(90vh - 120px)' }}>
+              <ManualVozTab restauranteId={session.restaurante_id} session={{ id:session.id, nombre:session.nombre, rol:session.rol }} />
+            </div>
+          </div>
+        </div>
+      )}
 
       {showBridgeSetup && (
         <BridgeSetupWizard setTab={setTab} session={session} />
@@ -8133,7 +8159,6 @@ export default function OwnerPage() {
             {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
             {tab === 'mensajes'       && <MensajesOwnerTab sh={sh} />}
             {tab === 'fichajes'       && <FichajesTab/>}
-            {tab === 'manual'         && <ManualVozTab restauranteId={session.restaurante_id} session={{ id: session.id, nombre: session.nombre, rol: session.rol }} />}
             {tab === 'restaurante'    && <RestauranteTab/>}
             {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
             {tab === 'forecaster'    && <ForecasterTab sh={sh} />}
