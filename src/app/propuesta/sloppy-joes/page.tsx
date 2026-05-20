@@ -1,0 +1,94 @@
+'use client'
+import PropuestaBase, {
+  ClienteConfig,
+  MODULO_ASISTENTE_COCINA,
+  MODULO_ANALISIS_CARTA,
+  MODULO_RECEPCION,
+  MODULO_EVENTOS,
+  MODULO_RRHH,
+  MODULO_DELIVERY,
+  MODULO_STOREFRONT,
+} from '@/components/propuesta/PropuestaBase'
+
+const C = { red:'#D9442B', gold:'#C9A84C', green:'#3F7D44', teal:'#2B6A6E', amber:'#E8A33B' }
+
+const config: ClienteConfig = {
+  nombre: 'Sloppy Joe\'s',
+  grupo: 'Sloppy Joe\'s — 6 locales en Sevilla',
+  emailContacto: 'alberto.suarez.gutierrez@gmail.com',
+  contactoNombre: 'Sloppy Joe\'s',
+  tagsIntro: ['6 locales en Sevilla', 'Delivery Glovo + UberEats', '€294/mes Deliverect', '€540/mes Ágora', 'Alta rotación de personal'],
+
+  citas: [
+    { cita: '"Tenemos una tablet de Deliverect en cada local solo para gestionar los pedidos online."', modulo: 'Delivery integrado', color: '#E84E0F' },
+    { cita: '"Glovo se lleva el 30% de cada pedido. Y encima pagamos Deliverect aparte."', modulo: 'Tienda propia', color: C.green },
+    { cita: '"No sabemos qué referencias venden más en cada local ni por qué."', modulo: 'Análisis de carta', color: C.gold },
+    { cita: '"Con 6 locales, la rotación de personal nos tiene locos. No hay criterios comunes."', modulo: 'RRHH centralizado', color: C.teal },
+  ],
+
+  headline: '6 locales · Delivery + Sala · Ágora + Deliverect + Glovo',
+  partidas: [
+    { nombre:'Cocina', secciones:['Platos calientes','Entrantes','Postres'], color:'#D9442B', icon:'🔥' },
+    { nombre:'Barra', secciones:['Bebidas','Cafés','Cocktails'], color:C.gold, icon:'🍺' },
+    { nombre:'Delivery', secciones:['Glovo','UberEats','Tienda propia'], color:'#E84E0F', icon:'🛵' },
+  ],
+  pasosFlujo: [
+    { actor:'Cliente', accion:'Pide en Glovo, UberEats o tu tienda propia', icon:'📱', color:'#F6F1E7' },
+    { actor:'ia.rest', accion:'Recibe el pedido y lo envía automáticamente al KDS', icon:'✦', color:C.red },
+    { actor:'Cocina', accion:'Ve el pedido delivery igual que uno de sala — sin tablet extra', icon:'🔥', color:'#D9442B' },
+    { actor:'Barra', accion:'Prepara bebidas en paralelo', icon:'🍺', color:C.gold },
+    { actor:'Repartidor', accion:'El pedido está listo — tiempo estimado calculado automáticamente', icon:'🛵', color:'#E84E0F' },
+    { actor:'Owner', accion:'Ve rentabilidad por canal: sala vs Glovo vs tienda propia', icon:'📊', color:C.green },
+  ],
+  sinKDSMensaje: 'Si algún local no tiene pantalla KDS, una impresora por partida (desde 80€) recibe automáticamente todos los pedidos — sala y delivery — sin tablet adicional.',
+
+  slideStockLabel: 'El coste oculto',
+  mercaderiaAnual: '~1.200.000 €',
+  desviacion1pct: '12.000 €',
+  citaStock: 'Deliverect €294/mes + Ágora €540/mes. Casi 900€ al mes en software.',
+  hoyVsIaRest: {
+    hoy: ['Deliverect: €294/mes por los 6 locales', 'Glovo: 30% de comisión por pedido', 'Tablet extra en cada local solo para delivery', 'Sin visibilidad de rentabilidad por canal', 'Sin análisis de qué se vende más en cada local'],
+    iaRest: ['Delivery integrado: €0 extra', 'Tu tienda propia sin comisión', 'Todo en la misma pantalla: sala + delivery', 'Rentabilidad por canal en tiempo real', 'Análisis de carta con datos reales de todos los locales'],
+  },
+  datosEstrategicos: [
+    { titulo:'Eliminar Deliverect', desc:'€294/mes que dejan de pagar. ia.rest integra Glovo y UberEats directamente.' },
+    { titulo:'Tienda propia sin comisión', desc:'Cada pedido que viene por tu web o Instagram en lugar de Glovo ahorra el 30% de comisión.' },
+    { titulo:'Datos de los 6 locales agregados', desc:'"El local de Triana vende 3 veces más de X que el de la Alameda. ¿Por qué?" Ahora lo sabrás.' },
+  ],
+
+  modulos: [
+    MODULO_DELIVERY({
+      ejemplos: ['Pedido Glovo → KDS en < 1 segundo, sin tablet extra', 'UberEats + Glovo + tienda propia en un solo panel', 'Control de tiempos de entrega por canal'],
+      roi: 'Elimina la tablet de Deliverect y sus €294/mes. Todo en ia.rest.',
+    }),
+    MODULO_STOREFRONT({
+      ejemplos: ['Enlace desde tu Instagram → pedido directo sin comisión', 'Delivery y recogida en el mismo panel', 'Glovo cobra 30% — tu tienda cobra 0%'],
+      roi: 'Cada pedido que viene por tu web en lugar de Glovo te ahorra el 30% de comisión.',
+    }),
+    MODULO_ANALISIS_CARTA({
+      desc: 'Clasifica cada plato en los 6 locales. ¿El mismo plato funciona diferente en Triana que en la Alameda? Ahora lo sabes.',
+      roi: 'Toma decisiones de carta con datos reales de los 6 locales, no intuición.',
+    }),
+    MODULO_ASISTENTE_COCINA(),
+    MODULO_RECEPCION({ roi: 'Elimina el papel en recepción de mercancía. Stock actualizado en 30 segundos.' }),
+    MODULO_RRHH({ roi: '6 locales. Un panel. Criterios homogéneos. Sin papeles ni WhatsApps de CVs.' }),
+    MODULO_EVENTOS({
+      ejemplos: ['Partido Betis en casa — refuerza barra en los 3 locales más cercanos', 'Feria de Abril — pedidos delivery se disparan 60%', 'Calor extremo — prepara bebidas frías en todos los locales'],
+      roi: 'Con 6 locales en Sevilla, anticipar picos de demanda marca la diferencia.',
+    }),
+  ],
+
+  objecionPrincipal: '"Ya tenemos Deliverect y Ágora. ¿Para qué cambiar?"',
+  respuestaObjecion: 'Deliverect hace una cosa: enrutar pedidos. ia.rest hace eso y además: análisis de carta, stock, RRHH, previsión, voz en cocina. Y te ahorras los €294/mes.',
+
+  fasePiloto: [
+    { fase:'Semana 1-2', color:C.red, items:['Un local piloto configurado','Delivery integrado operativo','KDS sala + delivery unificado','Sin tablet Deliverect en ese local'] },
+    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta con datos reales','Tienda propia activa','Rentabilidad por canal visible','Asistente IA cocina'] },
+    { fase:'Mes 2+', color:C.green, items:['Los 6 locales integrados','RRHH centralizado','Previsión por eventos','Benchmarking entre locales'] },
+  ],
+  precioMensaje: 'Ahorro vs Deliverect: €294/mes que desaparecen desde el primer mes.',
+}
+
+export default function PropuestaSloppyJoes() {
+  return <PropuestaBase config={config} />
+}
