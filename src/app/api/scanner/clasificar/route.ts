@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
   const documentos = (data ?? []).map((d: {
     id: string; tipo: string; confianza: number; estado: string;
     created_at: string; datos: Record<string, unknown> | null;
-    camareros: { nombre: string } | null
+    camareros: { nombre: string } | { nombre: string }[] | null
   }) => ({
     id: d.id,
     tipo: d.tipo,
@@ -153,7 +153,7 @@ export async function GET(req: NextRequest) {
     estado: d.estado,
     created_at: d.created_at,
     datos: d.datos,
-    camarero_nombre: d.camareros?.nombre ?? null,
+    camarero_nombre: Array.isArray(d.camareros) ? (d.camareros[0]?.nombre ?? null) : (d.camareros?.nombre ?? null),
   }))
 
   void session // auth verificada por middleware
