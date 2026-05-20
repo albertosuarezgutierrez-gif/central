@@ -658,26 +658,26 @@ function TurnosCocinaPanel({ sh, codigoAcceso }: { sh: () => Record<string,strin
     return mins < 60 ? `${mins}m` : `${Math.floor(mins/60)}h ${mins%60}m`
   }
 
-  const ROL_COLOR: Record<string, string> = { cocina: '#E8A33B', camarero: '#60a5fa', jefe_sala: '#D9442B', running: '#3F7D44' }
+  const ROL_COLOR: Record<string, string> = { cocina: C.amber, camarero: '#2563EB', jefe_sala: C.red, running: C.green }
   const ROL_LABEL: Record<string, string> = { cocina: 'Cocina', camarero: 'Camarero', jefe_sala: 'Jefe sala', running: 'Running' }
 
   return (
     <div>
       {/* Ahora en cocina */}
       {activosFiltrados.length > 0 && (
-        <div style={{ marginBottom: 20, padding: '14px 16px', background: '#1E1916', border: '1px solid #2A2520', borderRadius: 10 }}>
-          <div style={{ fontFamily: SM, fontSize: 10, letterSpacing: '.12em', color: '#6B5F52', textTransform: 'uppercase', marginBottom: 12 }}>
+        <div style={{ marginBottom: 20, padding: '14px 16px', background: C.greenS, border: `1px solid ${C.green}33`, borderRadius: 10 }}>
+          <div style={{ fontFamily: SM, fontSize: 10, letterSpacing: '.12em', color: C.green, textTransform: 'uppercase', marginBottom: 12 }}>
             Ahora en cocina
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap' as const, gap: 10 }}>
             {activosFiltrados.map(a => (
               <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 14px',
-                background: '#14110E', border: '1px solid #2A2520', borderRadius: 8 }}>
-                <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#3F7D44', flexShrink: 0 }} />
-                <span style={{ fontFamily: "'Inter Tight',system-ui,sans-serif", fontSize: 13, fontWeight: 600, color: '#F6F1E7' }}>
+                background: C.bone, border: `1px solid ${C.green}44`, borderRadius: 8 }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: C.green, flexShrink: 0 }} />
+                <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>
                   {a.camareros?.nombre}
                 </span>
-                <span style={{ fontFamily: "'JetBrains Mono',ui-monospace,monospace", fontSize: 11, color: '#E8A33B' }}>
+                <span style={{ fontFamily: SM, fontSize: 11, color: C.amber }}>
                   {tiempoActivo(a.entrada_at)}
                 </span>
               </div>
@@ -688,28 +688,28 @@ function TurnosCocinaPanel({ sh, codigoAcceso }: { sh: () => Record<string,strin
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 16, flexWrap: 'wrap' as const, alignItems: 'center' }}>
-        <div style={{ display: 'flex', background: '#1A1714', border: '1px solid #2A2520', borderRadius: 8, padding: 3, gap: 2 }}>
+        <div style={{ display: 'flex', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 3, gap: 2 }}>
           {(['cocina', 'todos'] as const).map(r => (
             <button key={r} onClick={() => setFiltroRol(r)} style={{
               fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
               textTransform: 'uppercase' as const, padding: '4px 10px', borderRadius: 6, border: 'none', cursor: 'pointer',
-              background: filtroRol === r ? '#F6F1E7' : 'transparent',
-              color: filtroRol === r ? '#14110E' : '#6B5F52',
+              background: filtroRol === r ? C.ink : 'transparent',
+              color: filtroRol === r ? C.paper : C.ink3,
             }}>
               {r === 'cocina' ? 'Solo cocina' : 'Todo el personal'}
             </button>
           ))}
         </div>
         <input type="date" value={desde} onChange={e => setDesde(e.target.value)}
-          style={{ fontFamily: SM, fontSize: 11, padding: '6px 10px', background: '#1A1714', border: '1px solid #2A2520', borderRadius: 8, color: '#F6F1E7' }} />
-        <span style={{ fontFamily: SM, fontSize: 11, color: '#6B5F52' }}>→</span>
+          style={{ fontFamily: SM, fontSize: 11, padding: '6px 10px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none' }} />
+        <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>→</span>
         <input type="date" value={hasta} onChange={e => setHasta(e.target.value)}
-          style={{ fontFamily: SM, fontSize: 11, padding: '6px 10px', background: '#1A1714', border: '1px solid #2A2520', borderRadius: 8, color: '#F6F1E7' }} />
+          style={{ fontFamily: SM, fontSize: 11, padding: '6px 10px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none' }} />
         {codigoAcceso && (
           <a href={`/cocina/fichar?r=${codigoAcceso}`} target="_blank" rel="noreferrer"
             style={{ marginLeft: 'auto', fontFamily: SM, fontSize: 10, letterSpacing: '.08em',
-              textTransform: 'uppercase', color: '#E8A33B', textDecoration: 'none', padding: '6px 12px',
-              border: '1px solid #E8A33B44', borderRadius: 8, background: '#E8A33B11' }}>
+              textTransform: 'uppercase', color: C.amber, textDecoration: 'none', padding: '6px 12px',
+              border: `1px solid ${C.amber}44`, borderRadius: 8, background: C.amberS }}>
             Pantalla fichaje ↗
           </a>
         )}
@@ -717,18 +717,18 @@ function TurnosCocinaPanel({ sh, codigoAcceso }: { sh: () => Record<string,strin
 
       {/* Tabla fichajes */}
       {loading ? (
-        <div style={{ padding: 40, textAlign: 'center', fontFamily: SM, fontSize: 12, color: '#6B5F52' }}>Cargando...</div>
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: SM, fontSize: 12, color: C.ink4 }}>Cargando...</div>
       ) : fichajeFiltrados.length === 0 ? (
-        <div style={{ padding: 40, textAlign: 'center', fontFamily: "'Inter Tight',system-ui,sans-serif", fontSize: 14, color: '#6B5F52' }}>
+        <div style={{ padding: 40, textAlign: 'center', fontFamily: SN, fontSize: 14, color: C.ink4 }}>
           No hay fichajes en este período
         </div>
       ) : (
-        <div style={{ border: '1px solid #2A2520', borderRadius: 10, overflow: 'hidden' }}>
+        <div style={{ border: `1px solid ${C.rule}`, borderRadius: 10, overflow: 'hidden' }}>
           {/* Header tabla */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 70px',
-            padding: '10px 16px', borderBottom: '1px solid #2A2520',
-            fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: '#6B5F52', textTransform: 'uppercase' as const,
-            background: '#1A1714' }}>
+            padding: '10px 16px', borderBottom: `1px solid ${C.rule}`,
+            fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink4, textTransform: 'uppercase' as const,
+            background: C.paper2 }}>
             <span>Nombre</span><span>Fecha</span><span>Entrada</span><span>Salida</span><span style={{ textAlign: 'right' }}>Horas</span>
           </div>
           {fichajeFiltrados.map((f, i) => {
@@ -736,26 +736,26 @@ function TurnosCocinaPanel({ sh, codigoAcceso }: { sh: () => Record<string,strin
             return (
               <div key={f.id} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px 70px',
                 padding: '12px 16px', alignItems: 'center',
-                borderBottom: i < fichajeFiltrados.length - 1 ? '1px solid #1E1B17' : 'none',
-                background: sinSalida ? '#E8A33B08' : 'transparent' }}>
+                borderBottom: i < fichajeFiltrados.length - 1 ? `1px solid ${C.rule}` : 'none',
+                background: sinSalida ? C.amber + '0C' : 'transparent' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  {sinSalida && <span style={{ width: 7, height: 7, borderRadius: '50%', background: '#3F7D44', flexShrink: 0 }} />}
-                  <span style={{ fontFamily: "'Inter Tight',system-ui,sans-serif", fontSize: 13, fontWeight: 600, color: '#F6F1E7' }}>
+                  {sinSalida && <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, flexShrink: 0 }} />}
+                  <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>
                     {f.camareros?.nombre}
                   </span>
                   <span style={{ fontFamily: SM, fontSize: 9, padding: '2px 6px', borderRadius: 4,
-                    background: `${ROL_COLOR[f.camareros?.rol] ?? '#888'}22`,
-                    color: ROL_COLOR[f.camareros?.rol] ?? '#888',
-                    border: `1px solid ${ROL_COLOR[f.camareros?.rol] ?? '#888'}44` }}>
+                    background: `${ROL_COLOR[f.camareros?.rol] ?? C.ink4}18`,
+                    color: ROL_COLOR[f.camareros?.rol] ?? C.ink4,
+                    border: `1px solid ${ROL_COLOR[f.camareros?.rol] ?? C.ink4}44` }}>
                     {ROL_LABEL[f.camareros?.rol] ?? f.camareros?.rol}
                   </span>
                 </div>
-                <span style={{ fontFamily: SM, fontSize: 11, color: '#D8CDB6' }}>{fmtFecha(f.entrada_at)}</span>
-                <span style={{ fontFamily: SM, fontSize: 12, color: '#F6F1E7' }}>{fmtHora(f.entrada_at)}</span>
-                <span style={{ fontFamily: SM, fontSize: 12, color: sinSalida ? '#E8A33B' : '#F6F1E7' }}>
+                <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{fmtFecha(f.entrada_at)}</span>
+                <span style={{ fontFamily: SM, fontSize: 12, color: C.ink }}>{fmtHora(f.entrada_at)}</span>
+                <span style={{ fontFamily: SM, fontSize: 12, color: sinSalida ? C.amber : C.ink }}>
                   {f.salida_at ? fmtHora(f.salida_at) : '— activo'}
                 </span>
-                <span style={{ fontFamily: SM, fontSize: 12, color: '#D8CDB6', textAlign: 'right', fontWeight: 600 }}>
+                <span style={{ fontFamily: SM, fontSize: 12, color: C.ink2, textAlign: 'right', fontWeight: 600 }}>
                   {f.horas_totales ?? (sinSalida ? tiempoActivo(f.entrada_at) : '—')}
                 </span>
               </div>
