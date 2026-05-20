@@ -4,14 +4,19 @@ import React, { useState, useRef, useCallback } from 'react'
 
 /* ── Paleta crema (light, igual que /edge) ── */
 
-type TipoDoc = 'cv' | 'albaran' | 'factura_proveedor' | 'carta' | 'otro'
+type TipoDoc = 'cv' | 'albaran' | 'factura_proveedor' | 'carta' | 'etiqueta_producto' | 'otro'
 
 interface ScanResult {
   scan_id: string | null
   tipo: TipoDoc
   confianza: number
+  confianza_pct?: number
+  nivel_confianza?: 'alta' | 'media' | 'baja'
+  campos_a_revisar?: string[]
+  requiere_revision?: boolean
   datos: Record<string, unknown>
   nim_error?: string | null
+  productos_con_caducidad?: { nombre: string; fecha_caducidad: string; codigo_barras: string | null }[]
 }
 
 const TIPO_INFO: Record<TipoDoc, { emoji: string; label: string; color: string; accion: string }> = {
@@ -19,7 +24,21 @@ const TIPO_INFO: Record<TipoDoc, { emoji: string; label: string; color: string; 
   albaran:          { emoji: '📦', label: 'Albarán',           color: C.gr,   accion: 'Archivar en Almacén' },
   factura_proveedor:{ emoji: '🧾', label: 'Factura proveedor', color: C.amb,  accion: 'Archivar en Gastos' },
   carta:            { emoji: '📋', label: 'Carta en papel',    color: C.verm, accion: 'Importar a la Carta' },
+  etiqueta_producto:{ emoji: '🏷️', label: 'Etiqueta producto', color: C.gr,   accion: 'Usar en Recepción' },
   otro:             { emoji: '📄', label: 'Otro documento',    color: C.ink3, accion: 'Guardar en Documentos' },
+}
+
+// Semáforo de confianza
+const SEMAFORO = {
+  alta:  { color: '#22C55E', label: 'Confianza alta',   icon: '🟢' },
+  media: { color: '#F59E0B', label: 'Confianza media',  icon: '🟡' },
+  baja:  { color: '#EF4444', label: 'Confianza baja',   icon: '🔴' },
+}
+
+const CAMPO_LABELS_ETIQUETA: Record<string, string> = {
+  nombre_producto: 'Producto', codigo_barras: 'Código barras', cantidad: 'Cantidad',
+  unidad: 'Unidad', lote: 'Lote', fecha_caducidad: 'Caducidad', fecha_fabricacion: 'Fabricación',
+  proveedor: 'Proveedor', temperatura_conservacion: 'Temperatura', alergenos: 'Alérgenos',
 }
 
 function Campo({ label, value }: { label: string; value: unknown }) {
@@ -140,6 +159,7 @@ export default function SmartScanModal({ onClose, sessionNombre, sessionRol }: P
       if (result.tipo === 'albaran')           window.location.href = '/owner?tab=almacen'
       if (result.tipo === 'factura_proveedor') window.location.href = '/owner?tab=gastos'
       if (result.tipo === 'carta')             window.location.href = '/owner?tab=carta'
+      if (result.tipo === 'etiqueta_producto') window.location.href = '/owner?tab=almacen&recepcion=1'
       if (result.tipo === 'otro')              onClose()
     }, 800)
   }, [result, onClose])
@@ -304,15 +324,27 @@ export default function SmartScanModal({ onClose, sessionNombre, sessionRol }: P
                     {info.label.toUpperCase()}
                   </span>
                 </div>
-                {/* Barra de confianza */}
+              {/* Barra de confianza + semáforo */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                   <div style={{ flex: 1, height: 4, background: C.bg3, borderRadius: 2 }}>
-                    <div style={{ width: `${result.confianza * 100}%`, height: '100%', background: info.color, borderRadius: 2, transition: 'width .5s' }} />
+                    <div style={{
+                      width: `${result.confianza * 100}%`, height: '100%',
+                      background: result.nivel_confianza === 'alta' ? '#22C55E' : result.nivel_confianza === 'media' ? '#F59E0B' : '#EF4444',
+                      borderRadius: 2, transition: 'width .5s'
+                    }} />
                   </div>
                   <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>
-                    {Math.round(result.confianza * 100)}%
+                    {result.nivel_confianza ? SEMAFORO[result.nivel_confianza].icon : ''} {Math.round(result.confianza * 100)}%
                   </span>
                 </div>
+                {/* Aviso campos a revisar */}
+                {result.campos_a_revisar && result.campos_a_revisar.length > 0 && (
+                  <div style={{ marginTop: 6, padding: '6px 10px', background: '#FEF3C7', borderRadius: 6, border: '1px solid #FCD34D' }}>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: '#92400E', fontWeight: 700 }}>
+                      ⚠️ Revisar: {result.campos_a_revisar.join(', ')}
+                    </span>
+                  </div>
+                )}
                 {result.nim_error && (
                   <div style={{ fontFamily: SM, fontSize: 10, color: C.amb, marginTop: 4 }}>
                     ⚠ Análisis parcial
@@ -321,15 +353,39 @@ export default function SmartScanModal({ onClose, sessionNombre, sessionRol }: P
               </div>
             </div>
 
-            {/* Datos extraídos */}
+            {/* Datos extraídos — con vista lado a lado si requiere revisión */}
+            {result.requiere_revision && preview ? (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontFamily: SM, fontSize: 10, color: '#92400E', background: '#FEF3C7', border: '1px solid #FCD34D', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+                  ⚠️ Confianza {result.nivel_confianza} — compara los datos extraídos con la imagen original
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                  {/* Imagen original */}
+                  <div>
+                    <div style={{ fontFamily: SM, fontSize: 9, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>Imagen original</div>
+                    <img src={preview} alt="original" style={{ width: '100%', borderRadius: 8, border: `1px solid ${C.rule}`, objectFit: 'contain', maxHeight: 220 }} />
+                  </div>
+                  {/* Datos extraídos */}
+                  <div>
+                    <div style={{ fontFamily: SM, fontSize: 9, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>Datos extraídos</div>
+                    <div style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px' }}>
+                      {Object.entries(result.datos).map(([k, v]) => (
+                        <div key={k}><Campo label={(result.tipo === 'etiqueta_producto' ? CAMPO_LABELS_ETIQUETA[k] : CAMPO_LABELS[k]) ?? k} value={v} /></div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
             <div style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
               <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 10 }}>
                 Datos extraídos
               </div>
               {Object.entries(result.datos).map(([k, v]) => (
-                <div key={k}><Campo label={CAMPO_LABELS[k] ?? k} value={v} /></div>
+                <div key={k}><Campo label={(result.tipo === 'etiqueta_producto' ? CAMPO_LABELS_ETIQUETA[k] : CAMPO_LABELS[k]) ?? k} value={v} /></div>
               ))}
             </div>
+            )}
 
             {/* Botones de acción */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
