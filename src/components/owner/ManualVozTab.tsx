@@ -88,7 +88,7 @@ function FormulaBox({ slots, nota }: { slots: string[]; nota?: string }) {
 function ProtocoloCamarero() {
   return (
     <div>
-      <FormulaBox slots={['MESA / ROL / NOMBRE', 'ÍTEMS / MENSAJE']} nota="[nota / cuenta / marcha / urgente]" />
+      <FormulaBox slots={['MESA / ROL / NOMBRE', 'ÍTEMS / MENSAJE']} nota="[nota / cuenta / marcha / 86]" />
 
       {/* Destinos */}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
@@ -135,14 +135,20 @@ function ProtocoloCamarero() {
         { v: 'T3   dos raciones croquetas', r: '2× Croquetas · ración entera' },
       ]} />
 
-      <SecTitle label="🧾 CUENTA · MARCHAR · URGENTE · 86" color={C.ink3} />
+      <SecTitle label="🧾 CUENTA · MARCHAR · 86" color={C.ink3} />
       <Tabla color={C.ink3} filas={[
-        { v: 'T3   cuenta',          r: 'Solicita cuenta → estado cuenta_pedida' },
-        { v: 'T3   marcha',          r: 'Marcha todo de T3 → notif running + KDS' },
-        { v: 'T3   urgente',         r: 'Reclamación urgente → alerta KDS + jefe' },
-        { v: '86   las bravas',      r: 'Bravas → agotado · bloquea en carta' },
-        { v: 'T3   cuenta dividir 2',r: 'Divide cuenta entre 2 personas' },
-        { v: 'T3   cuenta tarjeta',  r: 'Cuenta T3 · pago tarjeta registrado' },
+        { v: 'T3   cuenta',     r: 'Solicita cuenta → estado cuenta_pedida' },
+        { v: 'T3   marcha',     r: 'Marcha todo de T3 → notif running + KDS' },
+        { v: '86   las bravas', r: 'Bravas → agotado · bloquea en carta' },
+      ]} />
+
+      <SecTitle label="⏳ PRÓXIMAMENTE — no disponibles aún por voz" color={C.amber} />
+      <Tabla color={C.amber} filas={[
+        { v: 'T3   cuenta dividir 2', r: '⏳ Cobro dividido — próxima actualización' },
+        { v: 'T3   cuenta tarjeta',   r: '⏳ Método de pago por voz — próxima actualización' },
+        { v: 'T3   urgente',          r: '⏳ Reclamación urgente — próxima actualización' },
+        { v: 'quita la caña de T3',   r: '⏳ Anular ítem — próxima actualización' },
+        { v: 'T3 alergia al marisco', r: '⏳ Nota de alérgeno en mesa — próxima actualización' },
       ]} />
 
       <SecTitle label="💬 MENSAJES AL EQUIPO" color={C.teal} />

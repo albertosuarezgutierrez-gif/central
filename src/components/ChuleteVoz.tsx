@@ -1,10 +1,12 @@
 'use client'
 // src/components/ChuleteVoz.tsx
-// Chuleta Voz — guía rápida de comandos de voz por rol
-// Como una chuleta de examen: pequeño, rápido, lo esencial.
+// Chuleta Voz — guía rápida de comandos de voz por rol.
+// Consume lib/voice-commands-guide.ts como fuente de verdad.
+// Activos → visible directo. Próximos → bloque colapsado al final.
 
-import React from 'react'
+import React, { useState } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
+import { getComandosActivos, VOICE_COMMANDS_GUIDE, type BloqueComandos } from '@/lib/voice-commands-guide'
 
 type Rol = 'owner' | 'camarero' | 'running' | 'cocina'
 
@@ -15,12 +17,14 @@ const BLUE   = '#2B6A9E'
 const TEAL   = '#2B6A6E'
 const RED    = '#D9442B'
 const GRAY   = '#8D8270'
+const PURPLE = '#7B5EA7'
 
 const AMBERS  = 'rgba(232,163,59,.12)'
 const BLUES   = 'rgba(43,106,158,.12)'
 const TEALS   = 'rgba(43,106,110,.12)'
 const REDS    = 'rgba(217,66,43,.12)'
 const GRAYS   = 'rgba(141,130,112,.10)'
+const PURPLES = 'rgba(123,94,167,.12)'
 
 function Badge({ color, bg, label }: { color: string; bg: string; label: string }) {
   return (
@@ -103,16 +107,13 @@ function ReglaDeOro() {
   )
 }
 
-// ── Bloques por tipo ──────────────────────────────────────────────────────────
-
-const PURPLE   = '#7B5EA7'
-const PURPLES  = 'rgba(123,94,167,.12)'
+// ── Bloques de comandos activos ───────────────────────────────────────────────
 
 function BloqueVino() {
   return (
     <Block color={PURPLE} bg={PURPLES} badge="VINO" sub="recomendación al momento">
       <Row pattern="recomendación de vino para [plato]"
-        examples={['recomendación de vino para solomillo', 'recomendación de vino para dorada a la sal']} />
+        examples={['recomienda vino para solomillo', 'recomienda vino para dorada a la sal']} />
       <Sep />
       <Row pattern="¿qué vino va con [plato]?"
         examples={['¿qué vino va con el cochinillo?', 'vino para caza mayor']} />
@@ -178,6 +179,76 @@ function Bloque86() {
   )
 }
 
+function BloqueCuenta() {
+  return (
+    <Block color={RED} bg={REDS} badge="CUENTA" sub="cerrar mesa">
+      <Row pattern="[mesa] cuenta"
+        examples={['T3 cuenta', 'cuenta a la mesa tres', 'cobrar T4']} />
+      <Tip color={RED} text="el cobro dividido y método de pago se hacen en pantalla" />
+    </Block>
+  )
+}
+
+// ── Bloque Próximamente ───────────────────────────────────────────────────────
+
+function BloqueProximamente() {
+  const [abierto, setAbierto] = useState(false)
+
+  const proximos = VOICE_COMMANDS_GUIDE
+    .flatMap(b => b.comandos.filter(c => c.estado === 'proximo'))
+
+  return (
+    <div style={{ marginBottom: 8 }}>
+      <button
+        onClick={() => setAbierto(v => !v)}
+        style={{
+          width: '100%', background: C.bg1,
+          border: `0.5px solid ${C.rule}`,
+          borderRadius: 10, padding: '9px 13px',
+          display: 'flex', alignItems: 'center', gap: 9,
+          cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <Badge color={AMBER} bg={AMBERS} label="PRÓXIMAMENTE" />
+        <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 500, color: C.ink3, flex: 1 }}>
+          {proximos.length} comandos nuevos en desarrollo
+        </span>
+        <span style={{ color: AMBER, fontSize: 11 }}>{abierto ? '▲' : '▼'}</span>
+      </button>
+
+      {abierto && (
+        <div style={{
+          background: C.bg1, border: `0.5px solid ${C.rule}`,
+          borderTop: 'none', borderRadius: '0 0 10px 10px',
+          padding: '8px 13px', display: 'flex', flexDirection: 'column', gap: 8,
+        }}>
+          {proximos.map(cmd => (
+            <div key={cmd.id} style={{ opacity: 0.7 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <span style={{ fontSize: 13 }}>{cmd.icono}</span>
+                <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 600, color: C.ink3 }}>{cmd.titulo}</span>
+              </div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 3 }}>{cmd.descripcion}</div>
+              {cmd.ejemplos.slice(0, 1).map((ej, i) => (
+                <div key={i} style={{
+                  fontFamily: 'JetBrains Mono, Courier New, monospace', fontSize: 10,
+                  color: C.ink4, background: C.bg2, borderRadius: 4, padding: '3px 7px',
+                  fontStyle: 'italic',
+                }}>
+                  "{ej}"
+                </div>
+              ))}
+            </div>
+          ))}
+          <div style={{ fontFamily: SN, fontSize: 10, color: AMBER, borderTop: `0.5px solid ${C.rule}`, paddingTop: 6, marginTop: 2 }}>
+            Estos comandos aún no funcionan — disponibles en próximas actualizaciones
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function ChuleteVoz({ rol }: Props) {
@@ -195,23 +266,15 @@ export default function ChuleteVoz({ rol }: Props) {
         {titulo}
       </div>
 
-      {/* OWNER: todo */}
-      {rol === 'owner' && (<>
+      {/* CAMARERO y OWNER: bloques completos */}
+      {(rol === 'camarero' || rol === 'owner') && (<>
         <BloqueComanda />
         <BloqueMensaje />
         <BloqueMarchar />
+        <BloqueCuenta />
         <Bloque86 />
         <BloqueVino />
-        <ReglaDeOro />
-      </>)}
-
-      {/* CAMARERO: comanda + mensaje + marchar + 86 + vino + regla */}
-      {rol === 'camarero' && (<>
-        <BloqueComanda />
-        <BloqueMensaje />
-        <BloqueMarchar />
-        <Bloque86 />
-        <BloqueVino />
+        <BloqueProximamente />
         <ReglaDeOro />
       </>)}
 
