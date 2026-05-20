@@ -7,6 +7,7 @@ import PropuestaBase, {
   MODULO_VINOS,
   MODULO_EVENTOS,
   MODULO_RRHH,
+  ModuloCustom,
 } from '@/components/propuesta/PropuestaBase'
 
 const C = { red:'#D9442B', gold:'#C9A84C', green:'#3F7D44', teal:'#2B6A6E', amber:'#E8A33B' }
@@ -58,15 +59,47 @@ const config: ClienteConfig = {
     MODULO_ASISTENTE_COCINA({ roi:'Con 3 partidas y 14 camareros, el jefe no puede estar en todos lados. La IA coordina.' }),
     MODULO_ANALISIS_CARTA(),
     MODULO_RECEPCION({ roi:'1.000 albaranes/mes × €0,30 = €300 por restaurante. En 50 locales: €15.000/mes ahorrados.' }),
+    {
+      emoji: '📷',
+      titulo: 'Scanner inteligente',
+      sub: 'Un botón. Todo tipo de documentos.',
+      desc: 'La misma cámara lee albaranes, etiquetas de producto, facturas y CVs. Si la confianza es baja, muestra la imagen original al lado para comparar.',
+      ejemplos: [
+        'Foto albarán → extrae productos, precios y caducidades por línea',
+        'Foto etiqueta → nombre, código barras, lote, fecha caducidad automática',
+        '🟢 alta · 🟡 revisar · 🔴 baja — semáforo visual por cada campo',
+        'La foto siempre guardada — auditoría completa para el contable',
+      ],
+      ruta: '📷 en cualquier pantalla',
+      color: '#6366F1',
+      roi: 'Elimina el €0,30 por albarán. Trazabilidad total para inspecciones.',
+      activo: true,
+    } as ModuloCustom,
+    {
+      emoji: '🏷️',
+      titulo: 'Elaboraciones propias APPCC',
+      sub: 'Etiqueta en 30 segundos. Sanidad cubierta.',
+      desc: 'El cocinero registra la elaboración, imprime la etiqueta APPCC al instante y el sistema avisa automáticamente a los camareros cuando está a punto de caducar.',
+      ejemplos: [
+        'Registro: nombre, lote auto, raciones, temperatura, 14 alérgenos',
+        'Menos de 24h: push a jefe de sala + owner → "planifica la venta"',
+        'Menos de 4h: push a TODOS los camareros → "¡Recomiéndalo ahora!"',
+        'Historial completo para inspecciones de sanidad — sin papeles',
+      ],
+      ruta: '/kds → botón 🏷️',
+      color: '#F59E0B',
+      roi: 'APPCC automático. Sin multas por inspección. Caducados recomendados antes de tirarse.',
+      activo: true,
+    } as ModuloCustom,
     MODULO_VINOS({ sub:'La bodega de Eslava que nadie vende, vendida.', roi:'El camarero no necesita saber de vinos. ia.rest sabe por él.' }),
-    MODULO_EVENTOS({ ejemplos:['Feria de Abril en 4 días — vendisteis 40% más cerveza','Semana Santa — refuerza la terraza','Calor extremo mañana — prepara bebidas frías'] }),
+    MODULO_EVENTOS({ ejemplos:['Feria de Abril en 4 días — vendisteis 40% más cerveza','Semana Santa — refuerza toda la terraza','Calor extremo mañana — prepara bebidas frías'] }),
     MODULO_RRHH({ roi:'50 restaurantes. Un panel. Criterios homogéneos para todo el grupo.' }),
   ],
   objecionPrincipal: '"Me cuesta creer que un sistema aúne todo Y que todo esté bien hecho."',
   respuestaObjecion: 'No somos mejor que cada especialista. Somos lo que ninguno puede darte solo: la integración.',
   fasePiloto: [
-    { fase:'Semana 1-2', color:C.red, items:['Configuración local piloto','Comandas por voz + KDS','OCR albaranes','Recepción mercancía'] },
-    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Vinos maridaje IA','Alertas stock'] },
+    { fase:'Semana 1-2', color:C.red, items:['Configuración local piloto','Comandas por voz + KDS vistas','OCR albaranes + recepción','Elaboraciones APPCC + etiquetas'] },
+    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Scanner universal semáforo','Vinos maridaje IA + alertas stock'] },
     { fase:'Mes 2+', color:C.green, items:['RRHH grupo centralizado','Previsión por eventos','Central de compras','Benchmarking locales'] },
   ],
 }
