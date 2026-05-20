@@ -2187,9 +2187,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* ══ TAB: MANUAL ══════════════════════════════════════════ */}
       {tab==='manual' && (
         <div style={{flex:1,overflow:'hidden',display:'flex',flexDirection:'column'}}>
-          <div style={{overflowY:'auto',scrollbarWidth:'none' as const}}>
-            <ChuleteVoz rol="camarero" />
-          </div>
           <ManualComanda
             session={session}
             onSent={()=>{}}
@@ -3144,6 +3141,31 @@ function ForceUpdateRow() {
   )
 }
 
+function ChuleteVozSection() {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <div style={{borderBottom:`1px solid ${C.rule}`}}>
+      <div
+        onClick={()=>setOpen(o=>!o)}
+        style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'13px 0',cursor:'pointer'}}
+      >
+        <div>
+          <div style={{fontSize:13,fontWeight:500,color:C.ink}}>⚡ Chuleta Voz</div>
+          <div style={{fontSize:11,color:C.ink4,marginTop:1}}>Guía rápida de comandos</div>
+        </div>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.ink3} strokeWidth="2">
+          <path d={open ? 'M18 15l-6-6-6 6' : 'M6 9l6 6 6-6'}/>
+        </svg>
+      </div>
+      {open && (
+        <div style={{marginBottom:8}}>
+          <ChuleteVoz rol="camarero" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceConfirm,zonasAsignadas,onZonasAsignadas,zonasDisponibles,fontBig,onFontBig,alergenosMesa,onAlergenosMesa,subscribed,onSubscribe,hasInstall,onInstall,autoConfirm,onAutoConfirm,autoThreshold,onAutoThreshold,ttsOff,onTtsOff,onLogout}:{
   session:{id:string;restaurante_id:string;nombre:string;rol:string}
   tabsVisibles:Tab[];    onTabsVisibles:(v:Tab[])=>void
@@ -3324,6 +3346,9 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
             }}>Ver manual</a>
           </div>
         </div>
+        {/* ── CHULETA VOZ ── */}
+        <ChuleteVozSection />
+
         <div style={{paddingTop:20,paddingBottom:32}}>
           {/* Fichaje */}
           <FicharSalidaBtn session={session} />
