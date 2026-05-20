@@ -10,6 +10,7 @@ import ChuleteVoz from '@/components/ChuleteVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 import AsistenteCocinaPanel from '@/components/AsistenteCocinaPanel'
+import ElaboracionesPanel from '@/components/kds/ElaboracionesPanel'
 
 const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
 
@@ -253,6 +254,7 @@ function KDSInner() {
   const [chuleteAbierto, setChuleteAbierto] = useState(false)
   const [chatTexto, setChatTexto] = useState('')
   const [asistenteAbierto, setAsistenteAbierto] = useState(false)
+  const [elaborAbierto, setElaborAbierto]       = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [bannerMensaje, setBannerMensaje] = useState<{ texto: string; origen: string } | null>(null)
   const prevCountRef = useRef(0)
@@ -487,6 +489,12 @@ function KDSInner() {
           </div>
           <span style={{ fontFamily:SM, fontSize:16, fontWeight:700, color:K.fg }}>{time.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
           <SugerenciaButton session={effectiveSession} tema="dark" variant="inline" />
+          {/* Botón Elaboraciones propias */}
+          <button
+            onClick={() => { setElaborAbierto(v => !v); setAsistenteAbierto(false); setChatAbierto(false) }}
+            title="Elaboraciones propias"
+            style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background: elaborAbierto ? K.amb : 'transparent', border:`1px solid ${elaborAbierto ? K.amb : K.rule}`, borderRadius:6, color: elaborAbierto ? '#fff' : K.fg3, flexShrink:0, fontSize:14 }}
+          >🏷️</button>
           {/* Botón Asistente IA Cocina */}
           <button
             onClick={() => setAsistenteAbierto(v => !v)}
@@ -1022,6 +1030,26 @@ function KDSInner() {
         open={asistenteAbierto}
         onClose={() => setAsistenteAbierto(false)}
       />
+
+      {/* Elaboraciones propias */}
+      {elaborAbierto && (
+        <div style={{
+          position:'fixed', top:0, right:0, bottom:0, width:380, maxWidth:'95vw',
+          background:K.c1, borderLeft:`1px solid ${K.rule}`, zIndex:200,
+          display:'flex', flexDirection:'column', boxShadow:'-4px 0 24px rgba(0,0,0,.12)',
+        }}>
+          <div style={{ padding:'12px 16px', borderBottom:`1px solid ${K.rule}`, display:'flex', alignItems:'center', justifyContent:'space-between', background:K.bg, flexShrink:0 }}>
+            <span style={{ fontFamily:'Inter Tight,sans-serif', fontSize:13, fontWeight:700, color:K.amb }}>🏷️ ELABORACIONES</span>
+            <button onClick={() => setElaborAbierto(false)} style={{ background:'none', border:'none', cursor:'pointer', color:K.fg3, fontSize:18 }}>✕</button>
+          </div>
+          <div style={{ flex:1, padding:'16px', overflowY:'auto' }}>
+            <ElaboracionesPanel
+              session={{ id: effectiveSession?.id ?? '', nombre: effectiveSession?.nombre ?? 'Cocina', restaurante_id: effectiveSession?.restaurante_id ?? '' }}
+              sh={() => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })}
+            />
+          </div>
+        </div>
+      )}
     </div>
     </>
   )
