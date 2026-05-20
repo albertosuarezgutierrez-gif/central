@@ -20,15 +20,16 @@ const SE = 'Newsreader, Georgia, serif'
 const SN = 'Inter Tight, system-ui, sans-serif'
 const SM = 'Inter Tight, system-ui, sans-serif'
 
-type Slide = 'intro' | 'dolor' | 'modulos' | 'stock' | 'integracion' | 'piloto'
+type Slide = 'intro' | 'dolor' | 'su_cocina' | 'modulos' | 'stock' | 'integracion' | 'piloto'
 
 const SLIDES: { id: Slide; label: string }[] = [
-  { id: 'intro',       label: 'Inicio'       },
-  { id: 'dolor',       label: 'El problema'  },
-  { id: 'modulos',     label: 'Módulos'      },
-  { id: 'stock',       label: 'Los 8M€'      },
-  { id: 'integracion', label: 'Integración'  },
-  { id: 'piloto',      label: 'Piloto'       },
+  { id: 'intro',      label: 'Inicio'       },
+  { id: 'dolor',      label: 'El problema'  },
+  { id: 'su_cocina',  label: 'Vuestra cocina' },
+  { id: 'modulos',    label: 'Módulos'      },
+  { id: 'stock',      label: 'Los 8M€'      },
+  { id: 'integracion',label: 'Integración'  },
+  { id: 'piloto',     label: 'Piloto'       },
 ]
 
 const MODULOS = [
@@ -186,7 +187,75 @@ export default function PitchPage() {
           </div>
         )}
 
-        {/* SLIDE 3: MÓDULOS */}
+        {/* SLIDE 3: SU COCINA — Vuestra operativa exacta */}
+        {slide === 'su_cocina' && (
+          <div style={{ flex:1, padding:'32px 24px', maxWidth:720, margin:'0 auto', width:'100%', display:'flex', flexDirection:'column', gap:20, overflowY:'auto' }}>
+            <div>
+              <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.16em', color:C.teal, textTransform:'uppercase', marginBottom:10 }}>Adaptado a vuestra operativa</div>
+              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:'clamp(26px,5vw,38px)', lineHeight:1.2, color:C.paper }}>
+                50 mesas · 5 zonas · 3 partidas · 14 camareros
+              </div>
+              <div style={{ fontSize:14, color:C.ink3, marginTop:8 }}>No es un producto genérico. Esto es para vosotros.</div>
+            </div>
+
+            {/* Partidas */}
+            <div style={{ background:C.bg3, borderRadius:12, padding:'18px' }}>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.ink4, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:14 }}>Vuestras partidas → cada una con su pantalla y su impresora</div>
+              <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:10 }}>
+                {[
+                  { nombre:'Cocina caliente', items:['Principales','Entrantes calientes'], color:'#D9442B', icon:'🔥' },
+                  { nombre:'Cocina fría',     items:['Ensaladas','Entrantes fríos','Postres'], color:C.teal, icon:'❄️' },
+                  { nombre:'Barra',           items:['Bebidas','Cafés','Copas'], color:C.gold, icon:'🍺' },
+                ].map(p => (
+                  <div key={p.nombre} style={{ background:C.bg2, borderRadius:8, padding:'12px', borderTop:`3px solid ${p.color}` }}>
+                    <div style={{ fontSize:20, marginBottom:6 }}>{p.icon}</div>
+                    <div style={{ fontFamily:SN, fontSize:13, fontWeight:700, color:C.paper, marginBottom:8 }}>{p.nombre}</div>
+                    {p.items.map(it => (
+                      <div key={it} style={{ fontSize:11, color:C.ink3, marginBottom:3 }}>· {it}</div>
+                    ))}
+                    <div style={{ marginTop:10, padding:'4px 8px', background:`${p.color}22`, borderRadius:4, fontSize:10, color:p.color, fontWeight:700 }}>
+                      1 pantalla KDS + 1 impresora
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Cómo funciona el flujo */}
+            <div style={{ background:C.bg3, borderRadius:12, padding:'18px' }}>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.ink4, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:14 }}>El flujo de una comanda en vuestra cocina</div>
+              {[
+                { actor:'Camarero', accion:'Dice la comanda por voz en sala', icon:'🎙️', color:C.paper },
+                { actor:'ia.rest', accion:'Detecta qué va a cada partida automáticamente', icon:'✦', color:C.red },
+                { actor:'Cocina caliente', accion:'Ve solo sus platos en su pantalla (vista Producción)', icon:'🔥', color:'#D9442B' },
+                { actor:'Barra', accion:'Ve solo sus bebidas en su pantalla simultáneamente', icon:'🍺', color:C.gold },
+                { actor:'Jefe de cocina', accion:'Pregunta al asistente IA: "¿Cuántos solomillos pendientes?"', icon:'✦', color:C.teal },
+                { actor:'Marcha', accion:'Cuando todo está listo → imprime ticket de pase automático', icon:'🖨️', color:C.green },
+              ].map((paso, i) => (
+                <div key={i} style={{ display:'flex', gap:12, marginBottom: i < 5 ? 10 : 0, alignItems:'flex-start' }}>
+                  <div style={{ display:'flex', flexDirection:'column', alignItems:'center', flexShrink:0 }}>
+                    <div style={{ width:26, height:26, borderRadius:'50%', background:C.bg2, border:`1px solid ${paso.color}55`, display:'flex', alignItems:'center', justifyContent:'center', fontSize:12 }}>{paso.icon}</div>
+                    {i < 5 && <div style={{ width:1, height:16, background:`${C.ink4}44`, marginTop:3 }} />}
+                  </div>
+                  <div style={{ paddingTop:2 }}>
+                    <span style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:paso.color, textTransform:'uppercase', letterSpacing:'.06em' }}>{paso.actor}</span>
+                    <div style={{ fontSize:13, color:C.cream, marginTop:2 }}>{paso.accion}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* 50% en papel → solución */}
+            <div style={{ padding:'16px 18px', background:`${C.amber}15`, border:`1px solid ${C.amber}33`, borderRadius:10 }}>
+              <div style={{ fontFamily:SM, fontSize:10, fontWeight:700, color:C.amber, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:8 }}>Para los locales que todavía van a papel</div>
+              <div style={{ fontSize:14, color:C.cream, lineHeight:1.55 }}>
+                No hace falta pantalla. Una impresora térmica en cada partida (desde 80€) recibe el ticket automáticamente cuando el camarero dicta la comanda. El papel desaparece solo.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* SLIDE 4: MÓDULOS */}
         {slide === 'modulos' && (
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
             {/* Tabs módulos */}
