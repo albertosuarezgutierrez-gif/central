@@ -106,7 +106,7 @@ function NavDot({ active, onClick, label }: { active: boolean; onClick: () => vo
   )
 }
 
-export default function PitchPage() {
+export default function PropuestaOvejasNegras() {
   const [slide, setSlide] = useState<Slide>('intro')
   const [moduloIdx, setModuloIdx] = useState(0)
 
