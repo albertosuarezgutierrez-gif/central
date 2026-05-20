@@ -7787,8 +7787,21 @@ export default function OwnerPage() {
         .owner-wrap { max-width:960px; margin:0 auto; padding:24px 20px 80px; }
         .owner-content-area { min-width:0; flex:1; }
 
-        /* ── Desktop: sidebar layout ─────────────────────────── */
-        @media (min-width:1024px) {
+        /* ── Sub-tabs sticky en móvil/tablet ─────────────────── */
+        .owner-subtabs-sticky {
+          position:sticky;
+          top:52px;
+          z-index:40;
+          background:rgba(246,241,231,.96);
+          backdrop-filter:blur(12px);
+          -webkit-backdrop-filter:blur(12px);
+          margin:0 -20px 16px;
+          padding:0 20px;
+          border-bottom:1px solid ${C.rule};
+        }
+
+        /* ── Tablet intermedio: sidebar compacto ─────────────── */
+        @media (min-width:860px) {
           .owner-wrap {
             max-width:1440px;
             padding:0;
@@ -7798,11 +7811,11 @@ export default function OwnerPage() {
           }
           .owner-tabs {
             flex-direction:column;
-            width:200px;
+            width:56px;
             flex-shrink:0;
             overflow-x:unset;
             overflow-y:auto;
-            padding:16px 10px;
+            padding:12px 6px;
             gap:3px;
             margin-bottom:0;
             border-right:1px solid ${C.rule};
@@ -7812,15 +7825,30 @@ export default function OwnerPage() {
             height:calc(100dvh - 52px);
             scrollbar-width:none;
             align-self:flex-start;
+            align-items:center;
           }
           .owner-tabs::-webkit-scrollbar { display:none; }
+          .owner-tab-lbl { display:none; }
+          .owner-content-area { padding:16px 20px 60px; }
+          .owner-subtabs { flex-wrap:wrap; }
+          .owner-subtabs-sticky { margin:0 -20px 16px; padding:0 20px; }
+        }
+
+        /* ── Desktop: sidebar layout ─────────────────────────── */
+        @media (min-width:1024px) {
+          .owner-tabs {
+            width:200px;
+            padding:16px 10px;
+            align-items:flex-start;
+          }
           .owner-tab-lbl { display:inline !important; }
           .owner-content-area { padding:24px 32px 60px; }
-          .owner-subtabs { flex-wrap:wrap; }
+          .owner-subtabs-sticky { margin:0 -32px 16px; padding:0 32px; }
         }
         @media (min-width:1280px) {
           .owner-tabs { width:220px; padding:20px 12px; }
           .owner-content-area { padding:28px 40px 60px; }
+          .owner-subtabs-sticky { margin:0 -40px 16px; padding:0 40px; }
         }
         @media (min-width:1600px) {
           .owner-tabs { width:240px; }
@@ -7849,22 +7877,19 @@ export default function OwnerPage() {
         .owner-hdr-btn-lbl { display:inline; }
         .owner-hdr-menu-btn { display:none; }
 
-        @media (max-width:768px) {
+        @media (max-width:859px) {
           /* Header: compactar */
           .owner-hdr-badge { display:none; }
-          .owner-hdr-name { display:none; }
           .owner-hdr-btn-lbl { display:none; }
           .owner-hdr-actions { gap:6px; }
-
-          /* Tabs grupos: compactar */
-          .owner-tab-lbl { display:none; }
-          .owner-wrap { padding:12px 12px 80px; }
+          /* Tabs grupos: pill row con labels cortas */
+          .owner-wrap { padding:10px 12px 80px; }
         }
 
         @media (max-width:640px) {
           /* Header */
           .owner-hdr-name { display:none; }
-          .owner-wrap { padding:10px 10px 80px; }
+          .owner-wrap { padding:8px 8px 80px; }
 
           /* Camareros → cards */
           .cam-table-hdr { display:none; }
@@ -8062,24 +8087,26 @@ export default function OwnerPage() {
             const grupo = getGrupo(tab)
             if (grupo.tabs.length <= 1) return null
             return (
-              <div className="owner-subtabs" style={{ display:'flex', gap:2, marginBottom:20, borderBottom:`1px solid ${C.rule}`, paddingBottom:0 }}>
-                {grupo.tabs.map(t => (
-                  <button key={t.id} onClick={() => setTab(t.id)}
-                    style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
-                      background:'none', border:'none', borderBottom:`2px solid ${tab===t.id ? C.red : 'transparent'}`,
-                      color: tab===t.id ? C.ink : C.ink3,
-                      fontFamily:SN, fontSize:12, fontWeight:tab===t.id?600:500,
-                      cursor:'pointer', whiteSpace:'nowrap', transition:'all .15s', marginBottom:-1 }}>
-                    <Icon d={t.icon} size={13}/>
-                    {t.label}
-                  </button>
-                ))}
+              <div className="owner-subtabs-sticky">
+                <div className="owner-subtabs" style={{ display:'flex', gap:2, paddingBottom:0 }}>
+                  {grupo.tabs.map(t => (
+                    <button key={t.id} onClick={() => setTab(t.id)}
+                      style={{ display:'flex', alignItems:'center', gap:5, padding:'8px 14px',
+                        background:'none', border:'none', borderBottom:`2px solid ${tab===t.id ? C.red : 'transparent'}`,
+                        color: tab===t.id ? C.ink : C.ink3,
+                        fontFamily:SN, fontSize:12, fontWeight:tab===t.id?600:500,
+                        cursor:'pointer', whiteSpace:'nowrap', transition:'all .15s', marginBottom:-1 }}>
+                      <Icon d={t.icon} size={13}/>
+                      {t.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             )
           })()}
 
           {/* Tab activo */}
-          <div style={{ marginTop: getGrupo(tab).tabs.length <= 1 ? 20 : 0 }}>
+          <div style={{ marginTop: getGrupo(tab).tabs.length <= 1 ? 20 : 4 }}>
             {tab === 'sistema'          && <DiagnosticoTab restauranteId={session.restaurante_id} />}
             {tab === 'soporte'          && <SoporteTab restauranteId={session.restaurante_id} />}
             {tab === 'supervisor'     && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} sh={sh} />}
