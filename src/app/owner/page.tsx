@@ -441,12 +441,23 @@ function CamarerosTab() {
 
       {/* Create / Edit modal */}
       {subTab === 'personal' && modal && (modal === 'create' || (typeof modal === 'object' && 'edit' in modal)) && (
-        <Modal title={modal === 'create' ? 'Nuevo camarero' : 'Editar camarero'} onClose={() => setModal(null)}>
+        <Modal title={modal === 'create' ? 'Nuevo personal' : 'Editar personal'} onClose={() => setModal(null)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
             <Field label="Nombre" value={form.nombre} onChange={v => setForm(f => ({ ...f, nombre: v }))} placeholder="Marta"/>
             <Field label="PIN (4 dígitos)" value={form.pin} onChange={v => setForm(f => ({ ...f, pin: v }))} placeholder="1234" type="text" error={err.includes('PIN') ? err : undefined}/>
-            <Select label="Rol" value={form.rol} onChange={v => setForm(f => ({ ...f, rol: v, seccion_id: '' }))}
-              options={[{ value: 'camarero', label: 'Camarero' }, { value: 'jefe_sala', label: 'Jefe de sala' }, { value: 'cocina', label: 'Cocina' }, { value: 'running', label: 'Running' }]}/>
+            <Select label="Rol" value={form.rol} onChange={v => setForm(f => ({ ...f, rol: v, seccion_id: '', modulos_gestion: [] }))}
+              options={[
+                { value: 'camarero',  label: 'Camarero' },
+                { value: 'jefe_sala', label: 'Jefe de sala' },
+                { value: 'cocina',    label: 'Cocina' },
+                { value: 'running',   label: 'Running' },
+                { value: 'gestor',    label: 'Gestor — solo portal de gestión' },
+              ]}/>
+            {form.rol === 'gestor' && (
+              <div style={{ padding: '10px 12px', background: 'rgba(217,68,43,0.08)', border: '1px solid rgba(217,68,43,0.25)', borderRadius: 8, fontFamily: SN, fontSize: 12, color: C.ink2, lineHeight: 1.5 }}>
+                El gestor <strong>no accede a sala</strong>. Su única entrada es <strong>/portal</strong> con los módulos que marques abajo. Ideal para: contable del grupo, responsable de almacén, RRHH externo.
+              </div>
+            )}
             {form.rol === 'cocina' && (
               <Select label="Sección" value={form.seccion_id} onChange={v => setForm(f => ({ ...f, seccion_id: v }))}
                 options={[{ value: '', label: 'Todas las secciones' }, ...secciones.map(s => ({ value: s.id, label: s.nombre }))]}/>
@@ -461,18 +472,20 @@ function CamarerosTab() {
             <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: 14 }}>
               <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', fontWeight: 700, marginBottom: 12 }}>PERMISOS</div>
 
-              {/* Puede escanear */}
-              <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 10 }}>
-                <input type="checkbox" checked={form.puede_escanear ?? false}
-                  onChange={e => setForm(f => ({ ...f, puede_escanear: e.target.checked }))}
-                  style={{ marginTop: 2, flexShrink: 0 }} />
-                <div>
-                  <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>Puede escanear documentos</div>
-                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2, lineHeight: 1.4 }}>
-                    Accede a la cámara para subir albaranes, facturas, CVs y cartas. El sistema los clasifica con IA automáticamente.
+              {/* Puede escanear — solo roles con acceso a sala */}
+              {form.rol !== 'gestor' && (
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 10 }}>
+                  <input type="checkbox" checked={form.puede_escanear ?? false}
+                    onChange={e => setForm(f => ({ ...f, puede_escanear: e.target.checked }))}
+                    style={{ marginTop: 2, flexShrink: 0 }} />
+                  <div>
+                    <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, fontWeight: 500 }}>Puede escanear documentos</div>
+                    <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2, lineHeight: 1.4 }}>
+                      Accede a la cámara para subir albaranes, facturas, CVs y cartas. El sistema los clasifica con IA automáticamente.
+                    </div>
                   </div>
-                </div>
-              </label>
+                </label>
+              )}
 
               {/* Puede comandar — solo si es jefe_sala */}
               {form.rol === 'jefe_sala' && (
@@ -490,9 +503,14 @@ function CamarerosTab() {
               )}
 
               {/* Módulos de gestión */}
-              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, fontWeight: 500, marginBottom: 8, marginTop: 4 }}>Acceso a gestión</div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, fontWeight: 500, marginBottom: 8, marginTop: 4 }}>
+                Acceso a gestión
+                {form.rol === 'gestor' && <span style={{ marginLeft: 6, fontSize: 10, color: C.red, fontWeight: 600 }}>OBLIGATORIO PARA GESTOR</span>}
+              </div>
               <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 10, lineHeight: 1.4 }}>
-                Los módulos marcados aparecen en el portal de gestión de este usuario. Cada módulo activo cuenta como usuario facturable.
+                {form.rol === 'gestor'
+                  ? 'El gestor solo tiene acceso a los módulos que marques aquí. Sin módulos, no verá nada al entrar.'
+                  : 'Los módulos marcados aparecen en el portal de gestión de este usuario. Cada módulo activo cuenta como usuario facturable.'}
               </div>
               {([
                 { key: 'almacen',       label: 'Almacén',       desc: 'Stock, movimientos, reposición automática. Requiere actualización diaria para ser útil.' },
