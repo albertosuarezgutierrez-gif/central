@@ -286,6 +286,113 @@ export const VOICE_COMMANDS_GUIDE: BloqueComandos[] = [
       },
     ],
   },
+
+  // ── ASISTENTE COCINA (jefe de partida) ───────────────────────────────────
+  {
+    id: 'asistente-cocina',
+    titulo: 'Asistente IA — Jefe de cocina',
+    color: '#2B6A6E',
+    comandos: [
+      {
+        id: 'cocina-pendientes',
+        tipo: 'consulta_pendientes',
+        titulo: 'Cuántos pendientes de un producto',
+        descripcion: 'Pregunta cuántas unidades de un plato están esperando salir',
+        ejemplos: [
+          '¿Cuántos solomillos pendientes?',
+          '¿Cuántas croquetas quedan por marchar?',
+          '¿Cuántos menús hay en cocina?',
+        ],
+        estado: 'activo',
+        icono: '🔢',
+        roles: ['cocina', 'jefe_sala'],
+      },
+      {
+        id: 'cocina-mesa',
+        tipo: 'consulta_mesa_cocina',
+        titulo: 'Qué tiene pedido una mesa',
+        descripcion: 'Ver todos los ítems activos de una mesa concreta',
+        ejemplos: [
+          '¿Qué tiene la mesa 4?',
+          '¿Qué hay pendiente en terraza 3?',
+          '¿Qué le falta salir a la S2?',
+        ],
+        estado: 'activo',
+        icono: '🍽️',
+        roles: ['cocina', 'jefe_sala'],
+      },
+      {
+        id: 'cocina-alergicos',
+        tipo: 'consulta_alergicos',
+        titulo: 'Alérgicos en turno o mesa',
+        descripcion: 'Detecta alertas de alérgenos en las comandas activas',
+        ejemplos: [
+          '¿Hay alérgicos en cocina ahora?',
+          '¿La mesa 4 tiene alergia a algo?',
+          '¿Alguna comanda con gluten marcado?',
+        ],
+        estado: 'activo',
+        icono: '⚠️',
+        roles: ['cocina', 'jefe_sala'],
+      },
+      {
+        id: 'cocina-tiempo',
+        tipo: 'consulta_tiempo',
+        titulo: 'Qué lleva más tiempo esperando',
+        descripcion: 'Detecta la comanda o plato con mayor tiempo en cocina',
+        ejemplos: [
+          '¿Qué lleva más tiempo sin salir?',
+          '¿Cuál es la mesa más antigua?',
+          '¿Hay algo que lleve más de 20 minutos?',
+        ],
+        estado: 'activo',
+        icono: '⏱️',
+        roles: ['cocina', 'jefe_sala'],
+      },
+      {
+        id: 'cocina-stock',
+        tipo: 'consulta_stock_cocina',
+        titulo: 'Stock bajo de un artículo',
+        descripcion: 'Pregunta por el stock disponible de ingredientes o elaboraciones',
+        ejemplos: [
+          '¿Cuánto queda de merluza?',
+          '¿Hay stock bajo de algo?',
+          '¿Queda ensaladilla?',
+        ],
+        estado: 'activo',
+        icono: '📦',
+        roles: ['cocina', 'jefe_sala'],
+      },
+      {
+        id: 'cocina-elaboraciones',
+        tipo: 'consulta_elaboraciones',
+        titulo: 'Elaboraciones propias — caducidad',
+        descripcion: 'Consulta qué elaboraciones están activas y cuánto tiempo les queda',
+        ejemplos: [
+          '¿Qué elaboraciones van a caducar hoy?',
+          '¿Cuánto le queda a la ensaladilla?',
+          '¿Hay algo a punto de caducar?',
+        ],
+        estado: 'activo',
+        icono: '🏷️',
+        roles: ['cocina', 'jefe_sala'],
+      },
+      {
+        id: 'cocina-partida',
+        tipo: 'consulta_partida',
+        titulo: 'Estado de una partida',
+        descripcion: 'Resumen del estado de cocina caliente, fría o barra',
+        ejemplos: [
+          '¿Cómo va la cocina caliente?',
+          '¿Cuánto tiene barra pendiente?',
+          'Estado de cocina fría',
+        ],
+        estado: 'activo',
+        icono: '🔥',
+        roles: ['cocina', 'jefe_sala'],
+      },
+    ],
+  },
 ]
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
