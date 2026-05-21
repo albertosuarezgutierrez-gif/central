@@ -445,29 +445,46 @@ export async function POST(req: NextRequest) {
           if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
         }
 
-        // Fallback: si algún nombre no matcheó, buscar por nombre_alternativo (motes/apodos)
-        // Cubre el caso raro en que el LLM devuelve el alias en lugar del nombre canónico
+        // Fallback: si algún nombre no matcheó (case-sensitive .in() puede fallar con capitalización)
+        // Cubre: "cerveza caña" del brain vs "Cerveza caña" en BD, y aliases/motes
         const nombresNoMatcheados = todosNombres.filter(n => !precioMap[norm(n)])
         if (nombresNoMatcheados.length > 0) {
           const { data: prodsPorAlias } = await supabase
             .from('productos').select('id,nombre,precio,nombre_alternativo')
             .eq('restaurante_id', rid).eq('activo', true)
           for (const p of prodsPorAlias ?? []) {
+            // Fix: comparar nombre canónico case-insensitive (norm() quita tildes+mayúsculas)
+            const nombreNorm = norm(p.nombre)
+            const matchedPorNombre = nombresNoMatcheados.find(n => norm(n) === nombreNorm)
+            if (matchedPorNombre && p.precio != null) {
+              precioMap[nombreNorm] = { id: p.id, precio: Number(p.precio) }
+              // Reparar el nombre en brainResult para que el insert use el nombre canónico de BD
+              for (const item of brainResult.items) {
+                if (norm(item.nombre) === nombreNorm) item.nombre = p.nombre
+              }
+              if (process.env.NODE_ENV !== 'production') {
+                console.log(`[TRANSCRIBE] precio fallback case-insensitive: "${matchedPorNombre}" → "${p.nombre}" (${p.precio}€)`)
+              }
+            }
+            // Fallback alias/motes
             const aliases: string[] = Array.isArray(p.nombre_alternativo) ? p.nombre_alternativo : []
             for (const alias of aliases) {
               const aliasNorm = norm(alias)
               if (nombresNoMatcheados.some(n => norm(n) === aliasNorm)) {
                 if (p.precio != null) {
-                  // Registrar tanto por nombre canónico como por el alias buscado
                   precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
                   precioMap[aliasNorm] = { id: p.id, precio: Number(p.precio) }
-                  // Reparar el nombre en brainResult para que el insert use el nombre canónico
                   for (const item of brainResult.items) {
                     if (norm(item.nombre) === aliasNorm) item.nombre = p.nombre
                   }
                 }
               }
             }
+          }
+          // Log de productos sin precio para detectar carta incompleta
+          const sinPrecio = nombresNoMatcheados.filter(n => !precioMap[norm(n)])
+          if (sinPrecio.length > 0) {
+            console.warn(`[TRANSCRIBE] productos sin precio en carta: ${sinPrecio.join(', ')} (restaurante ${rid})`)
           }
         }
 
