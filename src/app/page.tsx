@@ -315,8 +315,7 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 @media(max-width:768px){
   nav{padding:0 20px}.nav-c{display:none}
   .nav-r{display:none}
-  nav .ham{display:flex}
-  nav .ssw{display:flex}
+  nav .ham{display:flex;grid-column:3;justify-self:end}
   .hero{padding:0 20px 80px}
   .dstage{grid-template-columns:1fr;min-height:auto}
   .ddiv{width:100%;height:1px}
@@ -410,6 +409,7 @@ export default function Page() {
   const [leadConsent, setLeadConsent] = useState(false);
   const [sessionOpen, setSessionOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
+  const sswRef = useRef<HTMLDivElement>(null);
   const demoRunning = useRef(false);
 
   const handleLead = async () => {
@@ -446,6 +446,14 @@ export default function Page() {
     window.addEventListener("scroll", h);
     return () => window.removeEventListener("scroll", h);
   }, []);
+
+  // SSW click-outside
+  useEffect(() => {
+    if (!sessionOpen) return;
+    const h = (e: MouseEvent) => { if (sswRef.current && !sswRef.current.contains(e.target as Node)) setSessionOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [sessionOpen]);
 
   // Scroll reveal
   useEffect(() => {
@@ -558,18 +566,18 @@ export default function Page() {
         </ul>
         <div className="nav-r">
           <button className="nbr" onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Quiero probarlo</button>
-        </div>
-        <div className="ssw">
-          <button className="ssw-btn" onClick={()=>setSessionOpen(o=>!o)} aria-label="Demo sesiones">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="6.25" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="10.5" width="12" height="1.5" rx=".75" fill="currentColor"/></svg>
-            Demo
-          </button>
-          <div className={`ssw-drop${sessionOpen?" open":""}`}>
-            <div className="ssw-title">Acceder al demo</div>
-            <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span><span className="ssw-item-pin">Demo</span></a>
-            <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span><span className="ssw-item-pin">Demo</span></a>
-            <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span><span className="ssw-item-pin">Demo</span></a>
-            <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span><span className="ssw-item-pin">Demo</span></a>
+          <div className="ssw" ref={sswRef}>
+            <button className="ssw-btn" onClick={()=>setSessionOpen(o=>!o)} aria-label="Demo sesiones">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="6.25" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="10.5" width="12" height="1.5" rx=".75" fill="currentColor"/></svg>
+              Demo
+            </button>
+            <div className={`ssw-drop${sessionOpen?" open":""}`}>
+              <div className="ssw-title">Acceder al demo</div>
+              <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span><span className="ssw-item-pin">Demo</span></a>
+              <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span><span className="ssw-item-pin">Demo</span></a>
+              <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span><span className="ssw-item-pin">Demo</span></a>
+              <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span><span className="ssw-item-pin">Demo</span></a>
+            </div>
           </div>
         </div>
         <button className={`ham${menuOpen?" open":""}`} onClick={()=>setMenuOpen(m=>!m)} aria-label="Menú"><span/><span/><span/></button>
