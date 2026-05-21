@@ -5209,17 +5209,22 @@ function FacturasTab() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
       {/* Header info Verifactu */}
-      <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '14px 18px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.red} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
+      <div style={{ background: '#0A2010', border: `1px solid ${C.green}44`, borderRadius: 8, padding: '14px 18px', display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.green} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}>
           <path d={ICONS.shield}/>
         </svg>
-        <div>
-          <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink2, marginBottom: 3 }}>
-            VERIFACTU · RD 1007/2023 · FASE 1 (hash local)
+        <div style={{ flex: 1 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+            <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.green }}>
+              ✓ SISTEMA CONFORME · VeriFactu RD 1007/2023
+            </div>
+            <span style={{ fontSize: 10, padding: '1px 7px', borderRadius: 20, background: `${C.green}22`, color: C.green, fontWeight: 700 }}>FASE 1 ACTIVA</span>
           </div>
           <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.5 }}>
-            Registros con hash SHA-256 encadenado almacenados localmente. QR verificable en sede AEAT impreso en ticket.
-            Envio automatico a AEAT (Fase 2) obligatorio desde 01/01/2027.
+            Hash SHA-256 encadenado · QR AEAT en ticket · Obligatorio desde 01/07/2026 (autónomos).
+          </div>
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 4 }}>
+            Fase 2 — Envío SOAP/XML a AEAT: preparado, pendiente de activación por la AEAT (~2027).
           </div>
         </div>
       </div>
