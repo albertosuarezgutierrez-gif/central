@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { generarSEPA, type SepaOrdenante, type SepaPago } from '@/lib/sepa'
+import { enviarEmailPagoEjecutado } from '@/lib/email'
 
 /**
  * POST /api/owner/pagos/sepa
@@ -95,6 +96,30 @@ export async function POST(req: NextRequest) {
     .from('ordenes_pago_proveedor')
     .update({ estado: 'enviado_sepa', sepa_msg_id: `IAREST-${Date.now()}` })
     .in('id', idsExportados)
+
+  // Enviar confirmación de pago a cada proveedor
+  for (const pago of pagos) {
+    const orden = ordenes.find(o => {
+      const p = o.proveedores as { iban?: string | null; nombre?: string } | null
+      return p?.iban === pago.acreedor_iban
+    })
+    if (orden) {
+      const emailProv = (orden.proveedores as { email?: string | null } | null)?.email
+      if (emailProv) {
+        try {
+          await enviarEmailPagoEjecutado({
+            email:             emailProv,
+            nombreProveedor:   orden.proveedor_nombre,
+            nombreRestaurante: rest.razon_social || rest.nombre,
+            importe:           pago.importe,
+            canal:             'sepa',
+            referencia:        pago.id,
+            concepto:          pago.concepto,
+          })
+        } catch (e) { console.error('[Email pago SEPA]', e) }
+      }
+    }
+  }
 
   const filename = `sepa-pagos-${new Date().toISOString().slice(0, 10)}.xml`
 

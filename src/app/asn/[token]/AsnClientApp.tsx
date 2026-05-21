@@ -211,15 +211,73 @@ export default function AsnClientApp({ token }: { token: string }) {
     </div>
   )
 
-  if (screen === 'ok') return (
-    <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
-      <div style={{ background:C.bg2, borderRadius:14, padding:32, maxWidth:340, textAlign:'center' }}>
-        <div style={{ fontSize:48, marginBottom:16 }}>✅</div>
-        <div style={{ fontFamily:'Georgia,serif', fontStyle:'italic', fontSize:20, color:C.cream, marginBottom:8 }}>Notificación recibida</div>
-        <div style={{ fontFamily:'system-ui,sans-serif', fontSize:13, color:C.creamDim, lineHeight:1.6 }}>El restaurante ya tiene los datos de tu envío. La recepción se pre-cargará automáticamente.</div>
+  if (screen === 'ok') {
+    const fileRefFactura = { current: null as HTMLInputElement | null }
+    const [facturaLoading, setFacturaLoading] = useState(false)
+    const [facturaMsg, setFacturaMsg]         = useState('')
+    const [facturaResult, setFacturaResult]   = useState<{ match_estado?: string; auto_aprobado?: boolean; importe_total?: number } | null>(null)
+
+    const subirFactura = async (file: File) => {
+      setFacturaLoading(true)
+      try {
+        const b64 = await new Promise<string>((res, rej) => {
+          const r = new FileReader(); r.onload = () => res((r.result as string).split(',')[1]); r.onerror = rej; r.readAsDataURL(file)
+        })
+        const resp = await fetch('/api/asn/factura', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token, image: { data: b64, mediaType: file.type || 'image/jpeg' } })
+        })
+        const d = await resp.json()
+        if (!d.ok) { setFacturaMsg('Error: ' + (d.error ?? 'No se pudo leer')); return }
+        setFacturaResult(d)
+        setFacturaMsg(d.auto_aprobado ? '✅ Factura recibida y pago aprobado automáticamente' : d.match_estado === 'diferencia_leve' ? '⚠️ Factura recibida — pequeña diferencia, el restaurante la revisará' : d.match_estado === 'diferencia_grave' ? '⚠️ Factura recibida — diferencia de importe, el restaurante contactará contigo' : '✅ Factura recibida')
+      } catch { setFacturaMsg('Error de conexión')
+      } finally { setFacturaLoading(false) }
+    }
+
+    return (
+      <div style={{ minHeight:'100vh', background:C.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:24 }}>
+        <div style={{ background:C.bg2, borderRadius:14, padding:32, maxWidth:380, width:'100%' }}>
+          <div style={{ textAlign:'center', marginBottom:20 }}>
+            <div style={{ fontSize:48, marginBottom:12 }}>✅</div>
+            <div style={{ fontFamily:'Georgia,serif', fontStyle:'italic', fontSize:20, color:C.cream, marginBottom:8 }}>Envío notificado</div>
+            <div style={{ fontFamily:'system-ui,sans-serif', fontSize:13, color:C.creamDim, lineHeight:1.6 }}>
+              El restaurante ya tiene los datos. La recepción se pre-cargará automáticamente.
+            </div>
+          </div>
+
+          {/* Subir factura */}
+          {!facturaResult && (
+            <div style={{ background:C.bg3, borderRadius:10, padding:'14px 16px', marginTop:16 }}>
+              <div style={{ fontFamily:'system-ui,sans-serif', fontSize:12, color:C.cream, fontWeight:600, marginBottom:6 }}>
+                📄 ¿Tienes lista la factura?
+              </div>
+              <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:C.creamDim, marginBottom:10, lineHeight:1.5 }}>
+                Súbela ahora para agilizar el pago. La IA valida el importe automáticamente contra la recepción.
+              </div>
+              {facturaMsg && (
+                <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, padding:'6px 10px', borderRadius:6, background: facturaMsg.startsWith('✅') ? '#0A2E14' : '#2E1A0A', color: facturaMsg.startsWith('✅') ? '#4ADE80' : '#FB923C', marginBottom:8 }}>{facturaMsg}</div>
+              )}
+              <button onClick={() => { const inp = document.createElement('input'); inp.type='file'; inp.accept='image/*,application/pdf'; inp.capture='environment'; inp.onchange = e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) subirFactura(f) }; inp.click() }}
+                disabled={facturaLoading}
+                style={{ width:'100%', padding:'9px', background: facturaLoading ? C.bg : C.red, border:'none', borderRadius:8, color:C.cream, fontFamily:'system-ui,sans-serif', fontSize:13, fontWeight:600, cursor:'pointer' }}>
+                {facturaLoading ? '⏳ Procesando factura…' : '📷 Subir factura (foto o PDF)'}
+              </button>
+            </div>
+          )}
+
+          {facturaResult && (
+            <div style={{ background:'#0A2E14', borderRadius:10, padding:'14px 16px', marginTop:16 }}>
+              <div style={{ fontFamily:'system-ui,sans-serif', fontSize:12, color:'#4ADE80', marginBottom:4 }}>✅ Factura procesada</div>
+              <div style={{ fontFamily:'system-ui,sans-serif', fontSize:11, color:C.creamDim }}>
+                {facturaResult.auto_aprobado ? 'Importe validado. El pago se ejecutará en la fecha acordada.' : 'Recibida. El restaurante te confirmará el pago.'}
+              </div>
+            </div>
+          )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   return (
     <div style={{ minHeight:'100vh', background:C.bg, color:C.cream }}>

@@ -321,3 +321,135 @@ export async function enviarEmailAlertaCompras({
     html,
   })
 }
+
+// ── EMAIL: RECADV — Confirmación de recepción al proveedor ───────────────────
+export async function enviarEmailRecadvProveedor({
+  email,
+  nombreProveedor,
+  nombreRestaurante,
+  albaranNumero,
+  fechaPago,
+  importe,
+  numArticulos,
+}: {
+  email: string
+  nombreProveedor: string
+  nombreRestaurante: string
+  albaranNumero?: string | null
+  fechaPago?: string | null
+  importe?: number | null
+  numArticulos?: number
+}) {
+  const albaran = albaranNumero ? ` (Albarán: <strong>${albaranNumero}</strong>)` : ''
+  const pagoInfo = fechaPago && importe
+    ? `<p>✅ Pago previsto: <strong>${importe.toFixed(2)} €</strong> el <strong>${fechaPago}</strong></p>`
+    : fechaPago
+    ? `<p>✅ Pago previsto el <strong>${fechaPago}</strong></p>`
+    : ''
+
+  const html = layout(`
+    <div class="card">
+      <h1>✅ Recepción confirmada${albaran}</h1>
+      <p>Hola <strong>${nombreProveedor}</strong>, confirmamos que hemos recibido correctamente tu envío en <strong>${nombreRestaurante}</strong>.</p>
+      ${numArticulos ? `<p><strong>${numArticulos} artículo${numArticulos > 1 ? 's' : ''}</strong> recibidos sin incidencias.</p>` : ''}
+      ${pagoInfo}
+      <hr class="divider">
+      <p>Si no has subido aún tu factura, puedes hacerlo respondiendo a este email o usando el mismo link de notificación de envío. El pago se ejecutará una vez validada la factura.</p>
+      <p style="font-size:13px;color:${C.fg3};">— ${nombreRestaurante}</p>
+    </div>
+  `, `Recepción confirmada — ${nombreRestaurante}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `✅ Recepción confirmada — ${nombreRestaurante}`,
+    html,
+  })
+}
+
+// ── EMAIL: Solicitud de factura al proveedor ─────────────────────────────────
+export async function enviarEmailSolicitarFactura({
+  email,
+  nombreProveedor,
+  nombreRestaurante,
+  albaranNumero,
+  importe,
+  uploadUrl,
+}: {
+  email: string
+  nombreProveedor: string
+  nombreRestaurante: string
+  albaranNumero?: string | null
+  importe?: number | null
+  uploadUrl: string
+}) {
+  const albaran = albaranNumero ? ` correspondiente al albarán <strong>${albaranNumero}</strong>` : ''
+
+  const html = layout(`
+    <div class="card">
+      <h1>Necesitamos tu factura</h1>
+      <p>Hola <strong>${nombreProveedor}</strong>, hemos confirmado la recepción de tu envío${albaran} en <strong>${nombreRestaurante}</strong>.</p>
+      ${importe ? `<p>Importe pendiente de facturar: <strong>${importe.toFixed(2)} €</strong></p>` : ''}
+      <p>Para procesar el pago necesitamos tu factura. Puedes subirla en este enlace en menos de 1 minuto:</p>
+      <div class="token-box">🔗 ${uploadUrl}</div>
+      <a href="${uploadUrl}" class="btn">Subir factura →</a>
+      <p style="font-size:12px;color:${C.fg3};margin-top:12px;">
+        Acepta PDF, foto o imagen. La IA la procesa automáticamente y valida el importe contra la recepción.<br>
+        Sin contraseña ni registro.
+      </p>
+    </div>
+  `, `Sube tu factura — ${nombreRestaurante}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Factura pendiente — ${nombreRestaurante}`,
+    html,
+  })
+}
+
+// ── EMAIL: Confirmación de pago ejecutado al proveedor ───────────────────────
+export async function enviarEmailPagoEjecutado({
+  email,
+  nombreProveedor,
+  nombreRestaurante,
+  importe,
+  canal,
+  referencia,
+  concepto,
+}: {
+  email: string
+  nombreProveedor: string
+  nombreRestaurante: string
+  importe: number
+  canal: 'sepa' | 'stripe'
+  referencia?: string | null
+  concepto?: string | null
+}) {
+  const canalLabel = canal === 'sepa'
+    ? '🏦 Transferencia SEPA (recibirás en 1-2 días hábiles)'
+    : '⚡ Stripe Connect (pago instantáneo)'
+
+  const html = layout(`
+    <div class="card">
+      <h1>Pago ejecutado</h1>
+      <p>Hola <strong>${nombreProveedor}</strong>, confirmamos que se ha procesado el siguiente pago desde <strong>${nombreRestaurante}</strong>:</p>
+      <hr class="divider">
+      <p><strong>Importe:</strong> ${importe.toFixed(2)} €</p>
+      <p><strong>Canal:</strong> ${canalLabel}</p>
+      ${concepto ? `<p><strong>Concepto:</strong> ${concepto}</p>` : ''}
+      ${referencia ? `<p><strong>Referencia:</strong> ${referencia}</p>` : ''}
+      <hr class="divider">
+      <p style="font-size:13px;color:${C.fg3};">Si tienes alguna pregunta sobre este pago, responde a este email.</p>
+    </div>
+  `, `Pago de ${importe.toFixed(2)} € — ${nombreRestaurante}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Pago de ${importe.toFixed(2)} € recibido — ${nombreRestaurante}`,
+    html,
+  })
+}
+
+// ── EMAIL: RECADV — Confirmación de recepción al proveedor ───────────────────
