@@ -672,6 +672,47 @@ Deno.serve(async (req) => {
     resultados.impresoras_tipo_desconocido = tiposDesconocidos.length
   } catch (e) { console.error('Check enum connection_type:', e) }
 
+  // ── Check 15: Lotes próximos a caducar (FEFO) ───────────────────────────────
+  try {
+    const hoy   = new Date()
+    const en3d  = new Date(hoy.getTime() + 3  * 24 * 60 * 60 * 1000)
+    const en7d  = new Date(hoy.getTime() + 7  * 24 * 60 * 60 * 1000)
+    const hoyStr = hoy.toISOString().split('T')[0]
+    const en7Str = en7d.toISOString().split('T')[0]
+
+    const { data: lotesCaducan } = await supabase
+      .from('recepcion_items')
+      .select(`
+        id, nombre_articulo, cantidad_recibida, unidad, fecha_caducidad, numero_lote,
+        recepciones_mercancia!inner(estado, restaurante_id)
+      `)
+      .eq('recepciones_mercancia.estado', 'confirmada')
+      .not('fecha_caducidad', 'is', null)
+      .lte('fecha_caducidad', en7Str)
+      .gte('fecha_caducidad', hoyStr)
+
+    for (const lote of lotesCaducan ?? []) {
+      const caducidad = lote.fecha_caducidad as string
+      const dias = Math.ceil((new Date(caducidad).getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+      const restauranteId = (lote.recepciones_mercancia as { restaurante_id: string }).restaurante_id
+
+      if (dias <= 3) {
+        await notificar({
+          tipo:          'lote_caduca_pronto',
+          modulo:        'almacen',
+          mensaje:       `🕐 Lote caduca en ${dias}d: ${lote.nombre_articulo} ${lote.numero_lote ? '('+lote.numero_lote+')' : ''} — ${lote.cantidad_recibida} ${lote.unidad}`,
+          detalle:       { nombre: lote.nombre_articulo, lote: lote.numero_lote, dias, caducidad },
+          restaurante_id: restauranteId,
+          nivel:         dias <= 1 ? 'critico' : 'aviso',
+        })
+      }
+    }
+    resultados.lotes_caducan_pronto = (lotesCaducan ?? []).filter((l: { fecha_caducidad: string }) => {
+      const dias = Math.ceil((new Date(l.fecha_caducidad).getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
+      return dias <= 3
+    }).length
+  } catch (e) { console.error('Check 15 caducidades:', e) }
+
 
     ok: true,
     timestamp: new Date().toISOString(),

@@ -8324,6 +8324,73 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
   }[]>([])
 
   const [eanLoading, setEanLoading] = useState<number | null>(null)
+  // Comparador precios
+  const [histPrecios, setHistPrecios] = useState<Record<string, { ultimo: number; media90: number | null; muestras: number }>>({})
+  // FEFO panel
+  const [fefoLotes, setFefoLotes] = useState<{
+    id: string; nombre: string; cantidad: number; unidad: string
+    fecha_caducidad: string; numero_lote: string | null; proveedor: string | null
+    dias_restantes: number; urgencia: 'critico' | 'alto' | 'medio' | 'ok'
+  }[]>([])
+  const [fefoLoading, setFefoLoading] = useState(false)
+  const [showFefo, setShowFefo] = useState(false)
+  // OCR en recepción
+  const [ocrRecLoading, setOcrRecLoading] = useState(false)
+  const recFileInputRef = React.useRef<HTMLInputElement>(null)
+
+  const loadFefo = async () => {
+    setFefoLoading(true)
+    const r = await fetch('/api/owner/stock/fefo?dias=14', { headers: sh() })
+    const d = await r.json()
+    setFefoLotes(d.lotes ?? [])
+    setFefoLoading(false)
+  }
+
+  const cargarHistPrecios = async (ids: (string | null)[]) => {
+    const validos = ids.filter(Boolean) as string[]
+    if (!validos.length) return
+    const r = await fetch(`/api/owner/recepciones/historial-precios?articulo_ids=${validos.join(',')}`, { headers: sh() })
+    const d = await r.json()
+    setHistPrecios(d.precios ?? {})
+  }
+
+  const ocrEnRecepcion = async (file: File) => {
+    setOcrRecLoading(true)
+    try {
+      const toBase64 = (f: File): Promise<string> => new Promise((res, rej) => {
+        const r = new FileReader()
+        r.onload = () => res((r.result as string).split(',')[1])
+        r.onerror = rej
+        r.readAsDataURL(f)
+      })
+      const b64 = await toBase64(file)
+      const mediaType = file.type === 'image/png' ? 'image/png' : 'image/jpeg'
+      const resp = await fetch('/api/owner/stock/ocr', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({ images: [{ data: b64, mediaType }] })
+      })
+      const d = await resp.json()
+      if (d.ok && d.articulos?.length) {
+        const nuevos = d.articulos.map((a: { nombre: string; cantidad: number; unidad: string; precio_unitario: number | null }) => ({
+          stock_articulo_id: null as string | null,
+          nombre_articulo: a.nombre,
+          cantidad_pedida: null,
+          cantidad_recibida: String(a.cantidad ?? ''),
+          unidad: a.unidad ?? 'unidad',
+          precio_facturado: a.precio_unitario ? String(a.precio_unitario) : '',
+          fecha_caducidad: '',
+          estado: 'ok' as const,
+        }))
+        setRecItems(nuevos)
+        setRecStep('checklist')
+        if (d.proveedor) {
+          const prov = listaProvs.find(p => p.nombre.toLowerCase().includes(d.proveedor.toLowerCase()))
+          if (prov) setRecProveedorId(prov.id)
+        }
+      }
+    } catch { /* silent */ } finally { setOcrRecLoading(false) }
+  }
 
   const lookupEAN = async (idx: number, ean: string) => {
     const val = ean.trim()
@@ -8434,7 +8501,7 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
   const cargarDesdePedido = (pedido: typeof recPedidosPend[0]) => {
     setRecPedidoId(pedido.id)
     setRecProveedorId(null)
-    setRecItems([{
+    const items = [{
       stock_articulo_id: pedido.stock_articulos?.id ?? null,
       nombre_articulo: pedido.stock_articulos?.nombre ?? 'Artículo',
       cantidad_pedida: Number(pedido.cantidad),
@@ -8443,8 +8510,10 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
       precio_facturado: '',
       fecha_caducidad: '',
       estado: 'ok' as const,
-    }])
+    }]
+    setRecItems(items)
     setRecStep('checklist')
+    cargarHistPrecios(items.map(i => i.stock_articulo_id))
   }
 
   const confirmarRecepcion = async () => {
@@ -8626,6 +8695,9 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
           </div>
         </div>
         <div style={{ display:'flex', gap:8 }}>
+          <button onClick={() => { setShowFefo(true); loadFefo() }} style={{ fontFamily:SN, fontSize:13, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
+            🗓 Caducidades
+          </button>
           <button onClick={() => openPedidos()} style={{ fontFamily:SN, fontSize:13, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
             📋 Pedidos
           </button>
@@ -8713,6 +8785,59 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
       )}
 
       {/* Modal Recibir mercancía — checklist ✅/✏️/❌ */}
+      {/* Modal FEFO — Caducidades próximas */}
+      {showFefo && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowFefo(false) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:560, maxHeight:'88vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink }}>🗓 Caducidades — próximos 14 días</div>
+              <button onClick={() => setShowFefo(false)} style={{ background:'none', border:'none', cursor:'pointer', color:C.ink3, fontSize:18 }}>✕</button>
+            </div>
+            {fefoLoading && <div style={{ textAlign:'center', padding:32, fontFamily:SE, fontStyle:'italic', color:C.ink3 }}>Cargando…</div>}
+            {!fefoLoading && fefoLotes.length === 0 && (
+              <div style={{ textAlign:'center', padding:32, fontFamily:SN, fontSize:13, color:C.ink3 }}>
+                No hay lotes registrados con fecha de caducidad en los próximos 14 días.
+                <div style={{ marginTop:8, fontSize:11, color:C.ink4 }}>Las caducidades se registran en el paso de recepción de mercancía.</div>
+              </div>
+            )}
+            {fefoLotes.map(lote => (
+              <div key={lote.id} style={{
+                padding:'11px 14px', borderRadius:10, marginBottom:8,
+                border: `1.5px solid ${lote.urgencia === 'critico' ? C.red+'77' : lote.urgencia === 'alto' ? C.amber+'77' : C.rule}`,
+                background: lote.urgencia === 'critico' ? '#FFF0F0' : lote.urgencia === 'alto' ? '#FFFBEB' : C.bone,
+                display:'flex', alignItems:'center', gap:12,
+              }}>
+                <div style={{ fontSize:22 }}>
+                  {lote.urgencia === 'critico' ? '🔴' : lote.urgencia === 'alto' ? '🟠' : lote.urgencia === 'medio' ? '🟡' : '🟢'}
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:C.ink }}>{lote.nombre}</div>
+                  <div style={{ fontFamily:SM, fontSize:10, color:C.ink3 }}>
+                    {lote.cantidad} {lote.unidad}
+                    {lote.numero_lote && ` · Lote ${lote.numero_lote}`}
+                    {lote.proveedor && ` · ${lote.proveedor}`}
+                  </div>
+                </div>
+                <div style={{ textAlign:'right' as const, flexShrink:0 }}>
+                  <div style={{ fontFamily:SM, fontSize:12, fontWeight:700, color: lote.urgencia === 'critico' ? C.red : lote.urgencia === 'alto' ? C.amber : C.ink3 }}>
+                    {lote.dias_restantes === 0 ? '¡Hoy!' : `${lote.dias_restantes}d`}
+                  </div>
+                  <div style={{ fontFamily:SM, fontSize:9, color:C.ink4 }}>
+                    {new Date(lote.fecha_caducidad).toLocaleDateString('es', { day:'2-digit', month:'short' })}
+                  </div>
+                </div>
+              </div>
+            ))}
+            {fefoLotes.length > 0 && (
+              <div style={{ marginTop:12, fontFamily:SN, fontSize:11, color:C.ink3, padding:'8px 12px', background:C.paper2, borderRadius:8 }}>
+                ℹ️ FEFO (First Expired, First Out): consume primero el lote con fecha más próxima.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {modal === 'recibir' && (
         <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
           onClick={e => { if (e.target === e.currentTarget && !recLoading) setModal(null) }}>
@@ -8767,6 +8892,24 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
                   </div>
                   <span style={{ fontFamily:SM, fontSize:11, color:C.amber, fontWeight:700 }}>Cargar →</span>
                 </div>
+
+                {/* OCR desde albarán — NUEVO */}
+                <div onClick={() => recFileInputRef.current?.click()}
+                  style={{ padding:'12px 14px', border:`1px solid ${C.amber}66`, borderRadius:8, background:C.bone, cursor:'pointer', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                  <div>
+                    <div style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:C.ink }}>
+                      {ocrRecLoading ? '⏳ Leyendo albarán…' : '📷 Foto del albarán'}
+                    </div>
+                    <div style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>IA extrae artículos, cantidades y precios automáticamente</div>
+                  </div>
+                  <span style={{ fontFamily:SM, fontSize:11, color:C.amber, fontWeight:700 }}>{ocrRecLoading ? '…' : 'Escanear →'}</span>
+                </div>
+                <input
+                  ref={recFileInputRef}
+                  type="file" accept="image/*" capture="environment"
+                  style={{ display:'none' }}
+                  onChange={e => { const f = e.target.files?.[0]; if (f) ocrEnRecepcion(f) }}
+                />
 
                 {/* Manual en blanco */}
                 <div onClick={() => { setRecItems([{ stock_articulo_id: null, nombre_articulo: '', cantidad_pedida: null, cantidad_recibida: '', unidad: 'unidad', precio_facturado: '', fecha_caducidad: '', estado: 'ok' }]); setRecStep('checklist') }}
@@ -8831,6 +8974,21 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
                           <input type="number" min="0" step="0.01" value={it.precio_facturado} placeholder="—"
                             onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, precio_facturado: e.target.value} : x))}
                             style={{ width:'100%', padding:'5px 8px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:13, color:C.ink, background:'transparent', outline:'none', boxSizing:'border-box' as const }} />
+                          {/* Comparador precio — muestra variación vs último */}
+                          {it.stock_articulo_id && histPrecios[it.stock_articulo_id] && it.precio_facturado && (() => {
+                            const hist = histPrecios[it.stock_articulo_id!]
+                            const actual = parseFloat(it.precio_facturado)
+                            const ref = hist.media90 ?? hist.ultimo
+                            if (!ref || isNaN(actual)) return null
+                            const pct = ((actual - ref) / ref) * 100
+                            if (Math.abs(pct) < 1) return null
+                            const sube = pct > 0
+                            return (
+                              <div style={{ fontFamily:SM, fontSize:9, color: sube ? C.red : C.green, marginTop:2 }}>
+                                {sube ? '▲' : '▼'} {Math.abs(pct).toFixed(1)}% vs media 90d ({ref.toFixed(2)}€)
+                              </div>
+                            )
+                          })()}
                         </div>
                         {/* Botones estado */}
                         <div style={{ display:'flex', gap:5 }}>
@@ -8853,15 +9011,24 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
                           style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:C.ink4, fontSize:16 }}>🗑</button>
                       </div>
                       {/* EAN + Lote */}
-                      <div style={{ marginTop:6, display:'flex', gap:8, alignItems:'center' }}>
+                      <div style={{ marginTop:6, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' as const }}>
                         <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, flexShrink:0 }}>EAN</span>
                         <input
+                          id={`ean-rec-${i}`}
                           placeholder="8412345…" maxLength={14}
                           style={{ width:120, padding:'3px 7px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SM, fontSize:11, color:C.ink3, background:'transparent', outline:'none' }}
                           onBlur={e => lookupEAN(i, e.target.value)}
                           onKeyDown={e => { if (e.key === 'Enter') lookupEAN(i, (e.target as HTMLInputElement).value) }}
                         />
                         {eanLoading === i && <span style={{ fontFamily:SM, fontSize:9, color:C.ink4 }}>buscando…</span>}
+                        {/* RASFF link */}
+                        <a
+                          href={`https://webgate.ec.europa.eu/rasff-window/screen/search?searchText=${encodeURIComponent(it.nombre_articulo)}`}
+                          target="_blank" rel="noopener noreferrer"
+                          title="Verificar alertas RASFF (UE)"
+                          style={{ fontFamily:SM, fontSize:9, color:C.ink4, textDecoration:'none', border:`1px solid ${C.rule}`, borderRadius:5, padding:'1px 5px', flexShrink:0 }}>
+                          🔍 RASFF
+                        </a>
                         <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, flexShrink:0 }}>LOTE</span>
                         <input
                           placeholder="L2626A" maxLength={30}

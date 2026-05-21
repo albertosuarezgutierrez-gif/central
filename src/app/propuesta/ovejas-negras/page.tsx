@@ -47,18 +47,30 @@ const config: ClienteConfig = {
   desviacion1pct: '80.000 €',
   citaStock: 'La dejancia pura.',
   hoyVsIaRest: {
-    hoy: ['Recepción manual sin cruce vs pedido', 'Caducidades a ojo', '€0,30 por albarán', 'Sin historial de precios', 'Mermas no registradas'],
-    iaRest: ['Lista pre-cargada desde pedido', 'Caducidad extraída de etiqueta', '€0 por albarán incluido', 'Detecta subidas de precio', 'Mermas registradas por proveedor'],
+    hoy: ['Recepción manual sin cruce vs pedido', 'Caducidades a ojo o en papel', '€0,30 por albarán digitalizar', 'Sin historial de precios', 'Mermas no registradas', 'Sin alerta de retirada de mercado'],
+    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🔍 Link RASFF UE por cada producto recibido'],
   },
   datosEstrategicos: [
-    { titulo:'Central de compras', desc:'2% sobre 8M€ en volumen = 160.000€/año para el grupo.' },
-    { titulo:'Inteligencia de precios', desc:'Detección temprana de subidas. "Tu restaurante paga 23% más de jamón que la media del grupo."' },
-    { titulo:'Benchmarking sectorial', desc:'Datos agregados de todos tus locales. Nadie en el sector tiene esto.' },
+    { titulo:"Central de compras", desc:"2% sobre 8M€ en volumen = 160.000€/año para el grupo." },
+    { titulo:"Inteligencia de precios", desc:"Detección temprana de subidas. \"Tu restaurante paga 23% más de jamón que la media del grupo.\" Con historial 90 días por artículo y proveedor." },
+    { titulo:"Trazabilidad FEFO + RASFF", desc:"Cada lote registrado. Alerta push cuando caduca. Link directo al portal alertas UE (RASFF) por producto." },
+    { titulo:"Benchmarking sectorial", desc:"Datos agregados de todos tus locales. Nadie en el sector tiene esto." },
   ],
   modulos: [
     MODULO_ASISTENTE_COCINA({ roi:'Con 3 partidas y 14 camareros, el jefe no puede estar en todos lados. La IA coordina.' }),
     MODULO_ANALISIS_CARTA(),
-    MODULO_RECEPCION({ roi:'1.000 albaranes/mes × €0,30 = €300 por restaurante. En 50 locales: €15.000/mes ahorrados.' }),
+    MODULO_RECEPCION({
+      sub: '1 foto. Lista completa. Stock actualizado.',
+      desc: 'El recepcionista hace una foto del albarán y la IA extrae todos los artículos, cantidades y precios automáticamente. Stock actualizado en 30 segundos. Trazabilidad de lote y caducidad incluida.',
+      ejemplos: [
+        '📷 Foto albarán → pre-carga todos los ítems con cantidades y precios',
+        '🏷️ EAN del producto → nombre e ingredientes desde base de datos global (4M productos)',
+        '📊 Comparador de precios: "Este jamón subió un 12% vs media 90 días"',
+        '🗓 Panel FEFO: lotes ordenados por caducidad + push automático cuando quedan 3 días',
+        '🔍 Link RASFF (alertas UE) por cada producto recibido — trazabilidad legal',
+      ],
+      roi: '1.000 albaranes/mes × 3 min = 50h/mes. En 50 locales: más de 2.500h al año. Y un 1% de desviación en 8M€ son 80.000€.',
+    }),
     {
       emoji: '📷',
       titulo: 'Scanner inteligente',
