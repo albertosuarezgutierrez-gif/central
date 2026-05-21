@@ -35,7 +35,7 @@ type Mesa = { id: string; codigo: string; nombre: string | null; zona: string; c
 type Turno = { id: string; nombre: string; estado: string; created_at: string; fecha: string }
 type TurnoStats = { total_comandas: number; avg_latencia_ms: number | null; mesas_activas: { codigo: string; count: number }[] }
 type Impresora = { id: string; nombre: string; seccion_id: string; secciones_ids: string[]; cloud_device_id: string | null; modelo: string | null; activa: boolean; ultimo_ping: string | null; configurada: boolean; connection_type: string; ip_address: string | null; port: number | null; impresora_fallback_id: string | null; es_caja: boolean; zonas_caja: string[] }
-type BridgeToken = { id: string; token: string; nombre: string; activo: boolean; ultimo_ping: string | null }
+type BridgeToken = { id: string; token: string; nombre: string; activo: boolean; ultimo_ping: string | null; rol: string | null; en_wifi: boolean | null; ip_lan: string | null; platform: string | null; device_name: string | null }
 type PrintJob = { id: string; status: string; seccion_id: string; created_at: string; sent_at: string | null; acked_at: string | null; attempts: number; error_msg: string | null; impresoras?: { nombre: string } }
 type Reserva = {
   id: string; nombre_cliente: string; telefono: string | null
@@ -3855,48 +3855,88 @@ function ImpresorasTab() {
                   Sin tokens. Crea uno para activar el bridge.
                 </div>
               ) : (
-                <div style={{ border: `1px solid ${C.rule}`, borderRadius: 6, overflow: 'hidden' }}>
-                  {bridgeTokens.map((bt, idx) => {
-                    const bridgeOnline = bt.ultimo_ping && Date.now() - new Date(bt.ultimo_ping).getTime() < 15000
-                    return (
-                      <div key={bt.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderBottom: idx < bridgeTokens.length - 1 ? `1px solid ${C.rule}` : 'none', background: C.bone }}>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{bt.nombre}</div>
-                          <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, letterSpacing: '.04em', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{bt.token}</div>
+                <>
+                  {/* Widget resumen mesh — solo si hay más de 1 nodo */}
+                  {bridgeTokens.filter(bt => bt.ultimo_ping && Date.now() - new Date(bt.ultimo_ping).getTime() < 15000).length > 1 && (
+                    <div style={{ background: '#1A2A1C', border: `1px solid ${C.green}`, borderRadius: 6, padding: '10px 14px', marginBottom: 10, display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <div style={{ color: C.green, fontSize: 16 }}>⬡</div>
+                      <div>
+                        <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.green }}>
+                          BRIDGE MESH ACTIVO — {bridgeTokens.filter(bt => bt.ultimo_ping && Date.now() - new Date(bt.ultimo_ping).getTime() < 15000).length} nodos online
                         </div>
-                        <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: bridgeOnline ? C.green : C.ink4, whiteSpace: 'nowrap' }}>
-                          {bridgeOnline ? 'ONLINE' : bt.ultimo_ping ? fmtAgo(bt.ultimo_ping) : 'NUNCA'}
+                        <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginTop: 2 }}>
+                          Si el master cae, otro nodo toma el relevo automáticamente
                         </div>
-                        <button
-                          title="Copiar token"
-                          onClick={() => {
-                            const copy = (text: string) => {
-                              if (navigator.clipboard && navigator.clipboard.writeText) {
-                                navigator.clipboard.writeText(text).catch(() => {
+                      </div>
+                    </div>
+                  )}
+                  <div style={{ border: `1px solid ${C.rule}`, borderRadius: 6, overflow: 'hidden' }}>
+                    {bridgeTokens.map((bt, idx) => {
+                      const bridgeOnline = bt.ultimo_ping && Date.now() - new Date(bt.ultimo_ping).getTime() < 15000
+                      const esMaster     = bridgeOnline && bt.rol === 'master'
+                      const plat         = bt.platform === 'android' ? '📱' : bt.platform === 'windows' ? '🖥' : bt.platform ? '💻' : '◻'
+                      const displayName  = bt.device_name || bt.nombre
+                      return (
+                        <div key={bt.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', borderBottom: idx < bridgeTokens.length - 1 ? `1px solid ${C.rule}` : 'none', background: esMaster ? '#161D17' : C.bone }}>
+                          {/* Icono plataforma */}
+                          <div style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>{plat}</div>
+                          {/* Info principal */}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{displayName}</span>
+                              {esMaster && (
+                                <span style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, letterSpacing: '.08em', color: C.green, background: '#1A2A1C', border: `1px solid ${C.green}`, borderRadius: 3, padding: '1px 5px' }}>★ MASTER</span>
+                              )}
+                              {bridgeOnline && !esMaster && (
+                                <span style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, letterSpacing: '.08em', color: C.ink3, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 3, padding: '1px 5px' }}>STANDBY</span>
+                              )}
+                            </div>
+                            <div style={{ display: 'flex', gap: 8, marginTop: 3, flexWrap: 'wrap' }}>
+                              {bt.ip_lan && (
+                                <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>📶 {bt.ip_lan}</span>
+                              )}
+                              {bt.en_wifi === false && bridgeOnline && (
+                                <span style={{ fontFamily: SM, fontSize: 10, color: '#E8A33B' }}>⚠ Datos móviles</span>
+                              )}
+                              <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 180 }}>{bt.token}</span>
+                            </div>
+                          </div>
+                          {/* Estado online */}
+                          <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.08em', color: bridgeOnline ? C.green : C.ink4, whiteSpace: 'nowrap' }}>
+                            {bridgeOnline ? '● ONLINE' : bt.ultimo_ping ? fmtAgo(bt.ultimo_ping) : 'NUNCA'}
+                          </div>
+                          {/* Copiar token */}
+                          <button
+                            title="Copiar token"
+                            onClick={() => {
+                              const copy = (text: string) => {
+                                if (navigator.clipboard && navigator.clipboard.writeText) {
+                                  navigator.clipboard.writeText(text).catch(() => {
+                                    const el = document.createElement('textarea')
+                                    el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
+                                    document.body.appendChild(el); el.select(); document.execCommand('copy')
+                                    document.body.removeChild(el)
+                                  })
+                                } else {
                                   const el = document.createElement('textarea')
                                   el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
                                   document.body.appendChild(el); el.select(); document.execCommand('copy')
                                   document.body.removeChild(el)
-                                })
-                              } else {
-                                const el = document.createElement('textarea')
-                                el.value = text; el.style.position = 'fixed'; el.style.opacity = '0'
-                                document.body.appendChild(el); el.select(); document.execCommand('copy')
-                                document.body.removeChild(el)
+                                }
+                                setCopiedTokenId(bt.id)
+                                setTimeout(() => setCopiedTokenId(null), 2000)
                               }
-                              setCopiedTokenId(bt.id)
-                              setTimeout(() => setCopiedTokenId(null), 2000)
-                            }
-                            copy(bt.token)
-                          }}
-                          style={{ background: copiedTokenId === bt.id ? C.green : C.paper2, color: copiedTokenId === bt.id ? '#fff' : C.ink3, border: `1px solid ${copiedTokenId === bt.id ? C.green : C.rule}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontFamily: SM, fontSize: 10, fontWeight: 700, transition: 'all .2s' }}>
-                          {copiedTokenId === bt.id ? '✓ COPIADO' : 'COPIAR'}
-                        </button>
-                        <Btn size="sm" variant="danger" onClick={() => deleteBridgeToken(bt.id)}><Icon d={ICONS.trash} size={13}/></Btn>
-                      </div>
-                    )
-                  })}
-                </div>
+                              copy(bt.token)
+                            }}
+                            style={{ background: copiedTokenId === bt.id ? C.green : C.paper2, color: copiedTokenId === bt.id ? '#fff' : C.ink3, border: `1px solid ${copiedTokenId === bt.id ? C.green : C.rule}`, borderRadius: 4, padding: '4px 8px', cursor: 'pointer', fontFamily: SM, fontSize: 10, fontWeight: 700, transition: 'all .2s', flexShrink: 0 }}>
+                            {copiedTokenId === bt.id ? '✓' : 'COPIAR'}
+                          </button>
+                          <Btn size="sm" variant="danger" onClick={() => deleteBridgeToken(bt.id)}><Icon d={ICONS.trash} size={13}/></Btn>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </>
               )}
             </div>
             <div style={{ display: 'flex', justifyContent: 'flex-end' }}>

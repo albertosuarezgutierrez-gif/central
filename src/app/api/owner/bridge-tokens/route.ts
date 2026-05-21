@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data, error } = await sb()
     .from('bridge_tokens')
-    .select('id, token, nombre, activo, ultimo_ping, created_at')
+    .select('id, token, nombre, activo, ultimo_ping, rol, en_wifi, ip_lan, platform, device_name')
     .eq('restaurante_id', rid)
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
