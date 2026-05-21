@@ -107,20 +107,28 @@ class MainActivity : AppCompatActivity() {
         setupMediaSession()
         checkForUpdate()
 
-        // Arrancar bridge si ya tiene token configurado
-        arrancarBridgeSiConfigurado()
+        // Bridge en background — completamente opcional, nunca bloquea la app
+        try { arrancarBridgeSiConfigurado() } catch (_: Exception) {}
     }
 
     private fun arrancarBridgeSiConfigurado() {
-        val token = BridgeService.getToken(this)
-        if (!token.isNullOrEmpty()) {
-            val intent = Intent(this, BridgeService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(intent)
-            } else {
-                startService(intent)
+        // Ejecutar en hilo separado — nunca bloquear onCreate
+        Thread {
+            try {
+                val token = BridgeService.getToken(this)
+                if (!token.isNullOrEmpty()) {
+                    val intent = Intent(this, BridgeService::class.java)
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                        startForegroundService(intent)
+                    } else {
+                        startService(intent)
+                    }
+                }
+            } catch (e: Exception) {
+                // Bridge no crítico — si falla, la app sigue funcionando
+                android.util.Log.w("ia.rest", "Bridge no pudo arrancar: ${e.message}")
             }
-        }
+        }.start()
     }
 
     @Suppress("DEPRECATION")
