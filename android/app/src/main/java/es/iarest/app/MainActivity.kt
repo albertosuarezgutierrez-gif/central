@@ -108,27 +108,12 @@ class MainActivity : AppCompatActivity() {
         checkForUpdate()
 
         // Bridge en background — completamente opcional, nunca bloquea la app
-        try { arrancarBridgeSiConfigurado() } catch (_: Exception) {}
+        // BridgeService desactivado temporalmente (Android 14 compat pendiente)
     }
 
     private fun arrancarBridgeSiConfigurado() {
-        // Ejecutar en hilo separado — nunca bloquear onCreate
-        Thread {
-            try {
-                val token = BridgeService.getToken(this)
-                if (!token.isNullOrEmpty()) {
-                    val intent = Intent(this, BridgeService::class.java)
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                        startForegroundService(intent)
-                    } else {
-                        startService(intent)
-                    }
-                }
-            } catch (e: Exception) {
-                // Bridge no crítico — si falla, la app sigue funcionando
-                android.util.Log.w("ia.rest", "Bridge no pudo arrancar: ${e.message}")
-            }
-        }.start()
+        // Bridge integrado en APK: pendiente fix Android 14 foreground service compat
+        // El bridge del PC gestiona la impresión mientras tanto
     }
 
     @Suppress("DEPRECATION")
