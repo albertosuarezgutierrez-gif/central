@@ -735,7 +735,10 @@ export default function Page() {
             {ico:"🔔",t:"Supervisor de tiempos",d:"Alertas automáticas cuando el servicio se desvía del estándar.",badge:null,cls:""},
             {ico:"⏱️",t:"Fichaje digital",d:"Control horario conforme al RD-ley 8/2019.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:"mc-red"},
             {ico:"📋",t:"VeriFactu AEAT",d:"Facturas homologadas con firma encadenada y QR verificable.",badge:{t:"Legal · incluido",cls:"b-legal"},cls:""},
-            {ico:"🛵",t:"Delivery integrado",d:"Glovo, Uber Eats y Just Eat directo al KDS.",badge:{t:"Próximamente",cls:"b-soon"},cls:""},
+            {ico:"🏢",t:"Gestión multi-local",d:"Panel unificado para grupos con varios restaurantes. Un solo acceso, todos los locales en tiempo real.",badge:{t:"Grupos",cls:"b-new"},cls:"mc-red"},
+            {ico:"🧪",t:"Elaboraciones y APPCC",d:"Fichas técnicas, alérgenos y trazabilidad de elaboraciones. Cumplimiento legal listo para una inspección.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:""},
+            {ico:"📊",t:"Análisis de carta",d:"Identifica tus platos estrella, los que no rinden y los que más margen te dejan. Decide con datos.",badge:null,cls:""},
+            {ico:"🛵",t:"Delivery",d:"Pedidos a domicilio y recogida integrados directamente en el KDS.",badge:null,cls:""},
           ].map((m,i)=>(
             <div key={i} className={`mcard reveal${m.cls?" "+m.cls:""}`} style={{animationDelay:`${i*0.05}s`}}>
               <div className="mico2">{m.ico}</div>
@@ -838,7 +841,7 @@ export default function Page() {
         <div className="faqlist">
           {[
             {q:"¿Funciona si hay ruido en sala?",a:"Sí. El motor de transcripción de ia.rest está optimizado para entornos de hostelería: ruido de fondo, música y conversaciones cercanas. Funciona bien en la práctica. Recomendamos hablar a 15–20 cm del micrófono, algo natural cuando ya llevas la comanda en mente."},
-            {q:"¿Cómo funcionará la integración con Glovo y Uber Eats?",a:"Estamos preparando la integración directa con las principales plataformas de delivery. Los pedidos entrarán automáticamente al KDS igual que cualquier comanda de sala — sin tabletas extra, sin reescribir. Estará disponible próximamente. Si tienes delivery activo y quieres ser de los primeros en probarlo, escríbenos."},
+            {q:"¿Tiene integración con delivery?",a:"Sí. Los pedidos de delivery entran directamente al KDS igual que cualquier comanda de sala — sin tabletas extra, sin reescribir. Si tienes delivery activo, cuéntanos tu caso y lo configuramos juntos."},
             {q:"¿Qué pasa si se cae internet en mitad del servicio?",a:"Las comandas ya enviadas siguen visibles en cocina. Para nuevas comandas cae a modo manual: el camarero puede abrir cualquier comanda anterior y modificarla."},
             {q:"¿Necesito hardware nuevo? ¿Impresoras, tablets específicas?",a:"No. ia.rest funciona en cualquier móvil o tablet con navegador. Para el KDS en cocina, una tablet de 70€ es suficiente. Para impresoras de tickets, garantizamos compatibilidad 100% con modelos como la Star TSP143IIILAN y la TSP143IIIW. Si ya tienes otra impresora térmica habitual, probablemente funcione — consúltanos."},
             {q:"¿El sistema entiende la carta de mi restaurante?",a:'Sí. Durante el onboarding (10 minutos) introduces tus platos y el sistema los aprende. Si el camarero dice "una de la casa" y en tu carta se llama "Ensaladilla de la abuela", el ticket sale con el nombre correcto.'},
@@ -859,7 +862,7 @@ export default function Page() {
 
       {/* TRUST */}
       <div className="trust">
-        {[["🔒","Datos en Europa","· Servidores certificados UE"],["🇪🇸","Soporte en español","· Respuesta el mismo día"],["📋","VeriFactu AEAT 2026","· Incluido en todos los perfiles"],["🛵","Delivery","· Glovo y Uber Eats · Próximamente"],["⏱️","Fichaje RD-ley 8/2019","· Control horario incluido"],["💳","Sin permanencia","· Cancela cuando quieras"]].map(([ico,b,t])=>(
+        {[["🔒","Datos en Europa","· Servidores certificados UE"],["🇪🇸","Soporte en español","· Respuesta el mismo día"],["📋","VeriFactu AEAT 2026","· Incluido en todos los perfiles"],["🛵","Delivery","· Pedidos a domicilio y recogida incluidos"],["⏱️","Fichaje RD-ley 8/2019","· Control horario incluido"],["💳","Sin permanencia","· Cancela cuando quieras"]].map(([ico,b,t])=>(
           <div key={b} className="ti"><span className="ico">{ico}</span><span><strong>{b}</strong>{t}</span></div>
         ))}
       </div>
