@@ -8083,7 +8083,7 @@ export default function OwnerPage() {
             </div>
           </div>
           {/* 📷 Escáner IA — botón fijo en header */}
-          <SmartScanFAB session={session} inline tema="light" />
+          <SmartScanFAB session={session} inline shape="ghost" />
           <button onClick={logout} style={{ background: 'none', border: `1px solid ${C.rule}`,
             borderRadius: 4, padding: '6px 10px', cursor: 'pointer', color: C.ink3, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Icon d={ICONS.logout} size={14}/>
