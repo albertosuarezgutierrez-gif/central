@@ -29,7 +29,7 @@ function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modu
     jefe_sala: '/jefe',
     camarero: '/edge', cocina: camarero.seccion_id ? `/kds?seccion=${camarero.seccion_id}` : '/kds',
     running: '/running',
-    gestor: '/portal',  // Rol backoffice puro — solo portal de gestión
+    gestor: '/central',  // Rol backoffice puro — solo portal de gestión
   }
   const tieneModulos = (camarero.modulos_gestion ?? []).length > 0
   const rutaDirecta = dest[camarero.rol]
@@ -39,7 +39,7 @@ function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modu
     return
   }
   // Rol desconocido: si tiene módulos → /portal, si no → /edge como fallback
-  window.location.href = tieneModulos ? '/portal' : '/edge'
+  window.location.href = tieneModulos ? '/central' : '/edge'
 }
 
 interface VozSugerencia { id: string; nombre: string; rol: string; seccion_id?: string | null }
