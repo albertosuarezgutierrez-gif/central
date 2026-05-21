@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // ia.rest · API /api/owner/reglas-envio
 // CRUD de reglas de enrutamiento — v3: nombre, fallback,

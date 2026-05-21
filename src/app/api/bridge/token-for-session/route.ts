@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // /api/bridge/token-for-session
 // La APK nativa llama este endpoint al arrancar.
 // Dado el token de sesión del camarero → devuelve el bridge token del restaurante.

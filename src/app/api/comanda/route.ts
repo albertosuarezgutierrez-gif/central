@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
@@ -144,11 +146,44 @@ export async function POST(req: NextRequest) {
     if (cmdErr) throw cmdErr
 
     // Items base
-    const itemsToInsert = items.map((it: {
+    const itemsRaw = items as {
       nombre: string; cantidad: number; notas?: string
       producto_id?: string; precio_unitario?: number
       formato_id?: string; formato_nombre?: string; seccion_id?: string
-    }) => ({
+    }[]
+
+    // Lookup de precios en BD para items sin precio (fallback case-insensitive)
+    const sinPrecio = itemsRaw.filter(it => it.precio_unitario == null)
+    if (sinPrecio.length > 0) {
+      const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
+      const nombres = [...new Set(sinPrecio.map(it => it.nombre))]
+      const { data: prods } = await supabase
+        .from('productos').select('id,nombre,precio')
+        .in('nombre', nombres).eq('restaurante_id', rid)
+      const precioMap: Record<string, { id: string; precio: number }> = {}
+      for (const p of prods ?? []) if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
+      // Fallback: si no matcheó (diferencia capitalización), buscar todos y comparar con norm()
+      const noMatcheados = nombres.filter(n => !precioMap[norm(n)])
+      if (noMatcheados.length > 0) {
+        const { data: todos } = await supabase.from('productos').select('id,nombre,precio').eq('restaurante_id', rid).eq('activo', true)
+        for (const p of todos ?? []) {
+          const pn = norm(p.nombre)
+          if (noMatcheados.some(n => norm(n) === pn) && p.precio != null) {
+            precioMap[pn] = { id: p.id, precio: Number(p.precio) }
+            for (const it of itemsRaw) { if (norm(it.nombre) === pn) it.nombre = p.nombre }
+          }
+        }
+      }
+      // Aplicar precios encontrados
+      for (const it of itemsRaw) {
+        if (it.precio_unitario == null) {
+          const found = precioMap[norm(it.nombre)]
+          if (found) { it.precio_unitario = found.precio; if (!it.producto_id) it.producto_id = found.id }
+        }
+      }
+    }
+
+    const itemsToInsert = itemsRaw.map(it => ({
       comanda_id: comanda.id,
       nombre: it.nombre, cantidad: it.cantidad,
       notas: it.notas ?? null,

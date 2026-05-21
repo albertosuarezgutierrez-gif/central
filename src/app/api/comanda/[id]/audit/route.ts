@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/comanda/[id]/audit — historial de cambios de una comanda
 // Usado por el panel super/owner para ver quién tocó qué
 

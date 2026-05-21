@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // GET  /api/owner/restaurante — leer configuración del restaurante
 // PATCH /api/owner/restaurante — actualizar NIF, razón social, dirección, etc.

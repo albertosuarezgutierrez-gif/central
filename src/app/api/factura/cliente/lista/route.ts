@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // GET /api/factura/cliente/lista?desde=YYYY-MM-DD&hasta=YYYY-MM-DD
 // Lista facturas completas (serie F) emitidas a empresas

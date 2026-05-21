@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/storefront/carta?slug=sloppy-joes
 // Endpoint público — sin auth. Devuelve config + productos del restaurante.
 

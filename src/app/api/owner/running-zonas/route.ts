@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // /api/owner/running-zonas — Gestión de zonas asignadas a runnings
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'

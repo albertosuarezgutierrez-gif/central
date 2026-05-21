@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // PATCH /api/comanda/[id]/item/[itemId] — modificar cantidad/notas
 // DELETE /api/comanda/[id]/item/[itemId] — eliminar item
 // Ambos verifican restaurante_id y registran en audit_log

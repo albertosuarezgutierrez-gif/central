@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // POST /api/storefront/pedido-operador
 // Canal teléfono y mostrador — el empleado introduce el pedido
 // Requiere sesión interna (camarero/owner/admin)

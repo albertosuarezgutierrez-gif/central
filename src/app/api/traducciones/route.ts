@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // app/api/traducciones/route.ts
 // GET  ?producto_id=xxx        → todas las traducciones de un producto
 // POST { producto_id, idioma, nombre, descripcion } → upsert

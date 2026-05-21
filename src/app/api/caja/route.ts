@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/caja  → resumen del turno activo
 // POST /api/caja → añadir movimiento manual (retiro/gasto/ingreso/apertura/arqueo/cierre)
 

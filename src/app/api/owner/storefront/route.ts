@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET  /api/owner/storefront        → leer config
 // POST /api/owner/storefront        → crear/actualizar config
 // Requiere sesión owner/admin

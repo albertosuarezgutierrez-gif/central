@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/owner/consumo
 // Devuelve el consumo mensual, histórico y estado de billing del restaurante
 

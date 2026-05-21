@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 /**
  * GET /api/voice-profile/status?camarero_id=xxx
  *

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET  /api/owner/metodos-pago   → lista todos los métodos del restaurante (activos e inactivos)
 // PUT  /api/owner/metodos-pago   → body: { id: string, activo: boolean } → actualiza uno
 // Solo owner / super_admin

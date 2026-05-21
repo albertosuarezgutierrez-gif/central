@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // POST /api/storefront/pedido
 // Crea el pedido online + Stripe Payment Intent
 // Público — sin auth de camarero
@@ -6,7 +8,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
+let _stripe: Stripe | null = null
+function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'placeholder', { apiVersion: '2026-04-22.dahlia' as any }); return _stripe }
 
 export async function POST(req: NextRequest) {
   try {
@@ -100,7 +103,7 @@ export async function POST(req: NextRequest) {
     if (pedErr || !pedido) throw pedErr ?? new Error('Error creando pedido')
 
     // Crear Stripe Payment Intent
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await getStripe().paymentIntents.create({
       amount: Math.round(total * 100),
       currency: 'eur',
       metadata: {

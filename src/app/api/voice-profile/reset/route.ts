@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 /**
  * DELETE /api/voice-profile/reset?camarero_id=xxx
  * Elimina el perfil de voz del camarero.

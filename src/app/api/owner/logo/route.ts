@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // POST /api/owner/logo — sube logo del restaurante a Supabase Storage
 // DELETE /api/owner/logo — elimina el logo actual

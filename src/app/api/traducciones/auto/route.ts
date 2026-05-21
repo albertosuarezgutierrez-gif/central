@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // app/api/traducciones/auto/route.ts
 // POST { producto_id, nombre, descripcion? }
 // → Claude traduce a EN/FR/DE/IT/PT y guarda en producto_traducciones

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/api/super/soporte/route.ts
 // GET  — todos los tickets de soporte (con filtros opcionales)
 // POST { ticket_id, texto } — Alberto responde en un ticket

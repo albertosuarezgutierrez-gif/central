@@ -70,6 +70,7 @@ export default function ManualComanda({
   const [nombreCuenta, setNombreCuenta] = useState('')
   const [editandoNombre, setEditandoNombre] = useState(false)
   const [draftNombre, setDraftNombre] = useState('')
+  const [numComensales, setNumComensales] = useState(0)
   const nombreInputRef = useRef<HTMLInputElement>(null)
 
   // Scroll-safe: cancela tap si el dedo se movió >6px (es scroll, no tap)
@@ -156,12 +157,18 @@ export default function ManualComanda({
     if (!comandaActiva || cuentaEnviada || cuentaLoading) return
     setCuentaLoading(true)
     try {
-      await fetch(`/api/comanda/${comandaActiva.id}/pedir-cuenta`, {
+      const res = await fetch(`/api/comanda/${comandaActiva.id}/pedir-cuenta`, {
         method: 'POST', headers: h(),
       })
-      setCuentaEnviada(true)
-    } catch { /* silencioso */ }
-    finally { setCuentaLoading(false) }
+      if (res.ok) {
+        setCuentaEnviada(true)
+      } else {
+        const d = await res.json().catch(() => ({}))
+        setError(d.error ?? 'Error al pedir la cuenta — inténtalo de nuevo')
+      }
+    } catch {
+      setError('Sin conexión al pedir cuenta')
+    } finally { setCuentaLoading(false) }
   }
 
   const send = async () => {
@@ -171,7 +178,7 @@ export default function ManualComanda({
       const r = await fetch('/api/comanda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...h() },
-        body: JSON.stringify({ mesa_id: mesaId, items: cart.map(it => ({...it, notas: it.notas?.trim() || undefined})), tipo: 'comanda', ...(nombreCuenta.trim() ? { nombre_cuenta: nombreCuenta.trim() } : {}) }),
+        body: JSON.stringify({ mesa_id: mesaId, items: cart.map(it => ({...it, notas: it.notas?.trim() || undefined})), tipo: 'comanda', ...(numComensales > 0 ? { num_comensales: numComensales } : {}), ...(nombreCuenta.trim() ? { nombre_cuenta: nombreCuenta.trim() } : {}) }),
       })
       const d = await r.json()
       if (d.ok) {
@@ -184,7 +191,7 @@ export default function ManualComanda({
           .then(dd => {
             if (dd.comanda) setComandaActiva({ id: dd.comanda.id, total: dd.comanda.total_estimado ?? 0, estado: dd.comanda.estado })
           }).catch(() => {})
-        setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false); setNotaIdx(null); setComandaActiva(null); setCuentaEnviada(false); setNombreCuenta(''); setEditandoNombre(false); setDraftNombre('') }, 2000)
+        setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false); setNotaIdx(null); setComandaActiva(null); setCuentaEnviada(false); setNombreCuenta(''); setEditandoNombre(false); setDraftNombre(''); setNumComensales(0) }, 2000)
       } else { setError(d.error ?? 'Error') }
     } catch { setError('Error de red') }
     finally { setSending(false) }
@@ -551,6 +558,18 @@ export default function ManualComanda({
               )}
               {/* Botón Enviar inline — visible solo cuando plegado y hay items */}
               {!showCart && cart.length > 0 && (
+                <>
+                  {/* Selector comensales compacto */}
+                  <div style={{ display:'flex', alignItems:'center', gap:3, flexShrink:0 }}
+                    onPointerDown={e => e.stopPropagation()}>
+                    <button onPointerDown={() => setNumComensales(n => Math.max(0, n-1))}
+                      style={{ width:22,height:22,borderRadius:999,border:`1px solid ${L.rule}`,background:'transparent',cursor:'pointer',fontSize:14,color:L.ink3,display:'flex',alignItems:'center',justifyContent:'center' }}>−</button>
+                    <span style={{ fontFamily:SM,fontSize:11,color:numComensales>0?L.ink:L.ink4,minWidth:14,textAlign:'center' as const }}>
+                      {numComensales > 0 ? `${numComensales}p` : 'pax'}
+                    </span>
+                    <button onPointerDown={() => setNumComensales(n => Math.min(20, n+1))}
+                      style={{ width:22,height:22,borderRadius:999,border:`1px solid ${L.rule}`,background:'transparent',cursor:'pointer',fontSize:14,color:L.ink3,display:'flex',alignItems:'center',justifyContent:'center' }}>+</button>
+                  </div>
                 <button
                   onPointerDown={e => { e.stopPropagation(); send() }}
                   disabled={sending || sent}
@@ -570,6 +589,7 @@ export default function ManualComanda({
                     </>
                   )}
                 </button>
+                </>
               )}
             </div>
 

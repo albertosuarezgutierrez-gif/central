@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/api/cloudprnt/[deviceId]/route.ts
 // ============================================================
 // ia.rest · CloudPRNT endpoint

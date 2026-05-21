@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // v1 — Sugerir ingredientes de escandallo con IA (NIM → Haiku fallback)
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'

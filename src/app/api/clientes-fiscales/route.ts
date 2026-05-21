@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // GET  /api/clientes-fiscales?nif=B12345&q=empresa
 // POST /api/clientes-fiscales  — Crear/actualizar cliente fiscal

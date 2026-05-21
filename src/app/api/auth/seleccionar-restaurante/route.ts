@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // POST /api/auth/seleccionar-restaurante
 // Después del selector de restaurante → devuelve session completa
 

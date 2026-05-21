@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // POST /api/factura/cliente
 // Emite una factura completa (serie F) con datos fiscales del cliente

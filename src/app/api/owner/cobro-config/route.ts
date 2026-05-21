@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET/PUT /api/owner/cobro-config
 // Configuración del módulo ia.rest cobro por restaurante
 import { NextRequest, NextResponse } from 'next/server'

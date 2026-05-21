@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // POST /api/factura/anular
 // Anula una factura existente (registro de anulación encadenado)

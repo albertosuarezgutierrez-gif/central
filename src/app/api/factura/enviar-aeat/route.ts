@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // POST /api/factura/enviar-aeat
 // Prepara y (cuando AEAT lo habilite) envía la factura vía SOAP/XML
 // Por ahora: guarda el XML en facturas_verifactu.xml_lroe y marca estado

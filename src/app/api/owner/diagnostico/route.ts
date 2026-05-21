@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/api/owner/diagnostico/route.ts
 // GET /api/owner/diagnostico — estado del sistema para este restaurante
 // Usado por DiagnosticoTab en /owner y /jefe para autodiagnóstico sin llamar a soporte

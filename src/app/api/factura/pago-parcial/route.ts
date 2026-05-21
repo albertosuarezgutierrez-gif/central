@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // POST /api/factura/pago-parcial
 // Registra un pago parcial de cuenta dividida.

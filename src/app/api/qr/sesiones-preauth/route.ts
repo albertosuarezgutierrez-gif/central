@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/qr/sesiones-preauth
 // Devuelve sesiones QR con tarjeta capturada (pre_auth) sin pagar
 // Para el panel del owner donde puede cobrar manualmente

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // GET /api/carta/[code] — carta pública sin auth
 // Devuelve productos activos del restaurante identificado por slug

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // /api/owner/notif-config — GET y PUT de notif_config del restaurante
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'

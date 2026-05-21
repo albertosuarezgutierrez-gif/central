@@ -486,7 +486,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                         style={{flex:1,padding:'9px',background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:8,fontSize:12,fontWeight:600,color:C.ink3,cursor:'pointer'}}>Cancelar</button>
                       <button onClick={async()=>{
                         if (!editItem) return; setSaving(true)
-                        await fetch(`/api/comanda/${comanda.id}/item/${editItem.id}`,{method:'PUT',headers:{'Content-Type':'application/json','x-ia-session':session_str},body:JSON.stringify({cantidad:editQty,notas:editNotas})})
+                        await fetch(`/api/comanda/${comanda.id}/item/${editItem.id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-ia-session':session_str},body:JSON.stringify({cantidad:editQty,notas:editNotas})})
                         setEditItem(null); await cargarComanda(); setSaving(false); flash('Guardado ✓')
                       }} disabled={saving}
                         style={{flex:2,padding:'9px',background:C.verm,border:'none',borderRadius:8,fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer',opacity:saving?.6:1}}>
@@ -504,7 +504,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                   <div key={item.id} style={{display:'flex',alignItems:'center',gap:12,padding:'12px 0',borderBottom:`1px solid ${C.rule}`}}>
                     <div style={{display:'flex',flexDirection:'column' as const,alignItems:'center',gap:4,flexShrink:0}}>
                       <button onClick={async()=>{
-                        await fetch(`/api/comanda/${comanda.id}/item/${item.id}`,{method:'PUT',headers:{'Content-Type':'application/json','x-ia-session':session_str},body:JSON.stringify({cantidad:item.cantidad+1})})
+                        await fetch(`/api/comanda/${comanda.id}/item/${item.id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-ia-session':session_str},body:JSON.stringify({cantidad:item.cantidad+1})})
                         await cargarComanda()
                       }} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.rule}`,background:C.bg2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:C.ink3}}>+</button>
                       <span style={{fontFamily:SE,fontStyle:'italic',fontSize:22,fontWeight:600,color:C.verm,lineHeight:1}}>{item.cantidad}</span>
@@ -513,7 +513,7 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                         if (nq <= 0) {
                           await fetch(`/api/comanda/${comanda.id}/item/${item.id}`,{method:'DELETE',headers:{'x-ia-session':session_str}})
                         } else {
-                          await fetch(`/api/comanda/${comanda.id}/item/${item.id}`,{method:'PUT',headers:{'Content-Type':'application/json','x-ia-session':session_str},body:JSON.stringify({cantidad:nq})})
+                          await fetch(`/api/comanda/${comanda.id}/item/${item.id}`,{method:'PATCH',headers:{'Content-Type':'application/json','x-ia-session':session_str},body:JSON.stringify({cantidad:nq})})
                         }
                         await cargarComanda()
                       }} style={{width:28,height:28,borderRadius:'50%',border:`1px solid ${C.rule}`,background:C.bg2,cursor:'pointer',display:'flex',alignItems:'center',justifyContent:'center',fontSize:16,color:C.ink3}}>−</button>

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/super/cobro-resumen
 // Panel financiero Alberto — volumen y comisiones por restaurante
 import { NextRequest, NextResponse } from 'next/server'

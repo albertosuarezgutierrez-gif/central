@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // GET  /api/comanda/[id]/ticket-alias  — Obtener alias de conceptos
 // POST /api/comanda/[id]/ticket-alias  — Crear/actualizar alias

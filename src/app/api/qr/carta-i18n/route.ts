@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // app/api/qr/carta-i18n/route.ts
 // GET ?token=xxx&lang=en  → carta traducida para el cliente QR
 // Auth: valida token contra qr_sesiones_cliente (sin sesión de camarero)

@@ -2,6 +2,8 @@
 // Login por PIN de cuenta → devuelve lista de restaurantes del owner
 // Si solo tiene 1 → incluye session completa para ir directo
 
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 

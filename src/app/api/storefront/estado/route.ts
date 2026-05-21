@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // PATCH /api/storefront/estado
 // El restaurante actualiza el estado de un pedido online
 // Requiere sesión interna

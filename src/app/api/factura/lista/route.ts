@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // GET /api/factura/lista?desde=YYYY-MM-DD&hasta=YYYY-MM-DD&page=0
 // Lista facturas para la vista de auditoría del owner

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // POST /api/storefront/webhook-pago
 // Webhook de Stripe para confirmar pago online
 // Cuando payment_intent.succeeded → confirmar pedido + crear comanda en sistema
@@ -7,7 +9,8 @@ import { createServerClient } from '@/lib/supabase'
 import { crearPrintJobs } from '@/lib/courier'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
+let _stripe: Stripe | null = null
+function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'placeholder', { apiVersion: '2026-04-22.dahlia' as any }); return _stripe }
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -16,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret!)
+    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret!)
   } catch (err) {
     console.error('[WEBHOOK-STOREFRONT] Firma inválida', err)
     return NextResponse.json({ error: 'Invalid signature' }, { status: 400 })

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET  /api/super/restaurantes/[id]/cuenta → cuenta actual + lista de todas las cuentas
 // PATCH /api/super/restaurantes/[id]/cuenta → asigna el restaurante a otra cuenta
 

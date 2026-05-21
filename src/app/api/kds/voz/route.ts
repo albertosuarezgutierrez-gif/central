@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { transcribir } from '@/lib/ear'
 import { createServerClient } from '@/lib/supabase'

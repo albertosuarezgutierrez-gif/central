@@ -1,10 +1,13 @@
+export const dynamic = 'force-dynamic'
+
 // GET + POST /api/comanda/[id]/item
 // GET  → lista items de la comanda (para desglose ticket)
-// POST → añade items a una comanda existente + registra en audit_log
+// POST → añade items a una comanda existente + registra en audit_log + crea print_job
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId, getSession } from '@/lib/session'
+import { crearPrintJobs } from '@/lib/courier'
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id: comanda_id } = await params
@@ -38,7 +41,9 @@ export async function POST(
 
     // Verificar que la comanda pertenece al restaurante
     const { data: comanda } = await supabase
-      .from('comandas').select('id, estado').eq('id', comanda_id).eq('restaurante_id', rid).single()
+      .from('comandas')
+      .select('id, estado, tipo, numero_ticket, nombre_cuenta, nota_general, mesa_id, camarero_id')
+      .eq('id', comanda_id).eq('restaurante_id', rid).single()
     if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
 
     // Insertar items
@@ -62,6 +67,52 @@ export async function POST(
         p_accion: 'añadir_item', p_item_nombre: it.nombre,
         p_cant_antes: 0, p_cant_despues: it.cantidad,
       })
+    }
+
+    // Print_job: imprimir ticket de los nuevos items en cocina
+    // El KDS los ve por Realtime, pero sin ticket impreso en restaurantes con mucho tráfico
+    // se pierden fácilmente. Imprimimos solo los items nuevos (no toda la comanda).
+    try {
+      let mesaCodigo = comanda.nombre_cuenta ? `★ ${comanda.nombre_cuenta}` : '?'
+      let zonaTipo: string | null = null
+      let zonaNombre: string | null = null
+
+      if (comanda.mesa_id) {
+        const { data: mesa } = await supabase
+          .from('mesas').select('codigo, zona, zonas(nombre)')
+          .eq('id', comanda.mesa_id).eq('restaurante_id', rid).single()
+        if (mesa) {
+          mesaCodigo = mesa.codigo
+          zonaTipo   = (mesa as Record<string, unknown>).zona as string ?? null
+          zonaNombre = ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null
+        }
+      }
+
+      const { data: cam } = await supabase.from('camareros').select('nombre').eq('id', comanda.camarero_id).single()
+
+      await crearPrintJobs(
+        {
+          id:              comanda_id,
+          tipo:            'comanda',
+          mesa_codigo:     mesaCodigo,
+          camarero_nombre: cam?.nombre ?? session.nombre ?? 'Equipo',
+          numero_ticket:   comanda.numero_ticket ?? undefined,
+          restaurante_id:  rid,
+          zona_tipo:       zonaTipo,
+          zona_nombre:     zonaNombre,
+          nota_general:    comanda.nota_general ?? null,
+        },
+        items.map(it => ({
+          nombre:         it.nombre,
+          cantidad:       it.cantidad,
+          notas:          it.notas ?? null,
+          seccion_id:     it.seccion_id ?? null,
+          formato_nombre: it.formato_nombre ?? null,
+        }))
+      )
+    } catch (e) {
+      // No bloquear la respuesta si falla la impresión — los items ya están en BD/KDS
+      console.error('[COMANDA ITEM] Print error:', e)
     }
 
     return NextResponse.json({ ok: true, items: insertados.data })

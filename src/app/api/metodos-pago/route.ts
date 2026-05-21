@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/metodos-pago → lista los métodos activos del restaurante
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'

@@ -1,6 +1,11 @@
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY)
+// Lazy init: evita "RESEND_API_KEY is required" durante el build estático de Next.js
+let _resend: Resend | null = null
+function getResend() {
+  if (!_resend) _resend = new Resend(process.env.RESEND_API_KEY ?? 'placeholder')
+  return _resend
+}
 
 const FROM = 'ia.rest <hola@iarest.es>'
 const BASE = 'https://www.iarest.es'
@@ -104,7 +109,7 @@ export async function enviarEmailBienvenida({
     </div>
   `, `Bienvenido a ia.rest — ${nombreRestaurante} está listo`)
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: email,
     subject: `Bienvenido a ia.rest — tu cuenta está lista`,
@@ -136,7 +141,7 @@ export async function enviarEmailRecordatorioTrial({
     </div>
   `, `Tu prueba de ia.rest termina en ${diasRestantes} días`)
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: email,
     subject: `Tu prueba de ia.rest termina en ${diasRestantes} días`,
@@ -168,7 +173,7 @@ export async function enviarEmailConfirmacionPago({
     </div>
   `, `Suscripción activa — ${nombreRestaurante}`)
 
-  return resend.emails.send({
+  return getResend().emails.send({
     from: FROM,
     to: email,
     subject: `Suscripción activa — ia.rest`,

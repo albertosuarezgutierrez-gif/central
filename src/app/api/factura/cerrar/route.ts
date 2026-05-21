@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // ============================================================
 // POST /api/factura/cerrar
 // Cierra una comanda, genera factura Verifactu y registra cobro

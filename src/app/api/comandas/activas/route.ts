@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/comandas/activas
 // ?camarero_id=xxx → solo del camarero
 // ?todos=1         → todas las del turno activo

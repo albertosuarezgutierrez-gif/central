@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/api/owner/soporte/route.ts
 // Chat de soporte IA para propietarios de restaurante
 //

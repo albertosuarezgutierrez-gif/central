@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // /api/super/cuentas — CRUD cuentas de cliente (multi-restaurante)
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'

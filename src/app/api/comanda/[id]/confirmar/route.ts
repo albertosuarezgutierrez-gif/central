@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
@@ -44,9 +46,10 @@ export async function PATCH(
       return NextResponse.json({ ok: true, ya_confirmada: true })
     }
 
-    // Ventana de 5 min — evita confirmar comandas antiguas/perdidas
+    // Ventana de 15 min — cubre red lenta, latencia alta o camarero ocupado
+    // (era 5min, demasiado ajustado en producción real con cobertura intermitente)
     const edadMs = Date.now() - new Date(comanda.created_at).getTime()
-    if (edadMs > 300_000) {
+    if (edadMs > 900_000) {
       return NextResponse.json({ error: 'Comanda demasiado antigua para confirmar' }, { status: 409 })
     }
 

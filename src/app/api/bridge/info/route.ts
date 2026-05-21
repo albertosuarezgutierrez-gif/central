@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/api/bridge/info/route.ts
 // Heartbeat del bridge — actualiza último ping y gestiona master election mesh
 

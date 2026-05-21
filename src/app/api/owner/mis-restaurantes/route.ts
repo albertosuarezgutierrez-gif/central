@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // GET /api/owner/mis-restaurantes
 // Devuelve todos los restaurantes activos de la misma cuenta que la sesión actual.
 // Usado por el switcher multi-local del panel owner.

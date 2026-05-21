@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic'
+
 // src/app/api/estado/route.ts
 // GET /api/estado — estado público del sistema ia.rest
 // Sin autenticación — para la página pública /estado y status.iarest.es (futuro)
