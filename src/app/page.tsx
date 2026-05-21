@@ -313,9 +313,10 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .mob-drawer a:hover{color:var(--red)}
 .mob-cta{margin-top:8px;padding:14px 36px;border-radius:9999px;background:var(--red);color:#fff;font-size:16px;font-weight:600;font-family:var(--ui);border:none;cursor:pointer;letter-spacing:-.01em}
 @media(max-width:768px){
-  nav{padding:0 20px}.nav-c{display:none}
+  nav{padding:0 20px;display:flex;justify-content:space-between;align-items:center}
+  .nav-c{display:none}
   .nav-r{display:none}
-  nav .ham{display:flex;grid-column:3;justify-self:end}
+  nav .ham{display:flex}
   .hero{padding:0 20px 80px}
   .dstage{grid-template-columns:1fr;min-height:auto}
   .ddiv{width:100%;height:1px}
