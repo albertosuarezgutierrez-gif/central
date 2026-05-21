@@ -2072,7 +2072,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                       {isSis?'sistema':msg.tipo==='pregunta'?'brain · pregunta':'brain'}
                     </div>
                   )}
-                  <div style={{fontSize:13,color:msg.tipo==='error'?C.verm:C.ink,lineHeight:1.4,fontFamily:isCam?SC:SN,fontStyle:isCam?'italic':'normal'}}>
+                  <div style={{fontSize:13,color:msg.tipo==='error'?C.verm:C.ink,lineHeight:1.4,fontFamily:SN,fontStyle:'normal'}}>
                     {msg.texto}
                   </div>
                   <div style={{fontSize:9,color:C.ink4,marginTop:3,textAlign:'right',fontFamily:SM}}>
@@ -2085,7 +2085,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <div ref={chatVozBottomRef} />
             {/* ── Confirm inline — dentro del chat ────────────── */}
             {screen==='confirm' && brain && (
-              <div style={{alignSelf:'flex-start',width:'96%',background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:12,overflow:'hidden',boxShadow:'0 2px 8px rgba(26,23,20,.08)',animation:'msgIn .2s ease'}}>
+              <div style={{alignSelf:'flex-start',width:'96%',background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:12,overflow:'hidden',boxShadow:'0 2px 8px rgba(26,23,20,.08)',animation:'msgIn .2s ease',display:'flex',flexDirection:'column',maxHeight:'55vh'}}>
                 <div style={{padding:'9px 14px 7px',borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',gap:8}}>
                   <span style={{fontFamily:SM,fontSize:8,background:C.ambS,color:'#7A5614',border:`1px solid ${C.amb}44`,padding:'2px 6px',borderRadius:4}}>BRAIN</span>
                   <span style={{fontFamily:SE,fontStyle:'italic',fontSize:17,color:C.ink,flex:1}}>{brain.mesa}</span>
@@ -2107,7 +2107,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                     ⚠ Alérgeno: {alertasAlerg.map(a=>a.producto).join(', ')}
                   </div>
                 )}
-                <div style={{padding:'6px 14px 8px'}}>
+                <div style={{padding:'6px 14px 8px',overflowY:'auto',flex:1}}>
                   {brain.items.map((it,i)=>(
                     <div key={i} style={{display:'flex',alignItems:'baseline',gap:8,padding:'3px 0'}}>
                       <span style={{fontFamily:SE,fontStyle:'italic',fontSize:20,color:C.verm,lineHeight:1,minWidth:20,textAlign:'center'}}>{it.cantidad}</span>
@@ -2117,7 +2117,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   ))}
                 </div>
                 {transcript&&(
-                  <div style={{padding:'4px 14px 6px',borderTop:`1px solid ${C.rule}`,fontFamily:SC,fontSize:13,color:C.teal}}>
+                  <div style={{padding:'4px 14px 6px',borderTop:`1px solid ${C.rule}`,fontFamily:SM,fontSize:11,color:C.ink3}}>
                     💬 {transcript}
                   </div>
                 )}
@@ -2129,7 +2129,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 )}
                 <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
                   {/* FIX-04: onPointerDown evita doble-disparo en móvil (no hay delay de click sintético) */}
-                  <button onPointerDown={reset} style={{flex:1,padding:12,background:'none',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>✗ Cancelar</button>
+                  <button onPointerDown={reset} style={{flex:1,padding:14,background:'none',border:'none',borderRight:`1px solid ${C.rule}`,color:C.ink3,fontFamily:SN,fontSize:13,fontWeight:600,cursor:'pointer'}}>✗ No</button>
                   <button onPointerDown={()=>{
                     // Confirmar en backend — crea print_jobs y activa la comanda
                     if (lastComandaId) {
@@ -2141,7 +2141,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                     setScreenSafe('sent')
                     addMsg('brain',`✓ Enviado · ${brain?.mesa ?? '?'}`,'ok')
                     setPushMsg(`🍳 Cocina recibió · ${brain?.mesa ?? '?'}`); setShowPush(true); setTimeout(()=>setShowPush(false),4000)
-                  }} style={{flex:2,padding:12,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:13,fontWeight:700,cursor:'pointer'}}>
+                  }} style={{flex:2,padding:14,background:C.verm,border:'none',color:'#fff',fontFamily:SN,fontSize:14,fontWeight:700,cursor:'pointer',letterSpacing:'.01em'}}>
                     ✓ Confirmar
                   </button>
                 </div>
@@ -2179,7 +2179,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                   }
                   setScreenSafe('sent'); addMsg('brain',`✓ Enviado · ${brain?.mesa ?? '?'}`,'ok')
                 }:r==='✗ No'?reset:()=>{reset();setScreenSafe('idle')}}
-                  style={{flexShrink:0,padding:'6px 12px',borderRadius:20,border:`1px solid ${C.rule}`,background:C.bg2,fontSize:12,fontWeight:600,color:r==='✓ Sí'?C.gr:r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
+                  style={{flexShrink:0,padding:'10px 18px',borderRadius:20,border:`1px solid ${C.rule}`,background:r==='✓ Sí'?C.gr:r==='✗ No'?C.vermS:C.bg2,fontSize:13,fontWeight:700,color:r==='✓ Sí'?'#fff':r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
                   {r}
                 </button>
               ))}
