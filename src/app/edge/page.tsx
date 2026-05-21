@@ -598,15 +598,18 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [autoConfirm, setAutoConfirm]   = useState(false)
   const [autoThreshold, setAutoThreshold] = useState(85)
   const [ttsOff, setTtsOff]             = useState(false)
-  // Versión APK nativa — inyectada por MainActivity en window.__APP_VERSION__
+  // Versión APK — se lee desde /app/version.json (funciona con cualquier binario)
   const [appVersion, setAppVersion] = useState<number|null>(null)
   const [isNative,   setIsNative]   = useState(false)
   useEffect(() => {
     if (typeof window === 'undefined') return
     const native = !!(window as any).isNativeApp
-    const ver    = (window as any).__APP_VERSION__ ?? null
     setIsNative(native)
-    setAppVersion(ver)
+    // Leer versión desde servidor — no depende del binario instalado
+    fetch('/app/version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setAppVersion(d.version ?? null))
+      .catch(() => {})
   }, [])
   const [mesaFijada, setMesaFijada]     = useState<string|null>(null)  // mesa pinchada en HABLAR
   const [clarificacionCtx, setClarificacionCtx] = useState<string|null>(null)
@@ -1892,7 +1895,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           <div style={{display:'flex',alignItems:'center',gap:5,background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,padding:'5px 11px 5px 7px',cursor:'pointer'}} onClick={logout}>
             <div style={{width:6,height:6,borderRadius:'50%',background:C.gr,animation:'ldot 2s infinite'}}/>
             <span style={{fontSize:12,fontWeight:600,color:C.ink}}>{session.nombre.split(' ')[0]}</span>
-            {isNative && appVersion && (
+            {appVersion && (
               <span style={{fontSize:9,fontWeight:700,color:C.ink3,letterSpacing:'.04em',marginLeft:2}}>
                 v{appVersion}
               </span>
