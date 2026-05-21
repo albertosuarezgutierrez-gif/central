@@ -18,14 +18,14 @@ const CSS = `
 html{scroll-behavior:smooth}
 body{font-family:var(--ui);background:var(--bg);color:var(--cream);overflow-x:hidden;-webkit-font-smoothing:antialiased}
 body::before{content:'';position:fixed;inset:0;z-index:9999;pointer-events:none;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");opacity:0.025}
-nav{position:fixed;top:0;left:0;right:0;z-index:200;height:64px;display:flex;align-items:center;justify-content:space-between;padding:0 40px;transition:background .3s,border-color .3s}
+nav{position:fixed;top:0;left:0;right:0;z-index:200;height:64px;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 40px;transition:background .3s,border-color .3s}
 nav.scrolled{background:rgba(251,248,241,.96);backdrop-filter:blur(24px);border-bottom:1px solid var(--b)}
 .logo{font-family:var(--head);font-style:italic;font-size:24px;color:var(--cream);letter-spacing:-.02em;text-decoration:none}
 .logo b{color:var(--red);font-weight:400}
-.nav-c{display:flex;gap:36px;list-style:none;position:absolute;left:50%;transform:translateX(-50%)}
+.nav-c{display:flex;gap:36px;list-style:none;justify-self:center}
 .nav-c a{font-size:14px;font-weight:500;color:var(--cream2);text-decoration:none;letter-spacing:-.01em;transition:color .2s}
 .nav-c a:hover{color:var(--cream)}
-.nav-r{display:flex;gap:10px;align-items:center}
+.nav-r{display:flex;gap:10px;align-items:center;justify-self:end}
 .nbg{padding:8px 18px;border-radius:9999px;border:1px solid rgba(26,23,20,.15);background:transparent;color:var(--cream2);font-size:13px;font-weight:500;font-family:var(--ui);cursor:pointer;transition:all .2s;letter-spacing:-.01em}
 .nbg:hover{border-color:rgba(26,23,20,.35);color:var(--cream)}
 .nbr{padding:8px 20px;border-radius:9999px;background:var(--red);border:none;color:#fff;font-size:13px;font-weight:600;font-family:var(--ui);cursor:pointer;letter-spacing:-.01em;box-shadow:rgba(217,68,43,.45) 0 4px 16px -4px;transition:all .2s}
@@ -539,10 +539,10 @@ export default function Page() {
         <div className="demo-sep"/>
         <p className="demo-label">Acceder al demo</p>
         <div className="demo-links">
-          <a href="/edge" className="demo-link" onClick={()=>setMenuOpen(false)}>Camarero <span>PIN 7672</span></a>
-          <a href="/kds" className="demo-link" onClick={()=>setMenuOpen(false)}>Cocina <span>PIN 3297</span></a>
-          <a href="/owner" className="demo-link" onClick={()=>setMenuOpen(false)}>Propietario <span>PIN 1369</span></a>
-          <a href="/jefe" className="demo-link" onClick={()=>setMenuOpen(false)}>Jefe de sala <span>PIN 2566</span></a>
+          <a href="/edge" className="demo-link" onClick={()=>setMenuOpen(false)}>Camarero <span>Demo</span></a>
+          <a href="/kds" className="demo-link" onClick={()=>setMenuOpen(false)}>Cocina <span>Demo</span></a>
+          <a href="/owner" className="demo-link" onClick={()=>setMenuOpen(false)}>Propietario <span>Demo</span></a>
+          <a href="/jefe" className="demo-link" onClick={()=>setMenuOpen(false)}>Jefe de sala <span>Demo</span></a>
         </div>
       </div>
 
@@ -566,10 +566,10 @@ export default function Page() {
           </button>
           <div className={`ssw-drop${sessionOpen?" open":""}`}>
             <div className="ssw-title">Acceder al demo</div>
-            <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span><span className="ssw-item-pin">7672</span></a>
-            <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span><span className="ssw-item-pin">3297</span></a>
-            <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span><span className="ssw-item-pin">1369</span></a>
-            <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span><span className="ssw-item-pin">2566</span></a>
+            <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span><span className="ssw-item-pin">Demo</span></a>
+            <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span><span className="ssw-item-pin">Demo</span></a>
+            <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span><span className="ssw-item-pin">Demo</span></a>
+            <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span><span className="ssw-item-pin">Demo</span></a>
           </div>
         </div>
         <button className={`ham${menuOpen?" open":""}`} onClick={()=>setMenuOpen(m=>!m)} aria-label="Menú"><span/><span/><span/></button>
