@@ -1,6 +1,6 @@
 {
   "name": "iarest-bridge-v6",
-  "version": "6.0.0",
+  "version": "7.0.0",
   "description": "ia.rest Bridge v6 — Cloud Edition",
   "main": "bridge-v6.js",
   "bin": "bridge-v6.js",
