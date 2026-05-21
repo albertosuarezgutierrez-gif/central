@@ -68,6 +68,8 @@ class MainActivity : AppCompatActivity() {
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 webView.evaluateJavascript("window.isNativeApp = true;", null)
+                webView.evaluateJavascript("window.__APP_VERSION__ = 12;", null)
+                webView.evaluateJavascript("window.__APP_PLATFORM__ = 'android';", null)
                 // Re-solicitar foco de audio en cada carga de página
                 requestAudioFocusAndSession()
             }

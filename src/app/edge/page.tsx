@@ -595,9 +595,19 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // Config camarero
   const [tabsVisibles, setTabsVisibles] = useState<Tab[]>(ALL_TABS.map(t=>t.id))
   const [voiceConfirm, setVoiceConfirm] = useState(true)
-  const [autoConfirm, setAutoConfirm]   = useState(false)   // enviar sin confirmar si confianza alta
-  const [autoThreshold, setAutoThreshold] = useState(85)    // % mínimo para auto-confirmar
-  const [ttsOff, setTtsOff]             = useState(false)   // BRAIN no habla, solo escribe
+  const [autoConfirm, setAutoConfirm]   = useState(false)
+  const [autoThreshold, setAutoThreshold] = useState(85)
+  const [ttsOff, setTtsOff]             = useState(false)
+  // Versión APK nativa — inyectada por MainActivity en window.__APP_VERSION__
+  const [appVersion, setAppVersion] = useState<number|null>(null)
+  const [isNative,   setIsNative]   = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const native = !!(window as any).isNativeApp
+    const ver    = (window as any).__APP_VERSION__ ?? null
+    setIsNative(native)
+    setAppVersion(ver)
+  }, [])
   const [mesaFijada, setMesaFijada]     = useState<string|null>(null)  // mesa pinchada en HABLAR
   const [clarificacionCtx, setClarificacionCtx] = useState<string|null>(null)
   const [preguntaBrain, setPreguntaBrain]       = useState<string>('¿Qué mesa?')
@@ -1882,6 +1892,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           <div style={{display:'flex',alignItems:'center',gap:5,background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,padding:'5px 11px 5px 7px',cursor:'pointer'}} onClick={logout}>
             <div style={{width:6,height:6,borderRadius:'50%',background:C.gr,animation:'ldot 2s infinite'}}/>
             <span style={{fontSize:12,fontWeight:600,color:C.ink}}>{session.nombre.split(' ')[0]}</span>
+            {isNative && appVersion && (
+              <span style={{fontSize:9,fontWeight:700,color:C.ink3,letterSpacing:'.04em',marginLeft:2}}>
+                v{appVersion}
+              </span>
+            )}
           </div>
           <SugerenciaButton session={session} tema="light" variant="inline" />
           {/* 🍷 Recomendador de vino */}
