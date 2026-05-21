@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // ═══════════════════════════════════════════════════════════════
-// ia.rest Bridge v7 — Cloud Edition + Mesh
+// ia.rest Bridge v7.0.1 — Cloud Edition + Mesh
 //
 // NUEVO v7: Arquitectura multi-nodo (mesh)
 //   · Cada dispositivo con la APK puede actuar como bridge
@@ -8,6 +8,11 @@
 //   · Si el master cae → standby toma el relevo en <15s
 //   · Detección automática WiFi vs datos móviles
 //   · Auto-scan cuando una impresora no responde
+//
+// FIX v7.0.1:
+//   · ws.on('error') ahora fuerza ws.terminate() → reconexión garantizada
+//   · Watchdog WS: detecta conexión zombie >90s y fuerza reconexión
+//   · fetchJSON timeout 10s: evita requests colgados que saturan el loop
 //
 // Backward compatible: con 1 solo bridge funciona igual que v6
 // ═══════════════════════════════════════════════════════════════
@@ -22,7 +27,7 @@ const { execSync, exec, spawn } = require('child_process')
 const readline = require('readline')
 const { CashlogyManager } = require('./azkoyen-cashlogy')
 
-const VERSION      = '7.0.0'
+const VERSION      = '7.0.1'
 const API          = 'https://www.iarest.es'
 const SUPABASE_URL = 'https://efncqyvhniaxsirhdxaa.supabase.co'
 const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmbmNxeXZobmlheHNpcmhkeGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2ODk5MzYsImV4cCI6MjA5MzI2NTkzNn0.dt3ko-HWzJK57FQyRDTjU07QBsYv9fpGo8Sm3Cs6heA'
@@ -141,7 +146,10 @@ function fetchJSON(url, opts = {}) {
         catch { resolve({ status: res.statusCode, body }) }
       })
     })
-    req.on('error', reject)
+    // Timeout 10s — evita que requests colgados saturen el loop
+    const t = setTimeout(() => { req.destroy(); reject(new Error(`fetchJSON timeout: ${url.split('?')[0]}`)) }, 10_000)
+    req.on('response', () => clearTimeout(t))
+    req.on('error', (e) => { clearTimeout(t); reject(e) })
     if (opts.body) req.write(typeof opts.body === 'string' ? opts.body : JSON.stringify(opts.body))
     req.end()
   })
@@ -495,22 +503,36 @@ async function scanRedSilencioso() {
 // ── Realtime WebSocket ────────────────────────────────────────
 const WebSocket = require('ws')
 let ws = null, wsReady = false, reconnectTimer = null, heartbeatTimer = null
+let wsWatchdog = null, lastWsActivity = 0
 let joinRef = 1
 
 function wsConnect(TOKEN, restauranteId) {
   if (ws) { try { ws.terminate() } catch {} }
   clearTimeout(reconnectTimer)
   clearInterval(heartbeatTimer)
+  clearInterval(wsWatchdog)
 
   const wsUrl = `${SUPABASE_URL.replace('https://', 'wss://')}/realtime/v1/websocket?apikey=${ANON_KEY}&vsn=1.0.0`
   ws = new WebSocket(wsUrl)
 
   ws.on('open', () => {
     wsReady = true
+    lastWsActivity = Date.now()
+
     heartbeatTimer = setInterval(() => {
       if (ws.readyState === WebSocket.OPEN)
         ws.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: null }))
     }, 25000)
+
+    // Watchdog: si >90s sin actividad → el WS está zombie → forzar reconexión
+    wsWatchdog = setInterval(() => {
+      if (Date.now() - lastWsActivity > 90_000) {
+        console.log(`${Y}[WS]${X} Sin actividad >90s — forzando reconexión`)
+        clearInterval(wsWatchdog)
+        ws.terminate()  // dispara ws.on('close') → reconecta
+      }
+    }, 30_000)
+
     // Suscribir
     ws.send(JSON.stringify({
       topic: `realtime:public:print_jobs:restaurante_id=eq.${restauranteId}`,
@@ -526,6 +548,7 @@ function wsConnect(TOKEN, restauranteId) {
   })
 
   ws.on('message', (raw) => {
+    lastWsActivity = Date.now()  // reset watchdog en cualquier mensaje (heartbeat ok)
     try {
       const msg = JSON.parse(raw)
       const record = msg.payload?.data?.record || msg.payload?.record
@@ -546,11 +569,17 @@ function wsConnect(TOKEN, restauranteId) {
   ws.on('close', () => {
     wsReady = false
     clearInterval(heartbeatTimer)
+    clearInterval(wsWatchdog)
     console.log(`${Y}[WS]${X} Desconectado — reconectando en 5s...`)
     reconnectTimer = setTimeout(() => wsConnect(TOKEN, restauranteId), 5000)
   })
 
-  ws.on('error', (e) => console.warn(`${Y}[WS]${X} ${e.message}`))
+  ws.on('error', (e) => {
+    // FIX: error no siempre dispara 'close' — forzar terminate para garantizar reconexión
+    console.warn(`${Y}[WS]${X} Error: ${e.message} — reconectando...`)
+    try { ws.terminate() } catch {}
+    // ws.terminate() dispara ws.on('close') que gestiona el reconnectTimer
+  })
 }
 
 // ── MAIN ──────────────────────────────────────────────────────
