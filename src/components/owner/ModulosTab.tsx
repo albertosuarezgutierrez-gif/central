@@ -51,6 +51,7 @@ const GRUPOS_LABEL: Record<string, { label: string; color: string; bgColor: stri
 
 export default function ModulosTab({ restauranteId, sh }: Props) {
   const [activos, setActivos] = useState<string[]>([])
+  const [modoVinos, setModoVinos] = useState<'basico' | 'carta'>('basico')
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [ok, setOk] = useState(false)
@@ -60,6 +61,7 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
       const r = await fetch('/api/owner/modulos', { headers: sh() })
       const d = await r.json()
       setActivos(d.modulos_activos ?? [])
+      setModoVinos(d.configuracion?.modo_vinos ?? 'basico')
     } catch { /* usa todos por defecto */ }
     finally { setCargando(false) }
   }, [sh])
@@ -80,7 +82,7 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
       await fetch('/api/owner/modulos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...sh() },
-        body: JSON.stringify({ modulos_activos: activos }),
+        body: JSON.stringify({ modulos_activos: activos, modo_vinos: modoVinos }),
       })
       invalidarCacheModulos(restauranteId)
       setOk(true)
@@ -185,6 +187,42 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
                       <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, lineHeight: 1.4 }}>
                         {m.desc}
                       </div>
+                      {/* Selector modo_vinos — solo cuando carta_vinos está activo */}
+                      {m.id === 'carta_vinos' && esActivo && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.ruleS}` }}
+                        >
+                          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 6 }}>
+                            Modo de carta de vinos
+                          </div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            {([
+                              { v: 'basico', label: 'Básico', desc: '4–8 vinos en carta normal' },
+                              { v: 'carta',  label: 'Carta completa', desc: 'Sommelier IA + QR + stock' },
+                            ] as const).map(op => (
+                              <button
+                                key={op.v}
+                                onClick={() => { setModoVinos(op.v); setOk(false) }}
+                                style={{
+                                  flex: 1, padding: '7px 10px',
+                                  border: `1px solid ${modoVinos === op.v ? C.red : C.ruleS}`,
+                                  borderRadius: 6,
+                                  background: modoVinos === op.v ? '#D9442B14' : C.paper,
+                                  cursor: 'pointer', textAlign: 'left',
+                                }}
+                              >
+                                <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 600, color: modoVinos === op.v ? C.red : C.ink }}>
+                                  {op.label}
+                                </div>
+                                <div style={{ fontFamily: SN, fontSize: 10, color: C.ink3, marginTop: 2 }}>
+                                  {op.desc}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )
