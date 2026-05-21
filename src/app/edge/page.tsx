@@ -605,11 +605,32 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     if (typeof window === 'undefined') return
     const native = !!(window as any).isNativeApp
     setIsNative(native)
-    // Leer versión desde servidor — no depende del binario instalado
     fetch('/app/version.json?t=' + Date.now(), { cache: 'no-store' })
       .then(r => r.json())
       .then(d => setAppVersion(d.version ?? null))
       .catch(() => {})
+
+    // ── Auto-activar bridge si es APK nativa ─────────────────
+    // El bridge token se obtiene automáticamente del servidor usando
+    // la sesión del camarero — cero pasos para el usuario
+    if (native && (window as any).IaRestBridge) {
+      const bridge = (window as any).IaRestBridge
+      const tokenActual = bridge.getToken?.() ?? ''
+      if (!tokenActual) {
+        // Sin token guardado → pedirlo al servidor
+        const ses = localStorage.getItem('ia_rest_session') ?? ''
+        fetch('/api/bridge/token-for-session', {
+          headers: { 'x-ia-session': ses }
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (d?.token) {
+              bridge.setToken(d.token, '')
+            }
+          })
+          .catch(() => {})
+      }
+    }
   }, [])
   const [mesaFijada, setMesaFijada]     = useState<string|null>(null)  // mesa pinchada en HABLAR
   const [clarificacionCtx, setClarificacionCtx] = useState<string|null>(null)
@@ -3368,10 +3389,6 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
         <ChuletaVozSection />
 
         <div style={{paddingTop:20,paddingBottom:32}}>
-          {/* Bridge — solo visible en APK nativa */}
-          {typeof window !== 'undefined' && (window as any).isNativeApp && (
-            <BridgeConfigSection />
-          )}
           {/* Fichaje */}
           <FicharSalidaBtn session={session} />
           <div style={{marginTop:10}}>
