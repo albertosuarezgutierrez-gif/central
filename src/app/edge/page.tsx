@@ -1608,6 +1608,31 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     return () => { delete (window as any).resetPTT }
   }, [lastComandaId])
 
+  // ── Botón atrás Android ───────────────────────────────────────────────
+  // Cuando el tab cambia a algo distinto de 'hablar', empujamos una entrada
+  // al historial del navegador. Así Android tiene algo que "deshacer".
+  useEffect(() => {
+    if (tab !== 'hablar') {
+      window.history.pushState({ iastab: tab }, '')
+    }
+  }, [tab])
+
+  // Escuchamos 'popstate' (botón atrás del SO / gesto de Android).
+  // Cerramos lo que esté abierto, en orden de profundidad.
+  useEffect(() => {
+    const onPop = () => {
+      if (comensalesModal)    { setComensalesModal(null); return }
+      if (mesaDetalle)        { setMesaDetalle(null); return }
+      if (mesaRapidaModal)    { setMesaRapidaModal(false); return }
+      if (vinoOpen)           { setVinoOpen(false); return }
+      if (tab !== 'hablar')   { setTab('hablar'); return }
+      // Si ya estamos en hablar sin modales, dejamos salir normalmente
+    }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [tab, comensalesModal, mesaDetalle, mesaRapidaModal, vinoOpen])
+  // ─────────────────────────────────────────────────────────────────────
+
   const logout = () => {
     fetch('/api/auth',{method:'DELETE'}); localStorage.removeItem('ia_rest_session')
     window.location.href='/login'
