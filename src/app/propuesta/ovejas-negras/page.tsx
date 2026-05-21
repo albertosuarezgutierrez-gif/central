@@ -48,7 +48,7 @@ const config: ClienteConfig = {
   citaStock: 'La dejancia pura.',
   hoyVsIaRest: {
     hoy: ['Recepción manual sin cruce vs pedido', 'Caducidades a ojo o en papel', '€0,30 por albarán digitalizar', 'Sin historial de precios', 'Mermas no registradas', 'Sin alerta de retirada de mercado'],
-    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🔍 Link RASFF UE por cada producto recibido'],
+    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🏦 Orden de pago auto al confirmar recepción OK', '🔍 Link RASFF UE por cada producto recibido'],
   },
   datosEstrategicos: [
     { titulo:"Lo que hace Mercadona — y ahora tú", desc:"Mercadona obliga a sus proveedores a usar EDI: el proveedor envía el albarán digital antes de llegar, el sistema lo valida automáticamente contra el pedido y procesa el pago sin intervención humana. ia.rest trae exactamente eso a la hostelería — sin ERP millonario, con un simple link que funciona en cualquier móvil." },
@@ -91,6 +91,23 @@ const config: ClienteConfig = {
       ruta: '/owner → Proveedores',
       color: '#2B6A6E',
       roi: 'Con 8M€ en mercadería y 1.000 albaranes al mes: si el sistema evita 1 incidencia no resuelta por semana, ya se paga solo. Y los proveedores con Ovejas Negras como cliente — se adaptan.',
+      activo: true,
+    } as ModuloCustom,
+    {
+      emoji: '🏦',
+      titulo: 'Pago automático al proveedor',
+      sub: 'Lo que hace Mercadona. Sin ERP millonario.',
+      desc: 'Recepción confirmada sin incidencias → orden de pago creada automáticamente con la fecha de vencimiento según contrato. El contable exporta el fichero SEPA y lo sube al banco. Cero papeles, cero gestión manual.',
+      ejemplos: [
+        '✅ Recepción OK → orden de pago generada al instante (importe × cantidad recibida)',
+        '🏦 Canal SEPA: XML pain.001.001.03 compatible con todos los bancos españoles',
+        '⚡ Canal Stripe Connect: pago directo instantáneo al proveedor (0,25% + 0,10€)',
+        '📅 Días de pago configurables por proveedor (30/60/90 días)',
+        '🔐 Aprobación obligatoria antes de ejecutar — el responsable de compras aprueba con 1 clic',
+        '📊 Panel de pagos: pendientes, aprobados, enviados, vencidos — todo en un vistazo',
+      ],
+      ruta: '/owner → Carta → Pagos',
+      color: '#1E3A5F',
       activo: true,
     } as ModuloCustom,
     {

@@ -23,6 +23,7 @@ import RRHHTab from '@/components/owner/RRHHTab'
 import AnalisisCartaTab from '@/components/owner/AnalisisCartaTab'
 import EtiquetasTab from '@/components/owner/EtiquetasTab'
 import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
+import PagosProveedorTab from '@/components/owner/PagosProveedorTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import ModulosTab from '@/components/owner/ModulosTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
@@ -7346,6 +7347,7 @@ const GRUPOS = [
       { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle },
       { id: 'bodega',         label: 'Almacén',      icon: ICONS.sparkle },
       { id: 'proveedores',    label: 'Proveedores',  icon: ICONS.sparkle },
+      { id: 'pagos',          label: 'Pagos',        icon: ICONS.receipt },
       { id: 'escandallos',    label: 'Costes',       icon: ICONS.chart   },
       { id: 'etiquetas',      label: 'Etiquetas',    icon: ICONS.receipt },
       { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle },
@@ -8282,6 +8284,7 @@ export default function OwnerPage() {
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'bodega'         && <BodegaTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'pagos'          && <PagosProveedorTab sh={sh} />}
             {tab === 'escandallos'    && <EscandallosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'etiquetas'      && <EtiquetasTab sh={sh} />}
             {tab === 'turno'          && <TurnoTab/>}

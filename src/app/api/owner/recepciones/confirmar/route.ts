@@ -188,10 +188,58 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Auto-crear orden de pago si NO hay incidencias y el proveedor tiene días_pago ──
+  let ordenPagoId: string | null = null
+  if (incidencias.length === 0 && rec.proveedor_id) {
+    const { data: provPago } = await supabase
+      .from('proveedores')
+      .select('nombre, dias_pago, metodo_pago, iban')
+      .eq('id', rec.proveedor_id)
+      .single()
+
+    if (provPago?.iban || provPago?.metodo_pago === 'stripe') {
+      // Calcular importe total de la recepción
+      const { data: itemsPago } = await supabase
+        .from('recepcion_items')
+        .select('cantidad_recibida, precio_facturado')
+        .eq('recepcion_id', recepcion_id)
+        .not('precio_facturado', 'is', null)
+
+      const importeTotal = (itemsPago ?? []).reduce((s: number, it: { cantidad_recibida: number; precio_facturado: number }) =>
+        s + (Number(it.cantidad_recibida) * Number(it.precio_facturado)), 0)
+
+      if (importeTotal > 0) {
+        const diasPago = provPago.dias_pago ?? 30
+        const vencimiento = new Date()
+        vencimiento.setDate(vencimiento.getDate() + diasPago)
+        const fechaVenc = vencimiento.toISOString().split('T')[0]
+
+        const { data: nuevaOrden } = await supabase
+          .from('ordenes_pago_proveedor')
+          .insert({
+            restaurante_id:   rid,
+            proveedor_id:     rec.proveedor_id,
+            recepcion_id,
+            proveedor_nombre: provPago.nombre,
+            concepto:         `Recepción ${rec.albaran_numero ?? recepcion_id.slice(0, 8).toUpperCase()}`,
+            importe:          Math.round(importeTotal * 100) / 100,
+            fecha_vencimiento: fechaVenc,
+            metodo:           provPago.metodo_pago ?? 'sepa',
+            estado:           'pendiente',
+          })
+          .select('id')
+          .single()
+
+        ordenPagoId = nuevaOrden?.id ?? null
+      }
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     ...(resultado as object),
     incidencias_detectadas: incidencias.length,
+    orden_pago_creada: ordenPagoId,
     notificaciones: {
       proveedor: waProveedor,
       responsable: waResponsable,
