@@ -17,6 +17,7 @@ import FichajesTab from '@/components/owner/FichajesTab'
 import ModalTraducciones from '@/components/owner/ModalTraducciones'
 import RecomendacionesTab from '@/components/owner/RecomendacionesTab'
 import ManualVozTab from '@/components/owner/ManualVozTab'
+import DashboardTab from '@/components/owner/DashboardTab'
 import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
 import AnalisisCartaTab from '@/components/owner/AnalisisCartaTab'
@@ -7216,6 +7217,13 @@ function ReservasTab() {
 
 const GRUPOS = [
   {
+    // Dashboard: primera pantalla — ventas, alertas, top productos
+    id: 'inicio', label: 'Inicio', icon: ICONS.chart,
+    tabs: [
+      { id: 'dashboard', label: 'Dashboard', icon: ICONS.clock },
+    ],
+  },
+  {
     // Sala: supervisor primero (uso diario en servicio), luego setup de personal y espacio
     id: 'sala', label: 'Sala', icon: ICONS.users,
     tabs: [
@@ -7700,7 +7708,7 @@ function SuscripcionTab({ restauranteId, onSetupClick }: { restauranteId: string
 export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
-  const [tab, setTab] = useState('camareros')
+  const [tab, setTab] = useState('dashboard')
   const [showBridgeSetup, setShowBridgeSetup] = useState(false)
   const [manualVozOpen, setManualVozOpen] = useState(false)
   const [setupStatus, setSetupStatus] = useState<{ tiene_camareros:boolean; tiene_productos:boolean; tiene_mesas:boolean; turno_activo:boolean } | null>(null)
@@ -8157,6 +8165,7 @@ export default function OwnerPage() {
             {tab === 'qr'             && <QRTabOwner restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'cubierto'       && <ServicioTab/>}
             {tab === 'reservas'       && <ReservasTab/>}
+            {tab === 'dashboard'      && <DashboardTab session={session} sh={sh} />}
             {tab === 'camareros'      && <CamarerosTab/>}
             {tab === 'mesas'          && <MesasTab/>}
             {tab === 'rrhh'           && <RRHHTab sh={sh} />}
