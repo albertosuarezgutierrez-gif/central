@@ -9,6 +9,8 @@
 
     <!-- Bridge: service en background -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
+    <!-- Android 14+: tipo connectedDevice para gestión de impresoras -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
 
     <!-- Micrófono (PTT + Whisper) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
@@ -53,10 +55,11 @@
             </intent-filter>
         </activity>
 
-        <!-- Bridge Service — corre en background mientras la app está activa -->
+        <!-- Bridge Service — gestión de impresoras en red local -->
         <service
             android:name=".BridgeService"
-            android:exported="false"/>
+            android:exported="false"
+            android:foregroundServiceType="connectedDevice"/>
 
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"

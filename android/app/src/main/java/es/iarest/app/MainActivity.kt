@@ -11,6 +11,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Log
 import android.view.KeyEvent
 import android.view.WindowManager
 import android.webkit.*
@@ -107,13 +108,39 @@ class MainActivity : AppCompatActivity() {
         setupMediaSession()
         checkForUpdate()
 
-        // Bridge en background — completamente opcional, nunca bloquea la app
-        // BridgeService desactivado temporalmente (Android 14 compat pendiente)
+        // Bridge en background — Android 14 compatible con connectedDevice type
+        try { arrancarBridgeSiConfigurado() } catch (_: Exception) {}
     }
 
     private fun arrancarBridgeSiConfigurado() {
-        // Bridge integrado en APK: pendiente fix Android 14 foreground service compat
-        // El bridge del PC gestiona la impresión mientras tanto
+        Thread {
+            try {
+                val token = BridgeService.getToken(this)
+                if (token.isNullOrEmpty()) return@Thread
+
+                // Android 14+: solicitar POST_NOTIFICATIONS antes de arrancar
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val granted = ContextCompat.checkSelfPermission(
+                        this, Manifest.permission.POST_NOTIFICATIONS
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+
+                    if (!granted) {
+                        // Sin permiso de notificaciones → arrancar igual, el try-catch en onCreate lo gestiona
+                        Log.i("ia.rest", "POST_NOTIFICATIONS no concedido — bridge arranca sin notificación visible")
+                    }
+                }
+
+                val intent = Intent(this, BridgeService::class.java)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    startForegroundService(intent)
+                } else {
+                    startService(intent)
+                }
+                Log.i("ia.rest", "BridgeService arrancado")
+            } catch (e: Exception) {
+                Log.w("ia.rest", "Bridge no pudo arrancar: ${e.message}")
+            }
+        }.start()
     }
 
     @Suppress("DEPRECATION")

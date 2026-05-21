@@ -77,8 +77,20 @@ class BridgeService : Service() {
     override fun onCreate() {
         super.onCreate()
         crearCanalNotificacion()
-        // startForeground sin tipo — compatible con todas las versiones Android
-        startForeground(NOTIF_ID, buildNotification("Iniciando..."))
+        // Android 14+: startForeground con tipo explícito connectedDevice
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                startForeground(
+                    NOTIF_ID,
+                    buildNotification("Iniciando..."),
+                    android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_CONNECTED_DEVICE
+                )
+            } else {
+                startForeground(NOTIF_ID, buildNotification("Iniciando..."))
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "startForeground falló: ${e.message} — continuando sin notificación")
+        }
         Log.i(TAG, "BridgeService onCreate")
     }
 
