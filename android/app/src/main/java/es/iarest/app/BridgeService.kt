@@ -77,6 +77,7 @@ class BridgeService : Service() {
     override fun onCreate() {
         super.onCreate()
         crearCanalNotificacion()
+        // startForeground sin tipo — compatible con todas las versiones Android
         startForeground(NOTIF_ID, buildNotification("Iniciando..."))
         Log.i(TAG, "BridgeService onCreate")
     }
