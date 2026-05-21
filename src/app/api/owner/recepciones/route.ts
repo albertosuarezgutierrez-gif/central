@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
     precio_facturado?: number
     fecha_caducidad?: string
     estado?: string
+    numero_lote?: string
   }) => ({
     recepcion_id:       rec.id,
     restaurante_id:     rid,
@@ -80,6 +81,7 @@ export async function POST(req: NextRequest) {
     precio_pedido:      it.precio_pedido ?? null,
     precio_facturado:   it.precio_facturado ?? null,
     fecha_caducidad:    it.fecha_caducidad ?? null,
+    numero_lote:        it.numero_lote ?? null,
     estado:             it.estado ?? 'ok',
   }))
 

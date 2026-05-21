@@ -21,6 +21,7 @@ import DashboardTab from '@/components/owner/DashboardTab'
 import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
 import AnalisisCartaTab from '@/components/owner/AnalisisCartaTab'
+import EtiquetasTab from '@/components/owner/EtiquetasTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import ModulosTab from '@/components/owner/ModulosTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
@@ -7299,6 +7300,7 @@ const GRUPOS = [
       { id: 'bodega',         label: 'Almacén',      icon: ICONS.sparkle },
       { id: 'proveedores',    label: 'Proveedores',  icon: ICONS.sparkle },
       { id: 'escandallos',    label: 'Costes',       icon: ICONS.chart   },
+      { id: 'etiquetas',      label: 'Etiquetas',    icon: ICONS.receipt },
       { id: 'secciones',      label: 'Secciones',    icon: ICONS.sparkle },
     ]
   },
@@ -8234,6 +8236,7 @@ export default function OwnerPage() {
             {tab === 'bodega'         && <BodegaTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'escandallos'    && <EscandallosTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'etiquetas'      && <EtiquetasTab sh={sh} />}
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
             {tab === 'analytics'      && <Analytics compact />}
@@ -8319,6 +8322,26 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
     nombre: string; cantidad: string; unidad: string; precio_unitario: string
     articulo_id: string | null; crear: boolean; seleccionado: boolean
   }[]>([])
+
+  const [eanLoading, setEanLoading] = useState<number | null>(null)
+
+  const lookupEAN = async (idx: number, ean: string) => {
+    const val = ean.trim()
+    if (!/^\d{8,14}$/.test(val)) return
+    setEanLoading(idx)
+    try {
+      const r = await fetch(`/api/owner/ean-lookup?ean=${val}`, { headers: sh() })
+      const d = await r.json()
+      if (d.encontrado && d.nombre) {
+        setRecItems(ls => ls.map((x, j) => j === idx ? {
+          ...x,
+          nombre_articulo: x.nombre_articulo || d.nombre,
+        } : x))
+      }
+    } catch { /* silent */ } finally {
+      setEanLoading(null)
+    }
+  }
 
   const UNIDADES = ['unidad','kg','litro','barril','caja','botella','pieza','sobre','lata','bolsa']
 
@@ -8447,6 +8470,7 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
             precio_facturado: it.precio_facturado ? parseFloat(it.precio_facturado) : null,
             fecha_caducidad: it.fecha_caducidad || null,
             estado: it.estado,
+            numero_lote: (it as typeof it & { numero_lote?: string }).numero_lote || null,
           })),
         }),
       })
@@ -8827,6 +8851,24 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
                           style={{ padding:'3px 8px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SN, fontSize:11, color:C.ink3, background:'transparent', outline:'none' }} />
                         <button onClick={() => setRecItems(ls => ls.filter((_,j) => j !== i))}
                           style={{ marginLeft:'auto', background:'none', border:'none', cursor:'pointer', color:C.ink4, fontSize:16 }}>🗑</button>
+                      </div>
+                      {/* EAN + Lote */}
+                      <div style={{ marginTop:6, display:'flex', gap:8, alignItems:'center' }}>
+                        <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, flexShrink:0 }}>EAN</span>
+                        <input
+                          placeholder="8412345…" maxLength={14}
+                          style={{ width:120, padding:'3px 7px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SM, fontSize:11, color:C.ink3, background:'transparent', outline:'none' }}
+                          onBlur={e => lookupEAN(i, e.target.value)}
+                          onKeyDown={e => { if (e.key === 'Enter') lookupEAN(i, (e.target as HTMLInputElement).value) }}
+                        />
+                        {eanLoading === i && <span style={{ fontFamily:SM, fontSize:9, color:C.ink4 }}>buscando…</span>}
+                        <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, flexShrink:0 }}>LOTE</span>
+                        <input
+                          placeholder="L2626A" maxLength={30}
+                          value={(it as typeof it & { numero_lote?: string }).numero_lote ?? ''}
+                          onChange={e => setRecItems(ls => ls.map((x,j) => j===i ? {...x, numero_lote: e.target.value} : x))}
+                          style={{ flex:1, padding:'3px 7px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SM, fontSize:11, color:C.ink3, background:'transparent', outline:'none' }}
+                        />
                       </div>
                     </div>
                   ))}

@@ -566,6 +566,17 @@ export default function QrClientApp({ token }: { token: string }) {
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 14, fontWeight: 600 }}>{prod.nombre}</div>
                         <div style={{ fontSize: 11, color: C.creamDim, marginTop: 1 }}>{prod.descripcion}</div>
+                        {prod.alergenos && prod.alergenos.length > 0 && (
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 3, marginTop: 5 }}>
+                            {prod.alergenos.map((al: string) => (
+                              <span key={al} style={{
+                                fontSize: 9, padding: '1px 6px',
+                                background: '#ffffff12', border: '1px solid #ffffff20',
+                                borderRadius: 10, color: C.creamDim,
+                              }}>{al}</span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
                         <div style={{ fontFamily: 'monospace', fontSize: 13 }}>{fmt(prod.precio)}</div>
