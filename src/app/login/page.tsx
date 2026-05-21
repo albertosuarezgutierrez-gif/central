@@ -49,6 +49,7 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const [restauranteCode, setRestauranteCode] = useState<string | null>(null)
+  const [lastRestauranteName, setLastRestauranteName] = useState<string | null>(null)
   const [showCodeInput, setShowCodeInput] = useState(false)
   const [codeInput, setCodeInput] = useState('')
   const [vozMode, setVozMode] = useState<'idle'|'grabando'|'procesando'|'seleccion'|'exito'|'error'>('idle')
@@ -74,6 +75,14 @@ export default function LoginPage() {
 
   useEffect(() => {
     setRestauranteCode(detectRestauranteCode())
+    // Leer nombre restaurante de la última sesión
+    try {
+      const s = localStorage.getItem('ia_rest_session')
+      if (s) {
+        const parsed = JSON.parse(s)
+        if (parsed?.restaurante_nombre) setLastRestauranteName(parsed.restaurante_nombre)
+      }
+    } catch { /* noop */ }
     const params = new URLSearchParams(window.location.search)
     if (params.get('checkout') === 'success') setCheckoutSuccess(true)
     // Resolver token personalizado ?t=
@@ -277,7 +286,24 @@ export default function LoginPage() {
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginBottom:28 }}>
         <svg width="52" height="52" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1A1714"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
         <div style={{ fontFamily:SE, fontSize:26, color:C.fg, fontWeight:500 }}>ia<span style={{color:C.red}}>.</span>rest</div>
-        {restauranteCode && <div style={{ fontFamily:SM, fontSize:9, color:C.fg3, letterSpacing:'.1em' }}>{restauranteCode}</div>}
+        {(lastRestauranteName || restauranteCode) && (
+          <div style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: restauranteCode === 'DEMO' ? '#E8A33B22' : '#1A171408',
+            border: `1px solid ${restauranteCode === 'DEMO' ? '#E8A33B66' : C.rule}`,
+            borderRadius: 20, padding: '4px 10px',
+          }}>
+            {restauranteCode === 'DEMO' && (
+              <span style={{ fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.08em',
+                background:'#E8A33B', color:'#1A1714', borderRadius:8, padding:'1px 5px' }}>
+                DEMO
+              </span>
+            )}
+            <span style={{ fontFamily:SN, fontSize:12, color:C.fg3, fontWeight:500 }}>
+              {lastRestauranteName ?? restauranteCode}
+            </span>
+          </div>
+        )}
       </div>
 
       {showCodeInput ? (

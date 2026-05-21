@@ -49,7 +49,7 @@ export default function AppBadge() {
     <div
       style={{
         position: 'fixed',
-        bottom: 10,
+        bottom: 112,
         left: 10,
         zIndex: 9999,
         display: 'flex',
