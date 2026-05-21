@@ -3368,6 +3368,10 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
         <ChuletaVozSection />
 
         <div style={{paddingTop:20,paddingBottom:32}}>
+          {/* Bridge — solo visible en APK nativa */}
+          {typeof window !== 'undefined' && (window as any).isNativeApp && (
+            <BridgeConfigSection />
+          )}
           {/* Fichaje */}
           <FicharSalidaBtn session={session} />
           <div style={{marginTop:10}}>
@@ -3377,6 +3381,82 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── BridgeConfigSection — configura el bridge desde la app ────
+function BridgeConfigSection() {
+  const [token,    setToken]    = React.useState('')
+  const [activo,   setActivo]   = React.useState(false)
+  const [guardado, setGuardado] = React.useState(false)
+  const [error,    setError]    = React.useState('')
+
+  React.useEffect(() => {
+    // Leer token actual desde el bridge nativo
+    const bridge = (window as any).IaRestBridge
+    if (!bridge) return
+    const tkn = bridge.getToken?.() ?? ''
+    setToken(tkn)
+    setActivo(tkn.length > 0)
+  }, [])
+
+  const activar = () => {
+    setError('')
+    const bridge = (window as any).IaRestBridge
+    if (!bridge) { setError('Bridge no disponible en esta versión'); return }
+    if (!token.trim()) { setError('Pega el token del panel /owner → Impresoras → Bridge'); return }
+    bridge.setToken(token.trim(), '')
+    setActivo(true)
+    setGuardado(true)
+    setTimeout(() => setGuardado(false), 3000)
+  }
+
+  const desactivar = () => {
+    const bridge = (window as any).IaRestBridge
+    bridge?.stop?.()
+    setToken('')
+    setActivo(false)
+  }
+
+  const C2 = { bg: '#14110E', bone: '#1E1A16', rule: '#2E2925', ink: '#F6F1E7', ink3: '#9A8F82', green: '#3F7D44', verm: '#D9442B', amb: '#E8A33B' }
+  const SM2 = 'Inter Tight, sans-serif'
+  const SN2 = 'Newsreader, serif'
+
+  return (
+    <div style={{marginBottom:14,background:C2.bone,borderRadius:12,padding:'14px 16px',border:`1px solid ${C2.rule}`}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+        <div style={{fontSize:16}}>⬡</div>
+        <div style={{fontFamily:SN2,fontSize:14,fontWeight:600,color:C2.ink}}>Bridge de impresión</div>
+        {activo && (
+          <span style={{fontFamily:SM2,fontSize:9,fontWeight:700,letterSpacing:'.08em',color:C2.green,background:'#1A2A1C',border:`1px solid ${C2.green}`,borderRadius:3,padding:'1px 5px'}}>ACTIVO</span>
+        )}
+      </div>
+      <div style={{fontFamily:SM2,fontSize:11,color:C2.ink3,marginBottom:12,lineHeight:1.5}}>
+        Este móvil actuará como nodo bridge — recibirá y enviará tickets a las impresoras del local.
+      </div>
+      {!activo ? (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <input
+            value={token}
+            onChange={e => setToken(e.target.value)}
+            placeholder="Pega aquí el token del bridge..."
+            style={{width:'100%',background:'#0E0C0A',border:`1px solid ${C2.rule}`,borderRadius:8,padding:'10px 12px',fontFamily:SM2,fontSize:12,color:C2.ink,outline:'none',boxSizing:'border-box'}}
+          />
+          {error && <div style={{fontFamily:SM2,fontSize:11,color:C2.verm}}>{error}</div>}
+          <button onClick={activar} style={{width:'100%',padding:11,background:C2.green,border:'none',borderRadius:8,fontFamily:SM2,fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}}>
+            Activar bridge en este móvil
+          </button>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {guardado && <div style={{fontFamily:SM2,fontSize:11,color:C2.green}}>✓ Bridge activado — este móvil es ahora un nodo</div>}
+          <div style={{fontFamily:SM2,fontSize:10,color:C2.ink3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{token}</div>
+          <button onClick={desactivar} style={{width:'100%',padding:9,background:'transparent',border:`1px solid ${C2.verm}44`,borderRadius:8,fontFamily:SM2,fontSize:12,fontWeight:600,color:C2.verm,cursor:'pointer'}}>
+            Desactivar bridge
+          </button>
+        </div>
+      )}
     </div>
   )
 }

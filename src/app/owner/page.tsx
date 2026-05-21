@@ -3827,21 +3827,32 @@ function ImpresorasTab() {
 
       {/* Modal: bridge local */}
       {modal === 'bridge' && (
-        <Modal title="Bridge local · ip_local" onClose={() => setModal(null)}>
+        <Modal title="Bridge Mesh · Impresión en red local" onClose={() => setModal(null)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <div style={{ fontFamily: SN, fontSize: 14, color: C.ink2, lineHeight: 1.6 }}>
-              El bridge es un proceso Node.js que corre en la red del restaurante, hace polling cada 3s y manda ESC/POS directamente a la impresora por TCP (puerto 9100).
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink2, lineHeight: 1.6 }}>
+              Cada dispositivo con la app ia.rest puede actuar como bridge de impresión. Si el activo cae, otro toma el relevo automáticamente.
             </div>
-            <div style={{ background: C.dark, borderRadius: 6, padding: '14px 16px' }}>
-              <div style={{ fontFamily: SM, fontSize: 10, color: C.darkFg3, letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 8 }}>Instalación</div>
+
+            {/* Opción A — App nativa */}
+            <div style={{ background: '#161D17', border: `1px solid ${C.green}44`, borderRadius: 8, padding: '12px 14px' }}>
+              <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.green, marginBottom: 8 }}>📱 OPCIÓN A — App ia.rest (recomendado)</div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink2, marginBottom: 10 }}>
+                Genera un token, cópialo y pégalo en la app del móvil que quieres usar como bridge.
+              </div>
+              <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '10px 12px', fontFamily: SM, fontSize: 11, color: C.ink3 }}>
+                En el móvil: Ajustes → Bridge → Pegar token → Activar
+              </div>
+            </div>
+
+            {/* Opción B — PC/Termux */}
+            <div style={{ background: C.dark, borderRadius: 8, padding: '12px 14px' }}>
+              <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', color: C.ink3, marginBottom: 8 }}>🖥 OPCIÓN B — PC o Termux (Node.js)</div>
               {[
-                'git clone https://github.com/albertosuarezgutierrez-gif/ia.rest.git',
-                'cd ia.rest/scripts',
-                'export IAREST_API=https://www.iarest.es',
+                'cd ia.rest/scripts/bridge-v6',
                 'export BRIDGE_TOKEN=<token de abajo>',
-                'node bridge-local.js',
+                'node bridge-v6.js',
               ].map((cmd, idx) => (
-                <div key={idx} style={{ fontFamily: SM, fontSize: 12, color: idx === 3 ? C.amber : '#C9BFAA', marginBottom: 4, letterSpacing: '.02em' }}>{cmd}</div>
+                <div key={idx} style={{ fontFamily: SM, fontSize: 12, color: idx === 1 ? C.amber : '#C9BFAA', marginBottom: 4 }}>{cmd}</div>
               ))}
             </div>
 
