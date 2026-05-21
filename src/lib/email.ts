@@ -180,3 +180,144 @@ export async function enviarEmailConfirmacionPago({
     html,
   })
 }
+
+// ── EMAIL: Incidencias al proveedor ──────────────────────────
+export async function enviarEmailIncidenciasProveedor({
+  email,
+  nombreProveedor,
+  nombreRestaurante,
+  albaranNumero,
+  incidencias,
+}: {
+  email: string
+  nombreProveedor: string
+  nombreRestaurante: string
+  albaranNumero?: string | null
+  incidencias: { nombre: string; tipo: string; cantidadPedida?: number | null; cantidadRecibida?: number; precioFacturado?: number | null }[]
+}) {
+  const tipoLabel = (tipo: string) => {
+    if (tipo === 'merma') return '📦 Merma / cantidad diferente'
+    if (tipo === 'precio_diferente') return '💰 Precio diferente al acordado'
+    if (tipo === 'no_pedido') return '❓ Artículo no pedido'
+    return `⚠️ Incidencia (${tipo})`
+  }
+
+  const rows = incidencias.map(it => `
+    <tr>
+      <td style="padding:10px 14px;border-bottom:1px solid ${C.rule};font-size:14px;">${it.nombre}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid ${C.rule};font-size:13px;color:#666;">${tipoLabel(it.tipo)}</td>
+      <td style="padding:10px 14px;border-bottom:1px solid ${C.rule};font-size:13px;font-family:monospace;">
+        ${it.cantidadPedida != null ? `Pedido: ${it.cantidadPedida} → Recibido: ${it.cantidadRecibida}` : it.precioFacturado != null ? `Precio: ${it.precioFacturado} €` : '—'}
+      </td>
+    </tr>`).join('')
+
+  const albaran = albaranNumero ? ` (Albarán: <strong>${albaranNumero}</strong>)` : ''
+
+  const html = layout(`
+    <div class="card">
+      <h1>Incidencias en la recepción${albaran}</h1>
+      <p>Hola <strong>${nombreProveedor}</strong>, hemos recibido tu entrega en <strong>${nombreRestaurante}</strong> y hemos detectado las siguientes diferencias:</p>
+      <table style="width:100%;border-collapse:collapse;margin:16px 0;border:1px solid ${C.rule};border-radius:8px;overflow:hidden;">
+        <thead>
+          <tr style="background:${C.bg2};">
+            <th style="padding:10px 14px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:${C.fg3};">Artículo</th>
+            <th style="padding:10px 14px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:${C.fg3};">Tipo</th>
+            <th style="padding:10px 14px;text-align:left;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:${C.fg3};">Detalle</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <p>Por favor, contacta con nosotros para resolverlo. Gracias por tu colaboración.</p>
+      <p style="font-size:13px;color:${C.fg3};margin-top:8px;">— ${nombreRestaurante}</p>
+    </div>
+  `, `Incidencias en tu entrega a ${nombreRestaurante}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Incidencias en tu entrega a ${nombreRestaurante}`,
+    html,
+  })
+}
+
+// ── EMAIL: Notificación ASN al proveedor ─────────────────────
+export async function enviarEmailAsnProveedor({
+  email,
+  nombreProveedor,
+  nombreRestaurante,
+  articulo,
+  cantidad,
+  unidad,
+  asnUrl,
+  fechaEntregaEstimada,
+}: {
+  email: string
+  nombreProveedor: string
+  nombreRestaurante: string
+  articulo: string
+  cantidad: number
+  unidad: string
+  asnUrl: string
+  fechaEntregaEstimada?: string
+}) {
+  const html = layout(`
+    <div class="card">
+      <h1>Nuevo pedido de ${nombreRestaurante}</h1>
+      <p>Hola <strong>${nombreProveedor}</strong>, ${nombreRestaurante} ha realizado un pedido y te pedimos que confirmes el envío antes de la entrega.</p>
+      <hr class="divider">
+      <p><strong>Artículo:</strong> ${articulo}</p>
+      <p><strong>Cantidad:</strong> ${cantidad} ${unidad}</p>
+      ${fechaEntregaEstimada ? `<p><strong>Fecha estimada:</strong> ${fechaEntregaEstimada}</p>` : ''}
+      <hr class="divider">
+      <p>Antes de salir, notifícanos el envío en este enlace (válido 72h). Nos permite preparar la recepción y detectar incidencias automáticamente:</p>
+      <div class="token-box">🔗 ${asnUrl}</div>
+      <a href="${asnUrl}" class="btn">Notificar envío →</a>
+      <p style="font-size:12px;color:${C.fg3};margin-top:12px;">Este enlace no requiere contraseña. Solo tienes que confirmar los items y subir tu albarán si lo deseas.</p>
+    </div>
+  `, `Nuevo pedido de ${nombreRestaurante} — confirma el envío`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Nuevo pedido de ${nombreRestaurante}`,
+    html,
+  })
+}
+
+// ── EMAIL: Alerta incidencia al responsable de compras ───────
+export async function enviarEmailAlertaCompras({
+  email,
+  nombreResponsable,
+  nombreRestaurante,
+  nombreProveedor,
+  albaranNumero,
+  numIncidencias,
+  resumen,
+}: {
+  email: string
+  nombreResponsable: string
+  nombreRestaurante: string
+  nombreProveedor: string
+  albaranNumero?: string | null
+  numIncidencias: number
+  resumen: string
+}) {
+  const albaran = albaranNumero ? ` — Albarán ${albaranNumero}` : ''
+
+  const html = layout(`
+    <div class="card">
+      <h1>⚠️ Recepción con ${numIncidencias} incidencia${numIncidencias > 1 ? 's' : ''}${albaran}</h1>
+      <p>Hola <strong>${nombreResponsable}</strong>, se ha confirmado una recepción en <strong>${nombreRestaurante}</strong> con incidencias del proveedor <strong>${nombreProveedor}</strong>.</p>
+      <div class="token-box" style="font-family:inherit;white-space:pre-line;font-size:13px;">${resumen}</div>
+      <p>El proveedor ha sido notificado automáticamente. El historial queda guardado en la ficha del proveedor.</p>
+      <a href="${BASE}/owner" class="btn">Ver ficha proveedor →</a>
+    </div>
+  `, `⚠️ ${numIncidencias} incidencia${numIncidencias > 1 ? 's' : ''} — ${nombreProveedor}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `⚠️ Incidencias recepción — ${nombreProveedor}`,
+    html,
+  })
+}

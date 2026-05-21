@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { sendWhatsApp } from '@/lib/whatsapp'
+import { enviarEmailAsnProveedor } from '@/lib/email'
 
 /**
  * POST /api/owner/proveedores/asn-token
@@ -70,7 +71,26 @@ export async function POST(req: NextRequest) {
 
   const mensaje = `Hola ${prov.nombre}, ${nombreRest} ha realizado un pedido de ${pedido.cantidad} ${pedido.unidad_compra} de ${articulo}.\n\nPuedes notificarnos el envío y subir tu albarán aquí (válido 72h):\n${asnUrl}\n\nGracias 🙏`
 
-  // Intentar envío WhatsApp (no bloquea si falla)
+  // 1. Email (canal principal)
+  let emailResult: { ok: boolean; error?: string } = { ok: false, error: 'Sin email configurado en proveedor' }
+  if (prov.email) {
+    try {
+      await enviarEmailAsnProveedor({
+        email: prov.email,
+        nombreProveedor: prov.nombre,
+        nombreRestaurante: nombreRest,
+        articulo,
+        cantidad: pedido.cantidad,
+        unidad: pedido.unidad_compra,
+        asnUrl,
+      })
+      emailResult = { ok: true }
+    } catch (e) {
+      emailResult = { ok: false, error: String(e) }
+    }
+  }
+
+  // 2. WhatsApp (canal secundario)
   let waResult: { ok: boolean; error?: string } = { ok: false, error: 'Sin WhatsApp configurado en proveedor' }
   const waNumber = prov.whatsapp || prov.telefono
   if (waNumber) {
@@ -83,9 +103,9 @@ export async function POST(req: NextRequest) {
     token,
     expires_at: expires.toISOString(),
     notificacion: {
+      email: emailResult,
       whatsapp: waResult,
-      email: prov.email ?? null,
-      mensaje_enviado: mensaje,
+      canales_enviados: [emailResult.ok && 'email', waResult.ok && 'whatsapp'].filter(Boolean),
     },
   })
 }

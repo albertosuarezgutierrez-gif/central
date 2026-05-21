@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { sendWhatsApp } from '@/lib/whatsapp'
+import { enviarEmailIncidenciasProveedor, enviarEmailAlertaCompras } from '@/lib/email'
 
 /**
  * POST /api/owner/recepciones/confirmar
@@ -82,6 +83,7 @@ export async function POST(req: NextRequest) {
     const rest = rRest.data as {
       nombre: string
       whatsapp_alertas_compras: string | null
+      responsable_compras_id: string | null
       personal: { nombre: string; telefono: string | null } | null
     } | null
 
@@ -94,22 +96,72 @@ export async function POST(req: NextRequest) {
 
     const albaran = rec.albaran_numero ? ` (Albarán: ${rec.albaran_numero})` : ''
 
-    // Notificar al proveedor
+    // ── Notificar al PROVEEDOR (email primero, WhatsApp si hay número) ──
     if (prov) {
+      let notificadoProv = false
+
+      // 1. Email (canal principal — siempre si tiene email)
+      if (prov.email) {
+        try {
+          await enviarEmailIncidenciasProveedor({
+            email: prov.email,
+            nombreProveedor: prov.nombre,
+            nombreRestaurante: rest?.nombre ?? 'el restaurante',
+            albaranNumero: rec.albaran_numero,
+            incidencias: (incidencias as { nombre_articulo: string; estado: string; cantidad_pedida: number | null; cantidad_recibida: number; precio_facturado: number | null }[]).map(it => ({
+              nombre: it.nombre_articulo,
+              tipo: it.estado,
+              cantidadPedida: it.cantidad_pedida,
+              cantidadRecibida: it.cantidad_recibida,
+              precioFacturado: it.precio_facturado,
+            })),
+          })
+          notificadoProv = true
+        } catch (e) { console.error('[Email proveedor]', e) }
+      }
+
+      // 2. WhatsApp (canal secundario — si hay número y no hay email o como refuerzo)
       const waNum = prov.whatsapp || prov.telefono
       if (waNum) {
         const msgProv = `Hola ${prov.nombre}, hemos recibido tu pedido${albaran} con las siguientes incidencias:\n\n${resumen}\n\nPor favor, contáctanos para resolverlo. Gracias.`
         waProveedor = await sendWhatsApp(waNum, msgProv)
-        if (waProveedor.ok) {
-          await supabase.from('incidencias_proveedor')
-            .update({ notificado_proveedor: true, notificado_at: new Date().toISOString() })
-            .eq('recepcion_id', recepcion_id)
-        }
+        if (waProveedor.ok) notificadoProv = true
+      }
+
+      if (notificadoProv) {
+        await supabase.from('incidencias_proveedor')
+          .update({ notificado_proveedor: true, notificado_at: new Date().toISOString() })
+          .eq('recepcion_id', recepcion_id)
       }
     }
 
-    // Notificar al responsable de compras del restaurante
-    const waRestNum = rest?.whatsapp_alertas_compras || rest?.personal?.telefono
+    // ── Notificar al RESPONSABLE DE COMPRAS (email primero, WhatsApp secundario) ──
+    // Cargar email del responsable si tiene (puede ser owner, jefe, contable, etc.)
+    let emailResponsable: string | null = null
+    if (rest?.responsable_compras_id) {
+      const { data: resp } = await supabase
+        .from('personal')
+        .select('email, nombre')
+        .eq('id', rest.responsable_compras_id)
+        .single()
+      emailResponsable = (resp as { email?: string | null } | null)?.email ?? null
+    }
+
+    if (emailResponsable && prov) {
+      try {
+        await enviarEmailAlertaCompras({
+          email: emailResponsable,
+          nombreResponsable: (rest?.personal as { nombre: string } | null)?.nombre ?? 'Responsable',
+          nombreRestaurante: rest?.nombre ?? 'el restaurante',
+          nombreProveedor: prov.nombre,
+          albaranNumero: rec.albaran_numero,
+          numIncidencias: incidencias.length,
+          resumen,
+        })
+      } catch (e) { console.error('[Email responsable compras]', e) }
+    }
+
+    const waRestNum = rest?.whatsapp_alertas_compras || (rest?.personal as { telefono?: string | null } | null)?.telefono
     if (waRestNum) {
       const msgRest = `⚠️ Recepción con ${incidencias.length} incidencia${incidencias.length > 1 ? 's' : ''}${albaran}:\n\n${resumen}\n\n${prov?.nombre ? `Proveedor: ${prov.nombre}` : ''}`
       waResponsable = await sendWhatsApp(waRestNum, msgRest)
