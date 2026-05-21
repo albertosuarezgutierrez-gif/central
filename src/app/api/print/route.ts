@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   // ── Mesh: solo el master procesa jobs ────────────────────────
   // Con 1 solo bridge (caso habitual) → siempre procesa. Backward compatible.
   // Con varios bridges → solo el master hace fetch de jobs. Evita duplicados.
-  const MASTER_TIMEOUT_MS = 15_000
+  const MASTER_TIMEOUT_MS = 60_000
   const meshDeadline = new Date(Date.now() - MASTER_TIMEOUT_MS).toISOString()
   const { count: nodosActivos } = await sb
     .from('bridge_tokens')

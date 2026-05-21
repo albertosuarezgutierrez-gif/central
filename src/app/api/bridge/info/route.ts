@@ -7,7 +7,7 @@ import { createServerClient } from '@/lib/supabase'
 export const runtime = 'nodejs'
 
 // Un master se considera caído si no hace ping en más de este tiempo
-const MASTER_TIMEOUT_MS = 15_000
+const MASTER_TIMEOUT_MS = 60_000
 
 export async function GET(req: NextRequest) {
   const token   = req.nextUrl.searchParams.get('token')
