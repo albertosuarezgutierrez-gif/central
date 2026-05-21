@@ -5,7 +5,6 @@ import SmartScanModal from './SmartScanModal'
 // Roles que siempre pueden escanear sin toggle
 const ROLES_SIEMPRE = ['owner', 'super_admin', 'jefe_sala']
 
-// Solo los campos que SmartScanFAB realmente usa — sin exigir restaurante_nombre
 interface SessionMinima {
   id: string
   nombre: string
@@ -17,20 +16,23 @@ interface SessionMinima {
 
 interface Props {
   session: SessionMinima
-  /** Posición vertical desde abajo (default: 80px para dejar espacio al nav) */
+  /**
+   * inline=true → botón compacto 30x30 para colocar en un header
+   * inline=false/undefined → FAB flotante (posición fija)
+   */
+  inline?: boolean
+  /** Solo aplica cuando inline=false */
   bottom?: number
-  /** Posición horizontal desde la derecha */
+  /** Solo aplica cuando inline=false */
   right?: number
 }
 
-export default function SmartScanFAB({ session, bottom = 88, right = 16 }: Props) {
+export default function SmartScanFAB({ session, inline = false, bottom = 88, right = 16 }: Props) {
   const [puedeEscanear, setPuedeEscanear] = useState<boolean | null>(
-    // Roles siempre permitidos → true inmediato, sin esperar fetch
     ROLES_SIEMPRE.includes(session.rol) ? true : null
   )
   const [open, setOpen] = useState(false)
 
-  // Para camareros: verificar permiso en BD
   useEffect(() => {
     if (ROLES_SIEMPRE.includes(session.rol)) {
       setPuedeEscanear(true)
@@ -40,7 +42,6 @@ export default function SmartScanFAB({ session, bottom = 88, right = 16 }: Props
       setPuedeEscanear(false)
       return
     }
-
     const ses = typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') ?? '' : ''
     fetch('/api/scanner/permiso-check', {
       headers: { 'x-ia-session': ses },
@@ -50,12 +51,70 @@ export default function SmartScanFAB({ session, bottom = 88, right = 16 }: Props
       .catch(() => setPuedeEscanear(false))
   }, [session.id, session.rol])
 
-  // No mostrar si no tiene permiso (o mientras carga)
   if (!puedeEscanear) return null
 
+  // ── Modo inline — botón compacto para header ─────────────
+  if (inline) {
+    return (
+      <>
+        <button
+          onClick={() => setOpen(true)}
+          title="Escáner IA — fotografía un documento"
+          style={{
+            position: 'relative',
+            width: 30,
+            height: 30,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            background: open ? '#2A1F1A' : 'transparent',
+            border: '1px solid rgba(216,205,182,.25)',
+            borderRadius: 16,
+            cursor: 'pointer',
+            color: 'rgba(246,241,231,.65)',
+            flexShrink: 0,
+            transition: 'background .15s, border-color .15s',
+          }}
+          onMouseEnter={e => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.background = '#2A1F1A'
+            b.style.borderColor = 'rgba(216,205,182,.5)'
+          }}
+          onMouseLeave={e => {
+            const b = e.currentTarget as HTMLButtonElement
+            b.style.background = open ? '#2A1F1A' : 'transparent'
+            b.style.borderColor = 'rgba(216,205,182,.25)'
+          }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+            <circle cx="12" cy="13" r="4"/>
+          </svg>
+          {/* Spark IA */}
+          <span style={{
+            position: 'absolute', top: -3, right: -3,
+            width: 10, height: 10, borderRadius: '50%',
+            background: '#D9442B',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 6, color: '#fff', fontWeight: 700,
+            border: '1.5px solid #14110E',
+          }}>✦</span>
+        </button>
+
+        {open && (
+          <SmartScanModal
+            onClose={() => setOpen(false)}
+            sessionNombre={session.nombre}
+            sessionRol={session.rol}
+          />
+        )}
+      </>
+    )
+  }
+
+  // ── Modo FAB flotante (legacy) ────────────────────────────
   return (
     <>
-      {/* Botón flotante */}
       <button
         onClick={() => setOpen(true)}
         title="Escáner IA — fotografía un documento"
@@ -85,12 +144,10 @@ export default function SmartScanFAB({ session, bottom = 88, right = 16 }: Props
           ;(e.currentTarget as HTMLButtonElement).style.boxShadow = '0 4px 16px rgba(0,0,0,.35)'
         }}
       >
-        {/* Icono cámara */}
         <svg width={22} height={22} viewBox="0 0 24 24" fill="none" stroke="#F6F1E7" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
           <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
           <circle cx="12" cy="13" r="4"/>
         </svg>
-        {/* Spark IA */}
         <span style={{
           position: 'absolute', top: -2, right: -2,
           width: 14, height: 14, borderRadius: '50%',
@@ -101,7 +158,6 @@ export default function SmartScanFAB({ session, bottom = 88, right = 16 }: Props
         }}>✦</span>
       </button>
 
-      {/* Modal */}
       {open && (
         <SmartScanModal
           onClose={() => setOpen(false)}
