@@ -95,7 +95,7 @@ serve(async (req) => {
 
     // Notificar push a camareros y jefes de sala
     const { data: camareros } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('id')
       .eq('restaurante_id', restaurante_id)
       .in('rol', ['camarero', 'jefe_sala'])

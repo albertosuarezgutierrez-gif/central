@@ -435,7 +435,7 @@ function StepPersonal({ session, onNext }: { session: any; onNext: () => void })
     if (!personal.length) { onNext(); return }
     setSaving(true)
     const results = await Promise.allSettled(personal.filter(p => !saved.includes(p._id)).map(p =>
-      fetch('/api/owner/camareros', {
+      fetch('/api/owner/personal', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...sh() },
         body: JSON.stringify({ nombre: p.nombre, pin: p.pin, rol: p.rol }),

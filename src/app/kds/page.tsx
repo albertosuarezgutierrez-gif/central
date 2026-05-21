@@ -275,7 +275,7 @@ function KDSInner() {
         if (rz.activo) {
           // Necesitamos el nombre del running — fetch camarero
           const { data: cam } = await supabase
-            .from('camareros')
+            .from('personal')
             .select('nombre')
             .eq('id', rz.camarero_id)
             .single()

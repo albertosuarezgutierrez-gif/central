@@ -127,7 +127,7 @@ export async function POST(
   let camarero_nombre = session?.nombre ?? 'Equipo'
   if (!session?.nombre) {
     const { data: cam } = await supabase
-      .from('camareros').select('nombre').eq('id', comanda.camarero_id).single()
+      .from('personal').select('nombre').eq('id', comanda.camarero_id).single()
     camarero_nombre = cam?.nombre ?? 'Equipo'
   }
 

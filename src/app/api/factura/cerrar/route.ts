@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
   // ── 8. Registrar en caja si es efectivo ─────────────────
   if (metodo.tipo === 'efectivo') {
     const { data: cam } = await supabase
-      .from('camareros').select('nombre').eq('id', session?.id ?? comanda.camarero_id).single()
+      .from('personal').select('nombre').eq('id', session?.id ?? comanda.camarero_id).single()
 
     await supabase.rpc('registrar_cobro_caja', {
       p_restaurante_id:  restaurante_id,
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
   try {
     // Recuperar items con precios para el ticket
     const { data: camData } = await supabase
-      .from('camareros').select('nombre').eq('id', session?.id ?? comanda.camarero_id).single()
+      .from('personal').select('nombre').eq('id', session?.id ?? comanda.camarero_id).single()
     const { data: mesaData } = await supabase
       .from('mesas').select('codigo, zona_id, zona:zonas(nombre, tipo)')
       .eq('id', comanda.mesa_id ?? '').single()

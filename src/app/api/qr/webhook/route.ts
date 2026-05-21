@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
 
       // Push al camarero: mesa pagada vía QR
       const { data: camareros } = await supabase
-        .from('camareros')
+        .from('personal')
         .select('id')
         .eq('restaurante_id', restaurante_id)
         .in('rol', ['camarero', 'jefe_sala'])

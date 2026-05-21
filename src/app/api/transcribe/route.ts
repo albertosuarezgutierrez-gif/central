@@ -32,7 +32,7 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
       .eq('activo', true)
       .limit(60),
     supabase
-      .from('camareros')
+      .from('personal')
       .select('nombre')
       .eq('restaurante_id', restauranteId)
       .eq('activo', true)
@@ -543,7 +543,7 @@ export async function POST(req: NextRequest) {
 
       // Solo crear print_jobs si no requiere confirmación — si la requiere, /confirmar los crea
       if (!requireConfirm && ['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
-        const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
+        const { data: camarero } = await supabase.from('personal').select('nombre').eq('id', camareroId).single()
 
         if (brainResult.tipo === 'marchar') {
           // ── B1 FIX: usar /api/marchar para notificaciones al running + marchar_log ──
@@ -612,7 +612,7 @@ export async function POST(req: NextRequest) {
           .from('restaurantes').select('nombre, direccion').eq('id', rid).single()
 
         const { data: camNombre } = await supabase
-          .from('camareros').select('nombre').eq('id', camareroId).single()
+          .from('personal').select('nombre').eq('id', camareroId).single()
 
         const totalCuenta = (itemsCuenta ?? []).reduce(
           (s: number, it: { precio_unitario: number | null; cantidad: number }) =>
@@ -665,7 +665,7 @@ export async function POST(req: NextRequest) {
         if (brainResult.destinatario_nombre) {
           // Mensaje privado a persona
           const { data: destinatario } = await supabase
-            .from('camareros')
+            .from('personal')
             .select('id, rol')
             .eq('restaurante_id', rid)
             .eq('activo', true)
@@ -827,7 +827,7 @@ export async function POST(req: NextRequest) {
         )
         // Solo enviar a impresora si no requiere confirmación
         if (!requireConfirm) {
-        const { data: camarero } = await supabase.from('camareros').select('nombre').eq('id', camareroId).single()
+        const { data: camarero } = await supabase.from('personal').select('nombre').eq('id', camareroId).single()
         crearPrintJobs(
           {
             id: comanda.id,

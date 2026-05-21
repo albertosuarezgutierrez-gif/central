@@ -88,7 +88,7 @@ export async function POST(
         }
       }
 
-      const { data: cam } = await supabase.from('camareros').select('nombre').eq('id', comanda.camarero_id).single()
+      const { data: cam } = await supabase.from('personal').select('nombre').eq('id', comanda.camarero_id).single()
 
       await crearPrintJobs(
         {

@@ -88,7 +88,7 @@ async function runBackup(req: NextRequest): Promise<NextResponse> {
 
   // Tablas completas
   const tablasCompletas = [
-    'restaurantes', 'camareros', 'productos', 'producto_formatos',
+    'restaurantes', 'personal', 'productos', 'producto_formatos',
     'mesas', 'zonas', 'secciones_cocina', 'impresoras', 'cuentas', 'cobro_config',
   ]
   for (const tabla of tablasCompletas) {

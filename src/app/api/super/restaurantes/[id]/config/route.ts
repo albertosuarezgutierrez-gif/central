@@ -38,7 +38,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     { count: numComandasHoy },
     { count: numFacturas },
   ] = await Promise.all([
-    supabase.from('camareros').select('*', { count: 'exact', head: true }).eq('restaurante_id', id).eq('activo', true),
+    supabase.from('personal').select('*', { count: 'exact', head: true }).eq('restaurante_id', id).eq('activo', true),
     supabase.from('mesas').select('*', { count: 'exact', head: true }).eq('restaurante_id', id),
     supabase.from('comandas').select('*', { count: 'exact', head: true })
       .eq('restaurante_id', id)

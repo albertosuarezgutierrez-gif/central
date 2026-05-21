@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     let camarero_nombre = 'Equipo'
     if (camarero_id) {
       const { data: cam } = await supabase
-        .from('camareros').select('nombre').eq('id', camarero_id).single()
+        .from('personal').select('nombre').eq('id', camarero_id).single()
       if (cam?.nombre) camarero_nombre = cam.nombre
     }
 

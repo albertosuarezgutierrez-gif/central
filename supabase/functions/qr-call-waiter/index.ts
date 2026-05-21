@@ -55,7 +55,7 @@ serve(async (req) => {
     // 2. Buscar camarero asignado a la zona
     if (zona_id) {
       const { data: camareroZona } = await sb
-        .from('camareros')
+        .from('personal')
         .select('id')
         .eq('restaurante_id', restaurante_id)
         .eq('rol', 'camarero')
@@ -69,7 +69,7 @@ serve(async (req) => {
     // 3. Fallback: todos los camareros activos del turno
     if (destinatarios.length === 0) {
       const { data: camareros } = await sb
-        .from('camareros')
+        .from('personal')
         .select('id')
         .eq('restaurante_id', restaurante_id)
         .eq('rol', 'camarero')
@@ -79,7 +79,7 @@ serve(async (req) => {
 
     // 4. Jefe de sala — siempre recibe (sin duplicados)
     const { data: jefes } = await sb
-      .from('camareros')
+      .from('personal')
       .select('id')
       .eq('restaurante_id', restaurante_id)
       .eq('rol', 'jefe_sala')

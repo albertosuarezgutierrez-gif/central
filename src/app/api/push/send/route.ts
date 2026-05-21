@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   let rolesIds: string[] = []
   if (roles?.length && !ids.length) {
     const { data: cams } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('id')
       .eq('restaurante_id', restauranteId)
       .in('rol', roles)

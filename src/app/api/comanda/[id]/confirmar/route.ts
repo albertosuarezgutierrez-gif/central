@@ -55,7 +55,7 @@ export async function PATCH(
 
     // ── 2. Leer camarero ──────────────────────────────────────────────────
     const { data: camarero } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('nombre')
       .eq('id', comanda.camarero_id)
       .single()

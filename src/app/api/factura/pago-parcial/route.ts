@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
 
   // ── 8. Registrar en caja ────────────────────────────────────
   const { data: camData } = await supabase
-    .from('camareros').select('nombre').eq('id', session?.id ?? comanda.camarero_id).single()
+    .from('personal').select('nombre').eq('id', session?.id ?? comanda.camarero_id).single()
 
   await supabase.rpc('registrar_cobro_caja', {
     p_restaurante_id:   restaurante_id,

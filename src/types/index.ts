@@ -24,6 +24,9 @@ export interface Camarero {
   created_at: string
 }
 
+/** Alias moderno de Camarero — refleja el rename de tabla camareros → personal */
+export type Personal = Camarero
+
 export interface Turno {
   id: string
   nombre: string

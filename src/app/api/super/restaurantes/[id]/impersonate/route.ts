@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Buscar el primer camarero con rol owner o admin del restaurante
   const { data: camareros } = await supabase
-    .from('camareros')
+    .from('personal')
     .select('id, nombre, rol, restaurante_id, seccion_id')
     .eq('restaurante_id', id)
     .eq('activo', true)
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Si no hay owner/admin, buscar cualquier camarero activo
   if (!camarero) {
     const { data: cualquiera } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('id, nombre, rol, restaurante_id, seccion_id')
       .eq('restaurante_id', id)
       .eq('activo', true)

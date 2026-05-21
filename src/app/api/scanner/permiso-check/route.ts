@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
   const { data } = await supabase
-    .from('camareros')
+    .from('personal')
     .select('puede_escanear')
     .eq('id', session.id)
     .eq('restaurante_id', rid)

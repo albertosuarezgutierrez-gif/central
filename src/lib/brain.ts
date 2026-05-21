@@ -98,7 +98,7 @@ async function buildPersonalContext(restaurante_id?: string): Promise<string> {
   try {
     const supabase = createServerClient()
     const { data } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('id, nombre, rol')
       .eq('activo', true)
       .eq('restaurante_id', restaurante_id)

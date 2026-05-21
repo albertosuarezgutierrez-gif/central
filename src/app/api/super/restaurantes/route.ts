@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad,
       created_at, trial_end, max_camareros, stripe_subscription_id,
-      camareros:camareros(count),
+      camareros:personal(count),
       mesas:mesas(count),
       comandas:comandas(count)
     `)
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
   // Crear camarero admin por defecto (PIN 0000)
   const { error: camError } = await supabase
-    .from('camareros')
+    .from('personal')
     .insert({
       nombre: 'Admin',
       pin: '0000',

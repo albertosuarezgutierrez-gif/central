@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   // Verificar que el camarero es running y del restaurante
   const { data: cam } = await supabase
-    .from('camareros')
+    .from('personal')
     .select('rol')
     .eq('id', camarero_id)
     .eq('restaurante_id', rid)

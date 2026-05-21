@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
 
       // Buscar camareros activos del restaurante (jefe_sala siempre, camarero asignado a la zona si existe)
       const { data: camareros } = await supabase
-        .from('camareros')
+        .from('personal')
         .select('id, nombre')
         .eq('restaurante_id', s.restaurante_id)
         .in('rol', ['camarero', 'jefe_sala'])

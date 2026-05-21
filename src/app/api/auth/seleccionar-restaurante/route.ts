@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
 
   // Buscar camarero owner
   const { data: cam } = await sb
-    .from('camareros')
+    .from('personal')
     .select('id, nombre, rol')
     .eq('cuenta_id', cuenta_id)
     .eq('restaurante_id', restaurante_id)

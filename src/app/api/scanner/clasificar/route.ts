@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
   let puedeEscanear = ROLES_SIEMPRE.includes(session.rol)
   if (!puedeEscanear && session.rol === 'camarero') {
     const { data: cam } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('puede_escanear')
       .eq('id', session.id)
       .eq('restaurante_id', rid)

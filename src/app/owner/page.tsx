@@ -190,7 +190,7 @@ function CamarerosTab() {
   const [codigoAcceso, setCodigoAcceso] = useState('')
 
   const load = useCallback(async () => {
-    const r = await fetch('/api/owner/camareros', { headers: sh() })
+    const r = await fetch('/api/owner/personal', { headers: sh() })
     const d = await r.json()
     setCamareros(d.camareros || [])
     const rs = await fetch('/api/owner/secciones', { headers: sh() })
@@ -243,7 +243,7 @@ function CamarerosTab() {
     if (!/^\d{4}$/.test(form.pin)) return setErr('PIN debe ser 4 dígitos')
 
     const isEdit = modal && typeof modal === 'object' && 'edit' in modal
-    const url = '/api/owner/camareros'
+    const url = '/api/owner/personal'
     const bodyData = { ...form, seccion_id: form.rol === 'cocina' && form.seccion_id ? form.seccion_id : null, puede_comandar: form.puede_comandar, modulos_gestion: form.modulos_gestion }
     const body = isEdit
       ? { id: (modal as { edit: Camarero }).edit.id, ...bodyData }
@@ -258,7 +258,7 @@ function CamarerosTab() {
 
   const del = async () => {
     if (!modal || typeof modal !== 'object' || !('del' in modal)) return
-    const r = await fetch('/api/owner/camareros', { method: 'DELETE',
+    const r = await fetch('/api/owner/personal', { method: 'DELETE',
       headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: (modal as { del: Camarero }).del.id }) })
     if (!r.ok) {
       const d = await r.json()
@@ -272,7 +272,7 @@ function CamarerosTab() {
   }
 
   const toggleActivo = async (c: Camarero) => {
-    await fetch('/api/owner/camareros', { method: 'PUT',
+    await fetch('/api/owner/personal', { method: 'PUT',
       headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: c.id, activo: !c.activo }) })
     await load()
   }
@@ -593,7 +593,7 @@ function CamarerosTab() {
             {delErr && (
               <Btn variant="ghost" onClick={async () => {
                 const c = (modal as { del: Camarero }).del
-                await fetch('/api/owner/camareros', { method: 'PUT',
+                await fetch('/api/owner/personal', { method: 'PUT',
                   headers: { 'Content-Type': 'application/json', ...sh() },
                   body: JSON.stringify({ id: c.id, activo: false }) })
                 await load(); setModal(null)
@@ -7801,7 +7801,7 @@ export default function OwnerPage() {
         .catch(() => {})
     }
     Promise.all([
-      fetch('/api/owner/camareros', { headers: h }).then(r => r.json()),
+      fetch('/api/owner/personal', { headers: h }).then(r => r.json()),
       fetch('/api/owner/carta',     { headers: h }).then(r => r.json()),
       fetch('/api/owner/mesas',     { headers: h }).then(r => r.json()),
       fetch('/api/owner/turno',     { headers: h }).then(r => r.json()),

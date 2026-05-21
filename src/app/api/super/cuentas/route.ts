@@ -58,7 +58,7 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
   // Desasociar restaurantes antes de borrar
   await sb.from('restaurantes').update({ cuenta_id: null }).eq('cuenta_id', id)
-  await sb.from('camareros').update({ cuenta_id: null }).eq('cuenta_id', id)
+  await sb.from('personal').update({ cuenta_id: null }).eq('cuenta_id', id)
   const { error } = await sb.from('cuentas').delete().eq('id', id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

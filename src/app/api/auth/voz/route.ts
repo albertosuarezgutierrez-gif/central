@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
     // 3. Obtener camareros del restaurante
     const { data: camareros } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('id, nombre, rol, seccion_id')
       .eq('restaurante_id', restaurante_id)
       .eq('activo', true)

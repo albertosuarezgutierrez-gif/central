@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   if (!camarero_id) return NextResponse.json({ error: 'camarero_id requerido' }, { status: 400 })
 
   const { error } = await supabase
-    .from('camareros')
+    .from('personal')
     .update({ puede_escanear: !!puede_escanear })
     .eq('id', camarero_id)
     .eq('restaurante_id', rid)

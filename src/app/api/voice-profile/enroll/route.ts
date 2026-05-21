@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
 
     // Verificar que el camarero pertenece al restaurante
     const { data: camarero } = await supabase
-      .from('camareros')
+      .from('personal')
       .select('id, nombre')
       .eq('id', camareroId)
       .eq('restaurante_id', restauranteId)
