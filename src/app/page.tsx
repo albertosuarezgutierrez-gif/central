@@ -570,7 +570,6 @@ export default function Page() {
           <div className="ssw" ref={sswRef}>
             <button className="ssw-btn" onClick={()=>setSessionOpen(o=>!o)} aria-label="Demo sesiones">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="6.25" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="10.5" width="12" height="1.5" rx=".75" fill="currentColor"/></svg>
-              Demo
             </button>
             <div className={`ssw-drop${sessionOpen?" open":""}`}>
               <div className="ssw-title">Acceder al demo</div>
