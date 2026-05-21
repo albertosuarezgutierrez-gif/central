@@ -1787,6 +1787,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {/* Modal recomendador de vino */}
       <VinoModal open={vinoOpen} onClose={()=>setVinoOpen(false)} session={session} tema="dark" />
       <style>{`
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes ldot{0%,100%{opacity:1}50%{opacity:.3}}
         @keyframes hout{0%{transform:scale(1);opacity:.4}100%{transform:scale(2);opacity:0}}
         @keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
@@ -1892,7 +1893,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
       {showPush && (
         <div style={{position:'absolute',top:0,left:0,right:0,zIndex:60,background:C.grS,borderBottom:`2px solid ${C.gr}`,padding:'10px 16px',display:'flex',alignItems:'center',gap:10,animation:'pushIn .3s ease'}}>
           <div style={{width:7,height:7,borderRadius:'50%',background:C.gr,flexShrink:0}}/>
-          <span style={{fontFamily:SC,fontSize:14,flex:1,color:C.ink}}>{pushMsg}</span>
+          <span style={{fontFamily:SM,fontSize:13,flex:1,color:C.ink}}>{pushMsg}</span>
           <span onClick={()=>setShowPush(false)} style={{fontSize:11,color:C.ink3,cursor:'pointer'}}>✕</span>
         </div>
       )}
@@ -2124,7 +2125,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                 {brain.nota_general&&(
                   <div style={{padding:'6px 14px',borderTop:`1px solid ${C.rule}`,background:C.ambS,display:'flex',alignItems:'center',gap:6}}>
                     <span style={{fontFamily:SM,fontSize:9,color:'#7A5A1A',letterSpacing:'.08em',fontWeight:700,textTransform:'uppercase' as const}}>NOTA</span>
-                    <span style={{fontFamily:SC,fontSize:13,color:'#7A5A1A',fontStyle:'italic'}}>{brain.nota_general}</span>
+                    <span style={{fontFamily:SN,fontSize:13,color:'#7A5A1A'}}>{brain.nota_general}</span>
                   </div>
                 )}
                 <div style={{display:'flex',borderTop:`1px solid ${C.rule}`}}>
@@ -2164,27 +2165,6 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
               </div>
             )}
           </div>
-
-          {/* ── Respuestas rápidas (solo con confirm activo) ──── */}
-          {screen==='confirm' && (
-            <div style={{padding:'4px 14px 6px',display:'flex',gap:6,flexShrink:0,overflowX:'auto',scrollbarWidth:'none' as const,background:C.bg1,borderTop:`1px solid ${C.rule}`}}>
-              {['✓ Sí','✗ No','Repite'].map(r=>(
-                // FIX-04: onPointerDown evita doble-disparo en móvil
-                <button key={r} onPointerDown={r==='✓ Sí'?()=>{
-                  if (lastComandaId) {
-                    fetch(`/api/comanda/${lastComandaId}/confirmar`, {
-                      method: 'PATCH',
-                      headers: { 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' },
-                    }).catch(err => console.error('[CONFIRMAR quick]', err))
-                  }
-                  setScreenSafe('sent'); addMsg('brain',`✓ Enviado · ${brain?.mesa ?? '?'}`,'ok')
-                }:r==='✗ No'?reset:()=>{reset();setScreenSafe('idle')}}
-                  style={{flexShrink:0,padding:'10px 18px',borderRadius:20,border:`1px solid ${C.rule}`,background:r==='✓ Sí'?C.gr:r==='✗ No'?C.vermS:C.bg2,fontSize:13,fontWeight:700,color:r==='✓ Sí'?'#fff':r==='✗ No'?C.verm:C.ink3,cursor:'pointer',fontFamily:SN}}>
-                  {r}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* ── PTT ─────────────────────────────────────────── */}
           <div style={{padding:'8px 20px 16px',display:'flex',flexDirection:'column',alignItems:'center',gap:7,flexShrink:0,borderTop:`1px solid ${C.rule}`,background:C.bg1}}>
