@@ -3,7 +3,7 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import ManualComanda from '@/components/ManualComanda'
-import ChuleteVoz from '@/components/ChuleteVoz'
+import ChuletaVoz from '@/components/ChuletaVoz'
 import VinoModal from '@/components/VinoModal'
 import MesaDetalleSheet from '@/components/edge/MesaDetalleSheet'
 import { useProductos86, useComandas, useServicioPendiente } from '@/hooks/useRealtime'
@@ -3141,7 +3141,7 @@ function ForceUpdateRow() {
   )
 }
 
-function ChuleteVozSection() {
+function ChuletaVozSection() {
   const [open, setOpen] = React.useState(false)
   return (
     <div style={{borderBottom:`1px solid ${C.rule}`}}>
@@ -3159,7 +3159,7 @@ function ChuleteVozSection() {
       </div>
       {open && (
         <div style={{marginBottom:8}}>
-          <ChuleteVoz rol="camarero" />
+          <ChuletaVoz rol="camarero" />
         </div>
       )}
     </div>
@@ -3347,7 +3347,7 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
           </div>
         </div>
         {/* ── CHULETA VOZ ── */}
-        <ChuleteVozSection />
+        <ChuletaVozSection />
 
         <div style={{paddingTop:20,paddingBottom:32}}>
           {/* Fichaje */}

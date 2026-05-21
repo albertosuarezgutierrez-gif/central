@@ -1,12 +1,12 @@
 'use client'
-// src/components/ChuleteVoz.tsx
+// src/components/ChuletaVoz.tsx
 // Chuleta Voz — guía rápida de comandos de voz por rol.
 // Consume lib/voice-commands-guide.ts como fuente de verdad.
 // Activos → visible directo. Próximos → bloque colapsado al final.
 
 import React, { useState } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
-import { getComandosActivos, VOICE_COMMANDS_GUIDE, type BloqueComandos } from '@/lib/voice-commands-guide'
+import { VOICE_COMMANDS_GUIDE } from '@/lib/voice-commands-guide'
 
 type Rol = 'owner' | 'camarero' | 'running' | 'cocina'
 
@@ -18,6 +18,7 @@ const TEAL   = '#2B6A6E'
 const RED    = '#D9442B'
 const GRAY   = '#8D8270'
 const PURPLE = '#7B5EA7'
+const GREEN  = '#3F7D44'
 
 const AMBERS  = 'rgba(232,163,59,.12)'
 const BLUES   = 'rgba(43,106,158,.12)'
@@ -25,6 +26,7 @@ const TEALS   = 'rgba(43,106,110,.12)'
 const REDS    = 'rgba(217,66,43,.12)'
 const GRAYS   = 'rgba(141,130,112,.10)'
 const PURPLES = 'rgba(123,94,167,.12)'
+const GREENS  = 'rgba(63,125,68,.12)'
 
 function Badge({ color, bg, label }: { color: string; bg: string; label: string }) {
   return (
@@ -107,7 +109,7 @@ function ReglaDeOro() {
   )
 }
 
-// ── Bloques de comandos activos ───────────────────────────────────────────────
+// ── Bloques camarero / owner ──────────────────────────────────────────────────
 
 function BloqueVino() {
   return (
@@ -189,6 +191,46 @@ function BloqueCuenta() {
   )
 }
 
+// ── Bloques cocina ────────────────────────────────────────────────────────────
+
+function BloqueAsistenteCocina() {
+  return (
+    <Block color={GREEN} bg={GREENS} badge="ASISTENTE IA" sub="pregunta en lenguaje natural">
+      <Row pattern="¿qué hay pendiente?"
+        examples={['¿qué hay pendiente?', '¿cuántos platos quedan?']} />
+      <Sep />
+      <Row pattern="¿qué hay en [mesa]?"
+        examples={['¿qué hay en la mesa 3?', '¿qué pidió la S1?']} />
+      <Sep />
+      <Row pattern="¿hay [plato] con alérgenos?"
+        examples={['¿hay alguno sin gluten?', '¿alguna mesa con alérgenos?']} />
+      <Sep />
+      <Row pattern="¿cuánto lleva esperando [mesa]?"
+        examples={['¿cuánto lleva la T4?', '¿qué mesa lleva más tiempo?']} />
+      <Sep />
+      <Row pattern="¿qué queda de [producto]?"
+        examples={['¿cuántas croquetas quedan?', '¿queda entrecot?']} />
+      <Sep />
+      <Row pattern="¿cómo va [partida]?"
+        examples={['¿cómo va la plancha?', '¿cómo lleva frío los postres?']} />
+      <Tip color={GREEN} text="mantén pulsado 🤙 y pregunta — responde sobre las comandas activas del turno" />
+    </Block>
+  )
+}
+
+function BloqueMarcharCocina() {
+  return (
+    <Block color={TEAL} bg={TEALS} badge="MARCHAR" sub="confirmar plato listo">
+      <Row pattern="marcha [producto] [mesa]"
+        examples={['marcha las croquetas S1', 'pasa el entrecot T4']} />
+      <Sep />
+      <Row pattern="marcha [mesa]"
+        examples={['marcha S1', 'todo listo mesa T4']} />
+      <Tip color={TEAL} text="el ítem queda tachado en pantalla automáticamente" />
+    </Block>
+  )
+}
+
 // ── Bloque Próximamente ───────────────────────────────────────────────────────
 
 function BloqueProximamente() {
@@ -251,7 +293,7 @@ function BloqueProximamente() {
 
 // ── Componente principal ──────────────────────────────────────────────────────
 
-export default function ChuleteVoz({ rol }: Props) {
+export default function ChuletaVoz({ rol }: Props) {
   const titulo = {
     owner:    'Chuleta Voz — visión completa',
     camarero: 'Chuleta Voz',
@@ -285,8 +327,10 @@ export default function ChuleteVoz({ rol }: Props) {
         <ReglaDeOro />
       </>)}
 
-      {/* COCINA: mensaje + regla */}
+      {/* COCINA: asistente IA + marchar + mensaje + regla */}
       {rol === 'cocina' && (<>
+        <BloqueAsistenteCocina />
+        <BloqueMarcharCocina />
         <BloqueMensaje />
         <ReglaDeOro />
       </>)}

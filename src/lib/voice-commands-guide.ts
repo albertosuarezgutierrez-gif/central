@@ -4,7 +4,7 @@
  *
  * REGLA: Cuando se implemente un nuevo tipo en BrainResult + transcribe,
  * cambiar estado 'proximo' → 'activo' aquí. Se propaga automáticamente a:
- *   - ChuleteVoz (/edge y /kds y /running)
+ *   - ChuletaVoz (/edge y /kds y /running)
  *   - ManualVozTab (/owner → Protocolo de Voz → Chuleta)
  *
  * Estados:
@@ -290,7 +290,7 @@ export const VOICE_COMMANDS_GUIDE: BloqueComandos[] = [
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
-/** Solo comandos activos — para ChuleteVoz en /edge */
+/** Solo comandos activos — para ChuletaVoz en /edge */
 export function getComandosActivos(rol?: string): BloqueComandos[] {
   return VOICE_COMMANDS_GUIDE.map(bloque => ({
     ...bloque,
