@@ -1,22 +1,8 @@
 'use client'
-import { SE, SN, SM, SC } from '@/lib/colors'
-const TT = SE  // serif italic font alias
+import { C, SE, SN, SM } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 
-// ── Design system ─────────────────────────────────────────────────────────
-const C = {
-  bg:    '#14110E',
-  bone:  '#1C1815',
-  paper: '#F6F1E7',
-  ink2:  '#D8CDB6',
-  ink3:  '#A89880',
-  ink4:  '#6B5A48',
-  rule:  '#2C2420',
-  red:   '#D9442B',
-  amber: '#E8A33B',
-  green: '#3F7D44',
-}
-const MN = '"JetBrains Mono", monospace'
+const TT = SE  // serif italic
 
 // ── Tipos ─────────────────────────────────────────────────────────────────
 interface Candidato {
@@ -51,10 +37,10 @@ const ROLES = [
 ]
 
 const ESTADOS = [
-  { v: 'activo',     l: 'Activo',     color: C.amber },
-  { v: 'entrevista', l: 'Entrevista', color: '#5B8DD9' },
-  { v: 'contratado', l: 'Contratado', color: C.green },
-  { v: 'descartado', l: 'Descartado', color: C.ink4 },
+  { v: 'activo',     l: 'Activo',      color: C.amber },
+  { v: 'entrevista', l: 'Entrevista',  color: '#5B8DD9' },
+  { v: 'contratado', l: 'Contratado',  color: C.green },
+  { v: 'descartado', l: 'Descartado',  color: C.ink4 },
 ]
 
 const RECOM_COLOR: Record<string, string> = {
@@ -79,10 +65,10 @@ function rolLabel(v: string) {
 
 // ── Estilos compartidos ───────────────────────────────────────────────────
 const inputStyle: React.CSSProperties = {
-  background:   '#1C1815',
-  border:       '1px solid #2C2420',
+  background:   C.bg2,
+  border:       `1px solid ${C.rule}`,
   borderRadius: 6,
-  color:        '#F6F1E7',
+  color:        C.ink,
   fontFamily:   SM,
   fontSize:     14,
   padding:      '10px 12px',
@@ -101,7 +87,7 @@ const labelTxt: React.CSSProperties = {
   fontWeight:    700,
   letterSpacing: '.12em',
   textTransform: 'uppercase',
-  color:         '#A89880',
+  color:         C.ink3,
 }
 const secTitleStyle: React.CSSProperties = {
   fontFamily:    SM,
@@ -109,13 +95,31 @@ const secTitleStyle: React.CSSProperties = {
   fontWeight:    700,
   letterSpacing: '.14em',
   textTransform: 'uppercase',
-  color:         '#6B5A48',
+  color:         C.ink4,
   marginBottom:  8,
 }
 
+// ── Chip badge ────────────────────────────────────────────────────────────
+function Chip({ color, children }: { color: string; children: React.ReactNode }) {
+  return (
+    <span style={{
+      fontFamily:    SM,
+      fontSize:      11,
+      fontWeight:    600,
+      letterSpacing: '.06em',
+      background:    color + '18',
+      color,
+      padding:       '3px 9px',
+      borderRadius:  999,
+      border:        `1px solid ${color}44`,
+      whiteSpace:    'nowrap',
+      display:       'inline-block',
+    }}>{children}</span>
+  )
+}
+
 // ══════════════════════════════════════════════════════════════════════════
-// Sub-componente DetalleView
-// Necesario separado para poder usar useState sin violar las reglas de hooks
+// Sub-componente DetalleView (hooks separados para no violar reglas)
 // ══════════════════════════════════════════════════════════════════════════
 function DetalleView({
   candidato: c,
@@ -130,7 +134,7 @@ function DetalleView({
   onEstadoChange: (id: string, estado: string) => Promise<void>
   onEliminar: (id: string) => Promise<void>
 }) {
-  const [nota, setNota]               = useState(c.notas_internas ?? '')
+  const [nota, setNota]                = useState(c.notas_internas ?? '')
   const [notaGuardada, setNotaGuardada] = useState(false)
 
   async function guardarNota() {
@@ -149,21 +153,21 @@ function DetalleView({
         <button onClick={onBack} style={{
           background: 'none', border: 'none', color: C.ink3,
           cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4,
-        }}>←</button>
+        }}>&#8592;</button>
         <div>
-          <h2 style={{ fontFamily: TT, fontSize: 22, color: C.paper, margin: 0, fontStyle: 'italic' }}>
+          <h2 style={{ fontFamily: TT, fontSize: 22, color: C.ink, margin: 0, fontStyle: 'italic' }}>
             {c.nombre}
           </h2>
           <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, marginTop: 2 }}>
-            {rolLabel(c.rol_solicitado)} · {new Date(c.fecha_subida).toLocaleDateString('es-ES')}
+            {rolLabel(c.rol_solicitado)} &middot; {new Date(c.fecha_subida).toLocaleDateString('es-ES')}
           </div>
         </div>
       </div>
 
-      {/* Score + recomendación */}
+      {/* Score + recomendacion */}
       {c.score != null && (
         <div style={{
-          background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10,
+          background: C.card, border: `1px solid ${C.rule}`, borderRadius: 10,
           padding: '16px 20px', marginBottom: 16,
           display: 'flex', alignItems: 'center', gap: 20, flexWrap: 'wrap',
         }}>
@@ -177,19 +181,14 @@ function DetalleView({
           </div>
           <div style={{ flex: 1, minWidth: 200 }}>
             {c.recomendacion && (
-              <div style={{
-                display: 'inline-block',
-                background: RECOM_COLOR[c.recomendacion] + '22',
-                border: `1px solid ${RECOM_COLOR[c.recomendacion]}`,
-                color: RECOM_COLOR[c.recomendacion],
-                borderRadius: 20, padding: '4px 12px',
-                fontFamily: SM, fontSize: 12, fontWeight: 700, marginBottom: 8,
-              }}>
-                {RECOM_LABEL[c.recomendacion] ?? c.recomendacion}
+              <div style={{ marginBottom: 8 }}>
+                <Chip color={RECOM_COLOR[c.recomendacion]}>
+                  {RECOM_LABEL[c.recomendacion] ?? c.recomendacion}
+                </Chip>
               </div>
             )}
             {c.resumen && (
-              <p style={{ fontFamily: SM, fontSize: 13, color: C.ink2, margin: 0, lineHeight: 1.6 }}>
+              <p style={{ fontFamily: SN, fontSize: 13, color: C.ink2, margin: 0, lineHeight: 1.6 }}>
                 {c.resumen}
               </p>
             )}
@@ -200,7 +199,7 @@ function DetalleView({
                 {c.experiencia_anos}
               </div>
               <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4,
-                textTransform: 'uppercase', letterSpacing: '.1em' }}>Años</div>
+                textTransform: 'uppercase', letterSpacing: '.1em' }}>Anos</div>
             </div>
           )}
         </div>
@@ -209,10 +208,10 @@ function DetalleView({
       {/* Alerta */}
       {c.alerta && (
         <div style={{
-          background: '#3B2E15', border: `1px solid ${C.amber}`, borderRadius: 8,
+          background: C.amberS, border: `1px solid ${C.amber}44`, borderRadius: 8,
           padding: '10px 14px', marginBottom: 16,
-          fontFamily: SM, fontSize: 13, color: C.amber,
-        }}>⚠ {c.alerta}</div>
+          fontFamily: SN, fontSize: 13, color: C.amberD,
+        }}>&#9888; {c.alerta}</div>
       )}
 
       {/* Idiomas */}
@@ -222,31 +221,31 @@ function DetalleView({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {c.idiomas.map((lang, i) => (
               <span key={i} style={{
-                background: C.bone, border: `1px solid ${C.rule}`,
-                borderRadius: 20, padding: '4px 10px',
+                background: C.paper2, border: `1px solid ${C.rule}`,
+                borderRadius: 999, padding: '4px 10px',
                 fontFamily: SM, fontSize: 12, color: C.ink2,
-              }}>{lang.idioma} — {lang.nivel}</span>
+              }}>{lang.idioma} &mdash; {lang.nivel}</span>
             ))}
           </div>
         </div>
       )}
 
-      {/* Puntos fuertes / débiles */}
+      {/* Puntos fuertes / debiles */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 16 }}>
         {c.puntos_fuertes?.length > 0 && (
-          <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
-            <div style={{ ...secTitleStyle, color: C.green, marginBottom: 10 }}>✓ Puntos fuertes</div>
+          <div style={{ background: C.card, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
+            <div style={{ ...secTitleStyle, color: C.green, marginBottom: 10 }}>&#10003; Puntos fuertes</div>
             {c.puntos_fuertes.map((p, i) => (
-              <div key={i} style={{ fontFamily: SM, fontSize: 12, color: C.ink2,
+              <div key={i} style={{ fontFamily: SN, fontSize: 12, color: C.ink2,
                 marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid ${C.green}` }}>{p}</div>
             ))}
           </div>
         )}
         {c.puntos_debiles?.length > 0 && (
-          <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
-            <div style={{ ...secTitleStyle, color: C.amber, marginBottom: 10 }}>△ A valorar</div>
+          <div style={{ background: C.card, border: `1px solid ${C.rule}`, borderRadius: 8, padding: 14 }}>
+            <div style={{ ...secTitleStyle, color: C.amber, marginBottom: 10 }}>&#9651; A valorar</div>
             {c.puntos_debiles.map((p, i) => (
-              <div key={i} style={{ fontFamily: SM, fontSize: 12, color: C.ink2,
+              <div key={i} style={{ fontFamily: SN, fontSize: 12, color: C.ink2,
                 marginBottom: 6, paddingLeft: 10, borderLeft: `2px solid ${C.amber}` }}>{p}</div>
             ))}
           </div>
@@ -259,8 +258,8 @@ function DetalleView({
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {ESTADOS.map(e => (
             <button key={e.v} onClick={() => onEstadoChange(c.id, e.v)} style={{
-              background:   c.estado === e.v ? e.color + '22' : 'transparent',
-              border:       `1px solid ${c.estado === e.v ? e.color : C.rule}`,
+              background:   c.estado === e.v ? e.color + '18' : 'transparent',
+              border:       `1px solid ${c.estado === e.v ? e.color + '66' : C.rule}`,
               color:        c.estado === e.v ? e.color : C.ink3,
               borderRadius: 6, padding: '6px 14px',
               fontFamily:   SM, fontSize: 12, fontWeight: c.estado === e.v ? 700 : 400,
@@ -278,10 +277,10 @@ function DetalleView({
           onBlur={guardarNota}
           placeholder="Observaciones, detalles de entrevista, pendientes..."
           rows={4}
-          style={{ ...inputStyle, resize: 'vertical', width: '100%', boxSizing: 'border-box' }}
+          style={{ ...inputStyle, resize: 'vertical', fontFamily: SN, lineHeight: 1.6 }}
         />
         {notaGuardada && (
-          <div style={{ fontFamily: SM, fontSize: 11, color: C.green, marginTop: 4 }}>Guardado</div>
+          <div style={{ fontFamily: SM, fontSize: 11, color: C.green, marginTop: 4 }}>&#10003; Guardado</div>
         )}
       </div>
 
@@ -290,12 +289,12 @@ function DetalleView({
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginBottom: 20 }}>
           {c.email && (
             <a href={`mailto:${c.email}`} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none' }}>
-              ✉ {c.email}
+              &#9993; {c.email}
             </a>
           )}
           {c.telefono && (
             <a href={`tel:${c.telefono}`} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none' }}>
-              ☎ {c.telefono}
+              &#9743; {c.telefono}
             </a>
           )}
         </div>
@@ -315,17 +314,17 @@ function DetalleView({
 // Componente principal RRHHTab
 // ══════════════════════════════════════════════════════════════════════════
 export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
-  const [candidatos,    setCandidatos]    = useState<Candidato[]>([])
-  const [loading,       setLoading]       = useState(true)
-  const [vista,         setVista]         = useState<'lista' | 'nuevo' | 'detalle'>('lista')
-  const [seleccionado,  setSeleccionado]  = useState<Candidato | null>(null)
-  const [filtroEstado,  setFiltroEstado]  = useState('')
-  const [filtroRol,     setFiltroRol]     = useState('')
-  const [form,          setForm]          = useState({
+  const [candidatos,   setCandidatos]   = useState<Candidato[]>([])
+  const [loading,      setLoading]      = useState(true)
+  const [vista,        setVista]        = useState<'lista' | 'nuevo' | 'detalle'>('lista')
+  const [seleccionado, setSeleccionado] = useState<Candidato | null>(null)
+  const [filtroEstado, setFiltroEstado] = useState('')
+  const [filtroRol,    setFiltroRol]    = useState('')
+  const [form, setForm]                 = useState({
     nombre: '', email: '', telefono: '', rol_solicitado: 'camarero', cv_texto: '',
   })
-  const [analizando,    setAnalizando]    = useState(false)
-  const [error,         setError]         = useState('')
+  const [analizando, setAnalizando]     = useState(false)
+  const [error, setError]               = useState('')
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -374,7 +373,7 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
   }
 
   async function eliminar(id: string) {
-    if (!confirm('¿Eliminar candidato? Esta acción no se puede deshacer.')) return
+    if (!confirm('Eliminar candidato? Esta accion no se puede deshacer.')) return
     await fetch(`/api/rrhh/candidatos/${id}`, { method: 'DELETE', headers: sh() })
     setVista('lista')
     await cargar()
@@ -388,8 +387,8 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
           <button onClick={() => setVista('lista')} style={{
             background: 'none', border: 'none', color: C.ink3,
             cursor: 'pointer', fontSize: 20, lineHeight: 1, padding: 4,
-          }}>←</button>
-          <h2 style={{ fontFamily: TT, fontSize: 22, color: C.paper, margin: 0, fontStyle: 'italic' }}>
+          }}>&#8592;</button>
+          <h2 style={{ fontFamily: TT, fontSize: 22, color: C.ink, margin: 0, fontStyle: 'italic' }}>
             Nuevo candidato
           </h2>
         </div>
@@ -399,7 +398,7 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
             <span style={labelTxt}>Nombre completo *</span>
             <input value={form.nombre}
               onChange={e => setForm(p => ({ ...p, nombre: e.target.value }))}
-              placeholder="Ej: María García López" style={inputStyle} />
+              placeholder="Ej: Maria Garcia Lopez" style={inputStyle} />
           </label>
 
           <label style={labelStyle}>
@@ -419,7 +418,7 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
                 placeholder="candidato@email.com" style={inputStyle} />
             </label>
             <label style={labelStyle}>
-              <span style={labelTxt}>Teléfono</span>
+              <span style={labelTxt}>Telefono</span>
               <input value={form.telefono}
                 onChange={e => setForm(p => ({ ...p, telefono: e.target.value }))}
                 placeholder="6XX XXX XXX" style={inputStyle} />
@@ -428,31 +427,31 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
 
           <label style={labelStyle}>
             <span style={labelTxt}>Texto del CV *</span>
-            <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, marginBottom: 4, display: 'block' }}>
+            <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginBottom: 4, display: 'block' }}>
               Copia y pega el contenido del CV, o transcribe los datos del candidato.
             </span>
             <textarea value={form.cv_texto}
               onChange={e => setForm(p => ({ ...p, cv_texto: e.target.value }))}
-              placeholder="Datos de formación, experiencia laboral, idiomas, habilidades..."
+              placeholder="Datos de formacion, experiencia laboral, idiomas, habilidades..."
               rows={10}
-              style={{ ...inputStyle, resize: 'vertical', fontFamily: MN, fontSize: 12, lineHeight: 1.6 }}
+              style={{ ...inputStyle, resize: 'vertical', fontFamily: SM, fontSize: 12, lineHeight: 1.6 }}
             />
           </label>
 
           {error && (
             <div style={{
-              background: '#3B1A18', border: `1px solid ${C.red}`, borderRadius: 6,
-              padding: '10px 14px', color: '#F4A89A', fontFamily: SM, fontSize: 13,
+              background: C.redS, border: `1px solid ${C.red}44`, borderRadius: 6,
+              padding: '10px 14px', color: C.redD, fontFamily: SN, fontSize: 13,
             }}>{error}</div>
           )}
 
           <button onClick={handleNuevo} disabled={analizando} style={{
             background:  analizando ? C.ink4 : C.red,
-            color:       C.paper, border: 'none', borderRadius: 8,
+            color:       '#fff', border: 'none', borderRadius: 8,
             padding:     '14px 0', fontFamily: SM, fontWeight: 700,
             fontSize:    15, cursor: analizando ? 'not-allowed' : 'pointer',
           }}>
-            {analizando ? '⏳ Analizando con IA...' : '✦ Analizar CV con IA'}
+            {analizando ? 'Analizando con IA...' : '\u2736 Analizar CV con IA'}
           </button>
         </div>
       </div>
@@ -475,19 +474,21 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
   // ── Vista: lista ──────────────────────────────────────────────────────
   return (
     <div>
+      {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         marginBottom: 20, flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ fontFamily: TT, fontSize: 22, color: C.paper, margin: 0, fontStyle: 'italic' }}>
+        <h2 style={{ fontFamily: TT, fontSize: 22, color: C.ink, margin: 0, fontStyle: 'italic' }}>
           Candidatos
         </h2>
         <button onClick={() => setVista('nuevo')} style={{
-          background: C.red, color: C.paper, border: 'none', borderRadius: 8,
+          background: C.red, color: '#fff', border: 'none', borderRadius: 8,
           padding: '10px 18px', fontFamily: SM, fontSize: 13, fontWeight: 700, cursor: 'pointer',
         }}>
           + Nuevo candidato
         </button>
       </div>
 
+      {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
         <select value={filtroEstado} onChange={e => setFiltroEstado(e.target.value)}
           style={{ ...inputStyle, maxWidth: 160, padding: '8px 12px' }}>
@@ -501,6 +502,7 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
         </select>
       </div>
 
+      {/* Lista */}
       {loading ? (
         <div style={{ color: C.ink4, fontFamily: SM, fontSize: 13, textAlign: 'center', padding: 40 }}>
           Cargando...
@@ -510,77 +512,85 @@ export default function RRHHTab({ sh }: { sh: () => Record<string, string> }) {
           <div style={{ fontFamily: TT, fontSize: 32, fontStyle: 'italic', marginBottom: 12 }}>
             Sin candidatos
           </div>
-          <div style={{ fontFamily: SM, fontSize: 13 }}>
-            Pulsa &quot;+ Nuevo candidato&quot; para añadir el primer CV.
+          <div style={{ fontFamily: SN, fontSize: 13 }}>
+            Pulsa &quot;+ Nuevo candidato&quot; para anadir el primer CV.
           </div>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {candidatos.map(c => {
             const estadoInfo = ESTADOS.find(e => e.v === c.estado)
             return (
               <div key={c.id}
                 onClick={() => { setSeleccionado(c); setVista('detalle') }}
                 style={{
-                  background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10,
-                  padding: '14px 18px', cursor: 'pointer',
-                  display: 'flex', alignItems: 'center', gap: 16,
-                  transition: 'border-color .15s',
+                  background:   C.card,
+                  border:       `1px solid ${C.rule}`,
+                  borderRadius: 10,
+                  padding:      '13px 16px',
+                  cursor:       'pointer',
+                  display:      'flex',
+                  alignItems:   'center',
+                  gap:          14,
+                  transition:   'border-color .15s, box-shadow .15s',
                 }}
-                onMouseEnter={e => (e.currentTarget.style.borderColor = C.ink4)}
-                onMouseLeave={e => (e.currentTarget.style.borderColor = C.rule)}
+                onMouseEnter={e => {
+                  e.currentTarget.style.borderColor = C.ink3
+                  e.currentTarget.style.boxShadow   = '0 2px 8px rgba(26,23,20,.07)'
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.borderColor = C.rule
+                  e.currentTarget.style.boxShadow   = 'none'
+                }}
               >
-                {/* Score */}
+                {/* Score badge */}
                 <div style={{
-                  minWidth: 48, height: 48, borderRadius: 8,
-                  background: c.score != null ? scoreColor(c.score) + '18' : C.rule,
-                  border:     `1px solid ${c.score != null ? scoreColor(c.score) : C.rule}`,
-                  display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+                  minWidth:   46,
+                  height:     46,
+                  borderRadius: 8,
+                  background: c.score != null ? scoreColor(c.score) + '12' : C.paper2,
+                  border:     `1px solid ${c.score != null ? scoreColor(c.score) + '55' : C.rule}`,
+                  display:    'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  flexShrink: 0,
                 }}>
                   <div style={{
-                    fontFamily: TT, fontSize: 18, fontWeight: 700, fontStyle: 'italic',
+                    fontFamily: TT, fontSize: 17, fontWeight: 700, fontStyle: 'italic',
                     color: c.score != null ? scoreColor(c.score) : C.ink4, lineHeight: 1,
-                  }}>{c.score ?? '—'}</div>
+                  }}>{c.score ?? '\u2014'}</div>
                   <div style={{ fontFamily: SM, fontSize: 8, color: C.ink4,
-                    letterSpacing: '.08em', textTransform: 'uppercase' }}>score</div>
+                    letterSpacing: '.08em', textTransform: 'uppercase', marginTop: 1 }}>score</div>
                 </div>
 
-                {/* Info */}
+                {/* Info principal */}
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontFamily: SM, fontSize: 15, fontWeight: 600, color: C.paper,
+                  <div style={{ fontFamily: SM, fontSize: 14, fontWeight: 600, color: C.ink,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                     {c.nombre}
                   </div>
-                  <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, marginTop: 2 }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 2 }}>
                     {rolLabel(c.rol_solicitado)}
-                    {c.experiencia_anos != null && ` · ${c.experiencia_anos}a exp.`}
-                    {c.idiomas?.length > 0 && ` · ${c.idiomas.map(l => l.idioma).join(', ')}`}
+                    {c.experiencia_anos != null && ` \u00b7 ${c.experiencia_anos}a exp.`}
+                    {c.idiomas?.length > 0 && ` \u00b7 ${c.idiomas.map(l => l.idioma).join(', ')}`}
                   </div>
                 </div>
 
-                {c.recomendacion && (
-                  <div style={{
-                    flexShrink: 0,
-                    background: RECOM_COLOR[c.recomendacion] + '18',
-                    border:     `1px solid ${RECOM_COLOR[c.recomendacion]}44`,
-                    color:      RECOM_COLOR[c.recomendacion],
-                    borderRadius: 16, padding: '3px 10px',
-                    fontFamily: SM, fontSize: 11, fontWeight: 700,
-                  }}>{RECOM_LABEL[c.recomendacion]}</div>
-                )}
-
-                <div style={{
-                  flexShrink: 0,
-                  background: (estadoInfo?.color ?? C.ink4) + '18',
-                  border:     `1px solid ${(estadoInfo?.color ?? C.ink4)}44`,
-                  color:      estadoInfo?.color ?? C.ink4,
-                  borderRadius: 16, padding: '3px 10px',
-                  fontFamily: SM, fontSize: 11,
-                }}>{estadoInfo?.l ?? c.estado}</div>
-
-                {c.alerta && (
-                  <div style={{ flexShrink: 0, color: C.amber, fontSize: 16 }}>⚠</div>
-                )}
+                {/* Chips derecha */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  {c.recomendacion && (
+                    <Chip color={RECOM_COLOR[c.recomendacion]}>
+                      {RECOM_LABEL[c.recomendacion]}
+                    </Chip>
+                  )}
+                  {estadoInfo && (
+                    <Chip color={estadoInfo.color}>{estadoInfo.l}</Chip>
+                  )}
+                  {c.alerta && (
+                    <span style={{ color: C.amber, fontSize: 14 }}>&#9888;</span>
+                  )}
+                </div>
               </div>
             )
           })}

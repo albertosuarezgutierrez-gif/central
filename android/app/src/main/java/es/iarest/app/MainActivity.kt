@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var pttActive = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val CURRENT_VERSION = 10
+    private val CURRENT_VERSION = 12
     private val VERSION_URL = "https://www.iarest.es/app/version.json"
 
     private val REQUIRED_PERMISSIONS = buildList {
@@ -65,10 +65,19 @@ class MainActivity : AppCompatActivity() {
             setSupportMultipleWindows(false)
         }
 
+        // Bridge interface — la WebView puede configurar el bridge desde /owner
+        webView.addJavascriptInterface(BridgeInterface(this), "IaRestBridge")
+
         webView.webViewClient = object : WebViewClient() {
             override fun onPageFinished(view: WebView?, url: String?) {
                 webView.evaluateJavascript("window.isNativeApp = true;", null)
-                // Re-solicitar foco de audio en cada carga de página
+                webView.evaluateJavascript("window.__APP_VERSION__ = $CURRENT_VERSION;", null)
+                webView.evaluateJavascript("window.__APP_PLATFORM__ = 'android';", null)
+                // Exponer estado del bridge al JS
+                val bridgeToken = BridgeService.getToken(this@MainActivity) ?: ""
+                webView.evaluateJavascript(
+                    "window.__BRIDGE_CONFIGURED__ = ${bridgeToken.isNotEmpty()};", null
+                )
                 requestAudioFocusAndSession()
             }
             override fun shouldOverrideUrlLoading(view: WebView?, request: WebResourceRequest?): Boolean {
@@ -97,17 +106,30 @@ class MainActivity : AppCompatActivity() {
         requestAllPermissions()
         setupMediaSession()
         checkForUpdate()
+
+        // Arrancar bridge si ya tiene token configurado
+        arrancarBridgeSiConfigurado()
     }
 
-    // ── Foco de audio — se llama al iniciar Y después de cada grabación ──
+    private fun arrancarBridgeSiConfigurado() {
+        val token = BridgeService.getToken(this)
+        if (!token.isNullOrEmpty()) {
+            val intent = Intent(this, BridgeService::class.java)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                startForegroundService(intent)
+            } else {
+                startService(intent)
+            }
+        }
+    }
+
     @Suppress("DEPRECATION")
     private fun requestAudioFocusAndSession() {
         audioManager.requestAudioFocus(
             { focusChange ->
-                // Si perdemos el foco y luego lo recuperamos, re-activamos la sesión
                 if (focusChange == AudioManager.AUDIOFOCUS_GAIN) {
                     mediaSession.isActive = true
-                    pttActive = false // reset por si quedó pillado
+                    pttActive = false
                 }
             },
             AudioManager.STREAM_MUSIC,
@@ -130,7 +152,6 @@ class MainActivity : AppCompatActivity() {
         if (requestCode == 10) webView.reload()
     }
 
-    // ── PTT via dispatchKeyEvent — intercepta ANTES que cualquier asistente ──
     override fun dispatchKeyEvent(event: KeyEvent): Boolean {
         val isHeadset = event.keyCode == KeyEvent.KEYCODE_HEADSETHOOK ||
                         event.keyCode == KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE
@@ -146,7 +167,6 @@ class MainActivity : AppCompatActivity() {
                 KeyEvent.ACTION_UP -> {
                     pttActive = false
                     webView.post { webView.evaluateJavascript("window.stopPTT&&window.stopPTT()", null) }
-                    // Re-solicitar foco tras cada grabación para no perderlo
                     mainHandler.postDelayed({ requestAudioFocusAndSession() }, 500)
                     return true
                 }
@@ -179,7 +199,6 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
-        // Re-solicitar foco cuando la app vuelve al primer plano
         requestAudioFocusAndSession()
         webView.requestFocus()
     }

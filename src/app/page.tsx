@@ -30,6 +30,18 @@ nav.scrolled{background:rgba(251,248,241,.96);backdrop-filter:blur(24px);border-
 .nbg:hover{border-color:rgba(26,23,20,.35);color:var(--cream)}
 .nbr{padding:8px 20px;border-radius:9999px;background:var(--red);border:none;color:#fff;font-size:13px;font-weight:600;font-family:var(--ui);cursor:pointer;letter-spacing:-.01em;box-shadow:rgba(217,68,43,.45) 0 4px 16px -4px;transition:all .2s}
 .nbr:hover{background:#e54e35;transform:translateY(-1px)}
+/* Session switcher — siempre visible */
+.ssw{position:relative;display:flex;align-items:center}
+.ssw-btn{display:flex;align-items:center;gap:7px;padding:7px 12px;border-radius:10px;border:1px solid rgba(26,23,20,.15);background:transparent;cursor:pointer;transition:all .2s;font-family:var(--ui);font-size:12px;font-weight:600;color:var(--cream2);letter-spacing:-.01em}
+.ssw-btn:hover{border-color:rgba(217,68,43,.35);background:rgba(217,68,43,.06);color:var(--cream)}
+.ssw-btn svg{opacity:.6}
+.ssw-drop{position:absolute;top:calc(100% + 8px);right:0;background:rgba(251,248,241,.98);backdrop-filter:blur(20px);border:1px solid rgba(26,23,20,.12);border-radius:14px;padding:10px;width:200px;box-shadow:0 8px 32px rgba(26,23,20,.12);opacity:0;pointer-events:none;transform:translateY(-6px);transition:all .18s;z-index:400}
+.ssw-drop.open{opacity:1;pointer-events:all;transform:translateY(0)}
+.ssw-title{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream3);padding:4px 8px 8px}
+.ssw-item{display:flex;justify-content:space-between;align-items:center;padding:9px 10px;border-radius:9px;text-decoration:none;transition:background .15s;cursor:pointer}
+.ssw-item:hover{background:rgba(217,68,43,.08)}
+.ssw-item-name{font-size:13px;font-weight:500;color:var(--cream);font-family:var(--ui)}
+.ssw-item-pin{font-family:var(--mono);font-size:10px;color:var(--cream3);background:rgba(26,23,20,.07);padding:2px 6px;border-radius:6px}
 .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:0 24px 100px;position:relative;overflow:hidden}
 .hglow{position:absolute;top:-180px;left:50%;transform:translateX(-50%);width:1000px;height:700px;background:radial-gradient(ellipse,rgba(217,68,43,.10) 0%,transparent 65%);pointer-events:none}
 .hglow2{position:absolute;bottom:0;right:5%;width:500px;height:400px;background:radial-gradient(ellipse,rgba(232,163,59,.04) 0%,transparent 65%);pointer-events:none}
@@ -290,7 +302,7 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .csent p strong{color:var(--amber)}
 .cerr{font-family:var(--mono);font-size:12px;color:var(--amber);margin-top:8px;text-align:center}
 .cnota{font-family:var(--soft);font-size:14px;color:var(--cream3);text-align:center;margin-top:16px}
-.ham{display:none;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:8px;z-index:300}
+.ham{display:none !important;flex-direction:column;gap:5px;cursor:pointer;background:none;border:none;padding:8px;z-index:300}
 .ham span{display:block;width:22px;height:2px;background:var(--cream);border-radius:2px;transition:all .25s}
 .ham.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .ham.open span:nth-child(2){opacity:0}
@@ -303,7 +315,7 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 @media(max-width:768px){
   nav{padding:0 20px}.nav-c{display:none}
   .nav-r{display:none}
-  .ham{display:flex}
+  .ham{display:flex !important}
   .hero{padding:0 20px 80px}
   .dstage{grid-template-columns:1fr;min-height:auto}
   .ddiv{width:100%;height:1px}
@@ -366,6 +378,13 @@ footer{border-top:1px solid var(--b);padding:48px 40px;max-width:1100px;margin:0
 .pcalc-inc-title{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--cream3);margin-bottom:20px}
 .pcalc-inc-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px 28px}
 .pcalc-inc-item{font-size:14px;color:var(--cream2);display:flex;align-items:baseline;gap:8px;letter-spacing:-.005em}
+/* Demo session switcher */
+.demo-sep{width:80%;max-width:280px;height:1px;background:rgba(26,23,20,.1);margin:8px 0}
+.demo-label{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--cream3);margin-bottom:12px}
+.demo-links{display:flex;flex-direction:column;gap:8px;width:80%;max-width:280px}
+.demo-link{font-family:var(--ui);font-size:14px;font-weight:500;color:var(--cream2);text-decoration:none;display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border:1px solid rgba(26,23,20,.1);border-radius:12px;transition:all .2s;background:transparent}
+.demo-link:hover{border-color:rgba(217,68,43,.3);background:rgba(217,68,43,.05);color:var(--cream)}
+.demo-link span{font-family:var(--mono);font-size:10px;color:var(--cream3)}
 `;
 
 const COMANDAS = [
@@ -388,6 +407,7 @@ export default function Page() {
   const [leadSent, setLeadSent] = useState(false);
   const [leadError, setLeadError] = useState("");
   const [leadConsent, setLeadConsent] = useState(false);
+  const [sessionOpen, setSessionOpen] = useState(false);
   const navRef = useRef<HTMLElement>(null);
   const demoRunning = useRef(false);
 
@@ -515,6 +535,14 @@ export default function Page() {
         <a href="#precios" onClick={()=>navTo("precios")}>Precios</a>
         <a href="#contacto" onClick={()=>navTo("contacto")}>Contacto</a>
         <button className="mob-cta" onClick={()=>navTo("contacto")}>Solicitar 14 días gratis →</button>
+        <div className="demo-sep"/>
+        <p className="demo-label">Acceder al demo</p>
+        <div className="demo-links">
+          <a href="/edge" className="demo-link" onClick={()=>setMenuOpen(false)}>Camarero <span>PIN 7672</span></a>
+          <a href="/kds" className="demo-link" onClick={()=>setMenuOpen(false)}>Cocina <span>PIN 3297</span></a>
+          <a href="/owner" className="demo-link" onClick={()=>setMenuOpen(false)}>Propietario <span>PIN 1369</span></a>
+          <a href="/jefe" className="demo-link" onClick={()=>setMenuOpen(false)}>Jefe de sala <span>PIN 2566</span></a>
+        </div>
       </div>
 
       {/* NAV */}
@@ -528,6 +556,19 @@ export default function Page() {
           <li><a href="#contacto">Contacto</a></li>
         </ul>
         <div className="nav-r">
+          <div className="ssw">
+            <button className="ssw-btn" onClick={()=>setSessionOpen(o=>!o)} aria-label="Demo sesiones">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="6.25" width="12" height="1.5" rx=".75" fill="currentColor"/><rect x="1" y="10.5" width="12" height="1.5" rx=".75" fill="currentColor"/></svg>
+              Demo
+            </button>
+            <div className={`ssw-drop${sessionOpen?" open":""}`}>
+              <div className="ssw-title">Acceder al demo</div>
+              <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span><span className="ssw-item-pin">7672</span></a>
+              <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span><span className="ssw-item-pin">3297</span></a>
+              <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span><span className="ssw-item-pin">1369</span></a>
+              <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span><span className="ssw-item-pin">2566</span></a>
+            </div>
+          </div>
           <button className="nbr" onClick={()=>document.getElementById("contacto")?.scrollIntoView({behavior:"smooth"})}>Quiero probarlo</button>
         </div>
         <button className={`ham${menuOpen?" open":""}`} onClick={()=>setMenuOpen(m=>!m)} aria-label="Menú"><span/><span/><span/></button>

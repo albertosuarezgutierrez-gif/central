@@ -41,12 +41,29 @@ export async function GET(req: NextRequest) {
   // Verificar token de bridge
   const { data: bridge } = await sb
     .from('bridge_tokens')
-    .select('id, activo, restaurante_id, scan_requested')
+    .select('id, activo, restaurante_id, scan_requested, rol, en_wifi')
     .eq('token', token)
     .single()
 
   if (!bridge?.activo) {
     return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
+  }
+
+  // ── Mesh: solo el master procesa jobs ────────────────────────
+  // Con 1 solo bridge (caso habitual) → siempre procesa. Backward compatible.
+  // Con varios bridges → solo el master hace fetch de jobs. Evita duplicados.
+  const MASTER_TIMEOUT_MS = 15_000
+  const meshDeadline = new Date(Date.now() - MASTER_TIMEOUT_MS).toISOString()
+  const { count: nodosActivos } = await sb
+    .from('bridge_tokens')
+    .select('id', { count: 'exact', head: true })
+    .eq('restaurante_id', bridge.restaurante_id)
+    .eq('activo', true)
+    .gt('ultimo_ping', meshDeadline)
+
+  const hayMesh = (nodosActivos ?? 1) > 1
+  if (hayMesh && bridge.rol !== 'master') {
+    return NextResponse.json({ jobs: [], standby: true, scan_requested: false })
   }
 
   // Actualizar último ping del bridge (y versión si viene)

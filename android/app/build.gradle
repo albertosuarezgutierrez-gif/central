@@ -11,8 +11,8 @@ android {
         applicationId "es.iarest.app"
         minSdk 26
         targetSdk 34
-        versionCode 11
-        versionName "2.0"
+        versionCode 12
+        versionName "3.0"
     }
 
     signingConfigs {
@@ -48,4 +48,6 @@ dependencies {
     implementation 'androidx.appcompat:appcompat:1.6.1'
     implementation 'androidx.media:media:1.7.0'
     implementation 'com.google.android.material:material:1.11.0'
+    // Bridge mesh — HTTP/WebSocket nativo
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }

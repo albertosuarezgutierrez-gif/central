@@ -1,12 +1,15 @@
 #!/usr/bin/env node
 // ═══════════════════════════════════════════════════════════════
-// ia.rest Bridge v6 — Cloud Edition
-// Sin servidor local · Sin puertos abiertos · Sin antivirus issues
+// ia.rest Bridge v7 — Cloud Edition + Mesh
 //
-// PRIMER USO: pide el token → guarda → instala autostart → arranca
-// USOS SIGUIENTES: arranca directamente sin pedir nada
+// NUEVO v7: Arquitectura multi-nodo (mesh)
+//   · Cada dispositivo con la APK puede actuar como bridge
+//   · Elección automática de master por último ping activo
+//   · Si el master cae → standby toma el relevo en <15s
+//   · Detección automática WiFi vs datos móviles
+//   · Auto-scan cuando una impresora no responde
 //
-// Instalación automática como servicio Windows via registro
+// Backward compatible: con 1 solo bridge funciona igual que v6
 // ═══════════════════════════════════════════════════════════════
 
 const net   = require('net')
@@ -17,8 +20,9 @@ const path  = require('path')
 const os    = require('os')
 const { execSync, exec, spawn } = require('child_process')
 const readline = require('readline')
+const { CashlogyManager } = require('./azkoyen-cashlogy')
 
-const VERSION      = '6.0.1'
+const VERSION      = '7.0.0'
 const API          = 'https://www.iarest.es'
 const SUPABASE_URL = 'https://efncqyvhniaxsirhdxaa.supabase.co'
 const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmbmNxeXZobmlheHNpcmhkeGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2ODk5MzYsImV4cCI6MjA5MzI2NTkzNn0.dt3ko-HWzJK57FQyRDTjU07QBsYv9fpGo8Sm3Cs6heA'
@@ -26,6 +30,70 @@ const ANON_KEY     = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 const CONFIG_DIR  = path.join(os.homedir(), '.iarest')
 const CONFIG_FILE = path.join(CONFIG_DIR, 'bridge-v6.json')
 const EXE_PATH    = process.execPath  // Ruta del EXE actual
+
+// ── Cashlogy Manager (global, persiste entre polls) ──────────
+let cashlogyManager = null
+
+async function initCashlogy(TOKEN, restauranteId) {
+  cashlogyManager = new CashlogyManager({ configFile: path.join(CONFIG_DIR, 'cashlogy.json') })
+  await cashlogyManager.init(async (status, info) => {
+    console.log(`${status === 'online' ? G : Y}[CASHLOGY]${X} Estado: ${status}`, info.ip ?? '')
+    // Reportar estado a Supabase para que /owner lo vea en tiempo real
+    try {
+      await fetchJSON(`${API}/api/bridge/cashlogy/status`, {
+        method: 'POST',
+        headers: { 'x-bridge-token': TOKEN },
+        body: { status, ip: info.ip ?? null, version: info.version ?? null, restaurante_id: restauranteId },
+      }).catch(() => {})
+    } catch {}
+  })
+}
+
+// ── Handler de comandos Cashlogy ────────────────────────────
+async function handleCashlogyCommand(job, TOKEN) {
+  const tipo = job.payload?.tipo
+  const hora = new Date().toLocaleTimeString('es-ES')
+
+  try {
+    let result = null
+
+    if (tipo === 'cashlogy_discover') {
+      console.log(`${B}[CASHLOGY]${X} ${hora} · Descubrimiento manual`)
+      if (cashlogyManager) await cashlogyManager.discover()
+      result = { ok: cashlogyManager?.isOnline(), ip: cashlogyManager?.ip }
+
+    } else if (tipo === 'cashlogy_status') {
+      result = cashlogyManager ? await cashlogyManager.getStatus() : { ok: false, error: 'Manager no iniciado' }
+
+    } else if (tipo === 'cashlogy_charge') {
+      const { importe, op_num, operacion_id } = job.payload
+      console.log(`${B}[CASHLOGY]${X} ${hora} · Cobro ${(importe/100).toFixed(2)}€ op:${op_num}`)
+      result = cashlogyManager
+        ? await cashlogyManager.charge(importe, op_num)
+        : { ok: false, error: 'Cashlogy no disponible', estado: 'error' }
+
+      // Reportar resultado de la operación a ia.rest
+      if (operacion_id) {
+        await fetchJSON(`${API}/api/bridge/cashlogy/result`, {
+          method: 'POST',
+          headers: { 'x-bridge-token': TOKEN },
+          body: { operacion_id, ...result },
+        }).catch(() => {})
+      }
+
+    } else if (tipo === 'cashlogy_close') {
+      result = cashlogyManager ? await cashlogyManager.closeTill() : { ok: false, error: 'No disponible' }
+    }
+
+    const estado = result?.ok ? 'done' : 'error'
+    console.log(`${result?.ok ? G : Y}[CASHLOGY]${X} ${hora} · ${tipo} → ${estado}`)
+    await reportPrintResult(job.id, estado, result?.ok ? null : (result?.error ?? 'error'), TOKEN)
+
+  } catch (e) {
+    console.error(`${R}[CASHLOGY ERR]${X}`, e.message)
+    await reportPrintResult(job.id, 'error', e.message, TOKEN)
+  }
+}
 
 // ── Colores para terminal ─────────────────────────────────────
 const R = '\x1b[31m', G = '\x1b[32m', Y = '\x1b[33m', B = '\x1b[36m', W = '\x1b[37m', X = '\x1b[0m'
@@ -249,6 +317,11 @@ async function reportPrintResult(job_id, status, error_msg, TOKEN) {
 }
 
 async function printJob(job, TOKEN) {
+  // Cashlogy — comandos de caja automática
+  if (job.payload?.tipo?.startsWith('cashlogy_')) {
+    return handleCashlogyCommand(job, TOKEN)
+  }
+
   let ip = job.ip || job.ip_address
   const port = job.port || 9100
   const data = Buffer.from(job.print_data, 'base64')
@@ -261,6 +334,10 @@ async function printJob(job, TOKEN) {
   } catch (e) {
     console.warn(`${Y}[WARN]${X} Print failed: ${e.message}`)
     await reportPrintResult(job.id, 'error', e.message, TOKEN)
+    // Auto-scan: buscar nueva IP si la impresora no respondió
+    if (job.impresora_id || job.id) {
+      autoScanImpresora(job.impresora_id, ip, TOKEN).catch(() => {})
+    }
   }
 }
 
@@ -268,6 +345,151 @@ async function printJob(job, TOKEN) {
 async function ping(TOKEN) {
   try { await fetchJSON(`${API}/api/bridge/info?token=${TOKEN}&v=${VERSION}`) }
   catch {}
+}
+
+// ── MESH v7 — Estado local del nodo ──────────────────────────
+// 'master'  → procesa print_jobs, hace scan de impresoras
+// 'standby' → solo heartbeat, no procesa jobs
+// 'unknown' → estado inicial hasta recibir respuesta del servidor
+let meshRol      = 'unknown'
+let meshNodos    = 1
+let scanEnCurso  = false
+
+// Detecta si el dispositivo está en WiFi o datos móviles
+// En Android (Termux): WiFi = interfaz wlan0 / datos = rmnet_data0
+function detectarRed() {
+  const ifaces = os.networkInterfaces()
+  const nombres = Object.keys(ifaces)
+
+  // WiFi o Ethernet — puede alcanzar impresoras LAN
+  const enWifi = nombres.some(n =>
+    n.startsWith('wlan') ||
+    n.startsWith('en')   ||   // macOS WiFi
+    n.startsWith('eth')  ||   // Ethernet
+    n === 'Wi-Fi'             // Windows
+  )
+
+  // IP local del dispositivo (para info en /owner)
+  let ipLan = null
+  for (const [nombre, lista] of Object.entries(ifaces)) {
+    const esRed = nombre.startsWith('wlan') || nombre.startsWith('en') ||
+                  nombre.startsWith('eth')  || nombre === 'Wi-Fi'
+    if (!esRed) continue
+    for (const iface of lista) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        ipLan = iface.address
+        break
+      }
+    }
+    if (ipLan) break
+  }
+
+  const plataforma = process.env.IAREST_PLATFORM ||
+    (process.platform === 'linux' && process.env.TERMUX_VERSION ? 'android' : process.platform)
+
+  return { enWifi, ipLan, plataforma }
+}
+
+// Ping mejorado — incluye info de red + recibe rol del servidor
+async function pingMesh(TOKEN) {
+  try {
+    const { enWifi, ipLan, plataforma } = detectarRed()
+    const deviceName = loadConfig().deviceName || os.hostname()
+
+    const params = new URLSearchParams({
+      token:    TOKEN,
+      v:        VERSION,
+      wifi:     enWifi ? '1' : '0',
+      platform: plataforma,
+      device:   deviceName,
+    })
+    if (ipLan) params.set('ip_lan', ipLan)
+
+    const r = await fetchJSON(`${API}/api/bridge/info?${params.toString()}`)
+    if (!r.body?.ok) return
+
+    const rolAnterior = meshRol
+    meshRol   = r.body.rol   ?? 'standby'
+    meshNodos = r.body.nodos_activos ?? 1
+
+    // Log solo cuando cambia el rol
+    if (meshRol !== rolAnterior) {
+      if (meshRol === 'master') {
+        console.log(`${G}[MESH]${X} ★ Promovido a MASTER ${meshNodos > 1 ? `(${meshNodos} nodos activos)` : '(único nodo)'}`)
+      } else if (meshRol === 'standby') {
+        console.log(`${Y}[MESH]${X} Modo STANDBY — otro nodo es master`)
+      }
+    }
+
+    // Si no tenemos WiFi, avisar (no puede imprimir pero sí tomar comandas)
+    if (!enWifi && meshRol === 'master') {
+      console.log(`${Y}[MESH]${X} Sin WiFi local — cediendo rol master`)
+    }
+
+    return r.body
+  } catch (e) {
+    // Silencioso en standby — solo loggear si es master
+    if (meshRol === 'master') console.warn(`${Y}[MESH]${X} Ping fallido: ${e.message}`)
+  }
+}
+
+// Auto-scan cuando una impresora no responde
+// Solo lanza si soy master y no hay ya un scan en curso
+async function autoScanImpresora(impresoraId, ipFallida, TOKEN) {
+  if (meshRol !== 'master') return
+  if (scanEnCurso) return
+  scanEnCurso = true
+
+  console.log(`${Y}[MESH]${X} Impresora ${ipFallida} no responde — buscando en red...`)
+  try {
+    const encontradas = await scanRedSilencioso()
+    if (!encontradas.length) {
+      console.log(`${Y}[MESH]${X} Sin impresoras detectadas en red`)
+      return
+    }
+    // Intentar cruzar con la impresora que falló por IP conocida
+    const candidata = encontradas.find(f => f.ip !== ipFallida) ?? encontradas[0]
+    if (candidata) {
+      await fetchJSON(`${API}/api/bridge/update-ip`, {
+        method: 'POST',
+        headers: { 'x-bridge-token': TOKEN },
+        body: { impresora_id: impresoraId, new_ip: candidata.ip },
+      }).catch(() => {})
+      console.log(`${G}[MESH]${X} IP actualizada: ${ipFallida} → ${candidata.ip}`)
+    }
+  } finally {
+    scanEnCurso = false
+  }
+}
+
+// Scan de red silencioso (solo para auto-recovery, sin log verboso)
+async function scanRedSilencioso() {
+  let base = '192.168.1'
+  try {
+    const ifaces = os.networkInterfaces()
+    for (const lista of Object.values(ifaces)) {
+      for (const iface of lista) {
+        if (iface.family === 'IPv4' && !iface.internal && iface.address.startsWith('192.168')) {
+          base = iface.address.split('.').slice(0, 3).join('.')
+          break
+        }
+      }
+    }
+  } catch {}
+
+  const PORT  = 9100
+  const BATCH = 30
+  const found = []
+  for (let start = 1; start <= 254; start += BATCH) {
+    const promises = []
+    for (let i = start; i < start + BATCH && i <= 254; i++) {
+      const ip = `${base}.${i}`
+      promises.push(probePort(ip, PORT, 400).then(ms => ms !== null ? { ip, port: PORT, ms } : null))
+    }
+    const results = await Promise.all(promises)
+    results.forEach(r => r && found.push(r))
+  }
+  return found
 }
 
 // ── Realtime WebSocket ────────────────────────────────────────
@@ -334,7 +556,7 @@ function wsConnect(TOKEN, restauranteId) {
 // ── MAIN ──────────────────────────────────────────────────────
 ;(async () => {
   // Banner
-  console.log(`\n${B}  ia.rest Bridge${X} ${W}v${VERSION}${X} ${B}· Cloud Edition${X}`)
+  console.log(`\n${B}  ia.rest Bridge${X} ${W}v${VERSION}${X} ${B}· Cloud Edition + Mesh${X}`)
   console.log(`  API: ${API}\n`)
 
   // Determinar token
@@ -363,32 +585,33 @@ function wsConnect(TOKEN, restauranteId) {
     info.impresoras.forEach(i => console.log(`${G}[OK]${X} ${i.nombre} → ${i.ip_address}:${i.port || 9100}`))
   }
 
-  // Ping inmediato
-  await ping(TOKEN)
+  // Ping inmediato — establece rol (master/standby) desde el primer momento
+  await pingMesh(TOKEN)
 
-  // Conectar Realtime
+  // Conectar Realtime (siempre — standby también escucha pero no procesa)
   wsConnect(TOKEN, restauranteId)
 
-  // Ping cada 30s
-  setInterval(() => ping(TOKEN), 30000)
-
-  // Poll backup cada 60s
+  // ── Loop principal mesh ──────────────────────────────────────
+  // Master:  ping cada 5s + poll backup cada 60s
+  // Standby: ping cada 10s (solo heartbeat, sin procesar jobs)
   setInterval(async () => {
+    await pingMesh(TOKEN)
+
+    // Solo el master hace poll de jobs
+    if (meshRol !== 'master') return
     try {
-      // Actualizar version en BD
-      await fetchJSON(`${API}/api/bridge/info?token=${TOKEN}&v=${VERSION}`)
       const r = await fetchJSON(`${API}/api/print?token=${TOKEN}&v=${VERSION}`)
       if (r.body?.jobs?.length) {
         for (const job of r.body.jobs) await printJob(job, TOKEN)
       }
-      // Escaneo de red solicitado por el owner
       if (r.body?.scan_requested) {
         scanRed(TOKEN).catch(e => console.warn('[SCAN]', e.message))
       }
     } catch {}
-  }, 60000)
+  }, 5_000)  // cada 5s — suficiente para detectar caída de master en <15s
 
   console.log(`\n${G}Listo. Esperando comandas...${X}`)
+  console.log(`${W}Rol: ${meshRol === 'master' ? `${G}MASTER ★${X}` : `${Y}STANDBY${X}`} · Nodos activos: ${meshNodos}${X}`)
   console.log(`${W}(Deja esta ventana minimizada — no la cierres)${X}\n`)
 
 })()

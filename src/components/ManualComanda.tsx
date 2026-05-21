@@ -67,6 +67,10 @@ export default function ManualComanda({
   // Recomendaciones activas: Set de producto_id + mapa id→nota
   const [recsIds, setRecsIds] = useState<Set<string>>(new Set())
   const [recsNota, setRecsNota] = useState<Record<string, string>>({})  // producto_id → nota
+  const [nombreCuenta, setNombreCuenta] = useState('')
+  const [editandoNombre, setEditandoNombre] = useState(false)
+  const [draftNombre, setDraftNombre] = useState('')
+  const nombreInputRef = useRef<HTMLInputElement>(null)
 
   // Scroll-safe: cancela tap si el dedo se movió >6px (es scroll, no tap)
   const ptrStart = useRef<{x:number, y:number} | null>(null)
@@ -130,7 +134,7 @@ export default function ManualComanda({
   const total = cart.reduce((s, it) => s + (it.precio_unitario ?? 0) * it.cantidad, 0)
   const totalItems = cart.reduce((s, it) => s + it.cantidad, 0)
 
-  const selectMesa = (m: Mesa) => { setMesaId(m.id); setMesaSel(m); setStep('carta') }
+  const selectMesa = (m: Mesa) => { setMesaId(m.id); setMesaSel(m); setStep('carta'); setNombreCuenta(''); setEditandoNombre(false); setDraftNombre('') }
 
   // Fetch comanda activa cuando cambia la mesa
   useEffect(() => {
@@ -167,7 +171,7 @@ export default function ManualComanda({
       const r = await fetch('/api/comanda', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...h() },
-        body: JSON.stringify({ mesa_id: mesaId, items: cart.map(it => ({...it, notas: it.notas?.trim() || undefined})), tipo: 'comanda' }),
+        body: JSON.stringify({ mesa_id: mesaId, items: cart.map(it => ({...it, notas: it.notas?.trim() || undefined})), tipo: 'comanda', ...(nombreCuenta.trim() ? { nombre_cuenta: nombreCuenta.trim() } : {}) }),
       })
       const d = await r.json()
       if (d.ok) {
@@ -180,7 +184,7 @@ export default function ManualComanda({
           .then(dd => {
             if (dd.comanda) setComandaActiva({ id: dd.comanda.id, total: dd.comanda.total_estimado ?? 0, estado: dd.comanda.estado })
           }).catch(() => {})
-        setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false); setNotaIdx(null); setComandaActiva(null); setCuentaEnviada(false) }, 2000)
+        setTimeout(() => { setSent(false); setCart([]); setMesaId(''); setMesaSel(null); setStep('mesa'); setShowCart(false); setNotaIdx(null); setComandaActiva(null); setCuentaEnviada(false); setNombreCuenta(''); setEditandoNombre(false); setDraftNombre('') }, 2000)
       } else { setError(d.error ?? 'Error') }
     } catch { setError('Error de red') }
     finally { setSending(false) }
@@ -233,9 +237,68 @@ export default function ManualComanda({
             ← MESAS
           </button>
         )}
-        <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink2 }}>
-          {step === 'mesa' ? 'Elige mesa' : `Mesa ${mesaSel?.codigo ?? ''}`}
-        </span>
+
+        {step === 'mesa' && (
+          <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink2 }}>Elige mesa</span>
+        )}
+
+        {step === 'carta' && !editandoNombre && (
+          <div style={{ display:'flex', alignItems:'center', gap:6, flex:1, minWidth:0 }}>
+            <span style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:L.ink2, whiteSpace:'nowrap' }}>
+              Mesa {mesaSel?.codigo ?? ''}
+            </span>
+            {nombreCuenta && (
+              <span style={{
+                background:'rgba(232,163,59,0.14)', border:`1px solid ${L.amb}`,
+                borderRadius:6, padding:'2px 8px',
+                fontFamily:SM, fontSize:10, color:'#7A5910',
+                maxWidth:120, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap',
+              }}>
+                {nombreCuenta}
+              </span>
+            )}
+            <button
+              onPointerDown={() => { setDraftNombre(nombreCuenta); setEditandoNombre(true); setTimeout(() => nombreInputRef.current?.focus(), 40) }}
+              title={nombreCuenta ? 'Editar nombre' : 'Añadir nombre'}
+              style={{ background:'none', border:'none', cursor:'pointer', padding:'2px 4px', color:L.ink4, display:'flex', alignItems:'center', flexShrink:0 }}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+              </svg>
+            </button>
+          </div>
+        )}
+
+        {step === 'carta' && editandoNombre && (
+          <div style={{ display:'flex', alignItems:'center', gap:6, flex:1 }}>
+            <input
+              ref={nombreInputRef}
+              type="text"
+              value={draftNombre}
+              onChange={e => setDraftNombre(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter') { setNombreCuenta(draftNombre.trim()); setEditandoNombre(false) }
+                if (e.key === 'Escape') setEditandoNombre(false)
+              }}
+              placeholder="Ej: cumpleaños Ana…"
+              maxLength={30}
+              style={{ flex:1, padding:'4px 10px', background:L.bg2, border:'none',
+                boxShadow:`${L.amb} 0 0 0 1.5px`, borderRadius:6,
+                fontFamily:SN, fontSize:12, color:L.ink, outline:'none' }}
+            />
+            <button
+              onPointerDown={() => { setNombreCuenta(draftNombre.trim()); setEditandoNombre(false) }}
+              style={{ padding:'4px 10px', background:L.red, border:'none', borderRadius:6,
+                color:'#fff', fontFamily:SN, fontSize:12, fontWeight:700, cursor:'pointer', flexShrink:0 }}>
+              OK
+            </button>
+            <button
+              onPointerDown={() => setEditandoNombre(false)}
+              style={{ padding:'4px 8px', background:'transparent', border:`1px solid ${L.rule}`, borderRadius:6,
+                color:L.ink3, fontFamily:SN, fontSize:12, cursor:'pointer', flexShrink:0 }}>
+              ✕
+            </button>
+          </div>
+        )}
 
         <div style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:8 }}>
           {/* Badge carrito en móvil */}

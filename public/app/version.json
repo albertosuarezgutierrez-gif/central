@@ -1,5 +1,5 @@
 {
-  "version": 10,
-  "url": "https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v1.0/iarest.apk",
-  "notes": "Fix PTT multi-comanda. Fix mesas duplicadas. Timeout asking 15s."
+  "version": 12,
+  "url": "https://github.com/albertosuarezgutierrez-gif/ia.rest/releases/download/android-v3.0/iarest.apk",
+  "notes": "Bridge Mesh v7: múltiples dispositivos como nodos, failover automático, auto-detección WiFi"
 }

@@ -1,155 +1,286 @@
 'use client'
-// src/app/portal/page.tsx — v2 (módulos completos)
-import { useState, useEffect } from 'react'
-import { C, SE, SN, SM } from '@/lib/colors'
-import { useAuth } from '@/hooks/useAuth'
-import dynamic from 'next/dynamic'
+import { useState, useEffect, useCallback } from 'react'
 
-const RRHHTab          = dynamic(() => import('@/components/owner/RRHHTab'), { ssr: false })
-const ForecasterTab    = dynamic(() => import('@/components/owner/ForecasterTab'), { ssr: false })
-const AlmacenPortal    = dynamic(() => import('@/components/portal/AlmacenPortal'), { ssr: false })
-const CartaPortal      = dynamic(() => import('@/components/portal/CartaPortal'), { ssr: false })
-const ContabilidadPortal = dynamic(() => import('@/components/portal/ContabilidadPortal'), { ssr: false })
-const EscanerPortal    = dynamic(() => import('@/components/portal/EscanerPortal'), { ssr: false })
-const ReservasPortal   = dynamic(() => import('@/components/portal/ReservasPortal'), { ssr: false })
-const OwnerCopiloto    = dynamic(() => import('@/components/owner/OwnerCopiloto'), { ssr: false })
-
-const MODULOS_PORTAL = [
-  { id: 'almacen',      label: 'Almacén',       icon: 'M20 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2zM4 7V5a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v2' },
-  { id: 'carta',        label: 'Carta',          icon: 'M6 2h12a2 2 0 0 1 2 2v16a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2zM9 9h6M9 13h4' },
-  { id: 'reservas',     label: 'Reservas',       icon: 'M3 9h18M3 9V7a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v2M3 9v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V9M9 14h6' },
-  { id: 'contabilidad', label: 'Contabilidad',   icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8zM14 2v6h6M9 13h6M9 17h4' },
-  { id: 'rrhh',         label: 'RRHH',           icon: 'M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2M9 7a4 4 0 1 0 0 8 4 4 0 0 0 0-8z' },
-  { id: 'escaner',      label: 'Escáner IA',     icon: 'M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z' },
-  { id: 'analytics',    label: 'Analytics',      icon: 'M18 20V10M12 20V4M6 20v-6' },
-  { id: 'asistente',    label: 'Asistente IA',   icon: 'M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z' },
-]
-
-function NavIcon({ path }: { path: string }) {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      {path.split('M').filter(Boolean).map((seg, i) => <path key={i} d={`M${seg}`} />)}
-    </svg>
-  )
+const C = {
+  bg:'#14110E', bg2:'#1C1814', bg3:'#221E1A',
+  red:'#D9442B', paper:'#F6F1E7', cream:'#EDE8DC',
+  ink:'#F6F1E7', ink2:'#D8CDB6', ink3:'#9C8E7E', ink4:'#6B5F52',
+  rule:'#2E2A26', green:'#3F7D44', amber:'#E8A33B', teal:'#2B6A6E', gold:'#C9A84C',
 }
+const SE = 'Newsreader, Georgia, serif'
+const SN = 'Inter Tight, system-ui, sans-serif'
+const SM = 'Inter Tight, system-ui, sans-serif'
 
-function PlaceholderModulo({ label, link }: { label: string; link: string }) {
+type Local = {
+  restaurante_id: string; restaurante_nombre: string; turno_abierto: boolean
+  comandas_activas: number; ventas_hoy: number; ventas_ayer: number
+  stock_critico: number; elaboraciones_criticas: number; docs_revision: number
+}
+type Resumen = {
+  total_locales: number; abiertos: number; cerrados: number
+  ventas_hoy: number; ventas_ayer: number; comandas_activas: number
+  stock_critico: number; elaboraciones_criticas: number; docs_revision: number
+}
+type GPoint = { fecha: string; total: number }
+
+const eur = (n: number) => new Intl.NumberFormat('es-ES',{style:'currency',currency:'EUR',maximumFractionDigits:0}).format(n)
+const pct = (h: number, a: number) => !a ? null : { v: Math.round(((h-a)/a)*100), pos: h >= a }
+
+function MiniBar({ g }: { g: GPoint[] }) {
+  const max = Math.max(...g.map(x => x.total), 1)
   return (
-    <div style={{ padding: 40, textAlign: 'center' }}>
-      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 22, color: C.ink, marginBottom: 8 }}>{label}</div>
-      <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, lineHeight: 1.6, maxWidth: 360, margin: '0 auto' }}>
-        Disponible próximamente en el portal.<br />
-        <a href={link} style={{ color: C.red }}>Acceder desde el panel del dueño</a>
-      </div>
+    <div style={{ display:'flex', gap:3, alignItems:'flex-end', height:36 }}>
+      {g.map((p,i) => (
+        <div key={p.fecha} title={`${p.fecha}: ${eur(p.total)}`} style={{
+          flex:1, borderRadius:'2px 2px 0 0',
+          height:`${Math.max(8,(p.total/max)*100)}%`,
+          background: i===g.length-1 ? C.green : `${C.ink4}55`,
+        }}/>
+      ))}
     </div>
   )
 }
 
 export default function PortalPage() {
-  const { session, checking } = useAuth()
-  const [tab, setTab] = useState<string | null>(null)
+  const [pin,setPin]         = useState('')
+  const [authed,setAuthed]   = useState(false)
+  const [session,setSession] = useState<{cuenta_id:string;nombre:string}|null>(null)
+  const [loading,setLoading] = useState(false)
+  const [err,setErr]         = useState('')
+  const [resumen,setResumen] = useState<Resumen|null>(null)
+  const [locales,setLocales] = useState<Local[]>([])
+  const [grafica,setGrafica] = useState<GPoint[]>([])
+  const [tab,setTab]         = useState<'grupo'|'locales'|'rentabilidad'>('grupo')
+  const [filtro,setFiltro]   = useState<'todos'|'abiertos'|'alertas'>('todos')
+  const [refreshing,setRefreshing] = useState(false)
 
-  const modulosGestion: string[] = session?.modulos_gestion ?? []
-  const modulosVisibles = MODULOS_PORTAL.filter(m => modulosGestion.includes(m.id))
+  const sh = useCallback(() => ({
+    'Content-Type':'application/json',
+    'x-ia-session': JSON.stringify({cuenta_id:session?.cuenta_id,rol:'gestor_grupo'}),
+  }),[session])
 
-  useEffect(() => {
-    if (modulosVisibles.length > 0 && !tab) setTab(modulosVisibles[0].id)
-  }, [modulosVisibles.length, tab])
+  const cargar = useCallback(async () => {
+    if (!session) return
+    setRefreshing(true)
+    try {
+      const [rs,rv] = await Promise.all([
+        fetch('/api/portal?action=stats',  {headers:sh()}),
+        fetch('/api/portal?action=ventas', {headers:sh()}),
+      ])
+      const ds = await rs.json(); const dv = await rv.json()
+      if (ds.resumen) setResumen(ds.resumen)
+      if (ds.locales) setLocales(ds.locales)
+      if (dv.grafica) setGrafica(dv.grafica)
+    } finally { setRefreshing(false) }
+  },[session,sh])
 
-  const sh = () => {
-    const ses = typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') ?? '' : ''
-    return { 'x-ia-session': ses }
+  useEffect(()=>{ if(authed) cargar() },[authed,cargar])
+  useEffect(()=>{ if(!authed) return; const iv=setInterval(cargar,60000); return ()=>clearInterval(iv) },[authed,cargar])
+
+  const login = async () => {
+    if (pin.length < 4) return
+    setLoading(true); setErr('')
+    try {
+      const r = await fetch('/api/auth/pin-cuenta',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})})
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error ?? 'PIN incorrecto')
+      setSession({cuenta_id:d.cuenta?.id,nombre:d.cuenta?.nombre??'Grupo'})
+      setAuthed(true)
+    } catch(e){ setErr(String(e)) }
+    finally { setLoading(false) }
   }
 
-  const logout = () => {
-    fetch('/api/auth', { method: 'DELETE' })
-    localStorage.removeItem('ia_rest_session')
-    window.location.href = '/login'
-  }
-
-  if (checking) return (
-    <div style={{ minHeight: '100dvh', background: C.paper, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, letterSpacing: '.12em' }}>Cargando…</span>
-    </div>
+  const lF = locales.filter(l =>
+    filtro==='abiertos' ? l.turno_abierto :
+    filtro==='alertas'  ? l.stock_critico+l.elaboraciones_criticas+l.docs_revision>0 : true
   )
 
-  if (!session) {
-    if (typeof window !== 'undefined') window.location.href = '/login'
-    return null
-  }
-
-  if (modulosGestion.length === 0) return (
-    <div style={{ minHeight: '100dvh', background: C.paper, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
-      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: C.ink }}>Sin módulos asignados</div>
-      <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, textAlign: 'center', maxWidth: 320, lineHeight: 1.6 }}>
-        Tu cuenta no tiene módulos de gestión asignados.<br />
-        El dueño puede configurarlos en Personal → Permisos.
+  if (!authed) return (
+    <div style={{minHeight:'100dvh',background:C.bg,display:'flex',alignItems:'center',justifyContent:'center',padding:24}}>
+      <div style={{background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,padding:'40px 32px',width:'100%',maxWidth:360,textAlign:'center'}}>
+        <div style={{fontFamily:SE,fontStyle:'italic',fontSize:36,color:C.ink,marginBottom:4}}>ia<span style={{color:C.red}}>.</span>rest</div>
+        <div style={{fontFamily:SM,fontSize:11,color:C.ink4,letterSpacing:'.1em',textTransform:'uppercase',marginBottom:32}}>Portal de grupo</div>
+        <input type="password" inputMode="numeric" placeholder="PIN de acceso" value={pin}
+          onChange={e=>setPin(e.target.value)} onKeyDown={e=>e.key==='Enter'&&login()}
+          style={{width:'100%',padding:'12px 16px',background:C.bg3,border:`1px solid ${C.rule}`,borderRadius:10,
+            fontFamily:SN,fontSize:22,color:C.ink,textAlign:'center',outline:'none',letterSpacing:'.2em',boxSizing:'border-box',marginBottom:12}}
+          autoFocus/>
+        {err && <div style={{fontSize:12,color:C.red,marginBottom:10}}>{err}</div>}
+        <button onClick={login} disabled={loading||pin.length<4} style={{
+          width:'100%',padding:'13px',background:pin.length>=4?C.red:C.rule,border:'none',borderRadius:10,
+          fontFamily:SN,fontSize:15,fontWeight:700,color:pin.length>=4?'#fff':C.ink4,cursor:pin.length>=4?'pointer':'default',
+        }}>{loading?'Entrando…':'Entrar'}</button>
       </div>
-      <button onClick={logout} style={{ fontFamily: SN, fontSize: 12, color: C.red, background: 'none', border: `1px solid ${C.red}`, borderRadius: 6, padding: '8px 16px', cursor: 'pointer', marginTop: 8 }}>
-        Cerrar sesión
-      </button>
     </div>
   )
 
   return (
-    <div style={{ minHeight: '100dvh', background: C.paper, display: 'flex', flexDirection: 'column', fontFamily: SN }}>
-
-      {/* HEADER */}
-      <div style={{ height: 52, padding: '0 20px', borderBottom: `1px solid ${C.rule}`, background: C.bone, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0, position: 'sticky', top: 0, zIndex: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: C.red }}>ia.rest</span>
-          <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>· Portal gestión</span>
+    <div style={{minHeight:'100dvh',background:C.bg,color:C.ink,fontFamily:SN}}>
+      {/* Header */}
+      <div style={{padding:'14px 20px',borderBottom:`1px solid ${C.rule}`,display:'flex',alignItems:'center',justifyContent:'space-between',background:C.bg2}}>
+        <div>
+          <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18}}>ia<span style={{color:C.red}}>.</span>rest</div>
+          <div style={{fontFamily:SM,fontSize:11,color:C.ink4}}>{session?.nombre}</div>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <span style={{ fontFamily: SN, fontSize: 13, color: C.ink2, fontWeight: 500 }}>{session.nombre}</span>
-          <button onClick={logout} style={{ fontFamily: SN, fontSize: 10, fontWeight: 600, color: C.ink3, background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 3, padding: '4px 8px', cursor: 'pointer' }}>
-            Salir
-          </button>
-        </div>
+        <button onClick={cargar} disabled={refreshing} style={{background:'none',border:`1px solid ${C.rule}`,borderRadius:8,padding:'6px 12px',color:C.ink4,fontFamily:SN,fontSize:12,cursor:'pointer'}}>
+          {refreshing?'↻':'↻ Actualizar'}
+        </button>
       </div>
 
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      {/* Tabs */}
+      <div style={{display:'flex',borderBottom:`1px solid ${C.rule}`,background:C.bg2}}>
+        {(['grupo','locales','rentabilidad'] as const).map(id=>(
+          <button key={id} onClick={()=>setTab(id)} style={{
+            padding:'12px 20px',background:'none',border:'none',cursor:'pointer',
+            fontFamily:SN,fontSize:13,fontWeight:tab===id?700:400,
+            color:tab===id?C.ink:C.ink4,
+            borderBottom:tab===id?`2px solid ${C.red}`:'2px solid transparent',
+            textTransform:'capitalize',
+          }}>{id}</button>
+        ))}
+      </div>
 
-        {/* SIDEBAR */}
-        <div style={{ width: 200, background: C.bone, borderRight: `1px solid ${C.rule}`, padding: '16px 8px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {modulosVisibles.map(m => (
-            <button key={m.id} onClick={() => setTab(m.id)} style={{
-              display: 'flex', alignItems: 'center', gap: 9,
-              padding: '9px 10px', background: tab === m.id ? C.paper2 : 'transparent',
-              border: 'none', borderRadius: 6, cursor: 'pointer',
-              fontFamily: SN, fontSize: 13,
-              fontWeight: tab === m.id ? 600 : 500,
-              color: tab === m.id ? C.ink : C.ink2,
-              textAlign: 'left', width: '100%',
-            }}>
-              <NavIcon path={m.icon} />
-              {m.label}
-            </button>
-          ))}
-          {/* Enlace al panel completo si también es owner/jefe */}
-          {(session.rol === 'owner' || session.rol === 'jefe_sala') && (
-            <a href={session.rol === 'owner' ? '/owner' : '/jefe'} style={{
-              display: 'flex', alignItems: 'center', gap: 8, padding: '8px 10px',
-              background: C.red, borderRadius: 6, color: '#fff',
-              textDecoration: 'none', fontSize: 12, fontWeight: 600, marginTop: 'auto',
-            }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4M10 17l5-5-5-5M13 12H3"/></svg>
-              Panel completo
-            </a>
-          )}
-        </div>
+      <div style={{padding:'20px',maxWidth:800,margin:'0 auto'}}>
 
-        {/* CONTENIDO */}
-        <div style={{ flex: 1, overflow: 'auto', padding: '24px' }}>
-          {tab === 'almacen'      && <AlmacenPortal sh={sh} />}
-          {tab === 'carta'        && <CartaPortal sh={sh} />}
-          {tab === 'reservas'     && <ReservasPortal sh={sh} />}
-          {tab === 'contabilidad' && <ContabilidadPortal sh={sh} />}
-          {tab === 'escaner'      && session && <EscanerPortal sh={sh} session={session} />}
-          {tab === 'rrhh'         && <RRHHTab sh={sh} />}
-          {tab === 'analytics'    && <ForecasterTab sh={sh} />}
-          {tab === 'asistente'    && <OwnerCopiloto />}
-        </div>
+        {/* GRUPO */}
+        {tab==='grupo' && resumen && (
+          <div style={{display:'flex',flexDirection:'column' as const,gap:14}}>
+            {/* Ventas hoy */}
+            <div style={{background:C.bg3,borderRadius:12,padding:'18px'}}>
+              <div style={{fontFamily:SM,fontSize:10,fontWeight:700,color:C.ink4,textTransform:'uppercase' as const,letterSpacing:'.1em',marginBottom:6}}>
+                Ventas hoy — grupo completo
+              </div>
+              <div style={{display:'flex',alignItems:'baseline',gap:12,marginBottom:10}}>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:36,color:C.ink}}>{eur(resumen.ventas_hoy)}</div>
+                {pct(resumen.ventas_hoy,resumen.ventas_ayer) && (() => {
+                  const p = pct(resumen.ventas_hoy,resumen.ventas_ayer)!
+                  return <div style={{fontSize:13,fontWeight:700,color:p.pos?C.green:C.red}}>{p.pos?'+':''}{p.v}% vs ayer</div>
+                })()}
+              </div>
+              <MiniBar g={grafica}/>
+              <div style={{fontFamily:SM,fontSize:11,color:C.ink4,marginTop:6}}>
+                Ayer: {eur(resumen.ventas_ayer)} · {resumen.comandas_activas} comandas ahora
+              </div>
+            </div>
+
+            {/* KPIs */}
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12}}>
+              <div style={{background:C.bg3,borderRadius:12,padding:'16px'}}>
+                <div style={{fontFamily:SM,fontSize:10,fontWeight:700,color:C.ink4,textTransform:'uppercase' as const,letterSpacing:'.1em',marginBottom:8}}>Locales</div>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:32,color:C.green}}>{resumen.abiertos}</div>
+                <div style={{fontSize:12,color:C.ink4}}>abiertos de {resumen.total_locales}</div>
+              </div>
+              <div style={{background:resumen.stock_critico+resumen.elaboraciones_criticas>0?'#2E1010':C.bg3,border:resumen.stock_critico+resumen.elaboraciones_criticas>0?`1px solid ${C.red}44`:'none',borderRadius:12,padding:'16px'}}>
+                <div style={{fontFamily:SM,fontSize:10,fontWeight:700,color:resumen.stock_critico>0?C.red:C.ink4,textTransform:'uppercase' as const,letterSpacing:'.1em',marginBottom:8}}>Alertas</div>
+                {resumen.stock_critico>0 && <div style={{fontSize:13,color:C.red,marginBottom:3}}>📦 {resumen.stock_critico} stock crítico</div>}
+                {resumen.elaboraciones_criticas>0 && <div style={{fontSize:13,color:C.amber,marginBottom:3}}>🏷️ {resumen.elaboraciones_criticas} caducando</div>}
+                {resumen.docs_revision>0 && <div style={{fontSize:13,color:C.gold}}>📷 {resumen.docs_revision} revisión</div>}
+                {resumen.stock_critico+resumen.elaboraciones_criticas+resumen.docs_revision===0 && <div style={{fontSize:13,color:C.green}}>✅ Sin alertas</div>}
+              </div>
+            </div>
+
+            {/* Locales con alertas */}
+            {locales.filter(l=>l.stock_critico+l.elaboraciones_criticas>0).length>0 && (
+              <div style={{background:C.bg3,borderRadius:12,padding:'16px'}}>
+                <div style={{fontFamily:SM,fontSize:10,fontWeight:700,color:C.red,textTransform:'uppercase' as const,letterSpacing:'.1em',marginBottom:12}}>Locales con alertas ahora</div>
+                {locales.filter(l=>l.stock_critico+l.elaboraciones_criticas>0).map(l=>(
+                  <div key={l.restaurante_id} style={{display:'flex',justifyContent:'space-between',padding:'8px 0',borderBottom:`1px solid ${C.rule}`}}>
+                    <span style={{fontSize:13,color:C.ink}}>{l.restaurante_nombre}</span>
+                    <div style={{display:'flex',gap:10}}>
+                      {l.stock_critico>0 && <span style={{fontSize:12,color:C.red}}>📦 {l.stock_critico}</span>}
+                      {l.elaboraciones_criticas>0 && <span style={{fontSize:12,color:C.amber}}>🏷️ {l.elaboraciones_criticas}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* LOCALES */}
+        {tab==='locales' && (
+          <div style={{display:'flex',flexDirection:'column' as const,gap:12}}>
+            <div style={{display:'flex',gap:8}}>
+              {(['todos','abiertos','alertas'] as const).map(f=>(
+                <button key={f} onClick={()=>setFiltro(f)} style={{
+                  padding:'6px 14px',borderRadius:20,border:`1px solid ${filtro===f?C.teal:C.rule}`,
+                  background:filtro===f?C.teal:'transparent',color:filtro===f?'#fff':C.ink3,
+                  fontFamily:SN,fontSize:12,cursor:'pointer',textTransform:'capitalize',
+                }}>{f}</button>
+              ))}
+            </div>
+            {lF.map(l=>{
+              const p = pct(l.ventas_hoy,l.ventas_ayer)
+              const alertas = l.stock_critico+l.elaboraciones_criticas+l.docs_revision>0
+              return (
+                <div key={l.restaurante_id} style={{
+                  background:alertas?'#1E1210':C.bg3,
+                  border:`1px solid ${alertas?C.red+'44':C.rule}`,borderRadius:12,padding:'14px 16px',
+                }}>
+                  <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:alertas?8:0}}>
+                    <div>
+                      <div style={{fontSize:14,fontWeight:700,color:C.ink,marginBottom:3}}>{l.restaurante_nombre}</div>
+                      <div style={{display:'flex',gap:6,alignItems:'center'}}>
+                        <span style={{width:7,height:7,borderRadius:'50%',background:l.turno_abierto?C.green:C.ink4,display:'inline-block'}}/>
+                        <span style={{fontSize:11,color:C.ink4}}>{l.turno_abierto?'Abierto':'Cerrado'}</span>
+                        {l.comandas_activas>0 && <span style={{fontSize:11,color:C.amber}}>· {l.comandas_activas} cmd</span>}
+                      </div>
+                    </div>
+                    <div style={{textAlign:'right' as const}}>
+                      <div style={{fontFamily:SE,fontStyle:'italic',fontSize:22,color:C.ink}}>{eur(l.ventas_hoy)}</div>
+                      {p && <div style={{fontSize:11,color:p.pos?C.green:C.red}}>{p.pos?'+':''}{p.v}% vs ayer</div>}
+                    </div>
+                  </div>
+                  {alertas && (
+                    <div style={{display:'flex',gap:10,paddingTop:8,borderTop:`1px solid ${C.rule}`}}>
+                      {l.stock_critico>0 && <span style={{fontSize:12,color:C.red}}>📦 {l.stock_critico}</span>}
+                      {l.elaboraciones_criticas>0 && <span style={{fontSize:12,color:C.amber}}>🏷️ {l.elaboraciones_criticas}</span>}
+                      {l.docs_revision>0 && <span style={{fontSize:12,color:C.gold}}>📷 {l.docs_revision}</span>}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+
+        {/* RENTABILIDAD */}
+        {tab==='rentabilidad' && (
+          <div style={{display:'flex',flexDirection:'column' as const,gap:14}}>
+            <div style={{background:C.bg3,borderRadius:12,padding:'18px'}}>
+              <div style={{fontFamily:SM,fontSize:10,fontWeight:700,color:C.ink4,textTransform:'uppercase' as const,letterSpacing:'.1em',marginBottom:14}}>
+                Ranking ventas hoy
+              </div>
+              {[...locales].sort((a,b)=>b.ventas_hoy-a.ventas_hoy).map((l,i)=>{
+                const maxV = Math.max(...locales.map(x=>x.ventas_hoy),1)
+                return (
+                  <div key={l.restaurante_id} style={{marginBottom:14}}>
+                    <div style={{display:'flex',justifyContent:'space-between',marginBottom:4}}>
+                      <span style={{fontSize:13,color:C.ink}}>{i+1}. {l.restaurante_nombre}</span>
+                      <span style={{fontSize:13,fontWeight:700,color:C.ink}}>{eur(l.ventas_hoy)}</span>
+                    </div>
+                    <div style={{height:6,background:C.bg2,borderRadius:3,overflow:'hidden'}}>
+                      <div style={{height:'100%',width:`${(l.ventas_hoy/maxV)*100}%`,background:i===0?C.green:C.teal,borderRadius:3,transition:'width .5s'}}/>
+                    </div>
+                  </div>
+                )
+              })}
+              {resumen && (
+                <div style={{marginTop:14,paddingTop:12,borderTop:`1px solid ${C.rule}`,display:'flex',justifyContent:'space-between'}}>
+                  <span style={{fontFamily:SM,fontSize:11,fontWeight:700,color:C.ink4,textTransform:'uppercase' as const}}>Total grupo</span>
+                  <span style={{fontFamily:SE,fontStyle:'italic',fontSize:22,color:C.green}}>{eur(resumen.ventas_hoy)}</span>
+                </div>
+              )}
+            </div>
+            <div style={{padding:'14px 16px',background:`${C.teal}18`,border:`1px solid ${C.teal}33`,borderRadius:10}}>
+              <div style={{fontFamily:SM,fontSize:11,fontWeight:700,color:C.teal,marginBottom:6}}>Próximamente</div>
+              <div style={{fontSize:13,color:C.ink3,lineHeight:1.6}}>
+                Márgenes por local · Coste mercadería · P&L consolidado · Exportación A3/Sage/Holded
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )

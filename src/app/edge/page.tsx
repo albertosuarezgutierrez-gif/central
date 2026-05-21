@@ -595,9 +595,43 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   // Config camarero
   const [tabsVisibles, setTabsVisibles] = useState<Tab[]>(ALL_TABS.map(t=>t.id))
   const [voiceConfirm, setVoiceConfirm] = useState(true)
-  const [autoConfirm, setAutoConfirm]   = useState(false)   // enviar sin confirmar si confianza alta
-  const [autoThreshold, setAutoThreshold] = useState(85)    // % mínimo para auto-confirmar
-  const [ttsOff, setTtsOff]             = useState(false)   // BRAIN no habla, solo escribe
+  const [autoConfirm, setAutoConfirm]   = useState(false)
+  const [autoThreshold, setAutoThreshold] = useState(85)
+  const [ttsOff, setTtsOff]             = useState(false)
+  // Versión APK — se lee desde /app/version.json (funciona con cualquier binario)
+  const [appVersion, setAppVersion] = useState<number|null>(null)
+  const [isNative,   setIsNative]   = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const native = !!(window as any).isNativeApp
+    setIsNative(native)
+    fetch('/app/version.json?t=' + Date.now(), { cache: 'no-store' })
+      .then(r => r.json())
+      .then(d => setAppVersion(d.version ?? null))
+      .catch(() => {})
+
+    // ── Auto-activar bridge si es APK nativa ─────────────────
+    // El bridge token se obtiene automáticamente del servidor usando
+    // la sesión del camarero — cero pasos para el usuario
+    if (native && (window as any).IaRestBridge) {
+      const bridge = (window as any).IaRestBridge
+      const tokenActual = bridge.getToken?.() ?? ''
+      if (!tokenActual) {
+        // Sin token guardado → pedirlo al servidor
+        const ses = localStorage.getItem('ia_rest_session') ?? ''
+        fetch('/api/bridge/token-for-session', {
+          headers: { 'x-ia-session': ses }
+        })
+          .then(r => r.ok ? r.json() : null)
+          .then(d => {
+            if (d?.token) {
+              bridge.setToken(d.token, '')
+            }
+          })
+          .catch(() => {})
+      }
+    }
+  }, [])
   const [mesaFijada, setMesaFijada]     = useState<string|null>(null)  // mesa pinchada en HABLAR
   const [clarificacionCtx, setClarificacionCtx] = useState<string|null>(null)
   const [preguntaBrain, setPreguntaBrain]       = useState<string>('¿Qué mesa?')
@@ -1882,6 +1916,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           <div style={{display:'flex',alignItems:'center',gap:5,background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,padding:'5px 11px 5px 7px',cursor:'pointer'}} onClick={logout}>
             <div style={{width:6,height:6,borderRadius:'50%',background:C.gr,animation:'ldot 2s infinite'}}/>
             <span style={{fontSize:12,fontWeight:600,color:C.ink}}>{session.nombre.split(' ')[0]}</span>
+            {appVersion && (
+              <span style={{fontSize:9,fontWeight:700,color:C.ink3,letterSpacing:'.04em',marginLeft:2}}>
+                v{appVersion}
+              </span>
+            )}
           </div>
           <SugerenciaButton session={session} tema="light" variant="inline" />
           {/* 🍷 Recomendador de vino */}
@@ -3359,6 +3398,82 @@ function ConfigScreen({session,tabsVisibles,onTabsVisibles,voiceConfirm,onVoiceC
           </div>
         </div>
       </div>
+    </div>
+  )
+}
+
+// ── BridgeConfigSection — configura el bridge desde la app ────
+function BridgeConfigSection() {
+  const [token,    setToken]    = React.useState('')
+  const [activo,   setActivo]   = React.useState(false)
+  const [guardado, setGuardado] = React.useState(false)
+  const [error,    setError]    = React.useState('')
+
+  React.useEffect(() => {
+    // Leer token actual desde el bridge nativo
+    const bridge = (window as any).IaRestBridge
+    if (!bridge) return
+    const tkn = bridge.getToken?.() ?? ''
+    setToken(tkn)
+    setActivo(tkn.length > 0)
+  }, [])
+
+  const activar = () => {
+    setError('')
+    const bridge = (window as any).IaRestBridge
+    if (!bridge) { setError('Bridge no disponible en esta versión'); return }
+    if (!token.trim()) { setError('Pega el token del panel /owner → Impresoras → Bridge'); return }
+    bridge.setToken(token.trim(), '')
+    setActivo(true)
+    setGuardado(true)
+    setTimeout(() => setGuardado(false), 3000)
+  }
+
+  const desactivar = () => {
+    const bridge = (window as any).IaRestBridge
+    bridge?.stop?.()
+    setToken('')
+    setActivo(false)
+  }
+
+  const C2 = { bg: '#14110E', bone: '#1E1A16', rule: '#2E2925', ink: '#F6F1E7', ink3: '#9A8F82', green: '#3F7D44', verm: '#D9442B', amb: '#E8A33B' }
+  const SM2 = 'Inter Tight, sans-serif'
+  const SN2 = 'Newsreader, serif'
+
+  return (
+    <div style={{marginBottom:14,background:C2.bone,borderRadius:12,padding:'14px 16px',border:`1px solid ${C2.rule}`}}>
+      <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:12}}>
+        <div style={{fontSize:16}}>⬡</div>
+        <div style={{fontFamily:SN2,fontSize:14,fontWeight:600,color:C2.ink}}>Bridge de impresión</div>
+        {activo && (
+          <span style={{fontFamily:SM2,fontSize:9,fontWeight:700,letterSpacing:'.08em',color:C2.green,background:'#1A2A1C',border:`1px solid ${C2.green}`,borderRadius:3,padding:'1px 5px'}}>ACTIVO</span>
+        )}
+      </div>
+      <div style={{fontFamily:SM2,fontSize:11,color:C2.ink3,marginBottom:12,lineHeight:1.5}}>
+        Este móvil actuará como nodo bridge — recibirá y enviará tickets a las impresoras del local.
+      </div>
+      {!activo ? (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          <input
+            value={token}
+            onChange={e => setToken(e.target.value)}
+            placeholder="Pega aquí el token del bridge..."
+            style={{width:'100%',background:'#0E0C0A',border:`1px solid ${C2.rule}`,borderRadius:8,padding:'10px 12px',fontFamily:SM2,fontSize:12,color:C2.ink,outline:'none',boxSizing:'border-box'}}
+          />
+          {error && <div style={{fontFamily:SM2,fontSize:11,color:C2.verm}}>{error}</div>}
+          <button onClick={activar} style={{width:'100%',padding:11,background:C2.green,border:'none',borderRadius:8,fontFamily:SM2,fontSize:13,fontWeight:700,color:'#fff',cursor:'pointer'}}>
+            Activar bridge en este móvil
+          </button>
+        </div>
+      ) : (
+        <div style={{display:'flex',flexDirection:'column',gap:8}}>
+          {guardado && <div style={{fontFamily:SM2,fontSize:11,color:C2.green}}>✓ Bridge activado — este móvil es ahora un nodo</div>}
+          <div style={{fontFamily:SM2,fontSize:10,color:C2.ink3,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap'}}>{token}</div>
+          <button onClick={desactivar} style={{width:'100%',padding:9,background:'transparent',border:`1px solid ${C2.verm}44`,borderRadius:8,fontFamily:SM2,fontSize:12,fontWeight:600,color:C2.verm,cursor:'pointer'}}>
+            Desactivar bridge
+          </button>
+        </div>
+      )}
     </div>
   )
 }
