@@ -133,27 +133,35 @@ async function buildVinosContext(restaurante_id?: string): Promise<string> {
   if (!restaurante_id) return ''
   try {
     const supabase = createServerClient()
+    // Leer vinos desde productos (arquitectura unificada)
     const { data } = await supabase
-      .from('vinos_catalogo')
-      .select('nombre, bodega, tipo, denominacion_origen, varietal, maridaje_tags, maridaje_texto, descripcion_cata, precio_copa, precio_botella')
+      .from('productos')
+      .select('nombre, precio, precio_copa, familia, metadata')
       .eq('restaurante_id', restaurante_id)
+      .eq('categoria', 'vino')
+      .eq('activo', true)
       .order('nombre')
-      .limit(40)
+      .limit(60)
     if (!data?.length) return ''
     const lines = data.map((v: {
-      nombre: string; bodega: string; tipo: string; denominacion_origen: string;
-      varietal: string; maridaje_tags: string[]; maridaje_texto: string;
-      descripcion_cata: string; precio_copa?: number; precio_botella?: number;
+      nombre: string; precio: number; precio_copa?: number;
+      familia: string; metadata?: Record<string, unknown>;
     }) => {
+      const m = v.metadata ?? {}
+      const tipo = (m.tipo_vino as string) ?? v.familia.replace('vino_', '')
+      const stock = (m.stock_botellas as number) ?? 0
+      if (stock === 0 && m.tipo_stock !== 'consignacion') return null // agotado
       const precios = [
         v.precio_copa ? `copa ${v.precio_copa}€` : null,
-        v.precio_botella ? `botella ${v.precio_botella}€` : null,
+        v.precio ? `botella ${v.precio}€` : null,
       ].filter(Boolean).join(' / ')
-      return `  ${v.nombre} | ${v.bodega} | ${v.tipo} | D.O.${v.denominacion_origen} | ${v.varietal}` +
-        (v.maridaje_texto ? ` | maridaje: ${v.maridaje_texto}` : '') +
-        (v.descripcion_cata ? ` | "${v.descripcion_cata.slice(0, 80)}..."` : '') +
-        (precios ? ` | ${precios}` : '')
-    }).join('\n')
+      const disponibilidad = stock > 0 && stock <= 2 ? ' [últimas unidades]' : ''
+      return `  ${v.nombre} | ${m.bodega ?? ''} | ${tipo} | D.O.${m.denominacion_origen ?? ''} | ${m.varietal ?? ''}` +
+        (m.maridaje_texto ? ` | maridaje: ${m.maridaje_texto}` : '') +
+        (precios ? ` | ${precios}` : '') +
+        disponibilidad
+    }).filter(Boolean).join('\n')
+    if (!lines.length) return ''
     return `\nCARTA DE VINOS DEL RESTAURANTE:\n${lines}\n`
   } catch { return '' }
 }

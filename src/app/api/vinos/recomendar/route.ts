@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
   const { plato } = await req.json()
   if (!plato?.trim()) return NextResponse.json({ error: 'Plato requerido' }, { status: 400 })
 
-  // Cargar restaurante para saber modo_vinos
+  // Leer configuración del restaurante
   const { data: restaurante } = await supabase
     .from('restaurantes')
     .select('configuracion, modulos_activos')
@@ -19,59 +19,45 @@ export async function POST(req: NextRequest) {
     .single()
 
   const modulosActivos: string[] = restaurante?.modulos_activos ?? []
-  const modoVinos: string = restaurante?.configuracion?.modo_vinos ?? 'basico'
-
-  // Si carta_vinos no está activo → respuesta genérica
   if (!modulosActivos.includes('carta_vinos')) {
-    return NextResponse.json({
-      recomendacion: 'El módulo de carta de vinos no está activo. Actívalo en /owner → Módulos.',
-      tiene_carta: false
-    })
+    return NextResponse.json({ recomendacion: 'Módulo carta_vinos no activo.', tiene_carta: false })
   }
 
-  let cartaVinos = ''
+  // Leer vinos desde productos (arquitectura unificada)
+  const { data: vinos } = await supabase
+    .from('productos')
+    .select('nombre, precio, precio_copa, copas_por_botella, familia, metadata')
+    .eq('restaurante_id', rid)
+    .eq('categoria', 'vino')
+    .eq('activo', true)
+    .order('nombre')
+    .limit(60)
 
-  if (modoVinos === 'carta') {
-    // Modo carta: consultar vinos_catalogo con stock y disponibilidad
-    const { data: vinos } = await supabase
-      .from('vinos_catalogo')
-      .select('nombre, bodega, tipo, denominacion_origen, varietal, maridaje_texto, maridaje_tags, precio_copa, precio_botella, stock_botellas, activo')
-      .eq('restaurante_id', rid)
-      .eq('activo', true)
-      .order('nombre')
-      .limit(60)
+  const lineas = (vinos ?? []).map((v: Record<string, unknown>) => {
+    const m = (v.metadata as Record<string, unknown>) ?? {}
+    const stock = (m.stock_botellas as number) ?? 0
+    if (stock === 0 && m.tipo_stock !== 'consignacion') return null
+    const precios = [
+      v.precio_copa ? `copa ${v.precio_copa}€` : null,
+      v.precio ? `botella ${v.precio}€` : null,
+    ].filter(Boolean).join(' / ')
+    const aviso = stock > 0 && stock <= 2 ? ' [últimas unidades]' : ''
+    return `- ${v.nombre} | ${m.bodega ?? ''} | ${m.tipo_vino ?? ''} | D.O. ${m.denominacion_origen ?? ''}` +
+      (m.varietal ? ` | ${m.varietal}` : '') +
+      (m.maridaje_texto ? ` | maridaje: ${m.maridaje_texto}` : '') +
+      (precios ? ` | ${precios}` : '') + aviso
+  }).filter(Boolean).join('\n')
 
-    cartaVinos = (vinos ?? []).map((v: Record<string, unknown>) => {
-      const stock = (v.stock_botellas as number) ?? 0
-      const disponibilidad = stock === 0 ? ' | AGOTADO' : stock <= 2 ? ' | últimas unidades' : ''
-      return `- ${v.nombre} | ${v.bodega} | ${v.tipo} | D.O. ${v.denominacion_origen} | ${v.varietal}${v.maridaje_texto ? ` | maridaje: ${v.maridaje_texto}` : ''}${v.precio_copa ? ` | copa ${v.precio_copa}€` : ''}${v.precio_botella ? ` | botella ${v.precio_botella}€` : ''}${disponibilidad}`
-    }).join('\n')
-
-  } else {
-    // Modo básico: vinos en productos con familia vino*
-    const { data: vinosProductos } = await supabase
-      .from('productos')
-      .select('nombre, precio, precio_copa, familia, descripcion')
-      .eq('restaurante_id', rid)
-      .eq('activo', true)
-      .like('familia', 'vino%')
-      .limit(20)
-
-    cartaVinos = (vinosProductos ?? []).map((p: Record<string, unknown>) =>
-      `- ${p.nombre}${p.precio_copa ? ` | copa ${p.precio_copa}€` : p.precio ? ` | ${p.precio}€` : ''}${p.descripcion ? ` | ${p.descripcion}` : ''}`
-    ).join('\n')
-  }
-
-  const system = cartaVinos.length > 0
-    ? `Eres un sumiller experto. El restaurante tiene esta carta de vinos:\n${cartaVinos}\n\nResponde SOLO con una recomendación corta (máx 2-3 frases). Usa vinos de la carta con nombre exacto, D.O. y precio copa/botella. Si un vino está AGOTADO no lo recomiendes. Si hay pocas unidades, menciónalo. Sin introducciones.`
-    : `Eres un sumiller experto. No hay carta de vinos configurada. Recomienda un tipo y D.O. española genérica para el plato. Máx 2 frases. Sin introducciones.`
+  const system = lineas.length > 0
+    ? `Eres un sumiller experto. El restaurante tiene esta carta de vinos:\n${lineas}\n\nResponde SOLO con una recomendación corta (2-3 frases). Usa vinos de la carta con nombre exacto, D.O. y precio. No recomiendes vinos agotados. Menciona si quedan últimas unidades. Sin introducciones.`
+    : `Eres un sumiller experto. No hay carta de vinos. Recomienda tipo y D.O. española genérica. Máx 2 frases.`
 
   try {
     const respuesta = await callAI(system, [{ role: 'user', content: `Recomienda vino para: ${plato}` }], 150)
     return NextResponse.json({
       recomendacion: respuesta.trim().slice(0, 300),
-      tiene_carta: cartaVinos.length > 0,
-      modo_vinos: modoVinos
+      tiene_carta: lineas.length > 0,
+      modo_vinos: restaurante?.configuracion?.modo_vinos ?? 'basico'
     })
   } catch {
     return NextResponse.json({ error: 'No se pudo obtener recomendación' }, { status: 500 })

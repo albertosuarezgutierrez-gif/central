@@ -6,6 +6,8 @@ export interface ApiSession {
   rol: string
   restaurante_id: string
   restaurante_nombre: string
+  cuenta_id?: string
+  camarero_id?: string
 }
 
 // Lee la sesión del header x-ia-session (pasado por el frontend)
