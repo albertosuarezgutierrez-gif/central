@@ -9216,6 +9216,206 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
         </div>
       )}{/* modal bodega fin */}
       <PrediccionAlmacenNIM sh={sh} />
+      <StockCentralOwner sh={sh} />
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// STOCK CENTRAL DEL GRUPO — sección dentro de BodegaTab
+// Visible solo si el restaurante pertenece a una cuenta con stock central
+// ══════════════════════════════════════════════════════════════════════
+type StockCentralItem = {
+  id: string; nombre: string; unidad: string; categoria: string | null
+  cantidad_disponible: number; cantidad_total: number; stock_minimo: number; tipo_stock: string
+}
+type TransferenciaCentral = {
+  id: string; articulo_nombre: string; cantidad: number; unidad: string
+  origen_tipo: string; estado: string; creado_at: string; notas: string | null
+}
+
+function StockCentralOwner({ sh }: { sh: () => Record<string,string> }) {
+  const [items, setItems]       = useState<StockCentralItem[]>([])
+  const [transf, setTransf]     = useState<TransferenciaCentral[]>([])
+  const [visible, setVisible]   = useState(false)
+  const [loaded, setLoaded]     = useState(false)
+  const [subtab, setSubtab]     = useState<'stock'|'solicitar'|'historial'>('stock')
+  const [form, setForm]         = useState({ articulo_nombre: '', cantidad: '1', unidad: 'ud', notas: '' })
+  const [enviando, setEnviando] = useState(false)
+  const [ok, setOk]             = useState('')
+
+  const cargar = async () => {
+    try {
+      const [rs, rt] = await Promise.all([
+        fetch('/api/central/stock', { headers: sh() }),
+        fetch('/api/central/transferencias', { headers: sh() }),
+      ])
+      const ds = await rs.json()
+      const dt = await rt.json()
+      if (ds.stock?.length > 0 || dt.transferencias?.length > 0) {
+        setVisible(true)
+        setItems(ds.stock ?? [])
+        setTransf(dt.transferencias ?? [])
+      }
+    } catch { /* sin central */ }
+    setLoaded(true)
+  }
+
+  useEffect(() => { cargar() }, []) // eslint-disable-line
+
+  const solicitar = async () => {
+    if (!form.articulo_nombre || !form.cantidad) return
+    setEnviando(true)
+    try {
+      const r = await fetch('/api/central/transferencias', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({
+          articulo_nombre: form.articulo_nombre,
+          cantidad: Number(form.cantidad),
+          unidad: form.unidad,
+          origen_tipo: 'central',
+          destino_tipo: 'restaurante',
+          destino_id: 'self',
+          notas: form.notas || null,
+        }),
+      })
+      const d = await r.json()
+      if (d.transferencia) {
+        setOk('✓ Solicitud enviada al almacén central')
+        setForm({ articulo_nombre: '', cantidad: '1', unidad: 'ud', notas: '' })
+        setSubtab('historial')
+        await cargar()
+      }
+    } finally { setEnviando(false) }
+  }
+
+  const confirmarRecibido = async (id: string) => {
+    await fetch('/api/central/transferencias', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', ...sh() },
+      body: JSON.stringify({ id, estado: 'recibido' }),
+    })
+    await cargar()
+  }
+
+  if (!loaded || !visible) return null
+
+  const estadoColor: Record<string, string> = {
+    pendiente: C.amber, en_transito: '#2B6A6E', recibido: C.green, cancelado: C.ink4
+  }
+
+  const inp: React.CSSProperties = {
+    width: '100%', padding: '8px 10px', background: C.bg2,
+    border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink,
+    fontFamily: SN, fontSize: 13, boxSizing: 'border-box',
+  }
+
+  return (
+    <div style={{ marginTop: 32, borderTop: `1px solid ${C.rule}`, paddingTop: 20 }}>
+      {/* Cabecera sección */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+        <div>
+          <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, color: C.ink4, letterSpacing: '.1em', textTransform: 'uppercase' as const }}>Grupo</div>
+          <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink }}>Almacén central</div>
+        </div>
+        <div style={{ fontSize: 11, color: C.ink4 }}>{items.length} artículos disponibles</div>
+      </div>
+
+      {/* Subtabs */}
+      <div style={{ display: 'flex', gap: 6, marginBottom: 14 }}>
+        {([['stock','Ver stock'],['solicitar','Solicitar'],['historial','Mis solicitudes']] as const).map(([id,label]) => (
+          <button key={id} onClick={() => setSubtab(id)} style={{
+            padding: '5px 14px', borderRadius: 20, border: `1px solid ${subtab===id?C.red:C.rule}`,
+            background: subtab===id?C.red:'transparent', color: subtab===id?C.paper:C.ink3,
+            fontFamily: SN, fontSize: 12, cursor: 'pointer',
+          }}>{label}</button>
+        ))}
+      </div>
+
+      {/* VER STOCK */}
+      {subtab === 'stock' && (
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+          {items.length === 0 && <div style={{ fontSize: 13, color: C.ink4 }}>Sin artículos en el almacén central.</div>}
+          {items.map(a => (
+            <div key={a.id} style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 13, color: C.ink }}>{a.nombre}</div>
+                <div style={{ fontSize: 11, color: C.ink4 }}>{a.categoria ?? ''} · {a.tipo_stock}</div>
+              </div>
+              <div style={{ textAlign: 'right' as const }}>
+                <div style={{ fontSize: 18, fontWeight: 700, color: a.cantidad_disponible <= a.stock_minimo && a.stock_minimo > 0 ? C.red : C.green }}>
+                  {a.cantidad_disponible} <span style={{ fontSize: 11, fontWeight: 400 }}>{a.unidad}</span>
+                </div>
+                <button onClick={() => { setForm(f => ({ ...f, articulo_nombre: a.nombre, unidad: a.unidad })); setSubtab('solicitar') }}
+                  style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, border: `1px solid ${C.rule}`, background: 'transparent', color: C.ink3, cursor: 'pointer', marginTop: 2 }}>
+                  Solicitar →
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* SOLICITAR */}
+      {subtab === 'solicitar' && (
+        <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: C.ink, marginBottom: 12 }}>Solicitar al almacén central</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <div style={{ gridColumn: '1/-1' }}>
+              <div style={{ fontSize: 11, color: C.ink4, marginBottom: 4 }}>Artículo *</div>
+              <input list="central-items" style={inp} value={form.articulo_nombre}
+                onChange={e => setForm(f => ({ ...f, articulo_nombre: e.target.value }))} placeholder="Nombre del artículo" />
+              <datalist id="central-items">{items.map(a => <option key={a.id} value={a.nombre} />)}</datalist>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: C.ink4, marginBottom: 4 }}>Cantidad *</div>
+              <input type="number" style={inp} value={form.cantidad} onChange={e => setForm(f => ({ ...f, cantidad: e.target.value }))} />
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: C.ink4, marginBottom: 4 }}>Unidad</div>
+              <input style={inp} value={form.unidad} onChange={e => setForm(f => ({ ...f, unidad: e.target.value }))} />
+            </div>
+            <div style={{ gridColumn: '1/-1' }}>
+              <div style={{ fontSize: 11, color: C.ink4, marginBottom: 4 }}>Notas (opcional)</div>
+              <input style={inp} value={form.notas} onChange={e => setForm(f => ({ ...f, notas: e.target.value }))} placeholder="Para qué lo necesitas, urgencia..." />
+            </div>
+          </div>
+          {ok && <div style={{ fontSize: 12, color: C.green, margin: '8px 0' }}>{ok}</div>}
+          <button onClick={solicitar} disabled={enviando || !form.articulo_nombre} style={{
+            marginTop: 12, padding: '9px 20px', background: form.articulo_nombre ? C.red : C.rule,
+            border: 'none', borderRadius: 8, fontFamily: SN, fontSize: 13, fontWeight: 700,
+            color: C.paper, cursor: form.articulo_nombre ? 'pointer' : 'not-allowed',
+          }}>{enviando ? 'Enviando...' : 'Enviar solicitud'}</button>
+        </div>
+      )}
+
+      {/* HISTORIAL */}
+      {subtab === 'historial' && (
+        <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 6 }}>
+          {transf.length === 0 && <div style={{ fontSize: 13, color: C.ink4 }}>Sin solicitudes todavía.</div>}
+          {transf.map(t => (
+            <div key={t.id} style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
+                <div>
+                  <div style={{ fontSize: 13, color: C.ink }}>{t.articulo_nombre} · {t.cantidad} {t.unidad}</div>
+                  {t.notas && <div style={{ fontSize: 11, color: C.ink3, marginTop: 2 }}>{t.notas}</div>}
+                  <div style={{ fontSize: 10, color: C.ink4, marginTop: 2 }}>{new Date(t.creado_at).toLocaleDateString('es-ES')}</div>
+                </div>
+                <span style={{ fontSize: 11, fontWeight: 700, padding: '3px 10px', borderRadius: 20, background: estadoColor[t.estado] + '22', color: estadoColor[t.estado] }}>
+                  {t.estado}
+                </span>
+              </div>
+              {t.estado === 'en_transito' && (
+                <button onClick={() => confirmarRecibido(t.id)} style={{
+                  padding: '5px 12px', borderRadius: 20, border: `1px solid ${C.green}`,
+                  background: 'transparent', color: C.green, fontFamily: SN, fontSize: 11, cursor: 'pointer',
+                }}>✓ Confirmar recibido</button>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
