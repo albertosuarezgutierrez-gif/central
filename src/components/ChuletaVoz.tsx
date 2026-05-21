@@ -271,6 +271,19 @@ function BloqueProximamente() {
   )
 }
 
+function BloqueMarcharCocina() {
+  return (
+    <Block color={TEAL} bg={TEALS} badge="MARCHAR" sub="confirmar plato listo">
+      <Row pattern="marcha [producto] [mesa]"
+        examples={['marcha las croquetas S1', 'pasa el entrecot T4']} />
+      <Sep />
+      <Row pattern="marcha [mesa]"
+        examples={['marcha S1', 'todo listo mesa T4']} />
+      <Tip color={TEAL} text="el ítem queda tachado en pantalla automáticamente" />
+    </Block>
+  )
+}
+
 // ── Componente principal ──────────────────────────────────────────────────────
 
 export default function ChuletaVoz({ rol }: Props) {
@@ -307,9 +320,10 @@ export default function ChuletaVoz({ rol }: Props) {
         <ReglaDeOro />
       </>)}
 
-      {/* COCINA: asistente IA + mensaje + regla */}
+      {/* COCINA: asistente IA + marchar + mensaje + regla */}
       {rol === 'cocina' && (<>
         <BloqueAsistenteCocina />
+        <BloqueMarcharCocina />
         <BloqueMensaje />
         <ReglaDeOro />
       </>)}
