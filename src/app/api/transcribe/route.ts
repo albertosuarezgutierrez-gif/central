@@ -188,18 +188,37 @@ export async function POST(req: NextRequest) {
     //
     // Capa B — alucinaciones conocidas de Whisper en español
     // (Whisper genera estas frases cuando graba ruido/silencio, muy bien documentado)
-    const ALUCINACIONES = ['gracias', 'suscríbete', 'hasta pronto', 'hasta la próxima',
-      'subtítulos', 'muchas gracias', 'de nada', 'bye', 'thank you', 'thanks', 'you']
+    const ALUCINACIONES = [
+      // Alucinaciones clásicas de Whisper con ruido
+      'gracias', 'suscríbete', 'hasta pronto', 'hasta la próxima',
+      'subtítulos', 'muchas gracias', 'de nada', 'bye', 'thank you', 'thanks', 'you',
+      // Alucinaciones en entorno hostelero ruidoso (detectadas en producción)
+      'tetris', 'patris', 'matrix', 'felix', 'paris',  // palabras cortas inventadas
+      'sí', 'no', 'ok', 'eh', 'ah', 'um', 'mm',       // respuestas monosilábicas de fondo
+      'música', 'musica', 'audio', 'sonido',            // meta-alucinaciones
+      'hola', 'adios', 'adiós',                         // saludos sin contexto de comanda
+    ]
     const textoNorm = textoRaw.trim().toLowerCase().replace(/[.!?,¡¿]/g, '').trim()
     const esAlucinacion = ALUCINACIONES.some(a => textoNorm === a || textoNorm.startsWith(a + ' '))
     //
     // Capa C — texto demasiado corto sin items (grabación cortada o ruido)
-    const esTextoVacio = textoRaw.trim().length < 4
+    // Subido de 4 a 6 chars: "Tetris" (6 chars) también se filtra
+    const esTextoVacio = textoRaw.trim().length < 6
     //
     // Capa D — Azure speaker match bajo (voz no coincide con el perfil)
     const esSpeakerBajo = speakerMatch !== null && speakerMatch < 0.40
     //
-    const avisoRuido = esRuidoMetricas || esAlucinacion || esTextoVacio || esSpeakerBajo
+    // Capa E — texto sin ningún token hostelero reconocible + muy corto
+    // Captura palabras sueltas inventadas que no son alucinaciones conocidas
+    const TOKENS_HOSTELEROS = ['mesa', 'terraza', 'barra', 'salon', 'caña', 'café', 'cafe',
+      'agua', 'vino', 'cerveza', 'cuenta', 'marchar', 'nota', 'una', 'dos', 'tres',
+      'cuatro', 'cinco', 'tapa', 'media', 'racion', 'comanda', 'para', 'con', 'sin']
+    const palabrasTexto = textoNorm.split(/\s+/).filter(Boolean)
+    const esTokenSueltoSinContexto = palabrasTexto.length === 1 &&
+      textoNorm.length < 10 &&
+      !TOKENS_HOSTELEROS.some(t => textoNorm.includes(t))
+    //
+    const avisoRuido = esRuidoMetricas || esAlucinacion || esTextoVacio || esSpeakerBajo || esTokenSueltoSinContexto
     // ────────────────────────────────────────────────────────────────────────
     // Si hay contexto previo de clarificación, se lo pasamos a BRAIN para que resuelva
     const texto = pendingContext
