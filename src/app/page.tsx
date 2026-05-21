@@ -548,10 +548,10 @@ export default function Page() {
         <div className="demo-sep"/>
         <p className="demo-label">Acceder al demo</p>
         <div className="demo-links">
-          <a href="/edge" className="demo-link" onClick={()=>setMenuOpen(false)}>Camarero <span>Demo</span></a>
-          <a href="/kds" className="demo-link" onClick={()=>setMenuOpen(false)}>Cocina <span>Demo</span></a>
-          <a href="/owner" className="demo-link" onClick={()=>setMenuOpen(false)}>Propietario <span>Demo</span></a>
-          <a href="/jefe" className="demo-link" onClick={()=>setMenuOpen(false)}>Jefe de sala <span>Demo</span></a>
+          <a href="/edge" className="demo-link" onClick={()=>setMenuOpen(false)}>Camarero</a>
+          <a href="/kds" className="demo-link" onClick={()=>setMenuOpen(false)}>Cocina</a>
+          <a href="/owner" className="demo-link" onClick={()=>setMenuOpen(false)}>Propietario</a>
+          <a href="/jefe" className="demo-link" onClick={()=>setMenuOpen(false)}>Jefe de sala</a>
         </div>
       </div>
 
@@ -574,10 +574,10 @@ export default function Page() {
             </button>
             <div className={`ssw-drop${sessionOpen?" open":""}`}>
               <div className="ssw-title">Acceder al demo</div>
-              <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span><span className="ssw-item-pin">Demo</span></a>
-              <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span><span className="ssw-item-pin">Demo</span></a>
-              <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span><span className="ssw-item-pin">Demo</span></a>
-              <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span><span className="ssw-item-pin">Demo</span></a>
+              <a href="/edge" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Camarero</span></a>
+              <a href="/kds" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Cocina</span></a>
+              <a href="/owner" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Propietario</span></a>
+              <a href="/jefe" className="ssw-item" onClick={()=>setSessionOpen(false)}><span className="ssw-item-name">Jefe de sala</span></a>
             </div>
           </div>
         </div>
