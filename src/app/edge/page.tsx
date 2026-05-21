@@ -41,11 +41,16 @@ const ALL_TABS: {id:Tab;lbl:string;path:string;fijo?:boolean}[] = [
 ]
 
 
+interface FormatoCarta {
+  id: string; nombre: string; precio: number; orden: number; activo: boolean
+}
 interface ProductoCarta {
   id: string; nombre: string; precio: number | null
   categoria: string; descripcion?: string | null
   alergenos?: string[] | null; activo: boolean
   familia?: string | null; metadata?: Record<string, unknown> | null
+  producto_formatos?: FormatoCarta[] | null
+  nota_cocina?: string | null
 }
 
 interface BrainResult {
@@ -2533,6 +2538,34 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                       const alerg = Array.isArray(p.alergenos) ? p.alergenos : []
                       const tags = (p.metadata?.maridaje_tags as string[]) ?? []
                       const TAG_EMOJI: Record<string,string> = { carne_roja:'🥩', carne_blanca:'🍗', pescado:'🐟', marisco:'🦞', pasta:'🍝', arroz:'🍚', queso:'🧀', verduras:'🥗', postre:'🎂', aperitivo:'🥂', cualquier_plato:'🍽' }
+                      // Formatos activos ordenados
+                      const fmts = (p.producto_formatos ?? [])
+                        .filter(f => f.activo)
+                        .sort((a, b) => a.orden - b.orden)
+                      // Abreviatura + color por formato
+                      function fmtAbrev(nombre: string): string {
+                        const n = nombre.toLowerCase().trim()
+                        if (n === 'tapa') return 'T'
+                        if (n === 'media' || n === 'media ración' || n === 'media racion' || n === '1/2') return 'M'
+                        if (n === 'ración' || n === 'racion' || n === 'plato') return 'R'
+                        if (n === 'copa') return 'C'
+                        if (n === 'botella') return 'Bot'
+                        if (n.startsWith('media bot') || n === '1/2 bot') return '½B'
+                        if (n === 'pequeño' || n === 'pqño' || n === 's') return 'S'
+                        if (n === 'grande' || n === 'g' || n === 'l') return 'G'
+                        return nombre.slice(0, 3).toUpperCase()
+                      }
+                      const FMT_STYLE: Record<string, {bg:string;border:string;color:string}> = {
+                        'T':   {bg:C.ambS,   border:`${C.amb}55`,  color:'#7A5A1A'},
+                        'M':   {bg:'#EEF6EE', border:'#3F7D4455', color:'#2D5A31'},
+                        'R':   {bg:C.vermS,  border:`${C.verm}44`, color:'#7A2515'},
+                        'C':   {bg:C.bg2,    border:C.rule,        color:C.ink3},
+                        'Bot': {bg:C.bg2,    border:C.rule,        color:C.ink3},
+                        '½B':  {bg:C.bg2,    border:C.rule,        color:C.ink3},
+                        'S':   {bg:C.bg2,    border:C.rule,        color:C.ink3},
+                        'G':   {bg:C.bg2,    border:C.rule,        color:C.ink3},
+                      }
+                      const defaultFmtStyle = {bg:C.bg2, border:C.rule, color:C.ink3}
                       return (
                         <div key={p.id} style={{
                           display:'flex',alignItems:'flex-start',gap:10,
@@ -2556,6 +2589,21 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                             {p.descripcion && (
                               <div style={{fontFamily:SN,fontSize:11,color:C.ink4,marginTop:2,lineHeight:1.4,fontStyle:'italic'}}>{p.descripcion}</div>
                             )}
+                            {/* Badges de formatos T/M/R con precio */}
+                            {fmts.length > 0 && (
+                              <div style={{display:'flex',gap:5,marginTop:5,flexWrap:'wrap' as const,alignItems:'center'}}>
+                                {fmts.map(f => {
+                                  const abrev = fmtAbrev(f.nombre)
+                                  const st = FMT_STYLE[abrev] ?? defaultFmtStyle
+                                  return (
+                                    <div key={f.id} style={{display:'flex',alignItems:'center',gap:3,background:st.bg,border:`1px solid ${st.border}`,borderRadius:5,padding:'2px 7px'}}>
+                                      <span style={{fontFamily:SM,fontSize:9,fontWeight:700,color:st.color,letterSpacing:'.06em'}}>{abrev}</span>
+                                      <span style={{fontFamily:SM,fontSize:10,color:C.ink3}}>{f.precio.toFixed(2).replace('.',',')} €</span>
+                                    </div>
+                                  )
+                                })}
+                              </div>
+                            )}
                             {alerg.length > 0 && (
                               <div style={{display:'flex',gap:4,marginTop:4,flexWrap:'wrap' as const}}>
                                 {alerg.map((a:string) => (
@@ -2563,6 +2611,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                                     ⚠ {a}
                                   </span>
                                 ))}
+                              </div>
+                            )}
+                            {/* Nota de cocina */}
+                            {p.nota_cocina && (
+                              <div style={{display:'flex',alignItems:'flex-start',gap:5,marginTop:5,background:C.ambS,border:`1px solid ${C.amb}44`,borderRadius:5,padding:'4px 8px',borderLeft:`2px solid ${C.amb}`}}>
+                                <span style={{fontFamily:SM,fontSize:9,color:'#7A5A1A',lineHeight:1.5,flexShrink:0}}>⚠</span>
+                                <span style={{fontFamily:SN,fontSize:10,color:'#7A5A1A',lineHeight:1.5}}>{p.nota_cocina}</span>
                               </div>
                             )}
                             {/* Maridaje chips — solo en vinos */}
@@ -2576,8 +2631,12 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
                               </div>
                             )}
                           </div>
+                          {/* Precio: base si no hay formatos, oculto si todos tienen formato */}
                           <div style={{fontFamily:SE,fontStyle:'italic',fontSize:17,fontWeight:500,color:es86?C.ink4:C.verm,flexShrink:0,lineHeight:1.2,paddingTop:1}}>
-                            {p.precio != null ? `${p.precio.toFixed(2).replace('.',',')} €` : '—'}
+                            {fmts.length === 0
+                              ? (p.precio != null ? `${p.precio.toFixed(2).replace('.',',')} €` : '—')
+                              : null
+                            }
                           </div>
                         </div>
                       )

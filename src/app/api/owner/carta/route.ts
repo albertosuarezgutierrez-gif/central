@@ -9,7 +9,8 @@ export const maxDuration = 60
 export async function GET(req: NextRequest) {
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
-  const { data, error } = await supabase.from('productos').select('*')
+  const { data, error } = await supabase.from('productos')
+    .select('*, producto_formatos(id, nombre, precio, orden, activo)')
     .eq('restaurante_id', rid)
     .order('categoria').order('orden').order('nombre')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
