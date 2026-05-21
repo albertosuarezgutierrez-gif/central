@@ -656,6 +656,11 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     setChatMsgs(prev => [...prev.slice(-4), {id:Date.now().toString(), from, texto, ts:new Date(), tipo}])
   }, [])
 
+  // Auto-scroll al último mensaje del chat de voz
+  useEffect(() => {
+    chatVozBottomRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [chatMsgs.length])
+
   // setScreenSafe: actualiza estado Y ref en un solo punto → evita stale closures en guards PTT/VAD
   const setScreenSafe = useCallback((s: Screen) => {
     screenRef.current = s
@@ -686,6 +691,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [chatTexto, setChatTexto]          = useState('')
   const [chatDestino, setChatDestino]      = useState<DestinoChat>('todos')
   const chatEndRef                         = useRef<HTMLDivElement>(null)
+  const chatVozBottomRef                   = useRef<HTMLDivElement>(null)
   const prev86 = useRef(0)
 
   const ultimasComandas = Object.values(
@@ -2070,6 +2076,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
               )
             })}
 
+            <div ref={chatVozBottomRef} />
             {/* ── Confirm inline — dentro del chat ────────────── */}
             {screen==='confirm' && brain && (
               <div style={{alignSelf:'flex-start',width:'96%',background:C.bg1,border:`1px solid ${C.rule}`,borderRadius:12,overflow:'hidden',boxShadow:'0 2px 8px rgba(26,23,20,.08)',animation:'msgIn .2s ease'}}>
