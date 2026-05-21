@@ -587,7 +587,92 @@ Deno.serve(async (req) => {
     resultados.cambios_sin_ack = cambiosSinAck?.length ?? 0
   } catch (e) { console.error('Check cambios sin ack:', e) }
 
-  return new Response(JSON.stringify({
+  // ── CHECK 13: Jobs pendientes con bridge activo → diagnóstico automático ───
+  // Detecta el bug del enum u otros problemas que bloquean silenciosamente los jobs
+  // Síntoma: bridge master activo + jobs pendientes attempts=0 > 5 min
+  try {
+    const cincoMinAtras = new Date(Date.now() - 5 * 60 * 1000).toISOString()
+
+    // ¿Hay bridge master activo?
+    const { data: bridgeMaster } = await supabase
+      .from('bridge_tokens')
+      .select('id, restaurante_id, rol, ultimo_ping, bridge_version')
+      .eq('activo', true)
+      .eq('rol', 'master')
+      .gt('ultimo_ping', new Date(Date.now() - 60 * 1000).toISOString())
+      .limit(1)
+      .maybeSingle()
+
+    if (bridgeMaster) {
+      // ¿Hay jobs pendientes bloqueados (attempts=0, > 5min)?
+      const { count: jobsBloqueados } = await supabase
+        .from('print_jobs')
+        .select('id', { count: 'exact', head: true })
+        .eq('restaurante_id', bridgeMaster.restaurante_id)
+        .eq('status', 'pendiente')
+        .eq('attempts', 0)
+        .lt('created_at', cincoMinAtras)
+
+      if ((jobsBloqueados ?? 0) > 0) {
+        // Diagnóstico: bridge activo pero no procesa jobs → problema de configuración
+        // Intentar auto-fix: limpiar jobs encolados zombies para forzar reproceso
+        await supabase
+          .from('print_jobs')
+          .update({ status: 'pendiente' })
+          .eq('restaurante_id', bridgeMaster.restaurante_id)
+          .eq('status', 'encolado')
+          .eq('attempts', 0)
+          .lt('created_at', cincoMinAtras)
+
+        await notificar({
+          tipo: 'jobs_bloqueados_bridge_activo',
+          modulo: 'bridge',
+          mensaje: `${jobsBloqueados} jobs pendientes sin procesar con bridge activo (bridge v${bridgeMaster.bridge_version}) — posible incompatibilidad de configuración`,
+          detalle: {
+            jobs_bloqueados: jobsBloqueados,
+            bridge_version: bridgeMaster.bridge_version,
+            bridge_ultimo_ping: bridgeMaster.ultimo_ping,
+            sugerencia: 'Verificar connection_type de impresoras y enum printer_connection_type en BD'
+          },
+          restaurante_id: bridgeMaster.restaurante_id,
+          nivel: 'critico',
+        })
+      }
+    }
+    resultados.jobs_bloqueados_bridge_activo = bridgeMaster ? 'verificado' : 'sin_bridge_master'
+  } catch (e) { console.error('Check jobs bloqueados:', e) }
+
+  // ── CHECK 14: Validación enum printer_connection_type ─────────────────────
+  // Detecta si hay impresoras con connection_type no reconocido por el sistema
+  // (el bug del enum 'tcp' bloqueó toda la impresión durante horas)
+  try {
+    const TIPOS_VALIDOS = ['ip_local', 'usb_bridge', 'tcp', 'star_cloudprnt']
+
+    const { data: impresoras } = await supabase
+      .from('impresoras')
+      .select('id, nombre, connection_type, restaurante_id')
+      .eq('activa', true)
+
+    const tiposDesconocidos = (impresoras ?? []).filter(
+      i => !TIPOS_VALIDOS.includes(i.connection_type)
+    )
+
+    if (tiposDesconocidos.length > 0) {
+      for (const imp of tiposDesconocidos) {
+        await notificar({
+          tipo: 'connection_type_desconocido',
+          modulo: 'bridge',
+          mensaje: `Impresora "${imp.nombre}" tiene connection_type="${imp.connection_type}" no reconocido — no recibirá jobs`,
+          detalle: { impresora_id: imp.id, connection_type: imp.connection_type, tipos_validos: TIPOS_VALIDOS },
+          restaurante_id: imp.restaurante_id,
+          nivel: 'critico',
+        })
+      }
+    }
+    resultados.impresoras_tipo_desconocido = tiposDesconocidos.length
+  } catch (e) { console.error('Check enum connection_type:', e) }
+
+
     ok: true,
     timestamp: new Date().toISOString(),
     modo: esMadrugada ? 'madrugada' : 'servicio',
