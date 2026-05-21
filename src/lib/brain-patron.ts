@@ -146,18 +146,21 @@ function detectarMesa(tNorm: string, cache: MenuCache): string | null {
   }
 
   // 2. "mesa N", "a la N", "a la mesa N", "para la N", "numero N"
+  // Usa el primer prefijo de zona del cache en lugar de hardcodear "T"
+  // (restaurantes sin zona T usarían "S" u otro prefijo como primera zona)
+  const defaultPrefijo = cache.zonas[0]?.prefijo ?? 'T'
   const mesaRe = /(?:a la mesa|para la mesa|a la|mesa|numero)\s+(\w+)/
   const m1 = tNorm.match(mesaRe)
-  if (m1) { const n = toNum(m1[1]); if (n) return `T${n}` }
+  if (m1) { const n = toNum(m1[1]); if (n) return `${defaultPrefijo}${n}` }
 
   // 3. "la cuatro" suelto (al final o cerca del final)
   const laRe = /\bla\s+(\w+)(?:\s*$|\s+(?:vamos|venga|ojo|por favor))/
   const m2 = tNorm.match(laRe)
-  if (m2) { const n = toNum(m2[1]); if (n) return `T${n}` }
+  if (m2) { const n = toNum(m2[1]); if (n) return `${defaultPrefijo}${n}` }
 
   // 4. Número dígito solo al final
   const m3 = tNorm.match(/\b(\d{1,2})\s*$/)
-  if (m3) { const n = parseInt(m3[1]); if (n >= 1 && n <= 99) return `T${n}` }
+  if (m3) { const n = parseInt(m3[1]); if (n >= 1 && n <= 99) return `${defaultPrefijo}${n}` }
 
   // 5. Código directo tipo "B1", "T3", "S06" al inicio o en cualquier posición
   // Cubre "B1 la cuenta", "T3 marchar", etc. — el camarero dice el código completo

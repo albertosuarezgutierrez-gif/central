@@ -20,7 +20,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerClient } from '@/lib/supabase';
 
-const supabase = createServerClient();
+// supabase instanciado lazy (dentro de handlers) para evitar error en build
+// "supabaseUrl is required" ocurre cuando se instancia a nivel módulo sin env vars
 
 // ── Construcción del ticket ESC/POS (StarPRNT) ───────────────
 function buildStarTicket(job: {
@@ -64,6 +65,7 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ deviceId: string }> }
 ) {
+  const supabase = createServerClient();
   const { deviceId } = await params;
   const token = req.nextUrl.searchParams.get('token');
 
@@ -155,6 +157,7 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ deviceId: string }> }
 ) {
+  const supabase = createServerClient();
   const body = await req.json().catch(() => ({}));
   const token = body.jobToken ?? req.nextUrl.searchParams.get('token');
 
