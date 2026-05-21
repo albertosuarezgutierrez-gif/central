@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   keywords: [
     'tpv hosteleria','tpv restaurante','tpv bar','software tpv hosteleria españa',
     'tpv voz restaurante','tpv comandas por voz','tpv inteligencia artificial hosteleria',
-    'verifactu tpv','verifactu hosteleria','verifactu restaurante 2027',
+    'verifactu tpv','verifactu hosteleria','verifactu restaurante 2027', 'verifactu 2027',
     'programa tpv restaurante','sistema comandas restaurante',
     'kds cocina','tpv tactil bar','tpv android hosteleria',
     'tpv sin comisiones','facturacion electronica restaurante',
@@ -87,6 +87,32 @@ export const viewport: Viewport = {
   maximumScale: 5,
 }
 
+const jsonLdOrg = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: 'ia.rest',
+  url: BASE_URL,
+  logo: `${BASE_URL}/icon-512.png`,
+  description: 'Software TPV con IA y comandas por voz para hostelería española. VeriFactu incluido.',
+  email: 'hola@iarest.es',
+  areaServed: { '@type': 'Country', name: 'España' },
+  sameAs: [
+    'https://www.linkedin.com/company/ia-rest',
+  ],
+}
+
+const jsonLdWebSite = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: 'ia.rest',
+  url: BASE_URL,
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: { '@type': 'EntryPoint', urlTemplate: `${BASE_URL}/blog?q={search_term_string}` },
+    'query-input': 'required name=search_term_string',
+  },
+}
+
 const jsonLdApp = {
   '@context': 'https://schema.org',
   '@type': 'SoftwareApplication',
@@ -139,7 +165,7 @@ const jsonLdFaq = {
     { '@type': 'Question', name: '¿Qué hardware necesito para usar ia.rest?',
       acceptedAnswer: { '@type': 'Answer', text: 'Solo necesitas un smartphone Android (recomendamos el Samsung Galaxy A15 5G desde 180 €), una impresora térmica de cocina y una pantalla para el KDS. Sin terminales propietarios ni contratos de hardware.' } },
     { '@type': 'Question', name: '¿ia.rest cumple con VeriFactu?',
-      acceptedAnswer: { '@type': 'Answer', text: 'Sí. Todos los perfiles generan facturas con hash encadenado SHA-256 y QR verificable por la AEAT. VeriFactu es obligatorio en España: para sociedades desde el 1 de enero de 2026 y para autónomos desde el 1 de julio de 2026. Multas de hasta 50.000 € por ejercicio.' } },
+      acceptedAnswer: { '@type': 'Answer', text: 'Sí. Todos los perfiles generan facturas con hash encadenado SHA-256 y QR verificable por la AEAT. VeriFactu es obligatorio en España: para sociedades desde el 1 de enero de 2027 y para autónomos desde el 1 de julio de 2027 (Real Decreto-ley 15/2025, BOE 3-dic-2025). Multas de hasta 50.000 € por ejercicio.' } },
     { '@type': 'Question', name: '¿Funciona el reconocimiento de voz con acento andaluz o catalán?',
       acceptedAnswer: { '@type': 'Answer', text: 'Sí. BRAIN está entrenado con vocabulario hostelero real en español: marchar, 86, sin, para llevar... Funciona con todos los acentos regionales y mejora con cada servicio.' } },
     { '@type': 'Question', name: '¿Puedo financiar ia.rest con el Kit Digital?',
@@ -167,6 +193,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <meta name="geo.placename" content="España" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdOrg) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdWebSite) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdApp) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLdFaq) }} />
         {/* Google Analytics 4 — G-EN2YQLRLEX */}

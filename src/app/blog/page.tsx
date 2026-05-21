@@ -16,9 +16,17 @@ export const metadata: Metadata = {
 
 const articulos = [
   {
+    slug: 'comanda-por-voz-como-funciona',
+    titulo: 'Comanda por voz en restaurantes: cómo funciona y por qué funciona',
+    descripcion: 'El camarero habla. La comanda llega a cocina en 0,4 segundos. Explicamos cómo la IA convierte la voz en comandas perfectas, con alérgenos y todo.',
+    fecha: 'Mayo 2026',
+    categoria: 'Producto',
+    color: '#D9442B',
+  },
+  {
     slug: 'verifactu-restaurantes-guia-2026',
-    titulo: 'VeriFactu para restaurantes: guía completa 2026',
-    descripcion: 'Todo lo que necesitas saber sobre la obligación de VeriFactu en hostelería. Plazos, requisitos, cómo cumplir y qué TPV lo incluye de serie.',
+    titulo: 'VeriFactu para restaurantes y bares: guía completa 2027',
+    descripcion: 'Plazos reales 2027, a quién afecta, qué multas hay y cómo cumplir sin cambiar todo tu sistema. Actualizado con el Real Decreto-ley 15/2025.',
     fecha: 'Mayo 2026',
     categoria: 'Fiscal',
     color: '#E8A33B',
@@ -37,7 +45,7 @@ const articulos = [
     descripcion: 'Si estás valorando salir de Numier, aquí tienes una comparativa honesta de las mejores alternativas para restaurantes y bares en España.',
     fecha: 'Mayo 2026',
     categoria: 'Comparativas',
-    color: '#D9442B',
+    color: '#6B5F52',
   },
 ]
 

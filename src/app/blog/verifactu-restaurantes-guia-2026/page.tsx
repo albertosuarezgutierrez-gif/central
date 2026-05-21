@@ -2,23 +2,24 @@ import { SE, SN, SM } from '@/lib/colors'
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'VeriFactu para restaurantes: guía completa 2026',
-  description: 'Todo sobre VeriFactu en hostelería: plazos, qué es, a quién afecta y cómo cumplir desde tu TPV sin complicaciones. Actualizado mayo 2026.',
+  title: 'VeriFactu para restaurantes y bares: guía completa 2027',
+  description: 'Todo sobre VeriFactu en hostelería: plazos reales 2027, a quién afecta, multas y cómo cumplir desde tu TPV sin complicaciones. Actualizado con el Real Decreto-ley 15/2025.',
   alternates: { canonical: 'https://www.iarest.es/blog/verifactu-restaurantes-guia-2026' },
   openGraph: {
-    title: 'VeriFactu para restaurantes: guía completa 2026',
-    description: 'Plazos, requisitos y cómo cumplir VeriFactu en tu restaurante o bar. Sin tecnicismos.',
+    title: 'VeriFactu para restaurantes: guía completa 2027 (plazos actualizados)',
+    description: 'Plazos reales 2027, requisitos y cómo cumplir VeriFactu en tu restaurante o bar. Sin tecnicismos.',
     url: 'https://www.iarest.es/blog/verifactu-restaurantes-guia-2026',
     type: 'article',
     publishedTime: '2026-05-13',
+    modifiedTime: '2026-05-21',
   },
   keywords: [
     'verifactu restaurantes', 'verifactu hosteleria', 'verifactu tpv',
-    'verifactu obligatorio 2026', 'facturacion electronica restaurante',
-    'tpv verifactu incluido', 'verifactu que es', 'verifactu plazo autonomos',
+    'verifactu 2027', 'verifactu obligatorio 2027', 'facturacion electronica restaurante',
+    'tpv verifactu incluido', 'verifactu que es', 'verifactu plazo autonomos 2027',
+    'verifactu sociedades 2027', 'verifactu bares cafeterias',
   ],
 }
-
 
 export default function ArticuloVerifactu() {
   return (
@@ -44,16 +45,25 @@ export default function ArticuloVerifactu() {
               fontWeight: 600, color: '#A8761A', background: '#E8A33B20',
               padding: '3px 10px', borderRadius: 100,
             }}>Fiscal</span>
-            <span style={{ fontSize: 12, color: '#6B5F52', fontFamily: SM }}>Mayo 2026 · 7 min lectura</span>
+            <span style={{ fontSize: 12, color: '#6B5F52', fontFamily: SM }}>Actualizado mayo 2026 · 8 min lectura</span>
           </div>
           <h1 style={{
             fontFamily: SE, fontStyle: 'italic', fontSize: 38, color: '#1A1714',
             margin: '0 0 20px', lineHeight: 1.15, letterSpacing: '-0.5px',
           }}>
-            VeriFactu para restaurantes: guía completa 2026
+            VeriFactu para restaurantes y bares: guía completa 2027
           </h1>
+
+          <div style={{
+            background: '#E8A33B15', border: '1px solid #E8A33B50',
+            borderRadius: 6, padding: '12px 16px', marginBottom: 20,
+            fontSize: 13, color: '#8B6210',
+          }}>
+            ⚡ <strong>Actualización importante:</strong> El Real Decreto-ley 15/2025 (BOE 3 de diciembre de 2025) amplió los plazos. Las fechas vigentes son <strong>1 de enero de 2027</strong> (sociedades) y <strong>1 de julio de 2027</strong> (autónomos). Artículos que mencionen 2026 están desactualizados.
+          </div>
+
           <p style={{ fontSize: 17, color: '#3A332C', lineHeight: 1.7, margin: 0 }}>
-            VeriFactu ya es obligatorio para muchos restaurantes. Si tienes una sociedad, llevas varios meses en plazo. Si eres autónomo, el reloj corre desde julio de 2026. Esta guía explica qué es exactamente, a quién afecta, qué multas hay y cómo cumplir sin cambiar todo tu sistema.
+            VeriFactu es obligatorio para todos los restaurantes y bares españoles. Si tienes una sociedad, el plazo es el <strong>1 de enero de 2027</strong>. Si eres autónomo, el <strong>1 de julio de 2027</strong>. Esta guía explica qué es exactamente, a quién afecta, qué multas hay y cómo cumplir sin cambiar todo tu sistema.
           </p>
         </div>
 
@@ -85,21 +95,37 @@ export default function ArticuloVerifactu() {
           </div>
 
           <h2 style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 26, color: '#1A1714', margin: '32px 0 16px', letterSpacing: '-0.3px' }}>
+            Plazos vigentes — 2027 (Real Decreto-ley 15/2025)
+          </h2>
+          <p>
+            El Real Decreto-ley 15/2025, publicado en el BOE el 3 de diciembre de 2025, modificó el Real Decreto 1007/2023 y amplió los plazos de adaptación. Las fechas definitivas y vigentes son:
+          </p>
+          <ul style={{ paddingLeft: 20, margin: '0 0 16px' }}>
+            <li style={{ marginBottom: 8 }}>Restaurantes, bares y cafeterías organizados como SL o SA → obligatorio desde <strong>1 de enero de 2027</strong></li>
+            <li style={{ marginBottom: 8 }}>Autónomos con actividad de restauración → obligatorio desde <strong>1 de julio de 2027</strong></li>
+            <li style={{ marginBottom: 8 }}>Grupos hosteleros con varios locales → cada local emite sus propias facturas encadenadas</li>
+          </ul>
+          <p>
+            Si tu restaurante está en el País Vasco o Navarra, consulta la normativa específica de TicketBAI, que tiene diferencias técnicas pero un objetivo similar.
+          </p>
+
+          <div style={{
+            background: '#D9442B10', border: '1px solid #D9442B30',
+            borderRadius: 6, padding: '16px 20px', margin: '24px 0',
+          }}>
+            <p style={{ margin: 0, fontSize: 14, color: '#A8311E', fontWeight: 500 }}>
+              ⚠️ Aunque el plazo es 2027, prepararse ya tiene sentido: migrar de TPV en enero de 2027 es hacerlo en plena campaña de reyes, uno de los meses más duros en hostelería. Los restaurantes que se adapten antes tendrán menos estrés operativo.
+            </p>
+          </div>
+
+          <h2 style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 26, color: '#1A1714', margin: '32px 0 16px', letterSpacing: '-0.3px' }}>
             ¿A quién afecta en hostelería?
           </h2>
           <p>
             La obligación alcanza a todos los negocios que emitan facturas o tickets y estén sujetos al IRPF por actividades económicas o al Impuesto de Sociedades en territorio común (excluye País Vasco y Navarra, que tienen su propio sistema TicketBAI).
           </p>
           <p>
-            Para la hostelería, esto incluye prácticamente a todos:
-          </p>
-          <ul style={{ paddingLeft: 20, margin: '0 0 16px' }}>
-            <li style={{ marginBottom: 8 }}>Restaurantes, bares y cafeterías organizados como SL o SA → obligatorio desde <strong>enero 2026</strong></li>
-            <li style={{ marginBottom: 8 }}>Autónomos con actividad de restauración → obligatorio desde <strong>julio 2026</strong></li>
-            <li style={{ marginBottom: 8 }}>Grupos hosteleros con varios locales → cada local emite sus propias facturas encadenadas</li>
-          </ul>
-          <p>
-            Si tu restaurante está en el País Vasco o Navarra, consulta la normativa específica de TicketBAI, que tiene diferencias técnicas pero un objetivo similar.
+            Para la hostelería, esto incluye prácticamente a todos: restaurantes, bares, cafeterías, chiringuitos, food trucks, servicios de catering y cocinas fantasma.
           </p>
 
           <h2 style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 26, color: '#1A1714', margin: '32px 0 16px', letterSpacing: '-0.3px' }}>
@@ -124,7 +150,7 @@ export default function ArticuloVerifactu() {
             Cuando un camarero cierra una cuenta, el sistema:
           </p>
           <ol style={{ paddingLeft: 20, margin: '0 0 16px' }}>
-            <li style={{ marginBottom: 8 }}>Genera un número de factura secuencial (ej: 2026-000347)</li>
+            <li style={{ marginBottom: 8 }}>Genera un número de factura secuencial (ej: 2027-000347)</li>
             <li style={{ marginBottom: 8 }}>Calcula un hash SHA-256 que combina NIF del restaurante, número de factura, fecha, importe y el hash de la factura anterior</li>
             <li style={{ marginBottom: 8 }}>Imprime el ticket con ese hash y un QR que apunta al verificador de la AEAT</li>
             <li style={{ marginBottom: 8 }}>Guarda el registro en la base de datos de manera que no pueda modificarse retroactivamente</li>
@@ -138,7 +164,7 @@ export default function ArticuloVerifactu() {
           }}>
             <p style={{ margin: '0 0 8px', fontSize: 12, color: '#6B5F52', fontFamily: SM, letterSpacing: '0.05em' }}>EJEMPLO DE HASH</p>
             <p style={{ margin: 0, fontSize: 13, color: '#D8CDB6', fontFamily: SM, wordBreak: 'break-all', lineHeight: 1.6 }}>
-              NIF|2026-000347|13052026|47.50|a3f8b2c1d4e5...
+              B12345678|2027-000347|01012027|47.50|a3f8b2c1d4e5...
               <br />
               → SHA-256 → <span style={{ color: '#3F7D44' }}>9f4a2b1c8e3d...</span>
             </p>
@@ -148,7 +174,7 @@ export default function ArticuloVerifactu() {
             Qué necesitas para cumplir
           </h2>
           <p>
-            En resumen, necesitas un TPV o sistema de facturación que:
+            Necesitas un TPV o sistema de facturación que:
           </p>
           <ul style={{ paddingLeft: 20, margin: '0 0 16px' }}>
             <li style={{ marginBottom: 8 }}>Genere automáticamente el hash SHA-256 encadenado en cada factura</li>
@@ -196,7 +222,10 @@ export default function ArticuloVerifactu() {
           <p>Las facturas no se borran — se anulan mediante una factura rectificativa con importe negativo que también lleva su propio hash. La cadena se mantiene íntegra.</p>
 
           <p style={{ fontWeight: 600, color: '#1A1714', marginBottom: 6 }}>Mi TPV actual no tiene VeriFactu. ¿Tengo que cambiar de sistema?</p>
-          <p>Sí, si tu proveedor no ha actualizado el software antes del plazo que te corresponde. Muchos proveedores lo están actualizando, pero conviene confirmarlo por escrito. Si vas a cambiar de TPV de todas formas, es un buen momento para valorar opciones.</p>
+          <p>Sí, si tu proveedor no ha actualizado el software antes del plazo que te corresponde. Si vas a cambiar de TPV, el momento ideal es ahora — antes de llegar a enero o julio de 2027 en plena operación.</p>
+
+          <p style={{ fontWeight: 600, color: '#1A1714', marginBottom: 6 }}>¿Dónde está el BOE que regula esto?</p>
+          <p>La normativa base es el Real Decreto 1007/2023. La ampliación de plazos está en el Real Decreto-ley 15/2025, publicado en el BOE el 3 de diciembre de 2025. Puedes consultarlo en la sede electrónica de la AEAT (sede.agenciatributaria.gob.es).</p>
 
         </div>
 
