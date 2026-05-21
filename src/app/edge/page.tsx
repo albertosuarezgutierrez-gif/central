@@ -1966,7 +1966,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 22h8M12 11v11M9 3.5A6 6 0 0 0 6 9c0 3.3 2.7 6 6 6s6-2.7 6-6a6 6 0 0 0-3-5.2"/><path d="M9 3h6"/></svg>
           </button>
           {/* 📷 Escáner IA — botón fijo en header */}
-          <SmartScanFAB session={session} inline />
+          <SmartScanFAB session={session} inline tema="dark" />
           {/* 👤 Volver a supervisión — solo si es jefe_sala */}
           {session.rol === 'jefe_sala' && (
             <a href="/jefe" title="Volver a supervisión"
