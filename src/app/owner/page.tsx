@@ -22,6 +22,7 @@ import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
 import AnalisisCartaTab from '@/components/owner/AnalisisCartaTab'
 import EtiquetasTab from '@/components/owner/EtiquetasTab'
+import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import ModulosTab from '@/components/owner/ModulosTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
@@ -1528,6 +1529,7 @@ type RestauranteConfig = {
   direccion: string | null; ciudad: string | null; telefono: string | null
   plan: string; activo: boolean
   google_review_url: string | null; instagram_url: string | null; web_url: string | null
+  whatsapp_alertas_compras: string | null; responsable_compras_id: string | null
 }
 type HealthCheck = {
   ok: boolean
@@ -1543,7 +1545,9 @@ function RestauranteTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es' })
+  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es', whatsapp_alertas_compras: '' })
+  const [personal, setPersonal] = useState<{ id: string; nombre: string; rol: string }[]>([])
+  const [responsableComprasId, setResponsableComprasId] = useState<string>('')
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoMsg, setLogoMsg] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -1552,23 +1556,29 @@ function RestauranteTab() {
     Promise.all([
       fetch('/api/owner/restaurante', { headers: sh() }).then(r => r.json()),
       fetch('/api/health').then(r => r.json()),
-    ]).then(([rd, hd]) => {
+      fetch('/api/owner/personal', { headers: sh() }).then(r => r.json()),
+    ]).then(([rd, hd, pd]) => {
       if (rd.restaurante) {
         setRest(rd.restaurante)
         setForm({
-          nombre:            rd.restaurante.nombre            ?? '',
-          nif:               rd.restaurante.nif               ?? '',
-          razon_social:      rd.restaurante.razon_social       ?? '',
-          direccion:         rd.restaurante.direccion          ?? '',
-          ciudad:            rd.restaurante.ciudad             ?? '',
-          telefono:          rd.restaurante.telefono           ?? '',
-          google_review_url: rd.restaurante.google_review_url  ?? '',
-          instagram_url:     rd.restaurante.instagram_url      ?? '',
-          web_url:           rd.restaurante.web_url            ?? '',
-          idioma_whisper:    rd.restaurante.idioma_whisper      ?? 'es',
+          nombre:                 rd.restaurante.nombre            ?? '',
+          nif:                    rd.restaurante.nif               ?? '',
+          razon_social:           rd.restaurante.razon_social       ?? '',
+          direccion:              rd.restaurante.direccion          ?? '',
+          ciudad:                 rd.restaurante.ciudad             ?? '',
+          telefono:               rd.restaurante.telefono           ?? '',
+          google_review_url:      rd.restaurante.google_review_url  ?? '',
+          instagram_url:          rd.restaurante.instagram_url      ?? '',
+          web_url:                rd.restaurante.web_url            ?? '',
+          idioma_whisper:         rd.restaurante.idioma_whisper      ?? 'es',
+          whatsapp_alertas_compras: rd.restaurante.whatsapp_alertas_compras ?? '',
         })
+        setResponsableComprasId(rd.restaurante.responsable_compras_id ?? '')
       }
       setHealth(hd)
+      setPersonal((pd.camareros ?? pd.personal ?? []).map((p: { id: string; nombre: string; rol: string }) => ({
+        id: p.id, nombre: p.nombre, rol: p.rol
+      })))
     }).finally(() => setLoading(false))
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -1578,7 +1588,10 @@ function RestauranteTab() {
     const r = await fetch('/api/owner/restaurante', {
       method: 'PATCH',
       headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+        ...form,
+        responsable_compras_id: responsableComprasId || null,
+      }),
     })
     const d = await r.json()
     if (r.ok) { setRest(d.restaurante); setMsg('Guardado correctamente.') }
@@ -1840,6 +1853,40 @@ function RestauranteTab() {
               El idioma que hablan los camareros al dar comandas por voz. &quot;Detección automática&quot; es más lenta y menos precisa.
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* ── Configuración de compras ── */}
+      <div style={{ border:`1px solid ${C.rule}`, borderRadius:8, padding:24, background:C.bone }}>
+        <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.1em', color:C.ink3, textTransform:'uppercase' as const, marginBottom:4 }}>
+          COMPRAS Y RECEPCIONES
+        </div>
+        <div style={{ fontFamily:SN, fontSize:12, color:C.ink3, marginBottom:16, lineHeight:1.5 }}>
+          Quién recibe alertas de incidencias en recepciones (mermas, precio diferente, no pedido). Puede ser el dueño, jefe de sala, contable o cualquier persona del equipo — adaptable a cómo trabaje cada local.
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:16 }}>
+          <div style={{ display:'flex', flexDirection:'column' as const, gap:4 }}>
+            <label style={{ fontFamily:SM, fontSize:10, fontWeight:700, letterSpacing:'.08em', color:C.ink3, textTransform:'uppercase' as const }}>
+              Responsable de compras
+            </label>
+            <select
+              value={responsableComprasId}
+              onChange={e => setResponsableComprasId(e.target.value)}
+              style={{ fontFamily:SN, fontSize:14, border:`1px solid ${C.rule}`, borderRadius:4, padding:'8px 10px', background:C.bone, color:C.ink, outline:'none' }}
+            >
+              <option value="">— Ninguno (alertas al owner) —</option>
+              {personal.map(p => (
+                <option key={p.id} value={p.id}>{p.nombre} ({p.rol})</option>
+              ))}
+            </select>
+            <div style={{ fontFamily:SN, fontSize:11, color:C.ink4 }}>
+              Recibe push cuando hay incidencias en una recepción. Puede ser el contable del grupo.
+            </div>
+          </div>
+          {inp('WhatsApp alertas compras', 'whatsapp_alertas_compras', '+34 600 000 000')}
+        </div>
+        <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:10, padding:'8px 12px', background:C.paper2, borderRadius:6 }}>
+          💡 <strong>Flexible por diseño:</strong> cada restaurante elige quién gestiona las compras. El número de WhatsApp recibe notificaciones automáticas de incidencias, precios fuera de rango y alertas de stock.
         </div>
       </div>
 
@@ -10030,6 +10077,8 @@ type Proveedor = {
   id: string; nombre: string; email: string | null; telefono: string | null
   web: string | null; contacto_nombre: string | null; categoria: string | null
   notas: string | null; activo: boolean; created_at: string
+  whatsapp?: string | null; fiabilidad_pct?: number | null; incidencias_total?: number
+  asn_activo?: boolean
 }
 
 const CATEGORIAS_PROV = ['Carnes y aves','Pescados y mariscos','Frutas y verduras','Lácteos','Bebidas y licores','Vinos','Cervezas','Aceites y conservas','Panadería','Limpieza','Material desechable','Otros']
@@ -10040,8 +10089,24 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
   const [modal,       setModal]       = useState<null | 'crear' | { edit: Proveedor }>(null)
   const [err,         setErr]         = useState('')
 
-  const empty = { nombre:'', email:'', telefono:'', web:'', contacto_nombre:'', categoria:'', notas:'', dias_reparto:[] as number[], hora_corte:'', pedido_minimo_eur:'' }
+  const empty = { nombre:'', email:'', telefono:'', whatsapp:'', web:'', contacto_nombre:'', categoria:'', notas:'', dias_reparto:[] as number[], hora_corte:'', pedido_minimo_eur:'' }
   const [form, setForm] = useState(empty)
+  const [fichaProveedor, setFichaProveedor] = useState<Proveedor | null>(null)
+  const [sugerencias, setSugerencias] = useState<{
+    articulo_id: string; articulo_nombre: string; proveedor_nombre: string | null
+    cantidad_sugerida: number; unidad: string; urgencia: string; justificacion: string
+  }[]>([])
+  const [sugerenciasLoading, setSugerenciasLoading] = useState(false)
+  const [showSugerencias, setShowSugerencias] = useState(false)
+
+  const cargarSugerencias = async () => {
+    setSugerenciasLoading(true)
+    const r = await fetch('/api/owner/pedidos/sugerir', { headers: sh() })
+    const d = await r.json()
+    setSugerencias(d.sugerencias ?? [])
+    setShowSugerencias(true)
+    setSugerenciasLoading(false)
+  }
 
   const load = async () => {
     setLoading(true)
@@ -10054,7 +10119,7 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
 
   const openCreate = () => { setForm(empty); setErr(''); setModal('crear') }
   const openEdit   = (p: Proveedor) => {
-    setForm({ nombre: p.nombre, email: p.email??'', telefono: p.telefono??'', web: p.web??'', contacto_nombre: p.contacto_nombre??'', categoria: p.categoria??'', notas: p.notas??'', dias_reparto: (p as unknown as Record<string,unknown>).dias_reparto as number[] ?? [], hora_corte: (p as unknown as Record<string,unknown>).hora_corte as string ?? '', pedido_minimo_eur: (p as unknown as Record<string,unknown>).pedido_minimo_eur ? String((p as unknown as Record<string,unknown>).pedido_minimo_eur) : '' })
+    setForm({ nombre: p.nombre, email: p.email??'', telefono: p.telefono??'', whatsapp: p.whatsapp??'', web: p.web??'', contacto_nombre: p.contacto_nombre??'', categoria: p.categoria??'', notas: p.notas??'', dias_reparto: (p as unknown as Record<string,unknown>).dias_reparto as number[] ?? [], hora_corte: (p as unknown as Record<string,unknown>).hora_corte as string ?? '', pedido_minimo_eur: (p as unknown as Record<string,unknown>).pedido_minimo_eur ? String((p as unknown as Record<string,unknown>).pedido_minimo_eur) : '' })
     setErr(''); setModal({ edit: p })
   }
 
@@ -10065,6 +10130,7 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
       dias_reparto: form.dias_reparto.length > 0 ? form.dias_reparto : null,
       hora_corte: form.hora_corte || null,
       pedido_minimo_eur: form.pedido_minimo_eur !== '' ? parseFloat(form.pedido_minimo_eur) : null,
+      whatsapp: form.whatsapp?.trim() || null,
     }
     const r = await fetch('/api/owner/proveedores', { method: isEdit ? 'PUT' : 'POST', headers: { 'Content-Type':'application/json', ...sh() }, body: JSON.stringify(body) })
     const d = await r.json()
@@ -10089,9 +10155,14 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
             {proveedores.length} proveedor{proveedores.length !== 1 ? 'es' : ''} activos
           </div>
         </div>
-        <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
-          + Proveedor
-        </button>
+        <div style={{ display:'flex', gap:8 }}>
+          <button onClick={cargarSugerencias} disabled={sugerenciasLoading} style={{ fontFamily:SN, fontSize:12, fontWeight:500, padding:'8px 14px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:8, cursor:'pointer' }}>
+            {sugerenciasLoading ? '…' : '✦ Sugerencias IA'}
+          </button>
+          <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
+            + Proveedor
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -10134,7 +10205,20 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
                   </div>
                   {p.notas && <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:4, fontStyle:'italic' }}>{p.notas}</div>}
                 </div>
-                <button onClick={() => openEdit(p)} style={{ fontFamily:SM, fontSize:10, padding:'5px 10px', background:'none', color:C.ink3, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer', flexShrink:0 }}>✎</button>
+                <div style={{ display:'flex', flexDirection:'column' as const, gap:6, alignItems:'flex-end', flexShrink:0 }}>
+                  {p.fiabilidad_pct != null && (
+                    <span style={{ fontFamily:SM, fontSize:9, fontWeight:700, padding:'2px 7px', borderRadius:10,
+                      background: p.fiabilidad_pct >= 90 ? '#F0FFF4' : p.fiabilidad_pct >= 75 ? '#FFFBEB' : '#FFF0F0',
+                      color: p.fiabilidad_pct >= 90 ? C.green : p.fiabilidad_pct >= 75 ? C.amber : C.red,
+                    }}>
+                      {p.fiabilidad_pct}% fiab.
+                    </span>
+                  )}
+                  <div style={{ display:'flex', gap:5 }}>
+                    <button onClick={() => setFichaProveedor(p)} style={{ fontFamily:SM, fontSize:10, padding:'5px 10px', background:C.bone, color:C.ink2, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer' }}>📊 Ficha</button>
+                    <button onClick={() => openEdit(p)} style={{ fontFamily:SM, fontSize:10, padding:'5px 10px', background:'none', color:C.ink3, border:`1px solid ${C.rule}`, borderRadius:6, cursor:'pointer' }}>✎</button>
+                  </div>
+                </div>
               </div>
             </div>
           ))}
@@ -10157,6 +10241,7 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
                 <F label="Email" value={form.email} onChange={v => setForm(f=>({...f,email:v}))} placeholder="pedidos@proveedor.com" type="email" />
                 <F label="Teléfono" value={form.telefono} onChange={v => setForm(f=>({...f,telefono:v}))} placeholder="600 000 000" />
               </div>
+              <F label="WhatsApp (para alertas y ASN)" value={form.whatsapp} onChange={v => setForm(f=>({...f,whatsapp:v}))} placeholder="+34 600 000 000" />
               <F label="Página web" value={form.web} onChange={v => setForm(f=>({...f,web:v}))} placeholder="www.proveedor.com" />
               <div>
                 <label style={{ fontFamily:SM, fontSize:8, fontWeight:700, color:C.ink4, textTransform:'uppercase' as const, letterSpacing:'.12em', display:'block', marginBottom:3 }}>CATEGORÍA DE PRODUCTO</label>
@@ -10226,6 +10311,49 @@ function ProveedoresTab({ sh, restauranteId }: { sh: () => Record<string,string>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal Sugerencias IA de pedido */}
+      {showSugerencias && (
+        <div style={{ position:'fixed', inset:0, background:'#00000077', zIndex:200, display:'flex', alignItems:'center', justifyContent:'center', padding:16 }}
+          onClick={e => { if (e.target === e.currentTarget) setShowSugerencias(false) }}>
+          <div style={{ background:C.paper, borderRadius:14, padding:24, width:'100%', maxWidth:580, maxHeight:'88vh', overflowY:'auto' as const, boxShadow:'0 20px 60px #00000044' }}>
+            <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', marginBottom:16 }}>
+              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:19, color:C.ink }}>✦ Sugerencias de pedido IA</div>
+              <button onClick={() => setShowSugerencias(false)} style={{ background:'none', border:'none', cursor:'pointer', color:C.ink3, fontSize:18 }}>✕</button>
+            </div>
+            {sugerencias.length === 0 ? (
+              <div style={{ fontFamily:SN, fontSize:13, color:C.green, padding:'20px 0', textAlign:'center' }}>
+                ✅ Stock en niveles correctos. No hay pedidos urgentes en este momento.
+              </div>
+            ) : (
+              sugerencias.map((s, i) => (
+                <div key={i} style={{ padding:'11px 14px', marginBottom:8, borderRadius:10,
+                  border:`1.5px solid ${s.urgencia === 'alta' ? C.red+'55' : s.urgencia === 'media' ? C.amber+'55' : C.rule}`,
+                  background: s.urgencia === 'alta' ? '#FFF0F0' : s.urgencia === 'media' ? '#FFFBEB' : C.bone }}>
+                  <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:5 }}>
+                    <div style={{ fontFamily:SN, fontSize:13, fontWeight:600, color:C.ink }}>{s.articulo_nombre}</div>
+                    <span style={{ fontFamily:SM, fontSize:10, fontWeight:700, color: s.urgencia === 'alta' ? C.red : s.urgencia === 'media' ? C.amber : C.ink3 }}>
+                      {s.urgencia.toUpperCase()}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>
+                    Sugerido: <strong>{s.cantidad_sugerida} {s.unidad}</strong>
+                    {s.proveedor_nombre && <span> · {s.proveedor_nombre}</span>}
+                  </div>
+                  <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:4, fontStyle:'italic' }}>
+                    {s.justificacion}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Ficha proveedor */}
+      {fichaProveedor && (
+        <ProveedorFichaModal proveedor={fichaProveedor} sh={sh} onClose={() => setFichaProveedor(null)} />
       )}
     </div>
   )

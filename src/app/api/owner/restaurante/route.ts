@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('restaurantes')
-    .select('id, nombre, slug, nif, razon_social, direccion, ciudad, telefono, plan, activo, configuracion, onboarding_completado, logo_url, codigo_acceso, reserva_bloqueo_previo_min, reserva_tiempo_gracia_min, google_review_url, instagram_url, web_url, idioma_whisper')
+    .select('id, nombre, slug, nif, razon_social, direccion, ciudad, telefono, plan, activo, configuracion, onboarding_completado, logo_url, codigo_acceso, reserva_bloqueo_previo_min, reserva_tiempo_gracia_min, google_review_url, instagram_url, web_url, idioma_whisper, whatsapp_alertas_compras, responsable_compras_id')
     .eq('id', rid)
     .single()
 
@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json()
 
   // Solo campos editables por el owner — nunca id, plan, activo desde aquí
-  const allowed = ['nombre', 'nif', 'razon_social', 'direccion', 'ciudad', 'telefono', 'configuracion', 'onboarding_completado', 'reserva_bloqueo_previo_min', 'reserva_tiempo_gracia_min', 'google_review_url', 'instagram_url', 'web_url', 'idioma_whisper']
+  const allowed = ['nombre', 'nif', 'razon_social', 'direccion', 'ciudad', 'telefono', 'configuracion', 'onboarding_completado', 'reserva_bloqueo_previo_min', 'reserva_tiempo_gracia_min', 'google_review_url', 'instagram_url', 'web_url', 'idioma_whisper', 'whatsapp_alertas_compras', 'responsable_compras_id']
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]

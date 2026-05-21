@@ -72,6 +72,24 @@ const config: ClienteConfig = {
       roi: '1.000 albaranes/mes × 3 min = 50h/mes. En 50 locales: más de 2.500h al año. Y un 1% de desviación en 8M€ son 80.000€.',
     }),
     {
+      emoji: '🔄',
+      titulo: 'Ciclo de compras cerrado',
+      sub: 'Del stock al proveedor. Del proveedor al stock. Sin fricción.',
+      desc: 'Flujo completo adaptable a cualquier forma de trabajar: pedido automático por stock, confirmación por IA con eventos, portal ASN para que el proveedor pre-notifique el envío, y notificación automática vía WhatsApp cuando hay incidencias.',
+      ejemplos: [
+        '✦ IA sugiere cantidades cruzando stock actual + eventos próximos (Feria, Semana Santa…)',
+        '🔗 Portal ASN: el proveedor sube su albarán antes de llegar → recepción pre-cargada',
+        '📱 WhatsApp automático al proveedor si hay merma o precio diferente al acordado',
+        '📊 Ficha por proveedor: fiabilidad %, incidencias por tipo, desviación de precio media',
+        '📄 Informe para reunión mensual con 1 clic — sin Excel, sin copiar y pegar',
+        '👤 "Jefe de compras" configurable: owner, contable, jefe sala, gestor externo',
+      ],
+      ruta: '/owner → Proveedores',
+      color: '#2B6A6E',
+      roi: 'La incidencia que no se registra, no se resuelve. Con 8M€ en mercadería, 1 incidencia detectada al mes ya cubre el coste anual del sistema.',
+      activo: true,
+    } as ModuloCustom,
+    {
       emoji: '📷',
       titulo: 'Scanner inteligente',
       sub: 'Un botón. Todo tipo de documentos.',
@@ -110,9 +128,9 @@ const config: ClienteConfig = {
   objecionPrincipal: '"Me cuesta creer que un sistema aúne todo Y que todo esté bien hecho."',
   respuestaObjecion: 'No somos mejor que cada especialista. Somos lo que ninguno puede darte solo: la integración.',
   fasePiloto: [
-    { fase:'Semana 1-2', color:C.red, items:['Configuración local piloto','Comandas por voz + KDS vistas','OCR albaranes + recepción','Elaboraciones APPCC + etiquetas'] },
-    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Scanner universal semáforo','Vinos maridaje IA + alertas stock'] },
-    { fase:'Mes 2+', color:C.green, items:['RRHH grupo centralizado','Previsión por eventos','Central de compras','Benchmarking locales'] },
+    { fase:'Semana 1-2', color:C.red, items:['Configuración local piloto','Comandas por voz + KDS vistas','OCR albarán + recepción con EAN y lote','Ciclo de compras: pedido → ASN → recepción'] },
+    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Ficha proveedor + alertas WhatsApp incidencias','Elaboraciones APPCC + etiquetas 1169/2011'] },
+    { fase:'Mes 2+', color:C.green, items:['RRHH grupo centralizado','Previsión por eventos → pedido automático IA','Central de compras + benchmarking locales','Informe mensual proveedores con 1 clic'] },
   ],
 }
 
