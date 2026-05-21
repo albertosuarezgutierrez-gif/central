@@ -1289,7 +1289,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
         const esNominal = !!(d.nombre_cuenta && d.comanda_id)
         const mesaInvalida = !esNominal && !d.comanda_id && (
           !d.brain?.mesa ||
-          ['T00','M00','','desconocida','undefined'].includes(d.brain.mesa) ||
+          ['T00','M00','','desconocida','undefined','codigo','mesa'].includes(d.brain.mesa) ||
           d.brain?.tipo === 'aviso' && !d.brain?.items?.length
         )
         if (mesaInvalida) {

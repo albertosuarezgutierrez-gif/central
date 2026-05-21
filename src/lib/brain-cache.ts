@@ -88,7 +88,7 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
       .eq('restaurante_id', restaurante_id)
       .order('orden'),
     supabase
-      .from('camareros')
+      .from('personal')
       .select('id, nombre, rol')
       .eq('activo', true)
       .eq('restaurante_id', restaurante_id),

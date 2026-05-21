@@ -336,6 +336,11 @@ function parseAndValidate(raw: string): BrainResult {
   if (typeof parsed.tipo !== 'string') throw new Error('Campo tipo ausente')
   if (!Array.isArray(parsed.items)) parsed.items = []
 
+  // Los avisos y recomendaciones de vino no deben tener items de comanda
+  if (parsed.tipo === 'aviso' || parsed.tipo === 'recomendacion_vino') {
+    parsed.items = []
+  }
+
   return parsed
 }
 
@@ -426,7 +431,7 @@ export async function parsearComanda(
       const raw = await Promise.race([
         callNvidia(systemPromptBase, texto),
         new Promise<never>((_, reject) =>
-          setTimeout(() => reject(new Error('NVIDIA timeout 8s')), 8_000)
+          setTimeout(() => reject(new Error('NVIDIA timeout 5s')), 5_000)
         ),
       ])
       const result = parseAndValidate(raw)
@@ -439,7 +444,7 @@ export async function parsearComanda(
           const rawRetry = await Promise.race([
             callNvidia(systemPromptBase + sesionContext, texto),
             new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('NVIDIA retry timeout 8s')), 8_000)
+              setTimeout(() => reject(new Error('NVIDIA retry timeout 5s')), 5_000)
             ),
           ])
           const retryResult = parseAndValidate(rawRetry)

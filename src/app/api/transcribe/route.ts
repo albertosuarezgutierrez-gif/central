@@ -885,6 +885,8 @@ export async function POST(req: NextRequest) {
         modelo_usado: fuente === 'patron' ? 'patron' : 'nvidia/llama-3.3-70b',
         turno_id: turnoId,
         camarero_id: camareroId,
+        // Fix duplicados: recording_id como clave de idempotencia en el log
+        ...(recordingId ? { recording_id: recordingId } : {}),
       })
     } catch { /* nunca bloquear la comanda */ }
 
