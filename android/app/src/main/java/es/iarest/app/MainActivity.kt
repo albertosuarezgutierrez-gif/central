@@ -30,7 +30,7 @@ class MainActivity : AppCompatActivity() {
     private var pttActive = false
     private val mainHandler = Handler(Looper.getMainLooper())
 
-    private val CURRENT_VERSION = 10
+    private val CURRENT_VERSION = 12
     private val VERSION_URL = "https://www.iarest.es/app/version.json"
 
     private val REQUIRED_PERMISSIONS = buildList {

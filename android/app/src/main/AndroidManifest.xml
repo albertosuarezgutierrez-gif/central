@@ -2,9 +2,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="es.iarest.app">
 
-    <!-- Red -->
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
+    <!-- Red -->\n    <uses-permission android:name=\"android.permission.INTERNET\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_NETWORK_STATE\"/>\n    <uses-permission android:name=\"android.permission.ACCESS_WIFI_STATE\"/>
 
     <!-- Micrófono (PTT + Whisper) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
