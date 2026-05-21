@@ -78,8 +78,10 @@ const config: ClienteConfig = {
       desc: 'Mercadona obliga a sus proveedores a usar EDI: albarán digital antes de llegar, validación automática contra el pedido, pago sin intervención humana. ia.rest trae exactamente ese flujo a la hostelería — adaptable a cualquier forma de trabajar, sin ERP millonario, con un simple link que funciona en cualquier móvil.',
       ejemplos: [
         '✦ IA sugiere cantidades cruzando stock actual + eventos próximos (Feria, Semana Santa…)',
-        '📧 Email al proveedor con link portal ASN (72h) — sube su albarán antes de llegar',
-        '📱 WhatsApp automático de respaldo si no abre el email',
+        '📧 Email al proveedor con link portal ASN (72h, sin contraseña ni app)',
+        '📷 Proveedor escanea la etiqueta de cada caja → IA extrae lote y caducidad automáticamente',
+        '🔢 Si la caja tiene GS1-128 (estándar Mercadona/Carrefour) → datos en 1 segundo sin IA',
+        '📱 WhatsApp de respaldo si no abre el email',
         '📦 Recepción pre-cargada cuando llega el camión — el recepcionista solo confirma diferencias',
         '⚠️ Incidencia detectada → email al proveedor + email al responsable de compras (sea quien sea)',
         '📊 Ficha proveedor: fiabilidad %, incidencias por tipo, historial de precios',
