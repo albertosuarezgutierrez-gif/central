@@ -27,7 +27,7 @@ export default function CookiesPage() {
         .cookie-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
         .cookie-table th { text-align: left; padding: 12px 16px; border-bottom: 1px solid rgba(246,241,231,.12); color: #6B6054; font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
         .cookie-table td { padding: 14px 16px; border-bottom: 1px solid rgba(246,241,231,0.07); color: #D8CDB6; line-height: 1.5; vertical-align: top; }
-        .cookie-table td:first-child { color: #F6F1E7; font-weight: 500; }
+        .cookie-table td:first-child { color: #F6F1E7; font-weight: 500; font-family: 'JetBrains Mono', monospace; font-size: 12px; }
         .tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; letter-spacing: .06em; text-transform: uppercase; }
         .tag-tec { background: rgba(110,189,115,.1); color: #6EBD73; border: 1px solid rgba(110,189,115,.2); }
         .tag-ext { background: rgba(232,163,59,.1); color: #E8A33B; border: 1px solid rgba(232,163,59,.2); }
@@ -42,9 +42,9 @@ export default function CookiesPage() {
         <div className="meta">Última actualización: mayo 2026 · ia.rest</div>
 
         <h2>¿Qué son las cookies?</h2>
-        <p>Las cookies son pequeños archivos de texto que los sitios web almacenan en tu dispositivo. Permiten recordar preferencias y mejorar la experiencia de navegación.</p>
+        <p>Las cookies son pequeños archivos de texto que los sitios web almacenan en tu dispositivo. Permiten recordar preferencias y mejorar la experiencia de navegación. Además de cookies, ia.rest utiliza <strong>localStorage</strong> del navegador para almacenar preferencias de la aplicación.</p>
 
-        <h2>Cookies que utilizamos</h2>
+        <h2>Cookies y almacenamiento local que utilizamos</h2>
         <table className="cookie-table">
           <thead>
             <tr>
@@ -62,6 +62,18 @@ export default function CookiesPage() {
               <td>1 año</td>
             </tr>
             <tr>
+              <td>ia_rest_session</td>
+              <td><span className="tag tag-tec">Técnica</span></td>
+              <td>Token de sesión autenticada en la plataforma ia.rest (localStorage)</td>
+              <td>Sesión / 8 horas</td>
+            </tr>
+            <tr>
+              <td>ia_aviso_ia_v1</td>
+              <td><span className="tag tag-tec">Técnica</span></td>
+              <td>Registra que el usuario ha leído el aviso de uso de inteligencia artificial, conforme al art. 50 del Reglamento (UE) 2024/1689 (localStorage)</td>
+              <td>Permanente (hasta borrar datos del navegador)</td>
+            </tr>
+            <tr>
               <td>Google Fonts</td>
               <td><span className="tag tag-ext">Terceros</span></td>
               <td>Carga de fuentes tipográficas desde servidores de Google. Puede transmitir tu IP a Google LLC (EE.UU.) bajo Cláusulas Contractuales Estándar</td>
@@ -70,10 +82,11 @@ export default function CookiesPage() {
           </tbody>
         </table>
 
-        <p>ia.rest <strong>no utiliza cookies de seguimiento, analíticas ni publicitarias</strong>. No hay Google Analytics, píxeles de Meta ni herramientas similares.</p>
+        <p>ia.rest <strong>no utiliza cookies de seguimiento, analíticas ni publicitarias</strong>. No hay Google Analytics, píxeles de Meta, Hotjar ni herramientas similares.</p>
 
-        <h2>Cómo gestionar las cookies</h2>
-        <p>Puedes aceptar o rechazar las cookies no esenciales desde el banner al acceder al sitio. También puedes configurar tu navegador:</p>
+        <h2>Cómo gestionar tus preferencias</h2>
+        <p>Puedes aceptar o rechazar las cookies no esenciales desde el banner al acceder al sitio. Dispones de tres opciones con el mismo nivel de accesibilidad: <strong>Aceptar todo</strong>, <strong>Rechazar todo</strong> o <strong>Configurar</strong>. Puedes revocar tu consentimiento en cualquier momento desde el enlace "Gestionar cookies" en el pie de página.</p>
+        <p>También puedes configurar o eliminar cookies directamente desde tu navegador:</p>
         <p>
           <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener">Chrome</a>
           {' · '}
@@ -83,9 +96,10 @@ export default function CookiesPage() {
           {' · '}
           <a href="https://support.microsoft.com/es-es/windows/eliminar-y-administrar-cookies" target="_blank" rel="noopener">Edge</a>
         </p>
+        <p>Para borrar el almacenamiento localStorage (preferencia del aviso IA y sesión), accede a las herramientas de desarrollador de tu navegador → Aplicación → Almacenamiento local → www.iarest.es → Borrar.</p>
 
         <h2>Más información</h2>
-        <p>Para cualquier consulta: <a href="mailto:hola@iarest.es">hola@iarest.es</a>. Consulta también nuestra <a href="/privacidad">Política de privacidad</a>.</p>
+        <p>Para cualquier consulta: <a href="mailto:hola@iarest.es">hola@iarest.es</a>. Consulta también nuestra <a href="/privacidad">Política de privacidad</a> y el <a href="/aviso-legal">Aviso legal</a>.</p>
       </div>
     </>
   )
