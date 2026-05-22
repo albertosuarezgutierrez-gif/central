@@ -7347,7 +7347,7 @@ const GRUPOS = [
       { id: 'carta',          label: 'Productos',    icon: ICONS.book    },
       { id: 'analisis',       label: 'Análisis',     icon: ICONS.chart   },
       { id: 'recomendaciones', label: 'Recomend.',   icon: ICONS.sparkle },
-      { id: 'bodega',         label: 'Almacén',      icon: ICONS.sparkle },
+      { id: 'almacen',        label: 'Almacén',      icon: ICONS.sparkle },
       { id: 'proveedores',    label: 'Proveedores',  icon: ICONS.sparkle },
       { id: 'pagos',          label: 'Pagos',        icon: ICONS.receipt },
       { id: 'contabilidad',   label: 'Contabilidad', icon: ICONS.chart },
@@ -8285,7 +8285,7 @@ export default function OwnerPage() {
             {tab === 'carta'          && <CartaTab restauranteId={session.restaurante_id}/>}
             {tab === 'analisis'       && <AnalisisCartaTab sh={sh} />}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
-            {tab === 'bodega'         && <BodegaTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'almacen'         && <AlmacenTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'pagos'          && <PagosProveedorTab sh={sh} />}
             {tab === 'contabilidad'   && <ContabilidadTab sh={sh} />}
@@ -8329,7 +8329,7 @@ type StockArticulo = {
 }
 type ProductoSimple = { id: string; nombre: string; categoria: string }
 
-function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; restauranteId: string }) {
+function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; restauranteId: string }) {
   const [articulos,   setArticulos]   = useState<StockArticulo[]>([])
   const [productos,   setProductos]   = useState<ProductoSimple[]>([])
   const [listaProvs,  setListaProvs]  = useState<{ id: string; nombre: string; email: string | null; telefono: string | null; categoria: string | null }[]>([])
@@ -9504,7 +9504,7 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
 }
 
 // ══════════════════════════════════════════════════════════════════════
-// STOCK CENTRAL DEL GRUPO — sección dentro de BodegaTab
+// STOCK CENTRAL DEL GRUPO — sección dentro de AlmacenTab
 // Visible solo si el restaurante pertenece a una cuenta con stock central
 // ══════════════════════════════════════════════════════════════════════
 type StockCentralItem = {
