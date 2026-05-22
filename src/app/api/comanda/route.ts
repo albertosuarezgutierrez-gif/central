@@ -8,16 +8,30 @@ import { notifyError } from '@/lib/notify'
 
 // POST /api/comanda — comanda manual (sin voz)
 export async function POST(req: NextRequest) {
+  // Parse body antes del try principal — body vacío/truncado es 400, no 500
+  type ItemInput = { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato_id?: string; formato_nombre?: string; seccion_id?: string }
+  let body: {
+    mesa_id?: string; nombre_cuenta?: string; items?: ItemInput[]
+    tipo?: string; num_comensales?: number; nota_general?: string
+    incluir_servicio?: boolean; require_confirm?: boolean
+  }
+  try {
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Body inválido o vacío' }, { status: 400 })
+  }
+
+  const {
+    mesa_id, nombre_cuenta, items, tipo = 'comanda',
+    num_comensales,
+    nota_general,
+    incluir_servicio = true,
+    require_confirm = false,
+  } = body
+
   try {
     const supabase = createServerClient()
     const rid = getRestauranteId(req)
-    const {
-      mesa_id, nombre_cuenta, items, tipo = 'comanda',
-      num_comensales,
-      nota_general,
-      incluir_servicio = true,
-      require_confirm = false,
-    } = await req.json()
 
     if (!mesa_id && !nombre_cuenta) {
       return NextResponse.json({ error: 'mesa_id o nombre_cuenta requerido' }, { status: 400 })
@@ -340,16 +354,18 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error('[COMANDA MANUAL]', err)
-    notifyError({
-      tipo: 'comanda_error',
-      modulo: 'comanda',
-      mensaje: `Error creando comanda: ${err instanceof Error ? err.message : 'Error interno'}`,
-      detalle: { error: String(err) },
-      nivel: 'critico',
-    })
-    return NextResponse.json(
-      { error: err instanceof Error ? err.message : 'Error interno' },
-      { status: 500 }
-    )
+    const msg = err instanceof Error ? err.message : 'Error interno'
+    // Solo notificar errores reales de BD/sistema — no errores de validación de cliente
+    const esErrorSistema = !(msg.includes('requerido') || msg.includes('inválido') || msg.includes('Sin turno'))
+    if (esErrorSistema) {
+      notifyError({
+        tipo: 'comanda_error',
+        modulo: 'comanda',
+        mensaje: `Error creando comanda: ${msg}`,
+        detalle: { error: String(err) },
+        nivel: 'critico',
+      })
+    }
+    return NextResponse.json({ error: msg }, { status: 500 })
   }
 }
