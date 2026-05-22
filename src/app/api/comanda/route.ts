@@ -217,17 +217,39 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const itemsToInsert = itemsRaw.map(it => ({
-      comanda_id: comanda.id,
-      nombre: it.nombre, cantidad: it.cantidad,
-      notas: it.notas ?? null,
-      producto_id: it.producto_id ?? null,
-      precio_unitario: it.precio_unitario ?? null,
-      formato_id: it.formato_id ?? null,
-      formato_nombre: it.formato_nombre ?? null,
-      seccion_id: it.seccion_id ?? null,
-      restaurante_id: rid,
-    }))
+    // Consultar productos con venta_por_peso para propagar precio_kg al item
+    const idsConProducto = itemsRaw.filter((it: { producto_id?: string }) => it.producto_id).map((it: { producto_id?: string }) => it.producto_id as string)
+    let productosPeso: { id: string; venta_por_peso: boolean; precio_por_kg: number | null }[] = []
+    if (idsConProducto.length > 0) {
+      const { data: pp } = await supabase
+        .from('productos')
+        .select('id, venta_por_peso, precio_por_kg')
+        .in('id', idsConProducto)
+        .eq('restaurante_id', rid)
+      productosPeso = (pp ?? []) as { id: string; venta_por_peso: boolean; precio_por_kg: number | null }[]
+    }
+    const pesoPorProducto = new Map(productosPeso.map(p => [p.id, p]))
+
+    const itemsToInsert = itemsRaw.map((it: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato_id?: string; formato_nombre?: string; seccion_id?: string; peso_gramos?: number }) => {
+      const prod = it.producto_id ? pesoPorProducto.get(it.producto_id) : null
+      const esPeso = prod?.venta_por_peso && prod?.precio_por_kg
+      return {
+        comanda_id: comanda.id,
+        nombre: it.nombre, cantidad: it.cantidad,
+        notas: it.notas ?? null,
+        producto_id: it.producto_id ?? null,
+        precio_unitario: esPeso
+          ? (it.peso_gramos ? parseFloat((prod!.precio_por_kg! * it.peso_gramos / 1000).toFixed(2)) : null)
+          : (it.precio_unitario ?? null),
+        formato_id: it.formato_id ?? null,
+        formato_nombre: it.formato_nombre ?? null,
+        seccion_id: it.seccion_id ?? null,
+        restaurante_id: rid,
+        peso_gramos: it.peso_gramos ?? null,
+        pesado_en_cocina: it.peso_gramos ? true : false,
+        precio_kg_en_venta: esPeso ? prod!.precio_por_kg : null,
+      }
+    })
 
     // Línea de servicio en comanda
     if (hacerServicio) {
@@ -240,6 +262,9 @@ export async function POST(req: NextRequest) {
         precio_unitario: servicioPrecioFinal,
         formato_id: null, formato_nombre: null, seccion_id: null,
         restaurante_id: rid,
+        peso_gramos: null,
+        pesado_en_cocina: false,
+        precio_kg_en_venta: null,
       })
     }
 

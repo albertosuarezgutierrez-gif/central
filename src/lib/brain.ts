@@ -312,7 +312,15 @@ RECOMENDACIÓN DE VINO (tipo recomendacion_vino):
   "Para el cochinillo, un Ribera del Duero crianza, taninos suaves. El Protos está a 28€ botella."
 
 SCHEMA:
-{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso|recomendacion_vino","destinatario_nombre":null,"items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}`
+{"mesa":"S4","nombre_cuenta":null,"tipo":"comanda|marchar|86|cuenta|aviso|recomendacion_vino","destinatario_nombre":null,"items":[{"nombre":"Nombre canónico de la carta","cantidad":2,"notas":"","formato":null,"peso_gramos":null}],"num_comensales":null,"nota_general":null,"necesita_clarificacion":false,"pregunta_clarificacion":null,"opciones_clarificacion":[],"confianza":0.95,"raw":"texto original"}
+
+PRODUCTOS POR PESO (peso_gramos en items):
+- Cuando el camarero menciona un peso junto a un producto → extrae peso_gramos (en gramos enteros)
+- "150 gramos de gamba roja para la 5" → items:[{nombre:"Gamba Roja",cantidad:1,peso_gramos:150}]
+- "200g de salmón mesa 3" → items:[{nombre:"Salmón",cantidad:1,peso_gramos:200}]
+- "una lubina de dos kilos" → items:[{nombre:"Lubina",cantidad:1,peso_gramos:2000}]
+- "medio kilo de berberechos T2" → items:[{nombre:"Berberechos",cantidad:1,peso_gramos:500}]
+- Si no se menciona peso → peso_gramos:null (cocina lo pesará en KDS)`
 
 // ── Proveedores ─────────────────────────────────────────────────────────────
 

@@ -11,6 +11,7 @@ import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 import AsistenteCocinaPanel from '@/components/AsistenteCocinaPanel'
 import ElaboracionesPanel from '@/components/kds/ElaboracionesPanel'
+import PesarModal from '@/components/kds/PesarModal'
 
 const K={bg:'#F6F1E7',c1:'#FBF8F1',fg:'#1A1714',fg2:'#3A332C',fg3:'#6B5F52',rule:'#D8CDB6',rS:'#B8A98B',red:'#D9442B',amb:'#E8A33B',gr:'#3F7D44',tl:'#2B6A6E'}
 
@@ -257,6 +258,8 @@ function KDSInner() {
   const [elaborAbierto, setElaborAbierto]       = useState(false)
   const chatEndRef = useRef<HTMLDivElement>(null)
   const [bannerMensaje, setBannerMensaje] = useState<{ texto: string; origen: string } | null>(null)
+  const [itemAPesar, setItemAPesar] = useState<{ id: string; nombre: string; precio_por_kg?: number | null } | null>(null)
+  const [pesarLoading, setPesarLoading] = useState(false)
   const prevCountRef = useRef(0)
   // Map zona_id → nombre del running que la cubre (para preview en botón MARCHAR)
   const [runningPorZona, setRunningPorZona] = useState<Record<string, string>>({})
@@ -354,6 +357,22 @@ function KDSInner() {
       .eq('id', itemId)
       .eq('restaurante_id', effectiveSession!.restaurante_id)
     fetchData()
+  }
+
+  const confirmarPeso = async (pesoGramos: number) => {
+    if (!itemAPesar) return
+    setPesarLoading(true)
+    try {
+      await fetch('/api/kds/pesar-item', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ comanda_item_id: itemAPesar.id, peso_gramos: pesoGramos }),
+      })
+      setItemAPesar(null)
+      fetchData()
+    } finally {
+      setPesarLoading(false)
+    }
   }
 
   const cerrar = async (id: string, mesaId: string, camareroId?: string, mesaCodigo?: string) => {
@@ -800,11 +819,18 @@ function KDSInner() {
               const minutosComanda = Math.floor((Date.now()-new Date(c.created_at).getTime())/60000)
               return (
                 <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.08)':col===K.amb?'rgba(232,163,59,.08)':'rgba(63,125,68,.06)', border:`1px solid ${urgente?'rgba(217,68,43,.35)':col===K.amb?'rgba(232,163,59,.3)':'rgba(63,125,68,.25)'}`, borderRadius:10, padding:14, animation:'slideIn .3s ease' }}>
-                  {allDone && (
-                    <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.75)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
-                      <span style={{ fontFamily:SM, fontSize:14, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
-                    </div>
-                  )}
+                  {(() => {
+                    const hayPendientesPesar = (c.items||[]).some(it => (it as unknown as {peso_gramos:number|null;precio_kg_en_venta:number|null}).peso_gramos === null && (it as unknown as {precio_kg_en_venta:number|null}).precio_kg_en_venta)
+                    return allDone && !hayPendientesPesar ? (
+                      <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.75)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
+                        <span style={{ fontFamily:SM, fontSize:14, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
+                      </div>
+                    ) : allDone && hayPendientesPesar ? (
+                      <div style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.75)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
+                        <span style={{ fontFamily:SM, fontSize:12, fontWeight:700, letterSpacing:'.08em', color:K.amb }}>⚖ PESAR ANTES DE MARCHAR</span>
+                      </div>
+                    ) : null
+                  })()}
                   <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:10 }}>
                     <div style={{ display:'flex', gap:10, alignItems:'baseline' }}>
                       <span style={{ fontFamily:SE, fontSize:36, fontWeight:500, color:K.fg, lineHeight:1 }}>{c.mesa?.codigo}</span>
@@ -823,17 +849,42 @@ function KDSInner() {
                       ⚠ NOTA · {(c as unknown as {nota_general:string}).nota_general}
                     </div>
                   )}
-                    {(c.items||[]).map(it=>(
-                      <div key={it.id} onClick={()=>toggle(it.id,it.estado)} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:`1px solid ${K.rule}`, cursor:'pointer', opacity:it.estado==='listo'?.4:1, transition:'opacity .15s', minHeight:44 }}>
-                        <div style={{ width:20, height:20, borderRadius:3, border:`2px solid ${it.estado==='listo'?K.gr:K.rS}`, background:it.estado==='listo'?K.gr:'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>
-                          {it.estado==='listo'&&<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1 5 4 8 9 2" stroke={K.fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
-                        </div>
+                    {(c.items||[]).map(it=>{
+                      const itEx = it as unknown as {peso_gramos:number|null;pesado_en_cocina:boolean;precio_kg_en_venta:number|null;producto_id:string|null}
+                      const pendientePesar = itEx.peso_gramos === null && !!itEx.precio_kg_en_venta
+                      return (
+                      <div key={it.id}
+                        onClick={()=> pendientePesar
+                          ? setItemAPesar({ id: it.id, nombre: it.nombre, precio_por_kg: itEx.precio_kg_en_venta })
+                          : toggle(it.id,it.estado)}
+                        style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:`1px solid ${K.rule}`, cursor:'pointer',
+                          opacity: pendientePesar ? 1 : it.estado==='listo' ? .4 : 1,
+                          transition:'opacity .15s', minHeight:44,
+                          background: pendientePesar ? 'rgba(232,163,59,.06)' : 'transparent',
+                        }}>
+                        {pendientePesar ? (
+                          <div style={{ width:20, height:20, borderRadius:3, border:`2px solid ${K.amb}`, background:'rgba(232,163,59,.15)', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, fontSize:11 }}>⚖</div>
+                        ) : (
+                          <div style={{ width:20, height:20, borderRadius:3, border:`2px solid ${it.estado==='listo'?K.gr:K.rS}`, background:it.estado==='listo'?K.gr:'transparent', display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0, transition:'all .15s' }}>
+                            {it.estado==='listo'&&<svg width="10" height="10" viewBox="0 0 10 10" fill="none"><polyline points="1 5 4 8 9 2" stroke={K.fg} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                          </div>
+                        )}
                         <div style={{ flex:1 }}>
-                          <div style={{ fontFamily:SM, fontSize:14, fontWeight:700, letterSpacing:'.05em', color:K.fg, textTransform:'uppercase', textDecoration:it.estado==='listo'?'line-through':'none' }}>
+                          <div style={{ fontFamily:SM, fontSize:14, fontWeight:700, letterSpacing:'.05em', color: pendientePesar ? K.amb : K.fg, textTransform:'uppercase', textDecoration:it.estado==='listo'?'line-through':'none' }}>
                             {it.nombre}
                             {it.formato_nombre&&(
                               <span style={{ fontFamily:SM, fontSize:10, fontWeight:600, marginLeft:6, padding:'1px 5px', borderRadius:2, background:K.rule, color:K.fg3, letterSpacing:'.06em', verticalAlign:'middle' }}>
                                 {it.formato_nombre.toUpperCase()}
+                              </span>
+                            )}
+                            {pendientePesar && (
+                              <span style={{ fontFamily:SM, fontSize:9, fontWeight:700, marginLeft:6, padding:'1px 6px', borderRadius:2, background:'rgba(232,163,59,.2)', color:K.amb, letterSpacing:'.08em', verticalAlign:'middle' }}>
+                                PESAR
+                              </span>
+                            )}
+                            {itEx.pesado_en_cocina && itEx.peso_gramos && (
+                              <span style={{ fontFamily:SM, fontSize:9, fontWeight:700, marginLeft:6, padding:'1px 6px', borderRadius:2, background:'rgba(63,125,68,.15)', color:K.gr, letterSpacing:'.06em', verticalAlign:'middle' }}>
+                                {itEx.peso_gramos}g
                               </span>
                             )}
                           </div>
@@ -851,7 +902,7 @@ function KDSInner() {
                           </span>
                         )}
                       </div>
-                    ))}
+                    )})}
                   </div>
                   <div style={{ display:'flex', justifyContent:'space-between', marginTop:8, fontFamily:SN, fontSize:10, color:K.fg3 }}>
                     <span>{c.camarero?.nombre}</span>
@@ -1051,6 +1102,16 @@ function KDSInner() {
         </div>
       )}
     </div>
+
+    {/* ── Modal pesar item ── */}
+    {itemAPesar && (
+      <PesarModal
+        item={itemAPesar}
+        onConfirm={(g) => confirmarPeso(g)}
+        onClose={() => setItemAPesar(null)}
+        loading={pesarLoading}
+      />
+    )}
     </>
   )
 }

@@ -62,6 +62,12 @@ export interface ComandaItem {
   seccion_id: string | null
   formato_id: string | null
   formato_nombre: string | null
+  producto_id: string | null
+  precio_unitario: number | null
+  // Módulo Peso v1.0
+  peso_gramos: number | null
+  pesado_en_cocina: boolean
+  precio_kg_en_venta: number | null
 }
 
 export interface ProductoFormato {
@@ -91,7 +97,7 @@ export interface BrainResult {
   mesa: string
   nombre_cuenta?: string | null    // cuenta nominal: "a nombre de Alberto" → nombre_cuenta:"Alberto", mesa:""
   tipo: 'comanda' | 'marchar' | '86' | 'cuenta' | 'aviso' | 'recomendacion_vino'
-  items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato?: string | null }[]
+  items: { nombre: string; cantidad: number; notas?: string; producto_id?: string; precio_unitario?: number; formato?: string | null; peso_gramos?: number | null }[]
   num_comensales?: number | null   // extraído de voz: "mesa 4 para 3 personas"
   nota_general?: string | null     // nota global o texto del mensaje en tipo aviso
   destinatario_nombre?: string | null  // aviso por nombre propio: "Pablo, T4 espera" → "Pablo"

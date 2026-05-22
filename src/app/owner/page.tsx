@@ -27,6 +27,7 @@ import PagosProveedorTab from '@/components/owner/PagosProveedorTab'
 import ContabilidadTab from '@/components/owner/ContabilidadTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import ModulosTab from '@/components/owner/ModulosTab'
+import NuevaEntradaPesoModal from '@/components/owner/NuevaEntradaPesoModal'
 import SmartScanFAB from '@/components/SmartScanFAB'
 import WineScannerModal from '@/components/WineScannerModal'
 
@@ -8334,6 +8335,7 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
   const [listaProvs,  setListaProvs]  = useState<{ id: string; nombre: string; email: string | null; telefono: string | null; categoria: string | null }[]>([])
   const [loading,  setLoading]   = useState(true)
   const [modal,    setModal]     = useState<null | 'crear' | 'ocr' | 'pedidos' | 'recibir' | { edit: StockArticulo } | { entrada: StockArticulo }>(null)
+  const [modalPeso, setModalPeso] = useState(false)
   // Estado recepción mercancía
   const [recItems, setRecItems] = useState<{
     stock_articulo_id: string | null
@@ -8763,8 +8765,20 @@ function BodegaTab({ sh, restauranteId }: { sh: () => Record<string,string>; res
           <button onClick={openCreate} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 18px', background:C.red, color:C.paper, border:`1px solid ${C.redD}`, borderRadius:8, cursor:'pointer' }}>
             + Artículo
           </button>
+          <button onClick={() => setModalPeso(true)} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 14px', background:'#3F7D44', color:'#fff', border:'1px solid #2d5c31', borderRadius:8, cursor:'pointer' }}>
+            ⚖ Por peso
+          </button>
         </div>
       </div>
+
+      {/* Modal nueva entrada por peso */}
+      {modalPeso && (
+        <NuevaEntradaPesoModal
+          restauranteId={restauranteId}
+          onClose={() => setModalPeso(false)}
+          onGuardado={() => { setModalPeso(false); load() }}
+        />
+      )}
 
       {/* Alertas de stock mínimo */}
       {alertas.length > 0 && (
