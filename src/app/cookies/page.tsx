@@ -1,64 +1,92 @@
 export default function CookiesPage() {
   const SE = "'Newsreader',Georgia,serif"
   const SN = "'Inter Tight',system-ui,sans-serif"
-  const secciones = [
-    { titulo: '1. ¿Qué son las cookies?', texto: 'Las cookies son pequeños archivos de texto que un sitio web almacena en el dispositivo del usuario al visitarlo. Sirven para recordar preferencias, mantener sesiones activas o analizar el comportamiento de uso.' },
-    { titulo: '2. ¿Usa ia.rest cookies?', texto: 'ia.rest utiliza un número muy reducido de cookies, estrictamente las necesarias para el funcionamiento del servicio. Para analítica web usamos Plausible Analytics, una herramienta que no utiliza cookies, no rastrea usuarios de forma individual y procesa los datos en servidores ubicados en la Unión Europea. No utilizamos cookies de seguimiento, publicidad ni perfilado de terceros.' },
-    { titulo: '3. Cookies técnicas propias (necesarias)', texto: null, tabla: [
-      ['Cookie / Almacenamiento', 'Tipo', 'Finalidad', 'Duración'],
-      ['ia_rest_session (localStorage)', 'Técnica', 'Mantiene la sesión del usuario autenticado (rol, restaurante, token)', 'Sesión / hasta cierre manual'],
-      ['ia_rest_vox (localStorage)', 'Técnica', 'Preferencia de activación de lectura TTS del camarero', 'Persistente'],
-      ['ia_rest_font_size (localStorage)', 'Técnica', 'Preferencia de tamaño de fuente en KDS', 'Persistente'],
-      ['ia_rest_zona (localStorage)', 'Técnica', 'Última zona de sala seleccionada', 'Persistente'],
-      ['Cookies de sesión Stripe', 'Técnica', 'Necesarias para el proceso de pago en Stripe Checkout. Gestionadas por Stripe Payments Europe.', 'Sesión de pago'],
-    ]},
-    { titulo: '4. Almacenamiento local (localStorage / sessionStorage)', texto: 'ia.rest utiliza principalmente localStorage del navegador (no cookies HTTP) para almacenar preferencias de usuario y datos de sesión. Este almacenamiento es local al dispositivo y no se transmite a ningún servidor en cada petición, a diferencia de las cookies convencionales.\n\nCon arreglo a la Directiva ePrivacy y la interpretación de la AEPD, el uso de localStorage con finalidad técnica estrictamente necesaria no requiere consentimiento previo del usuario.' },
-    { titulo: '5. Analítica web — Plausible Analytics', texto: 'ia.rest utiliza Plausible Analytics para conocer el tráfico de la web (páginas visitadas, origen del tráfico, dispositivos). Plausible no utiliza cookies, no almacena información de identificación personal, no rastrea usuarios entre sesiones ni entre sitios web, y procesa todos los datos en servidores ubicados en la Unión Europea (Alemania).\n\nAl no utilizar cookies ni técnicas de seguimiento individual, Plausible no requiere consentimiento previo conforme a la Directiva ePrivacy y el RGPD. Puedes consultar su política de privacidad en: plausible.io/privacy.' },
-    { titulo: '6. Cookies de terceros — pagos', texto: 'Durante el proceso de pago, el usuario accede a la plataforma de Stripe Checkout, que puede establecer sus propias cookies con fines de seguridad y prevención del fraude. Puedes consultar la política de cookies de Stripe en: stripe.com/privacy.\n\nFuera del proceso de pago, ia.rest no carga ningún servicio de terceros que establezca cookies (sin píxeles de publicidad, sin redes sociales).' },
-    { titulo: '7. ¿Cómo gestionar o eliminar las cookies?', texto: 'Puedes eliminar el almacenamiento local de ia.rest en cualquier momento desde la configuración de tu navegador:\n\n· Chrome: Configuración → Privacidad → Borrar datos de navegación → Cookies y otros datos del sitio\n· Firefox: Configuración → Privacidad y seguridad → Historial → Limpiar historial reciente\n· Safari: Preferencias → Privacidad → Gestionar datos del sitio\n\nEliminar los datos de sesión cerrará tu sesión activa en ia.rest.' },
-    { titulo: '8. Más información', texto: 'Para cualquier consulta sobre esta política, escríbenos a: alberto.suarez.gutierrez@gmail.com\n\nPuedes consultar también nuestra Política de Privacidad y el Aviso Legal en los enlaces del pie de página.' },
-  ]
-  const thS = { background:'#EFE7D6', fontSize:12, fontWeight:700 as const, color:'#3A332C', padding:'10px 14px', textAlign:'left' as const, borderBottom:'1px solid #D8CDB6' }
-  const tdS = { fontSize:13, color:'#6B5F52', padding:'10px 14px', borderBottom:'1px solid #D8CDB6', verticalAlign:'top' as const }
+
+  const s: React.CSSProperties = {
+    maxWidth: 720, margin: '0 auto', padding: '72px 48px 120px',
+    fontFamily: SN, background: '#14110E', minHeight: '100vh', color: '#F6F1E7'
+  }
+
   return (
-    <div style={{ minHeight:'100vh', background:'#F6F1E7', color:'#1A1714', padding:'48px 20px', fontFamily:SN }}>
-      <div style={{ maxWidth:720, margin:'0 auto' }}>
-        <a href="/" style={{ textDecoration:'none', display:'block', marginBottom:40 }}>
-          <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:26, color:'#1A1714' }}>ia<span style={{ color:'#D9442B' }}>.</span>rest</span>
-        </a>
-        <h1 style={{ fontFamily:SE, fontStyle:'italic', fontSize:36, color:'#1A1714', margin:'0 0 8px', letterSpacing:'-0.5px' }}>Política de cookies</h1>
-        <p style={{ fontSize:13, color:'#6B5F52', margin:'0 0 40px' }}>Última actualización: mayo 2026</p>
-        {secciones.map((s, i) => (
-          <div key={i} style={{ marginBottom:32, paddingBottom:32, borderBottom: i < secciones.length-1 ? '1px solid #D8CDB6' : 'none' }}>
-            <h2 style={{ fontFamily:SE, fontStyle:'italic', fontSize:20, color:'#1A1714', margin:'0 0 12px' }}>{s.titulo}</h2>
-            {s.texto && s.texto.split('\n\n').map((p, j) => (
-              <p key={j} style={{ fontSize:14, color:'#6B5F52', lineHeight:1.8, margin:'0 0 10px', whiteSpace:'pre-line' }}>{p}</p>
-            ))}
-            {s.tabla && (
-              <div style={{ overflowX:'auto', marginTop:8 }}>
-                <table style={{ width:'100%', borderCollapse:'collapse', border:'1px solid #D8CDB6', borderRadius:8, overflow:'hidden', fontSize:13 }}>
-                  <thead>
-                    <tr>{s.tabla[0].map((h, j) => <th key={j} style={thS}>{h}</th>)}</tr>
-                  </thead>
-                  <tbody>
-                    {s.tabla.slice(1).map((row, ri) => (
-                      <tr key={ri} style={{ background: ri % 2 === 0 ? '#FFFDF9' : '#F6F1E7' }}>
-                        {row.map((cell, ci) => <td key={ci} style={tdS}>{cell}</td>)}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        ))}
-        <div style={{ marginTop:40, paddingTop:24, borderTop:'1px solid #D8CDB6', display:'flex', gap:16, flexWrap:'wrap' }}>
-          <a href="/aviso-legal" style={{ color:'#D9442B', fontSize:13, textDecoration:'underline' }}>Aviso legal</a>
-          <a href="/privacidad" style={{ color:'#D9442B', fontSize:13, textDecoration:'underline' }}>Política de privacidad</a>
-          <a href="/terminos" style={{ color:'#6B5F52', fontSize:13, textDecoration:'underline' }}>Términos de uso</a>
-          <a href="/" style={{ color:'#6B5F52', fontSize:13, textDecoration:'underline' }}>Volver al inicio</a>
-        </div>
+    <>
+      <style>{`
+        body { background: #14110E; }
+        .legal-nav { position: sticky; top: 0; z-index: 10; padding: 0 48px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(246,241,231,0.08); background: rgba(20,17,14,.95); backdrop-filter: blur(16px); }
+        .legal-nav a { text-decoration: none; }
+        .logo { font-family: ${SE}; font-size: 20px; font-weight: 300; color: #F6F1E7; }
+        .logo b { color: #D9442B; font-weight: 300; }
+        .back { font-size: 13px; color: #6B6054; transition: color .2s; }
+        .back:hover { color: #F6F1E7; }
+        .doc h1 { font-family: ${SE}; font-size: clamp(32px,4vw,48px); font-weight: 300; letter-spacing: -1.5px; color: #F6F1E7; margin-bottom: 12px; }
+        .doc .meta { font-size: 12px; color: #6B6054; margin-bottom: 52px; padding-bottom: 32px; border-bottom: 1px solid rgba(246,241,231,0.08); }
+        .doc h2 { font-family: ${SE}; font-size: 22px; font-weight: 300; color: #F6F1E7; letter-spacing: -.5px; margin: 40px 0 14px; }
+        .doc p { font-size: 15px; color: #D8CDB6; line-height: 1.8; margin-bottom: 14px; font-weight: 300; }
+        .doc a { color: #D8CDB6; transition: color .2s; }
+        .doc a:hover { color: #F6F1E7; }
+        .doc strong { color: #F6F1E7; font-weight: 500; }
+        .cookie-table { width: 100%; border-collapse: collapse; margin: 16px 0 24px; font-size: 14px; }
+        .cookie-table th { text-align: left; padding: 12px 16px; border-bottom: 1px solid rgba(246,241,231,.12); color: #6B6054; font-weight: 600; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; }
+        .cookie-table td { padding: 14px 16px; border-bottom: 1px solid rgba(246,241,231,0.07); color: #D8CDB6; line-height: 1.5; vertical-align: top; }
+        .cookie-table td:first-child { color: #F6F1E7; font-weight: 500; }
+        .tag { display: inline-block; font-size: 10px; font-weight: 600; padding: 3px 8px; border-radius: 4px; letter-spacing: .06em; text-transform: uppercase; }
+        .tag-tec { background: rgba(110,189,115,.1); color: #6EBD73; border: 1px solid rgba(110,189,115,.2); }
+        .tag-ext { background: rgba(232,163,59,.1); color: #E8A33B; border: 1px solid rgba(232,163,59,.2); }
+        @media(max-width:600px) { .legal-nav { padding: 0 20px; } .doc { padding: 56px 20px 80px !important; } .cookie-table { font-size: 12px; } .cookie-table th, .cookie-table td { padding: 10px 8px; } }
+      `}</style>
+      <nav className="legal-nav">
+        <a href="/" className="logo">ia<b>.</b>rest</a>
+        <a href="/" className="back">← Volver</a>
+      </nav>
+      <div className="doc" style={s}>
+        <h1>Política de cookies</h1>
+        <div className="meta">Última actualización: mayo 2026 · ia.rest</div>
+
+        <h2>¿Qué son las cookies?</h2>
+        <p>Las cookies son pequeños archivos de texto que los sitios web almacenan en tu dispositivo. Permiten recordar preferencias y mejorar la experiencia de navegación.</p>
+
+        <h2>Cookies que utilizamos</h2>
+        <table className="cookie-table">
+          <thead>
+            <tr>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Finalidad</th>
+              <th>Duración</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>cookies_ia</td>
+              <td><span className="tag tag-tec">Técnica</span></td>
+              <td>Recuerda tu preferencia sobre el banner de cookies</td>
+              <td>1 año</td>
+            </tr>
+            <tr>
+              <td>Google Fonts</td>
+              <td><span className="tag tag-ext">Terceros</span></td>
+              <td>Carga de fuentes tipográficas desde servidores de Google. Puede transmitir tu IP a Google LLC (EE.UU.) bajo Cláusulas Contractuales Estándar</td>
+              <td>Sesión</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <p>ia.rest <strong>no utiliza cookies de seguimiento, analíticas ni publicitarias</strong>. No hay Google Analytics, píxeles de Meta ni herramientas similares.</p>
+
+        <h2>Cómo gestionar las cookies</h2>
+        <p>Puedes aceptar o rechazar las cookies no esenciales desde el banner al acceder al sitio. También puedes configurar tu navegador:</p>
+        <p>
+          <a href="https://support.google.com/chrome/answer/95647" target="_blank" rel="noopener">Chrome</a>
+          {' · '}
+          <a href="https://support.mozilla.org/es/kb/habilitar-y-deshabilitar-cookies" target="_blank" rel="noopener">Firefox</a>
+          {' · '}
+          <a href="https://support.apple.com/es-es/guide/safari/sfri11471/mac" target="_blank" rel="noopener">Safari</a>
+          {' · '}
+          <a href="https://support.microsoft.com/es-es/windows/eliminar-y-administrar-cookies" target="_blank" rel="noopener">Edge</a>
+        </p>
+
+        <h2>Más información</h2>
+        <p>Para cualquier consulta: <a href="mailto:hola@iarest.es">hola@iarest.es</a>. Consulta también nuestra <a href="/privacidad">Política de privacidad</a>.</p>
       </div>
-    </div>
+    </>
   )
 }
