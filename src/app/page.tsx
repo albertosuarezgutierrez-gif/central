@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef } from "react";
 
 const CSS = `
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;0,6..72,500;1,6..72,300;1,6..72,400;1,6..72,500&family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&family=Caveat:wght@500;600;700&display=swap');
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg:#F6F1E7;--bg2:#FBF8F1;--bg3:#EFE7D6;--bg4:#E5DAC2;
