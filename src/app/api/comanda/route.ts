@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     const hacerServicio =
       esPrimera && incluir_servicio &&
       servicioActivoFinal && rest?.servicio_auto &&
-      num_comensales > 0
+      (num_comensales ?? 0) > 0
 
     // Crear comanda
     const { data: comanda, error: cmdErr } = await supabase
@@ -214,7 +214,7 @@ export async function POST(req: NextRequest) {
       itemsToInsert.unshift({
         comanda_id: comanda.id,
         nombre: `${rest.servicio_nombre} (${num_comensales} pax)`,
-        cantidad: num_comensales,
+        cantidad: num_comensales ?? 1,
         notas: null,
         producto_id: null,
         precio_unitario: servicioPrecioFinal,
@@ -326,8 +326,8 @@ export async function POST(req: NextRequest) {
         num_comensales,
         items_resumen:  `${rest.servicio_nombre} · ${num_comensales} pax`,
         items_detalle:  [
-          { nombre: 'Pan / aceite',           cantidad: num_comensales },
-          { nombre: 'Cubiertos completos',     cantidad: num_comensales },
+          { nombre: 'Pan / aceite',           cantidad: num_comensales ?? 1 },
+          { nombre: 'Cubiertos completos',     cantidad: num_comensales ?? 1 },
           { nombre: 'Agua / carta de bebidas', cantidad: 1 },
         ],
         recogido: false,
