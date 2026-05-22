@@ -1,3 +1,6 @@
+// NOTA BD: tabla real = personal. View camareros existe para retrocompat PostgREST.
+// En joins Supabase: usar camareros(campo) — NUNCA camareros:personal(campo).
+// Para .from(): usar personal directamente.
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad,
       created_at, trial_end, max_camareros, stripe_subscription_id,
-      camareros:personal(count),
+      camareros(count),
       mesas:mesas(count),
       comandas:comandas(count)
     `)
