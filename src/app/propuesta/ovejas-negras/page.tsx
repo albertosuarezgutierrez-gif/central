@@ -48,9 +48,12 @@ const config: ClienteConfig = {
   citaStock: 'La dejancia pura.',
   hoyVsIaRest: {
     hoy: ['Recepción manual sin cruce vs pedido', 'Caducidades a ojo o en papel', '€0,30 por albarán digitalizar', 'Sin historial de precios', 'Mermas no registradas', 'Sin alerta de retirada de mercado'],
-    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🏦 Orden de pago auto al confirmar recepción OK', '🔍 Link RASFF UE por cada producto recibido'],
+    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🏦 Orden de pago auto al confirmar recepción OK', '🔍 Link RASFF UE por cada producto recibido', '📊 Contabilidad: cierre diario + 303 + exportación A3 para la asesoría'],
   },
   datosEstrategicos: [
+    { titulo:"Para el contable: 40 horas al mes → 4 horas",
+      desc:"Hoy Ricardo recibe: un cajón de albaranes, tickets sin orden y tiene que reconstruir la contabilidad desde cero cada trimestre. Con ia.rest recibe: SUENLACE.DAT listo para importar en A3, casillas del 303 calculadas, facturas de compra validadas automáticamente contra las recepciones, y un log completo de pagos a proveedores. Sin llamar a nadie. Sin pedir nada al restaurante."
+    },
     { titulo:"Lo que hace Mercadona — y ahora tú", desc:"Mercadona obliga a sus proveedores a usar EDI: el proveedor envía el albarán digital antes de llegar, el sistema lo valida automáticamente contra el pedido y procesa el pago sin intervención humana. ia.rest trae exactamente eso a la hostelería — sin ERP millonario, con un simple link que funciona en cualquier móvil." },
     { titulo:"Central de compras", desc:"2% sobre 8M€ en volumen = 160.000€/año para el grupo. Con datos unificados de todos los locales, tienes el mismo poder de negociación que una cadena." },
     { titulo:"Inteligencia de precios", desc:"Detección temprana de subidas. \"Tu restaurante paga 23% más de jamón que la media del grupo.\" Notificación automática al responsable de compras — sea el owner, el jefe de sala o el contable." },
@@ -81,6 +84,9 @@ const config: ClienteConfig = {
         '📧 Email al proveedor con link portal ASN (72h, sin contraseña ni app)',
         '📷 Proveedor escanea la etiqueta de cada caja → IA extrae lote y caducidad automáticamente',
         '🔢 Si la caja tiene GS1-128 (estándar Mercadona/Carrefour) → datos en 1 segundo sin IA',
+        '📩 RECADV automático al proveedor al confirmar: "recibido OK, pago previsto el DD/MM"',
+        '🧾 Proveedor sube su factura desde el mismo portal → OCR extrae importe automáticamente',
+        '✅ Validación 3 vías: pedido vs recepción vs factura — si cuadra, pago aprobado solo',
         '📱 WhatsApp de respaldo si no abre el email',
         '📦 Recepción pre-cargada cuando llega el camión — el recepcionista solo confirma diferencias',
         '⚠️ Incidencia detectada → email al proveedor + email al responsable de compras (sea quien sea)',
@@ -112,6 +118,23 @@ const config: ClienteConfig = {
       ],
       ruta: '/owner → Carta → Pagos',
       color: '#1E3A5F',
+    } as ModuloCustom,
+    {
+      emoji: '📊',
+      titulo: 'Contabilidad integrada',
+      sub: 'El 303 ya calculado. El fichero para la asesoría con un clic.',
+      desc: 'El sistema genera el asiento contable del día automáticamente desde los tickets. Al final del trimestre, los datos del modelo 303 están calculados y las casillas listas para copiar. El contable recibe el fichero en el formato de su software (A3, Sage, Holded o CSV) — sin tener que pedir nada al restaurante.',
+      ejemplos: [
+        '🔒 Cierre diario automático: cada ticket genera su asiento contable (base + IVA por tipo)',
+        '📋 Modelo 303 calculado: IVA repercutido, IVA soportado, resultado, casillas exactas listas',
+        '📤 Exportación un clic: A3 SUENLACE.DAT (el más usado en asesorías españolas), Sage, Holded o CSV',
+        '💰 P&L del mes en tiempo real: ingresos, resultado bruto, food cost %, ticket medio',
+        '🔄 Facturas de compra con validación 3 vías: pedido vs recepción vs factura del proveedor',
+        '⚙️ Adaptable: IS (sociedades), IRPF estimación directa o módulos — Plan de cuentas PGC editable',
+        '📅 VeriFactu ya implementado: obligatorio 1-ene-2027 — Ovejas Negras llegará preparada',
+      ],
+      ruta: '/owner → Carta → Contabilidad',
+      color: '#1A2E1A',
       activo: true,
     } as ModuloCustom,
     {
@@ -154,7 +177,7 @@ const config: ClienteConfig = {
   respuestaObjecion: 'No somos mejor que cada especialista. Somos lo que ninguno puede darte solo: la integración.',
   fasePiloto: [
     { fase:'Semana 1-2', color:C.red, items:['Configuración local piloto','Comandas por voz + KDS vistas','OCR albarán + recepción con EAN y lote','Ciclo de compras: pedido → ASN → recepción'] },
-    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Ficha proveedor + alertas WhatsApp incidencias','Elaboraciones APPCC + etiquetas 1169/2011'] },
+    { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Contabilidad: cierre diario + 303 trimestral','Ficha proveedor + alertas WhatsApp incidencias','Elaboraciones APPCC + etiquetas 1169/2011'] },
     { fase:'Mes 2+', color:C.green, items:['RRHH grupo centralizado','Previsión por eventos → pedido automático IA','Central de compras + benchmarking locales','Informe mensual proveedores con 1 clic'] },
   ],
 }
