@@ -642,10 +642,13 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     <a href="#contacto">Contacto</a>
   </div>
   <div class="f-copy" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
-    <span>© 2026 ia.rest</span>
+    <span>© 2026 ia.rest · NIF 28823484E</span>
     <a href="/privacidad" style="color:var(--ink3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink3)'">Privacidad</a>
     <a href="/aviso-legal" style="color:var(--ink3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink3)'">Aviso legal</a>
     <a href="/cookies" style="color:var(--ink3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink3)'">Cookies</a>
+  </div>
+  <div style="width:100%;text-align:center;margin-top:12px;font-size:11px;color:var(--ink3);line-height:1.5">
+    Sistema de IA de riesgo limitado conforme al Reglamento (UE) 2024/1689 (EU AI Act) · Art. 50 · Supervisión humana activa en todas las decisiones · <a href="/privacidad#ia" style="color:var(--ink3);text-decoration:underline;text-underline-offset:2px">Más información</a>
   </div>
 </footer>
 
@@ -657,8 +660,8 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     <a href="/cookies" style="color:var(--ink2);text-decoration:underline;text-underline-offset:2px">Más información</a>
   </p>
   <div style="display:flex;gap:10px;flex-shrink:0">
-    <button onclick="rechazarCookies()" style="padding:9px 18px;background:none;border:1px solid rgba(246,241,231,.15);border-radius:6px;color:var(--ink3);font-size:13px;font-family:'Inter Tight',sans-serif;cursor:pointer">Solo necesarias</button>
-    <button onclick="aceptarCookies()" style="padding:9px 18px;background:var(--red);border:none;border-radius:6px;color:var(--ink);font-size:13px;font-weight:600;font-family:'Inter Tight',sans-serif;cursor:pointer">Aceptar</button>
+    <button onclick="rechazarCookies()" style="padding:9px 18px;background:none;border:1px solid rgba(246,241,231,.15);border-radius:6px;color:var(--ink3);font-size:13px;font-family:'Inter Tight',sans-serif;cursor:pointer">Rechazar todo</button>
+    <button onclick="aceptarCookies()" style="padding:9px 18px;background:var(--red);border:none;border-radius:6px;color:var(--ink);font-size:13px;font-weight:600;font-family:'Inter Tight',sans-serif;cursor:pointer">Aceptar todo</button>
   </div>
 </div>` }} />
     </>
