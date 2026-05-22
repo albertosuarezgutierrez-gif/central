@@ -559,6 +559,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const [tab, setTab]     = useState<Tab>('hablar')
   const [vinoOpen, setVinoOpen] = useState(false)
   const [screen, setScreen] = useState<Screen>('idle')
+  // ── Aviso IA (Art. 50 Reglamento UE 2024/1689) ──────────────────
+  // Se muestra una sola vez por dispositivo. El chip en el header permite reabrirlo.
+  const [showAvisoIA, setShowAvisoIA] = useState(false)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    if (!localStorage.getItem('ia_aviso_ia_v1')) setShowAvisoIA(true)
+  }, [])
   const [cuentasCount, setCuentasCount] = useState(0)
   const [iniciandoTurno, setIniciandoTurno] = useState(false)
   const [transcript, setTranscript] = useState('')
@@ -1786,6 +1793,54 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     <div className="edge-root" style={{height:'100dvh',background:C.bg,display:'flex',flexDirection:'column',overflow:'hidden',fontFamily:SN,position:'relative',color:C.ink,zoom:fontBig?'110%':'100%'}}>
       {/* Modal recomendador de vino */}
       <VinoModal open={vinoOpen} onClose={()=>setVinoOpen(false)} session={session} tema="dark" />
+
+      {/* AVISO IA — Art. 50 Reglamento (UE) 2024/1689 — obligatorio desde 2-ago-2026
+          Aparece una vez por dispositivo. El chip del header permite releerlo. */}
+      {showAvisoIA && (
+        <div style={{position:'fixed',inset:0,zIndex:200,background:'rgba(10,8,6,.88)',display:'flex',alignItems:'flex-end',justifyContent:'center',animation:'slideUp .25s ease'}}
+          onClick={e=>{if(e.target===e.currentTarget){localStorage.setItem('ia_aviso_ia_v1','1');setShowAvisoIA(false)}}}>
+          <div style={{background:'#1A1714',borderRadius:'20px 20px 0 0',border:'1px solid #2E2924',borderBottom:'none',padding:'24px 22px 32px',width:'100%',maxWidth:480,boxShadow:'0 -8px 40px rgba(0,0,0,.55)'}}>
+            <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:18}}>
+              <div style={{width:40,height:40,borderRadius:12,flexShrink:0,background:'#D9442B18',border:'1px solid #D9442B44',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#D9442B" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 1 3 3v7a3 3 0 0 1-6 0V5a3 3 0 0 1 3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v4"/></svg>
+              </div>
+              <div>
+                <div style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:16,fontWeight:700,color:'#F6F1E7',lineHeight:1.2}}>Sistema de IA activo</div>
+                <div style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:11,color:'#7A6D5E',marginTop:2}}>Art. 50 · Reglamento (UE) 2024/1689</div>
+              </div>
+            </div>
+            <div style={{display:'flex',flexDirection:'column',gap:10,marginBottom:20}}>
+              <p style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:14,color:'#D8CDB6',lineHeight:1.55,margin:0}}>
+                Este sistema utiliza <strong style={{color:'#F6F1E7'}}>inteligencia artificial</strong> para transcribir tu voz y estructurar comandas automáticamente.
+              </p>
+              <div style={{background:'#0E0C09',border:'1px solid #2E2924',borderRadius:10,padding:'10px 12px',display:'flex',flexDirection:'column',gap:8}}>
+                {([
+                  ['Transcripción de voz','Tu voz se convierte en texto en tiempo real. No se almacena audio.'],
+                  ['Sin identificación biométrica','La voz no se usa para identificarte. El acceso es siempre por PIN.'],
+                  ['Supervisión humana','Todas las acciones las confirmas tú. La IA solo propone.'],
+                ] as [string,string][]).map(([tit,desc])=>(
+                  <div key={tit} style={{display:'flex',gap:9,alignItems:'flex-start'}}>
+                    <div style={{width:5,height:5,borderRadius:'50%',background:'#3F7D44',flexShrink:0,marginTop:5}}/>
+                    <div>
+                      <span style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:12,fontWeight:600,color:'#F6F1E7'}}>{tit} · </span>
+                      <span style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:12,color:'#7A6D5E'}}>{desc}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:11,color:'#4A4039',lineHeight:1.5,margin:0}}>
+                Modelos IA: NVIDIA NIM · Groq Whisper · Anthropic (fallback). Datos conforme a RGPD. Más info en <a href="/privacidad" target="_blank" style={{color:'#7A6D5E'}}>iarest.es/privacidad</a>
+              </p>
+            </div>
+            <button
+              onClick={()=>{localStorage.setItem('ia_aviso_ia_v1','1');setShowAvisoIA(false)}}
+              style={{width:'100%',padding:'14px 0',background:'linear-gradient(135deg,#E85540,#D9442B)',border:'none',borderRadius:12,fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:15,fontWeight:700,color:'#fff',cursor:'pointer',boxShadow:'0 4px 16px #D9442B44'}}
+            >
+              Entendido, continuar
+            </button>
+          </div>
+        </div>
+      )}
       <style>{`
         @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
         @keyframes ldot{0%,100%{opacity:1}50%{opacity:.3}}
@@ -1959,6 +2014,15 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
             )}
           </div>
           <SugerenciaButton session={session} tema="light" variant="inline" />
+          {/* Chip IA — transparencia permanente, toca para releer el aviso */}
+          <button
+            onClick={()=>setShowAvisoIA(true)}
+            title="Información sobre el sistema de IA"
+            style={{height:24,padding:'0 8px',display:'flex',alignItems:'center',gap:4,background:'#D9442B12',border:'1px solid #D9442B33',borderRadius:20,cursor:'pointer',flexShrink:0}}
+          >
+            <div style={{width:5,height:5,borderRadius:'50%',background:'#D9442B',animation:'ldot 3s infinite'}}/>
+            <span style={{fontFamily:"'Inter Tight',system-ui,sans-serif",fontSize:9,fontWeight:700,color:'#D9442B',letterSpacing:'.04em'}}>IA</span>
+          </button>
           {/* 🍷 Recomendador de vino */}
           <button onClick={()=>setVinoOpen(v=>!v)} title="Recomendar vino"
             style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
