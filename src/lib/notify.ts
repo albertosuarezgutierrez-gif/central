@@ -1,4 +1,6 @@
 // lib/notify.ts — fire-and-forget helper para sistema de monitorización
+import { tgAlert } from '@/lib/telegram'
+
 export type NivelAlerta = 'info' | 'aviso' | 'critico' | 'resuelto'
 export type ModuloAlerta = 'comanda' | 'cobro' | 'bridge' | 'qr' | 'ear' | 'stripe' | 'verifactu' | 'sesion' | 'sistema' | 'cron'
 
@@ -17,6 +19,12 @@ export function notifyError(opts: NotifyOptions): void {
     headers: { 'Authorization': `Bearer ${SERVICE_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ nivel: 'aviso', ...opts }),
   }).catch((e) => { console.error('[notify] Error:', e) })
+
+  // Telegram solo para críticos
+  if (opts.nivel === 'critico') {
+    const rid = opts.restaurante_id ? ` \`${opts.restaurante_id.slice(0, 8)}\`` : ''
+    tgAlert(`*${opts.modulo.toUpperCase()}* · ${opts.mensaje}${rid}`, 'critico')
+  }
 }
 
 export async function notifyErrorAsync(opts: NotifyOptions): Promise<string | null> {
