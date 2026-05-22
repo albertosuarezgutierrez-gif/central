@@ -406,9 +406,9 @@ export default function Page() {
     setLeadError("");
     setLeadSending(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/contact-lead`, {
+      const res = await fetch(`/api/leads/landing`, {
         method: "POST",
-        headers: { "Content-Type": "application/json", "apikey": process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY! },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ nombre: leadNombre.trim(), restaurante: leadRest.trim(), telefono: leadTel.trim(), email: leadEmail.trim() }),
       });
       if (!res.ok) throw new Error("error");
