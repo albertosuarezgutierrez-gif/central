@@ -777,11 +777,18 @@ function KDSInner() {
               const pendientes = (c.items||[]).filter(it=>it.estado!=='listo')
               return (
                 <div key={c.id} style={{ position:'relative', background:urgente?'rgba(217,68,43,.06)':col===K.amb?'rgba(232,163,59,.06)':'rgba(63,125,68,.04)', border:`1px solid ${urgente?'rgba(217,68,43,.3)':col===K.amb?'rgba(232,163,59,.25)':'rgba(63,125,68,.2)'}`, borderRadius:10, padding:'8px 12px', animation:'slideIn .3s ease' }}>
-                  {allDone && (
-                    <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.8)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
-                      <span style={{ fontFamily:SM, fontSize:12, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
-                    </div>
-                  )}
+                  {(()=>{
+                    const hayPendientesPesar = (c.items||[]).some(it=>(it as unknown as {peso_gramos:number|null;precio_kg_en_venta:number|null}).peso_gramos===null&&(it as unknown as {precio_kg_en_venta:number|null}).precio_kg_en_venta)
+                    return allDone && !hayPendientesPesar ? (
+                      <div onClick={()=>cerrar(c.id,c.mesa_id,c.camarero_id,c.mesa?.codigo)} style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.8)', display:'flex', alignItems:'center', justifyContent:'center', cursor:'pointer', zIndex:2 }}>
+                        <span style={{ fontFamily:SM, fontSize:12, fontWeight:700, letterSpacing:'.1em', color:K.gr }}>LISTO — TAP</span>
+                      </div>
+                    ) : allDone && hayPendientesPesar ? (
+                      <div style={{ position:'absolute', inset:0, background:'rgba(13,11,8,.8)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:2 }}>
+                        <span style={{ fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.08em', color:K.amb }}>⚖ PESAR ANTES DE MARCHAR</span>
+                      </div>
+                    ) : null
+                  })()}
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     <span style={{ fontFamily:SE, fontSize:22, fontWeight:500, color:K.fg, lineHeight:1, minWidth:50 }}>{c.mesa?.codigo}</span>
                     <span style={{ fontFamily:SM, fontSize:11, color:col, fontWeight:700, animation:urgente?'pulse 1.5s ease-in-out infinite':'none' }}>{edadStr(c.created_at)}</span>
@@ -791,18 +798,26 @@ function KDSInner() {
                       </span>
                     )}
                     <div style={{ flex:1, display:'flex', flexWrap:'wrap', gap:4 }}>
-                      {(c.items||[]).map(it=>(
-                        <span key={it.id} onClick={()=>toggle(it.id,it.estado)}
-                          style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.04em', textTransform:'uppercase',
-                            background:it.estado==='listo'?'rgba(63,125,68,.15)':K.rS,
-                            border:`1px solid ${it.estado==='listo'?K.gr:K.rule}`,
-                            color:it.estado==='listo'?K.gr:K.fg,
-                            textDecoration:it.estado==='listo'?'line-through':'none',
-                            opacity:it.estado==='listo'?0.5:1, transition:'all .15s' }}>
-                          {it.cantidad}× {it.nombre}
-                          {it.notas&&<span style={{ color:K.amb, fontWeight:400 }}> ·{it.notas}</span>}
-                        </span>
-                      ))}
+                      {(c.items||[]).map(it=>{
+                        const itEx = it as unknown as {peso_gramos:number|null;pesado_en_cocina:boolean;precio_kg_en_venta:number|null}
+                        const pendientePesar = itEx.peso_gramos===null && !!itEx.precio_kg_en_venta
+                        return (
+                          <span key={it.id}
+                            onClick={()=> pendientePesar
+                              ? setItemAPesar({ id:it.id, nombre:it.nombre, precio_por_kg:itEx.precio_kg_en_venta })
+                              : toggle(it.id,it.estado)}
+                            style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:11, fontWeight:700, letterSpacing:'.04em', textTransform:'uppercase',
+                              background: pendientePesar?'rgba(232,163,59,.2)':it.estado==='listo'?'rgba(63,125,68,.15)':K.rS,
+                              border:`1px solid ${pendientePesar?K.amb:it.estado==='listo'?K.gr:K.rule}`,
+                              color: pendientePesar?K.amb:it.estado==='listo'?K.gr:K.fg,
+                              textDecoration:it.estado==='listo'?'line-through':'none',
+                              opacity:it.estado==='listo'?0.5:1, transition:'all .15s' }}>
+                            {pendientePesar ? '⚖ ' : ''}{it.cantidad}× {it.nombre}
+                            {itEx.pesado_en_cocina && itEx.peso_gramos ? <span style={{ color:K.gr }}> {itEx.peso_gramos}g</span> : null}
+                            {it.notas&&<span style={{ color:K.amb, fontWeight:400 }}> ·{it.notas}</span>}
+                          </span>
+                        )
+                      })}
                     </div>
                     <span style={{ fontFamily:SM, fontSize:9, color:K.fg3 }}>{pendientes.length}/{(c.items||[]).length}</span>
                   </div>
