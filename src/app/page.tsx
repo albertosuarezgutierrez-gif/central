@@ -668,7 +668,7 @@ export default function Page() {
         <div className="mods-head reveal">
           <div className="section-tag">Todo lo que incluye</div>
           <h2>Un sistema completo<br/>para <em>cada punto del servicio</em></h2>
-          <p>Desde la primera comanda hasta el cierre de caja. Sala, cocina, barra, delivery y Hacienda.</p>
+          <p>Desde la primera comanda hasta el cierre de caja. Sala, cocina, barra, delivery, Hacienda y tu asesoría.</p>
         </div>
         <div className="mgrid">
           {[
@@ -692,6 +692,9 @@ export default function Page() {
             {ico:"🧪",t:"Elaboraciones y APPCC",d:"Fichas técnicas, alérgenos y trazabilidad de elaboraciones. Cumplimiento legal listo para una inspección.",badge:{t:"Obligatorio por ley",cls:"b-legal"},cls:""},
             {ico:"📊",t:"Análisis de carta",d:"Identifica tus platos estrella, los que no rinden y los que más margen te dejan. Decide con datos.",badge:null,cls:""},
             {ico:"🛵",t:"Delivery",d:"Pedidos a domicilio y recogida integrados directamente en el KDS.",badge:null,cls:""},
+            {ico:"📊",t:"Contabilidad integrada",d:"Cierre diario automático, modelo 303 calculado y exportación A3/Sage/Holded para la asesoría. Sin pedir nada al contable.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-red"},
+            {ico:"🧮",t:"Portal asesoría",d:"El contable accede a todos sus restaurantes cliente desde un panel. P&L, 303 y exportación con un clic. Se convierte en prescriptor.",badge:{t:"Nuevo",cls:"b-new"},cls:"mc-amber"},
+            {ico:"🏪",t:"Central de almacén",d:"Grupos con varios locales ven el stock crítico de todos en tiempo real y crean pedidos grupales al proveedor — mejor precio por volumen.",badge:{t:"Grupos",cls:"b-new"},cls:"mc-green"},
           ].map((m,i)=>(
             <div key={i} className={`mcard reveal${m.cls?" "+m.cls:""}`} style={{animationDelay:`${i*0.05}s`}}>
               <div className="mico2">{m.ico}</div>
@@ -714,7 +717,8 @@ export default function Page() {
               {[["🚶","Anotar en libreta → ir al TPV → introducir plato a plato","~45s","slow"],
                 ["😬","<strong>Error al teclear</strong> — el cliente recibe algo que no pidió","−€€","slow"],
                 ["📚","Personal nuevo tarda <strong>1–2 semanas</strong> en aprender el sistema","+16h","slow"],
-                ["🔥","Hora punta: cola en el TPV, cocina esperando, mesas esperando","caos","slow"]
+                ["🔥","Hora punta: cola en el TPV, cocina esperando, mesas esperando","caos","slow"],
+                ["📁","El contable recibe un cajón de albaranes cada trimestre y tarda 40h en cuadrar","40h","slow"]
               ].map(([i,t,v,cls],idx)=>(
                 <div key={idx} className="bar2">
                   <span className="bari">{i}</span>
@@ -730,7 +734,8 @@ export default function Page() {
               {[["🎙️","Dictar la comanda de pie en la mesa → en cocina ya","4s","fast"],
                 ["✅","La IA estructura exactamente lo que pidieron, <strong>sin errores de tecleo</strong>","0 errores","fast"],
                 ["🚀","Personal nuevo operativo en <strong>5 minutos</strong> — hablan, no aprenden menús","5min","fast"],
-                ["😎","Hora punta fluida. Cada camarero es una línea directa a cocina","control","fast"]
+                ["😎","Hora punta fluida. Cada camarero es una línea directa a cocina","control","fast"],
+                ["📊","El contable recibe el fichero A3 listo y el 303 calculado — sin llamar a nadie","4h","fast"]
               ].map(([i,t,v,cls],idx)=>(
                 <div key={idx} className="bar2">
                   <span className="bari">{i}</span>
@@ -819,6 +824,29 @@ export default function Page() {
           <div key={b} className="ti"><span className="ico">{ico}</span><span><strong>{b}</strong>{t}</span></div>
         ))}
       </div>
+
+      {/* PORTALES EXTERNOS */}
+      <section className="pain" style={{background:"#1E1A15"}}>
+        <div className="section-tag">Para grupos y asesorías</div>
+        <div className="pgrid">
+          <div className="ptxt reveal">
+            <h2>Portales externos<br/><strong>para quien lo necesita</strong></h2>
+            <p>El contable de tu grupo recibe el 303 calculado y el fichero A3 con un clic — sin llamarte. El director de compras ve el stock crítico de todos tus locales y lanza un pedido grupal al proveedor. Todo desde portales propios, con su PIN.</p>
+          </div>
+          <div className="pitems reveal rd1">
+            {[["🧮","Portal asesoría /asesoria","El contable ve todos sus clientes hosteleros. P\u0026L, IVA 303 calculado y exportación en su formato (A3, Sage, Holded)."],
+              ["🏪","Central de almacén /almacen-central","Stock crítico de todos los locales en tiempo real. Pedido grupal a un proveedor: mejor precio por volumen."],
+              ["📊","Contabilidad integrada","Cierre diario automático desde los tickets. Plan de cuentas PGC editable. Adaptable a IS, IRPF directa o módulos."],
+              ["🔑","Un PIN, varios módulos","La misma persona puede gestionar contabilidad y almacén con el mismo acceso. El owner decide quién ve qué."]
+            ].map(([ico,bold,txt],i)=>(
+              <div key={i} className="pitem">
+                <div className="pii">{ico}</div>
+                <div className="pit"><strong>{bold}</strong> {" "}{txt}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
 
       {/* PRICING */}
       <section className="pricing" id="precios">
