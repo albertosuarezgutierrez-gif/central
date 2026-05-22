@@ -413,7 +413,7 @@ export default function Page() {
       if (!res.ok) throw new Error("error");
       setLeadSent(true);
     } catch {
-      setLeadError("Algo falló. Escríbenos directamente a alberto.suarez.gutierrez@gmail.com");
+      setLeadError("Algo falló. Contáctanos directamente: hola@iarest.es · 637 349 990");
     } finally {
       setLeadSending(false);
     }
@@ -1007,6 +1007,7 @@ export default function Page() {
               {leadSending ? "Enviando…" : "Quiero la demo — me llamáis vosotros →"}
             </button>
             <p className="cnota">Sin tarjeta · Sin compromiso · Respuesta en menos de 24h</p>
+            <p className="cnota" style={{marginTop:12,color:"var(--cream3)"}}>¿Prefieres escribir o llamar? <a href="mailto:hola@iarest.es" style={{color:"var(--red)",textDecoration:"none"}}>hola@iarest.es</a> · <a href="tel:+34637349990" style={{color:"var(--red)",textDecoration:"none"}}>637 349 990</a></p>
           </div>
         )}
       </section>
