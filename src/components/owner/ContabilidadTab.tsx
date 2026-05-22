@@ -495,8 +495,6 @@ function ConfigTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
             { value: 'igic',         label: 'IGIC — Canarias' },
           ])}
           {field('Ejercicio fiscal', 'ejercicio_actual')}
-          {field('Email contable (para envíos automáticos)', 'email_contable', 'email')}
-          {field('Nombre contable / asesoría', 'nombre_contable')}
           {field('Formato exportación preferido', 'formato_exportacion', 'select', [
             { value: 'a3',     label: 'A3 / Wolters Kluwer' },
             { value: 'sage',   label: 'Sage 50' },
@@ -504,6 +502,14 @@ function ConfigTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
             { value: 'csv',    label: 'CSV genérico' },
             { value: 'json',   label: 'JSON' },
           ])}
+
+          {/* ── INVITAR CONTABLE / ASESORÍA ── */}
+          <div style={{ marginTop: 20, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.05em' }}>
+              Contable / Asesoría
+            </div>
+            <InvitarContable sh={sh} />
+          </div>
         </div>
         <div>
           <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.05em' }}>Plan de cuentas (PGC)</div>
@@ -523,6 +529,70 @@ function ConfigTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
       <button onClick={save} disabled={saving}
         style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, padding: '10px 24px', background: saving ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: 'pointer' }}>
         {saving ? 'Guardando…' : '💾 Guardar configuración'}
+      </button>
+    </div>
+  )
+}
+
+// ── INVITAR CONTABLE ──────────────────────────────────────────────────────────
+function InvitarContable({ sh }: { sh: () => Record<string, string> }) {
+  const [email, setEmail]     = useState('')
+  const [nombre, setNombre]   = useState('')
+  const [asesoria, setAsesoria] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg]         = useState('')
+
+  const invitar = async () => {
+    if (!email || !nombre) return
+    setLoading(true); setMsg('')
+    const r = await fetch('/api/owner/contabilidad/invitar', {
+      method: 'POST',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, nombre, nombre_asesoria: asesoria || null }),
+    })
+    const d = await r.json()
+    if (d.ok) {
+      setMsg(d.nuevo_contable
+        ? `✅ Invitación enviada a ${email}. Recibirá su PIN por email.`
+        : `✅ ${nombre} ya tenía cuenta. ${email} puede acceder desde su portal.`)
+      setEmail(''); setNombre(''); setAsesoria('')
+    } else {
+      setMsg('Error: ' + d.error)
+    }
+    setLoading(false)
+  }
+
+  return (
+    <div>
+      <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 10, lineHeight: 1.5 }}>
+        El contable o asesoría recibirá acceso al portal{' '}
+        <strong style={{ color: C.ink }}>www.iarest.es/asesoria</strong> con email y PIN generado automáticamente.
+        Si ya tiene otros clientes en ia.rest, este restaurante se añade a su lista.
+      </div>
+
+      {[
+        { label: 'Email del contable', val: email, set: setEmail, type: 'email', ph: 'contable@asesoria.es' },
+        { label: 'Nombre', val: nombre, set: setNombre, type: 'text', ph: 'Ricardo Fernández' },
+        { label: 'Nombre de la asesoría (opcional)', val: asesoria, set: setAsesoria, type: 'text', ph: 'Asesoría García & Asociados' },
+      ].map(({ label, val, set, type, ph }) => (
+        <div key={label} style={{ marginBottom: 8 }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 3 }}>{label}</div>
+          <input type={type} value={val} onChange={e => set(e.target.value)} placeholder={ph}
+            style={{ width: '100%', padding: '8px 10px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} />
+        </div>
+      ))}
+
+      {msg && (
+        <div style={{ fontFamily: SN, fontSize: 12, padding: '8px 10px', borderRadius: 8, marginBottom: 8,
+          background: msg.startsWith('✅') ? '#0A2E14' : '#2E1010',
+          color:      msg.startsWith('✅') ? '#4ADE80' : '#F87171' }}>
+          {msg}
+        </div>
+      )}
+
+      <button onClick={invitar} disabled={loading || !email || !nombre}
+        style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '8px 16px', background: loading || !email || !nombre ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+        {loading ? 'Enviando…' : '📧 Invitar al portal de contabilidad'}
       </button>
     </div>
   )
