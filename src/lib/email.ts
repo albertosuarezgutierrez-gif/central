@@ -453,3 +453,40 @@ export async function enviarEmailPagoEjecutado({
 }
 
 // ── EMAIL: RECADV — Confirmación de recepción al proveedor ───────────────────
+
+// ── EMAIL: Alerta error técnico al owner ─────────────────────────────────────
+export async function enviarEmailErrorTecnicoOwner({
+  email,
+  nombreRestaurante,
+  tipo,
+  descripcion,
+  accion,
+}: {
+  email: string
+  nombreRestaurante: string
+  tipo: string
+  descripcion: string
+  accion: string
+}) {
+  const html = layout(`
+    <div class="card">
+      <h1>⚠️ Incidencia técnica detectada</h1>
+      <p>Hemos detectado un problema técnico en <strong>${nombreRestaurante}</strong> que puede estar afectando al uso de ia.rest.</p>
+      <hr class="divider">
+      <p><strong>Tipo:</strong> ${tipo}</p>
+      <p><strong>Qué ha pasado:</strong> ${descripcion}</p>
+      <hr class="divider">
+      <h2 style="font-size:16px;font-weight:700;margin-bottom:12px;">Qué debes hacer</h2>
+      <p>${accion}</p>
+      <hr class="divider">
+      <p style="font-size:13px;color:${C.fg3};">Si el problema persiste tras seguir los pasos, responde a este email o escríbenos a <a href="mailto:hola@iarest.es">hola@iarest.es</a> y lo resolvemos de inmediato.</p>
+    </div>
+  `, `Incidencia en ${nombreRestaurante} — acción requerida`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `⚠️ Incidencia en ${nombreRestaurante} — acción requerida`,
+    html,
+  })
+}

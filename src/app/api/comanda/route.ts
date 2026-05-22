@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
 import { crearPrintJobs } from '@/lib/courier'
 import { notifyError } from '@/lib/notify'
+import { enviarEmailErrorTecnicoOwner } from '@/lib/email'
 
 // POST /api/comanda — comanda manual (sin voz)
 export async function POST(req: NextRequest) {
@@ -18,6 +19,25 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json()
   } catch {
+    // Body vacío o truncado: avisar al owner del restaurante si tenemos sesión
+    const rid = getRestauranteId(req)
+    if (rid !== '00000000-0000-0000-0000-000000000001') {
+      const supabase = createServerClient()
+      const { data: rest } = await supabase
+        .from('restaurantes')
+        .select('nombre, email_contacto')
+        .eq('id', rid)
+        .maybeSingle()
+      if (rest?.email_contacto) {
+        enviarEmailErrorTecnicoOwner({
+          email: rest.email_contacto,
+          nombreRestaurante: rest.nombre ?? 'tu restaurante',
+          tipo: 'Error al enviar comanda',
+          descripcion: 'Un dispositivo ha intentado enviar una comanda pero el mensaje llegó vacío o incompleto. Esto suele indicar una conexión de red inestable o un problema con la app en ese dispositivo.',
+          accion: 'Comprueba la conexión WiFi o de datos del dispositivo afectado. Si el problema persiste, cierra y vuelve a abrir la app de ia.rest en ese dispositivo. Si ves comandas que no han llegado a cocina, introdúcelas manualmente.',
+        }).catch(() => {}) // fire-and-forget, no bloquear respuesta
+      }
+    }
     return NextResponse.json({ error: 'Body inválido o vacío' }, { status: 400 })
   }
 
