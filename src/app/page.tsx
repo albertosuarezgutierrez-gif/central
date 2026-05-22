@@ -74,12 +74,21 @@ export default function HomePage() {
       const em = (document.getElementById("email") as HTMLInputElement).value.trim()
       const tf = (document.getElementById("telefono") as HTMLInputElement).value.trim()
       const u = (document.getElementById("usuarios") as HTMLSelectElement).value
+      // Honeypot anti-spam
+      const hp = (document.getElementById("website") as HTMLInputElement)?.value
+      if (hp) return
       let ok = true
       ;([["nombre", n], ["restaurante", r], ["email", em]] as [string,string][]).forEach(([id, v]) => {
         const el = document.getElementById(id) as HTMLInputElement
         if (!v) { el.style.borderColor = "rgba(217,68,43,.6)"; ok = false }
         else el.style.borderColor = ""
       })
+      // Validar formato email con @
+      const emailEl = document.getElementById("email") as HTMLInputElement
+      if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
+        emailEl.style.borderColor = "rgba(217,68,43,.6)"
+        ok = false
+      }
       const priv = document.getElementById("privacidad") as HTMLInputElement
       if (priv && !priv.checked) { priv.style.outline = "2px solid rgba(217,68,43,.6)"; ok = false }
       else if (priv) priv.style.outline = ""
@@ -571,6 +580,8 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
             <div class="form-top-s">Te contactamos en menos de 24h para mostrarte cómo encaja en tu local.</div>
           </div>
           <div class="form-body" id="formBody">
+            {/* Honeypot anti-spam — oculto para humanos, bots lo rellenan */}
+            <input type="text" id="website" name="website" style={{display:'none'}} tabIndex={-1} autoComplete="off"/>
             <div class="field"><label>Nombre</label><input type="text" id="nombre" placeholder="Tu nombre" autocomplete="given-name"/></div>
             <div class="field"><label>Restaurante</label><input type="text" id="restaurante" placeholder="Nombre del local" autocomplete="organization"/></div>
             <div class="field-row">
