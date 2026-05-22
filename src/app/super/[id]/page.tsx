@@ -497,12 +497,12 @@ export default function SuperRestaurantePage() {
                   {input(configForm.razon_social, v=>setConfigForm(f=>({...f,razon_social:v})), 'Restaurante Bodega La Plaza S.L.')}
                 </div>
                 <div>
-                  {label('PLAN')}
+                  {label('ESTADO DE SUSCRIPCIÓN')}
                   <select value={configForm.plan} onChange={e=>setConfigForm(f=>({...f,plan:e.target.value}))}
                     style={{width:'100%',background:C.card,border:`1px solid ${C.ruleL}`,borderRadius:6,padding:'10px 14px',fontFamily:SN,fontSize:14,color:C.ink,outline:'none'}}>
-                    <option value='barra'>BARRA · €59/mes · 1 camarero</option>
-                    <option value='servicio'>SERVICIO · €99/mes · 4 camareros</option>
-                    <option value='casa'>CASA · €169/mes · Ilimitado</option>
+                    <option value='trial'>TRIAL — periodo de prueba 14 días</option>
+                    <option value='activo'>ACTIVO — cliente de pago (Stripe)</option>
+                    <option value='inactivo'>INACTIVO — suspendido o baja</option>
                   </select>
                 </div>
                 <div style={{display:'flex',alignItems:'center',gap:12}}>

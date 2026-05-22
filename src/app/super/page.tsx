@@ -99,7 +99,9 @@ export default function SuperPage() {
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ nombre: '', slug: '', codigo_acceso: '', plan: 'starter', ciudad: 'Madrid' })
+  const [form, setForm] = useState({ nombre: '', slug: '', codigo_acceso: '', ciudad: 'Madrid' })
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
   const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'>('restaurantes')
@@ -220,7 +222,7 @@ export default function SuperPage() {
     const d = await r.json()
     if (d.error) { setErr(d.error); setSaving(false); return }
     setShowForm(false)
-    setForm({ nombre: '', slug: '', codigo_acceso: '', plan: 'starter', ciudad: 'Madrid' })
+    setForm({ nombre: '', slug: '', codigo_acceso: '', ciudad: 'Madrid' })
     setSaving(false)
     load()
   }
@@ -421,6 +423,14 @@ export default function SuperPage() {
             onCambiarEstado={cambiarEstado}
             onRecargar={loadSugerencias}
           />
+        ) : tabSuper === 'ia_training' ? (
+          <TabIATraining trainingStats={trainingStats} C={C} SE={SE} SN={SN} SM={SM} />
+        ) : tabSuper === 'sistema' ? (
+          <div style={{ padding: '24px 0' }}><SystemHealth session={session} /></div>
+        ) : tabSuper === 'autocuras' ? (
+          <div style={{ padding: '24px 0' }}><AutoCurasPanel /></div>
+        ) : tabSuper === 'soporte' ? (
+          <SoporteSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} onBadge={setBadgeSoporte} />
         ) : tabSuper === 'clientes' ? (
           <div>
             <div style={{ marginBottom: 32 }}>
@@ -533,119 +543,90 @@ export default function SuperPage() {
           </div>
         ) : (
         <div>
-        {/* Title */}
-        <div style={{ marginBottom: 48 }}>
-          <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>
-            PANEL · SUPER ADMIN
-          </div>
-          <h1 style={{ fontFamily: SE, fontSize: 48, fontWeight: 500, margin: '0 0 8px', letterSpacing: '-.02em', color: C.ink }}>
-            Restaurantes
-          </h1>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ fontFamily: SN, fontSize: 15, color: C.ink3 }}>
-              {restaurantes.length} restaurante{restaurantes.length !== 1 ? 's' : ''} activos
+        {/* KPIs globales */}
+        {!loading && restaurantes.length > 0 && (() => {
+          const activos = restaurantes.filter(r => r.activo && r.plan_status !== 'trial').length
+          const enTrial = restaurantes.filter(r => r.plan_status === 'trial').length
+          const inactivos = restaurantes.filter(r => !r.activo).length
+          return (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 28 }}>
+              {[
+                { l: 'Total', v: restaurantes.length, c: C.ink, f: 'todos' },
+                { l: 'Activos', v: activos, c: C.green, f: 'activo' },
+                { l: 'En trial', v: enTrial, c: '#E8A33B', f: 'trial' },
+                { l: 'Inactivos', v: inactivos, c: C.ink4, f: 'inactivo' },
+              ].map(m => (
+                <div key={m.l} onClick={() => setFiltroEstado(m.f as any)}
+                  style={{ background: filtroEstado === m.f ? C.bg3 : C.bg2, border: `1px solid ${filtroEstado === m.f ? C.red : C.rule}`, borderRadius: 8, padding: '12px 16px', cursor: 'pointer', transition: 'border-color .15s' }}>
+                  <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.1em', marginBottom: 4 }}>{m.l.toUpperCase()}</div>
+                  <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: m.c }}>{m.v}</div>
+                </div>
+              ))}
             </div>
-            <button
-              onClick={() => setShowForm(true)}
-              style={{
-                background: C.ink, color: C.bg, border: 'none', borderRadius: 4,
-                fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 16px',
-                cursor: 'pointer', marginLeft: 'auto',
-              }}
-            >
-              Nuevo restaurante
-            </button>
+          )
+        })()}
+
+        {/* Title + acciones */}
+        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: 1, minWidth: 200 }}>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 4 }}>PANEL · SUPER ADMIN</div>
+            <h1 style={{ fontFamily: SE, fontSize: 36, fontWeight: 500, margin: 0, letterSpacing: '-.02em', color: C.ink }}>Restaurantes</h1>
           </div>
+          <button onClick={() => setShowForm(true)} style={{
+            background: C.ink, color: C.bg, border: 'none', borderRadius: 4,
+            fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '9px 18px', cursor: 'pointer',
+          }}>+ Nuevo restaurante</button>
+        </div>
+
+        {/* Búsqueda + filtro estado */}
+        <div style={{ display: 'flex', gap: 10, marginBottom: 20, flexWrap: 'wrap' }}>
+          <input
+            value={busqueda}
+            onChange={e => setBusqueda(e.target.value)}
+            placeholder="Buscar por nombre o ciudad…"
+            style={{ flex: 1, minWidth: 180, padding: '8px 12px', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 6, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none' }}
+          />
+          {(['todos','activo','trial','inactivo'] as const).map(f => (
+            <button key={f} onClick={() => setFiltroEstado(f)} style={{
+              padding: '7px 12px', borderRadius: 6, cursor: 'pointer', fontFamily: SM, fontSize: 10, letterSpacing: '.06em',
+              background: filtroEstado === f ? C.ink : C.bg2,
+              color: filtroEstado === f ? C.bg : C.ink3,
+              border: `1px solid ${filtroEstado === f ? C.ink : C.rule}`,
+            }}>{f.toUpperCase()}</button>
+          ))}
         </div>
 
         {/* Form nueva alta */}
         {showForm && (
-          <div style={{
-            background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8,
-            padding: '28px', marginBottom: 32,
-          }}>
-            <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.1em', marginBottom: 20 }}>
-              NUEVO RESTAURANTE
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 16 }}>
+          <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '24px', marginBottom: 24 }}>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.1em', marginBottom: 16 }}>NUEVO RESTAURANTE</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 12 }}>
               {[
                 { key: 'nombre', label: 'Nombre', placeholder: 'Bodega La Plaza' },
-                { key: 'slug', label: 'Slug (subdominio)', placeholder: 'bodega-laplaza' },
+                { key: 'slug', label: 'Slug', placeholder: 'bodega-laplaza' },
                 { key: 'codigo_acceso', label: 'Código acceso', placeholder: 'BODEGA' },
+                { key: 'ciudad', label: 'Ciudad', placeholder: 'Madrid' },
               ].map(f => (
                 <div key={f.key}>
-                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.08em', marginBottom: 6 }}>
-                    {f.label.toUpperCase()}
-                  </div>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.08em', marginBottom: 6 }}>{f.label.toUpperCase()}</div>
                   <input
                     value={(form as any)[f.key]}
                     onChange={e => setForm(p => ({ ...p, [f.key]: e.target.value }))}
                     placeholder={f.placeholder}
-                    style={{
-                      width: '100%', padding: '10px 12px',
-                      background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 4,
-                      fontFamily: SN, fontSize: 14, color: C.ink, outline: 'none',
-                      boxSizing: 'border-box',
-                    }}
+                    style={{ width: '100%', padding: '9px 12px', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 4, fontFamily: SN, fontSize: 13, color: C.ink, outline: 'none', boxSizing: 'border-box' }}
                   />
                 </div>
               ))}
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 16 }}>
-              <div>
-                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.08em', marginBottom: 6 }}>PLAN</div>
-                <select
-                  value={form.plan}
-                  onChange={e => setForm(p => ({ ...p, plan: e.target.value }))}
-                  style={{
-                    width: '100%', padding: '10px 12px',
-                    background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 4,
-                    fontFamily: SN, fontSize: 14, color: C.ink, outline: 'none',
-                  }}
-                >
-                  <option value="starter">Starter</option>
-                  <option value="pro">Pro</option>
-                  <option value="enterprise">Enterprise</option>
-                </select>
-              </div>
-              <div>
-                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.08em', marginBottom: 6 }}>CIUDAD</div>
-                <input
-                  value={form.ciudad}
-                  onChange={e => setForm(p => ({ ...p, ciudad: e.target.value }))}
-                  placeholder="Madrid"
-                  style={{
-                    width: '100%', padding: '10px 12px',
-                    background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 4,
-                    fontFamily: SN, fontSize: 14, color: C.ink, outline: 'none',
-                    boxSizing: 'border-box',
-                  }}
-                />
-              </div>
+            <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginBottom: 12, padding: '8px 12px', background: C.bg3, borderRadius: 6 }}>
+              💡 Arranca en <strong style={{ color: '#E8A33B' }}>trial 14 días</strong>. Pricing por usuarios+mesas configurado en Stripe.
             </div>
-            {err && (
-              <div style={{ fontFamily: SN, fontSize: 13, color: C.red, marginBottom: 12 }}>{err}</div>
-            )}
-            <div style={{ display: 'flex', gap: 12 }}>
-              <button
-                onClick={crear}
-                disabled={saving}
-                style={{
-                  background: C.red, color: '#F6F1E7', border: 'none', borderRadius: 4,
-                  fontFamily: SN, fontSize: 14, fontWeight: 600, padding: '10px 20px',
-                  cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1,
-                }}
-              >
+            {err && <div style={{ fontFamily: SN, fontSize: 13, color: C.red, marginBottom: 10 }}>{err}</div>}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button onClick={crear} disabled={saving} style={{ background: C.red, color: '#F6F1E7', border: 'none', borderRadius: 4, fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '9px 18px', cursor: saving ? 'default' : 'pointer', opacity: saving ? 0.7 : 1 }}>
                 {saving ? 'Creando...' : 'Crear restaurante'}
               </button>
-              <button
-                onClick={() => { setShowForm(false); setErr('') }}
-                style={{
-                  background: 'none', border: `1px solid ${C.rule}`, borderRadius: 4,
-                  fontFamily: SN, fontSize: 14, color: C.ink3, padding: '10px 20px',
-                  cursor: 'pointer',
-                }}
-              >
+              <button onClick={() => { setShowForm(false); setErr('') }} style={{ background: 'none', border: `1px solid ${C.rule}`, borderRadius: 4, fontFamily: SN, fontSize: 13, color: C.ink3, padding: '9px 18px', cursor: 'pointer' }}>
                 Cancelar
               </button>
             </div>
@@ -654,221 +635,171 @@ export default function SuperPage() {
 
         {/* Lista restaurantes */}
         {loading ? (
-          <div style={{ fontFamily: SM, fontSize: 12, color: C.ink4, letterSpacing: '.1em' }}>
-            CARGANDO...
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {restaurantes.map(r => (
-              <div key={r.id} className="super-rest-row" style={{
-                background: r.activo ? C.bg : C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8,
-                padding: '20px 24px',
-                opacity: r.activo ? 1 : 0.6,
-              }}>
-                {/* Info */}
-                <div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 4 }}>
-                    <div style={{ fontFamily: SN, fontSize: 18, fontWeight: 600, color: C.ink }}>{r.nombre}</div>
-                    <span style={{
-                      fontFamily: SM, fontSize: 9, fontWeight: 700,
-                      padding: '2px 7px', borderRadius: 3,
-                      background: r.activo ? C.greenS : C.bg3,
-                      color: r.activo ? C.green : C.ink4,
-                      letterSpacing: '.08em',
-                    }}>
-                      {r.activo ? 'ACTIVO' : 'INACTIVO'}
-                    </span>
-                    <span style={{
-                      fontFamily: SM, fontSize: 9, fontWeight: 700,
-                      padding: '2px 7px', borderRadius: 3,
-                      background: C.bg3, color: PLAN_COLOR[r.plan] ?? C.ink3,
-                      letterSpacing: '.08em',
-                    }}>
-                      {r.plan.toUpperCase()}
-                    </span>
-                    {r.plan_status && (
-                      <span style={{
-                        fontFamily: SM, fontSize: 9, fontWeight: 700,
-                        padding: '2px 7px', borderRadius: 3, letterSpacing: '.08em',
-                        background: r.plan_status === 'active' ? 'rgba(63,125,68,.15)' : r.plan_status === 'trial' ? 'rgba(232,163,59,.15)' : 'rgba(217,68,43,.12)',
-                        color: r.plan_status === 'active' ? '#3F7D44' : r.plan_status === 'trial' ? '#A8761A' : '#D9442B',
-                      }}>
-                        {r.plan_status === 'trial'
-                          ? `TRIAL · ${r.trial_end ? Math.max(0, Math.ceil((new Date(r.trial_end).getTime() - Date.now()) / 86400000)) + 'd' : '?'}`
-                          : r.plan_status.toUpperCase()}
+          <div style={{ fontFamily: SM, fontSize: 12, color: C.ink4, letterSpacing: '.1em' }}>CARGANDO...</div>
+        ) : (() => {
+          const filtrados = restaurantes.filter(r => {
+            const q = busqueda.toLowerCase()
+            const matchQ = !q || r.nombre.toLowerCase().includes(q) || (r.ciudad || '').toLowerCase().includes(q)
+            const matchE = filtroEstado === 'todos' ? true
+              : filtroEstado === 'activo' ? (r.activo && r.plan_status !== 'trial')
+              : filtroEstado === 'trial' ? r.plan_status === 'trial'
+              : !r.activo
+            return matchQ && matchE
+          })
+          return filtrados.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: 48, color: C.ink4, fontFamily: SM, fontSize: 12 }}>Sin resultados</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {filtrados.map(r => (
+                <div key={r.id} className="super-rest-row" style={{
+                  background: r.activo ? C.bg : C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8,
+                  padding: '18px 22px', opacity: r.activo ? 1 : 0.6,
+                }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
+                      <div style={{ fontFamily: SN, fontSize: 17, fontWeight: 600, color: C.ink }}>{r.nombre}</div>
+                      <span style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 3, background: r.activo ? C.greenS : C.bg3, color: r.activo ? C.green : C.ink4, letterSpacing: '.08em' }}>
+                        {r.activo ? 'ACTIVO' : 'INACTIVO'}
                       </span>
-                    )}
-                    {r.max_camareros && r.max_camareros < 999 && (
-                      <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, padding: '2px 6px', background: C.bg3, borderRadius: 3 }}>
-                        {r.max_camareros}u
-                      </span>
-                    )}
+                      {r.plan_status && (
+                        <span style={{ fontFamily: SM, fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 3, letterSpacing: '.08em',
+                          background: r.plan_status === 'active' ? 'rgba(63,125,68,.15)' : r.plan_status === 'trial' ? 'rgba(232,163,59,.15)' : 'rgba(217,68,43,.12)',
+                          color: r.plan_status === 'active' ? '#3F7D44' : r.plan_status === 'trial' ? '#A8761A' : '#D9442B',
+                        }}>
+                          {r.plan_status === 'trial'
+                            ? `TRIAL · ${r.trial_end ? Math.max(0, Math.ceil((new Date(r.trial_end).getTime() - Date.now()) / 86400000)) + 'd' : '?'}`
+                            : r.plan_status.toUpperCase()}
+                        </span>
+                      )}
+                      {r.max_camareros && r.max_camareros < 999 && (
+                        <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4, padding: '2px 6px', background: C.bg3, borderRadius: 3 }}>{r.max_camareros}u</span>
+                      )}
+                    </div>
+                    <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, letterSpacing: '.06em' }}>
+                      {r.slug} &nbsp;·&nbsp; {r.codigo_acceso} &nbsp;·&nbsp; {r.ciudad}
+                    </div>
                   </div>
-                  <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4, letterSpacing: '.06em' }}>
-                    {r.slug}.ia.rest &nbsp;·&nbsp; {r.codigo_acceso} &nbsp;·&nbsp; {r.ciudad}
-                  </div>
-                </div>
-
-                {/* Metrics */}
-                {[
-                  { v: r.camareros?.[0]?.count ?? 0, l: 'camareros' },
-                  { v: r.mesas?.[0]?.count ?? 0, l: 'mesas' },
-                  { v: r.comandas?.[0]?.count ?? 0, l: 'comandas' },
-                ].map(m => (
-                  <div key={m.l} style={{ textAlign: 'center', minWidth: 60 }}>
-                    <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, lineHeight: 1 }}>{m.v}</div>
-                    <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.08em', marginTop: 2 }}>{m.l.toUpperCase()}</div>
-                  </div>
-                ))}
-
-                {/* Actions */}
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => router.push(`/super/${r.id}`)}
-                    style={{
-                      background: C.red, border: 'none', borderRadius: 4,
-                      fontFamily: SM, fontSize: 10, color: '#fff', padding: '6px 12px',
-                      cursor: 'pointer', letterSpacing: '.06em',
-                    }}
-                  >
-                    GESTIONAR →
-                  </button>
-                  <button
-                    onClick={() => toggleActivo(r)}
-                    style={{
-                      background: 'none', border: `1px solid ${r.activo ? C.rule : C.ruleS}`, borderRadius: 4,
-                      fontFamily: SM, fontSize: 10,
-                      color: r.activo ? C.red : C.green,
-                      padding: '6px 10px', cursor: 'pointer', letterSpacing: '.06em',
-                    }}
-                  >
-                    {r.activo ? 'PAUSAR' : 'ACTIVAR'}
-                  </button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-
-        {/* IA TRAINING TAB */}
-        {tabSuper === 'ia_training' && (
-          <div>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>IA TRAINING · FINE-TUNING PROPIO</div>
-              <h1 style={{ fontFamily: SE, fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>IA Training</h1>
-              <p style={{ fontFamily: SN, fontSize: 15, color: C.ink3, margin: 0 }}>
-                Pares EAR→BRAIN acumulados para el futuro modelo propio. Activar fine-tuning a partir de ~50 clientes.
-              </p>
-            </div>
-            {!trainingStats ? (
-              <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>Cargando estadísticas…</div>
-            ) : (
-              <div>
-                {/* ── Totales globales ── */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
                   {[
-                    { l: 'Total pares', v: trainingStats.global?.total ?? 0, col: C.red },
-                    { l: 'Alta calidad (≥4)', v: trainingStats.global?.alta_calidad ?? 0, col: C.green },
-                    { l: 'Corregidos (human)', v: trainingStats.global?.corregidos ?? 0, col: C.green },
-                    { l: 'Hoy', v: trainingStats.global?.hoy ?? 0, col: C.ink },
-                    { l: 'Esta semana', v: trainingStats.global?.semana ?? 0, col: C.ink },
-                    { l: 'Calidad media', v: trainingStats.global?.calidad_media_global ?? '—', col: '#E8A33B' },
+                    { v: r.camareros?.[0]?.count ?? 0, l: 'personal' },
+                    { v: r.mesas?.[0]?.count ?? 0, l: 'mesas' },
+                    { v: r.comandas?.[0]?.count ?? 0, l: 'comandas' },
                   ].map(m => (
-                    <div key={m.l} style={{ background: C.bg2, borderRadius: 8, padding: '16px 18px', border: `1px solid ${C.rule}` }}>
-                      <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.1em', marginBottom: 6 }}>{m.l.toUpperCase()}</div>
-                      <div style={{ fontFamily: SE, fontSize: 32, fontWeight: 500, color: m.col, lineHeight: 1 }}>{m.v}</div>
+                    <div key={m.l} style={{ textAlign: 'center', minWidth: 56 }}>
+                      <div style={{ fontFamily: SE, fontSize: 26, fontWeight: 500, color: C.ink, lineHeight: 1 }}>{m.v}</div>
+                      <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.08em', marginTop: 2 }}>{m.l.toUpperCase()}</div>
                     </div>
                   ))}
-                </div>
-                {/* ── Desglose por fuente ── */}
-                {trainingStats.porFuente?.length > 0 && (
-                  <div style={{ background: C.bg2, borderRadius: 8, padding: 20, border: `1px solid ${C.rule}`, marginBottom: 20 }}>
-                    <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', marginBottom: 14 }}>PARES POR FUENTE</div>
-                    {trainingStats.porFuente.map((f: any) => {
-                      const colores: Record<string,string> = { patron: C.green, claude_api: '#E8A33B', sintetico: C.ink3, nim_conversacional: C.red, nim_analitico: '#7B5EA7' }
-                      const pct = trainingStats.global?.total ? Math.round((f.total / trainingStats.global.total) * 100) : 0
-                      return (
-                        <div key={f.fuente} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: `1px solid ${C.rule}` }}>
-                          <span style={{ width: 8, height: 8, borderRadius: '50%', background: colores[f.fuente] ?? C.ink4, flexShrink: 0 }} />
-                          <span style={{ fontFamily: SM, fontSize: 12, color: C.ink, width: 180 }}>{f.fuente}</span>
-                          <span style={{ fontFamily: SM, fontSize: 13, color: colores[f.fuente] ?? C.ink3, fontWeight: 600, width: 50 }}>{f.total}</span>
-                          <div style={{ flex: 1, height: 4, background: C.rule, borderRadius: 2 }}>
-                            <div style={{ width: `${pct}%`, height: '100%', background: colores[f.fuente] ?? C.ink4, borderRadius: 2 }} />
-                          </div>
-                          <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, width: 35 }}>{pct}%</span>
-                          <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4 }}>cal:{f.calidad_media}</span>
-                        </div>
-                      )
-                    })}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <button onClick={() => router.push(`/super/${r.id}`)} style={{ background: C.red, border: 'none', borderRadius: 4, fontFamily: SM, fontSize: 10, color: '#fff', padding: '6px 12px', cursor: 'pointer', letterSpacing: '.06em' }}>
+                      GESTIONAR →
+                    </button>
+                    <button onClick={() => toggleActivo(r)} style={{ background: 'none', border: `1px solid ${r.activo ? C.rule : C.ruleS}`, borderRadius: 4, fontFamily: SM, fontSize: 10, color: r.activo ? C.red : C.green, padding: '6px 10px', cursor: 'pointer', letterSpacing: '.06em' }}>
+                      {r.activo ? 'PAUSAR' : 'ACTIVAR'}
+                    </button>
                   </div>
-                )}
-                {/* ── Últimos registros ── */}
-                {trainingStats.recientes?.length > 0 && (
-                  <div style={{ background: C.bg2, borderRadius: 8, padding: 20, border: `1px solid ${C.rule}`, marginBottom: 20 }}>
-                    <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', marginBottom: 14 }}>ÚLTIMOS 20 REGISTROS</div>
-                    {trainingStats.recientes.map((r: any) => {
-                      const calCol = r.calidad >= 4 ? C.green : r.calidad >= 3 ? '#E8A33B' : C.red
-                      return (
-                        <div key={r.id} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: `1px solid ${C.rule}`, alignItems: 'center', flexWrap: 'wrap' }}>
-                          <span style={{ fontFamily: SM, fontSize: 10, color: calCol, fontWeight: 700, width: 14 }}>{r.calidad}</span>
-                          <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, width: 120, flexShrink: 0 }}>{r.fuente}</span>
-                          <span style={{ fontFamily: SN, fontSize: 12, color: C.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.input_raw}</span>
-                          {r.fue_corregido && <span style={{ fontFamily: SM, fontSize: 9, color: C.green }}>✓ human</span>}
-                          <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4 }}>{new Date(r.created_at).toLocaleDateString('es-ES')}</span>
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
-                <div style={{ background: C.bg2, borderRadius: 8, padding: 24, border: `1px solid ${C.rule}`, marginBottom: 24 }}>
-                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', marginBottom: 16 }}>ESTADO DEL PIPELINE DE ENTRENAMIENTO</div>
-                  {[
-                    ['Trigger activo', 'trg_transcripcion_to_training_log — copia cada par EAR/BRAIN automáticamente', true],
-                    ['Tabla', 'ia_training_log — índices + RLS + vista v_training_stats', true],
-                    ['Umbral fine-tuning', '~50 clientes / ~100.000 pares mínimo recomendado', false],
-                    ['Modelo objetivo', 'Claude fine-tuned o modelo propio vía API Anthropic', false],
-                  ].map(([k, v, ok]) => (
-                    <div key={k as string} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: `1px solid ${C.rule}`, alignItems: 'flex-start' }}>
-                      <span style={{ width: 8, height: 8, borderRadius: '50%', background: ok ? C.green : C.ink4, display: 'inline-block', marginTop: 5, flexShrink: 0 }} />
-                      <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3, width: 180, flexShrink: 0 }}>{k as string}</span>
-                      <span style={{ fontFamily: SN, fontSize: 13, color: C.ink2 }}>{v as string}</span>
-                    </div>
-                  ))}
                 </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {tabSuper === 'sistema' && (
-          <div style={{ padding: '24px 0' }}>
-            <SystemHealth session={session} />
-          </div>
-        )}
-
-        {tabSuper === 'autocuras' && (
-          <div style={{ padding: '24px 0' }}>
-            <AutoCurasPanel />
-          </div>
-        )}
-
-        {tabSuper === 'soporte' && (
-          <SoporteSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} onBadge={setBadgeSoporte} />
-        )}
+              ))}
+            </div>
+          )
+        })()}
 
         {/* Footer info */}
-        <div style={{
-          marginTop: 64, paddingTop: 24, borderTop: `1px solid ${C.rule}`,
-          fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em',
-          display: 'flex', justifyContent: 'space-between',
-        }}>
+        <div style={{ marginTop: 64, paddingTop: 24, borderTop: `1px solid ${C.rule}`, fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', display: 'flex', justifyContent: 'space-between' }}>
           <span>ia.rest · Multi-tenant</span>
           <span>Supabase: efncqyvhniaxsirhdxaa</span>
         </div>
         </div>
         )}
       </div>
+    </div>
+  )
+}
+
+// ── Tab IA Training (extraído del bloque restaurantes) ──────────────────────
+function TabIATraining({ trainingStats, C, SE, SN, SM }: { trainingStats: any; C: any; SE: string; SN: string; SM: string }) {
+  return (
+    <div>
+      <div style={{ marginBottom: 32 }}>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>IA TRAINING · FINE-TUNING PROPIO</div>
+        <h1 style={{ fontFamily: SE, fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>IA Training</h1>
+        <p style={{ fontFamily: SN, fontSize: 15, color: C.ink3, margin: 0 }}>
+          Pares EAR→BRAIN acumulados para el futuro modelo propio. Activar fine-tuning a partir de ~50 clientes.
+        </p>
+      </div>
+      {!trainingStats ? (
+        <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>Cargando estadísticas…</div>
+      ) : (
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 24 }}>
+            {[
+              { l: 'Total pares', v: trainingStats.global?.total ?? 0, col: C.red },
+              { l: 'Alta calidad (≥4)', v: trainingStats.global?.alta_calidad ?? 0, col: C.green },
+              { l: 'Corregidos', v: trainingStats.global?.corregidos ?? 0, col: C.green },
+              { l: 'Hoy', v: trainingStats.global?.hoy ?? 0, col: C.ink },
+              { l: 'Esta semana', v: trainingStats.global?.semana ?? 0, col: C.ink },
+              { l: 'Calidad media', v: trainingStats.global?.calidad_media_global ?? '—', col: '#E8A33B' },
+            ].map(m => (
+              <div key={m.l} style={{ background: C.bg2, borderRadius: 8, padding: '16px 18px', border: `1px solid ${C.rule}` }}>
+                <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, letterSpacing: '.1em', marginBottom: 6 }}>{m.l.toUpperCase()}</div>
+                <div style={{ fontFamily: SE, fontSize: 32, fontWeight: 500, color: m.col, lineHeight: 1 }}>{m.v}</div>
+              </div>
+            ))}
+          </div>
+          {trainingStats.porFuente?.length > 0 && (
+            <div style={{ background: C.bg2, borderRadius: 8, padding: 20, border: `1px solid ${C.rule}`, marginBottom: 20 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', marginBottom: 14 }}>PARES POR FUENTE</div>
+              {trainingStats.porFuente.map((f: any) => {
+                const colores: Record<string,string> = { patron: C.green, claude_api: '#E8A33B', sintetico: C.ink3, nim_conversacional: C.red, nim_analitico: '#7B5EA7' }
+                const pct = trainingStats.global?.total ? Math.round((f.total / trainingStats.global.total) * 100) : 0
+                return (
+                  <div key={f.fuente} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '7px 0', borderBottom: `1px solid ${C.rule}`, flexWrap: 'wrap' }}>
+                    <span style={{ width: 8, height: 8, borderRadius: '50%', background: colores[f.fuente] ?? C.ink4, flexShrink: 0 }} />
+                    <span style={{ fontFamily: SM, fontSize: 12, color: C.ink, flex: 1, minWidth: 120 }}>{f.fuente}</span>
+                    <span style={{ fontFamily: SM, fontSize: 13, color: colores[f.fuente] ?? C.ink3, fontWeight: 600, width: 50 }}>{f.total}</span>
+                    <div style={{ flex: 2, height: 4, background: C.rule, borderRadius: 2, minWidth: 60 }}>
+                      <div style={{ width: `${pct}%`, height: '100%', background: colores[f.fuente] ?? C.ink4, borderRadius: 2 }} />
+                    </div>
+                    <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, width: 35 }}>{pct}%</span>
+                    <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4 }}>cal:{f.calidad_media}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {trainingStats.recientes?.length > 0 && (
+            <div style={{ background: C.bg2, borderRadius: 8, padding: 20, border: `1px solid ${C.rule}`, marginBottom: 20, overflowX: 'auto' }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', marginBottom: 14 }}>ÚLTIMOS 20 REGISTROS</div>
+              {trainingStats.recientes.map((r: any) => {
+                const calCol = r.calidad >= 4 ? C.green : r.calidad >= 3 ? '#E8A33B' : C.red
+                return (
+                  <div key={r.id} style={{ display: 'flex', gap: 10, padding: '5px 0', borderBottom: `1px solid ${C.rule}`, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: calCol, fontWeight: 700, width: 14 }}>{r.calidad}</span>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, width: 120, flexShrink: 0 }}>{r.fuente}</span>
+                    <span style={{ fontFamily: SN, fontSize: 12, color: C.ink, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 80 }}>{r.input_raw}</span>
+                    {r.fue_corregido && <span style={{ fontFamily: SM, fontSize: 9, color: C.green }}>✓ human</span>}
+                    <span style={{ fontFamily: SM, fontSize: 9, color: C.ink4 }}>{new Date(r.created_at).toLocaleDateString('es-ES')}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          <div style={{ background: C.bg2, borderRadius: 8, padding: 24, border: `1px solid ${C.rule}` }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', marginBottom: 16 }}>ESTADO DEL PIPELINE</div>
+            {[
+              ['Trigger activo', 'trg_transcripcion_to_training_log — copia cada par EAR/BRAIN automáticamente', true],
+              ['Tabla', 'ia_training_log — índices + RLS + vista v_training_stats', true],
+              ['Umbral fine-tuning', '~50 clientes / ~100.000 pares mínimo recomendado', false],
+              ['Modelo objetivo', 'Claude fine-tuned o modelo propio vía API Anthropic', false],
+            ].map(([k, v, ok]) => (
+              <div key={k as string} style={{ display: 'flex', gap: 12, padding: '8px 0', borderBottom: `1px solid ${C.rule}`, alignItems: 'flex-start' }}>
+                <span style={{ width: 8, height: 8, borderRadius: '50%', background: ok ? C.green : C.ink4, display: 'inline-block', marginTop: 5, flexShrink: 0 }} />
+                <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3, width: 180, flexShrink: 0 }}>{k as string}</span>
+                <span style={{ fontFamily: SN, fontSize: 13, color: C.ink2 }}>{v as string}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -1072,30 +1003,29 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
     return (
       <div style={{ background: C.bg2, border: `1px solid ${abierto ? C.red : C.rule}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s' }}>
         {/* Cabecera */}
-        <div style={{ padding: big ? '18px 22px' : '14px 18px', display: 'grid', gridTemplateColumns: '1fr auto', gap: 12, alignItems: 'center', cursor: 'pointer' }} onClick={() => setExpandido(abierto ? null : lead.id)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: big ? 6 : 4 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ padding: big ? '18px 22px' : '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setExpandido(abierto ? null : lead.id)}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: big ? 6 : 4, flex: 1, minWidth: 0 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {big && <span style={{ fontSize: 16 }}>🏆</span>}
-              <span style={{ fontFamily: SN, fontSize: big ? 18 : 15, fontWeight: 600, color: C.ink }}>{lead.nombre}</span>
+              <span style={{ fontFamily: SN, fontSize: big ? 17 : 14, fontWeight: 600, color: C.ink }}>{lead.nombre}</span>
               <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>·</span>
-              <span style={{ fontFamily: SM, fontSize: big ? 14 : 13, color: C.ink2 }}>{lead.restaurante}</span>
+              <span style={{ fontFamily: SM, fontSize: big ? 13 : 12, color: C.ink2 }}>{lead.restaurante}</span>
               {lead.locales && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3, background: `${C.rule}`, padding: '2px 7px', borderRadius: 8 }}>{lead.locales}</span>}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-              {lead.telefono && <a href={`tel:${lead.telefono}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 13, color: C.red, textDecoration: 'none', fontWeight: 600 }}>📞 {lead.telefono}</a>}
-              {lead.email && <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 13, color: C.ink2, textDecoration: 'none' }}>✉ {lead.email}</a>}
-              {lead.contacto && <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>👤 {lead.contacto}</span>}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+              {lead.telefono && <a href={`tel:${lead.telefono}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 12, color: C.red, textDecoration: 'none', fontWeight: 600 }}>📞 {lead.telefono}</a>}
+              {lead.email && <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 12, color: C.ink2, textDecoration: 'none' }}>✉ {lead.email}</a>}
+              {lead.contacto && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>👤 {lead.contacto}</span>}
               {lead.tpv && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>TPV: {lead.tpv}</span>}
               <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{fmt(lead.created_at)}</span>
             </div>
             {lead.notas && !abierto && <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, fontStyle: 'italic' }}>{lead.notas.substring(0, 80)}{lead.notas.length > 80 ? '…' : ''}</div>}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-            <button onClick={e => { e.stopPropagation(); cambiarEstado(lead) }} style={{ padding: '5px 12px', borderRadius: 20, border: `1px solid ${ESTADO_COLOR[lead.estado]}`, background: `${ESTADO_COLOR[lead.estado]}18`, color: ESTADO_COLOR[lead.estado], fontFamily: SM, fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.04em', textTransform: 'uppercase' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+            <button onClick={e => { e.stopPropagation(); cambiarEstado(lead) }} style={{ padding: '5px 10px', borderRadius: 20, border: `1px solid ${ESTADO_COLOR[lead.estado]}`, background: `${ESTADO_COLOR[lead.estado]}18`, color: ESTADO_COLOR[lead.estado], fontFamily: SM, fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.04em', textTransform: 'uppercase' }}>
               {lead.estado} →
             </button>
-            {(lead.eventos?.length > 0) && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>{lead.eventos.length} evento{lead.eventos.length !== 1 ? 's' : ''} {abierto ? '▲' : '▼'}</span>}
-            {(!lead.eventos?.length) && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>{abierto ? '▲' : '▼'}</span>}
+            <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>{(lead.eventos?.length ?? 0)} eventos {abierto ? '▲' : '▼'}</span>
           </div>
         </div>
 
@@ -1145,7 +1075,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>COMERCIAL</div>
           <h1 style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 40, fontWeight: 500, margin: '0 0 6px', color: C.ink }}>Leads</h1>
