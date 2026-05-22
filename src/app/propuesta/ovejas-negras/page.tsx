@@ -48,9 +48,12 @@ const config: ClienteConfig = {
   citaStock: 'La dejancia pura.',
   hoyVsIaRest: {
     hoy: ['Recepción manual sin cruce vs pedido', 'Caducidades a ojo o en papel', '€0,30 por albarán digitalizar', 'Sin historial de precios', 'Mermas no registradas', 'Sin alerta de retirada de mercado'],
-    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🏦 Orden de pago auto al confirmar recepción OK', '🔍 Link RASFF UE por cada producto recibido', '📊 Contabilidad: cierre diario + 303 + exportación A3 para la asesoría'],
+    iaRest: ['📷 Foto del albarán → lista completa en 10s', 'Caducidad escaneada + alerta push automática', '€0 por albarán incluido en el plan', 'Detecta subidas de precio vs media 90 días', 'Mermas registradas por proveedor y lote', '🏦 Orden de pago auto al confirmar recepción OK', '🔍 Link RASFF UE por cada producto recibido', '📊 Contabilidad: cierre diario + 303 + exportación A3 para la asesoría', '🧮 Portal asesoría /asesoria: Ricardo ve todos los locales desde un panel', '🏪 Central de almacén /almacen-central: pedido grupal para todos los locales a la vez'],
   },
   datosEstrategicos: [
+    { titulo:"Los portales son canales de distribución",
+      desc:"Cada contable que usa el portal de asesoría con Ovejas Negras como cliente verá ia.rest funcionando con sus propios datos. Cuando tenga un nuevo cliente de hostelería, lo recomendará. Cada director de compras de otro grupo que use el portal de almacén es un prescriptor. No pagamos por esa distribución — el producto la genera solo."
+    },
     { titulo:"Para el contable: 40 horas al mes → 4 horas",
       desc:"Hoy Ricardo recibe: un cajón de albaranes, tickets sin orden y tiene que reconstruir la contabilidad desde cero cada trimestre. Con ia.rest recibe: SUENLACE.DAT listo para importar en A3, casillas del 303 calculadas, facturas de compra validadas automáticamente contra las recepciones, y un log completo de pagos a proveedores. Sin llamar a nadie. Sin pedir nada al restaurante."
     },
@@ -138,6 +141,40 @@ const config: ClienteConfig = {
       activo: true,
     } as ModuloCustom,
     {
+      emoji: '🧮',
+      titulo: 'Portal asesoría — iarest.es/asesoria',
+      sub: 'Ricardo accede a todos sus clientes desde un sitio.',
+      desc: 'El contable de Ovejas Negras tiene un portal propio donde ve los 3 restaurantes del grupo (y los que vayan sumando). P&L del mes, modelo 303 calculado, exportación en A3 para su software. El owner invita al contable con un email — el sistema genera el PIN automáticamente.',
+      ejemplos: [
+        '🔑 Un PIN para todos los restaurantes del grupo — sin gestionar N contraseñas',
+        '📊 P&L por restaurante: ingresos, resultado bruto, food cost, IVA del trimestre',
+        '📋 303 precalculado por trimestre: casillas exactas listas para copiar a la AEAT',
+        '📤 Exportar en A3 SUENLACE.DAT con un clic — el formato que usa Ricardo en su despacho',
+        '⚠️ Alertas automáticas: facturas con diferencia, 303 pendiente, último cierre diario',
+        '🏢 Si Ricardo lleva más clientes hosteleros en ia.rest → los ve todos desde el mismo portal',
+      ],
+      ruta: 'www.iarest.es/asesoria',
+      color: '#1E2E4A',
+      activo: true,
+    } as ModuloCustom,
+    {
+      emoji: '🏪',
+      titulo: 'Central de almacén — iarest.es/almacen-central',
+      sub: 'Los 50 locales de golpe. Un pedido grupal. Mejor precio.',
+      desc: 'El director de compras del grupo entra en un panel y ve el stock crítico de cada restaurante en tiempo real. El sistema detecta automáticamente qué artículos necesitan varios locales a la vez y propone un pedido grupal — un solo pedido al proveedor que cubre múltiples restaurantes.',
+      ejemplos: [
+        '🔴 Vista unificada: qué restaurante tiene qué artículo agotado o bajo mínimo',
+        '📦 Pedido grupal: "Eslava, Batuta y ON necesitan lomo ibérico" → 1 pedido al proveedor',
+        '💰 Negociación por volumen: 100kg en lugar de 3×30kg = mejor precio unitario',
+        '📋 Pedidos pendientes por local: qué ha sido enviado, qué espera ASN del proveedor',
+        '📈 Valor de stock por restaurante: saber dónde hay exceso y dónde hay ruptura',
+        '🔑 Mismo PIN que el portal de contabilidad si la persona gestiona ambos módulos',
+      ],
+      ruta: 'www.iarest.es/almacen-central',
+      color: '#2B3A1E',
+      activo: true,
+    } as ModuloCustom,
+    {
       emoji: '📷',
       titulo: 'Scanner inteligente',
       sub: 'Un botón. Todo tipo de documentos.',
@@ -178,7 +215,7 @@ const config: ClienteConfig = {
   fasePiloto: [
     { fase:'Semana 1-2', color:C.red, items:['Configuración local piloto','Comandas por voz + KDS vistas','OCR albarán + recepción con EAN y lote','Ciclo de compras: pedido → ASN → recepción'] },
     { fase:'Semana 2-4', color:C.amber, items:['Análisis de carta real','Asistente IA cocina','Contabilidad: cierre diario + 303 trimestral','Ficha proveedor + alertas WhatsApp incidencias','Elaboraciones APPCC + etiquetas 1169/2011'] },
-    { fase:'Mes 2+', color:C.green, items:['RRHH grupo centralizado','Previsión por eventos → pedido automático IA','Central de compras + benchmarking locales','Informe mensual proveedores con 1 clic'] },
+    { fase:'Mes 2+', color:C.green, items:['RRHH grupo centralizado','Central de almacén activa → pedido grupal a proveedores','Previsión por eventos → pedido automático IA','Portal asesoría para Ricardo → exportación automática 303','Benchmarking costes entre locales del grupo'] },
   ],
 }
 
