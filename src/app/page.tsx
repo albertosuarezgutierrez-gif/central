@@ -469,6 +469,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div class="cap-item"><span class="cap-num">06</span><div class="cap-title">Ciclo de compras</div><div class="cap-sub">Del pedido al pago al proveedor. Todo cerrado.</div></div>
       <div class="cap-item"><span class="cap-num">07</span><div class="cap-title">Contabilidad</div><div class="cap-sub">Tu gestor recibe todo listo. Sin hacer nada.</div></div>
       <div class="cap-item"><span class="cap-num">08</span><div class="cap-title">Se repara solo</div><div class="cap-sub">Si algo falla, lo detecta y lo corrige. Solo.</div></div>
+      <div class="cap-item"><span class="cap-num">09</span><div class="cap-title">Alertas en Telegram</div><div class="cap-sub">Cierre de caja, stock crítico o cualquier aviso directo a tu móvil.</div></div>
     </div>
   </div>
 </section>

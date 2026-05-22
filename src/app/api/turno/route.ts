@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId, getSession } from '@/lib/session'
+import { tgAlert } from '@/lib/telegram'
 
 export async function GET(req: NextRequest) {
   const supabase = createServerClient()
@@ -57,12 +58,55 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { nombre } = await req.json()
 
+  // Obtener turno activo + stats antes de cerrarlo
+  const { data: turnoActivo } = await supabase
+    .from('turnos')
+    .select('id, nombre, created_at')
+    .eq('estado', 'activo')
+    .eq('restaurante_id', rid)
+    .is('camarero_id', null)
+    .maybeSingle()
+
+  // Calcular ventas del turno para la notificación
+  let totalVentas = 0
+  let numComandas = 0
+  if (turnoActivo) {
+    const { data: stats } = await supabase
+      .from('comandas')
+      .select('id, items:comanda_items(precio_unitario, cantidad)')
+      .eq('turno_id', turnoActivo.id)
+      .eq('restaurante_id', rid)
+      .eq('estado', 'cerrada')
+    if (stats) {
+      numComandas = stats.length
+      totalVentas = stats.reduce((sum, c) => {
+        const items = (c.items as { precio_unitario: number | null; cantidad: number }[]) || []
+        return sum + items.reduce((s, it) => s + ((it.precio_unitario || 0) * it.cantidad), 0)
+      }, 0)
+    }
+  }
+
   // Cerrar solo el turno activo de ESTE restaurante
   await supabase
     .from('turnos')
     .update({ estado: 'cerrado' })
     .eq('estado', 'activo')
     .eq('restaurante_id', rid)
+
+  // Notificación Telegram cierre de caja
+  if (turnoActivo && (totalVentas > 0 || numComandas > 0)) {
+    const { data: rest } = await supabase
+      .from('restaurantes')
+      .select('nombre')
+      .eq('id', rid)
+      .maybeSingle()
+    const nombreLocal = rest?.nombre ?? 'Local'
+    const hora = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
+    tgAlert(
+      `Cierre de caja · ${nombreLocal}\n💰 ${totalVentas.toFixed(2)}€ · ${numComandas} comandas · ${hora}`,
+      'info'
+    )
+  }
 
   // Abrir nuevo turno con restaurante_id
   const { data, error } = await supabase
