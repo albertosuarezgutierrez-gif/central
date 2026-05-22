@@ -1,77 +1,84 @@
 export default function PrivacidadPage() {
   const SE = "'Newsreader',Georgia,serif"
   const SN = "'Inter Tight',system-ui,sans-serif"
-  const secciones = [
-    { titulo: '1. Responsable del tratamiento', bloques: [
-      'Identidad: Alberto Suárez Gutiérrez · NIF: 28823484E',
-      'Domicilio: Sevilla, España',
-      'Email: alberto.suarez.gutierrez@gmail.com',
-      'Actividad: Prestación de servicios SaaS para hostelería bajo la marca ia.rest',
-    ]},
-    { titulo: '2. Datos que recopilamos y por qué', bloques: [
-      'Datos de solicitud de demo y contacto comercial: nombre, email, teléfono y nombre del restaurante facilitados a través del formulario de contacto de la web. Base legal: consentimiento del interesado (art. 6.1.a RGPD). Finalidad: gestionar la solicitud, ponernos en contacto para organizar la demo y, en su caso, informar sobre el servicio. Conservación: hasta que retires el consentimiento o un máximo de 2 años desde el último contacto sin actividad. Puedes retirar el consentimiento en cualquier momento escribiendo a alberto.suarez.gutierrez@gmail.com, sin que ello afecte a la licitud del tratamiento previo. Conforme al art. 21 LSSI-CE, el consentimiento otorgado en el formulario ampara exclusivamente las comunicaciones relacionadas con el servicio ia.rest.',
-      'Datos de registro: nombre, email, nombre del restaurante, número de usuarios. Base legal: ejecución del contrato (art. 6.1.b RGPD). Finalidad: crear y gestionar tu cuenta.',
-      'Datos de facturación: NIF, razón social, dirección. Base legal: obligación legal (LSSI, VeriFactu). Finalidad: emisión de facturas legales.',
-      'Datos operativos del restaurante: carta de productos, mesas, zonas, comandas, secciones de cocina. Base legal: ejecución del contrato. Finalidad: prestación del servicio. Estos datos son propiedad del restaurante; ia.rest actúa como encargado del tratamiento.',
-      'Transcripciones de voz: procesadas en tiempo real por Groq Whisper para transcribir comandas. Se almacenan temporalmente y se eliminan automáticamente a los 90 días. Base legal: ejecución del contrato.',
-      'Datos de empleados del restaurante: nombre, PIN, rol. El responsable de informar a estos empleados es el restaurante (en su calidad de responsable del tratamiento). ia.rest actúa como encargado.',
-      'Datos de alérgenos declarados en mesa: datos de categoría especial (salud) según art. 9 RGPD. Base legal: consentimiento explícito del comensal. El restaurante es responsable de obtener y documentar dicho consentimiento.',
-      'Datos de navegación: logs técnicos de acceso (IP, user-agent, timestamp) para seguridad del sistema. Base legal: interés legítimo (art. 6.1.f RGPD). Conservación: 90 días.',
-    ]},
-    { titulo: '3. Encargados del tratamiento (subprocesadores)', bloques: [
-      'Para prestar el Servicio, ia.rest utiliza los siguientes proveedores que actúan como encargados del tratamiento, con las garantías adecuadas exigidas por el RGPD:',
-      '· Supabase Inc. — base de datos y almacenamiento (EE.UU., SCCs)\n· Vercel Inc. — infraestructura y despliegue (EE.UU., SCCs)\n· Groq Inc. — transcripción de voz mediante Whisper (EE.UU., SCCs)\n· Anthropic PBC — interpretación de comandas mediante Claude AI (EE.UU., SCCs)\n· Stripe Payments Europe, Ltd. — procesamiento de pagos (Irlanda, UE)\n· MONEI PAYMENTS, S.L. — procesamiento de pagos Bizum (España, UE)\n· Resend Inc. — envío de correos transaccionales (EE.UU., SCCs)',
-      'Las Cláusulas Contractuales Estándar (SCCs) aprobadas por la Comisión Europea garantizan el nivel adecuado de protección para las transferencias internacionales.',
-    ]},
-    { titulo: '4. Conservación de los datos', bloques: [
-      'Datos de cuenta y contrato: durante la vigencia del contrato y 5 años adicionales por obligaciones fiscales/legales.',
-      'Transcripciones de voz: 90 días (eliminación automática mediante proceso programado).',
-      'Logs de seguridad: 90 días.',
-      'Datos de aceptación del contrato (contract_acceptances): 10 años (obligación legal LSSI).',
-      'Datos operativos del restaurante: mientras el cliente sea usuario activo. Tras la baja, disponibles para exportación 30 días; eliminados a los 31 días.',
-    ]},
-    { titulo: '5. Tus derechos', bloques: [
-      'Como interesado, tienes derecho a: acceder a tus datos, rectificarlos, suprimirlos, oponerte al tratamiento, solicitar la limitación del tratamiento, y obtener la portabilidad de tus datos en formato estándar.',
-      'Puedes ejercer estos derechos enviando un email a alberto.suarez.gutierrez@gmail.com indicando tu nombre, email de cuenta y el derecho que deseas ejercer. Responderemos en un plazo máximo de 30 días.',
-      'También tienes derecho a presentar una reclamación ante la Agencia Española de Protección de Datos (AEPD) en www.aepd.es si consideras que el tratamiento de tus datos no es conforme al RGPD.',
-    ]},
-    { titulo: '6. Seguridad', bloques: [
-      'Aplicamos medidas técnicas y organizativas adecuadas para proteger tus datos frente a accesos no autorizados, pérdida, alteración o destrucción no autorizada, conforme al art. 32 RGPD. Entre ellas: cifrado en tránsito (HTTPS/TLS), control de acceso por roles, Row Level Security en base de datos, rate limiting, y monitorización de seguridad.',
-      'En caso de violación de seguridad que pueda suponer un riesgo para tus derechos, te lo notificaremos en un plazo máximo de 72 horas desde su detección.',
-    ]},
-    { titulo: '7. Datos de entrenamiento de IA', bloques: [
-      'ia.rest puede utilizar datos operativos anonimizados (transcripciones de comandas, patrones de uso) para mejorar los modelos de inteligencia artificial únicamente si el responsable del restaurante ha activado expresamente esta opción en el panel de configuración (opt-in). Por defecto, esta opción está desactivada.',
-    ]},
-    { titulo: '8. Modificaciones', bloques: [
-      'Esta Política de Privacidad puede actualizarse para adaptarse a cambios normativos o del Servicio. Te notificaremos cualquier cambio significativo por email con al menos 30 días de antelación.',
-    ]},
-    { titulo: '9. Contacto', bloques: [
-      'Para cualquier consulta sobre esta Política de Privacidad o sobre el tratamiento de tus datos: alberto.suarez.gutierrez@gmail.com',
-    ]},
-  ]
+
+  const s: React.CSSProperties = {
+    maxWidth: 720, margin: '0 auto', padding: '72px 48px 120px',
+    fontFamily: SN, background: '#14110E', minHeight: '100vh', color: '#F6F1E7'
+  }
+
   return (
-    <div style={{ minHeight:'100vh', background:'#F6F1E7', color:'#1A1714', padding:'48px 20px', fontFamily:SN }}>
-      <div style={{ maxWidth:680, margin:'0 auto' }}>
-        <a href="/" style={{ textDecoration:'none', display:'block', marginBottom:40 }}>
-          <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:26, color:'#1A1714' }}>ia<span style={{ color:'#D9442B' }}>.</span>rest</span>
-        </a>
-        <h1 style={{ fontFamily:SE, fontStyle:'italic', fontSize:36, color:'#1A1714', margin:'0 0 8px', letterSpacing:'-0.5px' }}>Política de privacidad</h1>
-        <p style={{ fontSize:13, color:'#6B5F52', margin:'0 0 40px' }}>Última actualización: mayo 2026 · Versión 1.0</p>
-        {secciones.map((s, i) => (
-          <div key={i} style={{ marginBottom:32, paddingBottom:32, borderBottom: i < secciones.length-1 ? '1px solid #D8CDB6' : 'none' }}>
-            <h2 style={{ fontFamily:SE, fontStyle:'italic', fontSize:20, color:'#1A1714', margin:'0 0 12px' }}>{s.titulo}</h2>
-            {s.bloques.map((b, j) => (
-              <p key={j} style={{ fontSize:14, color:'#6B5F52', lineHeight:1.8, margin:'0 0 10px', whiteSpace:'pre-line' }}>{b}</p>
-            ))}
-          </div>
-        ))}
-        <div style={{ marginTop:40, paddingTop:24, borderTop:'1px solid #D8CDB6', display:'flex', gap:16, flexWrap:'wrap' }}>
-          <a href="/aviso-legal" style={{ color:'#D9442B', fontSize:13, textDecoration:'underline' }}>Aviso legal</a>
-          <a href="/cookies" style={{ color:'#D9442B', fontSize:13, textDecoration:'underline' }}>Política de cookies</a>
-          <a href="/terminos" style={{ color:'#6B5F52', fontSize:13, textDecoration:'underline' }}>Términos de uso</a>
-          <a href="/" style={{ color:'#6B5F52', fontSize:13, textDecoration:'underline' }}>Volver al inicio</a>
-        </div>
+    <>
+      <style>{`
+        body { background: #14110E; }
+        .legal-nav { position: sticky; top: 0; z-index: 10; padding: 0 48px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(246,241,231,0.08); background: rgba(20,17,14,.95); backdrop-filter: blur(16px); }
+        .legal-nav a { text-decoration: none; }
+        .logo { font-family: ${SE}; font-size: 20px; font-weight: 300; color: #F6F1E7; }
+        .logo b { color: #D9442B; font-weight: 300; }
+        .back { font-size: 13px; color: #6B6054; transition: color .2s; }
+        .back:hover { color: #F6F1E7; }
+        .doc h1 { font-family: ${SE}; font-size: clamp(32px,4vw,48px); font-weight: 300; letter-spacing: -1.5px; color: #F6F1E7; margin-bottom: 12px; }
+        .doc .meta { font-size: 12px; color: #6B6054; margin-bottom: 52px; padding-bottom: 32px; border-bottom: 1px solid rgba(246,241,231,0.08); }
+        .doc h2 { font-family: ${SE}; font-size: 22px; font-weight: 300; color: #F6F1E7; letter-spacing: -.5px; margin: 40px 0 14px; }
+        .doc p { font-size: 15px; color: #D8CDB6; line-height: 1.8; margin-bottom: 14px; font-weight: 300; }
+        .doc ul { margin: 0 0 14px 20px; }
+        .doc li { font-size: 15px; color: #D8CDB6; line-height: 1.8; margin-bottom: 6px; font-weight: 300; }
+        .doc a { color: #D8CDB6; transition: color .2s; }
+        .doc a:hover { color: #F6F1E7; }
+        .doc strong { color: #F6F1E7; font-weight: 500; }
+        @media(max-width:600px) { .legal-nav { padding: 0 20px; } .doc { padding: 56px 20px 80px !important; } }
+      `}</style>
+      <nav className="legal-nav">
+        <a href="/" className="logo">ia<b>.</b>rest</a>
+        <a href="/" className="back">← Volver</a>
+      </nav>
+      <div className="doc" style={s}>
+        <h1>Política de privacidad</h1>
+        <div className="meta">Última actualización: mayo 2026 · ia.rest</div>
+
+        <h2>1. Responsable del tratamiento</h2>
+        <p>El responsable del tratamiento de los datos personales recogidos a través de este sitio web es el titular de <strong>ia.rest</strong>. Para cualquier consulta relacionada con el tratamiento de tus datos, puedes contactarnos en <a href="mailto:hola@iarest.es">hola@iarest.es</a>.</p>
+
+        <h2>2. Datos que recogemos</h2>
+        <p>A través del formulario de contacto recogemos los siguientes datos:</p>
+        <ul>
+          <li>Nombre y apellidos</li>
+          <li>Nombre del establecimiento</li>
+          <li>Dirección de correo electrónico</li>
+          <li>Número de teléfono (opcional)</li>
+          <li>Número aproximado de usuarios</li>
+        </ul>
+
+        <h2>3. Finalidad del tratamiento</h2>
+        <p>Los datos recogidos se utilizan exclusivamente para:</p>
+        <ul>
+          <li>Responder a tu solicitud de información sobre ia.rest</li>
+          <li>Contactarte para mostrarte la plataforma y explicarte cómo puede ayudar a tu negocio</li>
+          <li>Enviarte información comercial relacionada con ia.rest, siempre que hayas prestado tu consentimiento</li>
+        </ul>
+
+        <h2>4. Base legal</h2>
+        <p>El tratamiento se basa en el <strong>consentimiento expreso</strong> que otorgas al marcar la casilla de aceptación y enviar el formulario, de acuerdo con el artículo 6.1.a del RGPD.</p>
+
+        <h2>5. Conservación de los datos</h2>
+        <p>Conservamos tus datos mientras exista una relación comercial activa o potencial, y en cualquier caso durante un máximo de <strong>2 años</strong> desde el último contacto.</p>
+
+        <h2>6. Destinatarios</h2>
+        <p>No cedemos tus datos a terceros salvo obligación legal. Los datos se almacenan en infraestructura de <strong>Supabase</strong> (servidores en la Unión Europea, región eu-west-1).</p>
+
+        <h2>7. Transferencias internacionales</h2>
+        <p>Las fuentes tipográficas del sitio se cargan desde <strong>Google Fonts</strong> (Google LLC, EE.UU.), lo que puede implicar la transferencia de tu dirección IP a servidores de Google, al amparo de las Cláusulas Contractuales Estándar aprobadas por la Comisión Europea.</p>
+
+        <h2>8. Tus derechos</h2>
+        <p>Puedes ejercer en cualquier momento los derechos de acceso, rectificación, supresión, oposición, portabilidad y limitación del tratamiento escribiendo a <a href="mailto:hola@iarest.es">hola@iarest.es</a>. Responderemos en el plazo máximo de <strong>30 días</strong>.</p>
+        <p>Si consideras que el tratamiento de tus datos no es conforme a la normativa, puedes presentar una reclamación ante la <strong>Agencia Española de Protección de Datos</strong> (aepd.es).</p>
+
+        <h2>9. Seguridad</h2>
+        <p>Aplicamos medidas técnicas y organizativas adecuadas para proteger tus datos frente a accesos no autorizados, pérdida o destrucción, de acuerdo con el artículo 32 del RGPD.</p>
+
+        <h2>10. Modificaciones</h2>
+        <p>Podemos actualizar esta política para adaptarla a cambios legislativos o de servicio. La fecha de última actualización aparece al inicio del documento.</p>
       </div>
-    </div>
+    </>
   )
 }

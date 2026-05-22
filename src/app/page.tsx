@@ -1,110 +1,153 @@
-"use client";
-import { useEffect } from "react";
+"use client"
+import { useEffect } from "react"
+import Head from "next/head"
 
 export default function HomePage() {
+
   useEffect(() => {
     // Scroll animations
     const io = new IntersectionObserver(
       (entries) => entries.forEach((e) => {
-        if (e.isIntersecting) { (e.target as HTMLElement).classList.add("on"); io.unobserve(e.target); }
-      }),
-      { threshold: 0.08 }
-    );
-    document.querySelectorAll(".fi").forEach((el) => io.observe(el));
+        if (e.isIntersecting) { (e.target as HTMLElement).classList.add("on"); io.unobserve(e.target) }
+      }), { threshold: 0.08 }
+    )
+    document.querySelectorAll(".fi").forEach((el) => io.observe(el))
 
-    // Calculadora pricing
-    let users = 1, mesas = 0;
-    function calcPrice(u: number, m: number) {
-      let total = 59;
-      const breakdown: string[] = ["59€ base"];
-      if (u >= 2) { const u2 = Math.min(u - 1, 5); total += u2 * 20; if (u2 > 0) breakdown.push(`+${u2}×20€ usuarios`); }
-      if (u > 6) { const u7 = u - 6; total += u7 * 15; breakdown.push(`+${u7}×15€ usuarios`); }
-      if (m > 0) { total += m * 12; breakdown.push(`+${m}×12€ mesas QR`); }
-      return { total, breakdown: breakdown.join(" · ") };
-    }
-    function updateCalc() {
-      const { total, breakdown } = calcPrice(users, mesas);
-      const annual = Math.round(total * 12 * 0.82);
-      const pr = document.getElementById("priceResult");
-      const aa = document.getElementById("annualAmt");
-      const pb = document.getElementById("priceBreakdown");
-      const lbl = document.getElementById("uLabel");
-      if (pr) pr.innerHTML = `${total} <span style="font-size:18px;color:var(--ink3);font-family:\'Inter Tight\',sans-serif">€/mes</span>`;
-      if (aa) aa.textContent = `${annual} €/año`;
-      if (pb) pb.textContent = breakdown;
-      if (lbl) {
-        if (users === 1) lbl.innerHTML = "usuario incluido<br>en el precio base";
-        else if (users <= 6) lbl.innerHTML = `usuarios · <span style="color:var(--ink2)">+20€ c/u</span>`;
-        else lbl.innerHTML = `usuarios · <span style="color:var(--ink2)">7+ a 15€ c/u</span>`;
-      }
-      const uc = document.getElementById("uCount");
-      const mc = document.getElementById("mCount");
-      if (uc) uc.textContent = String(users);
-      if (mc) mc.textContent = String(mesas);
-    }
-    const uPlus = document.getElementById("uPlus");
-    const uMinus = document.getElementById("uMinus");
-    const mPlus = document.getElementById("mPlus");
-    const mMinus = document.getElementById("mMinus");
-    if (uPlus) uPlus.addEventListener("click", () => { if (users < 20) { users++; updateCalc(); } });
-    if (uMinus) uMinus.addEventListener("click", () => { if (users > 1) { users--; updateCalc(); } });
-    if (mPlus) mPlus.addEventListener("click", () => { mesas++; updateCalc(); });
-    if (mMinus) mMinus.addEventListener("click", () => { if (mesas > 0) { mesas--; updateCalc(); } });
+    // Terminal reveal
+    const tls = document.querySelectorAll<HTMLElement>("#tlines > div")
+    tls.forEach((l, i) => { l.style.opacity = "0"; l.style.transition = `opacity .25s ease ${i * 0.1}s` })
+    const tio = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { tls.forEach((l) => (l.style.opacity = "1")); tio.unobserve(e.target) }
+    }), { threshold: 0.4 })
+    const tb = document.querySelector("#tlines")
+    if (tb) tio.observe(tb)
 
-    // Hamburguesa
+    // Cookies banner
+    function aceptarCookies() {
+      localStorage.setItem("cookies_ia", "accepted")
+      const b = document.getElementById("cookieBanner") as HTMLElement
+      if (b) b.style.display = "none"
+    }
+    function rechazarCookies() {
+      localStorage.setItem("cookies_ia", "rejected")
+      const b = document.getElementById("cookieBanner") as HTMLElement
+      if (b) b.style.display = "none"
+    }
+    if (!localStorage.getItem("cookies_ia")) {
+      const b = document.getElementById("cookieBanner") as HTMLElement
+      if (b) b.style.display = "flex"
+    }
+    ;(window as any).aceptarCookies = aceptarCookies
+    ;(window as any).rechazarCookies = rechazarCookies
+
+    // Burger
     function toggleMenu() {
-      const b = document.getElementById("burger");
-      const m = document.getElementById("mobMenu");
-      if (!b || !m) return;
-      b.classList.toggle("open");
-      m.classList.toggle("open");
-      document.body.style.overflow = m.classList.contains("open") ? "hidden" : "";
+      const b = document.getElementById("burger") as HTMLElement
+      const m = document.getElementById("mobMenu") as HTMLElement
+      b?.classList.toggle("open")
+      m?.classList.toggle("open")
+      document.body.style.overflow = m?.classList.contains("open") ? "hidden" : ""
     }
     function closeMenu() {
-      document.getElementById("burger")?.classList.remove("open");
-      document.getElementById("mobMenu")?.classList.remove("open");
-      document.body.style.overflow = "";
+      document.getElementById("burger")?.classList.remove("open")
+      document.getElementById("mobMenu")?.classList.remove("open")
+      document.body.style.overflow = ""
     }
-    const burger = document.getElementById("burger");
-    if (burger) burger.addEventListener("click", toggleMenu);
-    document.querySelectorAll(".mob-menu a").forEach((a) => a.addEventListener("click", closeMenu));
+    document.getElementById("burger")?.addEventListener("click", toggleMenu)
+    document.querySelectorAll(".mob-menu a").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        const href = (a as HTMLAnchorElement).getAttribute("href")
+        if (href?.startsWith("#")) {
+          e.preventDefault()
+          closeMenu()
+          setTimeout(() => {
+            document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" })
+          }, 320)
+        }
+      })
+    })
 
     // Form
     async function enviar() {
-      const n = (document.getElementById("nombre") as HTMLInputElement)?.value.trim() || "";
-      const r = (document.getElementById("restaurante") as HTMLInputElement)?.value.trim() || "";
-      const em = (document.getElementById("email") as HTMLInputElement)?.value.trim() || "";
-      const tf = (document.getElementById("telefono") as HTMLInputElement)?.value.trim() || "";
-      const u = (document.getElementById("usuarios") as HTMLSelectElement)?.value || "";
-      let ok = true;
-      ([["nombre", n], ["restaurante", r], ["email", em], ["usuarios", u]] as [string, string][]).forEach(([id, v]) => {
-        const el = document.getElementById(id) as HTMLInputElement;
-        if (!v) { if (el) el.style.borderColor = "rgba(217,68,43,.6)"; ok = false; }
-        else { if (el) el.style.borderColor = ""; }
-      });
-      if (!ok) return;
-      const btn = document.getElementById("submitBtn") as HTMLButtonElement;
-      if (btn) { btn.disabled = true; btn.textContent = "Enviando…"; }
+      const n = (document.getElementById("nombre") as HTMLInputElement).value.trim()
+      const r = (document.getElementById("restaurante") as HTMLInputElement).value.trim()
+      const em = (document.getElementById("email") as HTMLInputElement).value.trim()
+      const tf = (document.getElementById("telefono") as HTMLInputElement).value.trim()
+      const u = (document.getElementById("usuarios") as HTMLSelectElement).value
+      const priv = document.getElementById("privacidad") as HTMLInputElement
+
+      let ok = true
+      ;([["nombre", n], ["restaurante", r], ["email", em], ["usuarios", u]] as [string,string][]).forEach(([id, v]) => {
+        const el = document.getElementById(id) as HTMLInputElement
+        if (!v) { el.style.borderColor = "rgba(217,68,43,.6)"; ok = false }
+        else el.style.borderColor = ""
+      })
+      if (!priv.checked) { priv.style.outline = "2px solid rgba(217,68,43,.6)"; ok = false }
+      else priv.style.outline = ""
+      if (!ok) return
+
+      const btn = document.getElementById("submitBtn") as HTMLButtonElement
+      btn.disabled = true; btn.textContent = "Enviando…"
+
       try {
         await fetch("/api/leads/landing", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ nombre: n, restaurante: r, email: em, telefono: tf, usuarios: u, fuente: "landing" }),
-        });
-      } catch (_) {}
-      const fb = document.getElementById("formBody");
-      const ss = document.getElementById("successState");
-      if (fb) fb.style.display = "none";
-      if (ss) ss.style.display = "block";
-    }
-    (window as any).__enviar = enviar;
-    document.addEventListener("keydown", (e) => { if (e.key === "Enter") enviar(); });
+        })
+      } catch {}
 
-    return () => { io.disconnect(); };
-  }, []);
+      const fb = document.getElementById("formBody") as HTMLElement
+      const ss = document.getElementById("successState") as HTMLElement
+      if (fb) fb.style.display = "none"
+      if (ss) ss.style.display = "block"
+    }
+    ;(window as any).enviar = enviar
+    document.addEventListener("keydown", (e) => { if (e.key === "Enter") enviar() })
+
+    // Pricing calc
+    let users = 1, mesas = 0
+    function calcPrice(u: number, m: number) {
+      let total = 59
+      const parts = ["59€ base"]
+      if (u >= 2) { const u26 = Math.min(u - 1, 5); total += u26 * 20; if (u26 > 0) parts.push(`+${u26}×20€`) }
+      if (u > 6) { const u7 = u - 6; total += u7 * 15; parts.push(`+${u7}×15€`) }
+      if (m > 0) { total += m * 12; parts.push(`+${m}×12€ QR`) }
+      return { total, breakdown: parts.join(" · ") }
+    }
+    function updateCalc() {
+      const { total, breakdown } = calcPrice(users, mesas)
+      const annual = Math.round(total * 12 * 0.82)
+      const pr = document.getElementById("priceResult")
+      const aa = document.getElementById("annualAmt")
+      const pb = document.getElementById("priceBreakdown")
+      const ul = document.getElementById("uLabel")
+      if (pr) pr.innerHTML = `${total} <span style="font-size:18px;color:var(--ink3);font-family:'Inter Tight',sans-serif">€/mes</span>`
+      if (aa) aa.textContent = `${annual} €/año`
+      if (pb) pb.textContent = breakdown
+      if (ul) ul.innerHTML = users === 1 ? "usuario incluido<br>en el precio base" : users <= 6 ? `usuarios · <span style="color:var(--ink2)">+20€ c/u</span>` : `usuarios · <span style="color:var(--ink2)">7+ a 15€ c/u</span>`
+      const uc = document.getElementById("uCount")
+      const mc = document.getElementById("mCount")
+      if (uc) uc.textContent = String(users)
+      if (mc) mc.textContent = String(mesas)
+    }
+    document.getElementById("uPlus")?.addEventListener("click", () => { if (users < 20) { users++; updateCalc() } })
+    document.getElementById("uMinus")?.addEventListener("click", () => { if (users > 1) { users--; updateCalc() } })
+    document.getElementById("mPlus")?.addEventListener("click", () => { mesas++; updateCalc() })
+    document.getElementById("mMinus")?.addEventListener("click", () => { if (mesas > 0) { mesas--; updateCalc() } })
+
+    return () => { io.disconnect(); tio.disconnect() }
+  }, [])
 
   return (
     <>
+      <title>ia.rest — El sistema nervioso de tu restaurante</title>
+      <meta name="description" content="Gestión hostelera con IA. Voz a cocina en menos de 0.5s, almacén automático, contabilidad integrada, VeriFactu 2026 incluido. Sin comisión. Desde 59€/mes." />
+      <meta property="og:title" content="ia.rest — El sistema nervioso de tu restaurante" />
+      <meta property="og:description" content="No es un TPV. Es el primer sistema que gestiona tu restaurante de principio a fin, sin que tengas que hacer nada." />
+      <meta property="og:url" content="https://www.iarest.es" />
+      <meta property="og:type" content="website" />
+      <meta name="robots" content="index, follow" />
       <style dangerouslySetInnerHTML={{ __html: `:root {
   --bg: #14110E;
   --bg2: #111009;
@@ -375,7 +418,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 </section>
 
 <!-- ELIMINA -->
-<section class="elimina">
+<section class="elimina" id="elimina">
   <div class="w">
     <div class="elimina-grid">
       <div class="fi">
@@ -402,7 +445,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 </section>
 
 <!-- CAPABILITIES -->
-<section class="cap">
+<section class="cap" id="capacidades">
   <div class="w">
     <div class="fi">
       <div class="s-label">Capacidades</div>
@@ -424,7 +467,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 
 
 <!-- AUTO-HEALER -->
-<section class="healer">
+<section class="healer" id="infra">
   <div class="w">
     <div class="healer-grid">
       <div class="fi">
@@ -556,8 +599,26 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   <div class="f-links">
     <a href="#contacto">Contacto</a>
   </div>
-  <div class="f-copy">© 2026 ia.rest</div>
-</footer>` }} />
+  <div class="f-copy" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
+    <span>© 2026 ia.rest</span>
+    <a href="/privacidad" style="color:var(--ink3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink3)'">Privacidad</a>
+    <a href="/aviso-legal" style="color:var(--ink3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink3)'">Aviso legal</a>
+    <a href="/cookies" style="color:var(--ink3);text-decoration:none;transition:color .2s" onmouseover="this.style.color='var(--ink)'" onmouseout="this.style.color='var(--ink3)'">Cookies</a>
+  </div>
+</footer>
+
+
+<!-- BANNER COOKIES -->
+<div id="cookieBanner" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:999;background:#1C1814;border-top:1px solid rgba(246,241,231,0.1);padding:16px 32px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap">
+  <p style="font-size:13px;color:var(--ink3);line-height:1.5;max-width:680px;margin:0">
+    Usamos cookies técnicas necesarias para el funcionamiento del sitio. Las fuentes tipográficas se cargan desde Google Fonts (transferencia a EE.UU. bajo SCCs).
+    <a href="/cookies" style="color:var(--ink2);text-decoration:underline;text-underline-offset:2px">Más información</a>
+  </p>
+  <div style="display:flex;gap:10px;flex-shrink:0">
+    <button onclick="rechazarCookies()" style="padding:9px 18px;background:none;border:1px solid rgba(246,241,231,.15);border-radius:6px;color:var(--ink3);font-size:13px;font-family:'Inter Tight',sans-serif;cursor:pointer">Solo necesarias</button>
+    <button onclick="aceptarCookies()" style="padding:9px 18px;background:var(--red);border:none;border-radius:6px;color:var(--ink);font-size:13px;font-weight:600;font-family:'Inter Tight',sans-serif;cursor:pointer">Aceptar</button>
+  </div>
+</div>` }} />
     </>
-  );
+  )
 }

@@ -1,40 +1,61 @@
 export default function AvisoLegalPage() {
   const SE = "'Newsreader',Georgia,serif"
   const SN = "'Inter Tight',system-ui,sans-serif"
-  const secciones = [
-    { titulo: '1. Datos identificativos del titular', texto: 'En cumplimiento del artículo 10 de la Ley 34/2002, de 11 de julio, de Servicios de la Sociedad de la Información y de Comercio Electrónico (LSSI-CE), se informa de los datos identificativos del titular de este sitio web:\n\nTitular: Alberto Suárez Gutiérrez\nNIF: 28823484E\nDomicilio: Sevilla, España\nEmail: alberto.suarez.gutierrez@gmail.com\nActividad: Desarrollo y prestación de servicios SaaS para hostelería bajo la marca comercial ia.rest' },
-    { titulo: '2. Objeto y ámbito de aplicación', texto: 'El presente Aviso Legal regula el acceso y uso del sitio web www.iarest.es y sus subdominios (en adelante, "el Sitio"), así como de la aplicación web ia.rest (en adelante, "el Servicio"). El acceso al Sitio implica la aceptación de las presentes condiciones.' },
-    { titulo: '3. Propiedad intelectual e industrial', texto: 'El software, código fuente, diseño, marca "ia.rest", logotipos, nombres comerciales, algoritmos, agentes de inteligencia artificial (EAR, BRAIN, COURIER, VOX, ANALYST), textos, imágenes y demás contenidos del Sitio y del Servicio son propiedad exclusiva de Alberto Suárez Gutiérrez o cuentan con las licencias correspondientes, y están protegidos por la legislación española e internacional de propiedad intelectual e industrial.\n\nQueda expresamente prohibida su reproducción, distribución, transformación o comunicación pública sin autorización escrita previa del titular.' },
-    { titulo: '4. Condiciones de uso', texto: 'El usuario se compromete a hacer un uso adecuado del Sitio y del Servicio, conforme a la ley, a las buenas costumbres y al orden público, y a no utilizarlos con fines ilícitos o que puedan causar daños o perjuicios a terceros o al propio titular.\n\nQueda prohibido el uso del Servicio para actividades ilegales, la introducción de virus o código malicioso, el acceso no autorizado a sistemas, y cualquier acción que pudiera dañar, inutilizar o sobrecargar el Servicio.' },
-    { titulo: '5. Exclusión de garantías y responsabilidad', texto: 'El titular no garantiza la disponibilidad ininterrumpida del Sitio ni del Servicio, ni la ausencia de errores en los contenidos. El Servicio se presta en régimen de mejor esfuerzo, dependiendo de infraestructura de terceros (Vercel, Supabase, Groq, Anthropic).\n\nEl titular queda exonerado de cualquier responsabilidad por daños y perjuicios de cualquier naturaleza que pudieran derivarse del acceso, uso o imposibilidad de uso del Sitio, así como de la actuación de terceros.\n\nEn ningún caso el titular será responsable de lucro cesante, daños indirectos, consecuentes o punitivos.' },
-    { titulo: '6. Enlaces a terceros', texto: 'El Sitio puede contener enlaces a sitios web de terceros. El titular no asume ninguna responsabilidad derivada del acceso a dichos sitios, ni sobre sus contenidos, productos o servicios.' },
-    { titulo: '7. Legislación aplicable y jurisdicción', texto: 'El presente Aviso Legal se rige por la legislación española. Para la resolución de cualquier controversia derivada de su interpretación o aplicación, las partes se someten a la jurisdicción de los Juzgados y Tribunales de la ciudad de Sevilla, con renuncia expresa a cualquier otro fuero que pudiera corresponderles.' },
-    { titulo: '8. Modificaciones', texto: 'El titular se reserva el derecho a modificar el presente Aviso Legal en cualquier momento, publicando la versión actualizada en el Sitio. La fecha de última actualización figura al inicio de este documento.' },
-    { titulo: '9. Contacto', texto: 'Para cualquier consulta relacionada con este Aviso Legal, puedes contactar con nosotros en: alberto.suarez.gutierrez@gmail.com' },
-  ]
+
+  const s: React.CSSProperties = {
+    maxWidth: 720, margin: '0 auto', padding: '72px 48px 120px',
+    fontFamily: SN, background: '#14110E', minHeight: '100vh', color: '#F6F1E7'
+  }
+
   return (
-    <div style={{ minHeight:'100vh', background:'#F6F1E7', color:'#1A1714', padding:'48px 20px', fontFamily:SN }}>
-      <div style={{ maxWidth:680, margin:'0 auto' }}>
-        <a href="/" style={{ textDecoration:'none', display:'block', marginBottom:40 }}>
-          <span style={{ fontFamily:SE, fontStyle:'italic', fontSize:26, color:'#1A1714' }}>ia<span style={{ color:'#D9442B' }}>.</span>rest</span>
-        </a>
-        <h1 style={{ fontFamily:SE, fontStyle:'italic', fontSize:36, color:'#1A1714', margin:'0 0 8px', letterSpacing:'-0.5px' }}>Aviso legal</h1>
-        <p style={{ fontSize:13, color:'#6B5F52', margin:'0 0 40px' }}>Última actualización: mayo 2026</p>
-        {secciones.map((s, i) => (
-          <div key={i} style={{ marginBottom:32, paddingBottom:32, borderBottom: i < secciones.length-1 ? '1px solid #D8CDB6' : 'none' }}>
-            <h2 style={{ fontFamily:SE, fontStyle:'italic', fontSize:20, color:'#1A1714', margin:'0 0 10px' }}>{s.titulo}</h2>
-            {s.texto.split('\n\n').map((p, j) => (
-              <p key={j} style={{ fontSize:14, color:'#6B5F52', lineHeight:1.8, margin:'0 0 10px' }}>{p}</p>
-            ))}
-          </div>
-        ))}
-        <div style={{ marginTop:40, paddingTop:24, borderTop:'1px solid #D8CDB6', display:'flex', gap:16, flexWrap:'wrap' }}>
-          <a href="/privacidad" style={{ color:'#D9442B', fontSize:13, textDecoration:'underline' }}>Política de privacidad</a>
-          <a href="/cookies" style={{ color:'#D9442B', fontSize:13, textDecoration:'underline' }}>Política de cookies</a>
-          <a href="/terminos" style={{ color:'#6B5F52', fontSize:13, textDecoration:'underline' }}>Términos de uso</a>
-          <a href="/" style={{ color:'#6B5F52', fontSize:13, textDecoration:'underline' }}>Volver al inicio</a>
-        </div>
+    <>
+      <style>{`
+        body { background: #14110E; }
+        .legal-nav { position: sticky; top: 0; z-index: 10; padding: 0 48px; height: 60px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid rgba(246,241,231,0.08); background: rgba(20,17,14,.95); backdrop-filter: blur(16px); }
+        .legal-nav a { text-decoration: none; }
+        .logo { font-family: ${SE}; font-size: 20px; font-weight: 300; color: #F6F1E7; }
+        .logo b { color: #D9442B; font-weight: 300; }
+        .back { font-size: 13px; color: #6B6054; transition: color .2s; }
+        .back:hover { color: #F6F1E7; }
+        .doc h1 { font-family: ${SE}; font-size: clamp(32px,4vw,48px); font-weight: 300; letter-spacing: -1.5px; color: #F6F1E7; margin-bottom: 12px; }
+        .doc .meta { font-size: 12px; color: #6B6054; margin-bottom: 52px; padding-bottom: 32px; border-bottom: 1px solid rgba(246,241,231,0.08); }
+        .doc h2 { font-family: ${SE}; font-size: 22px; font-weight: 300; color: #F6F1E7; letter-spacing: -.5px; margin: 40px 0 14px; }
+        .doc p { font-size: 15px; color: #D8CDB6; line-height: 1.8; margin-bottom: 14px; font-weight: 300; }
+        .doc a { color: #D8CDB6; transition: color .2s; }
+        .doc a:hover { color: #F6F1E7; }
+        .doc strong { color: #F6F1E7; font-weight: 500; }
+        @media(max-width:600px) { .legal-nav { padding: 0 20px; } .doc { padding: 56px 20px 80px !important; } }
+      `}</style>
+      <nav className="legal-nav">
+        <a href="/" className="logo">ia<b>.</b>rest</a>
+        <a href="/" className="back">← Volver</a>
+      </nav>
+      <div className="doc" style={s}>
+        <h1>Aviso legal</h1>
+        <div className="meta">Última actualización: mayo 2026 · ia.rest</div>
+
+        <h2>1. Titular del sitio web</h2>
+        <p>El presente sitio web <strong>www.iarest.es</strong> es titularidad del responsable de <strong>ia.rest</strong>. Para cualquier comunicación legal: <a href="mailto:hola@iarest.es">hola@iarest.es</a>.</p>
+
+        <h2>2. Objeto y ámbito de aplicación</h2>
+        <p>Este aviso legal regula el acceso y uso del sitio web www.iarest.es y de los servicios SaaS ofrecidos bajo la marca <strong>ia.rest</strong>. El acceso al sitio implica la aceptación plena de las presentes condiciones.</p>
+
+        <h2>3. Propiedad intelectual e industrial</h2>
+        <p>Todos los contenidos del sitio web — incluyendo, sin limitación, textos, imágenes, diseño, logotipos, código fuente, arquitectura del software y denominaciones comerciales — son propiedad exclusiva de ia.rest o de sus licenciantes, y están protegidos por la legislación española e internacional sobre propiedad intelectual e industrial.</p>
+        <p>Queda expresamente prohibida la reproducción, distribución, transformación o comunicación pública de cualquier elemento del sitio sin autorización escrita previa del titular.</p>
+
+        <h2>4. Condiciones de uso del servicio SaaS</h2>
+        <p>El acceso y uso de la plataforma ia.rest como servicio está regulado por el <strong>Contrato SaaS</strong> disponible en <a href="/public/contrato-iarest-v1.pdf">/public/contrato-iarest-v1.pdf</a>, que debe ser aceptado expresamente durante el proceso de alta.</p>
+
+        <h2>5. Exclusión de garantías y responsabilidad</h2>
+        <p>ia.rest no garantiza la disponibilidad ininterrumpida del sitio web ni la ausencia de errores en sus contenidos. El titular no será responsable de los daños o perjuicios derivados del uso del sitio por causas ajenas a su control.</p>
+
+        <h2>6. Legislación aplicable y fuero</h2>
+        <p>Las presentes condiciones se rigen por la legislación española. Para la resolución de cualquier controversia, las partes se someten a los Juzgados y Tribunales competentes conforme a la normativa aplicable.</p>
+
+        <h2>7. Modificaciones</h2>
+        <p>ia.rest se reserva el derecho de modificar este aviso legal en cualquier momento. Las modificaciones serán efectivas desde su publicación en el sitio web.</p>
       </div>
-    </div>
+    </>
   )
 }
