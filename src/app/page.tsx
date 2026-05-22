@@ -74,16 +74,15 @@ export default function HomePage() {
       const em = (document.getElementById("email") as HTMLInputElement).value.trim()
       const tf = (document.getElementById("telefono") as HTMLInputElement).value.trim()
       const u = (document.getElementById("usuarios") as HTMLSelectElement).value
-      const priv = document.getElementById("privacidad") as HTMLInputElement
-
       let ok = true
-      ;([["nombre", n], ["restaurante", r], ["email", em], ["usuarios", u]] as [string,string][]).forEach(([id, v]) => {
+      ;([["nombre", n], ["restaurante", r], ["email", em]] as [string,string][]).forEach(([id, v]) => {
         const el = document.getElementById(id) as HTMLInputElement
         if (!v) { el.style.borderColor = "rgba(217,68,43,.6)"; ok = false }
         else el.style.borderColor = ""
       })
-      if (!priv.checked) { priv.style.outline = "2px solid rgba(217,68,43,.6)"; ok = false }
-      else priv.style.outline = ""
+      const priv = document.getElementById("privacidad") as HTMLInputElement
+      if (priv && !priv.checked) { priv.style.outline = "2px solid rgba(217,68,43,.6)"; ok = false }
+      else if (priv) priv.style.outline = ""
       if (!ok) return
 
       const btn = document.getElementById("submitBtn") as HTMLButtonElement
@@ -617,6 +616,10 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
                 <option value="10+">Equipo grande (10+)</option>
                 <option value="grupo">Tengo varios locales</option>
               </select>
+            </div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;margin-top:4px">
+              <input type="checkbox" id="privacidad" style="margin-top:3px;accent-color:var(--red);cursor:pointer;flex-shrink:0"/>
+              <label for="privacidad" style="font-size:12px;color:var(--ink2);line-height:1.5;cursor:pointer">He leído y acepto la <a href="/privacidad" target="_blank" style="color:var(--red)">política de privacidad</a>. Consiento el tratamiento de mis datos para gestionar mi solicitud.</label>
             </div>
             <button class="submit-btn" id="submitBtn" onclick="enviar()">Solicitar información →</button>
           </div>
