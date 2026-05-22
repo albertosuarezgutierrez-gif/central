@@ -26,9 +26,9 @@ export async function POST(req: NextRequest) {
     // Notificación Telegram
     const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
     await tgAlert([
-      `🔥 *NUEVO LEAD — landing*`,
+      `🔥 NUEVO LEAD — landing`,
       ``,
-      `👤 *${nombre}*`,
+      `👤 ${nombre}`,
       `🍽️ ${restaurante}`,
       `📧 ${email}`,
       `📱 ${telefono || '—'}`,
