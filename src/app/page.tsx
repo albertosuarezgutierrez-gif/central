@@ -494,35 +494,6 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<!-- PRICING -->
-<section style="background:var(--bg);padding:100px 48px">
-  <div class="w">
-    <div class="s-label" style="justify-content:center;display:flex">Para grupos y asesorías</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:start;max-width:880px;margin:0 auto">
-      <div class="fi">
-        <h2 style="font-size:clamp(28px,4vw,42px);font-weight:300;line-height:1.1;letter-spacing:-.02em;margin-bottom:16px">Portales externos<br><strong>para quien lo necesita</strong></h2>
-        <p style="color:var(--ink2);line-height:1.7;font-size:16px">El contable de tu grupo recibe el 303 calculado y el fichero A3 con un clic — sin llamarte. El director de compras ve el stock crítico de todos tus locales y lanza un pedido grupal. Todo desde portales propios, con su PIN.</p>
-      </div>
-      <div class="fi d1" style="display:flex;flex-direction:column;gap:16px">
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
-          <div style="font-size:22px;margin-bottom:8px">🧮</div>
-          <div style="font-weight:600;margin-bottom:4px">Portal asesoría <code style="font-size:11px;color:var(--ink3)">/asesoria</code></div>
-          <div style="font-size:14px;color:var(--ink2)">El contable ve todos sus clientes hosteleros. P&amp;L, IVA 303 calculado y exportación A3/Sage/Holded con un clic.</div>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
-          <div style="font-size:22px;margin-bottom:8px">🏪</div>
-          <div style="font-weight:600;margin-bottom:4px">Central de almacén <code style="font-size:11px;color:var(--ink3)">/almacen-central</code></div>
-          <div style="font-size:14px;color:var(--ink2)">Stock crítico de todos los locales en tiempo real. Pedido grupal a proveedor: mejor precio por volumen.</div>
-        </div>
-        <div style="background:var(--bg2);border:1px solid var(--border);border-radius:12px;padding:20px">
-          <div style="font-size:22px;margin-bottom:8px">📊</div>
-          <div style="font-weight:600;margin-bottom:4px">Contabilidad integrada</div>
-          <div style="font-size:14px;color:var(--ink2)">Cierre diario automático, modelo 303 calculado y exportación A3/Sage/Holded. Sin pedir nada al contable.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
 <section id="precios" style="background:var(--bg2);padding:100px 48px">
   <div class="w">
     <div class="fi" style="text-align:center;margin-bottom:52px">
