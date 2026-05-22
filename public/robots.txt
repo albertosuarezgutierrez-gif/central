@@ -1,23 +1,41 @@
 User-agent: *
+
+# Páginas públicas indexables
 Allow: /
 Allow: /registro
 Allow: /login
-Allow: /carta/
-Allow: /aviso-legal
 Allow: /privacidad
+Allow: /aviso-legal
 Allow: /cookies
 Allow: /terminos
+Allow: /comanda-por-voz
+Allow: /tpv-restaurante
+Allow: /blog/
+Allow: /tienda/
+Allow: /descargar
 
+# Rutas de operación — NO indexar
 Disallow: /api/
 Disallow: /edge
 Disallow: /kds
 Disallow: /owner
 Disallow: /super
 Disallow: /jefe
-Disallow: /hub
-Disallow: /cocina
 Disallow: /running
-Disallow: /manual
+Disallow: /portal
+Disallow: /asesoria
+Disallow: /contable
+Disallow: /almacen-central
+Disallow: /asn/
+Disallow: /q/
+Disallow: /central
+Disallow: /cocina
+Disallow: /hub
+Disallow: /app
+Disallow: /bienvenida
 Disallow: /onboarding
+Disallow: /estado/
+Disallow: /manual
+Disallow: /propuesta/
 
 Sitemap: https://www.iarest.es/sitemap.xml

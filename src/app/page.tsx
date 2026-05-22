@@ -143,11 +143,20 @@ export default function HomePage() {
     <>
       <title>ia.rest — El sistema nervioso de tu restaurante</title>
       <meta name="description" content="Gestión hostelera con IA. Voz a cocina en menos de 0.5s, almacén automático, contabilidad integrada, VeriFactu 2026 incluido. Sin comisión. Desde 59€/mes." />
+      <meta name="robots" content="index, follow" />
       <meta property="og:title" content="ia.rest — El sistema nervioso de tu restaurante" />
       <meta property="og:description" content="No es un TPV. Es el primer sistema que gestiona tu restaurante de principio a fin, sin que tengas que hacer nada." />
       <meta property="og:url" content="https://www.iarest.es" />
       <meta property="og:type" content="website" />
-      <meta name="robots" content="index, follow" />
+      <meta property="og:image" content="https://www.iarest.es/og-image.jpg" />
+      <meta property="og:image:width" content="1200" />
+      <meta property="og:image:height" content="630" />
+      <meta property="og:site_name" content="ia.rest" />
+      <meta property="og:locale" content="es_ES" />
+      <meta name="twitter:card" content="summary_large_image" />
+      <meta name="twitter:title" content="ia.rest — El sistema nervioso de tu restaurante" />
+      <meta name="twitter:description" content="No es un TPV. Es el primer sistema que gestiona tu restaurante de principio a fin, sin que tengas que hacer nada." />
+      <meta name="twitter:image" content="https://www.iarest.es/og-image.jpg" />
       <style dangerouslySetInnerHTML={{ __html: `:root {
   --bg: #14110E;
   --bg2: #111009;
