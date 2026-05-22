@@ -38,6 +38,12 @@ function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modu
     window.location.href = rutaDirecta
     return
   }
+  // Módulo único contabilidad → ir directamente a /contable
+  const mods = camarero.modulos_gestion ?? []
+  if (mods.length === 1 && mods[0] === 'contabilidad') {
+    window.location.href = '/contable'
+    return
+  }
   // Rol desconocido: si tiene módulos → /portal, si no → /edge como fallback
   window.location.href = tieneModulos ? '/central' : '/edge'
 }
