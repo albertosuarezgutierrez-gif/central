@@ -65,6 +65,8 @@ const config: ClienteConfig = {
   grupo: 'Catering Joaquín Jaén — Hacienda El Alba + Hacienda Trinidad',
   emailContacto: 'alberto.suarez.gutierrez@gmail.com',
   contactoNombre: 'Joaquín Jaén',
+  slug: 'catering-jj',
+  ciudad: 'Sevilla',
   tagsIntro: [
     'Bodas hasta 550 personas',
     'Eventos de empresa',

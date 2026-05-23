@@ -17,6 +17,8 @@ const config: ClienteConfig = {
   grupo: 'Ovejas Negras · Batuta · Serendipia · Eslava',
   emailContacto: 'alberto.suarez.gutierrez@gmail.com',
   contactoNombre: 'Ricardo Fernández',
+  slug: 'ovejas-negras',
+  ciudad: 'Sevilla',
   fechaReunion: '20 de mayo de 2026',
   lugarReunion: 'Espacio Eslava',
   tagsIntro: ['50 restaurantes', '8M€ en mercadería', '1.000 albaranes/mes', 'Alta rotación de personal'],

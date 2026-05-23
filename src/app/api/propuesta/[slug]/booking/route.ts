@@ -18,42 +18,64 @@ export async function POST(
     return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
   }
 
-  // Buscar lead por slug
-  const { data: lead } = await supabase
+  // Buscar lead por propuesta_slug (dinámico) o por slug estático conocido
+  const staticSlugs: Record<string, string> = {
+    'ovejas-negras': 'Ovejas Negras',
+    'sloppy-joes': "Sloppy Joe's",
+    'catering-jj': 'Catering Joaquín Jaén',
+  }
+  let lead: { id: string; empresa: string | null; restaurante: string | null; nombre: string | null; email: string | null; eventos: unknown[] } | null = null
+
+  const { data: bySlug } = await supabase
     .from('leads')
     .select('id, empresa, restaurante, nombre, email, eventos')
     .eq('propuesta_slug', slug)
-    .single()
+    .maybeSingle()
 
-  if (!lead) return NextResponse.json({ error: 'Propuesta no encontrada' }, { status: 404 })
+  if (bySlug) {
+    lead = bySlug
+  } else if (staticSlugs[slug]) {
+    // Propuesta estática — buscar por empresa/nombre
+    const { data: byName } = await supabase
+      .from('leads')
+      .select('id, empresa, restaurante, nombre, email, eventos')
+      .ilike('empresa', `%${staticSlugs[slug].split(' ')[0]}%`)
+      .maybeSingle()
+    if (byName) {
+      // Asociar slug al lead para futuras visitas
+      await supabase.from('leads').update({ propuesta_slug: slug }).eq('id', byName.id)
+      lead = byName
+    }
+  }
 
-  const empresa = lead.empresa || lead.restaurante || lead.nombre
+  const empresa = lead ? (lead.empresa || lead.restaurante || lead.nombre) : (staticSlugs[slug] || slug)
   const fechaHora = `${fecha}T${hora}:00`
 
-  // Actualizar lead
-  const eventos = Array.isArray(lead.eventos) ? lead.eventos : []
-  await supabase.from('leads').update({
-    reunion_fecha: fechaHora,
-    reunion_lugar: lugar,
-    reunion_notas: notas || null,
-    reunion_confirmada: false,
-    estado_pipeline: 'reunion_agendada',
-    estado: 'demo',
-    eventos: [...eventos, {
-      tipo: '📅',
-      texto: `Reunión solicitada: ${fecha} ${hora}h en ${lugar}. Contacto: ${nombre} (${email || 'sin email'})`,
-      fecha: new Date().toISOString().split('T')[0]
-    }]
-  }).eq('id', lead.id)
+  // Actualizar lead si existe en BD
+  if (lead) {
+    const eventos = Array.isArray(lead.eventos) ? lead.eventos : []
+    await supabase.from('leads').update({
+      reunion_fecha: fechaHora,
+      reunion_lugar: lugar,
+      reunion_notas: notas || null,
+      reunion_confirmada: false,
+      estado_pipeline: 'reunion_agendada',
+      estado: 'demo',
+      eventos: [...eventos, {
+        tipo: '📅',
+        texto: `Reunión solicitada: ${fecha} ${hora}h en ${lugar}. Contacto: ${nombre} (${email || 'sin email'})`,
+        fecha: new Date().toISOString().split('T')[0]
+      }]
+    }).eq('id', lead.id)
+  }
 
   // Notificar a Alberto por Telegram
   tgAlert(
     `📅 Reunión solicitada!\n\n<b>${empresa}</b>\n👤 ${nombre}${email ? ` · ${email}` : ''}\n📍 ${lugar}\n🕐 ${fecha} a las ${hora}h${notas ? `\n📝 ${notas}` : ''}\n\n<a href="https://www.iarest.es/super">Confirmar en /super →</a>`,
     'info'
   )
-
   // Email confirmación al lead (si tiene email)
-  const emailDestino = email || lead.email
+  const emailDestino = email || lead?.email
   if (emailDestino) {
     const html = `<!DOCTYPE html>
 <html>

@@ -17,6 +17,8 @@ const config: ClienteConfig = {
   grupo: 'Sloppy Joe\'s — 6 locales en Sevilla',
   emailContacto: 'alberto.suarez.gutierrez@gmail.com',
   contactoNombre: 'Sloppy Joe\'s',
+  slug: 'sloppy-joes',
+  ciudad: 'Sevilla',
   tagsIntro: ['6 locales en Sevilla', 'Delivery Glovo + UberEats', '€294/mes Deliverect', '€540/mes Ágora', 'Alta rotación de personal'],
 
   citas: [

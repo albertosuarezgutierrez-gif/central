@@ -1126,8 +1126,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase' }}>Propuesta IA</span>
                   {lead.estado_pipeline && (
-                    <span style={{ padding: '2px 8px', borderRadius: 10, background: lead.estado_pipeline === 'enviado' ? `${C.green}20` : lead.estado_pipeline === 'propuesta_lista' ? `${C.amber}20` : `${C.rule}`, color: lead.estado_pipeline === 'enviado' ? C.green : lead.estado_pipeline === 'propuesta_lista' ? C.amber : C.ink4, fontFamily: SM, fontSize: 10, fontWeight: 700 }}>
-                      {lead.estado_pipeline === 'propuesta_lista' ? '● LISTA' : lead.estado_pipeline === 'enviado' ? '✓ ENVIADA' : lead.estado_pipeline === 'reunion_agendada' ? '📅 REUNIÓN' : lead.estado_pipeline?.toUpperCase()}
+                    <span style={{ padding: '2px 8px', borderRadius: 10, background: lead.estado_pipeline === 'enviado' ? `${C.green}20` : lead.estado_pipeline === 'propuesta_lista' ? `${C.amber}20` : lead.estado_pipeline === 'reunion_agendada' ? `${C.teal}20` : lead.estado_pipeline === 'prospecto_ia' ? `${C.ink4}20` : `${C.rule}`, color: lead.estado_pipeline === 'enviado' ? C.green : lead.estado_pipeline === 'propuesta_lista' ? C.amber : lead.estado_pipeline === 'reunion_agendada' ? C.teal : C.ink4, fontFamily: SM, fontSize: 10, fontWeight: 700 }}>
+                      {lead.estado_pipeline === 'propuesta_lista' ? '● LISTA' : lead.estado_pipeline === 'enviado' ? '✓ ENVIADA' : lead.estado_pipeline === 'reunion_agendada' ? '📅 REUNIÓN' : lead.estado_pipeline === 'prospecto_ia' ? '🤖 PROSPECTO' : lead.estado_pipeline?.toUpperCase()}
                     </span>
                   )}
                   {lead.propuesta_slug && (
