@@ -28,6 +28,7 @@ import ContabilidadTab from '@/components/owner/ContabilidadTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import ModulosTab from '@/components/owner/ModulosTab'
 import NuevaEntradaPesoModal from '@/components/owner/NuevaEntradaPesoModal'
+import MiWebTab from '@/components/owner/MiWebTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
 import WineScannerModal from '@/components/WineScannerModal'
 
@@ -97,6 +98,7 @@ const ICONS = {
   calendar: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
   phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.77 3.19 2 2 0 0 1 3.74 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6.59 6.59l.97-1.04a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z',
   qr: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
+  globe: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -7376,6 +7378,7 @@ const GRUPOS = [
       { id: 'impresoras',     label: 'Impresoras',     icon: ICONS.printer       },
       { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          },
       { id: 'qr',             label: 'QR Mesa',        icon: ICONS.qr            },
+      { id: 'miweb',          label: 'Mi Web',         icon: ICONS.globe         },
       { id: 'modulos',        label: 'Módulos',        icon: ICONS.sparkle       }, // ← activar/desactivar módulos
       { id: 'notificaciones', label: 'Notificaciones', icon: ICONS.alertTriangle },
       { id: 'restaurante',    label: 'Restaurante',    icon: ICONS.shield        },
@@ -8297,6 +8300,7 @@ export default function OwnerPage() {
             {tab === 'facturas'       && <FacturasTab/>}
             {tab === 'impresoras'     && <ImpresorasTab/>}
             {tab === 'flujos'         && <FlujoTab/>}
+            {tab === 'miweb'          && <MiWebTab session={session} />}
             {tab === 'modulos'        && <ModulosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'notificaciones' && <NotificacionesTab/>}
             {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
