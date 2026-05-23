@@ -30,14 +30,22 @@ function detectarIdioma(acceptLanguage: string | null, idiomas_activos: string[]
 async function getWebData(slug: string) {
   const supabase = createServerClient()
 
-  const { data: web } = await supabase
+  const { data: web, error } = await supabase
     .from('web_restaurante')
-    .select('*, restaurantes(nombre, direccion, ciudad, telefono, tipo_negocio, latitud, longitud)')
+    .select('*')
     .eq('slug', slug)
     .eq('activa', true)
     .maybeSingle()
 
+  if (error) { console.error('[local/page] web query error:', error); return null }
   if (!web) return null
+
+  // Query separada para datos del restaurante (evita problemas de FK cache en PostgREST)
+  const { data: rest } = await supabase
+    .from('restaurantes')
+    .select('nombre, direccion, ciudad, telefono, tipo_negocio, latitud, longitud')
+    .eq('id', web.restaurante_id)
+    .maybeSingle()
 
   let carta: any[] = []
   if (web.mostrar_carta) {
@@ -55,15 +63,15 @@ async function getWebData(slug: string) {
     .update({ visitas_total: (web.visitas_total ?? 0) + 1 })
     .eq('id', web.id).then(() => {})
 
-  return { web, carta }
+  return { web, rest, carta }
 }
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params
   const result = await getWebData(slug)
   if (!result) return {}
-  const { web } = result
-  const nombre = (web.restaurantes as any)?.nombre ?? slug
+  const { web, rest } = result
+  const nombre = rest?.nombre ?? slug
   const desc = web.seo_description ?? web.descripcion_local ?? `Visita ${nombre} en Sevilla`
   return {
     title: web.seo_title ?? `${nombre} — Restaurante en Sevilla`,
@@ -86,8 +94,7 @@ export default async function WebRestaurantePage({ params }: Props) {
   const result = await getWebData(slug)
   if (!result) notFound()
 
-  const { web, carta } = result
-  const rest = web.restaurantes as any
+  const { web, carta, rest } = result
   const nombre = rest?.nombre ?? slug
 
   // Detectar idioma del visitante
