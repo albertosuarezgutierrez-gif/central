@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
+import { enviarEmailNuevoLead } from '@/lib/email'
 
 export async function POST(req: NextRequest) {
   try {
@@ -23,19 +24,22 @@ export async function POST(req: NextRequest) {
       estado: 'nuevo'
     })
 
-    // Notificación Telegram
+    // Notificaciones en paralelo
     const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
-    await tgAlert([
-      `🔥 NUEVO LEAD — landing`,
-      ``,
-      `👤 ${nombre}`,
-      `🍽️ ${restaurante}`,
-      `📧 ${email}`,
-      `📱 ${telefono || '—'}`,
-      `👥 Usuarios: ${usuarios || '—'}`,
-      ``,
-      `⏱️ ${fecha}`
-    ].join('\n'))
+    await Promise.allSettled([
+      tgAlert([
+        `🔥 NUEVO LEAD — landing`,
+        ``,
+        `👤 ${nombre}`,
+        `🍽️ ${restaurante}`,
+        `📧 ${email}`,
+        `📱 ${telefono || '—'}`,
+        `👥 Usuarios: ${usuarios || '—'}`,
+        ``,
+        `⏱️ ${fecha}`
+      ].join('\n')),
+      enviarEmailNuevoLead({ nombre, restaurante, email, telefono, usuarios })
+    ])
 
     return NextResponse.json({ ok: true })
 
