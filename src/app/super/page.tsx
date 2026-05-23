@@ -1349,160 +1349,350 @@ function SoporteSuperTab({ session, C, SE, SN, SM, onBadge }: { session: any; C:
 
 /* ─── Lead Hunter IA Panel ─── */
 function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; SM: string; onLeadCreado: (lead: any) => void; sh: () => Record<string,string> }) {
+  const [modo, setModo] = useState<'caption'|'url'>('caption')
   const [caption, setCaption] = useState('')
+  const [urlNegocio, setUrlNegocio] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<any>(null)
-  const [copied, setCopied] = useState(false)
+  const [analysis, setAnalysis] = useState<any>(null) // para modo URL
+  const [copiedDM, setCopiedDM] = useState(false)
   const [guardado, setGuardado] = useState(false)
+  const [propuestaUrl, setPropuestaUrl] = useState<string|null>(null)
+  const [showEmail, setShowEmail] = useState(false)
+  const [emailContent, setEmailContent] = useState('')
+  const [copiedEmail, setCopiedEmail] = useState(false)
 
-  const analizar = async () => {
+  // ── Modo caption: analizar post ──────────────────
+  const analizarCaption = async () => {
     if (!caption.trim()) return
-    setLoading(true); setResult(null); setGuardado(false)
+    setLoading(true); setResult(null); setAnalysis(null); setGuardado(false); setPropuestaUrl(null); setShowEmail(false)
     try {
       const prompt = `Eres un asistente de ventas B2B para ia.rest, SaaS de comandas por voz para restaurantes en España.
-
-Analiza este post de Instagram/TikTok de un restaurante español.
-${ciudad ? `Ciudad probable: ${ciudad}` : ''}
-
-POST:
-${caption}
-
-Responde SOLO con JSON válido, sin markdown, sin explicaciones:
-{
-  "es_lead": true o false,
-  "tipo": "apertura" o "queja_tpv" o "reforma" o "otro",
-  "nombre_local": "nombre del restaurante o null",
-  "ciudad": "ciudad detectada o null",
-  "tipo_cocina": "tipo de cocina o null",
-  "tamaño_estimado": "pequeño" o "mediano" o "grande",
-  "tpv_mencionado": "Ágora" o "Glop" o "Hiopos" o "Revo" o null,
-  "urgencia": "alta" o "media" o "baja",
-  "notas": "detalle específico del post útil para personalizar el DM",
-  "dm_sugerido": "DM personalizado de máx 200 caracteres, tono cercano, que termina con pregunta, sin links, menciona algo específico del post"
-}`
+Analiza este post de Instagram/TikTok.${ciudad ? ` Ciudad probable: ${ciudad}.` : ''}
+POST: ${caption}
+Responde SOLO con JSON válido, sin markdown:
+{"es_lead":true,"tipo":"apertura|queja_tpv|reforma|otro","nombre_local":"...","ciudad":"...","tipo_cocina":"...","tamaño_estimado":"pequeño|mediano|grande","tpv_mencionado":"Ágora|Glop|Hiopos|Revo|null","urgencia":"alta|media|baja","notas":"...","dm_sugerido":"DM máx 200 chars, tono cercano, termina con pregunta, sin links, menciona algo específico"}`
       const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
       })
       const data = await r.json()
-      const text = data.content?.[0]?.text?.trim() ?? ''
-      const clean = text.replace(/```json|```/g, '').trim()
-      setResult(JSON.parse(clean))
-    } catch(e: any) {
-      setResult({ error: e.message })
-    }
+      const parsed = JSON.parse(data.content?.[0]?.text?.replace(/```json|```/g,'').trim() ?? '{}')
+      setResult(parsed)
+      if (parsed.es_lead) generarPropuesta(parsed, null)
+    } catch(e: any) { setResult({ error: e.message }) }
     setLoading(false)
   }
 
+  // ── Modo URL: analizar negocio ────────────────────
+  const analizarURL = async () => {
+    if (!urlNegocio.trim()) return
+    setLoading(true); setResult(null); setAnalysis(null); setGuardado(false); setPropuestaUrl(null); setShowEmail(false)
+    try {
+      const r = await fetch('/api/super/lead-hunter', { method: 'POST', headers: sh(), body: JSON.stringify({ url: urlNegocio }) })
+      const d = await r.json()
+      if (!d.ok) { setAnalysis({ error: d.error }); setLoading(false); return }
+      setAnalysis(d.analysis)
+      generarPropuesta(null, d.analysis)
+    } catch(e: any) { setAnalysis({ error: e.message }) }
+    setLoading(false)
+  }
+
+  // ── Generar URL propuesta ─────────────────────────
+  const generarPropuesta = (post: any, biz: any) => {
+    const nombre = biz?.nombre || post?.nombre_local || 'Restaurante'
+    const ciudad_ = biz?.ciudad || post?.ciudad || ciudad || 'España'
+    const mrr = biz?.precio_mrr_estimado || 99
+    const modulos = biz?.modulos_recomendados || ['voz','kds']
+
+    const config = {
+      nombre,
+      grupo: biz?.grupo || nombre,
+      emailContacto: biz?.email_contacto || 'hola@iarest.es',
+      contactoNombre: biz?.nombre_contacto || 'equipo directivo',
+      tagsIntro: [
+        biz?.headline_operativa || `${biz?.num_mesas_estimado || '?'} mesas`,
+        `${biz?.num_locales || 1} local${biz?.num_locales > 1 ? 'es' : ''}`,
+        ciudad_,
+        biz?.tipo_cocina || post?.tipo_cocina || 'hostelería',
+      ].filter(Boolean),
+      citas: [{ quien: biz?.nombre_contacto || 'Gerencia', cargo: 'Dirección', texto: biz?.cita_inventada || 'En servicio no podemos pararnos a mirar pantallas.' }],
+      headline: biz?.headline_operativa || `${nombre} · ${ciudad_}`,
+      partidas: [{ nombre: 'Sala', color: '#D9442B' }, { nombre: 'Barra', color: '#E8A33B' }],
+      pasosFlujo: [
+        { paso: '1', label: 'Camarero habla', desc: 'Dicta la comanda por voz en 3 segundos', color: '#D9442B' },
+        { paso: '2', label: 'IA procesa', desc: 'Whisper + NIM estructuran el pedido', color: '#E8A33B' },
+        { paso: '3', label: 'Cocina recibe', desc: 'KDS muestra la comanda en tiempo real', color: '#3F7D44' },
+      ],
+      slideStockLabel: 'El coste oculto',
+      mercaderiaAnual: `${Math.round(mrr * 12 * 8)}€`,
+      desviacion1pct: `${Math.round(mrr * 12 * 0.08)}€`,
+      citaStock: biz?.cita_inventada || 'Lo que no controlas, lo pierdes.',
+      hoyVsIaRest: {
+        hoy: ['Comandas en papel o de memoria', 'Errores en hora punta', 'Sin datos de ventas en tiempo real'],
+        iaRest: ['Voz directa a cocina en <1s', 'Cero errores por malentendidos', 'Analytics en tiempo real'],
+      },
+      datosEstrategicos: [
+        { titulo: 'Integración inmediata', desc: 'Sin cambiar el hardware existente. Funciona en cualquier móvil.' },
+        { titulo: `${mrr}€/mes`, desc: 'Sin comisión por venta. Sin permanencia.' },
+        { titulo: '14 días de prueba', desc: 'Gratuita, sin tarjeta de crédito.' },
+      ],
+      modulos: modulos.slice(0, 4).map((m: string) => ({
+        emoji: { voz:'🎙', kds:'📺', almacen:'📦', vinos:'🍷', eventos:'🎉', delivery:'🛵' }[m] || '✦',
+        titulo: { voz:'Comandas por voz', kds:'KDS cocina', almacen:'Control de almacén', vinos:'Carta de vinos', eventos:'Módulo eventos', delivery:'Delivery propio' }[m] || m,
+        sub: 'Incluido en el plan base',
+        desc: 'Optimizado para el ritmo real de un restaurante en servicio.',
+        ejemplos: [],
+        ruta: '/edge',
+        color: '#D9442B',
+        roi: 'Ahorro real desde el primer día',
+      })),
+      objecionPrincipal: biz?.objecion_principal || '¿Y si el sistema falla en servicio?',
+      respuestaObjecion: biz?.respuesta_objecion || 'Funciona offline. Sin internet, sigue funcionando con cache local.',
+      fasePiloto: [
+        { fase: 'Semana 1', color: '#E8A33B', items: ['Setup en 2 horas', 'Formación del equipo', 'Primer turno en producción'] },
+        { fase: 'Semana 2-4', color: '#D9442B', items: ['Ajuste de carta y zonas', 'Optimización de flujos', 'Métricas de adopción'] },
+        { fase: 'Mes 2+', color: '#3F7D44', items: ['100% autónomo', 'Soporte incluido', 'Nuevas funcionalidades'] },
+      ],
+      precioMensaje: `Desde ${mrr}€/mes · Sin comisiones · Sin permanencia`,
+    }
+
+    const encoded = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(config)))))
+    setPropuestaUrl(`/propuesta/preview?d=${encoded}`)
+  }
+
+  // ── Generar borrador email ────────────────────────
+  const generarEmail = async () => {
+    setShowEmail(true)
+    const biz = analysis
+    const post = result
+    const nombre = biz?.nombre || post?.nombre_local || 'vuestro restaurante'
+    const contacto = biz?.nombre_contacto || 'equipo'
+    const ciudad_ = biz?.ciudad || post?.ciudad || ciudad || ''
+    const senial = post?.tipo || 'apertura'
+
+    const prompt = `Eres Alberto Suárez, fundador de ia.rest (comandas por voz para restaurantes en España).
+Escribe un email comercial corto y personalizado para este prospecto.
+
+Info del negocio:
+- Nombre: ${nombre}
+- Ciudad: ${ciudad_}
+- Señal detectada: ${senial}
+- TPV actual: ${biz?.tpv_actual || post?.tpv_mencionado || 'desconocido'}
+- Descripción: ${biz?.descripcion_negocio || post?.notas || ''}
+- Nombre contacto: ${contacto}
+
+Reglas:
+- Asunto: corto, específico, sin spam
+- Cuerpo: máx 150 palabras
+- Mencionar algo específico del negocio
+- Un único CTA: ver propuesta en el link
+- Firma: Alberto · ia.rest · hola@iarest.es
+- Tono: directo, sin florituras, B2B España
+
+Formato de respuesta:
+ASUNTO: [asunto]
+---
+[cuerpo del email]`
+
+    const r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
+    })
+    const d = await r.json()
+    setEmailContent(d.content?.[0]?.text?.trim() ?? '')
+  }
+
+  const copiarEmail = () => {
+    navigator.clipboard.writeText(emailContent)
+    setCopiedEmail(true); setTimeout(() => setCopiedEmail(false), 2000)
+  }
+
   const copiarDM = () => {
-    if (!result?.dm_sugerido) return
-    navigator.clipboard.writeText(result.dm_sugerido)
-    setCopied(true); setTimeout(() => setCopied(false), 2000)
+    navigator.clipboard.writeText(result?.dm_sugerido ?? '')
+    setCopiedDM(true); setTimeout(() => setCopiedDM(false), 2000)
   }
 
   const guardarLead = async () => {
-    if (!result?.es_lead) return
+    const biz = analysis; const post = result
+    const nombre = biz?.nombre || post?.nombre_local || 'Desconocido'
     const body = {
-      nombre: result.nombre_local || 'Desconocido',
-      restaurante: result.nombre_local || 'Desconocido',
-      telefono: '',
-      email: '',
-      locales: result.tamaño_estimado || '',
-      tpv: result.tpv_mencionado || '',
-      contacto: '',
-      notas: `[Lead Hunter IA] Señal: ${result.tipo} · ${result.notas || ''}\n\nDM sugerido: ${result.dm_sugerido || ''}`
+      nombre: biz?.nombre_contacto || nombre,
+      restaurante: nombre,
+      telefono: biz?.telefono || '',
+      email: biz?.email_contacto || '',
+      locales: biz ? `${biz.num_locales || 1} locales` : post?.tamaño_estimado || '',
+      tpv: biz?.tpv_actual || post?.tpv_mencionado || '',
+      contacto: biz?.nombre_contacto || '',
+      notas: `[Lead Hunter IA · ${modo}]\n${biz?.descripcion_negocio || post?.notas || ''}\n${propuestaUrl ? `Propuesta: https://www.iarest.es${propuestaUrl}` : ''}`
     }
     const resp = await fetch('/api/super/leads', { method: 'POST', headers: sh(), body: JSON.stringify(body) })
     const d = await resp.json()
     if (d.lead) { onLeadCreado(d.lead); setGuardado(true) }
   }
 
+  const limpiar = () => { setResult(null); setAnalysis(null); setCaption(''); setUrlNegocio(''); setGuardado(false); setPropuestaUrl(null); setShowEmail(false); setEmailContent('') }
+
   const TIPO_COLOR: Record<string, string> = { apertura: '#3F7D44', queja_tpv: '#D9442B', reforma: '#E8A33B', otro: '#6B5F52' }
   const TIPO_LABEL: Record<string, string> = { apertura: '🟢 Apertura', queja_tpv: '🔴 Queja TPV', reforma: '🟡 Reforma', otro: '⚪ Otro' }
 
+  const hasResult = result?.es_lead || analysis?.nombre
+
   return (
     <div style={{ background: `${C.amber}08`, border: `1px solid ${C.amber}30`, borderRadius: 14, padding: 20, marginBottom: 28 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-        <span style={{ fontFamily: SM, fontSize: 11, color: C.amber, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🎯 Lead Hunter IA</span>
-        <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>— pega un caption y la IA clasifica + genera el DM</span>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 10 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontFamily: SM, fontSize: 11, color: C.amber, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🎯 Lead Hunter IA</span>
+        </div>
+        {/* Selector modo */}
+        <div style={{ display: 'flex', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden' }}>
+          {(['caption','url'] as const).map(m => (
+            <button key={m} onClick={() => { setModo(m); limpiar() }}
+              style={{ padding: '6px 14px', border: 'none', background: modo === m ? C.amber : 'transparent', color: modo === m ? '#000' : C.ink3, fontFamily: SM, fontSize: 11, fontWeight: 700, cursor: 'pointer', letterSpacing: '.05em' }}>
+              {m === 'caption' ? '📋 Caption' : '🌐 URL negocio'}
+            </button>
+          ))}
+        </div>
       </div>
 
+      {/* Input según modo */}
       <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
-        <textarea
-          value={caption}
-          onChange={e => setCaption(e.target.value)}
-          placeholder="Pega aquí el caption del post de Instagram o TikTok..."
-          rows={3}
-          style={{ flex: 1, minWidth: 200, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px', color: C.ink, fontFamily: SN, fontSize: 13, resize: 'vertical', outline: 'none' }}
-        />
+        {modo === 'caption' ? (
+          <textarea value={caption} onChange={e => setCaption(e.target.value)}
+            placeholder="Pega el caption del post de Instagram o TikTok..."
+            rows={3}
+            style={{ flex: 1, minWidth: 200, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px', color: C.ink, fontFamily: SN, fontSize: 13, resize: 'vertical', outline: 'none' }}
+          />
+        ) : (
+          <input value={urlNegocio} onChange={e => setUrlNegocio(e.target.value)}
+            placeholder="https://restaurante.com o https://instagram.com/restaurante"
+            style={{ flex: 1, minWidth: 200, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none' }}
+          />
+        )}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 140 }}>
-          <select value={ciudad} onChange={e => setCiudad(e.target.value)} style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 10px', color: C.ink, fontFamily: SM, fontSize: 12, cursor: 'pointer' }}>
-            <option value="">Ciudad (auto)</option>
-            {['Sevilla','Madrid','Barcelona','Valencia','Málaga','Bilbao','Córdoba'].map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <button onClick={analizar} disabled={loading || !caption.trim()} style={{ background: C.amber, color: '#000', border: 'none', borderRadius: 8, padding: '10px 14px', fontFamily: SM, fontWeight: 700, fontSize: 12, cursor: 'pointer', opacity: (loading || !caption.trim()) ? .5 : 1, letterSpacing: '.05em' }}>
+          {modo === 'caption' && (
+            <select value={ciudad} onChange={e => setCiudad(e.target.value)}
+              style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 10px', color: C.ink, fontFamily: SM, fontSize: 12, cursor: 'pointer' }}>
+              <option value="">Ciudad (auto)</option>
+              {['Sevilla','Madrid','Barcelona','Valencia','Málaga','Bilbao','Córdoba'].map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          )}
+          <button onClick={modo === 'caption' ? analizarCaption : analizarURL}
+            disabled={loading || (modo === 'caption' ? !caption.trim() : !urlNegocio.trim())}
+            style={{ background: C.amber, color: '#000', border: 'none', borderRadius: 8, padding: '10px 14px', fontFamily: SM, fontWeight: 700, fontSize: 12, cursor: 'pointer', opacity: loading ? .5 : 1, letterSpacing: '.05em' }}>
             {loading ? 'Analizando…' : '▶ Analizar'}
           </button>
         </div>
       </div>
 
-      {result && !result.error && (
-        <div style={{ marginTop: 12 }}>
-          {!result.es_lead ? (
-            <div style={{ textAlign: 'center', padding: '16px', color: C.ink3, fontFamily: SM, fontSize: 13, background: C.bg, borderRadius: 8 }}>
-              🔇 No es un lead — {result.notas || 'El post no corresponde a una señal de oportunidad'}
-            </div>
-          ) : (
-            <div style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {/* Info row */}
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <span style={{ background: `${TIPO_COLOR[result.tipo]}20`, color: TIPO_COLOR[result.tipo], border: `1px solid ${TIPO_COLOR[result.tipo]}40`, borderRadius: 6, padding: '3px 10px', fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.05em' }}>{TIPO_LABEL[result.tipo] || result.tipo}</span>
-                <span style={{ fontFamily: SM, fontSize: 12, color: C.ink2, fontWeight: 600 }}>{result.nombre_local || '—'}</span>
-                {result.ciudad && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>📍 {result.ciudad}</span>}
-                {result.tipo_cocina && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>🍽 {result.tipo_cocina}</span>}
-                {result.tpv_mencionado && <span style={{ fontFamily: SM, fontSize: 11, color: C.red, fontWeight: 700 }}>⚠️ TPV: {result.tpv_mencionado}</span>}
-                <span style={{ fontFamily: SM, fontSize: 11, color: result.urgencia === 'alta' ? C.red : result.urgencia === 'media' ? C.amber : C.ink3 }}>● {result.urgencia?.toUpperCase()}</span>
-              </div>
-
-              {result.notas && (
-                <div style={{ fontFamily: SN, fontSize: 12, color: C.amber, background: `${C.amber}10`, border: `1px solid ${C.amber}25`, borderRadius: 6, padding: '8px 12px' }}>
-                  💡 {result.notas}
-                </div>
-              )}
-
-              {/* DM */}
-              {result.dm_sugerido && (
-                <div style={{ position: 'relative' }}>
-                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>DM generado — copiar y pegar en Instagram</div>
-                  <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 50px 12px 14px', fontFamily: SN, fontSize: 14, color: C.ink, lineHeight: 1.6 }}>
-                    {result.dm_sugerido}
-                  </div>
-                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginTop: 4 }}>{result.dm_sugerido.length}/200 caracteres</div>
-                  <button onClick={copiarDM} style={{ position: 'absolute', top: 30, right: 8, background: copied ? '#3F7D44' : C.rule, color: copied ? '#fff' : C.ink2, border: 'none', borderRadius: 6, padding: '5px 10px', fontFamily: SM, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
-                    {copied ? '✓' : 'Copiar'}
-                  </button>
-                </div>
-              )}
-
-              {/* Acciones */}
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button onClick={guardarLead} disabled={guardado} style={{ flex: 1, background: guardado ? `${C.green}20` : C.green, color: guardado ? C.green : '#fff', border: guardado ? `1px solid ${C.green}50` : 'none', borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: guardado ? 'default' : 'pointer' }}>
-                  {guardado ? '✓ Guardado en leads' : '+ Guardar como lead'}
-                </button>
-                <button onClick={() => { setResult(null); setCaption(''); setGuardado(false) }} style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 14px', color: C.ink3, fontFamily: SM, fontSize: 12, cursor: 'pointer' }}>
-                  Limpiar
-                </button>
-              </div>
-            </div>
-          )}
+      {/* Resultado */}
+      {(result?.error || analysis?.error) && (
+        <div style={{ color: C.red, fontFamily: SM, fontSize: 12, padding: '8px 12px', background: `${C.red}10`, borderRadius: 8, marginTop: 8 }}>
+          Error: {result?.error || analysis?.error}
         </div>
       )}
 
-      {result?.error && (
-        <div style={{ marginTop: 10, color: C.red, fontFamily: SM, fontSize: 12, padding: '8px 12px', background: `${C.red}10`, borderRadius: 8 }}>
-          Error: {result.error}
+      {result && !result.error && !result.es_lead && (
+        <div style={{ textAlign: 'center', padding: 16, color: C.ink3, fontFamily: SM, fontSize: 13, background: C.bg, borderRadius: 8, marginTop: 8 }}>
+          🔇 No es un lead — {result.notas || 'El post no corresponde a una señal de oportunidad'}
+        </div>
+      )}
+
+      {hasResult && (
+        <div style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', gap: 12, marginTop: 10 }}>
+
+          {/* Cabecera resultado */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            {result?.tipo && <span style={{ background: `${TIPO_COLOR[result.tipo]}20`, color: TIPO_COLOR[result.tipo], border: `1px solid ${TIPO_COLOR[result.tipo]}40`, borderRadius: 6, padding: '3px 10px', fontFamily: SM, fontSize: 11, fontWeight: 700 }}>{TIPO_LABEL[result.tipo]}</span>}
+            <span style={{ fontFamily: SM, fontSize: 13, color: C.ink, fontWeight: 700 }}>{analysis?.nombre || result?.nombre_local || '—'}</span>
+            {(analysis?.ciudad || result?.ciudad) && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>📍 {analysis?.ciudad || result?.ciudad}</span>}
+            {(analysis?.tipo_cocina || result?.tipo_cocina) && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>🍽 {analysis?.tipo_cocina || result?.tipo_cocina}</span>}
+            {analysis?.num_locales > 1 && <span style={{ fontFamily: SM, fontSize: 11, color: C.amber }}>🏢 {analysis.num_locales} locales</span>}
+            {(analysis?.tpv_actual || result?.tpv_mencionado) && <span style={{ fontFamily: SM, fontSize: 11, color: C.red, fontWeight: 700 }}>⚠️ TPV: {analysis?.tpv_actual || result?.tpv_mencionado}</span>}
+            {result?.urgencia && <span style={{ fontFamily: SM, fontSize: 11, color: result.urgencia === 'alta' ? C.red : result.urgencia === 'media' ? C.amber : C.ink3, fontWeight: 600 }}>● {result.urgencia.toUpperCase()}</span>}
+            {analysis?.precio_mrr_estimado && <span style={{ fontFamily: SM, fontSize: 11, color: C.green, fontWeight: 700 }}>💶 ~{analysis.precio_mrr_estimado}€/mes</span>}
+          </div>
+
+          {/* Descripción negocio */}
+          {analysis?.descripcion_negocio && (
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink2, lineHeight: 1.5 }}>{analysis.descripcion_negocio}</div>
+          )}
+
+          {/* Puntos de dolor */}
+          {analysis?.puntos_dolor?.length > 0 && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em' }}>Puntos de dolor detectados</div>
+              {analysis.puntos_dolor.map((p: string, i: number) => (
+                <div key={i} style={{ fontFamily: SN, fontSize: 12, color: C.ink2, display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+                  <span style={{ color: C.red, flexShrink: 0 }}>→</span>{p}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Nota caption */}
+          {result?.notas && (
+            <div style={{ fontFamily: SN, fontSize: 12, color: C.amber, background: `${C.amber}10`, border: `1px solid ${C.amber}25`, borderRadius: 6, padding: '8px 12px' }}>
+              💡 {result.notas}
+            </div>
+          )}
+
+          {/* DM */}
+          {result?.dm_sugerido && (
+            <div style={{ position: 'relative' }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>DM Instagram — listo para copiar</div>
+              <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 52px 12px 14px', fontFamily: SN, fontSize: 14, color: C.ink, lineHeight: 1.6 }}>
+                {result.dm_sugerido}
+              </div>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginTop: 4 }}>{result.dm_sugerido.length}/200 caracteres</div>
+              <button onClick={copiarDM} style={{ position: 'absolute', top: 30, right: 8, background: copiedDM ? '#3F7D44' : C.rule, color: copiedDM ? '#fff' : C.ink2, border: 'none', borderRadius: 6, padding: '5px 10px', fontFamily: SM, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                {copiedDM ? '✓' : 'Copiar'}
+              </button>
+            </div>
+          )}
+
+          {/* Acciones principales */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {propuestaUrl && (
+              <a href={propuestaUrl} target="_blank" rel="noopener noreferrer"
+                style={{ flex: 1, minWidth: 120, background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer', textDecoration: 'none', textAlign: 'center' }}>
+                🔗 Ver propuesta
+              </a>
+            )}
+            <button onClick={() => { if (!showEmail) generarEmail(); else setShowEmail(false) }}
+              style={{ flex: 1, minWidth: 120, background: showEmail ? C.bg2 : `${C.ink2}15`, color: showEmail ? C.ink3 : C.ink2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+              ✉️ {showEmail ? 'Ocultar email' : 'Borrador email'}
+            </button>
+            <button onClick={guardarLead} disabled={guardado}
+              style={{ flex: 1, minWidth: 120, background: guardado ? `${C.green}20` : C.green, color: guardado ? C.green : '#fff', border: guardado ? `1px solid ${C.green}50` : 'none', borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: guardado ? 'default' : 'pointer' }}>
+              {guardado ? '✓ Guardado' : '+ Guardar lead'}
+            </button>
+            <button onClick={limpiar}
+              style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 14px', color: C.ink3, fontFamily: SM, fontSize: 12, cursor: 'pointer' }}>
+              ✕
+            </button>
+          </div>
+
+          {/* Email borrador */}
+          {showEmail && (
+            <div style={{ position: 'relative', marginTop: 4 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>Borrador de email</div>
+              {!emailContent ? (
+                <div style={{ textAlign: 'center', padding: 20, color: C.ink3, fontFamily: SM, fontSize: 12 }}>Generando email…</div>
+              ) : (
+                <>
+                  <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '14px 52px 14px 14px', fontFamily: SN, fontSize: 13, color: C.ink, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                    {emailContent}
+                  </div>
+                  <button onClick={copiarEmail} style={{ position: 'absolute', top: 30, right: 8, background: copiedEmail ? '#3F7D44' : C.rule, color: copiedEmail ? '#fff' : C.ink2, border: 'none', borderRadius: 6, padding: '5px 10px', fontFamily: SM, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                    {copiedEmail ? '✓' : 'Copiar'}
+                  </button>
+                </>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
