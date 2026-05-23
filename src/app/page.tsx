@@ -101,7 +101,7 @@ export default function HomePage() {
         await fetch("/api/leads/landing", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre: n, restaurante: r, email: em, telefono: tf, usuarios: u, fuente: "landing" }),
+          body: JSON.stringify({ nombre: n, restaurante: r, email: em, telefono: tf, usuarios: u, origen: "landing-principal" }),
         })
       } catch {}
 
