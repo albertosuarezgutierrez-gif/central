@@ -9,6 +9,7 @@ interface WebConfig {
   slug?: string
   slug_sugerido?: string
   logo_url?: string
+  template?: string
   frase_bienvenida?: string
   descripcion_local?: string
   descripcion_barrio?: string
@@ -120,8 +121,21 @@ export default function MiWebTab({ session }: { session: any }) {
       })
       const d = await r.json()
       if (d.ok) {
-        setConfig(prev => ({ ...prev, logo_url: d.logo_url }))
-        setMsg({ tipo: 'ok', texto: '✓ Logo subido correctamente' })
+        // Aplicar identidad corporativa extraída por IA
+        setConfig(prev => ({
+          ...prev,
+          logo_url: d.logo_url,
+          ...(d.color_acento ? { color_acento: d.color_acento } : {}),
+          ...(d.template ? { template: d.template } : {}),
+        }))
+        if (d.identidad) {
+          setMsg({
+            tipo: 'ok',
+            texto: `✓ Logo subido · IA detectó tu identidad corporativa: ${d.identidad.descripcion} · Color aplicado: ${d.color_acento}`
+          })
+        } else {
+          setMsg({ tipo: 'ok', texto: '✓ Logo subido correctamente' })
+        }
       } else {
         setMsg({ tipo: 'error', texto: d.error ?? 'Error al subir logo' })
       }
