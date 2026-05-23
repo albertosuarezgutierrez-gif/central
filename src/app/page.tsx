@@ -149,11 +149,11 @@ export default function HomePage() {
 
   return (
     <>
-      <title>TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes</title>
-      <meta name="description" content="Sistema de comandas por voz para bares y restaurantes. El único TPV en español sin comisión. 59€/mes + 20€/usuario. Prueba 14 días gratis." />
+      <title>TPV por Voz para Bares y Catering - ia.rest | Sin Comisión 59€/mes</title>
+      <meta name="description" content="Sistema de gestión para restaurantes, bares y catering. Comandas por voz, KDS, almacén, eventos y catering integrado. El único TPV en español sin comisión. 59€/mes. Prueba 14 días gratis." />
       <meta name="robots" content="index, follow" />
-      <meta property="og:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes" />
-      <meta property="og:description" content="El único TPV en español sin comisión. Comandas por voz en menos de 0,5s. 59€/mes. Prueba 14 días gratis." />
+      <meta property="og:title" content="TPV por Voz para Restaurantes y Catering - ia.rest | Sin Comisión 59€/mes" />
+      <meta property="og:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión. 59€/mes. Prueba 14 días gratis." />
       <meta property="og:url" content="https://www.iarest.es" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-image.jpg" />
@@ -163,7 +163,7 @@ export default function HomePage() {
       <meta property="og:locale" content="es_ES" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes" />
-      <meta name="twitter:description" content="El único TPV en español sin comisión. Comandas por voz en menos de 0,5s. 59€/mes. Prueba 14 días gratis." />
+      <meta name="twitter:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión. 59€/mes." />
       <meta name="twitter:image" content="https://www.iarest.es/og-image.jpg" />
       <style dangerouslySetInnerHTML={{ __html: `:root {
   --bg: #14110E;
@@ -480,6 +480,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div class="cap-item"><span class="cap-num">09</span><div class="cap-title">Alertas en Telegram</div><div class="cap-sub">Cierre de caja, stock crítico o cualquier aviso directo a tu móvil.</div></div>
       <div class="cap-item"><span class="cap-num">10</span><div class="cap-title">Portal asesoría</div><div class="cap-sub">El contable ve todos sus clientes hosteleros. 303 calculado. Exporta en A3 con un clic.</div></div>
       <div class="cap-item"><span class="cap-num">11</span><div class="cap-title">Central de almacén</div><div class="cap-sub">Para grupos: stock crítico de todos los locales en tiempo real. Pedido grupal al proveedor.</div></div>
+      <div class="cap-item"><span class="cap-num">12</span><div class="cap-title">Eventos y catering</div><div class="cap-sub">Bodas, comuniones, empresas. Presupuesto, pases de cocina, APPCC y check-in de invitados. Un sistema para restaurante y catering.</div></div>
     </div>
   </div>
 </section>
