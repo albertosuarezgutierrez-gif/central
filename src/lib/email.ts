@@ -529,3 +529,29 @@ export async function enviarEmailNuevoLead({
     html,
   })
 }
+
+// ── Función genérica de envío (para propuestas y otros usos internos) ─────────
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  replyTo = 'hola@iarest.es',
+}: {
+  to: string | string[]
+  subject: string
+  html: string
+  text?: string
+  replyTo?: string
+}) {
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject,
+    html,
+    ...(text && { text }),
+    replyTo,
+  })
+  if (error) throw new Error(error.message)
+  return data
+}

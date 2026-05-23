@@ -965,6 +965,15 @@ interface Lead {
   estado: EstadoLead; notas: string | null; created_at: string
   tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]
+  // CRM avanzado
+  empresa?: string; web?: string; ciudad?: string
+  estudio_completo?: Record<string, unknown>
+  pain_points?: string[]; modulos_recomendados?: string[]
+  mrr_estimado?: number; propuesta_slug?: string
+  email_draft?: string; email_asunto?: string
+  estado_pipeline?: string
+  research_at?: string; propuesta_enviada_at?: string; propuesta_vista_at?: string
+  reunion_fecha?: string; reunion_lugar?: string; reunion_confirmada?: boolean
 }
 
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
@@ -978,6 +987,55 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [eventoTipo, setEventoTipo] = useState<Record<string, string>>({})
   const [form, setForm] = useState({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
   const [saving, setSaving] = useState(false)
+  const [researchLoading, setResearchLoading] = useState<Record<string, boolean>>({})
+  const [emailEditing, setEmailEditing] = useState<Record<string, boolean>>({})
+  const [emailTexts, setEmailTexts] = useState<Record<string, { asunto: string; cuerpo: string }>>({})
+  const [enviando, setEnviando] = useState<Record<string, boolean>>({})
+
+  const generarResearch = async (lead: Lead) => {
+    setResearchLoading(p => ({ ...p, [lead.id]: true }))
+    try {
+      const r = await fetch('/api/super/agentes/research', {
+        method: 'POST', headers: sh(), body: JSON.stringify({ lead_id: lead.id })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setLeads(prev => prev.map(l => l.id === lead.id ? {
+          ...l,
+          propuesta_slug: d.slug,
+          email_asunto: d.email_asunto,
+          email_draft: d.email_cuerpo,
+          estudio_completo: d.estudio,
+          estado_pipeline: 'propuesta_lista',
+          research_at: new Date().toISOString(),
+        } : l))
+      }
+    } catch (e) { console.error(e) }
+    setResearchLoading(p => ({ ...p, [lead.id]: false }))
+  }
+
+  const enviarPropuesta = async (lead: Lead) => {
+    const emailData = emailTexts[lead.id]
+    setEnviando(p => ({ ...p, [lead.id]: true }))
+    try {
+      const r = await fetch('/api/super/agentes/research/enviar', {
+        method: 'POST', headers: sh(),
+        body: JSON.stringify({
+          lead_id: lead.id,
+          email_asunto: emailData?.asunto || lead.email_asunto,
+          email_cuerpo: emailData?.cuerpo || lead.email_draft,
+        })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setLeads(prev => prev.map(l => l.id === lead.id ? {
+          ...l, estado_pipeline: 'enviado', propuesta_enviada_at: new Date().toISOString()
+        } : l))
+        setEmailEditing(p => ({ ...p, [lead.id]: false }))
+      } else alert(d.error)
+    } catch (e) { console.error(e) }
+    setEnviando(p => ({ ...p, [lead.id]: false }))
+  }
 
   useEffect(() => {
     fetch('/api/super/leads', { headers: sh() })
@@ -1062,6 +1120,121 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
           <div style={{ borderTop: `1px solid ${C.rule}`, padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
             {lead.notas && <div style={{ fontFamily: SM, fontSize: 13, color: C.ink2, fontStyle: 'italic', padding: '10px 14px', background: `${C.rule}30`, borderRadius: 8 }}>{lead.notas}</div>}
 
+            {/* ── PANEL RESEARCH IA ─── */}
+            <div style={{ borderTop: `1px dashed ${C.rule}`, paddingTop: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10, marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase' }}>Propuesta IA</span>
+                  {lead.estado_pipeline && (
+                    <span style={{ padding: '2px 8px', borderRadius: 10, background: lead.estado_pipeline === 'enviado' ? `${C.green}20` : lead.estado_pipeline === 'propuesta_lista' ? `${C.amber}20` : `${C.rule}`, color: lead.estado_pipeline === 'enviado' ? C.green : lead.estado_pipeline === 'propuesta_lista' ? C.amber : C.ink4, fontFamily: SM, fontSize: 10, fontWeight: 700 }}>
+                      {lead.estado_pipeline === 'propuesta_lista' ? '● LISTA' : lead.estado_pipeline === 'enviado' ? '✓ ENVIADA' : lead.estado_pipeline === 'reunion_agendada' ? '📅 REUNIÓN' : lead.estado_pipeline?.toUpperCase()}
+                    </span>
+                  )}
+                  {lead.propuesta_slug && (
+                    <a href={`/propuesta/${lead.propuesta_slug}`} target="_blank" rel="noreferrer"
+                      style={{ fontFamily: SM, fontSize: 10, color: C.red, textDecoration: 'none' }}>
+                      ver propuesta ↗
+                    </a>
+                  )}
+                </div>
+                {!lead.research_at ? (
+                  <button onClick={() => generarResearch(lead)} disabled={researchLoading[lead.id]}
+                    style={{ background: researchLoading[lead.id] ? C.rule : `${C.amber}20`, color: researchLoading[lead.id] ? C.ink4 : C.amber, border: `1px solid ${researchLoading[lead.id] ? C.rule : C.amber + '40'}`, borderRadius: 7, padding: '6px 12px', fontFamily: SM, fontSize: 11, fontWeight: 700, cursor: 'pointer' }}>
+                    {researchLoading[lead.id] ? '⏳ Generando…' : '🔍 Generar estudio IA'}
+                  </button>
+                ) : (
+                  <button onClick={() => generarResearch(lead)} disabled={researchLoading[lead.id]}
+                    style={{ background: 'transparent', color: C.ink4, border: `1px solid ${C.rule}`, borderRadius: 7, padding: '4px 10px', fontFamily: SM, fontSize: 10, cursor: 'pointer' }}>
+                    {researchLoading[lead.id] ? '⏳' : '↺ Regenerar'}
+                  </button>
+                )}
+              </div>
+
+              {/* Estudio generado */}
+              {lead.estudio_completo && (
+                <div style={{ background: `${C.rule}20`, borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+                  {!!lead.estudio_completo.argumento_principal && (
+                    <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, marginBottom: 10, fontStyle: 'italic' }}>
+                      💡 {String(lead.estudio_completo.argumento_principal)}
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 8 }}>
+                    {(lead.estudio_completo.modulos_criticos as string[] || []).map((m: string) => (
+                      <span key={m} style={{ padding: '2px 8px', background: `${C.red}15`, color: C.red, border: `1px solid ${C.red}30`, borderRadius: 10, fontFamily: SM, fontSize: 10, fontWeight: 700 }}>{m}</span>
+                    ))}
+                    {(lead.estudio_completo.modulos_secundarios as string[] || []).map((m: string) => (
+                      <span key={m} style={{ padding: '2px 8px', background: `${C.rule}`, color: C.ink4, borderRadius: 10, fontFamily: SM, fontSize: 10 }}>{m}</span>
+                    ))}
+                  </div>
+                  <div style={{ display: 'flex', gap: 16 }}>
+                    {!!lead.estudio_completo.mrr_estimado && <span style={{ fontFamily: SM, fontSize: 11, color: C.green }}>💰 {Number(lead.estudio_completo.mrr_estimado)}€/mes estimado</span>}
+                    {!!lead.estudio_completo.puntuacion_lead && <span style={{ fontFamily: SM, fontSize: 11, color: C.amber }}>⭐ {Number(lead.estudio_completo.puntuacion_lead)}/100</span>}
+                  </div>
+                </div>
+              )}
+
+              {/* Email draft */}
+              {lead.email_draft && (
+                <div style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', textTransform: 'uppercase' }}>Email generado</span>
+                    <button onClick={() => {
+                      if (!emailEditing[lead.id]) {
+                        setEmailTexts(p => ({ ...p, [lead.id]: { asunto: lead.email_asunto || '', cuerpo: lead.email_draft || '' } }))
+                      }
+                      setEmailEditing(p => ({ ...p, [lead.id]: !p[lead.id] }))
+                    }} style={{ background: 'none', border: `1px solid ${C.rule}`, borderRadius: 5, padding: '3px 8px', fontFamily: SM, fontSize: 10, color: C.ink3, cursor: 'pointer' }}>
+                      {emailEditing[lead.id] ? 'Cancelar edición' : '✏ Editar'}
+                    </button>
+                  </div>
+                  {emailEditing[lead.id] ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                      <input
+                        value={emailTexts[lead.id]?.asunto || ''}
+                        onChange={e => setEmailTexts(p => ({ ...p, [lead.id]: { ...p[lead.id], asunto: e.target.value } }))}
+                        placeholder="Asunto"
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '7px 10px', background: C.bg2 || C.bg, border: `1px solid ${C.rule}`, borderRadius: 6, fontFamily: SN, fontSize: 12, color: C.ink, outline: 'none' }}
+                      />
+                      <textarea
+                        value={emailTexts[lead.id]?.cuerpo || ''}
+                        onChange={e => setEmailTexts(p => ({ ...p, [lead.id]: { ...p[lead.id], cuerpo: e.target.value } }))}
+                        rows={8}
+                        style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', background: C.bg2 || C.bg, border: `1px solid ${C.rule}`, borderRadius: 6, fontFamily: SN, fontSize: 12, color: C.ink, resize: 'vertical', outline: 'none' }}
+                      />
+                    </div>
+                  ) : (
+                    <div>
+                      <div style={{ fontFamily: SM, fontSize: 11, color: C.ink2, marginBottom: 4 }}>Asunto: {lead.email_asunto}</div>
+                      <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, whiteSpace: 'pre-wrap', lineHeight: 1.6, maxHeight: 120, overflow: 'hidden', maskImage: 'linear-gradient(to bottom, black 70%, transparent)' }}>{lead.email_draft}</div>
+                    </div>
+                  )}
+                  {lead.email && !lead.propuesta_enviada_at && (
+                    <button onClick={() => enviarPropuesta(lead)} disabled={enviando[lead.id]}
+                      style={{ marginTop: 12, width: '100%', background: enviando[lead.id] ? C.rule : C.red, color: enviando[lead.id] ? C.ink4 : '#fff', border: 'none', borderRadius: 8, padding: '10px', fontFamily: SM, fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>
+                      {enviando[lead.id] ? '⏳ Enviando…' : `📨 Aprobar y enviar a ${lead.email}`}
+                    </button>
+                  )}
+                  {lead.propuesta_enviada_at && (
+                    <div style={{ marginTop: 8, textAlign: 'center', fontFamily: SM, fontSize: 11, color: C.green }}>
+                      ✓ Enviada {new Date(lead.propuesta_enviada_at).toLocaleDateString('es-ES')}
+                      {lead.propuesta_vista_at && ` · Vista ${new Date(lead.propuesta_vista_at).toLocaleDateString('es-ES')}`}
+                    </div>
+                  )}
+                  {!lead.email && <div style={{ marginTop: 8, fontFamily: SM, fontSize: 11, color: C.amber }}>⚠ Añade el email del lead para poder enviar</div>}
+                </div>
+              )}
+
+              {/* Reunión agendada */}
+              {lead.reunion_fecha && (
+                <div style={{ marginTop: 8, padding: '10px 14px', background: `${C.green}10`, border: `1px solid ${C.green}30`, borderRadius: 8 }}>
+                  <span style={{ fontFamily: SM, fontSize: 12, color: C.green }}>
+                    📅 Reunión: {new Date(lead.reunion_fecha).toLocaleString('es-ES', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' })}h
+                    {lead.reunion_lugar && ` · ${lead.reunion_lugar}`}
+                  </span>
+                </div>
+              )}
+            </div>
+
             {/* Historial */}
             {lead.eventos?.length > 0 && (
               <div>
@@ -1122,7 +1295,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       </div>
 
       {/* ── LEAD HUNTER IA PANEL ─────────────────────── */}
-      {showHunter && <LeadHunterPanel C={C} SN={SN} SM={SM} onLeadCreado={(lead: Lead) => setLeads(prev => [lead, ...prev])} sh={sh} />}
+      {showHunter && <LeadHunterPanel C={C} SN={SN} SM={SM} onLeadCreado={(lead: Lead) => setLeads(prev => [lead, ...prev])} onLeadActualizado={(lead: Lead) => setLeads(prev => prev.map(l => l.id === lead.id ? { ...l, ...lead } : l))} sh={sh} />}
 
       {/* Leyenda */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
@@ -1370,7 +1543,7 @@ function SoporteSuperTab({ session, C, SE, SN, SM, onBadge }: { session: any; C:
 }
 
 /* ─── Lead Hunter IA Panel ─── */
-function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; SM: string; onLeadCreado: (lead: any) => void; sh: () => Record<string,string> }) {
+function LeadHunterPanel({ C, SN, SM, onLeadCreado, onLeadActualizado, sh }: { C: any; SN: string; SM: string; onLeadCreado: (lead: any) => void; onLeadActualizado?: (lead: any) => void; sh: () => Record<string,string> }) {
   const [caption, setCaption] = useState('')
   const [ciudad, setCiudad] = useState('')
   const [loading, setLoading] = useState(false)
@@ -1429,6 +1602,8 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones:
     const body = {
       nombre: result.nombre_local || 'Desconocido',
       restaurante: result.nombre_local || 'Desconocido',
+      empresa: result.nombre_local || 'Desconocido',
+      ciudad: result.ciudad || ciudad || 'Sevilla',
       telefono: '',
       email: '',
       locales: result.tamaño_estimado || '',
@@ -1438,7 +1613,16 @@ Responde SOLO con JSON válido, sin markdown, sin explicaciones:
     }
     const resp = await fetch('/api/super/leads', { method: 'POST', headers: sh(), body: JSON.stringify(body) })
     const d = await resp.json()
-    if (d.lead) { onLeadCreado(d.lead); setGuardado(true) }
+    if (d.lead) {
+      onLeadCreado(d.lead)
+      setGuardado(true)
+      // Auto-disparar research IA en background
+      fetch('/api/super/agentes/research', {
+        method: 'POST', headers: sh(), body: JSON.stringify({ lead_id: d.lead.id })
+      }).then(r => r.json()).then(res => {
+        if (res.ok) onLeadActualizado?.({ ...d.lead, propuesta_slug: res.slug, email_asunto: res.email_asunto, email_draft: res.email_cuerpo, estudio_completo: res.estudio, estado_pipeline: 'propuesta_lista', research_at: new Date().toISOString() })
+      }).catch(() => {})
+    }
   }
 
   const TIPO_COLOR: Record<string, string> = { apertura: '#3F7D44', queja_tpv: '#D9442B', reforma: '#E8A33B', otro: '#6B5F52' }
