@@ -449,7 +449,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
           <div class="cost-row"><span>Gestión delivery (Deliverect…)</span><span>~49 €/mes</span></div>
           <div class="cost-row"><span>Software de almacén</span><span>~40 €/mes</span></div>
           <div class="cost-row"><span>VeriFactu externo</span><span>~30 €/mes</span></div>
-          <div class="cost-row"><span>Exportación contable</span><span>~80 €/mes</span></div>
+          <div class="cost-row"><span>Exportación contable + portal asesoría</span><span>~80 €/mes</span></div>
         </div>
         <div class="cost-total">
           <div class="ct-l"><strong>ia.rest · 5 usuarios</strong>todo incluido · sin comisión</div>
@@ -478,6 +478,8 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div class="cap-item"><span class="cap-num">07</span><div class="cap-title">Contabilidad</div><div class="cap-sub">Tu gestor recibe todo listo. Sin hacer nada.</div></div>
       <div class="cap-item"><span class="cap-num">08</span><div class="cap-title">Se repara solo</div><div class="cap-sub">Si algo falla, lo detecta y lo corrige. Solo.</div></div>
       <div class="cap-item"><span class="cap-num">09</span><div class="cap-title">Alertas en Telegram</div><div class="cap-sub">Cierre de caja, stock crítico o cualquier aviso directo a tu móvil.</div></div>
+      <div class="cap-item"><span class="cap-num">10</span><div class="cap-title">Portal asesoría</div><div class="cap-sub">El contable ve todos sus clientes hosteleros. 303 calculado. Exporta en A3 con un clic.</div></div>
+      <div class="cap-item"><span class="cap-num">11</span><div class="cap-title">Central de almacén</div><div class="cap-sub">Para grupos: stock crítico de todos los locales en tiempo real. Pedido grupal al proveedor.</div></div>
     </div>
   </div>
 </section>
