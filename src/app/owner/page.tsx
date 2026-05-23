@@ -36,6 +36,115 @@ import EventosTab from '@/components/owner/EventosTab'
 import MenusEventoTab from '@/components/owner/MenusEventoTab'
 import CRMEventosTab from '@/components/owner/CRMEventosTab'
 
+// ─── ComisionesEventoTab (inline, ligero) ─────────────────────────────────────
+function ComisionesEventoTab({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
+  const [data, setData] = React.useState<{
+    resumen: {personal_id:string;nombre:string;total_comisiones:number;pagado:number;pendiente:number}[]
+    pendientes: {id:string;importe:number;estado:string;personal:{nombre:string};evento:{numero_evento:string;cliente_nombre:string;fecha_evento:string}}[]
+  } | null>(null)
+  const [personal, setPersonal] = React.useState<{id:string;nombre:string}[]>([])
+  const [selPersonal, setSelPersonal] = React.useState('')
+  const [formConfig, setFormConfig] = React.useState({ tipo: 'porcentaje', valor: '' })
+  const [saving, setSaving] = React.useState(false)
+  const fmtEur2 = (n:number|null) => n ? `${Number(n).toLocaleString('es-ES',{minimumFractionDigits:2})} €` : '—'
+
+  React.useEffect(() => {
+    Promise.all([
+      fetch('/api/owner/eventos/comisiones', {headers:sh()}).then(r=>r.json()),
+      fetch('/api/owner/personal', {headers:sh()}).then(r=>r.json()),
+    ]).then(([d, p]) => {
+      setData(d)
+      setPersonal((p.camareros ?? p.personal ?? []).filter((c:{rol:string})=>c.rol==='coordinador_eventos'))
+    })
+  }, [sh])
+
+  const guardarConfig = async () => {
+    if (!selPersonal || !formConfig.valor) return
+    setSaving(true)
+    await fetch('/api/owner/eventos/comisiones', {
+      method:'POST', headers:{'Content-Type':'application/json',...sh()},
+      body:JSON.stringify({personal_id:selPersonal, tipo:formConfig.tipo, valor:parseFloat(formConfig.valor)})
+    })
+    setSaving(false)
+    fetch('/api/owner/eventos/comisiones',{headers:sh()}).then(r=>r.json()).then(setData)
+  }
+
+  const pagarComision = async (id:string) => {
+    await fetch('/api/owner/eventos/comisiones', {method:'PUT', headers:{'Content-Type':'application/json',...sh()}, body:JSON.stringify({id,estado:'pagada'})})
+    fetch('/api/owner/eventos/comisiones',{headers:sh()}).then(r=>r.json()).then(setData)
+  }
+
+  return (
+    <div style={{padding:'0 0 40px'}}>
+      {/* Resumen por coordinador */}
+      <div style={{fontFamily:SE,fontSize:17,fontWeight:700,color:C.ink,fontStyle:'italic',marginBottom:12}}>Comisiones por coordinador</div>
+      {data?.resumen?.length ? (
+        <div style={{display:'grid',gap:8,marginBottom:20}}>
+          {data.resumen.map(r => (
+            <div key={r.personal_id} style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontFamily:SE,fontSize:15,fontWeight:700,color:C.ink,fontStyle:'italic'}}>{r.nombre}</div>
+                <div style={{fontFamily:SN,fontSize:11,color:C.ink3,marginTop:2}}>Total: {fmtEur2(r.total_comisiones)} · Pagado: {fmtEur2(r.pagado)}</div>
+              </div>
+              <div style={{fontFamily:SE,fontSize:18,fontWeight:700,color:r.pendiente>0?C.amber:C.green,fontStyle:'italic'}}>{fmtEur2(r.pendiente)}</div>
+            </div>
+          ))}
+        </div>
+      ) : <div style={{fontFamily:SN,fontSize:13,color:C.ink3,marginBottom:20}}>Sin coordinadores con comisiones configuradas.</div>}
+
+      {/* Configurar comisión */}
+      <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:16,marginBottom:16}}>
+        <div style={{fontFamily:SE,fontSize:15,fontWeight:700,color:C.ink,fontStyle:'italic',marginBottom:12}}>Configurar comisión</div>
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr auto',gap:8,alignItems:'flex-end'}}>
+          <div>
+            <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'.08em'}}>Coordinador</div>
+            <select value={selPersonal} onChange={e=>setSelPersonal(e.target.value)} style={{width:'100%',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:5,padding:'7px 8px',fontFamily:SN,fontSize:13,color:C.ink}}>
+              <option value=''>Seleccionar...</option>
+              {personal.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'.08em'}}>Tipo</div>
+            <select value={formConfig.tipo} onChange={e=>setFormConfig(f=>({...f,tipo:e.target.value}))} style={{width:'100%',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:5,padding:'7px 8px',fontFamily:SN,fontSize:13,color:C.ink}}>
+              <option value='porcentaje'>% sobre evento</option>
+              <option value='fijo_por_evento'>Fijo por evento</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'.08em'}}>{formConfig.tipo==='porcentaje'?'% valor':'€ fijo'}</div>
+            <input type='number' step='0.1' placeholder={formConfig.tipo==='porcentaje'?'5':'200'} value={formConfig.valor} onChange={e=>setFormConfig(f=>({...f,valor:e.target.value}))}
+              style={{width:'100%',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:5,padding:'7px 8px',fontFamily:SM,fontSize:13,color:C.ink}} />
+          </div>
+          <button onClick={guardarConfig} disabled={saving} style={{padding:'7px 14px',borderRadius:5,border:'none',background:C.red,color:'#fff',fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>
+            {saving?'...':'Guardar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Comisiones pendientes de pagar */}
+      {(data?.pendientes?.length ?? 0) > 0 && (
+        <div>
+          <div style={{fontFamily:SE,fontSize:15,fontWeight:700,color:C.ink,fontStyle:'italic',marginBottom:10}}>Pendientes de pago</div>
+          {data!.pendientes.map(c => (
+            <div key={c.id} style={{background:C.paper,border:`1px solid ${C.amber}44`,borderRadius:8,padding:'10px 14px',marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontFamily:SN,fontSize:13,color:C.ink,fontWeight:600}}>{c.personal.nombre}</div>
+                <div style={{fontFamily:SN,fontSize:11,color:C.ink3}}>{c.evento.numero_evento} · {c.evento.cliente_nombre} · {c.evento.fecha_evento}</div>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <div style={{fontFamily:SE,fontSize:16,fontWeight:700,color:C.amber,fontStyle:'italic'}}>{fmtEur2(c.importe)}</div>
+                <button onClick={()=>pagarComision(c.id)} style={{padding:'5px 10px',borderRadius:5,border:'none',background:C.green+'22',color:C.green,fontFamily:SN,fontSize:11,fontWeight:600,cursor:'pointer'}}>
+                  ✓ Pagar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 /* ─── Design Tokens ─── */
 
 /* ─── Types ─── */
@@ -7408,9 +7517,10 @@ const GRUPOS = [
   {
     id: 'eventos', label: 'Eventos', icon: ICONS.calendar,
     tabs: [
-      { id: 'eventos',       label: 'Eventos',   icon: ICONS.calendar },
-      { id: 'menus-evento',  label: 'Menús',     icon: ICONS.book     },
-      { id: 'crm-eventos',   label: 'CRM',       icon: ICONS.users    },
+      { id: 'eventos',       label: 'Eventos',    icon: ICONS.calendar },
+      { id: 'menus-evento',  label: 'Menús',      icon: ICONS.book     },
+      { id: 'crm-eventos',   label: 'CRM',        icon: ICONS.users    },
+      { id: 'comisiones',    label: 'Comisiones', icon: ICONS.chart    },
     ]
   },
   {
@@ -8340,6 +8450,7 @@ export default function OwnerPage() {
             {tab === 'eventos'       && <EventosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'menus-evento'  && <MenusEventoTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'crm-eventos'   && <CRMEventosTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'comisiones'    && <ComisionesEventoTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>
