@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 import { callAI } from '@/lib/ai-client'
-import { tgAlert } from '@/lib/telegram'
+import { tgAlert, tgEstudio } from '@/lib/telegram'
 import { cleanJSON } from '@/lib/ai-client'
 
 export async function GET(req: NextRequest) {
@@ -115,27 +115,7 @@ JSON exacto:
     estudio = { resumen_negocio: empresa, pain_points: ['Gestión manual'], modulos_criticos: ['voz', 'kds'], modulos_secundarios: ['almacen'], mrr_estimado: 120, argumento_principal: `ia.rest para ${empresa}`, nivel_urgencia: 'media', puntuacion_lead: 60 }
   }
 
-  // 3. Generar email
-  const emailRaw = await callAI(
-    `Eres Alberto, fundador de ia.rest. Emails directos, cercanos, español de España. Sin "innovador/solución/potente". Solo JSON válido.`,
-    `Email para: ${empresa} | Argumento: ${estudio.argumento_principal} | Módulos: ${(estudio.modulos_criticos as string[])?.join(', ')} | Pain: ${(estudio.pain_points as string[])?.slice(0,2).join(', ')} | MRR: ${estudio.mrr_estimado}€
-
-Reglas: máx 120 palabras, menciona el negocio, 1 pain point, incluye literalmente __PROPUESTA_URL__ al final, CTA visita en local. Firma: Alberto · ia.rest · hola@iarest.es
-
-{"asunto":"asunto máx 60 chars","cuerpo":"texto con \\n. Incluir __PROPUESTA_URL__ literalmente."}`,
-    800, 20000
-  )
-
-  let emailData = { asunto: `ia.rest para ${empresa}`, cuerpo: `Hola,\n\nTe escribo porque creo que ia.rest puede encajar muy bien en ${empresa}.\n\nPropuesta: __PROPUESTA_URL__\n\n¿Te parece si me paso un día por el local?\n\nAlberto · ia.rest · hola@iarest.es` }
-  try { emailData = JSON.parse(cleanJSON(emailRaw)) } catch { /* usar default */ }
-
-  // 4. Generar slug
-  const slugBase = empresa.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 28)
-  const slug = `${slugBase}-${Date.now().toString(36)}`
-  const propuestaUrl = `https://www.iarest.es/propuesta/${slug}`
-  const emailCuerpo = emailData.cuerpo.replace(/__PROPUESTA_URL__/g, propuestaUrl)
-
-  // 5. Guardar todo en BD
+  // 3. Guardar estudio en BD (SIN propuesta aún — esperamos OK de Alberto)
   const { data: current } = await supabase.from('leads').select('eventos').eq('id', leadId).single()
   const eventos = Array.isArray(current?.eventos) ? current.eventos : []
 
@@ -145,21 +125,23 @@ Reglas: máx 120 palabras, menciona el negocio, 1 pain point, incluye literalmen
     modulos_recomendados: [...((estudio.modulos_criticos as string[]) || []), ...((estudio.modulos_secundarios as string[]) || [])],
     mrr_estimado: estudio.mrr_estimado || null,
     tpv: (estudio.tpv_actual as string) || (lead.tpv as string) || null,
-    propuesta_slug: slug,
-    email_draft: emailCuerpo,
-    email_asunto: emailData.asunto,
-    estado_pipeline: 'propuesta_lista',
+    estado_pipeline: 'esperando_ok',
     research_at: new Date().toISOString(),
     eventos: [...eventos, {
       tipo: '🔍',
-      texto: `Research IA completado. Puntuación: ${estudio.puntuacion_lead}/100. MRR estimado: ${estudio.mrr_estimado}€/mes`,
+      texto: `Research completado. Puntuación: ${estudio.puntuacion_lead}/100. MRR: ${estudio.mrr_estimado}€/mes. Esperando OK en Telegram.`,
       fecha: new Date().toISOString().split('T')[0]
     }]
   }).eq('id', leadId)
 
-  // 6. Notificar
-  tgAlert(
-    `🎯 <b>Research completado</b>\n<b>${empresa}</b>\n💰 ${estudio.mrr_estimado}€/mes · ⭐ ${estudio.puntuacion_lead}/100\n📦 ${(estudio.modulos_criticos as string[])?.join(', ')}\n\n<a href="${propuestaUrl}">Ver propuesta</a>`,
-    'info'
-  )
+  // 6. Mandar estudio a Telegram con botones de aprobación
+  await tgEstudio(leadId, {
+    empresa,
+    resumen: estudio.resumen_negocio as string || empresa,
+    argumento: estudio.argumento_principal as string || '',
+    modulos: [...((estudio.modulos_criticos as string[]) || []), ...((estudio.modulos_secundarios as string[]) || [])],
+    mrr: estudio.mrr_estimado as number || 0,
+    puntuacion: estudio.puntuacion_lead as number || 0,
+    painPoints: (estudio.pain_points as string[]) || [],
+  })
 }
