@@ -17,6 +17,7 @@ export interface TemplateData {
   horarios: { dia: string; hora: string }[]
   slug: string
   idioma: string
+  template?: string
   t: Record<string, string> // traducciones UI
 }
 
