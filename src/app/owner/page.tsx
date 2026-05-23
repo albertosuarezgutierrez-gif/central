@@ -3,6 +3,7 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import Analytics from '@/components/Analytics'
+import AnalyticsComparativo from '@/components/owner/AnalyticsComparativo'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { copyToClipboard } from '@/lib/clipboard'
 import { supabase } from '@/lib/supabase'
@@ -8303,7 +8304,7 @@ export default function OwnerPage() {
             {tab === 'etiquetas'      && <EtiquetasTab sh={sh} />}
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
-            {tab === 'analytics'      && <Analytics compact />}
+            {tab === 'analytics'      && <><Analytics compact /><AnalyticsComparativo sh={sh} /></>}
             {tab === 'facturas'       && <FacturasTab/>}
             {tab === 'impresoras'     && <ImpresorasTab/>}
             {tab === 'flujos'         && <FlujoTab/>}
