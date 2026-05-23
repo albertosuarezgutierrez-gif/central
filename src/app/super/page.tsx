@@ -951,6 +951,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [loading, setLoading] = useState(true)
   const [expandido, setExpandido] = useState<string | null>(null)
   const [modalNuevo, setModalNuevo] = useState(false)
+  const [showHunter, setShowHunter] = useState(false)
   const [eventoTexto, setEventoTexto] = useState<Record<string, string>>({})
   const [eventoTipo, setEventoTipo] = useState<Record<string, string>>({})
   const [form, setForm] = useState({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
@@ -1088,10 +1089,18 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             {personales.length} personales · {online.length} desde la landing
           </p>
         </div>
-        <button onClick={() => setModalNuevo(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-          + Lead personal
-        </button>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <button onClick={() => setShowHunter(v => !v)} style={{ background: showHunter ? C.amber : `${C.amber}20`, color: showHunter ? '#000' : C.amber, border: `1px solid ${C.amber}60`, borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            🎯 Lead Hunter IA
+          </button>
+          <button onClick={() => setModalNuevo(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            + Lead personal
+          </button>
+        </div>
       </div>
+
+      {/* ── LEAD HUNTER IA PANEL ─────────────────────── */}
+      {showHunter && <LeadHunterPanel C={C} SN={SN} SM={SM} onLeadCreado={(lead: Lead) => setLeads(prev => [lead, ...prev])} sh={sh} />}
 
       {/* Leyenda */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
@@ -1332,6 +1341,168 @@ function SoporteSuperTab({ session, C, SE, SN, SM, onBadge }: { session: any; C:
               {enviando ? '…' : 'Enviar'}
             </button>
           </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/* ─── Lead Hunter IA Panel ─── */
+function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; SM: string; onLeadCreado: (lead: any) => void; sh: () => Record<string,string> }) {
+  const [caption, setCaption] = useState('')
+  const [ciudad, setCiudad] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [result, setResult] = useState<any>(null)
+  const [copied, setCopied] = useState(false)
+  const [guardado, setGuardado] = useState(false)
+
+  const analizar = async () => {
+    if (!caption.trim()) return
+    setLoading(true); setResult(null); setGuardado(false)
+    try {
+      const prompt = `Eres un asistente de ventas B2B para ia.rest, SaaS de comandas por voz para restaurantes en España.
+
+Analiza este post de Instagram/TikTok de un restaurante español.
+${ciudad ? `Ciudad probable: ${ciudad}` : ''}
+
+POST:
+${caption}
+
+Responde SOLO con JSON válido, sin markdown, sin explicaciones:
+{
+  "es_lead": true o false,
+  "tipo": "apertura" o "queja_tpv" o "reforma" o "otro",
+  "nombre_local": "nombre del restaurante o null",
+  "ciudad": "ciudad detectada o null",
+  "tipo_cocina": "tipo de cocina o null",
+  "tamaño_estimado": "pequeño" o "mediano" o "grande",
+  "tpv_mencionado": "Ágora" o "Glop" o "Hiopos" o "Revo" o null,
+  "urgencia": "alta" o "media" o "baja",
+  "notas": "detalle específico del post útil para personalizar el DM",
+  "dm_sugerido": "DM personalizado de máx 200 caracteres, tono cercano, que termina con pregunta, sin links, menciona algo específico del post"
+}`
+      const r = await fetch('https://api.anthropic.com/v1/messages', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
+      })
+      const data = await r.json()
+      const text = data.content?.[0]?.text?.trim() ?? ''
+      const clean = text.replace(/```json|```/g, '').trim()
+      setResult(JSON.parse(clean))
+    } catch(e: any) {
+      setResult({ error: e.message })
+    }
+    setLoading(false)
+  }
+
+  const copiarDM = () => {
+    if (!result?.dm_sugerido) return
+    navigator.clipboard.writeText(result.dm_sugerido)
+    setCopied(true); setTimeout(() => setCopied(false), 2000)
+  }
+
+  const guardarLead = async () => {
+    if (!result?.es_lead) return
+    const body = {
+      nombre: result.nombre_local || 'Desconocido',
+      restaurante: result.nombre_local || 'Desconocido',
+      telefono: '',
+      email: '',
+      locales: result.tamaño_estimado || '',
+      tpv: result.tpv_mencionado || '',
+      contacto: '',
+      notas: `[Lead Hunter IA] Señal: ${result.tipo} · ${result.notas || ''}\n\nDM sugerido: ${result.dm_sugerido || ''}`
+    }
+    const resp = await fetch('/api/super/leads', { method: 'POST', headers: sh(), body: JSON.stringify(body) })
+    const d = await resp.json()
+    if (d.lead) { onLeadCreado(d.lead); setGuardado(true) }
+  }
+
+  const TIPO_COLOR: Record<string, string> = { apertura: '#3F7D44', queja_tpv: '#D9442B', reforma: '#E8A33B', otro: '#6B5F52' }
+  const TIPO_LABEL: Record<string, string> = { apertura: '🟢 Apertura', queja_tpv: '🔴 Queja TPV', reforma: '🟡 Reforma', otro: '⚪ Otro' }
+
+  return (
+    <div style={{ background: `${C.amber}08`, border: `1px solid ${C.amber}30`, borderRadius: 14, padding: 20, marginBottom: 28 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
+        <span style={{ fontFamily: SM, fontSize: 11, color: C.amber, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🎯 Lead Hunter IA</span>
+        <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>— pega un caption y la IA clasifica + genera el DM</span>
+      </div>
+
+      <div style={{ display: 'flex', gap: 10, marginBottom: 10, flexWrap: 'wrap' }}>
+        <textarea
+          value={caption}
+          onChange={e => setCaption(e.target.value)}
+          placeholder="Pega aquí el caption del post de Instagram o TikTok..."
+          rows={3}
+          style={{ flex: 1, minWidth: 200, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '10px 12px', color: C.ink, fontFamily: SN, fontSize: 13, resize: 'vertical', outline: 'none' }}
+        />
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 140 }}>
+          <select value={ciudad} onChange={e => setCiudad(e.target.value)} style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 10px', color: C.ink, fontFamily: SM, fontSize: 12, cursor: 'pointer' }}>
+            <option value="">Ciudad (auto)</option>
+            {['Sevilla','Madrid','Barcelona','Valencia','Málaga','Bilbao','Córdoba'].map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <button onClick={analizar} disabled={loading || !caption.trim()} style={{ background: C.amber, color: '#000', border: 'none', borderRadius: 8, padding: '10px 14px', fontFamily: SM, fontWeight: 700, fontSize: 12, cursor: 'pointer', opacity: (loading || !caption.trim()) ? .5 : 1, letterSpacing: '.05em' }}>
+            {loading ? 'Analizando…' : '▶ Analizar'}
+          </button>
+        </div>
+      </div>
+
+      {result && !result.error && (
+        <div style={{ marginTop: 12 }}>
+          {!result.es_lead ? (
+            <div style={{ textAlign: 'center', padding: '16px', color: C.ink3, fontFamily: SM, fontSize: 13, background: C.bg, borderRadius: 8 }}>
+              🔇 No es un lead — {result.notas || 'El post no corresponde a una señal de oportunidad'}
+            </div>
+          ) : (
+            <div style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {/* Info row */}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+                <span style={{ background: `${TIPO_COLOR[result.tipo]}20`, color: TIPO_COLOR[result.tipo], border: `1px solid ${TIPO_COLOR[result.tipo]}40`, borderRadius: 6, padding: '3px 10px', fontFamily: SM, fontSize: 11, fontWeight: 700, letterSpacing: '.05em' }}>{TIPO_LABEL[result.tipo] || result.tipo}</span>
+                <span style={{ fontFamily: SM, fontSize: 12, color: C.ink2, fontWeight: 600 }}>{result.nombre_local || '—'}</span>
+                {result.ciudad && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>📍 {result.ciudad}</span>}
+                {result.tipo_cocina && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>🍽 {result.tipo_cocina}</span>}
+                {result.tpv_mencionado && <span style={{ fontFamily: SM, fontSize: 11, color: C.red, fontWeight: 700 }}>⚠️ TPV: {result.tpv_mencionado}</span>}
+                <span style={{ fontFamily: SM, fontSize: 11, color: result.urgencia === 'alta' ? C.red : result.urgencia === 'media' ? C.amber : C.ink3 }}>● {result.urgencia?.toUpperCase()}</span>
+              </div>
+
+              {result.notas && (
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.amber, background: `${C.amber}10`, border: `1px solid ${C.amber}25`, borderRadius: 6, padding: '8px 12px' }}>
+                  💡 {result.notas}
+                </div>
+              )}
+
+              {/* DM */}
+              {result.dm_sugerido && (
+                <div style={{ position: 'relative' }}>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>DM generado — copiar y pegar en Instagram</div>
+                  <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '12px 50px 12px 14px', fontFamily: SN, fontSize: 14, color: C.ink, lineHeight: 1.6 }}>
+                    {result.dm_sugerido}
+                  </div>
+                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginTop: 4 }}>{result.dm_sugerido.length}/200 caracteres</div>
+                  <button onClick={copiarDM} style={{ position: 'absolute', top: 30, right: 8, background: copied ? '#3F7D44' : C.rule, color: copied ? '#fff' : C.ink2, border: 'none', borderRadius: 6, padding: '5px 10px', fontFamily: SM, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+                    {copied ? '✓' : 'Copiar'}
+                  </button>
+                </div>
+              )}
+
+              {/* Acciones */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button onClick={guardarLead} disabled={guardado} style={{ flex: 1, background: guardado ? `${C.green}20` : C.green, color: guardado ? C.green : '#fff', border: guardado ? `1px solid ${C.green}50` : 'none', borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: guardado ? 'default' : 'pointer' }}>
+                  {guardado ? '✓ Guardado en leads' : '+ Guardar como lead'}
+                </button>
+                <button onClick={() => { setResult(null); setCaption(''); setGuardado(false) }} style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 14px', color: C.ink3, fontFamily: SM, fontSize: 12, cursor: 'pointer' }}>
+                  Limpiar
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {result?.error && (
+        <div style={{ marginTop: 10, color: C.red, fontFamily: SM, fontSize: 12, padding: '8px 12px', background: `${C.red}10`, borderRadius: 8 }}>
+          Error: {result.error}
         </div>
       )}
     </div>
