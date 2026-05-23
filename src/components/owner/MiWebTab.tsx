@@ -10,6 +10,8 @@ interface WebConfig {
   slug_sugerido?: string
   logo_url?: string
   template?: string
+  idiomas_activos?: string[]
+  whatsapp?: string
   frase_bienvenida?: string
   descripcion_local?: string
   descripcion_barrio?: string
@@ -38,6 +40,7 @@ export default function MiWebTab({ session }: { session: any }) {
   const [saving, setSaving] = useState(false)
   const [generando, setGenerando] = useState(false)
   const [subiendoLogo, setSubiendoLogo] = useState(false)
+  const [traduciendo, setTraduciendo] = useState(false)
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
 
   useEffect(() => { cargar() }, [])
@@ -143,6 +146,44 @@ export default function MiWebTab({ session }: { session: any }) {
       setMsg({ tipo: 'error', texto: 'Error de conexión' })
     }
     setSubiendoLogo(false)
+  }
+
+  async function traducirCarta() {
+    setTraduciendo(true)
+    setMsg(null)
+    try {
+      const r = await fetch('/api/owner/web/traducir-carta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
+        body: JSON.stringify({ idiomas: ['en', 'fr', 'de'] })
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setConfig(prev => ({ ...prev, idiomas_activos: ['es', 'en', 'fr', 'de'] }))
+        setMsg({ tipo: 'ok', texto: `✓ Carta traducida a inglés, francés y alemán (${d.platos_traducidos} platos)` })
+      } else {
+        setMsg({ tipo: 'error', texto: d.error ?? 'Error al traducir' })
+      }
+    } catch {
+      setMsg({ tipo: 'error', texto: 'Error de conexión' })
+    }
+    setTraduciendo(false)
+  }
+
+  function descargarQR() {
+    const a = document.createElement('a')
+    a.href = '/api/owner/web/qr'
+    a.setAttribute('x-ia-session', JSON.stringify(session))
+    // Usamos fetch para incluir la sesión
+    fetch('/api/owner/web/qr', { headers: { 'x-ia-session': JSON.stringify(session) } })
+      .then(r => r.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob)
+        a.href = url
+        a.download = `qr-web-${config.slug ?? 'restaurante'}.png`
+        a.click()
+        URL.revokeObjectURL(url)
+      })
   }
 
   function set<K extends keyof WebConfig>(key: K, val: WebConfig[K]) {
@@ -391,6 +432,101 @@ export default function MiWebTab({ session }: { session: any }) {
             <span style={{ fontFamily: SM, fontSize: 13, color: C.ink }}>{config.color_acento ?? '#D9442B'}</span>
           </div>
         </div>
+      </div>
+
+      {/* Template */}
+      <div style={s.sec}>
+        <p style={s.h3}>Diseño</p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {([
+            { id: 'clasico', label: 'El Clásico', desc: 'Dorado, editorial' },
+            { id: 'urbano', label: 'Urbano', desc: 'Dark, bold, gastrobar' },
+            { id: 'mediterraneo', label: 'Mediterráneo', desc: 'Cálido, naranja' },
+            { id: 'taberna', label: 'De Toda la Vida', desc: 'Rojo, taberna' },
+            { id: 'finedining', label: 'Fine Dining', desc: 'Negro y oro' },
+          ] as const).map(t => (
+            <div
+              key={t.id}
+              onClick={() => set('template', t.id)}
+              style={{
+                border: `2px solid ${config.template === t.id ? C.red : C.rule}`,
+                borderRadius: 10, padding: '10px 12px', cursor: 'pointer',
+                background: config.template === t.id ? '#fff5f3' : '#fff',
+                transition: 'all .15s'
+              }}
+            >
+              <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: config.template === t.id ? C.red : C.ink }}>{t.label}</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.45, marginTop: 2 }}>{t.desc}</div>
+            </div>
+          ))}
+        </div>
+        {config.slug && (
+          <a
+            href={`/local/${config.slug}`} target="_blank" rel="noopener noreferrer"
+            style={{ display: 'inline-block', marginTop: 12, fontFamily: SN, fontSize: 12, color: '#1a56db', textDecoration: 'none' }}
+          >
+            Ver web con este diseño →
+          </a>
+        )}
+      </div>
+
+      {/* Multiidioma */}
+      <div style={s.sec}>
+        <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 10 }}>
+          <p style={{ ...s.h3, margin: 0 }}>Multiidioma</p>
+          <button style={{ ...s.btnSec, fontSize: 12, opacity: traduciendo ? 0.6 : 1 }} onClick={traducirCarta} disabled={traduciendo}>
+            {traduciendo ? 'Traduciendo...' : '🌍 Traducir carta con IA'}
+          </button>
+        </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {[
+            { id: 'es', label: '🇪🇸 Español', always: true },
+            { id: 'en', label: '🇬🇧 Inglés' },
+            { id: 'fr', label: '🇫🇷 Francés' },
+            { id: 'de', label: '🇩🇪 Alemán' },
+          ].map(lang => {
+            const activo = config.idiomas_activos?.includes(lang.id)
+            return (
+              <div key={lang.id} style={{
+                background: activo ? '#e8f5e9' : '#f5f5f5',
+                color: activo ? '#2e7d32' : '#999',
+                borderRadius: 20, padding: '5px 14px',
+                fontFamily: SN, fontSize: 12, fontWeight: 600,
+                border: `1px solid ${activo ? '#a5d6a7' : '#e0e0e0'}`
+              }}>
+                {lang.label} {activo ? '✓' : ''}
+              </div>
+            )
+          })}
+        </div>
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '8px 0 0' }}>
+          La web detecta el idioma del visitante y muestra la carta en el suyo automáticamente
+        </p>
+      </div>
+
+      {/* QR descargable */}
+      {config.existe && config.slug && (
+        <div style={s.sec}>
+          <p style={s.h3}>QR de tu web</p>
+          <div style={{ ...s.row, gap: 16 }}>
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, opacity: 0.7, flex: 1, lineHeight: 1.6 }}>
+              Descarga el QR para imprimir en mesas, tarjetas o escaparate. El cliente lo escanea y accede directamente a tu web.
+            </div>
+            <button style={{ ...s.btn, whiteSpace: 'nowrap', flexShrink: 0 }} onClick={descargarQR}>
+              ⬇ Descargar QR
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* WhatsApp */}
+      <div style={s.sec}>
+        <p style={s.h3}>WhatsApp reservas</p>
+        <label style={s.lbl}>Número de WhatsApp <span style={{ opacity: 0.5 }}>(con prefijo país)</span></label>
+        <input style={s.inp} value={config.whatsapp ?? ''} onChange={e => set('whatsapp', e.target.value)} placeholder="+34 600 000 000" />
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '4px 0 0' }}>
+          Añade un botón de WhatsApp directo en la web para reservas
+        </p>
       </div>
 
       {/* Guardar */}
