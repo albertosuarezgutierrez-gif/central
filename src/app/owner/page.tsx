@@ -1553,7 +1553,7 @@ function RestauranteTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es', whatsapp_alertas_compras: '' })
+  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es', whatsapp_alertas_compras: '', dias_antelacion_pedido_evento: '5' })
   const [personal, setPersonal] = useState<{ id: string; nombre: string; rol: string }[]>([])
   const [responsableComprasId, setResponsableComprasId] = useState<string>('')
   const [logoUploading, setLogoUploading] = useState(false)
@@ -1580,6 +1580,7 @@ function RestauranteTab() {
           web_url:                rd.restaurante.web_url            ?? '',
           idioma_whisper:         rd.restaurante.idioma_whisper      ?? 'es',
           whatsapp_alertas_compras: rd.restaurante.whatsapp_alertas_compras ?? '',
+          dias_antelacion_pedido_evento: (rd.restaurante.dias_antelacion_pedido_evento ?? 5).toString(),
         })
         setResponsableComprasId(rd.restaurante.responsable_compras_id ?? '')
       }
@@ -1892,6 +1893,21 @@ function RestauranteTab() {
             </div>
           </div>
           {inp('WhatsApp alertas compras', 'whatsapp_alertas_compras', '+34 600 000 000')}
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '.08em' }}>
+              Días antelación pedido para eventos
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="number" min="1" max="30"
+                value={form.dias_antelacion_pedido_evento}
+                onChange={e => setForm(f => ({ ...f, dias_antelacion_pedido_evento: e.target.value }))}
+                style={{ width: 70, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '7px 9px', fontFamily: SM, fontSize: 14, color: C.ink, textAlign: 'center' as const }}
+              />
+              <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+                días antes del evento para generar sugerencias de pedido
+              </span>
+            </div>
+          </div>
         </div>
         <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:10, padding:'8px 12px', background:C.paper2, borderRadius:6 }}>
           💡 <strong>Flexible por diseño:</strong> cada restaurante elige quién gestiona las compras. El número de WhatsApp recibe notificaciones automáticas de incidencias, precios fuera de rango y alertas de stock.
