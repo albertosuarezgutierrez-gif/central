@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
+import AgentesIATab from '@/components/AgentesIATab'
 
 
 interface Restaurante {
@@ -104,7 +105,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -379,6 +380,7 @@ export default function SuperPage() {
             { id: 'sistema',      label: 'Sistema' },
             { id: 'autocuras',    label: '⚡ Autocuras' },
             { id: 'soporte',      label: 'Soporte', badge: badgeSoporte },
+            { id: 'agentes',      label: '🤖 Agentes' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -431,8 +433,11 @@ export default function SuperPage() {
           <div style={{ padding: '24px 0' }}><AutoCurasPanel /></div>
         ) : tabSuper === 'soporte' ? (
           <SoporteSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} onBadge={setBadgeSoporte} />
-        ) : tabSuper === 'clientes' ? (
-          <div>
+        ) : tabSuper === 'agentes' ? (
+          <div style={{ padding: '24px 0' }}>
+            <AgentesIATab session={session} C={C} SE={SE} SN={SN} SM={SM} />
+          </div>
+        ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>
               <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>CLIENTES · MULTI-RESTAURANTE</div>
               <h1 style={{ fontFamily: SE, fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>Clientes</h1>
