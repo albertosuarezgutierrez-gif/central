@@ -2,90 +2,66 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 
-// POST /api/owner/eventos/cerrar
-// Cierra un evento: marca como completado, imputa costes de personal automáticamente
-// y calcula el margen real
 export async function POST(req: NextRequest) {
   const session = getSession(req)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
 
-  const { evento_id, aforo_confirmado, coste_espacio } = await req.json()
+  const { evento_id, aforo_real, precio_total_real, coste_espacio, costes_extra } = await req.json()
   if (!evento_id) return NextResponse.json({ error: 'Falta evento_id' }, { status: 400 })
 
-  // 1. Actualizar aforo real y estado
+  // 1. Actualizar evento
   await supabase.from('eventos').update({
-    estado: 'completado',
-    ...(aforo_confirmado ? { aforo_confirmado } : {}),
+    estado: 'completado', aforo_real: aforo_real ?? null,
+    precio_total_real: precio_total_real ?? null,
+    coste_espacio: coste_espacio ?? null,
   }).eq('id', evento_id).eq('restaurante_id', restauranteId)
 
-  // 2. Imputar coste del espacio si se indica
+  // 2. Imputar coste espacio
   if (coste_espacio) {
     await supabase.from('evento_costes').insert({
       evento_id, restaurante_id: restauranteId,
-      tipo: 'espacio', descripcion: 'Coste uso espacio',
-      importe: coste_espacio, origen: 'manual',
+      tipo: 'espacio', concepto: 'Coste espacio/hacienda',
+      importe: coste_espacio, es_estimado: false,
     })
   }
 
-  // 3. Imputar costes de personal asignado al evento
-  const { data: personalEvento } = await supabase
+  // 3. Imputar personal confirmado (si no imputado ya)
+  const { data: personal } = await supabase
     .from('evento_personal')
-    .select('*')
-    .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
-    .eq('confirmado', true)
+    .select('id, nombre_externo, rol, hora_inicio, hora_fin, coste_hora, personal:personal(nombre)')
+    .eq('evento_id', evento_id).eq('confirmado', true)
 
-  for (const p of personalEvento ?? []) {
-    if (p.hora_inicio && p.hora_fin && p.coste_hora) {
-      const [h1, m1] = (p.hora_inicio as string).split(':').map(Number)
-      const [h2, m2] = (p.hora_fin as string).split(':').map(Number)
-      const horas = ((h2 * 60 + m2) - (h1 * 60 + m1)) / 60
-      if (horas > 0) {
-        const importe = horas * p.coste_hora
-        // Solo imputar si no existe ya
-        const { count } = await supabase.from('evento_costes')
-          .select('id', { count: 'exact', head: true })
-          .eq('evento_id', evento_id)
-          .eq('personal_id', p.personal_id ?? p.id)
-          .eq('tipo', 'personal')
+  const { data: yaImputado } = await supabase
+    .from('evento_costes').select('id').eq('evento_id', evento_id).eq('tipo', 'personal').limit(1)
 
-        if (!count) {
-          await supabase.from('evento_costes').insert({
-            evento_id, restaurante_id: restauranteId,
-            tipo: 'personal',
-            descripcion: `Personal: ${p.rol} (${horas.toFixed(1)}h)`,
-            importe,
-            origen: 'personal_evento',
-            origen_id: p.id,
-            personal_id: p.personal_id,
-            horas,
-            coste_hora: p.coste_hora,
-          })
-        }
-      }
+  if (personal?.length && !yaImputado?.length) {
+    for (const p of personal) {
+      if (!p.coste_hora || !p.hora_inicio || !p.hora_fin) continue
+      const horas = Math.abs((new Date(`1970-01-01T${p.hora_fin}`).getTime() - new Date(`1970-01-01T${p.hora_inicio}`).getTime()) / 3600000)
+      const nombre = (p as unknown as { personal: { nombre: string } | null }).personal?.nombre ?? p.nombre_externo ?? p.rol
+      await supabase.from('evento_costes').insert({
+        evento_id, restaurante_id: restauranteId,
+        tipo: 'personal',
+        concepto: `${nombre} — ${p.rol} (${horas}h × ${p.coste_hora}€)`,
+        importe: p.coste_hora * horas, personal_ev_id: p.id, es_estimado: false,
+      })
     }
   }
 
-  // 4. Calcular rentabilidad final
-  const { data: rent } = await supabase.rpc('calcular_rentabilidad_evento', {
-    p_evento_id: evento_id,
-  })
-
-  const rentabilidad = rent?.[0] ?? null
-
-  // 5. Guardar coste_total en eventos para acceso rápido
-  if (rentabilidad) {
-    await supabase.from('eventos').update({
-      coste_total: rentabilidad.coste_total,
-    }).eq('id', evento_id)
+  // 4. Costes extra
+  if (costes_extra?.length) {
+    await supabase.from('evento_costes').insert(
+      costes_extra.map((c: { tipo: string; concepto: string; importe: number }) => ({
+        evento_id, restaurante_id: restauranteId,
+        tipo: c.tipo, concepto: c.concepto, importe: c.importe, es_estimado: false,
+      }))
+    )
   }
 
-  return NextResponse.json({
-    ok: true,
-    estado: 'completado',
-    rentabilidad,
-    personal_imputado: personalEvento?.filter(p => p.confirmado && p.coste_hora)?.length ?? 0,
-  })
+  // 5. Margen final
+  const { data: margen } = await supabase.rpc('calcular_margen_evento', { p_evento_id: evento_id })
+
+  return NextResponse.json({ ok: true, margen: margen?.[0] ?? null, mensaje: 'Evento cerrado.' })
 }

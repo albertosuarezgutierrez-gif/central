@@ -626,7 +626,6 @@ function PanelAPPCC({ eventoId, sh }: { eventoId: string; sh: () => Record<strin
     </div>
   )
 }
-
 // ─── Componente principal ─────────────────────────────────────────────────────
 interface EventosTabProps {
   restauranteId: string
