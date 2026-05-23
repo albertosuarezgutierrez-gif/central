@@ -250,13 +250,21 @@ function FormEvento({ restauranteId, sh, espacios, onCreado, onCancel, eventoEdi
 }
 
 // ─── Tarjeta de evento ────────────────────────────────────────────────────────
-function TarjetaEvento({ evento, onEdit, onEstado }: {
+function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
   evento: Evento
+  sh: () => Record<string, string>
   onEdit: (e: Evento) => void
   onEstado: (id: string, estado: EventoEstado) => void
+  onClonar: (e: Evento) => void
 }) {
   const est = ESTADO_CONFIG[evento.estado]
   const dias = diasHasta(evento.fecha_evento)
+  const [expandido, setExpandido] = useState(false)
+  const [mostrarAPPCC, setMostrarAPPCC] = useState(false)
+
+  const abrirPresupuesto = () => {
+    window.open(`/api/owner/eventos/presupuesto?evento_id=${evento.id}`, '_blank')
+  }
 
   return (
     <div style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginBottom: 8 }}>
@@ -327,7 +335,149 @@ function TarjetaEvento({ evento, onEdit, onEstado }: {
             Cancelar
           </button>
         )}
+        <button onClick={abrirPresupuesto} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SN, fontSize: 12, color: '#2B6A6E', cursor: 'pointer' }}>
+          📄 Presupuesto
+        </button>
+        {evento.es_recurrente && (
+          <button onClick={() => onClonar(evento)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SN, fontSize: 12, color: C.amber, cursor: 'pointer' }}>
+            🔁 Clonar
+          </button>
+        )}
+        {evento.requiere_appcc && (
+          <button onClick={() => setMostrarAPPCC(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.amber}44`, background: mostrarAPPCC ? C.amber + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.amber, cursor: 'pointer' }}>
+            📋 APPCC
+          </button>
+        )}
       </div>
+
+      {mostrarAPPCC && <PanelAPPCC eventoId={evento.id} sh={sh} />}
+    </div>
+  )
+}
+
+// ─── Panel APPCC ─────────────────────────────────────────────────────────────
+const TIPOS_APPCC = [
+  { value: 'temperatura_camara',             label: 'Temp. cámara',        unidad: '°C', limite: '≤4°C' },
+  { value: 'temperatura_coccion',            label: 'Temp. cocción',        unidad: '°C', limite: '≥65°C' },
+  { value: 'temperatura_transporte_salida',  label: 'Temp. transporte (salida)',  unidad: '°C', limite: '≤4°C' },
+  { value: 'temperatura_transporte_llegada', label: 'Temp. transporte (llegada)', unidad: '°C', limite: '≤8°C' },
+  { value: 'temperatura_servicio_caliente',  label: 'Temp. servicio caliente',    unidad: '°C', limite: '≥63°C' },
+  { value: 'temperatura_servicio_frio',      label: 'Temp. servicio frío',        unidad: '°C', limite: '≤8°C' },
+  { value: 'plato_testigo',                  label: 'Plato testigo',        unidad: '',   limite: 'Obligatorio (7d)' },
+]
+
+type AppccReg = {
+  id: string; tipo_registro: string; valor: number | null; cumple: boolean | null
+  hora_registro: string; plato_testigo_plato: string | null
+  plato_testigo_ubicacion: string | null; plato_testigo_expira_at: string | null
+  notas: string | null
+}
+
+function PanelAPPCC({ eventoId, sh }: { eventoId: string; sh: () => Record<string, string> }) {
+  const [registros, setRegistros] = useState<AppccReg[]>([])
+  const [resumen, setResumen] = useState<{ total: number; cumple: number; incidencias: number } | null>(null)
+  const [form, setForm] = useState({ tipo_registro: 'temperatura_camara', valor: '', plato_testigo_plato: '', plato_testigo_ubicacion: '', notas: '' })
+  const [saving, setSaving] = useState(false)
+
+  const cargar = useCallback(async () => {
+    const res = await fetch(`/api/owner/eventos/appcc?evento_id=${eventoId}`, { headers: sh() })
+    const data = await res.json()
+    setRegistros(data.registros ?? [])
+    setResumen(data.resumen ?? null)
+  }, [eventoId, sh])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const handleGuardar = async () => {
+    setSaving(true)
+    try {
+      await fetch('/api/owner/eventos/appcc', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({ evento_id: eventoId, ...form, valor: form.valor ? parseFloat(form.valor) : null }),
+      })
+      setForm({ tipo_registro: 'temperatura_camara', valor: '', plato_testigo_plato: '', plato_testigo_ubicacion: '', notas: '' })
+      cargar()
+    } finally { setSaving(false) }
+  }
+
+  const tipoActual = TIPOS_APPCC.find(t => t.value === form.tipo_registro)
+  const esPlato = form.tipo_registro === 'plato_testigo'
+
+  return (
+    <div style={{ marginTop: 12, background: '#FFFBF5', border: `1px solid ${C.amber}44`, borderRadius: 8, padding: 14 }}>
+      <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.amber, marginBottom: 10, textTransform: 'uppercase', letterSpacing: '.08em' }}>
+        📋 Registros APPCC
+        {resumen && (
+          <span style={{ marginLeft: 8, fontWeight: 400, color: resumen.incidencias > 0 ? C.red : C.green }}>
+            {resumen.cumple}/{resumen.total} ok
+            {resumen.incidencias > 0 ? ` · ${resumen.incidencias} incidencia(s)` : ''}
+          </span>
+        )}
+      </div>
+
+      {/* Formulario nuevo registro */}
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr auto', gap: 6, marginBottom: 10, alignItems: 'end' }}>
+        <select
+          value={form.tipo_registro}
+          onChange={e => setForm(f => ({ ...f, tipo_registro: e.target.value }))}
+          style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '6px 8px', fontFamily: SN, fontSize: 12, color: C.ink }}
+        >
+          {TIPOS_APPCC.map(t => <option key={t.value} value={t.value}>{t.label} ({t.limite})</option>)}
+        </select>
+        {!esPlato && (
+          <input
+            type="number" step="0.1" placeholder={`°C`}
+            value={form.valor}
+            onChange={e => setForm(f => ({ ...f, valor: e.target.value }))}
+            style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '6px 8px', fontFamily: SM, fontSize: 13, color: C.ink }}
+          />
+        )}
+        {esPlato && (
+          <input
+            type="text" placeholder="Plato"
+            value={form.plato_testigo_plato}
+            onChange={e => setForm(f => ({ ...f, plato_testigo_plato: e.target.value }))}
+            style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '6px 8px', fontFamily: SN, fontSize: 12, color: C.ink }}
+          />
+        )}
+        <button onClick={handleGuardar} disabled={saving} style={{ padding: '6px 12px', borderRadius: 5, border: 'none', background: C.amber, color: '#fff', fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+          {saving ? '...' : '+ Registrar'}
+        </button>
+      </div>
+      {esPlato && (
+        <input
+          type="text" placeholder="Ubicación (ej: congelador 2, estante A)"
+          value={form.plato_testigo_ubicacion}
+          onChange={e => setForm(f => ({ ...f, plato_testigo_ubicacion: e.target.value }))}
+          style={{ width: '100%', background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '6px 8px', fontFamily: SN, fontSize: 12, color: C.ink, marginBottom: 6, boxSizing: 'border-box' }}
+        />
+      )}
+
+      {/* Lista registros */}
+      {registros.length > 0 && (
+        <div style={{ maxHeight: 160, overflowY: 'auto' }}>
+          {registros.slice(0, 8).map(r => (
+            <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '4px 0', borderBottom: `1px solid ${C.rule}44`, fontFamily: SN, fontSize: 11 }}>
+              <span style={{ color: r.cumple === false ? C.red : r.cumple === true ? C.green : C.amber, fontWeight: 700, width: 16 }}>
+                {r.cumple === false ? '✗' : r.cumple === true ? '✓' : '•'}
+              </span>
+              <span style={{ color: C.ink2, flex: 1 }}>
+                {TIPOS_APPCC.find(t => t.value === r.tipo_registro)?.label ?? r.tipo_registro}
+                {r.valor !== null ? ` → ${r.valor}°C` : ''}
+                {r.plato_testigo_plato ? ` — ${r.plato_testigo_plato}` : ''}
+                {r.plato_testigo_ubicacion ? ` (${r.plato_testigo_ubicacion})` : ''}
+              </span>
+              <span style={{ color: C.ink3 }}>
+                {new Date(r.hora_registro).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+              </span>
+              {r.plato_testigo_expira_at && (
+                <span style={{ color: C.amber, fontSize: 10 }}>exp. {new Date(r.plato_testigo_expira_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
@@ -364,6 +514,23 @@ export default function EventosTab({ restauranteId, sh }: EventosTabProps) {
   }, [filtroEstado, filtroModo, sh])
 
   useEffect(() => { cargar() }, [cargar])
+
+  const [modalClonar, setModalClonar] = useState<Evento | null>(null)
+  const [fechaClonar, setFechaClonar] = useState('')
+  const [clonando, setClonando] = useState(false)
+
+  const handleClonar = async () => {
+    if (!modalClonar || !fechaClonar) return
+    setClonando(true)
+    try {
+      await fetch('/api/owner/eventos/clonar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...sh() },
+        body: JSON.stringify({ evento_id: modalClonar.id, nueva_fecha: fechaClonar }),
+      })
+      setModalClonar(null); setFechaClonar(''); cargar()
+    } finally { setClonando(false) }
+  }
 
   const onEstado = async (id: string, estado: EventoEstado) => {
     await fetch('/api/owner/eventos', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id, estado }) })
@@ -462,10 +629,37 @@ export default function EventosTab({ restauranteId, sh }: EventosTabProps) {
           <TarjetaEvento
             key={e.id}
             evento={e}
+            sh={sh}
             onEdit={ev => { setEventoEditar(ev); setMostrarForm(false) }}
             onEstado={onEstado}
+            onClonar={ev => { setModalClonar(ev); setFechaClonar('') }}
           />
         ))
+      )}
+
+      {/* Modal clonar evento */}
+      {modalClonar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
+          <div style={{ background: C.paper, borderRadius: 12, padding: 24, width: '100%', maxWidth: 360 }}>
+            <div style={{ fontFamily: SE, fontSize: 17, fontWeight: 700, color: C.ink, marginBottom: 4 }}>Clonar evento</div>
+            <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3, marginBottom: 16 }}>
+              Copiando {modalClonar.numero_evento} — {modalClonar.cliente_nombre}
+            </div>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Nueva fecha *</div>
+            <input
+              type="date"
+              value={fechaClonar}
+              onChange={e => setFechaClonar(e.target.value)}
+              style={{ width: '100%', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '8px 10px', fontFamily: SN, fontSize: 13, color: C.ink, marginBottom: 16, boxSizing: 'border-box' }}
+            />
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalClonar(null)} style={{ padding: '8px 16px', borderRadius: 6, border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={handleClonar} disabled={!fechaClonar || clonando} style={{ padding: '8px 18px', borderRadius: 6, border: 'none', background: C.amber, color: '#fff', fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: 'pointer', opacity: !fechaClonar || clonando ? 0.7 : 1 }}>
+                {clonando ? 'Clonando...' : '🔁 Clonar'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )
