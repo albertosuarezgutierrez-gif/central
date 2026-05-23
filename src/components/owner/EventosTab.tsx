@@ -261,6 +261,7 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
   const dias = diasHasta(evento.fecha_evento)
   const [expandido, setExpandido] = useState(false)
   const [mostrarAPPCC, setMostrarAPPCC] = useState(false)
+  const [mostrarRentabilidad, setMostrarRentabilidad] = useState(false)
 
   const abrirPresupuesto = () => {
     window.open(`/api/owner/eventos/presupuesto?evento_id=${evento.id}`, '_blank')
@@ -348,9 +349,153 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
             📋 APPCC
           </button>
         )}
+        <button onClick={() => setMostrarRentabilidad(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.green}44`, background: mostrarRentabilidad ? C.green + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.green, cursor: 'pointer' }}>
+          📊 Rentabilidad
+        </button>
       </div>
 
       {mostrarAPPCC && <PanelAPPCC eventoId={evento.id} sh={sh} />}
+      {mostrarRentabilidad && <PanelRentabilidad eventoId={evento.id} sh={sh} onCerrar={() => { setMostrarRentabilidad(false); onEstado(evento.id, 'completado') }} />}
+    </div>
+  )
+}
+
+// ─── Panel rentabilidad ───────────────────────────────────────────────────────
+type Rentabilidad = {
+  ingresos_totales: number; coste_ingredientes: number; coste_personal: number
+  coste_espacio: number; coste_total: number; margen_bruto: number; margen_pct: number
+}
+
+function PanelRentabilidad({ eventoId, sh, onCerrar }: {
+  eventoId: string; sh: () => Record<string, string>; onCerrar: () => void
+}) {
+  const [data, setData] = useState<{ rentabilidad: Rentabilidad | null; costes: { id: string; tipo: string; descripcion: string; importe: number; origen: string }[] } | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [formCoste, setFormCoste] = useState({ tipo: 'ingredientes', descripcion: '', importe: '' })
+  const [saving, setSaving] = useState(false)
+  const [modalCerrar, setModalCerrar] = useState(false)
+  const [afoRo, setAforo] = useState('')
+  const [costeEspacio, setCosteEspacio] = useState('')
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    const res = await fetch(`/api/owner/eventos/rentabilidad?evento_id=${eventoId}`, { headers: sh() })
+    const d = await res.json()
+    setData(d); setLoading(false)
+  }, [eventoId, sh])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const añadirCoste = async () => {
+    if (!formCoste.descripcion || !formCoste.importe) return
+    setSaving(true)
+    await fetch('/api/owner/eventos/costes', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sh() },
+      body: JSON.stringify({ evento_id: eventoId, ...formCoste, importe: parseFloat(formCoste.importe) }),
+    })
+    setFormCoste({ tipo: 'ingredientes', descripcion: '', importe: '' })
+    setSaving(false); cargar()
+  }
+
+  const cerrarEvento = async () => {
+    setSaving(true)
+    await fetch('/api/owner/eventos/cerrar', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', ...sh() },
+      body: JSON.stringify({ evento_id: eventoId, aforo_confirmado: afoRo ? parseInt(afoRo) : null, coste_espacio: costeEspacio ? parseFloat(costeEspacio) : null }),
+    })
+    setModalCerrar(false); setSaving(false); onCerrar()
+  }
+
+  const fmtEur2 = (n: number) => `${n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`
+  const r = data?.rentabilidad
+
+  return (
+    <div style={{ marginTop: 12, background: '#F0FFF4', border: `1px solid ${C.green}44`, borderRadius: 8, padding: 14 }}>
+      <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.green, marginBottom: 10, textTransform: 'uppercase' as const, letterSpacing: '.08em' }}>
+        📊 Rentabilidad
+      </div>
+
+      {loading ? (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Calculando...</div>
+      ) : r ? (
+        <>
+          {/* Resumen */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 12 }}>
+            {[
+              { label: 'Ingresos', value: fmtEur2(r.ingresos_totales), color: C.green },
+              { label: 'Costes', value: fmtEur2(r.coste_total), color: C.red },
+              { label: 'Margen', value: `${r.margen_pct}%`, color: r.margen_pct > 50 ? C.green : r.margen_pct > 30 ? C.amber : C.red },
+            ].map(s => (
+              <div key={s.label} style={{ background: C.paper, borderRadius: 6, padding: '8px 10px', textAlign: 'center' as const }}>
+                <div style={{ fontFamily: SN, fontSize: 10, color: C.ink3, textTransform: 'uppercase' as const }}>{s.label}</div>
+                <div style={{ fontFamily: SE, fontSize: 16, fontWeight: 700, color: s.color, fontStyle: 'italic' }}>{s.value}</div>
+              </div>
+            ))}
+          </div>
+          {/* Desglose costes */}
+          <div style={{ marginBottom: 10 }}>
+            {[
+              { label: 'Ingredientes', value: r.coste_ingredientes },
+              { label: 'Personal', value: r.coste_personal },
+              { label: 'Espacio', value: r.coste_espacio },
+            ].filter(d => d.value > 0).map(d => (
+              <div key={d.label} style={{ display: 'flex', justifyContent: 'space-between', fontFamily: SN, fontSize: 12, color: C.ink2, padding: '2px 0' }}>
+                <span>{d.label}</span><span>{fmtEur2(d.value)}</span>
+              </div>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 10 }}>Sin costes registrados aún.</div>
+      )}
+
+      {/* Añadir coste manual */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr auto', gap: 6, marginBottom: 8 }}>
+        <select value={formCoste.tipo} onChange={e => setFormCoste(f => ({ ...f, tipo: e.target.value }))}
+          style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '5px 6px', fontFamily: SN, fontSize: 11, color: C.ink }}>
+          {['ingredientes','personal','espacio','transporte','otro'].map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+        <input placeholder="Descripción" value={formCoste.descripcion}
+          onChange={e => setFormCoste(f => ({ ...f, descripcion: e.target.value }))}
+          style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '5px 6px', fontFamily: SN, fontSize: 12, color: C.ink }} />
+        <input type="number" placeholder="€" value={formCoste.importe}
+          onChange={e => setFormCoste(f => ({ ...f, importe: e.target.value }))}
+          style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '5px 6px', fontFamily: SM, fontSize: 12, color: C.ink }} />
+        <button onClick={añadirCoste} disabled={saving} style={{ padding: '5px 10px', borderRadius: 5, border: 'none', background: C.green, color: '#fff', fontFamily: SN, fontSize: 11, fontWeight: 600, cursor: 'pointer' }}>
+          +
+        </button>
+      </div>
+
+      <button onClick={() => setModalCerrar(true)} style={{ width: '100%', padding: '8px', borderRadius: 6, border: 'none', background: C.ink, color: C.paper, fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+        ✓ Cerrar evento y calcular margen final
+      </button>
+
+      {/* Modal cerrar */}
+      {modalCerrar && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 200, padding: 20 }}>
+          <div style={{ background: C.paper, borderRadius: 12, padding: 20, width: '100%', maxWidth: 340 }}>
+            <div style={{ fontFamily: SE, fontSize: 16, fontWeight: 700, color: C.ink, marginBottom: 12 }}>Cerrar evento</div>
+            <div style={{ marginBottom: 10 }}>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4 }}>Aforo real (opcional)</div>
+              <input type="number" placeholder="350" value={afoRo} onChange={e => setAforo(e.target.value)}
+                style={{ width: '100%', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '7px 8px', fontFamily: SN, fontSize: 13, color: C.ink, boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4 }}>Coste espacio € (opcional)</div>
+              <input type="number" placeholder="600" value={costeEspacio} onChange={e => setCosteEspacio(e.target.value)}
+                style={{ width: '100%', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 5, padding: '7px 8px', fontFamily: SN, fontSize: 13, color: C.ink, boxSizing: 'border-box' as const }} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setModalCerrar(false)} style={{ padding: '7px 14px', borderRadius: 5, border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SN, fontSize: 12, color: C.ink3, cursor: 'pointer' }}>Cancelar</button>
+              <button onClick={cerrarEvento} disabled={saving} style={{ padding: '7px 14px', borderRadius: 5, border: 'none', background: C.green, color: '#fff', fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                {saving ? '...' : '✓ Cerrar y calcular'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
