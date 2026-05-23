@@ -260,9 +260,15 @@ async function enviarTelegram(msg: string) {
 }
 
 export async function GET(req: NextRequest) {
-  // Verificar cron secret
+  // Aceptar llamadas del cron de Vercel O de super_admin
   const auth = req.headers.get('authorization')
-  if (auth !== `Bearer ${process.env.CRON_SECRET}` && process.env.NODE_ENV === 'production') {
+  const sessionHeader = req.headers.get('x-ia-session')
+  let isSuperAdmin = false
+  if (sessionHeader) {
+    try { const s = JSON.parse(sessionHeader); isSuperAdmin = s?.rol === 'super_admin' } catch {}
+  }
+  const isCron = auth === `Bearer ${process.env.CRON_SECRET}`
+  if (!isCron && !isSuperAdmin) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
