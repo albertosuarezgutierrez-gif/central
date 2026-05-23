@@ -437,6 +437,16 @@ export default function SuperPage() {
           <SoporteSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} onBadge={setBadgeSoporte} />
         ) : tabSuper === 'agentes' ? (
           <div style={{ padding: '24px 0' }}>
+            {/* Banner conexión Google */}
+            <div style={{ marginBottom: 20, padding: '12px 16px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+              <div>
+                <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.08em' }}>GOOGLE ANALYTICS + SEARCH CONSOLE</span>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginTop: 2 }}>Conecta tu cuenta Google para que el agente SEO acceda a datos reales</div>
+              </div>
+              <a href="/api/super/google-oauth" style={{ background: C.red, color: '#fff', padding: '8px 16px', borderRadius: 8, fontFamily: SM, fontSize: 11, textDecoration: 'none', letterSpacing: '.06em', whiteSpace: 'nowrap' }}>
+                🔗 CONECTAR GOOGLE
+              </a>
+            </div>
             <AgentesIATab session={session} C={C} SE={SE} SN={SN} SM={SM} />
           </div>
         ) : tabSuper === 'arquitecto' ? (
