@@ -198,7 +198,7 @@ export default function MiWebTab({ session }: { session: any }) {
     <div style={{ padding: 32, fontFamily: SN, color: C.ink, opacity: 0.5 }}>Cargando...</div>
   )
 
-  const urlPublica = config.slug ? `https://www.iarest.es/local/${config.slug}` : ''
+  const urlPublica = config.slug ? `https://www.iarest.es/r/${config.slug}` : ''
 
   const s = {
     wrap: { padding: '24px', maxWidth: 700, margin: '0 auto' } as React.CSSProperties,
@@ -393,7 +393,7 @@ export default function MiWebTab({ session }: { session: any }) {
         </div>
         <div>
           <label style={s.lbl}>URL reserva directa <span style={{ opacity: 0.5 }}>(para Google Business)</span></label>
-          <input style={s.inp} value={config.url_reserva_directa ?? ''} onChange={e => set('url_reserva_directa', e.target.value)} placeholder={`https://www.iarest.es/local/${config.slug ?? 'tu-local'}#reservar`} />
+          <input style={s.inp} value={config.url_reserva_directa ?? ''} onChange={e => set('url_reserva_directa', e.target.value)} placeholder={`https://www.iarest.es/r/${config.slug ?? 'tu-local'}#reservar`} />
         </div>
         <hr style={s.hr} />
         <p style={{ ...s.h3, marginBottom: 12 }}>Redes sociales</p>
@@ -462,7 +462,7 @@ export default function MiWebTab({ session }: { session: any }) {
         </div>
         {config.slug && (
           <a
-            href={`/local/${config.slug}`} target="_blank" rel="noopener noreferrer"
+            href={`/r/${config.slug}`} target="_blank" rel="noopener noreferrer"
             style={{ display: 'inline-block', marginTop: 12, fontFamily: SN, fontSize: 12, color: '#1a56db', textDecoration: 'none' }}
           >
             Ver web con este diseño →

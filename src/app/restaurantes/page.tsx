@@ -65,7 +65,7 @@ export default async function DirectorioPage() {
       item: {
         '@type': 'Restaurant',
         name: (r.restaurantes as any)?.nombre,
-        url: `https://www.iarest.es/local/${r.slug}`,
+        url: `https://www.iarest.es/r/${r.slug}`,
         address: { '@type': 'PostalAddress', addressLocality: (r.restaurantes as any)?.ciudad, addressCountry: 'ES' },
       }
     }))
@@ -146,7 +146,7 @@ export default async function DirectorioPage() {
                       const rest = r.restaurantes as any
                       const acento = r.color_acento ?? '#D9442B'
                       return (
-                        <Link key={r.slug} href={`/local/${r.slug}`} style={{ textDecoration: 'none' }}>
+                        <Link key={r.slug} href={`/r/${r.slug}`} style={{ textDecoration: 'none' }}>
                           <article style={{
                             background: '#fff', borderRadius: 14, overflow: 'hidden',
                             border: '1px solid #EDE5D8', transition: 'transform .15s, box-shadow .15s',

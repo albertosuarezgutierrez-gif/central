@@ -47,7 +47,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     if (webs?.length) {
       websRestaurantes = webs.map(w => ({
-        url: `${base}/local/${w.slug}`,
+        url: `${base}/r/${w.slug}`,
         lastModified: new Date(w.updated_at ?? now),
         changeFrequency: 'weekly' as const,
         priority: 0.7,

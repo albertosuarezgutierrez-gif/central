@@ -72,7 +72,7 @@ export default async function CiudadPage({ params }: Props) {
       item: {
         '@type': 'Restaurant',
         name: (r.restaurantes as any)?.nombre,
-        url: `https://www.iarest.es/local/${r.slug}`,
+        url: `https://www.iarest.es/r/${r.slug}`,
         address: {
           '@type': 'PostalAddress',
           addressLocality: nombreCiudad,
@@ -130,7 +130,7 @@ export default async function CiudadPage({ params }: Props) {
               const rest = r.restaurantes as any
               const acento = r.color_acento ?? '#D9442B'
               return (
-                <Link key={r.slug} href={`/local/${r.slug}`} style={{ textDecoration: 'none' }}>
+                <Link key={r.slug} href={`/r/${r.slug}`} style={{ textDecoration: 'none' }}>
                   <article style={{
                     background: '#fff', borderRadius: 16, overflow: 'hidden',
                     border: '1px solid #EDE5D8', height: '100%', display: 'flex', flexDirection: 'column'

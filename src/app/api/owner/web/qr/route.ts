@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   if (!web?.slug) return new NextResponse('Web no configurada', { status: 404 })
 
-  const url = `https://www.iarest.es/local/${web.slug}`
+  const url = `https://www.iarest.es/r/${web.slug}`
   const acento = web.color_acento ?? '#D9442B'
 
   // Generar QR como PNG en buffer
