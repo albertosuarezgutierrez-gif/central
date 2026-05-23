@@ -29,6 +29,7 @@ interface WebConfig {
   mostrar_reservas?: boolean
   color_acento?: string
   redes_sociales?: { instagram?: string; facebook?: string; tiktok?: string; tripadvisor?: string }
+  foto_portada_url?: string
   visitas_total?: number
 }
 
@@ -40,7 +41,9 @@ export default function MiWebTab({ session }: { session: any }) {
   const [saving, setSaving] = useState(false)
   const [generando, setGenerando] = useState(false)
   const [subiendoLogo, setSubiendoLogo] = useState(false)
+  const [subiendoPortada, setSubiendoPortada] = useState(false)
   const [traduciendo, setTraduciendo] = useState(false)
+  const [analytics, setAnalytics] = useState<{visitas_total:number;visitas_por_dia:number;dias_activa:number} | null>(null)
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
 
   useEffect(() => { cargar() }, [])
@@ -48,10 +51,11 @@ export default function MiWebTab({ session }: { session: any }) {
   async function cargar() {
     setLoading(true)
     try {
-      const r = await fetch('/api/owner/web', {
-        headers: { 'x-ia-session': JSON.stringify(session) }
-      })
-      const d = await r.json()
+      const [webRes, analyticsRes] = await Promise.all([
+        fetch('/api/owner/web', { headers: { 'x-ia-session': JSON.stringify(session) } }),
+        fetch('/api/owner/web/analytics', { headers: { 'x-ia-session': JSON.stringify(session) } }),
+      ])
+      const d = await webRes.json()
       setConfig({
         ...d,
         slug: d.slug ?? d.slug_sugerido ?? '',
@@ -60,6 +64,8 @@ export default function MiWebTab({ session }: { session: any }) {
         color_acento: d.color_acento ?? '#D9442B',
         redes_sociales: d.redes_sociales ?? {},
       })
+      const an = await analyticsRes.json()
+      if (an.existe) setAnalytics(an)
     } catch {
       setMsg({ tipo: 'error', texto: 'Error cargando configuración' })
     }
@@ -109,6 +115,30 @@ export default function MiWebTab({ session }: { session: any }) {
       setMsg({ tipo: 'error', texto: 'Error generando descripción' })
     }
     setGenerando(false)
+  }
+
+  async function subirPortada(file: File) {
+    setSubiendoPortada(true)
+    setMsg(null)
+    try {
+      const form = new FormData()
+      form.append('portada', file)
+      const r = await fetch('/api/owner/web/upload-portada', {
+        method: 'POST',
+        headers: { 'x-ia-session': JSON.stringify(session) },
+        body: form
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setConfig(prev => ({ ...prev, foto_portada_url: d.foto_portada_url }))
+        setMsg({ tipo: 'ok', texto: '✓ Foto de portada subida correctamente' })
+      } else {
+        setMsg({ tipo: 'error', texto: d.error ?? 'Error al subir foto' })
+      }
+    } catch {
+      setMsg({ tipo: 'error', texto: 'Error de conexión' })
+    }
+    setSubiendoPortada(false)
   }
 
   async function subirLogo(file: File) {
@@ -235,6 +265,22 @@ export default function MiWebTab({ session }: { session: any }) {
         </p>
       </div>
 
+      {/* Analytics */}
+      {config.existe && analytics && analytics.visitas_total > 0 && (
+        <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+          {[
+            { label: 'Visitas totales', val: analytics.visitas_total.toLocaleString() },
+            { label: 'Media / día', val: analytics.visitas_por_dia.toString() },
+            { label: 'Días activa', val: analytics.dias_activa.toString() },
+          ].map(stat => (
+            <div key={stat.label} style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 10, padding: '10px 16px', flex: 1, minWidth: 80, textAlign: 'center' }}>
+              <div style={{ fontFamily: SM, fontSize: 22, fontWeight: 700, color: C.red }}>{stat.val}</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.5, marginTop: 2 }}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* URL pública */}
       {config.slug && (
         <div style={{ ...s.sec, background: '#f0f7ff', borderColor: '#bdd7f5', marginBottom: 16 }}>
@@ -334,6 +380,47 @@ export default function MiWebTab({ session }: { session: any }) {
                 onClick={() => set('logo_url', undefined)}
               >
                 Eliminar logo
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Foto de portada */}
+      <div style={s.sec}>
+        <p style={s.h3}>Foto de portada</p>
+        <div style={{ ...s.row, gap: 16 }}>
+          <div style={{
+            width: 120, height: 72, borderRadius: 10, overflow: 'hidden', flexShrink: 0,
+            border: `2px dashed ${config.foto_portada_url ? C.green : C.rule}`,
+            background: config.foto_portada_url ? `url(${config.foto_portada_url}) center/cover` : '#f8f6f2',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {!config.foto_portada_url && <span style={{ fontSize: 24 }}>🖼️</span>}
+          </div>
+          <div style={{ flex: 1 }}>
+            <label style={{
+              display: 'inline-block', cursor: 'pointer',
+              background: C.red, color: '#fff', borderRadius: 8,
+              padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
+              opacity: subiendoPortada ? 0.6 : 1
+            }}>
+              {subiendoPortada ? 'Subiendo...' : '↑ Subir foto'}
+              <input
+                type="file" accept="image/png,image/jpeg,image/webp"
+                style={{ display: 'none' }} disabled={subiendoPortada}
+                onChange={e => { const f = e.target.files?.[0]; if (f) subirPortada(f) }}
+              />
+            </label>
+            <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '6px 0 0' }}>
+              PNG, JPG, WebP · Máx 5MB · Recomendado 1200×600px
+            </p>
+            {config.foto_portada_url && (
+              <button
+                style={{ background: 'transparent', border: 'none', color: C.red, fontFamily: SN, fontSize: 12, cursor: 'pointer', padding: '4px 0', marginTop: 4 }}
+                onClick={() => { set('foto_portada_url', undefined); fetch('/api/owner/web', { method: 'PATCH', headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) }, body: JSON.stringify({ foto_portada_url: null }) }) }}
+              >
+                Eliminar foto
               </button>
             )}
           </div>
@@ -518,6 +605,48 @@ export default function MiWebTab({ session }: { session: any }) {
           </div>
         </div>
       )}
+
+      {/* Reserva integrada */}
+      <div style={s.sec}>
+        <p style={s.h3}>Reserva online</p>
+        <div style={{ background: '#f0f7ff', border: '1px solid #bdd7f5', borderRadius: 10, padding: '14px 16px', marginBottom: 12 }}>
+          <div style={{ ...s.row, gap: 10, marginBottom: 8 }}>
+            <span style={{ fontSize: 20 }}>🔗</span>
+            <div>
+              <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#1a56db' }}>Reserva directa ia.rest</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: '#1a56db', opacity: 0.7, marginTop: 1 }}>Sin comisiones · Llega al panel de reservas</div>
+            </div>
+          </div>
+          <p style={{ fontFamily: SN, fontSize: 12, color: '#4a6090', lineHeight: 1.6 }}>
+            El botón "Reservar online" enlaza directamente con tu sistema de reservas de ia.rest. El cliente elige fecha, hora y comensales — la reserva aparece en tu panel automáticamente.
+          </p>
+          {config.slug && (
+            <div style={{ marginTop: 10, fontFamily: SM, fontSize: 11, color: '#1a56db', background: '#e8f0ff', borderRadius: 6, padding: '6px 10px' }}>
+              {`https://www.iarest.es/reservar/${config.slug}`}
+            </div>
+          )}
+        </div>
+        <label style={{ fontFamily: SN, fontSize: 14, color: C.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <input
+            type="checkbox"
+            checked={config.url_reserva_directa?.includes('reservar/') ?? false}
+            onChange={e => set('url_reserva_directa', e.target.checked && config.slug ? `https://www.iarest.es/reservar/${config.slug}` : '')}
+          />
+          Activar reserva online integrada
+        </label>
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '6px 0 0' }}>
+          O introduce una URL personalizada en el campo de abajo
+        </p>
+        <div style={{ marginTop: 12 }}>
+          <label style={s.lbl}>URL de reserva personalizada</label>
+          <input
+            style={s.inp}
+            value={config.url_reserva_directa ?? ''}
+            onChange={e => set('url_reserva_directa', e.target.value)}
+            placeholder={`https://www.iarest.es/reservar/${config.slug ?? 'tu-local'}`}
+          />
+        </div>
+      </div>
 
       {/* WhatsApp */}
       <div style={s.sec}>
