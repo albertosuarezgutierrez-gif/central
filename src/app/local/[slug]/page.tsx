@@ -12,7 +12,8 @@ import TemplateMediterraneo from './templates/Mediterraneo'
 import TemplateTaberna from './templates/Taberna'
 import TemplateFineDining from './templates/FineDining'
 
-export const revalidate = 3600
+export const revalidate = 0  // SSR hasta confirmar — volver a 3600 tras verificar
+export const dynamic = 'force-dynamic'
 
 interface Props { params: Promise<{ slug: string }> }
 
