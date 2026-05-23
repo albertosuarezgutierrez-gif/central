@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
 
     // Notificaciones en paralelo
     const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
-    await Promise.allSettled([
+    const [tgResult, emailResult] = await Promise.allSettled([
       tgAlert([
         `🔥 NUEVO LEAD — landing`,
         ``,
@@ -41,10 +41,25 @@ export async function POST(req: NextRequest) {
       enviarEmailNuevoLead({ nombre, restaurante, email, telefono, usuarios })
     ])
 
+    // Log explícito para depuración
+    if (tgResult.status === 'rejected') {
+      console.error('[leads/landing] Telegram error:', tgResult.reason)
+    }
+    if (emailResult.status === 'rejected') {
+      console.error('[leads/landing] Email error:', emailResult.reason)
+    } else {
+      const emailData = emailResult.value as any
+      if (emailData?.error) {
+        console.error('[leads/landing] Resend error:', JSON.stringify(emailData.error))
+      } else {
+        console.log('[leads/landing] Email enviado OK, id:', emailData?.data?.id || emailData?.id)
+      }
+    }
+
     return NextResponse.json({ ok: true })
 
   } catch (err: any) {
-    console.error('[leads/landing]', err.message)
+    console.error('[leads/landing] catch:', err.message)
     return NextResponse.json({ ok: true }) // siempre 200 al usuario
   }
 }
