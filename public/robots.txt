@@ -39,3 +39,6 @@ Disallow: /manual
 Disallow: /propuesta/
 
 Sitemap: https://www.iarest.es/sitemap.xml
+Allow: /local/
+Allow: /restaurantes
+Allow: /restaurantes/
