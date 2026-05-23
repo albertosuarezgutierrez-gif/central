@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
 import { useAuth } from '@/hooks/useAuth'
+import PanelGastosEvento from '@/components/eventos/PanelGastosEvento'
 
 type Espacio = { id: string; nombre: string; tipo: string; aforo_maximo: number | null }
 type Bloqueo = { id: string; espacio_id: string; fecha_inicio: string; fecha_fin: string; tipo: string; eventos: { numero_evento: string; tipo: string; cliente_nombre: string; estado: string; coordinador_id: string } | null }
@@ -102,7 +103,8 @@ function CalendarioDisponibilidad({ sh }: { sh: () => Record<string, string> }) 
 
 export default function EventosPage() {
   const { session, checking: authLoading } = useAuth()
-  const [tab, setTab] = useState<'eventos'|'calendario'>('eventos')
+  const [tab, setTab] = useState<'eventos'|'calendario'|'gastos'>('eventos')
+  const [eventoSeleccionado, setEventoSeleccionado] = useState<string | null>(null)
   const [eventos, setEventos] = useState<Evento[]>([])
   const [espacios, setEspacios] = useState<Espacio[]>([])
   const [stats, setStats] = useState<{total:number;proximos:number;ingresos_previstos:number}|null>(null)
@@ -182,13 +184,36 @@ export default function EventosPage() {
           </div>
         )}
         <div style={{ display:'flex', gap:4, marginBottom:16 }}>
-          {(['eventos','calendario'] as const).map(t => (
+          {(['eventos','calendario','gastos'] as const).map(t => (
             <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:6, border:`1px solid ${C.rule}`, background:tab===t?C.paper:'transparent', color:tab===t?C.ink:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer', fontWeight:tab===t?600:400 }}>
-              {t==='eventos'?'📋 Mis eventos':'📅 Disponibilidad'}
+              {t==='eventos'?'📋 Mis eventos':t==='calendario'?'📅 Disponibilidad':'💶 Gastos'}
             </button>
           ))}
         </div>
         {tab==='calendario' && <div style={{ background:C.bg2, border:`1px solid ${C.rule}`, borderRadius:10, padding:20 }}><CalendarioDisponibilidad sh={sh} /></div>}
+        {tab==='gastos' && (
+          <div>
+            {/* Selector de evento */}
+            <div style={{ marginBottom:12 }}>
+              <div style={{ fontFamily:SN, fontSize:11, color:C.ink3, marginBottom:6, textTransform:'uppercase' as const, letterSpacing:'.08em' }}>Selecciona el evento</div>
+              <select value={eventoSeleccionado ?? ''} onChange={e=>setEventoSeleccionado(e.target.value||null)}
+                style={{ width:'100%', background:C.bg2, border:`1px solid ${C.rule}`, borderRadius:6, padding:'9px 12px', fontFamily:SN, fontSize:13, color:C.paper }}>
+                <option value=''>— Elige un evento —</option>
+                {eventos.map(ev=>(
+                  <option key={ev.id} value={ev.id}>{ev.numero_evento} · {ev.cliente_nombre} ({ev.fecha_evento})</option>
+                ))}
+              </select>
+            </div>
+            {eventoSeleccionado ? (
+              <PanelGastosEvento eventoId={eventoSeleccionado} sh={sh} esCoordinador={true} />
+            ) : (
+              <div style={{ textAlign:'center' as const, padding:32, background:C.bg2, borderRadius:10, border:`1px solid ${C.rule}` }}>
+                <div style={{ fontSize:28, marginBottom:8 }}>💶</div>
+                <div style={{ fontFamily:SN, fontSize:13, color:C.ink3 }}>Selecciona un evento para ver y añadir sus gastos</div>
+              </div>
+            )}
+          </div>
+        )}
         {tab==='eventos' && (
           <>
             {mostrarForm && (

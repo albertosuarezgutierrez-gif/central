@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
+import PanelGastosEvento from '@/components/eventos/PanelGastosEvento'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type EventoTipo = 'boda' | 'comunion' | 'bautizo' | 'cumpleanos' | 'empresa' | 'otro'
@@ -262,6 +263,7 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
   const [expandido, setExpandido] = useState(false)
   const [mostrarAPPCC, setMostrarAPPCC] = useState(false)
   const [mostrarRentabilidad, setMostrarRentabilidad] = useState(false)
+  const [mostrarGastos, setMostrarGastos] = useState(false)
 
   const abrirPresupuesto = () => {
     window.open(`/api/owner/eventos/presupuesto?evento_id=${evento.id}`, '_blank')
@@ -352,10 +354,14 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
         <button onClick={() => setMostrarRentabilidad(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.green}44`, background: mostrarRentabilidad ? C.green + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.green, cursor: 'pointer' }}>
           📊 Rentabilidad
         </button>
+        <button onClick={() => setMostrarGastos(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.rule}`, background: mostrarGastos ? C.ink + '11' : 'transparent', fontFamily: SN, fontSize: 12, color: C.ink2, cursor: 'pointer' }}>
+          💶 Gastos
+        </button>
       </div>
 
       {mostrarAPPCC && <PanelAPPCC eventoId={evento.id} sh={sh} />}
       {mostrarRentabilidad && <PanelRentabilidad eventoId={evento.id} sh={sh} onCerrar={() => { setMostrarRentabilidad(false); onEstado(evento.id, 'completado') }} />}
+      {mostrarGastos && <div style={{ marginTop: 8 }}><PanelGastosEvento eventoId={evento.id} sh={sh} esCoordinador={false} /></div>}
     </div>
   )
 }
