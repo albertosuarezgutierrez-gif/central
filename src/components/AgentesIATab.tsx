@@ -9,7 +9,8 @@ const AGENTES = [
     emoji: '🔍',
     label: 'SEO',
     color: '#E8A33B',
-    desc: 'Keywords, competencia, mejoras landing',
+    desc: 'GSC + GA4 + keywords + competencia',
+    apiRoute: '/api/super/agentes-seo',
     systemPrompt: `Eres el Agente SEO de ia.rest, un software TPV por voz para restaurantes españoles (www.iarest.es).
 
 CONTEXTO:
@@ -248,7 +249,8 @@ function AgentPanel({ agente, session }: { agente: typeof AGENTES[0]; session: a
 
     try {
       const apiMessages = newMsgs.map(m => ({ role: m.role, content: m.content }))
-      const res = await fetch('/api/super/agentes-ai', {
+      const apiUrl = agente.apiRoute || '/api/super/agentes-ai'
+      const res = await fetch(apiUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
         body: JSON.stringify({ messages: apiMessages, systemPrompt: agente.systemPrompt }),
