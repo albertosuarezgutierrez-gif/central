@@ -9510,7 +9510,92 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
         </div>
       )}{/* modal bodega fin */}
       <PrediccionAlmacenNIM sh={sh} />
+      <InvitarGestorAlmacen sh={sh} />
       <StockCentralOwner sh={sh} />
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// INVITAR GESTOR ALMACÉN CENTRAL
+// ══════════════════════════════════════════════════════════════════════
+function InvitarGestorAlmacen({ sh }: { sh: () => Record<string,string> }) {
+  const [open,    setOpen]    = useState(false)
+  const [email,   setEmail]   = useState('')
+  const [nombre,  setNombre]  = useState('')
+  const [empresa, setEmpresa] = useState('')
+  const [modulos, setModulos] = useState<string[]>(['almacen'])
+  const [loading, setLoading] = useState(false)
+  const [msg,     setMsg]     = useState('')
+
+  const invitar = async () => {
+    if (!email || !nombre) return
+    setLoading(true); setMsg('')
+    const r = await fetch('/api/owner/almacen/invitar-gestor', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, nombre, nombre_empresa: empresa || null, modulos }),
+    })
+    const d = await r.json()
+    if (d.ok) {
+      setMsg(`✅ ${d.nuevo_contable ? `PIN enviado a ${email}` : `${nombre} añadido — ya tiene cuenta`}`)
+      setEmail(''); setNombre(''); setEmpresa('')
+    } else {
+      setMsg('Error: ' + d.error)
+    }
+    setLoading(false)
+  }
+
+  if (!open) return (
+    <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+      <button onClick={() => setOpen(true)} style={{ fontFamily: SN, fontSize: 12, padding: '7px 14px', background: 'none', border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink3, cursor: 'pointer' }}>
+        🏪 Invitar al portal de almacén central →
+      </button>
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.ink }}>Invitar al portal de almacén</div>
+        <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: C.ink4, cursor: 'pointer' }}>✕</button>
+      </div>
+      <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 12, lineHeight: 1.5 }}>
+        El gestor accede a <strong style={{ color: C.ink }}>www.iarest.es/almacen-central</strong> con su email y PIN.<br/>
+        Si ya tiene cuenta en ia.rest, se añade este restaurante a su lista.
+      </div>
+      {[
+        { l: 'Email', v: email, s: setEmail, t: 'email', ph: 'gestor@grupo.es' },
+        { l: 'Nombre', v: nombre, s: setNombre, t: 'text', ph: 'Director de compras' },
+        { l: 'Empresa (opcional)', v: empresa, s: setEmpresa, t: 'text', ph: 'Grupo Hostelería SL' },
+      ].map(({ l, v, s, t, ph }) => (
+        <div key={l} style={{ marginBottom: 8 }}>
+          <div style={{ fontFamily: SN, fontSize: 9, color: C.ink4, textTransform: 'uppercase' as const, marginBottom: 3 }}>{l}</div>
+          <input type={t} value={v} onChange={e => s(e.target.value)} placeholder={ph}
+            style={{ width: '100%', padding: '8px 10px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 7, color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} />
+        </div>
+      ))}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontFamily: SN, fontSize: 9, color: C.ink4, textTransform: 'uppercase' as const, marginBottom: 6 }}>Acceso a módulos</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['almacen','🏪 Almacén central'],['contabilidad','📊 Contabilidad']].map(([id, label]) => (
+            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+              <input type="checkbox" checked={modulos.includes(id)} onChange={e => setModulos(m => e.target.checked ? [...m, id] : m.filter(x => x !== id))} style={{ accentColor: C.red }} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+      {msg && (
+        <div style={{ fontFamily: SN, fontSize: 12, padding: '7px 10px', borderRadius: 7, marginBottom: 8,
+          background: msg.startsWith('✅') ? '#0A2E14' : '#2E1010',
+          color:      msg.startsWith('✅') ? '#4ADE80' : '#F87171' }}>
+          {msg}
+        </div>
+      )}
+      <button onClick={invitar} disabled={loading || !email || !nombre}
+        style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '8px 16px', background: loading || !email || !nombre ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 7, cursor: 'pointer' }}>
+        {loading ? 'Enviando…' : '📧 Invitar'}
+      </button>
     </div>
   )
 }
