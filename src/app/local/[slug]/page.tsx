@@ -110,7 +110,12 @@ export default async function WebRestaurantePage({ params }: Props) {
           <div style={{ width: '100%', height: 300, background: `url(${web.foto_portada_url}) center/cover`, position: 'relative' }}>
             <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(to bottom, rgba(0,0,0,.15) 0%, rgba(0,0,0,.55) 100%)' }} />
             <div className="max" style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', paddingBottom: 28 }}>
-              <h1 style={{ fontFamily: 'Newsreader', fontSize: 40, fontWeight: 600, color: '#fff', lineHeight: 1.15 }}>{nombre}</h1>
+              {web.logo_url && (
+                <img src={web.logo_url} alt={nombre} style={{ height: 52, objectFit: 'contain', marginBottom: 10, filter: 'brightness(0) invert(1)', maxWidth: 180 }} />
+              )}
+              {!web.logo_url && (
+                <h1 style={{ fontFamily: 'Newsreader', fontSize: 40, fontWeight: 600, color: '#fff', lineHeight: 1.15 }}>{nombre}</h1>
+              )}
               {web.frase_bienvenida && (
                 <p style={{ color: 'rgba(255,255,255,.8)', marginTop: 8, fontSize: 16, fontStyle: 'italic' }}>{web.frase_bienvenida}</p>
               )}
@@ -119,7 +124,10 @@ export default async function WebRestaurantePage({ params }: Props) {
         ) : (
           <header style={{ background: '#1A1714', padding: '44px 0' }}>
             <div className="max" style={{ textAlign: 'center' }}>
-              <h1 style={{ fontFamily: 'Newsreader', fontSize: 38, fontWeight: 600, color: '#F6F1E7' }}>{nombre}</h1>
+              {web.logo_url
+                ? <img src={web.logo_url} alt={nombre} style={{ height: 64, objectFit: 'contain', marginBottom: 12, filter: 'brightness(0) invert(1)', maxWidth: 200 }} />
+                : <h1 style={{ fontFamily: 'Newsreader', fontSize: 38, fontWeight: 600, color: '#F6F1E7' }}>{nombre}</h1>
+              }
               {web.frase_bienvenida && (
                 <p style={{ color: '#D8CDB6', marginTop: 10, fontSize: 16, fontStyle: 'italic' }}>{web.frase_bienvenida}</p>
               )}

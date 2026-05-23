@@ -8,6 +8,7 @@ interface WebConfig {
   activa?: boolean
   slug?: string
   slug_sugerido?: string
+  logo_url?: string
   frase_bienvenida?: string
   descripcion_local?: string
   descripcion_barrio?: string
@@ -35,6 +36,7 @@ export default function MiWebTab({ session }: { session: any }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [generando, setGenerando] = useState(false)
+  const [subiendoLogo, setSubiendoLogo] = useState(false)
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
 
   useEffect(() => { cargar() }, [])
@@ -103,6 +105,30 @@ export default function MiWebTab({ session }: { session: any }) {
       setMsg({ tipo: 'error', texto: 'Error generando descripción' })
     }
     setGenerando(false)
+  }
+
+  async function subirLogo(file: File) {
+    setSubiendoLogo(true)
+    setMsg(null)
+    try {
+      const form = new FormData()
+      form.append('logo', file)
+      const r = await fetch('/api/owner/web/upload-logo', {
+        method: 'POST',
+        headers: { 'x-ia-session': JSON.stringify(session) },
+        body: form
+      })
+      const d = await r.json()
+      if (d.ok) {
+        setConfig(prev => ({ ...prev, logo_url: d.logo_url }))
+        setMsg({ tipo: 'ok', texto: '✓ Logo subido correctamente' })
+      } else {
+        setMsg({ tipo: 'error', texto: d.error ?? 'Error al subir logo' })
+      }
+    } catch {
+      setMsg({ tipo: 'error', texto: 'Error de conexión' })
+    }
+    setSubiendoLogo(false)
   }
 
   function set<K extends keyof WebConfig>(key: K, val: WebConfig[K]) {
@@ -208,6 +234,54 @@ export default function MiWebTab({ session }: { session: any }) {
           <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '4px 0 0' }}>
             Solo letras minúsculas, números y guiones
           </p>
+        </div>
+      </div>
+
+      {/* Logo */}
+      <div style={s.sec}>
+        <p style={s.h3}>Logo</p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          {/* Preview */}
+          <div style={{
+            width: 80, height: 80, borderRadius: 12,
+            border: `2px dashed ${config.logo_url ? C.green : C.rule}`,
+            background: config.logo_url ? '#fff' : '#f8f6f2',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            overflow: 'hidden', flexShrink: 0
+          }}>
+            {config.logo_url
+              ? <img src={config.logo_url} alt="Logo" style={{ width: '100%', height: '100%', objectFit: 'contain', padding: 6 }} />
+              : <span style={{ fontSize: 28 }}>🏪</span>
+            }
+          </div>
+          {/* Acciones */}
+          <div style={{ flex: 1 }}>
+            <label style={{
+              display: 'inline-block', cursor: 'pointer',
+              background: C.red, color: '#fff', borderRadius: 8,
+              padding: '9px 16px', fontFamily: SN, fontSize: 13, fontWeight: 600,
+              opacity: subiendoLogo ? 0.6 : 1
+            }}>
+              {subiendoLogo ? 'Subiendo...' : '↑ Subir logo'}
+              <input
+                type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                style={{ display: 'none' }}
+                disabled={subiendoLogo}
+                onChange={e => { const f = e.target.files?.[0]; if (f) subirLogo(f) }}
+              />
+            </label>
+            <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '6px 0 0' }}>
+              PNG, JPG, SVG · Máx 2MB · Fondo transparente recomendado
+            </p>
+            {config.logo_url && (
+              <button
+                style={{ background: 'transparent', border: 'none', color: C.red, fontFamily: SN, fontSize: 12, cursor: 'pointer', padding: '4px 0', marginTop: 4 }}
+                onClick={() => set('logo_url', undefined)}
+              >
+                Eliminar logo
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
