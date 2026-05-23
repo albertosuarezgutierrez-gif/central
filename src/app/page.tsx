@@ -149,11 +149,11 @@ export default function HomePage() {
 
   return (
     <>
-      <title>ia.rest — El sistema nervioso de tu restaurante</title>
-      <meta name="description" content="Gestión hostelera con IA. Voz a cocina en menos de 0.5s, almacén automático, contabilidad integrada, VeriFactu 2026 incluido. Sin comisión. Desde 59€/mes." />
+      <title>TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes</title>
+      <meta name="description" content="Sistema de comandas por voz para bares y restaurantes. El único TPV en español sin comisión. 59€/mes + 20€/usuario. Prueba 14 días gratis." />
       <meta name="robots" content="index, follow" />
-      <meta property="og:title" content="ia.rest — El sistema nervioso de tu restaurante" />
-      <meta property="og:description" content="No es un TPV. Es el primer sistema que gestiona tu restaurante de principio a fin, sin que tengas que hacer nada." />
+      <meta property="og:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes" />
+      <meta property="og:description" content="El único TPV en español sin comisión. Comandas por voz en menos de 0,5s. 59€/mes. Prueba 14 días gratis." />
       <meta property="og:url" content="https://www.iarest.es" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-image.jpg" />
@@ -162,8 +162,8 @@ export default function HomePage() {
       <meta property="og:site_name" content="ia.rest" />
       <meta property="og:locale" content="es_ES" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content="ia.rest — El sistema nervioso de tu restaurante" />
-      <meta name="twitter:description" content="No es un TPV. Es el primer sistema que gestiona tu restaurante de principio a fin, sin que tengas que hacer nada." />
+      <meta name="twitter:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes" />
+      <meta name="twitter:description" content="El único TPV en español sin comisión. Comandas por voz en menos de 0,5s. 59€/mes. Prueba 14 días gratis." />
       <meta name="twitter:image" content="https://www.iarest.es/og-image.jpg" />
       <style dangerouslySetInnerHTML={{ __html: `:root {
   --bg: #14110E;
@@ -385,11 +385,11 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 <!-- HERO -->
 <section class="hero">
   <div class="hero-glow"></div>
-  <div class="eyebrow fi">Hostelería · IA nativa · 2026</div>
-  <h1 class="fi d1">Tu restaurante<br>funciona <i>solo.</i></h1>
-  <p class="hero-sub fi d2">No es un TPV. Es el primer sistema que gestiona tu restaurante de principio a fin — sin que tengas que hacer nada.</p>
+  <div class="eyebrow fi">El único TPV por voz en español · Sin comisión</div>
+  <h1 class="fi d1">Comandas por Voz<br>en tu Bar. <i>Simple.</i></h1>
+  <p class="hero-sub fi d2">Habla y la cocina ya tiene el ticket. Sin papel, sin errores, sin comisión. 59€/mes + 20€/usuario.</p>
   <div class="hero-cta fi d2">
-    <a href="#contacto" class="btn-p">Solicitar información →</a>
+    <a href="#contacto" class="btn-p">Prueba 14 días gratis →</a>
   </div>
 </section>
 
