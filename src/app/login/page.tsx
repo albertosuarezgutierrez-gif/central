@@ -29,6 +29,7 @@ function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modu
     jefe_sala: '/jefe',
     camarero: '/edge', cocina: camarero.seccion_id ? `/kds?seccion=${camarero.seccion_id}` : '/kds',
     running: '/running',
+    coordinador_eventos: '/eventos',
     gestor: '/central',  // Rol backoffice puro — solo portal de gestión
   }
   const tieneModulos = (camarero.modulos_gestion ?? []).length > 0

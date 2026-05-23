@@ -91,6 +91,8 @@ export type ClienteConfig = {
   // Piloto
   fasePiloto: { fase: string; color: string; items: string[] }[]
   precioMensaje?: string            // texto adicional de precio si aplica
+  slug?: string                     // slug del lead en BD para tracking y booking
+  ciudad?: string                   // ciudad para el texto del booking
 }
 
 // ─── Módulos base reutilizables ──────────────────────────────
@@ -207,6 +209,34 @@ function NavDot({ active, onClick, label }: { active: boolean; onClick: () => vo
 export default function PropuestaBase({ config }: { config: ClienteConfig }) {
   const [slide, setSlide] = useState<Slide>('intro')
   const [moduloIdx, setModuloIdx] = useState(0)
+
+  // ── Booking form state ──────────────────────────────────────────────────────
+  const ciudad = config.ciudad || config.lugarReunion || 'tu ciudad'
+  const [showBooking, setShowBooking] = useState(false)
+  const [form, setForm] = useState({ nombre: config.contactoNombre || '', email: '', fecha: config.fechaReunion ? '' : '', hora: '11:00', lugar: config.lugarReunion || `${config.nombre}, ${ciudad}`, notas: '' })
+  const [sending, setSending] = useState(false)
+  const [sent, setSent] = useState(false)
+  const [bookErr, setBookErr] = useState('')
+  const horas = ['09:00','09:30','10:00','10:30','11:00','11:30','12:00','12:30','16:00','16:30','17:00','17:30','18:00','18:30','19:00']
+  const fechaMin = new Date(); fechaMin.setDate(fechaMin.getDate() + 1)
+  const fechaMinStr = fechaMin.toISOString().split('T')[0]
+
+  const enviarBooking = async () => {
+    if (!form.nombre || !form.fecha || !form.hora || !form.lugar) { setBookErr('Por favor rellena nombre, fecha, hora y lugar.'); return }
+    setSending(true); setBookErr('')
+    try {
+      const slug = config.slug || config.nombre.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'-').replace(/-+/g,'-')
+      const r = await fetch(`/api/propuesta/${slug}/booking`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form),
+      })
+      const d = await r.json()
+      if (!r.ok) throw new Error(d.error)
+      setSent(true)
+    } catch (e: unknown) { setBookErr(e instanceof Error ? e.message : 'Error enviando solicitud') }
+    setSending(false)
+  }
 
   const SLIDES: { id: Slide; label: string }[] = [
     { id: 'intro',       label: 'Inicio'         },
@@ -553,13 +583,77 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
                 El sistema se paga solo en el primer mes.
               </div>
             </div>
-            <div style={{ display:'flex', gap:12, flexWrap:'wrap' }}>
-              <a href="/login?t=62d3124f5185d326ba0e5632" style={{ flex:1, padding:'14px', background:C.red, color:'#fff', border:'none', borderRadius:8, fontFamily:SN, fontSize:14, fontWeight:700, cursor:'pointer', textAlign:'center', textDecoration:'none', minWidth:160 }}>
-                Ver demo en vivo →
-              </a>
-              <a href={`mailto:alberto.suarez.gutierrez@gmail.com?subject=Piloto ia.rest — ${config.nombre}`} style={{ flex:1, padding:'14px', background:'transparent', color:C.paper, border:`1px solid ${C.ink4}66`, borderRadius:8, fontFamily:SN, fontSize:14, cursor:'pointer', textAlign:'center', textDecoration:'none', minWidth:160 }}>
-                Contactar
-              </a>
+            {/* ── BOOKING ───────────────────────────────────────────────── */}
+            <div style={{ marginTop:8 }}>
+              <div style={{ fontFamily:SE, fontSize:18, fontWeight:500, color:C.paper, marginBottom:6 }}>
+                ¿Te interesa? Concertamos una visita
+              </div>
+              <p style={{ fontFamily:SN, fontSize:13, color:C.ink3, margin:'0 0 16px', lineHeight:1.5 }}>
+                Te lo enseño en vivo en tu local. Sin demos de pantalla compartida.
+              </p>
+              {sent ? (
+                <div style={{ padding:'20px 24px', background:`${C.green}18`, border:`1px solid ${C.green}44`, borderRadius:10 }}>
+                  <div style={{ fontFamily:SE, fontSize:18, color:C.green, marginBottom:6 }}>✓ Solicitud recibida</div>
+                  <p style={{ fontFamily:SN, fontSize:13, color:C.cream, margin:0, lineHeight:1.5 }}>
+                    Perfecto. Te confirmo la visita en menos de 24h. Cualquier duda: <a href="mailto:hola@iarest.es" style={{ color:C.red, textDecoration:'none' }}>hola@iarest.es</a>
+                  </p>
+                </div>
+              ) : !showBooking ? (
+                <button onClick={() => setShowBooking(true)}
+                  style={{ padding:'14px 32px', background:C.red, color:'#fff', border:'none', borderRadius:8, fontFamily:SN, fontSize:14, fontWeight:700, cursor:'pointer' }}>
+                  Concertar visita →
+                </button>
+              ) : (
+                <div style={{ background:`${C.bg3}`, border:`1px solid ${C.ink4}33`, borderRadius:12, padding:'20px' }}>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:C.ink3, letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:4 }}>Nombre *</label>
+                      <input value={form.nombre} onChange={e => setForm(p=>({...p,nombre:e.target.value}))} placeholder="Nombre y apellido"
+                        style={{ width:'100%', boxSizing:'border-box', padding:'9px 11px', background:C.bg2, border:`1px solid ${C.ink4}44`, borderRadius:7, fontSize:13, color:C.paper, outline:'none', fontFamily:SN }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:C.ink3, letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:4 }}>Email</label>
+                      <input value={form.email} onChange={e => setForm(p=>({...p,email:e.target.value}))} type="email" placeholder="tu@email.com"
+                        style={{ width:'100%', boxSizing:'border-box', padding:'9px 11px', background:C.bg2, border:`1px solid ${C.ink4}44`, borderRadius:7, fontSize:13, color:C.paper, outline:'none', fontFamily:SN }} />
+                    </div>
+                  </div>
+                  <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, marginBottom:10 }}>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:C.ink3, letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:4 }}>Fecha *</label>
+                      <input value={form.fecha} onChange={e => setForm(p=>({...p,fecha:e.target.value}))} type="date" min={fechaMinStr}
+                        style={{ width:'100%', boxSizing:'border-box', padding:'9px 11px', background:C.bg2, border:`1px solid ${C.ink4}44`, borderRadius:7, fontSize:13, color:C.paper, outline:'none', fontFamily:SN, cursor:'pointer' }} />
+                    </div>
+                    <div>
+                      <label style={{ fontSize:10, fontWeight:700, color:C.ink3, letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:4 }}>Hora *</label>
+                      <select value={form.hora} onChange={e => setForm(p=>({...p,hora:e.target.value}))}
+                        style={{ width:'100%', boxSizing:'border-box', padding:'9px 11px', background:C.bg2, border:`1px solid ${C.ink4}44`, borderRadius:7, fontSize:13, color:C.paper, outline:'none', fontFamily:SN, cursor:'pointer' }}>
+                        {horas.map(h => <option key={h} value={h}>{h}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div style={{ marginBottom:10 }}>
+                    <label style={{ fontSize:10, fontWeight:700, color:C.ink3, letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:4 }}>Lugar *</label>
+                    <input value={form.lugar} onChange={e => setForm(p=>({...p,lugar:e.target.value}))} placeholder="Nombre y dirección del local"
+                      style={{ width:'100%', boxSizing:'border-box', padding:'9px 11px', background:C.bg2, border:`1px solid ${C.ink4}44`, borderRadius:7, fontSize:13, color:C.paper, outline:'none', fontFamily:SN }} />
+                  </div>
+                  <div style={{ marginBottom:12 }}>
+                    <label style={{ fontSize:10, fontWeight:700, color:C.ink3, letterSpacing:'.08em', textTransform:'uppercase', display:'block', marginBottom:4 }}>Notas</label>
+                    <textarea value={form.notas} onChange={e => setForm(p=>({...p,notas:e.target.value}))} rows={2} placeholder="¿Algo concreto que quieras ver?"
+                      style={{ width:'100%', boxSizing:'border-box', padding:'9px 11px', background:C.bg2, border:`1px solid ${C.ink4}44`, borderRadius:7, fontSize:13, color:C.paper, outline:'none', fontFamily:SN, resize:'vertical' }} />
+                  </div>
+                  {bookErr && <div style={{ fontSize:12, color:C.red, marginBottom:10, padding:'7px 10px', background:`${C.red}15`, borderRadius:6 }}>{bookErr}</div>}
+                  <div style={{ display:'flex', gap:8 }}>
+                    <button onClick={enviarBooking} disabled={sending}
+                      style={{ flex:1, padding:'12px', background:sending?C.ink4:C.red, color:'#fff', border:'none', borderRadius:8, fontFamily:SN, fontSize:14, fontWeight:600, cursor:sending?'default':'pointer' }}>
+                      {sending ? 'Enviando…' : 'Confirmar visita'}
+                    </button>
+                    <button onClick={() => setShowBooking(false)}
+                      style={{ background:'transparent', border:`1px solid ${C.ink4}44`, borderRadius:8, padding:'12px 16px', fontSize:13, color:C.ink3, cursor:'pointer', fontFamily:SN }}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}

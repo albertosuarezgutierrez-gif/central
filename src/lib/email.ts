@@ -490,3 +490,68 @@ export async function enviarEmailErrorTecnicoOwner({
     html,
   })
 }
+
+// ── EMAIL: Nuevo lead desde landing ──────────────────────────
+export async function enviarEmailNuevoLead({
+  nombre,
+  restaurante,
+  email,
+  telefono,
+  usuarios,
+}: {
+  nombre: string
+  restaurante: string
+  email: string
+  telefono?: string | null
+  usuarios?: string | null
+}) {
+  const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
+
+  const html = layout(`
+    <div class="card">
+      <h1>🔥 Nuevo lead — landing</h1>
+      <hr class="divider">
+      <p><strong>Nombre:</strong> ${nombre}</p>
+      <p><strong>Restaurante:</strong> ${restaurante}</p>
+      <p><strong>Email:</strong> <a href="mailto:${email}">${email}</a></p>
+      <p><strong>Teléfono:</strong> ${telefono || '—'}</p>
+      <p><strong>Usuarios:</strong> ${usuarios || '—'}</p>
+      <hr class="divider">
+      <p style="font-size:13px;color:${C.fg3};">${fecha}</p>
+      <a href="${BASE}/super" class="btn">Ver en /super →</a>
+    </div>
+  `, `Nuevo lead: ${nombre} — ${restaurante}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: 'hola@iarest.es',
+    subject: `🔥 Nuevo lead: ${nombre} — ${restaurante}`,
+    html,
+  })
+}
+
+// ── Función genérica de envío (para propuestas y otros usos internos) ─────────
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  text,
+  replyTo = 'hola@iarest.es',
+}: {
+  to: string | string[]
+  subject: string
+  html: string
+  text?: string
+  replyTo?: string
+}) {
+  const { data, error } = await getResend().emails.send({
+    from: FROM,
+    to,
+    subject,
+    html,
+    ...(text && { text }),
+    replyTo,
+  })
+  if (error) throw new Error(error.message)
+  return data
+}

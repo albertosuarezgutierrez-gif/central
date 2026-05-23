@@ -107,17 +107,21 @@ async function evalSinComanda(supabase: ReturnType<typeof createServerClient>, r
 
 async function evalPlatoSinLlegar(supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]) {
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
-  const { data: items } = await supabase.from('comanda_items').select('id, nombre, created_at, comanda_id')
-    .eq('estado', 'pendiente').lt('created_at', hace)
+  // Join directo para filtrar por restaurante_id sin N+1 queries
+  const { data: items } = await supabase
+    .from('comanda_items')
+    .select('id, nombre, created_at, comanda:comandas!inner(id, restaurante_id, mesa:mesas(codigo))')
+    .eq('estado', 'pendiente')
+    .eq('comanda.restaurante_id', rid)
+    .lt('created_at', hace)
+    .limit(20)
   for (const it of items ?? []) {
-    const { data: comanda } = await supabase.from('comandas').select('restaurante_id, mesa:mesas(codigo)')
-      .eq('id', it.comanda_id).eq('restaurante_id', rid).single()
+    const comanda = it.comanda as any
     if (!comanda) continue
     const ref = `plato_sin_llegar_${it.id}`
     if (await yaAlertado(supabase, rid, getCond(regla), ref)) continue
     const min = Math.floor((Date.now() - new Date(it.created_at).getTime()) / 60_000)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mesaCodigo = (comanda.mesa as any)?.codigo ?? '?'
+    const mesaCodigo = comanda.mesa?.codigo ?? '?'
     const msg = interpolarMensaje(regla.mensaje ?? 'Mesa {mesa} lleva {tiempo} min esperando {plato}', { mesa: mesaCodigo, tiempo: min, plato: it.nombre })
     await sendPush(rid, regla.nombre ?? 'Plato sin llegar', msg)
     await registrar(supabase, rid, regla, ref, msg)
@@ -127,17 +131,20 @@ async function evalPlatoSinLlegar(supabase: ReturnType<typeof createServerClient
 
 async function evalTicketSinTocar(supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]) {
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
-  const { data: items } = await supabase.from('comanda_items').select('id, nombre, created_at, comanda_id')
-    .eq('estado', 'pendiente').lt('created_at', hace)
+  const { data: items } = await supabase
+    .from('comanda_items')
+    .select('id, nombre, created_at, comanda:comandas!inner(id, restaurante_id, mesa:mesas(codigo))')
+    .eq('estado', 'pendiente')
+    .eq('comanda.restaurante_id', rid)
+    .lt('created_at', hace)
+    .limit(20)
   for (const it of items ?? []) {
-    const { data: comanda } = await supabase.from('comandas').select('restaurante_id, mesa:mesas(codigo)')
-      .eq('id', it.comanda_id).eq('restaurante_id', rid).single()
+    const comanda = it.comanda as any
     if (!comanda) continue
     const ref = `ticket_sin_tocar_${it.id}`
     if (await yaAlertado(supabase, rid, getCond(regla), ref)) continue
     const min = Math.floor((Date.now() - new Date(it.created_at).getTime()) / 60_000)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const mesaCodigo = (comanda.mesa as any)?.codigo ?? '?'
+    const mesaCodigo = comanda.mesa?.codigo ?? '?'
     const msg = interpolarMensaje(regla.mensaje ?? 'Ticket {mesa} lleva {tiempo} min en cocina sin tocar', { mesa: mesaCodigo, tiempo: min, plato: it.nombre })
     await sendPush(rid, regla.nombre ?? 'KDS atascado', msg)
     await registrar(supabase, rid, regla, ref, msg)

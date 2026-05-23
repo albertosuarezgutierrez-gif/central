@@ -3,6 +3,7 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import Analytics from '@/components/Analytics'
+import AnalyticsComparativo from '@/components/owner/AnalyticsComparativo'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { copyToClipboard } from '@/lib/clipboard'
 import { supabase } from '@/lib/supabase'
@@ -28,8 +29,121 @@ import ContabilidadTab from '@/components/owner/ContabilidadTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import ModulosTab from '@/components/owner/ModulosTab'
 import NuevaEntradaPesoModal from '@/components/owner/NuevaEntradaPesoModal'
+import MiWebTab from '@/components/owner/MiWebTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
 import WineScannerModal from '@/components/WineScannerModal'
+import EventosTab from '@/components/owner/EventosTab'
+import MenusEventoTab from '@/components/owner/MenusEventoTab'
+import CRMEventosTab from '@/components/owner/CRMEventosTab'
+
+// ─── ComisionesEventoTab (inline, ligero) ─────────────────────────────────────
+function ComisionesEventoTab({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
+  const [data, setData] = React.useState<{
+    resumen: {personal_id:string;nombre:string;total_comisiones:number;pagado:number;pendiente:number}[]
+    pendientes: {id:string;importe:number;estado:string;personal:{nombre:string};evento:{numero_evento:string;cliente_nombre:string;fecha_evento:string}}[]
+  } | null>(null)
+  const [personal, setPersonal] = React.useState<{id:string;nombre:string}[]>([])
+  const [selPersonal, setSelPersonal] = React.useState('')
+  const [formConfig, setFormConfig] = React.useState({ tipo: 'porcentaje', valor: '' })
+  const [saving, setSaving] = React.useState(false)
+  const fmtEur2 = (n:number|null) => n ? `${Number(n).toLocaleString('es-ES',{minimumFractionDigits:2})} €` : '—'
+
+  React.useEffect(() => {
+    Promise.all([
+      fetch('/api/owner/eventos/comisiones', {headers:sh()}).then(r=>r.json()),
+      fetch('/api/owner/personal', {headers:sh()}).then(r=>r.json()),
+    ]).then(([d, p]) => {
+      setData(d)
+      setPersonal((p.camareros ?? p.personal ?? []).filter((c:{rol:string})=>c.rol==='coordinador_eventos'))
+    })
+  }, [sh])
+
+  const guardarConfig = async () => {
+    if (!selPersonal || !formConfig.valor) return
+    setSaving(true)
+    await fetch('/api/owner/eventos/comisiones', {
+      method:'POST', headers:{'Content-Type':'application/json',...sh()},
+      body:JSON.stringify({personal_id:selPersonal, tipo:formConfig.tipo, valor:parseFloat(formConfig.valor)})
+    })
+    setSaving(false)
+    fetch('/api/owner/eventos/comisiones',{headers:sh()}).then(r=>r.json()).then(setData)
+  }
+
+  const pagarComision = async (id:string) => {
+    await fetch('/api/owner/eventos/comisiones', {method:'PUT', headers:{'Content-Type':'application/json',...sh()}, body:JSON.stringify({id,estado:'pagada'})})
+    fetch('/api/owner/eventos/comisiones',{headers:sh()}).then(r=>r.json()).then(setData)
+  }
+
+  return (
+    <div style={{padding:'0 0 40px'}}>
+      {/* Resumen por coordinador */}
+      <div style={{fontFamily:SE,fontSize:17,fontWeight:700,color:C.ink,fontStyle:'italic',marginBottom:12}}>Comisiones por coordinador</div>
+      {data?.resumen?.length ? (
+        <div style={{display:'grid',gap:8,marginBottom:20}}>
+          {data.resumen.map(r => (
+            <div key={r.personal_id} style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:'12px 16px',display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontFamily:SE,fontSize:15,fontWeight:700,color:C.ink,fontStyle:'italic'}}>{r.nombre}</div>
+                <div style={{fontFamily:SN,fontSize:11,color:C.ink3,marginTop:2}}>Total: {fmtEur2(r.total_comisiones)} · Pagado: {fmtEur2(r.pagado)}</div>
+              </div>
+              <div style={{fontFamily:SE,fontSize:18,fontWeight:700,color:r.pendiente>0?C.amber:C.green,fontStyle:'italic'}}>{fmtEur2(r.pendiente)}</div>
+            </div>
+          ))}
+        </div>
+      ) : <div style={{fontFamily:SN,fontSize:13,color:C.ink3,marginBottom:20}}>Sin coordinadores con comisiones configuradas.</div>}
+
+      {/* Configurar comisión */}
+      <div style={{background:C.paper,border:`1px solid ${C.rule}`,borderRadius:10,padding:16,marginBottom:16}}>
+        <div style={{fontFamily:SE,fontSize:15,fontWeight:700,color:C.ink,fontStyle:'italic',marginBottom:12}}>Configurar comisión</div>
+        <div style={{display:'grid',gridTemplateColumns:'2fr 1fr 1fr auto',gap:8,alignItems:'flex-end'}}>
+          <div>
+            <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'.08em'}}>Coordinador</div>
+            <select value={selPersonal} onChange={e=>setSelPersonal(e.target.value)} style={{width:'100%',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:5,padding:'7px 8px',fontFamily:SN,fontSize:13,color:C.ink}}>
+              <option value=''>Seleccionar...</option>
+              {personal.map(p=><option key={p.id} value={p.id}>{p.nombre}</option>)}
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'.08em'}}>Tipo</div>
+            <select value={formConfig.tipo} onChange={e=>setFormConfig(f=>({...f,tipo:e.target.value}))} style={{width:'100%',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:5,padding:'7px 8px',fontFamily:SN,fontSize:13,color:C.ink}}>
+              <option value='porcentaje'>% sobre evento</option>
+              <option value='fijo_por_evento'>Fijo por evento</option>
+            </select>
+          </div>
+          <div>
+            <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginBottom:3,textTransform:'uppercase' as const,letterSpacing:'.08em'}}>{formConfig.tipo==='porcentaje'?'% valor':'€ fijo'}</div>
+            <input type='number' step='0.1' placeholder={formConfig.tipo==='porcentaje'?'5':'200'} value={formConfig.valor} onChange={e=>setFormConfig(f=>({...f,valor:e.target.value}))}
+              style={{width:'100%',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:5,padding:'7px 8px',fontFamily:SM,fontSize:13,color:C.ink}} />
+          </div>
+          <button onClick={guardarConfig} disabled={saving} style={{padding:'7px 14px',borderRadius:5,border:'none',background:C.red,color:'#fff',fontFamily:SN,fontSize:12,fontWeight:600,cursor:'pointer'}}>
+            {saving?'...':'Guardar'}
+          </button>
+        </div>
+      </div>
+
+      {/* Comisiones pendientes de pagar */}
+      {(data?.pendientes?.length ?? 0) > 0 && (
+        <div>
+          <div style={{fontFamily:SE,fontSize:15,fontWeight:700,color:C.ink,fontStyle:'italic',marginBottom:10}}>Pendientes de pago</div>
+          {data!.pendientes.map(c => (
+            <div key={c.id} style={{background:C.paper,border:`1px solid ${C.amber}44`,borderRadius:8,padding:'10px 14px',marginBottom:6,display:'flex',justifyContent:'space-between',alignItems:'center'}}>
+              <div>
+                <div style={{fontFamily:SN,fontSize:13,color:C.ink,fontWeight:600}}>{c.personal.nombre}</div>
+                <div style={{fontFamily:SN,fontSize:11,color:C.ink3}}>{c.evento.numero_evento} · {c.evento.cliente_nombre} · {c.evento.fecha_evento}</div>
+              </div>
+              <div style={{display:'flex',gap:8,alignItems:'center'}}>
+                <div style={{fontFamily:SE,fontSize:16,fontWeight:700,color:C.amber,fontStyle:'italic'}}>{fmtEur2(c.importe)}</div>
+                <button onClick={()=>pagarComision(c.id)} style={{padding:'5px 10px',borderRadius:5,border:'none',background:C.green+'22',color:C.green,fontFamily:SN,fontSize:11,fontWeight:600,cursor:'pointer'}}>
+                  ✓ Pagar
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 /* ─── Design Tokens ─── */
 
@@ -97,6 +211,7 @@ const ICONS = {
   calendar: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2z',
   phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.77 3.19 2 2 0 0 1 3.74 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6.59 6.59l.97-1.04a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z',
   qr: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
+  globe: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -1548,7 +1663,7 @@ function RestauranteTab() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
-  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es', whatsapp_alertas_compras: '' })
+  const [form, setForm] = useState({ nombre: '', nif: '', razon_social: '', direccion: '', ciudad: '', telefono: '', google_review_url: '', instagram_url: '', web_url: '', idioma_whisper: 'es', whatsapp_alertas_compras: '', dias_antelacion_pedido_evento: '5' })
   const [personal, setPersonal] = useState<{ id: string; nombre: string; rol: string }[]>([])
   const [responsableComprasId, setResponsableComprasId] = useState<string>('')
   const [logoUploading, setLogoUploading] = useState(false)
@@ -1575,6 +1690,7 @@ function RestauranteTab() {
           web_url:                rd.restaurante.web_url            ?? '',
           idioma_whisper:         rd.restaurante.idioma_whisper      ?? 'es',
           whatsapp_alertas_compras: rd.restaurante.whatsapp_alertas_compras ?? '',
+          dias_antelacion_pedido_evento: (rd.restaurante.dias_antelacion_pedido_evento ?? 5).toString(),
         })
         setResponsableComprasId(rd.restaurante.responsable_compras_id ?? '')
       }
@@ -1887,6 +2003,21 @@ function RestauranteTab() {
             </div>
           </div>
           {inp('WhatsApp alertas compras', 'whatsapp_alertas_compras', '+34 600 000 000')}
+          <div style={{ marginTop: 8 }}>
+            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '.08em' }}>
+              Días antelación pedido para eventos
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input type="number" min="1" max="30"
+                value={form.dias_antelacion_pedido_evento}
+                onChange={e => setForm(f => ({ ...f, dias_antelacion_pedido_evento: e.target.value }))}
+                style={{ width: 70, background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '7px 9px', fontFamily: SM, fontSize: 14, color: C.ink, textAlign: 'center' as const }}
+              />
+              <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+                días antes del evento para generar sugerencias de pedido
+              </span>
+            </div>
+          </div>
         </div>
         <div style={{ fontFamily:SN, fontSize:11, color:C.ink4, marginTop:10, padding:'8px 12px', background:C.paper2, borderRadius:6 }}>
           💡 <strong>Flexible por diseño:</strong> cada restaurante elige quién gestiona las compras. El número de WhatsApp recibe notificaciones automáticas de incidencias, precios fuera de rango y alertas de stock.
@@ -7376,10 +7507,20 @@ const GRUPOS = [
       { id: 'impresoras',     label: 'Impresoras',     icon: ICONS.printer       },
       { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          },
       { id: 'qr',             label: 'QR Mesa',        icon: ICONS.qr            },
+      { id: 'miweb',          label: 'Mi Web',         icon: ICONS.globe         },
       { id: 'modulos',        label: 'Módulos',        icon: ICONS.sparkle       }, // ← activar/desactivar módulos
       { id: 'notificaciones', label: 'Notificaciones', icon: ICONS.alertTriangle },
       { id: 'restaurante',    label: 'Restaurante',    icon: ICONS.shield        },
       { id: 'suscripcion',    label: 'Suscripción',    icon: ICONS.receipt       },
+    ]
+  },
+  {
+    id: 'eventos', label: 'Eventos', icon: ICONS.calendar,
+    tabs: [
+      { id: 'eventos',       label: 'Eventos',    icon: ICONS.calendar },
+      { id: 'menus-evento',  label: 'Menús',      icon: ICONS.book     },
+      { id: 'crm-eventos',   label: 'CRM',        icon: ICONS.users    },
+      { id: 'comisiones',    label: 'Comisiones', icon: ICONS.chart    },
     ]
   },
   {
@@ -8293,10 +8434,11 @@ export default function OwnerPage() {
             {tab === 'etiquetas'      && <EtiquetasTab sh={sh} />}
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
-            {tab === 'analytics'      && <Analytics compact />}
+            {tab === 'analytics'      && <><Analytics compact /><AnalyticsComparativo sh={sh} /></>}
             {tab === 'facturas'       && <FacturasTab/>}
             {tab === 'impresoras'     && <ImpresorasTab/>}
             {tab === 'flujos'         && <FlujoTab/>}
+            {tab === 'miweb'          && <MiWebTab session={session} />}
             {tab === 'modulos'        && <ModulosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'notificaciones' && <NotificacionesTab/>}
             {tab === 'modificaciones' && <ModificacionesTab restauranteId={session.restaurante_id}/>}
@@ -8305,6 +8447,10 @@ export default function OwnerPage() {
             {tab === 'restaurante'    && <RestauranteTab/>}
             {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
             {tab === 'forecaster'    && <ForecasterTab sh={sh} />}
+            {tab === 'eventos'       && <EventosTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'menus-evento'  && <MenusEventoTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'crm-eventos'   && <CRMEventosTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'comisiones'    && <ComisionesEventoTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>
@@ -9498,7 +9644,92 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
         </div>
       )}{/* modal bodega fin */}
       <PrediccionAlmacenNIM sh={sh} />
+      <InvitarGestorAlmacen sh={sh} />
       <StockCentralOwner sh={sh} />
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════
+// INVITAR GESTOR ALMACÉN CENTRAL
+// ══════════════════════════════════════════════════════════════════════
+function InvitarGestorAlmacen({ sh }: { sh: () => Record<string,string> }) {
+  const [open,    setOpen]    = useState(false)
+  const [email,   setEmail]   = useState('')
+  const [nombre,  setNombre]  = useState('')
+  const [empresa, setEmpresa] = useState('')
+  const [modulos, setModulos] = useState<string[]>(['almacen'])
+  const [loading, setLoading] = useState(false)
+  const [msg,     setMsg]     = useState('')
+
+  const invitar = async () => {
+    if (!email || !nombre) return
+    setLoading(true); setMsg('')
+    const r = await fetch('/api/owner/almacen/invitar-gestor', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, nombre, nombre_empresa: empresa || null, modulos }),
+    })
+    const d = await r.json()
+    if (d.ok) {
+      setMsg(`✅ ${d.nuevo_contable ? `PIN enviado a ${email}` : `${nombre} añadido — ya tiene cuenta`}`)
+      setEmail(''); setNombre(''); setEmpresa('')
+    } else {
+      setMsg('Error: ' + d.error)
+    }
+    setLoading(false)
+  }
+
+  if (!open) return (
+    <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+      <button onClick={() => setOpen(true)} style={{ fontFamily: SN, fontSize: 12, padding: '7px 14px', background: 'none', border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink3, cursor: 'pointer' }}>
+        🏪 Invitar al portal de almacén central →
+      </button>
+    </div>
+  )
+
+  return (
+    <div style={{ marginTop: 24, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 16, color: C.ink }}>Invitar al portal de almacén</div>
+        <button onClick={() => setOpen(false)} style={{ background: 'none', border: 'none', color: C.ink4, cursor: 'pointer' }}>✕</button>
+      </div>
+      <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 12, lineHeight: 1.5 }}>
+        El gestor accede a <strong style={{ color: C.ink }}>www.iarest.es/almacen-central</strong> con su email y PIN.<br/>
+        Si ya tiene cuenta en ia.rest, se añade este restaurante a su lista.
+      </div>
+      {[
+        { l: 'Email', v: email, s: setEmail, t: 'email', ph: 'gestor@grupo.es' },
+        { l: 'Nombre', v: nombre, s: setNombre, t: 'text', ph: 'Director de compras' },
+        { l: 'Empresa (opcional)', v: empresa, s: setEmpresa, t: 'text', ph: 'Grupo Hostelería SL' },
+      ].map(({ l, v, s, t, ph }) => (
+        <div key={l} style={{ marginBottom: 8 }}>
+          <div style={{ fontFamily: SN, fontSize: 9, color: C.ink4, textTransform: 'uppercase' as const, marginBottom: 3 }}>{l}</div>
+          <input type={t} value={v} onChange={e => s(e.target.value)} placeholder={ph}
+            style={{ width: '100%', padding: '8px 10px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 7, color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} />
+        </div>
+      ))}
+      <div style={{ marginBottom: 10 }}>
+        <div style={{ fontFamily: SN, fontSize: 9, color: C.ink4, textTransform: 'uppercase' as const, marginBottom: 6 }}>Acceso a módulos</div>
+        <div style={{ display: 'flex', gap: 8 }}>
+          {[['almacen','🏪 Almacén central'],['contabilidad','📊 Contabilidad']].map(([id, label]) => (
+            <label key={id} style={{ display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+              <input type="checkbox" checked={modulos.includes(id)} onChange={e => setModulos(m => e.target.checked ? [...m, id] : m.filter(x => x !== id))} style={{ accentColor: C.red }} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+      {msg && (
+        <div style={{ fontFamily: SN, fontSize: 12, padding: '7px 10px', borderRadius: 7, marginBottom: 8,
+          background: msg.startsWith('✅') ? '#0A2E14' : '#2E1010',
+          color:      msg.startsWith('✅') ? '#4ADE80' : '#F87171' }}>
+          {msg}
+        </div>
+      )}
+      <button onClick={invitar} disabled={loading || !email || !nombre}
+        style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '8px 16px', background: loading || !email || !nombre ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 7, cursor: 'pointer' }}>
+        {loading ? 'Enviando…' : '📧 Invitar'}
+      </button>
     </div>
   )
 }

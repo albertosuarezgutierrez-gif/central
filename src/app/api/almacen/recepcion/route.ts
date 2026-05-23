@@ -110,5 +110,38 @@ export async function POST(req: NextRequest) {
       .eq('restaurante_id', restauranteId)
   }
 
+  // ─── IMPUTAR COSTE AL EVENTO si el pedido tiene evento_id ───────────────
+  if (pedido_proveedor_id) {
+    const { data: pedido } = await supabase
+      .from('pedidos_proveedor')
+      .select('evento_id, proveedor_nombre')
+      .eq('id', pedido_proveedor_id)
+      .single()
+
+    if (pedido?.evento_id) {
+      // Calcular importe total de esta recepción
+      let importe = 0
+      if (modo_cantidad === 'peso_kg' && cantidad_kg && precio_compra_kg) {
+        importe = parseFloat(cantidad_kg) * parseFloat(precio_compra_kg)
+      } else if (num_piezas && precio_compra_unit) {
+        importe = parseFloat(num_piezas) * parseFloat(precio_compra_unit)
+      }
+
+      if (importe > 0) {
+        const concepto = `${nombre_libre || 'Ingrediente'} — ${pedido.proveedor_nombre ?? 'Proveedor'}`
+        await supabase.from('evento_costes').insert({
+          evento_id: pedido.evento_id,
+          restaurante_id: restauranteId,
+          tipo: 'ingredientes',
+          concepto,
+          importe: Math.round(importe * 100) / 100,
+          recepcion_id: recepcion.id,
+          es_estimado: false,
+        })
+      }
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   return NextResponse.json({ ok: true, recepcion })
 }

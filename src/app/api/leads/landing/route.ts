@@ -1,15 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
+import { enviarEmailNuevoLead } from '@/lib/email'
+
+const ETIQUETAS_ORIGEN: Record<string, string> = {
+  'landing':           '🌐 Landing principal',
+  'landing-principal': '🌐 Landing principal',
+  'eventos-catering':  '🎪 Eventos / Catering',
+  'sloppy-joes':       '📋 Propuesta Sloppy Joe\'s',
+  'ovejas-negras':     '📋 Propuesta Ovejas Negras',
+  'catering-jj':       '📋 Propuesta Catering JJ',
+}
 
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
-    const { nombre, restaurante, email, telefono, usuarios, fuente } = body
+    const { nombre, restaurante, email, telefono, usuarios, fuente, origen } = body
 
     if (!nombre || !restaurante || !email) {
       return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
     }
+
+    // origen tiene prioridad sobre fuente (campo legacy)
+    const origenFinal = origen || fuente || 'landing'
+    const origenLabel = ETIQUETAS_ORIGEN[origenFinal] ?? `📌 ${origenFinal}`
 
     // Guardar en BD
     const supabase = createServerClient()
@@ -19,28 +33,45 @@ export async function POST(req: NextRequest) {
       email,
       telefono: telefono || null,
       usuarios: usuarios || null,
-      fuente: fuente || 'landing',
+      fuente: origenFinal,
       estado: 'nuevo'
     })
 
-    // Notificación Telegram
+    // Notificaciones en paralelo
     const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
-    await tgAlert([
-      `🔥 NUEVO LEAD — landing`,
-      ``,
-      `👤 ${nombre}`,
-      `🍽️ ${restaurante}`,
-      `📧 ${email}`,
-      `📱 ${telefono || '—'}`,
-      `👥 Usuarios: ${usuarios || '—'}`,
-      ``,
-      `⏱️ ${fecha}`
-    ].join('\n'))
+    const [tgResult, emailResult] = await Promise.allSettled([
+      tgAlert([
+        `🔥 NUEVO LEAD — ${origenLabel}`,
+        ``,
+        `👤 ${nombre}`,
+        `🍽️ ${restaurante}`,
+        `📧 ${email}`,
+        `📱 ${telefono || '—'}`,
+        `👥 Usuarios: ${usuarios || '—'}`,
+        ``,
+        `⏱️ ${fecha}`
+      ].join('\n')),
+      enviarEmailNuevoLead({ nombre, restaurante, email, telefono, usuarios })
+    ])
+
+    if (tgResult.status === 'rejected') {
+      console.error('[leads/landing] Telegram error:', tgResult.reason)
+    }
+    if (emailResult.status === 'rejected') {
+      console.error('[leads/landing] Email error:', emailResult.reason)
+    } else {
+      const emailData = emailResult.value as any
+      if (emailData?.error) {
+        console.error('[leads/landing] Resend error:', JSON.stringify(emailData.error))
+      } else {
+        console.log('[leads/landing] Email enviado OK, id:', emailData?.data?.id || emailData?.id)
+      }
+    }
 
     return NextResponse.json({ ok: true })
 
   } catch (err: any) {
-    console.error('[leads/landing]', err.message)
+    console.error('[leads/landing] catch:', err.message)
     return NextResponse.json({ ok: true }) // siempre 200 al usuario
   }
 }
