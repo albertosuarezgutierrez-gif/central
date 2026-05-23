@@ -18,6 +18,8 @@ export interface TemplateData {
   slug: string
   idioma: string
   template?: string
+  novedades?: {titulo: string; texto: string}[]
+  mostrar_novedades?: boolean
   t: Record<string, string> // traducciones UI
 }
 

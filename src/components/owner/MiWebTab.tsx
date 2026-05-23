@@ -30,6 +30,8 @@ interface WebConfig {
   color_acento?: string
   redes_sociales?: { instagram?: string; facebook?: string; tiktok?: string; tripadvisor?: string }
   foto_portada_url?: string
+  novedades?: {titulo: string; texto: string; activa?: boolean}[]
+  mostrar_novedades?: boolean
   visitas_total?: number
 }
 
@@ -42,6 +44,8 @@ export default function MiWebTab({ session }: { session: any }) {
   const [generando, setGenerando] = useState(false)
   const [subiendoLogo, setSubiendoLogo] = useState(false)
   const [subiendoPortada, setSubiendoPortada] = useState(false)
+  const [fotosSugeridas, setFotosSugeridas] = useState<{id:number;url:string;query:string}[]>([])
+  const [cargandoSugeridas, setCargandoSugeridas] = useState(false)
   const [traduciendo, setTraduciendo] = useState(false)
   const [analytics, setAnalytics] = useState<{visitas_total:number;visitas_por_dia:number;dias_activa:number} | null>(null)
   const [msg, setMsg] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null)
@@ -115,6 +119,18 @@ export default function MiWebTab({ session }: { session: any }) {
       setMsg({ tipo: 'error', texto: 'Error generando descripción' })
     }
     setGenerando(false)
+  }
+
+  async function cargarFotosSugeridas() {
+    setCargandoSugeridas(true)
+    try {
+      const r = await fetch('/api/owner/web/foto-sugerida', {
+        headers: { 'x-ia-session': JSON.stringify(session) }
+      })
+      const d = await r.json()
+      if (d.ok) setFotosSugeridas(d.sugerencias)
+    } catch { /* silencioso */ }
+    setCargandoSugeridas(false)
   }
 
   async function subirPortada(file: File) {
@@ -425,6 +441,39 @@ export default function MiWebTab({ session }: { session: any }) {
             )}
           </div>
         </div>
+        {/* Sugerencias Unsplash */}
+        {!config.foto_portada_url && (
+          <div style={{ marginTop: 14 }}>
+            <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontFamily: SN, fontSize: 12, color: C.ink, opacity: 0.5 }}>O elige una foto gratis para tu web</span>
+              <button style={{ ...s.btnSec, fontSize: 11 }} onClick={cargarFotosSugeridas} disabled={cargandoSugeridas}>
+                {cargandoSugeridas ? '...' : '✨ Ver sugerencias'}
+              </button>
+            </div>
+            {fotosSugeridas.length > 0 && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+                {fotosSugeridas.map(f => (
+                  <div
+                    key={f.id}
+                    onClick={() => { set('foto_portada_url', f.url); setFotosSugeridas([]) }}
+                    style={{
+                      height: 64, borderRadius: 8, cursor: 'pointer',
+                      background: `url(${f.url}) center/cover`,
+                      border: '2px solid transparent', transition: 'border .15s',
+                      boxShadow: '0 1px 4px rgba(0,0,0,.15)',
+                    }}
+                    title={f.query}
+                  />
+                ))}
+              </div>
+            )}
+            {fotosSugeridas.length > 0 && (
+              <p style={{ fontFamily: SN, fontSize: 10, color: C.ink, opacity: 0.35, marginTop: 6 }}>
+                Fotos gratuitas de Unsplash · Pulsa una para seleccionarla
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Descripción */}
@@ -655,6 +704,59 @@ export default function MiWebTab({ session }: { session: any }) {
         <input style={s.inp} value={config.whatsapp ?? ''} onChange={e => set('whatsapp', e.target.value)} placeholder="+34 600 000 000" />
         <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '4px 0 0' }}>
           Añade un botón de WhatsApp directo en la web para reservas
+        </p>
+      </div>
+
+      {/* Novedades */}
+      <div style={s.sec}>
+        <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 14 }}>
+          <p style={{ ...s.h3, margin: 0 }}>Novedades / Eventos</p>
+          <label style={{ fontFamily: SN, fontSize: 13, color: C.ink, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <input type="checkbox" checked={config.mostrar_novedades ?? false} onChange={e => set('mostrar_novedades', e.target.checked)} />
+            Mostrar en web
+          </label>
+        </div>
+        {((config.novedades as any[] ?? [])).map((nov: any, i: number) => (
+          <div key={i} style={{ background: '#fff', border: `1px solid ${C.rule}`, borderRadius: 10, padding: 14, marginBottom: 10 }}>
+            <div style={{ ...s.row, justifyContent: 'space-between', marginBottom: 10 }}>
+              <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, opacity: 0.5 }}>Novedad {i + 1}</span>
+              <button
+                style={{ background: 'transparent', border: 'none', color: C.red, fontFamily: SN, fontSize: 12, cursor: 'pointer' }}
+                onClick={() => {
+                  const arr = [...(config.novedades as any[] ?? [])]
+                  arr.splice(i, 1)
+                  set('novedades', arr)
+                }}
+              >Eliminar</button>
+            </div>
+            <div style={{ marginBottom: 8 }}>
+              <label style={s.lbl}>Título</label>
+              <input style={s.inp} value={nov.titulo ?? ''} onChange={e => {
+                const arr = [...(config.novedades as any[] ?? [])]
+                arr[i] = { ...arr[i], titulo: e.target.value }
+                set('novedades', arr)
+              }} placeholder="Menú especial San Juan..." />
+            </div>
+            <div>
+              <label style={s.lbl}>Texto</label>
+              <textarea style={{ ...s.ta, minHeight: 56 }} value={nov.texto ?? ''} onChange={e => {
+                const arr = [...(config.novedades as any[] ?? [])]
+                arr[i] = { ...arr[i], texto: e.target.value }
+                set('novedades', arr)
+              }} placeholder="Esta semana celebramos..." />
+            </div>
+          </div>
+        ))}
+        {((config.novedades as any[] ?? [])).length < 3 && (
+          <button
+            style={{ ...s.btnSec, width: '100%', textAlign: 'center' }}
+            onClick={() => set('novedades', [...(config.novedades as any[] ?? []), { titulo: '', texto: '', activa: true }])}
+          >
+            + Añadir novedad
+          </button>
+        )}
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink, opacity: 0.4, margin: '8px 0 0' }}>
+          Máximo 3 novedades · Aparecen en la web del restaurante
         </p>
       </div>
 

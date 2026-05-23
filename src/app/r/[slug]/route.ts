@@ -65,7 +65,17 @@ function buildHTML(d: TemplateData): string {
       ${d.redes_sociales.tripadvisor ? `<a href="${d.redes_sociales.tripadvisor}" target="_blank" rel="noopener" class="red">TripAdvisor</a>` : ''}
     </div>` : ''
 
-  // CSS por template
+  // Novedades HTML
+  const novedadesHTML = d.mostrar_novedades && d.novedades && d.novedades.length > 0 ? `
+    <div class="sec">
+      <h2 class="sec-title">Novedades</h2>
+      ${d.novedades.filter(n => n.titulo).map(n => `
+        <div class="novedad">
+          <div class="nov-titulo">${n.titulo}</div>
+          ${n.texto ? `<p class="nov-texto">${n.texto}</p>` : ''}
+        </div>
+      `).join('')}
+    </div>` : ''
   const css = getCSS(d.template ?? 'clasico', a)
 
   // Hero
@@ -87,6 +97,7 @@ function buildHTML(d: TemplateData): string {
   ${d.frase_bienvenida ? `<p class="frase">"${d.frase_bienvenida}"</p>` : ''}
   ${d.descripcion_local ? `<p class="desc">${d.descripcion_local}</p>` : ''}
   ${d.descripcion_barrio ? `<p class="desc barrio">${d.descripcion_barrio}</p>` : ''}
+  ${novedadesHTML}
   ${reservasHTML}
   ${cartaHTML}
   ${horariosHTML}
@@ -150,6 +161,9 @@ function getCSS(template: string, acento: string): string {
     .h-dia{text-transform:capitalize;opacity:.7}
     .redes{max-width:680px;margin:28px auto 0;padding:0 24px;display:flex;gap:16px;flex-wrap:wrap}
     .red{font-size:13px;opacity:.5;font-weight:500}
+    .novedad{background:rgba(0,0,0,.03);border-radius:10px;padding:14px 16px;margin-bottom:10px;border-left:3px solid currentColor}
+    .nov-titulo{font-size:15px;font-weight:700;margin-bottom:4px}
+    .nov-texto{font-size:13px;opacity:.7;line-height:1.6}
     footer{max-width:680px;margin:36px auto 0;padding:20px 24px 32px;font-size:11px;opacity:.4;letter-spacing:1px}`
 
   const themes: Record<string, string> = {
@@ -315,6 +329,8 @@ export async function GET(
       idioma,
       t,
       template: web.template ?? 'clasico',
+      novedades: (web.novedades as any[]) ?? [],
+      mostrar_novedades: web.mostrar_novedades ?? false,
     }
 
     const html = buildHTML(templateData)
