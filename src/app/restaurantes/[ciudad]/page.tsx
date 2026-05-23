@@ -22,7 +22,7 @@ async function getRestaurantesCiudad(ciudadSlug: string) {
     .from('web_restaurante')
     .select(`
       slug, descripcion_local, logo_url, foto_portada_url, color_acento,
-      restaurantes(nombre, ciudad, tipo_cocina, tipo_negocio, latitud, longitud)
+      restaurantes(nombre, ciudad, tipo_negocio, latitud, longitud)
     `)
     .eq('activa', true)
     .not('slug', 'is', null)
@@ -167,9 +167,9 @@ export default async function CiudadPage({ params }: Props) {
                         </p>
                       )}
                       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 'auto' }}>
-                        {rest?.tipo_cocina && (
+                        {rest?.tipo_negocio && (
                           <span style={{ background: '#F6F1E7', border: '1px solid #EDE5D8', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#7A6A5A' }}>
-                            {rest.tipo_cocina}
+                            {rest.tipo_negocio}
                           </span>
                         )}
                         <span style={{ background: acento + '18', border: `1px solid ${acento}33`, borderRadius: 20, padding: '3px 10px', fontSize: 11, color: acento, fontWeight: 600 }}>

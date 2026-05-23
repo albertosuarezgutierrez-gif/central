@@ -32,7 +32,7 @@ async function getWebData(slug: string) {
 
   const { data: web } = await supabase
     .from('web_restaurante')
-    .select('*, restaurantes(nombre, direccion, ciudad, telefono, tipo_cocina, latitud, longitud)')
+    .select('*, restaurantes(nombre, direccion, ciudad, telefono, tipo_negocio, latitud, longitud)')
     .eq('slug', slug)
     .eq('activa', true)
     .maybeSingle()
@@ -157,7 +157,7 @@ export default async function WebRestaurantePage({ params }: Props) {
     ...(rest?.latitud && rest?.longitud ? {
       geo: { '@type': 'GeoCoordinates', latitude: rest.latitud, longitude: rest.longitud }
     } : {}),
-    servesCuisine: rest?.tipo_cocina ?? 'Spanish',
+    servesCuisine: rest?.tipo_negocio ?? 'Spanish',
     priceRange: '€€',
     image: web.foto_portada_url ?? web.logo_url,
     hasMenu: `https://www.iarest.es/local/${slug}`,

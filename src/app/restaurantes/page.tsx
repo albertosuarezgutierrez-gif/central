@@ -25,7 +25,7 @@ async function getRestaurantes() {
     .from('web_restaurante')
     .select(`
       slug, descripcion_local, logo_url, foto_portada_url, color_acento, template,
-      restaurantes(nombre, ciudad, tipo_negocio, tipo_cocina)
+      restaurantes(nombre, ciudad, tipo_negocio)
     `)
     .eq('activa', true)
     .not('slug', 'is', null)
@@ -180,9 +180,9 @@ export default async function DirectorioPage() {
                                 </p>
                               )}
                               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                                {rest?.tipo_cocina && (
+                                {rest?.tipo_negocio && (
                                   <span style={{ background: '#F6F1E7', border: '1px solid #EDE5D8', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#7A6A5A', fontWeight: 500 }}>
-                                    {rest.tipo_cocina}
+                                    {rest.tipo_negocio}
                                   </span>
                                 )}
                                 <span style={{ background: '#F6F1E7', border: '1px solid #EDE5D8', borderRadius: 20, padding: '3px 10px', fontSize: 11, color: '#7A6A5A', fontWeight: 500 }}>
