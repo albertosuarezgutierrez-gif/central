@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
 import { useAuth } from '@/hooks/useAuth'
 import PanelGastosEvento from '@/components/eventos/PanelGastosEvento'
+import CRMEventosTab from '@/components/owner/CRMEventosTab'
 
 type Espacio = { id: string; nombre: string; tipo: string; aforo_maximo: number | null }
 type Bloqueo = { id: string; espacio_id: string; fecha_inicio: string; fecha_fin: string; tipo: string; eventos: { numero_evento: string; tipo: string; cliente_nombre: string; estado: string; coordinador_id: string } | null }
@@ -103,7 +104,7 @@ function CalendarioDisponibilidad({ sh }: { sh: () => Record<string, string> }) 
 
 export default function EventosPage() {
   const { session, checking: authLoading } = useAuth()
-  const [tab, setTab] = useState<'eventos'|'calendario'|'gastos'>('eventos')
+  const [tab, setTab] = useState<'eventos'|'calendario'|'gastos'|'crm'>('eventos')
   const [eventoSeleccionado, setEventoSeleccionado] = useState<string | null>(null)
   const [eventos, setEventos] = useState<Evento[]>([])
   const [espacios, setEspacios] = useState<Espacio[]>([])
@@ -184,13 +185,14 @@ export default function EventosPage() {
           </div>
         )}
         <div style={{ display:'flex', gap:4, marginBottom:16 }}>
-          {(['eventos','calendario','gastos'] as const).map(t => (
+          {(['eventos','calendario','gastos','crm'] as const).map(t => (
             <button key={t} onClick={()=>setTab(t)} style={{ padding:'7px 16px', borderRadius:6, border:`1px solid ${C.rule}`, background:tab===t?C.paper:'transparent', color:tab===t?C.ink:C.ink3, fontFamily:SN, fontSize:13, cursor:'pointer', fontWeight:tab===t?600:400 }}>
-              {t==='eventos'?'📋 Mis eventos':t==='calendario'?'📅 Disponibilidad':'💶 Gastos'}
+              {t==='eventos'?'📋 Mis eventos':t==='calendario'?'📅 Disponibilidad':t==='gastos'?'💶 Gastos':'🎯 CRM'}
             </button>
           ))}
         </div>
         {tab==='calendario' && <div style={{ background:C.bg2, border:`1px solid ${C.rule}`, borderRadius:10, padding:20 }}><CalendarioDisponibilidad sh={sh} /></div>}
+        {tab==='crm' && session && <CRMEventosTab restauranteId={session.restaurante_id} sh={sh} esCoordinador={true} />}
         {tab==='gastos' && (
           <div>
             {/* Selector de evento */}

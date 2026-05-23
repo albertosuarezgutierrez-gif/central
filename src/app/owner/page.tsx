@@ -34,6 +34,7 @@ import SmartScanFAB from '@/components/SmartScanFAB'
 import WineScannerModal from '@/components/WineScannerModal'
 import EventosTab from '@/components/owner/EventosTab'
 import MenusEventoTab from '@/components/owner/MenusEventoTab'
+import CRMEventosTab from '@/components/owner/CRMEventosTab'
 
 /* ─── Design Tokens ─── */
 
@@ -7407,8 +7408,9 @@ const GRUPOS = [
   {
     id: 'eventos', label: 'Eventos', icon: ICONS.calendar,
     tabs: [
-      { id: 'eventos',       label: 'Eventos',  icon: ICONS.calendar },
-      { id: 'menus-evento',  label: 'Menús',    icon: ICONS.book     },
+      { id: 'eventos',       label: 'Eventos',   icon: ICONS.calendar },
+      { id: 'menus-evento',  label: 'Menús',     icon: ICONS.book     },
+      { id: 'crm-eventos',   label: 'CRM',       icon: ICONS.users    },
     ]
   },
   {
@@ -8337,6 +8339,7 @@ export default function OwnerPage() {
             {tab === 'forecaster'    && <ForecasterTab sh={sh} />}
             {tab === 'eventos'       && <EventosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'menus-evento'  && <MenusEventoTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'crm-eventos'   && <CRMEventosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>
