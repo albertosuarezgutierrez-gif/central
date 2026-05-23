@@ -8,6 +8,7 @@ import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
 import AgenteArquitectoTab from '@/components/AgenteArquitectoTab'
+import BlogSEOTab from '@/components/BlogSEOTab'
 
 
 interface Restaurante {
@@ -106,7 +107,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'arquitecto'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'arquitecto'|'blog'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -383,6 +384,7 @@ export default function SuperPage() {
             { id: 'soporte',      label: 'Soporte', badge: badgeSoporte },
             { id: 'agentes',      label: '🤖 Agentes' },
             { id: 'arquitecto',   label: '🏗️ Arquitecto' },
+            { id: 'blog',         label: '📝 Blog SEO' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -452,6 +454,10 @@ export default function SuperPage() {
         ) : tabSuper === 'arquitecto' ? (
           <div style={{ padding: '24px 0' }}>
             <AgenteArquitectoTab session={session} C={C} SE={SE} SN={SN} SM={SM} />
+          </div>
+        ) : tabSuper === 'blog' ? (
+          <div style={{ padding: '24px 0' }}>
+            <BlogSEOTab session={session} />
           </div>
         ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>

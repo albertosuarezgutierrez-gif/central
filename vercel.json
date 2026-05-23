@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/eventos-entorno",
       "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/blog-seo",
+      "schedule": "0 8 * * 1"
     }
   ]
 }
