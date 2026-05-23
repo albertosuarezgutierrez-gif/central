@@ -33,6 +33,7 @@ import MiWebTab from '@/components/owner/MiWebTab'
 import SmartScanFAB from '@/components/SmartScanFAB'
 import WineScannerModal from '@/components/WineScannerModal'
 import EventosTab from '@/components/owner/EventosTab'
+import MenusEventoTab from '@/components/owner/MenusEventoTab'
 
 /* ─── Design Tokens ─── */
 
@@ -7390,7 +7391,8 @@ const GRUPOS = [
   {
     id: 'eventos', label: 'Eventos', icon: ICONS.calendar,
     tabs: [
-      { id: 'eventos', label: 'Eventos', icon: ICONS.calendar },
+      { id: 'eventos',       label: 'Eventos',  icon: ICONS.calendar },
+      { id: 'menus-evento',  label: 'Menús',    icon: ICONS.book     },
     ]
   },
   {
@@ -8318,6 +8320,7 @@ export default function OwnerPage() {
             {tab === 'suscripcion'    && <SuscripcionTab restauranteId={session.restaurante_id} onSetupClick={() => setTab('camareros')}/>}
             {tab === 'forecaster'    && <ForecasterTab sh={sh} />}
             {tab === 'eventos'       && <EventosTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'menus-evento'  && <MenusEventoTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>
