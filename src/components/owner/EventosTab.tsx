@@ -5,6 +5,8 @@ import PanelGastosEvento from '@/components/eventos/PanelGastosEvento'
 import PanelBEO from '@/components/owner/PanelBEO'
 import PanelProveedoresEvento from '@/components/owner/PanelProveedoresEvento'
 import PanelPasesEvento from '@/components/owner/PanelPasesEvento'
+import PanelScoring from '@/components/owner/PanelScoring'
+import PanelEscandallo from '@/components/owner/PanelEscandallo'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type EventoTipo = 'boda' | 'comunion' | 'bautizo' | 'cumpleanos' | 'empresa' | 'otro'
@@ -270,6 +272,8 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
   const [mostrarBEO, setMostrarBEO] = useState(false)
   const [mostrarProveedores, setMostrarProveedores] = useState(false)
   const [mostrarPases, setMostrarPases] = useState(false)
+  const [mostrarScoring, setMostrarScoring] = useState(false)
+  const [mostrarEscandallo, setMostrarEscandallo] = useState(false)
 
   const abrirPresupuesto = () => {
     window.open(`/api/owner/eventos/presupuesto?evento_id=${evento.id}`, '_blank')
@@ -372,6 +376,12 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
         <button onClick={() => setMostrarProveedores(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.green}44`, background: mostrarProveedores ? C.green + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.green, cursor: 'pointer' }}>
           🤝 Proveedores
         </button>
+        <button onClick={() => setMostrarEscandallo(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid #2B6A6E44`, background: mostrarEscandallo ? '#2B6A6E22' : 'transparent', fontFamily: SN, fontSize: 12, color: '#2B6A6E', cursor: 'pointer' }}>
+          🥗 Escandallo
+        </button>
+        <button onClick={() => setMostrarScoring(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid #6366F144`, background: mostrarScoring ? '#6366F122' : 'transparent', fontFamily: SN, fontSize: 12, color: '#6366F1', cursor: 'pointer' }}>
+          🤖 Scoring
+        </button>
       </div>
 
       {mostrarAPPCC && <PanelAPPCC eventoId={evento.id} sh={sh} />}
@@ -380,6 +390,8 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
       {mostrarBEO && <PanelBEO eventoId={evento.id} sh={sh} />}
       {mostrarPases && <PanelPasesEvento eventoId={evento.id} sh={sh} />}
       {mostrarProveedores && <PanelProveedoresEvento eventoId={evento.id} sh={sh} />}
+      {mostrarEscandallo && <PanelEscandallo eventoId={evento.id} sh={sh} />}
+      {mostrarScoring && <PanelScoring eventoId={evento.id} sh={sh} />}
     </div>
   )
 }

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ even
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
   const [{ data: evento }, { data: pases }] = await Promise.all([
-    supabase.from('eventos').select('id, nombre, fecha_evento, hora_inicio, aforo_confirmado, estado').eq('id', evento_id).eq('restaurante_id', restauranteId).single(),
+    supabase.from('eventos').select('id, cliente_nombre, fecha_evento, hora_inicio, aforo_confirmado, estado').eq('id', evento_id).eq('restaurante_id', restauranteId).single(),
     supabase.from('evento_pases').select('*, items:evento_pase_items(id, nombre, cantidad, estado, producto_id, notas)').eq('evento_id', evento_id).eq('restaurante_id', restauranteId).order('numero_pase'),
   ])
   if (!evento) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
