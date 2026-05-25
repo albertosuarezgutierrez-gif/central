@@ -1546,7 +1546,7 @@ ASUNTO: [asunto]
       .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
       .replace(/[^a-z0-9\s-]/g, '').trim()
       .replace(/\s+/g, '-').substring(0, 40)
-    const landingUrl = `https://www.iarest.es/${landingSlug}`
+    const landingUrl = `https://www.iarest.es/p/${landingSlug}`
 
     const body = {
       nombre: biz?.nombre_contacto || nombre,
