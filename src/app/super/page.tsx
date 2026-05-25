@@ -1665,6 +1665,17 @@ ASUNTO: [asunto]
               style={{ flex: 1, minWidth: 120, background: showEmail ? C.bg2 : `${C.ink2}15`, color: showEmail ? C.ink3 : C.ink2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
               ✉️ {showEmail ? 'Ocultar email' : 'Borrador email'}
             </button>
+            <button onClick={async () => {
+              const biz = analysis; const post = result
+              const nombre = biz?.nombre || post?.nombre_local || 'Restaurante'
+              const msg = `🎯 <b>Lead Hunter IA</b>\n\n<b>${nombre}</b>\n📍 ${biz?.ciudad || post?.ciudad || '—'} · ${biz?.tipo_cocina || post?.tipo_cocina || '—'}\n💶 ~${biz?.precio_mrr_estimado || '?'}€/mes${biz?.email_contacto ? `\n📧 ${biz.email_contacto}` : ''}${biz?.telefono ? `\n📞 ${biz.telefono}` : ''}\n\n${(biz?.puntos_dolor || []).map((p: string) => `→ ${p}`).join('\n') || post?.notas || ''}\n\n<b>DM:</b>\n"${result?.dm_sugerido || 'Generar DM en modo caption'}"\n\n✅ ¿Mandamos?`
+              await fetch('https://efncqyvhniaxsirhdxaa.supabase.co/functions/v1/tg-send', {
+                method: 'POST', headers: { 'Content-Type': 'application/json', 'x-secret': 'iarest-tg-2026' },
+                body: JSON.stringify({ mensaje: msg })
+              })
+            }} style={{ background: `${C.amber}20`, color: C.amber, border: `1px solid ${C.amber}40`, borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>
+              📱 Telegram
+            </button>
             <button onClick={guardarLead} disabled={guardado}
               style={{ flex: 1, minWidth: 120, background: guardado ? `${C.green}20` : C.green, color: guardado ? C.green : '#fff', border: guardado ? `1px solid ${C.green}50` : 'none', borderRadius: 8, padding: '9px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: guardado ? 'default' : 'pointer' }}>
               {guardado ? '✓ Guardado' : '+ Guardar lead'}
