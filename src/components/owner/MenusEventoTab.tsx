@@ -1,6 +1,7 @@
 'use client'
 import React, { useState, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
+import BebidasEventoTab from '@/components/owner/BebidasEventoTab'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 type MenuItem = {
@@ -37,6 +38,7 @@ function FormMenu({ restauranteId, sh, menu, onGuardado, onCancel }: {
   onCancel: () => void
 }) {
   const isEdit = !!menu
+  const [tabActiva, setTabActiva] = useState<'info' | 'bebidas'>('info')
   const [form, setForm] = useState({
     nombre: menu?.nombre ?? '',
     descripcion: menu?.descripcion ?? '',
@@ -117,7 +119,42 @@ function FormMenu({ restauranteId, sh, menu, onGuardado, onCancel }: {
         {isEdit ? `Editar: ${menu!.nombre}` : 'Nuevo menú de evento'}
       </div>
 
-      {/* Info básica */}
+      {/* Tabs: solo en edición */}
+      {isEdit && (
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16, borderBottom: `1px solid ${C.rule}`, paddingBottom: 8 }}>
+          {(['info', 'bebidas'] as const).map(tab => (
+            <button key={tab} onClick={() => setTabActiva(tab)} style={{
+              padding: '6px 14px', borderRadius: '6px 6px 0 0', border: 'none', cursor: 'pointer',
+              fontFamily: SN, fontSize: 13, fontWeight: tabActiva === tab ? 600 : 400,
+              background: tabActiva === tab ? C.ink : 'transparent',
+              color: tabActiva === tab ? C.paper : C.ink3,
+            }}>
+              {tab === 'info' ? '📋 Info y pases' : '🍾 Bebidas'}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* Tab Bebidas */}
+      {isEdit && tabActiva === 'bebidas' && (
+        <BebidasEventoTab
+          menuId={menu!.id}
+          restauranteId={restauranteId}
+          sh={sh}
+          precioInfantil={menu!.precio_infantil ?? 0}
+          menuNinoDescripcion={(menu as MenuDetalle & { menu_nino_descripcion?: string }).menu_nino_descripcion ?? ''}
+          edadMaximaNino={(menu as MenuDetalle & { edad_maxima_nino?: number }).edad_maxima_nino ?? 12}
+          onNinosChange={(data) => {
+            setForm(f => ({
+              ...f,
+              precio_infantil: data.precio_infantil.toString(),
+            }))
+          }}
+        />
+      )}
+
+      {/* Tab Info (siempre visible en creación, condicional en edición) */}
+      {(!isEdit || tabActiva === 'info') && (<>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 10, marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase' as const, letterSpacing: '.08em' }}>Nombre *</div>
@@ -270,14 +307,18 @@ function FormMenu({ restauranteId, sh, menu, onGuardado, onCancel }: {
         </div>
       )}
 
+      </>)}
+
       {error && <div style={{ color: C.red, fontFamily: SN, fontSize: 13, margin: '10px 0' }}>{error}</div>}
 
+      {(!isEdit || tabActiva === 'info') && (
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', marginTop: 16 }}>
         <button onClick={onCancel} style={{ padding: '8px 16px', borderRadius: 6, border: `1px solid ${C.rule}`, background: 'transparent', fontFamily: SN, fontSize: 13, color: C.ink3, cursor: 'pointer' }}>Cancelar</button>
         <button onClick={handleGuardar} disabled={saving} style={{ padding: '8px 18px', borderRadius: 6, border: 'none', background: C.red, color: '#fff', fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: saving ? 'not-allowed' : 'pointer', opacity: saving ? 0.7 : 1 }}>
           {saving ? 'Guardando...' : isEdit ? 'Guardar cambios' : 'Crear menú'}
         </button>
       </div>
+      )}
     </div>
   )
 }
