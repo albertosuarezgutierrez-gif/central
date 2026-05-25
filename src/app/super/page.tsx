@@ -2,7 +2,7 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Session } from '@/hooks/useAuth'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
@@ -105,7 +105,6 @@ export default function SuperPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
-  const searchParams = useSearchParams()
   const [err, setErr] = useState('')
   const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
@@ -155,9 +154,9 @@ export default function SuperPage() {
 
   // Leer ?tab=X de la URL al cargar
   useEffect(() => {
-    const tab = searchParams?.get('tab')
+    const tab = new URLSearchParams(window.location.search).get('tab')
     if (tab) setTabSuper(tab as any)
-  }, [searchParams])
+  }, [])
 
   useEffect(() => { if (session && tabSuper === 'sugerencias') loadSugerencias() }, [session, tabSuper, loadSugerencias])
   useEffect(() => { if (session && tabSuper === 'clientes') loadCuentas() }, [session, tabSuper])
