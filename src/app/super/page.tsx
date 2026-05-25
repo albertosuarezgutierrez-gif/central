@@ -1360,6 +1360,7 @@ function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; 
   const [guardado, setGuardado] = useState(false)
   const [propuestaUrl, setPropuestaUrl] = useState<string|null>(null)
   const [propuestaTrackUrl, setPropuestaTrackUrl] = useState<string|null>(null)
+  const [landingUrl, setLandingUrl] = useState<string|null>(null)
   const [showEmail, setShowEmail] = useState(false)
   const [emailContent, setEmailContent] = useState('')
   const [copiedEmail, setCopiedEmail] = useState(false)
@@ -1522,6 +1523,12 @@ ASUNTO: [asunto]
     const token = Math.random().toString(36).slice(2) + Date.now().toString(36)
     const propuestaConfig = propuestaUrl ? propuestaUrl.replace('/propuesta/preview?d=', '') : ''
     const trackUrl = `https://www.iarest.es/api/track/${token}`
+    // Generar slug personalizado: nombre-del-restaurante
+    const landingSlug = nombre.toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-z0-9\s-]/g, '').trim()
+      .replace(/\s+/g, '-').substring(0, 40)
+    const landingUrl = `https://www.iarest.es/${landingSlug}`
 
     const body = {
       nombre: biz?.nombre_contacto || nombre,
@@ -1532,28 +1539,29 @@ ASUNTO: [asunto]
       locales: biz ? `${biz.num_locales || 1} locales` : post?.tamaño_estimado || '',
       tpv: biz?.tpv_actual || post?.tpv_mencionado || '',
       contacto: biz?.nombre_contacto || '',
-      notas: `[Lead Hunter IA · ${modo}]\n${biz?.descripcion_negocio || post?.notas || ''}\n\nPropuesta: ${trackUrl}`,
+      notas: `[Lead Hunter IA · ${modo}]\n${biz?.descripcion_negocio || post?.notas || ''}\n\nPágina personalizada: ${landingUrl}`,
       propuesta_token: token,
       propuesta_url: propuestaUrl ? `https://www.iarest.es${propuestaUrl}` : null,
+      landing_slug: landingSlug,
+      tipo_negocio: biz?.tipo_cocina || post?.tipo_cocina || '',
     }
     const resp = await fetch('/api/super/leads', { method: 'POST', headers: sh(), body: JSON.stringify(body) })
     const d = await resp.json()
     if (d.lead) {
       onLeadCreado(d.lead)
       setGuardado(true)
-      // Actualizar propuesta con token en BD
-      if (propuestaUrl) {
-        await fetch(`/api/super/leads`, {
-          method: 'PATCH',
-          headers: sh(),
-          body: JSON.stringify({ id: d.lead.id, propuesta_token: token, propuesta_url: `https://www.iarest.es${propuestaUrl}` })
-        })
-      }
+      setLandingUrl(landingUrl)
+      // Actualizar con datos extras
+      await fetch(`/api/super/leads`, {
+        method: 'PATCH',
+        headers: sh(),
+        body: JSON.stringify({ id: d.lead.id, propuesta_token: token, propuesta_url: propuestaUrl ? `https://www.iarest.es${propuestaUrl}` : null, landing_slug: landingSlug, tipo_negocio: biz?.tipo_cocina || post?.tipo_cocina || '' })
+      })
       setPropuestaTrackUrl(trackUrl)
     }
   }
 
-  const limpiar = () => { setResult(null); setAnalysis(null); setCaption(''); setUrlNegocio(''); setGuardado(false); setPropuestaUrl(null); setPropuestaTrackUrl(null); setShowEmail(false); setEmailContent('') }
+  const limpiar = () => { setResult(null); setAnalysis(null); setCaption(''); setUrlNegocio(''); setGuardado(false); setPropuestaUrl(null); setPropuestaTrackUrl(null); setLandingUrl(null); setShowEmail(false); setEmailContent('') }
 
   const TIPO_COLOR: Record<string, string> = { apertura: '#3F7D44', queja_tpv: '#D9442B', reforma: '#E8A33B', otro: '#6B5F52' }
   const TIPO_LABEL: Record<string, string> = { apertura: '🟢 Apertura', queja_tpv: '🔴 Queja TPV', reforma: '🟡 Reforma', otro: '⚪ Otro' }
@@ -1689,7 +1697,7 @@ ASUNTO: [asunto]
             <button onClick={async () => {
               const biz = analysis; const post = result
               const nombre = biz?.nombre || post?.nombre_local || 'Restaurante'
-              const trackUrl = propuestaTrackUrl || (propuestaUrl ? `https://www.iarest.es${propuestaUrl}` : null)
+              const trackUrl = landingUrl || propuestaTrackUrl || (propuestaUrl ? `https://www.iarest.es${propuestaUrl}` : null)
               const msg = `🎯 <b>Lead Hunter IA</b>\n\n<b>${nombre}</b>\n📍 ${biz?.ciudad || post?.ciudad || '—'} · ${biz?.tipo_cocina || post?.tipo_cocina || '—'}\n💶 ~${biz?.precio_mrr_estimado || '?'}€/mes${biz?.email_contacto ? `\n📧 ${biz.email_contacto}` : ''}${biz?.telefono ? `\n📞 ${biz.telefono}` : ''}\n\n${(biz?.puntos_dolor || []).map((p: string) => `→ ${p}`).join('\n') || post?.notas || ''}\n\n<b>DM:</b>\n"${result?.dm_sugerido || '—'}"${trackUrl ? `\n\n🔗 <a href="${trackUrl}">Ver propuesta</a>` : ''}\n\n✅ ¿Mandamos?`
               await fetch('https://efncqyvhniaxsirhdxaa.supabase.co/functions/v1/tg-send', {
                 method: 'POST', headers: { 'Content-Type': 'application/json', 'x-secret': 'iarest-tg-2026' },
@@ -1707,6 +1715,17 @@ ASUNTO: [asunto]
               ✕
             </button>
           </div>
+
+          {/* URL personalizada generada */}
+          {guardado && landingUrl && (
+            <div style={{ background: `${C.green}10`, border: `1px solid ${C.green}30`, borderRadius: 8, padding: '12px 14px', marginTop: 4 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.green, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 6 }}>🔗 URL personalizada generada</div>
+              <div style={{ fontFamily: SM, fontSize: 13, color: C.ink, wordBreak: 'break-all' as const }}>{landingUrl}</div>
+              <button onClick={() => navigator.clipboard.writeText(landingUrl)} style={{ marginTop: 8, background: 'transparent', border: `1px solid ${C.green}50`, borderRadius: 6, padding: '4px 10px', color: C.green, fontFamily: SM, fontSize: 11, cursor: 'pointer' }}>
+                Copiar para el DM
+              </button>
+            </div>
+          )}
 
           {/* Email borrador */}
           {showEmail && (
