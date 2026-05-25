@@ -9,6 +9,7 @@ import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
 import InstagramTab from '@/components/InstagramTab'
 import ProveedoresTechTab from '@/components/ProveedoresTechTab'
+import IaTrainingPanel from '@/components/super/IaTrainingPanel'
 
 
 interface Restaurante {
@@ -438,7 +439,7 @@ export default function SuperPage() {
             onRecargar={loadSugerencias}
           />
         ) : tabSuper === 'ia_training' ? (
-          <TabIATraining trainingStats={trainingStats} C={C} SE={SE} SN={SN} SM={SM} />
+          <div style={{ padding: '24px 0' }}><IaTrainingPanel /></div>
         ) : tabSuper === 'sistema' ? (
           <div style={{ padding: '24px 0' }}><SystemHealth session={session} /></div>
         ) : tabSuper === 'autocuras' ? (
