@@ -8,19 +8,23 @@ type ScoringData = {
   recomendaciones_precio: string; alerta_appcc: boolean
   financiero: { ingresos_presupuestados: number; ingresos_reales: number; coste_total: number; margen_bruto: number; margen_pct: number }
 }
+type ScoringResponse = { scoring: ScoringData | null; appcc: { testigos: number; temp_ok: number; temp_ko: number }; comisiones: { total: number; cobradas: number; pendientes: number }; mensaje?: string; _cache?: boolean; _generado_at?: string }
 
 const fmtEur = (n: number | null) => n != null ? n.toLocaleString('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }) : '—'
 const scoreColor = (s: number) => s >= 8 ? '#3F7D44' : s >= 6 ? '#E8A33B' : '#D9442B'
 
 export default function PanelScoring({ eventoId, sh }: { eventoId: string; sh: () => Record<string, string> }) {
-  const [data, setData] = useState<{ scoring: ScoringData | null; appcc: { testigos: number; temp_ok: number; temp_ko: number }; comisiones: { total: number; cobradas: number; pendientes: number }; mensaje?: string } | null>(null)
+  const [data, setData] = useState<ScoringResponse | null>(null)
   const [loading, setLoading] = useState(false)
   const [generando, setGenerando] = useState(false)
 
   const cargar = useCallback(async (forzar = false) => {
     if (forzar) setGenerando(true)
     else setLoading(true)
-    const r = await fetch(`/api/owner/eventos/scoring-nim?evento_id=${eventoId}`, { headers: sh() })
+    const url = forzar
+      ? `/api/owner/eventos/scoring-nim?evento_id=${eventoId}&recalcular=1`
+      : `/api/owner/eventos/scoring-nim?evento_id=${eventoId}`
+    const r = await fetch(url, { headers: sh() })
     const d = await r.json()
     setData(d)
     setLoading(false)
@@ -35,6 +39,11 @@ export default function PanelScoring({ eventoId, sh }: { eventoId: string; sh: (
     <div style={{ marginTop: 10, background: '#fff', borderRadius: 8, border: `1px solid ${C.rule}`, overflow: 'hidden' }}>
       <div style={{ padding: '10px 14px', borderBottom: `1px solid ${C.rule}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div style={{ fontFamily: SE, fontSize: 14, fontWeight: 700 }}>🤖 Scoring IA post-evento</div>
+        {data?._generado_at && (
+          <div style={{ fontFamily: SN, fontSize: 10, color: C.ink3 }}>
+            {data._cache ? '📦 Caché' : '✨ Nuevo'} · {new Date(data._generado_at).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+          </div>
+        )}
         <button onClick={() => cargar(true)} disabled={generando}
           style={{ padding: '4px 12px', borderRadius: 5, border: 'none', background: generando ? C.ink + '22' : C.red, color: generando ? C.ink3 : '#fff', fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: generando ? 'not-allowed' : 'pointer' }}>
           {generando ? '⏳ Analizando…' : '🔄 Generar análisis'}
