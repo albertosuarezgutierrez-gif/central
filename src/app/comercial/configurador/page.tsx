@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 
 const C = {
@@ -346,6 +346,18 @@ function ConfiguradorContent({ menuId, briefingId }: { menuId: string; briefingI
 }
 
 export default function ConfiguradorMenuPage() {
+  return (
+    <Suspense fallback={
+      <div style={{ minHeight: '100vh', background: '#14110E', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: '#9C8E7E', fontFamily: 'Inter Tight, sans-serif' }}>Cargando...</div>
+      </div>
+    }>
+      <ConfiguradorMenuInner />
+    </Suspense>
+  )
+}
+
+function ConfiguradorMenuInner() {
   const searchParams = useSearchParams()
   const menuId = searchParams.get('menu_id') || ''
   const briefingId = searchParams.get('briefing_id') || ''
