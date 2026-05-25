@@ -1,8 +1,36 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'ia.rest · El sistema de gestión para tu restaurante',
-  description: 'Voz, cocina, almacén, proveedores y eventos. Todo conectado. Todo automatizado.',
+  title: 'Software gestión restaurante indio y nepalés | ia.rest',
+  description: 'Sistema de gestión completo para restaurantes indios y nepaleses en España. Comandas por voz, control de almacén, albaranes, etiquetado, proveedores y eventos. Sin comisiones.',
+  keywords: [
+    'software restaurante indio España',
+    'gestión restaurante nepalés',
+    'TPV restaurante indio',
+    'comandas por voz restaurante',
+    'sistema gestión hostelería',
+    'control almacén restaurante',
+    'software catering eventos',
+    'gestión restaurante multilocal',
+    'TPV hostelería sin comisiones',
+    'ia.rest',
+  ],
+  openGraph: {
+    title: 'ia.rest · Gestión completa para restaurantes indios y nepaleses',
+    description: 'Sala, cocina, almacén, proveedores y eventos. Todo conectado. Sin comisiones.',
+    url: 'https://www.iarest.es/demo/restaurante-indio',
+    siteName: 'ia.rest',
+    locale: 'es_ES',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'ia.rest · El sistema de gestión para restaurantes indios y nepaleses',
+    description: 'Sala, cocina, almacén, proveedores y eventos. Todo conectado.',
+  },
+  alternates: {
+    canonical: 'https://www.iarest.es/demo/restaurante-indio',
+  },
 }
 
 const RED = '#D9442B'
@@ -22,8 +50,20 @@ const SN = "'Inter Tight', system-ui, sans-serif"
 const MAIL = 'mailto:hola@iarest.es?subject=Videollamada%20ia.rest&body=Hola%2C%20me%20gustar%C3%ADa%20ver%20ia.rest%20para%20nuestro%20restaurante.'
 
 export default function DemoRestauranteIndio() {
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'SoftwareApplication',
+    name: 'ia.rest',
+    applicationCategory: 'BusinessApplication',
+    operatingSystem: 'Web, iOS, Android',
+    description: 'Sistema de gestión completo para restaurantes. Comandas por voz, almacén, proveedores y eventos.',
+    offers: { '@type': 'Offer', price: '59', priceCurrency: 'EUR', priceSpecification: { '@type': 'UnitPriceSpecification', billingDuration: 'P1M' } },
+    url: 'https://www.iarest.es',
+    provider: { '@type': 'Organization', name: 'ia.rest', url: 'https://www.iarest.es' },
+  }
   return (
     <main style={{ background: PAPER, minHeight: '100vh', color: DARK, fontFamily: SN }}>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
 
       {/* NAV */}
       <nav style={{ padding: '20px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${RULE_L}` }}>
