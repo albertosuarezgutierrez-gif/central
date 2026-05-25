@@ -175,7 +175,7 @@ const jsonLdFaq = {
       acceptedAnswer: { '@type': 'Answer', text: 'ia.rest usa tarificación por usuario activo: 59 €/mes por el local más 20 €/mes por cada usuario adicional (camarero, cocina o jefe de sala). A partir del séptimo usuario el precio baja a 15 €/mes. Un bar con 1 usuario paga 59 €/mes. Un restaurante con 6 usuarios paga 159 €/mes. Sin comisiones por cobro.' } },
     { '@type': 'Question', name: '¿Hay comisión por cada pago con tarjeta o Bizum?',
       acceptedAnswer: { '@type': 'Answer', text: 'No. ia.rest no cobra comisión por transacción. Pagas la cuota mensual fija. Cero porcentaje sobre tus ventas.' } },
-    { '@type': 'Question', name: '¿Puedo migrar desde mi TPV actual (Numier, Ágora, Revo...)?',
+    { '@type': 'Question', name: '¿Puedo migrar desde mi TPV actual?',
       acceptedAnswer: { '@type': 'Answer', text: 'Sí. Si tienes carta en papel o en otro sistema, la importamos automáticamente desde una foto con IA en minutos. El alta completa (local, mesas, usuarios) lleva menos de 30 minutos, sin que venga nadie a instalar nada.' } },
     { '@type': 'Question', name: '¿Funciona ia.rest para gestionar varios locales?',
       acceptedAnswer: { '@type': 'Answer', text: 'Sí. ia.rest tiene gestión multicuenta nativa. Desde un único acceso puedes ver y gestionar todos tus locales de forma independiente, cada uno con su carta, mesas, personal y facturación.' } },
