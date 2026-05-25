@@ -2,6 +2,9 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
 import PanelGastosEvento from '@/components/eventos/PanelGastosEvento'
+import PanelBEO from '@/components/owner/PanelBEO'
+import PanelProveedoresEvento from '@/components/owner/PanelProveedoresEvento'
+import PanelPasesEvento from '@/components/owner/PanelPasesEvento'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type EventoTipo = 'boda' | 'comunion' | 'bautizo' | 'cumpleanos' | 'empresa' | 'otro'
@@ -264,6 +267,9 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
   const [mostrarAPPCC, setMostrarAPPCC] = useState(false)
   const [mostrarRentabilidad, setMostrarRentabilidad] = useState(false)
   const [mostrarGastos, setMostrarGastos] = useState(false)
+  const [mostrarBEO, setMostrarBEO] = useState(false)
+  const [mostrarProveedores, setMostrarProveedores] = useState(false)
+  const [mostrarPases, setMostrarPases] = useState(false)
 
   const abrirPresupuesto = () => {
     window.open(`/api/owner/eventos/presupuesto?evento_id=${evento.id}`, '_blank')
@@ -357,11 +363,23 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
         <button onClick={() => setMostrarGastos(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.rule}`, background: mostrarGastos ? C.ink + '11' : 'transparent', fontFamily: SN, fontSize: 12, color: C.ink2, cursor: 'pointer' }}>
           💶 Gastos
         </button>
+        <button onClick={() => setMostrarBEO(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.ink}33`, background: mostrarBEO ? C.ink + '11' : 'transparent', fontFamily: SN, fontSize: 12, color: C.ink2, cursor: 'pointer' }}>
+          📋 BEO
+        </button>
+        <button onClick={() => setMostrarPases(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.amber}44`, background: mostrarPases ? C.amber + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.amber, cursor: 'pointer' }}>
+          🎯 Pases
+        </button>
+        <button onClick={() => setMostrarProveedores(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.green}44`, background: mostrarProveedores ? C.green + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.green, cursor: 'pointer' }}>
+          🤝 Proveedores
+        </button>
       </div>
 
       {mostrarAPPCC && <PanelAPPCC eventoId={evento.id} sh={sh} />}
       {mostrarRentabilidad && <PanelRentabilidad eventoId={evento.id} sh={sh} onCerrar={() => { setMostrarRentabilidad(false); onEstado(evento.id, 'completado') }} />}
       {mostrarGastos && <div style={{ marginTop: 8 }}><PanelGastosEvento eventoId={evento.id} sh={sh} esCoordinador={false} /></div>}
+      {mostrarBEO && <PanelBEO eventoId={evento.id} sh={sh} />}
+      {mostrarPases && <PanelPasesEvento eventoId={evento.id} sh={sh} />}
+      {mostrarProveedores && <PanelProveedoresEvento eventoId={evento.id} sh={sh} />}
     </div>
   )
 }
