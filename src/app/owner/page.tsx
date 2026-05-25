@@ -35,6 +35,8 @@ import WineScannerModal from '@/components/WineScannerModal'
 import EventosTab from '@/components/owner/EventosTab'
 import MenusEventoTab from '@/components/owner/MenusEventoTab'
 import CRMEventosTab from '@/components/owner/CRMEventosTab'
+import ProveedoresExternosTab from '@/components/owner/ProveedoresExternosTab'
+import LeadsEventosTab from '@/components/owner/LeadsEventosTab'
 
 // ─── ComisionesEventoTab (inline, ligero) ─────────────────────────────────────
 function ComisionesEventoTab({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
@@ -7521,6 +7523,8 @@ const GRUPOS = [
       { id: 'menus-evento',  label: 'Menús',      icon: ICONS.book     },
       { id: 'crm-eventos',   label: 'CRM',        icon: ICONS.users    },
       { id: 'comisiones',    label: 'Comisiones', icon: ICONS.chart    },
+      { id: 'prov-externos',  label: 'Proveedores', icon: ICONS.users   },
+      { id: 'leads-eventos',  label: 'Leads',       icon: ICONS.phone    },
     ]
   },
   {
@@ -8451,6 +8455,8 @@ export default function OwnerPage() {
             {tab === 'menus-evento'  && <MenusEventoTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'crm-eventos'   && <CRMEventosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'comisiones'    && <ComisionesEventoTab restauranteId={session.restaurante_id} sh={sh} />}
+            {tab === 'prov-externos'  && <ProveedoresExternosTab sh={sh} />}
+            {tab === 'leads-eventos'  && <LeadsEventosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>
