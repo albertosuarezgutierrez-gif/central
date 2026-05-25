@@ -1,3 +1,4 @@
+import { PrintButton } from './PrintButton'
 import { createServerClient } from '@/lib/supabase'
 import { notFound } from 'next/navigation'
 
@@ -118,7 +119,7 @@ export default async function AppccPdfPage({ params }: { params: Promise<{ id: s
         `}</style>
       </head>
       <body>
-        <button className="btn-print" onClick={() => {if(typeof window !== "undefined") window.print()}}>🖨️ Imprimir / PDF</button>
+        <PrintButton />
         <a className="btn-back" href={`/owner`}>← Volver</a>
 
         <div className="page">
@@ -332,9 +333,6 @@ export default async function AppccPdfPage({ params }: { params: Promise<{ id: s
           </div>
         </div>
 
-        <script dangerouslySetInnerHTML={{ __html: `
-          document.querySelector('.btn-print').addEventListener('click', function(){ window.print() });
-        `}} />
       </body>
     </html>
   )
