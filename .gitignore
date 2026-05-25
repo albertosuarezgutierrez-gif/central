@@ -5,3 +5,4 @@ node_modules/
 *.log
 scripts/setup-wizard/dist/
 scripts/setup-wizard/node_modules/
+.vercel
