@@ -967,6 +967,9 @@ interface Lead {
   estado: EstadoLead; notas: string | null; created_at: string
   tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]
+  landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
+  propuesta_url?: string; propuesta_vista_at?: string
+  ciudad?: string; empresa?: string
 }
 
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
@@ -1061,7 +1064,30 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
 
         {/* Panel expandido */}
         {abierto && (
-          <div style={{ borderTop: `1px solid ${C.rule}`, padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+          <div style={{ borderTop: `1px solid ${C.rule}`, padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            {/* Info comercial */}
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {lead.landing_slug && (
+                <a href={`https://www.iarest.es/p/${lead.landing_slug}`} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${C.green}15`, border: `1px solid ${C.green}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.green, textDecoration: 'none', fontWeight: 600 }}>
+                  🔗 iarest.es/p/{lead.landing_slug}
+                  {lead.landing_vista_at
+                    ? <span style={{ color: C.green }}>· {lead.landing_vistas || 1} vista{(lead.landing_vistas || 1) > 1 ? 's' : ''} · {fmtFecha(lead.landing_vista_at)}</span>
+                    : <span style={{ color: C.ink3 }}>· no vista aún</span>}
+                </a>
+              )}
+              {lead.propuesta_url && (
+                <a href={lead.propuesta_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${C.red}15`, border: `1px solid ${C.red}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.red, textDecoration: 'none', fontWeight: 600 }}>
+                  📋 Propuesta
+                  {lead.propuesta_vista_at
+                    ? <span style={{ color: C.red }}>· abierta {fmtFecha(lead.propuesta_vista_at)}</span>
+                    : <span style={{ color: C.ink3 }}>· no vista</span>}
+                </a>
+              )}
+            </div>
+
             {lead.notas && <div style={{ fontFamily: SM, fontSize: 13, color: C.ink2, fontStyle: 'italic', padding: '10px 14px', background: `${C.rule}30`, borderRadius: 8 }}>{lead.notas}</div>}
 
             {/* Historial */}
