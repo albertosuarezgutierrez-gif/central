@@ -3,8 +3,8 @@ export const metadata: Metadata = {
   title: 'Software gestión cadena restaurantes multilocal | ia.rest',
   description: 'Sistema centralizado para grupos de restaurantes en España. Control de todos los locales, stock compartido y analytics comparativo. Sin comisiones.',
   keywords: ['software cadena restaurantes España','gestión grupo hostelería multilocal','TPV varios restaurantes','sistema centralizado hostelería','ia.rest'],
-  openGraph: { title: 'ia.rest · Gestión centralizada para grupos de restaurantes', description: 'Todos tus locales. Un solo panel. Stock, analytics y personal centralizados.', url: 'https://www.iarest.es/demo/grupo-multilocal', siteName: 'ia.rest', locale: 'es_ES', type: 'website' },
-  alternates: { canonical: 'https://www.iarest.es/demo/grupo-multilocal' },
+  openGraph: { title: 'ia.rest · Gestión centralizada para grupos de restaurantes', description: 'Todos tus locales. Un solo panel. Stock, analytics y personal centralizados.', url: 'https://www.iarest.es/grupo-multilocal', siteName: 'ia.rest', locale: 'es_ES', type: 'website' },
+  alternates: { canonical: 'https://www.iarest.es/grupo-multilocal' },
 }
 const R='#D9442B',D='#14110E',P='#F6F1E7',B2='#1E1A15',B3='#2A221A',I3='#9C8E7E',I4='#6B5F52',RD='#2A2520',RL='#D8CDB6',AM='#E8A33B',GR='#3F7D44',SE="'Newsreader',Georgia,serif",SN="'Inter Tight',system-ui,sans-serif",ML='mailto:hola@iarest.es?subject=Videollamada%20ia.rest%20grupo&body=Hola%2C%20gestionamos%20varios%20locales%20y%20quiero%20ver%20ia.rest.'
 export default function Page() {

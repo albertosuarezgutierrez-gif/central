@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: 'ia.rest · Gestión completa para restaurantes indios y nepaleses',
     description: 'Sala, cocina, almacén, proveedores y eventos. Todo conectado. Sin comisiones.',
-    url: 'https://www.iarest.es/demo/restaurante-indio',
+    url: 'https://www.iarest.es/restaurante-indio',
     siteName: 'ia.rest',
     locale: 'es_ES',
     type: 'website',
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
     description: 'Sala, cocina, almacén, proveedores y eventos. Todo conectado.',
   },
   alternates: {
-    canonical: 'https://www.iarest.es/demo/restaurante-indio',
+    canonical: 'https://www.iarest.es/restaurante-indio',
   },
 }
 
