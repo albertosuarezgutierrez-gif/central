@@ -79,6 +79,34 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  // ── Briefing semanal — delegar al endpoint específico ────────────────
+  if (accion === 'briefing_elegir' || accion === 'briefing_otras') {
+    // Reenviar al handler de briefing
+    const res = await fetch('https://www.iarest.es/api/telegram/briefing-callback', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    }).catch(() => null)
+    return NextResponse.json({ ok: true })
+  }
+
+  // ── Aprobar publicar en blog ──────────────────────────────────────────
+  if (accion === 'blog_publicar') {
+    const borradorId = parts[1]
+    const slug = parts[2]
+    await tgAnswerCallback(cb.id, '✅ Publicando en blog...')
+    // El blog se publica via /super normalmente — aquí solo confirmamos
+    await tgEditMessage(cb.message.message_id,
+      `✅ <b>Artículo aprobado</b>\n\nPublica en:\n👉 https://www.iarest.es/super → Blog → Publicar`)
+  }
+
+  if (accion === 'blog_revisar') {
+    const slug = parts[1]
+    await tgAnswerCallback(cb.id, '')
+    await tgEditMessage(cb.message.message_id,
+      `📝 Revisa en:\n👉 https://www.iarest.es/super → tab Blog`)
+  }
+
   // ── Generar post desde idea del briefing ──────────────────────────────
   if (accion === 'ig_generar_idea') {
     const borradorId = parts[1]

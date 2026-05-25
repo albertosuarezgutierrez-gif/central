@@ -12,6 +12,26 @@ const TONO: Record<Plantilla,Tono> = { pregunta:'claro',cita:'claro',tip:'rojo',
 const CICLO: Tono[] = ['oscuro','claro','rojo']
 const POR_TONO: Record<Tono,Plantilla[]> = { claro:['pregunta','cita'],rojo:['tip'],oscuro:['stat','comparativa','producto'] }
 
+async function buscarBorradorProgramado(supabase: ReturnType<typeof createServerClient>) {
+  // Buscar borrador de la semana con scheduled_for próximo (±12h)
+  const ahora = new Date()
+  const desde = new Date(ahora.getTime() - 12 * 3600000).toISOString()
+  const hasta = new Date(ahora.getTime() + 12 * 3600000).toISOString()
+
+  const { data } = await supabase
+    .from('instagram_borradores')
+    .select('*')
+    .eq('estado', 'pendiente')
+    .not('scheduled_for', 'is', null)
+    .gte('scheduled_for', desde)
+    .lte('scheduled_for', hasta)
+    .order('scheduled_for', { ascending: true })
+    .limit(1)
+    .maybeSingle()
+
+  return data
+}
+
 async function generarPost(plantilla: Plantilla, tema: string, hashtags: string[]) {
   const hashBase = '#hosteleria #restaurante #bar #gestion #hosteleros'
   const prompt = `Agente Instagram ia.rest. Plantilla "${plantilla}" sobre: "${tema}"
@@ -42,6 +62,27 @@ export async function GET(req: NextRequest) {
   if (!isCron && !isManual) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const supabase = createServerClient()
+
+  // ── Primero: buscar borrador programado de la semana ─────────────────
+  if (!tipoForzado) {
+    const programado = await buscarBorradorProgramado(supabase)
+    if (programado) {
+      const msgId = await tgAlertButtons(
+        `📸 <b>Post programado listo</b>\n\n` +
+        `📅 <i>${programado.tema_elegido}</i>\n` +
+        `<b>${programado.titulo?.slice(0,60)}</b>\n\n` +
+        `<i>${programado.caption?.slice(0,150)}...</i>`,
+        'info',
+        [[
+          { texto: '✅ Publicar', callback: `ig_aprobar:${programado.id}` },
+          { texto: '🗑️ Descartar', callback: `ig_descartar:${programado.id}` },
+        ]]
+      )
+      if (msgId) await supabase.from('instagram_borradores').update({ telegram_msg_id: msgId }).eq('id', programado.id)
+      return NextResponse.json({ ok: true, modo: 'programado', borrador: programado.id })
+    }
+  }
+
   const hoy = new Date()
   const { data: ultimo } = await supabase.from('instagram_posts').select('plantilla,titulo').order('created_at',{ascending:false}).limit(1).maybeSingle()
   const ultimaPlantilla = ultimo?.plantilla as Plantilla|null

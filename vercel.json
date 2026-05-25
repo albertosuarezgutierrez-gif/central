@@ -61,7 +61,7 @@
       "schedule": "0 9 * * 5"
     },
     {
-      "path": "/api/cron/instagram-ideas",
+      "path": "/api/cron/briefing-semanal",
       "schedule": "30 8 * * 1"
     },
     {
