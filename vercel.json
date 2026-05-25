@@ -51,6 +51,22 @@
     {
       "path": "/api/cron/prospeccion-leads",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/instagram",
+      "schedule": "0 9 * * 3"
+    },
+    {
+      "path": "/api/cron/instagram",
+      "schedule": "0 9 * * 5"
+    },
+    {
+      "path": "/api/cron/instagram-refresh",
+      "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/instagram-metricas",
+      "schedule": "0 7 * * *"
     }
   ]
 }

@@ -117,3 +117,34 @@ function escapeHtml(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
 }
+
+export async function tgSendPhoto(photoUrl: string, caption: string): Promise<void> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chat_id = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chat_id) return
+  await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ chat_id, photo: photoUrl, caption, parse_mode: 'HTML' }),
+  }).catch(() => {})
+}
+
+export async function tgAlertButtons(
+  mensaje: string,
+  nivel: 'critico'|'aviso'|'info'|'resuelto' = 'info',
+  botones: Array<{ texto: string; callback: string }[]>
+): Promise<number|null> {
+  const token = process.env.TELEGRAM_BOT_TOKEN
+  const chat_id = process.env.TELEGRAM_CHAT_ID
+  if (!token || !chat_id) return null
+  const hora = new Date().toLocaleString('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'})
+  const EMOJI: Record<string,string> = { critico:'🔴',aviso:'🟡',info:'🔵',resuelto:'✅' }
+  const text = `${EMOJI[nivel]||'🔵'} <b>ia.rest</b>\n${mensaje}\n<i>${hora}</i>`
+  const reply_markup = { inline_keyboard: botones.map(fila => fila.map(b => ({ text: b.texto, callback_data: b.callback }))) }
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({ chat_id, text, parse_mode:'HTML', reply_markup }),
+  }).catch(()=>null)
+  if (!res?.ok) return null
+  const data = await res.json().catch(()=>null)
+  return data?.result?.message_id ?? null
+}
