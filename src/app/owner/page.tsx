@@ -38,6 +38,7 @@ import CRMEventosTab from '@/components/owner/CRMEventosTab'
 import ProveedoresExternosTab from '@/components/owner/ProveedoresExternosTab'
 import LeadsEventosTab from '@/components/owner/LeadsEventosTab'
 import CalendarioEventosTab from '@/components/owner/CalendarioEventosTab'
+import ProduccionTab from '@/components/owner/ProduccionTab'
 
 // ─── ComisionesEventoTab (inline, ligero) ─────────────────────────────────────
 function ComisionesEventoTab({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
@@ -7527,6 +7528,7 @@ const GRUPOS = [
       { id: 'prov-externos',  label: 'Proveedores', icon: ICONS.users   },
       { id: 'leads-eventos',  label: 'Leads',       icon: ICONS.phone    },
       { id: 'calendario-ev',   label: 'Calendario',  icon: ICONS.calendar },
+      { id: 'produccion',       label: 'Producción',  icon: ICONS.printer  },
     ]
   },
   {
@@ -8460,6 +8462,7 @@ export default function OwnerPage() {
             {tab === 'prov-externos'  && <ProveedoresExternosTab sh={sh} />}
             {tab === 'leads-eventos'  && <LeadsEventosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'calendario-ev'  && <CalendarioEventosTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'produccion'     && <ProduccionTab sh={sh} />}
             {tab === 'turnos-nim'    && <TurnosAnalisisTab sh={sh} />}
           </div>
         </div>

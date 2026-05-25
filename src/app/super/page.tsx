@@ -8,6 +8,7 @@ import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
 import InstagramTab from '@/components/InstagramTab'
+import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 
 
 interface Restaurante {
@@ -106,7 +107,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -391,6 +392,7 @@ export default function SuperPage() {
             { id: 'agentes',      label: '🤖 Agentes' },
             { id: 'instagram',    label: '📸 Instagram', badge: badgeInstagram },
             { id: 'blog',         label: '📝 Blog' },
+            { id: 'proveedores',  label: '🔌 Proveedores' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -454,6 +456,10 @@ export default function SuperPage() {
         ) : tabSuper === 'blog' ? (
           <div style={{ padding: '24px 0' }}>
             <BlogSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} />
+          </div>
+        ) : tabSuper === 'proveedores' ? (
+          <div style={{ padding: '24px 0' }}>
+            <ProveedoresTechTab />
           </div>
         ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>
@@ -1797,86 +1803,301 @@ ASUNTO: [asunto]
 
 // ─── BlogSuperTab ─────────────────────────────────────────────────────────────
 function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }) {
-  const [borradores, setBorradores] = React.useState<any[]>([])
+  const [articulos, setArticulos] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
+  const [filtroEstado, setFiltroEstado] = React.useState<'todos'|'publicado'|'borrador'>('todos')
+  const [buscar, setBuscar] = React.useState('')
   const [publicando, setPublicando] = React.useState<string | null>(null)
+  const [editando, setEditando] = React.useState<any | null>(null)
+  const [editForm, setEditForm] = React.useState({ titulo: '', keyword: '', meta_description: '' })
+  const [saving, setSaving] = React.useState(false)
+  const [expandido, setExpandido] = React.useState<string | null>(null)
+  const [ideasProveedores, setIdeasProveedores] = React.useState<any[]>([])
 
   React.useEffect(() => {
-    fetch('/api/super/blog', { headers: { 'x-ia-session': JSON.stringify(session) } })
+    fetch('/api/super/proveedores-tech?blog=true')
       .then(r => r.json())
-      .then(d => { setBorradores(d.borradores ?? []); setLoading(false) })
-      .catch(() => setLoading(false))
-  }, [session])
+      .then(d => setIdeasProveedores(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [])
 
-  const publicar = async (id: string, slug: string) => {
+  const cargar = React.useCallback(async () => {
+    setLoading(true)
+    const params = new URLSearchParams()
+    if (filtroEstado !== 'todos') params.set('estado', filtroEstado)
+    if (buscar) params.set('q', buscar)
+    const res = await fetch(`/api/super/blog?${params}`, { headers: { 'x-ia-session': JSON.stringify(session) } })
+    const data = await res.json()
+    setArticulos(data.borradores ?? [])
+    setLoading(false)
+  }, [session, filtroEstado, buscar])
+
+  React.useEffect(() => { cargar() }, [cargar])
+
+  // Debounce búsqueda
+  React.useEffect(() => {
+    const t = setTimeout(() => cargar(), 400)
+    return () => clearTimeout(t)
+  }, [buscar])
+
+  const publicar = async (id: string) => {
     setPublicando(id)
+    const res = await fetch('/api/super/blog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
+      body: JSON.stringify({ accion: 'publicar', id }),
+    })
+    const data = await res.json()
+    if (data.ok) await cargar()
+    else alert(data.error || 'Error al publicar')
+    setPublicando(null)
+  }
+
+  const abrirEditor = (articulo: any) => {
+    setEditando(articulo)
+    setEditForm({ titulo: articulo.titulo, keyword: articulo.keyword || '', meta_description: articulo.meta_description || '' })
+  }
+
+  const guardarMeta = async () => {
+    setSaving(true)
     await fetch('/api/super/blog', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
-      body: JSON.stringify({ accion: 'publicar', id, slug }),
+      body: JSON.stringify({ accion: 'editar_meta', id: editando.id, ...editForm }),
     })
-    setBorradores(prev => prev.map(b => b.id === id ? { ...b, estado: 'publicado' } : b))
-    setPublicando(null)
+    setSaving(false)
+    setEditando(null)
+    await cargar()
+  }
+
+  const cargarTSX = async (slug: string) => {
+    setExpandido(slug)
+    await fetch('/api/super/blog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
+      body: JSON.stringify({ accion: 'cargar_tsx', slug }),
+    })
+    await cargar()
+  }
+
+  const publicados = articulos.filter(a => a.estado === 'publicado').length
+  const borradores = articulos.filter(a => a.estado === 'borrador').length
+
+  const sh: Record<string, React.CSSProperties> = {
+    input: { background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, fontSize: 12, padding: '7px 12px', fontFamily: SN, outline: 'none', width: '100%' },
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <div>
-        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>BLOG · SEO AUTOMÁTICO</div>
-        <h1 style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, margin: '0 0 4px', color: C.ink }}>Blog</h1>
-        <p style={{ fontFamily: SN, fontSize: 13, color: C.ink3, margin: 0 }}>
-          Artículos generados automáticamente. Revisa y publica desde aquí.
-        </p>
+
+      {/* Header */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: 12 }}>
+        <div>
+          <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 6 }}>BLOG · SEO AUTOMÁTICO</div>
+          <h1 style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, margin: '0 0 4px', color: C.ink }}>Blog</h1>
+          <p style={{ fontFamily: SN, fontSize: 13, color: C.ink3, margin: 0 }}>Artículos generados automáticamente · Revisa, edita y publica</p>
+        </div>
+        <div style={{ display: 'flex', gap: 20 }}>
+          {[{ label: 'publicados', val: publicados, color: '#3F7D44' }, { label: 'borradores', val: borradores, color: C.red }].map(k => (
+            <div key={k.label} style={{ textAlign: 'right' }}>
+              <div style={{ fontFamily: SE, fontSize: 22, color: k.color }}>{k.val}</div>
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.08em' }}>{k.label.toUpperCase()}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
+      {/* Filtros */}
+      <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <input
+          value={buscar} onChange={e => setBuscar(e.target.value)}
+          placeholder="Buscar por título, keyword o slug..."
+          style={{ ...sh.input, maxWidth: 320 }}
+        />
+        <div style={{ display: 'flex', gap: 4 }}>
+          {(['todos', 'publicado', 'borrador'] as const).map(f => (
+            <button key={f} onClick={() => setFiltroEstado(f)} style={{
+              padding: '6px 14px', borderRadius: 20, border: 'none', cursor: 'pointer',
+              fontFamily: SM, fontSize: 11, letterSpacing: '.06em',
+              background: filtroEstado === f ? C.red : C.bone,
+              color: filtroEstado === f ? '#fff' : C.ink3,
+            }}>
+              {f === 'todos' ? 'TODOS' : f === 'publicado' ? '✅ PUBLICADOS' : '📝 BORRADORES'}
+            </button>
+          ))}
+        </div>
+        {buscar && (
+          <button onClick={() => setBuscar('')} style={{ background: 'none', border: 'none', color: C.ink4, cursor: 'pointer', fontFamily: SM, fontSize: 11 }}>✕ Limpiar</button>
+        )}
+      </div>
+
+      {/* Lista */}
       {loading ? (
         <div style={{ padding: 40, textAlign: 'center', color: C.ink4, fontFamily: SM, fontSize: 12 }}>cargando...</div>
-      ) : borradores.length === 0 ? (
+      ) : articulos.length === 0 ? (
         <div style={{ padding: '40px 0', textAlign: 'center', color: C.ink4, fontFamily: SN, fontSize: 13 }}>
-          No hay borradores. El cron del lunes genera uno automáticamente.
+          {buscar ? `Sin resultados para "${buscar}"` : 'No hay artículos aún.'}
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {borradores.map(b => (
-            <div key={b.id} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: SN, fontSize: 15, fontWeight: 600, color: C.ink, marginBottom: 4 }}>{b.titulo}</div>
-                  <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.06em' }}>
-                    /blog/{b.slug} · {b.keyword}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {articulos.map(a => (
+            <div key={a.id} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, overflow: 'hidden' }}>
+              <div style={{ display: 'flex', gap: 0 }}>
+                {/* Franja estado */}
+                <div style={{ width: 4, flexShrink: 0, background: a.estado === 'publicado' ? '#3F7D44' : C.red }} />
+
+                <div style={{ flex: 1, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.ink, marginBottom: 2 }}>{a.titulo}</div>
+                      <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.05em' }}>
+                        /blog/{a.slug}
+                        {a.keyword && <span style={{ marginLeft: 10, color: C.ink4 }}>· {a.keyword}</span>}
+                      </div>
+                    </div>
+                    <span style={{
+                      padding: '3px 10px', borderRadius: 20, flexShrink: 0,
+                      fontFamily: SM, fontSize: 10, letterSpacing: '.06em',
+                      background: a.estado === 'publicado' ? 'rgba(63,125,68,0.1)' : 'rgba(217,68,43,0.1)',
+                      color: a.estado === 'publicado' ? '#3F7D44' : C.red,
+                    }}>{a.estado.toUpperCase()}</span>
                   </div>
-                  {b.meta_description && (
-                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.5 }}>{b.meta_description}</div>
+
+                  {a.meta_description && (
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.5 }}>
+                      {a.meta_description.slice(0, 140)}{a.meta_description.length > 140 ? '...' : ''}
+                    </div>
                   )}
+
+                  {/* Acciones */}
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                    {a.estado === 'borrador' && (
+                      <button onClick={() => publicar(a.id)} disabled={publicando === a.id} style={{
+                        padding: '6px 14px', borderRadius: 6, border: 'none',
+                        background: publicando === a.id ? C.rule : C.red,
+                        color: publicando === a.id ? C.ink4 : '#fff',
+                        fontFamily: SM, fontSize: 11, cursor: publicando === a.id ? 'default' : 'pointer',
+                      }}>
+                        {publicando === a.id ? 'Publicando...' : '✅ Publicar'}
+                      </button>
+                    )}
+                    <button onClick={() => abrirEditor(a)} style={{
+                      padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.rule}`,
+                      background: 'none', color: C.ink3, fontFamily: SM, fontSize: 11, cursor: 'pointer',
+                    }}>✏️ Editar meta</button>
+                    <button onClick={() => window.open(`/blog/${a.slug}`, '_blank')} style={{
+                      padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.rule}`,
+                      background: 'none', color: C.ink3, fontFamily: SM, fontSize: 11, cursor: 'pointer',
+                    }}>👁 Ver artículo</button>
+                    {!a.contenido_tsx && (
+                      <button onClick={() => cargarTSX(a.slug)} style={{
+                        padding: '6px 12px', borderRadius: 6, border: `1px solid ${C.rule}`,
+                        background: 'none', color: C.ink4, fontFamily: SM, fontSize: 11, cursor: 'pointer',
+                      }}>⬇️ Cargar TSX</button>
+                    )}
+                    <div style={{ marginLeft: 'auto', fontFamily: SM, fontSize: 10, color: C.ink4, alignSelf: 'center' }}>
+                      {new Date(a.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                    </div>
+                  </div>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
-                  <span style={{
-                    padding: '4px 10px', borderRadius: 20, fontFamily: SM, fontSize: 10, letterSpacing: '.06em',
-                    background: b.estado === 'publicado' ? 'rgba(63,125,68,0.1)' : 'rgba(217,68,43,0.1)',
-                    color: b.estado === 'publicado' ? C.green : C.red,
-                  }}>{b.estado?.toUpperCase()}</span>
-                </div>
-              </div>
-              {b.estado === 'borrador' && (
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => publicar(b.id, b.slug)}
-                    disabled={publicando === b.id}
-                    style={{ padding: '8px 18px', borderRadius: 6, border: 'none', background: publicando === b.id ? C.rule : C.red, color: publicando === b.id ? C.ink4 : '#fff', fontFamily: SM, fontSize: 11, cursor: publicando === b.id ? 'default' : 'pointer' }}>
-                    {publicando === b.id ? 'Publicando...' : '✅ Publicar'}
-                  </button>
-                  <button
-                    onClick={() => window.open(`/blog/${b.slug}`, '_blank')}
-                    style={{ padding: '8px 14px', borderRadius: 6, border: `1px solid ${C.rule}`, background: 'none', color: C.ink3, fontFamily: SM, fontSize: 11, cursor: 'pointer' }}>
-                    👁 Preview
-                  </button>
-                </div>
-              )}
-              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>
-                {new Date(b.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Ideas desde proveedores */}
+      {ideasProveedores.length > 0 && (
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.rule}` }}>
+          <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 4 }}>💡 Ideas desde Proveedores</div>
+          <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '0 0 14px' }}>Contenido marcado en Proveedores como útil para blog</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {ideasProveedores.map((item: any) => (
+              <div key={item.id} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', display: 'flex' }}>
+                <div style={{ width: 4, flexShrink: 0, background: '#E8A33B' }} />
+                <div style={{ flex: 1, padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, color: '#E8A33B', letterSpacing: '.06em' }}>{item.proveedor_nombre}</span>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>{item.categoria?.toUpperCase()}</span>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginLeft: 'auto' }}>
+                      {item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : ''}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 2 }}>{item.asunto}</div>
+                  {item.resumen && (
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.5 }}>
+                      {item.resumen.slice(0, 180)}{item.resumen.length > 180 ? '...' : ''}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Modal editor meta */}
+      {editando && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex',
+          alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: 20,
+        }} onClick={() => setEditando(null)}>
+          <div style={{
+            background: C.paper, borderRadius: 12, padding: 28, maxWidth: 560, width: '100%',
+            display: 'flex', flexDirection: 'column', gap: 16,
+          }} onClick={e => e.stopPropagation()}>
+            <div style={{ fontFamily: SE, fontSize: 20, color: C.ink, marginBottom: 4 }}>Editar artículo</div>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.ink4 }}>/blog/{editando.slug}</div>
+
+            {[
+              { label: 'TÍTULO', key: 'titulo', placeholder: 'Título del artículo (55-60 chars)' },
+              { label: 'KEYWORD', key: 'keyword', placeholder: 'Keyword SEO principal' },
+              { label: 'META DESCRIPTION', key: 'meta_description', placeholder: 'Descripción SEO (150-160 chars)' },
+            ].map(field => (
+              <div key={field.key}>
+                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.08em', marginBottom: 5 }}>{field.label}</div>
+                {field.key === 'meta_description' ? (
+                  <textarea
+                    value={(editForm as any)[field.key]}
+                    onChange={e => setEditForm(p => ({ ...p, [field.key]: e.target.value }))}
+                    rows={3} placeholder={field.placeholder}
+                    style={{ ...sh.input, resize: 'vertical' }}
+                  />
+                ) : (
+                  <input
+                    value={(editForm as any)[field.key]}
+                    onChange={e => setEditForm(p => ({ ...p, [field.key]: e.target.value }))}
+                    placeholder={field.placeholder}
+                    style={sh.input}
+                  />
+                )}
+                <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginTop: 2, textAlign: 'right' }}>
+                  {(editForm as any)[field.key]?.length || 0} chars
+                </div>
+              </div>
+            ))}
+
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
+              <button onClick={() => setEditando(null)} style={{
+                padding: '8px 16px', borderRadius: 6, border: `1px solid ${C.rule}`,
+                background: 'none', color: C.ink3, fontFamily: SM, fontSize: 12, cursor: 'pointer',
+              }}>Cancelar</button>
+              <button onClick={guardarMeta} disabled={saving} style={{
+                padding: '8px 18px', borderRadius: 6, border: 'none',
+                background: saving ? C.rule : C.red, color: saving ? C.ink4 : '#fff',
+                fontFamily: SM, fontSize: 12, cursor: saving ? 'default' : 'pointer',
+              }}>{saving ? 'Guardando...' : '✅ Guardar'}</button>
+            </div>
+
+            {editando.estado === 'borrador' && (
+              <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: 12 }}>
+                <button onClick={() => { setEditando(null); publicar(editando.id) }} style={{
+                  padding: '8px 18px', borderRadius: 6, border: 'none',
+                  background: C.red, color: '#fff', fontFamily: SM, fontSize: 12, cursor: 'pointer', width: '100%',
+                }}>✅ Guardar y publicar</button>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>

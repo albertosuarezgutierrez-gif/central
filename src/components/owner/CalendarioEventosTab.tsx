@@ -26,7 +26,7 @@ export default function CalendarioEventosTab({ sh, restauranteId }: { sh: () => 
   const [eventos, setEventos] = useState<Evento[]>([])
   const [loading, setLoading] = useState(true)
   const [selEvento, setSelEvento] = useState<Evento | null>(null)
-  const [modo, setModo] = useState<'mes' | 'lista'>('mes')
+  const [modo, setModo] = useState<'mes' | 'lista'>('lista')
 
   const cargar = useCallback(async () => {
     setLoading(true)

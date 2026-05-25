@@ -9,7 +9,7 @@ export const dynamic = 'force-dynamic'
 
 // No indexar estas páginas — son para leads, no para Google
 export const metadata: Metadata = {
-  robots: { index: false, follow: false },
+  robots: "noindex, nofollow",
 }
 
 const R='#D9442B',D='#14110E',P='#F6F1E7',B2='#1E1A15',B3='#2A221A'

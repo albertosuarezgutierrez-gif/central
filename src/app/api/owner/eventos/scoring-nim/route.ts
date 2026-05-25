@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import { callAI } from '@/lib/ai-client'
+import { callAI, cleanJSON } from '@/lib/ai-client'
 
 export async function GET(req: NextRequest) {
   const session = getSession(req)
@@ -84,9 +84,9 @@ APPCC:
 
 OPERATIVO (pases KDS):
 - Pases servidos: ${pasesServidos} / ${pases?.length ?? 0}
-${tiemposPases.map(t => `- ${t.pase}: ${t.desvio_min > 0 ? '+' : ''}${t.desvio_min}min`).join('\n')}
+${tiemposPases.slice(0,3).map(t => `- ${t.pase}: ${t.desvio_min > 0 ? '+' : ''}${t.desvio_min}min`).join('\n')}
 
-Responde SOLO con JSON válido:
+Responde SOLO con JSON, sin texto adicional:
 {
   "puntuacion": <número 1-10>,
   "resumen": "<2-3 frases análisis ejecutivo>",
@@ -98,8 +98,7 @@ Responde SOLO con JSON válido:
 
   let analisis = { puntuacion: 0, resumen: '', puntos_fuertes: [], puntos_mejora: [], recomendaciones_precio: '', alerta_appcc: false }
   try {
-    const resp = await callAI('Eres experto en rentabilidad de catering.', prompt)
-    const { cleanJSON } = await import('@/lib/ai-client')
+    const resp = await callAI('Eres experto en rentabilidad de catering. Responde SOLO con JSON.', prompt, 350, 12_000)
     analisis = JSON.parse(cleanJSON(resp))
   } catch (e) {
     console.error('NIM scoring error:', e)

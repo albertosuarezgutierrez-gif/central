@@ -144,7 +144,7 @@ function FormEvento({ restauranteId, sh, espacios, onCreado, onCancel, eventoEdi
       </div>
 
       {/* Tipo + Cliente */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Tipo</div>
           {sel('tipo', Object.entries(TIPO_LABELS).map(([v, l]) => ({ value: v, label: l })))}
@@ -155,7 +155,7 @@ function FormEvento({ restauranteId, sh, espacios, onCreado, onCancel, eventoEdi
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Teléfono</div>
           {inp('cliente_telefono', 'tel', '600 000 000')}
@@ -167,7 +167,7 @@ function FormEvento({ restauranteId, sh, espacios, onCreado, onCancel, eventoEdi
       </div>
 
       {/* Fecha y horas */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Fecha evento *</div>
           {inp('fecha_evento', 'date')}
@@ -183,7 +183,7 @@ function FormEvento({ restauranteId, sh, espacios, onCreado, onCancel, eventoEdi
       </div>
 
       {/* Modo y espacio */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 10, marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Modo</div>
           {sel('modo_local', Object.entries(MODO_LABELS).map(([v, l]) => ({ value: v, label: l })))}
@@ -195,7 +195,7 @@ function FormEvento({ restauranteId, sh, espacios, onCreado, onCancel, eventoEdi
       </div>
 
       {/* Aforo y precio */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10, marginBottom: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 10, marginBottom: 10 }}>
         <div>
           <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '.08em' }}>Aforo previsto *</div>
           {inp('aforo_previsto', 'number', '100')}
