@@ -373,6 +373,10 @@ function TarjetaEvento({ evento, sh, onEdit, onEstado, onClonar }: {
         <button onClick={() => setMostrarPases(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.amber}44`, background: mostrarPases ? C.amber + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.amber, cursor: 'pointer' }}>
           🎯 Pases
         </button>
+        <a href={`/owner/eventos/${evento.id}/appcc-pdf`} target="_blank" rel="noopener noreferrer"
+          style={{ padding: '5px 12px', borderRadius: 5, border: '1px solid #2B6A6E44', background: 'transparent', fontFamily: SN, fontSize: 12, color: '#2B6A6E', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}>
+          🌡️ APPCC PDF
+        </a>
         <button onClick={() => setMostrarProveedores(v => !v)} style={{ padding: '5px 12px', borderRadius: 5, border: `1px solid ${C.green}44`, background: mostrarProveedores ? C.green + '22' : 'transparent', fontFamily: SN, fontSize: 12, color: C.green, cursor: 'pointer' }}>
           🤝 Proveedores
         </button>
