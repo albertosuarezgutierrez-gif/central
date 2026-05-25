@@ -74,7 +74,7 @@ export default function PanelEscandallo({ eventoId, sh }: { eventoId: string; sh
       {!data?.mensaje && data && (
         <>
           {/* KPIs */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1, borderBottom: `1px solid ${C.rule}`, background: C.rule }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: 1, borderBottom: `1px solid ${C.rule}`, background: C.rule }}>
             {[
               ['Coste total', fmtEur(data.total_coste_estimado)],
               ['Coste/persona', fmtEur(data.coste_por_persona)],
@@ -100,7 +100,8 @@ export default function PanelEscandallo({ eventoId, sh }: { eventoId: string; sh
           )}
 
           {/* Tabla ingredientes */}
-          <div style={{ padding: '8px 0' }}>
+          <div style={{ padding: '8px 0', overflowX: 'auto' }}>
+            <div style={{ minWidth: 380 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 80px 80px 80px', gap: 0, padding: '4px 14px', borderBottom: `1px solid ${C.rule}` }}>
               {['Ingrediente', 'Por persona', 'Total', 'Coste total'].map(h => (
                 <div key={h} style={{ fontFamily: SN, fontSize: 10, color: C.ink3, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
@@ -120,6 +121,7 @@ export default function PanelEscandallo({ eventoId, sh }: { eventoId: string; sh
             {filtrados.length === 0 && (
               <div style={{ padding: 16, textAlign: 'center', color: C.ink3, fontFamily: SN, fontSize: 12 }}>Sin ingredientes</div>
             )}
+            </div>
           </div>
         </>
       )}

@@ -67,7 +67,7 @@ export default function PanelScoring({ eventoId, sh }: { eventoId: string; sh: (
             </div>
 
             {/* Financiero */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 6, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: 6, marginBottom: 12 }}>
               {[
                 ['Ingresos presupuestados', fmtEur(data.scoring.financiero.ingresos_presupuestados)],
                 ['Ingresos reales', fmtEur(data.scoring.financiero.ingresos_reales)],
@@ -82,7 +82,7 @@ export default function PanelScoring({ eventoId, sh }: { eventoId: string; sh: (
             </div>
 
             {/* APPCC + Comisiones */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 6, marginBottom: 12 }}>
               <div style={{ background: data.appcc?.temp_ko ? '#fee2e2' : '#f0fdf4', borderRadius: 6, padding: '6px 10px', border: `1px solid ${data.appcc?.temp_ko ? '#fca5a5' : '#bbf7d0'}` }}>
                 <div style={{ fontFamily: SN, fontSize: 10, color: C.ink3 }}>APPCC</div>
                 <div style={{ fontFamily: SN, fontSize: 12 }}>
@@ -99,7 +99,7 @@ export default function PanelScoring({ eventoId, sh }: { eventoId: string; sh: (
             </div>
 
             {/* Puntos fuertes y mejora */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 8, marginBottom: 12 }}>
               <div>
                 <div style={{ fontFamily: SN, fontSize: 10, color: '#3F7D44', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em', marginBottom: 4 }}>Puntos fuertes</div>
                 {data.scoring.puntos_fuertes.map((p, i) => (
