@@ -2,11 +2,12 @@
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback } from 'react'
 import { Session } from '@/hooks/useAuth'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
+import InstagramTab from '@/components/InstagramTab'
 
 
 interface Restaurante {
@@ -104,13 +105,15 @@ export default function SuperPage() {
   const [busqueda, setBusqueda] = useState('')
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
+  const searchParams = useSearchParams()
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
   const [badgeSug, setBadgeSug] = useState(0)
   const [badgeSoporte, setBadgeSoporte] = useState(0)
+  const [badgeInstagram, setBadgeInstagram] = useState(0)
   const [cuentas, setCuentas] = useState<CuentaVista[]>([])
   const [loadingCuentas, setLoadingCuentas] = useState(false)
   const [showFormCuenta, setShowFormCuenta] = useState(false)
@@ -149,6 +152,12 @@ export default function SuperPage() {
       body: JSON.stringify({ id, estado }),
     })
   }
+
+  // Leer ?tab=X de la URL al cargar
+  useEffect(() => {
+    const tab = searchParams?.get('tab')
+    if (tab) setTabSuper(tab as any)
+  }, [searchParams])
 
   useEffect(() => { if (session && tabSuper === 'sugerencias') loadSugerencias() }, [session, tabSuper, loadSugerencias])
   useEffect(() => { if (session && tabSuper === 'clientes') loadCuentas() }, [session, tabSuper])

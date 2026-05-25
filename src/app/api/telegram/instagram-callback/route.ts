@@ -97,17 +97,18 @@ export async function POST(req: NextRequest) {
   if (accion === 'blog_publicar') {
     const borradorId = parts[1]
     const slug = parts[2]
-    await tgAnswerCallback(cb.id, '✅ Publicando en blog...')
-    // El blog se publica via /super normalmente — aquí solo confirmamos
+    await tgAnswerCallback(cb.id, '✅ Ve a /super para publicar')
     await tgEditMessage(cb.message.message_id,
-      `✅ <b>Artículo aprobado</b>\n\nPublica en:\n👉 https://www.iarest.es/super → Blog → Publicar`)
+      `📝 <b>Artículo listo</b>\n\n` +
+      `Publica desde:\n👉 <a href="https://www.iarest.es/super?tab=blog">iarest.es/super → Blog</a>`)
   }
 
   if (accion === 'blog_revisar') {
     const slug = parts[1]
     await tgAnswerCallback(cb.id, '')
     await tgEditMessage(cb.message.message_id,
-      `📝 Revisa en:\n👉 https://www.iarest.es/super → tab Blog`)
+      `📝 <b>Artículo en borrador</b>\n\n` +
+      `Revisa y publica desde:\n👉 <a href="https://www.iarest.es/super?tab=blog">iarest.es/super → Blog</a>`)
   }
 
   // ── Generar post desde idea del briefing ──────────────────────────────
