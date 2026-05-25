@@ -3,267 +3,317 @@ import { useEffect } from "react"
 
 export default function HosteleriaPage() {
   useEffect(() => {
-    document.querySelectorAll('.fq').forEach((b: any) => {
-      b.addEventListener('click', () => {
-        const i = b.closest('.fi'), o = i.classList.contains('open')
-        document.querySelectorAll('.fi').forEach((x: any) => x.classList.remove('open'))
-        if (!o) i.classList.add('open')
-      })
-    })
-    document.querySelectorAll('a[href^="#"]').forEach((l: any) => {
-      l.addEventListener('click', (e: any) => {
-        e.preventDefault()
-        const t = document.querySelector(l.getAttribute('href'))
-        if (t) t.scrollIntoView({ behavior: 'smooth', block: 'start' })
-      })
-    })
-    const form = document.getElementById('cf')
-    if (form) {
-      form.addEventListener('submit', async (e: any) => {
-        e.preventDefault()
-        const btn = document.getElementById('sb') as HTMLButtonElement
-        const nom = (document.getElementById('nom') as HTMLInputElement)?.value.trim()
-        const mail = (document.getElementById('mail') as HTMLInputElement)?.value.trim()
-        const tel = (document.getElementById('tel') as HTMLInputElement)?.value.trim()
-        const tipo = (document.getElementById('tipo') as HTMLSelectElement)?.value
-        const rgpd = (document.getElementById('rgpd') as HTMLInputElement)?.checked
-        if (!nom || !mail || !tel || !tipo) { alert('Rellena los campos obligatorios (*).'); return }
-        if (!rgpd) { alert('Acepta la política de privacidad.'); return }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) { alert('Email no válido.'); return }
-        if (btn) { btn.disabled = true; btn.textContent = 'Enviando...' }
-        try {
-          const r = await fetch('/api/leads/landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ nombre: nom, email: mail, telefono: tel, tipo_negocio: tipo, origen: 'landing_hosteleria', rgpd_aceptado: true, rgpd_fecha: new Date().toISOString() }) })
-          if (r.ok) {
-            const fc = document.getElementById('fc'), fok = document.getElementById('fok')
-            if (fc) fc.style.display = 'none'
-            if (fok) fok.style.display = 'block'
-          } else throw new Error()
-        } catch(_) {
-          const s = encodeURIComponent('Demo ia.rest Hosteleria - ' + nom)
-          const b2 = encodeURIComponent('Nombre: ' + nom + '\nEmail: ' + mail + '\nTel: ' + tel + '\nTipo: ' + tipo + '\nRGPD: Si')
-          window.location.href = 'mailto:hola@iarest.es?subject=' + s + '&body=' + b2
-        } finally {
-          if (btn) { btn.disabled = false; btn.textContent = 'Solicitar demo →' }
+    // Scroll animations
+    const io = new IntersectionObserver(
+      (entries) => entries.forEach((e) => {
+        if (e.isIntersecting) { (e.target as HTMLElement).classList.add("on"); io.unobserve(e.target) }
+      }), { threshold: 0.08 }
+    )
+    document.querySelectorAll(".fi").forEach((el) => io.observe(el))
+
+    // Terminal reveal
+    const tls = document.querySelectorAll<HTMLElement>("#tlines > div")
+    tls.forEach((l, i) => { l.style.opacity = "0"; l.style.transition = `opacity .25s ease ${i * 0.1}s` })
+    const tio = new IntersectionObserver((entries) => entries.forEach((e) => {
+      if (e.isIntersecting) { tls.forEach((l) => (l.style.opacity = "1")); tio.unobserve(e.target) }
+    }), { threshold: 0.4 })
+    const tb = document.querySelector("#tlines")
+    if (tb) tio.observe(tb)
+
+    // Burger
+    function toggleMenu() {
+      document.getElementById("burger")?.classList.toggle("open")
+      document.getElementById("mobMenu")?.classList.toggle("open")
+      document.body.style.overflow = document.getElementById("mobMenu")?.classList.contains("open") ? "hidden" : ""
+    }
+    document.getElementById("burger")?.addEventListener("click", toggleMenu)
+    document.querySelectorAll(".mob-menu a").forEach((a) => {
+      a.addEventListener("click", (e) => {
+        const href = (a as HTMLAnchorElement).getAttribute("href")
+        if (href?.startsWith("#")) {
+          e.preventDefault()
+          document.getElementById("burger")?.classList.remove("open")
+          document.getElementById("mobMenu")?.classList.remove("open")
+          document.body.style.overflow = ""
+          setTimeout(() => { document.querySelector(href)?.scrollIntoView({ behavior: "smooth", block: "start" }) }, 320)
         }
       })
+    })
+
+    // Form
+    async function enviar() {
+      const n = (document.getElementById("nombre") as HTMLInputElement)?.value.trim()
+      const em = (document.getElementById("email") as HTMLInputElement)?.value.trim()
+      const tf = (document.getElementById("telefono") as HTMLInputElement)?.value.trim()
+      const ti = (document.getElementById("tipo") as HTMLSelectElement)?.value
+      const hp = (document.getElementById("website") as HTMLInputElement)?.value
+      if (hp) return
+      const priv = document.getElementById("privacidad") as HTMLInputElement
+      let ok = true
+      if (!n) { (document.getElementById("nombre") as HTMLInputElement).style.borderColor = "rgba(217,68,43,.6)"; ok = false }
+      if (!em || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { (document.getElementById("email") as HTMLInputElement).style.borderColor = "rgba(217,68,43,.6)"; ok = false }
+      if (!priv?.checked) { if (priv) priv.style.outline = "2px solid rgba(217,68,43,.6)"; ok = false }
+      if (!ok) return
+      const btn = document.getElementById("submitBtn") as HTMLButtonElement
+      btn.disabled = true; btn.textContent = "Enviando…"
+      try {
+        await fetch("/api/leads/landing", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: n, email: em, telefono: tf, tipo_negocio: ti, origen: "landing-hosteleria" })
+        })
+      } catch(_) {}
+      const fb = document.getElementById("formBody") as HTMLElement
+      const ss = document.getElementById("successState") as HTMLElement
+      if (fb) fb.style.display = "none"
+      if (ss) ss.style.display = "block"
     }
+    ;(window as any).enviar = enviar
+    document.addEventListener("keydown", (e) => { if (e.key === "Enter") enviar() })
+
+    return () => { io.disconnect(); tio.disconnect() }
   }, [])
 
   return (
     <>
       <title>Software TPV para Hostelería en España | ia.rest</title>
-      <meta name="description" content="ia.rest gestiona cualquier negocio de hostelería: bar, restaurante, chiringuito, feria y food truck. TPV por voz, KDS, almacén y VeriFactu. Desde 59€/mes." />
-      <meta name="keywords" content="software TPV hostelería España, programa gestión bar restaurante, TPV chiringuito hostelería, software feria hostelería, gestión restaurante voz, verifactu hostelería 2026" />
-      <link rel="canonical" href="https://www.iarest.es/hosteleria" />
+      <meta name="description" content="ia.rest gestiona cualquier negocio de hostelería: bar, restaurante, chiringuito, feria y food truck. Comandas por voz, KDS, VeriFactu y almacén. Desde 59€/mes." />
+      <meta name="robots" content="index, follow" />
       <meta property="og:title" content="Software TPV para Hostelería | ia.rest" />
-      <meta property="og:description" content="Bar, restaurante, chiringuito, feria. Si sirves, ia.rest lo gestiona. TPV por voz, KDS y VeriFactu desde 59€/mes." />
+      <meta property="og:description" content="Bar, restaurante, chiringuito, feria, food truck. Si sirves, ia.rest lo gestiona. Voz, KDS y VeriFactu desde 59€/mes." />
       <meta property="og:url" content="https://www.iarest.es/hosteleria" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-hosteleria.jpg" />
-      <meta property="og:locale" content="es_ES" />
       <meta property="og:site_name" content="ia.rest" />
+      <meta property="og:locale" content="es_ES" />
       <meta name="twitter:card" content="summary_large_image" />
       <meta name="twitter:title" content="Software TPV para Hostelería | ia.rest" />
       <meta name="twitter:description" content="Bar, restaurante, chiringuito, feria. Si sirves, ia.rest lo gestiona." />
       <meta name="twitter:image" content="https://www.iarest.es/og-hosteleria.jpg" />
+      <link rel="canonical" href="https://www.iarest.es/hosteleria" />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify({
         "@context": "https://schema.org",
         "@graph": [
-          { "@type": "SoftwareApplication", "@id": "https://www.iarest.es/#software-hosteleria", "name": "ia.rest — TPV para Hostelería", "url": "https://www.iarest.es/hosteleria", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android", "description": "Sistema de gestión para hostelería: bar, restaurante, chiringuito, feria y food truck. TPV por voz, KDS, almacén, VeriFactu y APPCC.", "offers": { "@type": "Offer", "price": "59", "priceCurrency": "EUR" }, "provider": { "@type": "Organization", "name": "ia.rest", "url": "https://www.iarest.es", "telephone": "+34637349990", "email": "hola@iarest.es" } },
+          { "@type": "SoftwareApplication", "@id": "https://www.iarest.es/#tpv-hosteleria", "name": "ia.rest — TPV para Hostelería", "url": "https://www.iarest.es/hosteleria", "applicationCategory": "BusinessApplication", "operatingSystem": "Web, Android", "description": "TPV por voz para bar, restaurante, chiringuito, feria y food truck. KDS, almacén, VeriFactu y sin comisión.", "offers": { "@type": "Offer", "price": "59", "priceCurrency": "EUR" }, "provider": { "@type": "Organization", "name": "ia.rest", "url": "https://www.iarest.es", "telephone": "+34637349990", "email": "hola@iarest.es" } },
           { "@type": "FAQPage", "mainEntity": [
-            { "@type": "Question", "name": "¿ia.rest funciona para chiringuitos y puestos de feria?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. ia.rest está diseñado para cualquier negocio que sirva en mesa o mostrador: bar, restaurante, chiringuito, puesto de feria o food truck. El sistema funciona desde el móvil sin necesidad de hardware fijo." } },
-            { "@type": "Question", "name": "¿ia.rest incluye VeriFactu?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Incluido en todos los planes. Obligatorio para hostelería desde 2026." } },
-            { "@type": "Question", "name": "¿Cuánto cuesta?", "acceptedAnswer": { "@type": "Answer", "text": "59€/mes de base más 20€ por usuario. Sin comisión por ventas. Prueba gratuita 14 días sin tarjeta." } },
-            { "@type": "Question", "name": "¿Funciona sin internet estable?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. ia.rest tiene modo offline para chiringuitos y ferias donde la conexión puede ser inestable. Las comandas se sincronizan cuando vuelve la conexión." } }
+            { "@type": "Question", "name": "¿ia.rest funciona para chiringuitos y ferias?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Funciona desde el móvil, sin hardware fijo, con modo offline para conexiones inestables. Setup en menos de una hora." } },
+            { "@type": "Question", "name": "¿Incluye VeriFactu?", "acceptedAnswer": { "@type": "Answer", "text": "Sí. Incluido en todos los planes sin coste adicional. Obligatorio para hostelería desde 2026." } },
+            { "@type": "Question", "name": "¿Cuánto cuesta para un bar?", "acceptedAnswer": { "@type": "Answer", "text": "59€/mes si lo gestionas solo. Con un camarero y cocina, 99€/mes. Sin comisión por ventas." } }
           ]},
           { "@type": "BreadcrumbList", "itemListElement": [
             { "@type": "ListItem", "position": 1, "name": "ia.rest", "item": "https://www.iarest.es" },
-            { "@type": "ListItem", "position": 2, "name": "Software TPV Hostelería", "item": "https://www.iarest.es/hosteleria" }
+            { "@type": "ListItem", "position": 2, "name": "TPV Hostelería", "item": "https://www.iarest.es/hosteleria" }
           ]}
         ]
       })}} />
-      <style dangerouslySetInnerHTML={{ __html: `
-:root{--p:#F6F1E7;--d:#14110E;--b2:#1E1A15;--b3:#2A221A;--r:#D9442B;--g:#3F7D44;--i2:#D8CDB6;--i3:#9C8E7E;--i4:#6B5F52;--ru:#2E2720}
+      <style dangerouslySetInnerHTML={{ __html: `:root{--bg:#14110E;--bg2:#111009;--bg3:#1C1814;--ink:#F6F1E7;--ink2:#D8CDB6;--ink3:#6B6054;--red:#D9442B;--red2:#A8311E;--red3:rgba(217,68,43,0.1);--amber:#E8A33B;--green:#6EBD73;--border:rgba(246,241,231,0.07);--border2:rgba(246,241,231,0.13)}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html{scroll-behavior:smooth}
-body{background:var(--d);color:var(--p);font-family:'Bricolage Grotesque',sans-serif;-webkit-font-smoothing:antialiased}
-@import url('https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,300;0,400;1,300&family=DM+Mono:wght@300;400&family=Bricolage+Grotesque:wght@300;400;700&display=swap');
-a{color:inherit;text-decoration:none}
-.w{max-width:1120px;margin:0 auto}
-.topbar{position:sticky;top:0;z-index:100;background:rgba(20,17,14,.93);backdrop-filter:blur(12px);border-bottom:1px solid var(--ru);padding:0 48px;height:60px;display:flex;align-items:center;justify-content:space-between}
-.logo{font-family:'Newsreader',serif;font-size:22px;font-weight:300}.logo .dot{color:var(--r)}
-.tnav{display:flex;align-items:center;gap:28px}
-.tnav a{font-size:13px;color:var(--i3);transition:color .2s}.tnav a:hover{color:var(--p)}
-.bcta{background:var(--r);color:#fff;padding:8px 18px;border-radius:7px;font-size:13px;font-weight:700;border:none;cursor:pointer;font-family:'Bricolage Grotesque',sans-serif}
-sec{padding:80px 48px}
-.lbl{font-family:'DM Mono',monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--r);margin-bottom:14px}
-h1{font-family:'Newsreader',serif;font-size:clamp(44px,7vw,88px);font-weight:300;line-height:1.0;letter-spacing:-.03em;margin-bottom:18px;max-width:860px}
-h1 em{font-style:italic;color:var(--r)}
-h2{font-family:'Newsreader',serif;font-size:clamp(30px,4.5vw,54px);font-weight:300;line-height:1.1;color:var(--p);letter-spacing:-.02em}
-.hero{padding:112px 48px 80px;border-bottom:1px solid var(--ru);position:relative;overflow:hidden}
-.hero::after{content:'';position:absolute;top:-160px;right:-160px;width:500px;height:500px;border-radius:50%;background:radial-gradient(circle,rgba(217,68,43,.07) 0%,transparent 70%);pointer-events:none}
-.tag{display:inline-flex;align-items:center;gap:8px;border:1px solid var(--ru);border-radius:100px;padding:6px 14px;font-family:'DM Mono',monospace;font-size:11px;color:var(--i3);letter-spacing:.1em;margin-bottom:28px}
-.pulse{width:6px;height:6px;border-radius:50%;background:var(--r);animation:pu 2s infinite}
-@keyframes pu{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
-.hero-sub{font-size:18px;color:var(--i3);font-weight:300;max-width:540px;line-height:1.6;margin-bottom:36px}
-.acts{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:52px}
-.bp{background:var(--r);color:#fff;padding:13px 26px;border-radius:9px;font-weight:700;font-size:15px;transition:opacity .2s,transform .15s;display:inline-block}.bp:hover{opacity:.88;transform:translateY(-1px)}
-.bg{border:1px solid var(--ru);color:var(--i2);padding:13px 26px;border-radius:9px;font-size:15px;display:inline-block;transition:border-color .2s,color .2s}.bg:hover{border-color:var(--i3);color:var(--p)}
-.stats{display:flex;gap:44px;flex-wrap:wrap;padding-top:28px;border-top:1px solid var(--ru)}
-.sn{font-family:'Newsreader',serif;font-size:34px;font-weight:300;color:var(--p);line-height:1}.sn span{color:var(--r)}
-.sl{font-size:12px;color:var(--i3);margin-top:3px;font-family:'DM Mono',monospace;letter-spacing:.06em}
-/* NEGOCIOS */
-.neg{background:var(--b2)}
-.neg-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:2px;margin-top:40px}
-.neg-item{background:var(--b3);padding:28px 22px;border-bottom:2px solid transparent;transition:border-color .2s;cursor:default;text-align:center}
-.neg-item:hover{border-bottom-color:var(--r)}
-.neg-ico{font-size:32px;margin-bottom:12px}
-.neg-name{font-weight:700;font-size:15px;color:var(--p);margin-bottom:4px}
-.neg-sub{font-size:12px;color:var(--i3)}
-/* FUNCIONALIDADES */
-.func{background:var(--d)}
-.func-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:1px;margin-top:40px;border:1px solid var(--ru);border-radius:12px;overflow:hidden}
-.func-item{padding:24px;background:var(--d);border-right:1px solid var(--ru);border-bottom:1px solid var(--ru);transition:background .2s}.func-item:hover{background:var(--b2)}
-.func-num{font-family:'DM Mono',monospace;font-size:11px;color:var(--r);margin-bottom:8px}
-.func-name{font-weight:700;font-size:14px;color:var(--p);margin-bottom:4px}
-.func-tag{font-size:11px;color:var(--i3)}
-/* FERIA */
-.feria{background:var(--b2)}
-.feria-inner{display:grid;grid-template-columns:1fr 1fr;gap:72px;align-items:center;margin-top:16px}
-.feria-items{list-style:none;margin-top:24px}
-.feria-items li{font-weight:700;font-size:15px;color:var(--p);padding:12px 0;border-bottom:1px solid var(--ru);display:flex;gap:10px;align-items:center}
-.feria-items li::before{content:'→';color:var(--r);flex-shrink:0}
-.feria-visual{background:var(--b3);border-radius:12px;padding:32px;border:1px solid var(--ru);text-align:center}
-.feria-visual .big{font-family:'Newsreader',serif;font-size:72px;font-weight:300;color:var(--p);line-height:1}
-.feria-visual .big span{color:var(--r)}
-.feria-visual p{font-size:13px;color:var(--i3);margin-top:8px}
-/* PRICING */
-.pricing{background:var(--d)}
-.p-inner{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;margin-top:16px}
-.p-card{background:var(--b2);border-radius:14px;padding:36px;border:1px solid var(--ru);text-align:center;transition:border-color .2s}.p-card:hover{border-color:var(--r)}
-.p-desde{font-family:'DM Mono',monospace;font-size:11px;color:var(--i3);letter-spacing:.15em;text-transform:uppercase;margin-bottom:10px}
-.p-num{font-family:'Newsreader',serif;font-size:72px;font-weight:300;color:var(--p);line-height:1;letter-spacing:-.03em}
-.p-num sup{font-size:26px;vertical-align:super;color:var(--r)}
-.p-num sub{font-size:17px;color:var(--i3)}
-.p-det{font-size:13px;color:var(--i3);margin-top:6px}
-.p-items{list-style:none;margin-top:20px;text-align:left}
-.p-items li{font-size:13px;color:var(--i2);padding:7px 0;border-bottom:1px solid var(--ru);display:flex;gap:8px}.p-items li:last-child{border-bottom:none}
-.p-items li .c{color:var(--g);flex-shrink:0}
-.p-ej{background:var(--b3);border-radius:8px;padding:16px 20px;margin-top:16px}
-.pe-lb{font-family:'DM Mono',monospace;font-size:10px;color:var(--i4);letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px}
-.pe-r{display:flex;justify-content:space-between;font-size:12px;color:var(--i3);padding:3px 0}
-.pe-t{display:flex;justify-content:space-between;font-size:14px;font-weight:700;color:var(--p);padding-top:8px;margin-top:4px;border-top:1px solid var(--ru)}
-/* FAQ */
-.faq{background:var(--b2)}
-.fq-list{margin-top:36px;max-width:720px}
-.fi{border-bottom:1px solid var(--ru)}
-.fq{padding:16px 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;gap:14px;font-weight:700;font-size:14px;color:var(--p);user-select:none}
-.fq .arr{color:var(--r);transition:transform .25s;flex-shrink:0}
-.fa{font-size:13px;color:var(--i3);line-height:1.6;max-height:0;overflow:hidden;transition:max-height .3s ease,padding .25s}
-.fi.open .arr{transform:rotate(180deg)}
-.fi.open .fa{max-height:160px;padding-bottom:16px}
-/* CONTACTO */
-.contacto{background:var(--d);border-top:1px solid var(--ru)}
-.c-inner{display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:flex-start}
-.c-copy h2{font-size:clamp(26px,4vw,44px);margin-bottom:12px}
-.c-copy h2 em{font-style:italic;color:var(--r)}
-.c-copy p{font-size:14px;color:var(--i3);line-height:1.65;margin-bottom:16px}
-.prs{display:flex;flex-direction:column;gap:8px;margin-top:16px}
-.pr{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--i3)}.pr .ck{color:var(--g)}
-.f-card{background:var(--b2);border-radius:12px;padding:32px;border:1px solid var(--ru)}
-.f-ttl{font-weight:700;font-size:16px;color:var(--p);margin-bottom:2px}
-.f-sub{font-size:12px;color:var(--i3);margin-bottom:20px}
-.f-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-.fg{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
-.fg label{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--i3)}
-.fg input,.fg select{background:var(--b3);border:1px solid var(--ru);border-radius:6px;padding:9px 12px;font-size:14px;color:var(--p);font-family:'Bricolage Grotesque',sans-serif;outline:none;width:100%;-webkit-appearance:none;appearance:none;transition:border-color .2s}
-.fg input::placeholder{color:var(--i4)}
-.fg input:focus,.fg select:focus{border-color:var(--r)}
-.fg select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239C8E7E' stroke-width='1.5' fill='none'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;cursor:pointer}
-.rgpd{display:flex;gap:10px;align-items:flex-start;margin-bottom:14px;background:rgba(217,68,43,.05);border:1px solid rgba(217,68,43,.18);border-radius:7px;padding:11px 13px}
-.rgpd input[type=checkbox]{flex-shrink:0;width:15px;height:15px;margin-top:2px;accent-color:var(--r);cursor:pointer}
-.rgpd p{font-size:11px;color:var(--i3);line-height:1.5}
-.rgpd a{color:var(--i2);text-decoration:underline}
-.rgpd strong{color:var(--p)}
-.f-btn{width:100%;background:var(--r);color:#fff;padding:12px;border-radius:8px;font-weight:700;font-size:15px;border:none;cursor:pointer;font-family:'Bricolage Grotesque',sans-serif;transition:opacity .2s}.f-btn:hover{opacity:.88}.f-btn:disabled{opacity:.45;cursor:not-allowed}
-.f-legal{font-size:11px;color:var(--i4);text-align:center;margin-top:8px;line-height:1.4}
-.f-legal a{color:var(--i3);text-decoration:underline}
-.f-ok{display:none;text-align:center;padding:24px}
-.f-ok .ico{font-size:40px;margin-bottom:12px}
-.f-ok h3{font-family:'Newsreader',serif;font-size:20px;font-weight:300;color:var(--p);margin-bottom:6px}
-.f-ok p{font-size:13px;color:var(--i3)}
-footer{background:var(--d);border-top:1px solid var(--ru);padding:32px 48px}
-.f-inner{max-width:1120px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
-.f-logo{font-family:'Newsreader',serif;font-size:18px;font-weight:300}.f-logo .dot{color:var(--r)}
-.f-links{display:flex;gap:18px;flex-wrap:wrap}
-.f-links a{font-size:12px;color:var(--i3);transition:color .2s}.f-links a:hover{color:var(--p)}
-.f-contact{display:flex;gap:16px;flex-wrap:wrap}
-.f-contact a{font-size:12px;color:var(--i3);transition:color .2s}.f-contact a:hover{color:var(--p)}
-.f-copy{font-size:11px;color:var(--i4);font-family:'DM Mono',monospace}
+body{background:var(--bg);color:var(--ink);font-family:'Inter Tight',sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;border-bottom:1px solid var(--border);background:rgba(20,17,14,0.92);backdrop-filter:blur(20px)}
+.logo{font-family:'Newsreader',serif;font-size:20px;font-weight:300;color:var(--ink);text-decoration:none}
+.logo b{color:var(--red);font-weight:300}
+.nav-links{display:flex;gap:28px;align-items:center}
+.nav-links a{font-size:13px;color:var(--ink3);text-decoration:none;transition:color .2s}
+.nav-links a:hover{color:var(--ink)}
+.nav-cta{background:var(--red)!important;color:var(--ink)!important;padding:8px 20px;border-radius:5px;font-weight:600!important}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:100px 48px 80px;text-align:center;position:relative;overflow:hidden}
+.hero-glow{position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(217,68,43,0.13) 0%,transparent 60%);pointer-events:none}
+.eyebrow{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:36px;display:flex;align-items:center;gap:12px;justify-content:center}
+.eyebrow::before,.eyebrow::after{content:'';width:28px;height:1px;background:var(--red);opacity:.5}
+h1{font-family:'Newsreader',serif;font-size:clamp(50px,8vw,104px);font-weight:200;line-height:1.02;letter-spacing:-3px;color:var(--ink);max-width:900px}
+h1 i{font-style:italic;color:var(--red)}
+.hero-sub{margin-top:28px;font-size:clamp(15px,1.8vw,18px);color:var(--ink3);font-weight:300;line-height:1.7;max-width:500px}
+.hero-cta{margin-top:44px;display:flex;gap:12px;justify-content:center}
+.btn-p{font-size:14px;font-weight:600;background:var(--red);color:var(--ink);padding:13px 28px;border-radius:6px;text-decoration:none;transition:opacity .2s,transform .15s}
+.btn-p:hover{opacity:.85;transform:translateY(-1px)}
+.btn-s{font-size:14px;font-weight:400;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s}
+.btn-s:hover{color:var(--ink);border-color:rgba(246,241,231,.2)}
+.strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex}
+.strip-item{flex:1;padding:32px 0;text-align:center;border-right:1px solid var(--border)}
+.strip-item:last-child{border-right:none}
+.strip-num{display:block;font-family:'Newsreader',serif;font-size:clamp(26px,4vw,42px);font-weight:200;color:var(--ink);letter-spacing:-1px}
+.strip-num b{color:var(--red);font-weight:200}
+.strip-lbl{display:block;margin-top:5px;font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.1em;text-transform:uppercase}
+section{padding:100px 48px}
+.w{max-width:1100px;margin:0 auto}
+.s-label{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:20px}
+h2{font-family:'Newsreader',serif;font-size:clamp(34px,5vw,62px);font-weight:200;letter-spacing:-2px;color:var(--ink);line-height:1.05}
+h2 i{font-style:italic;color:var(--red)}
+.cap{background:var(--bg2)}
+.cap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--border);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:52px}
+.cap-item{background:var(--bg2);padding:30px 22px;transition:background .2s}
+.cap-item:hover{background:var(--bg3)}
+.cap-num{display:block;font-family:'Newsreader',serif;font-size:12px;color:var(--red);font-weight:300;letter-spacing:.05em;margin-bottom:14px}
+.cap-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.1px;margin-bottom:6px}
+.cap-sub{font-size:12px;color:var(--ink3);line-height:1.55}
+.voz{background:var(--bg)}
+.voz-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.terminal{background:#0C0A08;border:1px solid var(--border2);border-radius:12px;overflow:hidden}
+.t-bar{padding:13px 16px;background:#111009;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center}
+.d{width:9px;height:9px;border-radius:50%}
+.dr{background:#ff5f57}.dy{background:#ffbd2e}.dg{background:#28ca41}
+.t-body{padding:26px 20px;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:2}
+.tc{color:var(--ink3)}.tr{color:var(--red)}.tg{color:var(--green)}.ta{color:var(--amber)}
+.cur{display:inline-block;width:7px;height:13px;background:var(--red);animation:bl 1s step-end infinite;vertical-align:middle}
+@keyframes bl{0%,49%{opacity:1}50%,100%{opacity:0}}
+.voz-pts{list-style:none}
+.voz-pt{padding:22px 0;border-bottom:1px solid var(--border)}
+.voz-pt:first-child{border-top:1px solid var(--border)}
+.voz-pt-t{font-size:15px;font-weight:600;color:var(--ink);margin-bottom:0;letter-spacing:-.2px}
+.negocios{background:var(--bg2)}
+.neg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:52px}
+.neg-item{background:var(--bg3);padding:32px 24px;transition:background .2s}
+.neg-item:hover{background:#221E19}
+.neg-ico{font-size:28px;margin-bottom:16px}
+.neg-name{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.2px;margin-bottom:4px}
+.neg-sub{font-size:12px;color:var(--ink3)}
+.healer{background:var(--bg2)}
+.healer-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
+.stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:24px}
+.stat-val{display:block;font-family:'Newsreader',serif;font-size:38px;font-weight:200;letter-spacing:-1px;margin-bottom:4px}
+.stat-val.r{color:var(--red)}.stat-val.g{color:var(--green)}.stat-val.a{color:var(--amber)}
+.stat-lbl{font-size:10px;color:var(--ink3);font-weight:500;text-transform:uppercase;letter-spacing:.08em}
+.form-section{background:var(--bg)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.form-copy h2{margin-bottom:24px}
+.form-copy p{font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75}
+.form-copy ul{list-style:none;margin-top:32px}
+.form-copy ul li{padding:14px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--ink2);display:flex;gap:10px}
+.form-copy ul li:first-child{border-top:1px solid var(--border)}
+.form-copy ul li::before{content:'—';color:var(--red);flex-shrink:0}
+.form-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.form-top{padding:30px 34px 26px;border-bottom:1px solid var(--border)}
+.form-top-t{font-family:'Newsreader',serif;font-size:22px;font-weight:300;color:var(--ink);letter-spacing:-.5px;margin-bottom:6px}
+.form-top-s{font-size:13px;color:var(--ink3);line-height:1.5}
+.form-body{padding:26px 34px 30px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:7px}
+.field input,.field select{width:100%;padding:11px 14px;background:rgba(246,241,231,.04);border:1px solid var(--border2);border-radius:7px;color:var(--ink);font-size:14px;font-family:'Inter Tight',sans-serif;outline:none;transition:border-color .2s,background .2s;-webkit-appearance:none}
+.field input::placeholder{color:var(--ink3)}
+.field input:focus,.field select:focus{border-color:rgba(217,68,43,.45);background:rgba(246,241,231,.06)}
+.field select{color:var(--ink3);cursor:pointer}
+.field select option{background:#1C1814;color:var(--ink)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.submit-btn{width:100%;padding:14px;background:var(--red);color:var(--ink);border:none;border-radius:7px;font-size:15px;font-weight:700;font-family:'Inter Tight',sans-serif;cursor:pointer;margin-top:6px;transition:background .2s,transform .15s;letter-spacing:-.1px}
+.submit-btn:hover{background:var(--red2);transform:translateY(-1px)}
+.submit-btn:disabled{opacity:.5;cursor:not-allowed;transform:none}
+.form-foot{padding:14px 34px;border-top:1px solid var(--border);font-size:11px;color:var(--ink3);text-align:center}
+.success-state{display:none;padding:44px 34px;text-align:center}
+.success-icon{width:52px;height:52px;border-radius:50%;background:rgba(110,189,115,.1);border:1px solid rgba(110,189,115,.3);display:flex;align-items:center;justify-content:center;font-size:20px;margin:0 auto 18px}
+.success-t{font-family:'Newsreader',serif;font-size:26px;font-weight:300;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px}
+.success-s{font-size:14px;color:var(--ink3);line-height:1.6}
+footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+.f-logo{font-family:'Newsreader',serif;font-size:18px;font-weight:300;color:var(--ink3)}
+.f-logo b{color:var(--red);font-weight:300}
+.f-links{display:flex;gap:22px}
+.f-links a{font-size:12px;color:var(--ink3);text-decoration:none;transition:color .2s}
+.f-links a:hover{color:var(--ink)}
+.f-copy{font-size:11px;color:var(--ink3)}
+.fi{opacity:0;transform:translateY(16px);transition:opacity .65s ease,transform .65s ease}
+.fi.d1{transition-delay:.1s}.fi.d2{transition-delay:.2s}.fi.d3{transition-delay:.3s}
+.fi.on{opacity:1;transform:none}
+.burger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:8px;z-index:200;flex-shrink:0}
+.burger span{display:block;width:22px;height:2px;background:var(--ink);border-radius:2px;transition:transform .3s,opacity .3s}
+.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+.burger.open span:nth-child(2){opacity:0}
+.burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
+.mob-menu{display:none;position:fixed;top:60px;left:0;right:0;bottom:0;background:rgba(20,17,14,0.98);backdrop-filter:blur(20px);z-index:99;flex-direction:column;padding:40px 28px;gap:0}
+.mob-menu.open{display:flex}
+.mob-menu a{font-size:32px;font-family:'Newsreader',serif;font-weight:200;color:var(--ink2);text-decoration:none;padding:20px 0;border-bottom:1px solid var(--border);letter-spacing:-1px;transition:color .2s}
+.mob-menu a:hover{color:var(--ink)}
+.mob-menu .mob-cta{margin-top:28px;border:none;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:700;color:var(--ink);background:var(--red);padding:16px 24px;border-radius:8px;text-align:center}
 @media(max-width:900px){
-  sec,footer{padding:56px 24px}.hero{padding:72px 24px 56px}.topbar{padding:0 20px}.tnav{display:none}
-  .c-inner,.p-inner,.feria-inner{grid-template-columns:1fr;gap:32px}.f-row{grid-template-columns:1fr}
-  .f-inner{flex-direction:column;align-items:flex-start}
+  nav{padding:0 20px}.nav-links{display:none!important}.burger{display:flex!important}
+  section{padding:72px 20px}
+  .voz-grid,.healer-grid,.form-grid{grid-template-columns:1fr;gap:48px}
+  .neg-grid,.cap-grid{grid-template-columns:1fr 1fr}
+  .strip{flex-wrap:wrap}.strip-item{min-width:50%}
+  .field-row{grid-template-columns:1fr}
+  .form-top,.form-body,.form-foot{padding-left:22px;padding-right:22px}
+  footer{flex-direction:column;text-align:center}
 }
+@media(max-width:500px){h1{letter-spacing:-2px}.neg-grid,.cap-grid{grid-template-columns:1fr}}
       `}} />
       <div dangerouslySetInnerHTML={{ __html: `
 
-<header>
-  <nav class="topbar">
-    <a href="/" class="logo">ia<span class="dot">.</span>rest</a>
-    <div class="tnav">
-      <a href="/catering">Catering</a>
-      <a href="/espacios">Espacios</a>
-      <a href="#pricing">Precio</a>
-      <a href="#contacto" class="bcta">Demo gratuita</a>
-    </div>
-  </nav>
-</header>
+<nav>
+  <a class="logo" href="/">ia<b>.</b>rest</a>
+  <div class="nav-links">
+    <a href="#negocios">Para quién</a>
+    <a href="#sistema">Sistema</a>
+    <a href="/catering">Catering</a>
+    <a href="/espacios">Espacios</a>
+    <a href="#contacto" class="nav-cta">Demo gratuita →</a>
+  </div>
+  <button class="burger" id="burger" aria-label="Menú"><span></span><span></span><span></span></button>
+</nav>
 
-<main>
+<div class="mob-menu" id="mobMenu">
+  <a href="#negocios">Para quién</a>
+  <a href="#sistema">Sistema</a>
+  <a href="/catering">Catering</a>
+  <a href="/espacios">Espacios</a>
+  <a href="#contacto" class="mob-cta">Demo gratuita →</a>
+</div>
 
+<!-- HERO -->
 <section class="hero">
-  <div class="w">
-    <div class="tag"><span class="pulse"></span>TPV en producción · España</div>
-    <h1>Para cualquier negocio<br>que <em>sirva en mesa</em><br><em>o mostrador.</em></h1>
-    <p class="hero-sub">Bar, restaurante, chiringuito, feria, food truck. Si sirves, ia.rest lo gestiona.</p>
-    <div class="acts">
-      <a href="#contacto" class="bp">Solicitar demo gratuita</a>
-      <a href="#negocios" class="bg">Ver para quién es →</a>
-    </div>
-    <div class="stats">
-      <div><div class="sn">59<span>€</span></div><div class="sl">Desde / mes</div></div>
-      <div><div class="sn">0<span>%</span></div><div class="sl">Comisión</div></div>
-      <div><div class="sn">14<span>d</span></div><div class="sl">Prueba gratis</div></div>
-      <div><div class="sn">1<span>h</span></div><div class="sl">Onboarding</div></div>
-    </div>
+  <div class="hero-glow"></div>
+  <div class="eyebrow fi">Software TPV · Hostelería española · Sin comisión</div>
+  <h1 class="fi d1">Si sirves,<br><i>ia.rest lo gestiona.</i></h1>
+  <p class="hero-sub fi d2">Bar, restaurante, chiringuito, feria, food truck. Comandas por voz, sin papel, sin comisión.</p>
+  <div class="hero-cta fi d2">
+    <a href="#contacto" class="btn-p">Demo gratuita →</a>
+    <a href="#negocios" class="btn-s">Ver para quién es</a>
   </div>
 </section>
 
-<sec class="neg" id="negocios">
+<!-- STRIP -->
+<div class="strip">
+  <div class="strip-item">
+    <span class="strip-num">59<b>€</b></span>
+    <span class="strip-lbl">Desde / mes</span>
+  </div>
+  <div class="strip-item">
+    <span class="strip-num">0<b>%</b></span>
+    <span class="strip-lbl">Comisión</span>
+  </div>
+  <div class="strip-item">
+    <span class="strip-num"><b>&lt;</b>1h</span>
+    <span class="strip-lbl">Setup</span>
+  </div>
+  <div class="strip-item">
+    <span class="strip-num">14<b>d</b></span>
+    <span class="strip-lbl">Prueba gratis</span>
+  </div>
+</div>
+
+<!-- PARA QUIÉN -->
+<section class="negocios" id="negocios">
   <div class="w">
-    <div class="lbl">Para quién es</div>
-    <h2>Si sirves comida o bebida,<br>esto es para ti.</h2>
-    <div class="neg-grid">
+    <div class="s-label fi">Para quién es</div>
+    <h2 class="fi">Cualquier negocio<br>que sirva en mesa<br>o <i>mostrador.</i></h2>
+    <div class="neg-grid fi d1">
       <div class="neg-item">
         <div class="neg-ico">🍺</div>
         <div class="neg-name">Bar y cafetería</div>
-        <div class="neg-sub">Mostrador y terraza</div>
+        <div class="neg-sub">Mostrador · Terraza</div>
       </div>
       <div class="neg-item">
         <div class="neg-ico">🍽️</div>
         <div class="neg-name">Restaurante</div>
-        <div class="neg-sub">Sala completa</div>
+        <div class="neg-sub">Sala completa · KDS</div>
       </div>
       <div class="neg-item">
         <div class="neg-ico">🌊</div>
         <div class="neg-name">Chiringuito</div>
-        <div class="neg-sub">Playa y exterior</div>
+        <div class="neg-sub">Playa · Exterior · Offline</div>
       </div>
       <div class="neg-item">
         <div class="neg-ico">🎡</div>
         <div class="neg-name">Feria y eventos</div>
-        <div class="neg-sub">Temporal y móvil</div>
+        <div class="neg-sub">Temporal · Móvil</div>
       </div>
       <div class="neg-item">
         <div class="neg-ico">🚐</div>
@@ -277,159 +327,136 @@ footer{background:var(--d);border-top:1px solid var(--ru);padding:32px 48px}
       </div>
     </div>
   </div>
-</sec>
+</section>
 
-<sec class="func" id="sistema">
+<!-- CAPACIDADES -->
+<section class="cap" id="sistema">
   <div class="w">
-    <div class="lbl">El sistema</div>
-    <h2>Todo lo que necesitas.<br>Nada que no uses.</h2>
-    <div class="func-grid">
-      <div class="func-item">
-        <div class="func-num">01</div>
-        <div class="func-name">Comandas por voz</div>
-        <div class="func-tag">Sin tocar pantalla</div>
+    <div class="s-label fi">El sistema</div>
+    <h2 class="fi">Todo lo que necesitas.<br><i>Nada que no uses.</i></h2>
+    <div class="cap-grid fi d1">
+      <div class="cap-item">
+        <span class="cap-num">01</span>
+        <div class="cap-title">Comandas por voz</div>
+        <div class="cap-sub">Sin tocar pantalla</div>
       </div>
-      <div class="func-item">
-        <div class="func-num">02</div>
-        <div class="func-name">KDS en cocina</div>
-        <div class="func-tag">Sin papel</div>
+      <div class="cap-item">
+        <span class="cap-num">02</span>
+        <div class="cap-title">KDS en cocina</div>
+        <div class="cap-sub">Sin papel</div>
       </div>
-      <div class="func-item">
-        <div class="func-num">03</div>
-        <div class="func-name">VeriFactu</div>
-        <div class="func-tag">Obligatorio 2026</div>
+      <div class="cap-item">
+        <span class="cap-num">03</span>
+        <div class="cap-title">VeriFactu</div>
+        <div class="cap-sub">Obligatorio 2026</div>
       </div>
-      <div class="func-item">
-        <div class="func-num">04</div>
-        <div class="func-name">Almacén</div>
-        <div class="func-tag">Stock en tiempo real</div>
+      <div class="cap-item">
+        <span class="cap-num">04</span>
+        <div class="cap-title">Almacén</div>
+        <div class="cap-sub">Stock en tiempo real</div>
       </div>
-      <div class="func-item">
-        <div class="func-num">05</div>
-        <div class="func-name">QR en mesa</div>
-        <div class="func-tag">Pedido del cliente</div>
+      <div class="cap-item">
+        <span class="cap-num">05</span>
+        <div class="cap-title">QR en mesa</div>
+        <div class="cap-sub">El cliente pide solo</div>
       </div>
-      <div class="func-item">
-        <div class="func-num">06</div>
-        <div class="func-name">Multi-local</div>
-        <div class="func-tag">Un solo panel</div>
+      <div class="cap-item">
+        <span class="cap-num">06</span>
+        <div class="cap-title">Cierre de caja</div>
+        <div class="cap-sub">Automático</div>
+      </div>
+      <div class="cap-item">
+        <span class="cap-num">07</span>
+        <div class="cap-title">Multi-local</div>
+        <div class="cap-sub">Un solo panel</div>
+      </div>
+      <div class="cap-item">
+        <span class="cap-num">08</span>
+        <div class="cap-title">Modo offline</div>
+        <div class="cap-sub">Para feria y chiringuito</div>
       </div>
     </div>
   </div>
-</sec>
+</section>
 
-<sec class="feria">
+<!-- VOZ -->
+<section class="voz">
   <div class="w">
-    <div class="lbl">Para chiringuito y feria</div>
-    <div class="feria-inner">
+    <div class="voz-grid">
+      <div class="terminal fi">
+        <div class="t-bar"><div class="d dr"></div><div class="d dy"></div><div class="d dg"></div></div>
+        <div class="t-body" id="tlines">
+          <div><span class="tc">camarero@mesa-4 ~$</span> <span class="tr">escuchar</span></div>
+          <div><span class="tg">▶ </span><span class="tc">mic activo...</span></div>
+          <div><span class="ta">"dos cañas y una ración de jamón"</span></div>
+          <div><span class="tg">✓ </span><span class="tc">comanda enviada a cocina</span></div>
+          <div><span class="tg">✓ </span><span class="tc">ticket generado</span></div>
+          <div><span class="tc">camarero@mesa-4 ~$</span> <span class="cur"></span></div>
+        </div>
+      </div>
       <div>
-        <h2>Funciona donde<br>otros no llegan.</h2>
-        <ul class="feria-items">
-          <li>Desde el móvil, sin hardware fijo</li>
-          <li>Modo offline para conexión inestable</li>
-          <li>Setup en menos de 1 hora</li>
-          <li>Cierre de caja al final del día</li>
-          <li>VeriFactu incluido</li>
+        <div class="s-label fi">Comandas por voz</div>
+        <h2 class="fi">Hablas.<br><i>La cocina recibe.</i></h2>
+        <ul class="voz-pts fi d1">
+          <li class="voz-pt"><div class="voz-pt-t">Sin tocar ninguna pantalla</div></li>
+          <li class="voz-pt"><div class="voz-pt-t">Funciona con ruido de fondo</div></li>
+          <li class="voz-pt"><div class="voz-pt-t">Desde cualquier móvil</div></li>
+          <li class="voz-pt"><div class="voz-pt-t">En español natural</div></li>
         </ul>
       </div>
-      <div class="feria-visual">
-        <div class="big">1<span>h</span></div>
-        <p>De la caja de cartón<br>al sistema operativo.</p>
+    </div>
+  </div>
+</section>
+
+<!-- FERIA/CHIRINGUITO -->
+<section class="healer">
+  <div class="w">
+    <div class="healer-grid">
+      <div class="fi">
+        <div class="s-label">Chiringuito · Feria · Food truck</div>
+        <h2>Funciona donde<br><i>otros no llegan.</i></h2>
+      </div>
+      <div class="stats-grid fi d1">
+        <div class="stat"><span class="stat-val r">0</span><div class="stat-lbl">Hardware obligatorio</div></div>
+        <div class="stat"><span class="stat-val g">1<span style="font-size:18px">h</span></span><div class="stat-lbl">Setup completo</div></div>
+        <div class="stat"><span class="stat-val a">✓</span><div class="stat-lbl">Modo offline</div></div>
+        <div class="stat"><span class="stat-val">✓</span><div class="stat-lbl">VeriFactu incluido</div></div>
       </div>
     </div>
   </div>
-</sec>
+</section>
 
-<sec class="pricing" id="pricing">
+<!-- FORM -->
+<section class="form-section" id="contacto">
   <div class="w">
-    <div class="lbl">Precio</div>
-    <div class="p-inner">
-      <div>
-        <h2>Por personas,<br>no por ventas.</h2>
-        <p style="font-size:15px;color:var(--i3);line-height:1.65;margin-top:14px">Sin comisión por cada venta. Sin planes fijos. Solo pagas por los usuarios de tu equipo.</p>
-        <br>
-        <a href="#contacto" class="bp" style="display:inline-block">Empezar prueba gratuita</a>
+    <div class="form-grid">
+      <div class="form-copy fi">
+        <div class="s-label">Contacto</div>
+        <h2>14 días para<br><i>comprobarlo.</i></h2>
+        <p style="margin-top:20px">Setup en menos de 1 hora. Soporte directo. Sin tarjeta. Si no convence, nada.</p>
+        <ul>
+          <li>Sin compromiso ni permanencia</li>
+          <li>VeriFactu 2026 incluido</li>
+          <li>Funciona con tu hardware actual</li>
+          <li>Datos alojados en Europa</li>
+        </ul>
       </div>
-      <div>
-        <div class="p-card">
-          <div class="p-desde">Precio mensual</div>
-          <div class="p-num"><sup>€</sup>59<sub>/mes</sub></div>
-          <div class="p-det">+ 20€/usuario (2–6) · + 15€/usuario (7+)</div>
-          <ul class="p-items">
-            <li><span class="c">✓</span> Voz, KDS y VeriFactu</li>
-            <li><span class="c">✓</span> Almacén y cierre de caja</li>
-            <li><span class="c">✓</span> QR en mesa (add-on)</li>
-            <li><span class="c">✓</span> Multi-local incluido</li>
-            <li><span class="c">✓</span> 14 días de prueba gratis</li>
-          </ul>
-          <div class="p-ej">
-            <div class="pe-lb">Ejemplo — Bar 3 usuarios</div>
-            <div class="pe-r"><span>Base</span><span>59€</span></div>
-            <div class="pe-r"><span>2 usuarios × 20€</span><span>40€</span></div>
-            <div class="pe-t"><span>Total</span><strong>99€/mes</strong></div>
+      <div class="fi d1">
+        <div class="form-card">
+          <div class="form-top">
+            <div class="form-top-t">Quiero verlo en mi negocio</div>
+            <div class="form-top-s">Te contactamos en menos de 24h.</div>
           </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</sec>
-
-<sec class="faq">
-  <div class="w">
-    <div class="lbl">FAQ</div>
-    <h2>Preguntas frecuentes.</h2>
-    <div class="fq-list">
-      <div class="fi">
-        <div class="fq" role="button" tabindex="0">¿Funciona para chiringuitos y puestos de feria? <span class="arr">↓</span></div>
-        <div class="fa">Sí. ia.rest funciona desde el móvil sin hardware fijo. Tiene modo offline para cuando la conexión es inestable. Setup en menos de una hora.</div>
-      </div>
-      <div class="fi">
-        <div class="fq" role="button" tabindex="0">¿Incluye VeriFactu? <span class="arr">↓</span></div>
-        <div class="fa">Sí. VeriFactu con QR de la AEAT está incluido en todos los planes. Obligatorio para hostelería desde 2026. Sin coste adicional.</div>
-      </div>
-      <div class="fi">
-        <div class="fq" role="button" tabindex="0">¿Cuánto cuesta para un bar pequeño? <span class="arr">↓</span></div>
-        <div class="fa">59€/mes si lo gestionas tú solo. Si tienes camarero y cocina, 99€/mes (base + 2 usuarios × 20€). Sin comisión por ventas, sin sorpresas.</div>
-      </div>
-      <div class="fi">
-        <div class="fq" role="button" tabindex="0">¿Necesito comprar hardware nuevo? <span class="arr">↓</span></div>
-        <div class="fa">No. ia.rest funciona desde cualquier móvil o tablet. Si ya tienes impresoras térmicas, las conectamos. No hay hardware obligatorio.</div>
-      </div>
-      <div class="fi">
-        <div class="fq" role="button" tabindex="0">¿Mis datos están protegidos? <span class="arr">↓</span></div>
-        <div class="fa">Sí. Servidores en la UE, cifrado en tránsito y en reposo. Cumplimiento RGPD y LOPDGDD. Contacto: hola@iarest.es.</div>
-      </div>
-    </div>
-  </div>
-</sec>
-
-<sec class="contacto" id="contacto">
-  <div class="w">
-    <div class="c-inner">
-      <div class="c-copy">
-        <div class="lbl">Demo gratuita</div>
-        <h2>Cuéntanos<br><em>tu negocio.</em></h2>
-        <p>Demo en directo adaptada a tu tipo de local. Sin compromiso. Sin tarjeta.</p>
-        <div class="prs">
-          <div class="pr"><span class="ck">✓</span> Respuesta en menos de 24 horas</div>
-          <div class="pr"><span class="ck">✓</span> Demo adaptada a tu negocio</div>
-          <div class="pr"><span class="ck">✓</span> 14 días de prueba gratuita</div>
-          <div class="pr"><span class="ck">✓</span> Onboarding incluido</div>
-        </div>
-      </div>
-      <div class="f-card">
-        <div id="fc">
-          <div class="f-ttl">Solicitar demo gratuita</div>
-          <div class="f-sub">Te llamamos nosotros.</div>
-          <form id="cf" novalidate>
-            <div class="f-row">
-              <div class="fg"><label for="nom">Nombre *</label><input type="text" id="nom" placeholder="Tu nombre" required autocomplete="given-name"></div>
-              <div class="fg"><label for="tel">Teléfono *</label><input type="tel" id="tel" placeholder="600 000 000" required autocomplete="tel"></div>
+          <div class="form-body" id="formBody">
+            <input type="text" id="website" name="website" style="display:none" tabindex="-1" autocomplete="off"/>
+            <div class="field"><label>Nombre</label><input type="text" id="nombre" placeholder="Tu nombre" autocomplete="given-name"/></div>
+            <div class="field-row">
+              <div class="field"><label>Email</label><input type="email" id="email" placeholder="tu@email.com"/></div>
+              <div class="field"><label>Teléfono</label><input type="tel" id="telefono" placeholder="+34 6xx xxx xxx"/></div>
             </div>
-            <div class="fg"><label for="mail">Email *</label><input type="email" id="mail" placeholder="tu@email.com" required autocomplete="email"></div>
-            <div class="fg">
-              <label for="tipo">Tipo de negocio *</label>
-              <select id="tipo" required>
+            <div class="field">
+              <label>Tipo de negocio</label>
+              <select id="tipo">
                 <option value="" disabled selected>Selecciona</option>
                 <option value="bar">Bar o cafetería</option>
                 <option value="restaurante">Restaurante</option>
@@ -440,47 +467,35 @@ footer{background:var(--d);border-top:1px solid var(--ru);padding:32px 48px}
                 <option value="otro">Otro</option>
               </select>
             </div>
-            <div class="rgpd">
-              <input type="checkbox" id="rgpd" required>
-              <p><strong>Consentimiento *</strong> — He leído y acepto la <a href="/privacidad" target="_blank">política de privacidad</a>. Consiento que <strong>Alberto Suárez Gutiérrez (NIF 28823484E)</strong> trate mis datos para gestionar esta solicitud. Derechos en <a href="mailto:hola@iarest.es">hola@iarest.es</a>.</p>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;margin-top:4px">
+              <input type="checkbox" id="privacidad" style="margin-top:3px;accent-color:var(--red);cursor:pointer;flex-shrink:0"/>
+              <label for="privacidad" style="font-size:12px;color:var(--ink2);line-height:1.5;cursor:pointer">He leído y acepto la <a href="/privacidad" target="_blank" style="color:var(--red)">política de privacidad</a>. Consiento que <strong>Alberto Suárez Gutiérrez (NIF 28823484E)</strong>, responsable de ia.rest, trate mis datos para gestionar mi solicitud. Derechos en <a href="mailto:hola@iarest.es" style="color:var(--red)">hola@iarest.es</a>.</label>
             </div>
-            <button type="submit" class="f-btn" id="sb">Solicitar demo →</button>
-            <p class="f-legal">Datos en servidores UE · RGPD y LOPDGDD · <a href="/privacidad">Privacidad</a></p>
-          </form>
-        </div>
-        <div class="f-ok" id="fok">
-          <div class="ico">✅</div>
-          <h3>¡Recibido!</h3>
-          <p>Te contactamos antes de 24 horas.</p>
+            <button class="submit-btn" id="submitBtn" onclick="enviar()">Solicitar información →</button>
+          </div>
+          <div class="success-state" id="successState">
+            <div class="success-icon">✓</div>
+            <div class="success-t">Recibido.</div>
+            <div class="success-s">Te contactamos antes de 24h.</div>
+          </div>
+          <div class="form-foot">Sin compromiso · Sin tarjeta · Datos protegidos</div>
+          <div class="form-foot" style="margin-top:8px">¿Prefieres escribir o llamar? <a href="mailto:hola@iarest.es" style="color:var(--red);text-decoration:none">hola@iarest.es</a> · <a href="tel:+34637349990" style="color:var(--red);text-decoration:none">637 349 990</a></div>
         </div>
       </div>
     </div>
-    <p style="text-align:center;margin-top:20px;font-size:13px;color:var(--i4)">
-      Contacto directo —
-      <a href="mailto:hola@iarest.es" style="color:var(--i3);text-decoration:underline">hola@iarest.es</a> ·
-      <a href="tel:+34637349990" style="color:var(--i3);text-decoration:underline">+34 637 349 990</a>
-    </p>
   </div>
-</sec>
-
-</main>
+</section>
 
 <footer>
-  <div class="f-inner">
-    <div class="f-logo">ia<span class="dot">.</span>rest</div>
-    <nav class="f-links">
-      <a href="/">Inicio</a>
-      <a href="/catering">Catering</a>
-      <a href="/espacios">Espacios</a>
-      <a href="/blog">Blog</a>
-      <a href="/privacidad">Privacidad</a>
-    </nav>
-    <div class="f-contact">
-      <a href="mailto:hola@iarest.es">hola@iarest.es</a>
-      <a href="tel:+34637349990">+34 637 349 990</a>
-    </div>
-    <span class="f-copy">© 2026 ia.rest · NIF 28823484E · Sevilla</span>
+  <div class="f-logo">ia<b>.</b>rest</div>
+  <div class="f-links">
+    <a href="/">Inicio</a>
+    <a href="/catering">Catering</a>
+    <a href="/espacios">Espacios</a>
+    <a href="/blog">Blog</a>
+    <a href="/privacidad">Privacidad</a>
   </div>
+  <div class="f-copy">© 2026 ia.rest · NIF 28823484E · hola@iarest.es · +34 637 349 990</div>
 </footer>
 
       `}} />
