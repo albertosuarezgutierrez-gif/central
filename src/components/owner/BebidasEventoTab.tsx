@@ -290,7 +290,7 @@ function FormBebida({ form, setForm, onGuardar, onCancelar, saving, necesitaBote
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
           {TIPOS.map(t => (
             <button key={t.value} onClick={() => set('tipo', t.value)} style={{
-              padding: '6px 12px', borderRadius: '20px', border: 'none', cursor: 'pointer',
+              padding: '6px 12px', borderRadius: '20px', cursor: 'pointer',
               fontFamily: SN, fontSize: '12px',
               background: form.tipo === t.value ? C.ink : '#fff',
               color: form.tipo === t.value ? C.paper : C.ink3,
