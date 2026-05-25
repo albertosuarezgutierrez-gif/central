@@ -79,14 +79,17 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Briefing semanal — delegar al endpoint específico ────────────────
+  // ── Briefing semanal — fire-and-forget, no esperamos respuesta ───────
   if (accion === 'briefing_elegir' || accion === 'briefing_otras') {
-    // Reenviar al handler de briefing
-    const res = await fetch('https://www.iarest.es/api/telegram/briefing-callback', {
+    await tgAnswerCallback(cb.id, '⏳ Generando blog + posts IG...')
+    await tgEditMessage(cb.message.message_id,
+      `⏳ <b>Generando contenido de la semana...</b>\n\nBlog + 3 posts Instagram\nEn ~1 minuto te llegan los resultados`)
+    // Fire-and-forget — no bloqueamos la respuesta al webhook de TG
+    fetch('https://www.iarest.es/api/telegram/briefing-callback', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).catch(() => null)
+    }).catch(() => {})
     return NextResponse.json({ ok: true })
   }
 
