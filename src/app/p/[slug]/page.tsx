@@ -62,7 +62,7 @@ export default async function LandingPersonalizada({ params }: { params: Promise
 
   const { data: lead } = await supabase
     .from('leads')
-    .select('id, empresa, restaurante, nombre, ciudad, tipo_negocio, landing_vista_at, landing_vistas, email, telefono, pain_points, estudio_completo')
+    .select('id, empresa, restaurante, nombre, ciudad, tipo_negocio, landing_vista_at, landing_vistas, email, telefono, pain_points, estudio_completo, pain_points_reales, modulos_recomendados, datos_operativos, landing_actualizada_at')
     .eq('landing_slug', slug)
     .maybeSingle()
 
@@ -83,6 +83,11 @@ export default async function LandingPersonalizada({ params }: { params: Promise
   const ciudad = lead.ciudad || ''
   const modulos = getModulos(lead.tipo_negocio || '')
   const MAIL = `mailto:hola@iarest.es?subject=Videollamada%20ia.rest%20–%20${encodeURIComponent(nombre)}&body=Hola%2C%20soy%20de%20${encodeURIComponent(nombre)}%20y%20me%20gustar%C3%ADa%20ver%20ia.rest.`
+  const datosOp = (lead as any).datos_operativos || {}
+  const headline = `Esto es lo que ia.rest puede hacer por ${nombre.split(' ')[0]}.`
+  const subheadline = datosOp.subheadline || 'Sala, cocina, almacén, proveedores y eventos. Todo conectado y automatizado desde un solo sistema.'
+  const painPoints: string[] = (lead as any).pain_points_reales || []
+  const modulosRec: string[] = (lead as any).modulos_recomendados || []
 
   return (
     <main style={{ background: P, minHeight: '100vh', color: D, fontFamily: SN }}>
@@ -103,8 +108,21 @@ export default async function LandingPersonalizada({ params }: { params: Promise
           Esto es lo que<br /><span style={{ color: R }}>ia.rest puede hacer por {nombre.split(' ')[0]}.</span>
         </h1>
         <p style={{ fontSize: 18, color: I4, lineHeight: 1.7, margin: '0 0 44px', maxWidth: 520, marginLeft: 'auto', marginRight: 'auto' }}>
-          Sala, cocina, almacén, proveedores y eventos. Todo conectado y automatizado desde un solo sistema.
+          {subheadline}
         </p>
+
+        {/* Pain points reales si existen */}
+        {painPoints.length > 0 && (
+          <div style={{ maxWidth: 520, margin: '0 auto 40px', display: 'flex', flexDirection: 'column' as const, gap: 8 }}>
+            {painPoints.map((p, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start', textAlign: 'left' as const }}>
+                <span style={{ color: R, fontWeight: 700, flexShrink: 0 }}>→</span>
+                <span style={{ fontSize: 14, color: I4, lineHeight: 1.5 }}>{p}</span>
+              </div>
+            ))}
+          </div>
+        )}
+
         <a href={MAIL} style={{ display: 'inline-block', background: R, color: '#fff', padding: '18px 44px', borderRadius: 10, fontSize: 16, fontWeight: 700, textDecoration: 'none' }}>
           Ver cómo funciona — 15 min
         </a>

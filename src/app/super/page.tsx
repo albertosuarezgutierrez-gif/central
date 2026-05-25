@@ -1077,6 +1077,20 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                     : <span style={{ color: C.ink3 }}>· no vista aún</span>}
                 </a>
               )}
+              {lead.landing_slug && (
+                <button onClick={async (e) => {
+                  e.stopPropagation()
+                  const btn = e.currentTarget
+                  btn.textContent = '⏳ Analizando…'
+                  btn.setAttribute('disabled', 'true')
+                  const r = await fetch(`/api/super/leads/${lead.id}/actualizar-landing`, { method: 'POST', headers: sh() })
+                  const d = await r.json()
+                  btn.textContent = d.ok ? '✅ Actualizada' : '❌ Error'
+                  setTimeout(() => { btn.textContent = '🔄 Actualizar propuesta'; btn.removeAttribute('disabled') }, 3000)
+                }} style={{ background: `${C.amber}15`, border: `1px solid ${C.amber}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.amber, fontWeight: 600, cursor: 'pointer' }}>
+                  🔄 Actualizar propuesta
+                </button>
+              )}
               {lead.propuesta_url && (
                 <a href={lead.propuesta_url} target="_blank" rel="noopener noreferrer"
                   style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${C.red}15`, border: `1px solid ${C.red}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.red, textDecoration: 'none', fontWeight: 600 }}>
