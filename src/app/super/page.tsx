@@ -7,6 +7,7 @@ import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
+import InstagramTab from '@/components/InstagramTab'
 
 
 interface Restaurante {
@@ -105,12 +106,13 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
   const [badgeSug, setBadgeSug] = useState(0)
   const [badgeSoporte, setBadgeSoporte] = useState(0)
+  const [badgeInstagram, setBadgeInstagram] = useState(0)
   const [cuentas, setCuentas] = useState<CuentaVista[]>([])
   const [loadingCuentas, setLoadingCuentas] = useState(false)
   const [showFormCuenta, setShowFormCuenta] = useState(false)
@@ -149,6 +151,12 @@ export default function SuperPage() {
       body: JSON.stringify({ id, estado }),
     })
   }
+
+  // Leer ?tab=X de la URL al cargar
+  useEffect(() => {
+    const tab = new URLSearchParams(window.location.search).get('tab')
+    if (tab) setTabSuper(tab as any)
+  }, [])
 
   useEffect(() => { if (session && tabSuper === 'sugerencias') loadSugerencias() }, [session, tabSuper, loadSugerencias])
   useEffect(() => { if (session && tabSuper === 'clientes') loadCuentas() }, [session, tabSuper])
@@ -381,6 +389,8 @@ export default function SuperPage() {
             { id: 'autocuras',    label: '⚡ Autocuras' },
             { id: 'soporte',      label: 'Soporte', badge: badgeSoporte },
             { id: 'agentes',      label: '🤖 Agentes' },
+            { id: 'instagram',    label: '📸 Instagram', badge: badgeInstagram },
+            { id: 'blog',         label: '📝 Blog' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -436,6 +446,14 @@ export default function SuperPage() {
         ) : tabSuper === 'agentes' ? (
           <div style={{ padding: '24px 0' }}>
             <AgentesIATab session={session} C={C} SE={SE} SN={SN} SM={SM} />
+          </div>
+        ) : tabSuper === 'instagram' ? (
+          <div style={{ padding: '24px 0' }}>
+            <InstagramTab session={session} />
+          </div>
+        ) : tabSuper === 'blog' ? (
+          <div style={{ padding: '24px 0' }}>
+            <BlogSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} />
           </div>
         ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>
@@ -1745,6 +1763,94 @@ ASUNTO: [asunto]
               )}
             </div>
           )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── BlogSuperTab ─────────────────────────────────────────────────────────────
+function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }) {
+  const [borradores, setBorradores] = React.useState<any[]>([])
+  const [loading, setLoading] = React.useState(true)
+  const [publicando, setPublicando] = React.useState<string | null>(null)
+
+  React.useEffect(() => {
+    fetch('/api/super/blog', { headers: { 'x-ia-session': JSON.stringify(session) } })
+      .then(r => r.json())
+      .then(d => { setBorradores(d.borradores ?? []); setLoading(false) })
+      .catch(() => setLoading(false))
+  }, [session])
+
+  const publicar = async (id: string, slug: string) => {
+    setPublicando(id)
+    await fetch('/api/super/blog', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
+      body: JSON.stringify({ accion: 'publicar', id, slug }),
+    })
+    setBorradores(prev => prev.map(b => b.id === id ? { ...b, estado: 'publicado' } : b))
+    setPublicando(null)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <div>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>BLOG · SEO AUTOMÁTICO</div>
+        <h1 style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, margin: '0 0 4px', color: C.ink }}>Blog</h1>
+        <p style={{ fontFamily: SN, fontSize: 13, color: C.ink3, margin: 0 }}>
+          Artículos generados automáticamente. Revisa y publica desde aquí.
+        </p>
+      </div>
+
+      {loading ? (
+        <div style={{ padding: 40, textAlign: 'center', color: C.ink4, fontFamily: SM, fontSize: 12 }}>cargando...</div>
+      ) : borradores.length === 0 ? (
+        <div style={{ padding: '40px 0', textAlign: 'center', color: C.ink4, fontFamily: SN, fontSize: 13 }}>
+          No hay borradores. El cron del lunes genera uno automáticamente.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {borradores.map(b => (
+            <div key={b.id} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 16 }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: SN, fontSize: 15, fontWeight: 600, color: C.ink, marginBottom: 4 }}>{b.titulo}</div>
+                  <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, letterSpacing: '.06em' }}>
+                    /blog/{b.slug} · {b.keyword}
+                  </div>
+                  {b.meta_description && (
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 8, lineHeight: 1.5 }}>{b.meta_description}</div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                  <span style={{
+                    padding: '4px 10px', borderRadius: 20, fontFamily: SM, fontSize: 10, letterSpacing: '.06em',
+                    background: b.estado === 'publicado' ? 'rgba(63,125,68,0.1)' : 'rgba(217,68,43,0.1)',
+                    color: b.estado === 'publicado' ? C.green : C.red,
+                  }}>{b.estado?.toUpperCase()}</span>
+                </div>
+              </div>
+              {b.estado === 'borrador' && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => publicar(b.id, b.slug)}
+                    disabled={publicando === b.id}
+                    style={{ padding: '8px 18px', borderRadius: 6, border: 'none', background: publicando === b.id ? C.rule : C.red, color: publicando === b.id ? C.ink4 : '#fff', fontFamily: SM, fontSize: 11, cursor: publicando === b.id ? 'default' : 'pointer' }}>
+                    {publicando === b.id ? 'Publicando...' : '✅ Publicar'}
+                  </button>
+                  <button
+                    onClick={() => window.open(`/blog/${b.slug}`, '_blank')}
+                    style={{ padding: '8px 14px', borderRadius: 6, border: `1px solid ${C.rule}`, background: 'none', color: C.ink3, fontFamily: SM, fontSize: 11, cursor: 'pointer' }}>
+                    👁 Preview
+                  </button>
+                </div>
+              )}
+              <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>
+                {new Date(b.created_at).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
+          ))}
         </div>
       )}
     </div>
