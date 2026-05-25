@@ -149,11 +149,11 @@ export default function HomePage() {
 
   return (
     <>
-      <title>TPV por Voz para Bares y Catering - ia.rest | Sin Comisión 59€/mes</title>
-      <meta name="description" content="Sistema de gestión para restaurantes, bares y catering. Comandas por voz, KDS, almacén, eventos y catering integrado. El único TPV en español sin comisión. 59€/mes. Prueba 14 días gratis." />
+      <title>Software de Gestión para Restaurantes, Catering y Espacios de Eventos | ia.rest</title>
+      <meta name="description" content="ia.rest gestiona restaurantes, empresas de catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes. Prueba 14 días gratis." />
       <meta name="robots" content="index, follow" />
-      <meta property="og:title" content="TPV por Voz para Restaurantes y Catering - ia.rest | Sin Comisión 59€/mes" />
-      <meta property="og:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión. 59€/mes. Prueba 14 días gratis." />
+      <meta property="og:title" content="Software para Restaurantes, Catering y Espacios de Eventos | ia.rest" />
+      <meta property="og:description" content="Gestión completa para hostelería: restaurantes, catering y espacios de eventos. Voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes." />
       <meta property="og:url" content="https://www.iarest.es" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-image.jpg" />
@@ -368,7 +368,9 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div dangerouslySetInnerHTML={{ __html: `<nav>
   <a class="logo" href="#">ia<b>.</b>rest</a>
   <div class="nav-links">
-    <a href="#contacto" class="nav-cta">Solicitar información →</a>
+    <a href="/catering">Catering</a>
+    <a href="/espacios">Espacios</a>
+    <a href="#contacto" class="nav-cta">Solicitar demo →</a>
   </div>
   <button class="burger" id="burger" aria-label="Menú">
     <span></span><span></span><span></span>
@@ -376,10 +378,12 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 </nav>
 
 <div class="mob-menu" id="mobMenu">
+  <a href="/catering">Catering</a>
+  <a href="/espacios">Espacios de eventos</a>
   <a href="#sistema">Sistema</a>
   <a href="#precios">Precios</a>
   <a href="#contacto">Contacto</a>
-  <a href="#contacto" class="mob-cta">Solicitar información →</a>
+  <a href="#contacto" class="mob-cta">Solicitar demo →</a>
 </div>
 
 <!-- HERO -->
@@ -507,6 +511,36 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
+<!-- VERTICALES -->
+<section style="background:var(--bg);padding:100px 48px">
+  <div class="w">
+    <div class="fi" style="margin-bottom:48px">
+      <div class="s-label">¿Para qué tipo de negocio?</div>
+      <h2>Un sistema.<br><i>Tres soluciones.</i></h2>
+    </div>
+    <div class="fi d1" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:2px">
+      <div style="background:var(--bg2);padding:36px 28px;border-bottom:2px solid transparent;transition:border-color .2s" onmouseenter="this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.borderBottomColor='transparent'">
+        <div style="font-size:28px;margin-bottom:16px">🍽️</div>
+        <div style="font-family:'Newsreader',serif;font-size:22px;font-weight:300;color:var(--ink);margin-bottom:8px">Restaurante y bar</div>
+        <p style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:20px">Comandas por voz, KDS, gestión de mesas, almacén y VeriFactu. El sistema completo para sala y cocina.</p>
+        <a href="#sistema" style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver el sistema →</a>
+      </div>
+      <div style="background:var(--bg2);padding:36px 28px;border-bottom:2px solid var(--red)">
+        <div style="font-size:28px;margin-bottom:16px">🍱</div>
+        <div style="font-family:'Newsreader',serif;font-size:22px;font-weight:300;color:var(--ink);margin-bottom:8px">Catering y eventos</div>
+        <p style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:20px">Del presupuesto al evento y a la factura. Portal cliente, APPCC, voz en el evento y VeriFactu. El 360 completo.</p>
+        <a href="/catering" style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver landing catering →</a>
+      </div>
+      <div style="background:var(--bg2);padding:36px 28px;border-bottom:2px solid transparent;transition:border-color .2s" onmouseenter="this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.borderBottomColor='transparent'">
+        <div style="font-size:28px;margin-bottom:16px">🏛️</div>
+        <div style="font-family:'Newsreader',serif;font-size:22px;font-weight:300;color:var(--ink);margin-bottom:8px">Fincas y espacios</div>
+        <p style="font-size:13px;color:var(--ink3);line-height:1.6;margin-bottom:20px">Solicitudes de bodas.net automáticas, calendario, contratos digitales y VeriFactu. Solo pagas lo que usas.</p>
+        <a href="/espacios" style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver landing espacios →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
 <section id="precios" style="background:var(--bg2);padding:100px 48px">
   <div class="w">
     <div class="fi" style="text-align:center;margin-bottom:52px">
@@ -605,7 +639,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
             </div>
             <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;margin-top:4px">
               <input type="checkbox" id="privacidad" style="margin-top:3px;accent-color:var(--red);cursor:pointer;flex-shrink:0"/>
-              <label for="privacidad" style="font-size:12px;color:var(--ink2);line-height:1.5;cursor:pointer">He leído y acepto la <a href="/privacidad" target="_blank" style="color:var(--red)">política de privacidad</a>. Consiento el tratamiento de mis datos para gestionar mi solicitud.</label>
+              <label for="privacidad" style="font-size:12px;color:var(--ink2);line-height:1.5;cursor:pointer">He leído y acepto la <a href="/privacidad" target="_blank" style="color:var(--red)">política de privacidad</a>. Consiento que <strong>Alberto Suárez Gutiérrez (NIF 28823484E)</strong>, responsable de ia.rest, trate mis datos para gestionar mi solicitud. Puedo ejercer mis derechos de acceso, rectificación, supresión y oposición en <a href="mailto:hola@iarest.es" style="color:var(--red)">hola@iarest.es</a>.</label>
             </div>
             <button class="submit-btn" id="submitBtn" onclick="enviar()">Solicitar información →</button>
           </div>
