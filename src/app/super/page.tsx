@@ -8,6 +8,7 @@ import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
 import InstagramTab from '@/components/InstagramTab'
+import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 
 
 interface Restaurante {
@@ -106,7 +107,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -391,6 +392,7 @@ export default function SuperPage() {
             { id: 'agentes',      label: '🤖 Agentes' },
             { id: 'instagram',    label: '📸 Instagram', badge: badgeInstagram },
             { id: 'blog',         label: '📝 Blog' },
+            { id: 'proveedores',  label: '🔌 Proveedores' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -454,6 +456,10 @@ export default function SuperPage() {
         ) : tabSuper === 'blog' ? (
           <div style={{ padding: '24px 0' }}>
             <BlogSuperTab session={session} C={C} SE={SE} SN={SN} SM={SM} />
+          </div>
+        ) : tabSuper === 'proveedores' ? (
+          <div style={{ padding: '24px 0' }}>
+            <ProveedoresTechTab />
           </div>
         ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>
@@ -1780,6 +1786,14 @@ function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: st
   const [editForm, setEditForm] = React.useState({ titulo: '', keyword: '', meta_description: '' })
   const [saving, setSaving] = React.useState(false)
   const [expandido, setExpandido] = React.useState<string | null>(null)
+  const [ideasProveedores, setIdeasProveedores] = React.useState<any[]>([])
+
+  React.useEffect(() => {
+    fetch('/api/super/proveedores-tech?blog=true')
+      .then(r => r.json())
+      .then(d => setIdeasProveedores(Array.isArray(d) ? d : []))
+      .catch(() => {})
+  }, [])
 
   const cargar = React.useCallback(async () => {
     setLoading(true)
@@ -1963,6 +1977,36 @@ function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: st
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* Ideas desde proveedores */}
+      {ideasProveedores.length > 0 && (
+        <div style={{ marginTop: 32, paddingTop: 24, borderTop: `1px solid ${C.rule}` }}>
+          <div style={{ fontFamily: SE, fontSize: 18, fontWeight: 700, color: C.ink, marginBottom: 4 }}>💡 Ideas desde Proveedores</div>
+          <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '0 0 14px' }}>Contenido marcado en Proveedores como útil para blog</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {ideasProveedores.map((item: any) => (
+              <div key={item.id} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 8, overflow: 'hidden', display: 'flex' }}>
+                <div style={{ width: 4, flexShrink: 0, background: '#E8A33B' }} />
+                <div style={{ flex: 1, padding: '10px 14px' }}>
+                  <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 4 }}>
+                    <span style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, color: '#E8A33B', letterSpacing: '.06em' }}>{item.proveedor_nombre}</span>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>{item.categoria?.toUpperCase()}</span>
+                    <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginLeft: 'auto' }}>
+                      {item.fecha ? new Date(item.fecha).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' }) : ''}
+                    </span>
+                  </div>
+                  <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 2 }}>{item.asunto}</div>
+                  {item.resumen && (
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, lineHeight: 1.5 }}>
+                      {item.resumen.slice(0, 180)}{item.resumen.length > 180 ? '...' : ''}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
