@@ -1179,7 +1179,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                     onDragStart={e => e.dataTransfer.setData('leadId', lead.id)}
                     onClick={() => setSeleccionado(activo ? null : lead)}
                     style={{
-                      background: activo ? C.bg3 : C.dark,
+                      background: C.bg3,
                       border: `1px solid ${activo ? C.red : C.rule}`,
                       borderRadius: 6,
                       padding: '9px 10px',
