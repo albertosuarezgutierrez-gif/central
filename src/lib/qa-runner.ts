@@ -427,6 +427,55 @@ export async function checkSEO(): Promise<QACheck[]> {
   return checks
 }
 
+
+// ─── Checks Propuestas ────────────────────────────────────────────────────────
+export async function checkPropuestas(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+  const base = 'https://www.iarest.es'
+
+  // 1. Leer todos los leads con propuesta_slug en BD
+  const { data: leads } = await sb
+    .from('leads')
+    .select('empresa, restaurante, nombre, propuesta_slug')
+    .not('propuesta_slug', 'is', null)
+
+  if (!leads?.length) {
+    checks.push({ categoria:'PROPUESTAS', nombre:'Propuestas activas', estado:'warning',
+      severidad:'info', detalle:'No hay leads con propuesta_slug en BD' })
+    return checks
+  }
+
+  // 2. GET a cada /propuesta/[slug] y verificar 200
+  const resultados = await Promise.allSettled(
+    leads.map(async (lead: { empresa: string|null; restaurante: string|null; nombre: string|null; propuesta_slug: string }) => {
+      const empresa = lead.empresa || lead.restaurante || lead.nombre || lead.propuesta_slug
+      const url = `${base}/propuesta/${lead.propuesta_slug}`
+      const t0 = Date.now()
+      try {
+        const r = await fetch(url, { redirect: 'follow' })
+        return { slug: lead.propuesta_slug, empresa, ok: r.ok, status: r.status, ms: Date.now() - t0 }
+      } catch {
+        return { slug: lead.propuesta_slug, empresa, ok: false, status: 0, ms: Date.now() - t0 }
+      }
+    })
+  )
+
+  for (const r of resultados) {
+    if (r.status !== 'fulfilled') continue
+    const { slug, empresa, ok, status, ms } = r.value
+    checks.push({
+      categoria: 'PROPUESTAS',
+      nombre: `Propuesta: ${empresa} (/propuesta/${slug})`,
+      estado: ok ? 'ok' : 'fallo',
+      severidad: ok ? 'info' : 'critico',
+      detalle: ok ? `HTTP ${status} (${ms}ms)` : `HTTP ${status} — 404 o error. El slug puede estar roto.`,
+      ms_respuesta: ms,
+    })
+  }
+
+  return checks
+}
+
 // ─── Checks Performance ───────────────────────────────────────────────────────
 export async function checkPerf(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
   const checks: QACheck[] = []
@@ -674,6 +723,7 @@ export async function runQA(trigger: string, onCheck?: (c: QACheck) => void, onC
   await runCat('APIs — Servicios externos',        async () => checkAPIs())
   await runCat('SEO — Indexación Google',          async () => checkSEO())
   await runCat('CRONS — Trabajos programados',     async () => checkCrons())
+  await runCat('PROPUESTAS — URLs activas',        async () => checkPropuestas(supabase))
   await runCat('PERF — Performance',               async () => checkPerf(supabase))
 
   // Check demo solo si hay reunión próxima
