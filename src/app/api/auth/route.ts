@@ -46,20 +46,41 @@ export async function POST(req: NextRequest) {
 
   // Verificar PIN dentro del restaurante usando RPC
   const { data, error } = await supabase
-    .rpc('login_pin', { p_restaurante_id: restaurante_id, p_pin: pinStr })
+    .rpc('login_pin', { p_restaurante_id: restaurante_id, p_pin: pinStr, p_ip_address: ip })
 
-  if (error || !data || data.length === 0) {
-    // Registrar intento fallido
+  // Manejar respuesta de la RPC (ahora incluye rate limit en BD)
+  if (error) {
+    return NextResponse.json({ error: 'Error de autenticación' }, { status: 500 })
+  }
+
+  const result = data?.[0]
+  if (!result) {
+    return NextResponse.json({ error: 'PIN incorrecto' }, { status: 401 })
+  }
+
+  // Rate limit desde BD
+  if (result.blocked) {
+    const mins = result.blocked_until
+      ? Math.ceil((new Date(result.blocked_until).getTime() - Date.now()) / 60000)
+      : 15
+    return NextResponse.json({ error: `Demasiados intentos. Espera ${mins} min.` }, { status: 429 })
+  }
+
+  if (!result.success) {
+    // También actualizar rate limit en memoria como primera capa
     const prev = ATTEMPTS.get(ip) ?? { count: 0, until: 0 }
     const newCount = prev.count + 1
     ATTEMPTS.set(ip, {
       count: newCount,
       until: newCount >= MAX_ATTEMPTS ? now + BLOCK_MS : prev.until,
     })
-    return NextResponse.json({ error: 'PIN incorrecto' }, { status: 401 })
+    const msg = result.intentos_restantes > 0
+      ? `PIN incorrecto (${result.intentos_restantes} intentos restantes)`
+      : 'PIN incorrecto'
+    return NextResponse.json({ error: msg }, { status: 401 })
   }
 
-  // PIN correcto → limpiar rate limit
+  // PIN correcto → limpiar rate limit en memoria
   ATTEMPTS.delete(ip)
 
   const cam = data[0]

@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
   if (!token) return NextResponse.json({ error: 'Token no configurado' }, { status: 500 })
   const res = await fetch(`https://api.telegram.org/bot${token}/setWebhook`, {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url: 'https://www.iarest.es/api/telegram/instagram-callback', allowed_updates: ['callback_query','message'] }),
+    body: JSON.stringify({ url: 'https://www.iarest.es/api/telegram/instagram-callback', allowed_updates: ['callback_query','message'], secret_token: process.env.TELEGRAM_WEBHOOK_SECRET ?? '' }),
   })
   const data = await res.json()
   const info = await (await fetch(`https://api.telegram.org/bot${token}/getWebhookInfo`)).json()
