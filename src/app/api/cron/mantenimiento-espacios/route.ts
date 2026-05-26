@@ -51,7 +51,14 @@ function emailHtml(d: {
 </body></html>`
 }
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
 export async function GET(req: NextRequest) {
+  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   const supabase = createServerClient()
   const hace24h = new Date(Date.now() - 86400000).toISOString()
 
