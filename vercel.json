@@ -83,6 +83,14 @@
     {
       "path": "/api/cron/feedback-visita",
       "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/super/qa-agent/cron",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/super/qa-agent/cron",
+      "schedule": "0 7 * * 1"
     }
   ]
 }

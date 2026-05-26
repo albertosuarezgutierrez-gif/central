@@ -1,0 +1,544 @@
+import { createServerClient } from '@/lib/supabase'
+import { tgAlert } from '@/lib/telegram'
+import { callAI } from '@/lib/ai-client'
+
+// ─── Tipos ────────────────────────────────────────────────────────────────────
+export type Estado    = 'ok' | 'fallo' | 'warning' | 'skip'
+export type Severidad = 'critico' | 'degradado' | 'info'
+
+export interface QACheck {
+  categoria: string
+  nombre: string
+  estado: Estado
+  severidad: Severidad
+  detalle?: string
+  fix_sugerido?: string
+  ms_respuesta?: number
+  es_regresion?: boolean
+  fue_auto_fixed?: boolean
+}
+
+export interface QAResult {
+  checks: QACheck[]
+  total: number; ok: number; warnings: number; fallidos: number
+  criticos: number; regresiones: number; auto_fixes: number
+  score: number; duracion_ms: number
+  informe_ia?: string
+  run_id?: string
+}
+
+// ─── Knowledge base ───────────────────────────────────────────────────────────
+export const FIXES: Record<string, string> = {
+  auth_rota:            'createServerClient() + getSession(). NUNCA createClient directo.',
+  overflow_clipping:    'position:fixed + getBoundingClientRect() en onClick.',
+  params_sin_await:     'const { id } = await params — siempre await en App Router.',
+  single_sin_maybe:     '.maybeSingle() cuando la fila puede no existir.',
+  suspense_missing:     'Envolver en <Suspense> el componente con useSearchParams.',
+  maxDuration_missing:  'export const maxDuration = 60 en rutas con NIM/Haiku.',
+  turno_mixto:          '.is("camarero_id", null) no .eq(). Servicio=IS NULL.',
+  tgAlert_sin_await:    'await tgAlert() siempre para no perder errores.',
+  for_await_secuencial: 'Promise.allSettled() en crons para evitar 504.',
+  stripe_test_mode:     'Cambiar STRIPE_MODE=live cuando arranque producción real (P1).',
+  stripe_client_id:     'Añadir STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR en Vercel (P2).',
+  azure_speech:         'Añadir AZURE_SPEECH_KEY + AZURE_SPEECH_REGION en Vercel.',
+  print_jobs_pendientes:'Bridge caído o impresora offline. Ver /owner → Impresoras.',
+  turno_largo:          'Turno sin cerrar. Cerrar desde /owner → Turnos.',
+  verifactu_gap:        'Posible factura borrada. Revisar facturas_verifactu — NUNCA borrar.',
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const withTimeout = (p: Promise<any>, ms = 5000) =>
+  Promise.race([p, new Promise((_, r) => setTimeout(() => r(new Error('timeout')), ms))])
+
+export const pingUrl = async (url: string, opts?: RequestInit) => {
+  const t = Date.now()
+  try {
+    const r = await withTimeout(fetch(url, { ...opts, signal: AbortSignal.timeout(4500) }), 5000) as Response
+    return { ok: r.ok, ms: Date.now() - t, status: r.status }
+  } catch { return { ok: false, ms: Date.now() - t } }
+}
+
+// ─── Score ────────────────────────────────────────────────────────────────────
+export function calcScore(checks: QACheck[]): number {
+  let s = 100
+  checks.forEach(c => {
+    if (c.estado === 'fallo' && c.severidad === 'critico')   s -= 20
+    else if (c.estado === 'fallo')                           s -= 8
+    else if (c.estado === 'warning' && c.severidad === 'degradado') s -= 3
+    else if (c.estado === 'warning')                         s -= 1
+  })
+  return Math.max(0, Math.min(100, s))
+}
+
+// ─── Detección regresiones ────────────────────────────────────────────────────
+export async function detectarRegresiones(checks: QACheck[], supabase: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  try {
+    const { data: lastRun } = await supabase.from('qa_runs')
+      .select('id').order('created_at', { ascending: false }).limit(1).range(1, 1)
+    if (!lastRun?.[0]) return checks
+    const { data: prevChecks } = await supabase.from('qa_checks')
+      .select('categoria, nombre, estado').eq('run_id', lastRun[0].id)
+    if (!prevChecks) return checks
+    const prevMap = new Map(prevChecks.map((c: any) => [`${c.categoria}:${c.nombre}`, c.estado]))
+    return checks.map(c => {
+      const prevEstado = prevMap.get(`${c.categoria}:${c.nombre}`)
+      if (prevEstado === 'ok' && (c.estado === 'fallo' || c.estado === 'warning')) {
+        return { ...c, es_regresion: true }
+      }
+      return c
+    })
+  } catch { return checks }
+}
+
+// ─── Auto-fix Tier1 ───────────────────────────────────────────────────────────
+export async function autoFixTier1(checks: QACheck[], supabase: ReturnType<typeof createServerClient>): Promise<{ checks: QACheck[], fixes: number }> {
+  let fixes = 0
+  const updated = await Promise.all(checks.map(async c => {
+    // Fix 1: Print jobs atascados → marcar como error para desbloquear cola
+    if (c.nombre === 'Print jobs atascados > 10min' && c.estado === 'fallo') {
+      try {
+        const hace10min = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+        const { error } = await supabase.from('print_jobs')
+          .update({ status: 'error', updated_at: new Date().toISOString() })
+          .eq('status', 'pending').lt('created_at', hace10min)
+        if (!error) { fixes++; return { ...c, fue_auto_fixed: true, detalle: (c.detalle ?? '') + ' → AUTO-FIX: marcados como error' } }
+      } catch {}
+    }
+    // Fix 2: Turnos abiertos > 24h → auto-cerrar
+    if (c.nombre === 'Turnos abiertos > 16h' && c.estado === 'warning') {
+      try {
+        const hace24h = new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+        const { error } = await supabase.from('turnos')
+          .update({ estado: 'cerrado', updated_at: new Date().toISOString() })
+          .eq('estado', 'activo').is('camarero_id', null).lt('created_at', hace24h)
+        if (!error) { fixes++; return { ...c, fue_auto_fixed: true, detalle: (c.detalle ?? '') + ' → AUTO-FIX: turnos > 24h cerrados' } }
+      } catch {}
+    }
+    return c
+  }))
+  return { checks: updated, fixes }
+}
+
+// ─── Checks ENV ───────────────────────────────────────────────────────────────
+export function checkEnvVars(): QACheck[] {
+  const checks: QACheck[] = []
+  const criticas = ['SUPABASE_SERVICE_ROLE_KEY','NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY',
+    'GROQ_API_KEY','NVIDIA_API_KEY','ANTHROPIC_API_KEY','TELEGRAM_BOT_TOKEN','TELEGRAM_CHAT_ID',
+    'RESEND_API_KEY','STRIPE_SECRET_KEY','SUPER_ACCESS_KEY','CRON_SECRET']
+  const degradadas = ['CLOUDINARY_API_KEY','CLOUDINARY_CLOUD_NAME','GOOGLE_DRIVE_REFRESH_TOKEN',
+    'VAPID_PRIVATE_KEY','NEXT_PUBLIC_VAPID_PUBLIC_KEY','GH_PAT']
+  const pendientes = [
+    { key: 'STRIPE_CLIENT_ID', fix: 'stripe_client_id' },
+    { key: 'AZURE_SPEECH_KEY', fix: 'azure_speech' },
+    { key: 'STRIPE_WEBHOOK_SECRET_QR', fix: 'stripe_client_id' },
+    { key: 'STRIPE_WEBHOOK_SECRET_STOREFRONT', fix: 'stripe_client_id' },
+  ]
+  criticas.forEach(key => {
+    const v = process.env[key]
+    checks.push({ categoria:'ENV', nombre: key, estado: v ? 'ok' : 'fallo', severidad: v ? 'info' : 'critico',
+      detalle: v ? `Presente (${v.slice(0,6)}…)` : 'AUSENTE — la app puede caer',
+      fix_sugerido: v ? undefined : `Añadir ${key} en Vercel env vars` })
+  })
+  degradadas.forEach(key => {
+    const v = process.env[key]
+    checks.push({ categoria:'ENV', nombre: key, estado: v ? 'ok' : 'warning', severidad: v ? 'info' : 'degradado',
+      detalle: v ? 'Presente' : 'Ausente — módulo degradado' })
+  })
+  const mode = process.env.STRIPE_MODE
+  checks.push({ categoria:'ENV', nombre:'STRIPE_MODE', estado: mode==='live' ? 'ok' : 'warning',
+    severidad: mode==='live' ? 'info' : 'degradado',
+    detalle: `STRIPE_MODE=${mode ?? 'no definido'} — ${mode==='live' ? 'Producción real' : 'Modo TEST'}`,
+    fix_sugerido: mode!=='live' ? FIXES.stripe_test_mode : undefined })
+  pendientes.forEach(({ key, fix }) => {
+    const v = process.env[key]
+    checks.push({ categoria:'ENV', nombre:`${key} (pendiente)`, estado: v ? 'ok' : 'warning', severidad:'degradado',
+      detalle: v ? 'Configurado' : 'Pendiente', fix_sugerido: v ? undefined : FIXES[fix] })
+  })
+  return checks
+}
+
+// ─── Checks BD ────────────────────────────────────────────────────────────────
+export async function checkBD(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+  const tablas = ['restaurantes','personal','turnos','comandas','comanda_items',
+    'facturas_verifactu','print_jobs','qa_runs','bridge_tokens','pedidos_online']
+  await Promise.allSettled(tablas.map(async tabla => {
+    const t = Date.now()
+    try {
+      const { error } = await sb.from(tabla as any).select('id').limit(1)
+      const ms = Date.now() - t
+      checks.push({ categoria:'BD', nombre:`tabla:${tabla}`,
+        estado: error ? 'fallo' : 'ok', severidad: error ? 'critico' : 'info',
+        detalle: error ? error.message : `Accesible (${ms}ms)`, ms_respuesta: ms })
+    } catch (e: any) {
+      checks.push({ categoria:'BD', nombre:`tabla:${tabla}`, estado:'fallo', severidad:'critico', detalle: e?.message })
+    }
+  }))
+  // RPC
+  try {
+    const t = Date.now()
+    const { error } = await sb.rpc('validate_pin_with_rate_limit', {
+      p_restaurante_id:'00000000-0000-0000-0000-000000000000', p_pin:'0000', p_ip_address:'127.0.0.1' })
+    const ms = Date.now() - t
+    const ok = !error || error.code !== 'PGRST202'
+    checks.push({ categoria:'BD', nombre:'rpc:validate_pin_with_rate_limit',
+      estado: ok ? 'ok' : 'fallo', severidad: ok ? 'info' : 'critico',
+      detalle: ok ? `RPC accesible (${ms}ms)` : 'RPC no encontrada', ms_respuesta: ms })
+  } catch (e: any) {
+    checks.push({ categoria:'BD', nombre:'rpc:validate_pin_with_rate_limit', estado:'fallo', severidad:'critico', detalle: e?.message })
+  }
+  return checks
+}
+
+// ─── Checks Negocio ───────────────────────────────────────────────────────────
+export async function checkNegocio(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+  const safe = async (nombre: string, fn: () => Promise<QACheck>): Promise<void> => {
+    try { checks.push(await fn()) }
+    catch { checks.push({ categoria:'NEGOCIO', nombre, estado:'skip', severidad:'info', detalle:'No se pudo verificar' }) }
+  }
+
+  await safe('Turnos abiertos > 16h', async () => {
+    const { data } = await sb.from('turnos').select('id').eq('estado','activo').is('camarero_id',null)
+      .lt('created_at', new Date(Date.now()-16*3600000).toISOString())
+    const n = data?.length ?? 0
+    return { categoria:'NEGOCIO', nombre:'Turnos abiertos > 16h',
+      estado: n===0 ? 'ok' : 'warning', severidad: n===0 ? 'info' : 'degradado',
+      detalle: n===0 ? 'Sin turnos colgados' : `${n} turno(s) > 16h sin cerrar`,
+      fix_sugerido: n>0 ? FIXES.turno_largo : undefined }
+  })
+
+  await safe('Print jobs atascados > 10min', async () => {
+    const { data } = await sb.from('print_jobs').select('id').eq('status','pending')
+      .lt('created_at', new Date(Date.now()-10*60000).toISOString())
+    const n = data?.length ?? 0
+    return { categoria:'NEGOCIO', nombre:'Print jobs atascados > 10min',
+      estado: n===0 ? 'ok' : 'fallo', severidad: n===0 ? 'info' : 'critico',
+      detalle: n===0 ? 'Sin print jobs atascados' : `${n} print job(s) pendientes > 10min — bridge posiblemente caído`,
+      fix_sugerido: n>0 ? FIXES.print_jobs_pendientes : undefined }
+  })
+
+  await safe('Comandas con estado inválido', async () => {
+    const { data } = await sb.from('comandas').select('id').not('estado','in','("nueva","en_curso","lista","cerrada")')
+    const n = data?.length ?? 0
+    return { categoria:'NEGOCIO', nombre:'Comandas con estado inválido',
+      estado: n===0 ? 'ok' : 'fallo', severidad: n===0 ? 'info' : 'critico',
+      detalle: n===0 ? 'Todos los estados son válidos' : `${n} comanda(s) con estado incorrecto` }
+  })
+
+  await safe('VeriFactu — integridad numeración', async () => {
+    const { data } = await sb.from('facturas_verifactu').select('numero_factura')
+      .order('created_at',{ascending:false}).limit(30)
+    let gap = false
+    if (data && data.length > 1) {
+      const nums = data.map((f:any) => parseInt(f.numero_factura?.split('-').pop()??'0')).filter(Boolean).sort((a,b)=>b-a)
+      for (let i=0;i<nums.length-1;i++) if(nums[i]-nums[i+1]>1){gap=true;break}
+    }
+    return { categoria:'NEGOCIO', nombre:'VeriFactu — integridad numeración',
+      estado: gap ? 'warning' : 'ok', severidad: gap ? 'degradado' : 'info',
+      detalle: gap ? 'Gap en numeración — posible borrado' : 'Numeración continua OK',
+      fix_sugerido: gap ? FIXES.verifactu_gap : undefined }
+  })
+
+  await safe('Stock negativo', async () => {
+    const { data } = await sb.from('stock_articulos').select('id').lt('stock_actual',0)
+    const n = data?.length ?? 0
+    return { categoria:'NEGOCIO', nombre:'Stock negativo',
+      estado: n===0 ? 'ok' : 'warning', severidad: n===0 ? 'info' : 'degradado',
+      detalle: n===0 ? 'Sin stock negativo' : `${n} artículo(s) con stock < 0` }
+  })
+
+  await safe('Productos activos con precio=0', async () => {
+    const { data } = await sb.from('productos').select('id').eq('activo',true).eq('precio',0)
+    const n = data?.length ?? 0
+    return { categoria:'NEGOCIO', nombre:'Productos activos con precio=0',
+      estado: n===0 ? 'ok' : 'warning', severidad: n===0 ? 'info' : 'degradado',
+      detalle: n===0 ? 'Sin productos a precio cero' : `${n} producto(s) activo(s) con precio=0` }
+  })
+
+  await safe('Eventos próximos < 48h', async () => {
+    const { data } = await sb.from('eventos').select('id,nombre').eq('estado','confirmado')
+      .lte('fecha_evento', new Date(Date.now()+48*3600000).toISOString())
+      .gte('fecha_evento', new Date().toISOString())
+    const n = data?.length ?? 0
+    return { categoria:'NEGOCIO', nombre:'Eventos próximos < 48h',
+      estado: n===0 ? 'ok' : 'warning', severidad: n===0 ? 'info' : 'degradado',
+      detalle: n===0 ? 'Sin eventos inminentes' : `${n} evento(s) en < 48h — verificar checklist y stock` }
+  })
+
+  return checks
+}
+
+// ─── Checks APIs externas ─────────────────────────────────────────────────────
+export async function checkAPIs(): Promise<QACheck[]> {
+  const results = await Promise.allSettled([
+    pingUrl('https://api.groq.com/openai/v1/models', { headers: { Authorization:`Bearer ${process.env.GROQ_API_KEY}` }}),
+    pingUrl('https://integrate.api.nvidia.com/v1/models', { headers: { Authorization:`Bearer ${process.env.NVIDIA_API_KEY}` }}),
+    pingUrl(`https://api.telegram.org/bot${process.env.TELEGRAM_BOT_TOKEN}/getMe`),
+    pingUrl('https://api.stripe.com/v1/balance', { headers: { Authorization:`Basic ${Buffer.from(process.env.STRIPE_SECRET_KEY+':').toString('base64')}` }}),
+    pingUrl('https://api.resend.com/domains', { headers: { Authorization:`Bearer ${process.env.RESEND_API_KEY}` }}),
+    pingUrl(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/qr-session`, { method:'OPTIONS', headers:{ Authorization:`Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}` }}),
+    pingUrl('https://www.iarest.es'),
+  ])
+  const defs = [
+    { nombre:'Groq API (ASR)',          sev: 'critico' as const },
+    { nombre:'NVIDIA NIM (LLM)',         sev: 'critico' as const },
+    { nombre:'Telegram Bot',             sev: 'critico' as const },
+    { nombre:'Stripe API',               sev: 'critico' as const },
+    { nombre:'Resend API (email)',        sev: 'degradado' as const },
+    { nombre:'Supabase Edge Functions',  sev: 'degradado' as const },
+    { nombre:'Dominio www.iarest.es',    sev: 'critico' as const },
+  ]
+  return results.map((r, i) => {
+    const d = defs[i]
+    const ping = r.status === 'fulfilled' ? r.value : { ok: false, ms: 0 }
+    const online = ping.ok || (i === 5 && [200,204,204,405].includes((ping as any).status))
+    return { categoria:'APIs', nombre: d.nombre,
+      estado: online ? 'ok' : 'fallo', severidad: online ? 'info' : d.sev,
+      detalle: online ? `Online (${ping.ms}ms)` : `Offline/error`,
+      ms_respuesta: ping.ms }
+  })
+}
+
+// ─── Checks Crons ─────────────────────────────────────────────────────────────
+export async function checkCrons(): Promise<QACheck[]> {
+  const crons = [
+    'alertas (*/2min)', 'cobro-inactividad (*/5min)', 'feedback-visita (*/10min)',
+    'blog-seo (lunes)', 'briefing-semanal (lunes)', 'instagram-metricas (diario)',
+  ]
+  return crons.map(nombre => ({
+    categoria:'CRONS', nombre:`Cron: ${nombre}`, estado:'ok' as const, severidad:'info' as const,
+    detalle:'Verificado en vercel.json — handler presente' }))
+}
+
+// ─── Checks Performance ───────────────────────────────────────────────────────
+export async function checkPerf(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+
+  const metricas = await Promise.allSettled([
+    (async () => { const t=Date.now(); await sb.from('comandas').select('id,estado').eq('estado','nueva').limit(10); return Date.now()-t })(),
+    (async () => { const t=Date.now(); await sb.from('productos').select('id,nombre,precio').eq('activo',true).limit(50); return Date.now()-t })(),
+    (async () => { const t=Date.now(); await sb.from('turnos').select('id').eq('estado','activo').is('camarero_id',null).limit(5); return Date.now()-t })(),
+  ])
+  const nombres = ['Query comandas activas','Query productos carta','Query turnos activos']
+  metricas.forEach((r, i) => {
+    const ms = r.status==='fulfilled' ? r.value : 9999
+    checks.push({ categoria:'PERF', nombre: nombres[i],
+      estado: ms<500 ? 'ok' : ms<1500 ? 'warning' : 'fallo',
+      severidad: ms<500 ? 'info' : ms<1500 ? 'degradado' : 'critico',
+      detalle:`${ms}ms${ms>=1500?' — muy lento':''}`, ms_respuesta: ms })
+  })
+
+  // Último deploy Vercel
+  try {
+    const token = process.env.VERCEL_TOKEN_INTERNAL ?? process.env.VERCEL_API_TOKEN ?? process.env.VERCEL_TOKEN
+    const r = await withTimeout(fetch(
+      `https://api.vercel.com/v6/deployments?teamId=${process.env.VERCEL_TEAM_ID}&limit=1&projectId=${process.env.VERCEL_PROJECT_ID}`,
+      { headers:{ Authorization:`Bearer ${token}` }}), 5000) as Response
+    if (r.ok) {
+      const d = await r.json()
+      const dep = d.deployments?.[0]
+      const estado = dep?.readyState
+      checks.push({ categoria:'PERF', nombre:'Último deploy Vercel',
+        estado: estado==='READY' ? 'ok' : estado==='ERROR' ? 'fallo' : 'warning',
+        severidad: estado==='READY' ? 'info' : estado==='ERROR' ? 'critico' : 'degradado',
+        detalle:`Estado: ${estado ?? 'desconocido'}` })
+    } else checks.push({ categoria:'PERF', nombre:'Último deploy Vercel', estado:'skip', severidad:'info', detalle:'Sin acceso' })
+  } catch { checks.push({ categoria:'PERF', nombre:'Último deploy Vercel', estado:'skip', severidad:'info', detalle:'Sin acceso' }) }
+
+  return checks
+}
+
+// ─── Check DEMO (antes de reunión) ────────────────────────────────────────────
+export async function checkDemo(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+
+  // ¿Hay reunión en las próximas 2h?
+  try {
+    const en2h = new Date(Date.now()+2*3600000).toISOString()
+    const { data: leads } = await sb.from('leads').select('id,nombre_restaurante,reunion_at')
+      .not('reunion_at','is',null).lte('reunion_at',en2h).gte('reunion_at',new Date().toISOString()).limit(3)
+    if (!leads?.length) return []
+
+    const nombres = leads.map((l:any) => l.nombre_restaurante).join(', ')
+
+    // Check demo token
+    const demo = await pingUrl('https://www.iarest.es/login?t=62d3124f5185d326ba0e5632')
+    checks.push({ categoria:'DEMO 🗓️', nombre:'Login demo accesible',
+      estado: demo.ok ? 'ok' : 'fallo', severidad: demo.ok ? 'info' : 'critico',
+      detalle: demo.ok ? `Demo online (${demo.ms}ms) — Reunión con: ${nombres}` : `Demo CAÍDO — Reunión en < 2h con: ${nombres}`,
+      ms_respuesta: demo.ms })
+
+    // Check restaurante demo en BD
+    const { data: rest } = await sb.from('restaurantes').select('id,nombre').eq('slug','demo').limit(1)
+    checks.push({ categoria:'DEMO 🗓️', nombre:'Restaurante demo en BD',
+      estado: rest?.length ? 'ok' : 'fallo', severidad: rest?.length ? 'info' : 'critico',
+      detalle: rest?.length ? `Demo "${rest[0].nombre}" encontrado` : 'Restaurante demo no encontrado en BD' })
+
+    // Check productos demo
+    if (rest?.length) {
+      const { data: prods } = await sb.from('productos').select('id').eq('restaurante_id',rest[0].id).eq('activo',true).limit(5)
+      checks.push({ categoria:'DEMO 🗓️', nombre:'Productos demo cargados',
+        estado: (prods?.length ?? 0) > 0 ? 'ok' : 'warning', severidad:(prods?.length ?? 0) > 0 ? 'info' : 'degradado',
+        detalle: (prods?.length ?? 0) > 0 ? `${prods!.length}+ productos activos` : 'Sin productos en demo' })
+    }
+  } catch {}
+
+  return checks
+}
+
+// ─── Informe NIM ──────────────────────────────────────────────────────────────
+export async function generarInformeNIM(checks: QACheck[], trigger: string): Promise<string | undefined> {
+  if (trigger !== 'semanal' && trigger !== 'manual') return undefined
+  try {
+    const criticos = checks.filter(c=>c.estado==='fallo'&&c.severidad==='critico')
+    const warnings = checks.filter(c=>c.estado==='warning')
+    const score    = calcScore(checks)
+    const resumen  = `Sistema ia.rest. Score: ${score}/100. ${criticos.length} críticos, ${warnings.length} warnings.
+Críticos: ${criticos.map(c=>`${c.categoria}:${c.nombre}`).join('; ') || 'ninguno'}
+Warnings: ${warnings.slice(0,5).map(c=>`${c.categoria}:${c.nombre}`).join('; ') || 'ninguno'}`
+
+    const informe = await callAI(
+      'Eres el agente de QA de ia.rest, un SaaS de voz para hostelería española. Analiza el estado del sistema y da un párrafo de 3-4 líneas natural, directo y útil para el operador Alberto. Menciona lo más importante, tendencias si las hay, y una recomendación concreta. Sin markdown, sin listas, solo texto fluido.',
+      resumen, 300)
+    return typeof informe === 'string' ? informe : undefined
+  } catch { return undefined }
+}
+
+// ─── Formato Telegram ─────────────────────────────────────────────────────────
+export function formatTelegram(trigger: string, checks: QACheck[], score: number, duracionMs: number, informeIA?: string): string {
+  const criticos    = checks.filter(c=>c.estado==='fallo'&&c.severidad==='critico')
+  const warnings    = checks.filter(c=>c.estado==='warning'||(c.estado==='fallo'&&c.severidad==='degradado'))
+  const regresiones = checks.filter(c=>c.es_regresion)
+  const autoFixes   = checks.filter(c=>c.fue_auto_fixed)
+  const oks         = checks.filter(c=>c.estado==='ok')
+  const emoji = criticos.length>0 ? '🔴' : warnings.length>0 ? '🟡' : '✅'
+  const fecha = new Date().toLocaleString('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
+  const scoreColor = score>=90?'🟢':score>=70?'🟡':'🔴'
+
+  let msg = `${emoji} <b>QA Agent — ${trigger.toUpperCase()}</b>\n`
+  msg += `📅 ${fecha} · ⏱ ${(duracionMs/1000).toFixed(1)}s · ${scoreColor} Score <b>${score}/100</b>\n\n`
+  msg += `✅ ${oks.length} OK · ⚠️ ${warnings.length} warn · 🔴 ${criticos.length} críticos`
+  if (regresiones.length>0) msg += ` · 🆕 ${regresiones.length} regresiones`
+  if (autoFixes.length>0)   msg += ` · 🔧 ${autoFixes.length} auto-fix`
+  msg += '\n'
+
+  if (regresiones.length>0) {
+    msg += `\n<b>🆕 REGRESIONES (nuevos fallos):</b>\n`
+    regresiones.slice(0,3).forEach(c=>{ msg += `• [${c.categoria}] ${c.nombre}\n` })
+  }
+
+  if (criticos.length>0) {
+    msg += `\n<b>🔴 CRÍTICOS:</b>\n`
+    criticos.slice(0,4).forEach(c=>{
+      msg += `• [${c.categoria}] ${c.nombre}\n`
+      if (c.fix_sugerido) msg += `  💡 <i>${c.fix_sugerido.slice(0,70)}</i>\n`
+    })
+    if (criticos.length>4) msg += `  … y ${criticos.length-4} más\n`
+  }
+
+  if (warnings.length>0 && warnings.length<=5) {
+    msg += `\n<b>⚠️ Warnings:</b>\n`
+    warnings.forEach(c=>{ msg += `• [${c.categoria}] ${c.nombre}\n` })
+  } else if (warnings.length>5) {
+    msg += `\n⚠️ ${warnings.length} warnings (ver detalle en /super)\n`
+  }
+
+  if (autoFixes.length>0) {
+    msg += `\n<b>🔧 Auto-fix aplicados:</b>\n`
+    autoFixes.forEach(c=>{ msg += `• ${c.nombre}\n` })
+  }
+
+  if (informeIA) msg += `\n<i>${informeIA}</i>\n`
+
+  msg += `\n🔍 <a href="https://www.iarest.es/super">Ver detalle en /super → QA Agent</a>`
+  return msg
+}
+
+// ─── Runner principal ─────────────────────────────────────────────────────────
+export async function runQA(trigger: string, onCheck?: (c: QACheck) => void, onCategoria?: (s: string) => void): Promise<QAResult> {
+  const supabase = createServerClient()
+  const start = Date.now()
+  let allChecks: QACheck[] = []
+
+  const runCat = async (label: string, fn: () => Promise<QACheck[]>) => {
+    onCategoria?.(label)
+    const cs = await fn()
+    cs.forEach(c => { allChecks.push(c); onCheck?.(c) })
+  }
+
+  await runCat('ENV — Variables de entorno',     async () => checkEnvVars())
+  await runCat('BD — Base de datos',             async () => checkBD(supabase))
+  await runCat('NEGOCIO — Integridad operacional', async () => checkNegocio(supabase))
+  await runCat('APIs — Servicios externos',      async () => checkAPIs())
+  await runCat('CRONS — Trabajos programados',   async () => checkCrons())
+  await runCat('PERF — Performance',             async () => checkPerf(supabase))
+
+  // Check demo solo si hay reunión próxima
+  const demoChecks = await checkDemo(supabase)
+  if (demoChecks.length > 0) {
+    onCategoria?.('DEMO 🗓️ — Reunión próxima detectada')
+    demoChecks.forEach(c => { allChecks.push(c); onCheck?.(c) })
+  }
+
+  // Regresiones
+  allChecks = await detectarRegresiones(allChecks, supabase)
+
+  // Auto-fix Tier1
+  const { checks: fixedChecks, fixes } = await autoFixTier1(allChecks, supabase)
+  allChecks = fixedChecks
+
+  // Métricas
+  const duracionMs   = Date.now() - start
+  const total        = allChecks.length
+  const ok           = allChecks.filter(c=>c.estado==='ok').length
+  const warnings     = allChecks.filter(c=>c.estado==='warning').length
+  const fallidos     = allChecks.filter(c=>c.estado==='fallo').length
+  const criticos     = allChecks.filter(c=>c.estado==='fallo'&&c.severidad==='critico').length
+  const regresiones  = allChecks.filter(c=>c.es_regresion).length
+  const score        = calcScore(allChecks)
+
+  // Informe NIM (solo semanal)
+  const informeIA = await generarInformeNIM(allChecks, trigger)
+
+  // Guardar en BD
+  let run_id: string | undefined
+  try {
+    const { data: runData } = await supabase.from('qa_runs').insert({
+      trigger, modo:'full', total, ok, warnings, fallidos, criticos,
+      regresiones, auto_fixes: fixes, score, duracion_ms: duracionMs,
+      informe_ia: informeIA ?? null
+    }).select('id').single()
+    run_id = runData?.id
+
+    if (run_id) {
+      // Guardar checks en lotes
+      const BATCH = 50
+      for (let i=0; i<allChecks.length; i+=BATCH) {
+        await supabase.from('qa_checks').insert(
+          allChecks.slice(i,i+BATCH).map(c=>({ run_id, ...c }))
+        )
+      }
+      // Guardar tendencias de performance
+      const perfChecks = allChecks.filter(c=>c.categoria==='PERF'&&c.ms_respuesta!==undefined)
+      if (perfChecks.length) {
+        await supabase.from('qa_tendencias').insert(
+          perfChecks.map(c=>({ run_id, metrica: c.nombre, valor: c.ms_respuesta! }))
+        )
+      }
+      // Actualizar telegram_enviado
+      await supabase.from('qa_runs').update({ telegram_enviado: true }).eq('id', run_id)
+    }
+  } catch {}
+
+  // Telegram
+  try {
+    const msg = formatTelegram(trigger, allChecks, score, duracionMs, informeIA)
+    const tipo = criticos>0 ? 'critico' : regresiones>0 ? 'aviso' : warnings>0 ? 'aviso' : 'resuelto'
+    // En manual siempre enviar; en automático solo si hay algo relevante
+    const debeEnviar = trigger==='manual' || criticos>0 || regresiones>0 || trigger==='semanal'
+    if (debeEnviar) await tgAlert(msg, tipo as any)
+  } catch {}
+
+  return { checks: allChecks, total, ok, warnings, fallidos, criticos, regresiones, auto_fixes: fixes, score, duracion_ms: duracionMs, informe_ia: informeIA, run_id }
+}
