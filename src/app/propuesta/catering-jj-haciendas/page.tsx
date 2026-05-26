@@ -107,9 +107,11 @@ const config: ClienteConfig = {
 
   modulos: [
     {
-      icon: '🍽️',
+      emoji: '🍽️',
       titulo: 'KDS por pases',
       color: C.gold,
+      sub: '',
+      ruta: '',
       desc: 'ia.rest organiza la cocina en tandas: mesas 1-10, mesas 11-20... Cada partida sabe qué preparar y cuándo. Cocina central y hacienda coordinadas sin walkie ni gritos.',
       ejemplos: [
         'Pase 1 — 80 entrantes: cocina fría + barra coordinadas en tiempo real',
@@ -119,9 +121,11 @@ const config: ClienteConfig = {
       roi: 'Todos los platos de una mesa salen juntos y a tiempo, aunque sean 400 comensales.',
     },
     {
-      icon: '🏭',
+      emoji: '🏭',
       titulo: 'Stock centralizado tres haciendas',
       color: C.teal,
+      sub: '',
+      ruta: '',
       desc: 'Control de stock unificado para El Alba, Trinidad y El Triunfo. Sabes en todo momento qué hay en cada espacio sin llamadas ni hojas de Excel.',
       ejemplos: [
         'Transferencia de géneros de cocina central a hacienda — registrada automáticamente',

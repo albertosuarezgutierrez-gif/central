@@ -107,9 +107,11 @@ const config: ClienteConfig = {
 
   modulos: [
     {
-      icon: '📋',
+      emoji: '📋',
       titulo: 'Escandallos por evento',
       color: C.gold,
+      sub: '',
+      ruta: '',
       desc: 'Crea el escandallo de cada menú una vez. ia.rest multiplica automáticamente por el aforo y genera la lista de compra completa del servicio al instante.',
       ejemplos: [
         'Menú degustación 200 personas → lista de compra en 5 segundos',
@@ -119,9 +121,11 @@ const config: ClienteConfig = {
       roi: 'Para 50 servicios al año, el presupuestador recupera semanas de trabajo.',
     },
     {
-      icon: '💶',
+      emoji: '💶',
       titulo: 'Presupuestador con margen real',
       color: C.teal,
+      sub: '',
+      ruta: '',
       desc: 'Géneros + personal + transporte + margen objetivo = presupuesto PDF listo para el cliente en 2 minutos. Sabes exactamente cuánto ganas antes de confirmar el servicio.',
       ejemplos: [
         'Comparativa de márgenes por tipo de menú',

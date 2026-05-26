@@ -105,9 +105,11 @@ const config: ClienteConfig = {
 
   modulos: [
     {
-      icon: '🎙️',
+      emoji: '🎙️',
       titulo: 'Voz + Brain',
       color: C.red,
+      sub: '',
+      ruta: '',
       desc: 'El camarero habla — "mesa 4, dos chuletones, uno sin sal, y una botella de Ribera" — y la comanda llega a cocina en menos de un segundo. Sin tocar pantalla.',
       ejemplos: [
         'Modificadores: sin, con, aparte, para llevar, al punto...',
@@ -117,9 +119,11 @@ const config: ClienteConfig = {
       roi: 'Más mesas atendidas por camarero en el mismo turno.',
     },
     {
-      icon: '📊',
+      emoji: '📊',
       titulo: 'Analytics multi-local',
       color: C.teal,
+      sub: '',
+      ruta: '',
       desc: 'Ventas en tiempo real de Doble J y Las Dos Jotas desde el móvil. Qué platos venden más en cada local, en qué franja horaria, con qué ticket medio.',
       ejemplos: [
         'Top 10 platos más vendidos por local esta semana',
