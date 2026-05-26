@@ -314,6 +314,119 @@ export async function checkCrons(): Promise<QACheck[]> {
     detalle:'Verificado en vercel.json — handler presente' }))
 }
 
+// ─── Checks SEO ───────────────────────────────────────────────────────────────
+export async function checkSEO(): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+  const base = 'https://www.iarest.es'
+
+  // 1. sitemap.xml accesible y válido
+  try {
+    const t = Date.now()
+    const r = await withTimeout(fetch(`${base}/sitemap.xml`), 6000) as Response
+    const ms = Date.now() - t
+    if (!r.ok) {
+      checks.push({ categoria:'SEO', nombre:'sitemap.xml accesible', estado:'fallo', severidad:'critico',
+        detalle:`HTTP ${r.status} — Google no puede leer el sitemap`, ms_respuesta: ms })
+    } else {
+      const xml = await r.text()
+      const urlCount = (xml.match(/<url>/g) || []).length
+      checks.push({ categoria:'SEO', nombre:'sitemap.xml accesible', estado:'ok', severidad:'info',
+        detalle:`${urlCount} URLs indexadas (${ms}ms)`, ms_respuesta: ms })
+
+      // 2. Verificar sample de URLs del sitemap devuelven 200
+      const urlMatches = [...xml.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => m[1])
+      const urlsSample = urlMatches
+        .filter(u => !u.includes('/r/') && !u.includes('/restaurantes/'))
+        .slice(0, 8)
+
+      const resultsSample = await Promise.allSettled(
+        urlsSample.map(url => withTimeout(fetch(url, { method: 'HEAD' }), 5000))
+      )
+      const urls404 = urlsSample.filter((_, i) => {
+        const r = resultsSample[i]
+        return r.status === 'fulfilled' && !(r.value as Response).ok
+      })
+      if (urls404.length > 0) {
+        checks.push({ categoria:'SEO', nombre:'URLs sitemap sin 404', estado:'fallo', severidad:'critico',
+          detalle:`${urls404.length} URL(s) en el sitemap devuelven error: ${urls404.slice(0,3).join(', ')}`,
+          fix_sugerido:'Eliminar del sitemap.ts las URLs que no tienen page.tsx' })
+      } else {
+        checks.push({ categoria:'SEO', nombre:'URLs sitemap sin 404', estado:'ok', severidad:'info',
+          detalle:`Muestra de ${urlsSample.length} URLs verificadas — todas responden OK` })
+      }
+    }
+  } catch (e: any) {
+    checks.push({ categoria:'SEO', nombre:'sitemap.xml accesible', estado:'fallo', severidad:'critico',
+      detalle:`Error: ${e?.message}` })
+  }
+
+  // 3. robots.txt accesible y con Sitemap apuntando a iarest.es
+  try {
+    const t = Date.now()
+    const r = await withTimeout(fetch(`${base}/robots.txt`), 5000) as Response
+    const ms = Date.now() - t
+    if (!r.ok) {
+      checks.push({ categoria:'SEO', nombre:'robots.txt accesible', estado:'fallo', severidad:'degradado',
+        detalle:`HTTP ${r.status}`, ms_respuesta: ms })
+    } else {
+      const txt = await r.text()
+      const tieneSitemap = txt.includes('Sitemap:') && txt.includes('iarest.es')
+      const tieneDisallow = txt.includes('Disallow: /api/')
+      checks.push({ categoria:'SEO', nombre:'robots.txt accesible', estado:'ok', severidad:'info',
+        detalle:`OK (${ms}ms) — Sitemap: ${tieneSitemap ? '✓' : '⚠ falta'} — Disallow /api/: ${tieneDisallow ? '✓' : '⚠ falta'}`, ms_respuesta: ms })
+      if (!tieneSitemap) {
+        checks.push({ categoria:'SEO', nombre:'robots.txt apunta a sitemap', estado:'warning', severidad:'degradado',
+          detalle:'Falta línea Sitemap: https://www.iarest.es/sitemap.xml en robots.txt' })
+      }
+    }
+  } catch (e: any) {
+    checks.push({ categoria:'SEO', nombre:'robots.txt accesible', estado:'fallo', severidad:'degradado',
+      detalle:`Error: ${e?.message}` })
+  }
+
+  // 4. Landings SEO principales responden 200
+  const landingsSEO = [
+    { url: `${base}/`, nombre:'Home' },
+    { url: `${base}/comanda-por-voz`, nombre:'Landing voz' },
+    { url: `${base}/grupo-multilocal`, nombre:'Landing multilocal' },
+    { url: `${base}/catering`, nombre:'Landing catering' },
+    { url: `${base}/hosteleria`, nombre:'Landing hostelería' },
+    { url: `${base}/blog`, nombre:'Blog índice' },
+    { url: `${base}/registro`, nombre:'Registro' },
+  ]
+  const resultadosLandings = await Promise.allSettled(
+    landingsSEO.map(l => withTimeout(fetch(l.url, { method: 'HEAD' }), 5000))
+  )
+  const landings404 = landingsSEO.filter((_, i) => {
+    const r = resultadosLandings[i]
+    return r.status === 'fulfilled' && !(r.value as Response).ok
+  })
+  if (landings404.length > 0) {
+    checks.push({ categoria:'SEO', nombre:'Landings principales OK', estado:'fallo', severidad:'critico',
+      detalle:`${landings404.length} landing(s) con error: ${landings404.map(l => l.nombre).join(', ')}` })
+  } else {
+    checks.push({ categoria:'SEO', nombre:'Landings principales OK', estado:'ok', severidad:'info',
+      detalle:`${landingsSEO.length} landings SEO verificadas — todas OK` })
+  }
+
+  // 5. Meta tags home — title y description
+  try {
+    const r = await withTimeout(fetch(base), 8000) as Response
+    if (r.ok) {
+      const html = await r.text()
+      const hasTitle = /<title[^>]*>ia\.rest/i.test(html) || /<title[^>]*>iarest/i.test(html) || html.includes('<title>')
+      const hasDesc  = /name="description"/i.test(html)
+      const hasOG    = /property="og:title"/i.test(html)
+      const score    = [hasTitle, hasDesc, hasOG].filter(Boolean).length
+      checks.push({ categoria:'SEO', nombre:'Meta tags home', estado: score===3 ? 'ok' : score>=2 ? 'warning' : 'fallo',
+        severidad: score===3 ? 'info' : score>=2 ? 'degradado' : 'critico',
+        detalle:`title:${hasTitle?'✓':'✗'} description:${hasDesc?'✓':'✗'} og:title:${hasOG?'✓':'✗'}` })
+    }
+  } catch {}
+
+  return checks
+}
+
 // ─── Checks Performance ───────────────────────────────────────────────────────
 export async function checkPerf(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
   const checks: QACheck[] = []
@@ -429,11 +542,19 @@ const NOMBRE_LEGIBLE: Record<string, string> = {
   'Productos activos con precio=0':   'Productos gratis sin querer',
   'VeriFactu — integridad numeración':'Posible factura borrada',
   'Eventos próximos < 48h':           'Evento inminente — revisar checklist',
+  // SEO
+  'sitemap.xml accesible':        'Sitemap no accesible para Google',
+  'URLs sitemap sin 404':         'URLs en sitemap que dan error 404',
+  'robots.txt accesible':         'robots.txt no accesible',
+  'robots.txt apunta a sitemap':  'robots.txt sin referencia al sitemap',
+  'Landings principales OK':      'Landings SEO con errores',
+  'Meta tags home':               'Meta tags incompletas en home',
 }
 
 const CAT_LEGIBLE: Record<string, string> = {
   ENV: 'Configuración', BD: 'Base de datos', NEGOCIO: 'Operaciones',
   APIs: 'Servicios', CRONS: 'Tareas automáticas', PERF: 'Rendimiento',
+  SEO: 'Indexación Google',
   'DEMO 🗓️': 'Demo pre-reunión',
 }
 
@@ -547,12 +668,13 @@ export async function runQA(trigger: string, onCheck?: (c: QACheck) => void, onC
     cs.forEach(c => { allChecks.push(c); onCheck?.(c) })
   }
 
-  await runCat('ENV — Variables de entorno',     async () => checkEnvVars())
-  await runCat('BD — Base de datos',             async () => checkBD(supabase))
+  await runCat('ENV — Variables de entorno',       async () => checkEnvVars())
+  await runCat('BD — Base de datos',               async () => checkBD(supabase))
   await runCat('NEGOCIO — Integridad operacional', async () => checkNegocio(supabase))
-  await runCat('APIs — Servicios externos',      async () => checkAPIs())
-  await runCat('CRONS — Trabajos programados',   async () => checkCrons())
-  await runCat('PERF — Performance',             async () => checkPerf(supabase))
+  await runCat('APIs — Servicios externos',        async () => checkAPIs())
+  await runCat('SEO — Indexación Google',          async () => checkSEO())
+  await runCat('CRONS — Trabajos programados',     async () => checkCrons())
+  await runCat('PERF — Performance',               async () => checkPerf(supabase))
 
   // Check demo solo si hay reunión próxima
   const demoChecks = await checkDemo(supabase)
