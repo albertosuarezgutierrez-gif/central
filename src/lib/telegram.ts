@@ -14,19 +14,26 @@ export async function tgAlert(
 ): Promise<void> {
   const token   = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = process.env.TELEGRAM_CHAT_ID
-  if (!token || !chat_id) return
+  if (!token || !chat_id) {
+    console.error('[tgAlert] Missing token or chat_id')
+    return
+  }
 
   const hora = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
   const text = `${EMOJI[nivel]} <b>ia.rest</b>\n${escapeHtml(mensaje)}\n<i>${hora}</i>`
 
   try {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ chat_id, text, parse_mode: 'HTML' }),
     })
+    const data = await res.json()
+    if (!data.ok) {
+      console.error('[tgAlert] Telegram error:', data.description || data.error)
+    }
   } catch (err: any) {
-    console.error('[tgAlert]', err?.message)
+    console.error('[tgAlert] Fetch error:', err?.message)
   }
 }
 
