@@ -1,5 +1,5 @@
-import { HelpChat } from '@/components/help/HelpChat'
 'use client'
+import { HelpChat } from '@/components/help/HelpChat'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Session } from '@/hooks/useAuth'
