@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 
 const C = {
   bg:'#14110E', bg2:'#1C1814', bg3:'#221E1A',
@@ -211,6 +211,12 @@ function NavDot({ active, onClick, label }: { active: boolean; onClick: () => vo
 
 export default function PropuestaBase({ config }: { config: ClienteConfig }) {
   const [slide, setSlide] = useState<Slide>('intro')
+
+  // Tracking: notificar visita al montar
+  useEffect(() => {
+    if (!config.slug) return
+    fetch(`/api/propuesta/${config.slug}/booking`, { method: 'PATCH' }).catch(() => {})
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [moduloIdx, setModuloIdx] = useState(0)
 
   // ── Booking form state ──────────────────────────────────────────────────────
