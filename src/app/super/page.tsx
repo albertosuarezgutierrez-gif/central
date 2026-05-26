@@ -1010,6 +1010,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [showHunter, setShowHunter] = useState(false)
   const [eventoTexto, setEventoTexto] = useState<Record<string, string>>({})
   const [eventoTipo, setEventoTipo] = useState<Record<string, string>>({})
+  const [vistaKanban, setVistaKanban] = useState(true)
+  const [dragOver, setDragOver] = useState<string | null>(null)
   const [form, setForm] = useState({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
   const [saving, setSaving] = useState(false)
 
@@ -1108,111 +1110,214 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
     )
   }
 
+  // ── Mover etapa (drag & drop y click directo) ──────────────────────────
+  const moverEtapa = async (leadId: string, nuevoEstado: EstadoLead) => {
+    const lead = leads.find(l => l.id === leadId)
+    if (!lead || lead.estado === nuevoEstado) return
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, estado: nuevoEstado } as Lead : l))
+    if (seleccionado?.id === leadId) setSeleccionado(prev => prev ? { ...prev, estado: nuevoEstado } as Lead : null)
+    await fetch(`/api/super/leads/${leadId}`, {
+      method: 'PATCH', headers: sh(),
+      body: JSON.stringify({ estado: nuevoEstado })
+    })
+  }
+
+  // ── Kanban ─────────────────────────────────────────────────────────────
+  const COLUMNAS: { key: EstadoLead; label: string; emoji: string }[] = [
+    { key: 'nuevo',      label: 'Nuevo',      emoji: '🌱' },
+    { key: 'contactado', label: 'Contactado', emoji: '📞' },
+    { key: 'demo',       label: 'Demo',       emoji: '🎯' },
+    { key: 'cliente',    label: 'Ganado',     emoji: '✅' },
+    { key: 'descartado', label: 'Descartado', emoji: '❌' },
+  ]
+
+  const KanbanView = () => (
+    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start', minHeight: 400 }}>
+      {COLUMNAS.map(col => {
+        const colLeads = leads.filter(l => l.estado === col.key)
+        const isOver = dragOver === col.key
+        return (
+          <div
+            key={col.key}
+            onDragOver={e => { e.preventDefault(); setDragOver(col.key) }}
+            onDragLeave={() => setDragOver(null)}
+            onDrop={e => {
+              e.preventDefault()
+              const leadId = e.dataTransfer.getData('leadId')
+              moverEtapa(leadId, col.key)
+              setDragOver(null)
+            }}
+            style={{
+              flexShrink: 0, width: 200,
+              background: isOver ? ESTADO_COLOR[col.key] + '18' : C.bg2,
+              border: `1px solid ${isOver ? ESTADO_COLOR[col.key] : C.rule}`,
+              borderRadius: 12, padding: '10px 8px',
+              transition: 'all .15s'
+            }}
+          >
+            {/* Cabecera columna */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '0 4px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 14 }}>{col.emoji}</span>
+                <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: ESTADO_COLOR[col.key] }}>
+                  {col.label}
+                </span>
+              </div>
+              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4, background: C.bg3, borderRadius: 10, padding: '1px 7px', fontWeight: 700 }}>
+                {colLeads.length}
+              </span>
+            </div>
+
+            {/* Cards */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {colLeads.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '20px 0', color: C.ink4, fontSize: 11, fontStyle: 'italic' }}>
+                  Vacío
+                </div>
+              )}
+              {colLeads.map(lead => {
+                const activo = seleccionado?.id === lead.id
+                const dias = lead.ultima_actividad_at
+                  ? Math.floor((Date.now() - new Date(lead.ultima_actividad_at).getTime()) / 86400000)
+                  : null
+                return (
+                  <div
+                    key={lead.id}
+                    draggable
+                    onDragStart={e => e.dataTransfer.setData('leadId', lead.id)}
+                    onClick={() => setSeleccionado(activo ? null : lead)}
+                    style={{
+                      background: activo ? C.bg3 : C.bg2,
+                      border: `1px solid ${activo ? C.red : C.rule}`,
+                      borderRadius: 8, padding: '10px 10px', cursor: 'grab',
+                      transition: 'all .12s',
+                      boxShadow: activo ? `0 0 0 1px ${C.red}` : 'none'
+                    }}
+                  >
+                    {/* Empresa */}
+                    <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.paper, marginBottom: 3, lineHeight: 1.3 }}>
+                      {lead.restaurante || lead.nombre}
+                    </div>
+                    {/* Meta */}
+                    <div style={{ fontSize: 10, color: C.ink4, marginBottom: 6 }}>
+                      {lead.tpv || lead.ciudad || '—'}
+                    </div>
+                    {/* Pills */}
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                      {lead.puntuacion != null && (
+                        <span style={{ fontSize: 9, color: lead.puntuacion >= 70 ? C.green : lead.puntuacion >= 40 ? C.amber : '#9B2226', background: C.bg3, borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>
+                          ★{lead.puntuacion}
+                        </span>
+                      )}
+                      {dias != null && dias > 7 && (
+                        <span style={{ fontSize: 9, color: dias > 14 ? '#9B2226' : C.amber, background: dias > 14 ? '#1A0000' : '#1A1400', borderRadius: 3, padding: '1px 5px' }}>
+                          {dias}d
+                        </span>
+                      )}
+                      {lead.siguiente_contacto_texto && (
+                        <span style={{ fontSize: 9, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '1px 5px', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          📅
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+
+
 
   return (
     <div>
       {/* Header */}
-      <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
+      <div style={{ marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', gap: 16, flexWrap: 'wrap' }}>
         <div>
           <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>COMERCIAL</div>
           <h1 style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 40, fontWeight: 500, margin: '0 0 6px', color: C.ink }}>Leads</h1>
           <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: 0 }}>
-            {personales.length} personales · {online.length} desde la landing
+            {leads.length} empresas &middot; {leads.filter(l => l.estado === 'cliente').length} clientes
           </p>
         </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <button onClick={() => setShowHunter(v => !v)} style={{ background: showHunter ? C.amber : `${C.amber}20`, color: showHunter ? '#000' : C.amber, border: `1px solid ${C.amber}60`, borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            🎯 Lead Hunter IA
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div style={{ display: 'flex', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 3, gap: 2 }}>
+            <button onClick={() => setVistaKanban(true)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600, background: vistaKanban ? C.red : 'transparent', color: vistaKanban ? '#fff' : C.ink4 }}>
+              Kanban
+            </button>
+            <button onClick={() => setVistaKanban(false)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600, background: !vistaKanban ? C.red : 'transparent', color: !vistaKanban ? '#fff' : C.ink4 }}>
+              Lista
+            </button>
+          </div>
+          <button onClick={() => setShowHunter(v => !v)} style={{ background: showHunter ? C.amber : `${C.amber}20`, color: showHunter ? '#000' : C.amber, border: `1px solid ${C.amber}60`, borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            Lead Hunter IA
           </button>
-          <button onClick={() => setModalNuevo(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-            + Lead personal
+          <button onClick={() => setModalNuevo(true)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 10, padding: '10px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
+            + Nueva empresa
           </button>
         </div>
       </div>
 
-      {/* ── LEAD HUNTER IA PANEL ─────────────────────── */}
       {showHunter && <LeadHunterPanel C={C} SN={SN} SM={SM} onLeadCreado={(lead: Lead) => setLeads(prev => [lead, ...prev])} sh={sh} />}
 
-      {/* Leyenda */}
-      <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
-        {ESTADOS_LEAD.map(e => (
-          <div key={e} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontFamily: SM, color: C.ink3 }}>
-            <div style={{ width: 7, height: 7, borderRadius: '50%', background: ESTADO_COLOR[e] }} />
-            {e}
-          </div>
-        ))}
-      </div>
+      {loading && (
+        <div style={{ textAlign: 'center', padding: 48, color: C.ink3, fontFamily: SM, fontSize: 13 }}>Cargando...</div>
+      )}
 
-      {loading ? (
-        <div style={{ textAlign: 'center', padding: 48, color: C.ink3, fontFamily: SM, fontSize: 13 }}>Cargando…</div>
-      ) : (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          {/* Lista de leads */}
-          <div style={{ flex: seleccionado ? '0 0 340px' : '1', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 32 }}>
-
-          {/* PERSONALES */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.amber, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🏆 Personales</span>
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>— grupos y contactos directos</span>
-              <div style={{ flex: 1, height: 1, background: `${C.amber}40` }} />
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.amber }}>{personales.length}</span>
-            </div>
-            {personales.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: C.ink3, fontFamily: SM, fontSize: 13, fontStyle: 'italic' }}>
-                Aún no hay leads personales. Usa el botón "+ Lead personal" para añadir.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {(personales as Lead[]).map(l => <CardLead key={l.id} lead={l} />)}
-              </div>
-            )}
-          </div>
-
-          {/* ONLINE */}
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink2, letterSpacing: '.1em', textTransform: 'uppercase', fontWeight: 700 }}>🌐 Online</span>
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>— formulario de la landing</span>
-              <div style={{ flex: 1, height: 1, background: C.rule }} />
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{online.length}</span>
-            </div>
-            {online.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '32px 0', color: C.ink3, fontFamily: SM, fontSize: 13, fontStyle: 'italic' }}>
-                Aún no hay contactos desde la landing.
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {(online as Lead[]).map(l => <CardLead key={l.id} lead={l} />)}
-              </div>
-            )}
-          </div>
-        </div>{/* fin lista */}
-
-        {/* Panel detalle lateral */}
-        {seleccionado && (
-          <div style={{ flex: 1, minWidth: 0, position: 'sticky', top: 16, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
-            <CRMEmpresaDetalle
-              lead={seleccionado as Parameters<typeof CRMEmpresaDetalle>[0]['lead']}
-              sh={sh}
-              onUpdate={(updated) => {
-                setLeads(prev => prev.map(l => l.id === seleccionado.id ? { ...l, ...updated } as Lead : l))
-                setSeleccionado(prev => prev ? { ...prev, ...updated } as Lead : null)
-              }}
-              onDelete={async () => {
-                if (!confirm('¿Eliminar este lead?')) return
-                await fetch(`/api/super/leads/${seleccionado.id}`, { method: 'DELETE', headers: sh() })
-                setLeads(prev => prev.filter(l => l.id !== seleccionado.id))
-                setSeleccionado(null)
-                setExpandido(null)
-              }}
-            />
-          </div>
-        )}
+      {!loading && vistaKanban && (
+        <div style={{ marginBottom: 16 }}>
+          <KanbanView />
         </div>
       )}
 
-      {/* Modal nuevo lead personal */}
+      {!loading && !vistaKanban && (
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          <div style={{ flex: seleccionado ? '0 0 340px' : '1', minWidth: 0 }}>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 8 }}>
+              PERSONALES ({personales.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
+              {personales.length === 0
+                ? <div style={{ color: C.ink4, fontSize: 12, fontStyle: 'italic' }}>Sin leads personales</div>
+                : personales.map(l => <CardLead key={l.id} lead={l} />)
+              }
+            </div>
+            <div style={{ fontFamily: SM, fontSize: 11, color: C.ink2, fontWeight: 700, marginBottom: 8 }}>
+              ONLINE ({online.length})
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {online.length === 0
+                ? <div style={{ color: C.ink4, fontSize: 12, fontStyle: 'italic' }}>Sin leads online</div>
+                : online.map(l => <CardLead key={l.id} lead={l} />)
+              }
+            </div>
+          </div>
+        </div>
+      )}
+
+      {seleccionado && (
+        <div style={{ marginTop: 12, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
+          <CRMEmpresaDetalle
+            lead={seleccionado as Parameters<typeof CRMEmpresaDetalle>[0]['lead']}
+            sh={sh}
+            onUpdate={(updated) => {
+              setLeads(prev => prev.map(l => l.id === seleccionado.id ? { ...l, ...updated } as Lead : l))
+              setSeleccionado(prev => prev ? { ...prev, ...updated } as Lead : null)
+            }}
+            onDelete={async () => {
+              if (!confirm('Eliminar este lead?')) return
+              await fetch(`/api/super/leads/${seleccionado.id}`, { method: 'DELETE', headers: sh() })
+              setLeads(prev => prev.filter(l => l.id !== seleccionado.id))
+              setSeleccionado(null)
+              setExpandido(null)
+            }}
+          />
+        </div>
+      )}
+
       {modalNuevo && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setModalNuevo(false)}>
           <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
@@ -1221,27 +1326,22 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               {([
                 ['restaurante', 'Empresa / Grupo *'],
                 ['nombre', 'Primer contacto (nombre)'],
-                ['telefono', 'Teléfono'],
+                ['telefono', 'Telefono'],
                 ['email', 'Email'],
-                ['locales', 'Nº locales (ej: 6 locales)'],
-                ['tpv', 'TPV actual (ej: Ágora)'],
-                
+                ['locales', 'N locales'],
+                ['tpv', 'TPV actual'],
                 ['notas', 'Notas'],
               ] as [keyof typeof form, string][]).map(([k, label]) => (
                 <div key={k}>
                   <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginBottom: 4 }}>{label}</div>
-                  <input
-                    value={form[k]}
-                    onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))}
-                    style={{ width: '100%', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none', boxSizing: 'border-box' }}
-                  />
+                  <input value={form[k]} onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))} style={{ width: '100%', background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none', boxSizing: 'border-box' }} />
                 </div>
               ))}
             </div>
             <div style={{ display: 'flex', gap: 10, marginTop: 20, justifyContent: 'flex-end' }}>
               <button onClick={() => setModalNuevo(false)} style={{ background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 8, padding: '9px 18px', color: C.ink3, fontFamily: SM, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
               <button onClick={crearLeadPersonal} disabled={saving || !form.nombre || !form.restaurante} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '9px 18px', fontFamily: SM, fontWeight: 600, fontSize: 13, cursor: 'pointer', opacity: (saving || !form.nombre || !form.restaurante) ? .5 : 1 }}>
-                {saving ? 'Guardando…' : 'Crear lead'}
+                {saving ? 'Guardando...' : 'Crear empresa'}
               </button>
             </div>
           </div>
