@@ -2,6 +2,11 @@
 import { useEffect } from "react"
 
 export default function EventosCateringPage() {
+  // Tracking visita
+  useEffect(() => {
+    fetch('/api/propuesta/eventos-catering/booking', { method: 'PATCH' }).catch(() => {})
+  }, [])
+
   useEffect(() => {
     // Scroll animations
     const io = new IntersectionObserver(

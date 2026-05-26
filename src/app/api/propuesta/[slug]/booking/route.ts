@@ -26,6 +26,8 @@ export async function POST(
     'catering-jj-haciendas': 'Catering Joaquín Jaén',
     'catering-jj-restauracion': 'Catering Joaquín Jaén',
     'catering-jj-catering': 'Catering Joaquín Jaén',
+    'eventos-catering': 'Eventos & Catering',
+    'bombonera-group': 'Bombonera Group',
   }
   let lead: { id: string; empresa: string | null; restaurante: string | null; nombre: string | null; email: string | null; eventos: unknown[] } | null = null
 
@@ -128,12 +130,37 @@ export async function PATCH(
   const { slug } = await params
   const supabase = createServerClient()
 
-  // Buscar lead por slug
-  const { data: lead } = await supabase
+  const staticSlugsMap: Record<string, string> = {
+    'ovejas-negras': 'Ovejas Negras',
+    'sloppy-joes': "Sloppy Joe's",
+    'catering-jj': 'Catering Joaquín Jaén',
+    'catering-jj-haciendas': 'Catering Joaquín Jaén',
+    'catering-jj-restauracion': 'Catering Joaquín Jaén',
+    'catering-jj-catering': 'Catering Joaquín Jaén',
+    'eventos-catering': 'Eventos & Catering',
+    'bombonera-group': 'Bombonera Group',
+  }
+
+  // Buscar lead por slug (directo o fallback por empresa)
+  let lead: { id: string; empresa: string | null; restaurante: string | null; nombre: string | null; propuesta_vista_at: string | null } | null = null
+  const { data: bySlugP } = await supabase
     .from('leads')
     .select('id, empresa, restaurante, nombre, propuesta_vista_at')
     .eq('propuesta_slug', slug)
     .maybeSingle()
+  if (bySlugP) {
+    lead = bySlugP
+  } else if (staticSlugsMap[slug]) {
+    const { data: byNameP } = await supabase
+      .from('leads')
+      .select('id, empresa, restaurante, nombre, propuesta_vista_at')
+      .ilike('empresa', `%${staticSlugsMap[slug].split(' ')[0]}%`)
+      .maybeSingle()
+    if (byNameP) {
+      await supabase.from('leads').update({ propuesta_slug: slug }).eq('id', byNameP.id)
+      lead = byNameP
+    }
+  }
 
   const esPrimeraVisita = lead && !lead.propuesta_vista_at
 
