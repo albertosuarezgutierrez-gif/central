@@ -83,7 +83,24 @@ export async function POST(req: NextRequest) {
   // PIN correcto → limpiar rate limit en memoria
   ATTEMPTS.delete(ip)
 
-  const cam = data[0]
+  // Leer datos completos del camarero (la RPC solo devuelve campos básicos)
+  const rpcResult = data[0]
+  const { data: personalData } = await supabase
+    .from('personal')
+    .select('id, nombre, rol, restaurante_id, seccion_id, puede_comandar, modulos_gestion')
+    .eq('id', rpcResult.camarero_id)
+    .single()
+
+  const cam = {
+    camarero_id:     rpcResult.camarero_id,
+    nombre:          personalData?.nombre ?? rpcResult.nombre,
+    rol:             personalData?.rol ?? rpcResult.rol,
+    restaurante_id:  personalData?.restaurante_id ?? restaurante_id,
+    restaurante_nombre: restaurante_nombre,
+    seccion_id:      personalData?.seccion_id ?? null,
+    puede_comandar:  personalData?.puede_comandar ?? false,
+    modulos_gestion: personalData?.modulos_gestion ?? [],
+  }
 
   // Leer onboarding_completado para owners nuevos
   let onboarding_completado: boolean | null = null
