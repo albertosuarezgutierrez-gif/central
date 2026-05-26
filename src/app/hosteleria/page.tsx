@@ -117,11 +117,7 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .nav-links a:hover{color:var(--ink)}
 .nav-cta{background:var(--red)!important;color:var(--ink)!important;padding:8px 20px;border-radius:5px;font-weight:600!important}
 .hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:100px 48px 80px;text-align:center;position:relative;overflow:hidden}
-.hero-glow{position:absolute;top:-10%;left:50%;transform:translateX(-50%);width:900px;height:600px;background:radial-gradient(ellipse at center,rgba(217,68,43,0.18) 0%,rgba(217,68,43,0.04) 45%,transparent 70%);pointer-events:none}
-.hero-noise{position:absolute;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");pointer-events:none;opacity:.4}
-.social-proof{display:inline-flex;align-items:center;gap:10px;background:rgba(246,241,231,.04);border:1px solid var(--border2);border-radius:100px;padding:8px 18px;font-size:12px;color:var(--ink3);margin-bottom:28px;letter-spacing:-.1px}
-.social-proof .dot{width:6px;height:6px;border-radius:50%;background:var(--green);flex-shrink:0}
-.social-proof strong{color:var(--ink2)}
+.hero-glow{position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(217,68,43,0.13) 0%,transparent 60%);pointer-events:none}
 .eyebrow{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:36px;display:flex;align-items:center;gap:12px;justify-content:center}
 .eyebrow::before,.eyebrow::after{content:'';width:28px;height:1px;background:var(--red);opacity:.5}
 h1{font-family:'Newsreader',serif;font-size:clamp(50px,8vw,104px);font-weight:200;line-height:1.02;letter-spacing:-3px;color:var(--ink);max-width:900px}
@@ -144,26 +140,13 @@ section{padding:100px 48px}
 h2{font-family:'Newsreader',serif;font-size:clamp(34px,5vw,62px);font-weight:200;letter-spacing:-2px;color:var(--ink);line-height:1.05}
 h2 i{font-style:italic;color:var(--red)}
 .cap{background:var(--bg2)}
-.bento{display:grid;grid-template-columns:repeat(12,1fr);grid-template-rows:auto;gap:2px;margin-top:52px;background:var(--border);border:1px solid var(--border);border-radius:14px;overflow:hidden}
-.bi{background:var(--bg2);padding:32px 26px;transition:background .2s;position:relative;overflow:hidden}
-.bi:hover{background:var(--bg3)}
-.bi.span2{grid-column:span 4}
-.bi.span3{grid-column:span 6}
-.bi.span4{grid-column:span 4}
-.bi.big{grid-column:span 6;padding:40px 36px}
-.bi.wide{grid-column:span 12;display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:40px}
-.bi-num{font-family:'Newsreader',serif;font-size:12px;color:var(--red);font-weight:300;letter-spacing:.05em;margin-bottom:16px;display:block}
-.bi-title{font-size:15px;font-weight:600;color:var(--ink);letter-spacing:-.1px;margin-bottom:6px}
-.bi-sub{font-size:12px;color:var(--ink3);line-height:1.55}
-.bi-big-num{font-family:'Newsreader',serif;font-size:72px;font-weight:200;color:var(--ink);line-height:1;letter-spacing:-3px;margin-bottom:8px}
-.bi-big-num b{color:var(--red);font-weight:200}
-.bi-corner{position:absolute;bottom:16px;right:20px;font-size:32px;opacity:.12}
-/* separadores sección */
-.sec-divider{display:flex;align-items:center;gap:20px;padding:0 48px;margin:0;border-top:1px solid var(--border)}
-.sec-divider-num{font-family:'JetBrains Mono',monospace;font-size:10px;color:var(--ink3);letter-spacing:.12em;padding:14px 0;white-space:nowrap}
-.sec-divider-line{flex:1;height:0}
-/* tipos negocio mejorado */
-.neg-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;margin-top:52px;border:1px solid var(--border);border-radius:14px;overflow:hidden;background:var(--border)}
+.cap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--border);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:52px}
+.cap-item{background:var(--bg2);padding:30px 22px;transition:background .2s}
+.cap-item:hover{background:var(--bg3)}
+.cap-num{display:block;font-family:'Newsreader',serif;font-size:12px;color:var(--red);font-weight:300;letter-spacing:.05em;margin-bottom:14px}
+.cap-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.1px;margin-bottom:6px}
+.cap-sub{font-size:12px;color:var(--ink3);line-height:1.55}
+.voz{background:var(--bg)}
 .voz-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center}
 .terminal{background:#0C0A08;border:1px solid var(--border2);border-radius:12px;overflow:hidden}
 .t-bar{padding:13px 16px;background:#111009;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center}
@@ -242,16 +225,15 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 .mob-menu .mob-cta{margin-top:28px;border:none;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:700;color:var(--ink);background:var(--red);padding:16px 24px;border-radius:8px;text-align:center}
 @media(max-width:900px){
   nav{padding:0 20px}.nav-links{display:none!important}.burger{display:flex!important}
-  section{padding:72px 20px}.sec-divider{padding:0 20px}
+  section{padding:72px 20px}
   .voz-grid,.healer-grid,.form-grid{grid-template-columns:1fr;gap:48px}
-  .neg-grid{grid-template-columns:1fr 1fr}
-  .bento{grid-template-columns:1fr 1fr}.bi.big,.bi.wide,.bi.span2,.bi.span3,.bi.span4{grid-column:span 1}.bi.wide{display:block}.bi-big-num{font-size:52px}
+  .neg-grid,.cap-grid{grid-template-columns:1fr 1fr}
   .strip{flex-wrap:wrap}.strip-item{min-width:50%}
   .field-row{grid-template-columns:1fr}
   .form-top,.form-body,.form-foot{padding-left:22px;padding-right:22px}
   footer{flex-direction:column;text-align:center}
 }
-@media(max-width:500px){h1{letter-spacing:-2px}.neg-grid,.bento{grid-template-columns:1fr}}
+@media(max-width:500px){h1{letter-spacing:-2px}.neg-grid,.cap-grid{grid-template-columns:1fr}}
       `}} />
       <div dangerouslySetInnerHTML={{ __html: `
 
@@ -278,8 +260,6 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 <!-- HERO -->
 <section class="hero">
   <div class="hero-glow"></div>
-  <div class="hero-noise"></div>
-  <div class="social-proof fi"><span class="dot"></span>En producción · Sevilla · <strong>Ovejas Negras, Catering JJ y más</strong></div>
   <div class="eyebrow fi">Software TPV · Hostelería española · Sin comisión</div>
   <h1 class="fi d1">Si sirves,<br><i>ia.rest lo gestiona.</i></h1>
   <p class="hero-sub fi d2">Bar, restaurante, chiringuito, feria, food truck. Comandas por voz, sin papel, sin comisión.</p>
@@ -308,8 +288,6 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     <span class="strip-lbl">Prueba gratis</span>
   </div>
 </div>
-
-<div class="sec-divider"><span class="sec-divider-num">01 — PARA QUIÉN ES</span></div>
 
 <!-- PARA QUIÉN -->
 <section class="negocios" id="negocios">
@@ -351,97 +329,55 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<div class="sec-divider"><span class="sec-divider-num">02 — EL SISTEMA</span></div>
-
 <!-- CAPACIDADES -->
 <section class="cap" id="sistema">
   <div class="w">
     <div class="s-label fi">El sistema</div>
     <h2 class="fi">Todo lo que necesitas.<br><i>Nada que no uses.</i></h2>
-    <div class="bento fi d1">
-
-      <!-- Bloque grande: Voz -->
-      <div class="bi big">
-        <span class="bi-num">01</span>
-        <div class="bi-big-num">🎙<b>Voz</b></div>
-        <div class="bi-title">Comandas por voz</div>
-        <div class="bi-sub">Sin tocar ninguna pantalla. En español natural. Desde cualquier móvil.</div>
-        <div class="bi-corner">🎙</div>
+    <div class="cap-grid fi d1">
+      <div class="cap-item">
+        <span class="cap-num">01</span>
+        <div class="cap-title">Comandas por voz</div>
+        <div class="cap-sub">Sin tocar pantalla</div>
       </div>
-
-      <!-- Bloque grande: KDS -->
-      <div class="bi big">
-        <span class="bi-num">02</span>
-        <div class="bi-big-num">KDS</div>
-        <div class="bi-title">Cocina sin papel</div>
-        <div class="bi-sub">La comanda llega al instante. La cocina confirma. El camarero recibe el aviso.</div>
-        <div class="bi-corner">📟</div>
+      <div class="cap-item">
+        <span class="cap-num">02</span>
+        <div class="cap-title">KDS en cocina</div>
+        <div class="cap-sub">Sin papel</div>
       </div>
-
-      <!-- 4 bloques medianos -->
-      <div class="bi span2">
-        <span class="bi-num">03</span>
-        <div class="bi-title">VeriFactu</div>
-        <div class="bi-sub">Facturación legal con QR de la AEAT. Obligatorio 2026. Incluido.</div>
-        <div class="bi-corner">🧾</div>
+      <div class="cap-item">
+        <span class="cap-num">03</span>
+        <div class="cap-title">VeriFactu</div>
+        <div class="cap-sub">Obligatorio 2026</div>
       </div>
-      <div class="bi span2">
-        <span class="bi-num">04</span>
-        <div class="bi-title">Almacén</div>
-        <div class="bi-sub">Stock en tiempo real. Pedidos a proveedor automáticos.</div>
-        <div class="bi-corner">📦</div>
+      <div class="cap-item">
+        <span class="cap-num">04</span>
+        <div class="cap-title">Almacén</div>
+        <div class="cap-sub">Stock en tiempo real</div>
       </div>
-      <div class="bi span2">
-        <span class="bi-num">05</span>
-        <div class="bi-title">QR en mesa</div>
-        <div class="bi-sub">El cliente escanea y pide solo. Sin camarero, sin esperas.</div>
-        <div class="bi-corner">📱</div>
+      <div class="cap-item">
+        <span class="cap-num">05</span>
+        <div class="cap-title">QR en mesa</div>
+        <div class="cap-sub">El cliente pide solo</div>
       </div>
-
-      <!-- Bloque ancho: stats offline/feria -->
-      <div class="bi wide">
-        <div>
-          <span class="bi-num">06 — Chiringuito · Feria · Food truck</span>
-          <div class="bi-title" style="font-size:18px;margin-bottom:8px">Funciona donde otros no llegan.</div>
-          <div class="bi-sub">Modo offline para conexiones inestables. Sin hardware fijo. Setup en menos de 1 hora.</div>
-        </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-          <div style="background:rgba(246,241,231,.04);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center">
-            <div style="font-family:'Newsreader',serif;font-size:38px;font-weight:200;color:var(--red);line-height:1">0</div>
-            <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Hardware necesario</div>
-          </div>
-          <div style="background:rgba(246,241,231,.04);border:1px solid var(--border);border-radius:8px;padding:16px;text-align:center">
-            <div style="font-family:'Newsreader',serif;font-size:38px;font-weight:200;color:var(--green);line-height:1">1h</div>
-            <div style="font-size:10px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em;margin-top:4px">Setup completo</div>
-          </div>
-        </div>
+      <div class="cap-item">
+        <span class="cap-num">06</span>
+        <div class="cap-title">Cierre de caja</div>
+        <div class="cap-sub">Automático</div>
       </div>
-
-      <!-- Últimos bloques -->
-      <div class="bi span2">
-        <span class="bi-num">07</span>
-        <div class="bi-title">Cierre de caja</div>
-        <div class="bi-sub">Automático al final del turno. Con desglose por método de pago.</div>
-        <div class="bi-corner">💰</div>
+      <div class="cap-item">
+        <span class="cap-num">07</span>
+        <div class="cap-title">Multi-local</div>
+        <div class="cap-sub">Un solo panel</div>
       </div>
-      <div class="bi span2">
-        <span class="bi-num">08</span>
-        <div class="bi-title">Multi-local</div>
-        <div class="bi-sub">Un solo panel para todos tus locales. Mismo almacén, mismo equipo.</div>
-        <div class="bi-corner">🏢</div>
+      <div class="cap-item">
+        <span class="cap-num">08</span>
+        <div class="cap-title">Modo offline</div>
+        <div class="cap-sub">Para feria y chiringuito</div>
       </div>
-      <div class="bi span2">
-        <span class="bi-num">09</span>
-        <div class="bi-title">Sin comisión</div>
-        <div class="bi-sub">59€/mes fijo. Sin % por cada venta. Sin sorpresas en la factura.</div>
-        <div class="bi-corner">✓</div>
-      </div>
-
     </div>
   </div>
 </section>
-
-<div class="sec-divider"><span class="sec-divider-num">03 — VOZ</span></div>
 
 <!-- VOZ -->
 <section class="voz">
@@ -472,7 +408,23 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<div class="sec-divider"><span class="sec-divider-num">04 — CONTACTO</span></div>
+<!-- FERIA/CHIRINGUITO -->
+<section class="healer">
+  <div class="w">
+    <div class="healer-grid">
+      <div class="fi">
+        <div class="s-label">Chiringuito · Feria · Food truck</div>
+        <h2>Funciona donde<br><i>otros no llegan.</i></h2>
+      </div>
+      <div class="stats-grid fi d1">
+        <div class="stat"><span class="stat-val r">0</span><div class="stat-lbl">Hardware obligatorio</div></div>
+        <div class="stat"><span class="stat-val g">1<span style="font-size:18px">h</span></span><div class="stat-lbl">Setup completo</div></div>
+        <div class="stat"><span class="stat-val a">✓</span><div class="stat-lbl">Modo offline</div></div>
+        <div class="stat"><span class="stat-val">✓</span><div class="stat-lbl">VeriFactu incluido</div></div>
+      </div>
+    </div>
+  </div>
+</section>
 
 <!-- FORM -->
 <section class="form-section" id="contacto">
