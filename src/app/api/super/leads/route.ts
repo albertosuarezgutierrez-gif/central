@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServerClient()
   const { data, error } = await supabase
     .from('leads')
-    .select('*')
+    .select('*, leads_contactos(id, nombre, cargo, telefono, email, es_decisor, canal_preferido)')
     .order('created_at', { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ leads: data })

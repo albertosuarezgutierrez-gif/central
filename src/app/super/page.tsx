@@ -998,6 +998,7 @@ interface Lead {
   puntuacion?: number | null
   ultima_actividad_at?: string | null
   siguiente_contacto_texto?: string | null; siguiente_contacto_at?: string | null
+  leads_contactos?: { id: string; nombre: string; cargo: string | null; telefono: string | null; email: string | null; es_decisor: boolean; canal_preferido: string }[]
 }
 
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
@@ -1064,6 +1065,11 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
 
   const CardLead = ({ lead }: { lead: Lead }) => {
     const activo = seleccionado?.id === lead.id
+    // Contacto principal: decisor si existe, o primero, o fallback a campos legacy
+    const contactoPrincipal = lead.leads_contactos?.find(c => c.es_decisor)
+      ?? lead.leads_contactos?.[0]
+    const nombreContacto = contactoPrincipal?.nombre ?? lead.nombre ?? lead.contacto
+    const telContacto = contactoPrincipal?.telefono ?? lead.telefono
     return (
       <div
         onClick={() => setSeleccionado(activo ? null : lead)}
@@ -1082,6 +1088,15 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
           <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 2 }}>
             {lead.restaurante || lead.nombre}
           </div>
+          {/* Contacto principal */}
+          {nombreContacto && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+              <span style={{ fontSize: 11, color: C.ink3, fontFamily: SM }}>👤 {nombreContacto}{contactoPrincipal?.cargo ? ` · ${contactoPrincipal.cargo}` : ''}</span>
+              {telContacto && (
+                <a href={`https://wa.me/${telContacto.replace(/\D/g, '')}`} target="_blank" onClick={e => e.stopPropagation()} style={{ fontSize: 11, color: C.green, textDecoration: 'none' }}>💬</a>
+              )}
+            </div>
+          )}
           {/* Subtítulo: ciudad / TPV */}
           <div style={{ fontSize: 11, color: C.ink4, marginBottom: 6 }}>
             {[lead.tpv, lead.locales].filter(Boolean).join(' · ') || lead.ciudad || '—'}
@@ -1190,8 +1205,19 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                     <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 3, lineHeight: 1.2 }}>
                       {lead.restaurante || lead.nombre}
                     </div>
+                    {(() => {
+                      const cp = lead.leads_contactos?.find(c => c.es_decisor) ?? lead.leads_contactos?.[0]
+                      const nombre = cp?.nombre ?? lead.nombre ?? lead.contacto
+                      const tel = cp?.telefono ?? lead.telefono
+                      return nombre ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 4 }}>
+                          <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>👤 {nombre}</span>
+                          {tel && <a href={`https://wa.me/${tel.replace(/\D/g,'')}`} target="_blank" onClick={e=>e.stopPropagation()} style={{ fontSize: 10, color: C.green, textDecoration: 'none' }}>💬</a>}
+                        </div>
+                      ) : null
+                    })()}
                     {lead.tpv && (
-                      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4 }}>
+                      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginBottom: 4 }}>
                         {lead.tpv}
                       </div>
                     )}
