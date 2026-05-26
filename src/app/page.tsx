@@ -349,6 +349,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 .mob-menu .mob-cta{margin-top:28px;border:none;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:700;color:var(--ink);background:var(--red);padding:16px 24px;border-radius:8px;text-align:center;letter-spacing:0;font-size:16px}
 
 /* RESPONSIVE */
+.perfiles-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--border)}
 @media(max-width:900px){
   nav{padding:0 20px}
   .nav-links{display:none!important}
@@ -361,6 +362,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   .field-row{grid-template-columns:1fr}
   .form-top,.form-body,.form-foot{padding-left:22px;padding-right:22px}
   footer{flex-direction:column;text-align:center}
+  .perfiles-grid{grid-template-columns:1fr}
 }
 @media(max-width:500px){
   h1{letter-spacing:-2px}
@@ -404,7 +406,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 
 <!-- PERFILES — las 3 tarjetas grandes clickables -->
 <section id="perfiles" style="background:var(--bg2);padding:0 0 0 0">
-  <div class="w" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--border)">
+  <div class="w perfiles-grid">
 
     <a href="/hosteleria" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
       <div style="font-size:32px;margin-bottom:20px">🍺</div>
