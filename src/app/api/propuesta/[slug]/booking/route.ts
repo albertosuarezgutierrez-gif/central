@@ -128,7 +128,7 @@ export async function PATCH(
   const { slug } = await params
   const supabase = createServerClient()
 
-  // Buscar lead para saber si es primera visita
+  // Buscar lead por slug
   const { data: lead } = await supabase
     .from('leads')
     .select('id, empresa, restaurante, nombre, propuesta_vista_at')
@@ -142,17 +142,15 @@ export async function PATCH(
       .from('leads')
       .update({ propuesta_vista_at: new Date().toISOString() })
       .eq('id', lead.id)
-      .is('propuesta_vista_at', null) // Solo actualiza si es primera visita
   }
 
-  // Telegram solo en primera visita
-  if (esPrimeraVisita) {
-    const empresa = lead.empresa || lead.restaurante || lead.nombre || slug
-    await tgAlert(
-      `👁 Propuesta abierta por primera vez\n\n<b>${empresa}</b>\n🔗 /propuesta/${slug}\n\n<a href="https://www.iarest.es/super">Ver en CRM →</a>`,
-      'info'
-    )
-  }
+  // Telegram en cada visita
+  const empresa = lead ? (lead.empresa || lead.restaurante || lead.nombre || slug) : slug
+  const label = esPrimeraVisita ? '👁 Propuesta abierta por primera vez' : '👁 Propuesta visitada de nuevo'
+  await tgAlert(
+    `${label}\n\n<b>${empresa}</b>\n🔗 /propuesta/${slug}\n\n<a href="https://www.iarest.es/super">Ver en CRM →</a>`,
+    'info'
+  )
 
   return NextResponse.json({ ok: true })
 }
