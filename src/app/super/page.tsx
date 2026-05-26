@@ -1,3 +1,4 @@
+import { HelpChat } from '@/components/help/HelpChat'
 'use client'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useEffect, useCallback, useRef } from 'react'
@@ -392,6 +393,7 @@ export default function SuperPage() {
           <div className="super-header-name" style={{ fontFamily: SM, fontSize: 11, color: '#8D8270' }}>
             {session?.nombre}
           </div>
+          <HelpChat />
           <button
             onClick={() => { localStorage.removeItem('ia_rest_session'); window.location.href = '/login' }}
             style={{
