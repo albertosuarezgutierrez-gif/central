@@ -174,16 +174,17 @@ export async function checkBD(sb: ReturnType<typeof createServerClient>): Promis
       checks.push({ categoria:'BD', nombre:`tabla:${tabla}`, estado:'fallo', severidad:'critico', detalle: e?.message })
     }
   }))
-  // RPC
+  // RPC — si existe pero falla con datos de prueba, eso es OK
   try {
     const t = Date.now()
     const { error } = await sb.rpc('validate_pin_with_rate_limit', {
       p_restaurante_id:'00000000-0000-0000-0000-000000000000', p_pin:'0000', p_ip_address:'127.0.0.1' })
     const ms = Date.now() - t
-    const ok = !error || error.code !== 'PGRST202'
+    // PGRST202 = función no encontrada. Cualquier otro error = función existe pero datos inválidos = OK
+    const noExiste = error?.code === 'PGRST202' || error?.code === '42883'
     checks.push({ categoria:'BD', nombre:'rpc:validate_pin_with_rate_limit',
-      estado: ok ? 'ok' : 'fallo', severidad: ok ? 'info' : 'critico',
-      detalle: ok ? `RPC accesible (${ms}ms)` : 'RPC no encontrada', ms_respuesta: ms })
+      estado: noExiste ? 'fallo' : 'ok', severidad: noExiste ? 'critico' : 'info',
+      detalle: noExiste ? 'RPC no encontrada en BD' : `RPC accesible (${ms}ms)`, ms_respuesta: ms })
   } catch (e: any) {
     checks.push({ categoria:'BD', nombre:'rpc:validate_pin_with_rate_limit', estado:'fallo', severidad:'critico', detalle: e?.message })
   }
@@ -219,7 +220,9 @@ export async function checkNegocio(sb: ReturnType<typeof createServerClient>): P
   })
 
   await safe('Comandas con estado inválido', async () => {
-    const { data } = await sb.from('comandas').select('id').not('estado','in','("nueva","en_curso","lista","cerrada")')
+    const { data } = await sb.from('comandas').select('id')
+      .not('estado','in','("nueva","en_curso","lista","cerrada")')
+      .not('estado','is','null')
     const n = data?.length ?? 0
     return { categoria:'NEGOCIO', nombre:'Comandas con estado inválido',
       estado: n===0 ? 'ok' : 'fallo', severidad: n===0 ? 'info' : 'critico',
@@ -405,53 +408,130 @@ Warnings: ${warnings.slice(0,5).map(c=>`${c.categoria}:${c.nombre}`).join('; ') 
   } catch { return undefined }
 }
 
+// ─── Nombres legibles para Telegram ──────────────────────────────────────────
+const NOMBRE_LEGIBLE: Record<string, string> = {
+  'GOOGLE_DRIVE_REFRESH_TOKEN':       'Google Drive sin configurar',
+  'CLOUDINARY_API_KEY':               'Cloudinary sin configurar',
+  'CLOUDINARY_CLOUD_NAME':            'Cloudinary sin configurar',
+  'VAPID_PRIVATE_KEY':                'Push notifications sin configurar',
+  'NEXT_PUBLIC_VAPID_PUBLIC_KEY':     'Push notifications sin configurar',
+  'GH_PAT':                           'GitHub PAT sin configurar',
+  'STRIPE_MODE':                      'Stripe en modo TEST (no producción)',
+  'STRIPE_CLIENT_ID (pendiente)':     'Pagos QR pendientes de configurar',
+  'AZURE_SPEECH_KEY (pendiente)':     'Perfiles de voz pendientes',
+  'STRIPE_WEBHOOK_SECRET_QR (pendiente)':         'Webhook QR pendiente',
+  'STRIPE_WEBHOOK_SECRET_STOREFRONT (pendiente)': 'Webhook storefront pendiente',
+  'rpc:validate_pin_with_rate_limit': 'RPC de validación de PIN',
+  'Print jobs atascados > 10min':     'Impresora/bridge sin responder',
+  'Turnos abiertos > 16h':            'Turno sin cerrar',
+  'Comandas con estado inválido':     'Comandas con datos incorrectos',
+  'Stock negativo':                   'Artículos con stock negativo',
+  'Productos activos con precio=0':   'Productos gratis sin querer',
+  'VeriFactu — integridad numeración':'Posible factura borrada',
+  'Eventos próximos < 48h':           'Evento inminente — revisar checklist',
+}
+
+const CAT_LEGIBLE: Record<string, string> = {
+  ENV: 'Configuración', BD: 'Base de datos', NEGOCIO: 'Operaciones',
+  APIs: 'Servicios', CRONS: 'Tareas automáticas', PERF: 'Rendimiento',
+  'DEMO 🗓️': 'Demo pre-reunión',
+}
+
+function nombreLegible(c: QACheck): string {
+  return NOMBRE_LEGIBLE[c.nombre] ?? c.nombre
+}
+
 // ─── Formato Telegram ─────────────────────────────────────────────────────────
 export function formatTelegram(trigger: string, checks: QACheck[], score: number, duracionMs: number, informeIA?: string): string {
-  const criticos    = checks.filter(c=>c.estado==='fallo'&&c.severidad==='critico')
-  const warnings    = checks.filter(c=>c.estado==='warning'||(c.estado==='fallo'&&c.severidad==='degradado'))
-  const regresiones = checks.filter(c=>c.es_regresion)
-  const autoFixes   = checks.filter(c=>c.fue_auto_fixed)
-  const oks         = checks.filter(c=>c.estado==='ok')
-  const emoji = criticos.length>0 ? '🔴' : warnings.length>0 ? '🟡' : '✅'
-  const fecha = new Date().toLocaleString('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})
-  const scoreColor = score>=90?'🟢':score>=70?'🟡':'🔴'
+  const criticos    = checks.filter(c => c.estado === 'fallo' && c.severidad === 'critico')
+  const warnings    = checks.filter(c => c.estado === 'warning' || (c.estado === 'fallo' && c.severidad === 'degradado'))
+  const regresiones = checks.filter(c => c.es_regresion)
+  const autoFixes   = checks.filter(c => c.fue_auto_fixed)
+  const oks         = checks.filter(c => c.estado === 'ok')
 
-  let msg = `${emoji} <b>QA Agent — ${trigger.toUpperCase()}</b>\n`
-  msg += `📅 ${fecha} · ⏱ ${(duracionMs/1000).toFixed(1)}s · ${scoreColor} Score <b>${score}/100</b>\n\n`
-  msg += `✅ ${oks.length} OK · ⚠️ ${warnings.length} warn · 🔴 ${criticos.length} críticos`
-  if (regresiones.length>0) msg += ` · 🆕 ${regresiones.length} regresiones`
-  if (autoFixes.length>0)   msg += ` · 🔧 ${autoFixes.length} auto-fix`
+  const triggerLabel: Record<string, string> = {
+    manual: 'Manual', post_deploy: 'Post-deploy', diario: 'Revisión diaria', semanal: 'Revisión semanal'
+  }
+  const scoreEmoji  = score >= 90 ? '🟢' : score >= 70 ? '🟡' : '🔴'
+  const estadoLabel = score >= 90 ? 'Todo OK' : score >= 70 ? 'Atención requerida' : 'Problemas detectados'
+  const hora = new Date().toLocaleString('es-ES', { timeZone:'Europe/Madrid', hour:'2-digit', minute:'2-digit' })
+
+  let msg = `${scoreEmoji} <b>ia.rest — ${estadoLabel}</b>\n`
+  msg += `${triggerLabel[trigger] ?? trigger} · ${hora} · ${(duracionMs/1000).toFixed(0)}s\n`
+  msg += `\n`
+
+  // Score visual
+  const barLen = 10
+  const filled = Math.round((score / 100) * barLen)
+  const bar = '█'.repeat(filled) + '░'.repeat(barLen - filled)
+  msg += `${bar} <b>${score}/100</b>\n`
+  msg += `✅ ${oks.length} correctos`
+  if (warnings.length)    msg += `  ⚠️ ${warnings.length} avisos`
+  if (criticos.length)    msg += `  🔴 ${criticos.length} problemas`
+  if (regresiones.length) msg += `  🆕 ${regresiones.length} nuevos`
+  if (autoFixes.length)   msg += `  🔧 ${autoFixes.length} corregidos`
   msg += '\n'
 
-  if (regresiones.length>0) {
-    msg += `\n<b>🆕 REGRESIONES (nuevos fallos):</b>\n`
-    regresiones.slice(0,3).forEach(c=>{ msg += `• [${c.categoria}] ${c.nombre}\n` })
-  }
-
-  if (criticos.length>0) {
-    msg += `\n<b>🔴 CRÍTICOS:</b>\n`
-    criticos.slice(0,4).forEach(c=>{
-      msg += `• [${c.categoria}] ${c.nombre}\n`
-      if (c.fix_sugerido) msg += `  💡 <i>${c.fix_sugerido.slice(0,70)}</i>\n`
+  // Problemas críticos (nuevos primero)
+  if (criticos.length > 0) {
+    msg += `\n<b>Problemas a resolver:</b>\n`
+    // Regresiones primero
+    const reg = criticos.filter(c => c.es_regresion)
+    const rest = criticos.filter(c => !c.es_regresion)
+    ;[...reg, ...rest].slice(0, 5).forEach(c => {
+      const cat = CAT_LEGIBLE[c.categoria] ?? c.categoria
+      const nombre = nombreLegible(c)
+      msg += `🔴 ${nombre}\n`
+      msg += `   <i>${cat}</i>\n`
     })
-    if (criticos.length>4) msg += `  … y ${criticos.length-4} más\n`
+    if (criticos.length > 5) msg += `   … y ${criticos.length - 5} más\n`
   }
 
-  if (warnings.length>0 && warnings.length<=5) {
-    msg += `\n<b>⚠️ Warnings:</b>\n`
-    warnings.forEach(c=>{ msg += `• [${c.categoria}] ${c.nombre}\n` })
-  } else if (warnings.length>5) {
-    msg += `\n⚠️ ${warnings.length} warnings (ver detalle en /super)\n`
+  // Nuevas regresiones en warnings
+  if (regresiones.filter(c => c.severidad !== 'critico').length > 0) {
+    msg += `\n<b>Nuevos desde el último run:</b>\n`
+    regresiones.filter(c => c.severidad !== 'critico').slice(0, 3).forEach(c => {
+      msg += `🆕 ${nombreLegible(c)}\n`
+    })
   }
 
-  if (autoFixes.length>0) {
-    msg += `\n<b>🔧 Auto-fix aplicados:</b>\n`
-    autoFixes.forEach(c=>{ msg += `• ${c.nombre}\n` })
+  // Avisos (solo los importantes, sin repetir pendientes conocidos)
+  const warningsImportantes = warnings.filter(c =>
+    !['STRIPE_CLIENT_ID (pendiente)', 'AZURE_SPEECH_KEY (pendiente)',
+      'STRIPE_WEBHOOK_SECRET_QR (pendiente)', 'STRIPE_WEBHOOK_SECRET_STOREFRONT (pendiente)',
+      'GOOGLE_DRIVE_REFRESH_TOKEN', 'CLOUDINARY_API_KEY', 'CLOUDINARY_CLOUD_NAME',
+      'VAPID_PRIVATE_KEY', 'NEXT_PUBLIC_VAPID_PUBLIC_KEY', 'GH_PAT'].includes(c.nombre)
+  )
+  const pendientes = warnings.filter(c =>
+    ['STRIPE_CLIENT_ID (pendiente)', 'AZURE_SPEECH_KEY (pendiente)',
+      'STRIPE_WEBHOOK_SECRET_QR (pendiente)', 'STRIPE_WEBHOOK_SECRET_STOREFRONT (pendiente)'].includes(c.nombre)
+  )
+
+  if (warningsImportantes.length > 0) {
+    msg += `\n<b>Avisos:</b>\n`
+    warningsImportantes.slice(0, 3).forEach(c => {
+      msg += `⚠️ ${nombreLegible(c)}\n`
+    })
+    if (warningsImportantes.length > 3) msg += `   … y ${warningsImportantes.length - 3} más\n`
   }
 
-  if (informeIA) msg += `\n<i>${informeIA}</i>\n`
+  if (pendientes.length > 0) {
+    msg += `\n<i>Pendientes conocidos: ${pendientes.map(c => nombreLegible(c)).join(', ')}</i>\n`
+  }
 
-  msg += `\n🔍 <a href="https://www.iarest.es/super">Ver detalle en /super → QA Agent</a>`
+  // Auto-fixes
+  if (autoFixes.length > 0) {
+    msg += `\n<b>Corregido automáticamente:</b>\n`
+    autoFixes.forEach(c => { msg += `🔧 ${nombreLegible(c)}\n` })
+  }
+
+  // Informe NIM (semanal)
+  if (informeIA) {
+    msg += `\n─────────────────\n`
+    msg += `<i>${informeIA}</i>\n`
+  }
+
+  msg += `\n<a href="https://www.iarest.es/super">Ver detalle completo →</a>`
   return msg
 }
 
