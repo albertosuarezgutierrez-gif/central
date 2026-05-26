@@ -10,6 +10,7 @@ import AgentesIATab from '@/components/AgentesIATab'
 import InstagramTab from '@/components/InstagramTab'
 import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 import IaTrainingPanel from '@/components/super/IaTrainingPanel'
+import CRMAgentTab from '@/components/super/CRMAgentTab'
 
 
 interface Restaurante {
@@ -108,7 +109,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'agente_crm'>('restaurantes')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -394,6 +395,7 @@ export default function SuperPage() {
             { id: 'instagram',    label: '📸 Instagram', badge: badgeInstagram },
             { id: 'blog',         label: '📝 Blog' },
             { id: 'proveedores',  label: '🔌 Proveedores' },
+            { id: 'agente_crm',   label: '🤖 Agente CRM' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -461,6 +463,10 @@ export default function SuperPage() {
         ) : tabSuper === 'proveedores' ? (
           <div style={{ padding: '24px 0' }}>
             <ProveedoresTechTab />
+          </div>
+        ) : tabSuper === 'agente_crm' ? (
+          <div style={{ padding: '24px 0' }}>
+            <CRMAgentTab />
           </div>
         ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>
