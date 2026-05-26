@@ -12,6 +12,7 @@ import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 import IaTrainingPanel from '@/components/super/IaTrainingPanel'
 import CRMAgentTab from '@/components/super/CRMAgentTab'
 import CRMEmpresaDetalle from '@/components/super/CRMEmpresaDetalle'
+import QAAgentTab from '@/components/super/QAAgentTab'
 
 
 interface Restaurante {
@@ -110,7 +111,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('clientes')
+  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'>('clientes')
   const [tabCRM, setTabCRM] = useState<'leads'|'agente'>('leads')
   const [showSistemaMenu, setShowSistemaMenu] = useState(false)
   const sistemaRef = useRef<HTMLDivElement>(null)
@@ -447,8 +448,8 @@ export default function SuperPage() {
               }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', height: '100%',
                 fontFamily: SM, fontSize: 11, letterSpacing: '.1em', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
-                color: ['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores'].includes(tabSuper) ? C.ink : C.ink3,
-                borderBottom: `2px solid ${['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores'].includes(tabSuper) ? C.red : 'transparent'}` }}>
+                color: ['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores','qa_agent'].includes(tabSuper) ? C.ink : C.ink3,
+                borderBottom: `2px solid ${['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores','qa_agent'].includes(tabSuper) ? C.red : 'transparent'}` }}>
               {'SISTEMA'}
               {(badgeSoporte + badgeInstagram) > 0
                 ? <span style={{ background: C.red, color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', fontFamily: SM }}>{badgeSoporte + badgeInstagram}</span>
@@ -465,6 +466,7 @@ export default function SuperPage() {
                   { id: 'instagram',   label: 'Instagram', badge: badgeInstagram },
                   { id: 'blog',        label: 'Blog' },
                   { id: 'proveedores', label: 'Proveedores' },
+                  { id: 'qa_agent',    label: 'QA Agent' },
                 ] as any[]).map((t: any) => (
                   <button key={t.id} onClick={() => { setTabSuper(t.id as any); setShowSistemaMenu(false) }}
                     style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
@@ -539,6 +541,11 @@ export default function SuperPage() {
         ) : tabSuper === 'proveedores' ? (
           <div style={{ padding: '24px 0' }}>
             <ProveedoresTechTab />
+          </div>
+
+        ) : tabSuper === 'qa_agent' ? (
+          <div style={{ padding: '24px 0' }}>
+            <QAAgentTab session={session} />
           </div>
 
         ) : tabSuper === 'clientes' ? (
