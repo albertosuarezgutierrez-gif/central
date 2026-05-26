@@ -61,6 +61,8 @@ export default function CRMEmpresaDetalle({
   const [nuevoContacto, setNuevoContacto] = useState({ nombre: '', cargo: '', email: '', telefono: '', es_decisor: false, canal_preferido: 'whatsapp', local_id: '' })
   const [showFormLocal, setShowFormLocal] = useState(false)
   const [showFormContacto, setShowFormContacto] = useState(false)
+  const [buscandoLocales, setBuscandoLocales] = useState(false)
+  const [resultadoBusqueda, setResultadoBusqueda] = useState<{ insertados: number; pendientes_manual: { nombre: string; ciudad: string | null; fuente: string }[] } | null>(null)
 
   const [textoAgente, setTextoAgente] = useState('')
   const [contactoAgente, setContactoAgente] = useState('')
@@ -110,6 +112,21 @@ export default function CRMEmpresaDetalle({
       body: JSON.stringify({ ...nuevoLocal, aforo: nuevoLocal.aforo ? parseInt(nuevoLocal.aforo) : null })
     })
     if (r.ok) { await fetchLocales(); setNuevoLocal({ nombre: '', ciudad: '', tipo: 'restaurante', aforo: '' }); setShowFormLocal(false) }
+  }
+
+  const handleBuscarLocales = async () => {
+    setBuscandoLocales(true)
+    setResultadoBusqueda(null)
+    try {
+      const r = await fetch(`/api/super/leads/${lead.id}/locales/buscar`, { method: 'POST', headers: sh() })
+      const d = await r.json()
+      if (r.ok) {
+        await fetchLocales()
+        setResultadoBusqueda({ insertados: d.insertados ?? 0, pendientes_manual: d.pendientes_manual ?? [] })
+      }
+    } finally {
+      setBuscandoLocales(false)
+    }
   }
 
   const handleDeleteLocal = async (localId: string) => {
@@ -308,11 +325,39 @@ export default function CRMEmpresaDetalle({
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
               <span style={{ color: C.ink3, fontSize: 11 }}>Establecimientos del grupo</span>
-              <button onClick={() => setShowFormLocal(!showFormLocal)}
-                style={{ fontSize: 11, color: C.paper, background: C.red, border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
-                + Añadir
-              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <button
+                  onClick={handleBuscarLocales}
+                  disabled={buscandoLocales}
+                  style={{ fontSize: 11, color: C.paper, background: buscandoLocales ? C.ink4 : '#3B8BE8', border: 'none', borderRadius: 6, padding: '4px 10px', cursor: buscandoLocales ? 'default' : 'pointer', opacity: buscandoLocales ? 0.7 : 1 }}>
+                  {buscandoLocales ? '🔍 Buscando…' : '🔍 Buscar con IA'}
+                </button>
+                <button onClick={() => setShowFormLocal(!showFormLocal)}
+                  style={{ fontSize: 11, color: C.paper, background: C.red, border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
+                  + Añadir
+                </button>
+              </div>
             </div>
+
+            {/* Resultado búsqueda IA */}
+            {resultadoBusqueda && (
+              <div style={{ background: resultadoBusqueda.insertados > 0 ? '#1A2E1A' : '#2E1A1A', borderRadius: 8, padding: '10px 12px', marginBottom: 10, fontSize: 12 }}>
+                {resultadoBusqueda.insertados > 0
+                  ? <div style={{ color: C.green }}>✅ {resultadoBusqueda.insertados} locales añadidos automáticamente</div>
+                  : <div style={{ color: C.amber }}>ℹ️ No se encontraron locales nuevos en internet</div>}
+                {resultadoBusqueda.pendientes_manual.length > 0 && (
+                  <div style={{ marginTop: 8 }}>
+                    <div style={{ color: C.amber, marginBottom: 4 }}>⚠️ Estos no se pudieron verificar — añádelos manualmente:</div>
+                    {resultadoBusqueda.pendientes_manual.map((p, i) => (
+                      <div key={i} style={{ color: C.ink2, fontSize: 11, padding: '2px 0' }}>
+                        · <b>{p.nombre}</b>{p.ciudad ? ` (${p.ciudad})` : ''} — {p.fuente || 'sin fuente'}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button onClick={() => setResultadoBusqueda(null)} style={{ background: 'transparent', border: 'none', color: C.ink4, cursor: 'pointer', fontSize: 11, marginTop: 6 }}>✕ cerrar</button>
+              </div>
+            )}
 
             {showFormLocal && (
               <div style={{ background: C.paper3, borderRadius: 8, padding: 12, marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
