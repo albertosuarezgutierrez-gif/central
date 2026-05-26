@@ -4,15 +4,25 @@ User-agent: *
 Allow: /
 Allow: /registro
 Allow: /login
+Allow: /comanda-por-voz
+Allow: /hosteleria
+Allow: /eventos
+Allow: /espacios
+Allow: /restaurante-indio
+Allow: /restaurante-mediterraneo
+Allow: /grupo-multilocal
+Allow: /catering
+Allow: /tapas-bar
+Allow: /restaurantes
+Allow: /restaurantes/
+Allow: /r/
+Allow: /blog/
+Allow: /tienda/
+Allow: /descargar
 Allow: /privacidad
 Allow: /aviso-legal
 Allow: /cookies
 Allow: /terminos
-Allow: /comanda-por-voz
-Allow: /tpv-restaurante
-Allow: /blog/
-Allow: /tienda/
-Allow: /descargar
 
 # Rutas de operación — NO indexar
 Disallow: /api/
@@ -31,14 +41,17 @@ Disallow: /q/
 Disallow: /central
 Disallow: /cocina
 Disallow: /hub
-Disallow: /app
 Disallow: /bienvenida
 Disallow: /onboarding
 Disallow: /estado/
-Disallow: /manual
 Disallow: /propuesta/
+Disallow: /proveedor/
+Disallow: /feedback/
+Disallow: /propina/
+Disallow: /contrato/
+Disallow: /comercial
+Disallow: /instalar
+Disallow: /status
+Disallow: /demo-storefront
 
 Sitemap: https://www.iarest.es/sitemap.xml
-Allow: /r/
-Allow: /restaurantes
-Allow: /restaurantes/
