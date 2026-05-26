@@ -1,6 +1,6 @@
 'use client'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { Session } from '@/hooks/useAuth'
 import { useRouter } from 'next/navigation'
 import SugerenciasPanel from '@/components/SugerenciasPanel'
@@ -113,6 +113,8 @@ export default function SuperPage() {
   const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('clientes')
   const [tabCRM, setTabCRM] = useState<'leads'|'agente'>('leads')
   const [showSistemaMenu, setShowSistemaMenu] = useState(false)
+  const sistemaRef = useRef<HTMLDivElement>(null)
+  const [sistemaPos, setSistemaPos] = useState({ top: 0, right: 0 })
   const [subTabClientes, setSubTabClientes] = useState<'locales'|'cuentas'>('locales')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
@@ -181,6 +183,22 @@ export default function SuperPage() {
     fetch('/api/super/soporte', { headers: { 'x-ia-session': JSON.stringify(session) } })
       .then(r => r.json()).then(d => setBadgeSoporte((d.tickets ?? []).filter((t: any) => t.estado === 'escalado').length))
   }}, [session])
+
+  // Cerrar dropdown SISTEMA al click/touch fuera
+  useEffect(() => {
+    if (!showSistemaMenu) return
+    const handleClose = (e: MouseEvent | TouchEvent) => {
+      if (sistemaRef.current && !sistemaRef.current.contains(e.target as Node)) {
+        setShowSistemaMenu(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClose)
+    document.addEventListener('touchstart', handleClose)
+    return () => {
+      document.removeEventListener('mousedown', handleClose)
+      document.removeEventListener('touchstart', handleClose)
+    }
+  }, [showSistemaMenu])
 
   const loadCuentas = async () => {
     if (!session) return
@@ -418,9 +436,15 @@ export default function SuperPage() {
           ))}
           <div style={{ flex: 1 }} />
           {/* Dropdown Sistema */}
-          <div style={{ position: 'relative', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}>
+          <div ref={sistemaRef} style={{ position: 'relative', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}>
             <button
-              onClick={() => setShowSistemaMenu((v: boolean) => !v)}
+              onClick={() => {
+                if (!showSistemaMenu && sistemaRef.current) {
+                  const rect = sistemaRef.current.getBoundingClientRect()
+                  setSistemaPos({ top: rect.bottom, right: window.innerWidth - rect.right })
+                }
+                setShowSistemaMenu((v: boolean) => !v)
+              }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', height: '100%',
                 fontFamily: SM, fontSize: 11, letterSpacing: '.1em', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
                 color: ['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores'].includes(tabSuper) ? C.ink : C.ink3,
@@ -431,7 +455,7 @@ export default function SuperPage() {
                 : <span style={{ fontSize: 10, color: C.ink4 }}>▾</span>}
             </button>
             {showSistemaMenu && (
-              <div style={{ position: 'absolute', right: 0, top: '100%', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, zIndex: 200, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,.5)', overflow: 'hidden' }}>
+              <div style={{ position: 'fixed', right: sistemaPos.right, top: sistemaPos.top, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, zIndex: 9999, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,.5)', overflow: 'hidden' }}>
                 {([
                   { id: 'ia_training', label: 'IA Training' },
                   { id: 'autocuras',   label: 'Autocuras' },
