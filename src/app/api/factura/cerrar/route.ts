@@ -22,11 +22,13 @@ export async function POST(req: NextRequest) {
   let body: {
     comanda_id: string; mesa_label?: string
     metodo_id?: string; entregado?: number; notas?: string; propina?: number
+    cliente_email?: string; cliente_nombre?: string; propina_digital?: boolean
   }
   try { body = await req.json() }
   catch { return NextResponse.json({ error: 'Body inválido' }, { status: 400 }) }
 
-  const { comanda_id, mesa_label = 'Mesa', metodo_id, entregado = 0, notas, propina = 0 } = body
+  const { comanda_id, mesa_label = 'Mesa', metodo_id, entregado = 0, notas, propina = 0,
+          cliente_email, cliente_nombre, propina_digital = false } = body
   if (!comanda_id) return NextResponse.json({ error: 'comanda_id requerido' }, { status: 400 })
   if (!metodo_id)  return NextResponse.json({ error: 'metodo_id requerido — selecciona método de pago' }, { status: 400 })
 
@@ -151,12 +153,30 @@ export async function POST(req: NextRequest) {
   }
 
   // ── 9. Marcar comanda cerrada + liberar mesa ────────────
-  await supabase.from('comandas').update({ estado: 'cerrada' }).eq('id', comanda_id)
+  const updateComanda: Record<string, unknown> = { estado: 'cerrada', cerrada_at: new Date().toISOString() }
+  if (cliente_email) { updateComanda.cliente_email = cliente_email; updateComanda.cliente_nombre = cliente_nombre ?? null }
+  await supabase.from('comandas').update(updateComanda).eq('id', comanda_id)
   if (comanda.mesa_id) {
     await supabase.from('mesas')
       .update({ estado: 'libre', camarero_id: null, ultima_comanda: new Date().toISOString() })
       .eq('id', comanda.mesa_id)
       .eq('restaurante_id', restaurante_id)
+  }
+
+  // ── 9b. Generar token propina digital si lo pidió el camarero ──
+  let propina_token: string | null = null
+  if (propina_digital) {
+    const { data: restConfig } = await supabase
+      .from('restaurantes').select('propinas_activas').eq('id', restaurante_id).single()
+    if (restConfig?.propinas_activas) {
+      propina_token = `${comanda_id.slice(0,8)}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`
+      await supabase.from('propinas').insert({
+        restaurante_id,
+        comanda_id,
+        token: propina_token,
+        estado: 'pendiente',
+      })
+    }
   }
 
   console.log(`[factura/cerrar] ✓ Factura ${numero} · ${importe_total}€ · propina ${propina_val}€ · ${metodo.nombre} · cambio ${cambio}€`)
@@ -207,6 +227,7 @@ export async function POST(req: NextRequest) {
     propina: propina_val,
     cambio,
     ya_existia: false,
+    propina_token,
   }, { status: 201 })
 }
 

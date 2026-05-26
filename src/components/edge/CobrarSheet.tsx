@@ -125,6 +125,14 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
   const [error, setError]         = useState('')
   const [propina, setPropina]     = useState(0)
   const [propinaInput, setPropinaInput] = useState('')
+  // Nuevos: email feedback + propina digital
+  const [clienteEmail, setClienteEmail]         = useState('')
+  const [propinaDigital, setPropinaDigital]     = useState(false)
+  const [propActivas, setPropActivas]           = useState(false)
+  const [feedbackActivo, setFeedbackActivo]     = useState(false)
+  // Post-cobro: mostrar link propina digital
+  const [propinaToken, setPropinaToken]         = useState<string | null>(null)
+  const [cobrado, setCobrado]                   = useState(false)
 
   const totalConPropina = Math.round((total + propina) * 100) / 100
   const session_str = JSON.stringify(session)
@@ -146,6 +154,11 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
         setMetodos(demo)
         setMetodoSel(demo[0])
       })
+    // Verificar si propinas y feedback están activos en este restaurante
+    fetch('/api/owner/config-cobro', { headers: { 'x-ia-session': session_str } })
+      .then(r => r.json())
+      .then(d => { setPropActivas(!!d.propinas_activas); setFeedbackActivo(!!d.feedback_activo) })
+      .catch(() => {})
   }, [session_str])
 
   const seleccionarMetodo = (m: MetodoPago) => { setMetodoSel(m); setError('') }
@@ -158,18 +171,22 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ia-session': session_str },
         body: JSON.stringify({
-          comanda_id: comandaId,
-          mesa_label: mesaLabel,
-          metodo_id:  metodoSel.id,
-          entregado:  metodoSel.tipo === 'efectivo' ? (entregado ?? totalConPropina) : 0,
-          propina:    propina > 0 ? propina : undefined,
+          comanda_id:     comandaId,
+          mesa_label:     mesaLabel,
+          metodo_id:      metodoSel.id,
+          entregado:      metodoSel.tipo === 'efectivo' ? (entregado ?? totalConPropina) : 0,
+          propina:        propina > 0 ? propina : undefined,
+          cliente_email:  clienteEmail.trim() || undefined,
+          propina_digital: propinaDigital,
         }),
       })
       const d = await r.json()
       if (!r.ok) { setError(d.error || 'Error al cobrar'); setLoading(false); return }
+      if (d.propina_token) setPropinaToken(d.propina_token)
+      setCobrado(true)
       onCerrado({ factura: d.factura, cambio: d.cambio ?? 0, metodo: metodoSel.nombre })
     } catch { setError('Error de red'); setLoading(false) }
-  }, [metodoSel, totalConPropina, propina, comandaId, mesaLabel, session_str, onCerrado])
+  }, [metodoSel, totalConPropina, propina, comandaId, mesaLabel, session_str, clienteEmail, propinaDigital, onCerrado])
 
   const aplicarPropina = (val: number) => {
     setPropina(val)
@@ -181,6 +198,8 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
     const n = parseFloat(v.replace(',', '.'))
     setPropina(isNaN(n) ? 0 : Math.round(n * 100) / 100)
   }
+
+  const propinaUrl = propinaToken ? `${typeof window !== 'undefined' ? window.location.origin : 'https://www.iarest.es'}/propina/${propinaToken}` : null
 
   return (
     <>
@@ -227,13 +246,13 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
             </div>
           </div>
 
-          {/* PROPINA */}
+          {/* PROPINA EFECTIVO */}
           {!loading && (
             <div style={{ padding: '0 20px 14px' }}>
               <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.ink4, marginBottom: 10 }}>
                 Propina <span style={{ fontWeight: 400, fontSize: 9, letterSpacing: 0, textTransform: 'none' }}>· opcional</span>
               </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' as const }}>
                 {[0, 1, 2, 5].map(v => {
                   const sel = propina === v
                   return (
@@ -244,6 +263,57 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
                 })}
                 <input type="text" inputMode="decimal" placeholder="otro €" value={propinaInput} onChange={e => onPropinaInputChange(e.target.value)} style={{ flex: '1 1 80px', minWidth: 80, padding: '8px 10px', borderRadius: 10, border: `1.5px solid ${propinaInput && propina > 0 && ![1, 2, 5].includes(propina) ? C.gr : C.rule}`, background: C.bg2, fontFamily: SM, fontSize: 13, color: C.ink, outline: 'none' }} />
               </div>
+            </div>
+          )}
+
+          {/* PROPINA DIGITAL — solo si está activada en el restaurante */}
+          {propActivas && !loading && (
+            <div style={{ padding: '0 20px 14px' }}>
+              <button
+                onClick={() => setPropinaDigital(v => !v)}
+                style={{
+                  width: '100%', padding: '12px 16px', borderRadius: 12, cursor: 'pointer',
+                  background: propinaDigital ? `${C.amb}18` : C.bg2,
+                  border: `1.5px solid ${propinaDigital ? C.amb : C.rule}`,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  transition: 'all .15s',
+                }}>
+                <span style={{ fontSize: 22 }}>💝</span>
+                <div style={{ textAlign: 'left' as const, flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: propinaDigital ? C.amb : C.ink }}>Propina digital</div>
+                  <div style={{ fontSize: 11, color: C.ink4, marginTop: 1 }}>El cliente paga con tarjeta desde su móvil</div>
+                </div>
+                <div style={{ width: 20, height: 20, borderRadius: '50%', border: `2px solid ${propinaDigital ? C.amb : C.rule}`, background: propinaDigital ? C.amb : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  {propinaDigital && <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#fff' }} />}
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* EMAIL PARA VALORACIÓN — solo si feedback está activado */}
+          {feedbackActivo && !loading && (
+            <div style={{ padding: '0 20px 14px' }}>
+              <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', color: C.ink4, marginBottom: 8 }}>
+                Email para valoración <span style={{ fontWeight: 400, fontSize: 9, letterSpacing: 0, textTransform: 'none' }}>· opcional</span>
+              </div>
+              <input
+                type="email"
+                inputMode="email"
+                placeholder="cliente@email.com"
+                value={clienteEmail}
+                onChange={e => setClienteEmail(e.target.value)}
+                style={{
+                  width: '100%', padding: '10px 14px', borderRadius: 10,
+                  border: `1.5px solid ${clienteEmail ? C.teal : C.rule}`,
+                  background: C.bg2, color: C.ink, fontSize: 14, outline: 'none',
+                  boxSizing: 'border-box' as const,
+                }}
+              />
+              {clienteEmail && (
+                <div style={{ fontSize: 11, color: C.teal, marginTop: 4 }}>
+                  ✓ Recibirá email de valoración en ~30 min
+                </div>
+              )}
             </div>
           )}
 
@@ -270,6 +340,22 @@ export default function CobrarSheet({ comandaId, mesaLabel, total, session, onCe
               <button onClick={() => cobrar()} disabled={loading} style={{ width: '100%', height: 54, borderRadius: 12, border: 'none', background: loading ? C.rule : C.verm, fontFamily: SN, fontSize: 15, fontWeight: 700, color: '#fff', cursor: loading ? 'default' : 'pointer', opacity: loading ? 0.6 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, transition: 'background .15s,opacity .15s' }}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.9)" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" /></svg>
                 {loading ? 'Procesando…' : `Confirmar cobro · ${totalConPropina.toFixed(2).replace('.', ',')} €`}
+              </button>
+            </div>
+          )}
+
+          {/* POST-COBRO: link propina digital */}
+          {propinaToken && propinaUrl && (
+            <div style={{ margin: '0 20px 16px', padding: '16px', background: `${C.amb}18`, border: `1.5px solid ${C.amb}`, borderRadius: 14 }}>
+              <div style={{ fontWeight: 700, color: C.amb, fontSize: 14, marginBottom: 6 }}>💝 Propina digital lista</div>
+              <div style={{ fontSize: 12, color: C.ink3, marginBottom: 12 }}>Muestra este link al cliente para que pague desde su móvil</div>
+              <div style={{ background: C.dark, borderRadius: 8, padding: '8px 12px', fontSize: 11, color: C.ink3, wordBreak: 'break-all' as const, marginBottom: 10 }}>
+                {propinaUrl}
+              </div>
+              <button
+                onClick={() => { navigator.clipboard?.writeText(propinaUrl); }}
+                style={{ width: '100%', padding: '10px', background: C.amb, border: 'none', borderRadius: 10, color: '#fff', fontWeight: 700, fontSize: 13, cursor: 'pointer' }}>
+                Copiar link
               </button>
             </div>
           )}
