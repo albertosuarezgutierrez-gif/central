@@ -417,14 +417,17 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 
     <a href="/catering" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid var(--red);transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='var(--bg2)'">
       <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <!-- Mano con bandeja -->
-        <ellipse cx="22" cy="14" rx="12" ry="3"/>
-        <line x1="10" y1="14" x2="10" y2="17"/>
-        <line x1="34" y1="14" x2="34" y2="17"/>
-        <path d="M10 17 Q10 19 22 19 Q34 19 34 17"/>
-        <path d="M18 19 L16 28 Q16 30 22 30 Q28 30 28 28 L26 19"/>
-        <path d="M12 30 Q8 30 8 34 L36 34 Q36 30 32 30"/>
-        <path d="M8 34 Q7 36 9 36 L35 36 Q37 36 36 34"/>
+        <!-- Bandeja redonda plana -->
+        <ellipse cx="22" cy="18" rx="14" ry="3"/>
+        <!-- Plato encima -->
+        <ellipse cx="22" cy="15" rx="7" ry="1.5"/>
+        <!-- Brazo / mano extendida -->
+        <path d="M8 21 Q8 24 22 24 Q36 24 36 21"/>
+        <path d="M8 21 L6 28 Q6 30 10 30 L34 30 Q38 30 38 28 L36 21"/>
+        <!-- Muñeca -->
+        <path d="M16 30 L15 38"/>
+        <path d="M28 30 L29 38"/>
+        <line x1="15" y1="38" x2="29" y2="38"/>
       </svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Catering<br>y eventos</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Del presupuesto al evento y a la caja. Portal cliente, APPCC, escandallos y VeriFactu.</p>
