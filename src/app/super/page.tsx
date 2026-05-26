@@ -1132,7 +1132,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   ]
 
   const KanbanView = () => (
-    <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 12, alignItems: 'flex-start', minHeight: 400 }}>
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
       {COLUMNAS.map(col => {
         const colLeads = leads.filter(l => l.estado === col.key)
         const isOver = dragOver === col.key
@@ -1140,39 +1140,31 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
           <div
             key={col.key}
             onDragOver={e => { e.preventDefault(); setDragOver(col.key) }}
-            onDragLeave={() => setDragOver(null)}
-            onDrop={e => {
-              e.preventDefault()
-              const leadId = e.dataTransfer.getData('leadId')
-              moverEtapa(leadId, col.key)
-              setDragOver(null)
-            }}
+            onDragLeave={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDragOver(null) }}
+            onDrop={e => { e.preventDefault(); moverEtapa(e.dataTransfer.getData('leadId'), col.key); setDragOver(null) }}
             style={{
-              flexShrink: 0, width: 200,
-              background: isOver ? ESTADO_COLOR[col.key] + '18' : C.bg2,
-              border: `1px solid ${isOver ? ESTADO_COLOR[col.key] : C.rule}`,
-              borderRadius: 12, padding: '10px 8px',
-              transition: 'all .15s'
+              flexShrink: 0, width: 210,
+              background: isOver ? C.bg3 : C.bg2,
+              border: `1px solid ${isOver ? C.red : C.rule}`,
+              borderRadius: 8,
+              transition: 'border-color .15s',
             }}
           >
             {/* Cabecera columna */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, padding: '0 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                <span style={{ fontSize: 14 }}>{col.emoji}</span>
-                <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: ESTADO_COLOR[col.key] }}>
-                  {col.label}
-                </span>
-              </div>
-              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4, background: C.bg3, borderRadius: 10, padding: '1px 7px', fontWeight: 700 }}>
+            <div style={{ padding: '10px 12px 8px', borderBottom: `1px solid ${C.rule}`, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>
+                {col.label}
+              </span>
+              <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, background: C.bg3, borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
                 {colLeads.length}
               </span>
             </div>
 
             {/* Cards */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ padding: '6px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 60 }}>
               {colLeads.length === 0 && (
-                <div style={{ textAlign: 'center', padding: '20px 0', color: C.ink4, fontSize: 11, fontStyle: 'italic' }}>
-                  Vacío
+                <div style={{ padding: '12px 8px', color: C.ink4, fontSize: 11, fontFamily: SM, textAlign: 'center' }}>
+                  —
                 </div>
               )}
               {colLeads.map(lead => {
@@ -1187,36 +1179,31 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                     onDragStart={e => e.dataTransfer.setData('leadId', lead.id)}
                     onClick={() => setSeleccionado(activo ? null : lead)}
                     style={{
-                      background: activo ? C.bg3 : C.bg2,
+                      background: activo ? C.bg3 : C.dark,
                       border: `1px solid ${activo ? C.red : C.rule}`,
-                      borderRadius: 8, padding: '10px 10px', cursor: 'grab',
-                      transition: 'all .12s',
-                      boxShadow: activo ? `0 0 0 1px ${C.red}` : 'none'
+                      borderRadius: 6,
+                      padding: '9px 10px',
+                      cursor: 'grab',
+                      transition: 'border-color .12s',
                     }}
                   >
-                    {/* Empresa */}
-                    <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.paper, marginBottom: 3, lineHeight: 1.3 }}>
+                    <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 3, lineHeight: 1.2 }}>
                       {lead.restaurante || lead.nombre}
                     </div>
-                    {/* Meta */}
-                    <div style={{ fontSize: 10, color: C.ink4, marginBottom: 6 }}>
-                      {lead.tpv || lead.ciudad || '—'}
-                    </div>
-                    {/* Pills */}
-                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {lead.tpv && (
+                      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4 }}>
+                        {lead.tpv}
+                      </div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       {lead.puntuacion != null && (
-                        <span style={{ fontSize: 9, color: lead.puntuacion >= 70 ? C.green : lead.puntuacion >= 40 ? C.amber : '#9B2226', background: C.bg3, borderRadius: 3, padding: '1px 5px', fontWeight: 700 }}>
-                          ★{lead.puntuacion}
+                        <span style={{ fontFamily: SM, fontSize: 10, color: lead.puntuacion >= 70 ? C.green : lead.puntuacion >= 45 ? C.amber : C.ink3 }}>
+                          {lead.puntuacion}pts
                         </span>
                       )}
-                      {dias != null && dias > 7 && (
-                        <span style={{ fontSize: 9, color: dias > 14 ? '#9B2226' : C.amber, background: dias > 14 ? '#1A0000' : '#1A1400', borderRadius: 3, padding: '1px 5px' }}>
+                      {dias != null && dias > 10 && (
+                        <span style={{ fontFamily: SM, fontSize: 10, color: C.amber, marginLeft: 'auto' }}>
                           {dias}d
-                        </span>
-                      )}
-                      {lead.siguiente_contacto_texto && (
-                        <span style={{ fontSize: 9, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '1px 5px', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                          📅
                         </span>
                       )}
                     </div>
@@ -1229,7 +1216,6 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       })}
     </div>
   )
-
 
 
   return (
