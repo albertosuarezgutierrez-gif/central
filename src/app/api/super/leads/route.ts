@@ -6,6 +6,66 @@ import { getSession } from '@/lib/session'
 import { callAI } from '@/lib/ai-client'
 import { tgAlert, tgEstudio } from '@/lib/telegram'
 import { cleanJSON } from '@/lib/ai-client'
+import Anthropic from '@anthropic-ai/sdk'
+
+// ── Busca locales del grupo en internet y los inserta en leads_locales ────────
+async function buscarEInsertarLocales(
+  leadId: string,
+  nombreGrupo: string,
+  supabase: ReturnType<typeof createServerClient>
+): Promise<void> {
+  const key = process.env.ANTHROPIC_API_KEY
+  if (!key) return
+
+  try {
+    const client = new Anthropic({ apiKey: key })
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1200,
+      tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
+      system: `Investigador de hostelería española. Responde SOLO JSON válido, sin backticks.`,
+      messages: [{ role: 'user', content: `Busca todos los locales (restaurantes, bares, haciendas, etc.) del grupo hostelero "${nombreGrupo}" en España. Devuelve SOLO JSON array: [{"nombre":"Local","ciudad":"Ciudad","tipo":"restaurante","aforo":null,"fuente":"URL","verificado":true}]. Si no encuentras nada con seguridad, devuelve [].` }],
+    })
+
+    let current = response
+    while (current.stop_reason === 'tool_use') {
+      const toolUses = current.content.filter(b => b.type === 'tool_use')
+      if (!toolUses.length) break
+      const followUp = await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 1200,
+        tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
+        system: `Investigador de hostelería española. Responde SOLO JSON válido, sin backticks.`,
+        messages: [
+          { role: 'user', content: `Busca locales del grupo "${nombreGrupo}" en España. SOLO JSON array.` },
+          { role: 'assistant', content: current.content },
+          { role: 'user', content: toolUses.map(b => b.type === 'tool_use' ? ({ type: 'tool_result' as const, tool_use_id: b.id, content: 'ok' }) : null).filter(Boolean) as Anthropic.Messages.ToolResultBlockParam[] },
+        ],
+      })
+      current = followUp
+    }
+
+    const texto = current.content.filter(b => b.type === 'text').map(b => b.type === 'text' ? b.text : '').join('')
+    const match = texto.replace(/```json|```/g, '').trim().match(/\[[\s\S]*\]/)
+    if (!match) return
+    const locales: { nombre: string; ciudad: string | null; tipo: string; aforo: number | null; fuente: string; verificado: boolean }[] = JSON.parse(match[0])
+    const validos = locales.filter(l => l.verificado && l.nombre?.trim())
+    if (!validos.length) return
+
+    await supabase.from('leads_locales').insert(
+      validos.map(l => ({
+        lead_id: leadId,
+        nombre: l.nombre,
+        ciudad: l.ciudad || null,
+        tipo: l.tipo || 'restaurante',
+        aforo: l.aforo || null,
+        notas: l.fuente ? `IA: ${l.fuente}` : 'Encontrado automáticamente por IA',
+      }))
+    )
+  } catch (err) {
+    console.error('[locales-bg] Error para', nombreGrupo, err)
+  }
+}
 
 export async function GET(req: NextRequest) {
   const session = getSession(req)
@@ -149,7 +209,10 @@ JSON exacto:
     }]
   }).eq('id', leadId)
 
-  // 6. Mandar estudio a Telegram con botones de aprobación
+  // 4. Buscar locales del grupo automáticamente en background
+  await buscarEInsertarLocales(leadId, empresa, supabase)
+
+  // 5. Mandar estudio a Telegram con botones de aprobación
   await tgEstudio(leadId, {
     empresa,
     resumen: estudio.resumen_negocio as string || empresa,
