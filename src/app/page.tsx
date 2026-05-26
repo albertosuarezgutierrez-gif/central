@@ -409,21 +409,21 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   <div class="w perfiles-grid">
 
     <a href="/hosteleria" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
-      <div style="font-size:32px;margin-bottom:20px">🍺</div>
+      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="6" width="24" height="24" rx="2"/><line x1="14" y1="12" x2="30" y2="12"/><line x1="14" y1="16" x2="30" y2="16"/><line x1="14" y1="20" x2="22" y2="20"/><line x1="22" y1="30" x2="22" y2="36"/><line x1="14" y1="36" x2="30" y2="36"/><rect x="18" y="25" width="8" height="5" rx="1"/></svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Restaurante<br>y hostelería</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Bar, restaurante, chiringuito, feria, food truck. Comandas por voz, KDS, almacén y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
     </a>
 
     <a href="/catering" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid var(--red);transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='var(--bg2)'">
-      <div style="font-size:32px;margin-bottom:20px">🍱</div>
+      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none"><text x="3" y="40" font-size="42" font-family="Newsreader,Georgia,serif" font-style="italic" font-weight="200" fill="currentColor">C</text></svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Catering<br>y eventos</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Del presupuesto al evento y a la caja. Portal cliente, APPCC, escandallos y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
     </a>
 
     <a href="/espacios" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
-      <div style="font-size:32px;margin-bottom:20px">🏛️</div>
+      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none"><text x="4" y="40" font-size="42" font-family="Newsreader,Georgia,serif" font-style="italic" font-weight="200" fill="currentColor">E</text></svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Fincas<br>y espacios</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Solicitudes de bodas.net automáticas. Contratos digitales, calendario y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
