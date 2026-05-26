@@ -7,10 +7,12 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { createBrowserClient } from '@supabase/ssr'
 
-const sb = createBrowserClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-)
+function getSb() {
+  return createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholder'
+  )
+}
 
 export interface AlertaActiva {
   id: string
@@ -82,10 +84,10 @@ function hablar(texto: string) {
 export function useAlertas(camareroId: string | null, restauranteId: string | null) {
   const [alertas, setAlertas]        = useState<AlertaActiva[]>([])
   const [pushRegistrado, setPushReg] = useState(false)
-  const canalRef                     = useRef<ReturnType<typeof sb.channel> | null>(null)
+  const canalRef                     = useRef<ReturnType<ReturnType<typeof getSb>["channel"]> | null>(null)
 
   const marcarLeida = useCallback(async (alertaId: string) => {
-    await sb
+    await getSb()
       .from('alerta_log')
       .update({ leida: true, actuada_at: new Date().toISOString() })
       .eq('id', alertaId)
@@ -100,7 +102,7 @@ export function useAlertas(camareroId: string | null, restauranteId: string | nu
       setPushReg(true)
     }
 
-    const canal = sb
+    const canal = getSb()
       .channel(`alertas-${camareroId}`)
       .on(
         'postgres_changes',
@@ -115,7 +117,7 @@ export function useAlertas(camareroId: string | null, restauranteId: string | nu
 
           let mesa_codigo: string | undefined
           if (row.mesa_id) {
-            const { data } = await sb
+            const { data } = await getSb()
               .from('mesas')
               .select('codigo')
               .eq('id', row.mesa_id)
