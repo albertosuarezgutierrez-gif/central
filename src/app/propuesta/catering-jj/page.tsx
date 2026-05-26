@@ -76,10 +76,10 @@ const config: ClienteConfig = {
   ],
 
   citas: [
-    { cita: '"Para cada evento tenemos que recalcular el escandallo a mano según el aforo."', modulo: 'Escandallos automáticos', color: C.gold },
-    { cita: '"A veces no sabemos exactamente qué stock queda después de un evento grande."', modulo: 'Almacén en tiempo real', color: C.teal },
-    { cita: '"Calcular el presupuesto de una boda nos lleva horas entre coste de géneros y personal."', modulo: 'Presupuestador', color: C.green },
-    { cita: '"En cocina durante el evento hay mucho caos coordinando los pases."', modulo: 'KDS por pases', color: C.red },
+    { cita: '', pain: 'Escandallo manual por aforo', detalle: 'Recalcular food cost cada vez que cambia el número de comensales consume horas que no generan valor.', modulo: 'Presupuestador automático', color: C.gold },
+    { cita: '', pain: 'Stock invisible post-evento', detalle: 'Sin registro en tiempo real, el inventario al día siguiente de una boda de 400 personas es siempre una sorpresa.', modulo: 'Almacén en tiempo real', color: C.teal },
+    { cita: '', pain: 'Pases sin coordinación digital', detalle: 'Coordinar cocina central y hacienda simultáneamente con papel multiplica los errores de servicio.', modulo: 'KDS por pases', color: C.green },
+    { cita: '', pain: 'El margen real se descubre después', detalle: 'Cada propuesta parte de cero: géneros, personal, transporte. Sin datos, el margen es siempre una estimación.', modulo: 'Margen calculado antes', color: C.red },
   ],
 
   headline: 'Dos haciendas · Bodas hasta 550 · Eventos empresa · Cocina central',

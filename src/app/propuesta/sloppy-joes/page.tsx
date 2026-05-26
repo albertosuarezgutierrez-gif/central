@@ -22,10 +22,10 @@ const config: ClienteConfig = {
   tagsIntro: ['6 locales en Sevilla', 'Delivery Glovo + UberEats', '€294/mes Deliverect', '€540/mes Ágora', 'Alta rotación de personal'],
 
   citas: [
-    { cita: '"Tenemos una tablet de Deliverect en cada local solo para gestionar los pedidos online."', modulo: 'Delivery integrado', color: '#E84E0F' },
-    { cita: '"Glovo se lleva el 30% de cada pedido. Y encima pagamos Deliverect aparte."', modulo: 'Tienda propia', color: C.green },
-    { cita: '"No sabemos qué referencias venden más en cada local ni por qué."', modulo: 'Análisis de carta', color: C.gold },
-    { cita: '"Con 6 locales, la rotación de personal nos tiene locos. No hay criterios comunes."', modulo: 'RRHH centralizado', color: C.teal },
+    { cita: '', pain: 'Una tablet extra por local solo para delivery', detalle: 'Gestionar Glovo y UberEats desde dispositivos separados al POS multiplica los errores y la carga operativa en cada turno.', modulo: 'Delivery integrado en cocina', color: '#E84E0F' },
+    { cita: '', pain: 'El 30% de cada pedido online va a la plataforma', detalle: 'Con Deliverect encima, el coste real de cada pedido online ronda el 35-38%. La tienda propia elimina esa comisión.', modulo: 'Tienda propia sin comisión', color: C.green },
+    { cita: '', pain: 'Sin visibilidad de qué vende cada local', detalle: 'Con 6 locales y sistemas distintos, saber qué referencias son rentables en cada punto es imposible sin horas de Excel.', modulo: 'Análisis de carta multi-local', color: C.gold },
+    { cita: '', pain: 'RRHH sin criterios comunes entre locales', detalle: 'La rotación de personal en multi-local sin centralización genera inconsistencias de servicio y coste de formación repetido.', modulo: 'RRHH centralizado', color: C.teal },
   ],
 
   headline: '6 locales · Delivery + Sala · Ágora + Deliverect + Glovo',

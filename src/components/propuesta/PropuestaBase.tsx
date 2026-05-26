@@ -29,9 +29,11 @@ export type PasoFlujo = {
 }
 
 export type CitaDolor = {
-  cita: string
+  cita: string       // para leads con reunión: frase entre comillas
   modulo: string
   color: string
+  pain?: string      // para leads sin reunión: título del pain point del sector
+  detalle?: string   // para leads sin reunión: descripción del pain
 }
 
 export type ModuloCustom = {
@@ -293,26 +295,43 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
         )}
 
         {/* DOLOR */}
-        {slide === 'dolor' && (
-          <div style={{ flex:1, padding:'32px 24px', maxWidth:720, margin:'0 auto', width:'100%', display:'flex', flexDirection:'column', gap:20, overflowY:'auto' }}>
-            <div>
-              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:28, color:C.paper, marginBottom:4 }}>
-                Lo que nos dijisteis
-              </div>
-              {config.fechaReunion && config.lugarReunion && (
-                <div style={{ fontSize:12, color:C.ink4, marginBottom:8 }}>
-                  Reunión en {config.lugarReunion} · {config.contactoNombre} · {config.fechaReunion}
+        {slide === 'dolor' && (() => {
+          const tieneReunion = !!config.fechaReunion
+          const tituloDolor = tieneReunion ? 'Lo que nos dijisteis' : 'Los retos de vuestra operación'
+          const subtituloDolor = tieneReunion
+            ? `Reunión en ${config.lugarReunion} · ${config.contactoNombre} · ${config.fechaReunion}`
+            : 'Lo que nos dicen operaciones como la vuestra'
+          return (
+            <div style={{ flex:1, padding:'32px 24px', maxWidth:720, margin:'0 auto', width:'100%', display:'flex', flexDirection:'column', gap:20, overflowY:'auto' }}>
+              <div>
+                <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:28, color:C.paper, marginBottom:4 }}>
+                  {tituloDolor}
                 </div>
-              )}
-            </div>
-            {config.citas.map((item, i) => (
-              <div key={i} style={{ padding:'16px 20px', background:C.bg3, borderRadius:12, borderLeft:`3px solid ${item.color}` }}>
-                <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:15, color:C.cream, lineHeight:1.5, marginBottom:8 }}>{item.cita}</div>
-                <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em' }}>→ {item.modulo}</div>
+                <div style={{ fontSize:12, color:C.ink4, marginBottom:8 }}>
+                  {subtituloDolor}
+                </div>
               </div>
-            ))}
-          </div>
-        )}
+              {config.citas.map((item, i) => (
+                tieneReunion ? (
+                  // Con reunión → comillas, formato cita
+                  <div key={i} style={{ padding:'16px 20px', background:C.bg3, borderRadius:12, borderLeft:`3px solid ${item.color}` }}>
+                    <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:15, color:C.cream, lineHeight:1.5, marginBottom:8 }}>{item.cita}</div>
+                    <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em' }}>→ {item.modulo}</div>
+                  </div>
+                ) : (
+                  // Sin reunión → pain point del sector, sin comillas
+                  <div key={i} style={{ padding:'16px 20px', background:C.bg3, borderRadius:12, borderLeft:`3px solid ${item.color}` }}>
+                    {item.pain && (
+                      <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:6 }}>{item.pain}</div>
+                    )}
+                    <div style={{ fontSize:14, color:C.cream, lineHeight:1.5, marginBottom:8 }}>{item.detalle || item.cita}</div>
+                    <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em' }}>→ {item.modulo}</div>
+                  </div>
+                )
+              ))}
+            </div>
+          )
+        })()}
 
         {/* SU COCINA */}
         {slide === 'su_cocina' && (
