@@ -277,13 +277,22 @@ h2 i{font-style:italic;color:var(--red)}
   .btn-p,.btn-s{text-align:center}
 }` }} />
       <div dangerouslySetInnerHTML={{ __html: `<nav>
-  <a class="logo" href="#">ia<b>.</b>rest</a>
+  <a class="logo" href="/">ia<b>.</b>rest</a>
   <div class="nav-links">
+    <a href="/hosteleria">Hostelería</a>
+    <a href="/espacios">Espacios</a>
     <a href="#costes">Costes</a>
-    <a href="#flujo">Cómo funciona</a>
-    <a href="#" class="nav-cta">Demo gratuita →</a>
+    <a href="#contacto" class="nav-cta">Demo gratuita →</a>
   </div>
+  <button class="burger" id="burger" aria-label="Menú"><span></span><span></span><span></span></button>
 </nav>
+
+<div class="mob-menu" id="mobMenu">
+  <a href="/hosteleria">Hostelería</a>
+  <a href="/espacios">Espacios</a>
+  <a href="#costes">Costes</a>
+  <a href="#contacto" class="mob-cta">Demo gratuita →</a>
+</div>
 
 <!-- HERO -->
 <section class="hero">
