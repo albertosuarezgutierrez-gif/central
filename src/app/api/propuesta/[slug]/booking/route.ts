@@ -23,6 +23,9 @@ export async function POST(
     'ovejas-negras': 'Ovejas Negras',
     'sloppy-joes': "Sloppy Joe's",
     'catering-jj': 'Catering Joaquín Jaén',
+    'catering-jj-haciendas': 'Catering Joaquín Jaén',
+    'catering-jj-restauracion': 'Catering Joaquín Jaén',
+    'catering-jj-catering': 'Catering Joaquín Jaén',
   }
   let lead: { id: string; empresa: string | null; restaurante: string | null; nombre: string | null; email: string | null; eventos: unknown[] } | null = null
 
@@ -125,11 +128,31 @@ export async function PATCH(
   const { slug } = await params
   const supabase = createServerClient()
 
-  await supabase
+  // Buscar lead para saber si es primera visita
+  const { data: lead } = await supabase
     .from('leads')
-    .update({ propuesta_vista_at: new Date().toISOString() })
+    .select('id, empresa, restaurante, nombre, propuesta_vista_at')
     .eq('propuesta_slug', slug)
-    .is('propuesta_vista_at', null) // Solo registra la primera visita
+    .maybeSingle()
+
+  const esPrimeraVisita = lead && !lead.propuesta_vista_at
+
+  if (lead) {
+    await supabase
+      .from('leads')
+      .update({ propuesta_vista_at: new Date().toISOString() })
+      .eq('id', lead.id)
+      .is('propuesta_vista_at', null) // Solo actualiza si es primera visita
+  }
+
+  // Telegram solo en primera visita
+  if (esPrimeraVisita) {
+    const empresa = lead.empresa || lead.restaurante || lead.nombre || slug
+    tgAlert(
+      `👁 Propuesta abierta por primera vez\n\n<b>${empresa}</b>\n🔗 /propuesta/${slug}\n\n<a href="https://www.iarest.es/super">Ver en CRM →</a>`,
+      'info'
+    )
+  }
 
   return NextResponse.json({ ok: true })
 }

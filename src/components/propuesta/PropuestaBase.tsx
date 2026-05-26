@@ -29,9 +29,11 @@ export type PasoFlujo = {
 }
 
 export type CitaDolor = {
-  cita: string
+  cita: string       // para leads con reunión: frase entre comillas
   modulo: string
   color: string
+  pain?: string      // para leads sin reunión: título del pain point del sector
+  detalle?: string   // para leads sin reunión: descripción del pain
 }
 
 export type ModuloCustom = {
@@ -92,6 +94,7 @@ export type ClienteConfig = {
   fasePiloto: { fase: string; color: string; items: string[] }[]
   precioMensaje?: string            // texto adicional de precio si aplica
   slug?: string                     // slug del lead en BD para tracking y booking
+  verticales?: { label: string; sub: string; url: string; icon: string; color: string }[]
   ciudad?: string                   // ciudad para el texto del booking
 }
 
@@ -293,26 +296,43 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
         )}
 
         {/* DOLOR */}
-        {slide === 'dolor' && (
-          <div style={{ flex:1, padding:'32px 24px', maxWidth:720, margin:'0 auto', width:'100%', display:'flex', flexDirection:'column', gap:20, overflowY:'auto' }}>
-            <div>
-              <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:28, color:C.paper, marginBottom:4 }}>
-                Lo que nos dijisteis
-              </div>
-              {config.fechaReunion && config.lugarReunion && (
-                <div style={{ fontSize:12, color:C.ink4, marginBottom:8 }}>
-                  Reunión en {config.lugarReunion} · {config.contactoNombre} · {config.fechaReunion}
+        {slide === 'dolor' && (() => {
+          const tieneReunion = !!config.fechaReunion
+          const tituloDolor = tieneReunion ? 'Lo que nos dijisteis' : 'Los retos de vuestra operación'
+          const subtituloDolor = tieneReunion
+            ? `Reunión en ${config.lugarReunion} · ${config.contactoNombre} · ${config.fechaReunion}`
+            : 'Lo que nos dicen operaciones como la vuestra'
+          return (
+            <div style={{ flex:1, padding:'32px 24px', maxWidth:720, margin:'0 auto', width:'100%', display:'flex', flexDirection:'column', gap:20, overflowY:'auto' }}>
+              <div>
+                <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:28, color:C.paper, marginBottom:4 }}>
+                  {tituloDolor}
                 </div>
-              )}
-            </div>
-            {config.citas.map((item, i) => (
-              <div key={i} style={{ padding:'16px 20px', background:C.bg3, borderRadius:12, borderLeft:`3px solid ${item.color}` }}>
-                <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:15, color:C.cream, lineHeight:1.5, marginBottom:8 }}>{item.cita}</div>
-                <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em' }}>→ {item.modulo}</div>
+                <div style={{ fontSize:12, color:C.ink4, marginBottom:8 }}>
+                  {subtituloDolor}
+                </div>
               </div>
-            ))}
-          </div>
-        )}
+              {config.citas.map((item, i) => (
+                tieneReunion ? (
+                  // Con reunión → comillas, formato cita
+                  <div key={i} style={{ padding:'16px 20px', background:C.bg3, borderRadius:12, borderLeft:`3px solid ${item.color}` }}>
+                    <div style={{ fontFamily:SE, fontStyle:'italic', fontSize:15, color:C.cream, lineHeight:1.5, marginBottom:8 }}>{item.cita}</div>
+                    <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em' }}>→ {item.modulo}</div>
+                  </div>
+                ) : (
+                  // Sin reunión → pain point del sector, sin comillas
+                  <div key={i} style={{ padding:'16px 20px', background:C.bg3, borderRadius:12, borderLeft:`3px solid ${item.color}` }}>
+                    {item.pain && (
+                      <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:6 }}>{item.pain}</div>
+                    )}
+                    <div style={{ fontSize:14, color:C.cream, lineHeight:1.5, marginBottom:8 }}>{item.detalle || item.cita}</div>
+                    <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:item.color, textTransform:'uppercase', letterSpacing:'.1em' }}>→ {item.modulo}</div>
+                  </div>
+                )
+              ))}
+            </div>
+          )
+        })()}
 
         {/* SU COCINA */}
         {slide === 'su_cocina' && (
@@ -583,6 +603,26 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
                 El sistema se paga solo en el primer mes.
               </div>
             </div>
+            {/* ── VERTICALES ───────────────────────────────────────────── */}
+            {config.verticales && config.verticales.length > 0 && (
+              <div style={{ background:C.bg3, borderRadius:12, padding:'20px' }}>
+                <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:C.ink4, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:4 }}>¿Quieres ver el detalle por área?</div>
+                <div style={{ fontSize:13, color:C.ink3, marginBottom:16 }}>Hemos preparado una presentación específica para cada línea de negocio.</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {config.verticales.map(v => (
+                    <a key={v.url} href={v.url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', background:C.bg2, borderRadius:10, border:`1px solid ${v.color}33`, textDecoration:'none', transition:'.15s' }}>
+                      <span style={{ fontSize:22 }}>{v.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontFamily:SN, fontSize:14, fontWeight:700, color:v.color, marginBottom:2 }}>{v.label}</div>
+                        <div style={{ fontSize:12, color:C.ink3 }}>{v.sub}</div>
+                      </div>
+                      <span style={{ fontSize:12, color:v.color, fontWeight:700 }}>Ver →</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ── BOOKING ───────────────────────────────────────────────── */}
             <div style={{ marginTop:8 }}>
               <div style={{ fontFamily:SE, fontSize:18, fontWeight:500, color:C.paper, marginBottom:6 }}>

@@ -39,6 +39,10 @@ const TIPO_ICON: Record<string, string> = {
 export default function ProveedoresTechTab() {
   const [proveedores, setProveedores] = useState<Proveedor[]>([])
   const [selected, setSelected] = useState<string | null>(null)
+  const [mobileView, setMobileView] = useState<'list' | 'detail'>('list')
+  const [windowWidth, setWindowWidth] = useState(
+    typeof window !== 'undefined' ? window.innerWidth : 1200
+  )
   const [detalle, setDetalle] = useState<{
     proveedor: Proveedor | null; contactos: Contacto[]; comms: Comunicacion[]
   }>({ proveedor: null, contactos: [], comms: [] })
@@ -55,6 +59,14 @@ export default function ProveedoresTechTab() {
   const [nuevoC, setNuevoC] = useState({ nombre: '', cargo: '', email: '', telefono: '', notas: '' })
   const [editandoNotas, setEditandoNotas] = useState(false)
   const [notasEdit, setNotasEdit] = useState('')
+
+  useEffect(() => {
+    const handler = () => setWindowWidth(window.innerWidth)
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+
+  const isMobile = windowWidth < 768
 
   const api = (body: object) => fetch('/api/super/proveedores-tech', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -77,6 +89,17 @@ export default function ProveedoresTechTab() {
 
   useEffect(() => { cargarLista() }, [cargarLista])
   useEffect(() => { if (selected) cargarDetalle(selected) }, [selected, cargarDetalle])
+
+  const seleccionarProveedor = (id: string) => {
+    setSelected(id)
+    setTab('directorio')
+    if (isMobile) setMobileView('detail')
+  }
+
+  const volverALista = () => {
+    setSelected(null)
+    setMobileView('list')
+  }
 
   const porCategoria: Record<string, Proveedor[]> = {}
   for (const p of proveedores) {
@@ -143,19 +166,46 @@ export default function ProveedoresTechTab() {
 
   // ─── Estilos inline ───────────────────────────────────────────────────────
   const s = {
-    row: { display: 'flex', gap: 0, minHeight: 600 } as React.CSSProperties,
-    sidebar: { width: 260, flexShrink: 0, borderRight: `1px solid ${C.rule}`, overflowY: 'auto' as const, maxHeight: '78vh' },
+    // Layout responsive
+    row: {
+      display: 'flex',
+      gap: 0,
+      minHeight: isMobile ? 'auto' : 600,
+      flexDirection: 'row' as const,
+    } as React.CSSProperties,
+    sidebar: {
+      width: isMobile ? '100%' : 260,
+      display: isMobile && mobileView === 'detail' ? 'none' : 'block',
+      flexShrink: 0,
+      borderRight: isMobile ? 'none' : `1px solid ${C.rule}`,
+      overflowY: 'auto' as const,
+      maxHeight: isMobile ? 'none' : '78vh',
+    } as React.CSSProperties,
+    detail: {
+      flex: 1,
+      display: isMobile && mobileView === 'list' ? 'none' : 'block',
+      padding: isMobile ? '0 14px' : '0 22px',
+      overflowY: 'auto' as const,
+      maxHeight: isMobile ? 'none' : '78vh',
+      width: isMobile ? '100%' : 'auto',
+    } as React.CSSProperties,
+    // Botón volver (solo móvil)
+    backBtn: {
+      display: 'flex', alignItems: 'center', gap: 6,
+      background: 'none', border: 'none', cursor: 'pointer',
+      color: C.red, fontSize: 13, fontWeight: 600,
+      padding: '12px 0', marginBottom: 4,
+    } as React.CSSProperties,
     catHeader: { padding: '5px 12px', fontSize: 10, fontWeight: 700, color: C.ink3, textTransform: 'uppercase' as const, letterSpacing: '0.08em', background: C.bg2, borderBottom: `1px solid ${C.rule}` },
     provRow: (sel: boolean): React.CSSProperties => ({ padding: '9px 13px', cursor: 'pointer', background: sel ? C.bg3 : 'transparent', borderBottom: `1px solid ${C.rule}`, borderLeft: sel ? `3px solid ${C.red}` : '3px solid transparent' }),
     badge: (color: string): React.CSSProperties => ({ display: 'inline-block', padding: '1px 7px', borderRadius: 99, fontSize: 10, fontWeight: 700, color: '#fff', background: color }),
     blogPill: { display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99, background: '#E8A33B22', color: '#E8A33B' } as React.CSSProperties,
-    detail: { flex: 1, padding: '0 22px', overflowY: 'auto' as const, maxHeight: '78vh' },
     tabs: { display: 'flex', borderBottom: `1px solid ${C.rule}`, marginBottom: 18, marginTop: 8 },
     tab: (sel: boolean): React.CSSProperties => ({ padding: '8px 18px', fontSize: 13, fontWeight: sel ? 700 : 500, color: sel ? C.red : C.ink3, cursor: 'pointer', borderBottom: sel ? `2px solid ${C.red}` : '2px solid transparent', background: 'transparent', border: 'none', outline: 'none' }),
     section: { marginBottom: 22 } as React.CSSProperties,
     sectionTitle: { fontFamily: SE, fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 9 } as React.CSSProperties,
-    field: { display: 'flex', gap: 8, marginBottom: 5, alignItems: 'flex-start', fontSize: 13 } as React.CSSProperties,
-    lbl: { color: C.ink3, width: 110, flexShrink: 0, fontWeight: 500 } as React.CSSProperties,
+    field: { display: 'flex', gap: 8, marginBottom: 5, alignItems: 'flex-start', fontSize: 13, flexWrap: 'wrap' as const } as React.CSSProperties,
+    lbl: { color: C.ink3, width: isMobile ? 90 : 110, flexShrink: 0, fontWeight: 500, fontSize: 13 } as React.CSSProperties,
     card: { background: C.bg3, borderRadius: 8, padding: '10px 13px', marginBottom: 8, borderLeft: `3px solid ${C.bg3}` } as React.CSSProperties,
     cardRed: { background: C.bg3, borderRadius: 8, padding: '10px 13px', marginBottom: 8, borderLeft: `3px solid ${C.red}` } as React.CSSProperties,
     cardAmber: { background: C.bg3, borderRadius: 8, padding: '10px 13px', marginBottom: 8, borderLeft: '3px solid #E8A33B' } as React.CSSProperties,
@@ -170,7 +220,7 @@ export default function ProveedoresTechTab() {
     <div style={{ fontFamily: SN, color: C.ink }}>
       <div style={s.row}>
 
-        {/* ── Sidebar ─────────────────────────────────────────────────── */}
+        {/* ── Sidebar / Lista ─────────────────────────────────────────────── */}
         <div style={s.sidebar}>
           {Object.entries(porCategoria).map(([cat, items]) => (
             <div key={cat}>
@@ -179,7 +229,7 @@ export default function ProveedoresTechTab() {
                 const b = ESTADO_INT[p.estado_integracion] ?? ESTADO_INT.pendiente
                 return (
                   <div key={p.id} style={s.provRow(selected === p.id)}
-                    onClick={() => { setSelected(p.id); setTab('directorio') }}>
+                    onClick={() => seleccionarProveedor(p.id)}>
                     <div style={{ fontSize: 13, fontWeight: 600, color: C.ink, marginBottom: 2 }}>{p.nombre}</div>
                     <span style={s.badge(b.color)}>{b.label}</span>
                     {(p.proveedores_tech_contactos?.length ?? 0) > 0 &&
@@ -193,10 +243,17 @@ export default function ProveedoresTechTab() {
           ))}
         </div>
 
-        {/* ── Detalle ─────────────────────────────────────────────────── */}
+        {/* ── Detalle ─────────────────────────────────────────────────────── */}
         <div style={s.detail}>
 
-          {!selected && (
+          {/* Botón volver en móvil */}
+          {isMobile && mobileView === 'detail' && (
+            <button style={s.backBtn} onClick={volverALista}>
+              ← Volver
+            </button>
+          )}
+
+          {!selected && !isMobile && (
             <div style={{ color: C.ink3, fontSize: 14, paddingTop: 40, textAlign: 'center' }}>
               ← Selecciona un proveedor
             </div>
@@ -205,9 +262,9 @@ export default function ProveedoresTechTab() {
           {selected && prov && !loading && (
             <>
               {/* Header proveedor */}
-              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: 14, marginBottom: 2 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', paddingTop: isMobile ? 0 : 14, marginBottom: 2, flexWrap: 'wrap' as const, gap: 8 }}>
                 <div>
-                  <div style={{ fontFamily: SE, fontSize: 20, fontWeight: 700, color: C.ink }}>{prov.nombre}</div>
+                  <div style={{ fontFamily: SE, fontSize: isMobile ? 17 : 20, fontWeight: 700, color: C.ink }}>{prov.nombre}</div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 4, flexWrap: 'wrap' as const }}>
                     <span style={{ fontSize: 12, color: C.ink3 }}>{CAT_LABELS[prov.categoria]}</span>
                     {intBadge && <span style={s.badge(intBadge.color)}>{intBadge.label}</span>}
@@ -231,8 +288,8 @@ export default function ProveedoresTechTab() {
                     <div style={s.sectionTitle}>Datos</div>
                     <div style={s.card}>
                       {prov.web && <div style={s.field}><span style={s.lbl}>Web</span>
-                        <a href={`https://${prov.web}`} target="_blank" rel="noreferrer" style={{ color: C.red, fontSize: 13 }}>{prov.web}</a></div>}
-                      {prov.email_general && <div style={s.field}><span style={s.lbl}>Email</span><span style={{ fontSize: 13 }}>{prov.email_general}</span></div>}
+                        <a href={`https://${prov.web}`} target="_blank" rel="noreferrer" style={{ color: C.red, fontSize: 13, wordBreak: 'break-all' as const }}>{prov.web}</a></div>}
+                      {prov.email_general && <div style={s.field}><span style={s.lbl}>Email</span><span style={{ fontSize: 13, wordBreak: 'break-all' as const }}>{prov.email_general}</span></div>}
                       {prov.telefono && <div style={s.field}><span style={s.lbl}>Teléfono</span><span style={{ fontSize: 13 }}>{prov.telefono}</span></div>}
                       <div style={s.field}><span style={s.lbl}>Estado</span><span style={{ fontSize: 13 }}>{prov.estado}</span></div>
                       <div style={s.field}><span style={s.lbl}>Integración</span><span style={{ fontSize: 13 }}>{intBadge?.label}</span></div>
@@ -240,9 +297,9 @@ export default function ProveedoresTechTab() {
                   </div>
 
                   <div style={s.section}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' as const, gap: 6 }}>
                       <div style={s.sectionTitle}>Notas</div>
-                      <div style={{ display: 'flex', gap: 6 }}>
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' as const }}>
                         <button style={s.btn(prov.util_blog_notas ? 'blog' : 'ghost')} onClick={toggleBlogNotas}>
                           💡 {prov.util_blog_notas ? 'En blog' : 'Para blog'}
                         </button>
@@ -264,7 +321,7 @@ export default function ProveedoresTechTab() {
                   </div>
 
                   <div style={s.section}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8, flexWrap: 'wrap' as const, gap: 6 }}>
                       <div style={s.sectionTitle}>Contactos</div>
                       <button style={s.btn('ghost')} onClick={() => setShowNuevoContacto(v => !v)}>
                         {showNuevoContacto ? 'Cancelar' : '+ Añadir'}
@@ -287,7 +344,7 @@ export default function ProveedoresTechTab() {
                         <div style={{ fontWeight: 700, fontSize: 13 }}>{c.nombre}</div>
                         {c.cargo && <div style={{ fontSize: 12, color: C.ink3 }}>{c.cargo}</div>}
                         <div style={{ display: 'flex', gap: 14, marginTop: 4, flexWrap: 'wrap' as const }}>
-                          {c.email && <a href={`mailto:${c.email}`} style={{ fontSize: 12, color: C.red }}>📧 {c.email}</a>}
+                          {c.email && <a href={`mailto:${c.email}`} style={{ fontSize: 12, color: C.red, wordBreak: 'break-all' as const }}>📧 {c.email}</a>}
                           {c.telefono && <span style={{ fontSize: 12, color: C.ink2 }}>📞 {c.telefono}</span>}
                         </div>
                         {c.notas && <div style={{ fontSize: 12, color: C.ink3, marginTop: 4 }}>{c.notas}</div>}
@@ -347,7 +404,7 @@ export default function ProveedoresTechTab() {
 
                   {detalle.comms.map(c => (
                     <div key={c.id} style={c.util_blog ? s.cardAmber : c.origen === 'gmail' ? s.cardRed : s.card}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap' as const, gap: 4 }}>
                         <div style={{ display: 'flex', gap: 7, alignItems: 'center', flexWrap: 'wrap' as const }}>
                           <span style={{ fontSize: 14 }}>{TIPO_ICON[c.tipo] ?? '📄'}</span>
                           <span style={{ fontWeight: 600, fontSize: 13 }}>{c.asunto || '(sin asunto)'}</span>
