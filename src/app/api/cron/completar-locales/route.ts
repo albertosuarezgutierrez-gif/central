@@ -115,9 +115,16 @@ export async function GET(req: NextRequest) {
 
     const verificados = locales.filter(l => l.verificado && l.nombre?.trim())
     if (verificados.length === 0) {
+      // Marcar como intentado para no reprocesar (registro centinela)
+      await supabase.from('leads_locales').insert({
+        lead_id: lead.id,
+        nombre: '⚠️ Sin locales encontrados en internet',
+        ciudad: null,
+        tipo: 'otro',
+        aforo: null,
+        notas: 'auto:sin_resultado — añadir manualmente si procede',
+      })
       resumen.push(`• ${nombreGrupo}: no encontrado en web`)
-      // Pausa entre llamadas
-      await new Promise(r => setTimeout(r, 2000))
       continue
     }
 

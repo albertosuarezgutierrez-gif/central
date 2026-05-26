@@ -383,7 +383,7 @@ export default function CRMEmpresaDetalle({
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {locales.length === 0 && <div style={{ color: C.ink3, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin locales añadidos</div>}
-              {locales.map(l => (
+              {locales.filter(l => !l.notas?.startsWith('auto:sin_resultado')).map(l => (
                 <div key={l.id} style={{ background: C.paper3, borderRadius: 8, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: C.ink, fontSize: 13, fontWeight: 600 }}>{l.nombre}</div>
