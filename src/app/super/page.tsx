@@ -109,7 +109,8 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'leads'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'agente_crm'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('restaurantes')
+  const [tabCRM, setTabCRM] = useState<'leads'|'agente'>('leads')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -384,7 +385,7 @@ export default function SuperPage() {
           {([
             { id: 'restaurantes', label: 'Restaurantes' },
             { id: 'clientes',     label: 'Clientes' },
-            { id: 'leads',        label: 'Leads' },
+            { id: 'crm',          label: '🏢 CRM' },
             { id: 'cobro',        label: 'Cobro €' },
             { id: 'sugerencias',  label: 'Sugerencias', badge: badgeSug },
             { id: 'ia_training',  label: 'IA Training' },
@@ -395,7 +396,6 @@ export default function SuperPage() {
             { id: 'instagram',    label: '📸 Instagram', badge: badgeInstagram },
             { id: 'blog',         label: '📝 Blog' },
             { id: 'proveedores',  label: '🔌 Proveedores' },
-            { id: 'agente_crm',   label: '🤖 Agente CRM' },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
@@ -428,8 +428,28 @@ export default function SuperPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: `clamp(24px, 5vw, 48px) clamp(12px, 4vw, 32px)` }}>
         {tabSuper === 'cobro' ? (
           <Cobro session={session} C={C} SE={SE} SN={SN} SM={SM} />
-        ) : tabSuper === 'leads' ? (
-          <LeadsTab C={C} SE={SE} SN={SN} SM={SM} />
+        ) : tabSuper === 'crm' ? (
+          <div style={{ padding: '0' }}>
+            {/* Sub-nav CRM */}
+            <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.rule}`, marginBottom: 32, paddingTop: 8 }}>
+              {([
+                { id: 'leads', label: '📋 Leads' },
+                { id: 'agente', label: '🤖 Agente CRM' },
+              ] as { id: 'leads'|'agente'; label: string }[]).map(t => (
+                <button key={t.id} onClick={() => setTabCRM(t.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer',
+                    padding: '10px 18px', fontFamily: SM, fontSize: 12, letterSpacing: '.08em',
+                    color: tabCRM === t.id ? C.ink : C.ink4,
+                    borderBottom: `2px solid ${tabCRM === t.id ? C.red : 'transparent'}` }}>
+                  {t.label.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            {tabCRM === 'leads'
+              ? <LeadsTab C={C} SE={SE} SN={SN} SM={SM} />
+              : <CRMAgentTab />
+            }
+          </div>
         ) : tabSuper === 'sugerencias' ? (
           <SugerenciasPanel
             sugerencias={sugerencias}
@@ -464,10 +484,7 @@ export default function SuperPage() {
           <div style={{ padding: '24px 0' }}>
             <ProveedoresTechTab />
           </div>
-        ) : tabSuper === 'agente_crm' ? (
-          <div style={{ padding: '24px 0' }}>
-            <CRMAgentTab />
-          </div>
+
         ) : tabSuper === 'clientes' ? (          <div>
             <div style={{ marginBottom: 32 }}>
               <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>CLIENTES · MULTI-RESTAURANTE</div>
