@@ -94,8 +94,8 @@ export async function PUT(req: NextRequest) {
     lead_id,
     texto_reunion: texto.substring(0, 2000),
     resumen_ia: analysis.resumen,
-    canal: canal || 'nota',
-    tipo_interaccion: canal || 'nota',
+    canal: (canal === 'nota' ? 'nota_interna' : canal) || 'nota_interna',
+    tipo_interaccion: canal || 'nota_interna',
     contacto_id: contacto_id || null,
   })
 

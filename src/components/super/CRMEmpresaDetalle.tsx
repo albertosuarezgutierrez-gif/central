@@ -28,7 +28,7 @@ interface Comunicacion {
 type Tab = 'info' | 'locales' | 'contactos' | 'historial' | 'agente'
 
 const CANAL_ICONS: Record<string, string> = {
-  whatsapp: '💬', email: '📧', llamada: '📞', reunion: '🤝', instagram: '📸', nota: '📝'
+  whatsapp: '💬', email: '📧', llamada: '📞', reunion: '🤝', instagram: '📸', nota: '📝', nota_interna: '📝'
 }
 
 const ESTADO_COLOR: Record<string, string> = {
@@ -465,7 +465,7 @@ export default function CRMEmpresaDetalle({
                 <option value="llamada">📞 Llamada</option>
                 <option value="reunion">🤝 Reunión</option>
                 <option value="instagram">📸 Instagram</option>
-                <option value="nota">📝 Nota interna</option>
+                <option value="nota_interna">📝 Nota interna</option>
               </select>
               <select value={contactoAgente} onChange={e => setContactoAgente(e.target.value)} style={{ ...sel, flex: 1 }}>
                 <option value="">Sin contacto específico</option>
