@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No hay suscripción activa' }, { status: 404 })
   }
 
-  const stripe = new Stripe(getStripeSecretKey(), { apiVersion: '2023-10-16' as any })
+  const stripe = new Stripe(getStripeSecretKey(), { apiVersion: '2023-10-16' as never })
   const appUrl = process.env.APP_URL ?? 'https://www.iarest.es'
 
   const portalSession = await stripe.billingPortal.sessions.create({
