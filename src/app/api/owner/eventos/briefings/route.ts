@@ -57,6 +57,6 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const url = `${process.env.NEXT_PUBLIC_URL || 'https://www.iarest.es'}/evento/briefing/${data.token}`
+  const url = `${process.env.NEXT_PUBLIC_APP_URL || 'https://www.iarest.es'}/evento/briefing/${data.token}`
   return NextResponse.json({ briefing: data, url })
 }

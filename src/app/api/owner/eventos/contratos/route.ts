@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  const url = `${process.env.NEXT_PUBLIC_URL ?? 'https://www.iarest.es'}/contrato/${data.firma_token}`
+  const url = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/contrato/${data.firma_token}`
   return NextResponse.json({ contrato: data, url_firma: url }, { status: 201 })
 }
 

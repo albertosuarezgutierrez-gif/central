@@ -48,8 +48,8 @@ export async function POST(
       },
       quantity: 1,
     }],
-    success_url: `${process.env.NEXT_PUBLIC_URL ?? 'https://www.iarest.es'}/propina/${token}?ok=1`,
-    cancel_url:  `${process.env.NEXT_PUBLIC_URL ?? 'https://www.iarest.es'}/propina/${token}`,
+    success_url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/propina/${token}?ok=1`,
+    cancel_url:  `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/propina/${token}`,
     metadata: {
       propina_id: propina.id,
       token,

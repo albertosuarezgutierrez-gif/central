@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   if (body.portal_activo && body.contacto_email && process.env.RESEND_API_KEY) {
     try {
       const { Resend } = await import('resend')
-      const url = `${process.env.NEXT_PUBLIC_URL ?? 'https://www.iarest.es'}/proveedor/${data.token_portal}`
+      const url = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/proveedor/${data.token_portal}`
       await new Resend(process.env.RESEND_API_KEY).emails.send({
         from: 'ia.rest <eventos@iarest.es>', to: body.contacto_email,
         subject: 'Acceso a tu portal de proveedor — ia.rest',

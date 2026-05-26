@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     let sha: string | undefined
     const existing = await fetch(
       `https://api.github.com/repos/albertosuarezgutierrez-gif/ia.rest/contents/${filePath}`,
-      { headers: { 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}` } }
+      { headers: { 'Authorization': `Bearer ${process.env.GH_PAT}` } }
     ).then(r => r.ok ? r.json() : null).catch(() => null)
     if (existing?.sha) sha = existing.sha
 
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
       `https://api.github.com/repos/albertosuarezgutierrez-gif/ia.rest/contents/${filePath}`,
       {
         method: 'PUT',
-        headers: { 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}`, 'Content-Type': 'application/json' },
+        headers: { 'Authorization': `Bearer ${process.env.GH_PAT}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ message: `blog: publicar ${b.slug}`, content, ...(sha ? { sha } : {}) }),
       }
     )
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     const filePath = `src/app/blog/${slug}/page.tsx`
     const ghRes = await fetch(
       `https://api.github.com/repos/albertosuarezgutierrez-gif/ia.rest/contents/${filePath}`,
-      { headers: { 'Authorization': `Bearer ${process.env.GITHUB_TOKEN}` } }
+      { headers: { 'Authorization': `Bearer ${process.env.GH_PAT}` } }
     )
     if (!ghRes.ok) return NextResponse.json({ error: 'No encontrado en GitHub' }, { status: 404 })
     const data = await ghRes.json()
