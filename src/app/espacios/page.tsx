@@ -253,19 +253,21 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
 .footer-copy { font-size: 11px; color: var(--ink4); font-family: 'DM Mono', monospace; }
 
 /* ── RESPONSIVE ── */
+/* Ocultar burger y mob-menu por defecto (solo visibles en móvil) */
+.burger { display: none; flex-direction: column; justify-content: center; gap: 5px; background: none; border: none; cursor: pointer; padding: 8px; z-index: 200; flex-shrink: 0; }
+.burger span { display: block; width: 22px; height: 2px; background: #F6F1E7; border-radius: 2px; transition: transform .3s, opacity .3s; }
+.mob-menu { display: none; position: fixed; inset: 60px 0 0; background: #14110E; z-index: 150; flex-direction: column; padding: 32px 24px; gap: 4px; }
+.mob-menu.open { display: flex; }
+.mob-menu a { font-size: 18px; font-weight: 500; color: #F6F1E7; text-decoration: none; padding: 14px 0; border-bottom: 1px solid rgba(246,241,231,0.07); }
+.mob-cta { color: #D9442B !important; font-weight: 700 !important; }
+
 @media (max-width: 900px) {
   section, footer { padding: 60px 24px; }
   .hero { padding: 72px 24px 60px; }
   .topbar { padding: 0 20px; }
-  .burger{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:8px;z-index:200;flex-shrink:0}
-.burger span{display:block;width:22px;height:2px;background:#F6F1E7;border-radius:2px;transition:transform .3s,opacity .3s}
-.burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
+  .burger.open span:nth-child(1){transform:translateY(7px) rotate(45deg)}
 .burger.open span:nth-child(2){opacity:0}
 .burger.open span:nth-child(3){transform:translateY(-7px) rotate(-45deg)}
-.mob-menu{display:none;position:fixed;inset:60px 0 0;background:#14110E;z-index:150;flex-direction:column;padding:32px 24px;gap:4px}
-.mob-menu.open{display:flex}
-.mob-menu a{font-size:18px;font-weight:500;color:#F6F1E7;text-decoration:none;padding:14px 0;border-bottom:1px solid rgba(246,241,231,0.07)}
-.mob-cta{color:#D9442B!important;font-weight:700!important}
   .topbar-nav { display: none; }
   .burger { display: flex !important; }
   .bnet-inner, .dolores-grid, .pricing-inner, .contacto-inner { grid-template-columns: 1fr; gap: 36px; }
@@ -275,9 +277,9 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
   .footer-inner { flex-direction: column; align-items: flex-start; }
 }` }} />
       <div dangerouslySetInnerHTML={{ __html: `<header>
-  <nav>
+  <nav class="topbar">
   <a class="logo" href="/">ia<b>.</b>rest</a>
-  <div class="nav-links">
+  <div class="topbar-nav">
     <a href="/hosteleria">Hostelería</a>
     <a href="/catering">Catering</a>
     <a href="#pricing">Precios</a>
@@ -292,7 +294,6 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
   <a href="#pricing">Precios</a>
   <a href="#contacto" class="mob-cta">Demo gratuita →</a>
 </div>
-  </nav>
 </header>
 
 <main>
