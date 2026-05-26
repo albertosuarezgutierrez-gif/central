@@ -345,11 +345,15 @@ export default function SuperPage() {
           .super-hist-row { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 14px !important; }
           /* Ticket layout: sidebar encima en móvil */
           .super-ticket-layout { grid-template-columns: 1fr !important; }
-          /* Tabs super */
-          .super-tab-lbl { display: none; }
+          /* Nav tabs principal */
+          .super-tab-btn { padding: 12px 10px !important; font-size: 10px !important; }
+          /* Kanban: columnas más estrechas */
+          .kanban-col { width: 160px !important; }
         }
         @media (max-width: 480px) {
           .super-header-name { display: none; }
+          /* Nav: ocultar labels, mostrar solo activo */
+          .super-tab-btn { padding: 10px 8px !important; font-size: 9px !important; letter-spacing: 0 !important; }
         }
       `}</style>
       {/* Header */}
@@ -393,6 +397,7 @@ export default function SuperPage() {
             { id: 'sugerencias', label: 'Sugerencias', badge: badgeSug },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
+              className="super-tab-btn"
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '14px 20px',
