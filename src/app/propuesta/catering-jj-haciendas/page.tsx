@@ -32,6 +32,7 @@ const config: ClienteConfig = {
     { nombre: 'Cocina central', secciones: ['Fríos', 'Calientes', 'Postres'], color: C.red, icon: '🔥' },
     { nombre: 'Hacienda El Alba', secciones: ['Montaje', 'Pases', 'Barra'], color: C.gold, icon: '🏛️' },
     { nombre: 'Hacienda Trinidad', secciones: ['Montaje', 'Pases', 'Barra'], color: C.teal, icon: '🌿' },
+    { nombre: 'Hacienda El Triunfo', secciones: ['Montaje', 'Pases', 'Barra'], color: C.amber, icon: '🌾' },
   ],
 
   pasosFlujo: [
