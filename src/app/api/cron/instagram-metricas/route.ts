@@ -16,6 +16,6 @@ export async function GET(req: NextRequest) {
       actualizados++
     } catch { /* insights pueden no estar disponibles */ }
   }
-  if (actualizados > 0) tgAlert(`📊 Instagram: ${actualizados} posts con métricas actualizadas`, 'info')
+  if (actualizados > 0) await tgAlert(`📊 Instagram: ${actualizados} posts con métricas actualizadas`, 'info')
   return NextResponse.json({ ok: true, actualizados })
 }

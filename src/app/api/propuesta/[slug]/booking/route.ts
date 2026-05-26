@@ -73,7 +73,7 @@ export async function POST(
   }
 
   // Notificar a Alberto por Telegram
-  tgAlert(
+  await tgAlert(
     `📅 Reunión solicitada!\n\n<b>${empresa}</b>\n👤 ${nombre}${email ? ` · ${email}` : ''}\n📍 ${lugar}\n🕐 ${fecha} a las ${hora}h${notas ? `\n📝 ${notas}` : ''}\n\n<a href="https://www.iarest.es/super">Confirmar en /super →</a>`,
     'info'
   )
@@ -148,7 +148,7 @@ export async function PATCH(
   // Telegram solo en primera visita
   if (esPrimeraVisita) {
     const empresa = lead.empresa || lead.restaurante || lead.nombre || slug
-    tgAlert(
+    await tgAlert(
       `👁 Propuesta abierta por primera vez\n\n<b>${empresa}</b>\n🔗 /propuesta/${slug}\n\n<a href="https://www.iarest.es/super">Ver en CRM →</a>`,
       'info'
     )

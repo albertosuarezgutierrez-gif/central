@@ -213,7 +213,7 @@ JSON:
   }).eq('id', lead_id)
 
   // 8. Notificar Telegram
-  tgAlert(
+  await tgAlert(
     `🎯 Research completado\n\n<b>${empresa}</b>\n💰 MRR estimado: ${estudio.mrr_estimado}€/mes\n📦 Módulos: ${(estudio.modulos_criticos as string[])?.join(', ')}\n⭐ Puntuación: ${estudio.puntuacion_lead}/100\n\nPropuesta: ${propuestaUrl}`,
     'info'
   )

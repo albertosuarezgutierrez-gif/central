@@ -55,17 +55,8 @@ export async function POST(req: NextRequest) {
       `⏱️ ${fecha}`
     ].join('\n')
 
-    const token   = process.env.TELEGRAM_BOT_TOKEN
-    const chat_id = process.env.TELEGRAM_CHAT_ID
-
     const [tgResult, emailResult] = await Promise.allSettled([
-      token && chat_id
-        ? fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id, text: tgMsg, parse_mode: 'HTML' }),
-          }).then(r => r.json())
-        : Promise.resolve({ ok: false, error: 'No TG config' }),
+      tgAlert(tgMsg.replace(/<[^>]*>/g, ''), 'info'),
       enviarEmailNuevoLead({ nombre, restaurante, email, telefono, usuarios })
     ])
 

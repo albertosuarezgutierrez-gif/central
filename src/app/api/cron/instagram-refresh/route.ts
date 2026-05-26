@@ -18,12 +18,12 @@ export async function GET(req: NextRequest) {
           method: 'PATCH', headers: { Authorization: `Bearer ${VERCEL_TOKEN}`, 'Content-Type': 'application/json' },
           body: JSON.stringify({ value: nuevoToken }),
         })
-        tgAlert('🔄 Token Instagram renovado automáticamente ✅', 'info')
+        await tgAlert('🔄 Token Instagram renovado automáticamente ✅', 'info')
       }
     }
     return NextResponse.json({ ok: true })
   } catch (err: any) {
-    tgAlert(`❌ Error renovando token Instagram: ${err.message}`, 'critico')
+    await tgAlert(`❌ Error renovando token Instagram: ${err.message}`, 'critico')
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

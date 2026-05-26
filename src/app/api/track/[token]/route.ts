@@ -29,7 +29,7 @@ export async function GET(
       .update({ propuesta_vista_at: new Date().toISOString() })
       .eq('id', lead.id)
 
-    tgAlert(
+    await tgAlert(
       `👁 <b>${lead.restaurante || lead.nombre}</b> ha abierto la propuesta`,
       'aviso'
     )

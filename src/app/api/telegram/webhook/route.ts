@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
       pendingFoco.delete(chatId)
       const { leadId, messageId } = focoData
 
-      tgAlert(`✏️ Regenerando con nuevo foco: "${text}"`, 'info')
+      await tgAlert(`✏️ Regenerando con nuevo foco: "${text}"`, 'info')
       await tgEditMessage(messageId, `⏳ <i>Regenerando propuesta con foco: "${text}"…</i>`)
 
       generarPropuestaYEmail(leadId, supabase, messageId, text).catch(console.error)

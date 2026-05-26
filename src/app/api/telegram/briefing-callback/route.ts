@@ -201,7 +201,7 @@ export async function POST(req: NextRequest) {
 
   } catch (err: any) {
     await tgEditMessage(cb.message.message_id, `❌ Error: ${err.message.slice(0,100)}`)
-    tgAlert(`❌ Briefing semanal error: ${err.message}`)
+    await tgAlert(`❌ Briefing semanal error: ${err.message}`)
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }

@@ -48,7 +48,7 @@ Devuelve SOLO JSON válido sin markdown, sin texto adicional.`
     landing_actualizada_at: new Date().toISOString(),
   }).eq('id', id)
 
-  tgAlert(`🔄 Landing <b>${nombre}</b> actualizada\n💡 ${analisis.headline_personalizado || ''}`, 'info')
+  await tgAlert(`🔄 Landing <b>${nombre}</b> actualizada\n💡 ${analisis.headline_personalizado || ''}`, 'info')
 
   return NextResponse.json({ ok: true, analisis, landing_url: `https://www.iarest.es/p/${lead.landing_slug}` })
 }

@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle()
     const nombreLocal = rest?.nombre ?? 'Local'
     const hora = new Date().toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' })
-    tgAlert(
+    await tgAlert(
       `Cierre de caja · ${nombreLocal}\n💰 ${totalVentas.toFixed(2)}€ · ${numComandas} comandas · ${hora}`,
       'info'
     )

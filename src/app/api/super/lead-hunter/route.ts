@@ -59,6 +59,6 @@ export async function PUT(req: NextRequest) {
   }
   const { mensaje } = await req.json()
   if (!mensaje) return NextResponse.json({ error: 'Mensaje requerido' }, { status: 400 })
-  tgAlert(mensaje, 'info')
+  await tgAlert(mensaje, 'info')
   return NextResponse.json({ ok: true })
 }

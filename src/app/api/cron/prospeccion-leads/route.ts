@@ -145,7 +145,7 @@ export async function GET(req: NextRequest) {
     .slice(0, 8) // máximo 8 por semana
 
   if (candidatosFiltrados.length === 0) {
-    tgAlert('🔍 Prospección semanal: sin candidatos nuevos esta semana.', 'info')
+    await tgAlert('🔍 Prospección semanal: sin candidatos nuevos esta semana.', 'info')
     return NextResponse.json({ ok: true, candidatos: 0 })
   }
 
@@ -199,7 +199,7 @@ export async function GET(req: NextRequest) {
     `• <b>${c.nombre}</b> (${c.ciudad}) — ${c.mrr_estimado}€/mes · ${c.puntuacion}/100\n  ${c.argumento}`
   ).join('\n\n')
 
-  tgAlert(
+  await tgAlert(
     `🔍 <b>Prospección semanal IA</b>\n${validos.length} candidatos nuevos encontrados\n\n${lineas}\n\n<a href="https://www.iarest.es/super">Ver todos en /super →</a>`,
     'info'
   )

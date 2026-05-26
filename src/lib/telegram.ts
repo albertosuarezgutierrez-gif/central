@@ -1,5 +1,5 @@
 // lib/telegram.ts — notificaciones operador vía Telegram
-// Fire-and-forget, nunca bloquea la respuesta principal
+// Retorna Promise — usar con await para garantizar entrega
 
 const EMOJI: Record<string, string> = {
   critico:  '🔴',
@@ -8,10 +8,10 @@ const EMOJI: Record<string, string> = {
   resuelto: '✅',
 }
 
-export function tgAlert(
+export async function tgAlert(
   mensaje: string,
   nivel: 'critico' | 'aviso' | 'info' | 'resuelto' = 'critico'
-): void {
+): Promise<void> {
   const token   = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = process.env.TELEGRAM_CHAT_ID
   if (!token || !chat_id) return
@@ -19,11 +19,15 @@ export function tgAlert(
   const hora = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' })
   const text = `${EMOJI[nivel]} <b>ia.rest</b>\n${escapeHtml(mensaje)}\n<i>${hora}</i>`
 
-  fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ chat_id, text, parse_mode: 'HTML' }),
-  }).catch((err) => { console.error('[tgAlert]', err?.message) })
+  try {
+    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id, text, parse_mode: 'HTML' }),
+    })
+  } catch (err: any) {
+    console.error('[tgAlert]', err?.message)
+  }
 }
 
 // Mensaje con botones inline — para aprobación de leads

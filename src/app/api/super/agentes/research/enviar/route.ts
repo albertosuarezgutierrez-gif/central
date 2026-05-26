@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
     }]
   }).eq('id', lead_id)
 
-  tgAlert(
+  await tgAlert(
     `📨 Propuesta enviada\n<b>${empresa}</b>\n✉ ${lead.email}`,
     'info'
   )
