@@ -7,6 +7,7 @@ import PanelProveedoresEvento from '@/components/owner/PanelProveedoresEvento'
 import PanelPasesEvento from '@/components/owner/PanelPasesEvento'
 import PanelScoring from '@/components/owner/PanelScoring'
 import PanelEscandallo from '@/components/owner/PanelEscandallo'
+import MantenimientoTab from '@/components/owner/MantenimientoTab'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type EventoTipo = 'boda' | 'comunion' | 'bautizo' | 'cumpleanos' | 'empresa' | 'otro'
@@ -667,6 +668,61 @@ function PanelAPPCC({ eventoId, sh }: { eventoId: string; sh: () => Record<strin
   )
 }
 // ─── Componente principal ─────────────────────────────────────────────────────
+// ─── Espacios y Mantenimiento ─────────────────────────────────────────────────
+function EspaciosMantenimientoSection({
+  espacios, sh
+}: {
+  espacios: Espacio[]
+  sh: () => Record<string, string>
+}) {
+  const [expandido, setExpandido] = useState<string | null>(null)
+
+  return (
+    <div style={{ marginTop: 32 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+        <div style={{ fontFamily: SE, fontSize: 17, fontWeight: 700, color: C.ink, fontStyle: 'italic' }}>
+          Espacios
+        </div>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+          — mantenimiento y recordatorios
+        </div>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {espacios.map(espacio => (
+          <div key={espacio.id} style={{ background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, overflow: 'hidden' }}>
+            <button
+              onClick={() => setExpandido(prev => prev === espacio.id ? null : espacio.id)}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 12,
+                padding: '12px 16px', background: 'transparent', border: 'none',
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ fontSize: 18 }}>🏛️</span>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.ink }}>{espacio.nombre}</div>
+                {espacio.aforo_maximo && (
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 1 }}>
+                    Aforo máx. {espacio.aforo_maximo} personas
+                  </div>
+                )}
+              </div>
+              <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+                {expandido === espacio.id ? '▲ Cerrar' : '🔧 Mantenimiento'}
+              </span>
+            </button>
+            {expandido === espacio.id && (
+              <div style={{ borderTop: `1px solid ${C.rule}`, padding: '16px 20px', background: C.bg ?? C.paper }}>
+                <MantenimientoTab espacioId={espacio.id} />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 interface EventosTabProps {
   restauranteId: string
   sh: () => Record<string, string>
@@ -819,6 +875,11 @@ export default function EventosTab({ restauranteId, sh }: EventosTabProps) {
             onClonar={ev => { setModalClonar(ev); setFechaClonar('') }}
           />
         ))
+      )}
+
+      {/* ─── Espacios y Mantenimiento ─────────────────────────────────────── */}
+      {espacios.length > 0 && (
+        <EspaciosMantenimientoSection espacios={espacios} sh={sh} />
       )}
 
       {/* Modal clonar evento */}

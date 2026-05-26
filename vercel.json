@@ -71,6 +71,10 @@
     {
       "path": "/api/cron/instagram-metricas",
       "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/mantenimiento-espacios",
+      "schedule": "0 8 * * *"
     }
   ]
 }
