@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad,
       created_at, trial_end, max_camareros, stripe_subscription_id,
-      personal(count),
+      personal!restaurante_id(count),
       mesas:mesas(count),
       comandas:comandas(count)
     `)
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
 
   const restaurantes = (data ?? []).map((r: any) => ({
     ...r,
-    num_camareros: r.personal?.[0]?.count ?? 0,
+    num_camareros: r['personal']?.[0]?.count ?? 0,
     num_mesas:     r.mesas?.[0]?.count ?? 0,
     num_comandas:  r.comandas?.[0]?.count ?? 0,
   }))
