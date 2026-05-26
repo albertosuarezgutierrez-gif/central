@@ -1102,7 +1102,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             </div>
           )}
           {/* Subtítulo: ciudad / TPV */}
-          <div style={{ fontSize: 11, color: C.ink4, marginBottom: 6 }}>
+          <div style={{ fontSize: 11, color: C.ink3, marginBottom: 6 }}>
             {[lead.tpv, lead.locales].filter(Boolean).join(' · ') || lead.ciudad || '—'}
           </div>
           {/* Pills */}
@@ -1111,7 +1111,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               {lead.estado}
             </span>
             {lead.puntuacion != null && (
-              <span style={{ fontSize: 9, color: C.ink4, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
+              <span style={{ fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
                 ★ {lead.puntuacion}
               </span>
             )}
@@ -1174,7 +1174,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, fontWeight: 700, letterSpacing: '.08em', textTransform: 'uppercase' }}>
                 {col.label}
               </span>
-              <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4, background: C.bg3, borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
+              <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
                 {colLeads.length}
               </span>
             </div>
@@ -1182,7 +1182,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             {/* Cards */}
             <div style={{ padding: '6px 8px 8px', display: 'flex', flexDirection: 'column', gap: 5, minHeight: 60 }}>
               {colLeads.length === 0 && (
-                <div style={{ padding: '12px 8px', color: C.ink4, fontSize: 11, fontFamily: SM, textAlign: 'center' }}>
+                <div style={{ padding: '12px 8px', color: C.ink3, fontSize: 11, fontFamily: SM, textAlign: 'center' }}>
                   —
                 </div>
               )}
@@ -1221,7 +1221,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                       ) : null
                     })()}
                     {lead.tpv && (
-                      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4, marginBottom: 4 }}>
+                      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 4 }}>
                         {lead.tpv}
                       </div>
                     )}
@@ -1261,10 +1261,10 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <div style={{ display: 'flex', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: 3, gap: 2 }}>
-            <button onClick={() => setVistaKanban(true)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600, background: vistaKanban ? C.red : 'transparent', color: vistaKanban ? '#fff' : C.ink4 }}>
+            <button onClick={() => setVistaKanban(true)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600, background: vistaKanban ? C.red : 'transparent', color: vistaKanban ? '#fff' : C.ink3 }}>
               Kanban
             </button>
-            <button onClick={() => setVistaKanban(false)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600, background: !vistaKanban ? C.red : 'transparent', color: !vistaKanban ? '#fff' : C.ink4 }}>
+            <button onClick={() => setVistaKanban(false)} style={{ padding: '6px 14px', borderRadius: 7, border: 'none', cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600, background: !vistaKanban ? C.red : 'transparent', color: !vistaKanban ? '#fff' : C.ink3 }}>
               Lista
             </button>
           </div>
@@ -1297,7 +1297,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 24 }}>
               {personales.length === 0
-                ? <div style={{ color: C.ink4, fontSize: 12, fontStyle: 'italic' }}>Sin leads personales</div>
+                ? <div style={{ color: C.ink3, fontSize: 12, fontStyle: 'italic' }}>Sin leads personales</div>
                 : personales.map(l => <CardLead key={l.id} lead={l} />)
               }
             </div>
@@ -1306,7 +1306,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {online.length === 0
-                ? <div style={{ color: C.ink4, fontSize: 12, fontStyle: 'italic' }}>Sin leads online</div>
+                ? <div style={{ color: C.ink3, fontSize: 12, fontStyle: 'italic' }}>Sin leads online</div>
                 : online.map(l => <CardLead key={l.id} lead={l} />)
               }
             </div>

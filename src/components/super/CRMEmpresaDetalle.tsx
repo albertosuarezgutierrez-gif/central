@@ -196,11 +196,11 @@ export default function CRMEmpresaDetalle({
       <div style={{ padding: '16px 18px 12px', borderBottom: `1px solid ${C.rule}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 10, color: C.ink4, fontWeight: 600, letterSpacing: '.08em', marginBottom: 4 }}>EMPRESA</div>
+            <div style={{ fontSize: 10, color: C.ink3, fontWeight: 600, letterSpacing: '.08em', marginBottom: 4 }}>EMPRESA</div>
             <h2 style={{ fontFamily: SE, fontSize: 20, color: C.paper, margin: '0 0 2px', fontWeight: 400 }}>
               {lead.restaurante || lead.nombre}
             </h2>
-            {lead.tpv && <div style={{ fontSize: 12, color: C.ink4 }}>TPV: {lead.tpv}</div>}
+            {lead.tpv && <div style={{ fontSize: 12, color: C.ink3 }}>TPV: {lead.tpv}</div>}
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'flex-start' }}>
             {lead.landing_slug && (
@@ -253,7 +253,7 @@ export default function CRMEmpresaDetalle({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {/* Briefing IA */}
             <div style={{ background: C.bg3, borderRadius: 8, padding: 12, border: `1px solid ${C.rule}` }}>
-              <div style={{ fontSize: 10, color: C.ink4, marginBottom: 6, fontWeight: 600, letterSpacing: '.06em' }}>✨ RESUMEN DE LA RELACIÓN</div>
+              <div style={{ fontSize: 10, color: C.ink3, marginBottom: 6, fontWeight: 600, letterSpacing: '.06em' }}>✨ RESUMEN DE LA RELACIÓN</div>
               {loadingBriefing ? (
                 <div style={{ color: C.ink3, fontSize: 12 }}>Analizando historial...</div>
               ) : briefing ? (
@@ -271,7 +271,7 @@ export default function CRMEmpresaDetalle({
                 <div style={{ fontSize: 10, color: C.amber, marginBottom: 4, fontWeight: 600 }}>📅 PRÓXIMA ACCIÓN</div>
                 <div style={{ color: C.paper, fontSize: 13 }}>{lead.siguiente_contacto_texto}</div>
                 {lead.siguiente_contacto_at && (
-                  <div style={{ color: C.ink4, fontSize: 11, marginTop: 3 }}>
+                  <div style={{ color: C.ink3, fontSize: 11, marginTop: 3 }}>
                     {new Date(lead.siguiente_contacto_at).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}
                   </div>
                 )}
@@ -281,7 +281,7 @@ export default function CRMEmpresaDetalle({
             {/* Decisores */}
             {contactos.filter(c => c.es_decisor).length > 0 && (
               <div>
-                <div style={{ fontSize: 10, color: C.ink4, marginBottom: 8, fontWeight: 600, letterSpacing: '.06em' }}>⭐ DECISORES</div>
+                <div style={{ fontSize: 10, color: C.ink3, marginBottom: 8, fontWeight: 600, letterSpacing: '.06em' }}>⭐ DECISORES</div>
                 {contactos.filter(c => c.es_decisor).map(c => (
                   <div key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 10, background: C.bg3, borderRadius: 8, padding: '8px 12px', marginBottom: 6 }}>
                     <div style={{ width: 32, height: 32, borderRadius: '50%', background: C.red + '33', display: 'flex', alignItems: 'center', justifyContent: 'center', color: C.red, fontSize: 14, fontWeight: 700, flexShrink: 0 }}>
@@ -289,7 +289,7 @@ export default function CRMEmpresaDetalle({
                     </div>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: C.paper, fontSize: 13, fontWeight: 600 }}>{c.nombre}</div>
-                      <div style={{ color: C.ink4, fontSize: 11 }}>{c.cargo ?? '—'}</div>
+                      <div style={{ color: C.ink3, fontSize: 11 }}>{c.cargo ?? '—'}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
                       {c.telefono && <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" style={{ fontSize: 18, textDecoration: 'none' }}>💬</a>}
@@ -313,7 +313,7 @@ export default function CRMEmpresaDetalle({
         {tab === 'locales' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ color: C.ink4, fontSize: 11 }}>Establecimientos del grupo</span>
+              <span style={{ color: C.ink3, fontSize: 11 }}>Establecimientos del grupo</span>
               <button onClick={() => setShowFormLocal(!showFormLocal)}
                 style={{ fontSize: 11, color: C.paper, background: C.red, border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
                 + Añadir
@@ -343,12 +343,12 @@ export default function CRMEmpresaDetalle({
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {locales.length === 0 && <div style={{ color: C.ink4, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin locales añadidos</div>}
+              {locales.length === 0 && <div style={{ color: C.ink3, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin locales añadidos</div>}
               {locales.map(l => (
                 <div key={l.id} style={{ background: C.bg3, borderRadius: 8, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ flex: 1 }}>
                     <div style={{ color: C.paper, fontSize: 13, fontWeight: 600 }}>{l.nombre}</div>
-                    <div style={{ color: C.ink4, fontSize: 11, marginTop: 2 }}>{[l.tipo, l.ciudad, l.aforo ? `${l.aforo} pax` : null].filter(Boolean).join(' · ')}</div>
+                    <div style={{ color: C.ink3, fontSize: 11, marginTop: 2 }}>{[l.tipo, l.ciudad, l.aforo ? `${l.aforo} pax` : null].filter(Boolean).join(' · ')}</div>
                   </div>
                   <button onClick={() => handleDeleteLocal(l.id)} style={{ background: 'transparent', border: 'none', color: C.ink4, cursor: 'pointer', fontSize: 14 }}>🗑</button>
                 </div>
@@ -361,7 +361,7 @@ export default function CRMEmpresaDetalle({
         {tab === 'contactos' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <span style={{ color: C.ink4, fontSize: 11 }}>Personas del grupo</span>
+              <span style={{ color: C.ink3, fontSize: 11 }}>Personas del grupo</span>
               <button onClick={() => setShowFormContacto(!showFormContacto)}
                 style={{ fontSize: 11, color: C.paper, background: C.red, border: 'none', borderRadius: 6, padding: '4px 10px', cursor: 'pointer' }}>
                 + Añadir
@@ -403,7 +403,7 @@ export default function CRMEmpresaDetalle({
             )}
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-              {contactos.length === 0 && <div style={{ color: C.ink4, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin contactos añadidos</div>}
+              {contactos.length === 0 && <div style={{ color: C.ink3, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin contactos añadidos</div>}
               {contactos.map(c => (
                 <div key={c.id} style={{ background: C.bg3, borderRadius: 8, padding: '9px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
                   <div style={{ width: 34, height: 34, borderRadius: '50%', flexShrink: 0, background: c.es_decisor ? C.red + '33' : C.bg2, display: 'flex', alignItems: 'center', justifyContent: 'center', color: c.es_decisor ? C.red : C.ink3, fontSize: 14, fontWeight: 700 }}>
@@ -414,10 +414,10 @@ export default function CRMEmpresaDetalle({
                       <span style={{ color: C.paper, fontSize: 13, fontWeight: 600 }}>{c.nombre}</span>
                       {c.es_decisor && <span style={{ fontSize: 9, color: C.red, background: C.red + '22', borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>DECISOR</span>}
                     </div>
-                    <div style={{ color: C.ink4, fontSize: 11, marginTop: 1 }}>{[c.cargo, c.local?.nombre].filter(Boolean).join(' · ')}</div>
+                    <div style={{ color: C.ink3, fontSize: 11, marginTop: 1 }}>{[c.cargo, c.local?.nombre].filter(Boolean).join(' · ')}</div>
                     <div style={{ display: 'flex', gap: 5, marginTop: 3 }}>
-                      <span style={{ fontSize: 9, color: C.ink4, background: C.bg2, borderRadius: 3, padding: '1px 4px' }}>{CANAL_ICONS[c.canal_preferido]} {c.canal_preferido}</span>
-                      <span style={{ fontSize: 9, color: scoreColor(c.score), background: C.bg2, borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>score {c.score}</span>
+                      <span style={{ fontSize: 9, color: C.ink3, background: C.bg2, borderRadius: 3, padding: '1px 4px' }}>{CANAL_ICONS[c.canal_preferido]} {c.canal_preferido}</span>
+                      <span style={{ fontSize: 10, color: scoreColor(c.score), background: C.bg2, borderRadius: 3, padding: '1px 4px', fontWeight: 700 }}>score {c.score}</span>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'center' }}>
@@ -437,7 +437,7 @@ export default function CRMEmpresaDetalle({
         {/* ── HISTORIAL ── */}
         {tab === 'historial' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {comunicaciones.length === 0 && <div style={{ color: C.ink4, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin comunicaciones registradas</div>}
+            {comunicaciones.length === 0 && <div style={{ color: C.ink3, fontSize: 12, textAlign: 'center', padding: 20 }}>Sin comunicaciones registradas</div>}
             {comunicaciones.map(com => (
               <div key={com.id} style={{ background: C.bg3, borderRadius: 8, padding: '9px 12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 5 }}>
@@ -445,7 +445,7 @@ export default function CRMEmpresaDetalle({
                     <span style={{ fontSize: 9, color: C.ink3, background: C.bg2, borderRadius: 3, padding: '2px 5px' }}>{CANAL_ICONS[com.canal] ?? '💬'} {com.canal}</span>
                     {com.contacto && <span style={{ fontSize: 9, color: C.amber, background: C.amber + '22', borderRadius: 3, padding: '2px 5px' }}>👤 {com.contacto.nombre}</span>}
                   </div>
-                  <span style={{ fontSize: 9, color: C.ink4, flexShrink: 0 }}>{new Date(com.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
+                  <span style={{ fontSize: 10, color: C.ink3, flexShrink: 0 }}>{new Date(com.created_at).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}</span>
                 </div>
                 <div style={{ color: com.resumen_ia ? C.paper : C.ink3, fontSize: 12, lineHeight: 1.5 }}>
                   {com.resumen_ia ?? com.texto_reunion?.slice(0, 200)}
@@ -490,10 +490,10 @@ export default function CRMEmpresaDetalle({
               </button>
             ) : (
               <div style={{ background: C.bg3, borderRadius: 8, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-                <div style={{ fontSize: 10, color: C.ink4, fontWeight: 600 }}>PREVIEW — ¿Guardar este análisis?</div>
+                <div style={{ fontSize: 10, color: C.ink3, fontWeight: 600 }}>PREVIEW — ¿Guardar este análisis?</div>
                 {Boolean((previewAgente.analysis as Record<string, unknown>)?.resumen) && (
                   <div>
-                    <div style={{ fontSize: 10, color: C.ink4, marginBottom: 3 }}>Resumen</div>
+                    <div style={{ fontSize: 10, color: C.ink3, marginBottom: 3 }}>Resumen</div>
                     <div style={{ color: C.paper, fontSize: 12 }}>{String((previewAgente.analysis as Record<string, unknown>).resumen ?? '')}</div>
                   </div>
                 )}
