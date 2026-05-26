@@ -130,9 +130,12 @@ export default function HomePage() {
       const aa = document.getElementById("annualAmt")
       const pb = document.getElementById("priceBreakdown")
       const ul = document.getElementById("uLabel")
-      if (pr) pr.innerHTML = `${total} <span style="font-size:18px;color:var(--ink3);font-family:'Inter Tight',sans-serif">€/mes</span>`
-      if (aa) aa.textContent = `${annual} €/año`
-      if (pb) pb.textContent = breakdown
+      const isGrupo = users >= 10
+      if (pr) pr.innerHTML = isGrupo
+        ? `<span style="font-family:'Inter Tight',sans-serif;font-size:32px;font-weight:400;letter-spacing:-1px">Consultar</span>`
+        : `${total} <span style="font-size:18px;color:var(--ink3);font-family:'Inter Tight',sans-serif">€/mes</span>`
+      if (aa) aa.textContent = isGrupo ? "precio a medida para grupos" : `${annual} €/año`
+      if (pb) pb.textContent = isGrupo ? "Precio personalizado para grupos y cadenas" : breakdown
       if (ul) ul.innerHTML = users === 1 ? "usuario incluido<br>en el precio base" : users <= 6 ? `usuarios · <span style="color:var(--ink2)">+20€ c/u</span>` : `usuarios · <span style="color:var(--ink2)">7+ a 15€ c/u</span>`
       const uc = document.getElementById("uCount")
       const mc = document.getElementById("mCount")
@@ -150,10 +153,10 @@ export default function HomePage() {
   return (
     <>
       <title>Software de Gestión para Restaurantes, Catering y Espacios de Eventos | ia.rest</title>
-      <meta name="description" content="ia.rest gestiona restaurantes, catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes." />
+      <meta name="description" content="ia.rest gestiona restaurantes, catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 89€/mes." />
       <meta name="robots" content="index, follow" />
       <meta property="og:title" content="Software para Restaurantes, Catering y Espacios de Eventos | ia.rest" />
-      <meta property="og:description" content="Gestión completa para hostelería: restaurantes, catering y espacios de eventos. Voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes." />
+      <meta property="og:description" content="Gestión completa para hostelería: restaurantes, catering y espacios de eventos. Voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 89€/mes." />
       <meta property="og:url" content="https://www.iarest.es" />
       <meta property="og:type" content="website" />
       <meta property="og:image" content="https://www.iarest.es/og-image.jpg" />
@@ -162,8 +165,8 @@ export default function HomePage() {
       <meta property="og:site_name" content="ia.rest" />
       <meta property="og:locale" content="es_ES" />
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 59€/mes" />
-      <meta name="twitter:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión. 59€/mes." />
+      <meta name="twitter:title" content="TPV por Voz para Bares - ia.rest | Sin Comisión 89€/mes" />
+      <meta name="twitter:description" content="Gestión completa para hostelería: voz, KDS, almacén, eventos, bodas y catering integrado. Sin comisión. 89€/mes." />
       <meta name="twitter:image" content="https://www.iarest.es/og-image.jpg" />
       <style dangerouslySetInnerHTML={{ __html: `:root {
   --bg: #14110E;
