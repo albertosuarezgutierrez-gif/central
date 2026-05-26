@@ -1,7 +1,18 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
+
+export const dynamic = 'force-dynamic'
+
+function superAuth(req: NextRequest) {
+  const session = getSession(req)
+  if (!session || session.rol !== 'super_admin') return false
+  return true
+}
 
 export async function GET(req: NextRequest) {
+  if (!superAuth(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
   const supabase = createServerClient()
   const { searchParams } = new URL(req.url)
   const id = searchParams.get('id')
@@ -33,6 +44,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!superAuth(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
   const supabase = createServerClient()
   const body = await req.json()
   const { accion, ...payload } = body

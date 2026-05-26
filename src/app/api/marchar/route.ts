@@ -13,7 +13,7 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { getRestauranteId } from '@/lib/session'
+import { getSession, getRestauranteId } from '@/lib/session'
 import { crearPrintJobMarchar, crearPrintJobs } from '@/lib/courier'
 
 export const dynamic = 'force-dynamic'
@@ -124,6 +124,9 @@ async function enviarPush(
 
 // ── Handler principal ─────────────────────────────────────────
 export async function POST(req: NextRequest) {
+  const session = getSession(req)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
 

@@ -8,9 +8,13 @@ export const dynamic = 'force-dynamic'
  */
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
   try {
+    const session = getSession(req)
+    if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
     const camareroId = req.nextUrl.searchParams.get('camarero_id')
     if (!camareroId) {
       return NextResponse.json({ error: 'camarero_id requerido' }, { status: 400 })
