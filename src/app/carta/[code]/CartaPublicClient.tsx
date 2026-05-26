@@ -1,7 +1,7 @@
 'use client'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { IDIOMAS_CARTA, CodigoIdioma, IDIOMAS_VALIDOS } from '@/lib/useIdiomasCarta'
 
@@ -57,7 +57,7 @@ function NotFoundScreen() {
 }
 
 // ─── Main component ───────────────────────────────────────────
-export default function CartaPublicClient({ code }: { code: string }) {
+function CartaPublicInner({ code }: { code: string }) {
   const searchParams = useSearchParams()
   const autoprint = searchParams.get('imprimir') === '1'
   const langParam = searchParams.get('lang') ?? 'es'
@@ -317,5 +317,14 @@ export default function CartaPublicClient({ code }: { code: string }) {
         </a>
       </div>
     </div>
+  )
+}
+
+
+export default function CartaPublicClient({ code }: { code: string }) {
+  return (
+    <Suspense fallback={<div style={{ display:'flex', justifyContent:'center', alignItems:'center', minHeight:'100vh', background:'#F6F1E7' }}><span style={{ fontFamily:'Inter Tight, sans-serif', fontSize:13, color:'#9C8E7E' }}>Cargando carta…</span></div>}>
+      <CartaPublicInner code={code} />
+    </Suspense>
   )
 }
