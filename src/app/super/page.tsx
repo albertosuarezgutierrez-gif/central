@@ -11,6 +11,7 @@ import InstagramTab from '@/components/InstagramTab'
 import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 import IaTrainingPanel from '@/components/super/IaTrainingPanel'
 import CRMAgentTab from '@/components/super/CRMAgentTab'
+import CRMEmpresaDetalle from '@/components/super/CRMEmpresaDetalle'
 
 
 interface Restaurante {
@@ -1001,6 +1002,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [expandido, setExpandido] = useState<string | null>(null)
+  const [seleccionado, setSeleccionado] = useState<Lead | null>(null)
   const [modalNuevo, setModalNuevo] = useState(false)
   const [showHunter, setShowHunter] = useState(false)
   const [eventoTexto, setEventoTexto] = useState<Record<string, string>>({})
@@ -1060,7 +1062,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
     return (
       <div style={{ background: C.bg2, border: `1px solid ${abierto ? C.red : C.rule}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s' }}>
         {/* Cabecera */}
-        <div style={{ padding: big ? '18px 22px' : '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setExpandido(abierto ? null : lead.id)}>
+        <div style={{ padding: big ? '18px 22px' : '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => { setExpandido(abierto ? null : lead.id); setSeleccionado(abierto ? null : lead) }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: big ? 6 : 4, flex: 1, minWidth: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
               {big && <span style={{ fontSize: 16 }}>🏆</span>}
@@ -1203,7 +1205,9 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       {loading ? (
         <div style={{ textAlign: 'center', padding: 48, color: C.ink3, fontFamily: SM, fontSize: 13 }}>Cargando…</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* Lista de leads */}
+          <div style={{ flex: seleccionado ? '0 0 340px' : '1', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 32 }}>
 
           {/* PERSONALES */}
           <div>
@@ -1242,6 +1246,28 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               </div>
             )}
           </div>
+        </div>{/* fin lista */}
+
+        {/* Panel detalle lateral */}
+        {seleccionado && (
+          <div style={{ flex: 1, minWidth: 0, position: 'sticky', top: 16, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
+            <CRMEmpresaDetalle
+              lead={seleccionado as Parameters<typeof CRMEmpresaDetalle>[0]['lead']}
+              sh={sh}
+              onUpdate={(updated) => {
+                setLeads(prev => prev.map(l => l.id === seleccionado.id ? { ...l, ...updated } as Lead : l))
+                setSeleccionado(prev => prev ? { ...prev, ...updated } as Lead : null)
+              }}
+              onDelete={async () => {
+                if (!confirm('¿Eliminar este lead?')) return
+                await fetch(`/api/super/leads/${seleccionado.id}`, { method: 'DELETE', headers: sh() })
+                setLeads(prev => prev.filter(l => l.id !== seleccionado.id))
+                setSeleccionado(null)
+                setExpandido(null)
+              }}
+            />
+          </div>
+        )}
         </div>
       )}
 
