@@ -59,7 +59,7 @@ export default function HosteleriaPage() {
       try {
         await fetch("/api/leads/landing", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre: n, email: em, telefono: tf, tipo_negocio: ti, origen: "landing-hosteleria" })
+          body: JSON.stringify({ nombre: n, restaurante: ti, email: em, telefono: tf, tipo_negocio: ti, origen: "landing-hosteleria" })
         })
       } catch(_) {}
       const fb = document.getElementById("formBody") as HTMLElement

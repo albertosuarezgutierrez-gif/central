@@ -36,10 +36,10 @@ export default function EspaciosPage() {
         if (!rgpd) { alert('Acepta la política de privacidad.'); return }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(mail)) { alert('Email no válido.'); return }
         if (btn) { btn.disabled = true; btn.textContent = 'Enviando...' }
-        const payload: any = { nombre: nom, email: mail, telefono: tel, tipo_negocio: tipo, origen: 'landing_espacios', rgpd_aceptado: true, rgpd_fecha: new Date().toISOString() }
+        const payload: any = { nombre: nom, email: mail, telefono: tel, restaurante: (document.getElementById('espacio') as HTMLInputElement)?.value?.trim() || tipo || 'Espacio de eventos', tipo_negocio: tipo, origen: 'landing-espacios', rgpd_aceptado: true, rgpd_fecha: new Date().toISOString() }
         if (document.getElementById('espacio')) payload['espacio'] = (document.getElementById('espacio') as HTMLInputElement)?.value.trim()
         try {
-          const r = await fetch('https://www.iarest.es/api/contact', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
+          const r = await fetch('/api/leads/landing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) })
           if (r.ok) {
             const fc = document.getElementById('formContainer')
             const fok = document.getElementById('formSuccess')

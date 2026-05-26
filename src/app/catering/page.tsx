@@ -92,6 +92,34 @@ export default function CateringPage() {
       })
     })
 
+
+    // Form catering
+    async function enviarCatering() {
+      const n = (document.getElementById('cnombre') as HTMLInputElement)?.value.trim()
+      const em = (document.getElementById('cemail') as HTMLInputElement)?.value.trim()
+      const tf = (document.getElementById('ctelefono') as HTMLInputElement)?.value.trim()
+      const emp = (document.getElementById('cempresa') as HTMLInputElement)?.value.trim()
+      const hp = (document.getElementById('cw') as HTMLInputElement)?.value
+      const priv = document.getElementById('crgpd') as HTMLInputElement
+      if (hp) return
+      if (!n || !em) { alert('Rellena los campos obligatorios (nombre y email).'); return }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) { alert('Email no válido.'); return }
+      if (!priv?.checked) { alert('Acepta la política de privacidad.'); return }
+      const btn = document.getElementById('csubmit') as HTMLButtonElement
+      if (btn) { btn.disabled = true; btn.textContent = 'Enviando...' }
+      try {
+        await fetch('/api/leads/landing', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ nombre: n, restaurante: emp || 'Empresa de catering', email: em, telefono: tf, origen: 'landing-catering' })
+        })
+      } catch(_) {}
+      const fb = document.getElementById('cateringFormBody')
+      const ok = document.getElementById('cateringOK')
+      if (fb) fb.style.display = 'none'
+      if (ok) ok.style.display = 'block'
+    }
+    ;(window as any).enviarCatering = enviarCatering
+
     return () => { io.disconnect(); io2.disconnect() }
   }, [])
 
@@ -188,6 +216,18 @@ h2 i{font-style:italic;color:var(--red)}
 .flujo-panel{margin-top:48px;background:var(--bg2);border:1px solid var(--border2);border-radius:14px;overflow:hidden;min-height:180px}
 .fpanel-inner{padding:32px 36px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:40px;animation:panelIn .4s cubic-bezier(.4,0,.2,1)}
 @keyframes panelIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:start}
+.form-card{background:var(--bg2);border:1px solid var(--border2);border-radius:16px;overflow:hidden}
+.form-top{padding:28px 32px 22px;border-bottom:1px solid var(--border)}
+.form-top-t{font-family:'Newsreader',serif;font-size:22px;font-weight:300;color:var(--ink);letter-spacing:-.5px;margin-bottom:6px}
+.form-top-s{font-size:13px;color:var(--ink3)}
+.form-body{padding:24px 32px 28px}
+.field{margin-bottom:12px}
+.field label{display:block;font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ink3);margin-bottom:6px}
+.field input{width:100%;padding:10px 13px;background:rgba(246,241,231,.04);border:1px solid var(--border2);border-radius:7px;color:var(--ink);font-size:14px;font-family:'Inter Tight',sans-serif;outline:none;transition:border-color .2s}.field input:focus{border-color:rgba(217,68,43,.45)}.field input::placeholder{color:var(--ink3)}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.submit-btn{width:100%;padding:13px;background:var(--red);color:var(--ink);border:none;border-radius:7px;font-size:15px;font-weight:700;font-family:'Inter Tight',sans-serif;cursor:pointer;transition:background .2s}.submit-btn:hover{background:var(--red2)}.submit-btn:disabled{opacity:.5;cursor:not-allowed}
+.form-foot{padding:13px 32px;border-top:1px solid var(--border);font-size:11px;color:var(--ink3);text-align:center}
 .fpanel-col{}
 .fpanel-col-label{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:var(--ink3);margin-bottom:12px}
 .fpanel-col-val{font-family:'Newsreader',serif;font-size:28px;font-weight:200;letter-spacing:-1px;line-height:1;margin-bottom:6px}
@@ -216,6 +256,9 @@ h2 i{font-style:italic;color:var(--red)}
   .hero,.costes,.flujo{padding-left:20px;padding-right:20px}
   .cost-cards{grid-template-columns:1fr}
   .cap-grid{grid-template-columns:1fr 1fr}
+  .form-grid{grid-template-columns:1fr;gap:40px}
+  .field-row{grid-template-columns:1fr}
+  .form-top,.form-body,.form-foot{padding-left:20px;padding-right:20px}
   .flujo-header{grid-template-columns:1fr;gap:32px;margin-bottom:40px}
   .flujo-steps{flex-direction:column;gap:0}
   .flujo-steps::before{display:none}
@@ -385,6 +428,52 @@ h2 i{font-style:italic;color:var(--red)}
       <div class="cap-item"><span class="cap-num">10</span><div class="cap-title">Contabilidad</div><div class="cap-sub">IVA 303 · Export A3/Sage</div></div>
       <div class="cap-item"><span class="cap-num">11</span><div class="cap-title">Analytics</div><div class="cap-sub">Margen por evento y temporada</div></div>
       <div class="cap-item"><span class="cap-num">12</span><div class="cap-title">Multi-local</div><div class="cap-sub">Varios espacios · Un panel</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- CONTACTO -->
+<section style="background:var(--bg);padding:100px 48px;border-top:1px solid var(--border)" id="contacto">
+  <div class="w">
+    <div class="form-grid fi">
+      <div>
+        <div class="s-label">Demo gratuita</div>
+        <h2>Cuéntanos<br>tu catering.</h2>
+        <p style="margin-top:20px;font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75">Demo en directo adaptada a tu empresa. Sin compromiso. Sin tarjeta.</p>
+        <ul style="list-style:none;margin-top:28px">
+          <li style="padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--red)">—</span>Respuesta en menos de 24 horas</li>
+          <li style="padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--red)">—</span>Demo adaptada a tu operativa</li>
+          <li style="padding:12px 0;border-bottom:1px solid var(--border);font-size:14px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--red)">—</span>14 días de prueba gratuita</li>
+          <li style="padding:12px 0;font-size:14px;color:var(--ink2);display:flex;gap:10px"><span style="color:var(--red)">—</span>Onboarding incluido</li>
+        </ul>
+      </div>
+      <div>
+        <div class="form-card">
+          <div class="form-top">
+            <div class="form-top-t">Solicitar demo</div>
+            <div class="form-top-s">Te contactamos en menos de 24h.</div>
+          </div>
+          <div class="form-body" id="cateringFormBody">
+            <input type="text" id="cw" name="website" style="display:none" tabindex="-1" autocomplete="off"/>
+            <div class="field"><label>Nombre *</label><input type="text" id="cnombre" placeholder="Tu nombre" autocomplete="given-name"/></div>
+            <div class="field-row">
+              <div class="field"><label>Email *</label><input type="email" id="cemail" placeholder="tu@email.com"/></div>
+              <div class="field"><label>Teléfono</label><input type="tel" id="ctelefono" placeholder="+34 6xx xxx xxx"/></div>
+            </div>
+            <div class="field"><label>Empresa / Nombre del catering</label><input type="text" id="cempresa" placeholder="Mi Catering S.L."/></div>
+            <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;margin-top:4px">
+              <input type="checkbox" id="crgpd" style="margin-top:3px;accent-color:var(--red);cursor:pointer;flex-shrink:0"/>
+              <label for="crgpd" style="font-size:12px;color:var(--ink2);line-height:1.5;cursor:pointer">He leído y acepto la <a href="/privacidad" target="_blank" style="color:var(--red)">política de privacidad</a>. Consiento que <strong>Alberto Suárez Gutiérrez (NIF 28823484E)</strong> trate mis datos para gestionar mi solicitud. Derechos en <a href="mailto:hola@iarest.es" style="color:var(--red)">hola@iarest.es</a>.</label>
+            </div>
+            <button class="submit-btn" id="csubmit" onclick="enviarCatering()">Solicitar demo →</button>
+          </div>
+          <div style="display:none;padding:44px 34px;text-align:center" id="cateringOK">
+            <div style="font-family:'Newsreader',serif;font-size:24px;font-weight:300;color:var(--ink);margin-bottom:8px">Recibido.</div>
+            <div style="font-size:14px;color:var(--ink3)">Te contactamos antes de 24h.</div>
+          </div>
+          <div class="form-foot">Sin compromiso · Sin tarjeta · <a href="mailto:hola@iarest.es" style="color:var(--red)">hola@iarest.es</a> · <a href="tel:+34637349990" style="color:var(--red)">637 349 990</a></div>
+        </div>
+      </div>
     </div>
   </div>
 </section>` }} />
