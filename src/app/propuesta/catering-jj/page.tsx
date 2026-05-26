@@ -67,6 +67,11 @@ const config: ClienteConfig = {
   contactoNombre: 'Joaquín Jaén',
   slug: 'catering-jj',
   ciudad: 'Sevilla',
+  verticales: [
+    { label: 'Haciendas — El Alba y Trinidad', sub: 'Bodas y eventos hasta 550 personas · Pases · Stock', url: '/propuesta/catering-jj-haciendas', icon: '🏛️', color: C.gold },
+    { label: 'Restaurantes — Doble J y Las Dos Jotas', sub: 'Sala · Delivery · KDS · Gestión diaria', url: '/propuesta/catering-jj-restauracion', icon: '🍽️', color: C.teal },
+    { label: 'Catering externo', sub: 'Cocina central · Logística · Presupuestador', url: '/propuesta/catering-jj-catering', icon: '🚚', color: C.green },
+  ],
   tagsIntro: [
     'Bodas hasta 550 personas',
     'Eventos de empresa',

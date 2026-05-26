@@ -23,6 +23,9 @@ export async function POST(
     'ovejas-negras': 'Ovejas Negras',
     'sloppy-joes': "Sloppy Joe's",
     'catering-jj': 'Catering Joaquín Jaén',
+    'catering-jj-haciendas': 'Catering Joaquín Jaén',
+    'catering-jj-restauracion': 'Catering Joaquín Jaén',
+    'catering-jj-catering': 'Catering Joaquín Jaén',
   }
   let lead: { id: string; empresa: string | null; restaurante: string | null; nombre: string | null; email: string | null; eventos: unknown[] } | null = null
 

@@ -94,6 +94,7 @@ export type ClienteConfig = {
   fasePiloto: { fase: string; color: string; items: string[] }[]
   precioMensaje?: string            // texto adicional de precio si aplica
   slug?: string                     // slug del lead en BD para tracking y booking
+  verticales?: { label: string; sub: string; url: string; icon: string; color: string }[]
   ciudad?: string                   // ciudad para el texto del booking
 }
 
@@ -602,6 +603,26 @@ export default function PropuestaBase({ config }: { config: ClienteConfig }) {
                 El sistema se paga solo en el primer mes.
               </div>
             </div>
+            {/* ── VERTICALES ───────────────────────────────────────────── */}
+            {config.verticales && config.verticales.length > 0 && (
+              <div style={{ background:C.bg3, borderRadius:12, padding:'20px' }}>
+                <div style={{ fontFamily:SM, fontSize:11, fontWeight:700, color:C.ink4, textTransform:'uppercase', letterSpacing:'.1em', marginBottom:4 }}>¿Quieres ver el detalle por área?</div>
+                <div style={{ fontSize:13, color:C.ink3, marginBottom:16 }}>Hemos preparado una presentación específica para cada línea de negocio.</div>
+                <div style={{ display:'flex', flexDirection:'column', gap:10 }}>
+                  {config.verticales.map(v => (
+                    <a key={v.url} href={v.url} target="_blank" rel="noreferrer" style={{ display:'flex', alignItems:'center', gap:14, padding:'14px 16px', background:C.bg2, borderRadius:10, border:`1px solid ${v.color}33`, textDecoration:'none', transition:'.15s' }}>
+                      <span style={{ fontSize:22 }}>{v.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontFamily:SN, fontSize:14, fontWeight:700, color:v.color, marginBottom:2 }}>{v.label}</div>
+                        <div style={{ fontSize:12, color:C.ink3 }}>{v.sub}</div>
+                      </div>
+                      <span style={{ fontSize:12, color:v.color, fontWeight:700 }}>Ver →</span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* ── BOOKING ───────────────────────────────────────────────── */}
             <div style={{ marginTop:8 }}>
               <div style={{ fontFamily:SE, fontSize:18, fontWeight:500, color:C.paper, marginBottom:6 }}>
