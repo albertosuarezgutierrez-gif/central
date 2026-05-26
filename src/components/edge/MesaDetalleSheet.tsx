@@ -62,6 +62,11 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
   const [mesasLibres, setMesasLibres]   = useState<{id:string;codigo:string;zona:string|null}[]>([])
   const [loadingMesas, setLoadingMesas] = useState(false)
   const [cambiandoMesa, setCambiandoMesa] = useState(false)
+  // Transferencia camarero
+  const [transferirOpen, setTransferirOpen] = useState(false)
+  const [camarerосDisponibles, setCamarerosDisponibles] = useState<{id:string;nombre:string}[]>([])
+  const [loadingCamareros, setLoadingCamareros] = useState(false)
+  const [transfiriendo, setTransfiriendo] = useState(false)
 
   const session_str = JSON.stringify(session)
 
@@ -116,6 +121,35 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
     } catch { setMesasLibres([]) }
     setLoadingMesas(false)
   }, [session_str, mesaId])
+
+  const cargarCamarerосDisponibles = useCallback(async () => {
+    if (!comanda) return
+    setLoadingCamareros(true)
+    try {
+      const r = await fetch(`/api/comanda/${comanda.id}/camarero`, { headers: { 'x-ia-session': session_str } })
+      const d = await r.json()
+      setCamarerosDisponibles(d.camareros ?? [])
+    } catch { setCamarerosDisponibles([]) }
+    setLoadingCamareros(false)
+  }, [comanda, session_str])
+
+  const ejecutarTransferencia = async (camareroId: string, camareroNombre: string) => {
+    if (!comanda || transfiriendo) return
+    setTransfiriendo(true)
+    try {
+      const r = await fetch(`/api/comanda/${comanda.id}/camarero`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-ia-session': session_str },
+        body: JSON.stringify({ camarero_destino_id: camareroId }),
+      })
+      const d = await r.json()
+      if (!r.ok) { flash(`Error: ${d.error ?? 'desconocido'}`); return }
+      flash(`Mesa transferida a ${camareroNombre} ✓`)
+      setTransferirOpen(false)
+      onClose()
+    } catch { flash('Error al transferir') }
+    finally { setTransfiriendo(false) }
+  }
 
   const ejecutarCambioMesa = async (mesaDestinoId: string, mesaDestinoCodigo: string) => {
     if (!comanda || cambiandoMesa) return
@@ -317,6 +351,19 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                               <polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
                             </svg>
                             <span style={{fontFamily:SN,fontSize:13,color:C.amb,fontWeight:600}}>Cambiar mesa</span>
+                          </button>
+                          {/* Transferir a camarero */}
+                          <button onClick={()=>{cargarCamarerосDisponibles();setTransferirOpen(true);setMenuOpen(false)}}
+                            style={{width:'100%',padding:'12px 16px',background:'none',border:'none',
+                              display:'flex',alignItems:'center',gap:10,cursor:'pointer',
+                              borderBottom:`1px solid ${C.rule}`,textAlign:'left' as const}}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round">
+                              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                              <circle cx="9" cy="7" r="4"/>
+                              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                              <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                            </svg>
+                            <span style={{fontFamily:SN,fontSize:13,color:C.teal,fontWeight:600}}>Transferir mesa</span>
                           </button>
                           {/* Separador — acciones de cuenta */}
                           <div style={{padding:'6px 16px 2px',fontFamily:SM,fontSize:9,color:C.ink4,letterSpacing:'.08em',textTransform:'uppercase' as const}}>
@@ -817,6 +864,83 @@ export default function MesaDetalleSheet({ mesaId, mesaCodigo, capacidad, sessio
                   )
                 })
               })()}
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* MODAL TRANSFERIR CAMARERO */}
+      {transferirOpen && comanda && (
+        <>
+          <div onClick={()=>setTransferirOpen(false)}
+            style={{position:'fixed',inset:0,background:'rgba(26,23,20,.5)',zIndex:60,backdropFilter:'blur(2px)'}}/>
+          <div style={{
+            position:'fixed',bottom:0,left:0,right:0,zIndex:70,
+            background:C.bg1,borderTop:`1px solid ${C.rule}`,
+            borderRadius:'20px 20px 0 0',
+            maxHeight:'60dvh',display:'flex',flexDirection:'column',
+            boxShadow:'0 -8px 32px rgba(26,23,20,.18)',
+            fontFamily:SN,color:C.ink,
+            animation:'slideUp .25s cubic-bezier(.32,1,.28,1)',
+          }}>
+            <div style={{width:36,height:3,background:C.rule,borderRadius:2,margin:'10px auto 0',flexShrink:0}}/>
+            <div style={{padding:'14px 20px 12px',borderBottom:`1px solid ${C.rule}`,flexShrink:0,display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+              <div>
+                <div style={{fontFamily:SE,fontStyle:'italic',fontSize:18,color:C.ink}}>Transferir mesa</div>
+                <div style={{fontSize:11,color:C.ink3,marginTop:2}}>
+                  <span style={{fontWeight:600,color:C.teal}}>{mesaCodigo}</span>
+                  {' '}→ elige camarero destino
+                </div>
+              </div>
+              <button onClick={()=>setTransferirOpen(false)}
+                style={{background:'none',border:'none',fontSize:22,color:C.ink3,cursor:'pointer',padding:4,lineHeight:1}}>×</button>
+            </div>
+            <div style={{flex:1,overflowY:'auto',scrollbarWidth:'none' as const,padding:'12px 16px 24px'}}>
+              {loadingCamareros && (
+                <div style={{textAlign:'center',padding:24,color:C.ink4,fontFamily:SN,fontSize:12}}>cargando camareros…</div>
+              )}
+              {!loadingCamareros && camarerосDisponibles.length === 0 && (
+                <div style={{textAlign:'center',padding:32}}>
+                  <div style={{fontSize:32,marginBottom:8}}>👤</div>
+                  <div style={{fontFamily:SE,fontStyle:'italic',fontSize:16,color:C.ink3}}>Sin camareros disponibles</div>
+                  <div style={{fontSize:12,color:C.ink4,marginTop:6}}>No hay otros camareros con turno activo ahora mismo</div>
+                </div>
+              )}
+              {!loadingCamareros && camarerосDisponibles.map(c => (
+                <button
+                  key={c.id}
+                  disabled={transfiriendo}
+                  onClick={()=>ejecutarTransferencia(c.id, c.nombre)}
+                  style={{
+                    width:'100%',padding:'16px 18px',marginBottom:8,
+                    background:transfiriendo ? C.bg2 : C.bg2,
+                    border:`1.5px solid ${C.rule}`,borderRadius:14,
+                    display:'flex',alignItems:'center',gap:14,
+                    cursor:transfiriendo?'default':'pointer',
+                    opacity:transfiriendo?.6:1,
+                    transition:'background .15s',
+                    textAlign:'left' as const,
+                  }}>
+                  <div style={{
+                    width:38,height:38,borderRadius:'50%',
+                    background:`${C.teal}22`,
+                    display:'flex',alignItems:'center',justifyContent:'center',
+                    flexShrink:0,
+                  }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={C.teal} strokeWidth="2" strokeLinecap="round">
+                      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+                      <circle cx="12" cy="7" r="4"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{fontFamily:SN,fontSize:15,fontWeight:600,color:C.ink}}>{c.nombre}</div>
+                    <div style={{fontSize:11,color:C.ink4,marginTop:1}}>En turno ahora · Toca para transferir</div>
+                  </div>
+                  <svg style={{marginLeft:'auto',flexShrink:0}} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={C.ink4} strokeWidth="2" strokeLinecap="round">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
+              ))}
             </div>
           </div>
         </>

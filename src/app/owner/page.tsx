@@ -35,6 +35,8 @@ import WineScannerModal from '@/components/WineScannerModal'
 import EventosTab from '@/components/owner/EventosTab'
 import MenusEventoTab from '@/components/owner/MenusEventoTab'
 import CRMEventosTab from '@/components/owner/CRMEventosTab'
+import FeedbackTab from '@/components/owner/FeedbackTab'
+import PropinasTab from '@/components/owner/PropinasTab'
 import ProveedoresExternosTab from '@/components/owner/ProveedoresExternosTab'
 import LeadsEventosTab from '@/components/owner/LeadsEventosTab'
 import CalendarioEventosTab from '@/components/owner/CalendarioEventosTab'
@@ -7496,11 +7498,13 @@ const GRUPOS = [
     // reservas antes del servicio, analytics consulta semanal, cubierto se configura una vez
     id: 'servicio', label: 'Servicio', icon: ICONS.chart,
     tabs: [
-      { id: 'turno',     label: 'Turno',     icon: ICONS.clock    }, // diario x2 (abrir/cerrar)
-      { id: 'caja',      label: 'Caja',      icon: ICONS.receipt  }, // diario durante servicio
-      { id: 'reservas',  label: 'Reservas',  icon: ICONS.calendar }, // diario antes del servicio
-      { id: 'analytics', label: 'Analytics', icon: ICONS.chart    }, // semanal
-      { id: 'cubierto',  label: 'Cubierto',  icon: ICONS.receipt  }, // se configura una vez
+      { id: 'turno',     label: 'Turno',     icon: ICONS.clock    },
+      { id: 'caja',      label: 'Caja',      icon: ICONS.receipt  },
+      { id: 'reservas',  label: 'Reservas',  icon: ICONS.calendar },
+      { id: 'analytics', label: 'Analytics', icon: ICONS.chart    },
+      { id: 'feedback',  label: 'Opiniones', icon: ICONS.sparkle  },
+      { id: 'propinas',  label: 'Propinas',  icon: ICONS.receipt  },
+      { id: 'cubierto',  label: 'Cubierto',  icon: ICONS.receipt  },
     ]
   },
   {
@@ -8443,6 +8447,8 @@ export default function OwnerPage() {
             {tab === 'turno'          && <TurnoTab/>}
             {tab === 'caja'           && <CajaTab/>}
             {tab === 'analytics'      && <><Analytics compact /><AnalyticsComparativo sh={sh} /></>}
+            {tab === 'feedback'       && <FeedbackTab session={session} sh={sh} />}
+            {tab === 'propinas'       && <PropinasTab session={session} sh={sh} />}
             {tab === 'facturas'       && <FacturasTab/>}
             {tab === 'impresoras'     && <ImpresorasTab/>}
             {tab === 'flujos'         && <FlujoTab/>}
