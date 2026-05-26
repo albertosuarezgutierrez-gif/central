@@ -4,12 +4,16 @@ import { tgAlert } from '@/lib/telegram'
 import { enviarEmailNuevoLead } from '@/lib/email'
 
 const ETIQUETAS_ORIGEN: Record<string, string> = {
-  'landing':           '🌐 Landing principal',
-  'landing-principal': '🌐 Landing principal',
-  'eventos-catering':  '🎪 Eventos / Catering',
-  'sloppy-joes':       '📋 Propuesta Sloppy Joe\'s',
-  'ovejas-negras':     '📋 Propuesta Ovejas Negras',
-  'catering-jj':       '📋 Propuesta Catering JJ',
+  'landing':              '🌐 Landing principal',
+  'landing-principal':    '🌐 Landing principal',
+  'landing-hosteleria':   '🍺 Landing Hostelería',
+  'landing-catering':     '🍱 Landing Catering',
+  'landing-espacios':     '🏛️ Landing Espacios',
+  'landing_espacios':     '🏛️ Landing Espacios',
+  'eventos-catering':     '🎪 Eventos / Catering',
+  'sloppy-joes':          '📋 Propuesta Sloppy Joe\'s',
+  'ovejas-negras':        '📋 Propuesta Ovejas Negras',
+  'catering-jj':          '📋 Propuesta Catering JJ',
 }
 
 export async function POST(req: NextRequest) {
@@ -39,18 +43,29 @@ export async function POST(req: NextRequest) {
 
     // Notificaciones en paralelo
     const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
+    const tgMsg = [
+      `🔥 NUEVO LEAD — ${origenLabel}`,
+      ``,
+      `👤 ${nombre}`,
+      `🍽️ ${restaurante}`,
+      `📧 ${email}`,
+      `📱 ${telefono || '—'}`,
+      `👥 Usuarios: ${usuarios || '—'}`,
+      ``,
+      `⏱️ ${fecha}`
+    ].join('\n')
+
+    const token   = process.env.TELEGRAM_BOT_TOKEN
+    const chat_id = process.env.TELEGRAM_CHAT_ID
+
     const [tgResult, emailResult] = await Promise.allSettled([
-      tgAlert([
-        `🔥 NUEVO LEAD — ${origenLabel}`,
-        ``,
-        `👤 ${nombre}`,
-        `🍽️ ${restaurante}`,
-        `📧 ${email}`,
-        `📱 ${telefono || '—'}`,
-        `👥 Usuarios: ${usuarios || '—'}`,
-        ``,
-        `⏱️ ${fecha}`
-      ].join('\n')),
+      token && chat_id
+        ? fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id, text: tgMsg, parse_mode: 'HTML' }),
+          }).then(r => r.json())
+        : Promise.resolve({ ok: false, error: 'No TG config' }),
       enviarEmailNuevoLead({ nombre, restaurante, email, telefono, usuarios })
     ])
 
