@@ -13,12 +13,27 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
   const supabase = createServerClient()
-  const { data, error } = await supabase
-    .from('leads')
-    .select('*, leads_contactos(id, nombre, cargo, telefono, email, es_decisor, canal_preferido)')
-    .order('created_at', { ascending: false })
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ leads: data })
+
+  // Dos queries separadas para evitar problemas de RLS con joins anidados
+  const [leadsRes, contactosRes] = await Promise.all([
+    supabase.from('leads').select('*').order('created_at', { ascending: false }),
+    supabase.from('leads_contactos').select('id, lead_id, nombre, cargo, telefono, email, es_decisor, canal_preferido')
+  ])
+
+  if (leadsRes.error) return NextResponse.json({ error: leadsRes.error.message }, { status: 500 })
+
+  const contactosPorLead: Record<string, unknown[]> = {}
+  for (const c of (contactosRes.data ?? [])) {
+    if (!contactosPorLead[c.lead_id]) contactosPorLead[c.lead_id] = []
+    contactosPorLead[c.lead_id].push(c)
+  }
+
+  const leads = (leadsRes.data ?? []).map(l => ({
+    ...l,
+    leads_contactos: contactosPorLead[l.id] ?? []
+  }))
+
+  return NextResponse.json({ leads })
 }
 
 export async function POST(req: NextRequest) {

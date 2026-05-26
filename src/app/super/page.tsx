@@ -1019,7 +1019,11 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   useEffect(() => {
     fetch('/api/super/leads', { headers: sh() })
       .then(r => r.json())
-      .then(d => setLeads(d.leads || []))
+      .then(d => {
+        if (d.leads) setLeads(d.leads)
+        else console.error('Leads error:', d.error)
+      })
+      .catch(e => console.error('Leads fetch error:', e))
       .finally(() => setLoading(false))
   }, [])
 
