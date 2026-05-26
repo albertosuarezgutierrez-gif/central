@@ -6,6 +6,7 @@ import { supabase } from '@/lib/supabase'
 import { Comanda } from '@/types'
 import { useAuth } from '@/hooks/useAuth'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { HelpChat } from '@/components/help/HelpChat'
 import ChuletaVoz from '@/components/ChuletaVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
@@ -508,6 +509,7 @@ function KDSInner() {
           </div>
           <span style={{ fontFamily:SM, fontSize:16, fontWeight:700, color:K.fg }}>{time.toLocaleTimeString('es',{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
           <SugerenciaButton session={effectiveSession} tema="dark" variant="inline" />
+          <HelpChat />
           {/* Botón Elaboraciones propias */}
           <button
             onClick={() => { setElaborAbierto(v => !v); setAsistenteAbierto(false); setChatAbierto(false) }}

@@ -23,6 +23,7 @@ import PlanoSala, { MesaPlano, ZonaInfo } from '@/components/PlanoSala'
 import { useMensajes } from '@/hooks/useMensajes'
 import FicharSalidaBtn from '@/components/FicharSalidaBtn'
 import SmartScanFAB from '@/components/SmartScanFAB'
+import { HelpChat } from '@/components/help/HelpChat'
 import CuentasTab from '@/components/edge/CuentasTab'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
@@ -2032,6 +2033,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           </button>
           {/* 📷 Escáner IA — botón fijo en header */}
           <SmartScanFAB session={session} inline shape="pill" />
+          <HelpChat />
           {/* 👤 Volver a supervisión — solo si es jefe_sala */}
           {session.rol === 'jefe_sala' && (
             <a href="/jefe" title="Volver a supervisión"

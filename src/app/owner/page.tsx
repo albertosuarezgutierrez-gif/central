@@ -5,6 +5,7 @@ import { useAuth } from '@/hooks/useAuth'
 import Analytics from '@/components/Analytics'
 import AnalyticsComparativo from '@/components/owner/AnalyticsComparativo'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { HelpChat } from '@/components/help/HelpChat'
 import { copyToClipboard } from '@/lib/clipboard'
 import { supabase } from '@/lib/supabase'
 import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
@@ -8259,6 +8260,7 @@ export default function OwnerPage() {
             <span className="owner-hdr-btn-lbl" style={{ fontFamily: SN, fontSize: 12, fontWeight: 600 }}>Guía</span>
           </button>
           <SugerenciaButton session={session} tema="light" variant="inline" />
+          <HelpChat />
           <button onClick={() => setManualVozOpen(true)}
             style={{ background:'none', border:`1px solid ${C.rule}`, borderRadius:4, padding:'6px 10px', cursor:'pointer', color:C.red, display:'flex', alignItems:'center', gap:6 }}
             title="Protocolo de Voz">

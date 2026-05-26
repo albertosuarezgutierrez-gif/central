@@ -10,6 +10,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { supabase } from '@/lib/supabase'
 import SugerenciaButton from '@/components/SugerenciaButton'
+import { HelpChat } from '@/components/help/HelpChat'
 import ChuletaVoz from '@/components/ChuletaVoz'
 import { useMensajes } from '@/hooks/useMensajes'
 
@@ -346,6 +347,7 @@ export default function RunningPage() {
   return (
     <>
       <SugerenciaButton session={session} tema="light" />
+      <HelpChat />
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;700&family=Newsreader:ital,opsz,wght@1,6..72,400;1,6..72,500&family=JetBrains+Mono:wght@500;700&family=Caveat:wght@400;600&display=swap');
         @keyframes slideIn{from{transform:translateY(-8px);opacity:0}to{transform:translateY(0);opacity:1}}

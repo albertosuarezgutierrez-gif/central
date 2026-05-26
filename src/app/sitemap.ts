@@ -7,6 +7,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = 'https://www.iarest.es'
   const now  = new Date()
 
+  // Posts de blog estáticos (no gestionados por agente SEO)
+  const postsEstaticos = [
+    'verifactu-restaurantes-guia-2026',
+    'reducir-errores-comanda-restaurante',
+    'errores-comanda-restaurante',
+    'alternativa-numier-tpv',
+    'comanda-por-voz-como-funciona',
+    'tpv-restaurante',
+    'tpv-voz-para-bares',
+    'software-tpv-bares-espana',
+  ]
+
   // Páginas estáticas
   const estaticas: MetadataRoute.Sitemap = [
     // Core
@@ -25,16 +37,16 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/eventos`,                                       lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
     { url: `${base}/espacios`,                                      lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
 
-    // Blog
+    // Blog índice
     { url: `${base}/blog`,                                          lastModified: now, changeFrequency: 'weekly',  priority: 0.8 },
-    { url: `${base}/blog/verifactu-restaurantes-guia-2026`,         lastModified: now, changeFrequency: 'monthly', priority: 0.9 },
-    { url: `${base}/blog/reducir-errores-comanda-restaurante`,      lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/blog/errores-comanda-restaurante`,              lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/blog/alternativa-numier-tpv`,                   lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/blog/comanda-por-voz-como-funciona`,            lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/blog/tpv-restaurante`,                          lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/blog/tpv-voz-para-bares`,                       lastModified: now, changeFrequency: 'monthly', priority: 0.8 },
-    { url: `${base}/blog/software-tpv-bares-espana`,                lastModified: now, changeFrequency: 'monthly', priority: 0.7 },
+
+    // Posts estáticos (no gestionados por agente SEO)
+    ...postsEstaticos.map(slug => ({
+      url: `${base}/blog/${slug}`,
+      lastModified: now,
+      changeFrequency: 'monthly' as const,
+      priority: 0.8,
+    })),
 
     // Legal
     { url: `${base}/login`,                                         lastModified: now, changeFrequency: 'monthly', priority: 0.5 },
@@ -44,12 +56,36 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${base}/terminos`,                                      lastModified: now, changeFrequency: 'yearly',  priority: 0.2 },
   ]
 
+  // Posts generados por el agente SEO — dinámico desde BD
+  let postsAgente: MetadataRoute.Sitemap = []
+
   // Webs de restaurantes activas — dinámico
   let websRestaurantes: MetadataRoute.Sitemap = []
   let ciudades: Set<string> = new Set()
 
   try {
     const supabase = createServerClient()
+
+    // Blog posts publicados por el agente SEO
+    const { data: posts } = await supabase
+      .from('blog_borradores')
+      .select('slug, published_at')
+      .eq('estado', 'publicado')
+      .order('published_at', { ascending: false })
+
+    if (posts?.length) {
+      // Excluir los que ya están en postsEstaticos para evitar duplicados
+      postsAgente = posts
+        .filter(p => !postsEstaticos.includes(p.slug))
+        .map(p => ({
+          url: `${base}/blog/${p.slug}`,
+          lastModified: new Date(p.published_at ?? now),
+          changeFrequency: 'monthly' as const,
+          priority: 0.8,
+        }))
+    }
+
+    // Webs de restaurantes activas
     const { data: webs } = await supabase
       .from('web_restaurante')
       .select('slug, updated_at, restaurantes(ciudad)')
@@ -70,7 +106,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       })
     }
   } catch (e) {
-    console.warn('[sitemap] Error cargando webs dinámicas:', e)
+    console.warn('[sitemap] Error cargando datos dinámicos:', e)
   }
 
   // Páginas de directorio por ciudad
@@ -81,5 +117,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.7,
   }))
 
-  return [...estaticas, ...websRestaurantes, ...paginasCiudad]
+  return [...estaticas, ...postsAgente, ...websRestaurantes, ...paginasCiudad]
 }

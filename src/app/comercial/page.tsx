@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { HelpChat } from '@/components/help/HelpChat'
 
 const C = { dark: '#14110E', bg2: '#1E1A15', bg3: '#2A221A', paper: '#F6F1E7', ink2: '#D8CDB6', ink3: '#9C8E7E', ink4: '#6B5F52', red: '#D9442B', amber: '#E8A33B', green: '#3F7D44', rule: '#2E2720' }
 
@@ -81,10 +82,13 @@ export default function ComercialPage() {
           <div style={sh({ color: C.paper, fontWeight: 700, fontSize: '1.05rem' })}>Panel Comercial</div>
           <div style={sh({ color: C.ink3, fontSize: '0.78rem' })}>Gestión de eventos y presupuestos</div>
         </div>
-        <button onClick={crearBriefing} disabled={creando}
-          style={sh({ padding: '0.6rem 1rem', background: C.red, border: 'none', borderRadius: 8, color: C.paper, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 })}>
-          {creando ? '...' : '+ Nuevo briefing'}
-        </button>
+        <div style={sh({ display: 'flex', alignItems: 'center', gap: 8 })}>
+          <HelpChat />
+          <button onClick={crearBriefing} disabled={creando}
+            style={sh({ padding: '0.6rem 1rem', background: C.red, border: 'none', borderRadius: 8, color: C.paper, cursor: 'pointer', fontSize: '0.85rem', fontWeight: 600 })}>
+            {creando ? '...' : '+ Nuevo briefing'}
+          </button>
+        </div>
       </div>
 
       {/* Link nuevo copiado */}
