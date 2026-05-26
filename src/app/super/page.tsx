@@ -1147,7 +1147,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   ]
 
   const KanbanView = () => (
-    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start' }}>
+    <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start', WebkitOverflowScrolling: 'touch' as any, marginLeft: -4, marginRight: -4, paddingLeft: 4 }}>
       {COLUMNAS.map(col => {
         const colLeads = leads.filter(l => l.estado === col.key)
         const isOver = dragOver === col.key
@@ -1286,8 +1286,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       )}
 
       {!loading && !vistaKanban && (
-        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
-          <div style={{ flex: seleccionado ? '0 0 340px' : '1', minWidth: 0 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 280px', minWidth: 0 }}>
             <div style={{ fontFamily: SM, fontSize: 11, color: C.amber, fontWeight: 700, marginBottom: 8 }}>
               PERSONALES ({personales.length})
             </div>
@@ -1311,7 +1311,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       )}
 
       {seleccionado && (
-        <div style={{ marginTop: 12, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
+        <div style={{ marginTop: 12, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, overflow: 'hidden' }}>
           <CRMEmpresaDetalle
             lead={seleccionado as Parameters<typeof CRMEmpresaDetalle>[0]['lead']}
             sh={sh}

@@ -191,7 +191,7 @@ export default function CRMEmpresaDetalle({
     : null
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: SN }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: 0, fontFamily: SN }}>
       {/* Header empresa */}
       <div style={{ padding: '16px 18px 12px', borderBottom: `1px solid ${C.rule}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
@@ -246,7 +246,7 @@ export default function CRMEmpresaDetalle({
       </div>
 
       {/* Contenido */}
-      <div style={{ flex: 1, overflowY: 'auto', padding: 14 }}>
+      <div style={{ flex: '1 1 auto', overflowY: 'auto', padding: 14, maxHeight: '70vh' }}>
 
         {/* ── INFO ── */}
         {tab === 'info' && (
@@ -291,7 +291,7 @@ export default function CRMEmpresaDetalle({
                       <div style={{ color: C.paper, fontSize: 13, fontWeight: 600 }}>{c.nombre}</div>
                       <div style={{ color: C.ink4, fontSize: 11 }}>{c.cargo ?? '—'}</div>
                     </div>
-                    <div style={{ display: 'flex', gap: 8 }}>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
                       {c.telefono && <a href={`https://wa.me/${c.telefono.replace(/\D/g, '')}`} target="_blank" style={{ fontSize: 18, textDecoration: 'none' }}>💬</a>}
                       {c.email && <a href={`mailto:${c.email}`} style={{ fontSize: 18, textDecoration: 'none' }}>📧</a>}
                     </div>
@@ -323,7 +323,7 @@ export default function CRMEmpresaDetalle({
             {showFormLocal && (
               <div style={{ background: C.bg3, borderRadius: 8, padding: 12, marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
                 <input placeholder="Nombre del local *" value={nuevoLocal.nombre} onChange={e => setNuevoLocal(p => ({ ...p, nombre: e.target.value }))} style={{ ...inp, width: '100%', boxSizing: 'border-box' }} />
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <input placeholder="Ciudad" value={nuevoLocal.ciudad} onChange={e => setNuevoLocal(p => ({ ...p, ciudad: e.target.value }))} style={{ ...inp, flex: 1 }} />
                   <input placeholder="Aforo" type="number" value={nuevoLocal.aforo} onChange={e => setNuevoLocal(p => ({ ...p, aforo: e.target.value }))} style={{ ...inp, width: 70 }} />
                 </div>
@@ -335,7 +335,7 @@ export default function CRMEmpresaDetalle({
                   <option value="catering">Catering</option>
                   <option value="otro">Otro</option>
                 </select>
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <button onClick={handleAddLocal} style={{ flex: 1, background: C.red, color: C.paper, border: 'none', borderRadius: 6, padding: '7px 0', cursor: 'pointer', fontSize: 13 }}>Guardar</button>
                   <button onClick={() => setShowFormLocal(false)} style={{ background: C.bg2, color: C.ink3, border: 'none', borderRadius: 6, padding: '7px 14px', cursor: 'pointer', fontSize: 13 }}>✕</button>
                 </div>
@@ -370,15 +370,15 @@ export default function CRMEmpresaDetalle({
 
             {showFormContacto && (
               <div style={{ background: C.bg3, borderRadius: 8, padding: 12, marginBottom: 10, display: 'flex', flexDirection: 'column', gap: 7 }}>
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <input placeholder="Nombre *" value={nuevoContacto.nombre} onChange={e => setNuevoContacto(p => ({ ...p, nombre: e.target.value }))} style={{ ...inp, flex: 1 }} />
                   <input placeholder="Cargo" value={nuevoContacto.cargo} onChange={e => setNuevoContacto(p => ({ ...p, cargo: e.target.value }))} style={{ ...inp, flex: 1 }} />
                 </div>
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <input placeholder="Email" value={nuevoContacto.email} onChange={e => setNuevoContacto(p => ({ ...p, email: e.target.value }))} style={{ ...inp, flex: 1 }} />
                   <input placeholder="Teléfono" value={nuevoContacto.telefono} onChange={e => setNuevoContacto(p => ({ ...p, telefono: e.target.value }))} style={{ ...inp, flex: 1 }} />
                 </div>
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <select value={nuevoContacto.canal_preferido} onChange={e => setNuevoContacto(p => ({ ...p, canal_preferido: e.target.value }))} style={{ ...sel, flex: 1 }}>
                     <option value="whatsapp">💬 WhatsApp</option>
                     <option value="email">📧 Email</option>
@@ -395,7 +395,7 @@ export default function CRMEmpresaDetalle({
                   <input type="checkbox" checked={nuevoContacto.es_decisor} onChange={e => setNuevoContacto(p => ({ ...p, es_decisor: e.target.checked }))} />
                   <span style={{ color: C.paper, fontSize: 13 }}>Es el decisor de compra</span>
                 </label>
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <button onClick={handleAddContacto} style={{ flex: 1, background: C.red, color: C.paper, border: 'none', borderRadius: 6, padding: '7px 0', cursor: 'pointer', fontSize: 13 }}>Guardar</button>
                   <button onClick={() => setShowFormContacto(false)} style={{ background: C.bg2, color: C.ink3, border: 'none', borderRadius: 6, padding: '7px 14px', cursor: 'pointer', fontSize: 13 }}>✕</button>
                 </div>
@@ -458,7 +458,7 @@ export default function CRMEmpresaDetalle({
         {/* ── AGENTE ── */}
         {tab === 'agente' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' as const }}>
               <select value={canalAgente} onChange={e => setCanalAgente(e.target.value)} style={{ ...sel, flex: 1 }}>
                 <option value="whatsapp">💬 WhatsApp</option>
                 <option value="email">📧 Email</option>
@@ -503,7 +503,7 @@ export default function CRMEmpresaDetalle({
                     <div style={{ color: C.paper, fontSize: 12 }}>{String((previewAgente.analysis as Record<string, unknown>).siguiente_accion ?? '')}</div>
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 7 }}>
+                <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' as const }}>
                   <button onClick={handleGuardarAgente}
                     style={{ flex: 1, background: C.green, color: C.paper, border: 'none', borderRadius: 6, padding: '8px 0', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                     ✅ Guardar
