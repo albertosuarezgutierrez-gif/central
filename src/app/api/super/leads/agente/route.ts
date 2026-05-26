@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
-  const { lead_id, texto, canal } = await req.json()
+  const { lead_id, texto, canal, contacto_id } = await req.json()
   if (!lead_id || !texto) {
     return NextResponse.json({ error: 'lead_id y texto son obligatorios' }, { status: 400 })
   }
@@ -83,7 +83,7 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }
 
-  const { lead_id, texto, canal, analysis } = await req.json()
+  const { lead_id, texto, canal, analysis, contacto_id } = await req.json()
   if (!lead_id || !analysis) {
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
@@ -96,6 +96,7 @@ export async function PUT(req: NextRequest) {
     resumen_ia: analysis.resumen,
     canal: canal || 'nota',
     tipo_interaccion: canal || 'nota',
+    contacto_id: contacto_id || null,
   })
 
   const { data: current } = await supabase
@@ -117,6 +118,7 @@ export async function PUT(req: NextRequest) {
     eventos: [...eventos, nuevoEvento],
     puntuacion: Math.max(0, Math.min(100, puntuacionActual + (analysis.puntuacion_delta as number || 0))),
     siguiente_contacto_texto: analysis.siguiente_accion,
+    ultima_actividad_at: new Date().toISOString(),
   }
 
   if (analysis.estado_cambio) patch.estado = analysis.estado_nuevo

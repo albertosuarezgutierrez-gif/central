@@ -77,6 +77,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/crm-recordatorios",
+      "schedule": "0 9 * * 1-5"
+    },
+    {
       "path": "/api/cron/feedback-visita",
       "schedule": "*/10 * * * *"
     }

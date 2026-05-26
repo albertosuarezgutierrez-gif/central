@@ -11,6 +11,7 @@ import InstagramTab from '@/components/InstagramTab'
 import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 import IaTrainingPanel from '@/components/super/IaTrainingPanel'
 import CRMAgentTab from '@/components/super/CRMAgentTab'
+import CRMEmpresaDetalle from '@/components/super/CRMEmpresaDetalle'
 
 
 interface Restaurante {
@@ -994,6 +995,9 @@ interface Lead {
   landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
   propuesta_url?: string; propuesta_vista_at?: string
   ciudad?: string; empresa?: string
+  puntuacion?: number | null
+  ultima_actividad_at?: string | null
+  siguiente_contacto_texto?: string | null; siguiente_contacto_at?: string | null
 }
 
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
@@ -1001,6 +1005,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [leads, setLeads] = useState<Lead[]>([])
   const [loading, setLoading] = useState(true)
   const [expandido, setExpandido] = useState<string | null>(null)
+  const [seleccionado, setSeleccionado] = useState<Lead | null>(null)
   const [modalNuevo, setModalNuevo] = useState(false)
   const [showHunter, setShowHunter] = useState(false)
   const [eventoTexto, setEventoTexto] = useState<Record<string, string>>({})
@@ -1055,116 +1060,54 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const personales = leads.filter(l => l.tipo === 'personal')
   const online = leads.filter(l => l.tipo !== 'personal')
 
-  const CardLead = ({ lead, big }: { lead: Lead; big?: boolean }) => {
-    const abierto = expandido === lead.id
+  const CardLead = ({ lead }: { lead: Lead }) => {
+    const activo = seleccionado?.id === lead.id
     return (
-      <div style={{ background: C.bg2, border: `1px solid ${abierto ? C.red : C.rule}`, borderRadius: 14, overflow: 'hidden', transition: 'border-color .2s' }}>
-        {/* Cabecera */}
-        <div style={{ padding: big ? '18px 22px' : '14px 18px', display: 'flex', gap: 12, alignItems: 'flex-start', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => setExpandido(abierto ? null : lead.id)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: big ? 6 : 4, flex: 1, minWidth: 0 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              {big && <span style={{ fontSize: 16 }}>🏆</span>}
-              <span style={{ fontFamily: SN, fontSize: big ? 17 : 14, fontWeight: 600, color: C.ink }}>{lead.nombre}</span>
-              <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>·</span>
-              <span style={{ fontFamily: SM, fontSize: big ? 13 : 12, color: C.ink2 }}>{lead.restaurante}</span>
-              {lead.locales && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3, background: `${C.rule}`, padding: '2px 7px', borderRadius: 8 }}>{lead.locales}</span>}
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              {lead.telefono && <a href={`tel:${lead.telefono}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 12, color: C.red, textDecoration: 'none', fontWeight: 600 }}>📞 {lead.telefono}</a>}
-              {lead.email && <a href={`mailto:${lead.email}`} onClick={e => e.stopPropagation()} style={{ fontFamily: SM, fontSize: 12, color: C.ink2, textDecoration: 'none' }}>✉ {lead.email}</a>}
-              {lead.contacto && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>👤 {lead.contacto}</span>}
-              {lead.tpv && <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>TPV: {lead.tpv}</span>}
-              <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>{fmt(lead.created_at)}</span>
-            </div>
-            {lead.notas && !abierto && <div style={{ fontFamily: SM, fontSize: 12, color: C.ink3, fontStyle: 'italic' }}>{lead.notas.substring(0, 80)}{lead.notas.length > 80 ? '…' : ''}</div>}
+      <div
+        onClick={() => setSeleccionado(activo ? null : lead)}
+        style={{
+          background: activo ? C.bg3 : C.bg2,
+          border: `1px solid ${activo ? C.red : C.rule}`,
+          borderRadius: 10, padding: '12px 16px', cursor: 'pointer',
+          transition: 'all .15s', display: 'flex', gap: 12, alignItems: 'flex-start'
+        }}
+      >
+        {/* Indicador estado */}
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: ESTADO_COLOR[lead.estado], flexShrink: 0, marginTop: 5 }} />
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Empresa */}
+          <div style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: C.ink, marginBottom: 2 }}>
+            {lead.restaurante || lead.nombre}
           </div>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-            <button onClick={e => { e.stopPropagation(); cambiarEstado(lead) }} style={{ padding: '5px 10px', borderRadius: 20, border: `1px solid ${ESTADO_COLOR[lead.estado]}`, background: `${ESTADO_COLOR[lead.estado]}18`, color: ESTADO_COLOR[lead.estado], fontFamily: SM, fontSize: 10, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap', letterSpacing: '.04em', textTransform: 'uppercase' }}>
-              {lead.estado} →
-            </button>
-            <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3 }}>{(lead.eventos?.length ?? 0)} eventos {abierto ? '▲' : '▼'}</span>
+          {/* Subtítulo: ciudad / TPV */}
+          <div style={{ fontSize: 11, color: C.ink4, marginBottom: 6 }}>
+            {[lead.tpv, lead.locales].filter(Boolean).join(' · ') || lead.ciudad || '—'}
+          </div>
+          {/* Pills */}
+          <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
+            <span style={{ fontSize: 9, fontWeight: 700, color: ESTADO_COLOR[lead.estado], background: ESTADO_COLOR[lead.estado] + '22', borderRadius: 3, padding: '2px 6px', textTransform: 'uppercase' }}>
+              {lead.estado}
+            </span>
+            {lead.puntuacion != null && (
+              <span style={{ fontSize: 9, color: C.ink4, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
+                ★ {lead.puntuacion}
+              </span>
+            )}
+            {lead.propuesta_url && (
+              <span style={{ fontSize: 9, color: C.green, background: C.green + '22', borderRadius: 3, padding: '2px 5px' }}>
+                propuesta enviada
+              </span>
+            )}
           </div>
         </div>
 
-        {/* Panel expandido */}
-        {abierto && (
-          <div style={{ borderTop: `1px solid ${C.rule}`, padding: '16px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-
-            {/* Info comercial */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              {lead.landing_slug && (
-                <a href={`https://www.iarest.es/p/${lead.landing_slug}`} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${C.green}15`, border: `1px solid ${C.green}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.green, textDecoration: 'none', fontWeight: 600 }}>
-                  🔗 iarest.es/p/{lead.landing_slug}
-                  {lead.landing_vista_at
-                    ? <span style={{ color: C.green }}>· {lead.landing_vistas || 1} vista{(lead.landing_vistas || 1) > 1 ? 's' : ''} · {fmtFecha(lead.landing_vista_at)}</span>
-                    : <span style={{ color: C.ink3 }}>· no vista aún</span>}
-                </a>
-              )}
-              {lead.landing_slug && (
-                <button onClick={async (e) => {
-                  e.stopPropagation()
-                  const btn = e.currentTarget
-                  btn.textContent = '⏳ Analizando…'
-                  btn.setAttribute('disabled', 'true')
-                  const r = await fetch(`/api/super/leads/${lead.id}/actualizar-landing`, { method: 'POST', headers: sh() })
-                  const d = await r.json()
-                  btn.textContent = d.ok ? '✅ Actualizada' : '❌ Error'
-                  setTimeout(() => { btn.textContent = '🔄 Actualizar propuesta'; btn.removeAttribute('disabled') }, 3000)
-                }} style={{ background: `${C.amber}15`, border: `1px solid ${C.amber}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.amber, fontWeight: 600, cursor: 'pointer' }}>
-                  🔄 Actualizar propuesta
-                </button>
-              )}
-              {lead.propuesta_url && (
-                <a href={lead.propuesta_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: `${C.red}15`, border: `1px solid ${C.red}40`, borderRadius: 8, padding: '5px 12px', fontFamily: SM, fontSize: 11, color: C.red, textDecoration: 'none', fontWeight: 600 }}>
-                  📋 Propuesta
-                  {lead.propuesta_vista_at
-                    ? <span style={{ color: C.red }}>· abierta {fmtFecha(lead.propuesta_vista_at)}</span>
-                    : <span style={{ color: C.ink3 }}>· no vista</span>}
-                </a>
-              )}
-            </div>
-
-            {lead.notas && <div style={{ fontFamily: SM, fontSize: 13, color: C.ink2, fontStyle: 'italic', padding: '10px 14px', background: `${C.rule}30`, borderRadius: 8 }}>{lead.notas}</div>}
-
-            {/* Historial */}
-            {lead.eventos?.length > 0 && (
-              <div>
-                <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Historial</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {[...lead.eventos].reverse().map((ev, i) => (
-                    <div key={i} style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                      <span style={{ fontSize: 14, lineHeight: 1.4 }}>{ev.tipo}</span>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontFamily: SN, fontSize: 13, color: C.ink }}>{ev.texto}</span>
-                        <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginLeft: 8 }}>{fmtFecha(ev.fecha)}</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Añadir evento */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-              <select value={eventoTipo[lead.id] || '💬'} onChange={e => setEventoTipo(p => ({ ...p, [lead.id]: e.target.value }))} style={{ background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '6px 8px', color: C.ink, fontSize: 14, cursor: 'pointer' }}>
-                {EVENTO_EMOJIS.map(e => <option key={e} value={e}>{e}</option>)}
-              </select>
-              <input
-                value={eventoTexto[lead.id] || ''}
-                onChange={e => setEventoTexto(p => ({ ...p, [lead.id]: e.target.value }))}
-                onKeyDown={e => e.key === 'Enter' && addEvento(lead)}
-                placeholder="Añadir nota o evento…"
-                style={{ flex: 1, background: C.bg, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '7px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none' }}
-              />
-              <button onClick={() => addEvento(lead)} style={{ background: C.red, color: '#fff', border: 'none', borderRadius: 6, padding: '7px 14px', fontFamily: SM, fontWeight: 600, fontSize: 12, cursor: 'pointer' }}>+ Añadir</button>
-            </div>
-          </div>
-        )}
+        {/* Flecha si seleccionado */}
+        {activo && <span style={{ color: C.red, fontSize: 16, flexShrink: 0 }}>›</span>}
       </div>
     )
   }
+
 
   return (
     <div>
@@ -1203,7 +1146,9 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       {loading ? (
         <div style={{ textAlign: 'center', padding: 48, color: C.ink3, fontFamily: SM, fontSize: 13 }}>Cargando…</div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'flex-start' }}>
+          {/* Lista de leads */}
+          <div style={{ flex: seleccionado ? '0 0 340px' : '1', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 32 }}>
 
           {/* PERSONALES */}
           <div>
@@ -1219,7 +1164,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {(personales as Lead[]).map(l => <CardLead key={l.id} lead={l} big />)}
+                {(personales as Lead[]).map(l => <CardLead key={l.id} lead={l} />)}
               </div>
             )}
           </div>
@@ -1242,6 +1187,28 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
               </div>
             )}
           </div>
+        </div>{/* fin lista */}
+
+        {/* Panel detalle lateral */}
+        {seleccionado && (
+          <div style={{ flex: 1, minWidth: 0, position: 'sticky', top: 16, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 14, overflow: 'hidden', maxHeight: 'calc(100vh - 120px)' }}>
+            <CRMEmpresaDetalle
+              lead={seleccionado as Parameters<typeof CRMEmpresaDetalle>[0]['lead']}
+              sh={sh}
+              onUpdate={(updated) => {
+                setLeads(prev => prev.map(l => l.id === seleccionado.id ? { ...l, ...updated } as Lead : l))
+                setSeleccionado(prev => prev ? { ...prev, ...updated } as Lead : null)
+              }}
+              onDelete={async () => {
+                if (!confirm('¿Eliminar este lead?')) return
+                await fetch(`/api/super/leads/${seleccionado.id}`, { method: 'DELETE', headers: sh() })
+                setLeads(prev => prev.filter(l => l.id !== seleccionado.id))
+                setSeleccionado(null)
+                setExpandido(null)
+              }}
+            />
+          </div>
+        )}
         </div>
       )}
 
@@ -1249,16 +1216,16 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       {modalNuevo && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setModalNuevo(false)}>
           <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 16, padding: 28, width: '100%', maxWidth: 480 }} onClick={e => e.stopPropagation()}>
-            <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 24, fontWeight: 500, color: C.ink, marginBottom: 20 }}>Nuevo lead personal</div>
+            <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 24, fontWeight: 500, color: C.ink, marginBottom: 20 }}>Nueva empresa</div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {([
-                ['nombre', 'Nombre contacto *'],
-                ['restaurante', 'Grupo / Restaurante *'],
+                ['restaurante', 'Empresa / Grupo *'],
+                ['nombre', 'Primer contacto (nombre)'],
                 ['telefono', 'Teléfono'],
                 ['email', 'Email'],
                 ['locales', 'Nº locales (ej: 6 locales)'],
                 ['tpv', 'TPV actual (ej: Ágora)'],
-                ['contacto', 'Persona de contacto'],
+                
                 ['notas', 'Notas'],
               ] as [keyof typeof form, string][]).map(([k, label]) => (
                 <div key={k}>
