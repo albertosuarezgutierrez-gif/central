@@ -416,14 +416,35 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     </a>
 
     <a href="/catering" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid var(--red);transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='var(--bg2)'">
-      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none"><text x="3" y="40" font-size="42" font-family="Newsreader,Georgia,serif" font-style="italic" font-weight="200" fill="currentColor">C</text></svg></div>
+      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Mano con bandeja -->
+        <ellipse cx="22" cy="14" rx="12" ry="3"/>
+        <line x1="10" y1="14" x2="10" y2="17"/>
+        <line x1="34" y1="14" x2="34" y2="17"/>
+        <path d="M10 17 Q10 19 22 19 Q34 19 34 17"/>
+        <path d="M18 19 L16 28 Q16 30 22 30 Q28 30 28 28 L26 19"/>
+        <path d="M12 30 Q8 30 8 34 L36 34 Q36 30 32 30"/>
+        <path d="M8 34 Q7 36 9 36 L35 36 Q37 36 36 34"/>
+      </svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Catering<br>y eventos</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Del presupuesto al evento y a la caja. Portal cliente, APPCC, escandallos y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
     </a>
 
     <a href="/espacios" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
-      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none"><text x="4" y="40" font-size="42" font-family="Newsreader,Georgia,serif" font-style="italic" font-weight="200" fill="currentColor">E</text></svg></div>
+      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Fachada finca: tejado + columnas + puerta -->
+        <polyline points="4,18 22,6 40,18"/>
+        <line x1="4" y1="18" x2="40" y2="18"/>
+        <line x1="8" y1="18" x2="8" y2="38"/>
+        <line x1="36" y1="18" x2="36" y2="38"/>
+        <line x1="4" y1="38" x2="40" y2="38"/>
+        <rect x="18" y="26" width="8" height="12" rx="4"/>
+        <line x1="14" y1="18" x2="14" y2="38"/>
+        <line x1="30" y1="18" x2="30" y2="38"/>
+        <line x1="8" y1="28" x2="14" y2="28"/>
+        <line x1="30" y1="28" x2="36" y2="28"/>
+      </svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Fincas<br>y espacios</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Solicitudes de bodas.net automáticas. Contratos digitales, calendario y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
