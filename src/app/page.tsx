@@ -417,17 +417,22 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 
     <a href="/catering" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid var(--red);transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='var(--bg2)'">
       <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <!-- Bandeja redonda plana -->
-        <ellipse cx="22" cy="18" rx="14" ry="3"/>
-        <!-- Plato encima -->
-        <ellipse cx="22" cy="15" rx="7" ry="1.5"/>
-        <!-- Brazo / mano extendida -->
-        <path d="M8 21 Q8 24 22 24 Q36 24 36 21"/>
-        <path d="M8 21 L6 28 Q6 30 10 30 L34 30 Q38 30 38 28 L36 21"/>
-        <!-- Muñeca -->
-        <path d="M16 30 L15 38"/>
-        <path d="M28 30 L29 38"/>
-        <line x1="15" y1="38" x2="29" y2="38"/>
+        <!-- Copa izquierda -->
+        <path d="M10 6 L8 16 Q8 22 14 22"/>
+        <path d="M18 6 L20 16 Q20 22 14 22"/>
+        <line x1="14" y1="22" x2="14" y2="32"/>
+        <line x1="10" y1="32" x2="18" y2="32"/>
+        <!-- Copa derecha -->
+        <path d="M26 6 L24 16 Q24 22 30 22"/>
+        <path d="M34 6 L36 16 Q36 22 30 22"/>
+        <line x1="30" y1="22" x2="30" y2="32"/>
+        <line x1="26" y1="32" x2="34" y2="32"/>
+        <!-- Brindis — línea diagonal entre las dos -->
+        <line x1="19" y1="9" x2="25" y2="9" stroke-width="1" opacity="0.6"/>
+        <!-- Destellos -->
+        <line x1="22" y1="3" x2="22" y2="5"/>
+        <line x1="19" y1="4" x2="20" y2="6"/>
+        <line x1="25" y1="4" x2="24" y2="6"/>
       </svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Catering<br>y eventos</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Del presupuesto al evento y a la caja. Portal cliente, APPCC, escandallos y VeriFactu.</p>
