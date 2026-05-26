@@ -49,27 +49,48 @@ async function commitToGithub(slug: string, tsx: string): Promise<string> {
   return data.content?.sha || ''
 }
 
-async function solicitarIndexacion(slug: string): Promise<void> {
-  try {
-    const rt = process.env.GOOGLE_OAUTH_REFRESH_TOKEN
-    if (!rt) return
-    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token', refresh_token: rt,
-        client_id: process.env.GOOGLE_CLIENT_ID || '',
-        client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
-      }),
-    })
-    const { access_token } = await tokenRes.json()
-    if (!access_token) return
+async function getOAuthToken(): Promise<string> {
+  const rt = process.env.GOOGLE_OAUTH_REFRESH_TOKEN
+  if (!rt) throw new Error('GOOGLE_OAUTH_REFRESH_TOKEN no configurado')
+  const res = await fetch('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: rt,
+      client_id: process.env.GOOGLE_CLIENT_ID || '',
+      client_secret: process.env.GOOGLE_CLIENT_SECRET || '',
+    }),
+  })
+  const data = await res.json()
+  if (!data.access_token) throw new Error(`OAuth error: ${JSON.stringify(data)}`)
+  return data.access_token
+}
 
-    // GSC — solicitar indexación vía Indexing API (requiere scope adicional, por ahora fetch inspect)
-    await fetch('https://www.googleapis.com/webmasters/v3/sites/https%3A%2F%2Fwww.iarest.es%2F/sitemaps', {
-      headers: { Authorization: `Bearer ${access_token}` },
+async function solicitarIndexacion(slug: string): Promise<{ indexing: boolean; sitemap: boolean }> {
+  const resultado = { indexing: false, sitemap: false }
+  try {
+    const token = await getOAuthToken()
+    const url = `https://www.iarest.es/blog/${slug}`
+
+    // 1. Google Indexing API — notifica URL nueva/actualizada
+    const indexRes = await fetch('https://indexing.googleapis.com/v3/urlNotifications:publish', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, type: 'URL_UPDATED' }),
     })
-  } catch { /* no crítico */ }
+    resultado.indexing = indexRes.ok
+
+    // 2. Ping sitemap a GSC — fuerza rerastreo del sitemap completo
+    const sitemapUrl = encodeURIComponent('https://www.iarest.es/sitemap.xml')
+    const siteUrl    = encodeURIComponent('https://www.iarest.es/')
+    const sitemapRes = await fetch(
+      `https://www.googleapis.com/webmasters/v3/sites/${siteUrl}/sitemaps/${sitemapUrl}`,
+      { method: 'PUT', headers: { Authorization: `Bearer ${token}` } }
+    )
+    resultado.sitemap = sitemapRes.ok
+  } catch { /* no crítico — no bloquear publicación */ }
+  return resultado
 }
 
 async function enviarTelegram(msg: string) {
@@ -136,18 +157,27 @@ export async function POST(req: NextRequest) {
       .update({ estado: 'publicado', github_sha: sha, published_at: new Date().toISOString() })
       .eq('id', id)
 
-    // 3. Solicitar indexación en GSC
-    await solicitarIndexacion(borrador.slug)
+    // 3. Solicitar indexación en Google (Indexing API + ping sitemap GSC)
+    const indexResult = await solicitarIndexacion(borrador.slug)
 
-    // 4. Telegram
+    // 4. Telegram con estado de indexación
+    const indexEmoji = indexResult.indexing ? '✅' : '⚠️'
+    const sitemapEmoji = indexResult.sitemap ? '✅' : '⚠️'
     await enviarTelegram(
       `✅ <b>Artículo publicado</b>\n\n` +
       `<b>${borrador.titulo}</b>\n` +
       `🔗 https://www.iarest.es/blog/${borrador.slug}\n\n` +
-      `Vercel desplegará en ~60 segundos. Solicita indexación en GSC cuando esté live.`
+      `<b>Google notificado:</b>\n` +
+      `${indexEmoji} Indexing API (URL directa)\n` +
+      `${sitemapEmoji} Sitemap actualizado en GSC\n\n` +
+      `Vercel desplegará en ~60 segundos.`
     )
 
-    return NextResponse.json({ ok: true, url: `https://www.iarest.es/blog/${borrador.slug}` })
+    return NextResponse.json({
+      ok: true,
+      url: `https://www.iarest.es/blog/${borrador.slug}`,
+      google: indexResult,
+    })
 
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
