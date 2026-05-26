@@ -150,10 +150,13 @@ export async function GET(req: NextRequest) {
 
   const pendientesRestantes = leadsSinLocales.length - lote.length
 
-  await tgAlert(
-    `📍 <b>Locales completados automáticamente</b>\n${totalInsertados} locales insertados en ${lote.length} grupos\n\n${resumen.join('\n')}${pendientesRestantes > 0 ? `\n\n⏳ ${pendientesRestantes} grupos pendientes (próxima ejecución)` : ''}`,
-    'info'
-  )
+  // Solo alertar si hay inserciones reales
+  if (totalInsertados > 0) {
+    await tgAlert(
+      `📍 <b>Locales completados automáticamente</b>\n${totalInsertados} locales insertados en ${lote.length} grupos\n\n${resumen.join('\n')}${pendientesRestantes > 0 ? `\n\n⏳ ${pendientesRestantes} grupos pendientes` : ''}`,
+      'info'
+    )
+  }
 
   return NextResponse.json({ ok: true, procesados: lote.length, insertados: totalInsertados, pendientes: pendientesRestantes })
 }
