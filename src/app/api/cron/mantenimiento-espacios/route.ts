@@ -14,15 +14,9 @@ function tipoLabel(tipo: string): string {
 }
 
 function emailHtml(d: {
-  espacioNombre: string
-  descripcion: string
-  tipo: string
-  estado: string
-  proximaRevision: string
-  diasRestantes: number
-  proveedorNombre: string | null
-  costeEstimado: number | null
-  notas: string | null
+  espacioNombre: string; descripcion: string; tipo: string
+  estado: string; proximaRevision: string; diasRestantes: number
+  proveedorNombre: string | null; costeEstimado: number | null; notas: string | null
 }) {
   const color = d.estado === 'vencido' ? '#D9442B' : '#E8A33B'
   const badge = d.estado === 'vencido'
@@ -49,7 +43,7 @@ function emailHtml(d: {
         ${d.notas ? `<tr><td style="padding:10px 0;color:#6B5F52;font-size:13px">Notas</td><td style="padding:10px 0;color:#14110E;font-size:14px">${d.notas}</td></tr>` : ''}
       </table>
       <div style="margin-top:28px;padding:16px;background:#F6F1E7;border-radius:8px;font-size:13px;color:#6B5F52">
-        Una vez realizado, accede a <strong>ia.rest → Espacios → Mantenimiento</strong> y pulsa <strong>✓ Revisado</strong>.
+        Una vez realizado, accede a <strong>ia.rest → Eventos → Espacios → Mantenimiento</strong> y pulsa <strong>✓ Revisado</strong>.
       </div>
     </div>
     <div style="padding:16px 32px;background:#F6F1E7;text-align:center;font-size:11px;color:#9C8E7E">ia.rest · hola@iarest.es</div>
@@ -61,9 +55,14 @@ export async function GET(req: NextRequest) {
   const supabase = createServerClient()
   const hace24h = new Date(Date.now() - 86400000).toISOString()
 
+  // Join: espacio_mantenimiento → espacios_evento → restaurante para email
   const { data: items, error } = await supabase
     .from('espacio_mantenimiento')
-    .select(`*, espacio:espacio_id(nombre, email_contacto), restaurante:restaurante_id(nombre, email_contacto)`)
+    .select(`
+      *,
+      espacio:espacio_id(nombre, restaurante_id),
+      restaurante:restaurante_id(nombre, email_contacto)
+    `)
     .in('estado', ['proximo', 'vencido'])
     .or(`notificado_at.is.null,notificado_at.lt.${hace24h}`)
 
@@ -71,9 +70,9 @@ export async function GET(req: NextRequest) {
 
   const resultados = await Promise.allSettled(
     items.map(async (item) => {
-      const espacio = item.espacio as { nombre: string; email_contacto: string | null } | null
+      const espacio = item.espacio as { nombre: string; restaurante_id: string } | null
       const restaurante = item.restaurante as { nombre: string; email_contacto: string | null } | null
-      const email = espacio?.email_contacto ?? restaurante?.email_contacto
+      const email = restaurante?.email_contacto
       if (!email) return
 
       const diasRestantes = Math.ceil(
