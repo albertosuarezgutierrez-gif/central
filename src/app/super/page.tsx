@@ -110,8 +110,10 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'restaurantes'|'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('restaurantes')
+  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'>('clientes')
   const [tabCRM, setTabCRM] = useState<'leads'|'agente'>('leads')
+  const [showSistemaMenu, setShowSistemaMenu] = useState(false)
+  const [subTabClientes, setSubTabClientes] = useState<'locales'|'cuentas'>('locales')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
   const [filtroSug, setFiltroSug] = useState<string>('todas')
@@ -383,46 +385,70 @@ export default function SuperPage() {
       {/* TABS NAV */}
       <div style={{ borderBottom: `1px solid ${C.rule}`, background: C.bg }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(12px, 4vw, 32px)', display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
+          {/* Tabs principales */}
           {([
-            { id: 'restaurantes', label: 'Restaurantes' },
-            { id: 'clientes',     label: 'Clientes' },
-            { id: 'crm',          label: '🏢 CRM' },
-            { id: 'cobro',        label: 'Cobro €' },
-            { id: 'sugerencias',  label: 'Sugerencias', badge: badgeSug },
-            { id: 'ia_training',  label: 'IA Training' },
-            { id: 'sistema',      label: 'Sistema' },
-            { id: 'autocuras',    label: '⚡ Autocuras' },
-            { id: 'soporte',      label: 'Soporte', badge: badgeSoporte },
-            { id: 'agentes',      label: '🤖 Agentes' },
-            { id: 'instagram',    label: '📸 Instagram', badge: badgeInstagram },
-            { id: 'blog',         label: '📝 Blog' },
-            { id: 'proveedores',  label: '🔌 Proveedores' },
+            { id: 'clientes',    label: 'Clientes' },
+            { id: 'crm',         label: 'CRM' },
+            { id: 'cobro',       label: 'Cobro' },
+            { id: 'sugerencias', label: 'Sugerencias', badge: badgeSug },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               style={{
                 background: 'none', border: 'none', cursor: 'pointer',
                 padding: '14px 20px',
                 fontFamily: SM, fontSize: 11, letterSpacing: '.1em',
-                color: tabSuper === t.id ? C.ink : C.ink4,
+                color: tabSuper === t.id ? C.ink : C.ink3,
                 borderBottom: `2px solid ${tabSuper === t.id ? C.red : 'transparent'}`,
-                position: 'relative',
                 display: 'flex', alignItems: 'center', gap: 6,
-                transition: 'color .15s',
+                transition: 'color .15s', whiteSpace: 'nowrap',
               }}
             >
               {t.label.toUpperCase()}
-              {'badge' in t && (t as any).badge > 0 && (
-                <span style={{
-                  background: C.red, color: '#fff',
-                  borderRadius: 10, fontSize: 9, fontWeight: 700,
-                  padding: '1px 5px', lineHeight: '14px',
-                  fontFamily: SM,
-                }}>
+              {(t as any).badge > 0 && (
+                <span style={{ background: C.red, color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', fontFamily: SM }}>
                   {(t as any).badge}
                 </span>
               )}
             </button>
           ))}
+          <div style={{ flex: 1 }} />
+          {/* Dropdown Sistema */}
+          <div style={{ position: 'relative', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}>
+            <button
+              onClick={() => setShowSistemaMenu((v: boolean) => !v)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', height: '100%',
+                fontFamily: SM, fontSize: 11, letterSpacing: '.1em', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
+                color: ['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores'].includes(tabSuper) ? C.ink : C.ink3,
+                borderBottom: `2px solid ${['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores'].includes(tabSuper) ? C.red : 'transparent'}` }}>
+              {'SISTEMA'}
+              {(badgeSoporte + badgeInstagram) > 0
+                ? <span style={{ background: C.red, color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', fontFamily: SM }}>{badgeSoporte + badgeInstagram}</span>
+                : <span style={{ fontSize: 10, color: C.ink4 }}>▾</span>}
+            </button>
+            {showSistemaMenu && (
+              <div style={{ position: 'absolute', right: 0, top: '100%', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, zIndex: 200, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,.5)', overflow: 'hidden' }}>
+                {([
+                  { id: 'ia_training', label: 'IA Training' },
+                  { id: 'autocuras',   label: 'Autocuras' },
+                  { id: 'sistema',     label: 'Sistema' },
+                  { id: 'soporte',     label: 'Soporte', badge: badgeSoporte },
+                  { id: 'agentes',     label: 'Agentes' },
+                  { id: 'instagram',   label: 'Instagram', badge: badgeInstagram },
+                  { id: 'blog',        label: 'Blog' },
+                  { id: 'proveedores', label: 'Proveedores' },
+                ] as any[]).map((t: any) => (
+                  <button key={t.id} onClick={() => { setTabSuper(t.id as any); setShowSistemaMenu(false) }}
+                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                      background: tabSuper === t.id ? C.bg3 : 'transparent', border: 'none', cursor: 'pointer',
+                      padding: '10px 16px', fontFamily: SM, fontSize: 11, letterSpacing: '.08em',
+                      color: tabSuper === t.id ? C.paper : C.ink3, textAlign: 'left' }}>
+                    {t.label.toUpperCase()}
+                    {(t.badge ?? 0) > 0 && <span style={{ background: C.red, color: '#fff', borderRadius: 8, padding: '1px 5px', fontSize: 9 }}>{t.badge}</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
@@ -486,14 +512,31 @@ export default function SuperPage() {
             <ProveedoresTechTab />
           </div>
 
-        ) : tabSuper === 'clientes' ? (          <div>
-            <div style={{ marginBottom: 32 }}>
-              <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em', marginBottom: 8 }}>CLIENTES · MULTI-RESTAURANTE</div>
+        ) : tabSuper === 'clientes' ? (
+          <div>
+            {/* Header */}
+            <div style={{ marginBottom: 24 }}>
               <h1 style={{ fontFamily: SE, fontSize: 40, fontWeight: 500, margin: '0 0 8px', color: C.ink }}>Clientes</h1>
               <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: 0 }}>
-                Cada cliente puede tener uno o varios restaurantes. Un PIN de cuenta, múltiples locales.
+                Restaurantes activos y cuentas de acceso multi-local.
               </p>
             </div>
+            {/* Sub-tabs */}
+            <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.rule}`, marginBottom: 28 }}>
+              {([
+                { id: 'locales', label: 'Restaurantes' },
+                { id: 'cuentas', label: 'Cuentas' },
+              ] as {id:'locales'|'cuentas'; label:string}[]).map(t => (
+                <button key={t.id} onClick={() => setSubTabClientes(t.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '10px 18px',
+                    fontFamily: SM, fontSize: 11, letterSpacing: '.08em',
+                    color: subTabClientes === t.id ? C.ink : C.ink3,
+                    borderBottom: `2px solid ${subTabClientes === t.id ? C.red : 'transparent'}` }}>
+                  {t.label.toUpperCase()}
+                </button>
+              ))}
+            </div>
+            {subTabClientes === 'cuentas' ? (<div>
 
             {/* Botón nueva cuenta */}
             {!showFormCuenta && (
@@ -594,9 +637,8 @@ export default function SuperPage() {
                 ))}
               </div>
             )}
-          </div>
-        ) : (
-        <div>
+          </div>) : (
+          <div>
         {/* KPIs globales */}
         {!loading && restaurantes.length > 0 && (() => {
           const activos = restaurantes.filter(r => r.activo && r.plan_status !== 'trial').length
@@ -756,14 +798,9 @@ export default function SuperPage() {
             </div>
           )
         })()}
-
-        {/* Footer info */}
-        <div style={{ marginTop: 64, paddingTop: 24, borderTop: `1px solid ${C.rule}`, fontFamily: SM, fontSize: 10, color: C.ink4, letterSpacing: '.1em', display: 'flex', justifyContent: 'space-between' }}>
-          <span>ia.rest · Multi-tenant</span>
-          <span>Supabase: efncqyvhniaxsirhdxaa</span>
+          </div>)}
         </div>
-        </div>
-        )}
+        ) : null}
       </div>
     </div>
   )
