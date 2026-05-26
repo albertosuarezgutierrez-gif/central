@@ -50,7 +50,7 @@ export default function CRMEmpresaDetalle({
   onDelete: () => void
   sh: () => Record<string, string>
 }) {
-  const [tab, setTab] = useState<Tab>('info')
+  const [tab, setTab] = useState<Tab>('contactos')
   const [locales, setLocales] = useState<Local[]>([])
   const [contactos, setContactos] = useState<Contacto[]>([])
   const [comunicaciones, setComunicaciones] = useState<Comunicacion[]>([])
@@ -192,39 +192,17 @@ export default function CRMEmpresaDetalle({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', fontFamily: SN }}>
-      {/* Header */}
-      <div style={{ padding: '14px 18px 10px', borderBottom: `1px solid ${C.rule}` }}>
+      {/* Header empresa */}
+      <div style={{ padding: '16px 18px 12px', borderBottom: `1px solid ${C.rule}` }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10 }}>
-          <div>
-            <h2 style={{ fontFamily: SE, fontSize: 18, color: C.paper, margin: '0 0 4px', fontWeight: 400 }}>{lead.nombre}</h2>
-            <div style={{ fontSize: 12, color: C.ink3 }}>{lead.restaurante}</div>
-            <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 10, background: ESTADO_COLOR[lead.estado] + '33', color: ESTADO_COLOR[lead.estado], borderRadius: 4, padding: '2px 7px', fontWeight: 700, textTransform: 'uppercase' }}>
-                {lead.estado}
-              </span>
-              {lead.puntuacion != null && (
-                <span style={{ fontSize: 10, color: scoreColor(lead.puntuacion), background: C.bg3, borderRadius: 4, padding: '2px 7px', fontWeight: 700 }}>
-                  score {lead.puntuacion}
-                </span>
-              )}
-              {locales.length > 0 && (
-                <span style={{ fontSize: 10, color: C.ink4, background: C.bg3, borderRadius: 4, padding: '2px 7px' }}>
-                  {locales.length} local{locales.length > 1 ? 'es' : ''}
-                </span>
-              )}
-              {contactos.length > 0 && (
-                <span style={{ fontSize: 10, color: C.ink4, background: C.bg3, borderRadius: 4, padding: '2px 7px' }}>
-                  {contactos.length} contacto{contactos.length > 1 ? 's' : ''}
-                </span>
-              )}
-              {diasSinActividad != null && diasSinActividad > 7 && (
-                <span style={{ fontSize: 10, color: C.amber, background: '#2A1F00', borderRadius: 4, padding: '2px 7px' }}>
-                  ⏱ {diasSinActividad}d sin actividad
-                </span>
-              )}
-            </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 10, color: C.ink4, fontWeight: 600, letterSpacing: '.08em', marginBottom: 4 }}>EMPRESA</div>
+            <h2 style={{ fontFamily: SE, fontSize: 20, color: C.paper, margin: '0 0 2px', fontWeight: 400 }}>
+              {lead.restaurante || lead.nombre}
+            </h2>
+            {lead.tpv && <div style={{ fontSize: 12, color: C.ink4 }}>TPV: {lead.tpv}</div>}
           </div>
-          <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
+          <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'flex-start' }}>
             {lead.landing_slug && (
               <a href={`https://www.iarest.es/propuesta/${lead.landing_slug}`} target="_blank"
                 style={{ fontSize: 10, color: C.red, textDecoration: 'none', padding: '4px 8px', border: `1px solid ${C.red}`, borderRadius: 5 }}>
@@ -233,6 +211,28 @@ export default function CRMEmpresaDetalle({
             )}
             <button onClick={onDelete} style={{ background: 'transparent', border: 'none', color: C.ink4, cursor: 'pointer', fontSize: 14 }}>🗑</button>
           </div>
+        </div>
+
+        {/* Estado pills */}
+        <div style={{ display: 'flex', gap: 6, marginTop: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 10, fontWeight: 700, color: ESTADO_COLOR[lead.estado], background: ESTADO_COLOR[lead.estado] + '33', borderRadius: 4, padding: '2px 8px', textTransform: 'uppercase' }}>
+            {lead.estado}
+          </span>
+          {lead.puntuacion != null && (
+            <span style={{ fontSize: 10, color: scoreColor(lead.puntuacion), background: C.bg3, borderRadius: 4, padding: '2px 7px', fontWeight: 700 }}>
+              ★ {lead.puntuacion}
+            </span>
+          )}
+          {diasSinActividad != null && diasSinActividad > 7 && (
+            <span style={{ fontSize: 10, color: C.amber, background: '#2A1F00', borderRadius: 4, padding: '2px 7px' }}>
+              ⏱ {diasSinActividad}d sin actividad
+            </span>
+          )}
+          {lead.siguiente_contacto_texto && (
+            <span style={{ fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 4, padding: '2px 7px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              📅 {lead.siguiente_contacto_texto}
+            </span>
+          )}
         </div>
       </div>
 
