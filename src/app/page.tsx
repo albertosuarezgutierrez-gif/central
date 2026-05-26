@@ -150,7 +150,7 @@ export default function HomePage() {
   return (
     <>
       <title>Software de Gestión para Restaurantes, Catering y Espacios de Eventos | ia.rest</title>
-      <meta name="description" content="ia.rest gestiona restaurantes, empresas de catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes. Prueba 14 días gratis." />
+      <meta name="description" content="ia.rest gestiona restaurantes, catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes." />
       <meta name="robots" content="index, follow" />
       <meta property="og:title" content="Software para Restaurantes, Catering y Espacios de Eventos | ia.rest" />
       <meta property="og:description" content="Gestión completa para hostelería: restaurantes, catering y espacios de eventos. Voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 59€/mes." />
@@ -203,6 +203,8 @@ h1{font-family:'Newsreader',serif;font-size:clamp(50px,8vw,104px);font-weight:20
 h1 i{font-style:italic;color:var(--red)}
 .hero-sub{margin-top:28px;font-size:clamp(15px,1.8vw,18px);color:var(--ink3);font-weight:300;line-height:1.7;max-width:500px}
 .hero-cta{margin-top:44px;display:flex;gap:12px;justify-content:center}
+.btn-s{font-size:14px;font-weight:400;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s;display:inline-block}
+.btn-s:hover{color:var(--ink);border-color:rgba(246,241,231,.2)}
 .btn-p{font-size:14px;font-weight:600;background:var(--red);color:var(--ink);padding:13px 28px;border-radius:6px;text-decoration:none;transition:opacity .2s,transform .15s}
 .btn-p:hover{opacity:.85;transform:translateY(-1px)}
 .btn-s{font-size:14px;font-weight:400;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s}
@@ -368,9 +370,11 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div dangerouslySetInnerHTML={{ __html: `<nav>
   <a class="logo" href="#">ia<b>.</b>rest</a>
   <div class="nav-links">
+    <a href="/hosteleria">Hostelería</a>
     <a href="/catering">Catering</a>
     <a href="/espacios">Espacios</a>
-    <a href="#contacto" class="nav-cta">Solicitar demo →</a>
+    <a href="#precios">Precios</a>
+    <a href="#contacto" class="nav-cta">Demo gratuita →</a>
   </div>
   <button class="burger" id="burger" aria-label="Menú">
     <span></span><span></span><span></span>
@@ -378,22 +382,51 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 </nav>
 
 <div class="mob-menu" id="mobMenu">
+  <a href="/hosteleria">Hostelería</a>
   <a href="/catering">Catering</a>
-  <a href="/espacios">Espacios de eventos</a>
-  <a href="#sistema">Sistema</a>
+  <a href="/espacios">Espacios</a>
   <a href="#precios">Precios</a>
   <a href="#contacto">Contacto</a>
-  <a href="#contacto" class="mob-cta">Solicitar demo →</a>
+  <a href="#contacto" class="mob-cta">Demo gratuita →</a>
 </div>
 
 <!-- HERO -->
-<section class="hero">
+<section class="hero" style="padding-bottom:0">
   <div class="hero-glow"></div>
-  <div class="eyebrow fi">El único TPV por voz en español · Sin comisión</div>
-  <h1 class="fi d1">Comandas por Voz<br>en tu Bar. <i>Simple.</i></h1>
-  <p class="hero-sub fi d2">Habla y la cocina ya tiene el ticket. Sin papel, sin errores, sin comisión. 59€/mes + 20€/usuario.</p>
+  <div class="eyebrow fi">Software de gestión · Hostelería española · Sin comisión</div>
+  <h1 class="fi d1">Gestión completa<br>para <i>hostelería.</i></h1>
+  <p class="hero-sub fi d2" style="max-width:520px">Restaurante, catering o espacio de eventos. Todo en una sola herramienta. Voz, KDS, APPCC, VeriFactu y más.</p>
   <div class="hero-cta fi d2">
     <a href="#contacto" class="btn-p">Prueba 14 días gratis →</a>
+    <a href="#perfiles" class="btn-s" style="font-size:14px;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s">¿Para qué tipo de negocio? ↓</a>
+  </div>
+</section>
+
+<!-- PERFILES — las 3 tarjetas grandes clickables -->
+<section id="perfiles" style="background:var(--bg2);padding:0 0 0 0">
+  <div class="w" style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:2px;background:var(--border)">
+
+    <a href="/hosteleria" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
+      <div style="font-size:32px;margin-bottom:20px">🍺</div>
+      <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Restaurante<br>y hostelería</div>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Bar, restaurante, chiringuito, feria, food truck. Comandas por voz, KDS, almacén y VeriFactu.</p>
+      <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
+    </a>
+
+    <a href="/catering" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid var(--red);transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='var(--bg2)'">
+      <div style="font-size:32px;margin-bottom:20px">🍱</div>
+      <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Catering<br>y eventos</div>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Del presupuesto al evento y a la caja. Portal cliente, APPCC, escandallos y VeriFactu.</p>
+      <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
+    </a>
+
+    <a href="/espacios" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
+      <div style="font-size:32px;margin-bottom:20px">🏛️</div>
+      <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Fincas<br>y espacios</div>
+      <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Solicitudes de bodas.net automáticas. Contratos digitales, calendario y VeriFactu.</p>
+      <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
+    </a>
+
   </div>
 </section>
 
