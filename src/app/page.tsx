@@ -409,50 +409,21 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   <div class="w perfiles-grid">
 
     <a href="/hosteleria" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
-      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="10" y="6" width="24" height="24" rx="2"/><line x1="14" y1="12" x2="30" y2="12"/><line x1="14" y1="16" x2="30" y2="16"/><line x1="14" y1="20" x2="22" y2="20"/><line x1="22" y1="30" x2="22" y2="36"/><line x1="14" y1="36" x2="30" y2="36"/><rect x="18" y="25" width="8" height="5" rx="1"/></svg></div>
+      <div style="width:40px;height:40px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3zm0 0v7"/></svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Restaurante<br>y hostelería</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Bar, restaurante, chiringuito, feria, food truck. Comandas por voz, KDS, almacén y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
     </a>
 
     <a href="/catering" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid var(--red);transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)'" onmouseleave="this.style.background='var(--bg2)'">
-      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <!-- Copa izquierda -->
-        <path d="M10 6 L8 16 Q8 22 14 22"/>
-        <path d="M18 6 L20 16 Q20 22 14 22"/>
-        <line x1="14" y1="22" x2="14" y2="32"/>
-        <line x1="10" y1="32" x2="18" y2="32"/>
-        <!-- Copa derecha -->
-        <path d="M26 6 L24 16 Q24 22 30 22"/>
-        <path d="M34 6 L36 16 Q36 22 30 22"/>
-        <line x1="30" y1="22" x2="30" y2="32"/>
-        <line x1="26" y1="32" x2="34" y2="32"/>
-        <!-- Brindis — línea diagonal entre las dos -->
-        <line x1="19" y1="9" x2="25" y2="9" stroke-width="1" opacity="0.6"/>
-        <!-- Destellos -->
-        <line x1="22" y1="3" x2="22" y2="5"/>
-        <line x1="19" y1="4" x2="20" y2="6"/>
-        <line x1="25" y1="4" x2="24" y2="6"/>
-      </svg></div>
+      <div style="width:40px;height:40px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="M5.8 11.3 2 22l10.7-3.79"/><path d="M4 3h.01"/><path d="M22 8h.01"/><path d="M15 2h.01"/><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10"/><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2z"/></svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Catering<br>y eventos</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Del presupuesto al evento y a la caja. Portal cliente, APPCC, escandallos y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
     </a>
 
     <a href="/espacios" style="display:block;text-decoration:none;background:var(--bg2);padding:52px 40px;border-bottom:3px solid transparent;transition:all .25s;cursor:pointer" onmouseenter="this.style.background='var(--bg3)';this.style.borderBottomColor='var(--red)'" onmouseleave="this.style.background='var(--bg2)';this.style.borderBottomColor='transparent'">
-      <div style="width:44px;height:44px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 44 44" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
-        <!-- Fachada finca: tejado + columnas + puerta -->
-        <polyline points="4,18 22,6 40,18"/>
-        <line x1="4" y1="18" x2="40" y2="18"/>
-        <line x1="8" y1="18" x2="8" y2="38"/>
-        <line x1="36" y1="18" x2="36" y2="38"/>
-        <line x1="4" y1="38" x2="40" y2="38"/>
-        <rect x="18" y="26" width="8" height="12" rx="4"/>
-        <line x1="14" y1="18" x2="14" y2="38"/>
-        <line x1="30" y1="18" x2="30" y2="38"/>
-        <line x1="8" y1="28" x2="14" y2="28"/>
-        <line x1="30" y1="28" x2="36" y2="28"/>
-      </svg></div>
+      <div style="width:40px;height:40px;margin-bottom:22px;color:var(--red)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.25" stroke-linecap="round" stroke-linejoin="round" style="width:100%;height:100%"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg></div>
       <div style="font-family:'Newsreader',serif;font-size:26px;font-weight:200;color:var(--ink);letter-spacing:-.5px;margin-bottom:10px;line-height:1.15">Fincas<br>y espacios</div>
       <p style="font-size:13px;color:var(--ink3);line-height:1.65;margin-bottom:20px">Solicitudes de bodas.net automáticas. Contratos digitales, calendario y VeriFactu.</p>
       <div style="font-size:12px;color:var(--red);font-family:'JetBrains Mono',monospace;letter-spacing:.05em">Ver solución →</div>
