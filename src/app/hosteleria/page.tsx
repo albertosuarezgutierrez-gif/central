@@ -362,18 +362,38 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       </div>
       <div class="cap-item">
         <span class="cap-num">06</span>
-        <div class="cap-title">Cierre de caja</div>
-        <div class="cap-sub">Automático</div>
+        <div class="cap-title">Pedidos online</div>
+        <div class="cap-sub">Delivery y recogida</div>
       </div>
       <div class="cap-item">
         <span class="cap-num">07</span>
+        <div class="cap-title">Carta de vinos</div>
+        <div class="cap-sub">Sommelier IA incluido</div>
+      </div>
+      <div class="cap-item">
+        <span class="cap-num">08</span>
+        <div class="cap-title">Contabilidad</div>
+        <div class="cap-sub">IVA 303 · Export A3/Sage</div>
+      </div>
+      <div class="cap-item">
+        <span class="cap-num">09</span>
+        <div class="cap-title">Analytics</div>
+        <div class="cap-sub">Margen y KPIs en vivo</div>
+      </div>
+      <div class="cap-item">
+        <span class="cap-num">10</span>
+        <div class="cap-title">Cierre de caja</div>
+        <div class="cap-sub">Automático por turno</div>
+      </div>
+      <div class="cap-item">
+        <span class="cap-num">11</span>
         <div class="cap-title">Multi-local</div>
         <div class="cap-sub">Un solo panel</div>
       </div>
       <div class="cap-item">
-        <span class="cap-num">08</span>
+        <span class="cap-num">12</span>
         <div class="cap-title">Modo offline</div>
-        <div class="cap-sub">Para feria y chiringuito</div>
+        <div class="cap-sub">Feria y chiringuito</div>
       </div>
     </div>
   </div>

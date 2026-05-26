@@ -199,6 +199,11 @@ h2 i{font-style:italic;color:var(--red)}
 /* Progress bar flujo */
 .flujo-progress{height:2px;background:var(--border);margin:40px 0 0;overflow:hidden}
 .flujo-progress-fill{height:100%;background:linear-gradient(to right,var(--red),rgba(217,68,43,.3));transition:width .5s cubic-bezier(.4,0,.2,1);width:0%}
+.cap-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:2px;background:var(--border);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-top:52px}
+.cap-item{background:var(--bg2);padding:28px 22px;transition:background .2s}.cap-item:hover{background:var(--bg3)}
+.cap-num{display:block;font-family:'Newsreader',serif;font-size:12px;color:var(--red);font-weight:300;letter-spacing:.05em;margin-bottom:12px}
+.cap-title{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:-.1px;margin-bottom:4px}
+.cap-sub{font-size:12px;color:var(--ink3)}
 
 /* Animaciones scroll */
 .fi{opacity:0;transform:translateY(16px);transition:opacity .65s ease,transform .65s ease}
@@ -210,6 +215,7 @@ h2 i{font-style:italic;color:var(--red)}
   nav{padding:0 20px}.nav-links{display:none}
   .hero,.costes,.flujo{padding-left:20px;padding-right:20px}
   .cost-cards{grid-template-columns:1fr}
+  .cap-grid{grid-template-columns:1fr 1fr}
   .flujo-header{grid-template-columns:1fr;gap:32px;margin-bottom:40px}
   .flujo-steps{flex-direction:column;gap:0}
   .flujo-steps::before{display:none}
@@ -358,6 +364,28 @@ h2 i{font-style:italic;color:var(--red)}
       </div>
     </div>
 
+  </div>
+</section>
+
+<!-- CAPACIDADES -->
+<section style="background:var(--bg);padding:100px 48px">
+  <div class="w">
+    <div class="s-label fi">Todo lo que incluye</div>
+    <h2 class="fi">Sin módulos de más.<br><i>Sin que te falte nada.</i></h2>
+    <div class="cap-grid fi d1">
+      <div class="cap-item"><span class="cap-num">01</span><div class="cap-title">Presupuesto en 5 min</div><div class="cap-sub">Portal cliente incluido</div></div>
+      <div class="cap-item"><span class="cap-num">02</span><div class="cap-title">Contrato digital</div><div class="cap-sub">Firma desde el móvil</div></div>
+      <div class="cap-item"><span class="cap-num">03</span><div class="cap-title">APPCC automático</div><div class="cap-sub">14 alérgenos · Sin papel</div></div>
+      <div class="cap-item"><span class="cap-num">04</span><div class="cap-title">Escandallos + IA</div><div class="cap-sub">Coste real por evento</div></div>
+      <div class="cap-item"><span class="cap-num">05</span><div class="cap-title">Pedido a proveedor</div><div class="cap-sub">Rappels aplicados auto</div></div>
+      <div class="cap-item"><span class="cap-num">06</span><div class="cap-title">OCR albarán</div><div class="cap-sub">3-way match automático</div></div>
+      <div class="cap-item"><span class="cap-num">07</span><div class="cap-title">Voz y KDS</div><div class="cap-sub">El día del evento</div></div>
+      <div class="cap-item"><span class="cap-num">08</span><div class="cap-title">Fichaje de extras</div><div class="cap-sub">Check-in QR por evento</div></div>
+      <div class="cap-item"><span class="cap-num">09</span><div class="cap-title">VeriFactu</div><div class="cap-sub">Factura legal automática</div></div>
+      <div class="cap-item"><span class="cap-num">10</span><div class="cap-title">Contabilidad</div><div class="cap-sub">IVA 303 · Export A3/Sage</div></div>
+      <div class="cap-item"><span class="cap-num">11</span><div class="cap-title">Analytics</div><div class="cap-sub">Margen por evento y temporada</div></div>
+      <div class="cap-item"><span class="cap-num">12</span><div class="cap-title">Multi-local</div><div class="cap-sub">Varios espacios · Un panel</div></div>
+    </div>
   </div>
 </section>` }} />
     </>
