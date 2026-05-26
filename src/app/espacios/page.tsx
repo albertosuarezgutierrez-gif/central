@@ -593,6 +593,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       <a href="https://www.iarest.es">Inicio</a>
       <a href="https://www.iarest.es/catering">Para catering</a>
       <a href="https://www.iarest.es/blog">Blog</a>
+      <a href="https://www.instagram.com/iarest.es?igsh=cDdjNDVja3lrcTlk" target="_blank" rel="noopener">Instagram</a>
       <a href="https://www.iarest.es/privacidad">Privacidad</a>
       <a href="https://www.iarest.es/contrato-iarest-v1.pdf">Condiciones</a>
     </nav>

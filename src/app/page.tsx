@@ -694,7 +694,13 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 <footer>
   <div class="f-logo">ia<b>.</b>rest</div>
   <div class="f-links">
-    <a href="#contacto">Contacto</a>
+    <a href="/hosteleria">Hostelería</a>
+    <a href="/catering">Catering</a>
+    <a href="/espacios">Espacios</a>
+    <a href="https://www.instagram.com/iarest.es?igsh=cDdjNDVja3lrcTlk" target="_blank" rel="noopener" style="display:inline-flex;align-items:center;gap:5px">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"/></svg>
+      @iarest.es
+    </a>
   </div>
   <div class="f-copy" style="display:flex;gap:16px;flex-wrap:wrap;justify-content:center">
     <span>© 2026 ia.rest · NIF 28823484E</span>
