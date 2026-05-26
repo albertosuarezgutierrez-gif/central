@@ -8,7 +8,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
 
-  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID!
+  const clientId = process.env.GOOGLE_CLIENT_ID!
   const redirectUri = 'https://www.iarest.es/api/backup/drive-auth/callback'
 
   const url = new URL('https://accounts.google.com/o/oauth2/v2/auth')

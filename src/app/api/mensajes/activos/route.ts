@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   // Camareros con sesión válida (no expirada, no revocada) en este restaurante
   const { data, error } = await supabase
     .from('sesiones_activas')
-    .select('camarero_id, camareros!inner(id, nombre, rol, restaurante_id)')
-    .eq('camareros.restaurante_id', rid)
+    .select('camarero_id, personal!inner(id, nombre, rol, restaurante_id)')
+    .eq('personal.restaurante_id', rid)
     .gt('expires_at', new Date().toISOString())
     .is('revoked_at', null)
 
@@ -32,8 +32,8 @@ export async function GET(req: NextRequest) {
     })
     .map((row: any) => ({
       id:     row.camarero_id,
-      nombre: row.camareros.nombre,
-      rol:    row.camareros.rol,
+      nombre: row.personal.nombre,
+      rol:    row.personal.rol,
     }))
 
   return NextResponse.json({ activos })

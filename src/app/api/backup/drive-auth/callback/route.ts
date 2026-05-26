@@ -16,8 +16,8 @@ export async function GET(req: NextRequest) {
     )
   }
 
-  const clientId = process.env.GOOGLE_OAUTH_CLIENT_ID!
-  const clientSecret = process.env.GOOGLE_OAUTH_CLIENT_SECRET!
+  const clientId = process.env.GOOGLE_CLIENT_ID!
+  const clientSecret = process.env.GOOGLE_CLIENT_SECRET!
   const redirectUri = 'https://www.iarest.es/api/backup/drive-auth/callback'
 
   // Intercambiar code por tokens

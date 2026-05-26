@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
 
   if (comanda.estado === 'cerrada') {
     const { data: factExist } = await supabase
-      .from('facturas_verifactu').select('*').eq('comanda_id', comanda_id).single()
+      .from('facturas_verifactu').select('id, numero_factura, importe_total, hash_sha256, qr_content, estado, created_at').eq('comanda_id', comanda_id).single()
     if (factExist) return NextResponse.json({ factura: factExist, ya_existia: true })
   }
 

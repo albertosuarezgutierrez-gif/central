@@ -21,9 +21,7 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Obtener sesiones inactivas (función SQL)
-  const { data: sesiones, error } = await supabase
-    .rpc('get_sesiones_inactivas')
+  const { data: sesiones, error } = await supabase.rpc('get_sesiones_inactivas')
 
   if (error) {
     console.error('[cobro-inactividad] Error obteniendo sesiones:', error)
@@ -34,14 +32,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, procesadas: 0 })
   }
 
-  let enviadas = 0
-  let errores = 0
+  const pushUrl  = `${process.env.SUPABASE_URL}/functions/v1/push-send`
+  const pushAuth = `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
 
-  for (const s of sesiones) {
-    try {
+  // ── Paralelo: todas las sesiones a la vez ─────────────────────
+  const resultados = await Promise.allSettled(
+    sesiones.map(async (s: any) => {
       const minutos = Math.round(s.minutos_abierta)
 
-      // Buscar camareros activos del restaurante (jefe_sala siempre, camarero asignado a la zona si existe)
       const { data: camareros } = await supabase
         .from('personal')
         .select('id, nombre')
@@ -49,42 +47,38 @@ export async function GET(req: NextRequest) {
         .in('rol', ['camarero', 'jefe_sala'])
         .eq('activo', true)
 
-      if (!camareros || camareros.length === 0) continue
+      if (!camareros || camareros.length === 0) return
 
-      // Enviar push a cada camarero
-      const pushUrl = `${process.env.SUPABASE_URL}/functions/v1/push-send`
-      const pushAuth = `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`
-
-      for (const cam of camareros) {
-        await fetch(pushUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': pushAuth },
-          body: JSON.stringify({
-            camarero_id: cam.id,
-            titulo: `⏱ Mesa ${s.mesa_codigo} sin pagar`,
-            cuerpo: `Lleva ${minutos} minutos abierta sin cerrar el QR`,
-            datos: {
-              tipo: 'qr_inactividad',
-              mesa_id: s.mesa_id,
-              sesion_id: s.sesion_id,
-              minutos_abierta: minutos,
-            }
+      // Push a todos los camareros del restaurante en paralelo
+      await Promise.allSettled(
+        camareros.map((cam: any) =>
+          fetch(pushUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'Authorization': pushAuth },
+            body: JSON.stringify({
+              camarero_id: cam.id,
+              titulo: `⏱ Mesa ${s.mesa_codigo} sin pagar`,
+              cuerpo: `Lleva ${minutos} minutos abierta sin cerrar el QR`,
+              datos: {
+                tipo: 'qr_inactividad',
+                mesa_id: s.mesa_id,
+                sesion_id: s.sesion_id,
+                minutos_abierta: minutos,
+              }
+            })
           })
-        })
-      }
+        )
+      )
 
-      // Marcar sesión como alertada para no volver a avisar
       await supabase
         .from('qr_sesiones_cliente')
         .update({ inactividad_alerta_enviada: true })
         .eq('id', s.sesion_id)
+    })
+  )
 
-      enviadas++
-    } catch (e) {
-      console.error(`[cobro-inactividad] Error procesando sesión ${s.sesion_id}:`, e)
-      errores++
-    }
-  }
+  const enviadas = resultados.filter(r => r.status === 'fulfilled').length
+  const errores  = resultados.filter(r => r.status === 'rejected').length
 
   return NextResponse.json({
     ok: true,

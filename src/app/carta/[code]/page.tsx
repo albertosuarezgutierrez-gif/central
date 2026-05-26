@@ -3,6 +3,7 @@
 // No requiere auth. Se usa desde QR en mesas y enlaces directos.
 // ============================================================
 
+import { Suspense } from 'react'
 import CartaPublicClient from './CartaPublicClient'
 
 export async function generateMetadata({
@@ -28,5 +29,9 @@ export default async function CartaPage({
   params: Promise<{ code: string }>
 }) {
   const { code } = await params
-  return <CartaPublicClient code={code} />
+  return (
+    <Suspense fallback={<div style={{ minHeight: '100vh', background: '#F6F1E7' }} />}>
+      <CartaPublicClient code={code} />
+    </Suspense>
+  )
 }

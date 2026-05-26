@@ -1,19 +1,26 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
+
+export const dynamic = 'force-dynamic'
+
+function superAuth(req: NextRequest) {
+  const session = getSession(req)
+  if (!session || session.rol !== 'super_admin') return false
+  return true
+}
 
 // GET /api/super/training?formato=alpaca|sharegpt|stats&calidad_min=3&limit=5000
 export async function GET(req: NextRequest) {
+  if (!superAuth(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
   const supabase = createServerClient()
   const { searchParams } = new URL(req.url)
   const formato = searchParams.get('formato') ?? 'stats'
   const calidadMin = parseInt(searchParams.get('calidad_min') ?? '3')
   const limit = Math.min(parseInt(searchParams.get('limit') ?? '5000'), 50000)
-  const soloCorrectos = searchParams.get('solo_correctos') !== '0'
 
   if (formato === 'stats') {
-    // Estadísticas del dataset
-    const { data } = await supabase.rpc('exec_sql' as never, { query: '' }).select() // dummy
-    
     const [total, porModelo, porCalidad, corregidos, ultimos7d] = await Promise.all([
       supabase.from('ia_training_log').select('id', { count: 'exact', head: true }),
       supabase.from('ia_training_log').select('modelo_usado').not('modelo_usado', 'is', null),
@@ -23,21 +30,18 @@ export async function GET(req: NextRequest) {
         .gte('created_at', new Date(Date.now() - 7 * 86400000).toISOString()),
     ])
 
-    // Agrupar por modelo
     const modelos: Record<string, number> = {}
     for (const r of (porModelo.data ?? [])) {
       const m = (r.modelo_usado as string) ?? 'desconocido'
       modelos[m] = (modelos[m] ?? 0) + 1
     }
 
-    // Distribución calidad
     const calidades: Record<number, number> = {}
     for (const r of (porCalidad.data ?? [])) {
       const c = (r.calidad as number) ?? 0
       calidades[c] = (calidades[c] ?? 0) + 1
     }
 
-    // Ejemplos exportables (calidad >= calidadMin, con output_brain)
     const { count: exportables } = await supabase
       .from('ia_training_log')
       .select('id', { count: 'exact', head: true })
@@ -54,12 +58,12 @@ export async function GET(req: NextRequest) {
       por_modelo: modelos,
       distribucion_calidad: calidades,
       velocidad_acumulacion: total.count
-        ? `~${Math.round((total.count / 17))} comandas/día`  // 17 días desde primer registro
+        ? `~${Math.round((total.count / 17))} comandas/día`
         : '0',
     })
   }
 
-  // Obtener ejemplos para exportar
+  // Exportar ejemplos
   const { data: ejemplos } = await supabase
     .from('ia_training_log')
     .select('input_raw, output_brain, fue_corregido, correccion, calidad, modelo_usado, created_at')
@@ -72,11 +76,7 @@ export async function GET(req: NextRequest) {
   if (!ejemplos?.length) return NextResponse.json({ error: 'Sin datos' }, { status: 404 })
 
   if (formato === 'alpaca') {
-    // Formato Alpaca — estándar para fine-tuning Llama
-    const INSTRUCTION = `Eres el sistema de interpretación de comandas de voz de ia.rest para hostelería española.
-El camarero habla y tú interpretas su comanda devolviendo JSON estructurado.
-Vocabulario hostelero: "marchar" = preparar/enviar a cocina, "86" = sin existencias, "media" = ración media,
-"tapa" = ración pequeña, "la cuenta" = cobrar mesa, sin = sin ese ingrediente.`
+    const INSTRUCTION = `Eres el sistema de interpretación de comandas de voz de ia.rest para hostelería española.\nEl camarero habla y tú interpretas su comanda devolviendo JSON estructurado.\nVocabulario hostelero: "marchar" = preparar/enviar a cocina, "86" = sin existencias, "media" = ración media,\n"tapa" = ración pequeña, "la cuenta" = cobrar mesa, sin = sin ese ingrediente.`
 
     const dataset = ejemplos.map(e => {
       const output = e.fue_corregido && e.correccion ? e.correccion : e.output_brain
@@ -97,7 +97,6 @@ Vocabulario hostelero: "marchar" = preparar/enviar a cocina, "86" = sin existenc
   }
 
   if (formato === 'sharegpt') {
-    // Formato ShareGPT — para modelos con historial de conversación
     const SYSTEM = `Eres brain de ia.rest, sistema de interpretación de comandas de voz para hostelería española. Responde siempre en JSON.`
 
     const dataset = ejemplos.map(e => {
@@ -123,8 +122,10 @@ Vocabulario hostelero: "marchar" = preparar/enviar a cocina, "86" = sin existenc
   return NextResponse.json({ error: 'formato no soportado. Usa: stats, alpaca, sharegpt' }, { status: 400 })
 }
 
-// POST /api/super/training/correccion — marcar corrección desde /edge
+// POST /api/super/training — marcar corrección (también requiere super_admin)
 export async function POST(req: NextRequest) {
+  if (!superAuth(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
   const supabase = createServerClient()
   const { training_log_id, correccion_output } = await req.json()
   if (!training_log_id || !correccion_output) {

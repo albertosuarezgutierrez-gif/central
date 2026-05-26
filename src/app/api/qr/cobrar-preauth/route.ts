@@ -9,7 +9,7 @@ import { getSession, getRestauranteId } from '@/lib/session'
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as any })
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
 const COMISION_RATE = 0.005
 const ROLES_PERMITIDOS = ['owner', 'camarero', 'jefe_sala', 'super_admin']
 

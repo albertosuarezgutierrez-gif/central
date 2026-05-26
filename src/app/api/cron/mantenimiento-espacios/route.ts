@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { Resend } from 'resend'
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
+function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
 function tipoLabel(tipo: string): string {
   const labels: Record<string, string> = {
@@ -51,7 +51,14 @@ function emailHtml(d: {
 </body></html>`
 }
 
+export const dynamic = 'force-dynamic'
+export const maxDuration = 30
+
 export async function GET(req: NextRequest) {
+  if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
+
   const supabase = createServerClient()
   const hace24h = new Date(Date.now() - 86400000).toISOString()
 
@@ -82,7 +89,7 @@ export async function GET(req: NextRequest) {
         ? `🔴 Mantenimiento VENCIDO — ${item.descripcion} · ${espacio?.nombre ?? ''}`
         : `🟡 Mantenimiento próximo en ${diasRestantes} días — ${item.descripcion}`
 
-      await resend.emails.send({
+      await getResend().emails.send({
         from: 'ia.rest <avisos@iarest.es>',
         to: email,
         subject: asunto,

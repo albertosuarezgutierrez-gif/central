@@ -85,6 +85,14 @@ SOLO el caption, sin comillas.`
 }
 
 export async function POST(req: NextRequest) {
+  // Verificar secret_token que Telegram envía en X-Telegram-Bot-Api-Secret-Token
+  const secret = process.env.TELEGRAM_WEBHOOK_SECRET
+  if (secret) {
+    const incoming = req.headers.get('x-telegram-bot-api-secret-token')
+    if (incoming !== secret) {
+      return NextResponse.json({ ok: false }, { status: 401 })
+    }
+  }
   const body = await req.json() as {
     callback_query?: { id: string; data: string; message: { message_id: number } }
   }

@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     token,
-    url: `${process.env.NEXT_PUBLIC_URL ?? 'https://www.iarest.es'}/portal/${token}`,
+    url: `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/portal/${token}`,
   })
 }
 

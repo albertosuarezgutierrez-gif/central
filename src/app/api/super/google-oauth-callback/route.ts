@@ -35,6 +35,25 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
   const code  = searchParams.get('code')
   const error = searchParams.get('error')
+  const state = searchParams.get('state')
+
+  // Validar state CSRF (misma lógica que google-oauth/route.ts)
+  const stateSecret = process.env.CRON_SECRET || process.env.SUPER_ACCESS_KEY || 'iarest'
+  const stateTs = Math.floor(Date.now() / 600000)
+  const validStates = [
+    Buffer.from(`${stateSecret}:${stateTs}`).toString('base64url'),
+    Buffer.from(`${stateSecret}:${stateTs - 1}`).toString('base64url'), // tolerancia 1 ventana
+  ]
+  if (!state || !validStates.includes(state)) {
+    return new NextResponse(
+      `<html><body style="font-family:monospace;padding:40px;background:#14110E;color:#F6F1E7">
+        <h2 style="color:#D9442B">❌ State inválido o caducado</h2>
+        <p>Inicia el flujo desde /super.</p>
+        <a href="/super" style="color:#E8A33B">← Volver a /super</a>
+      </body></html>`,
+      { headers: { 'Content-Type': 'text/html' } }
+    )
+  }
 
   if (error) {
     return new NextResponse(
@@ -87,7 +106,7 @@ export async function GET(req: NextRequest) {
 
     // Guardar refresh_token en Vercel automáticamente
     if (VERCEL_TOKEN) {
-      await upsertVercelEnv('GOOGLE_OAUTH_REFRESH_TOKEN', tokens.refresh_token)
+      await upsertVercelEnv('GOOGLE_DRIVE_REFRESH_TOKEN', tokens.refresh_token)
     }
 
     // Obtener info del usuario para confirmar
