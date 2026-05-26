@@ -104,8 +104,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, procesados: 0 })
   }
 
-  // 4. Procesar hasta 5 por ejecución (para no superar maxDuration)
-  const lote = leadsSinLocales.slice(0, 5)
+  // 4. Procesar 1 por ejecución (búsqueda web tarda ~15s, timeout 60s)
+  const lote = leadsSinLocales.slice(0, 1)
   let totalInsertados = 0
   const resumen: string[] = []
 
