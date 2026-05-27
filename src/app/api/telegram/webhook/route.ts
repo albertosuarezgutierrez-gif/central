@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'ver_whatsapp') {
-      await tgAnswerCallback(callbackId, '📱 Abriendo WhatsApp…')
+      // Primero DB + sendMessage, luego answerCallback (no bloquea si callback_id expira)
       try {
         const { data: leadRaw } = await supabase
           .from('leads')
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
           .single() as { data: { whatsapp_draft: string | null } | null }
 
         const empresa = leadRaw?.empresa || leadRaw?.restaurante || leadRaw?.nombre || leadId
-        const waDraft = (waRow as Record<string, unknown>)?.whatsapp_draft as string || '⚠️ WhatsApp no generado. Pulsa Regenerar.'
+        const waDraft = (waRow as Record<string, unknown>)?.whatsapp_draft as string || '⚠️ WhatsApp no generado. Pulsa Regenerar en CRM.'
         const propuestaUrl = leadRaw?.propuesta_slug
           ? `https://www.iarest.es/propuesta/${leadRaw.propuesta_slug}`
           : 'https://www.iarest.es/super'
@@ -123,11 +123,22 @@ export async function POST(req: NextRequest) {
             body: JSON.stringify({
               chat_id: tgChat,
               parse_mode: 'HTML',
-              text: [`📱 <b>WhatsApp — ${empresa}</b>`, ``, `<code>${waDraft}</code>`, ``, `🔗 <a href="${propuestaUrl}">Propuesta →</a>`, `<i>Copia el texto y envíalo por WhatsApp</i>`].join('\n'),
+              text: [
+                `📱 <b>WhatsApp — ${empresa}</b>`,
+                ``,
+                `<code>${waDraft}</code>`,
+                ``,
+                `🔗 <a href="${propuestaUrl}">Propuesta →</a>`,
+                `<i>Copia el texto y envíalo</i>`,
+              ].join('\n'),
             }),
           })
         }
-      } catch(e) { console.error('[ver_whatsapp]', e) }
+        await tgAnswerCallback(callbackId, '📱 WhatsApp enviado arriba ↑')
+      } catch(e) {
+        console.error('[ver_whatsapp]', e)
+        await tgAnswerCallback(callbackId, 'Error al cargar').catch(() => {})
+      }
     }
 
     return NextResponse.json({ ok: true })
