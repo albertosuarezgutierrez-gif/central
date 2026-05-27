@@ -94,38 +94,40 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === 'ver_whatsapp') {
-      await tgAnswerCallback(callbackId, '📱 Cargando WhatsApp…')
-      const { data: lead } = await supabase
-        .from('leads')
-        .select('empresa, restaurante, nombre, whatsapp_draft, propuesta_slug')
-        .eq('id', leadId)
-        .single()
+      await tgAnswerCallback(callbackId, '📱 Abriendo WhatsApp…')
+      try {
+        const { data: leadRaw } = await supabase
+          .from('leads')
+          .select('empresa, restaurante, nombre, propuesta_slug')
+          .eq('id', leadId)
+          .single()
 
-      const empresa = lead?.empresa || lead?.restaurante || lead?.nombre || leadId
-      const waDraft = (lead as Record<string, unknown>)?.whatsapp_draft as string || 'No generado aún. Pulsa Regenerar en el CRM.'
-      const propuestaUrl = lead?.propuesta_slug
-        ? `https://www.iarest.es/propuesta/${lead.propuesta_slug}`
-        : 'https://www.iarest.es/super'
+        const { data: waRow } = await supabase
+          .from('leads')
+          .select('whatsapp_draft')
+          .eq('id', leadId)
+          .single() as { data: { whatsapp_draft: string | null } | null }
 
-      const token = process.env.TELEGRAM_BOT_TOKEN
-      const chat_id = process.env.TELEGRAM_CHAT_ID
-      if (token && chat_id) {
-        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            chat_id,
-            parse_mode: 'HTML',
-            text: [
-              `📱 <b>WhatsApp para ${empresa}</b>`,
-              ``,
-              `<code>${waDraft}</code>`,
-              ``,
-              `🔗 <a href="${propuestaUrl}">Propuesta →</a>  ·  Copia el texto y envíalo`,
-            ].join('\n'),
-          }),
-        }).catch(console.error)
-      }
+        const empresa = leadRaw?.empresa || leadRaw?.restaurante || leadRaw?.nombre || leadId
+        const waDraft = (waRow as Record<string, unknown>)?.whatsapp_draft as string || '⚠️ WhatsApp no generado. Pulsa Regenerar.'
+        const propuestaUrl = leadRaw?.propuesta_slug
+          ? `https://www.iarest.es/propuesta/${leadRaw.propuesta_slug}`
+          : 'https://www.iarest.es/super'
+
+        const tgToken = process.env.TELEGRAM_BOT_TOKEN
+        const tgChat = process.env.TELEGRAM_CHAT_ID
+        if (tgToken && tgChat) {
+          await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: tgChat,
+              parse_mode: 'HTML',
+              text: [`📱 <b>WhatsApp — ${empresa}</b>`, ``, `<code>${waDraft}</code>`, ``, `🔗 <a href="${propuestaUrl}">Propuesta →</a>`, `<i>Copia el texto y envíalo por WhatsApp</i>`].join('\n'),
+            }),
+          })
+        }
+      } catch(e) { console.error('[ver_whatsapp]', e) }
     }
 
     return NextResponse.json({ ok: true })
