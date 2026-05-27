@@ -3,11 +3,64 @@
  * Cliente IA centralizado: NVIDIA NIM (gratis) primero → Anthropic Claude (fallback)
  *
  * Uso:
- *   import { callAI, callAIVision } from '@/lib/ai-client'
+ *   import { callAI, callAIVision, callAISearch } from '@/lib/ai-client'
  *   const text = await callAI(systemPrompt, userText)
  *   const text = await callAIVision(systemPrompt, images, userText)
  *
  * Sin config para el dueño — todo gestionado por el operador via env vars Vercel.
+ */
+
+/**
+ * ═══════════════════════════════════════════════════════════════
+ * GUÍA DE SELECCIÓN DE MODELO — leer antes de añadir cualquier
+ * llamada a IA en el proyecto
+ * ═══════════════════════════════════════════════════════════════
+ *
+ * REGLA GENERAL: NUNCA llamar NIM/Anthropic/Gemini directamente.
+ * Usar siempre las funciones de este módulo.
+ *
+ * ┌─────────────────────────────────────────────────────────────┐
+ * │ callAI()  — texto, sin internet                             │
+ * │   Cuándo: generación, clasificación, extracción, resúmenes  │
+ * │   Cuándo NO: cuando necesitas datos actuales de internet    │
+ * │   Modelo: NIM llama-3.3-70b → Haiku fallback               │
+ * │   noFallback=true (default): agentes críticos sin créditos  │
+ * │   noFallback=false: tareas auxiliares (aliases, sugerencias)│
+ * ├─────────────────────────────────────────────────────────────┤
+ * │ callAISearch() — texto + búsqueda web (Gemini + Google)     │
+ * │   Cuándo: research de leads, noticias, datos actuales       │
+ * │   Cuándo NO: generación pura sin necesidad de internet      │
+ * │   Gemini NO gana a NIM en tareas sin búsqueda web           │
+ * │   Fallback automático a callAI() si Gemini no disponible    │
+ * ├─────────────────────────────────────────────────────────────┤
+ * │ callAIVision() — análisis de imágenes                       │
+ * │   Cuándo: OCR albaranes, clasificación docs, cartas         │
+ * │   Modelo: NIM llama-3.2-11b-vision → Haiku fallback         │
+ * └─────────────────────────────────────────────────────────────┘
+ *
+ * CRITERIOS DE ELECCIÓN PARA NUEVAS TAREAS:
+ *
+ *  ¿Necesita datos actuales de internet?
+ *    SÍ  → callAISearch()
+ *    NO  → callAI() o callAIVision()
+ *
+ *  ¿Analiza imágenes?
+ *    SÍ  → callAIVision()
+ *
+ *  ¿Es tarea auxiliar (puede fallar sin crítica)?
+ *    SÍ  → callAI(..., noFallback=false)  ← usa Haiku si NIM falla
+ *    NO  → callAI(..., noFallback=true)   ← lanza error si NIM falla
+ *
+ *  ¿Output muy corto (<20 tokens) con alta precisión requerida?
+ *    Haiku supera a NIM en clasificación binaria/ternaria corta.
+ *    Para esos casos usar callAI con noFallback=false — si NIM falla
+ *    el fallback a Haiku dará mejor resultado.
+ *
+ * PARA EVALUAR QUÉ MODELO ES MEJOR EN UNA TAREA NUEVA:
+ *   1. Implementar con callAI() (noFallback=false)
+ *   2. Loguear en ia_training_log: modelo usado + output + calidad
+ *   3. Comparar calidad NIM vs Haiku tras 100+ ejecuciones reales
+ *   4. Decidir si forzar un modelo concreto o mantener el fallback
  */
 
 export interface ImageInput {

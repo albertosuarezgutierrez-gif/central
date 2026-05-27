@@ -261,3 +261,62 @@ export async function registrarCorreccionFuzzy(
     // Non-blocking: si el log falla, el flujo continúa sin interrumpirse
   }
 }
+
+// ── Generación automática de alias fonéticos con IA ──────────────────────────
+
+/**
+ * Genera alias fonéticos para un producto usando IA (NIM → Haiku fallback).
+ *
+ * SELECCIÓN DE MODELO: callAI() con noFallback=false
+ *   - Tarea auxiliar: si falla, el producto queda sin alias (no es crítico)
+ *   - No necesita internet → callAI, NO callAISearch
+ *   - Output corto (<50 tokens) → NIM 70B suficiente; Haiku como seguro
+ *   - Evaluación: loguear modelo_usado en ia_training_log para comparar
+ *     calidad NIM vs Haiku tras suficientes ejecuciones reales
+ *
+ * @param nombreProducto  - Nombre canónico del producto ("Salmonete a la plancha")
+ * @param contexto        - Info extra opcional ("bar de tapas sevillano")
+ * @returns Array de alias fonéticos o [] si la IA falla
+ */
+export async function generarAliasFoneticos(
+  nombreProducto: string,
+  contexto?: string
+): Promise<string[]> {
+  // Importación dinámica para evitar problemas de bundle en entornos sin IA
+  const { callAI, cleanJSON } = await import('@/lib/ai-client')
+
+  const system = `Eres experto en errores de transcripción ASR (Whisper) en hostelería española.
+Tu trabajo: dado el nombre de un plato, generar variantes fonéticas de cómo Whisper podría transcribirlo MAL en un bar ruidoso.
+Responde SOLO con un JSON array de strings. Sin texto adicional, sin markdown, sin explicaciones.`
+
+  const user = `Producto: "${nombreProducto}"${contexto ? `\nContexto: ${contexto}` : ''}
+
+Genera 4-6 variantes fonéticas de cómo un camarero podría pronunciarlo y Whisper podría transcribirlo mal.
+Incluye: apócopes, metátesis, elisiones de sílabas, errores de vocal, abreviaciones coloquiales.
+Excluye: el nombre correcto exacto (ya está en la BD).
+
+Ejemplos de estilo esperado:
+- "Salmonete" → ["salmo","salmone","sal morena","salmonte","salmonet"]
+- "Croquetas de jamón" → ["croqueta jamon","croketas","croqueta de jamo","croquet jamon"]
+- "Patatas bravas" → ["patata brava","bravas","patata abrava","padatas bravas"]
+- "Tortilla española" → ["tortilla españo","tortilla espanol","tortiña","tortilla de patata"]
+
+Devuelve SOLO el array JSON:`
+
+  try {
+    // noFallback=false: tarea auxiliar, si NIM falla usamos Haiku
+    const raw = await callAI(system, user, 120, 8_000, false)
+    const clean = cleanJSON(raw)
+    const parsed = JSON.parse(clean)
+    if (!Array.isArray(parsed)) return []
+    // Filtrar strings válidos y normalizar a minúsculas sin duplicados
+    return [...new Set(
+      parsed
+        .filter((s: unknown) => typeof s === 'string' && s.trim().length >= 2)
+        .map((s: string) => s.trim().toLowerCase())
+    )] as string[]
+  } catch (e) {
+    console.warn('[FUZZY] generarAliasFoneticos falló (non-critical):', (e as Error).message)
+    return []
+  }
+}
