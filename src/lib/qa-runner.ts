@@ -477,6 +477,91 @@ export async function checkPropuestas(sb: ReturnType<typeof createServerClient>)
   return checks
 }
 
+// ─── Checks Patrones Aprendidos (desde BD) ───────────────────────────────────
+export async function checkPatronesAprendidos(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+
+  // Cargar patrones activos desde BD
+  let patrones: Array<{
+    id: string; nombre: string; descripcion: string; categoria: string;
+    severidad: string; query_sql: string; mensaje_fallo: string;
+    fix_sugerido: string | null; veces_detectado: number
+  }> = []
+
+  try {
+    const { data } = await sb
+      .from('qa_patrones_error')
+      .select('id, nombre, descripcion, categoria, severidad, query_sql, mensaje_fallo, fix_sugerido, veces_detectado')
+      .eq('estado', 'activo')
+      .order('severidad', { ascending: true })
+    patrones = data || []
+  } catch (e) {
+    checks.push({ categoria: 'APRENDIDO', nombre: 'Cargar patrones BD', estado: 'fallo', severidad: 'degradado', detalle: String(e) })
+    return checks
+  }
+
+  if (patrones.length === 0) {
+    checks.push({ categoria: 'APRENDIDO', nombre: 'Patrones activos', estado: 'ok', severidad: 'info', detalle: 'No hay patrones activos en BD' })
+    return checks
+  }
+
+  // Ejecutar cada patrón
+  for (const patron of patrones) {
+    // Saltar checks estructurales (query_sql = SELECT 1 WHERE false)
+    if (patron.query_sql.includes('WHERE false')) {
+      checks.push({
+        categoria: patron.categoria,
+        nombre: patron.nombre,
+        estado: 'ok',
+        severidad: 'info',
+        detalle: `Check estructural — ${patron.descripcion}`,
+        fix_sugerido: patron.fix_sugerido || undefined,
+      })
+      continue
+    }
+
+    try {
+      const { data: rows, error } = await sb.rpc('ejecutar_qa_patron', { p_query: patron.query_sql }) as {
+        data: Array<{ empresa?: string; propuesta_slug?: string }> | null;
+        error: { message: string } | null
+      }
+
+      if (error) {
+        checks.push({ categoria: patron.categoria, nombre: patron.nombre, estado: 'skip', severidad: 'info', detalle: `Error SQL: ${error.message}` })
+        continue
+      }
+
+      const count = rows?.length || 0
+      if (count > 0) {
+        const empresas = rows!.slice(0, 3).map(r => r.empresa || r.propuesta_slug || '?').join(', ')
+        const detalle = patron.mensaje_fallo
+          .replace('{count}', String(count))
+          .replace('{empresas}', empresas + (count > 3 ? ` y ${count - 3} más` : ''))
+
+        // Incrementar contador de detecciones
+        await sb.from('qa_patrones_error')
+          .update({ veces_detectado: patron.veces_detectado + 1, ultima_deteccion_at: new Date().toISOString() })
+          .eq('id', patron.id)
+
+        checks.push({
+          categoria: patron.categoria,
+          nombre: patron.nombre,
+          estado: 'fallo',
+          severidad: patron.severidad as 'critico' | 'degradado' | 'info',
+          detalle,
+          fix_sugerido: patron.fix_sugerido || undefined,
+        })
+      } else {
+        checks.push({ categoria: patron.categoria, nombre: patron.nombre, estado: 'ok', severidad: 'info', detalle: 'Sin incidencias detectadas' })
+      }
+    } catch (e) {
+      checks.push({ categoria: patron.categoria, nombre: patron.nombre, estado: 'skip', severidad: 'info', detalle: String(e) })
+    }
+  }
+
+  return checks
+}
+
 // ─── Checks CRM Lead Onboarding ──────────────────────────────────────────────
 export async function checkLeadOnboarding(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
   const checks: QACheck[] = []
@@ -850,6 +935,7 @@ export async function runQA(trigger: string, onCheck?: (c: QACheck) => void, onC
   await runCat('CRONS — Trabajos programados',     async () => checkCrons())
   await runCat('PROPUESTAS — URLs activas',        async () => checkPropuestas(supabase))
   await runCat('CRM — Lead Onboarding & Drafts',   async () => checkLeadOnboarding(supabase))
+  await runCat('APRENDIDO — Errores recurrentes',   async () => checkPatronesAprendidos(supabase))
   await runCat('PERF — Performance',               async () => checkPerf(supabase))
 
   // Check demo solo si hay reunión próxima

@@ -141,6 +141,24 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    if (action === 'qa_activar') {
+      await tgAnswerCallback(callbackId, '✅ Activando…')
+      const { data: p } = await supabase
+        .from('qa_patrones_error')
+        .update({ estado: 'activo', activado_at: new Date().toISOString() })
+        .eq('id', leadId)
+        .select('nombre')
+        .single()
+      await tgEditMessage(messageId, message.text + `\n\n✅ <b>Activado</b> — se ejecutará en el próximo QA`)
+      console.log('[qa_activar] Patrón activado:', p?.nombre)
+    }
+
+    if (action === 'qa_descartar') {
+      await tgAnswerCallback(callbackId, '❌ Descartado')
+      await supabase.from('qa_patrones_error').update({ estado: 'inactivo' }).eq('id', leadId)
+      await tgEditMessage(messageId, message.text + '\n\n❌ <i>Descartado</i>')
+    }
+
     return NextResponse.json({ ok: true })
   }
 
