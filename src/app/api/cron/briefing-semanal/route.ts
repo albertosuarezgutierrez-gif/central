@@ -10,6 +10,7 @@ import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
 import { obtenerNoticias } from '@/lib/instagram-context'
+import { buildPipelineBloque } from '@/app/api/cron/pipeline-comercial/route'
 
 interface TemaSemanada {
   num: number
@@ -142,14 +143,18 @@ Responde SOLO JSON array de 3 elementos:
 
   const semanaId = semana?.id || 'temp'
 
+  // ── Bloque pipeline comercial (siempre al inicio del lunes) ──────────
+  const pipelineBloque = await buildPipelineBloque().catch(() => '')
+
   // ── Mensaje Telegram con las 3 opciones ──────────────────────────────
   const formatoEmoji: Record<string, string> = {
     video:'🎬', stat:'📊', pregunta:'❓', tip:'💡',
     comparativa:'⚖️', cita:'💬', producto:'📱'
   }
 
-  let msg = `📅 <b>Briefing semanal — ${new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' })}</b>\n\n`
-  msg += `¿De qué hablamos esta semana?\n\n`
+  let msg = `📅 <b>Briefing semanal — ${new Date().toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' })}</b>\n`
+  if (pipelineBloque) msg += pipelineBloque + '\n'
+  msg += `── Contenido esta semana ──\n¿De qué hablamos?\n\n`
 
   temas.forEach(t => {
     msg += `${t.num}️⃣ <b>${t.tema}</b>\n`
