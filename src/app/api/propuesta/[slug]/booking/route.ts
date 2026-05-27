@@ -77,8 +77,6 @@ export async function POST(
   }
 
   // Notificar a Alberto por Telegram
-  const tipoLabel = tipo_reunion === 'telefonica' ? '\u{1F4DE} Por teléfono' : '\u{1F91D} Presencial'
-  const lugarFinal = lugar || (tipo_reunion === 'telefonica' ? 'Llamada telefónica' : empresa as string)
   await tgAlert(
     `\u{1F4C5} <b>Reunión solicitada — ${empresa}</b>\n\n${tipoLabel}\n\u{1F464} ${nombre}${telefono ? ` · \u{1F4F1} ${telefono}` : ''}${email ? ` · ${email}` : ''}${disponibilidad ? `\n\u{1F5D3} Disponibilidad: ${disponibilidad}` : ''}${notas ? `\n\u{1F4DD} ${notas}` : ''}\n\n<a href="https://www.iarest.es/super">Ver en CRM \u2192</a>`,
     'info'
