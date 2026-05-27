@@ -253,6 +253,19 @@ Reglas:
   const propuestaUrl = `https://www.iarest.es/propuesta/${slug}`
   const emailCuerpo = emailData.cuerpo.replace(/__PROPUESTA_URL__/g, propuestaUrl)
 
+  // WhatsApp draft con links siempre al final
+  let waDraftRegen = ''
+  try {
+    const waR = await callAI(
+      `Eres Alberto, fundador de ia.rest. WhatsApp corto, directo, cercano. Español de España. Solo el texto, sin JSON.`,
+      `WhatsApp para ${empresa}. Pain point: ${(estudio.pain_points as string[])?.[0] || ''}. Argumento: ${argumento}. Notas: ${(lead.notas as string || '').substring(0,150)}. 2-4 líneas, saludo cercano, 1 dato concreto, propone quedar.`,
+      250, 12000
+    )
+    waDraftRegen = `${waR.trim()}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
+  } catch {
+    waDraftRegen = `Hola, te escribo por ia.rest — creo que encaja bien para ${empresa}.\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
+  }
+
   // Preview email (primeros 200 chars)
   const preview = emailCuerpo.substring(0, 200).replace(/\n/g, ' ') + '…'
 
@@ -264,6 +277,7 @@ Reglas:
     propuesta_slug: slug,
     email_draft: emailCuerpo,
     email_asunto: emailData.asunto,
+    whatsapp_draft: waDraftRegen,
     estado_pipeline: 'propuesta_lista',
     eventos: [...eventos, {
       tipo: '📝',

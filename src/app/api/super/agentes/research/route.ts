@@ -176,6 +176,23 @@ JSON:
 
   const emailCuerpo = emailData.cuerpo.replace(/__PROPUESTA_URL__/g, propuestaUrl)
 
+  // 5b. Generar WhatsApp draft
+  let waDraft = ''
+  try {
+    const waRaw = await callAI(
+      `Eres Alberto, fundador de ia.rest. WhatsApp corto, directo, cercano. Español de España. Devuelve SOLO el texto del mensaje, sin JSON.`,
+      `WhatsApp para ${empresa}.
+Notas/relación: ${(lead.notas as string || '').substring(0, 200)}
+Pain point principal: ${(estudio.pain_points as string[])?.[0] || ''}
+Argumento: ${estudio.argumento_principal}
+2-4 líneas. Saludo cercano. 1 cosa concreta del negocio. Propone quedar. Max 2 emojis. Sin palabrería corporativa.`,
+      250, 15000
+    )
+    waDraft = `${waRaw.trim()}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
+  } catch {
+    waDraft = `Hola, te escribo desde ia.rest — creo que te puede interesar para gestionar ${empresa}.\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
+  }
+
   // 6. Guardar en BD
   const { error: updateError } = await supabase
     .from('leads')
@@ -191,6 +208,7 @@ JSON:
       propuesta_slug: slug,
       email_draft: emailCuerpo,
       email_asunto: emailData.asunto,
+      whatsapp_draft: waDraft,
       estado_pipeline: 'propuesta_lista',
       research_at: new Date().toISOString(),
     })

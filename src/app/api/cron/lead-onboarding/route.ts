@@ -130,7 +130,8 @@ Propuesta URL: ${propuestaUrl}
 2-4 líneas máximo. Saludo cercano. 1 cosa concreta del negocio. Propone quedar. Max 2 emojis. Sin palabrería corporativa.`,
     300, 15000
   )
-  const waDraft = waRaw.trim()
+  // Siempre incluir propuesta + web al final, sin depender de la IA
+  const waDraft = `${waRaw.trim()}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
 
   // 6. Guardar en BD
   const { data: current } = await supabase.from('leads').select('eventos').eq('id', lead.id as string).single()
