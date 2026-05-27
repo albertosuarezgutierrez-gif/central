@@ -308,6 +308,7 @@ export async function checkCrons(): Promise<QACheck[]> {
   const crons = [
     'alertas (*/2min)', 'cobro-inactividad (*/5min)', 'feedback-visita (*/10min)',
     'blog-seo (lunes)', 'briefing-semanal (lunes)', 'instagram-metricas (diario)',
+    'lead-onboarding (*/30min)',
   ]
   return crons.map(nombre => ({
     categoria:'CRONS', nombre:`Cron: ${nombre}`, estado:'ok' as const, severidad:'info' as const,
@@ -471,6 +472,130 @@ export async function checkPropuestas(sb: ReturnType<typeof createServerClient>)
       detalle: ok ? `HTTP ${status} (${ms}ms)` : `HTTP ${status} — 404 o error. El slug puede estar roto.`,
       ms_respuesta: ms,
     })
+  }
+
+  return checks
+}
+
+// ─── Checks CRM Lead Onboarding ──────────────────────────────────────────────
+export async function checkLeadOnboarding(sb: ReturnType<typeof createServerClient>): Promise<QACheck[]> {
+  const checks: QACheck[] = []
+
+  // 1. Leads nuevos sin research hace más de 2h (el cron debería haberlos procesado)
+  try {
+    const hace2h = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+    const hace72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
+    const { data: sinResearch } = await sb
+      .from('leads')
+      .select('id, empresa, restaurante, nombre, created_at')
+      .is('research_at', null)
+      .neq('estado', 'descartado')
+      .gte('created_at', hace72h)
+      .lt('created_at', hace2h)
+
+    if (sinResearch && sinResearch.length > 0) {
+      const nombres = sinResearch.map((l: {empresa:string|null;restaurante:string|null;nombre:string|null}) =>
+        l.empresa || l.restaurante || l.nombre || 'Desconocido').join(', ')
+      checks.push({
+        categoria: 'CRM',
+        nombre: 'Leads sin research tras 2h',
+        estado: 'fallo',
+        severidad: 'degradado',
+        detalle: `${sinResearch.length} lead(s) sin procesar: ${nombres}`,
+        fix_sugerido: 'Revisar cron lead-onboarding en Vercel — puede estar fallando',
+      })
+    } else {
+      checks.push({ categoria:'CRM', nombre:'Leads sin research tras 2h', estado:'ok', severidad:'info', detalle:'Todos los leads recientes tienen research' })
+    }
+  } catch(e) {
+    checks.push({ categoria:'CRM', nombre:'Leads sin research tras 2h', estado:'skip', severidad:'info', detalle:String(e) })
+  }
+
+  // 2. Leads con propuesta_slug roto (slug generado con timestamp)
+  try {
+    const { data: slugsRojos } = await sb
+      .from('leads')
+      .select('empresa, restaurante, nombre, propuesta_slug')
+      .not('propuesta_slug', 'is', null)
+      .like('propuesta_slug', '%-' + '%')  // slugs con timestamp al final son sospechosos
+
+    // Filtrar los que tienen timestamp (patrón: termina en -XXXXXX hex 6 chars)
+    const rotos = (slugsRojos || []).filter((l: {propuesta_slug:string}) =>
+      /[a-z0-9]+-[a-z0-9]{5,8}$/.test(l.propuesta_slug || '')
+    )
+    if (rotos.length > 0) {
+      const nombres = rotos.map((l: {empresa:string|null;restaurante:string|null;nombre:string|null;propuesta_slug:string}) =>
+        `${l.empresa || l.nombre} → /propuesta/${l.propuesta_slug}`).join(', ')
+      checks.push({
+        categoria: 'CRM',
+        nombre: 'Slugs propuesta con timestamp (sospechosos)',
+        estado: 'warning',
+        severidad: 'degradado',
+        detalle: `${rotos.length} slug(s) con timestamp: ${nombres.substring(0, 200)}`,
+        fix_sugerido: 'Actualizar propuesta_slug a un slug limpio en /super → Leads',
+      })
+    } else {
+      checks.push({ categoria:'CRM', nombre:'Slugs propuesta con timestamp (sospechosos)', estado:'ok', severidad:'info', detalle:'Todos los slugs tienen formato limpio' })
+    }
+  } catch(e) {
+    checks.push({ categoria:'CRM', nombre:'Slugs propuesta con timestamp (sospechosos)', estado:'skip', severidad:'info', detalle:String(e) })
+  }
+
+  // 3. WhatsApp drafts sin URL obligatoria
+  try {
+    const { data: leadsConWA } = await sb
+      .from('leads')
+      .select('id, empresa, restaurante, nombre, whatsapp_draft, propuesta_slug')
+      .not('whatsapp_draft', 'is', null)
+      .not('propuesta_slug', 'is', null)
+
+    const sinUrl = (leadsConWA || []).filter((l: {whatsapp_draft:string|null}) =>
+      l.whatsapp_draft && !l.whatsapp_draft.includes('www.iarest.es')
+    )
+    if (sinUrl.length > 0) {
+      const nombres = sinUrl.map((l: {empresa:string|null;restaurante:string|null;nombre:string|null}) =>
+        l.empresa || l.restaurante || l.nombre || 'Desconocido').join(', ')
+      checks.push({
+        categoria: 'CRM',
+        nombre: 'WhatsApp drafts sin URL web/propuesta',
+        estado: 'warning',
+        severidad: 'degradado',
+        detalle: `${sinUrl.length} lead(s) sin links en WhatsApp: ${nombres}`,
+        fix_sugerido: 'Pulsar Regenerar en /super → Leads para cada uno',
+      })
+    } else {
+      checks.push({ categoria:'CRM', nombre:'WhatsApp drafts sin URL web/propuesta', estado:'ok', severidad:'info', detalle:'Todos los drafts incluyen links obligatorios' })
+    }
+  } catch(e) {
+    checks.push({ categoria:'CRM', nombre:'WhatsApp drafts sin URL web/propuesta', estado:'skip', severidad:'info', detalle:String(e) })
+  }
+
+  // 4. Email drafts sin propuesta URL
+  try {
+    const { data: leadsConEmail } = await sb
+      .from('leads')
+      .select('id, empresa, restaurante, nombre, email_draft')
+      .not('email_draft', 'is', null)
+
+    const sinPropUrl = (leadsConEmail || []).filter((l: {email_draft:string|null}) =>
+      l.email_draft && !l.email_draft.includes('iarest.es/propuesta/')
+    )
+    if (sinPropUrl.length > 0) {
+      const nombres = sinPropUrl.map((l: {empresa:string|null;restaurante:string|null;nombre:string|null}) =>
+        l.empresa || l.restaurante || l.nombre || 'Desconocido').join(', ')
+      checks.push({
+        categoria: 'CRM',
+        nombre: 'Emails sin URL de propuesta',
+        estado: 'warning',
+        severidad: 'degradado',
+        detalle: `${sinPropUrl.length} lead(s): ${nombres}`,
+        fix_sugerido: 'Regenerar propuesta desde /super → Leads',
+      })
+    } else {
+      checks.push({ categoria:'CRM', nombre:'Emails sin URL de propuesta', estado:'ok', severidad:'info', detalle:'Todos los email drafts incluyen link de propuesta' })
+    }
+  } catch(e) {
+    checks.push({ categoria:'CRM', nombre:'Emails sin URL de propuesta', estado:'skip', severidad:'info', detalle:String(e) })
   }
 
   return checks
@@ -724,6 +849,7 @@ export async function runQA(trigger: string, onCheck?: (c: QACheck) => void, onC
   await runCat('SEO — Indexación Google',          async () => checkSEO())
   await runCat('CRONS — Trabajos programados',     async () => checkCrons())
   await runCat('PROPUESTAS — URLs activas',        async () => checkPropuestas(supabase))
+  await runCat('CRM — Lead Onboarding & Drafts',   async () => checkLeadOnboarding(supabase))
   await runCat('PERF — Performance',               async () => checkPerf(supabase))
 
   // Check demo solo si hay reunión próxima
