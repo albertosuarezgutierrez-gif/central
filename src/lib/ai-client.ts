@@ -145,7 +145,7 @@ export async function callAI(
   userOrMessages: string | { role: 'user' | 'assistant'; content: string }[],
   maxTokens = 600,
   timeoutMs = 15_000,
-  noFallback = false
+  noFallback = true
 ): Promise<string> {
   const messages: { role: 'user' | 'assistant'; content: string }[] =
     typeof userOrMessages === 'string'
@@ -187,7 +187,8 @@ export async function callAIVision(
   images: ImageInput[],
   userText: string,
   maxTokens = 2000,
-  timeoutMs = 30_000
+  timeoutMs = 30_000,
+  noFallback = true
 ): Promise<string> {
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
@@ -198,9 +199,11 @@ export async function callAIVision(
         new Promise<never>((_, r) => setTimeout(() => r(new Error('NVIDIA-Vision timeout')), timeoutMs)),
       ])
     } catch (e) {
+      if (noFallback) throw new Error(`[AI-CLIENT] NVIDIA-Vision falló (noFallback): ${(e as Error).message}`)
       console.warn('[AI-CLIENT] NVIDIA-Vision falló, fallback Anthropic:', (e as Error).message)
     }
   }
 
+  if (noFallback) throw new Error('[AI-CLIENT] NVIDIA no disponible y noFallback=true')
   return anthropicVision(system, images, userText, maxTokens)
 }
