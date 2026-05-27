@@ -67,8 +67,6 @@ export default function PropuestaDinamica({ lead, slug }: { lead: LeadData; slug
   const modulosCriticos = estudio?.modulos_criticos || (lead.modulos_recomendados || []).slice(0, 3)
   const modulosSecundarios = estudio?.modulos_secundarios || (lead.modulos_recomendados || []).slice(3)
   const painPoints = estudio?.pain_points || lead.pain_points || []
-  const mrr = estudio?.mrr_estimado || lead.mrr_estimado || 120
-  const ahorro = estudio?.ahorro_mensual_estimado || Math.round(mrr * 1.5)
 
   // Trackear visita
   useEffect(() => {
@@ -218,36 +216,33 @@ export default function PropuestaDinamica({ lead, slug }: { lead: LeadData; slug
           </section>
         )}
 
-        {/* ── ROI ───────────────────────────────────────────────────────── */}
+        {/* ── GARANTÍAS ─────────────────────────────────────────────────── */}
         <section style={{ margin: '52px 0', padding: '32px', background: C.ink, borderRadius: 16 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.12em', color: '#9C8E7E', textTransform: 'uppercase', marginBottom: 16 }}>
-            NÚMEROS
+            CÓMO TRABAJAMOS
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 24 }}>
             <div>
               <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 42, fontWeight: 500, color: C.bg, lineHeight: 1 }}>
-                {mrr}€
-              </div>
-              <div style={{ fontSize: 13, color: '#9C8E7E', marginTop: 6 }}>al mes, todo incluido</div>
-            </div>
-            {ahorro > 0 && (
-              <div>
-                <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 42, fontWeight: 500, color: C.green, lineHeight: 1 }}>
-                  +{ahorro}€
-                </div>
-                <div style={{ fontSize: 13, color: '#9C8E7E', marginTop: 6 }}>ahorro mensual estimado</div>
-              </div>
-            )}
-            <div>
-              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 42, fontWeight: 500, color: C.amber, lineHeight: 1 }}>
                 14d
               </div>
-              <div style={{ fontSize: 13, color: '#9C8E7E', marginTop: 6 }}>de prueba sin tarjeta</div>
+              <div style={{ fontSize: 13, color: '#9C8E7E', marginTop: 6 }}>prueba real sin tarjeta</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 42, fontWeight: 500, color: C.green, lineHeight: 1 }}>
+                0€
+              </div>
+              <div style={{ fontSize: 13, color: '#9C8E7E', marginTop: 6 }}>comisión por venta</div>
+            </div>
+            <div>
+              <div style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 42, fontWeight: 500, color: C.amber, lineHeight: 1 }}>
+                &lt;30'
+              </div>
+              <div style={{ fontSize: 13, color: '#9C8E7E', marginTop: 6 }}>alta sin instalador</div>
             </div>
           </div>
           <div style={{ marginTop: 24, fontSize: 13, color: '#6B5F52', lineHeight: 1.5 }}>
-            Sin comisión por venta. Sin permanencia. Sin sorpresas.
-            {estudio?.tpv_actual && estudio.tpv_actual !== 'Desconocido' && ` Sustituye completamente a ${estudio.tpv_actual}.`}
+            Sin permanencia. Sin sorpresas. El precio se negocia en persona según vuestra operativa.
           </div>
         </section>
 
