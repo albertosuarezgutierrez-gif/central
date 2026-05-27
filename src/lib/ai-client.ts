@@ -198,7 +198,7 @@ export async function callAI(
   userOrMessages: string | { role: 'user' | 'assistant'; content: string }[],
   maxTokens = 600,
   timeoutMs = 15_000,
-  noFallback = true
+  noFallback = false
 ): Promise<string> {
   const messages: { role: 'user' | 'assistant'; content: string }[] =
     typeof userOrMessages === 'string'
@@ -287,7 +287,7 @@ export async function callAIVision(
   userText: string,
   maxTokens = 2000,
   timeoutMs = 30_000,
-  noFallback = true
+  noFallback = false
 ): Promise<string> {
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
