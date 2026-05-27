@@ -2982,7 +2982,13 @@ function CartaTab({ restauranteId }: { restauranteId: string }) {
                 ? secciones.map(s => ({ value: s.id, label: s.nombre }))
                 : SECCIONES_DEFAULT.map(s => ({ value: s, label: s.charAt(0).toUpperCase() + s.slice(1) }))
               }/>
-            <Field label="Motes / apodos del local (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="huevos del abuelo, el especial, el combo"/>
+            <div>
+              <Field label="Alias fonéticos para voz (separados por coma)" value={form.nombre_alternativo} onChange={v => setForm(f => ({ ...f, nombre_alternativo: v }))} placeholder="salmo, salmone, salmon nete"/>
+              <div style={{fontFamily:SN,fontSize:10,color:C.ink3,marginTop:4,lineHeight:1.5}}>
+                Cómo el camarero puede pronunciarlo mal al hablar. El sistema corrige automáticamente antes de enviar al motor IA.<br/>
+                Ej. <span style={{color:C.ink2}}>salmonete →</span> <span style={{color:C.amber}}>salmo, salmone, sal morena</span>
+              </div>
+            </div>
             <div>
               <Field label="Familia BRAIN (opcional)" value={form.familia} onChange={v => setForm(f => ({ ...f, familia: v }))} placeholder="vino_tinto"/>
               <div style={{fontFamily:SM,fontSize:10,color:C.ink3,marginTop:4,lineHeight:1.5}}>
