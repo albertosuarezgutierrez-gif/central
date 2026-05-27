@@ -137,11 +137,7 @@ export default function PropuestaDinamica({ lead, slug }: { lead: LeadData; slug
               {estudio.argumento_principal}
             </p>
           )}
-          {estudio?.resumen_negocio && (
-            <p style={{ fontSize: 14, color: '#9C8E7E', lineHeight: 1.7, margin: '0', fontStyle: 'italic', maxWidth: 520 }}>
-              {estudio.resumen_negocio}
-            </p>
-          )}
+
         </div>
       </section>
 
