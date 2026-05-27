@@ -2,17 +2,34 @@
 
 import { useState, useRef, useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import { C, SN, SE } from '@/lib/colors'
+import { C, SN } from '@/lib/colors'
 import { getPromptForPath } from './help-prompts'
 
 interface Msg { role: 'user' | 'assistant'; content: string }
 
-function HelpPanel({ prompt, onClose }: { prompt: string; onClose: () => void }) {
+interface HelpContext {
+  turnoActivo?: boolean
+  mesaSeleccionada?: string | null
+  comandaAbierta?: boolean
+  turnoFichado?: boolean
+}
+
+function HelpPanel({
+  prompt,
+  context,
+  onClose,
+}: {
+  prompt: string
+  context: HelpContext
+  onClose: () => void
+}) {
+  const pathname = usePathname()
   const [msgs, setMsgs] = useState<Msg[]>([
     { role: 'assistant', content: '¿En qué te puedo ayudar?' }
   ])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [escalated, setEscalated] = useState(false)
   const bottomRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
 
@@ -38,10 +55,15 @@ function HelpPanel({ prompt, onClose }: { prompt: string; onClose: () => void })
       const res = await fetch('/api/help/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: next, systemPrompt: prompt }),
+        body: JSON.stringify({
+          messages: next,
+          systemPrompt: prompt,
+          context: { ...context, pathname },
+        }),
       })
       const data = await res.json()
       setMsgs(p => [...p, { role: 'assistant', content: data.reply || 'Sin respuesta.' }])
+      if (data.escalated) setEscalated(true)
     } catch {
       setMsgs(p => [...p, { role: 'assistant', content: 'Error de conexión. Inténtalo de nuevo.' }])
     } finally {
@@ -52,7 +74,7 @@ function HelpPanel({ prompt, onClose }: { prompt: string; onClose: () => void })
   return (
     <div style={{
       position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-      width: 320, height: 420,
+      width: 320, height: 460,
       background: C.bg2, border: `1px solid ${C.rule}`,
       borderRadius: 14, display: 'flex', flexDirection: 'column',
       boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
@@ -78,6 +100,17 @@ function HelpPanel({ prompt, onClose }: { prompt: string; onClose: () => void })
           padding: '2px 4px', fontFamily: SN,
         }}>✕</button>
       </div>
+
+      {/* Banner escalado */}
+      {escalated && (
+        <div style={{
+          padding: '8px 14px', background: '#1f1500',
+          borderBottom: `1px solid ${C.amber}`,
+          fontSize: 11.5, color: C.amber, fontFamily: SN, flexShrink: 0,
+        }}>
+          ⚡ He avisado al operador — te contactará pronto.
+        </div>
+      )}
 
       {/* Mensajes */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 4px' }}>
@@ -155,7 +188,7 @@ function HelpPanel({ prompt, onClose }: { prompt: string; onClose: () => void })
   )
 }
 
-export function HelpChat() {
+export function HelpChat(context: HelpContext = {}) {
   const [open, setOpen] = useState(false)
   const pathname = usePathname()
   const { label, prompt } = getPromptForPath(pathname)
@@ -192,7 +225,13 @@ export function HelpChat() {
             fontSize: 14, fontWeight: 700, fontFamily: SN, flexShrink: 0,
           }}
         >?</button>
-        {open && <HelpPanel prompt={prompt} onClose={() => setOpen(false)} />}
+        {open && (
+          <HelpPanel
+            prompt={prompt}
+            context={context}
+            onClose={() => setOpen(false)}
+          />
+        )}
       </div>
     </>
   )
