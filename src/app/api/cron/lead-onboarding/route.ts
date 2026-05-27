@@ -80,7 +80,7 @@ Web content: ${webContent.substring(0, 1500)}
 
 JSON:
 {"resumen_negocio":"2-3 frases","tipo_negocio":"restaurante|bar|catering|grupo","num_locales_estimado":1,"num_empleados_estimado":8,"tpv_actual":"nombre o Desconocido","pain_points":["p1","p2","p3"],"modulos_criticos":["eventos","almacen"],"modulos_secundarios":["analytics"],"mrr_estimado":150,"argumento_principal":"argumento más poderoso específico para este negocio","tono_propuesta":"profesional|informal","nivel_urgencia":"alta|media|baja","puntuacion_lead":75}`,
-    1200, 30000
+    1200, 30000, true
   )
 
   let estudio: Record<string, unknown> = {}
@@ -111,7 +111,7 @@ Pain point principal: ${(estudio.pain_points as string[])?.slice(0, 1).join(', '
 
 Reglas: máx 100 palabras, proponer llamada o visita, incluir __PROPUESTA_URL__ al final como "Te dejo esto por si quieres echarle un vistazo antes:", firma Alberto · ia.rest
 {"asunto":"máx 60 chars","cuerpo":"texto con \\n, incluir __PROPUESTA_URL__"}`,
-    700, 20000
+    700, 20000, true
   )
   let emailData = { asunto: `ia.rest para ${empresa}`, cuerpo: `Hola,\n\n${estudio.argumento_principal}\n\nPropuesta: __PROPUESTA_URL__\n\nAlberto · ia.rest · hola@iarest.es` }
   try { emailData = JSON.parse(cleanJSON(emailRaw)) } catch { /* default */ }
@@ -128,7 +128,7 @@ Algo concreto del negocio: ${(estudio.pain_points as string[])?.[0] || estudio.a
 Propuesta URL: ${propuestaUrl}
 
 2-3 líneas máximo. Saludo natural. 1 referencia real al negocio. Propone quedar o llamar. Max 1 emoji. Sin palabrería.`,
-    300, 15000
+    300, 15000, true
   )
   // Siempre incluir propuesta + web al final, sin depender de la IA
   const waDraft = `${waRaw.trim()}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`

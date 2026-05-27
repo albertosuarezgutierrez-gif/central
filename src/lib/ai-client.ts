@@ -144,7 +144,8 @@ export async function callAI(
   system: string,
   userOrMessages: string | { role: 'user' | 'assistant'; content: string }[],
   maxTokens = 600,
-  timeoutMs = 15_000
+  timeoutMs = 15_000,
+  noFallback = false
 ): Promise<string> {
   const messages: { role: 'user' | 'assistant'; content: string }[] =
     typeof userOrMessages === 'string'
@@ -168,10 +169,13 @@ export async function callAI(
         new Promise<never>((_, r) => setTimeout(() => r(new Error('NVIDIA timeout')), timeoutMs)),
       ])
     } catch (e) {
-      console.warn('[AI-CLIENT] NVIDIA falló, fallback Anthropic:', (e as Error).message)
+      const msg = (e as Error).message
+      console.warn('[AI-CLIENT] NVIDIA falló:', msg)
+      if (noFallback) throw new Error(`NIM falló: ${msg}`)
     }
   }
 
+  if (noFallback) throw new Error('NVIDIA_API_KEY no configurada y noFallback=true')
   return anthropicText(system, messages, maxTokens)
 }
 
