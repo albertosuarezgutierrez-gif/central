@@ -16,19 +16,19 @@ const C = {
   white: '#FFFFFF',
 }
 
-const MODULOS: Record<string, { emoji: string; titulo: string; golpe: string }> = {
-  voz:          { emoji: '🎙', titulo: 'Comandas por voz',        golpe: 'El camarero habla. Cocina recibe. Sin papel, sin app, sin tocar nada. En menos de un segundo.' },
-  kds:          { emoji: '📺', titulo: 'Pantalla de cocina',      golpe: 'Cada partida ve solo sus platos, en orden, con el tiempo que llevan esperando. Sin gritos ni tickets.' },
-  almacen:      { emoji: '📦', titulo: 'Almacén y food cost',     golpe: 'Sabes cuánto te cuesta cada plato en tiempo real. Si sube el género, lo ves antes de que lo notes en caja.' },
-  contabilidad: { emoji: '📊', titulo: 'Contabilidad integrada',  golpe: 'Cierre diario automático, IVA 303 listo para el gestor. Sin Excel, sin esperar fin de mes para saber qué pasó.' },
-  qr:           { emoji: '📱', titulo: 'QR en mesa',              golpe: 'El cliente pide desde su móvil. La comanda llega a cocina directa. Más rotación, menos carga en sala.' },
-  storefront:   { emoji: '🛵', titulo: 'Tienda online propia',    golpe: 'Delivery y recogida sin pagar comisión a nadie. Tu tienda, tus clientes, tu margen.' },
-  analytics:    { emoji: '📈', titulo: 'Analytics',               golpe: 'Ventas por hora, por plato, por camarero. Sabes qué funciona y qué no — sin esperar el cierre del mes.' },
-  multi_local:  { emoji: '🏢', titulo: 'Multi-local',             golpe: 'Todos tus locales desde un panel. Stock, ventas y personal en un solo sitio. Sin entrar y salir de sistemas.' },
-  eventos:      { emoji: '🎉', titulo: 'Eventos y catering',      golpe: 'Presupuestos, reserva de espacios, check-in de personal y cierre de evento con un solo flujo.' },
-  vinos:        { emoji: '🍷', titulo: 'Carta de vinos',          golpe: 'Sommelier IA que sugiere maridajes. Control de botellas y copas. El vino se vende solo.' },
+const MODULOS: Record<string, { emoji: string; titulo: string; golpe: string; ia?: string }> = {
+  voz:          { emoji: '🎙', titulo: 'Voz con IA',              golpe: 'El camarero habla en lenguaje natural — "dos cañas y una de croquetas sin". La IA interpreta, asigna partida y manda a cocina en menos de un segundo.', ia: 'Reconocimiento de voz + procesamiento IA' },
+  kds:          { emoji: '📺', titulo: 'Cocina inteligente',       golpe: 'La IA prioriza los platos según el tiempo de cada mesa. Cocina ve solo lo suyo, en orden, sin ruido. Menos errores, más velocidad.', ia: 'Priorización automática por IA' },
+  almacen:      { emoji: '📦', titulo: 'Almacén con IA',          golpe: 'La IA analiza tu consumo real y genera los pedidos al proveedor antes de que te quedes sin género. Tú apruebas con un toque.', ia: 'Predicción de consumo + pedidos automáticos' },
+  contabilidad: { emoji: '📊', titulo: 'Contabilidad integrada',  golpe: 'Cierre diario automático, IVA 303 y exportación al gestor. La IA detecta anomalías antes de que las veas tú.', ia: 'Detección de anomalías por IA' },
+  qr:           { emoji: '📱', titulo: 'QR en mesa',              golpe: 'El cliente pide desde su móvil. La comanda llega a cocina sin pasar por el camarero. Más rotación, menos carga en sala.', },
+  storefront:   { emoji: '🛵', titulo: 'Tienda online propia',    golpe: 'Delivery y recogida directos, sin comisión a nadie. La IA actualiza disponibilidad en tiempo real según lo que queda en cocina.', ia: 'Disponibilidad en tiempo real por IA' },
+  analytics:    { emoji: '📈', titulo: 'Analytics e IA',          golpe: 'La IA cruza ventas, clima, eventos del entorno y día de la semana para decirte cuánto vas a vender la próxima semana. Y casi siempre acierta.', ia: 'Forecasting predictivo con IA' },
+  multi_local:  { emoji: '🏢', titulo: 'Multi-local',             golpe: 'Todos tus locales desde un panel. La IA compara rendimiento entre sedes y te avisa si algo se desvía de lo normal.', ia: 'Alertas y comparativas automáticas' },
+  eventos:      { emoji: '🎉', titulo: 'Eventos con IA',          golpe: 'La IA genera presupuestos personalizados, analiza rentabilidad por tipo de evento y sugiere qué mejorar en cada cierre.', ia: 'Presupuestos y análisis de rentabilidad con IA' },
+  vinos:        { emoji: '🍷', titulo: 'Sommelier IA',            golpe: 'La IA sugiere maridajes en tiempo real según lo que ha pedido la mesa. Controla botellas, copas y consignación. El vino se vende solo.', ia: 'Maridajes y sugerencias en tiempo real' },
   bridge:       { emoji: '🖨', titulo: 'Impresoras integradas',   golpe: 'Funciona con tu impresora actual. Sin cambiar hardware, sin instalaciones, sin técnico.' },
-  rrhh:         { emoji: '👥', titulo: 'RRHH y fichaje',          golpe: 'Fichaje digital, control de horas, selección de personal con análisis de CVs por IA. Sin papel ni apps de pago.' },
+  rrhh:         { emoji: '👥', titulo: 'RRHH con IA',             golpe: 'La IA analiza los CVs antes de que los leas tú y puntúa cada candidato según el perfil del puesto. Fichaje digital incluido.', ia: 'Análisis de candidatos con IA' },
 }
 
 interface Estudio {
@@ -158,6 +158,31 @@ export default function PropuestaDinamica({ lead, slug }: { lead: LeadData; slug
           </div>
         </section>
 
+        {/* IA COMO EJE */}
+        <section style={{ margin: '60px 0' }}>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.1em', color: C.ink4, textTransform: 'uppercase', marginBottom: 8 }}>
+            Inteligencia artificial
+          </div>
+          <h2 style={{ fontFamily: "'Newsreader', Georgia, serif", fontSize: 26, fontWeight: 400, color: C.ink, margin: '0 0 24px', lineHeight: 1.3 }}>
+            La IA no es un extra. Está en cada parte de la operativa.
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 12 }}>
+            {[
+              { icon: '🎙', label: 'Entiende cualquier acento y vocabulario de hostelería' },
+              { icon: '🍷', label: 'Sugiere maridajes en tiempo real según la mesa' },
+              { icon: '📦', label: 'Predice consumo y genera pedidos antes de que falte género' },
+              { icon: '📈', label: 'Anticipa lo que vas a vender la próxima semana' },
+              { icon: '📸', label: 'Lee albaranes y facturas con la cámara del móvil' },
+              { icon: '👥', label: 'Puntúa candidatos según el perfil antes de que los leas' },
+            ].map((item, i) => (
+              <div key={i} style={{ padding: '18px 16px', background: C.white, border: `1px solid ${C.rule}`, borderRadius: 10, display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+                <span style={{ fontSize: 20, flexShrink: 0 }}>{item.icon}</span>
+                <span style={{ fontSize: 13, color: C.ink2, lineHeight: 1.5 }}>{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+
         {/* MÓDULOS CLAVE */}
         {modulosCriticos.length > 0 && (
           <section style={{ margin: '60px 0' }}>
@@ -183,6 +208,12 @@ export default function PropuestaDinamica({ lead, slug }: { lead: LeadData; slug
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: C.ink, marginBottom: 5 }}>{mod.titulo}</div>
                       <div style={{ fontSize: 14, color: C.ink3, lineHeight: 1.6 }}>{mod.golpe}</div>
+                      {mod.ia && (
+                        <div style={{ marginTop: 8, display: 'inline-flex', alignItems: 'center', gap: 5, background: `${C.red}10`, border: `1px solid ${C.red}25`, borderRadius: 6, padding: '3px 9px' }}>
+                          <span style={{ fontSize: 10, color: C.red }}>✦</span>
+                          <span style={{ fontSize: 11, color: C.red, fontWeight: 600 }}>{mod.ia}</span>
+                        </div>
+                      )}
                     </div>
                     <div style={{ flexShrink: 0, width: 6, height: 6, borderRadius: '50%', background: C.green, marginTop: 8 }} />
                   </div>
