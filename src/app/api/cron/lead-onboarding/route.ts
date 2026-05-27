@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, procesados: 0 })
   }
 
-  const resultados = []
+  const resultados: Array<{ id: string; empresa: string | null; ok: boolean; slug?: string; error?: string }> = []
   for (const lead of leads) {
     try {
       const res = await procesarLead(lead, supabase)
