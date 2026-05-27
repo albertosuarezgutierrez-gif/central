@@ -14,6 +14,7 @@ import IaTrainingPanel from '@/components/super/IaTrainingPanel'
 import CRMAgentTab from '@/components/super/CRMAgentTab'
 import CRMEmpresaDetalle from '@/components/super/CRMEmpresaDetalle'
 import QAAgentTab from '@/components/super/QAAgentTab'
+import StripeOperadorTab from '@/components/super/StripeOperadorTab'
 
 
 interface Restaurante {
@@ -112,7 +113,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'>('clientes')
+  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'suscripciones'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'>('clientes')
   const [tabCRM, setTabCRM] = useState<'leads'|'agente'>('leads')
   const [showSistemaMenu, setShowSistemaMenu] = useState(false)
   const sistemaRef = useRef<HTMLDivElement>(null)
@@ -412,10 +413,11 @@ export default function SuperPage() {
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(12px, 4vw, 32px)', display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
           {/* Tabs principales */}
           {([
-            { id: 'clientes',    label: 'Clientes' },
-            { id: 'crm',         label: 'CRM' },
-            { id: 'cobro',       label: 'Cobro' },
-            { id: 'sugerencias', label: 'Sugerencias', badge: badgeSug },
+            { id: 'clientes',       label: 'Clientes' },
+            { id: 'crm',           label: 'CRM' },
+            { id: 'cobro',         label: 'Cobro' },
+            { id: 'suscripciones', label: '💳 Suscripciones' },
+            { id: 'sugerencias',   label: 'Sugerencias', badge: badgeSug },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               className="super-tab-btn"
@@ -488,6 +490,8 @@ export default function SuperPage() {
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: `clamp(24px, 5vw, 48px) clamp(12px, 4vw, 32px)` }}>
         {tabSuper === 'cobro' ? (
           <Cobro session={session} C={C} SE={SE} SN={SN} SM={SM} />
+        ) : tabSuper === 'suscripciones' ? (
+          <StripeOperadorTab />
         ) : tabSuper === 'crm' ? (
           <div style={{ padding: '0' }}>
             {/* Sub-nav CRM */}
