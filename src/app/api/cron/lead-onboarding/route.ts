@@ -69,7 +69,8 @@ async function procesarLead(
   // 2. Estudio IA
   const estudioRaw = await callAI(
     `Eres consultor experto en hostelería española analizando negocios para ia.rest (SaaS gestión voz, 59€/mes base).
-Módulos: voz, kds, almacen, contabilidad, qr, storefront, analytics, eventos, vinos, rrhh.
+Módulos: voz, kds, almacen, contabilidad, qr, storefront, analytics, eventos, vinos, rrhh, multi_local.
+IMPORTANTE: argumento_principal es la frase de apertura de una propuesta cuyo único objetivo es que el dueño quiera tener una reunión. Debe nombrar algo concreto y real del negocio, generar curiosidad y NO explicar el producto. Máximo 2 frases. Sin palabrería corporativa.
 Responde SOLO JSON válido.`,
     `Lead: ${empresa} | Web: ${web || 'n/a'} | Ciudad: ${lead.ciudad || 'n/a'}
 Notas: ${(lead.notas as string || '').substring(0, 300)}
@@ -102,14 +103,13 @@ JSON:
 
   // 4. Email draft
   const emailRaw = await callAI(
-    `Eres Alberto, fundador de ia.rest. Emails directos, cercanos, español de España. Sin "innovador/solución/potente". Solo JSON.`,
+    `Eres Alberto, fundador de ia.rest. Emails directos, cercanos, español de España. Sin "innovador/solución/potente". Solo JSON.
+El objetivo del email es conseguir una reunión (llamada o visita), NO explicar el producto. 1 pain point concreto del negocio, proponer quedar sin presión.`,
     `Email para ${empresa}.
-Argumento: ${estudio.argumento_principal}
-Pain points: ${(estudio.pain_points as string[])?.slice(0, 2).join(', ')}
-Módulos: ${(estudio.modulos_criticos as string[])?.join(', ')}
-MRR: ${estudio.mrr_estimado}€/mes
+Argumento (úsalo como gancho, no lo copies literal): ${estudio.argumento_principal}
+Pain point principal: ${(estudio.pain_points as string[])?.slice(0, 1).join(', ')}
 
-Reglas: máx 120 palabras, 1 pain point concreto, incluir __PROPUESTA_URL__ al final, CTA quedar en su local sin presión, firma Alberto · ia.rest · hola@iarest.es
+Reglas: máx 100 palabras, proponer llamada o visita, incluir __PROPUESTA_URL__ al final como "Te dejo esto por si quieres echarle un vistazo antes:", firma Alberto · ia.rest
 {"asunto":"máx 60 chars","cuerpo":"texto con \\n, incluir __PROPUESTA_URL__"}`,
     700, 20000
   )
@@ -120,14 +120,14 @@ Reglas: máx 120 palabras, 1 pain point concreto, incluir __PROPUESTA_URL__ al f
   // 5. WhatsApp draft
   const relacionInfo = (lead.notas as string || '').substring(0, 200)
   const waRaw = await callAI(
-    `Eres Alberto, fundador de ia.rest. WhatsApp corto, directo, cercano. Español de España. Devuelve SOLO el texto del mensaje.`,
+    `Eres Alberto, fundador de ia.rest. WhatsApp corto, directo, cercano. Español de España. Devuelve SOLO el texto del mensaje.
+Objetivo: conseguir que quieran quedar (llamada o visita). NO explicar el producto, solo generar curiosidad con algo concreto del negocio.`,
     `WhatsApp para ${empresa}.
 Contexto relación: ${relacionInfo}
-Pain point principal: ${(estudio.pain_points as string[])?.[0] || ''}
-Argumento: ${estudio.argumento_principal}
+Algo concreto del negocio: ${(estudio.pain_points as string[])?.[0] || estudio.argumento_principal}
 Propuesta URL: ${propuestaUrl}
 
-2-4 líneas máximo. Saludo cercano. 1 cosa concreta del negocio. Propone quedar. Max 2 emojis. Sin palabrería corporativa.`,
+2-3 líneas máximo. Saludo natural. 1 referencia real al negocio. Propone quedar o llamar. Max 1 emoji. Sin palabrería.`,
     300, 15000
   )
   // Siempre incluir propuesta + web al final, sin depender de la IA

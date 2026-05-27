@@ -12,9 +12,9 @@ export async function POST(
   const { slug } = await params
   const supabase = createServerClient()
 
-  const { nombre, email, fecha, hora, lugar, notas } = await req.json()
+  const { nombre, email, telefono, tipo_reunion, disponibilidad, fecha, hora, lugar, notas } = await req.json()
 
-  if (!nombre || !fecha || !hora || !lugar) {
+  if (!nombre) {
     return NextResponse.json({ error: 'Faltan campos obligatorios' }, { status: 400 })
   }
 
@@ -54,30 +54,33 @@ export async function POST(
     }
   }
 
-  const empresa = lead ? (lead.empresa || lead.restaurante || lead.nombre) : (staticSlugs[slug] || slug)
-  const fechaHora = `${fecha}T${hora}:00`
+  const tipoLabel = tipo_reunion === 'telefonica' ? '📞 Por teléfono' : '🤝 Presencial'
+  const lugarFinal = lugar || (tipo_reunion === 'telefonica' ? 'Llamada telefónica' : empresa)
+  const fechaHora = fecha ? `${fecha}T${hora || '11:00'}:00` : null
 
   // Actualizar lead si existe en BD
   if (lead) {
     const eventos = Array.isArray(lead.eventos) ? lead.eventos : []
     await supabase.from('leads').update({
-      reunion_fecha: fechaHora,
-      reunion_lugar: lugar,
-      reunion_notas: notas || null,
+      ...(fechaHora ? { reunion_fecha: fechaHora } : {}),
+      reunion_lugar: lugarFinal,
+      reunion_notas: notas || disponibilidad || null,
       reunion_confirmada: false,
       estado_pipeline: 'reunion_agendada',
       estado: 'demo',
       eventos: [...eventos, {
         tipo: '📅',
-        texto: `Reunión solicitada: ${fecha} ${hora}h en ${lugar}. Contacto: ${nombre} (${email || 'sin email'})`,
+        texto: `Reunión solicitada: ${tipoLabel}${disponibilidad ? ` · Disponibilidad: ${disponibilidad}` : ''}${telefono ? ` · Tel: ${telefono}` : ''}`,
         fecha: new Date().toISOString().split('T')[0]
       }]
     }).eq('id', lead.id)
   }
 
   // Notificar a Alberto por Telegram
+  const tipoLabel = tipo_reunion === 'telefonica' ? '\u{1F4DE} Por teléfono' : '\u{1F91D} Presencial'
+  const lugarFinal = lugar || (tipo_reunion === 'telefonica' ? 'Llamada telefónica' : empresa as string)
   await tgAlert(
-    `📅 Reunión solicitada!\n\n<b>${empresa}</b>\n👤 ${nombre}${email ? ` · ${email}` : ''}\n📍 ${lugar}\n🕐 ${fecha} a las ${hora}h${notas ? `\n📝 ${notas}` : ''}\n\n<a href="https://www.iarest.es/super">Confirmar en /super →</a>`,
+    `\u{1F4C5} <b>Reunión solicitada — ${empresa}</b>\n\n${tipoLabel}\n\u{1F464} ${nombre}${telefono ? ` · \u{1F4F1} ${telefono}` : ''}${email ? ` · ${email}` : ''}${disponibilidad ? `\n\u{1F5D3} Disponibilidad: ${disponibilidad}` : ''}${notas ? `\n\u{1F4DD} ${notas}` : ''}\n\n<a href="https://www.iarest.es/super">Ver en CRM \u2192</a>`,
     'info'
   )
   // Email confirmación al lead (si tiene email)
