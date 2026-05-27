@@ -180,6 +180,52 @@ export async function callAI(
 }
 
 /**
+ * Llamada con búsqueda web: Gemini Flash + Google Search grounding
+ * Usar SOLO para agentes que necesitan datos reales de internet (Lead Hunter, research)
+ * Fallback a callAI() si Gemini no disponible o falla
+ */
+export async function callAISearch(
+  system: string,
+  user: string,
+  maxTokens = 1500,
+  timeoutMs = 45_000
+): Promise<string> {
+  const geminiKey = process.env.GEMINI_API_KEY
+
+  if (geminiKey) {
+    try {
+      const res = await Promise.race([
+        fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              system_instruction: { parts: [{ text: system }] },
+              contents: [{ role: 'user', parts: [{ text: user }] }],
+              tools: [{ google_search: {} }],
+              generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
+            }),
+          }
+        ),
+        new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini timeout')), timeoutMs)),
+      ])
+
+      if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+      const data = await res.json()
+      const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
+      if (!text) throw new Error('Gemini: respuesta vacía')
+      return text
+    } catch (e) {
+      console.warn('[AI-CLIENT] Gemini Search falló, fallback callAI:', (e as Error).message)
+    }
+  }
+
+  // Fallback a NIM→Haiku sin search grounding
+  return callAI(system, user, maxTokens, timeoutMs, false)
+}
+
+/**
  * Llamada visión: NVIDIA gratis → Anthropic fallback
  */
 export async function callAIVision(

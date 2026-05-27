@@ -1,11 +1,11 @@
-// /api/cron/lead-onboarding — Detecta leads nuevos sin research y lanza flujo completo
-// Genera: estudio IA + propuesta + email + WhatsApp draft + avisa Telegram con botones
+// /api/cron/lead-onboarding — Lead Hunter v3 con Gemini Search grounding
+// Acepta cualquier input (web, Instagram, Facebook, nombre) → búsqueda completa en internet
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { callAI, cleanJSON } from '@/lib/ai-client'
+import { callAI, callAISearch, cleanJSON } from '@/lib/ai-client'
 
 export async function GET(req: NextRequest) {
   const auth = req.headers.get('authorization')
@@ -15,7 +15,6 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
-  // Leads nuevos sin research, últimas 72h
   const hace72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: leads } = await supabase
     .from('leads')
@@ -35,7 +34,7 @@ export async function GET(req: NextRequest) {
     try {
       const res = await procesarLead(lead, supabase)
       resultados.push({ id: lead.id, empresa: lead.empresa || lead.restaurante || lead.nombre, ok: true, slug: res.slug })
-      await new Promise(r => setTimeout(r, 3000))
+      await new Promise(r => setTimeout(r, 2000))
     } catch (e) {
       console.error('[lead-onboarding] Error en lead', lead.id, e)
       resultados.push({ id: lead.id, empresa: lead.empresa || lead.nombre, ok: false, error: String(e) })
@@ -51,98 +50,125 @@ async function procesarLead(
 ) {
   const empresa = (lead.empresa || lead.restaurante || lead.nombre || 'Desconocido') as string
   const web = (lead.web || '') as string
+  const ciudad = (lead.ciudad || '') as string
   const datosOp = (lead.datos_operativos as Record<string, unknown>) || {}
 
-  // 1. Contenido web
-  let webContent = ''
-  if (web) {
-    try {
-      const res = await fetch(web, { signal: AbortSignal.timeout(6000), headers: { 'User-Agent': 'Mozilla/5.0' } })
-      const html = await res.text()
-      webContent = html
-        .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
-        .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
-        .replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').substring(0, 3000)
-    } catch { webContent = '' }
-  }
+  // 1. Research completo con Gemini + Google Search grounding
+  // Le pasamos todo lo que tengamos: nombre, web, ciudad, notas
+  // Gemini busca en Google automáticamente para completar lo que falte
+  const researchRaw = await callAISearch(
+    `Eres un investigador de negocios especializado en hostelería española. 
+Tu tarea es hacer un research COMPLETO de un negocio de hostelería usando todos los medios disponibles.
+Busca en Google, Google Maps, redes sociales, directorios, prensa local — todo lo que encuentres.
+Responde SOLO con JSON válido, sin texto adicional.`,
+    `Investiga este negocio de hostelería:
+Nombre: ${empresa}
+${web ? `URL/Red social: ${web}` : ''}
+${ciudad ? `Ciudad: ${ciudad}` : ''}
+Notas adicionales: ${(lead.notas as string || '').substring(0, 300)}
+Datos conocidos: ${JSON.stringify(datosOp).substring(0, 300)}
 
-  // 2. Estudio IA
-  const estudioRaw = await callAI(
-    `Eres consultor experto en hostelería española analizando negocios para ia.rest (SaaS gestión voz, 59€/mes base).
-Módulos: voz, kds, almacen, contabilidad, qr, storefront, analytics, eventos, vinos, rrhh, multi_local.
-IMPORTANTE: argumento_principal es la frase de apertura de una propuesta cuyo único objetivo es que el dueño quiera tener una reunión. Debe nombrar algo concreto y real del negocio, generar curiosidad y NO explicar el producto. Máximo 2 frases. Sin palabrería corporativa.
-Responde SOLO JSON válido.`,
-    `Lead: ${empresa} | Web: ${web || 'n/a'} | Ciudad: ${lead.ciudad || 'n/a'}
-Notas: ${(lead.notas as string || '').substring(0, 300)}
-Datos: ${JSON.stringify(datosOp).substring(0, 400)}
-Pain points conocidos: ${JSON.stringify(lead.pain_points || []).substring(0, 200)}
-Web content: ${webContent.substring(0, 1500)}
-
-JSON:
-{"resumen_negocio":"2-3 frases","tipo_negocio":"restaurante|bar|catering|grupo","num_locales_estimado":1,"num_empleados_estimado":8,"tpv_actual":"nombre o Desconocido","pain_points":["p1","p2","p3"],"modulos_criticos":["eventos","almacen"],"modulos_secundarios":["analytics"],"mrr_estimado":150,"argumento_principal":"argumento más poderoso específico para este negocio","tono_propuesta":"profesional|informal","nivel_urgencia":"alta|media|baja","puntuacion_lead":75}`,
-    1200, 30000, true
+Busca en internet TODO lo que puedas encontrar sobre este negocio y devuelve:
+{
+  "nombre_oficial": "nombre real del negocio",
+  "tipo_negocio": "restaurante|bar|catering|grupo|mixto",
+  "descripcion": "2-3 frases con info real encontrada online",
+  "web_oficial": "URL si encontrada",
+  "direccion": "dirección completa si encontrada",
+  "telefono": "si encontrado",
+  "ciudad": "ciudad confirmada",
+  "num_locales": 1,
+  "num_empleados_estimado": 8,
+  "rating_google": 0.0,
+  "num_resenas": 0,
+  "precio_medio": "€|€€|€€€",
+  "horario": "si encontrado",
+  "tpv_actual": "nombre TPV o Desconocido",
+  "redes_sociales": {"instagram": "", "facebook": ""},
+  "menciones_prensa": ["titular 1 si hay"],
+  "eventos_catering": true,
+  "tiene_carta_online": false,
+  "pain_points_detectados": ["p1", "p2", "p3"],
+  "modulos_criticos": ["eventos", "almacen"],
+  "modulos_secundarios": ["analytics"],
+  "mrr_estimado": 150,
+  "puntuacion_lead": 75,
+  "argumento_principal": "frase gancho específica para este negocio que genere curiosidad y ganas de reunirse, máx 2 frases, sin explicar el producto",
+  "tono_propuesta": "profesional|informal",
+  "nivel_urgencia": "alta|media|baja"
+}`,
+    1600,
+    50000
   )
 
   let estudio: Record<string, unknown> = {}
-  try { estudio = JSON.parse(cleanJSON(estudioRaw)) } catch {
+  try { estudio = JSON.parse(cleanJSON(researchRaw)) } catch {
     estudio = {
-      resumen_negocio: `Negocio hostelero: ${empresa}`,
-      tipo_negocio: 'catering', pain_points: ['Gestión manual', 'Sin control costes'],
-      modulos_criticos: ['eventos', 'almacen'], modulos_secundarios: ['analytics'],
-      mrr_estimado: 150, argumento_principal: `Gestiona ${empresa} sin hojas de cálculo`,
+      descripcion: `Negocio hostelero: ${empresa}`,
+      tipo_negocio: 'restaurante',
+      pain_points_detectados: ['Gestión manual', 'Sin control costes'],
+      modulos_criticos: ['voz', 'almacen'], modulos_secundarios: ['analytics'],
+      mrr_estimado: 150,
+      argumento_principal: `${empresa} tiene una oportunidad concreta que quiero contarte en 10 minutos.`,
       tono_propuesta: 'profesional', nivel_urgencia: 'media', puntuacion_lead: 65,
     }
   }
 
-  // 3. Slug (limpio, sin timestamp si ya es específico)
+  // Normalizar campos con fallbacks
+  const resumenNegocio = (estudio.descripcion || estudio.resumen_negocio || `Negocio hostelero: ${empresa}`) as string
+  const painPoints = (estudio.pain_points_detectados || estudio.pain_points || ['Gestión manual']) as string[]
+  const modulosCriticos = (estudio.modulos_criticos || ['voz']) as string[]
+  const modulosSecundarios = (estudio.modulos_secundarios || ['analytics']) as string[]
+
+  // 2. Slug
   const slugBase = empresa.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').substring(0, 35)
   const slug = slugBase
   const propuestaUrl = `https://www.iarest.es/propuesta/${slug}`
 
-  // 4. Email draft
-  const emailRaw = await callAI(
-    `Eres Alberto, fundador de ia.rest. Emails directos, cercanos, español de España. Sin "innovador/solución/potente". Solo JSON.
-El objetivo del email es conseguir una reunión (llamada o visita), NO explicar el producto. 1 pain point concreto del negocio, proponer quedar sin presión.`,
-    `Email para ${empresa}.
-Argumento (úsalo como gancho, no lo copies literal): ${estudio.argumento_principal}
-Pain point principal: ${(estudio.pain_points as string[])?.slice(0, 1).join(', ')}
-
-Reglas: máx 100 palabras, proponer llamada o visita, incluir __PROPUESTA_URL__ al final como "Te dejo esto por si quieres echarle un vistazo antes:", firma Alberto · ia.rest
+  // 3. Email + WhatsApp en paralelo
+  const [emailRaw, waRaw] = await Promise.allSettled([
+    callAI(
+      `Eres Alberto, fundador de ia.rest. Emails directos, cercanos, español de España. Sin "innovador/solución/potente". Solo JSON.
+El objetivo es conseguir una reunión. 1 referencia real al negocio, proponer quedar sin presión.`,
+      `Email para ${empresa}.
+Gancho (úsalo adaptado, no literal): ${estudio.argumento_principal}
+Info real del negocio: ${resumenNegocio}
+Pain point principal: ${painPoints[0] || ''}
+Reglas: máx 100 palabras, proponer llamada o visita, incluir __PROPUESTA_URL__ al final como "Te dejo esto por si quieres echarle un ojo antes:", firma Alberto · ia.rest
 {"asunto":"máx 60 chars","cuerpo":"texto con \\n, incluir __PROPUESTA_URL__"}`,
-    700, 20000, true
-  )
-  let emailData = { asunto: `ia.rest para ${empresa}`, cuerpo: `Hola,\n\n${estudio.argumento_principal}\n\nPropuesta: __PROPUESTA_URL__\n\nAlberto · ia.rest · hola@iarest.es` }
-  try { emailData = JSON.parse(cleanJSON(emailRaw)) } catch { /* default */ }
+      700, 20000, true
+    ),
+    callAI(
+      `Eres Alberto, fundador de ia.rest. WhatsApp corto, directo, cercano. Español de España. Devuelve SOLO el texto del mensaje sin JSON.
+Objetivo: conseguir una reunión. NO explicar el producto.`,
+      `WhatsApp para ${empresa}.
+Info real: ${resumenNegocio}
+Algo concreto: ${painPoints[0] || estudio.argumento_principal}
+2-3 líneas. Saludo natural. 1 referencia real. Propone quedar. Max 1 emoji.`,
+      300, 15000, true
+    ),
+  ])
+
+  let emailData = { asunto: `ia.rest para ${empresa}`, cuerpo: `Hola,\n\n${estudio.argumento_principal}\n\nPropuesta: __PROPUESTA_URL__\n\nAlberto · ia.rest` }
+  if (emailRaw.status === 'fulfilled') {
+    try { emailData = JSON.parse(cleanJSON(emailRaw.value)) } catch { /* default */ }
+  }
   const emailCuerpo = emailData.cuerpo.replace(/__PROPUESTA_URL__/g, propuestaUrl)
 
-  // 5. WhatsApp draft
-  const relacionInfo = (lead.notas as string || '').substring(0, 200)
-  const waRaw = await callAI(
-    `Eres Alberto, fundador de ia.rest. WhatsApp corto, directo, cercano. Español de España. Devuelve SOLO el texto del mensaje.
-Objetivo: conseguir que quieran quedar (llamada o visita). NO explicar el producto, solo generar curiosidad con algo concreto del negocio.`,
-    `WhatsApp para ${empresa}.
-Contexto relación: ${relacionInfo}
-Algo concreto del negocio: ${(estudio.pain_points as string[])?.[0] || estudio.argumento_principal}
-Propuesta URL: ${propuestaUrl}
+  const waDraft = `${waRaw.status === 'fulfilled' ? waRaw.value.trim() : `Hola, quería comentarte algo sobre ${empresa}.`}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
 
-2-3 líneas máximo. Saludo natural. 1 referencia real al negocio. Propone quedar o llamar. Max 1 emoji. Sin palabrería.`,
-    300, 15000, true
-  )
-  // Siempre incluir propuesta + web al final, sin depender de la IA
-  const waDraft = `${waRaw.trim()}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
-
-  // 6. Guardar en BD
+  // 4. Guardar en BD
   const { data: current } = await supabase.from('leads').select('eventos').eq('id', lead.id as string).single()
   const eventos = Array.isArray(current?.eventos) ? current.eventos : []
 
-  await supabase.from('leads').update({
+  const updateData: Record<string, unknown> = {
     estudio_completo: estudio,
-    pain_points: (estudio.pain_points as string[]) || [],
-    modulos_recomendados: [...((estudio.modulos_criticos as string[]) || []), ...((estudio.modulos_secundarios as string[]) || [])],
-    mrr_estimado: estudio.mrr_estimado as number || null,
-    tpv: (estudio.tpv_actual as string) || (lead.tpv as string),
+    pain_points: painPoints,
+    modulos_recomendados: [...modulosCriticos, ...modulosSecundarios],
+    mrr_estimado: (estudio.mrr_estimado as number) || null,
+    tpv: (estudio.tpv_actual as string) || (lead.tpv as string) || null,
     propuesta_slug: slug,
     email_draft: emailCuerpo,
     email_asunto: emailData.asunto,
@@ -151,16 +177,24 @@ Propuesta URL: ${propuestaUrl}
     research_at: new Date().toISOString(),
     eventos: [...eventos, {
       tipo: '🔍',
-      texto: `Research automático. Puntuación: ${estudio.puntuacion_lead}/100. MRR: ${estudio.mrr_estimado}€/mes`,
+      texto: `Research automático (Gemini Search). Puntuación: ${estudio.puntuacion_lead}/100. MRR: ${estudio.mrr_estimado}€/mes`,
       fecha: new Date().toISOString().split('T')[0]
     }]
-  }).eq('id', lead.id as string)
+  }
 
-  // 7. Telegram con botones
-  const token = process.env.TELEGRAM_BOT_TOKEN
+  // Enriquecer lead con datos encontrados
+  if (estudio.web_oficial && !lead.web) updateData.web = estudio.web_oficial
+  if (estudio.direccion) updateData.direccion = estudio.direccion
+  if (estudio.ciudad && !lead.ciudad) updateData.ciudad = estudio.ciudad
+
+  await supabase.from('leads').update(updateData).eq('id', lead.id as string)
+
+  // 5. Telegram
+  const tgToken = process.env.TELEGRAM_BOT_TOKEN
   const chat_id = process.env.TELEGRAM_CHAT_ID
-  if (token && chat_id) {
-    await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+  if (tgToken && chat_id) {
+    const ratingTexto = estudio.rating_google ? ` · ⭐${estudio.rating_google} (${estudio.num_resenas} reseñas)` : ''
+    await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -169,20 +203,24 @@ Propuesta URL: ${propuestaUrl}
         text: [
           `🆕 <b>Lead listo: ${empresa}</b>`,
           ``,
-          `📋 ${(estudio.resumen_negocio as string || '').substring(0, 130)}`,
-          `💰 MRR estimado: <b>${estudio.mrr_estimado}€/mes</b>`,
-          `📦 Módulos clave: ${(estudio.modulos_criticos as string[])?.join(', ')}`,
+          `📋 ${resumenNegocio.substring(0, 160)}`,
+          estudio.direccion ? `📍 ${estudio.direccion}` : null,
+          `💰 MRR estimado: <b>${estudio.mrr_estimado}€/mes</b>${ratingTexto}`,
+          `📦 Módulos clave: ${modulosCriticos.join(', ')}`,
           `⭐ Puntuación: ${estudio.puntuacion_lead}/100`,
           ``,
           `📧 Email: <i>${emailData.asunto}</i>`,
           `📱 WhatsApp: listo para copiar`,
           `🔗 <a href="${propuestaUrl}">Ver propuesta →</a>`,
-        ].join('\n'),
+        ].filter(Boolean).join('\n'),
         reply_markup: {
           inline_keyboard: [
             [
               { text: '📱 Ver WhatsApp', callback_data: `ver_whatsapp:${lead.id}` },
-              ...(lead.email ? [{ text: '📨 Enviar email', callback_data: `enviar_email:${lead.id}` }] : [{ text: '✏️ CRM', url: 'https://www.iarest.es/super' }]),
+              ...(lead.email
+                ? [{ text: '📨 Enviar email', callback_data: `enviar_email:${lead.id}` }]
+                : [{ text: '✏️ CRM', url: 'https://www.iarest.es/super' }]
+              ),
             ],
             [
               { text: '🔗 Ver propuesta', url: propuestaUrl },
