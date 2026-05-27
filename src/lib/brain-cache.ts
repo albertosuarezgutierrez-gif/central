@@ -73,7 +73,7 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
   const [{ data: productos }, { data: formatos }, { data: zonas }, { data: personal }, { data: secciones }] = await Promise.all([
     supabase
       .from('productos')
-      .select('id, nombre, nombre_alternativo, precio, seccion, familia')
+      .select('id, nombre, nombre_alternativo, alias_ia, precio, seccion, familia')
       .eq('activo', true)
       .eq('restaurante_id', restaurante_id),
     supabase
@@ -115,6 +115,7 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
     aliases: [
       p.nombre as string,
       ...(Array.isArray(p.nombre_alternativo) ? (p.nombre_alternativo as string[]) : []),
+      ...(Array.isArray(p.alias_ia) ? (p.alias_ia as string[]) : []),   // alias IA (invisibles para el owner)
     ],
     precio: p.precio != null ? Number(p.precio) : null,
     seccion: (p.seccion as string) ?? null,

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (aliases.length === 0 && data?.id) {
     generarAliasFoneticos(nombre.trim()).then(async (generados) => {
       if (!generados.length) return
-      await supabase.from('productos').update({ nombre_alternativo: generados }).eq('id', data.id).eq('restaurante_id', rid)
+      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('restaurante_id', rid)
       invalidarCache(rid)
       console.log(`[ALIAS-IA] ${nombre}: ${generados.join(', ')}`)
     }).catch(() => {})
@@ -60,11 +60,11 @@ export async function PUT(req: NextRequest) {
     .eq('id', id).eq('restaurante_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   invalidarCache(rid)
-  // Si se cambió nombre y alias vacíos → regenerar con IA
+  // Si se cambió nombre y alias vacíos → regenerar alias IA en alias_ia
   if (updates.nombre && data?.id && (!updates.nombre_alternativo || (updates.nombre_alternativo as string[]).length === 0)) {
     generarAliasFoneticos(updates.nombre.trim()).then(async (generados) => {
       if (!generados.length) return
-      await supabase.from('productos').update({ nombre_alternativo: generados }).eq('id', data.id).eq('restaurante_id', rid)
+      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('restaurante_id', rid)
       invalidarCache(rid)
       console.log(`[ALIAS-IA] ${updates.nombre} (edit): ${generados.join(', ')}`)
     }).catch(() => {})

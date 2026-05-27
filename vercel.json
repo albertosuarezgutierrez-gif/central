@@ -103,6 +103,10 @@
     {
       "path": "/api/cron/pipeline-comercial",
       "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/alias-ia",
+      "schedule": "0 3 * * *"
     }
   ]
 }
