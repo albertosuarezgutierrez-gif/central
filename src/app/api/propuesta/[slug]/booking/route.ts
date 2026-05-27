@@ -54,6 +54,7 @@ export async function POST(
     }
   }
 
+  const empresa = lead ? (lead.empresa || lead.restaurante || lead.nombre) : (staticSlugs[slug] || slug)
   const tipoLabel = tipo_reunion === 'telefonica' ? '📞 Por teléfono' : '🤝 Presencial'
   const lugarFinal = lugar || (tipo_reunion === 'telefonica' ? 'Llamada telefónica' : empresa)
   const fechaHora = fecha ? `${fecha}T${hora || '11:00'}:00` : null
