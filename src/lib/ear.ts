@@ -13,6 +13,14 @@ export interface TranscripcionResult {
   avg_logprob: number | null
 }
 
+/** Error especial para audio demasiado corto (PTT soltado sin hablar). No es un fallo real. */
+export class AudioDemasiadoCortoError extends Error {
+  constructor() {
+    super('Audio demasiado corto — ignorar silenciosamente')
+    this.name = 'AudioDemasiadoCortoError'
+  }
+}
+
 /** Transcribe audio. Intenta Groq Whisper primero, fallback automático a OpenAI si falla. */
 export async function transcribir(audioBlob: Blob, prompt?: string, idioma = 'es'): Promise<TranscripcionResult> {
   const start = Date.now()
@@ -23,9 +31,19 @@ export async function transcribir(audioBlob: Blob, prompt?: string, idioma = 'es
       const resultado = await transcribirConGroq(audioBlob, prompt, idioma)
       return { ...resultado, proveedor: 'groq' }
     } catch (err) {
+      // Audio vacío → propagar directamente, sin fallback ni notificación
+      if (err instanceof AudioDemasiadoCortoError) throw err
+
       const msg = err instanceof Error ? err.message : String(err)
       const esRateLimit = msg.includes('429') || msg.includes('rate') || msg.includes('limit')
       const esAuth      = msg.includes('401') || msg.includes('API key') || msg.includes('authentication')
+      const esAudioCorto = msg.includes('too short') || msg.includes('Minimum audio length') || msg.includes('0.01 seconds')
+
+      // Audio vacío (PTT soltado sin hablar) → lanzar error especial, sin fallback ni tgAlert
+      if (esAudioCorto) {
+        console.log('[EAR] Audio demasiado corto, ignorando silenciosamente')
+        throw new AudioDemasiadoCortoError()
+      }
 
       console.warn(`[EAR] Groq falló (${msg}) — activando fallback OpenAI`)
 

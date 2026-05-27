@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { transcribir } from '@/lib/ear'
+import { transcribir, AudioDemasiadoCortoError } from '@/lib/ear'
 import { routearComanda } from '@/lib/brain-router'
 import { crearPrintJobs, crearPrintJobCuenta } from '@/lib/courier'
 import { createServerClient } from '@/lib/supabase'
@@ -929,6 +929,12 @@ export async function POST(req: NextRequest) {
     if (recordingId) recentRecordings.set(recordingId, { ts: Date.now(), result: okResult })
     return NextResponse.json(okResult)
   } catch (err) {
+    // Audio vacío (PTT soltado sin hablar) → respuesta silenciosa, sin error ni tgAlert
+    if (err instanceof AudioDemasiadoCortoError) {
+      return NextResponse.json({ ok: false, audio_corto: true, texto: '', brain: null, comanda_id: null,
+        latencia_ms: 0, aviso_ruido: true, alertas_86: [], alertas_alergenos: [] })
+    }
+
     const msg = err instanceof Error ? err.message : String(err)
     const is401 = msg.includes('401') || (err as { status?: number })?.status === 401
 

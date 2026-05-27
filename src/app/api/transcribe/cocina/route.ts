@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import { transcribir } from '@/lib/ear'
+import { transcribir, AudioDemasiadoCortoError } from '@/lib/ear'
 
 /**
  * POST /api/transcribe/cocina
@@ -71,6 +71,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true, texto: resultado?.texto?.trim() ?? '' })
 
   } catch (err) {
+    if (err instanceof AudioDemasiadoCortoError) {
+      return NextResponse.json({ ok: false, audio_corto: true, texto: '' })
+    }
     console.error('[transcribe/cocina]', err)
     return NextResponse.json({ error: 'Error al transcribir' }, { status: 500 })
   }
