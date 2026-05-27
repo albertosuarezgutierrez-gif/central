@@ -1,6 +1,7 @@
 import { BrainResult } from '@/types'
 import { createServerClient } from '@/lib/supabase'
 import { getMenuCache } from '@/lib/brain-cache'
+import { corregirTranscripcion, registrarCorreccionFuzzy } from '@/lib/fuzzy-comanda'
 
 // ── Contexto dinámico (recomendaciones, carta, zonas) ──────────────────────
 
@@ -412,9 +413,27 @@ export async function parsearComanda(
   turno_id?: string,
   camarero_id?: string
 ): Promise<BrainResult> {
+  // ── Capa 1: corrección léxica fuzzy (sin IA, <5ms) ──────────────────────
+  // Corrige errores de transcripción Whisper antes de enviar al LLM.
+  // Reutiliza el brain-cache — sin query extra a BD.
+  let textoParaLLM = texto
+  if (restaurante_id) {
+    try {
+      const cacheFuzzy = await getMenuCache(restaurante_id)
+      const correccion = corregirTranscripcion(texto, cacheFuzzy.productos)
+      if (correccion.hubo_cambios) {
+        textoParaLLM = correccion.corregido
+        console.log(`[FUZZY] "${texto}" → "${textoParaLLM}" (${correccion.cambios.length} fix, avg ${correccion.confianza.toFixed(2)})`)
+        registrarCorreccionFuzzy(createServerClient(), restaurante_id, turno_id, correccion).catch(() => {})
+      }
+    } catch {
+      // Si fuzzy falla, continuar con texto original sin interrumpir
+    }
+  }
+
   // Lanzar todas las consultas de contexto en paralelo (carta + zonas + recom + sesión + personal)
   // Cargar vinos solo si la transcripción lo sugiere (ahorra latencia)
-  const necesitaVinos = /recomend|maridaj|vino para|vino con|sommelier|sumiller|que vino/i.test(texto)
+  const necesitaVinos = /recomend|maridaj|vino para|vino con|sommelier|sumiller|que vino/i.test(textoParaLLM)
 
   const [menuContext, zonasContext, recomContext, sesionContext, personalContext, seccionesContext, vinosContext] = await Promise.all([
     buildMenuContext(restaurante_id),
@@ -437,7 +456,7 @@ export async function parsearComanda(
   if (hasNvidia) {
     try {
       const raw = await Promise.race([
-        callNvidia(systemPromptBase, texto),
+        callNvidia(systemPromptBase, textoParaLLM),
         new Promise<never>((_, reject) =>
           setTimeout(() => reject(new Error('NVIDIA timeout 5s')), 5_000)
         ),
@@ -450,7 +469,7 @@ export async function parsearComanda(
         console.warn(`[BRAIN] NVIDIA confianza baja (${result.confianza}), reintentando con memoria de sesión`)
         try {
           const rawRetry = await Promise.race([
-            callNvidia(systemPromptBase + sesionContext, texto),
+            callNvidia(systemPromptBase + sesionContext, textoParaLLM),
             new Promise<never>((_, reject) =>
               setTimeout(() => reject(new Error('NVIDIA retry timeout 5s')), 5_000)
             ),
@@ -477,7 +496,7 @@ export async function parsearComanda(
     : systemPromptBase
   try {
     const raw = await Promise.race([
-      callAnthropic(systemPromptFallback, texto),
+      callAnthropic(systemPromptFallback, textoParaLLM),
       new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error('Anthropic timeout 20s')), 20_000)
       ),

@@ -5,9 +5,9 @@ import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16' as never,
-})
+}) }
 
 function isSuperAdmin(req: NextRequest) {
   const s = getSession(req)
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Precio ad-hoc por cliente (no usa price IDs fijos)
-  const price = await stripe.prices.create({
+  const price = await getStripe().prices.create({
     unit_amount: Math.round(precio_mensual * 100),
     currency: 'eur',
     recurring: { interval: 'month' },
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     },
   })
 
-  const checkoutSession = await stripe.checkout.sessions.create({
+  const checkoutSession = await getStripe().checkout.sessions.create({
     customer: cuenta.stripe_customer_id,
     mode: 'subscription',
     line_items: [{ price: price.id, quantity: 1 }],

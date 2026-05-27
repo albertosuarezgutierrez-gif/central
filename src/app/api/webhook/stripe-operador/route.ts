@@ -7,10 +7,12 @@ import { tgAlert } from '@/lib/telegram'
 import { Resend } from 'resend'
 import { periodoStr, trimestreActual } from '@/lib/contabilidad'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as never,
-})
-const resend = new Resend(process.env.RESEND_API_KEY!)
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2023-10-16' as never,
+  })
+}
+function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
@@ -19,7 +21,7 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event
   try {
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret)
+    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret)
   } catch (err: any) {
     return NextResponse.json({ error: `Webhook error: ${err.message}` }, { status: 400 })
   }
@@ -33,7 +35,7 @@ export async function POST(req: NextRequest) {
       const cuenta_id = s.metadata?.cuenta_id
       if (!cuenta_id || !s.subscription) break
 
-      const sub = await stripe.subscriptions.retrieve(s.subscription as string) as any
+      const sub = await getStripe().subscriptions.retrieve(s.subscription as string) as any
       const proximoCobro = new Date(sub.current_period_end * 1000).toISOString()
 
       await sb.from('cuentas').update({
@@ -64,7 +66,7 @@ export async function POST(req: NextRequest) {
         .single()
       if (!cuenta) break
 
-      const sub = await stripe.subscriptions.retrieve(inv.subscription as string) as any
+      const sub = await getStripe().subscriptions.retrieve(inv.subscription as string) as any
       const proximoCobro = new Date(sub.current_period_end * 1000).toISOString()
       await sb.from('cuentas').update({
         stripe_estado: 'activa',
@@ -83,7 +85,7 @@ export async function POST(req: NextRequest) {
 
       // 1. EMAIL al cliente
       if (cuenta.email) {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: 'ia.rest <facturacion@iarest.es>',
           to: cuenta.email,
           subject: `Factura ia.rest — ${mesAno} (${numeroFactura})`,
@@ -213,7 +215,7 @@ export async function POST(req: NextRequest) {
       await sb.from('cuentas').update({ stripe_estado: 'impago' }).eq('id', cuenta.id)
 
       if (cuenta.email) {
-        await resend.emails.send({
+        await getResend().emails.send({
           from: 'ia.rest <facturacion@iarest.es>',
           to: cuenta.email,
           subject: 'Problema con tu pago de ia.rest',
