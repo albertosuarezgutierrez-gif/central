@@ -5,9 +5,9 @@ import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
+function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2023-10-16' as never,
-})
+}) }
 
 function isSuperAdmin(req: NextRequest) {
   const s = getSession(req)
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ya tiene customer de Stripe' }, { status: 400 })
   }
 
-  const customer = await stripe.customers.create({
+  const customer = await getStripe().customers.create({
     email,
     name: nombre_empresa,
     metadata: { cuenta_id },

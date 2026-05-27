@@ -5,9 +5,11 @@ import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 import Stripe from 'stripe'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as never,
-})
+function getStripe() {
+  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
+    apiVersion: '2023-10-16' as never,
+  })
+}
 
 function isSuperAdmin(req: NextRequest) {
   const s = getSession(req)
@@ -31,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
 
   // Cancelar al final del período — no corte inmediato
-  await stripe.subscriptions.update(cuenta.stripe_subscription_id, {
+  await getStripe().subscriptions.update(cuenta.stripe_subscription_id, {
     cancel_at_period_end: true,
   })
 
