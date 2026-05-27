@@ -95,6 +95,10 @@
     {
       "path": "/api/super/qa-agent/cron",
       "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/lead-onboarding",
+      "schedule": "*/30 * * * *"
     }
   ]
 }

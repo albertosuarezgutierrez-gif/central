@@ -93,6 +93,41 @@ export async function POST(req: NextRequest) {
       await tgEditMessage(messageId, message.text + '\n\n👆 <i>Revísalo y envíalo desde <a href="https://www.iarest.es/super">/super</a></i>')
     }
 
+    if (action === 'ver_whatsapp') {
+      await tgAnswerCallback(callbackId, '📱 Cargando WhatsApp…')
+      const { data: lead } = await supabase
+        .from('leads')
+        .select('empresa, restaurante, nombre, whatsapp_draft, propuesta_slug')
+        .eq('id', leadId)
+        .single()
+
+      const empresa = lead?.empresa || lead?.restaurante || lead?.nombre || leadId
+      const waDraft = (lead as Record<string, unknown>)?.whatsapp_draft as string || 'No generado aún. Pulsa Regenerar en el CRM.'
+      const propuestaUrl = lead?.propuesta_slug
+        ? `https://www.iarest.es/propuesta/${lead.propuesta_slug}`
+        : 'https://www.iarest.es/super'
+
+      const token = process.env.TELEGRAM_BOT_TOKEN
+      const chat_id = process.env.TELEGRAM_CHAT_ID
+      if (token && chat_id) {
+        await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            chat_id,
+            parse_mode: 'HTML',
+            text: [
+              `📱 <b>WhatsApp para ${empresa}</b>`,
+              ``,
+              `<code>${waDraft}</code>`,
+              ``,
+              `🔗 <a href="${propuestaUrl}">Propuesta →</a>  ·  Copia el texto y envíalo`,
+            ].join('\n'),
+          }),
+        }).catch(console.error)
+      }
+    }
+
     return NextResponse.json({ ok: true })
   }
 

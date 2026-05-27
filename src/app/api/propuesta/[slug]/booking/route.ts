@@ -28,6 +28,7 @@ export async function POST(
     'catering-jj-catering': 'Catering Joaquín Jaén',
     'eventos-catering': 'Eventos & Catering',
     'bombonera-group': 'Bombonera Group',
+    'tu-otra-cocina': 'Tu Otra Cocina',
   }
   let lead: { id: string; empresa: string | null; restaurante: string | null; nombre: string | null; email: string | null; eventos: unknown[] } | null = null
 
@@ -139,6 +140,7 @@ export async function PATCH(
     'catering-jj-catering': 'Catering Joaquín Jaén',
     'eventos-catering': 'Eventos & Catering',
     'bombonera-group': 'Bombonera Group',
+    'tu-otra-cocina': 'Tu Otra Cocina',
   }
 
   // Buscar lead por slug (directo o fallback por empresa)
