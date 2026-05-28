@@ -222,11 +222,8 @@
 <script>
 var items=[], selIdx=-1, selPrice=0, pdfName='propuesta.pdf';
 
-function rmItem(btn){btn.parentElement.remove()}
-function addItem(){var d=document.createElement('div');d.className='menu-row';d.innerHTML='<input type="text" placeholder="Nombre del menú"/><input type="number" placeholder="€" style="text-align:right"/><button class="icon-btn" onclick="rmItem(this)">×</button>';document.getElementById('menu-list').appendChild(d)}
 function onFile(i){if(i.files[0]){pdfName=i.files[0].name;var el=document.getElementById('file-ok');el.textContent='✓ '+pdfName;el.style.display='block'}}
 
-function getItems(){var rows=document.querySelectorAll('#menu-list .menu-row'),out=[];rows.forEach(function(r){var inp=r.querySelectorAll('input');var n=inp[0].value.trim(),p=parseFloat(inp[1].value);if(n&&p>0)out.push({name:n,price:p})});return out}
 
 function setStep(n){
   for(var i=1;i<=4;i++){
@@ -240,12 +237,14 @@ function setStep(n){
 
 function goTo(n){
   if(n===2){
-    items=getItems();
-    if(!items.length){alert('Añade al menos una opción de menú');return}
+    var imp=parseFloat(document.getElementById('f-importe').value||0);
+    if(!imp||imp<=0){alert('Introduce el importe total');return}
+    var desc=document.getElementById('f-desc').value||'Evento';
+    items=[{name:desc,price:imp}];
     document.getElementById('p-email').textContent=document.getElementById('f-email').value||'cliente@empresa.com';
     document.getElementById('p-asunto').textContent='Confirmación y pago — '+(document.getElementById('f-evento').value||'Tu evento');
     document.getElementById('p-pdf').textContent=pdfName;
-    document.getElementById('p-items').innerHTML=items.map(function(i){return'<div class="menu-option"><span>'+i.name+'</span><span class="price">'+(i.price*1.01).toFixed(2)+' €</span></div>'}).join('');
+    var desc=document.getElementById('f-desc').value||'Evento';var imp=parseFloat(document.getElementById('f-importe').value||0);document.getElementById('p-items').innerHTML='<div class="menu-option"><span>'+desc+'</span><span class="price">'+(imp*1.01).toFixed(2)+' €</span></div>';
   }
   if(n===3){
     document.getElementById('c-evento').textContent=document.getElementById('f-evento').value||'Tu evento';
@@ -278,7 +277,7 @@ function checkPay(){
   btn.textContent=selIdx>=0?'Pagar '+selPrice.toFixed(2)+' € con tarjeta':'Pagar con tarjeta';
 }
 
-function reset(){items=[];selIdx=-1;selPrice=0;document.getElementById('f-email').value='';document.getElementById('f-evento').value='';document.getElementById('c-nombre').value='';setStep(1)}
+function reset(){items=[];selIdx=-1;selPrice=0;document.getElementById('f-email').value='';document.getElementById('f-evento').value='';document.getElementById('f-desc').value='';document.getElementById('f-importe').value='';document.getElementById('c-nombre').value='';setStep(1)}
 </script>
 </body>
 </html>
