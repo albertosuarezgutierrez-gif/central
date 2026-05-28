@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('restaurantes')
-    .select('id, nombre, slug, nif, razon_social, direccion, ciudad, telefono, plan, activo, configuracion, onboarding_completado, logo_url, codigo_acceso, reserva_bloqueo_previo_min, reserva_tiempo_gracia_min, google_review_url, instagram_url, web_url, idioma_whisper, whatsapp_alertas_compras, responsable_compras_id, dias_antelacion_pedido_evento')
+    .select('id, nombre, slug, nif, razon_social, direccion, ciudad, telefono, plan, activo, configuracion, onboarding_completado, logo_url, codigo_acceso, reserva_bloqueo_previo_min, reserva_tiempo_gracia_min, google_review_url, instagram_url, web_url, idioma_whisper, whatsapp_alertas_compras, responsable_compras_id, dias_antelacion_pedido_evento, modulos_activos')
     .eq('id', rid)
     .single()
 

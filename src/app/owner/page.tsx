@@ -42,6 +42,7 @@ import ProveedoresExternosTab from '@/components/owner/ProveedoresExternosTab'
 import LeadsEventosTab from '@/components/owner/LeadsEventosTab'
 import CalendarioEventosTab from '@/components/owner/CalendarioEventosTab'
 import ProduccionTab from '@/components/owner/ProduccionTab'
+import CobrosTab from '@/components/owner/CobrosTab'
 
 // ─── ComisionesEventoTab (inline, ligero) ─────────────────────────────────────
 function ComisionesEventoTab({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
@@ -7468,15 +7469,21 @@ function ReservasTab() {
 
 const GRUPOS = [
   {
+    id: 'cobros', label: 'Cobros', icon: ICONS.receipt, modulo: 'cobros',
+    tabs: [
+      { id: 'cobros', label: 'Cobros', icon: ICONS.receipt },
+    ],
+  },
+  {
     // Dashboard: primera pantalla — ventas, alertas, top productos
-    id: 'inicio', label: 'Inicio', icon: ICONS.chart,
+    id: 'inicio', label: 'Inicio', icon: ICONS.chart, modulo: null,
     tabs: [
       { id: 'dashboard', label: 'Dashboard', icon: ICONS.clock },
     ],
   },
   {
     // Sala: supervisor primero (uso diario en servicio), luego setup de personal y espacio
-    id: 'sala', label: 'Sala', icon: ICONS.users,
+    id: 'sala', label: 'Sala', icon: ICONS.users, modulo: 'sala',
     tabs: [
       { id: 'supervisor', label: 'Supervisor',   icon: ICONS.clock  }, // diario durante servicio
       { id: 'camareros',  label: 'Camareros',    icon: ICONS.users  }, // semanal/mensual
@@ -7486,7 +7493,7 @@ const GRUPOS = [
   },
   {
     // Carta: productos primero (actualizar carta, precios, 86), secciones es setup
-    id: 'carta', label: 'Carta', icon: ICONS.book,
+    id: 'carta', label: 'Carta', icon: ICONS.book, modulo: 'carta',
     tabs: [
       { id: 'carta',          label: 'Productos',    icon: ICONS.book    },
       { id: 'analisis',       label: 'Análisis',     icon: ICONS.chart   },
@@ -7503,7 +7510,7 @@ const GRUPOS = [
   {
     // Servicio: operativo diario primero (turno y caja se abren/cierran cada servicio),
     // reservas antes del servicio, analytics consulta semanal, cubierto se configura una vez
-    id: 'servicio', label: 'Servicio', icon: ICONS.chart,
+    id: 'servicio', label: 'Servicio', icon: ICONS.chart, modulo: 'servicio',
     tabs: [
       { id: 'turno',     label: 'Turno',     icon: ICONS.clock    },
       { id: 'caja',      label: 'Caja',      icon: ICONS.receipt  },
@@ -7517,7 +7524,7 @@ const GRUPOS = [
   {
     // Config: hardware primero (impresoras se consulta cuando algo falla),
     // flujos y QR son setup importantes, el resto es configuración que se toca raramente
-    id: 'config', label: 'Config', icon: ICONS.shield,
+    id: 'config', label: 'Config', icon: ICONS.shield, modulo: null,
     tabs: [
       { id: 'impresoras',     label: 'Impresoras',     icon: ICONS.printer       },
       { id: 'flujos',         label: 'Flujos',         icon: ICONS.wifi          },
@@ -7530,7 +7537,7 @@ const GRUPOS = [
     ]
   },
   {
-    id: 'eventos', label: 'Eventos', icon: ICONS.calendar,
+    id: 'eventos', label: 'Eventos', icon: ICONS.calendar, modulo: 'eventos',
     tabs: [
       { id: 'eventos',       label: 'Eventos',    icon: ICONS.calendar },
       { id: 'menus-evento',  label: 'Menús',      icon: ICONS.book     },
@@ -7543,7 +7550,7 @@ const GRUPOS = [
     ]
   },
   {
-    id: 'ia', label: 'IA', icon: ICONS.sparkle,
+    id: 'ia', label: 'IA', icon: ICONS.sparkle, modulo: 'ia',
     tabs: [
       { id: 'forecaster', label: 'Eventos IA',  icon: ICONS.chart  },
       { id: 'turnos-nim', label: 'Turnos IA',   icon: ICONS.clock  },
@@ -7551,7 +7558,7 @@ const GRUPOS = [
   },
   {
     // Auditoría: separado del resto porque es legal/fiscal — consulta periódica o ante incidencias
-    id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle,
+    id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle, modulo: null,
     tabs: [
       { id: 'sistema',        label: 'Sistema',        icon: ICONS.shield        }, // diagnóstico en tiempo real
       { id: 'soporte',        label: 'Soporte',        icon: ICONS.phone         }, // chat con IA de soporte
@@ -7979,6 +7986,7 @@ export default function OwnerPage() {
   const { session, checking } = useAuth('owner')
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '' })
   const [tab, setTab] = useState('dashboard')
+  const [modulosActivos, setModulosActivos] = useState<string[] | null>(null)
   const [showBridgeSetup, setShowBridgeSetup] = useState(false)
   const [manualVozOpen, setManualVozOpen] = useState(false)
   const [setupStatus, setSetupStatus] = useState<{ tiene_camareros:boolean; tiene_productos:boolean; tiene_mesas:boolean; turno_activo:boolean } | null>(null)
@@ -8010,6 +8018,14 @@ export default function OwnerPage() {
               razon_social: d.restaurante.razon_social ?? null,
               direccion:    d.restaurante.direccion    ?? null,
             })
+            const mods: string[] = d.restaurante.modulos_activos ?? []
+            if (mods.length > 0) {
+              setModulosActivos(mods)
+              // Si solo tiene cobros, ir directo a cobros
+              if (mods.length === 1 && mods[0] === 'cobros') {
+                setTab('cobros')
+              }
+            }
           }
         })
         .catch(() => {})
@@ -8389,6 +8405,9 @@ export default function OwnerPage() {
         <div className="owner-tabs" style={{ marginBottom:4, gap:4 }}>
           {GRUPOS.map(g => {
             const activo = getGrupo(tab).id === g.id
+            // Bloquear si modulosActivos está restringido y el grupo requiere módulo no activo
+            const bloqueado = modulosActivos !== null && (g as any).modulo && !modulosActivos.includes((g as any).modulo)
+            if (bloqueado) return null // ocultar grupos bloqueados directamente
             return (
               <button key={g.id}
                 onClick={() => setTab(g.tabs[0].id)}
@@ -8432,6 +8451,7 @@ export default function OwnerPage() {
 
           {/* Tab activo */}
           <div style={{ marginTop: getGrupo(tab).tabs.length <= 1 ? 20 : 4 }}>
+            {tab === 'cobros' && <CobrosTab restauranteId={session.restaurante_id} sh={sh} />}
             {tab === 'sistema'          && <DiagnosticoTab restauranteId={session.restaurante_id} />}
             {tab === 'soporte'          && <SoporteTab restauranteId={session.restaurante_id} />}
             {tab === 'supervisor'     && <SupervisorTab rol={session.rol} restauranteId={session.restaurante_id} sh={sh} />}
