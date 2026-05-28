@@ -1071,7 +1071,7 @@ interface Lead {
   estado: EstadoLead; notas: string | null; created_at: string
   tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]
-  landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
+  propuesta_slug?: string; landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
   propuesta_url?: string; propuesta_vista_at?: string
   ciudad?: string; empresa?: string
   puntuacion?: number | null

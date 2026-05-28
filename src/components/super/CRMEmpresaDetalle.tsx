@@ -8,7 +8,7 @@ interface Lead {
   estado: string; notas: string | null; created_at: string
   tipo: string; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]; puntuacion?: number
-  landing_slug?: string; propuesta_url?: string
+  propuesta_slug?: string; landing_slug?: string; propuesta_url?: string
   siguiente_contacto_texto?: string | null; siguiente_contacto_at?: string | null
   ultima_actividad_at?: string | null
 }
@@ -218,10 +218,10 @@ export default function CRMEmpresaDetalle({
             {lead.tpv && <div style={{ fontSize: 12, color: C.ink3 }}>TPV: {lead.tpv}</div>}
           </div>
           <div style={{ display: 'flex', gap: 6, flexShrink: 0, alignItems: 'flex-start' }}>
-            {lead.landing_slug && (
-              <a href={`https://www.iarest.es/propuesta/${lead.landing_slug}`} target="_blank"
-                style={{ fontSize: 10, color: C.red, textDecoration: 'none', padding: '4px 8px', border: `1px solid ${C.red}`, borderRadius: 5 }}>
-                Propuesta ↗
+            {(lead.propuesta_slug || lead.landing_slug) && (
+              <a href={`https://www.iarest.es/propuesta/${lead.propuesta_slug || lead.landing_slug}`} target="_blank"
+                style={{ fontSize: 11, fontWeight: 600, color: C.paper, textDecoration: 'none', padding: '5px 10px', background: C.red, borderRadius: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
+                📊 Ver presentación
               </a>
             )}
             <button onClick={onDelete} style={{ background: 'transparent', border: 'none', color: C.ink4, cursor: 'pointer', fontSize: 14 }}>🗑</button>
