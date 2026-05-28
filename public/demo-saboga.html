@@ -51,7 +51,7 @@ input::placeholder{color:var(--ink4)}
 
 /* MENU ITEMS */
 .menu-item-card{background:var(--bg3);border:1px solid var(--rule);border-radius:12px;padding:1rem;margin-bottom:.75rem;position:relative}
-.menu-item-header{display:grid;grid-template-columns:1fr 100px 32px;gap:8px;margin-bottom:.75rem;align-items:center}
+.menu-item-header{display:grid;grid-template-columns:1fr 90px 32px;gap:8px;margin-bottom:.75rem;align-items:center}@media(max-width:420px){.menu-item-header{grid-template-columns:1fr 32px;}.menu-item-price-wrap{grid-column:1;}.remove-menu{grid-column:2;grid-row:1;}}
 .menu-item-price-wrap{position:relative}
 .menu-item-price-wrap input{text-align:right;padding-right:28px}
 .euro{position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--ink4);font-size:13px;pointer-events:none}
@@ -110,15 +110,9 @@ input::placeholder{color:var(--ink4)}
 </head>
 <body>
 
-<div class="topbar">
-  <a class="topbar-brand" href="https://www.iarest.es" target="_blank">
-    <div class="topbar-dot"></div>
-    <span class="topbar-name">ia.rest</span>
-  </a>
-  <span class="topbar-tag">Portal de cobro</span>
-</div>
 
-<div class="wrap">
+
+<div class="wrap" style="padding-top:2.5rem">
 
   <div class="logo-wrap">
     <img src="https://www.cateringsaboga.es/wp-content/uploads/thegem-logos/logo_ac2d1ae67cd805b2bd49706995c1a677_1x.png" alt="Saboga Catering" onerror="this.style.display='none';document.getElementById('logo-text').style.display='block'" />
@@ -144,7 +138,7 @@ input::placeholder{color:var(--ink4)}
         <input type="text" id="f-evento" placeholder="Ej: Congreso Empresarial Junio 2026" />
       </div>
       <div class="field">
-        <label>Email del cliente (o déjalo vacío para link general)</label>
+        <label>Email del cliente <span style="color:var(--ink4);font-weight:400;text-transform:none;letter-spacing:0">(vacío = link general)</span></label>
         <input type="email" id="f-email" placeholder="cliente@empresa.com" />
       </div>
     </div>
@@ -230,9 +224,10 @@ input::placeholder{color:var(--ink4)}
     </div>
     <div class="footer">
       <a href="https://www.iarest.es" target="_blank">
-        <div style="width:6px;height:6px;background:var(--red);border-radius:50%"></div>
-        Gestionado por ia.rest
+        <div style="width:7px;height:7px;background:var(--red);border-radius:50%"></div>
+        Cobros gestionados por <strong style="color:var(--ink2)">ia.rest</strong>
       </a>
+      <div style="font-size:11px;color:var(--ink4);margin-top:6px">www.iarest.es</div>
     </div>
   </div>
 
