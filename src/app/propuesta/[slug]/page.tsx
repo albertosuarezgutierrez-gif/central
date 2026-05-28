@@ -14,6 +14,7 @@ const SLUG_ALIASES: Record<string, string> = {
   'bombonera-group':       'Bombonera',
   'eventos-catering':      'Catering',
   'tu-otra-cocina':        'Tu Otra',
+  'saboga-catering':       'Saboga',
 }
 
 async function getLead(supabase: ReturnType<typeof createServerClient>, slug: string) {
