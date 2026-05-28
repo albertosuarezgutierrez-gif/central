@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('cobros_grupo')
     .select(`
-      id, slug, titulo, descripcion, estado, created_at,
+      id, slug, titulo, descripcion, estado, imagen_url, color_primario, created_at,
       cobros_grupo_items(id, nombre, precio_eur, pdf_url, activo, orden),
       cobros_grupo_pagos(id, estado, importe_eur, nombre_pagador, email_pagador, pagado_at)
     `)
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
 
   const body = await req.json()
-  const { titulo, descripcion, items } = body
+  const { titulo, descripcion, items, imagen_url, color_primario } = body
 
   if (!titulo?.trim()) return NextResponse.json({ error: 'Título requerido' }, { status: 400 })
   if (!items?.length) return NextResponse.json({ error: 'Al menos un menú requerido' }, { status: 400 })
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
 
   const { data: portal, error: portalErr } = await supabase
     .from('cobros_grupo')
-    .insert({ restaurante_id: rid, slug, titulo, descripcion: descripcion || null, stripe_connect_id: stripeConnectId })
+    .insert({ restaurante_id: rid, slug, titulo, descripcion: descripcion || null, stripe_connect_id: stripeConnectId, imagen_url: imagen_url || null, color_primario: color_primario || '#D9442B' })
     .select('id, slug')
     .single()
 

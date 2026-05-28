@@ -9,7 +9,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const { data: portal } = await supabase
     .from('cobros_grupo')
     .select(`
-      id, titulo, descripcion, estado, stripe_connect_id,
+      id, titulo, descripcion, estado, imagen_url, color_primario, stripe_connect_id,
       restaurantes(nombre, logo_url),
       cobros_grupo_items(id, nombre, descripcion, precio_eur, pdf_url, activo, orden)
     `)
