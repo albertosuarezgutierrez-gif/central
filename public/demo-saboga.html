@@ -13,7 +13,7 @@
   .top-bar-name{color:#F6F1E7;font-size:13px;font-weight:500;letter-spacing:0.02em}
   .top-bar-tag{color:#6B5F52;font-size:11px}
   .wrap{max-width:480px;margin:0 auto;padding:2rem 1rem 4rem}
-  .logo-wrap{text-align:center;margin-bottom:2rem;padding:1.5rem;background:#fff;border-radius:16px;border:1px solid #E8E4DC}
+  .logo-wrap{text-align:center;margin-bottom:2rem;padding:1.5rem;background:#14110E;border-radius:16px;border:1px solid #2A221A}
   .logo-wrap img{max-height:80px;max-width:220px;object-fit:contain}
   .step-bar{display:flex;align-items:center;margin-bottom:1.5rem;gap:0}
   .step{display:flex;flex-direction:column;align-items:center;flex:1}
@@ -121,20 +121,13 @@
         <input type="email" id="f-email" placeholder="cliente@empresa.com" />
       </div>
       <div class="field">
-        <label>Opciones de menú</label>
-        <div id="menu-list">
-          <div class="menu-row">
-            <input type="text" value="Menú adulto" placeholder="Nombre del menú" />
-            <input type="number" value="45" placeholder="€" style="text-align:right" />
-            <button class="icon-btn" onclick="rmItem(this)">×</button>
-          </div>
-          <div class="menu-row">
-            <input type="text" value="Menú infantil" placeholder="Nombre del menú" />
-            <input type="number" value="20" placeholder="€" style="text-align:right" />
-            <button class="icon-btn" onclick="rmItem(this)">×</button>
-          </div>
+        <label>Descripción</label>
+        <input type="text" id="f-desc" placeholder="Ej: Cena empresa 40 pax, menú degustación" style="margin-bottom:10px" />
+        <label>Importe total</label>
+        <div style="position:relative">
+          <input type="number" id="f-importe" placeholder="0.00" step="0.01" style="text-align:right;padding-right:36px" />
+          <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);color:#9C8E7E;font-size:14px;pointer-events:none">€</span>
         </div>
-        <button class="add-btn" onclick="addItem()">+ Añadir opción</button>
       </div>
       <div class="field">
         <label>Adjuntar propuesta (PDF)</label>
