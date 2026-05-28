@@ -1,5 +1,5 @@
 'use client'
-// CobrosTab v4.0 — imagen evento + color personalizado
+// CobrosTab v5.0 — onboarding Stripe integrado
 import { useState, useEffect } from 'react'
 import { C, SE, SN } from '@/lib/colors'
 
@@ -9,25 +9,26 @@ interface Portal { id: string; slug: string; titulo: string; descripcion: string
 interface Props { restauranteId: string; sh: () => Record<string, string> }
 
 const BASE_URL = 'https://www.iarest.es'
-
 const COLORES_PRESET = [
-  { hex: '#D9442B', label: 'Rojo' },
-  { hex: '#1A5276', label: 'Azul oscuro' },
-  { hex: '#145A32', label: 'Verde' },
-  { hex: '#6C3483', label: 'Morado' },
-  { hex: '#784212', label: 'Marrón' },
-  { hex: '#1A1714', label: 'Negro' },
-  { hex: '#B7950B', label: 'Dorado' },
-  { hex: '#1F618D', label: 'Azul' },
+  { hex: '#D9442B', label: 'Rojo' }, { hex: '#1A5276', label: 'Azul oscuro' },
+  { hex: '#145A32', label: 'Verde' }, { hex: '#6C3483', label: 'Morado' },
+  { hex: '#784212', label: 'Marrón' }, { hex: '#1A1714', label: 'Negro' },
+  { hex: '#B7950B', label: 'Dorado' }, { hex: '#1F618D', label: 'Azul' },
 ]
 
 export default function CobrosTab({ restauranteId, sh }: Props) {
   const [portales, setPortales] = useState<Portal[]>([])
   const [loading, setLoading] = useState(true)
-  const [vista, setVista] = useState<'lista' | 'crear'>('lista')
+  const [vista, setVista] = useState<'lista' | 'crear' | 'stripe'>('lista')
   const [guardando, setGuardando] = useState(false)
   const [err, setErr] = useState('')
   const [copiado, setCopiado] = useState<string | null>(null)
+
+  // Stripe onboarding
+  const [stripeActivo, setStripeActivo] = useState<boolean | null>(null)
+  const [stripeUrl, setStripeUrl] = useState('')
+  const [cargandoStripe, setCargandoStripe] = useState(false)
+  const [primerPortalCreado, setPrimerPortalCreado] = useState(false)
 
   // Form
   const [titulo, setTitulo] = useState('')
@@ -48,7 +49,27 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     setPortales(d.portales ?? [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [])
+
+  const checkStripe = async () => {
+    setCargandoStripe(true)
+    try {
+      const res = await fetch('/api/owner/cobros/stripe-onboarding', { headers: sh() })
+      const d = await res.json()
+      if (d.activo) { setStripeActivo(true) }
+      else { setStripeActivo(false); setStripeUrl(d.onboarding_url || '') }
+    } catch { setStripeActivo(false) }
+    setCargandoStripe(false)
+  }
+
+  useEffect(() => {
+    load()
+    checkStripe()
+    // Detectar si viene de Stripe con ?stripe=ok o ?stripe=refresh
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('stripe') === 'ok') {
+      checkStripe()
+    }
+  }, [])
 
   const addItem = () => setItems([...items, { nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }])
   const removeItem = (i: number) => setItems(items.filter((_, idx) => idx !== i))
@@ -64,8 +85,7 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
       const res = await fetch('/api/owner/cobros/upload-imagen', { method: 'POST', headers: sh(), body: formData })
       const d = await res.json()
       if (d.url) { setImagenUrl(d.url); setImagenNombre(file.name) }
-      else setErr('Error al subir imagen')
-    } catch { setErr('Error al subir imagen') }
+    } catch {}
     setSubiendo(false)
   }
 
@@ -92,11 +112,17 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     })
     const d = await res.json()
     if (d.ok) {
-      setVista('lista')
       setTitulo(''); setDescripcion(''); setColor('#D9442B')
       setImagenUrl(''); setImagenNombre('')
       setItems([{ nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }, { nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }])
       await load()
+      // Si Stripe no está activo → mostrar pantalla de onboarding
+      if (!stripeActivo) {
+        setPrimerPortalCreado(true)
+        setVista('stripe')
+      } else {
+        setVista('lista')
+      }
     } else { setErr(d.error ?? 'Error al crear') }
     setGuardando(false)
   }
@@ -115,17 +141,86 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     await load()
   }
 
+  const irAStripe = async () => {
+    if (stripeUrl) { window.location.href = stripeUrl; return }
+    setCargandoStripe(true)
+    const res = await fetch('/api/owner/cobros/stripe-onboarding', { headers: sh() })
+    const d = await res.json()
+    if (d.onboarding_url) window.location.href = d.onboarding_url
+    else if (d.activo) { setStripeActivo(true); setVista('lista') }
+    setCargandoStripe(false)
+  }
+
   const colorContraste = (hex: string) => {
     const r = parseInt(hex.slice(1,3),16), g = parseInt(hex.slice(3,5),16), b = parseInt(hex.slice(5,7),16)
     return (r*299+g*587+b*114)/1000 > 128 ? '#1A1714' : '#F6F1E7'
   }
 
-  // Estilos tema claro
+  // Estilos
   const card: React.CSSProperties = { background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }
   const lbl: React.CSSProperties = { fontFamily: SN, fontSize: 11, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, display: 'block', marginBottom: 6 }
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, color: C.ink, fontSize: 14, fontFamily: SN, outline: 'none', boxSizing: 'border-box' }
   const btn: React.CSSProperties = { background: C.red, color: C.paper, border: 'none', borderRadius: 10, padding: '11px 18px', fontFamily: SN, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
   const btnSec: React.CSSProperties = { background: 'transparent', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '10px 16px', fontFamily: SN, fontSize: 13, cursor: 'pointer' }
+
+  // ── VISTA STRIPE ONBOARDING ──────────────────────────────────────────────
+  if (vista === 'stripe') return (
+    <div style={{ maxWidth: 500, margin: '0 auto', padding: '2rem 0' }}>
+      {/* Éxito creación portal */}
+      {primerPortalCreado && (
+        <div style={{ background: C.greenS, border: `1px solid ${C.green}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.5rem', display: 'flex', gap: 10, alignItems: 'center' }}>
+          <span style={{ fontSize: 20 }}>✅</span>
+          <div>
+            <p style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.green, margin: 0 }}>Portal creado correctamente</p>
+            <p style={{ fontFamily: SN, fontSize: 12, color: C.green, margin: '2px 0 0', opacity: .8 }}>Ya tienes el link listo para enviar a tus invitados</p>
+          </div>
+        </div>
+      )}
+
+      {/* Onboarding bancario */}
+      <div style={{ ...card, textAlign: 'center', padding: '2.5rem 2rem' }}>
+        <div style={{ width: 64, height: 64, borderRadius: '50%', background: `rgba(217,68,43,.1)`, border: `2px solid ${C.red}`, display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem', fontSize: 28 }}>
+          🏦
+        </div>
+        <h2 style={{ fontFamily: SE, fontSize: '1.3rem', color: C.ink, margin: '0 0 .75rem' }}>
+          Activa los cobros reales
+        </h2>
+        <p style={{ fontFamily: SN, fontSize: 14, color: C.ink3, margin: '0 0 1.5rem', lineHeight: 1.6 }}>
+          Para recibir el dinero directamente en tu cuenta, necesitas configurar tus datos bancarios. Es rápido y lo gestiona Stripe de forma segura.
+        </p>
+
+        {/* Pasos */}
+        <div style={{ textAlign: 'left', marginBottom: '1.75rem' }}>
+          {[
+            { n: '1', t: 'Pulsa el botón de abajo', d: 'Te lleva a la página segura de Stripe' },
+            { n: '2', t: 'Introduce tus datos bancarios', d: 'NIF, dirección y cuenta bancaria donde recibirás los pagos' },
+            { n: '3', t: 'Vuelve aquí automáticamente', d: 'Los cobros quedan activados y el dinero llega a tu cuenta' },
+          ].map(s => (
+            <div key={s.n} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: `1px solid ${C.rule}`, alignItems: 'flex-start' }}>
+              <div style={{ width: 28, height: 28, borderRadius: '50%', background: C.red, color: C.paper, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: SN, fontSize: 12, fontWeight: 700, flexShrink: 0 }}>{s.n}</div>
+              <div>
+                <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, margin: 0 }}>{s.t}</p>
+                <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '2px 0 0' }}>{s.d}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button onClick={irAStripe} disabled={cargandoStripe}
+          style={{ ...btn, width: '100%', padding: 14, fontSize: 15, marginBottom: 12 }}>
+          {cargandoStripe ? 'Generando enlace seguro...' : '🏦 Configurar cuenta bancaria →'}
+        </button>
+
+        <button onClick={() => setVista('lista')} style={{ ...btnSec, width: '100%' }}>
+          Ahora no, configurar más tarde
+        </button>
+
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: '1rem', lineHeight: 1.5 }}>
+          🔒 Tus datos bancarios los gestiona Stripe directamente.<br/>ia.rest no tiene acceso a ellos.
+        </p>
+      </div>
+    </div>
+  )
 
   // ── VISTA CREAR ──────────────────────────────────────────────────────────
   if (vista === 'crear') return (
@@ -135,7 +230,6 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
         <h2 style={{ fontFamily: SE, fontSize: '1.2rem', color: C.ink, margin: 0 }}>Nuevo portal de cobro</h2>
       </div>
 
-      {/* Datos del evento */}
       <div style={card}>
         <p style={{ fontFamily: SE, fontSize: '1rem', color: C.ink, margin: '0 0 1rem' }}>Datos del evento</p>
         <div style={{ marginBottom: '1rem' }}>
@@ -148,14 +242,11 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
         </div>
       </div>
 
-      {/* Imagen y color */}
       <div style={card}>
         <p style={{ fontFamily: SE, fontSize: '1rem', color: C.ink, margin: '0 0 1rem' }}>Imagen y color del evento</p>
-
-        {/* Upload imagen */}
         <div style={{ marginBottom: '1.25rem' }}>
-          <label style={lbl}>Imagen del evento (logo, cartel...)</label>
-          <label style={{ display: 'block', border: `2px dashed ${C.rule}`, borderRadius: 12, padding: '1.25rem', textAlign: 'center', cursor: 'pointer', position: 'relative', background: C.paper, transition: 'border .2s' }}>
+          <label style={lbl}>Imagen del evento</label>
+          <label style={{ display: 'block', border: `2px dashed ${C.rule}`, borderRadius: 12, padding: '1.25rem', textAlign: 'center', cursor: 'pointer', position: 'relative', background: C.paper }}>
             <input type="file" accept="image/*" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%' }}
               onChange={e => { if (e.target.files?.[0]) uploadImagen(e.target.files[0]) }} />
             {imagenUrl ? (
@@ -174,46 +265,32 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
             )}
           </label>
         </div>
-
-        {/* Color picker */}
         <div>
           <label style={lbl}>Color del evento</label>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
             {COLORES_PRESET.map(c => (
               <button key={c.hex} onClick={() => setColor(c.hex)} title={c.label}
-                style={{ width: 36, height: 36, borderRadius: '50%', background: c.hex, border: color === c.hex ? `3px solid ${C.ink}` : `2px solid transparent`, cursor: 'pointer', transition: 'all .15s', flexShrink: 0 }} />
+                style={{ width: 36, height: 36, borderRadius: '50%', background: c.hex, border: color === c.hex ? `3px solid ${C.ink}` : `2px solid transparent`, cursor: 'pointer', flexShrink: 0 }} />
             ))}
-            {/* Color personalizado */}
-            <label title="Color personalizado" style={{ width: 36, height: 36, borderRadius: '50%', border: `2px dashed ${C.rule}`, cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
-              <input type="color" value={color} onChange={e => setColor(e.target.value)}
-                style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
+            <label title="Personalizado" style={{ width: 36, height: 36, borderRadius: '50%', border: `2px dashed ${C.rule}`, cursor: 'pointer', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>
+              <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%', height: '100%' }} />
               ✏️
             </label>
           </div>
-          {/* Preview */}
           <div style={{ background: color, borderRadius: 10, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
             {imagenUrl && <img src={imagenUrl} alt="" style={{ height: 32, width: 32, objectFit: 'contain', borderRadius: 4 }} />}
-            <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: colorContraste(color) }}>
-              {titulo || 'Vista previa del evento'}
-            </span>
-            <span style={{ marginLeft: 'auto', fontFamily: SN, fontSize: 12, fontWeight: 600,
-              background: colorContraste(color) === '#F6F1E7' ? 'rgba(255,255,255,.2)' : 'rgba(0,0,0,.1)',
-              color: colorContraste(color), padding: '4px 12px', borderRadius: 20 }}>
-              Pagar →
-            </span>
+            <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: colorContraste(color), flex: 1 }}>{titulo || 'Vista previa'}</span>
+            <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 600, background: 'rgba(255,255,255,.2)', color: colorContraste(color), padding: '4px 12px', borderRadius: 20 }}>Pagar →</span>
           </div>
-          <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 6 }}>Así se verá la cabecera de la página de pago que ven tus invitados</p>
         </div>
       </div>
 
-      {/* Menús */}
       <div style={card}>
         <p style={{ fontFamily: SE, fontSize: '1rem', color: C.ink, margin: '0 0 1rem' }}>Opciones de menú</p>
         {items.map((item, i) => (
           <div key={i} style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '.875rem', marginBottom: '.75rem' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 100px 32px', gap: 8, marginBottom: '.75rem', alignItems: 'center' }}>
-              <input style={{ ...inp, padding: '9px 12px' }} value={item.nombre}
-                onChange={e => updateItem(i, 'nombre', e.target.value)} placeholder={`Menú ${i + 1}`} />
+              <input style={{ ...inp, padding: '9px 12px' }} value={item.nombre} onChange={e => updateItem(i, 'nombre', e.target.value)} placeholder={`Menú ${i + 1}`} />
               <div style={{ position: 'relative' }}>
                 <input style={{ ...inp, padding: '9px 28px 9px 10px', textAlign: 'right' }} type="number" step="0.01"
                   value={item.precio_eur} onChange={e => updateItem(i, 'precio_eur', e.target.value)} placeholder="0.00" />
@@ -243,6 +320,30 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   // ── VISTA LISTA ───────────────────────────────────────────────────────────
   return (
     <div style={{ maxWidth: 620, margin: '0 auto', padding: '1rem 0' }}>
+
+      {/* Banner Stripe pendiente */}
+      {stripeActivo === false && (
+        <div style={{ background: '#FEF9EC', border: `1px solid ${C.amber}`, borderRadius: 12, padding: '1rem 1.25rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+            <span style={{ fontSize: 18 }}>⚠️</span>
+            <div>
+              <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, margin: 0 }}>Cobros no activados</p>
+              <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '2px 0 0' }}>Configura tu cuenta bancaria para recibir los pagos</p>
+            </div>
+          </div>
+          <button onClick={() => setVista('stripe')} style={{ ...btn, padding: '8px 16px', fontSize: 13, flexShrink: 0 }}>
+            Activar cobros →
+          </button>
+        </div>
+      )}
+
+      {stripeActivo === true && portales.length > 0 && (
+        <div style={{ background: C.greenS, border: `1px solid ${C.green}`, borderRadius: 10, padding: '10px 14px', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span>✅</span>
+          <span style={{ fontFamily: SN, fontSize: 13, color: C.green, fontWeight: 500 }}>Cuenta bancaria activa · Los pagos llegan directamente a tu cuenta</span>
+        </div>
+      )}
+
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem', flexWrap: 'wrap', gap: 8 }}>
         <div>
           <h2 style={{ fontFamily: SE, fontSize: '1.3rem', color: C.ink, margin: '0 0 3px' }}>Cobros</h2>
@@ -269,63 +370,50 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
         const link = `${BASE_URL}/cobro/${portal.slug}`
         const cerrado = portal.estado === 'cerrado'
         const col = portal.color_primario || C.red
-        const textCol = (() => {
-          const r = parseInt(col.slice(1,3),16), g = parseInt(col.slice(3,5),16), b = parseInt(col.slice(5,7),16)
-          return (r*299+g*587+b*114)/1000 > 128 ? '#1A1714' : '#F6F1E7'
-        })()
+        const tCol = colorContraste(col)
 
         return (
           <div key={portal.id} style={{ ...card, opacity: cerrado ? 0.7 : 1, padding: 0, overflow: 'hidden' }}>
-            {/* Header con color del evento */}
             <div style={{ background: col, padding: '1rem 1.25rem', display: 'flex', alignItems: 'center', gap: 12 }}>
               {portal.imagen_url && (
-                <img src={portal.imagen_url} alt={portal.titulo}
-                  style={{ height: 44, width: 44, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,.15)', padding: 4, flexShrink: 0 }} />
+                <img src={portal.imagen_url} alt={portal.titulo} style={{ height: 44, width: 44, objectFit: 'contain', borderRadius: 8, background: 'rgba(255,255,255,.15)', padding: 4, flexShrink: 0 }} />
               )}
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                  <h3 style={{ fontFamily: SE, fontSize: '1rem', color: textCol, margin: 0 }}>{portal.titulo}</h3>
-                  <span style={{ fontFamily: SN, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4,
-                    background: 'rgba(255,255,255,.2)', color: textCol, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  <h3 style={{ fontFamily: SE, fontSize: '1rem', color: tCol, margin: 0 }}>{portal.titulo}</h3>
+                  <span style={{ fontFamily: SN, fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 4, background: 'rgba(255,255,255,.2)', color: tCol, textTransform: 'uppercase', letterSpacing: '.04em' }}>
                     {cerrado ? 'Cerrado' : 'Activo'}
                   </span>
                 </div>
-                <p style={{ fontFamily: SN, fontSize: 11, color: textCol, opacity: .75, margin: '2px 0 0' }}>
+                <p style={{ fontFamily: SN, fontSize: 11, color: tCol, opacity: .75, margin: '2px 0 0' }}>
                   {portal.cobros_grupo_items.length} menús · {pagados.length} pagados · {pendientes.length} pendientes
                 </p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p style={{ fontFamily: SE, fontSize: '1.3rem', color: textCol, margin: 0, fontWeight: 500 }}>{total.toFixed(2)} €</p>
-                <p style={{ fontFamily: SN, fontSize: 10, color: textCol, opacity: .7, margin: 0 }}>cobrado</p>
+                <p style={{ fontFamily: SE, fontSize: '1.3rem', color: tCol, margin: 0 }}>{total.toFixed(2)} €</p>
+                <p style={{ fontFamily: SN, fontSize: 10, color: tCol, opacity: .7, margin: 0 }}>cobrado</p>
               </div>
             </div>
 
             <div style={{ padding: '1rem 1.25rem' }}>
-              {/* Menús */}
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: '.875rem' }}>
                 {portal.cobros_grupo_items.map(item => (
-                  <span key={item.id} style={{ fontFamily: SN, fontSize: 12, padding: '3px 10px',
-                    background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 20, color: C.ink2 }}>
-                    {item.nombre} · {Number(item.precio_eur).toFixed(2)}€
-                    {item.pdf_url && <span style={{ color: C.red }}> 📄</span>}
+                  <span key={item.id} style={{ fontFamily: SN, fontSize: 12, padding: '3px 10px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 20, color: C.ink2 }}>
+                    {item.nombre} · {Number(item.precio_eur).toFixed(2)}€{item.pdf_url && <span style={{ color: C.red }}> 📄</span>}
                   </span>
                 ))}
               </div>
 
-              {/* Link */}
-              <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 12px',
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: '.875rem', flexWrap: 'wrap' }}>
+              <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '8px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, marginBottom: '.875rem', flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', flex: 1 }}>{link}</span>
                 <div style={{ display: 'flex', gap: 6, flexShrink: 0 }}>
-                  <button onClick={() => copiarLink(portal.slug)}
-                    style={{ background: col, color: textCol, border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontFamily: SN, fontWeight: 600, cursor: 'pointer' }}>
+                  <button onClick={() => copiarLink(portal.slug)} style={{ background: col, color: tCol, border: 'none', borderRadius: 8, padding: '5px 12px', fontSize: 12, fontFamily: SN, fontWeight: 600, cursor: 'pointer' }}>
                     {copiado === portal.slug ? '✓ Copiado' : 'Copiar link'}
                   </button>
                   <a href={link} target="_blank" style={{ ...btnSec, padding: '5px 10px', fontSize: 12, textDecoration: 'none' }}>↗</a>
                 </div>
               </div>
 
-              {/* Pagos */}
               {pagados.length > 0 && (
                 <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: '.75rem' }}>
                   <span style={lbl}>Pagos recibidos</span>
