@@ -400,7 +400,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   <h1 class="fi d1">Facturar más<br>no es ganar más.<br><i>Ahora sí lo es.</i></h1>
   <p class="hero-sub fi d2" style="max-width:540px">Costes, almacén, escandallos y operación conectados en tiempo real. Para el dueño que quiere saber exactamente cuánto gana, no solo cuánto factura.</p>
   <div class="hero-cta fi d2">
-    <a href="#contacto" class="btn-p">Prueba 14 días gratis →</a>
+    <a href="#contacto" class="btn-p">Solicitar demo →</a>
     <a href="#perfiles" class="btn-s" style="font-size:14px;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s">Ver para quién es ↓</a>
   </div>
   <div class="fi d3" style="margin-top:48px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;padding-top:28px;border-top:1px solid var(--border)">
@@ -416,7 +416,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:200;color:var(--red);letter-spacing:-1px;line-height:1">+<span style="color:var(--ink)">cada</span></div>
       <div style="font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Punto de margen<br>que recuperas</div>
     </div>
-    <div style="text-align:center">
+    <div style="text-align:center;display:none">
       <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:200;color:var(--ink);letter-spacing:-1px;line-height:1">59<span style="color:var(--red)">€</span></div>
       <div style="font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Al mes · Sin<br>comisión</div>
     </div>
