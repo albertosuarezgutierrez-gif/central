@@ -22,9 +22,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   if (!portal) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
   // Cierre automático por fecha límite
+  // fecha_limite_pago puede venir como TIMESTAMPTZ o solo fecha (YYYY-MM-DD)
+  // Si viene solo fecha, no cerrar hasta fin del día para evitar cierre prematuro por UTC
   let estado = portal.estado
   if (estado !== 'cerrado' && portal.fecha_limite_pago) {
-    if (new Date(portal.fecha_limite_pago) < new Date()) {
+    const limite = new Date(portal.fecha_limite_pago)
+    const esSoloFecha = portal.fecha_limite_pago.length <= 10
+    // Si es solo fecha, añadir 24h-1ms para cubrir todo el día en cualquier zona horaria
+    const limiteReal = esSoloFecha ? new Date(limite.getTime() + 86399999) : limite
+    if (limiteReal < new Date()) {
       estado = 'cerrado'
       await supabase.from('cobros_grupo').update({ estado: 'cerrado' }).eq('id', portal.id)
     }
