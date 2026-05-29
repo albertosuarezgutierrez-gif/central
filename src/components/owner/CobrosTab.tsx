@@ -137,11 +137,19 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   }
 
   const cerrar = async (id: string) => {
-    if (!confirm('¿Cerrar este portal?')) return
+    if (!confirm('¿Cerrar este portal? Ya no se podrán realizar nuevos pagos.')) return
     await fetch(`/api/owner/cobros/${id}`, {
       method: 'PATCH', headers: { ...sh(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ estado: 'cerrado' })
     })
+    await load()
+  }
+
+  const eliminar = async (id: string) => {
+    if (!confirm('¿Eliminar este portal? Esta acción no se puede deshacer.')) return
+    const res = await fetch(`/api/owner/cobros/${id}`, { method: 'DELETE', headers: sh() })
+    const d = await res.json()
+    if (!res.ok) { alert(d.error || 'Error al eliminar'); return }
     await load()
   }
 
@@ -470,8 +478,20 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
               )}
 
               {!cerrado && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '.75rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: '.75rem' }}>
+                  {pagados.length === 0 && (
+                    <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
+                      Eliminar
+                    </button>
+                  )}
                   <button onClick={() => cerrar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px' }}>Cerrar portal</button>
+                </div>
+              )}
+              {cerrado && pagados.length === 0 && (
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '.75rem' }}>
+                  <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
+                    Eliminar
+                  </button>
                 </div>
               )}
             </div>
