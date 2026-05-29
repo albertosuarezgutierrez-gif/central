@@ -18,8 +18,7 @@ function CobroInner() {
 
   const [portal, setPortal] = useState<Portal | null>(null)
   const [notFound, setNotFound] = useState(false)
-  // selección múltiple: { [item_id]: cantidad }
-  const [cantidades, setCantidades] = useState<Record<string, number>>({})
+  const [seleccionados, setSeleccionados] = useState<Set<string>>(new Set())
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -33,44 +32,24 @@ function CobroInner() {
   }, [slug])
 
   const toggleItem = (id: string) => {
-    setCantidades(prev => {
-      if (prev[id]) {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      }
-      return { ...prev, [id]: 1 }
+    setSeleccionados(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id); else next.add(id)
+      return next
     })
   }
 
-  const setCantidad = (id: string, delta: number) => {
-    setCantidades(prev => {
-      const actual = prev[id] ?? 0
-      const nueva = actual + delta
-      if (nueva <= 0) {
-        const next = { ...prev }
-        delete next[id]
-        return next
-      }
-      return { ...prev, [id]: nueva }
-    })
-  }
-
-  const totalSeleccionados = Object.values(cantidades).reduce((a, b) => a + b, 0)
   const totalImporte = portal
-    ? Object.entries(cantidades).reduce((acc, [id, qty]) => {
-        const item = portal.items.find(i => i.id === id)
-        return acc + (item ? item.precio_final_eur * qty : 0)
-      }, 0)
+    ? portal.items.filter(i => seleccionados.has(i.id)).reduce((acc, i) => acc + i.precio_final_eur, 0)
     : 0
 
   const pagar = async () => {
-    if (totalSeleccionados === 0 || !nombre.trim()) {
+    if (!seleccionados.size || !nombre.trim()) {
       setError('Selecciona al menos una opción e introduce tu nombre')
       return
     }
     setCargando(true); setError('')
-    const items = Object.entries(cantidades).map(([item_id, cantidad]) => ({ item_id, cantidad }))
+    const items = [...seleccionados].map(item_id => ({ item_id, cantidad: 1 }))
     const res = await fetch(`/api/cobros/${slug}/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ items, nombre_pagador: nombre, email_pagador: email })
@@ -99,7 +78,6 @@ function CobroInner() {
   return (
     <div style={{ minHeight: '100vh', background: '#F6F1E7', fontFamily: 'Inter Tight,sans-serif' }}>
 
-      {/* HERO */}
       <div style={{ background: col, padding: '2rem 1.25rem 1.5rem' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
           {portal!.imagen_url ? (
@@ -108,9 +86,7 @@ function CobroInner() {
           ) : (
             <div style={{ width: 56, height: 56, borderRadius: 12, background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem', fontSize: 24 }}>🎫</div>
           )}
-          <h1 style={{ fontFamily: 'Newsreader,serif', fontSize: '1.6rem', color: textCol, margin: '0 0 .4rem' }}>
-            {portal!.titulo}
-          </h1>
+          <h1 style={{ fontFamily: 'Newsreader,serif', fontSize: '1.6rem', color: textCol, margin: '0 0 .4rem' }}>{portal!.titulo}</h1>
           {portal!.descripcion && (
             <p style={{ fontSize: 13, color: textCol, opacity: .8, margin: 0, lineHeight: 1.6 }}>{portal!.descripcion}</p>
           )}
@@ -119,7 +95,7 @@ function CobroInner() {
               {portal!.fecha_evento && (
                 <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 14 }}>📅</span>
-                  <span style={{ fontFamily: 'Inter Tight,sans-serif', fontSize: 12, color: textCol, fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, color: textCol, fontWeight: 600 }}>
                     {new Date(portal!.fecha_evento + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
                   </span>
                 </div>
@@ -127,7 +103,7 @@ function CobroInner() {
               {portal!.fecha_limite_pago && portal!.estado !== 'cerrado' && (
                 <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span style={{ fontSize: 14 }}>⏳</span>
-                  <span style={{ fontFamily: 'Inter Tight,sans-serif', fontSize: 12, color: textCol, fontWeight: 600 }}>
+                  <span style={{ fontSize: 12, color: textCol, fontWeight: 600 }}>
                     Plazo hasta el {new Date(portal!.fecha_limite_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} a las {new Date(portal!.fecha_limite_pago).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -151,65 +127,44 @@ function CobroInner() {
           </div>
         ) : (
           <>
-            {/* Selección múltiple */}
             <div style={{ background: '#FBF8F1', border: '1px solid #D8CDB6', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }}>
               <p style={{ fontSize: 11, color: '#9C8E7E', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, margin: '0 0 .75rem' }}>
-                Elige tu menú — puedes seleccionar varios
+                Elige tu menú — puedes marcar varios
               </p>
               {portal!.items.map((item) => {
-                const sel = !!cantidades[item.id]
-                const qty = cantidades[item.id] ?? 0
+                const sel = seleccionados.has(item.id)
                 return (
-                  <div key={item.id}
-                    style={{ border: `1.5px solid ${sel ? col : '#D8CDB6'}`, borderRadius: 12,
-                      background: sel ? colBg : '#F6F1E7', marginBottom: '.5rem', transition: 'all .2s', overflow: 'hidden' }}>
-                    {/* Fila principal — click para toggle */}
-                    <div onClick={() => toggleItem(item.id)}
-                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', cursor: 'pointer' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        {/* Checkbox visual */}
-                        <div style={{ width: 20, height: 20, borderRadius: 6,
-                          border: `1.5px solid ${sel ? col : '#D8CDB6'}`,
-                          background: sel ? col : 'transparent',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                          {sel && <span style={{ color: textCol, fontSize: 12, lineHeight: 1, fontWeight: 700 }}>✓</span>}
-                        </div>
-                        <div>
-                          <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1714' }}>{item.nombre}</div>
-                          {item.descripcion && <div style={{ fontSize: 12, color: '#9C8E7E' }}>{item.descripcion}</div>}
-                          {item.pdf_url && (
-                            <a href={item.pdf_url} target="_blank" onClick={e => e.stopPropagation()}
-                              style={{ fontSize: 11, color: col, textDecoration: 'none', fontWeight: 600 }}>📄 Ver carta completa</a>
-                          )}
-                        </div>
+                  <div key={item.id} onClick={() => toggleItem(item.id)}
+                    style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12,
+                      border: `1.5px solid ${sel ? col : '#D8CDB6'}`,
+                      borderRadius: 12, cursor: 'pointer',
+                      background: sel ? colBg : '#F6F1E7',
+                      marginBottom: '.5rem', transition: 'all .2s' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      {/* Checkbox cuadrado */}
+                      <div style={{ width: 20, height: 20, borderRadius: 6, flexShrink: 0,
+                        border: `1.5px solid ${sel ? col : '#D8CDB6'}`,
+                        background: sel ? col : 'transparent',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        {sel && <span style={{ color: textCol, fontSize: 12, fontWeight: 700, lineHeight: 1 }}>✓</span>}
                       </div>
-                      <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.1rem', color: col, fontWeight: 500, flexShrink: 0, marginLeft: 10 }}>
-                        {item.precio_final_eur.toFixed(2)} €
-                      </span>
+                      <div>
+                        <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1714' }}>{item.nombre}</div>
+                        {item.descripcion && <div style={{ fontSize: 12, color: '#9C8E7E' }}>{item.descripcion}</div>}
+                        {item.pdf_url && (
+                          <a href={item.pdf_url} target="_blank" onClick={e => e.stopPropagation()}
+                            style={{ fontSize: 11, color: col, textDecoration: 'none', fontWeight: 600 }}>📄 Ver carta completa</a>
+                        )}
+                      </div>
                     </div>
-                    {/* Fila cantidad — solo si seleccionado */}
-                    {sel && (
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 12px 10px', gap: 8 }}
-                        onClick={e => e.stopPropagation()}>
-                        <span style={{ fontSize: 12, color: '#9C8E7E', marginRight: 4 }}>Cantidad:</span>
-                        <button onClick={() => setCantidad(item.id, -1)}
-                          style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${col}`, background: 'transparent',
-                            color: col, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
-                        <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1714', minWidth: 20, textAlign: 'center' }}>{qty}</span>
-                        <button onClick={() => setCantidad(item.id, 1)}
-                          style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: col,
-                            color: textCol, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
-                        <span style={{ fontSize: 13, color: '#6B5F52', marginLeft: 4, fontWeight: 500 }}>
-                          = {(item.precio_final_eur * qty).toFixed(2)} €
-                        </span>
-                      </div>
-                    )}
+                    <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.1rem', color: col, fontWeight: 500, flexShrink: 0, marginLeft: 10 }}>
+                      {item.precio_final_eur.toFixed(2)} €
+                    </span>
                   </div>
                 )
               })}
             </div>
 
-            {/* Datos pagador */}
             <div style={{ background: '#FBF8F1', border: '1px solid #D8CDB6', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }}>
               <p style={{ fontSize: 11, color: '#9C8E7E', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, margin: '0 0 .75rem' }}>Tus datos</p>
               <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre y apellidos *"
@@ -220,22 +175,21 @@ function CobroInner() {
 
             {error && <p style={{ color: '#D9442B', fontSize: 13, marginBottom: '1rem' }}>{error}</p>}
 
-            {/* Resumen total */}
-            {totalSeleccionados > 0 && (
+            {seleccionados.size > 0 && (
               <div style={{ background: colBg, border: `1px solid ${col}30`, borderRadius: 12, padding: '10px 14px', marginBottom: '1rem',
                 display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: 13, color: '#6B5F52' }}>{totalSeleccionados} unidad{totalSeleccionados !== 1 ? 'es' : ''}</span>
+                <span style={{ fontSize: 13, color: '#6B5F52' }}>{seleccionados.size} opción{seleccionados.size !== 1 ? 'es' : ''} seleccionada{seleccionados.size !== 1 ? 's' : ''}</span>
                 <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.2rem', color: col, fontWeight: 600 }}>
-                  Total: {totalImporte.toFixed(2)} €
+                  {totalImporte.toFixed(2)} €
                 </span>
               </div>
             )}
 
-            <button onClick={pagar} disabled={totalSeleccionados === 0 || !nombre.trim() || cargando}
+            <button onClick={pagar} disabled={!seleccionados.size || !nombre.trim() || cargando}
               style={{ width: '100%', padding: 14, background: col, color: textCol, border: 'none', borderRadius: 12,
-                fontSize: 15, fontWeight: 600, cursor: totalSeleccionados === 0 || !nombre.trim() ? 'not-allowed' : 'pointer',
-                opacity: totalSeleccionados === 0 || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
-              {cargando ? 'Procesando...' : totalSeleccionados > 0 ? `Pagar ${totalImporte.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
+                fontSize: 15, fontWeight: 600, cursor: !seleccionados.size || !nombre.trim() ? 'not-allowed' : 'pointer',
+                opacity: !seleccionados.size || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
+              {cargando ? 'Procesando...' : seleccionados.size > 0 ? `Pagar ${totalImporte.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
             </button>
             <p style={{ fontSize: 11, color: '#9C8E7E', textAlign: 'center', marginTop: 8 }}>🔒 Pago seguro procesado por Stripe</p>
           </>
