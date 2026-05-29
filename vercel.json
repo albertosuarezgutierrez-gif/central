@@ -101,6 +101,14 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/cron/crm-lead-hunter-sevilla",
+      "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/crm-recordatorio-dia2",
+      "schedule": "0 8 * * *"
+    },
+    {
       "path": "/api/cron/pipeline-comercial",
       "schedule": "0 8 * * 1-5"
     },

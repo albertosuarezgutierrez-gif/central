@@ -1,6 +1,41 @@
 "use client"
-import { useEffect } from "react"
+import { useEffect, Suspense } from "react"
+import { useSearchParams } from "next/navigation"
 import Head from "next/head"
+
+// Componente que usa useSearchParams
+function TrackingDetector() {
+  const searchParams = useSearchParams()
+
+  useEffect(() => {
+    const utm_id = searchParams.get('utm_id')
+    const utm_source = searchParams.get('utm_source')
+    const tk = searchParams.get('tk')
+
+    // Si viene del CRM → registra click
+    if (utm_id && utm_source === 'crm_lead' && tk) {
+      registerWebClick(utm_id, tk)
+    }
+  }, [searchParams])
+
+  return null
+}
+
+async function registerWebClick(leadId: string, token: string) {
+  try {
+    const res = await fetch('/api/leads/track-click', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ lead_id: leadId, token })
+    })
+
+    if (!res.ok) {
+      console.error('Error registrando click')
+    }
+  } catch (error) {
+    console.error('Error:', error)
+  }
+}
 
 export default function HomePage() {
 
@@ -152,6 +187,11 @@ export default function HomePage() {
 
   return (
     <>
+      {/* Tracking detector — detecta UTM params del CRM */}
+      <Suspense fallback={null}>
+        <TrackingDetector />
+      </Suspense>
+
       <title>Software de Gestión para Restaurantes, Catering y Espacios de Eventos | ia.rest</title>
       <meta name="description" content="ia.rest gestiona restaurantes, catering y espacios de eventos. Comandas por voz, KDS, APPCC, VeriFactu y portal cliente. Sin comisión. Desde 89€/mes." />
       <meta name="robots" content="index, follow" />
