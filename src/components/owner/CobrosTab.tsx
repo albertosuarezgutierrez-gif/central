@@ -5,7 +5,7 @@ import { C, SE, SN } from '@/lib/colors'
 
 interface Item { id: string; nombre: string; precio_eur: number; pdf_url: string | null; activo: boolean }
 interface Pago { id: string; estado: string; importe_eur: number; nombre_pagador: string; pagado_at: string | null }
-interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; fecha_evento: string | null; fecha_limite_pago: string | null; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
+interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; fecha_evento: string | null; fecha_limite_pago: string | null; repercutir_comision: boolean; modo_seleccion: 'una' | 'varias'; permitir_cantidades: boolean; max_seleccion: number | null; mensaje_confirmacion: string | null; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
 interface Props { restauranteId: string; sh: () => Record<string, string> }
 
 const BASE_URL = 'https://www.iarest.es'
@@ -40,6 +40,10 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   const [fechaEvento, setFechaEvento] = useState('')
   const [fechaLimitePago, setFechaLimitePago] = useState('')
   const [repercutirComision, setRepercutirComision] = useState(false)
+  const [modoSeleccion, setModoSeleccion] = useState<'una' | 'varias'>('una')
+  const [permitirCantidades, setPermitirCantidades] = useState(false)
+  const [maxSeleccion, setMaxSeleccion] = useState('')
+  const [mensajeConfirmacion, setMensajeConfirmacion] = useState('')
   const [color, setColor] = useState('#D9442B')
   const [imagenUrl, setImagenUrl] = useState('')
   const [imagenNombre, setImagenNombre] = useState('')
@@ -115,12 +119,13 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     const res = await fetch('/api/owner/cobros', {
       method: 'POST',
       headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color, fecha_evento: fechaEvento || null, fecha_limite_pago: fechaLimitePago || null, repercutir_comision: repercutirComision })
+      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color, fecha_evento: fechaEvento || null, fecha_limite_pago: fechaLimitePago || null, repercutir_comision: repercutirComision, modo_seleccion: modoSeleccion, permitir_cantidades: permitirCantidades, max_seleccion: maxSeleccion ? parseInt(maxSeleccion) : null, mensaje_confirmacion: mensajeConfirmacion || null })
     })
     const d = await res.json()
     if (d.ok) {
       setTitulo(''); setDescripcion(''); setColor('#D9442B')
       setFechaEvento(''); setFechaLimitePago(''); setRepercutirComision(false)
+      setModoSeleccion('una'); setPermitirCantidades(false); setMaxSeleccion(''); setMensajeConfirmacion('')
       setImagenUrl(''); setImagenNombre('')
       setItems([{ nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }, { nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }])
       await load()
@@ -428,6 +433,70 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
           </div>
         ))}
         <button onClick={addItem} style={{ ...btnSec, width: '100%', textAlign: 'center' }}>+ Añadir opción de menú</button>
+      </div>
+
+      {/* Configuración de selección */}
+      <div style={card}>
+        <p style={{ fontFamily: SE, fontSize: '1rem', color: C.ink, margin: '0 0 1rem' }}>Configuración de selección</p>
+
+        {/* Modo selección */}
+        <div style={{ marginBottom: '1rem' }}>
+          <label style={lbl}>¿Cuántos menús puede elegir cada invitado?</label>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {([['una', 'Solo uno'], ['varias', 'Varios']] as const).map(([val, label]) => (
+              <button key={val} onClick={() => { setModoSeleccion(val); if (val === 'una') { setPermitirCantidades(false); setMaxSeleccion('') } }}
+                style={{ flex: 1, padding: '10px 0', borderRadius: 10, border: `1.5px solid ${modoSeleccion === val ? C.red : C.rule}`,
+                  background: modoSeleccion === val ? `rgba(217,68,43,.08)` : C.paper,
+                  color: modoSeleccion === val ? C.red : C.ink3, fontFamily: SN, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                {val === 'una' ? '◉ ' : '☑ '}{label}
+              </button>
+            ))}
+          </div>
+          <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, margin: '6px 0 0' }}>
+            {modoSeleccion === 'una' ? 'El invitado elige 1 opción (botón de radio)' : 'El invitado puede marcar varias opciones (checkboxes)'}
+          </p>
+        </div>
+
+        {/* Opciones solo en modo varias */}
+        {modoSeleccion === 'varias' && (
+          <>
+            {/* Permitir cantidades */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, cursor: 'pointer', padding: '10px 0', borderTop: `1px solid ${C.rule}` }}
+              onClick={() => setPermitirCantidades(!permitirCantidades)}>
+              <div>
+                <p style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink, margin: '0 0 2px' }}>Permitir cantidades por opción</p>
+                <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: 0 }}>
+                  {permitirCantidades ? 'El invitado puede poner +2 del mismo menú, etc.' : 'Una unidad por opción — más sencillo'}
+                </p>
+              </div>
+              <div style={{ width: 44, height: 24, borderRadius: 12, background: permitirCantidades ? C.green : C.rule, position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+                <div style={{ position: 'absolute', top: 3, left: permitirCantidades ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: C.paper, transition: 'left .2s' }} />
+              </div>
+            </div>
+
+            {/* Máximo de selecciones (solo sin cantidades) */}
+            {!permitirCantidades && (
+              <div style={{ padding: '10px 0', borderTop: `1px solid ${C.rule}` }}>
+                <label style={lbl}>Máximo de opciones seleccionables (opcional)</label>
+                <input type="number" min="1" style={{ ...inp, width: 120 }} value={maxSeleccion}
+                  onChange={e => setMaxSeleccion(e.target.value)} placeholder="Sin límite" />
+                <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, margin: '4px 0 0' }}>
+                  Deja vacío para no limitar. Ej: 2 = máximo 2 menús distintos
+                </p>
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Mensaje de confirmación */}
+        <div style={{ paddingTop: '10px', borderTop: `1px solid ${C.rule}` }}>
+          <label style={lbl}>Mensaje tras pagar (opcional)</label>
+          <input style={inp} value={mensajeConfirmacion} onChange={e => setMensajeConfirmacion(e.target.value)}
+            placeholder="Ej: ¡Nos vemos el jueves! Recibirás el menú por email" />
+          <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, margin: '4px 0 0' }}>
+            Si lo dejas vacío se muestra: "Pago confirmado. ¡Gracias!"
+          </p>
+        </div>
       </div>
 
       {err && <p style={{ fontFamily: SN, fontSize: 13, color: C.red, marginBottom: '1rem' }}>{err}</p>}
