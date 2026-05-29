@@ -2,7 +2,7 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 
-interface Item { id: string; nombre: string; descripcion: string | null; precio_eur: number; pdf_url: string | null }
+interface Item { id: string; nombre: string; descripcion: string | null; precio_eur: number; precio_final_eur: number; pdf_url: string | null }
 interface Portal {
   titulo: string; descripcion: string | null; estado: string
   imagen_url: string | null; color_primario: string
@@ -145,7 +145,7 @@ function CobroInner() {
                     </div>
                   </div>
                   <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.1rem', color: col, fontWeight: 500, flexShrink: 0, marginLeft: 10 }}>
-                    {(item.precio_eur * 1.01).toFixed(2)} €
+                    {item.precio_final_eur.toFixed(2)} €
                   </span>
                 </div>
               ))}
@@ -167,7 +167,7 @@ function CobroInner() {
               style={{ width: '100%', padding: 14, background: col, color: textCol, border: 'none', borderRadius: 12,
                 fontSize: 15, fontWeight: 600, cursor: selIdx === null || !nombre.trim() ? 'not-allowed' : 'pointer',
                 opacity: selIdx === null || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
-              {cargando ? 'Procesando...' : selIdx !== null ? `Pagar ${(portal!.items[selIdx].precio_eur * 1.01).toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
+              {cargando ? 'Procesando...' : selIdx !== null ? `Pagar ${portal!.items[selIdx].precio_final_eur.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
             </button>
             <p style={{ fontSize: 11, color: '#9C8E7E', textAlign: 'center', marginTop: 8 }}>🔒 Pago seguro procesado por Stripe</p>
           </>

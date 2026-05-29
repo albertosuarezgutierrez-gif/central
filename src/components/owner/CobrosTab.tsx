@@ -35,6 +35,7 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   const [descripcion, setDescripcion] = useState('')
   const [fechaEvento, setFechaEvento] = useState('')
   const [fechaLimitePago, setFechaLimitePago] = useState('')
+  const [repercutirComision, setRepercutirComision] = useState(false)
   const [color, setColor] = useState('#D9442B')
   const [imagenUrl, setImagenUrl] = useState('')
   const [imagenNombre, setImagenNombre] = useState('')
@@ -110,12 +111,12 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     const res = await fetch('/api/owner/cobros', {
       method: 'POST',
       headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color, fecha_evento: fechaEvento || null, fecha_limite_pago: fechaLimitePago || null })
+      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color, fecha_evento: fechaEvento || null, fecha_limite_pago: fechaLimitePago || null, repercutir_comision: repercutirComision })
     })
     const d = await res.json()
     if (d.ok) {
       setTitulo(''); setDescripcion(''); setColor('#D9442B')
-      setFechaEvento(''); setFechaLimitePago('')
+      setFechaEvento(''); setFechaLimitePago(''); setRepercutirComision(false)
       setImagenUrl(''); setImagenNombre('')
       setItems([{ nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }, { nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }])
       await load()
@@ -325,6 +326,23 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
       </div>
 
       {err && <p style={{ fontFamily: SN, fontSize: 13, color: C.red, marginBottom: '1rem' }}>{err}</p>}
+
+      {/* Toggle comisión */}
+      <div style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, cursor: 'pointer' }}
+        onClick={() => setRepercutirComision(!repercutirComision)}>
+        <div>
+          <p style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.ink, margin: '0 0 3px' }}>Repercutir gastos de gestión al invitado</p>
+          <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: 0 }}>
+            {repercutirComision
+              ? 'El invitado paga el precio + 2.5% (1.5% Stripe + 1% ia.rest)'
+              : 'Tú asumes los gastos de gestión — el invitado paga el precio exacto'}
+          </p>
+        </div>
+        <div style={{ width: 44, height: 24, borderRadius: 12, background: repercutirComision ? C.green : C.rule, position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+          <div style={{ position: 'absolute', top: 3, left: repercutirComision ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: C.paper, transition: 'left .2s' }} />
+        </div>
+      </div>
+
       <button onClick={crear} disabled={guardando} style={{ ...btn, width: '100%', padding: 14, fontSize: 15 }}>
         {guardando ? 'Creando portal...' : 'Crear portal y generar link →'}
       </button>

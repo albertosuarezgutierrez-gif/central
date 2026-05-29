@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
 
   const body = await req.json()
-  const { titulo, descripcion, items, imagen_url, color_primario, fecha_evento, fecha_limite_pago } = body
+  const { titulo, descripcion, items, imagen_url, color_primario, fecha_evento, fecha_limite_pago, repercutir_comision } = body
 
   if (!titulo?.trim()) return NextResponse.json({ error: 'Título requerido' }, { status: 400 })
   if (!items?.length) return NextResponse.json({ error: 'Al menos un menú requerido' }, { status: 400 })
@@ -62,6 +62,7 @@ export async function POST(req: NextRequest) {
       color_primario: color_primario || '#D9442B',
       fecha_evento: fecha_evento || null,
       fecha_limite_pago: fecha_limite_pago || null,
+      repercutir_comision: repercutir_comision === true,
     })
     .select('id, slug')
     .single()
