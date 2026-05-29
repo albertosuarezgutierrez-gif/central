@@ -3,13 +3,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as never
-})
-
 const COMISION_TOTAL = 0.025 // 1.5% Stripe + 1% ia.rest
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
   const { slug } = await params
   const supabase = createServerClient()
 

@@ -4,11 +4,8 @@ import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as never
-})
-
 export async function GET(req: NextRequest) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
   const supabase = createServerClient()
   const session = getSession(req)
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

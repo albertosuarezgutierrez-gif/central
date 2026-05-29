@@ -4,11 +4,8 @@ import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as never
-})
-
 export async function POST(req: NextRequest) {
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
   const body = await req.text()
   const sig = req.headers.get('stripe-signature')!
 

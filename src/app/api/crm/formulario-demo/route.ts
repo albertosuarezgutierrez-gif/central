@@ -9,24 +9,18 @@ export async function POST(req: NextRequest) {
     const { nombre, email, telefono, restaurante, locales, utm_id } = await req.json()
 
     if (!nombre || !email || !telefono || !restaurante || !utm_id) {
-      return NextResponse.json(
-        { error: 'Faltan campos requeridos' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Faltan campos requeridos' }, { status: 400 })
     }
 
-    // Obtener lead para restaurante_id
-    const { data: lead, error: leadError } = await supabase
+    // Verificar lead existe
+    const { data: lead } = await supabase
       .from('leads')
-      .select('id, restaurante_id, nombre')
+      .select('id, nombre')
       .eq('id', utm_id)
       .single()
 
-    if (leadError || !lead) {
-      return NextResponse.json(
-        { error: 'Lead no encontrado' },
-        { status: 404 }
-      )
+    if (!lead) {
+      return NextResponse.json({ error: 'Lead no encontrado' }, { status: 404 })
     }
 
     // Actualizar tracking
@@ -41,28 +35,13 @@ export async function POST(req: NextRequest) {
     // Insertar formulario
     const { error: insertError } = await supabase
       .from('formularios_demo_recibidos')
-      .insert({
-        lead_id: utm_id,
-        restaurante_id: lead.restaurante_id,
-        nombre,
-        email,
-        telefono,
-        restaurante,
-        locales,
-        recibido_at: new Date().toISOString()
-      })
+      .insert({ lead_id: utm_id, nombre, email, telefono, restaurante, locales })
 
-    if (insertError) {
-      console.error('Error insertando formulario:', insertError)
-      return NextResponse.json(
-        { error: 'Error al guardar formulario' },
-        { status: 500 }
-      )
-    }
+    if (insertError) throw new Error(insertError.message)
 
-    // Telegram alert INMEDIATO
+    // Telegram INMEDIATO
     await tgAlert(
-      `<b>✅ FORMULARIO RELLENADO — ACCIÓN INMEDIATA</b>\n\n` +
+      `<b>✅ FORMULARIO RELLENADO — LLAMAR YA</b>\n\n` +
       `<b>${nombre}</b>\n` +
       `📧 ${email}\n` +
       `☎️ ${telefono}\n` +
@@ -71,11 +50,11 @@ export async function POST(req: NextRequest) {
       'info'
     )
 
-    return NextResponse.json({ ok: true, formulario_id: utm_id })
+    return NextResponse.json({ ok: true })
   } catch (error) {
-    console.error('Error en formulario-demo:', error)
+    console.error('Error formulario-demo:', error)
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Error desconocido' },
+      { error: error instanceof Error ? error.message : 'Error' },
       { status: 500 }
     )
   }
