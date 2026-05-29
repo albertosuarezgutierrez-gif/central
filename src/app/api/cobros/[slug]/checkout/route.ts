@@ -3,7 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 
-const COMISION_TOTAL = 0.025 // 1.5% Stripe + 1% ia.rest
+const COMISION_TOTAL = 0.025
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const body = await req.json()
   const { nombre_pagador, email_pagador } = body
 
-  // Soporta tanto array de items (multi) como item_id único (legacy)
+  // Soporta array de items (multi) y item_id único (legacy)
   let itemsInput: { item_id: string; cantidad: number }[] = []
   if (body.items && Array.isArray(body.items)) {
     itemsInput = body.items
@@ -25,7 +25,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     return NextResponse.json({ error: 'Datos incompletos' }, { status: 400 })
   }
 
-  // Cargar portal
   const { data: portal } = await supabase
     .from('cobros_grupo')
     .select(`
@@ -39,16 +38,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   if (portal.estado === 'cerrado') return NextResponse.json({ error: 'Portal cerrado' }, { status: 410 })
   if (!portal.stripe_connect_id) return NextResponse.json({ error: 'Cobros no configurados' }, { status: 400 })
 
-  // Validar y calcular items
-  const allItems = portal.cobros_grupo_items as any[]
-  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = []
+  const allItems = portal.cobros_grupo_items as { id: string; nombre: string; precio_eur: number; activo: boolean }[]
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const lineItems: any[] = []
   let totalBase = 0
-  let totalFinal = 0
-  const pagosInsert: any[] = []
+  const pagosInsert: Record<string, unknown>[] = []
 
   for (const { item_id, cantidad } of itemsInput) {
     if (!cantidad || cantidad < 1) continue
-    const item = allItems.find((i: any) => i.id === item_id && i.activo)
+    const item = allItems.find(i => i.id === item_id && i.activo)
     if (!item) return NextResponse.json({ error: `Menú no disponible: ${item_id}` }, { status: 404 })
 
     const precioBase = Number(item.precio_eur)
@@ -66,7 +64,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     })
 
     totalBase += precioBase * cantidad
-    totalFinal += precioFinal * cantidad
 
     pagosInsert.push({
       cobro_grupo_id: portal.id,
@@ -82,18 +79,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!lineItems.length) return NextResponse.json({ error: 'Sin items válidos' }, { status: 400 })
 
-  // application_fee = 1% del total base
   const applicationFee = Math.round(totalBase * 0.01 * 100)
 
-  // Insertar registros de pago (uno por item)
   const { data: pagos } = await supabase
     .from('cobros_grupo_pagos')
     .insert(pagosInsert)
     .select('id')
 
-  const pagoIds = pagos?.map((p: any) => p.id).join(',') ?? ''
+  const pagoIds = (pagos ?? []).map((p: { id: string }) => p.id).join(',')
 
-  // Crear Stripe Checkout Session
   const origin = req.headers.get('origin') || 'https://www.iarest.es'
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
@@ -113,12 +107,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     }
   })
 
-  // Guardar session id en todos los pagos
   if (pagos?.length) {
     await supabase
       .from('cobros_grupo_pagos')
       .update({ stripe_checkout_session: session.id })
-      .in('id', pagos.map((p: any) => p.id))
+      .in('id', (pagos as { id: string }[]).map(p => p.id))
   }
 
   return NextResponse.json({ checkout_url: session.url })
