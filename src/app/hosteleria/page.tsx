@@ -269,8 +269,8 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<!-- STRIP -->
-<div class="strip">
+<!-- STRIP — OCULTO -->
+<div class="strip" style="display:none">
   <div class="strip-item">
     <span class="strip-num">59<b>€</b></span>
     <span class="strip-lbl">Desde / mes</span>

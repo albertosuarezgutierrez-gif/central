@@ -452,7 +452,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
 </section>
 
 <!-- PRICING -->
-<section class="pricing" id="pricing">
+<section class="pricing" id="pricing" style="display:none">
   <div class="max-w">
     <div class="sl">Precio</div>
     <div class="pricing-inner">

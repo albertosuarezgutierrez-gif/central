@@ -494,8 +494,8 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<!-- ELIMINA -->
-<section class="elimina" id="elimina">
+<!-- ELIMINA — OCULTO -->
+<section class="elimina" id="elimina" style="display:none">
   <div class="w">
     <div class="elimina-grid">
       <div class="fi">

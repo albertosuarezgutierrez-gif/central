@@ -308,8 +308,8 @@ h2 i{font-style:italic;color:var(--red)}
   </div>
 </section>
 
-<!-- STRIP -->
-<div class="strip">
+<!-- STRIP — OCULTO -->
+<div class="strip" style="display:none">
   <div class="strip-item"><span class="strip-num">59<b>€</b></span><span class="strip-lbl">Desde / mes</span></div>
   <div class="strip-item"><span class="strip-num">0<b>%</b></span><span class="strip-lbl">Comisión</span></div>
   <div class="strip-item"><span class="strip-num">0<b>€</b></span><span class="strip-lbl">Sorpresas en caja</span></div>
