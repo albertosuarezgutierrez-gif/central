@@ -18,7 +18,8 @@ function CobroInner() {
 
   const [portal, setPortal] = useState<Portal | null>(null)
   const [notFound, setNotFound] = useState(false)
-  const [selIdx, setSelIdx] = useState<number | null>(null)
+  // selección múltiple: { [item_id]: cantidad }
+  const [cantidades, setCantidades] = useState<Record<string, number>>({})
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
   const [cargando, setCargando] = useState(false)
@@ -31,13 +32,48 @@ function CobroInner() {
       .catch(() => setNotFound(true))
   }, [slug])
 
+  const toggleItem = (id: string) => {
+    setCantidades(prev => {
+      if (prev[id]) {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      }
+      return { ...prev, [id]: 1 }
+    })
+  }
+
+  const setCantidad = (id: string, delta: number) => {
+    setCantidades(prev => {
+      const actual = prev[id] ?? 0
+      const nueva = actual + delta
+      if (nueva <= 0) {
+        const next = { ...prev }
+        delete next[id]
+        return next
+      }
+      return { ...prev, [id]: nueva }
+    })
+  }
+
+  const totalSeleccionados = Object.values(cantidades).reduce((a, b) => a + b, 0)
+  const totalImporte = portal
+    ? Object.entries(cantidades).reduce((acc, [id, qty]) => {
+        const item = portal.items.find(i => i.id === id)
+        return acc + (item ? item.precio_final_eur * qty : 0)
+      }, 0)
+    : 0
+
   const pagar = async () => {
-    if (selIdx === null || !nombre.trim()) { setError('Selecciona un menú e introduce tu nombre'); return }
+    if (totalSeleccionados === 0 || !nombre.trim()) {
+      setError('Selecciona al menos una opción e introduce tu nombre')
+      return
+    }
     setCargando(true); setError('')
-    const item = portal!.items[selIdx]
+    const items = Object.entries(cantidades).map(([item_id, cantidad]) => ({ item_id, cantidad }))
     const res = await fetch(`/api/cobros/${slug}/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ item_id: item.id, nombre_pagador: nombre, email_pagador: email })
+      body: JSON.stringify({ items, nombre_pagador: nombre, email_pagador: email })
     })
     const d = await res.json()
     if (d.checkout_url) window.location.href = d.checkout_url
@@ -56,16 +92,14 @@ function CobroInner() {
   )
 
   const col = portal!.color_primario || '#D9442B'
-  // Calcular contraste para texto sobre color del evento
   const r = parseInt(col.slice(1,3),16), g = parseInt(col.slice(3,5),16), b = parseInt(col.slice(5,7),16)
   const textCol = (r*299+g*587+b*114)/1000 > 128 ? '#1A1714' : '#F6F1E7'
-  // Color más suave para fondos
-  const colBg = col + '18' // 10% opacidad
+  const colBg = col + '18'
 
   return (
     <div style={{ minHeight: '100vh', background: '#F6F1E7', fontFamily: 'Inter Tight,sans-serif' }}>
 
-      {/* HERO — imagen y color del evento */}
+      {/* HERO */}
       <div style={{ background: col, padding: '2rem 1.25rem 1.5rem' }}>
         <div style={{ maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
           {portal!.imagen_url ? (
@@ -80,7 +114,6 @@ function CobroInner() {
           {portal!.descripcion && (
             <p style={{ fontSize: 13, color: textCol, opacity: .8, margin: 0, lineHeight: 1.6 }}>{portal!.descripcion}</p>
           )}
-          {/* Fechas evento y límite */}
           {(portal!.fecha_evento || portal!.fecha_limite_pago) && (
             <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: '.875rem', flexWrap: 'wrap' }}>
               {portal!.fecha_evento && (
@@ -118,37 +151,62 @@ function CobroInner() {
           </div>
         ) : (
           <>
-            {/* Selección menú */}
+            {/* Selección múltiple */}
             <div style={{ background: '#FBF8F1', border: '1px solid #D8CDB6', borderRadius: 14, padding: '1.25rem', marginBottom: '1rem' }}>
-              <p style={{ fontSize: 11, color: '#9C8E7E', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, margin: '0 0 .75rem' }}>Elige tu menú</p>
-              {portal!.items.map((item, i) => (
-                <div key={item.id} onClick={() => setSelIdx(i)}
-                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: 12,
-                    border: `1.5px solid ${selIdx === i ? col : '#D8CDB6'}`,
-                    borderRadius: 12, cursor: 'pointer',
-                    background: selIdx === i ? colBg : '#F6F1E7',
-                    marginBottom: '.5rem', transition: 'all .2s' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <div style={{ width: 20, height: 20, borderRadius: '50%',
-                      border: `1.5px solid ${selIdx === i ? col : '#D8CDB6'}`,
-                      background: selIdx === i ? col : 'transparent',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                      {selIdx === i && <div style={{ width: 8, height: 8, borderRadius: '50%', background: textCol }} />}
+              <p style={{ fontSize: 11, color: '#9C8E7E', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, margin: '0 0 .75rem' }}>
+                Elige tu menú — puedes seleccionar varios
+              </p>
+              {portal!.items.map((item) => {
+                const sel = !!cantidades[item.id]
+                const qty = cantidades[item.id] ?? 0
+                return (
+                  <div key={item.id}
+                    style={{ border: `1.5px solid ${sel ? col : '#D8CDB6'}`, borderRadius: 12,
+                      background: sel ? colBg : '#F6F1E7', marginBottom: '.5rem', transition: 'all .2s', overflow: 'hidden' }}>
+                    {/* Fila principal — click para toggle */}
+                    <div onClick={() => toggleItem(item.id)}
+                      style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', cursor: 'pointer' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        {/* Checkbox visual */}
+                        <div style={{ width: 20, height: 20, borderRadius: 6,
+                          border: `1.5px solid ${sel ? col : '#D8CDB6'}`,
+                          background: sel ? col : 'transparent',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          {sel && <span style={{ color: textCol, fontSize: 12, lineHeight: 1, fontWeight: 700 }}>✓</span>}
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1714' }}>{item.nombre}</div>
+                          {item.descripcion && <div style={{ fontSize: 12, color: '#9C8E7E' }}>{item.descripcion}</div>}
+                          {item.pdf_url && (
+                            <a href={item.pdf_url} target="_blank" onClick={e => e.stopPropagation()}
+                              style={{ fontSize: 11, color: col, textDecoration: 'none', fontWeight: 600 }}>📄 Ver carta completa</a>
+                          )}
+                        </div>
+                      </div>
+                      <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.1rem', color: col, fontWeight: 500, flexShrink: 0, marginLeft: 10 }}>
+                        {item.precio_final_eur.toFixed(2)} €
+                      </span>
                     </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 500, color: '#1A1714' }}>{item.nombre}</div>
-                      {item.descripcion && <div style={{ fontSize: 12, color: '#9C8E7E' }}>{item.descripcion}</div>}
-                      {item.pdf_url && (
-                        <a href={item.pdf_url} target="_blank" onClick={e => e.stopPropagation()}
-                          style={{ fontSize: 11, color: col, textDecoration: 'none', fontWeight: 600 }}>📄 Ver carta completa</a>
-                      )}
-                    </div>
+                    {/* Fila cantidad — solo si seleccionado */}
+                    {sel && (
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', padding: '0 12px 10px', gap: 8 }}
+                        onClick={e => e.stopPropagation()}>
+                        <span style={{ fontSize: 12, color: '#9C8E7E', marginRight: 4 }}>Cantidad:</span>
+                        <button onClick={() => setCantidad(item.id, -1)}
+                          style={{ width: 28, height: 28, borderRadius: 8, border: `1px solid ${col}`, background: 'transparent',
+                            color: col, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>−</button>
+                        <span style={{ fontSize: 15, fontWeight: 600, color: '#1A1714', minWidth: 20, textAlign: 'center' }}>{qty}</span>
+                        <button onClick={() => setCantidad(item.id, 1)}
+                          style={{ width: 28, height: 28, borderRadius: 8, border: 'none', background: col,
+                            color: textCol, fontSize: 16, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', lineHeight: 1 }}>+</button>
+                        <span style={{ fontSize: 13, color: '#6B5F52', marginLeft: 4, fontWeight: 500 }}>
+                          = {(item.precio_final_eur * qty).toFixed(2)} €
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.1rem', color: col, fontWeight: 500, flexShrink: 0, marginLeft: 10 }}>
-                    {item.precio_final_eur.toFixed(2)} €
-                  </span>
-                </div>
-              ))}
+                )
+              })}
             </div>
 
             {/* Datos pagador */}
@@ -162,18 +220,27 @@ function CobroInner() {
 
             {error && <p style={{ color: '#D9442B', fontSize: 13, marginBottom: '1rem' }}>{error}</p>}
 
-            {/* Botón pagar con color del evento */}
-            <button onClick={pagar} disabled={selIdx === null || !nombre.trim() || cargando}
+            {/* Resumen total */}
+            {totalSeleccionados > 0 && (
+              <div style={{ background: colBg, border: `1px solid ${col}30`, borderRadius: 12, padding: '10px 14px', marginBottom: '1rem',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: 13, color: '#6B5F52' }}>{totalSeleccionados} unidad{totalSeleccionados !== 1 ? 'es' : ''}</span>
+                <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.2rem', color: col, fontWeight: 600 }}>
+                  Total: {totalImporte.toFixed(2)} €
+                </span>
+              </div>
+            )}
+
+            <button onClick={pagar} disabled={totalSeleccionados === 0 || !nombre.trim() || cargando}
               style={{ width: '100%', padding: 14, background: col, color: textCol, border: 'none', borderRadius: 12,
-                fontSize: 15, fontWeight: 600, cursor: selIdx === null || !nombre.trim() ? 'not-allowed' : 'pointer',
-                opacity: selIdx === null || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
-              {cargando ? 'Procesando...' : selIdx !== null ? `Pagar ${portal!.items[selIdx].precio_final_eur.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
+                fontSize: 15, fontWeight: 600, cursor: totalSeleccionados === 0 || !nombre.trim() ? 'not-allowed' : 'pointer',
+                opacity: totalSeleccionados === 0 || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
+              {cargando ? 'Procesando...' : totalSeleccionados > 0 ? `Pagar ${totalImporte.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
             </button>
             <p style={{ fontSize: 11, color: '#9C8E7E', textAlign: 'center', marginTop: 8 }}>🔒 Pago seguro procesado por Stripe</p>
           </>
         )}
 
-        {/* Footer ia.rest */}
         <div style={{ textAlign: 'center', marginTop: '2.5rem', paddingTop: '1.5rem', borderTop: '1px solid #D8CDB6' }}>
           <a href="https://www.iarest.es" target="_blank"
             style={{ display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none', color: '#9C8E7E', fontSize: 12 }}>
