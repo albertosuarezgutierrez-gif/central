@@ -282,7 +282,6 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
   <div class="topbar-nav">
     <a href="/hosteleria">Hostelería</a>
     <a href="/catering">Catering</a>
-    <a href="#pricing">Precios</a>
     <a href="#contacto" class="nav-cta">Demo gratuita →</a>
   </div>
   <button class="burger" id="burger" aria-label="Menú"><span></span><span></span><span></span></button>
@@ -291,7 +290,6 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
 <div class="mob-menu" id="mobMenu">
   <a href="/hosteleria">Hostelería</a>
   <a href="/catering">Catering</a>
-  <a href="#pricing">Precios</a>
   <a href="#contacto" class="mob-cta">Demo gratuita →</a>
 </div>
 </header>

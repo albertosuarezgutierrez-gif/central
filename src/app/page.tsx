@@ -378,7 +378,6 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     <a href="/hosteleria">Hostelería</a>
     <a href="/catering">Catering</a>
     <a href="/espacios">Espacios</a>
-    <a href="#precios">Precios</a>
     <a href="#contacto" class="nav-cta">Demo gratuita →</a>
   </div>
   <button class="burger" id="burger" aria-label="Menú">
@@ -390,7 +389,6 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   <a href="/hosteleria">Hostelería</a>
   <a href="/catering">Catering</a>
   <a href="/espacios">Espacios</a>
-  <a href="#precios">Precios</a>
   <a href="#contacto">Contacto</a>
   <a href="#contacto" class="mob-cta">Demo gratuita →</a>
 </div>
