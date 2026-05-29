@@ -6,6 +6,7 @@ interface Item { id: string; nombre: string; descripcion: string | null; precio_
 interface Portal {
   titulo: string; descripcion: string | null; estado: string
   imagen_url: string | null; color_primario: string
+  fecha_evento: string | null; fecha_limite_pago: string | null
   items: Item[]
   restaurantes: { nombre: string; logo_url: string | null }
 }
@@ -78,6 +79,27 @@ function CobroInner() {
           </h1>
           {portal!.descripcion && (
             <p style={{ fontSize: 13, color: textCol, opacity: .8, margin: 0, lineHeight: 1.6 }}>{portal!.descripcion}</p>
+          )}
+          {/* Fechas evento y límite */}
+          {(portal!.fecha_evento || portal!.fecha_limite_pago) && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: '.875rem', flexWrap: 'wrap' }}>
+              {portal!.fecha_evento && (
+                <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>📅</span>
+                  <span style={{ fontFamily: 'Inter Tight,sans-serif', fontSize: 12, color: textCol, fontWeight: 600 }}>
+                    {new Date(portal!.fecha_evento + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
+              {portal!.fecha_limite_pago && portal!.estado !== 'cerrado' && (
+                <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>⏳</span>
+                  <span style={{ fontFamily: 'Inter Tight,sans-serif', fontSize: 12, color: textCol, fontWeight: 600 }}>
+                    Plazo hasta el {new Date(portal!.fecha_limite_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} a las {new Date(portal!.fecha_limite_pago).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
+            </div>
           )}
         </div>
       </div>

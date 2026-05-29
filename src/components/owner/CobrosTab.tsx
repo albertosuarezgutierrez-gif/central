@@ -1,11 +1,11 @@
 'use client'
-// CobrosTab v5.0 — onboarding Stripe integrado
+// CobrosTab v6.0 — fechas evento + límite pago + cierre automático
 import { useState, useEffect } from 'react'
 import { C, SE, SN } from '@/lib/colors'
 
 interface Item { id: string; nombre: string; precio_eur: number; pdf_url: string | null; activo: boolean }
 interface Pago { id: string; estado: string; importe_eur: number; nombre_pagador: string; pagado_at: string | null }
-interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
+interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; fecha_evento: string | null; fecha_limite_pago: string | null; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
 interface Props { restauranteId: string; sh: () => Record<string, string> }
 
 const BASE_URL = 'https://www.iarest.es'
@@ -33,6 +33,8 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   // Form
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [fechaEvento, setFechaEvento] = useState('')
+  const [fechaLimitePago, setFechaLimitePago] = useState('')
   const [color, setColor] = useState('#D9442B')
   const [imagenUrl, setImagenUrl] = useState('')
   const [imagenNombre, setImagenNombre] = useState('')
@@ -108,11 +110,12 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     const res = await fetch('/api/owner/cobros', {
       method: 'POST',
       headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color })
+      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color, fecha_evento: fechaEvento || null, fecha_limite_pago: fechaLimitePago || null })
     })
     const d = await res.json()
     if (d.ok) {
       setTitulo(''); setDescripcion(''); setColor('#D9442B')
+      setFechaEvento(''); setFechaLimitePago('')
       setImagenUrl(''); setImagenNombre('')
       setItems([{ nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }, { nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }])
       await load()
@@ -236,9 +239,20 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
           <label style={lbl}>Nombre del evento *</label>
           <input style={inp} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej: Congreso Empresarial Junio 2026" />
         </div>
-        <div>
+        <div style={{ marginBottom: '1rem' }}>
           <label style={lbl}>Descripción (opcional)</label>
           <input style={inp} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Información adicional para los invitados" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={lbl}>Fecha del evento</label>
+            <input type="date" style={inp} value={fechaEvento} onChange={e => setFechaEvento(e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>Límite de contratación</label>
+            <input type="datetime-local" style={inp} value={fechaLimitePago} onChange={e => setFechaLimitePago(e.target.value)} />
+            <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, margin: '4px 0 0' }}>El portal se cierra automáticamente en esta fecha</p>
+          </div>
         </div>
       </div>
 
@@ -388,6 +402,16 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
                 <p style={{ fontFamily: SN, fontSize: 11, color: tCol, opacity: .75, margin: '2px 0 0' }}>
                   {portal.cobros_grupo_items.length} menús · {pagados.length} pagados · {pendientes.length} pendientes
                 </p>
+                {(portal.fecha_evento || portal.fecha_limite_pago) && (
+                  <p style={{ fontFamily: SN, fontSize: 11, color: tCol, opacity: .75, margin: '3px 0 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {portal.fecha_evento && (
+                      <span>📅 Evento: {new Date(portal.fecha_evento + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    )}
+                    {portal.fecha_limite_pago && !cerrado && (
+                      <span>⏳ Límite: {new Date(portal.fecha_limite_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                    )}
+                  </p>
+                )}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <p style={{ fontFamily: SE, fontSize: '1.3rem', color: tCol, margin: 0 }}>{total.toFixed(2)} €</p>
