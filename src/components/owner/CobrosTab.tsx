@@ -1,11 +1,11 @@
 'use client'
-// CobrosTab v5.0 — onboarding Stripe integrado
+// CobrosTab v6.1 — edición de ítems y PDF desde portal existente
 import { useState, useEffect } from 'react'
 import { C, SE, SN } from '@/lib/colors'
 
 interface Item { id: string; nombre: string; precio_eur: number; pdf_url: string | null; activo: boolean }
 interface Pago { id: string; estado: string; importe_eur: number; nombre_pagador: string; pagado_at: string | null }
-interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
+interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; fecha_evento: string | null; fecha_limite_pago: string | null; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
 interface Props { restauranteId: string; sh: () => Record<string, string> }
 
 const BASE_URL = 'https://www.iarest.es'
@@ -19,7 +19,11 @@ const COLORES_PRESET = [
 export default function CobrosTab({ restauranteId, sh }: Props) {
   const [portales, setPortales] = useState<Portal[]>([])
   const [loading, setLoading] = useState(true)
-  const [vista, setVista] = useState<'lista' | 'crear' | 'stripe'>('lista')
+  const [vista, setVista] = useState<'lista' | 'crear' | 'stripe' | 'editar'>('lista')
+  const [portalEditando, setPortalEditando] = useState<Portal | null>(null)
+  const [itemsEdit, setItemsEdit] = useState<Array<{ id: string; nombre: string; precio_eur: string; pdf_url: string; pdf_nombre: string }>>([])
+  const [guardandoEdit, setGuardandoEdit] = useState(false)
+  const [errEdit, setErrEdit] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [err, setErr] = useState('')
   const [copiado, setCopiado] = useState<string | null>(null)
@@ -33,6 +37,9 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   // Form
   const [titulo, setTitulo] = useState('')
   const [descripcion, setDescripcion] = useState('')
+  const [fechaEvento, setFechaEvento] = useState('')
+  const [fechaLimitePago, setFechaLimitePago] = useState('')
+  const [repercutirComision, setRepercutirComision] = useState(false)
   const [color, setColor] = useState('#D9442B')
   const [imagenUrl, setImagenUrl] = useState('')
   const [imagenNombre, setImagenNombre] = useState('')
@@ -108,11 +115,12 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     const res = await fetch('/api/owner/cobros', {
       method: 'POST',
       headers: { ...sh(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color })
+      body: JSON.stringify({ titulo, descripcion, items: valid, imagen_url: imagenUrl || null, color_primario: color, fecha_evento: fechaEvento || null, fecha_limite_pago: fechaLimitePago || null, repercutir_comision: repercutirComision })
     })
     const d = await res.json()
     if (d.ok) {
       setTitulo(''); setDescripcion(''); setColor('#D9442B')
+      setFechaEvento(''); setFechaLimitePago(''); setRepercutirComision(false)
       setImagenUrl(''); setImagenNombre('')
       setItems([{ nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }, { nombre: '', precio_eur: '', pdf_url: '', pdf_nombre: '' }])
       await load()
@@ -133,12 +141,55 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   }
 
   const cerrar = async (id: string) => {
-    if (!confirm('¿Cerrar este portal?')) return
+    if (!confirm('¿Cerrar este portal? Ya no se podrán realizar nuevos pagos.')) return
     await fetch(`/api/owner/cobros/${id}`, {
       method: 'PATCH', headers: { ...sh(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ estado: 'cerrado' })
     })
     await load()
+  }
+
+  const eliminar = async (id: string) => {
+    if (!confirm('¿Eliminar este portal? Esta acción no se puede deshacer.')) return
+    const res = await fetch(`/api/owner/cobros/${id}`, { method: 'DELETE', headers: sh() })
+    const d = await res.json()
+    if (!res.ok) { alert(d.error || 'Error al eliminar'); return }
+    await load()
+  }
+
+  const abrirEdicion = (portal: Portal) => {
+    setPortalEditando(portal)
+    setItemsEdit(portal.cobros_grupo_items.map(i => ({
+      id: i.id,
+      nombre: i.nombre,
+      precio_eur: String(i.precio_eur),
+      pdf_url: i.pdf_url || '',
+      pdf_nombre: i.pdf_url ? '(PDF existente)' : ''
+    })))
+    setErrEdit('')
+    setVista('editar')
+  }
+
+  const uploadPdfEdit = async (idx: number, file: File) => {
+    const formData = new FormData(); formData.append('file', file)
+    const res = await fetch('/api/owner/cobros/upload-pdf', { method: 'POST', headers: sh(), body: formData })
+    const d = await res.json()
+    if (d.url) {
+      const n = [...itemsEdit]; n[idx] = { ...n[idx], pdf_url: d.url, pdf_nombre: file.name }; setItemsEdit(n)
+    }
+  }
+
+  const guardarEdicion = async () => {
+    if (!portalEditando) return
+    setGuardandoEdit(true); setErrEdit('')
+    const res = await fetch(`/api/owner/cobros/${portalEditando.id}/items`, {
+      method: 'PUT', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: itemsEdit.map(i => ({ id: i.id, nombre: i.nombre, precio_eur: parseFloat(i.precio_eur), pdf_url: i.pdf_url || null })) })
+    })
+    const d = await res.json()
+    setGuardandoEdit(false)
+    if (!res.ok) { setErrEdit(d.error || 'Error al guardar'); return }
+    await load(); setVista('lista'); setPortalEditando(null)
   }
 
   const irAStripe = async () => {
@@ -162,6 +213,64 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, color: C.ink, fontSize: 14, fontFamily: SN, outline: 'none', boxSizing: 'border-box' }
   const btn: React.CSSProperties = { background: C.red, color: C.paper, border: 'none', borderRadius: 10, padding: '11px 18px', fontFamily: SN, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
   const btnSec: React.CSSProperties = { background: 'transparent', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '10px 16px', fontFamily: SN, fontSize: 13, cursor: 'pointer' }
+
+  // ── VISTA EDITAR MENÚS ───────────────────────────────────────────────────
+  if (vista === 'editar' && portalEditando) {
+    const col = portalEditando.color_primario || C.red
+    return (
+      <div>
+        <button onClick={() => { setVista('lista'); setPortalEditando(null) }} style={{ background: 'none', border: 'none', color: C.ink3, fontFamily: SN, fontSize: 13, cursor: 'pointer', padding: '0 0 1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+          ← Volver
+        </button>
+        <h2 style={{ fontFamily: SE, fontSize: '1.2rem', color: C.ink, margin: '0 0 .25rem' }}>Editar menús</h2>
+        <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '0 0 1.5rem' }}>{portalEditando.titulo}</p>
+
+        {itemsEdit.map((item, i) => (
+          <div key={item.id} style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '1rem', marginBottom: '.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 8, marginBottom: '.625rem' }}>
+              <input
+                style={{ padding: '9px 12px', background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, fontFamily: SN, fontSize: 14, outline: 'none' }}
+                value={item.nombre}
+                onChange={e => { const n = [...itemsEdit]; n[i] = { ...n[i], nombre: e.target.value }; setItemsEdit(n) }}
+                placeholder="Nombre del menú"
+              />
+              <input
+                style={{ padding: '9px 12px', background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, fontFamily: SN, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' as const }}
+                value={item.precio_eur}
+                onChange={e => { const n = [...itemsEdit]; n[i] = { ...n[i], precio_eur: e.target.value }; setItemsEdit(n) }}
+                placeholder="0.00"
+                type="number"
+              />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', position: 'relative', padding: '8px 12px', background: C.bg3, border: `1px solid ${item.pdf_nombre && item.pdf_nombre !== '(PDF existente)' ? col : C.rule}`, borderRadius: 8 }}>
+              <input type="file" accept=".pdf" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%' }}
+                onChange={e => { if (e.target.files?.[0]) uploadPdfEdit(i, e.target.files[0]) }} />
+              <span style={{ fontSize: 14 }}>📄</span>
+              <span style={{ fontFamily: SN, fontSize: 12, color: item.pdf_nombre ? (item.pdf_nombre === '(PDF existente)' ? C.ink3 : C.green) : C.ink4 }}>
+                {item.pdf_nombre === '(PDF existente)' ? 'PDF adjunto — pulsa para reemplazar' : item.pdf_nombre ? ('✓ ' + item.pdf_nombre) : 'Adjuntar / reemplazar PDF'}
+              </span>
+              {item.pdf_url && item.pdf_nombre === '(PDF existente)' && (
+                <a href={item.pdf_url} target="_blank" onClick={e => e.stopPropagation()}
+                  style={{ marginLeft: 'auto', fontSize: 11, color: col, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
+                  Ver actual ↗
+                </a>
+              )}
+            </label>
+          </div>
+        ))}
+
+        {errEdit && <p style={{ color: C.red, fontFamily: SN, fontSize: 13, margin: '0 0 1rem' }}>{errEdit}</p>}
+
+        <button onClick={guardarEdicion} disabled={guardandoEdit}
+          style={{ width: '100%', padding: 14, background: col, color: '#F6F1E7', border: 'none', borderRadius: 12, fontSize: 15, fontFamily: SN, fontWeight: 600, cursor: guardandoEdit ? 'not-allowed' : 'pointer', opacity: guardandoEdit ? .6 : 1 }}>
+          {guardandoEdit ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, textAlign: 'center', marginTop: 8 }}>
+          Cambios inmediatos — el enlace público se actualiza al instante
+        </p>
+      </div>
+    )
+  }
 
   // ── VISTA STRIPE ONBOARDING ──────────────────────────────────────────────
   if (vista === 'stripe') return (
@@ -236,9 +345,20 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
           <label style={lbl}>Nombre del evento *</label>
           <input style={inp} value={titulo} onChange={e => setTitulo(e.target.value)} placeholder="Ej: Congreso Empresarial Junio 2026" />
         </div>
-        <div>
+        <div style={{ marginBottom: '1rem' }}>
           <label style={lbl}>Descripción (opcional)</label>
           <input style={inp} value={descripcion} onChange={e => setDescripcion(e.target.value)} placeholder="Información adicional para los invitados" />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label style={lbl}>Fecha del evento</label>
+            <input type="date" style={inp} value={fechaEvento} onChange={e => setFechaEvento(e.target.value)} />
+          </div>
+          <div>
+            <label style={lbl}>Límite de contratación</label>
+            <input type="datetime-local" style={inp} value={fechaLimitePago} onChange={e => setFechaLimitePago(e.target.value)} />
+            <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, margin: '4px 0 0' }}>El portal se cierra automáticamente en esta fecha</p>
+          </div>
         </div>
       </div>
 
@@ -311,6 +431,23 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
       </div>
 
       {err && <p style={{ fontFamily: SN, fontSize: 13, color: C.red, marginBottom: '1rem' }}>{err}</p>}
+
+      {/* Toggle comisión */}
+      <div style={{ ...card, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 16, cursor: 'pointer' }}
+        onClick={() => setRepercutirComision(!repercutirComision)}>
+        <div>
+          <p style={{ fontFamily: SN, fontSize: 14, fontWeight: 600, color: C.ink, margin: '0 0 3px' }}>Repercutir gastos de gestión al invitado</p>
+          <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: 0 }}>
+            {repercutirComision
+              ? 'El invitado paga el precio + 2.5% (1.5% Stripe + 1% ia.rest)'
+              : 'Tú asumes los gastos de gestión — el invitado paga el precio exacto'}
+          </p>
+        </div>
+        <div style={{ width: 44, height: 24, borderRadius: 12, background: repercutirComision ? C.green : C.rule, position: 'relative', flexShrink: 0, transition: 'background .2s' }}>
+          <div style={{ position: 'absolute', top: 3, left: repercutirComision ? 23 : 3, width: 18, height: 18, borderRadius: '50%', background: C.paper, transition: 'left .2s' }} />
+        </div>
+      </div>
+
       <button onClick={crear} disabled={guardando} style={{ ...btn, width: '100%', padding: 14, fontSize: 15 }}>
         {guardando ? 'Creando portal...' : 'Crear portal y generar link →'}
       </button>
@@ -388,6 +525,16 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
                 <p style={{ fontFamily: SN, fontSize: 11, color: tCol, opacity: .75, margin: '2px 0 0' }}>
                   {portal.cobros_grupo_items.length} menús · {pagados.length} pagados · {pendientes.length} pendientes
                 </p>
+                {(portal.fecha_evento || portal.fecha_limite_pago) && (
+                  <p style={{ fontFamily: SN, fontSize: 11, color: tCol, opacity: .75, margin: '3px 0 0', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {portal.fecha_evento && (
+                      <span>📅 Evento: {new Date(portal.fecha_evento + 'T00:00:00').toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+                    )}
+                    {portal.fecha_limite_pago && !cerrado && (
+                      <span>⏳ Límite: {new Date(portal.fecha_limite_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}</span>
+                    )}
+                  </p>
+                )}
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <p style={{ fontFamily: SE, fontSize: '1.3rem', color: tCol, margin: 0 }}>{total.toFixed(2)} €</p>
@@ -427,11 +574,26 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
                 </div>
               )}
 
-              {!cerrado && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: '.75rem', flexWrap: 'wrap' }}>
+                {!cerrado && (
+                  <button onClick={() => abrirEdicion(portal)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px' }}>
+                    ✏️ Editar menús
+                  </button>
+                )}
+                {!cerrado && pagados.length === 0 && (
+                  <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
+                    Eliminar
+                  </button>
+                )}
+                {!cerrado && (
                   <button onClick={() => cerrar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px' }}>Cerrar portal</button>
-                </div>
-              )}
+                )}
+                {cerrado && pagados.length === 0 && (
+                  <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
+                    Eliminar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )
