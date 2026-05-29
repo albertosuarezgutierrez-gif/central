@@ -2,10 +2,11 @@
 import { useEffect, useState, Suspense } from 'react'
 import { useParams, useSearchParams } from 'next/navigation'
 
-interface Item { id: string; nombre: string; descripcion: string | null; precio_eur: number; pdf_url: string | null }
+interface Item { id: string; nombre: string; descripcion: string | null; precio_eur: number; precio_final_eur: number; pdf_url: string | null }
 interface Portal {
   titulo: string; descripcion: string | null; estado: string
   imagen_url: string | null; color_primario: string
+  fecha_evento: string | null; fecha_limite_pago: string | null
   items: Item[]
   restaurantes: { nombre: string; logo_url: string | null }
 }
@@ -79,6 +80,27 @@ function CobroInner() {
           {portal!.descripcion && (
             <p style={{ fontSize: 13, color: textCol, opacity: .8, margin: 0, lineHeight: 1.6 }}>{portal!.descripcion}</p>
           )}
+          {/* Fechas evento y límite */}
+          {(portal!.fecha_evento || portal!.fecha_limite_pago) && (
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 16, marginTop: '.875rem', flexWrap: 'wrap' }}>
+              {portal!.fecha_evento && (
+                <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>📅</span>
+                  <span style={{ fontFamily: 'Inter Tight,sans-serif', fontSize: 12, color: textCol, fontWeight: 600 }}>
+                    {new Date(portal!.fecha_evento + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                  </span>
+                </div>
+              )}
+              {portal!.fecha_limite_pago && portal!.estado !== 'cerrado' && (
+                <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 8, padding: '5px 12px', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span style={{ fontSize: 14 }}>⏳</span>
+                  <span style={{ fontFamily: 'Inter Tight,sans-serif', fontSize: 12, color: textCol, fontWeight: 600 }}>
+                    Plazo hasta el {new Date(portal!.fecha_limite_pago).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })} a las {new Date(portal!.fecha_limite_pago).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -123,7 +145,7 @@ function CobroInner() {
                     </div>
                   </div>
                   <span style={{ fontFamily: 'Newsreader,serif', fontSize: '1.1rem', color: col, fontWeight: 500, flexShrink: 0, marginLeft: 10 }}>
-                    {(item.precio_eur * 1.01).toFixed(2)} €
+                    {item.precio_final_eur.toFixed(2)} €
                   </span>
                 </div>
               ))}
@@ -145,7 +167,7 @@ function CobroInner() {
               style={{ width: '100%', padding: 14, background: col, color: textCol, border: 'none', borderRadius: 12,
                 fontSize: 15, fontWeight: 600, cursor: selIdx === null || !nombre.trim() ? 'not-allowed' : 'pointer',
                 opacity: selIdx === null || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
-              {cargando ? 'Procesando...' : selIdx !== null ? `Pagar ${(portal!.items[selIdx].precio_eur * 1.01).toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
+              {cargando ? 'Procesando...' : selIdx !== null ? `Pagar ${portal!.items[selIdx].precio_final_eur.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
             </button>
             <p style={{ fontSize: 11, color: '#9C8E7E', textAlign: 'center', marginTop: 8 }}>🔒 Pago seguro procesado por Stripe</p>
           </>
