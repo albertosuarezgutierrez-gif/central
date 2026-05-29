@@ -597,7 +597,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   </div>
 </section>
 
-<section id="precios" style="background:var(--bg2);padding:100px 48px">
+<section id="precios" style="background:var(--bg2);padding:100px 48px;display:none">
   <div class="w">
     <div class="fi" style="text-align:center;margin-bottom:52px">
       <div class="s-label" style="justify-content:center;display:flex">Precio</div>
