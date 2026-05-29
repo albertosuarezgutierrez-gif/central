@@ -1,5 +1,5 @@
 'use client'
-// CobrosTab v6.0 — fechas evento + límite pago + cierre automático
+// CobrosTab v6.1 — edición de ítems y PDF desde portal existente
 import { useState, useEffect } from 'react'
 import { C, SE, SN } from '@/lib/colors'
 
@@ -19,7 +19,11 @@ const COLORES_PRESET = [
 export default function CobrosTab({ restauranteId, sh }: Props) {
   const [portales, setPortales] = useState<Portal[]>([])
   const [loading, setLoading] = useState(true)
-  const [vista, setVista] = useState<'lista' | 'crear' | 'stripe'>('lista')
+  const [vista, setVista] = useState<'lista' | 'crear' | 'stripe' | 'editar'>('lista')
+  const [portalEditando, setPortalEditando] = useState<Portal | null>(null)
+  const [itemsEdit, setItemsEdit] = useState<Array<{ id: string; nombre: string; precio_eur: string; pdf_url: string; pdf_nombre: string }>>([])
+  const [guardandoEdit, setGuardandoEdit] = useState(false)
+  const [errEdit, setErrEdit] = useState('')
   const [guardando, setGuardando] = useState(false)
   const [err, setErr] = useState('')
   const [copiado, setCopiado] = useState<string | null>(null)
@@ -153,6 +157,41 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
     await load()
   }
 
+  const abrirEdicion = (portal: Portal) => {
+    setPortalEditando(portal)
+    setItemsEdit(portal.cobros_grupo_items.map(i => ({
+      id: i.id,
+      nombre: i.nombre,
+      precio_eur: String(i.precio_eur),
+      pdf_url: i.pdf_url || '',
+      pdf_nombre: i.pdf_url ? '(PDF existente)' : ''
+    })))
+    setErrEdit('')
+    setVista('editar')
+  }
+
+  const uploadPdfEdit = async (idx: number, file: File) => {
+    const formData = new FormData(); formData.append('file', file)
+    const res = await fetch('/api/owner/cobros/upload-pdf', { method: 'POST', headers: sh(), body: formData })
+    const d = await res.json()
+    if (d.url) {
+      const n = [...itemsEdit]; n[idx] = { ...n[idx], pdf_url: d.url, pdf_nombre: file.name }; setItemsEdit(n)
+    }
+  }
+
+  const guardarEdicion = async () => {
+    if (!portalEditando) return
+    setGuardandoEdit(true); setErrEdit('')
+    const res = await fetch(`/api/owner/cobros/${portalEditando.id}/items`, {
+      method: 'PUT', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items: itemsEdit.map(i => ({ id: i.id, nombre: i.nombre, precio_eur: parseFloat(i.precio_eur), pdf_url: i.pdf_url || null })) })
+    })
+    const d = await res.json()
+    setGuardandoEdit(false)
+    if (!res.ok) { setErrEdit(d.error || 'Error al guardar'); return }
+    await load(); setVista('lista'); setPortalEditando(null)
+  }
+
   const irAStripe = async () => {
     if (stripeUrl) { window.location.href = stripeUrl; return }
     setCargandoStripe(true)
@@ -174,6 +213,64 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 10, color: C.ink, fontSize: 14, fontFamily: SN, outline: 'none', boxSizing: 'border-box' }
   const btn: React.CSSProperties = { background: C.red, color: C.paper, border: 'none', borderRadius: 10, padding: '11px 18px', fontFamily: SN, fontSize: 14, fontWeight: 600, cursor: 'pointer' }
   const btnSec: React.CSSProperties = { background: 'transparent', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '10px 16px', fontFamily: SN, fontSize: 13, cursor: 'pointer' }
+
+  // ── VISTA EDITAR MENÚS ───────────────────────────────────────────────────
+  if (vista === 'editar' && portalEditando) {
+    const col = portalEditando.color_primario || C.red
+    return (
+      <div>
+        <button onClick={() => { setVista('lista'); setPortalEditando(null) }} style={{ background: 'none', border: 'none', color: C.ink3, fontFamily: SN, fontSize: 13, cursor: 'pointer', padding: '0 0 1rem', display: 'flex', alignItems: 'center', gap: 6 }}>
+          ← Volver
+        </button>
+        <h2 style={{ fontFamily: SE, fontSize: '1.2rem', color: C.ink, margin: '0 0 .25rem' }}>Editar menús</h2>
+        <p style={{ fontFamily: SN, fontSize: 12, color: C.ink3, margin: '0 0 1.5rem' }}>{portalEditando.titulo}</p>
+
+        {itemsEdit.map((item, i) => (
+          <div key={item.id} style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '1rem', marginBottom: '.75rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 110px', gap: 8, marginBottom: '.625rem' }}>
+              <input
+                style={{ padding: '9px 12px', background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, fontFamily: SN, fontSize: 14, outline: 'none' }}
+                value={item.nombre}
+                onChange={e => { const n = [...itemsEdit]; n[i] = { ...n[i], nombre: e.target.value }; setItemsEdit(n) }}
+                placeholder="Nombre del menú"
+              />
+              <input
+                style={{ padding: '9px 12px', background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, fontFamily: SN, fontSize: 14, outline: 'none', width: '100%', boxSizing: 'border-box' as const }}
+                value={item.precio_eur}
+                onChange={e => { const n = [...itemsEdit]; n[i] = { ...n[i], precio_eur: e.target.value }; setItemsEdit(n) }}
+                placeholder="0.00"
+                type="number"
+              />
+            </div>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', position: 'relative', padding: '8px 12px', background: C.bg3, border: `1px solid ${item.pdf_nombre && item.pdf_nombre !== '(PDF existente)' ? col : C.rule}`, borderRadius: 8 }}>
+              <input type="file" accept=".pdf" style={{ position: 'absolute', inset: 0, opacity: 0, cursor: 'pointer', width: '100%' }}
+                onChange={e => { if (e.target.files?.[0]) uploadPdfEdit(i, e.target.files[0]) }} />
+              <span style={{ fontSize: 14 }}>📄</span>
+              <span style={{ fontFamily: SN, fontSize: 12, color: item.pdf_nombre ? (item.pdf_nombre === '(PDF existente)' ? C.ink3 : C.green) : C.ink4 }}>
+                {item.pdf_nombre === '(PDF existente)' ? 'PDF adjunto — pulsa para reemplazar' : item.pdf_nombre ? ('✓ ' + item.pdf_nombre) : 'Adjuntar / reemplazar PDF'}
+              </span>
+              {item.pdf_url && item.pdf_nombre === '(PDF existente)' && (
+                <a href={item.pdf_url} target="_blank" onClick={e => e.stopPropagation()}
+                  style={{ marginLeft: 'auto', fontSize: 11, color: col, fontWeight: 600, textDecoration: 'none', flexShrink: 0 }}>
+                  Ver actual ↗
+                </a>
+              )}
+            </label>
+          </div>
+        ))}
+
+        {errEdit && <p style={{ color: C.red, fontFamily: SN, fontSize: 13, margin: '0 0 1rem' }}>{errEdit}</p>}
+
+        <button onClick={guardarEdicion} disabled={guardandoEdit}
+          style={{ width: '100%', padding: 14, background: col, color: '#F6F1E7', border: 'none', borderRadius: 12, fontSize: 15, fontFamily: SN, fontWeight: 600, cursor: guardandoEdit ? 'not-allowed' : 'pointer', opacity: guardandoEdit ? .6 : 1 }}>
+          {guardandoEdit ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+        <p style={{ fontFamily: SN, fontSize: 11, color: C.ink4, textAlign: 'center', marginTop: 8 }}>
+          Cambios inmediatos — el enlace público se actualiza al instante
+        </p>
+      </div>
+    )
+  }
 
   // ── VISTA STRIPE ONBOARDING ──────────────────────────────────────────────
   if (vista === 'stripe') return (
@@ -477,23 +574,26 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
                 </div>
               )}
 
-              {!cerrado && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: '.75rem' }}>
-                  {pagados.length === 0 && (
-                    <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
-                      Eliminar
-                    </button>
-                  )}
-                  <button onClick={() => cerrar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px' }}>Cerrar portal</button>
-                </div>
-              )}
-              {cerrado && pagados.length === 0 && (
-                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '.75rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: '.75rem', flexWrap: 'wrap' }}>
+                {!cerrado && (
+                  <button onClick={() => abrirEdicion(portal)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px' }}>
+                    ✏️ Editar menús
+                  </button>
+                )}
+                {!cerrado && pagados.length === 0 && (
                   <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
                     Eliminar
                   </button>
-                </div>
-              )}
+                )}
+                {!cerrado && (
+                  <button onClick={() => cerrar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px' }}>Cerrar portal</button>
+                )}
+                {cerrado && pagados.length === 0 && (
+                  <button onClick={() => eliminar(portal.id)} style={{ ...btnSec, fontSize: 12, padding: '6px 12px', color: C.red, borderColor: C.red }}>
+                    Eliminar
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )
