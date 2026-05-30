@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { firmarObjeto } from '@/lib/session-sign'
 import { createClient } from '@supabase/supabase-js'
 
 function serviceClient() {
@@ -49,12 +50,12 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({
     ok: true,
-    session: {
+    session: firmarObjeto({
       contable_id:   contable.id,
       nombre:        contable.nombre,
       nombre_asesoria: contable.nombre_asesoria ?? null,
       email,
       restaurantes,
-    },
+    }),
   })
 }

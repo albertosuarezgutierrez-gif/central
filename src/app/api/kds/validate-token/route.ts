@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { firmarSesion } from '@/lib/session-sign'
 
 // GET /api/kds/validate-token?token=XXXX
 // Valida el kds_token de un restaurante y devuelve sesión sintética para el KDS
@@ -32,13 +33,13 @@ export async function GET(req: NextRequest) {
   // Sesión sintética para el KDS — rol cocina, sin camarero_id real
   // El KDS solo necesita restaurante_id para las queries Realtime
   return NextResponse.json({
-    session: {
+    session: firmarSesion({
       id:                 `kds-${data.id}`,
       nombre:             'KDS',
       rol:                'cocina' as const,
       restaurante_id:     data.id,
       restaurante_nombre: data.nombre,
       seccion_id:         null,   // se lee de ?seccion= en URL
-    }
+    })
   })
 }

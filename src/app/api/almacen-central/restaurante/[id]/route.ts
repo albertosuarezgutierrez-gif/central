@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
+import { sesionAceptable } from '@/lib/session-sign'
 import { createClient } from '@supabase/supabase-js'
 
 function sc() {
@@ -8,7 +9,7 @@ function sc() {
 function getSession(req: NextRequest) {
   const raw = req.headers.get('x-almacen-session')
   if (!raw) return null
-  try { return JSON.parse(raw) as { contable_id: string; restaurantes: { id: string; permisos: string[] }[] } }
+  try { const p = JSON.parse(raw); if (!sesionAceptable(p, 'objeto')) return null; return (p) as { contable_id: string; restaurantes: { id: string; permisos: string[] }[] } }
   catch { return null }
 }
 function tieneAcceso(session: ReturnType<typeof getSession>, rid: string): boolean {

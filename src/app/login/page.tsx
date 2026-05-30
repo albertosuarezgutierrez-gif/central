@@ -244,10 +244,20 @@ export default function LoginPage() {
     } catch { setError('Error de red'); setVozMode('error') }
   }, [restauranteCode])
 
-  const seleccionarCamarero = (c: VozSugerencia) => {
-    const session = { id:c.id, nombre:c.nombre, rol:c.rol, seccion_id:c.seccion_id ?? null, restaurante_id:vozRestauranteId, restaurante_nombre:vozRestauranteNombre }
-    localStorage.setItem('ia_rest_session', JSON.stringify(session))
-    navigateByRol(c)
+  const seleccionarCamarero = async (c: VozSugerencia) => {
+    try {
+      const r = await fetch('/api/auth/voz-seleccion', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ camarero_id: c.id, restaurante_id: vozRestauranteId })
+      })
+      const d = await r.json()
+      if (r.ok && d.camarero) {
+        localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
+        navigateByRol(c)
+      } else {
+        setError(d.error ?? 'No se pudo iniciar sesión')
+      }
+    } catch { setError('Error de red') }
   }
 
   const resetVoz = () => { setVozMode('idle'); setVozTexto(''); setVozSugerencias([]); setError('') }

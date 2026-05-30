@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { firmarSesion } from '@/lib/session-sign'
 import { createServerClient } from '@/lib/supabase'
 
 // POST /api/cocina/validar-pin
@@ -48,12 +49,13 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    camarero: {
+    camarero: firmarSesion({
       id: cam.camarero_id,
+      camarero_id: cam.camarero_id,
       nombre: cam.nombre,
       rol: cam.rol,
       restaurante_id: cam.restaurante_id,
       restaurante_nombre: cam.restaurante_nombre ?? restaurante_nombre,
-    }
+    })
   })
 }
