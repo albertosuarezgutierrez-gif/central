@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { firmarSesion } from '@/lib/session-sign'
 
 export const maxDuration = 30
 
@@ -112,14 +113,15 @@ Si no se identifica ningún nombre, devuelve null.`
       identificado: true,
       texto,
       confianza: brainResult.confianza,
-      camarero: {
+      camarero: firmarSesion({
         id: camarero.id,
+        camarero_id: camarero.id,
         nombre: camarero.nombre,
         rol: camarero.rol,
         seccion_id: camarero.seccion_id ?? null,
         restaurante_id,
         restaurante_nombre,
-      },
+      }),
     })
 
   } catch (err) {

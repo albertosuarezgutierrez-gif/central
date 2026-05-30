@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
+import { firmarSesion } from '@/lib/session-sign'
 import { createServerClient } from '@/lib/supabase'
 
 function getSession(req: NextRequest) {
@@ -60,8 +61,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // Construir la sesiÃ³n igual que lo hace /api/auth al hacer login con PIN
-  const sessionData = {
+  const sessionData = firmarSesion({
     id: camarero.id,
+    camarero_id: camarero.id,
     nombre: camarero.nombre,
     rol: camarero.rol,
     restaurante_id: camarero.restaurante_id,
@@ -69,7 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     seccion_id: camarero.seccion_id ?? null,
     // Marcamos que es una sesiÃ³n impersonada por el super admin
     _impersonated_by: session.nombre || 'super_admin',
-  }
+  })
 
   return NextResponse.json({
     ok: true,

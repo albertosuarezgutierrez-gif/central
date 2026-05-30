@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import { verificarSesion } from '@/lib/session-sign'
 
 export interface ApiSession {
   id: string
@@ -8,21 +9,45 @@ export interface ApiSession {
   restaurante_nombre: string
   cuenta_id?: string
   camarero_id?: string
+  seccion_id?: string | null
+  puede_comandar?: boolean
+  modulos_gestion?: string[]
+  _sig?: string
 }
 
-// Lee la sesión del header x-ia-session (pasado por el frontend)
+// Corte de seguridad. En 'false' (o sin definir) se aceptan sesiones antiguas
+// sin firma (no echa a nadie durante la migración). En 'true' solo se aceptan
+// sesiones firmadas válidas → cierra el agujero de suplantación.
+const ENFORCE = process.env.SESSION_ENFORCE === 'true'
+
 export function getSession(req: NextRequest): ApiSession | null {
   const raw = req.headers.get('x-ia-session')
   if (!raw) return null
-  try { return JSON.parse(raw) } catch { return null }
+
+  let parsed: ApiSession
+  try { parsed = JSON.parse(raw) } catch { return null }
+
+  // Si trae firma: tiene que ser válida SIEMPRE. Una firma presente pero
+  // incorrecta = manipulación → se rechaza aunque no estemos en enforce.
+  if (parsed._sig) {
+    return verificarSesion(parsed) ? parsed : null
+  }
+
+  // Sin firma: solo se tolera durante la migración (ENFORCE=false).
+  return ENFORCE ? null : parsed
 }
 
-// Extrae restaurante_id o devuelve el demo como fallback
-// Acepta: x-ia-session (JSON), x-ia-restaurante-id (directo para cron), o fallback demo
 export function getRestauranteId(req: NextRequest): string {
-  // Header directo para cron y usos server-side
+  // Header directo para cron / server-side. Con ENFORCE exige el secreto
+  // compartido CRON_SECRET; antes se tolera para no romper los crons.
   const direct = req.headers.get('x-ia-restaurante-id')
-  if (direct) return direct
+  if (direct) {
+    const cs = req.headers.get('x-ia-cron-secret')
+    const ok = !!process.env.CRON_SECRET && cs === process.env.CRON_SECRET
+    if (ok || !ENFORCE) return direct
+  }
+
   const s = getSession(req)
-  return s?.restaurante_id ?? '00000000-0000-0000-0000-000000000001'
+  if (s?.restaurante_id) return s.restaurante_id
+  return '00000000-0000-0000-0000-000000000001'
 }

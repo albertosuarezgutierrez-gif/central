@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { firmarSesion } from '@/lib/session-sign'
 
 // Rate limiting: 5 intentos / IP → bloqueo 30 min
 const ATTEMPTS = new Map<string, { count: number; until: number }>()
@@ -56,14 +57,15 @@ export async function POST(req: NextRequest) {
   ATTEMPTS.delete(ip)
 
   return NextResponse.json({
-    camarero: {
+    camarero: firmarSesion({
       id: cam.camarero_id,
+      camarero_id: cam.camarero_id,
       nombre: cam.nombre,
       rol: 'super_admin',
       restaurante_id: cam.restaurante_id,
       restaurante_nombre: cam.restaurante_nombre ?? 'ia.rest',
       seccion_id: null,
       onboarding_completado: true,
-    }
+    })
   })
 }

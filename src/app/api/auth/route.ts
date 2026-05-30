@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { firmarSesion } from '@/lib/session-sign'
 
 // Rate limiting: máx 10 intentos/IP en 5 min (protege fuerza bruta de PINs)
 const ATTEMPTS = new Map<string, { count: number; until: number }>()
@@ -114,8 +115,9 @@ export async function POST(req: NextRequest) {
   }
 
   return NextResponse.json({
-    camarero: {
+    camarero: firmarSesion({
       id: cam.camarero_id,
+      camarero_id: cam.camarero_id,
       nombre: cam.nombre,
       rol: cam.rol,
       restaurante_id: cam.restaurante_id,
@@ -124,6 +126,6 @@ export async function POST(req: NextRequest) {
       puede_comandar: cam.puede_comandar ?? false,
       modulos_gestion: cam.modulos_gestion ?? [],
       onboarding_completado,
-    }
+    })
   })
 }

@@ -4,6 +4,7 @@ export const dynamic = 'force-dynamic'
 // Después del selector de restaurante → devuelve session completa
 
 import { NextRequest, NextResponse } from 'next/server'
+import { firmarSesion } from '@/lib/session-sign'
 import { createServerClient } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
@@ -31,13 +32,14 @@ export async function POST(req: NextRequest) {
     .single()
 
   return NextResponse.json({
-    session: {
+    session: firmarSesion({
       id: cam?.id ?? '',
+      camarero_id: cam?.id ?? '',
       nombre: cam?.nombre ?? '',
       rol: 'owner',
       restaurante_id: r.id,
       restaurante_nombre: r.nombre,
       cuenta_id,
-    },
+    }),
   })
 }
