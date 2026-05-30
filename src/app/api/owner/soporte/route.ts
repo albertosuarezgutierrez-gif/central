@@ -112,7 +112,7 @@ export async function POST(req: NextRequest) {
       ? `https://${process.env.VERCEL_URL}`
       : 'http://localhost:3000'
     const diagFetch = await fetch(`${baseUrl}/api/owner/diagnostico`, {
-      headers: { 'x-ia-restaurante-id': rid },
+      headers: { 'x-ia-restaurante-id': rid, 'x-ia-cron-secret': process.env.CRON_SECRET ?? '' },
     })
     if (diagFetch.ok) diagnostico = await diagFetch.json()
   } catch { /* si falla el diagnóstico, la IA responde sin contexto */ }

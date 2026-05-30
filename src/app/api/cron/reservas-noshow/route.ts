@@ -66,6 +66,7 @@ export async function GET(req: NextRequest) {
         headers: {
           'Content-Type': 'application/json',
           'x-ia-restaurante-id': restaurante_id,
+          'x-ia-cron-secret': process.env.CRON_SECRET ?? '',
         },
         body: JSON.stringify({
           restaurante_id,

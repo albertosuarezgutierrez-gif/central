@@ -47,7 +47,7 @@ async function sendPush(rid: string, title: string, body: string) {
   const base = process.env.NEXT_PUBLIC_APP_URL || 'https://www.iarest.es'
   await fetch(`${base}/api/push/send`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-ia-restaurante-id': rid },
+    headers: { 'Content-Type': 'application/json', 'x-ia-restaurante-id': rid, 'x-ia-cron-secret': process.env.CRON_SECRET ?? '' },
     body: JSON.stringify({ title, body }),
   }).catch(e => console.error('[CRON push]', e))
 }
