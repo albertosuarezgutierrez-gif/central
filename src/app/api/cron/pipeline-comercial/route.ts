@@ -140,18 +140,33 @@ Reglas del mensaje WhatsApp (campo "whatsapp"):
 - Si hay reunión sin confirmar: pídele confirmar día y hora de forma natural.
 - Máximo 40 palabras. Sin emojis excesivos (máx 1). Que suene humano, no a plantilla.
 - NO inventes datos que no tienes (precios concretos, fechas que no constan).
+- CRÍTICO: el mensaje en UNA sola línea, sin saltos de línea. Usa ". " para separar frases. No uses comillas dobles dentro del texto (usa comillas simples si hace falta).
 
-Responde SOLO JSON array (mismo orden que la lista):
-[{ "lead_id": "uuid-exacto", "urgencia": "alta|media|baja", "accion": "acción concreta (máx 12 palabras)", "razon": "por qué ahora (máx 8 palabras)", "whatsapp": "mensaje listo para enviar" }]`
+Responde SOLO JSON array válido en una línea por objeto (mismo orden que la lista):
+[{ "lead_id": "uuid-exacto", "urgencia": "alta|media|baja", "accion": "acción concreta (máx 12 palabras)", "razon": "por qué ahora (máx 8 palabras)", "whatsapp": "mensaje listo para enviar, sin saltos de línea" }]`
 
   let acciones: AccionSugerida[] = []
+  const parseAcciones = (raw: string): AccionSugerida[] => {
+    const limpio = cleanJSON(raw)
+    try { return JSON.parse(limpio) } catch { /* reparar abajo */ }
+    // Reparación: escapar saltos de línea reales dentro de strings JSON
+    try {
+      const reparado = limpio.replace(/"(?:[^"\\]|\\.)*"/g, m => m.replace(/[\n\r]/g, ' '))
+      return JSON.parse(reparado)
+    } catch { /* extraer objeto a objeto abajo */ }
+    // Último recurso: extraer cada objeto {...} individualmente
+    const objs = limpio.match(/\{[^{}]*\}/g) || []
+    const out: AccionSugerida[] = []
+    for (const o of objs) {
+      try { out.push(JSON.parse(o.replace(/\n/g, ' '))) } catch { /* ignorar */ }
+    }
+    return out
+  }
   try {
-    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON.', prompt, 1800)
-    const parsed = JSON.parse(cleanJSON(raw))
-    acciones = (parsed as AccionSugerida[]).map((a, i) => ({
-      ...a,
-      lead_id: urgentes[i]?.id ?? a.lead_id
-    }))
+    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON válido.', prompt, 1800)
+    const parsed = parseAcciones(raw)
+    if (!parsed.length) throw new Error('parse vacío')
+    acciones = parsed.map((a, i) => ({ ...a, lead_id: urgentes[i]?.id ?? a.lead_id }))
   } catch {
     acciones = urgentes.map(l => ({
       lead_id: l.id,
