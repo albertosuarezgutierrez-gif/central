@@ -55,12 +55,12 @@ async function buscarBorradorProgramado(supabase: ReturnType<typeof createServer
 }
 
 async function generarPost(plantilla: Plantilla, tema: string, hashtags: string[]) {
-  const hashBase = '#hosteleria #restaurante #bar #gestion #hosteleros'
+  const hashBase = '#hosteleria #restaurante'
   const prompt = `Eres el agente de Instagram de ia.rest (siempre escrito así: "ia.rest", nunca "IA Rest" ni "iarest").
 PRODUCTO: ia.rest es un TPV por voz para hostelería española. El camarero habla → la cocina recibe en <0,5s.
 TONO: directo, sin palabrería, habla como un hostelero experimentado. Frases cortas. Nada genérico.
 SLOGAN: "Facturar más ahora sí es ganar más."
-PROHIBIDO: nombrar competidores. Usar "sistemas tradicionales" o "TPV convencional". NUNCA mencionar ciudades ni ubicaciones. NUNCA escribir "IA Rest" — siempre "ia.rest".
+PROHIBIDO: nombrar competidores. Usar "sistemas tradicionales" o "TPV convencional". NUNCA mencionar ciudades ni ubicaciones EN EL ARTE. NUNCA escribir "IA Rest" — siempre "ia.rest".
 PLANTILLA "${plantilla}" sobre: "${tema}"
 ${plantilla==='stat'?'dato:número impactante del sector hostelero. unidad:qué mide. ctx:por qué importa para un dueño. sub:"Dato del sector"':''}
 ${plantilla==='pregunta'?'titulo:pregunta que incomoda al hostelero(50-70 chars). sub:"Hostelería · 2026"':''}
@@ -68,7 +68,14 @@ ${plantilla==='comparativa'?'titulo:"Antes vs ia.rest". items:8 por|(4 antes+4 i
 ${plantilla==='tip'?'titulo:"Cómo..."(60-80). sub:"3 claves · Hostelería". items:3 consejos accionables por|':''}
 ${plantilla==='cita'?'titulo:frase que diría un dueño de restaurante real(máx 100 chars). sub:"Dueño · Restaurante"':''}
 ${plantilla==='producto'?'titulo:frase corta que describe la pantalla en acción. sub:vacío':''}
-CAPTION: 150-200 palabras. Tono conversacional, directo. Sin emoji al inicio. Terminar con URL: www.iarest.es. Tags: ${hashBase} ${hashtags.join(' ')}
+
+CAPTION — REGLAS CRÍTICAS DE ALCANCE 2026 (Instagram funciona como buscador, prioriza keywords sobre hashtags):
+1. PRIMERA LÍNEA = GANCHO. Una frase corta que pare el scroll de un hostelero (dolor real o promesa concreta). Sin emoji al inicio. Es lo único que se ve antes del "...más".
+2. Escribe con LENGUAJE NATURAL DE BÚSQUEDA: incluye frases que un dueño de bar/restaurante teclearía en el buscador (ej: "reducir errores de comanda", "TPV por voz para hostelería", "digitalizar mi restaurante", "comandas sin papel", "software para bares"). Tejidas en la prosa, no forzadas.
+3. Aporta 1 idea de valor concreta. Termina invitando a compartir o guardar si le sirve (los compartidos son la señal #1 de alcance).
+4. Cierra con: www.iarest.es
+5. EXACTAMENTE 4-5 hashtags al final (Instagram corta a 5). Mezcla: 2 de nicho hostelero + 1-2 locales/sector + el de marca. Precisos, no genéricos. Base obligatoria: ${hashBase}. Añade de: ${hashtags.slice(0,3).join(' ')}
+6. Largo total: 120-160 palabras.
 SOLO JSON: {"titulo":"","sub":"","dato":"","unidad":"","ctx":"","items":"","caption":""}`
   const raw = await callAI('Post Instagram. SOLO JSON.', prompt, 600)
   return JSON.parse(cleanJSON(raw))
