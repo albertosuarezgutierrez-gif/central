@@ -3,7 +3,8 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { publicarEnInstagram } from '@/lib/instagram'
+import { publicarEnInstagram, publicarReel } from '@/lib/instagram'
+import { generarReel } from '@/app/api/ig-reel/route'
 import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/lib/telegram'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { obtenerNoticias, leerContextoDrive } from '@/lib/instagram-context'
@@ -63,6 +64,27 @@ export async function POST(req: NextRequest) {
 
   const parts = cb.data.split(':')
   const accion = parts[0]
+
+  // ── Aprobar y publicar REEL ───────────────────────────────────────────
+  if (accion === 'ig_aprobar_reel') {
+    const borradorId = parts[1]
+    const { data: b } = await supabase.from('instagram_borradores').select('*').eq('id', borradorId).single()
+    if (!b || b.estado !== 'pendiente') { await tgAnswerCallback(cb.id, 'Ya procesado'); return NextResponse.json({ ok: true }) }
+    await tgAnswerCallback(cb.id, '⏳ Publicando Reel...')
+    try {
+      const postId = await publicarReel(b.image_url, b.caption)
+      await supabase.from('instagram_posts').insert({
+        post_id: postId, plantilla: 'reel', titulo: b.titulo, caption: b.caption,
+        image_url: b.image_url, tema_elegido: b.tema_elegido, modulo_relacionado: b.modulo_relacionado,
+        estado: 'publicado', tipo: 'reel',
+      })
+      await supabase.from('instagram_borradores').update({ estado: 'publicado' }).eq('id', borradorId)
+      await tgEditMessage(cb.message.message_id, `✅ Reel publicado`)
+    } catch (e) {
+      await tgAlertButtons(`⚠️ Error publicando Reel: ${(e as Error).message}`, 'aviso', [])
+    }
+    return NextResponse.json({ ok: true })
+  }
 
   // ── Aprobar y publicar borrador ───────────────────────────────────────
   if (accion === 'ig_aprobar') {
@@ -191,9 +213,31 @@ SOLO JSON: {"titulo":"...","sub":"...","dato":"...","unidad":"...","ctx":"...","
       .maybeSingle()
 
     if (b?.id) {
-      // Reusar el flujo de generar_idea
-      const fakeCallback = { ...cb, data: `ig_generar_idea:${b.id}:${formato}` }
-      // Llamar recursivamente sería complejo — hacer inline
+      // ── Formato VIDEO → generar Reel animado (slides → Cloudinary MP4) ──
+      if (formato === 'video') {
+        const prompt = `Agente Instagram ia.rest. Genera contenido para un Reel vertical sobre: "${tema}".
+Devuelve un titulo de portada (max 55 chars) y 3 puntos clave cortos (max 70 chars cada uno) que expliquen el tema a un hostelero. Y un caption de 150 palabras terminando en www.iarest.es con hashtags de hostelería.
+SOLO JSON: {"titulo":"...","p1":"...","p2":"...","p3":"...","caption":"..."}`
+        const raw = await callAI('Genera Reel Instagram. SOLO JSON.', prompt, 500)
+        const p = JSON.parse(cleanJSON(raw))
+        const puntos = [p.p1, p.p2, p.p3].filter(Boolean) as string[]
+        try {
+          const reelUrl = await generarReel({ titulo: p.titulo || tema, estilo: 'editorial', puntos })
+          await supabase.from('instagram_borradores').update({
+            plantilla: 'reel', titulo: p.titulo || tema, caption: p.caption, image_url: reelUrl,
+          }).eq('id', b.id)
+          await tgAlertButtons(
+            `🎬 <b>Reel listo</b>\n\n<b>${(p.titulo || tema).slice(0,60)}</b>\n\n<i>${p.caption?.slice(0,150)}...</i>`,
+            'info',
+            [[{ texto: '✅ Publicar Reel', callback: `ig_aprobar_reel:${b.id}` }, { texto: '🗑️ Descartar', callback: `ig_descartar:${b.id}` }]]
+          )
+        } catch (e) {
+          await tgAlertButtons(`⚠️ Error generando Reel: ${(e as Error).message}`, 'aviso', [])
+        }
+        return NextResponse.json({ ok: true })
+      }
+
+      // ── Resto de formatos → imagen ──
       const prompt = `Agente Instagram ia.rest. Plantilla "${formato}" sobre: "${tema}"
 SOLO JSON: {"titulo":"...","sub":"...","dato":"...","unidad":"...","ctx":"...","items":"...","caption":"..."}`
       const raw = await callAI('Genera post Instagram. SOLO JSON.', prompt, 500)
