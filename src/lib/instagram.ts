@@ -70,3 +70,26 @@ export async function publicarPostBlog(post: { titulo: string; slug: string; key
   const imageUrl = `https://www.iarest.es/api/ig-img?tipo=pregunta&titulo=${encodeURIComponent(post.titulo)}&sub=${encodeURIComponent(post.keyword)}`
   return await publicarEnInstagram(imageUrl, caption.trim())
 }
+
+export async function publicarReel(videoUrl: string, caption: string): Promise<string> {
+  if (!IG_TOKEN || !IG_USER_ID) throw new Error('INSTAGRAM vars no configuradas')
+  const create = await (await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ media_type: 'REELS', video_url: videoUrl, caption, share_to_feed: true, access_token: IG_TOKEN }),
+  })).json() as { id?: string }
+  if (!create.id) throw new Error(`Error contenedor Reel: ${JSON.stringify(create)}`)
+  let intentos = 0, status = 'IN_PROGRESS'
+  while (status === 'IN_PROGRESS' && intentos < 30) {
+    await new Promise(r => setTimeout(r, 4000))
+    const s = await (await fetch(`https://graph.instagram.com/v21.0/${create.id}?fields=status_code&access_token=${IG_TOKEN}`)).json() as { status_code?: string }
+    status = s.status_code || 'ERROR'
+    intentos++
+  }
+  if (status !== 'FINISHED') throw new Error(`Reel no listo: ${status}`)
+  const pub = await (await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media_publish`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: create.id, access_token: IG_TOKEN }),
+  })).json() as { id?: string }
+  if (!pub.id) throw new Error(`Error publicando Reel: ${JSON.stringify(pub)}`)
+  return pub.id
+}
