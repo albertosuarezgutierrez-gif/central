@@ -165,12 +165,15 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
   try {
     const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON válido.', prompt, 1800)
     if (req.nextUrl.searchParams.get('debug') === '1') {
-      return NextResponse.json({ debug: true, rawLen: raw.length, raw: raw.slice(0, 2000), urgentes: urgentes.length })
+      return NextResponse.json({ debug: 'ok', rawLen: raw.length, raw: raw.slice(0, 2000), urgentes: urgentes.length })
     }
     const parsed = parseAcciones(raw)
     if (!parsed.length) throw new Error('parse vacío')
     acciones = parsed.map((a, i) => ({ ...a, lead_id: urgentes[i]?.id ?? a.lead_id }))
-  } catch {
+  } catch (err) {
+    if (req.nextUrl.searchParams.get('debug') === '1') {
+      return NextResponse.json({ debug: 'catch', error: (err as Error).message, urgentes: urgentes.length })
+    }
     acciones = urgentes.map(l => ({
       lead_id: l.id,
       urgencia: (l.propuestaReciente || l.accionVencida || l.reunionSinConfirmar ? 'alta' : 'media') as 'alta' | 'media' | 'baja',
