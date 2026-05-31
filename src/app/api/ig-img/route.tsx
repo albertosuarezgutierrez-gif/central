@@ -4,27 +4,31 @@ export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
 const ORIGIN = 'https://www.iarest.es'
-type FontDef = { name: string; data: ArrayBuffer; weight: 400|500|600; style: 'normal'|'italic' }
+type FontDef = { name: string; data: ArrayBuffer; weight: 400|500|600|700; style: 'normal'|'italic' }
 let _fonts: FontDef[] | null = null
 async function getFonts(): Promise<FontDef[]> {
   if (_fonts) return _fonts
   const load = (f: string) => fetch(`${ORIGIN}/fonts/${f}`).then(r => r.arrayBuffer())
-  const [news, inter, interSemi] = await Promise.all([
-    load('Newsreader-Italic.ttf'),
-    load('InterTight-Regular.ttf'),
-    load('InterTight-SemiBold.ttf'),
+  const [news, inter, interSemi, anton, caveat] = await Promise.all([
+    load('Newsreader-Italic.ttf'), load('InterTight-Regular.ttf'), load('InterTight-SemiBold.ttf'),
+    load('Anton.ttf'), load('Caveat-SemiBold.ttf'),
   ])
   _fonts = [
-    { name: 'News',  data: news,      weight: 500, style: 'italic' },
-    { name: 'Inter', data: inter,     weight: 400, style: 'normal' },
+    { name: 'News', data: news, weight: 500, style: 'italic' },
+    { name: 'Inter', data: inter, weight: 400, style: 'normal' },
     { name: 'Inter', data: interSemi, weight: 600, style: 'normal' },
+    { name: 'Anton', data: anton, weight: 400, style: 'normal' },
+    { name: 'Caveat', data: caveat, weight: 600, style: 'normal' },
   ]
   return _fonts
 }
 
+const S=1080, RED='#D9442B', DARK='#14110E', D2='#1E1A15', D3='#2A221A', CR='#F6F1E7', INK='#1A1714', I2='#9C8E7E', I3='#6B5F52'
+
 export async function GET(req: NextRequest) {
   const p = req.nextUrl.searchParams
   const tipo = p.get('tipo') || 'pregunta'
+  const estilo = p.get('estilo') || 'editorial'
   const titulo = p.get('titulo') || 'ia.rest'
   const sub = p.get('sub') || ''
   const dato = p.get('dato') || '3min'
@@ -36,9 +40,54 @@ export async function GET(req: NextRequest) {
   const punto = p.get('punto') || ''
 
   const fonts = await getFonts()
-  const S=1080,RED='#D9442B',DARK='#14110E',D2='#1E1A15',D3='#2A221A',CR='#F6F1E7',INK='#1A1714',I2='#9C8E7E',I3='#6B5F52'
   const R = (el: React.ReactElement) => new ImageResponse(el, { width:S, height:S, fonts })
 
+  // ───────── ESTILOS ALTERNATIVOS (brutalist / humano) para stat y pregunta ─────────
+  if (estilo === 'brutalist') {
+    if (tipo === 'stat') return R(
+      <div style={{width:S,height:S,background:CR,display:'flex',flexDirection:'column',fontFamily:'Inter'}}>
+        <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',background:DARK,padding:'34px 60px'}}>
+          <span style={{fontSize:30,fontWeight:600,letterSpacing:'0.08em',color:CR}}>{(sub||'DATO DEL SECTOR').toUpperCase()}</span>
+          <span style={{fontSize:30,fontWeight:600,color:RED}}>ia.rest</span>
+        </div>
+        <div style={{display:'flex',flex:1,alignItems:'center',paddingLeft:50}}>
+          <span style={{fontFamily:'Anton',fontSize:dato.length>3?340:420,color:RED,lineHeight:0.8}}>{dato}</span>
+        </div>
+        <div style={{display:'flex',flexDirection:'column',background:DARK,padding:'50px 60px',gap:18}}>
+          <span style={{fontFamily:'Anton',fontSize:unidad.length>26?64:80,color:CR,lineHeight:1.0,textTransform:'uppercase'}}>{unidad}</span>
+          <span style={{fontSize:26,color:I2}}>www.iarest.es</span>
+        </div>
+      </div>)
+    return R( // pregunta brutalist
+      <div style={{width:S,height:S,background:RED,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:70,fontFamily:'Inter'}}>
+        <span style={{fontSize:30,fontWeight:600,letterSpacing:'0.08em',color:'rgba(246,241,231,0.7)'}}>HOSTELERÍA · 2026</span>
+        <span style={{fontFamily:'Anton',fontSize:titulo.length>48?92:118,color:CR,lineHeight:0.96,textTransform:'uppercase'}}>{titulo}</span>
+        <span style={{fontSize:28,fontWeight:600,color:CR}}>ia.rest · www.iarest.es</span>
+      </div>)
+  }
+
+  if (estilo === 'humano') {
+    if (tipo === 'stat') return R(
+      <div style={{width:S,height:S,background:'#362C22',display:'flex',alignItems:'center',justifyContent:'center',padding:70}}>
+        <div style={{width:S-140,height:S-140,background:'#EEE5D4',display:'flex',flexDirection:'column',padding:80,position:'relative'}}>
+          <div style={{position:'absolute',top:-30,left:(S-140)/2-90,width:180,height:60,background:RED}}/>
+          <span style={{fontFamily:'Caveat',fontSize:92,color:'#50402D'}}>¿Sabías que…</span>
+          <span style={{fontFamily:'Caveat',fontSize:300,color:RED,lineHeight:0.95,marginTop:10}}>{dato}</span>
+          <span style={{fontFamily:'Caveat',fontSize:80,color:'#3C2E22',lineHeight:1.1,marginTop:10}}>{unidad}</span>
+          <span style={{fontFamily:'Inter',fontSize:30,color:'#785F4B',marginTop:'auto'}}>ia.rest — lo dices, llega bien a cocina</span>
+        </div>
+      </div>)
+    return R( // pregunta humano
+      <div style={{width:S,height:S,background:'#362C22',display:'flex',alignItems:'center',justifyContent:'center',padding:70}}>
+        <div style={{width:S-140,height:S-140,background:'#EEE5D4',display:'flex',flexDirection:'column',justifyContent:'center',padding:90,position:'relative'}}>
+          <div style={{position:'absolute',top:-30,left:(S-140)/2-90,width:180,height:60,background:RED}}/>
+          <span style={{fontFamily:'Caveat',fontSize:titulo.length>50?96:120,color:'#3C2E22',lineHeight:1.05}}>{titulo}</span>
+          <span style={{fontFamily:'Inter',fontSize:30,color:'#785F4B',marginTop:40}}>ia.rest · www.iarest.es</span>
+        </div>
+      </div>)
+  }
+
+  // ───────── ESTILO EDITORIAL (default) ─────────
   if (tipo === 'pregunta') return R(
     <div style={{width:S,height:S,background:CR,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
@@ -160,7 +209,6 @@ export async function GET(req: NextRequest) {
           <div style={{fontSize:13,color:I3}}>www.iarest.es</div>
         </div>
       </div>)
-
     if (esCierre) return R(
       <div style={{width:S,height:S,background:RED,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
         <span style={{fontSize:12,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(246,241,231,0.5)',fontFamily:'Inter'}}>{num} / {total}</span>
@@ -173,7 +221,6 @@ export async function GET(req: NextRequest) {
           <div style={{fontSize:13,color:'rgba(246,241,231,0.4)',letterSpacing:'0.1em',textTransform:'uppercase'}}>TPV por voz para hostelería · 59€/mes</div>
         </div>
       </div>)
-
     const numStr=String(num)
     const bg=num%2===0?CR:DARK,textColor=num%2===0?INK:CR,numColor=num%2===0?'rgba(217,68,43,0.1)':'rgba(217,68,43,0.15)'
     return R(

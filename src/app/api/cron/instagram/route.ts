@@ -7,7 +7,29 @@ import { tgAlertButtons } from '@/lib/telegram'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
 
 type Plantilla = 'stat'|'pregunta'|'comparativa'|'tip'|'cita'|'producto'
+type Estilo = 'editorial'|'brutalist'|'humano'
+const ESTILOS: Estilo[] = ['editorial','brutalist','humano']
 type Tono = 'claro'|'rojo'|'oscuro'
+
+// Director de arte: elige el estilo de la semana, rotando sin repetir el último usado.
+async function estiloDeLaSemana(supabase: ReturnType<typeof createServerClient>): Promise<Estilo> {
+  const now = new Date()
+  const year = now.getUTCFullYear()
+  const oneJan = new Date(Date.UTC(year, 0, 1))
+  const week = Math.ceil((((now.getTime() - oneJan.getTime()) / 86400000) + oneJan.getUTCDay() + 1) / 7)
+  const semanaIso = `${year}-W${week}`
+
+  const { data: yaSemana } = await supabase.from('instagram_estilos_usados')
+    .select('estilo').eq('semana_iso', semanaIso).limit(1).maybeSingle()
+  if (yaSemana?.estilo && ESTILOS.includes(yaSemana.estilo as Estilo)) return yaSemana.estilo as Estilo
+
+  const { data: ultimo } = await supabase.from('instagram_estilos_usados')
+    .select('estilo').order('created_at', { ascending: false }).limit(1).maybeSingle()
+  const pool = ESTILOS.filter(e => e !== ultimo?.estilo)
+  const elegido = pool[Math.floor(Math.random() * pool.length)] || ESTILOS[0]
+  await supabase.from('instagram_estilos_usados').insert({ estilo: elegido, semana_iso: semanaIso })
+  return elegido
+}
 const TONO: Record<Plantilla,Tono> = { pregunta:'claro',cita:'claro',tip:'rojo',stat:'oscuro',comparativa:'oscuro',producto:'oscuro' }
 const CICLO: Tono[] = ['oscuro','claro','rojo']
 const POR_TONO: Record<Tono,Plantilla[]> = { claro:['pregunta','cita'],rojo:['tip'],oscuro:['stat','comparativa','producto'] }
@@ -106,7 +128,8 @@ export async function GET(req: NextRequest) {
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
     const { tema, modulo, hashtags } = await elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx)
     const post = await generarPost(plantilla, tema, hashtags)
-    const imageUrl = buildUrl({ tipo: plantilla, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items })
+    const estilo = await estiloDeLaSemana(supabase)
+    const imageUrl = buildUrl({ tipo: plantilla, estilo, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items })
 
     const { data: borrador } = await supabase.from('instagram_borradores').insert({
       plantilla, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad,
