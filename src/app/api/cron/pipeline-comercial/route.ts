@@ -31,6 +31,7 @@ interface LeadConMetricas extends LeadPipeline {
   accionVencida: boolean
   propuestaReciente: boolean
   reunionProxima: boolean
+  reunionSinConfirmar?: boolean
   nombreDisplay: string
 }
 
@@ -53,11 +54,11 @@ export async function GET(req: NextRequest) {
   const { data: leads, error } = await supabase
     .from('leads')
     .select(`
-      id, nombre, empresa, restaurante, estado, puntuacion,
+      id, nombre, empresa, restaurante, estado:estado_pipeline, puntuacion,
       ultima_actividad_at, siguiente_contacto_at, siguiente_contacto_texto,
       propuesta_slug, propuesta_vista_at, reunion_fecha, reunion_confirmada
     `)
-    .not('estado', 'in', '(cliente,descartado)')
+    .not('estado_pipeline', 'in', '(cliente,descartado)')
     .order('puntuacion', { ascending: false })
 
   if (error || !leads?.length) {
@@ -84,10 +85,21 @@ export async function GET(req: NextRequest) {
   })
 
   // ── Filtrar los que necesitan atención ───────────────────────────────
-  const urgentes = leadsConMetricas.filter(l =>
+  const ahoraMs = ahora.getTime()
+  const enriquecer = (l: LeadConMetricas) => {
+    const reunionSinConfirmar = !!l.reunion_fecha
+      && new Date(l.reunion_fecha).getTime() > ahoraMs
+      && new Date(l.reunion_fecha).getTime() - ahoraMs < 14 * 86400000
+      && l.reunion_confirmada !== true
+    return { ...l, reunionSinConfirmar }
+  }
+  const leadsExt = leadsConMetricas.map(enriquecer)
+
+  const urgentes = leadsExt.filter(l =>
     l.propuestaReciente ||
     l.accionVencida ||
-    (l.diasSinActividad > 3 && ['contactado', 'demo', 'propuesta'].includes(l.estado))
+    l.reunionSinConfirmar ||
+    (l.diasSinActividad > 3 && ['contactado','demo','propuesta','reunion_agendada','propuesta_lista','esperando_ok','estudiando'].includes(l.estado))
   )
 
   if (!urgentes.length) {
@@ -99,8 +111,9 @@ export async function GET(req: NextRequest) {
     const partes: string[] = [`${l.nombreDisplay} (${l.estado}, score:${l.puntuacion ?? '?'})`]
     if (l.propuestaReciente) partes.push('visitó propuesta <48h')
     if (l.accionVencida)     partes.push(`acción vencida: "${l.siguiente_contacto_texto ?? 'pendiente'}"`)
+    if (l.reunionSinConfirmar) partes.push(`⚠️ REUNIÓN SIN CONFIRMAR el ${new Date(l.reunion_fecha!).toLocaleDateString('es-ES')}`)
     if (l.diasSinActividad < 999) partes.push(`${l.diasSinActividad}d sin actividad`)
-    if (l.reunionProxima)    partes.push(`reunión el ${new Date(l.reunion_fecha!).toLocaleDateString('es-ES')}`)
+    if (l.reunionProxima && !l.reunionSinConfirmar) partes.push(`reunión el ${new Date(l.reunion_fecha!).toLocaleDateString('es-ES')}`)
     return `- [${l.id}] ${partes.join(' | ')}`
   }).join('\n')
 
@@ -111,10 +124,10 @@ LEADS ACTIVOS QUE NECESITAN ATENCIÓN:
 ${resumenLeads}
 
 Reglas:
+- Si reunión sin confirmar: contactar HOY para confirmar fecha/hora (es lo más urgente, el dinero se cae si no se confirma)
 - Si visitó propuesta <48h: llamar hoy sin falta
 - Si acción vencida: ejecutarla hoy
 - Si >3 días sin actividad en estado avanzado: retomar con mensaje personalizado
-- Si reunión próxima: preparar briefing
 
 Responde SOLO JSON array (mantén el mismo orden que la lista):
 [{ "lead_id": "uuid-exacto", "urgencia": "alta|media|baja", "accion": "acción concreta (máx 12 palabras)", "razon": "por qué ahora (máx 8 palabras)" }]`
