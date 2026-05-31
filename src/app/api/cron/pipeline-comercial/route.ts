@@ -163,7 +163,7 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
     return out
   }
   try {
-    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON válido.', prompt, 3500)
+    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON válido.', prompt, 3500, 45_000, true)
     const parsed = parseAcciones(raw)
     if (!parsed.length) throw new Error('parse vacío')
     // Mapear por lead_id devuelto por NIM; los que falten se completan con fallback más abajo
