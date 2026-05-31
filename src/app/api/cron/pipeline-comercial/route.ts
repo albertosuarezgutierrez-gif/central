@@ -184,7 +184,10 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
             razon: l.reunionSinConfirmar ? 'Reunión sin confirmar' : `${l.diasSinActividad}d sin actividad`,
           }
     })
-  } catch {
+  } catch (err) {
+    if (req.nextUrl.searchParams.get('debug') === '1') {
+      return NextResponse.json({ rama: 'catch', error: (err as Error).message })
+    }
     acciones = urgentes.map(l => ({
       lead_id: l.id,
       urgencia: (l.propuestaReciente || l.accionVencida || l.reunionSinConfirmar ? 'alta' : 'media') as 'alta' | 'media' | 'baja',
