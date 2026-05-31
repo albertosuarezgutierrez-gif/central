@@ -163,17 +163,23 @@ Responde SOLO JSON array válido en una línea por objeto (mismo orden que la li
     return out
   }
   try {
-    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON válido.', prompt, 1800)
-    if (req.nextUrl.searchParams.get('debug') === '1') {
-      return NextResponse.json({ debug: 'ok', rawLen: raw.length, raw: raw.slice(0, 2000), urgentes: urgentes.length })
-    }
+    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON válido.', prompt, 3500)
     const parsed = parseAcciones(raw)
     if (!parsed.length) throw new Error('parse vacío')
-    acciones = parsed.map((a, i) => ({ ...a, lead_id: urgentes[i]?.id ?? a.lead_id }))
-  } catch (err) {
-    if (req.nextUrl.searchParams.get('debug') === '1') {
-      return NextResponse.json({ debug: 'catch', error: (err as Error).message, urgentes: urgentes.length })
-    }
+    // Mapear por lead_id devuelto por NIM; los que falten se completan con fallback más abajo
+    const porId = new Map(parsed.filter(a => a.lead_id).map(a => [a.lead_id, a]))
+    acciones = urgentes.map((l, i) => {
+      const m = porId.get(l.id) || parsed[i]
+      return m
+        ? { ...m, lead_id: l.id }
+        : {
+            lead_id: l.id,
+            urgencia: (l.reunionSinConfirmar || l.propuestaReciente || l.accionVencida ? 'alta' : 'media') as 'alta'|'media'|'baja',
+            accion: l.reunionSinConfirmar ? 'Confirmar día y hora de la reunión' : 'Retomar contacto',
+            razon: l.reunionSinConfirmar ? 'Reunión sin confirmar' : `${l.diasSinActividad}d sin actividad`,
+          }
+    })
+  } catch {
     acciones = urgentes.map(l => ({
       lead_id: l.id,
       urgencia: (l.propuestaReciente || l.accionVencida || l.reunionSinConfirmar ? 'alta' : 'media') as 'alta' | 'media' | 'baja',
