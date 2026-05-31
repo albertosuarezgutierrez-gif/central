@@ -2,13 +2,13 @@
 // Diario 8:00 — analiza leads activos, detecta urgencias, sugiere acciones via NIM
 // Integrado en briefing-semanal del lunes (bloque pipeline al inicio)
 
-export const maxDuration = 30
+export const maxDuration = 60
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
-import { tgAlert } from '@/lib/telegram'
+import { tgAlert, tgAlertButtons } from '@/lib/telegram'
 
 interface LeadPipeline {
   id: string
@@ -17,6 +17,9 @@ interface LeadPipeline {
   restaurante: string | null
   estado: string
   puntuacion: number | null
+  mrr_estimado: number | null
+  email: string | null
+  email_draft: string | null
   ultima_actividad_at: string | null
   siguiente_contacto_at: string | null
   siguiente_contacto_texto: string | null
@@ -40,6 +43,7 @@ interface AccionSugerida {
   urgencia: 'alta' | 'media' | 'baja'
   accion: string
   razon: string
+  whatsapp?: string
 }
 
 export async function GET(req: NextRequest) {
@@ -54,7 +58,8 @@ export async function GET(req: NextRequest) {
   const { data: leads, error } = await supabase
     .from('leads')
     .select(`
-      id, nombre, empresa, restaurante, estado:estado_pipeline, puntuacion,
+      id, nombre, empresa, restaurante, estado:estado_pipeline, puntuacion, mrr_estimado,
+      email, email_draft,
       ultima_actividad_at, siguiente_contacto_at, siguiente_contacto_texto,
       propuesta_slug, propuesta_vista_at, reunion_fecha, reunion_confirmada
     `)
@@ -118,73 +123,96 @@ export async function GET(req: NextRequest) {
   }).join('\n')
 
   const prompt = `Eres el asistente comercial de ia.rest (TPV por voz para hostelería española, 59€/mes).
-Analiza estos leads y devuelve LA acción más concreta e inmediata para cada uno.
+Para cada lead: devuelve la acción más concreta e inmediata Y redacta el mensaje de WhatsApp de seguimiento listo para enviar.
 
 LEADS ACTIVOS QUE NECESITAN ATENCIÓN:
 ${resumenLeads}
 
-Reglas:
-- Si reunión sin confirmar: contactar HOY para confirmar fecha/hora (es lo más urgente, el dinero se cae si no se confirma)
+Reglas de acción:
+- Si reunión sin confirmar: contactar HOY para confirmar fecha/hora (lo más urgente, el dinero se cae si no se confirma)
 - Si visitó propuesta <48h: llamar hoy sin falta
 - Si acción vencida: ejecutarla hoy
 - Si >3 días sin actividad en estado avanzado: retomar con mensaje personalizado
 
-Responde SOLO JSON array (mantén el mismo orden que la lista):
-[{ "lead_id": "uuid-exacto", "urgencia": "alta|media|baja", "accion": "acción concreta (máx 12 palabras)", "razon": "por qué ahora (máx 8 palabras)" }]`
+Reglas del mensaje WhatsApp (campo "whatsapp"):
+- Tono cercano y profesional, de tú, como un comercial que conoce al cliente. Español de España.
+- Personalizado al nombre del negocio y a su situación (reunión, propuesta vista, silencio).
+- Si hay reunión sin confirmar: pídele confirmar día y hora de forma natural.
+- Máximo 40 palabras. Sin emojis excesivos (máx 1). Que suene humano, no a plantilla.
+- NO inventes datos que no tienes (precios concretos, fechas que no constan).
+
+Responde SOLO JSON array (mismo orden que la lista):
+[{ "lead_id": "uuid-exacto", "urgencia": "alta|media|baja", "accion": "acción concreta (máx 12 palabras)", "razon": "por qué ahora (máx 8 palabras)", "whatsapp": "mensaje listo para enviar" }]`
 
   let acciones: AccionSugerida[] = []
   try {
-    const raw = await callAI('Analiza leads y sugiere acciones comerciales. SOLO JSON.', prompt, 500)
+    const raw = await callAI('Analiza leads, sugiere acciones y redacta WhatsApp de seguimiento. SOLO JSON.', prompt, 1800)
     const parsed = JSON.parse(cleanJSON(raw))
-    // Garantizar IDs correctos (NIM a veces los trunca)
     acciones = (parsed as AccionSugerida[]).map((a, i) => ({
       ...a,
       lead_id: urgentes[i]?.id ?? a.lead_id
     }))
   } catch {
-    // Fallback sin NIM
     acciones = urgentes.map(l => ({
       lead_id: l.id,
-      urgencia: (l.propuestaReciente || l.accionVencida ? 'alta' : 'media') as 'alta' | 'media' | 'baja',
-      accion: l.propuestaReciente
-        ? 'Llamar hoy — acaban de ver la propuesta'
-        : l.accionVencida
-          ? `Ejecutar: ${l.siguiente_contacto_texto ?? 'acción pendiente'}`
-          : 'Retomar contacto tras silencio',
-      razon: l.propuestaReciente
-        ? 'Visitó propuesta <48h'
-        : `${l.diasSinActividad}d sin actividad`
+      urgencia: (l.propuestaReciente || l.accionVencida || l.reunionSinConfirmar ? 'alta' : 'media') as 'alta' | 'media' | 'baja',
+      accion: l.reunionSinConfirmar
+        ? 'Confirmar día y hora de la reunión'
+        : l.propuestaReciente
+          ? 'Llamar hoy — acaban de ver la propuesta'
+          : l.accionVencida
+            ? `Ejecutar: ${l.siguiente_contacto_texto ?? 'acción pendiente'}`
+            : 'Retomar contacto tras silencio',
+      razon: l.reunionSinConfirmar ? 'Reunión sin confirmar' : l.propuestaReciente ? 'Visitó propuesta <48h' : `${l.diasSinActividad}d sin actividad`,
     }))
   }
 
-  // ── Construir mensaje Telegram priorizado ────────────────────────────
-  const urgEmoji: Record<string, string> = { alta: '🔴', media: '🟡', baja: '🟢' }
-  const ordenUrgencia: Record<string, number> = { alta: 0, media: 1, baja: 2 }
-  const accionesOrdenadas = [...acciones].sort(
-    (a, b) => ordenUrgencia[a.urgencia] - ordenUrgencia[b.urgencia]
+  // ── Guardar los borradores de WhatsApp generados (para que el botón funcione) ──
+  await Promise.allSettled(
+    acciones
+      .filter(a => a.whatsapp && a.whatsapp.trim().length > 5)
+      .map(a => supabase.from('leads').update({ whatsapp_draft: a.whatsapp }).eq('id', a.lead_id))
   )
 
-  let msg = `📊 <b>Pipeline Comercial — ${ahora.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</b>\n`
-  msg += `<i>${urgentes.length} de ${leads.length} leads requieren atención</i>\n\n`
+  // ── Cabecera + un mensaje accionable por lead (ordenado por urgencia y € en juego) ──
+  const urgEmoji: Record<string, string> = { alta: '🔴', media: '🟡', baja: '🟢' }
+  const ordenUrgencia: Record<string, number> = { alta: 0, media: 1, baja: 2 }
+  const mrrDe = (id: string) => urgentes.find(l => l.id === id)?.mrr_estimado ?? 0
+  const accionesOrdenadas = [...acciones].sort((a, b) => {
+    const u = ordenUrgencia[a.urgencia] - ordenUrgencia[b.urgencia]
+    return u !== 0 ? u : mrrDe(b.lead_id) - mrrDe(a.lead_id)
+  })
+
+  const mrrEnJuego = urgentes.reduce((s, l) => s + (l.mrr_estimado ?? 0), 0)
+  await tgAlert(
+    `📊 <b>Pipeline — ${ahora.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}</b>\n` +
+    `<i>${urgentes.length} de ${leads.length} leads requieren acción · ${mrrEnJuego}€/mes en juego</i>\n` +
+    `Te paso cada uno con su mensaje listo para enviar 👇`,
+    'info'
+  )
 
   for (const accion of accionesOrdenadas) {
     const lead = urgentes.find(l => l.id === accion.lead_id)
     if (!lead) continue
-    msg += `${urgEmoji[accion.urgencia] ?? '⚪'} <b>${lead.nombreDisplay}</b>`
-    if (lead.puntuacion) msg += ` · ${lead.puntuacion}pts`
-    msg += `\n   → ${accion.accion}\n`
-    msg += `   <i>${accion.razon}</i>\n\n`
+    const mrr = lead.mrr_estimado ? ` · ${lead.mrr_estimado}€/mes` : ''
+    let msg = `${urgEmoji[accion.urgencia] ?? '⚪'} <b>${lead.nombreDisplay}</b>${mrr}\n`
+    msg += `→ ${accion.accion}\n<i>${accion.razon}</i>`
+    if (accion.whatsapp) msg += `\n\n💬 <i>${accion.whatsapp}</i>`
+
+    const fila1: { texto: string; callback: string }[] = [{ texto: '📱 Ver WhatsApp', callback: `ver_whatsapp:${lead.id}` }]
+    if (lead.email && lead.email_draft) fila1.push({ texto: '📨 Enviar email', callback: `enviar_email:${lead.id}` })
+    const botones = [fila1, [{ texto: '✏️ Cambiar foco', callback: `propuesta_foco:${lead.id}` }]]
+
+    await tgAlertButtons(msg, accion.urgencia === 'alta' ? 'aviso' : 'info', botones)
   }
-
-  msg += `<a href="https://www.iarest.es/super">Abrir CRM →</a>`
-
-  await tgAlert(msg, 'info')
 
   return NextResponse.json({
     ok: true,
     leads: leads.length,
     urgentes: urgentes.length,
-    acciones: acciones.length
+    acciones: acciones.length,
+    conWhatsapp: acciones.filter(a => a.whatsapp).length,
+    mrrEnJuego,
   })
 }
 
