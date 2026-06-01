@@ -81,12 +81,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const applicationFee = Math.round(totalBase * 0.01 * 100)
 
-  const { data: pagos } = await supabase
+  const { data: pagos, error: pagosError } = await supabase
     .from('cobros_grupo_pagos')
     .insert(pagosInsert)
     .select('id')
 
-  const pagoIds = (pagos ?? []).map((p: { id: string }) => p.id).join(',')
+  // Si no podemos registrar el pago, NO creamos la sesión de Stripe: de lo
+  // contrario el invitado pagaría pero no quedaría rastro y el panel mostraría
+  // 0 cobrado (el webhook no tendría ninguna fila que actualizar).
+  if (pagosError || !pagos?.length) {
+    return NextResponse.json(
+      { error: 'No se pudo registrar el pago, inténtalo de nuevo' },
+      { status: 500 }
+    )
+  }
+
+  const pagoIds = pagos.map((p: { id: string }) => p.id).join(',')
 
   const origin = req.headers.get('origin') || 'https://www.iarest.es'
   const session = await stripe.checkout.sessions.create({

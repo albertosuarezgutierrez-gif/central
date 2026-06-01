@@ -57,7 +57,11 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session
     await supabase
       .from('cobros_grupo_pagos')
-      .update({ estado: 'pagado', pagado_at: new Date().toISOString() })
+      .update({
+        estado: 'pagado',
+        pagado_at: new Date().toISOString(),
+        stripe_payment_intent: (session.payment_intent as string) ?? null,
+      })
       .eq('stripe_checkout_session', session.id)
   }
 
