@@ -2,10 +2,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import { createClient } from '@supabase/supabase-js'
 import { Resend } from 'resend'
 
-function sc() { return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!) }
+function sc() { return createServerClient() }
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
 /**

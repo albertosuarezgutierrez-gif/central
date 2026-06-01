@@ -1,10 +1,10 @@
-#!/usr/bin/env npx ts-node --esm
+#!/usr/bin/env npx tsx
 /**
  * ia.rest — QA Check
  * Análisis estático de patrones problemáticos conocidos.
  * Actualizar cuando se añada un nuevo bug al qa-protocolo.md de Drive.
  *
- * Uso: npx ts-node --skipProject scripts/qa-check.ts
+ * Uso: npx tsx scripts/qa-check.ts   (o: npm run qa)
  * CI:  ver .github/workflows/qa.yml
  */
 

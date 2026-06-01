@@ -174,6 +174,7 @@ export async function POST(req: NextRequest) {
         restaurante_id,
         comanda_id,
         token: propina_token,
+        // qa-ignore: 'pendiente' es estado de la tabla propinas, no de comandas
         estado: 'pendiente',
       })
     }

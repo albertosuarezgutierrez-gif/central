@@ -118,6 +118,7 @@ export async function GET(req: NextRequest) {
       cliente_email:   c.cliente_email,
       cliente_nombre:  c.cliente_nombre ?? null,
       token,
+      // qa-ignore: 'pendiente' es estado de la tabla feedback_visita, no de comandas
       estado:          'pendiente',
     }).select().maybeSingle()
 
