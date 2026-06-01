@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { C, SE, SN } from '@/lib/colors'
 
 interface Item { id: string; nombre: string; precio_eur: number; pdf_url: string | null; activo: boolean }
-interface Pago { id: string; estado: string; importe_eur: number; nombre_pagador: string; pagado_at: string | null }
+interface Pago { id: string; estado: string; importe_eur: number; nombre_pagador: string; email_pagador: string | null; telefono_pagador: string | null; concepto: string | null; pagado_at: string | null }
 interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; fecha_evento: string | null; fecha_limite_pago: string | null; repercutir_comision: boolean; modo_seleccion: 'una' | 'varias'; permitir_cantidades: boolean; max_seleccion: number | null; mensaje_confirmacion: string | null; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
 interface Props { restauranteId: string; sh: () => Record<string, string> }
 
@@ -143,6 +143,31 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
   const copiarLink = (slug: string) => {
     navigator.clipboard.writeText(`${BASE_URL}/cobro/${slug}`)
     setCopiado(slug); setTimeout(() => setCopiado(null), 2000)
+  }
+
+  // Exporta la lista de pagados (nombre, menú, teléfono, email, importe) para el catering
+  const descargarCSV = (portal: Portal) => {
+    const pagados = portal.cobros_grupo_pagos.filter(p => p.estado === 'pagado')
+    const esc = (v: unknown) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const filas = [
+      ['Nombre', 'Menú', 'Teléfono', 'Email', 'Importe (€)', 'Fecha pago'],
+      ...pagados.map(p => [
+        p.nombre_pagador || 'Anónimo',
+        p.concepto || '',
+        p.telefono_pagador || '',
+        p.email_pagador || '',
+        Number(p.importe_eur).toFixed(2),
+        p.pagado_at ? new Date(p.pagado_at).toLocaleString('es-ES') : ''
+      ])
+    ]
+    const csv = '﻿' + filas.map(f => f.map(esc).join(';')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `cobros-${portal.slug}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const cerrar = async (id: string) => {
@@ -632,14 +657,30 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
 
               {pagados.length > 0 && (
                 <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: '.75rem' }}>
-                  <span style={lbl}>Pagos recibidos</span>
-                  {pagados.slice(0, 5).map(p => (
-                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 0', borderBottom: `1px solid ${C.rule}`, fontSize: 13, fontFamily: SN, color: C.ink2 }}>
-                      <span>{p.nombre_pagador || 'Anónimo'}</span>
-                      <span style={{ color: C.green, fontWeight: 600 }}>{Number(p.importe_eur).toFixed(2)} €</span>
-                    </div>
-                  ))}
-                  {pagados.length > 5 && <p style={{ fontFamily: SN, fontSize: 12, color: C.ink4, marginTop: 6 }}>+{pagados.length - 5} más</p>}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                    <span style={lbl}>Pagos recibidos</span>
+                    <button onClick={() => descargarCSV(portal)} style={{ ...btnSec, fontSize: 11, padding: '4px 10px' }}>
+                      ⬇ Lista catering (CSV)
+                    </button>
+                  </div>
+                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
+                    {pagados.map(p => (
+                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, padding: '7px 0', borderBottom: `1px solid ${C.rule}`, fontSize: 13, fontFamily: SN, color: C.ink2 }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 600, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre_pagador || 'Anónimo'}</div>
+                          {p.concepto && <div style={{ fontSize: 12, color: C.red }}>🍽 {p.concepto}</div>}
+                          {(p.telefono_pagador || p.email_pagador) && (
+                            <div style={{ fontSize: 11, color: C.ink4 }}>
+                              {p.telefono_pagador && <span>📱 {p.telefono_pagador}</span>}
+                              {p.telefono_pagador && p.email_pagador && <span> · </span>}
+                              {p.email_pagador && <span>✉ {p.email_pagador}</span>}
+                            </div>
+                          )}
+                        </div>
+                        <span style={{ color: C.green, fontWeight: 600, flexShrink: 0 }}>{Number(p.importe_eur).toFixed(2)} €</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 

@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const supabase = createServerClient()
 
   const body = await req.json()
-  const { nombre_pagador, email_pagador } = body
+  const { nombre_pagador, email_pagador, telefono_pagador } = body
 
   // Soporta array de items (multi) y item_id único (legacy)
   let itemsInput: { item_id: string; cantidad: number }[] = []
@@ -68,8 +68,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     pagosInsert.push({
       cobro_grupo_id: portal.id,
       item_id,
+      concepto: item.nombre,
       nombre_pagador: nombre_pagador.trim(),
       email_pagador: email_pagador?.trim() || null,
+      telefono_pagador: telefono_pagador?.trim() || null,
       importe_eur: precioFinal * cantidad,
       importe_base_eur: precioBase * cantidad,
       estado: 'pendiente',
@@ -107,7 +109,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     metadata: {
       cobro_grupo_id: portal.id,
       pago_ids: pagoIds,
-      nombre_pagador: nombre_pagador.trim()
+      nombre_pagador: nombre_pagador.trim(),
+      telefono_pagador: telefono_pagador?.trim() || ''
     },
     success_url: `${origin}/cobro/${slug}?pago=ok`,
     cancel_url: `${origin}/cobro/${slug}`,

@@ -32,6 +32,7 @@ function CobroInner() {
 
   const [nombre, setNombre] = useState('')
   const [email, setEmail] = useState('')
+  const [telefono, setTelefono] = useState('')
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState('')
 
@@ -89,6 +90,7 @@ function CobroInner() {
   // ── pagar ──
   const pagar = async () => {
     if (!nombre.trim()) { setError('Introduce tu nombre'); return }
+    if (!telefono.trim()) { setError('Introduce tu teléfono móvil'); return }
 
     let items: { item_id: string; cantidad: number }[] = []
 
@@ -110,7 +112,7 @@ function CobroInner() {
     setCargando(true); setError('')
     const res = await fetch(`/api/cobros/${slug}/checkout`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ items, nombre_pagador: nombre, email_pagador: email })
+      body: JSON.stringify({ items, nombre_pagador: nombre, email_pagador: email, telefono_pagador: telefono })
     })
     const d = await res.json()
     if (d.checkout_url) window.location.href = d.checkout_url
@@ -339,6 +341,8 @@ function CobroInner() {
               <p style={{ fontSize: 11, color: '#9C8E7E', textTransform: 'uppercase', letterSpacing: '.05em', fontWeight: 600, margin: '0 0 .75rem' }}>Tus datos</p>
               <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Nombre y apellidos *"
                 style={{ width: '100%', padding: '10px 12px', background: '#F6F1E7', border: '1px solid #D8CDB6', borderRadius: 10, color: '#1A1714', fontSize: 14, outline: 'none', marginBottom: 8, boxSizing: 'border-box' as const }} />
+              <input type="tel" inputMode="tel" value={telefono} onChange={e => setTelefono(e.target.value)} placeholder="Teléfono móvil *"
+                style={{ width: '100%', padding: '10px 12px', background: '#F6F1E7', border: '1px solid #D8CDB6', borderRadius: 10, color: '#1A1714', fontSize: 14, outline: 'none', marginBottom: 8, boxSizing: 'border-box' as const }} />
               <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="Email (para confirmación)"
                 style={{ width: '100%', padding: '10px 12px', background: '#F6F1E7', border: '1px solid #D8CDB6', borderRadius: 10, color: '#1A1714', fontSize: 14, outline: 'none', boxSizing: 'border-box' as const }} />
             </div>
@@ -360,10 +364,10 @@ function CobroInner() {
               </div>
             )}
 
-            <button onClick={pagar} disabled={!haySeleccion || !nombre.trim() || cargando}
+            <button onClick={pagar} disabled={!haySeleccion || !nombre.trim() || !telefono.trim() || cargando}
               style={{ width: '100%', padding: 14, background: col, color: textCol, border: 'none', borderRadius: 12,
-                fontSize: 15, fontWeight: 600, cursor: !haySeleccion || !nombre.trim() ? 'not-allowed' : 'pointer',
-                opacity: !haySeleccion || !nombre.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
+                fontSize: 15, fontWeight: 600, cursor: !haySeleccion || !nombre.trim() || !telefono.trim() ? 'not-allowed' : 'pointer',
+                opacity: !haySeleccion || !nombre.trim() || !telefono.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
               {cargando ? 'Procesando...' : haySeleccion ? `Pagar ${importeTotal.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
             </button>
             <p style={{ fontSize: 11, color: '#9C8E7E', textAlign: 'center', marginTop: 8 }}>🔒 Pago seguro procesado por Stripe</p>
