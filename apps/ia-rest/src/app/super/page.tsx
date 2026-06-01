@@ -146,7 +146,7 @@ export default function SuperPage() {
   const loadSugerencias = useCallback(async () => {
     if (!session) return
     setLoadingSug(true)
-    const r = await fetch('/api/sugerencias', {
+    const r = await fetch('/api/super/sugerencias', {
       headers: { 'x-ia-session': JSON.stringify(session) }
     })
     const d = await r.json()
@@ -159,7 +159,7 @@ export default function SuperPage() {
   const marcarLeida = async (id: string) => {
     setSugerencias(prev => prev.map(s => s.id === id ? { ...s, leida: true } : s))
     setBadgeSug(prev => Math.max(0, prev - 1))
-    await fetch('/api/sugerencias', {
+    await fetch('/api/super/sugerencias', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
       body: JSON.stringify({ id, leida: true }),
@@ -168,7 +168,7 @@ export default function SuperPage() {
 
   const cambiarEstado = async (id: string, estado: string) => {
     setSugerencias(prev => prev.map(s => s.id === id ? { ...s, estado } : s))
-    await fetch('/api/sugerencias', {
+    await fetch('/api/super/sugerencias', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify(session) },
       body: JSON.stringify({ id, estado }),
@@ -190,8 +190,8 @@ export default function SuperPage() {
       .then(r => r.json()).then(d => setTrainingStats(d))
   }}, [session, tabSuper])
 
-    useEffect(() => { if (session) { 
-    fetch('/api/sugerencias', { headers: { 'x-ia-session': JSON.stringify(session) } })
+    useEffect(() => { if (session) {
+    fetch('/api/super/sugerencias', { headers: { 'x-ia-session': JSON.stringify(session) } })
       .then(r => r.json()).then(d => setBadgeSug((d.sugerencias ?? []).filter((s: any) => !s.leida).length))
   }}, [session])
 

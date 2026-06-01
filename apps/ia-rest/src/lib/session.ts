@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server'
+import type { SupabaseClient } from '@supabase/supabase-js'
 import { verificarSesion } from '@/lib/session-sign'
 
 export interface ApiSession {
@@ -28,6 +29,12 @@ export function getSession(req: NextRequest): ApiSession | null {
   let parsed: ApiSession
   try { parsed = JSON.parse(raw) } catch { return null }
 
+  // Fail-safe: sin SESSION_SECRET no se puede verificar NINGUNA firma. Aceptar
+  // sesiones en ese estado equivaldría a confiar en una cabecera forjable, así
+  // que se rechaza siempre (deny-by-default). El operador debe configurar
+  // SESSION_SECRET en el entorno para que la auth funcione.
+  if (!process.env.SESSION_SECRET) return null
+
   // Si trae firma: tiene que ser válida SIEMPRE. Una firma presente pero
   // incorrecta = manipulación → se rechaza aunque no estemos en enforce.
   if (parsed._sig) {
@@ -40,6 +47,35 @@ export function getSession(req: NextRequest): ApiSession | null {
   // Canónico derivado tras verificar la firma (NO altera el payload firmado).
   if (parsed.restaurante_id && !parsed.local_id) parsed.local_id = parsed.restaurante_id
   return parsed
+}
+
+/**
+ * Resuelve el restaurante_id objetivo VALIDANDO que pertenece a la cuenta de la
+ * sesión firmada. Evita IDOR cross-tenant cuando una ruta acepta un
+ * restaurante_id por query/body.
+ *
+ * - Sin `requested` o igual al de la sesión → devuelve el de la sesión.
+ * - super_admin (operador) → cualquiera, es cross-tenant por diseño.
+ * - owner/resto → solo si el restaurante pertenece a `session.cuenta_id`.
+ *   Si no pertenece (o la sesión no tiene cuenta_id) → null, y el caller
+ *   debe responder 403.
+ */
+export async function resolverRestauranteIdDeCuenta(
+  supabase: SupabaseClient,
+  session: ApiSession,
+  requested: string | null | undefined
+): Promise<string | null> {
+  const current = session.restaurante_id
+  if (!requested || requested === current) return current ?? null
+  if (session.rol === 'super_admin') return requested
+  if (!session.cuenta_id) return null
+  const { data } = await supabase
+    .from('restaurantes')
+    .select('id')
+    .eq('id', requested)
+    .eq('cuenta_id', session.cuenta_id)
+    .maybeSingle()
+  return data ? requested : null
 }
 
 export function getRestauranteId(req: NextRequest): string {

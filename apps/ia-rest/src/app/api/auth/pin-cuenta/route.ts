@@ -5,7 +5,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import { firmarSesion } from '@/lib/session-sign'
+import { firmarSesion, firmarObjeto } from '@/lib/session-sign'
 import { createServerClient } from '@/lib/supabase'
 
 export async function POST(req: NextRequest) {
@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
         restaurante_nombre: r.nombre,
         cuenta_id: cuenta.id,
       }),
+      // Token de cuenta firmado para el portal de grupo (/central → /api/portal)
+      cuentaSession: firmarObjeto({ cuenta_id: cuenta.id, rol: 'gestor', nombre: cuenta.nombre }),
       restaurantes,
     })
   }
@@ -66,6 +68,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({
     tipo: 'selector',
     cuenta: { id: cuenta.id, nombre: cuenta.nombre },
+    // Token de cuenta firmado para el portal de grupo (/central → /api/portal)
+    cuentaSession: firmarObjeto({ cuenta_id: cuenta.id, rol: 'gestor', nombre: cuenta.nombre }),
     restaurantes,
   })
 }
