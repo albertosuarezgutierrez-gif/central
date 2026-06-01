@@ -11,7 +11,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const supabase = createServerClient()
 
   const body = await req.json()
-  const { nombre_pagador, email_pagador } = body
+  const { nombre_pagador, email_pagador, telefono_pagador } = body
 
   // Soporta array de items (multi) y item_id único (legacy)
   let itemsInput: { item_id: string; cantidad: number }[] = []
@@ -68,8 +68,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     pagosInsert.push({
       cobro_grupo_id: portal.id,
       item_id,
+      concepto: item.nombre,
       nombre_pagador: nombre_pagador.trim(),
       email_pagador: email_pagador?.trim() || null,
+      telefono_pagador: telefono_pagador?.trim() || null,
       importe_eur: precioFinal * cantidad,
       importe_base_eur: precioBase * cantidad,
       estado: 'pendiente',
@@ -81,12 +83,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   const applicationFee = Math.round(totalBase * 0.01 * 100)
 
-  const { data: pagos } = await supabase
+  const { data: pagos, error: pagosError } = await supabase
     .from('cobros_grupo_pagos')
     .insert(pagosInsert)
     .select('id')
 
-  const pagoIds = (pagos ?? []).map((p: { id: string }) => p.id).join(',')
+  // Si no podemos registrar el pago, NO creamos la sesión de Stripe: de lo
+  // contrario el invitado pagaría pero no quedaría rastro y el panel mostraría
+  // 0 cobrado (el webhook no tendría ninguna fila que actualizar).
+  if (pagosError || !pagos?.length) {
+    return NextResponse.json(
+      { error: 'No se pudo registrar el pago, inténtalo de nuevo' },
+      { status: 500 }
+    )
+  }
+
+  const pagoIds = pagos.map((p: { id: string }) => p.id).join(',')
 
   const origin = req.headers.get('origin') || 'https://www.iarest.es'
   const session = await stripe.checkout.sessions.create({
@@ -97,7 +109,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     metadata: {
       cobro_grupo_id: portal.id,
       pago_ids: pagoIds,
-      nombre_pagador: nombre_pagador.trim()
+      nombre_pagador: nombre_pagador.trim(),
+      telefono_pagador: telefono_pagador?.trim() || ''
     },
     success_url: `${origin}/cobro/${slug}?pago=ok`,
     cancel_url: `${origin}/cobro/${slug}`,

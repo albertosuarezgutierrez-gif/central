@@ -55,9 +55,21 @@ export async function POST(req: NextRequest) {
   // Pago completado
   if (event.type === 'checkout.session.completed') {
     const session = event.data.object as Stripe.Checkout.Session
+    const update: Record<string, unknown> = {
+      estado: 'pagado',
+      pagado_at: new Date().toISOString(),
+      stripe_payment_intent: (session.payment_intent as string) ?? null,
+    }
+    // Red de seguridad: si el formulario no trajo email/teléfono, los recuperamos
+    // de los datos que Stripe capturó en el pago.
+    const email = session.customer_details?.email
+    const telefono = session.customer_details?.phone || session.metadata?.telefono_pagador
+    if (email) update.email_pagador = email
+    if (telefono) update.telefono_pagador = telefono
+
     await supabase
       .from('cobros_grupo_pagos')
-      .update({ estado: 'pagado', pagado_at: new Date().toISOString() })
+      .update(update)
       .eq('stripe_checkout_session', session.id)
   }
 
