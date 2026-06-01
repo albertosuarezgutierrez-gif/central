@@ -99,7 +99,7 @@ export default function PropinasTab({ session, sh }: Props) {
           <div style={{ fontSize: 11, color: C.ink4, marginBottom: 6, fontFamily: SM, letterSpacing: '.05em', textTransform: 'uppercase' as const }}>Importes sugeridos (€, separados por comas)</div>
           <input value={opcionesInput} onChange={e => setOpcionesInput(e.target.value)}
             placeholder="1, 2, 3, 5"
-            style={{ width: '100%', background: C.dark, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '10px 14px', color: C.ink, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} />
+            style={{ width: '100%', background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '10px 14px', color: C.ink, fontSize: 13, outline: 'none', boxSizing: 'border-box' as const }} />
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
