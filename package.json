@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "qa": "npx ts-node --skipProject --esm scripts/qa-check.ts"
+    "qa": "tsx scripts/qa-check.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.92.0",
@@ -42,6 +42,7 @@
     "eslint-config-next": "^16.2.6",
     "glob": "^13.0.6",
     "tailwindcss": "^4",
+    "tsx": "^4.22.4",
     "typescript": "^5"
   }
 }

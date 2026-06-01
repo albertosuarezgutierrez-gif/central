@@ -40,7 +40,7 @@ jobs:
       #   - await-params-dynamic-routes → params Promise en App Router
       #   - no-ink-on-dark-background   → colores incorrectos
       - name: QA Check — patrones conocidos
-        run: npx ts-node --skipProject --esm scripts/qa-check.ts
+        run: npx tsx scripts/qa-check.ts
 
       # ── Resumen si falla ───────────────────────────────────────────────────
       - name: Instrucciones si falla
