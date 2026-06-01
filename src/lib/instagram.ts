@@ -58,9 +58,20 @@ export async function obtenerMetricas(postId: string): Promise<{ likes: number; 
 }
 
 export async function renovarToken(): Promise<string> {
-  const res = await (await fetch(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${IG_TOKEN}`)).json() as { access_token?: string }
-  if (!res.access_token) throw new Error('Error renovando token')
-  return res.access_token
+  if (!IG_TOKEN) throw new Error('INSTAGRAM_ACCESS_TOKEN no configurado')
+  let ultimoError = ''
+  for (let intento = 1; intento <= 3; intento++) {
+    try {
+      const r = await fetch(`https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token&access_token=${IG_TOKEN}`)
+      const res = await r.json() as { access_token?: string; error?: { message?: string; code?: number } }
+      if (res.access_token) return res.access_token
+      ultimoError = res.error?.message || `respuesta sin access_token (HTTP ${r.status})`
+    } catch (e: any) {
+      ultimoError = e?.message || 'fetch falló'
+    }
+    if (intento < 3) await new Promise(r => setTimeout(r, intento * 2000)) // backoff 2s, 4s
+  }
+  throw new Error(`refresh_access_token falló tras 3 intentos: ${ultimoError}`)
 }
 
 export async function publicarPostBlog(post: { titulo: string; slug: string; keyword: string; caption?: string }): Promise<string> {
