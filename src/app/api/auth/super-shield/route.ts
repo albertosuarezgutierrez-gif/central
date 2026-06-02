@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
     httpOnly: true,
     secure: true,
     sameSite: 'strict',
-    maxAge: 60 * 60 * 24 * 30, // 30 días
+    maxAge: 60 * 60 * 24 * 365, // 1 año — evita re-desbloquear cada mes
     path: '/',
     ...(cookieDomain ? { domain: cookieDomain } : {}),
   })

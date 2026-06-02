@@ -7,7 +7,7 @@ import { NextRequest, NextResponse } from 'next/server'
  * Sin ella → 404 (la página parece no existir).
  * 
  * Para obtener la cookie: GET /api/super/shield?k=SUPER_ACCESS_KEY
- * Eso redirige a /super con la cookie establecida (HttpOnly, Secure, 30 días,
+ * Eso redirige a /super con la cookie establecida (HttpOnly, Secure, 1 año,
  * compartida entre iarest.es y www.iarest.es).
  * 
  * /super/gate queda excluido: es el puente de impersonación que ya tiene
