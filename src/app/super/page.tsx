@@ -63,6 +63,9 @@ export default function SuperPage() {
   const [pinError, setPinError] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
   const [pinBlocked, setPinBlocked] = useState('')
+  // Guardia de sesión: si la API rechaza la sesión (401/403) avisamos en vez
+  // de pintar las pantallas vacías como si no hubiera datos.
+  const [sessionExpired, setSessionExpired] = useState(false)
 
   // Inicializar: leer sesión guardada
   useEffect(() => {
@@ -75,6 +78,21 @@ export default function SuperPage() {
     }
     setChecking(false)
   }, [])
+
+  // Sonda de sesión: al entrar, comprobamos contra un endpoint autenticado.
+  // Si la firma de sesión ya no es válida (401/403), marcamos caducada y
+  // mostramos un aviso claro en lugar de dejar todo el panel vacío.
+  useEffect(() => {
+    if (!session) return
+    let cancel = false
+    ;(async () => {
+      try {
+        const res = await fetch('/api/super/training-stats', { headers: { 'x-ia-session': JSON.stringify(session) } })
+        if (!cancel && (res.status === 401 || res.status === 403)) setSessionExpired(true)
+      } catch { /* red caída: no marcamos caducada, puede ser temporal */ }
+    })()
+    return () => { cancel = true }
+  }, [session])
 
   // Auto-submit al llegar a 6 dígitos
   useEffect(() => {
@@ -328,6 +346,29 @@ export default function SuperPage() {
               >{d}</button>
             ))}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Sesión caducada: la API rechaza la firma actual. Avisamos y ofrecemos
+  // volver a entrar (regenera una sesión firmada válida → arregla todo /super).
+  if (sessionExpired) {
+    const D = { bg:'#14110E', fg:'#F6F1E7', fg3:'#8D8270', red:'#D9442B', amber:'#E8A33B' }
+    return (
+      <div style={{ minHeight:'100vh', background:D.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN, padding:24 }}>
+        <div style={{ textAlign:'center', maxWidth:340 }}>
+          <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
+          <div style={{ fontFamily:SE, fontSize:22, color:D.fg, marginBottom:10 }}>Sesión caducada</div>
+          <div style={{ fontSize:14, color:D.fg3, lineHeight:1.6, marginBottom:24 }}>
+            Tu sesión ya no es válida, por eso las pantallas salían vacías. Vuelve a entrar con el PIN para restaurar el acceso.
+          </div>
+          <button
+            onClick={() => { localStorage.removeItem('ia_rest_session'); setSessionExpired(false); setSuperPin(''); setSession(null) }}
+            style={{ background:D.red, color:D.fg, border:'none', borderRadius:10, padding:'13px 28px', fontSize:15, fontWeight:600, fontFamily:SN, cursor:'pointer' }}
+          >
+            Volver a entrar →
+          </button>
         </div>
       </div>
     )
