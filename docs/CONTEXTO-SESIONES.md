@@ -44,6 +44,24 @@
 
 ## 📝 Registro de sesiones
 
+### 2026-06-02 — Fix: `/super` daba 404 (cookie del escudo no compartida apex↔www)
+- **Síntoma:** `https://www.iarest.es/super` → **404**. No era crash de página
+  (deploy `READY`, sin logs de error en runtime) sino el escudo de
+  `src/middleware.ts`: devuelve 404 si no llega cookie `__super_shield` válida.
+- **Causa raíz:** el proyecto sirve **dos dominios** (`iarest.es` y
+  `www.iarest.es`). La cookie `__super_shield` se ponía **sin `domain`**
+  (host-only) en `src/app/api/auth/super-shield/route.ts`, así que una cookie
+  obtenida en un host no viajaba al otro (ni sobrevivía a un redirect apex↔www)
+  → el middleware no la veía → 404.
+- **Fix (PR #10, `claude/iarest-error-GAqTO`):** anclar la cookie a `.iarest.es`
+  cuando el host pertenece a ese dominio (host-only en previews `*.vercel.app`/
+  localhost, donde un domain de iarest.es lo descartaría el navegador). Corregido
+  también el comentario del middleware (la cookie dura 30 días, no 8 h).
+- **Acción manual tras deploy:** volver a desbloquear una vez en
+  `https://www.iarest.es/api/auth/super-shield?k=<SUPER_ACCESS_KEY>` para reescribir
+  la cookie ya existente con el nuevo `domain`.
+- `npx tsc --noEmit`: solo el error preexistente de `@types/node`.
+
 ### 2026-06-02 — Revisión de contenido: blog + Instagram
 - **Diagnóstico blog:** 8 artículos completos en `src/app/blog/` y los 8 en el
   `sitemap.ts`, pero el índice `/blog` (array `articulos` hardcodeado) solo enlazaba 4.
