@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
 import { publicarEnInstagram } from '@/lib/instagram'
+import { tgAlertButtons } from '@/lib/telegram'
 export async function GET(req: NextRequest) {
   const session = getSession(req)
   if (!session || session.rol !== 'super_admin') return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -35,6 +36,26 @@ export async function POST(req: NextRequest) {
   if (body.accion === 'descartar_borrador') {
     await supabase.from('instagram_borradores').update({ estado: 'descartado' }).eq('id', body.borrador_id)
     return NextResponse.json({ ok: true })
+  }
+  if (body.accion === 'enviar_pendientes_telegram') {
+    // Empuja todos los borradores pendientes a Telegram con botones ✅/🗑️
+    // (mismos callbacks que el cron: ig_aprobar / ig_descartar)
+    const { data: pendientes } = await supabase.from('instagram_borradores')
+      .select('*').eq('estado', 'pendiente')
+      .order('scheduled_for', { ascending: true, nullsFirst: false })
+    let enviados = 0
+    for (const b of pendientes ?? []) {
+      const msgId = await tgAlertButtons(
+        `📸 <b>Post Instagram listo</b>\n\n<code>${b.plantilla}</code>${b.tema_elegido ? ` · ${b.tema_elegido}` : ''}\n\n<b>${(b.titulo || '').slice(0, 70)}</b>\n\n<i>${(b.caption || '').slice(0, 150)}…</i>`,
+        'info',
+        [[
+          { texto: '✅ Publicar', callback: `ig_aprobar:${b.id}` },
+          { texto: '🗑️ Descartar', callback: `ig_descartar:${b.id}` },
+        ]]
+      )
+      if (msgId) { await supabase.from('instagram_borradores').update({ telegram_msg_id: msgId }).eq('id', b.id); enviados++ }
+    }
+    return NextResponse.json({ ok: true, enviados, total: pendientes?.length ?? 0 })
   }
   return NextResponse.json({ error: 'Acción no válida' }, { status: 400 })
 }
