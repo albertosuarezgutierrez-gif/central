@@ -16,6 +16,8 @@ export default function InstagramTab({ session }: { session: any }) {
   const [publicando, setPublicando] = useState<string|null>(null)
   const [generando, setGenerando] = useState(false)
   const [tipoGenerar, setTipoGenerar] = useState('auto')
+  const [enviandoTg, setEnviandoTg] = useState(false)
+  const [tgMsg, setTgMsg] = useState<string|null>(null)
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -46,6 +48,16 @@ export default function InstagramTab({ session }: { session: any }) {
   const guardarCaption = async (id: string) => {
     await fetch('/api/super/instagram', { method:'POST', headers:{'Content-Type':'application/json','x-ia-session':JSON.stringify(session)}, body: JSON.stringify({ accion:'actualizar_caption', borrador_id:id, caption:captionEdit }) })
     setEditingCaption(null); await cargar()
+  }
+
+  const enviarTelegram = async () => {
+    setEnviandoTg(true); setTgMsg(null)
+    try {
+      const res = await fetch('/api/super/instagram', { method:'POST', headers:{'Content-Type':'application/json','x-ia-session':JSON.stringify(session)}, body: JSON.stringify({ accion:'enviar_pendientes_telegram' }) })
+      const data = await res.json()
+      if (data.ok) setTgMsg(data.enviados>0 ? `📨 ${data.enviados} enviado${data.enviados>1?'s':''} a Telegram — aprueba desde el móvil` : 'No se pudo enviar (revisa el bot de Telegram)')
+      else setTgMsg('No se pudo enviar')
+    } catch { setTgMsg('Error de red') } finally { setEnviandoTg(false) }
   }
 
   const generarNuevo = async () => {
@@ -91,6 +103,12 @@ export default function InstagramTab({ session }: { session: any }) {
         <>
           {tab === 'borradores' && (
             <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+              {borradores.length > 0 && (
+                <div style={{ display:'flex', alignItems:'center', gap:12, flexWrap:'wrap' }}>
+                  <button onClick={enviarTelegram} disabled={enviandoTg} style={{ padding:'8px 16px', borderRadius:6, border:'none', background:enviandoTg?C.rule:C.dark, color:enviandoTg?C.ink4:C.paper, fontFamily:SM, fontSize:12, cursor:enviandoTg?'default':'pointer' }}>{enviandoTg?'Enviando…':`📨 Mandar ${borradores.length} a Telegram`}</button>
+                  {tgMsg && <span style={{ fontFamily:SM, fontSize:11, color:C.ink3 }}>{tgMsg}</span>}
+                </div>
+              )}
               {borradores.length === 0 ? <div style={{ padding:'40px 0', textAlign:'center', color:C.ink4, fontFamily:SN, fontSize:13 }}>No hay borradores. El agente genera mié y vie a las 9:00, o usa el briefing del lunes.</div>
               : borradores.map(b => (
                 <div key={b.id} style={{ background:C.paper, border:`1px solid ${C.rule}`, borderRadius:10, overflow:'hidden' }}>
