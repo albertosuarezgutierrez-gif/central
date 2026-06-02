@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Blog**: índice `/blog` ahora enlaza los **8 artículos** (antes solo 4). Los 4
+  que faltaban (`tpv-voz-para-bares`, `software-tpv-bares-espana`, `tpv-restaurante`,
+  `errores-comanda-restaurante`) eran páginas huérfanas: existían y estaban en el
+  sitemap, pero no eran navegables. PR #7.
+- **Instagram**: la cola estaba atascada (1 publicado, 9 borradores caducados del
+  25-may sin aprobar). Limpiado: los 9 → `descartado`, e insertado un **lote fresco
+  de 5 borradores** (`pendiente`) con `scheduled_for` jun 3/5/10/12/17. Visibles en
+  `/super → Instagram`; el cron los lleva a Telegram en su fecha. El cuello de botella
+  es **aprobar/publicar**, no generar.
+
 - **Portal de Cobros de grupo** (`/cobro/[slug]` + `/owner → Cobros`): funcional.
   - Captura **nombre + email + teléfono móvil (obligatorio)** y el **menú (`concepto`)** de cada pago.
   - Panel del owner muestra menú · teléfono · email por pago + botón export **CSV** para el catering.
@@ -33,6 +43,26 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-02 — Revisión de contenido: blog + Instagram
+- **Diagnóstico blog:** 8 artículos completos en `src/app/blog/` y los 8 en el
+  `sitemap.ts`, pero el índice `/blog` (array `articulos` hardcodeado) solo enlazaba 4.
+  Los otros 4 eran huérfanos (indexables por Google, no navegables). → Añadidos al
+  índice los 4 que faltaban. `npx tsc` solo da el error pre-existente de `@types/node`.
+- **Diagnóstico Instagram (Supabase):** solo **1 post publicado** (`instagram_posts`,
+  "Digitaliza tu restaurante", 0 alcance) y **9 borradores pendientes caducados**
+  (programados 25-29 may, nunca aprobados). El agente genera mié+vie + lote del lunes,
+  todo con aprobación manual en Telegram → la cola se quedó parada.
+- **Acción (decidida por Alberto: "regenerar lote fresco"):** los 9 caducados →
+  `descartado`; insertados **5 borradores nuevos** (pregunta, tip, comparativa, cita,
+  pregunta-VeriFactu) con caption según reglas de marca + `image_url` construido para
+  el renderer `/api/ig-img` (estilo editorial) + `scheduled_for` jun 3/5/10/12/17 09:00.
+  No se publicó nada en la cuenta real (decisión de Alberto vía Telegram/panel).
+- **Nota entorno:** la network policy del contenedor bloquea `iarest.es`
+  (`Host not in allowlist` / 403) → no se puede disparar `?manual=1` en prod desde aquí;
+  por eso el lote se insertó directo en Supabase (es lo que alimenta `/super` y el cron).
+- **PR #7** (`claude/blog-instagram-content-review-EyU19`): cambio de blog. Instagram
+  es datos en Supabase (no hay diff de código).
 
 ### 2026-06-01 — Cobros de grupo: registro, móvil y menú por pago
 - **Diagnóstico de pagos "fantasma":** en el portal de Saboga Catering había 9 pagos
