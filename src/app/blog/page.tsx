@@ -47,6 +47,38 @@ const articulos = [
     categoria: 'Comparativas',
     color: '#6B5F52',
   },
+  {
+    slug: 'tpv-voz-para-bares',
+    titulo: 'TPV por voz para bares: guía completa 2026',
+    descripcion: 'Cómo un TPV por voz simplifica las comandas en tu bar: qué es, cómo funciona y en qué se diferencia de un TPV táctil tradicional.',
+    fecha: 'Mayo 2026',
+    categoria: 'Producto',
+    color: '#D9442B',
+  },
+  {
+    slug: 'software-tpv-bares-espana',
+    titulo: 'Software TPV para bares en España: qué necesitas realmente',
+    descripcion: 'Guía práctica para elegir el software TPV de tu bar o restaurante. Sin tecnicismos ni nombres de marca: lo que de verdad importa.',
+    fecha: 'Mayo 2026',
+    categoria: 'Guías',
+    color: '#6B5F52',
+  },
+  {
+    slug: 'tpv-restaurante',
+    titulo: 'TPV para restaurante: guía práctica para elegir el mejor sistema',
+    descripcion: 'Qué es un TPV para restaurante, cómo elegirlo y por qué es esencial para tu negocio de hostelería. Lo esencial, paso a paso.',
+    fecha: 'Mayo 2026',
+    categoria: 'Guías',
+    color: '#E8A33B',
+  },
+  {
+    slug: 'errores-comanda-restaurante',
+    titulo: 'Errores en comandas de restaurante: cómo evitarlos',
+    descripcion: 'Los errores de comanda más comunes y cómo eliminarlos desde la raíz: transcripción manual, confirmación sala-cocina, cambios y trazabilidad.',
+    fecha: 'Mayo 2026',
+    categoria: 'Operaciones',
+    color: '#3F7D44',
+  },
 ]
 
 export default function BlogPage() {
