@@ -208,7 +208,7 @@ SUPABASE_SERVICE_ROLE_KEY        # service role (solo Edge Functions / server)
 SUPABASE_URL
 STRIPE_SECRET_KEY  STRIPE_MODE  STRIPE_WEBHOOK_SECRET_*  STRIPE_CLIENT_ID
 GROQ_API_KEY  GEMINI_API_KEY  NIM / NVIDIA key
-SUPER_SHIELD_KEY                 # key de /api/auth/super-shield (rotar)
+SUPER_ACCESS_KEY                 # cookie escudo __super_shield (acceso emergencia; el nombre real de la var es SUPER_ACCESS_KEY)
 GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al repo
 ```
 
@@ -228,7 +228,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 | Dominio | www.iarest.es |
 | GitHub PAT | → env `GITHUB_PAT` (no en repo) |
 | Vercel Bearer | → env `VERCEL_TOKEN` (no en repo) |
-| SUPER shield | `/api/auth/super-shield?k=<SUPER_SHIELD_KEY>` |
+| SUPER login | `/super` → email + contraseña (bcrypt en `personal`). Emergencia: `/api/auth/super-shield?k=<SUPER_ACCESS_KEY>` + PIN |
 | DEMO token | `/login?t=<token rotativo>` |
 
 Vercel env API (añadir variable):
@@ -260,7 +260,7 @@ Authorization: Bearer {VERCEL_TOKEN}
 
 | Rol | Ruta | PIN demo |
 |---|---|---|
-| super_admin | /super | 9999 (+ shield cookie obligatoria) |
+| super_admin | /super | **email + contraseña** (bcrypt, `personal.password_hash`). PIN 9999 + shield = solo emergencia |
 | owner | /owner | 1369 |
 | jefe_sala | /jefe | 2566 |
 | camarero | /edge | 7672 |
