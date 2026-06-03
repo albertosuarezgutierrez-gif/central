@@ -16,6 +16,12 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Acceso a `/super`**: ahora es **login email + contraseña** (antes: llave secreta en
+  la URL `__super_shield` + PIN). El super admin (`personal`, fila `rol='super_admin'`,
+  "Alberto") tiene `email` + `password_hash` (bcrypt). Ruta `/api/auth/super-login`;
+  la página `/super` ya no está bajo el escudo del middleware (las `/api/super/*` sí, y
+  el login pone la cookie `__super_shield`). `super-pin`/`super-shield` quedan como acceso
+  de emergencia. Cookie del escudo: 1 año, compartida `iarest.es`↔`www`. (PRs #10, #12, #13).
 - **Blog**: índice `/blog` ahora enlaza los **8 artículos** (antes solo 4). Los 4
   que faltaban (`tpv-voz-para-bares`, `software-tpv-bares-espana`, `tpv-restaurante`,
   `errores-comanda-restaurante`) eran páginas huérfanas: existían y estaban en el
@@ -43,6 +49,27 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-03 — Acceso a `/super` por email + contraseña + candado a 1 año
+- **Problema de fondo:** entrar a `/super` era un coñazo: llave secreta en la URL (cookie
+  `__super_shield`) que caducaba + PIN. Se pedía algo memorable que funcione en cualquier
+  dispositivo sin la llave.
+- **PR #12:** cookie del escudo de 30 días → **1 año** (menos re-desbloqueos).
+- **PR #13 (login email+contraseña):**
+  - Migración `20260603_super_admin_email_login.sql`: columnas `email` + `password_hash`
+    en `personal` + índice único parcial sobre `lower(email)`. **Aplicada en Supabase.**
+  - Dep nueva: `bcryptjs` (JS puro). Ruta `/api/auth/super-login` (rate-limit en memoria,
+    `bcrypt.compare`, errores genéricos; devuelve la misma sesión firmada que el PIN **y**
+    pone la cookie `__super_shield`).
+  - `middleware.ts`: la **página** `/super` sale del escudo (muestra el login); `/api/super/*`
+    y `/api/auth/super-pin` siguen protegidas (el login rellena la cookie).
+  - UI `super/page.tsx`: formulario email+contraseña en vez del teclado PIN.
+  - `super-pin`/`super-shield` se mantienen como **acceso de emergencia** (no se borran).
+  - Credenciales del super admin fijadas en BD: email `alberto.suarez.gutierrez@gmail.com`
+    + hash bcrypt (la contraseña en claro NO se guarda en el repo).
+  - Verificado: `bcrypt.compare` contra el hash real OK; la query del endpoint encuentra la
+    fila; `tsc` + `next build` en verde. El test HTTP en vivo no se pudo hacer desde el
+    contenedor (red bloquea `*.vercel.app`/`iarest.es`).
 
 ### 2026-06-02 — Fix: `/super` daba 404 (cookie del escudo no compartida apex↔www)
 - **Síntoma:** `https://www.iarest.es/super` → **404**. No era crash de página
