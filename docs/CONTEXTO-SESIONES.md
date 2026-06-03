@@ -68,8 +68,13 @@
   - Credenciales del super admin fijadas en BD: email `alberto.suarez.gutierrez@gmail.com`
     + hash bcrypt (la contraseña en claro NO se guarda en el repo).
   - Verificado: `bcrypt.compare` contra el hash real OK; la query del endpoint encuentra la
-    fila; `tsc` + `next build` en verde. El test HTTP en vivo no se pudo hacer desde el
-    contenedor (red bloquea `*.vercel.app`/`iarest.es`).
+    fila; `tsc` + `next build` en verde. **Alberto probó el login en el preview → OK.**
+    **PR #13 MERGEADO a `main`** (commit `cf4594c`) → en producción.
+  - **Acceso vigente:** `www.iarest.es/super` → email + contraseña, en cualquier dispositivo.
+  - Skill `ia-rest-maestro` actualizado (tabla de roles/accesos + env var real
+    `SUPER_ACCESS_KEY`, antes figuraba mal como `SUPER_SHIELD_KEY`).
+  - Pendiente menor: cambiar contraseña a demanda (UI de gestión de credenciales no existe;
+    se haría por SQL como ahora).
 
 ### 2026-06-02 — Fix: `/super` daba 404 (cookie del escudo no compartida apex↔www)
 - **Síntoma:** `https://www.iarest.es/super` → **404**. No era crash de página
