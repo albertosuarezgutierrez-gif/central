@@ -182,7 +182,40 @@ export default function HomePage() {
     document.getElementById("mPlus")?.addEventListener("click", () => { mesas++; updateCalc() })
     document.getElementById("mMinus")?.addEventListener("click", () => { if (mesas > 0) { mesas--; updateCalc() } })
 
-    return () => { io.disconnect(); tio.disconnect() }
+    // Hero terminal de voz — animación en bucle
+    let vCancelled = false
+    const vWait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+    const vPhrase = "Mesa 4: dos cañas, una de bravas y un solomillo al punto"
+    async function vRun() {
+      const trans = document.getElementById("vtrans")
+      const mic = document.getElementById("vmic")
+      const wave = document.getElementById("vwave")
+      const label = document.getElementById("vmicLabel")
+      const arrow = document.getElementById("varrow")
+      const status = document.getElementById("vstatus")
+      const items = Array.from(document.querySelectorAll<HTMLElement>("#vitems .vit"))
+      if (!trans || !mic || !wave || !label || !arrow || !status) return
+      while (!vCancelled) {
+        trans.innerHTML = '<span class="vcur"></span>'
+        arrow.classList.remove("show"); status.classList.remove("show")
+        items.forEach((it) => it.classList.remove("show"))
+        mic.classList.add("live"); wave.classList.add("live"); label.textContent = "escuchando…"
+        await vWait(900); if (vCancelled) return
+        for (let i = 0; i <= vPhrase.length; i++) {
+          trans.innerHTML = vPhrase.slice(0, i) + '<span class="vcur"></span>'
+          await vWait(38); if (vCancelled) return
+        }
+        await vWait(400)
+        mic.classList.remove("live"); wave.classList.remove("live"); label.textContent = "procesando…"
+        arrow.classList.add("show"); await vWait(650); if (vCancelled) return
+        for (const it of items) { it.classList.add("show"); await vWait(280); if (vCancelled) return }
+        await vWait(250); label.textContent = "listo"; status.classList.add("show")
+        await vWait(3400); if (vCancelled) return
+      }
+    }
+    vRun()
+
+    return () => { io.disconnect(); tio.disconnect(); vCancelled = true }
   }, [])
 
   return (
@@ -238,8 +271,51 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:cen
 .nav-cta:hover{opacity:.85}
 
 /* HERO */
-.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:100px 48px 80px;text-align:center;position:relative;overflow:hidden}
+.hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:100px 48px 60px;position:relative;overflow:hidden}
 .hero-glow{position:absolute;top:-20%;left:50%;transform:translateX(-50%);width:700px;height:500px;background:radial-gradient(ellipse,rgba(217,68,43,0.13) 0%,transparent 60%);pointer-events:none}
+.hero-inner{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;max-width:1180px;margin:0 auto;width:100%;position:relative;z-index:2}
+.hero-copy{text-align:left}
+.hero-copy .eyebrow{justify-content:flex-start}
+.hero-copy .hero-sub{margin-left:0}
+.hero-copy .hero-cta{justify-content:flex-start}
+.hero-demo{position:relative}
+.demo-badge{position:absolute;top:-13px;right:14px;z-index:3;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
+.demo-badge .ddot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:vpulse 1.8s infinite}
+@keyframes vpulse{0%{box-shadow:0 0 0 0 rgba(110,189,115,.5)}70%{box-shadow:0 0 0 7px rgba(110,189,115,0)}100%{box-shadow:0 0 0 0 rgba(110,189,115,0)}}
+.vterm{background:#0C0A08;border:1px solid var(--border2);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+.vt-bar{padding:13px 16px;background:#111009;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center}
+.vt-bar .vd{width:9px;height:9px;border-radius:50%}
+.vt-bar .vdr{background:#ff5f57}.vt-bar .vdy{background:#ffbd2e}.vt-bar .vdg{background:#28ca41}
+.vt-title{margin-left:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3)}
+.vt-body{padding:22px 20px 24px;min-height:330px}
+.vmic-row{display:flex;align-items:center;gap:14px;margin-bottom:8px}
+.vmic{width:40px;height:40px;border-radius:50%;background:rgba(217,68,43,.12);border:1px solid rgba(217,68,43,.35);display:flex;align-items:center;justify-content:center;flex-shrink:0;position:relative}
+.vmic.live::after{content:'';position:absolute;inset:-1px;border-radius:50%;border:1px solid var(--red);animation:vring 1.4s ease-out infinite}
+@keyframes vring{0%{transform:scale(1);opacity:.7}100%{transform:scale(1.7);opacity:0}}
+.vmic svg{width:18px;height:18px;color:var(--red)}
+.vwave{display:flex;align-items:center;gap:3px;height:24px}
+.vwave i{width:3px;border-radius:2px;background:var(--red);opacity:.35;height:6px}
+.vwave.live i{animation:vw .9s ease-in-out infinite}
+.vwave.live i:nth-child(2){animation-delay:.1s}.vwave.live i:nth-child(3){animation-delay:.2s}.vwave.live i:nth-child(4){animation-delay:.3s}.vwave.live i:nth-child(5){animation-delay:.15s}.vwave.live i:nth-child(6){animation-delay:.25s}.vwave.live i:nth-child(7){animation-delay:.05s}
+@keyframes vw{0%,100%{height:6px;opacity:.35}50%{height:22px;opacity:1}}
+.vmic-label{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3)}
+.vtrans{font-family:'Newsreader',serif;font-style:italic;font-size:20px;line-height:1.45;color:var(--ink);min-height:60px;margin:18px 0 6px;letter-spacing:-.3px}
+.vtrans .vcur{display:inline-block;width:2px;height:19px;background:var(--red);margin-left:1px;vertical-align:-3px;animation:vbl 1s step-end infinite}
+@keyframes vbl{0%,49%{opacity:1}50%,100%{opacity:0}}
+.varrow{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3);margin:14px 0 12px;display:flex;align-items:center;gap:8px;opacity:0;transition:opacity .4s}
+.varrow.show{opacity:1}
+.varrow .vln{flex:1;height:1px;background:var(--border)}
+.vitems{display:flex;flex-direction:column;gap:8px}
+.vit{display:flex;align-items:center;gap:12px;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.vit.show{opacity:1;transform:none}
+.vit .vqty{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--amber);font-weight:500;min-width:20px}
+.vit .vnm{font-size:14px;color:var(--ink2);flex:1}
+.vit .vtag{font-size:9px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);background:var(--bg);padding:3px 8px;border-radius:5px;border:1px solid var(--border)}
+.vit .vck{color:var(--green);font-size:13px}
+.vt-status{margin-top:16px;padding-top:14px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;font-family:'JetBrains Mono',monospace;font-size:11px;opacity:0;transition:opacity .4s}
+.vt-status.show{opacity:1}
+.vt-status .vok{color:var(--green);display:flex;align-items:center;gap:7px}
+.vt-status .vms{color:var(--ink3)}
 .eyebrow{font-size:10px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--red);margin-bottom:36px;display:flex;align-items:center;gap:12px;justify-content:center}
 .eyebrow::before,.eyebrow::after{content:'';width:28px;height:1px;background:var(--red);opacity:.5}
 h1{font-family:'Newsreader',serif;font-size:clamp(50px,8vw,104px);font-weight:200;line-height:1.02;letter-spacing:-3px;color:var(--ink);max-width:900px}
@@ -398,6 +474,11 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   .nav-links{display:none!important}
   .burger{display:flex!important}
   section{padding:72px 20px}
+  .hero-inner{grid-template-columns:1fr;gap:40px}
+  .hero-copy{text-align:center}
+  .hero-copy .eyebrow{justify-content:center}
+  .hero-copy .hero-sub{margin-left:auto;margin-right:auto}
+  .hero-copy .hero-cta{justify-content:center}
   .manifesto-grid,.elimina-grid,.voz-grid,.healer-grid,.form-grid{grid-template-columns:1fr;gap:48px}
   .cap-grid{grid-template-columns:1fr 1fr}
   .strip{flex-wrap:wrap}
@@ -436,14 +517,39 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
 <!-- HERO -->
 <section class="hero" style="padding-bottom:0">
   <div class="hero-glow"></div>
-  <div class="eyebrow fi">Software de gestión · Hostelería española · Sin comisión</div>
-  <h1 class="fi d1">Facturar más<br>no es ganar más.<br><i>Ahora sí lo es.</i></h1>
-  <p class="hero-sub fi d2" style="max-width:540px">Costes, almacén, escandallos y operación conectados en tiempo real. Para el dueño que quiere saber exactamente cuánto gana, no solo cuánto factura.</p>
-  <div class="hero-cta fi d2">
-    <a href="#contacto" class="btn-p">Solicitar demo →</a>
-    <a href="#perfiles" class="btn-s" style="font-size:14px;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s">Ver para quién es ↓</a>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="eyebrow fi">Software de gestión · Hostelería española · Sin comisión</div>
+      <h1 class="fi d1">Facturar más<br>no es ganar más.<br><i>Ahora sí lo es.</i></h1>
+      <p class="hero-sub fi d2" style="max-width:520px">Costes, almacén, escandallos y operación conectados en tiempo real. Para el dueño que quiere saber exactamente cuánto gana, no solo cuánto factura.</p>
+      <div class="hero-cta fi d2">
+        <a href="#contacto" class="btn-p">Solicitar demo →</a>
+        <a href="#perfiles" class="btn-s">Ver para quién es ↓</a>
+      </div>
+    </div>
+    <div class="hero-demo fi d2">
+      <div class="demo-badge"><span class="ddot"></span> En vivo</div>
+      <div class="vterm">
+        <div class="vt-bar"><span class="vd vdr"></span><span class="vd vdy"></span><span class="vd vdg"></span><span class="vt-title">comanda-voz · mesa 4</span></div>
+        <div class="vt-body">
+          <div class="vmic-row">
+            <div class="vmic" id="vmic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="22"/></svg></div>
+            <div class="vwave" id="vwave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+            <span class="vmic-label" id="vmicLabel">escuchando…</span>
+          </div>
+          <div class="vtrans" id="vtrans"><span class="vcur"></span></div>
+          <div class="varrow" id="varrow"><span>Interpretando comanda</span><span class="vln"></span><span>NIM · llama-3.3</span></div>
+          <div class="vitems" id="vitems">
+            <div class="vit"><span class="vqty">2×</span><span class="vnm">Caña</span><span class="vtag">Barra</span><span class="vck">✓</span></div>
+            <div class="vit"><span class="vqty">1×</span><span class="vnm">Bravas</span><span class="vtag">Fríos</span><span class="vck">✓</span></div>
+            <div class="vit"><span class="vqty">1×</span><span class="vnm">Solomillo · al punto</span><span class="vtag">Plancha</span><span class="vck">✓</span></div>
+          </div>
+          <div class="vt-status" id="vstatus"><span class="vok">● Enviado a cocina (KDS)</span><span class="vms">0.42s</span></div>
+        </div>
+      </div>
+    </div>
   </div>
-  <div class="fi d3" style="margin-top:48px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;padding-top:28px;border-top:1px solid var(--border)">
+  <div class="fi d3" style="margin-top:48px;display:flex;gap:32px;flex-wrap:wrap;justify-content:center;padding-top:28px;border-top:1px solid var(--border);max-width:1180px;margin-left:auto;margin-right:auto;width:100%">
     <div style="text-align:center">
       <div style="font-family:'Newsreader',serif;font-size:36px;font-weight:200;color:var(--ink);letter-spacing:-1px;line-height:1">5<span style="color:var(--red)">%</span></div>
       <div style="font-size:10px;color:var(--ink3);font-weight:500;letter-spacing:.1em;text-transform:uppercase;margin-top:4px">Margen neto medio<br>en hostelería</div>

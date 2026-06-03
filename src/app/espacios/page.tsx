@@ -55,6 +55,43 @@ export default function EspaciosPage() {
         }
       })
     }
+
+    // Hero bodas.net → calendario — animación en bucle
+    let eCancelled = false
+    const eWait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+    const eCalGrid = document.getElementById('eCalGrid')
+    if (eCalGrid) {
+      eCalGrid.innerHTML = ''
+      for (let d = 1; d <= 30; d++) {
+        const el = document.createElement('div')
+        el.textContent = String(d)
+        if (d === 14) { el.className = 'emark'; el.id = 'eDay14' }
+        eCalGrid.appendChild(el)
+      }
+    }
+    async function eRun() {
+      const notif = document.getElementById('enotif')
+      const steps = Array.from(document.querySelectorAll<HTMLElement>('#esteps .estp'))
+      const cal = document.getElementById('ecal')
+      const day14 = document.getElementById('eDay14')
+      if (!notif || !cal || !day14 || steps.length === 0) return
+      while (!eCancelled) {
+        notif.classList.remove('show')
+        steps.forEach((s) => { s.classList.remove('show'); s.classList.remove('done') })
+        cal.classList.remove('show'); day14.classList.remove('pop')
+        await eWait(700); if (eCancelled) return
+        notif.classList.add('show'); await eWait(900); if (eCancelled) return
+        for (const s of steps) {
+          s.classList.add('show'); await eWait(550); s.classList.add('done')
+          if (s.dataset.i === '1') { cal.classList.add('show'); await eWait(350); day14.classList.add('pop') }
+          await eWait(450); if (eCancelled) return
+        }
+        await eWait(3400); if (eCancelled) return
+      }
+    }
+    eRun()
+
+    return () => { eCancelled = true }
   }, [])
 
   return (
@@ -125,6 +162,41 @@ h1 em { font-style: italic; color: var(--red); }
 .stat-num { font-family: 'Newsreader', serif; font-size: 34px; font-weight: 300; color: var(--paper); line-height: 1; }
 .stat-num span { color: var(--red); }
 .stat-label { font-size: 12px; color: var(--ink3); margin-top: 3px; font-family: 'DM Mono', monospace; letter-spacing: .06em; }
+
+/* ── HERO 2-COL + DEMO BODAS.NET ── */
+.hero-inner { display: grid; grid-template-columns: 1.05fr .95fr; gap: 52px; align-items: center; }
+.hero-copy .hero-stats { margin-bottom: 0; }
+.hero-demo { position: relative; }
+.demo-badge { position: absolute; top: -13px; right: 14px; z-index: 3; background: var(--bg3); border: 1px solid var(--rule); border-radius: 20px; padding: 5px 14px; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; letter-spacing: .1em; text-transform: uppercase; color: var(--ink3); display: flex; align-items: center; gap: 7px; }
+.demo-badge .eddot { width: 6px; height: 6px; border-radius: 50%; background: var(--red); animation: pulse 2s infinite; }
+.ecard { background: var(--paper); color: var(--ink); border-radius: 16px; overflow: hidden; box-shadow: 0 30px 80px -30px rgba(0,0,0,.7); padding: 8px; }
+.ephone-top { display: flex; align-items: center; gap: 8px; padding: 10px 12px 6px; }
+.ephone-top .edot { width: 9px; height: 9px; border-radius: 50%; background: #E7DFCF; }
+.ephone-top .esrc { font-family: 'DM Mono', monospace; font-size: 11px; color: var(--ink4); margin-left: auto; }
+.enotif { display: flex; gap: 12px; align-items: flex-start; background: #fff; border: 1px solid #E7DFCF; border-radius: 12px; padding: 14px; margin: 6px; opacity: 0; transform: translateY(-12px); transition: opacity .45s, transform .45s; }
+.enotif.show { opacity: 1; transform: none; }
+.enotif .endot { width: 9px; height: 9px; border-radius: 50%; background: var(--red); margin-top: 5px; flex-shrink: 0; }
+.enotif .entit { font-weight: 700; font-size: 14px; color: var(--ink); }
+.enotif .ensub { font-size: 12px; color: var(--ink4); margin-top: 2px; }
+.enotif .enbadge { margin-left: auto; font-family: 'DM Mono', monospace; font-size: 10px; font-weight: 500; text-transform: uppercase; letter-spacing: .06em; background: rgba(217,68,43,.12); color: var(--red); padding: 4px 9px; border-radius: 6px; white-space: nowrap; }
+.esteps { margin: 6px; display: flex; flex-direction: column; gap: 8px; }
+.estp { display: flex; align-items: center; gap: 12px; padding: 12px 14px; background: #fff; border: 1px solid #E7DFCF; border-radius: 11px; opacity: 0; transform: translateX(-10px); transition: opacity .4s, transform .4s; }
+.estp.show { opacity: 1; transform: none; }
+.estp .eic { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; background: rgba(217,68,43,.1); color: var(--red); font-size: 13px; }
+.estp .etx { font-size: 13px; color: var(--ink); font-weight: 600; flex: 1; }
+.estp .etx small { display: block; font-weight: 400; color: var(--ink4); font-size: 11px; margin-top: 1px; }
+.estp .eck { color: var(--green); font-size: 14px; opacity: 0; transition: opacity .3s; }
+.estp.done .eck { opacity: 1; }
+.estp.done .eic { background: rgba(63,125,68,.12); color: var(--green); }
+.ecal { margin: 6px; background: #fff; border: 1px solid #E7DFCF; border-radius: 12px; padding: 14px; opacity: 0; transform: translateY(10px); transition: opacity .45s, transform .45s; }
+.ecal.show { opacity: 1; transform: none; }
+.ecal-h { font-family: 'DM Mono', monospace; font-size: 11px; font-weight: 500; color: var(--ink); margin-bottom: 10px; display: flex; justify-content: space-between; text-transform: uppercase; letter-spacing: .06em; }
+.ecal-h span { color: var(--ink4); }
+.ecal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.ecal-grid div { aspect-ratio: 1; display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--ink4); border-radius: 6px; }
+.ecal-grid .emark { background: var(--red); color: #fff; font-weight: 700; transform: scale(0); transition: transform .4s cubic-bezier(.34,1.56,.64,1); }
+.ecal-grid .emark.pop { transform: scale(1); }
+@media (max-width: 900px) { .hero-inner { grid-template-columns: 1fr; gap: 40px; } }
 
 /* ── SECCIONES ── */
 section { padding: 88px 48px; }
@@ -299,25 +371,52 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
 <!-- HERO -->
 <section class="hero">
   <div class="max-w">
-    <div class="hero-tag"><span class="pulse"></span>Para fincas · salones · haciendas · lofts</div>
-    <h1>Tu espacio de eventos,<br><em>gestionado solo.</em></h1>
-    <p class="hero-desc">Las solicitudes de bodas.net entran directamente, tienen respuesta automática y quedan en tu calendario. Sin copiar correos. Sin perder ninguna consulta.</p>
-    <div class="hero-actions">
-      <a href="#contacto" class="btn-primary">Solicitar demo gratuita</a>
-      <a href="#como" class="btn-ghost">Ver cómo funciona →</a>
-    </div>
-    <div class="hero-stats">
-      <div class="stat">
-        <div class="stat-num">59<span>€</span></div>
-        <div class="stat-label">Desde / mes</div>
+    <div class="hero-inner">
+      <div class="hero-copy">
+        <div class="hero-tag"><span class="pulse"></span>Para fincas · salones · haciendas · lofts</div>
+        <h1>Tu espacio de eventos,<br><em>gestionado solo.</em></h1>
+        <p class="hero-desc">Las solicitudes de bodas.net entran directamente, tienen respuesta automática y quedan en tu calendario. Sin copiar correos. Sin perder ninguna consulta.</p>
+        <div class="hero-actions">
+          <a href="#contacto" class="btn-primary">Solicitar demo gratuita</a>
+          <a href="#como" class="btn-ghost">Ver cómo funciona →</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-num">59<span>€</span></div>
+            <div class="stat-label">Desde / mes</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num">0<span>%</span></div>
+            <div class="stat-label">Comisión por evento</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num">14<span>d</span></div>
+            <div class="stat-label">Prueba gratuita</div>
+          </div>
+        </div>
       </div>
-      <div class="stat">
-        <div class="stat-num">0<span>%</span></div>
-        <div class="stat-label">Comisión por evento</div>
-      </div>
-      <div class="stat">
-        <div class="stat-num">14<span>d</span></div>
-        <div class="stat-label">Prueba gratuita</div>
+      <div class="hero-demo">
+        <div class="demo-badge"><span class="eddot"></span> En vivo</div>
+        <div class="ecard">
+          <div class="ephone-top"><span class="edot"></span><span class="esrc">ia.rest · bandeja</span></div>
+          <div class="enotif" id="enotif">
+            <span class="endot"></span>
+            <div>
+              <div class="entit">Nueva solicitud · bodas.net</div>
+              <div class="ensub">Laura &amp; Diego · 130 invitados · 14 jun 2026</div>
+            </div>
+            <span class="enbadge">Nueva</span>
+          </div>
+          <div class="esteps" id="esteps">
+            <div class="estp" data-i="0"><span class="eic">✉</span><span class="etx">Respuesta automática enviada<small>Disponibilidad + dossier en 30 segundos</small></span><span class="eck">✓</span></div>
+            <div class="estp" data-i="1"><span class="eic">📅</span><span class="etx">Reservado en tu calendario<small>14 jun · bloqueo provisional 7 días</small></span><span class="eck">✓</span></div>
+            <div class="estp" data-i="2"><span class="eic">📄</span><span class="etx">Contrato digital preparado<small>Listo para firmar · VeriFactu</small></span><span class="eck">✓</span></div>
+          </div>
+          <div class="ecal" id="ecal">
+            <div class="ecal-h">Junio 2026 <span>Disponibilidad</span></div>
+            <div class="ecal-grid" id="eCalGrid"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
