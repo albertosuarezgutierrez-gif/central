@@ -279,6 +279,31 @@ El rol `comercial` solo ve /comercial. El jefe_sala puede ser transversal: resta
 
 ---
 
+## OPERATIVA / RUNBOOK + GOTCHAS
+
+### ⚠️ Red del contenedor (gotcha recurrente)
+El contenedor cloud **bloquea `iarest.es` y `*.vercel.app`** (`Host not in allowlist` / 403).
+→ NO intentes test HTTP contra producción ni previews desde aquí. Para verificar:
+usa las MCP tools de Supabase/Vercel, comprueba contra la BD, o pide a Alberto que
+abra la URL (preview o prod). El despliegue/datos sí se gestionan vía MCP.
+
+### Acceso a `/super` (runbook)
+- **Entrar (normal):** `www.iarest.es/super` → email + contraseña (super_admin en `personal`).
+- **Cambiar la contraseña:** generar hash bcrypt (`bcryptjs`, coste 12) y
+  `UPDATE personal SET password_hash='<hash>' WHERE rol='super_admin'` vía Supabase MCP.
+  NUNCA guardar la contraseña en claro en el repo.
+- **Acceso de emergencia** (si el login email falla): desbloquear escudo
+  `GET /api/auth/super-shield?k=<SUPER_ACCESS_KEY>` (cookie 1 año) + endpoint PIN
+  `/api/auth/super-pin`. `SUPER_ACCESS_KEY` vive en Vercel env.
+
+### Convenciones de trabajo (PR/CI)
+- Rama de trabajo `claude/...`; PR en **draft**; **merge squash** a `main`.
+- Checks que deben pasar antes de mergear: **Lint · TypeCheck · Build** y
+  **Análisis estático · Patrones conocidos** (+ Vercel preview en verde).
+- `npx tsc --noEmit` arrastra un error preexistente de `@types/node` (ignorable).
+
+---
+
 ## PATRONES CRÍTICOS (NO NEGOCIABLES)
 
 ### Auth en API routes
