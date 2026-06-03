@@ -1,4 +1,12 @@
 {
+  "permissions": {
+    "allow": [
+      "Edit(docs/CONTEXTO-SESIONES.md)",
+      "Write(docs/CONTEXTO-SESIONES.md)",
+      "Edit(.claude/skills/ia-rest-maestro/SKILL.md)",
+      "Write(.claude/skills/ia-rest-maestro/SKILL.md)"
+    ]
+  },
   "hooks": {
     "Stop": [
       {
