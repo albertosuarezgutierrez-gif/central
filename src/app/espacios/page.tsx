@@ -375,7 +375,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       <div class="hero-copy">
         <div class="hero-tag"><span class="pulse"></span>Para fincas · salones · haciendas · lofts</div>
         <h1>Tu espacio de eventos,<br><em>gestionado solo.</em></h1>
-        <p class="hero-desc">Las solicitudes de bodas.net entran directamente, tienen respuesta automática y quedan en tu calendario. Sin copiar correos. Sin perder ninguna consulta.</p>
+        <p class="hero-desc">Ni una consulta de bodas.net sin responder. Ni una fecha descontrolada.</p>
         <div class="hero-actions">
           <a href="#contacto" class="btn-primary">Solicitar demo gratuita</a>
           <a href="#como" class="btn-ghost">Ver cómo funciona →</a>
@@ -429,7 +429,6 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       <div class="bnet-copy">
         <div class="sl">La consulta más importante</div>
         <h2>Una solicitud de<br><em>bodas.net.</em><br>Gestionada sola.</h2>
-        <p>Cada solicitud que llega de bodas.net entra directamente en ia.rest, recibe una respuesta automática personalizada y aparece en tu calendario de disponibilidad.</p>
         <p>Nunca más una consulta sin responder porque estabas ocupado. Nunca más perder una boda porque tardaste tres días en contestar.</p>
         <a href="#contacto" class="btn-primary" style="display:inline-block;margin-top:8px">Quiero verlo en mi espacio</a>
       </div>
@@ -473,45 +472,37 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       <div class="dolor-item">
         <div class="di-label prob">Antes</div>
         <div class="di-title">Las solicitudes llegan por email, Instagram y teléfono y se pierden.</div>
-        <p class="di-desc">Cada plataforma es un sitio diferente. A veces tardas días en responder y el cliente ya eligió otro espacio.</p>
       </div>
       <div class="dolor-item">
         <div class="di-label sol">Con ia.rest</div>
         <div class="di-title">Todas las consultas en un solo lugar. Respuesta automática inmediata.</div>
-        <p class="di-desc">Cada solicitud entra en ia.rest y tiene respuesta en segundos. Tú decides cuándo profundizar.</p>
       </div>
 
       <div class="dolor-item">
         <div class="di-label prob">Antes</div>
         <div class="di-title">El calendario de disponibilidad está en tu cabeza o en papel.</div>
-        <p class="di-desc">Dobles reservas, fechas confusas, tener que llamar para confirmar si una fecha está libre.</p>
       </div>
       <div class="dolor-item">
         <div class="di-label sol">Con ia.rest</div>
-        <div class="di-title">Calendario en tiempo real. Al confirmar un evento la fecha se bloquea sola.</div>
-        <p class="di-desc">Cualquiera de tu equipo ve en un segundo qué fechas están disponibles. Sin llamadas, sin cruces.</p>
+        <div class="di-title">Calendario en tiempo real. La fecha se bloquea sola.</div>
       </div>
 
       <div class="dolor-item">
         <div class="di-label prob">Antes</div>
         <div class="di-title">El presupuesto tarda días y se hace en Word o Excel.</div>
-        <p class="di-desc">Cada presupuesto es un archivo diferente que mandas por email y esperas que el cliente encuentre.</p>
       </div>
       <div class="dolor-item">
         <div class="di-label sol">Con ia.rest</div>
-        <div class="di-title">Presupuesto en 5 minutos, desde el móvil. El cliente lo recibe en su portal.</div>
-        <p class="di-desc">El cliente accede desde un enlace, lo revisa, hace preguntas y confirma. Todo en el mismo sitio.</p>
+        <div class="di-title">Presupuesto en 5 minutos, desde el móvil.</div>
       </div>
 
       <div class="dolor-item">
         <div class="di-label prob">Antes</div>
         <div class="di-title">El contrato va por email y vuelve escaneado a medias.</div>
-        <p class="di-desc">Imprimir, firmar, escanear, reenviar. A veces el cliente no lo devuelve y queda todo en el aire.</p>
       </div>
       <div class="dolor-item">
         <div class="di-label sol">Con ia.rest</div>
-        <div class="di-title">El contrato se genera solo y el cliente lo firma desde el móvil.</div>
-        <p class="di-desc">Al aceptar el presupuesto el contrato se crea automáticamente. El cliente firma con un clic.</p>
+        <div class="di-title">El contrato se firma desde el móvil.</div>
       </div>
 
     </div>
@@ -527,22 +518,18 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       <div class="paso">
         <div class="paso-num">1</div>
         <div class="paso-title">Llega la solicitud</div>
-        <p class="paso-desc">Desde bodas.net u otras plataformas. Entra sola en ia.rest y tiene respuesta automática al instante.</p>
       </div>
       <div class="paso">
         <div class="paso-num">2</div>
         <div class="paso-title">Envías el presupuesto</div>
-        <p class="paso-desc">En minutos, desde el móvil o el ordenador. El cliente lo recibe en su portal personal.</p>
       </div>
       <div class="paso">
         <div class="paso-num">3</div>
-        <div class="paso-title">El cliente confirma</div>
-        <p class="paso-desc">Acepta el presupuesto, hace preguntas en el chat y firma el contrato digital. La fecha se bloquea automáticamente.</p>
+        <div class="paso-title">El cliente confirma y firma</div>
       </div>
       <div class="paso">
         <div class="paso-num">4</div>
-        <div class="paso-title">Factura legal</div>
-        <p class="paso-desc">VeriFactu genera la factura electrónica con QR de la AEAT. Obligatorio desde 2026. Sin esfuerzo extra.</p>
+        <div class="paso-title">Factura legal VeriFactu</div>
       </div>
     </div>
   </div>
@@ -595,7 +582,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
     <div class="faq-list">
       <div class="faq-item">
         <div class="faq-q" role="button" tabindex="0">¿ia.rest gestiona las solicitudes de bodas.net automáticamente? <span class="arr">↓</span></div>
-        <div class="faq-a">Sí. Las solicitudes que llegan de bodas.net entran directamente en ia.rest, reciben respuesta automática y quedan en tu calendario de disponibilidad. Sin copiar y pegar, sin perder ninguna consulta.</div>
+        <div class="faq-a">Sí. Ninguna consulta de bodas.net se te escapa: quedan todas centralizadas, respondidas y en tu calendario, sin copiar y pegar.</div>
       </div>
       <div class="faq-item">
         <div class="faq-q" role="button" tabindex="0">¿Qué pasa si solo gestiono el espacio yo solo? <span class="arr">↓</span></div>
@@ -646,7 +633,7 @@ footer { background: var(--dark); border-top: 1px solid var(--rule); padding: 36
       <div class="contacto-copy">
         <div class="sl">Empieza hoy</div>
         <h2>Cuéntanos<br><em>tu espacio.</em></h2>
-        <p>Te hacemos una demo en directo adaptada a tu espacio. Verás exactamente cómo entran las solicitudes de bodas.net y cómo se gestiona todo desde ia.rest.</p>
+        <p>Te hacemos una demo en directo adaptada a tu espacio. En 20 minutos lo ves funcionando con tus fechas.</p>
         <div class="promise-list">
           <div class="pi"><span class="chk">✓</span> Respuesta en menos de 24 horas</div>
           <div class="pi"><span class="chk">✓</span> Demo personalizada para tu espacio</div>

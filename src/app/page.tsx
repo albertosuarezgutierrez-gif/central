@@ -684,7 +684,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <div class="cap-item"><span class="cap-num">09</span><div class="cap-title">Alertas en Telegram</div><div class="cap-sub">Cierre de caja, stock crítico o cualquier aviso directo a tu móvil.</div></div>
       <div class="cap-item"><span class="cap-num">10</span><div class="cap-title">Portal asesoría</div><div class="cap-sub">El contable ve todos sus clientes hosteleros. 303 calculado. Exporta en A3 con un clic.</div></div>
       <div class="cap-item"><span class="cap-num">11</span><div class="cap-title">Central de almacén</div><div class="cap-sub">Para grupos: stock crítico de todos los locales en tiempo real. Pedido grupal al proveedor.</div></div>
-      <div class="cap-item"><span class="cap-num">12</span><div class="cap-title">Eventos y catering</div><div class="cap-sub">El cliente rellena un briefing online. El sistema calcula el precio con tus escandallos reales, barra libre y márgenes. El comercial cierra con un click. Informe post-evento automático.</div></div>
+      <div class="cap-item"><span class="cap-num">12</span><div class="cap-title">Eventos y catering</div><div class="cap-sub">Del briefing al cierre, con tu margen calculado solo.</div></div>
       <div class="cap-item"><span class="cap-num">13</span><div class="cap-title">Tu web incluida</div><div class="cap-sub">Web profesional con tu carta, horarios y reserva directa. Incluida en el plan, sin coste extra.</div></div>
     </div>
   </div>

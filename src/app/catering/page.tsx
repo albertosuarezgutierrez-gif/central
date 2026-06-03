@@ -370,7 +370,7 @@ h2 i{font-style:italic;color:var(--red)}
       <div class="eyebrow fi">Software para catering profesional · España</div>
       <h1 class="fi d1">Sabes cuánto<br>ganas en<br>cada <i>evento.</i></h1>
       <p class="hero-sub fi d2">
-        El cliente rellena un briefing. El sistema calcula el precio con tus escandallos reales, barra libre y márgenes. Tú solo cierras.
+        Coste real, margen y beneficio de cada evento. Del presupuesto a la caja, sin sorpresas.
       </p>
       <div class="hero-cta fi d2">
         <button class="btn-p">Solicitar demo gratuita →</button>
@@ -422,21 +422,18 @@ h2 i{font-style:italic;color:var(--red)}
       <div class="cost-card">
         <div class="cost-card-label">Coste real por evento</div>
         <div class="cost-card-num a">3.534<span style="font-size:28px">€</span></div>
-        <p class="cost-card-desc">Escandallo real × comensales, con rappels de proveedor aplicados automáticamente.</p>
-        <div class="cost-card-sub">escandallo × 180p — rappel 5% = 3.534€</div>
+        <div class="cost-card-sub">Boda · 180 comensales</div>
       </div>
 
       <div class="cost-card">
         <div class="cost-card-label">Margen bruto</div>
         <div class="cost-card-num g">71<span style="font-size:28px">%</span></div>
-        <p class="cost-card-desc">Calculado en tiempo real durante el evento. Si se desvía, lo ves al momento.</p>
-        <div class="cost-card-sub">12.400€ ingreso — 3.534€ coste</div>
+        <div class="cost-card-sub">Calculado en tiempo real</div>
       </div>
 
       <div class="cost-card">
         <div class="cost-card-label">Beneficio neto</div>
         <div class="cost-card-num g">8.866<span style="font-size:28px">€</span></div>
-        <p class="cost-card-desc">Por evento. Histórico de márgenes por tipo de celebración, proveedor y temporada.</p>
         <div class="cost-card-sub">factura generada · verifactu ✓</div>
       </div>
 
@@ -453,7 +450,7 @@ h2 i{font-style:italic;color:var(--red)}
         <h2>Todo el trabajo.<br><i>Automatizado.</i></h2>
       </div>
       <div>
-        <p style="font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75">Cada fase genera datos que alimentan la siguiente. Al cerrar el evento, ia.rest ya sabe cuánto ganaste y qué puedes mejorar.</p>
+        <p style="font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75">Al cerrar el evento ya sabes cuánto has ganado.</p>
       </div>
     </div>
 

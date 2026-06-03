@@ -31,6 +31,12 @@
   - Maquetas autónomas de referencia en raíz: `demo-hero-{voz,catering,espacios}.html`.
   - Origen: evaluar qué patrón de MotionSites encaja con la marca sin romperla
     (nada de vídeo/glassmorphism; paleta y tipografía propias de cada landing).
+  - **Recorte anti-copia (equilibrado)**: se quitó el "cómo" copiable de las 3
+    landings (en espacios: párrafos Antes/Después en prosa, el paso-a-paso
+    detallado y el bloque bodas.net; en catering: hero-sub que describía el motor,
+    fórmulas de coste de las tarjetas y el párrafo del flujo; en home: el cap-sub
+    largo de "Eventos y catering"). Se conservan titulares + FAQ (reformulada a
+    beneficio por SEO). Regla: **titular = el QUÉ; nunca el CÓMO** (mecanismo).
 
 - **Acceso a `/super`**: ahora es **login email + contraseña** (antes: llave secreta en
   la URL `__super_shield` + PIN). El super admin (`personal`, fila `rol='super_admin'`,
