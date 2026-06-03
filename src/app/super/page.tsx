@@ -58,8 +58,9 @@ export default function SuperPage() {
   const [session, setSession] = useState<Session | null>(null)
   const router = useRouter()
   const [checking, setChecking] = useState(true)
-  // PIN screen
-  const [superPin, setSuperPin] = useState('')
+  // Login email + contraseña
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [pinError, setPinError] = useState('')
   const [pinLoading, setPinLoading] = useState(false)
   const [pinBlocked, setPinBlocked] = useState('')
@@ -94,34 +95,23 @@ export default function SuperPage() {
     return () => { cancel = true }
   }, [session])
 
-  // Auto-submit al llegar a 6 dígitos
-  useEffect(() => {
-    if (superPin.length === 6 && !pinLoading) doSuperLogin(superPin)
-  }, [superPin]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const doSuperLogin = async (pin: string) => {
+  const doSuperLogin = async () => {
+    if (pinLoading) return
     setPinLoading(true); setPinError(''); setPinBlocked('')
     try {
-      const r = await fetch('/api/auth/super-pin', {
+      const r = await fetch('/api/auth/super-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pin }),
+        body: JSON.stringify({ email, password }),
       })
       const d = await r.json()
-      if (r.status === 429) { setPinBlocked(d.error); setSuperPin(''); setPinLoading(false); return }
-      if (!r.ok || !d.camarero) { setPinError(d.error ?? 'PIN incorrecto'); setSuperPin(''); setPinLoading(false); return }
+      if (r.status === 429) { setPinBlocked(d.error); setPinLoading(false); return }
+      if (!r.ok || !d.camarero) { setPinError(d.error ?? 'Email o contraseña incorrectos'); setPassword(''); setPinLoading(false); return }
       localStorage.setItem('ia_rest_session', JSON.stringify(d.camarero))
       setSession(d.camarero)
-    } catch { setPinError('Error de red'); setSuperPin('') }
+    } catch { setPinError('Error de red') }
     setPinLoading(false)
   }
-
-  const addDigit = (d: string) => {
-    if (pinLoading || pinBlocked) return
-    if (superPin.length >= 6) return
-    setSuperPin(p => p + d)
-  }
-  const delDigit = () => { if (!pinLoading) setSuperPin(p => p.slice(0, -1)) }
   const [trainingStats, setTrainingStats] = useState<any>(null)
   const [restaurantes, setRestaurantes] = useState<Restaurante[]>([])
   const [loading, setLoading] = useState(true)
@@ -293,60 +283,59 @@ export default function SuperPage() {
 
   if (checking) return null
 
-  // PIN screen propio — nunca redirige a /login
+  // Login propio (email + contraseña) — nunca redirige a /login
   if (!session) {
     // Colores hardcoded oscuros — independiente del tema claro de C
-    const D = { bg:'#14110E', fg:'#F6F1E7', fg3:'#8D8270', key:'#2A241D', keyB:'rgba(255,255,255,0.09)', red:'#D9442B', amber:'#E8A33B' }
-    const pad = ['1','2','3','4','5','6','7','8','9','','0','⌫']
+    const D = { bg:'#14110E', fg:'#F6F1E7', fg3:'#8D8270', keyB:'rgba(255,255,255,0.09)', red:'#D9442B', amber:'#E8A33B' }
+    const inputStyle: React.CSSProperties = {
+      width:'100%', padding:'13px 14px', boxSizing:'border-box',
+      background:D.keyB, border:'1px solid rgba(255,255,255,0.12)', borderRadius:10,
+      color:D.fg, fontSize:15, fontFamily:SN, outline:'none', marginBottom:12,
+    }
+    const disabled = pinLoading || !!pinBlocked || !email || !password
     return (
-      <div style={{ minHeight:'100vh', background:D.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN }}>
-        <div style={{ textAlign:'center', width:280 }}>
+      <div style={{ minHeight:'100vh', background:D.bg, display:'flex', alignItems:'center', justifyContent:'center', fontFamily:SN, padding:24 }}>
+        <form onSubmit={(e) => { e.preventDefault(); doSuperLogin() }} style={{ textAlign:'center', width:300 }}>
           {/* Logo */}
           <div style={{ fontFamily:SM, fontSize:22, fontWeight:800, color:D.fg, letterSpacing:'-0.03em', marginBottom:4 }}>
             ia<span style={{ color:D.red }}>.</span>rest
           </div>
-          <div style={{ fontSize:11, color:D.fg3, fontFamily:SE, letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:32 }}>
+          <div style={{ fontSize:11, color:D.fg3, fontFamily:SE, letterSpacing:'0.12em', textTransform:'uppercase', marginBottom:28 }}>
             Acceso operador
           </div>
 
-          {/* Puntos PIN */}
-          <div style={{ display:'flex', justifyContent:'center', gap:12, marginBottom:28 }}>
-            {[0,1,2,3,4,5].map(i => (
-              <div key={i} style={{
-                width:13, height:13, borderRadius:'50%',
-                background: pinLoading ? D.red : i < superPin.length ? D.red : 'rgba(246,241,231,0.18)',
-                transition:'background .12s, transform .1s',
-                transform: i < superPin.length ? 'scale(1.2)' : 'scale(1)',
-              }}/>
-            ))}
-          </div>
+          <input
+            type="email" inputMode="email" autoComplete="username" autoFocus
+            placeholder="Email" value={email}
+            onChange={e => { setEmail(e.target.value); setPinError(''); setPinBlocked('') }}
+            disabled={pinLoading} style={inputStyle}
+          />
+          <input
+            type="password" autoComplete="current-password"
+            placeholder="Contraseña" value={password}
+            onChange={e => { setPassword(e.target.value); setPinError(''); setPinBlocked('') }}
+            disabled={pinLoading} style={inputStyle}
+          />
 
           {/* Error / bloqueado */}
           {(pinError || pinBlocked) && (
-            <div style={{ fontSize:12, color: pinBlocked ? D.amber : '#ff6b6b', marginBottom:16, minHeight:18 }}>
+            <div style={{ fontSize:12, color: pinBlocked ? D.amber : '#ff6b6b', marginBottom:14, minHeight:18 }}>
               {pinBlocked || pinError}
             </div>
           )}
 
-          {/* Teclado */}
-          <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10 }}>
-            {pad.map((d, i) => d === '' ? <div key={i}/> : (
-              <button key={i} onClick={() => d === '⌫' ? delDigit() : addDigit(d)}
-                disabled={!!pinBlocked || pinLoading}
-                style={{
-                  background: d === '⌫' ? 'transparent' : D.keyB,
-                  border: d === '⌫' ? 'none' : '1px solid rgba(255,255,255,0.1)',
-                  borderRadius:12, padding:'16px 0',
-                  color: d === '⌫' ? D.fg3 : D.fg,
-                  fontSize: d === '⌫' ? 18 : 20, fontWeight:600,
-                  cursor: pinBlocked ? 'not-allowed' : 'pointer',
-                  fontFamily:SN, opacity: pinBlocked ? 0.4 : 1,
-                  transition:'background .12s',
-                }}
-              >{d}</button>
-            ))}
-          </div>
-        </div>
+          <button
+            type="submit" disabled={disabled}
+            style={{
+              width:'100%', padding:'13px 0', borderRadius:10, border:'none',
+              background: disabled ? 'rgba(217,68,43,0.5)' : D.red,
+              color:D.fg, fontSize:15, fontWeight:600, fontFamily:SN,
+              cursor: (pinLoading || !!pinBlocked) ? 'not-allowed' : 'pointer',
+            }}
+          >
+            {pinLoading ? 'Entrando…' : 'Entrar'}
+          </button>
+        </form>
       </div>
     )
   }
@@ -361,10 +350,10 @@ export default function SuperPage() {
           <div style={{ fontSize:40, marginBottom:12 }}>🔒</div>
           <div style={{ fontFamily:SE, fontSize:22, color:D.fg, marginBottom:10 }}>Sesión caducada</div>
           <div style={{ fontSize:14, color:D.fg3, lineHeight:1.6, marginBottom:24 }}>
-            Tu sesión ya no es válida, por eso las pantallas salían vacías. Vuelve a entrar con el PIN para restaurar el acceso.
+            Tu sesión ya no es válida, por eso las pantallas salían vacías. Vuelve a entrar con tu email y contraseña para restaurar el acceso.
           </div>
           <button
-            onClick={() => { localStorage.removeItem('ia_rest_session'); setSessionExpired(false); setSuperPin(''); setSession(null) }}
+            onClick={() => { localStorage.removeItem('ia_rest_session'); setSessionExpired(false); setEmail(''); setPassword(''); setSession(null) }}
             style={{ background:D.red, color:D.fg, border:'none', borderRadius:10, padding:'13px 28px', fontSize:15, fontWeight:600, fontFamily:SN, cursor:'pointer' }}
           >
             Volver a entrar →
