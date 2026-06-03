@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Landings con hero animado (demo de producto en movimiento)** — PR #15: las 3
+  landings (`/`, `/catering`, `/espacios`) tienen ahora un **hero a 2 columnas** con
+  animación en bucle del "momento mágico" de cada vertical:
+  - **Home** (`src/app/page.tsx`): terminal de voz — micro escuchando → frase
+    tecleándose → items estructurados por partida → "Enviado a cocina 0.42s".
+    Se **conserva** el titular de beneficio ("Facturar más no es ganar más…").
+  - **Catering**: briefing del cliente → "calculando con escandallos" → presupuesto
+    + **margen neto 31%** (además del timeline detallado que ya existía abajo).
+  - **Espacios**: notificación "Nueva solicitud · bodas.net" → 3 pasos auto
+    (respuesta/calendario/contrato) → día 14 marcado en el calendario.
+  - CSS namespaced por archivo (`v*` home · `c*` catering · `e*` espacios) y JS de
+    animación en el `useEffect`, con bandera `*Cancelled` en el cleanup.
+  - Maquetas autónomas de referencia en raíz: `demo-hero-{voz,catering,espacios}.html`.
+  - Origen: evaluar qué patrón de MotionSites encaja con la marca sin romperla
+    (nada de vídeo/glassmorphism; paleta y tipografía propias de cada landing).
+  - **Recorte anti-copia (equilibrado)**: se quitó el "cómo" copiable de las 3
+    landings (en espacios: párrafos Antes/Después en prosa, el paso-a-paso
+    detallado y el bloque bodas.net; en catering: hero-sub que describía el motor,
+    fórmulas de coste de las tarjetas y el párrafo del flujo; en home: el cap-sub
+    largo de "Eventos y catering"). Se conservan titulares + FAQ (reformulada a
+    beneficio por SEO). Regla: **titular = el QUÉ; nunca el CÓMO** (mecanismo).
+
 - **Acceso a `/super`**: ahora es **login email + contraseña** (antes: llave secreta en
   la URL `__super_shield` + PIN). El super admin (`personal`, fila `rol='super_admin'`,
   "Alberto") tiene `email` + `password_hash` (bcrypt). Ruta `/api/auth/super-login`;

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ia.rest · Prueba hero espacios animado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,300;12..96,400;12..96,500;12..96,600;12..96,700&family=Newsreader:ital,opsz,wght@0,6..72,300;0,6..72,400;1,6..72,300;1,6..72,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --paper:#F6F1E7;--dark:#14110E;--bg2:#1E1A15;--bg3:#2A221A;
+  --red:#D9442B;--green:#3F7D44;--ink:#1A1714;--ink3:#9C8E7E;--ink4:#6B5F52;--rule:#2E2720;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--dark);color:var(--paper);font-family:'Bricolage Grotesque',sans-serif;line-height:1.6;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:0 48px;height:60px;border-bottom:1px solid var(--rule);background:rgba(20,17,14,0.92);backdrop-filter:blur(20px)}
+.logo{font-family:'Newsreader',serif;font-size:22px;font-weight:300;color:var(--paper);text-decoration:none}.logo .dot{color:var(--red)}
+.btn-nav{background:var(--red);color:#fff;padding:8px 18px;border-radius:7px;font-weight:700;font-size:13px;text-decoration:none}
+
+.hero{min-height:100vh;display:grid;grid-template-columns:1fr 1fr;gap:64px;align-items:center;padding:120px 48px 64px;max-width:1200px;margin:0 auto;position:relative}
+.hero-glow{position:absolute;top:5%;left:28%;width:680px;height:540px;background:radial-gradient(ellipse,rgba(217,68,43,0.14) 0%,transparent 62%);pointer-events:none;z-index:-1}
+.hero-tag{display:inline-flex;align-items:center;gap:8px;font-family:'DM Mono',monospace;font-size:11px;color:var(--ink3);letter-spacing:.1em;margin-bottom:28px;border:1px solid var(--rule);padding:6px 14px;border-radius:100px}
+.pulse{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.5;transform:scale(.8)}}
+h1{font-family:'Newsreader',serif;font-size:clamp(42px,5.6vw,76px);font-weight:300;line-height:1.0;letter-spacing:-.03em;color:var(--paper)}
+h1 em{font-style:italic;color:var(--red)}
+.hero-desc{margin-top:22px;font-size:17px;color:var(--ink3);font-weight:300;line-height:1.65;max-width:450px}
+.hero-actions{margin-top:34px;display:flex;gap:12px}
+.btn-primary{font-size:15px;font-weight:700;background:var(--red);color:#fff;padding:13px 26px;border-radius:9px;text-decoration:none}
+.btn-ghost{font-size:14px;color:var(--ink3);padding:13px 22px;border:1px solid var(--rule);border-radius:9px;text-decoration:none}
+
+.demo-wrap{position:relative}
+.demo-badge{position:absolute;top:-13px;right:18px;z-index:3;background:var(--bg3);border:1px solid var(--rule);border-radius:20px;padding:5px 14px;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
+.demo-badge .dot{width:6px;height:6px;border-radius:50%;background:var(--red);animation:pulse 2s infinite}
+
+.card{background:var(--paper);color:var(--ink);border-radius:16px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.7);padding:8px}
+.phone-top{display:flex;align-items:center;gap:8px;padding:10px 12px 6px}
+.phone-top .src{font-family:'DM Mono',monospace;font-size:11px;color:var(--ink4);margin-left:auto}
+
+.notif{display:flex;gap:12px;align-items:flex-start;background:#fff;border:1px solid #E7DFCF;border-radius:12px;padding:14px;margin:6px;opacity:0;transform:translateY(-12px);transition:opacity .45s,transform .45s}
+.notif.show{opacity:1;transform:none}
+.notif .ndot{width:9px;height:9px;border-radius:50%;background:var(--red);margin-top:5px;flex-shrink:0}
+.notif .ntit{font-weight:700;font-size:14px;color:var(--ink)}
+.notif .nsub{font-size:12px;color:var(--ink4);margin-top:2px}
+.notif .nbadge{margin-left:auto;font-family:'DM Mono',monospace;font-size:10px;font-weight:500;text-transform:uppercase;letter-spacing:.06em;background:rgba(217,68,43,.12);color:var(--red);padding:4px 9px;border-radius:6px;white-space:nowrap}
+
+.steps{margin:6px;display:flex;flex-direction:column;gap:8px}
+.stp{display:flex;align-items:center;gap:12px;padding:12px 14px;background:#fff;border:1px solid #E7DFCF;border-radius:11px;opacity:0;transform:translateX(-10px);transition:opacity .4s,transform .4s}
+.stp.show{opacity:1;transform:none}
+.stp .ic{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0;background:rgba(217,68,43,.1);color:var(--red);font-size:13px}
+.stp .tx{font-size:13px;color:var(--ink);font-weight:600;flex:1}
+.stp .tx small{display:block;font-weight:400;color:var(--ink4);font-size:11px;margin-top:1px}
+.stp .ck{color:var(--green);font-size:14px;opacity:0;transition:opacity .3s}
+.stp.done .ck{opacity:1}
+.stp.done .ic{background:rgba(63,125,68,.12);color:var(--green)}
+
+.cal{margin:6px;background:#fff;border:1px solid #E7DFCF;border-radius:12px;padding:14px;opacity:0;transform:translateY(10px);transition:opacity .45s,transform .45s}
+.cal.show{opacity:1;transform:none}
+.cal-h{font-family:'DM Mono',monospace;font-size:11px;font-weight:500;color:var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;text-transform:uppercase;letter-spacing:.06em}
+.cal-h span{color:var(--ink4)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.cal-grid div{aspect-ratio:1;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink4);border-radius:6px}
+.cal-grid .mark{background:var(--red);color:#fff;font-weight:700;transform:scale(0);transition:transform .4s cubic-bezier(.34,1.56,.64,1)}
+.cal-grid .mark.pop{transform:scale(1)}
+
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:44px;padding:96px 22px 48px}nav{padding:0 20px}}
+</style>
+</head>
+<body>
+<nav><a class="logo" href="#">ia<span class="dot">.</span>rest</a><a href="#" class="btn-nav">Demo gratuita</a></nav>
+
+<section class="hero">
+  <div class="hero-glow"></div>
+  <div>
+    <div class="hero-tag"><span class="pulse"></span>Para fincas · salones · haciendas · lofts</div>
+    <h1>Tu espacio de eventos,<br><em>gestionado solo.</em></h1>
+    <p class="hero-desc">Las solicitudes de bodas.net entran directamente, tienen respuesta automática y quedan en tu calendario. Sin copiar correos. Sin perder ninguna consulta.</p>
+    <div class="hero-actions"><a href="#" class="btn-primary">Solicitar demo gratuita</a><a href="#" class="btn-ghost">Ver cómo funciona →</a></div>
+  </div>
+
+  <div class="demo-wrap">
+    <div class="demo-badge"><span class="dot"></span> En vivo</div>
+    <div class="card">
+      <div class="phone-top"><span class="d" style="width:9px;height:9px;border-radius:50%;background:#E7DFCF"></span><span class="src">ia.rest · bandeja</span></div>
+
+      <div class="notif" id="notif">
+        <span class="ndot"></span>
+        <div>
+          <div class="ntit">Nueva solicitud · bodas.net</div>
+          <div class="nsub">Laura &amp; Diego · 130 invitados · 14 jun 2026</div>
+        </div>
+        <span class="nbadge">Nueva</span>
+      </div>
+
+      <div class="steps" id="steps">
+        <div class="stp" data-i="0"><span class="ic">✉</span><span class="tx">Respuesta automática enviada<small>Disponibilidad + dossier en 30 segundos</small></span><span class="ck">✓</span></div>
+        <div class="stp" data-i="1"><span class="ic">📅</span><span class="tx">Reservado en tu calendario<small>14 jun · bloqueo provisional 7 días</small></span><span class="ck">✓</span></div>
+        <div class="stp" data-i="2"><span class="ic">📄</span><span class="tx">Contrato digital preparado<small>Listo para firmar · VeriFactu</small></span><span class="ck">✓</span></div>
+      </div>
+
+      <div class="cal" id="cal">
+        <div class="cal-h">Junio 2026 <span>Disponibilidad</span></div>
+        <div class="cal-grid" id="calGrid"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+const notif=document.getElementById('notif');
+const steps=[...document.querySelectorAll('.stp')];
+const cal=document.getElementById('cal');
+const calGrid=document.getElementById('calGrid');
+const wait=ms=>new Promise(r=>setTimeout(r,ms));
+
+calGrid.innerHTML='';
+for(let d=1;d<=30;d++){const el=document.createElement('div');el.textContent=d;if(d===14){el.className='mark';el.id='day14';}calGrid.appendChild(el);}
+const day14=document.getElementById('day14');
+
+async function run(){
+  notif.classList.remove('show');
+  steps.forEach(s=>{s.classList.remove('show');s.classList.remove('done');});
+  cal.classList.remove('show');day14.classList.remove('pop');
+  await wait(700);
+  notif.classList.add('show');
+  await wait(900);
+  for(const s of steps){
+    s.classList.add('show');
+    await wait(550);
+    s.classList.add('done');
+    if(s.dataset.i==='1'){cal.classList.add('show');await wait(350);day14.classList.add('pop');}
+    await wait(450);
+  }
+  await wait(3400);
+  run();
+}
+run();
+</script>
+</body>
+</html>

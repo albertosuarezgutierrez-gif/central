@@ -120,7 +120,31 @@ export default function CateringPage() {
     }
     ;(window as any).enviarCatering = enviarCatering
 
-    return () => { io.disconnect(); io2.disconnect() }
+    // Hero briefing → presupuesto — animación en bucle
+    let cCancelled = false
+    const cWait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms))
+    async function cRun() {
+      const rows = Array.from(document.querySelectorAll<HTMLElement>('#cbriefing .cbf-row'))
+      const calc = document.getElementById('ccalc')
+      const quoteLabel = document.getElementById('cquoteLabel')
+      const quote = document.getElementById('cquote')
+      const margin = document.getElementById('cmargin')
+      if (!calc || !quoteLabel || !quote || !margin || rows.length === 0) return
+      while (!cCancelled) {
+        rows.forEach((r) => r.classList.remove('show'))
+        calc.classList.remove('show'); quoteLabel.style.opacity = '0'
+        quote.classList.remove('show'); margin.classList.remove('show')
+        await cWait(700); if (cCancelled) return
+        for (const r of rows) { r.classList.add('show'); await cWait(520); if (cCancelled) return }
+        await cWait(400); calc.classList.add('show'); await cWait(1500); if (cCancelled) return
+        calc.classList.remove('show'); quoteLabel.style.opacity = '1'; await cWait(250)
+        quote.classList.add('show'); await cWait(700); margin.classList.add('show')
+        await cWait(3600); if (cCancelled) return
+      }
+    }
+    cRun()
+
+    return () => { io.disconnect(); io2.disconnect(); cCancelled = true }
   }, [])
 
   return (
@@ -169,6 +193,45 @@ h1 i{font-style:italic;color:var(--red)}
 .btn-p:hover{opacity:.85;transform:translateY(-1px)}
 .btn-s{font-size:14px;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s;cursor:pointer;background:none;font-family:'Inter Tight',sans-serif}
 .btn-s:hover{color:var(--ink);border-color:rgba(246,241,231,.2)}
+
+/* HERO 2-COL + DEMO BRIEFING */
+.hero-inner{display:grid;grid-template-columns:1.02fr .98fr;gap:52px;align-items:center;max-width:1180px;margin:0 auto;width:100%;position:relative;z-index:2}
+.hero-copy{text-align:left}
+.hero-copy .eyebrow{justify-content:flex-start}
+.hero-copy h1{max-width:none}
+.hero-copy .hero-sub{margin-left:0}
+.hero-copy .hero-cta{justify-content:flex-start}
+.hero-demo{position:relative}
+.demo-badge{position:absolute;top:-13px;right:14px;z-index:3;background:var(--bg3);border:1px solid var(--border2);border-radius:20px;padding:5px 14px;font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);display:flex;align-items:center;gap:7px}
+.demo-badge .ddot{width:6px;height:6px;border-radius:50%;background:var(--green);animation:cpulse 1.8s infinite}
+@keyframes cpulse{0%{box-shadow:0 0 0 0 rgba(110,189,115,.5)}70%{box-shadow:0 0 0 7px rgba(110,189,115,0)}100%{box-shadow:0 0 0 0 rgba(110,189,115,0)}}
+.cpanel{background:#0C0A08;border:1px solid var(--border2);border-radius:14px;overflow:hidden;box-shadow:0 30px 80px -30px rgba(0,0,0,.8)}
+.cp-bar{padding:13px 16px;background:#111009;border-bottom:1px solid var(--border);display:flex;gap:6px;align-items:center}
+.cp-bar .cvd{width:9px;height:9px;border-radius:50%}.cp-bar .cvdr{background:#ff5f57}.cp-bar .cvdy{background:#ffbd2e}.cp-bar .cvdg{background:#28ca41}
+.cp-title{margin-left:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--ink3)}
+.cp-body{padding:20px 20px 22px;min-height:360px}
+.cstep-label{font-family:'JetBrains Mono',monospace;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink3);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.cstep-label .cln{flex:1;height:1px;background:var(--border)}
+.cbf{display:flex;flex-direction:column;gap:9px;margin-bottom:16px}
+.cbf-row{display:flex;justify-content:space-between;align-items:center;padding:11px 14px;background:var(--bg3);border:1px solid var(--border);border-radius:9px;opacity:0;transform:translateY(8px);transition:opacity .35s,transform .35s}
+.cbf-row.show{opacity:1;transform:none}
+.cbf-k{font-size:12px;color:var(--ink3)}
+.cbf-v{font-size:14px;color:var(--ink);font-weight:500}
+.ccalc{display:flex;align-items:center;gap:10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--amber);margin:6px 0 14px;opacity:0;transition:opacity .4s}
+.ccalc.show{opacity:1}
+.ccalc .cspin{width:12px;height:12px;border:1.5px solid rgba(232,163,59,.3);border-top-color:var(--amber);border-radius:50%;animation:cspin .7s linear infinite}
+@keyframes cspin{to{transform:rotate(360deg)}}
+.cquote{border:1px solid rgba(217,68,43,.2);border-radius:11px;overflow:hidden;opacity:0;transform:translateY(10px);transition:opacity .45s,transform .45s}
+.cquote.show{opacity:1;transform:none}
+.cq-line{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);font-size:13px;color:var(--ink2)}
+.cq-line .cqc{font-family:'JetBrains Mono',monospace;color:var(--ink);font-size:13px}
+.cq-total{display:flex;justify-content:space-between;align-items:center;padding:15px 16px;background:rgba(217,68,43,0.06)}
+.cq-total .ctl{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.08em}
+.cq-total .ctr{font-family:'Newsreader',serif;font-size:32px;font-weight:200;color:var(--ink);letter-spacing:-1px}
+.cmargin{margin-top:12px;display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:rgba(110,189,115,.08);border:1px solid rgba(110,189,115,.25);border-radius:9px;opacity:0;transition:opacity .45s}
+.cmargin.show{opacity:1}
+.cmargin .cml{font-size:12px;color:var(--ink2)}
+.cmargin .cmr{font-family:'Newsreader',serif;font-size:26px;color:var(--green);font-weight:300}
 
 /* STRIP */
 .strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex}
@@ -254,6 +317,11 @@ h2 i{font-style:italic;color:var(--red)}
 @media(max-width:900px){
   nav{padding:0 20px}.nav-links{display:none}
   .hero,.costes,.flujo{padding-left:20px;padding-right:20px}
+  .hero-inner{grid-template-columns:1fr;gap:40px}
+  .hero-copy{text-align:center}
+  .hero-copy .eyebrow{justify-content:center}
+  .hero-copy .hero-sub{margin-left:auto;margin-right:auto}
+  .hero-copy .hero-cta{justify-content:center}
   .cost-cards{grid-template-columns:1fr}
   .cap-grid{grid-template-columns:1fr 1fr}
   .form-grid{grid-template-columns:1fr;gap:40px}
@@ -297,14 +365,42 @@ h2 i{font-style:italic;color:var(--red)}
 <!-- HERO -->
 <section class="hero">
   <div class="hero-glow"></div>
-  <div class="eyebrow fi">Software para catering profesional · España</div>
-  <h1 class="fi d1">Sabes cuánto<br>ganas en<br>cada <i>evento.</i></h1>
-  <p class="hero-sub fi d2">
-    Coste real por plato, margen por evento, desviación de almacén en tiempo real. ia.rest cierra el círculo completo — del presupuesto a la caja.
-  </p>
-  <div class="hero-cta fi d2">
-    <button class="btn-p">Solicitar demo gratuita →</button>
-    <a href="#costes" class="btn-s">Ver el control de costes ↓</a>
+  <div class="hero-inner">
+    <div class="hero-copy">
+      <div class="eyebrow fi">Software para catering profesional · España</div>
+      <h1 class="fi d1">Sabes cuánto<br>ganas en<br>cada <i>evento.</i></h1>
+      <p class="hero-sub fi d2">
+        Coste real, margen y beneficio de cada evento. Del presupuesto a la caja, sin sorpresas.
+      </p>
+      <div class="hero-cta fi d2">
+        <button class="btn-p">Solicitar demo gratuita →</button>
+        <a href="#costes" class="btn-s">Ver el control de costes ↓</a>
+      </div>
+    </div>
+    <div class="hero-demo fi d2">
+      <div class="demo-badge"><span class="ddot"></span> En vivo</div>
+      <div class="cpanel">
+        <div class="cp-bar"><span class="cvd cvdr"></span><span class="cvd cvdy"></span><span class="cvd cvdg"></span><span class="cp-title">presupuesto-evento · briefing</span></div>
+        <div class="cp-body">
+          <div class="cstep-label"><span>Briefing del cliente</span><span class="cln"></span></div>
+          <div class="cbf" id="cbriefing">
+            <div class="cbf-row"><span class="cbf-k">Tipo de evento</span><span class="cbf-v">Boda</span></div>
+            <div class="cbf-row"><span class="cbf-k">Invitados</span><span class="cbf-v">120</span></div>
+            <div class="cbf-row"><span class="cbf-k">Menú</span><span class="cbf-v">Degustación 6 pases</span></div>
+            <div class="cbf-row"><span class="cbf-k">Barra libre</span><span class="cbf-v">Premium · 5h</span></div>
+          </div>
+          <div class="ccalc" id="ccalc"><span class="cspin"></span> Calculando con tus escandallos reales…</div>
+          <div class="cstep-label" id="cquoteLabel" style="opacity:0;transition:opacity .4s"><span>Presupuesto generado</span><span class="cln"></span></div>
+          <div class="cquote" id="cquote">
+            <div class="cq-line"><span>Menú degustación · 120 pax</span><span class="cqc">5.760 €</span></div>
+            <div class="cq-line"><span>Barra libre Premium · 5h</span><span class="cqc">2.040 €</span></div>
+            <div class="cq-line"><span>Personal de sala · 8 pers.</span><span class="cqc">1.280 €</span></div>
+            <div class="cq-total"><span class="ctl">Total presupuesto</span><span class="ctr">9.080 €</span></div>
+          </div>
+          <div class="cmargin" id="cmargin"><span class="cml">Margen neto estimado (escandallos reales)</span><span class="cmr">31%</span></div>
+        </div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -326,21 +422,18 @@ h2 i{font-style:italic;color:var(--red)}
       <div class="cost-card">
         <div class="cost-card-label">Coste real por evento</div>
         <div class="cost-card-num a">3.534<span style="font-size:28px">€</span></div>
-        <p class="cost-card-desc">Escandallo real × comensales, con rappels de proveedor aplicados automáticamente.</p>
-        <div class="cost-card-sub">escandallo × 180p — rappel 5% = 3.534€</div>
+        <div class="cost-card-sub">Boda · 180 comensales</div>
       </div>
 
       <div class="cost-card">
         <div class="cost-card-label">Margen bruto</div>
         <div class="cost-card-num g">71<span style="font-size:28px">%</span></div>
-        <p class="cost-card-desc">Calculado en tiempo real durante el evento. Si se desvía, lo ves al momento.</p>
-        <div class="cost-card-sub">12.400€ ingreso — 3.534€ coste</div>
+        <div class="cost-card-sub">Calculado en tiempo real</div>
       </div>
 
       <div class="cost-card">
         <div class="cost-card-label">Beneficio neto</div>
         <div class="cost-card-num g">8.866<span style="font-size:28px">€</span></div>
-        <p class="cost-card-desc">Por evento. Histórico de márgenes por tipo de celebración, proveedor y temporada.</p>
         <div class="cost-card-sub">factura generada · verifactu ✓</div>
       </div>
 
@@ -357,7 +450,7 @@ h2 i{font-style:italic;color:var(--red)}
         <h2>Todo el trabajo.<br><i>Automatizado.</i></h2>
       </div>
       <div>
-        <p style="font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75">Cada fase genera datos que alimentan la siguiente. Al cerrar el evento, ia.rest ya sabe cuánto ganaste y qué puedes mejorar.</p>
+        <p style="font-size:16px;color:var(--ink3);font-weight:300;line-height:1.75">Al cerrar el evento ya sabes cuánto has ganado.</p>
       </div>
     </div>
 
