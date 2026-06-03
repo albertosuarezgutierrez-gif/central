@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from 'next/server'
 
 /**
  * ESCUDO SUPER ADMIN
- * 
- * Todas las rutas /super* y /api/super/* requieren la cookie __super_shield.
- * Sin ella → 404 (la página parece no existir).
- * 
- * Para obtener la cookie: GET /api/super/shield?k=SUPER_ACCESS_KEY
- * Eso redirige a /super con la cookie establecida (HttpOnly, Secure, 1 año,
- * compartida entre iarest.es y www.iarest.es).
- * 
- * /super/gate queda excluido: es el puente de impersonación que ya tiene
- * sus propios datos firmados en el hash de la URL.
+ *
+ * Las APIs /api/super/* (y /api/auth/super-pin) requieren la cookie
+ * __super_shield. Sin ella → 404 (parecen no existir).
+ *
+ * La PÁGINA /super ya NO está bajo el escudo: muestra el login de
+ * email + contraseña (/api/auth/super-login). Al validar, ese endpoint pone la
+ * cookie __super_shield, de modo que las APIs siguen protegidas. Así el panel
+ * es accesible desde cualquier dispositivo sin la llave secreta en la URL.
+ *
+ * La llave secreta (GET /api/auth/super-shield?k=SUPER_ACCESS_KEY) y el PIN
+ * (/api/auth/super-pin) se mantienen como acceso de emergencia.
  */
 
 const SUPER_ACCESS_KEY = process.env.SUPER_ACCESS_KEY
@@ -20,7 +21,6 @@ export function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
 
   const isSuper =
-    (pathname.startsWith('/super') && !pathname.startsWith('/super/gate')) ||
     pathname.startsWith('/api/super') ||
     pathname === '/api/auth/super-pin'
 
@@ -42,5 +42,5 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/super/:path*', '/api/super/:path*', '/api/auth/super-pin'],
+  matcher: ['/api/super/:path*', '/api/auth/super-pin'],
 }
