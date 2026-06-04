@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **FIX Apify ingest: "0 de 30" → inserta — 04/06/2026** (PR #35, mergeado):
+  con `APIFY_TOKEN` ya puesto en Vercel, "Lanzar una vuelta" devolvía
+  `Fase B: 0 leads de 30` (run SUCCEEDED pero 0 insertados). Causa: el INSERT del
+  lote en `leads` (lib/prospeccion-apify.ts `ingestar`) chocaba con el **esquema
+  real** (3 cosas, cualquiera tumba el lote entero): (1) `leads.telefono` es
+  **NOT NULL** sin default y se pasaba `null`; (2) CHECK `leads_tipo_check` solo
+  admite `'online'|'personal'` y metía `'prospecto'`; (3) CHECK `leads_origen_check`
+  no incluía `'apify_google_places'`. Fix: código `telefono → ''`, `tipo → 'online'`;
+  **migración Supabase aplicada** (`leads_origen_check_allow_apify`) que añade
+  `'apify_google_places'` al CHECK (lo usan el panel `/super` y el RPC
+  `search_leads_sevilla_nuevos`). Verificado con INSERT real (sitio sin tel.) + `tsc`.
+  - El primer run (`empresas de catering Sevilla`, run_id `e6lzGDB53voBotbzF`) que
+    salió 0 se **reseteó a `pending`** para re-cosecharlo con el código corregido.
+  - `APIFY_TOKEN` (Apify free) **ya está en Vercel** (Production). Pendiente: vigilar
+    crédito del plan free si se sondea Sevilla entero.
+
 - **Botón "📧 Enviar emails de venta" en `/super → Apify Sevilla` — 04/06/2026**
   (PR #33, mergeado): el envío de email frío de Sevilla se extrajo a
   `lib/lead-hunter-sevilla.ts` (`enviarEmailsSevilla`), compartido por el cron
