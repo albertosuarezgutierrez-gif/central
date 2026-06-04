@@ -1,10 +1,12 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
+import { generarReel } from '@/app/api/ig-reel/route'
+import { pickMusicTrack } from '@/lib/instagram-music'
 
 type Plantilla = 'stat'|'pregunta'|'comparativa'|'tip'|'cita'|'producto'
 type Estilo = 'editorial'|'brutalist'|'humano'
@@ -33,6 +35,25 @@ async function estiloDeLaSemana(supabase: ReturnType<typeof createServerClient>)
 const TONO: Record<Plantilla,Tono> = { pregunta:'claro',cita:'claro',tip:'rojo',stat:'oscuro',comparativa:'oscuro',producto:'oscuro' }
 const CICLO: Tono[] = ['oscuro','claro','rojo']
 const POR_TONO: Record<Tono,Plantilla[]> = { claro:['pregunta','cita'],rojo:['tip'],oscuro:['stat','comparativa','producto'] }
+
+// Formato del día: viernes (getUTCDay()===5) → reel; resto → imagen. 1 reel/semana fijo.
+function formatoDelDia(d: Date = new Date()): 'reel' | 'imagen' {
+  return d.getUTCDay() === 5 ? 'reel' : 'imagen'
+}
+
+// Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente).
+async function generarReelContenido(tema: string, hashtags: string[]) {
+  const prompt = `Eres el agente de Instagram de ia.rest (siempre "ia.rest", nunca "IA Rest").
+PRODUCTO: TPV por voz para hostelería española. El camarero habla → la cocina recibe en <0,5s.
+TONO: directo, sin palabrería, como un hostelero experimentado. PROHIBIDO nombrar competidores ni ciudades EN EL ARTE.
+Crea un REEL sobre: "${tema}".
+- titulo: portada, gancho corto que pare el scroll (máx 55 chars).
+- p1, p2, p3: tres ideas concretas que avanzan el argumento (máx 70 chars cada una).
+- caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda (ej "TPV por voz", "reducir errores de comanda", "digitalizar mi restaurante"). Invita a compartir/guardar. Cierra con www.iarest.es y EXACTAMENTE 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
+SOLO JSON: {"titulo":"","p1":"","p2":"","p3":"","caption":""}`
+  const raw = await callAI('Reel Instagram. SOLO JSON.', prompt, 600)
+  return JSON.parse(cleanJSON(raw)) as { titulo: string; p1: string; p2: string; p3: string; caption: string }
+}
 
 async function buscarBorradorProgramado(supabase: ReturnType<typeof createServerClient>) {
   // Buscar borrador de la semana con scheduled_for próximo (±12h)
@@ -134,9 +155,37 @@ export async function GET(req: NextRequest) {
     const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
     const { tema, modulo, hashtags } = await elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx)
-    const post = await generarPost(plantilla, tema, hashtags)
     const estilo = await estiloDeLaSemana(supabase)
-    const imageUrl = buildUrl({ tipo: plantilla, estilo, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items })
+    const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
+
+    // ── Rama REEL (viernes o ?formato=reel) con fallback elegante a imagen ──
+    if (formato === 'reel') {
+      try {
+        const reel = await generarReelContenido(tema, hashtags)
+        const puntos = [reel.p1, reel.p2, reel.p3].filter(Boolean)
+        const audioPid = pickMusicTrack()
+        const reelUrl = await generarReel({ titulo: reel.titulo, estilo, puntos, modulo, audioPid })
+        const { data: bReel } = await supabase.from('instagram_borradores').insert({
+          plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: reelUrl,
+          tema_elegido: tema, modulo_relacionado: modulo,
+        }).select('id').single()
+        if (bReel?.id) {
+          await tgAlertButtons(
+            `🎬 <b>Nuevo Reel listo</b>\n\n🎞️ <code>reel</code> · ${modulo||'—'}${audioPid?' · 🎵':' · 🔇'}\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\n<i>${reel.caption?.slice(0,150)}...</i>`,
+            'info',
+            [[{ texto:'✅ Publicar Reel', callback:`ig_aprobar_reel:${bReel.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bReel.id}` }]]
+          )
+        }
+        return NextResponse.json({ ok: true, formato: 'reel', borradorId: bReel?.id, tema })
+      } catch (reelErr: any) {
+        await tgAlertButtons(`⚠️ <b>Reel falló, genero imagen</b>\n\n<code>${(reelErr?.message||'error').slice(0,150)}</code>`, 'aviso', [])
+        // cae al flujo de imagen de abajo (nunca se queda el día sin publicar)
+      }
+    }
+
+    // ── Flujo IMAGEN (lunes, fallback de reel, o ?formato=imagen) ──
+    const post = await generarPost(plantilla, tema, hashtags)
+    const imageUrl = buildUrl({ tipo: plantilla, estilo, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items, modulo })
 
     const { data: borrador } = await supabase.from('instagram_borradores').insert({
       plantilla, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad,
@@ -152,7 +201,7 @@ export async function GET(req: NextRequest) {
         [[{ texto:'✅ Publicar', callback:`ig_aprobar:${borrador.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${borrador.id}` }],[{ texto:'✏️ Editar en /super', callback:`ig_editar:${borrador.id}` }]]
       )
     }
-    return NextResponse.json({ ok: true, plantilla, borradorId: borrador?.id, tema })
+    return NextResponse.json({ ok: true, formato: 'imagen', plantilla, borradorId: borrador?.id, tema })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }

@@ -173,3 +173,43 @@ cron/instagram (viernes)
 - Los slides del reel heredan el nuevo theming.
 - Si el reel falla, sale imagen y llega aviso; nada se queda sin publicar.
 - `tsc` y `next build` limpios.
+
+---
+
+## Addendum v2 (2026-06-04) — Reels que "venden": ambiente real + producto
+
+> Tras una investigación de mercado (5 frentes: APIs IA→vídeo, Veo, stock+música,
+> APIs de plantilla, arquitectura), Alberto pidió "lo que más venda, gratis y lo que
+> recomiendes". Conclusión: el formato que convierte en hostelería NO es footage 100%
+> IA (caro y con riesgo de "comida falsa"), sino **stock real de ambiente + producto
+> en acción + texto + música**. Decisión: **mantener el motor Cloudinary** (0€, sin
+> infra nueva, ya enganchado a Telegram/`publicarReel`) y enriquecerlo. Se reevaluó y
+> se **revirtió la decisión previa de excluir footage**: se añade ambiente real, pero
+> sin FFmpeg ni APIs de pago — todo dentro de Cloudinary.
+
+**Cambios sobre el plan base (Tasks 3–6 siguen válidas):**
+
+1. **Clips de ambiente reales (Pexels)** — pool sembrado en Cloudinary
+   (`iarest_amb_1..N`), leído por `src/lib/instagram-reel-assets.ts`
+   (`CLOUDINARY_AMBIENT_IDS`). Se **intercalan** entre los slides (no overlay anidado,
+   para no arriesgar sintaxis: segmentos `fl_splice` mezclando imagen y vídeo).
+   Degradación: si la env está vacía → reel sin footage (= comportamiento base).
+2. **Mockup de producto "inventado" por el agente** — un frame extra `tipo=producto`
+   de `/api/ig-img` (la app en acción: comanda por voz → KDS), renderizado en cada run.
+   Sin capturas reales; queda como URL cambiable si algún día se quiere una real.
+3. **Secuencia que vende:** portada → producto → ambiente → puntos (intercalando
+   ambiente) → CTA. Música royalty-free encima, recortada a la duración.
+4. **Siembra automatizada:** `POST /api/super/instagram/seed-reel-assets` (Bearer
+   `CRON_SECRET`) usa `PEXELS_API_KEY` para curar clips verticales de hostelería y
+   subirlos a Cloudinary por URL; devuelve el valor para `CLOUDINARY_AMBIENT_IDS`.
+
+**Riesgo conocido (falsable):** la sintaxis Cloudinary de splice de vídeo + `e_zoompan`
++ `l_audio` es **empírica**; se valida con un render real tras deploy. Por eso el
+footage va detrás de `CLOUDINARY_AMBIENT_IDS` (vacío por defecto): el reel funciona ya
+(slides + producto + música) y el ambiente se enciende cuando se siembra y se confirma
+el render. Si Cloudinary rechazara el splice de vídeo, el reel sigue saliendo sin footage.
+
+**Acciones externas (Alberto):** (a) `PEXELS_API_KEY` (gratis) en Vercel; (b) lanzar el
+seed una vez y pegar `CLOUDINARY_AMBIENT_IDS`; (c) subir 3–5 pistas royalty-free
+(Pixabay) y rellenar `CLOUDINARY_MUSIC_IDS`; (d) `?formato=reel&manual=1` para revisar
+un render antes de fiarlo al cron del viernes.

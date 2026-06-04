@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Instagram Reels v2 — "que vendan": ambiente real + producto + música** (04/06/2026,
+  rama `claude/elegant-dirac-DJLHF`): tras investigación de mercado (5 frentes), se
+  decidió **mantener el motor Cloudinary** (0€, sin infra nueva) y enriquecerlo en vez
+  de FFmpeg/APIs de pago. Implementado:
+  - `src/lib/instagram-music.ts` (pool `CLOUDINARY_MUSIC_IDS`) + `src/lib/instagram-reel-assets.ts`
+    (pool ambiente `CLOUDINARY_AMBIENT_IDS`), ambos con degradación elegante (vacío = sin audio / sin footage).
+  - `src/app/api/ig-reel/route.ts` reescrito: secuencia **portada → mockup producto
+    (`ig-img tipo=producto`) → ambiente (Pexels) → puntos (intercalando ambiente) → CTA**,
+    con Ken Burns en slides, ambiente silenciado y música recortada a la duración.
+  - `src/app/api/cron/instagram/route.ts`: **viernes → reel** (`formatoDelDia`) con
+    fallback a imagen; usa el callback **`ig_aprobar_reel`** (no `ig_aprobar`) para que
+    `publicarReel` publique el MP4 como vídeo. `maxDuration` 60→120.
+  - `src/app/api/super/instagram/seed-reel-assets/route.ts`: siembra clips de ambiente
+    de Pexels→Cloudinary (Bearer CRON_SECRET, requiere `PEXELS_API_KEY`).
+  - Smoke `scripts/smoke-instagram-reel.ts` (música+ambiente+forma URL) **OK**; `tsc` y
+    `next build` **verdes**.
+  - **Riesgo abierto:** la sintaxis Cloudinary de splice de vídeo + `e_zoompan` + `l_audio`
+    es empírica → validar con un render real tras deploy (`?formato=reel&manual=1`). El
+    footage va tras `CLOUDINARY_AMBIENT_IDS` (vacío) → no bloquea: el reel ya sale con
+    slides+producto+música; el ambiente se enciende al sembrar y confirmar el render.
+  - **Pendiente Alberto:** `PEXELS_API_KEY` en Vercel · lanzar seed y pegar
+    `CLOUDINARY_AMBIENT_IDS` · subir 3-5 pistas Pixabay y rellenar `CLOUDINARY_MUSIC_IDS`.
+
 - **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026): tarjeta
   "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
   fuentes/páginas), junto a la de formularios. Endpoint `GET /api/super/ga4-stats`
