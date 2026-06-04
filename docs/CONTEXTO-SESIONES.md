@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Superpowers instalado (subset) — 04/06/2026** (rama
+  `claude/install-superpowers-plugin-F47Fw`): vendorizados en `.claude/skills/` 6
+  skills de metodología de obra/superpowers (`brainstorming`, `writing-plans`,
+  `systematic-debugging`, `verification-before-completion`, `requesting-code-review`,
+  `receiving-code-review`) + la meta-skill `using-superpowers`. Se añadió un hook
+  `SessionStart` (`.claude/hooks/superpowers-session-start.sh`, cableado en
+  `.claude/settings.json` sin tocar el `Stop`) que inyecta `using-superpowers` al
+  arrancar. Motivo: `/plugin` no existe en Claude Code web → única vía es vendorizar +
+  commitear (entorno efímero). Quedan fuera (opcionales, más ceremonia): TDD,
+  worktrees, subagentes, dispatching-parallel-agents, executing/finishing, writing-skills.
 - **Panel de leads de la landing en `/super → CRM → Leads`** (04/06/2026): tarjeta
   "FORMULARIOS DE LA LANDING" con Hoy / Ayer / 7d / 30d + total + chips por fuente,
   alimentada por `GET /api/super/leads-landing` (auth super_admin, service role, tz
@@ -117,6 +127,31 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-04 (5) — Instalación de superpowers (subset) + hook SessionStart
+- **Petición de Alberto:** intentó `/plugin install superpowers@claude-plugins-official`
+  desde Claude Code **web** y falló. Diagnóstico: `/plugin` y los marketplaces solo
+  existen en el Claude Code **local** (escritorio/CLI), no en el cloud efímero. La
+  sintaxis era correcta; el canal no.
+- **Análisis previo (pedido por Alberto):** superpowers (obra/superpowers v5.1.0, MIT)
+  = 14 skills + metodología (TDD, depuración sistemática, "evidencia > afirmaciones",
+  planificación, revisión). Coincide con dolores reales: el bache de CI de la PR #17
+  (`tsc` sin deps no reproduce el build de Vercel) y testear sin red.
+- **Decisión:** instalar **subset** (6 skills de alto valor/bajo roce, no las 14) +
+  **hook SÍ** (recomendación de Claude: en cloud cada sesión arranca de cero, sin hook
+  los skills quedan pasivos).
+- **Hecho (rama `claude/install-superpowers-plugin-F47Fw`):**
+  - `git clone --depth 1` del repo → copia de 7 carpetas a `.claude/skills/`
+    (los 6 + `using-superpowers`), con sus archivos de apoyo.
+  - Nuevo `.claude/hooks/superpowers-session-start.sh` (versión Linux, lee
+    `using-superpowers/SKILL.md` desde el repo y emite el JSON `SessionStart`; descarté
+    el wrapper polyglot Win/Unix del original por innecesario).
+  - `.claude/settings.json`: añadido bloque `SessionStart` (`matcher:
+    startup|clear|compact`) **conservando** el `Stop` de persist-memoria.
+  - Nota en `AGENTS.md` (sección "Skills disponibles").
+- **Verificado:** hook emite `hookEventName:"SessionStart"` con `additionalContext` de
+  ~5.6k chars; `settings.json` válido con `Stop`+`SessionStart`; los 8 skills aparecen
+  en la lista de Claude Code. Solo toca `.claude/` + docs → no afecta a `next build`.
 
 ### 2026-06-04 (4) — "Llamar al camarero" configurable (modo 100% autoservicio)
 - **Petición de Alberto:** un local sin camareros (autoservicio/recogida) no quiere
