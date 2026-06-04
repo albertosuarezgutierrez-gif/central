@@ -34,6 +34,22 @@
   (`openMenu`/`menuRef`/`menuPos`); (6) deep-link `?tab=prospeccion_apify` redirige a
   CRM/Prospección. Sin cambios de lógica en los componentes. `tsc`+`lint`+`build` verde.
 
+- **Conversión de landings — 04/06/2026** (motivo: ~800 visitas/mes en GA4 y 0
+  formularios → el cuello de botella es convertir). Cambios:
+  - **Botón WhatsApp** (`wa.me/34637349990`, mensaje pre-rellenado) en los heros de
+    `/`, `/catering`, `/espacios` + enlace WhatsApp bajo el formulario de la home.
+    Clase `.btn-wa` (verde #25D366).
+  - **Home: formulario corto** → de 5 campos a **Nombre + Teléfono (req) + Email
+    (opcional)**; `enviar()` valida nombre+teléfono y manda `restaurante/usuarios` vacíos
+    (la API los acepta). Antes pedía restaurante+usuarios y exigía email.
+  - **Home: barra fija (sticky CTA) en móvil** ("Pedir demo" + WhatsApp) + **fila de
+    confianza** en el hero (Sin permanencia · Datos en Europa · Setup 2h · Sin comisión).
+    Sin testimonios inventados.
+  - **Bug arreglado en catering:** el botón "Solicitar demo gratuita" era un `<button>`
+    **sin acción** (no llevaba a ningún sitio); ahora es enlace a `#contacto`.
+  - Pendiente sugerido: medir conversión real (evento GA4 en los CTA) y, si el tráfico
+    resulta ser ruido/bots (ver checklist GA4), priorizar tráfico cualificado.
+
 - **Agente de venta para CATERING + HACIENDAS de eventos (Sevilla) — 04/06/2026**
   (rama `claude/leais-sales-agent-catering-b5ikA`, PR #25): se extendió todo el
   pipeline de captación para que sea **consciente del vertical** (catering →
