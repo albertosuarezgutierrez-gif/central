@@ -42,6 +42,20 @@
   - **CI:** se arregló de paso un fallo **preexistente** de ESLint en `main`
     (`eslint.config.mjs` referenciaba reglas `react-hooks/*` y `react/*` sin registrar
     los plugins → lint abortaba). Verificado `tsc`+`lint`+`build` en verde.
+  - **Ampliación "todo automático" (misma sesión):** (a) **panel en `/super → Apify
+    Sevilla`** (`ProspeccionApifyTab` + `/api/super/prospeccion-apify`) para lanzar el
+    agente a mano y ver el historial de runs/leads; (b) **canal WhatsApp wa.me**
+    (`cron/crm-whatsapp-sevilla`, diario L-V 10:00): genera el enlace wa.me por vertical
+    con el teléfono capturado y lo manda a Telegram con botón "Abrir WhatsApp" (1 toque,
+    sin API de Meta); marca `leads.whatsapp_outreach_at` (**migración aplicada**);
+    (c) **secuencia día 2** (`cron/crm-followup-sevilla`, L-V 11:00): 2º email a quien
+    recibió el día 1 hace ≥3d, no rellenó formulario y no se dio de baja (usa
+    `leads_web_tracking.mensaje_dia2_at`); (d) **backfill** (`cron/backfill-leads-sevilla`,
+    diario 5:00): clasifica el vertical de leads de Sevilla sin `tipo_negocio` y saca
+    email de su web; (e) **más cobertura** Apify (15 queries por zonas: Aljarafe, Sevilla
+    Este, Triana, Dos Hermanas, provincia; cap 30/run). Lógica del agente extraída a
+    `lib/prospeccion-apify.ts` y plantillas a `lib/crm-sevilla.ts` (compartidas cron+panel).
+    `tsc`+`lint`+`build` en verde.
 
 - **Superpowers instalado (subset) — 04/06/2026** (rama
   `claude/install-superpowers-plugin-F47Fw`): vendorizados en `.claude/skills/` 6
