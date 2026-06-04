@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Agente de venta para CATERING + HACIENDAS de eventos (Sevilla) — 04/06/2026**
+  (rama `claude/leais-sales-agent-catering-b5ikA`, PR #25): se extendió todo el
+  pipeline de captación para que sea **consciente del vertical** (catering →
+  `/catering`; eventos/haciendas → `/espacios`; restaurante → `/`, intacto). Piezas:
+  (1) **Apify Google Places** como motor de sourcing nuevo, asíncrono en 2 fases
+  (`src/lib/apify.ts` + cron `/api/cron/prospeccion-apify` `*/30` + tabla de estado
+  `prospeccion_apify_runs`, **aplicada**); rastrea catering+haciendas+restaurantes en
+  Sevilla. (2) `prospeccion-leads`: taxonomía con `eventos`, captura email/telefono y
+  **fix** — `tipo_negocio` se guardaba solo en `estudio_completo` (JSON), ahora también
+  en la **columna** `leads.tipo_negocio` (que es la que leen RPC y presentación).
+  (3) `lead-onboarding`: research y borradores email/WhatsApp por vertical, enlazando la
+  landing correcta. (4) Presentación `src/app/p/[slug]/page.tsx`: bucket `MODULOS_TIPO.eventos`
+  propio (espacios/calendario/solicitudes/contratos/cobros de grupo) + `getModulos`
+  enruta hacienda/finca/espacio → eventos + subheadline por vertical. (5) RPC
+  `search_leads_sevilla_nuevos` **v2** (aplicada): admite catering/eventos de un solo
+  sitio y los de Apify (`origen`), exige email. (6) `crm-lead-hunter-sevilla`: 3 plantillas
+  de email por vertical con CTA a la landing correcta + tracking.
+  - **OJO descubierto:** el archivo `MIGRACIONES_CRM_LEAD_HUNTER.sql` del repo **NO**
+    coincide con la función realmente desplegada (`leads_locales` usa `lead_id`+`aforo`,
+    no `empresa_id`/`num_mesas`; `leads` no tiene `restaurante_id`). La v2 se hizo sobre
+    la función real (vía `pg_get_functiondef`).
+  - **Pendiente:** **`APIFY_TOKEN` en Vercel env** (sin él, `prospeccion-apify` hace
+    no-op y nada más se rompe). Spec y plan en `docs/superpowers/{specs,plans}/`.
+  - **CI:** se arregló de paso un fallo **preexistente** de ESLint en `main`
+    (`eslint.config.mjs` referenciaba reglas `react-hooks/*` y `react/*` sin registrar
+    los plugins → lint abortaba). Verificado `tsc`+`lint`+`build` en verde.
+
 - **Superpowers instalado (subset) — 04/06/2026** (rama
   `claude/install-superpowers-plugin-F47Fw`): vendorizados en `.claude/skills/` 6
   skills de metodología de obra/superpowers (`brainstorming`, `writing-plans`,
