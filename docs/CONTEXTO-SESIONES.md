@@ -57,16 +57,22 @@
     `lib/prospeccion-apify.ts` y plantillas a `lib/crm-sevilla.ts` (compartidas cron+panel).
     `tsc`+`lint`+`build` en verde.
 
-- **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026): tarjeta
-  "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
+- **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026) — ✅ **FUNCIONANDO**:
+  tarjeta "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
   fuentes/páginas), junto a la de formularios. Endpoint `GET /api/super/ga4-stats`
   (runtime nodejs): autentica como la **service account** `ia-rest-sa@ia-rest-drive`
   firmando un JWT con `GOOGLE_SA_JSON` (`jsonwebtoken`, scope `analytics.readonly`),
   exchange en `oauth2.googleapis.com/token`, y `batchRunReports` de la **GA4 Data API**
   sobre la propiedad **536881804** (`GA4_PROPERTY_ID`, con default hardcode al mismo nº).
-  La SA tiene rol **Lector** en la propiedad (binding creado vía Admin API). Si falta la
-  credencial/acceso, la tarjeta muestra el error en vez de romper (`configured:false`).
-  **Verificar tras deploy:** que `GOOGLE_SA_JSON` en Vercel sea una key válida de esa SA.
+  Si falta la credencial/acceso, la tarjeta muestra el error en vez de romper (`configured:false`).
+  - **`GOOGLE_SA_JSON` ya está puesta en Vercel** (key de la SA en base64). Antes NO existía
+    (el backup de Drive usa OAuth, no esta SA) → por eso al principio daba "Falta GOOGLE_SA_JSON".
+  - **Gotcha clave (binding de la SA en GA4):** la UI de Google Analytics **rechaza** añadir
+    service accounts como usuarios. Se resolvió creando el accessBinding por API con token OAuth
+    del admin (Alberto, scope `analytics.manage.users`) contra el endpoint **`v1alpha`**
+    (`POST .../v1alpha/properties/536881804/accessBindings`), NO `v1beta`. Rol: Lector.
+  - **Dato de negocio:** mucho tráfico (≈49 hoy / 804 en 30d, sobre todo *Direct*) y 0
+    formularios → el cuello de botella es **conversión**, no atracción.
 - **Superpowers instalado (subset) — 04/06/2026** (rama
   `claude/install-superpowers-plugin-F47Fw`): vendorizados en `.claude/skills/` 6
   skills de metodología de obra/superpowers (`brainstorming`, `writing-plans`,
