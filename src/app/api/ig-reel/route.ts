@@ -1,13 +1,19 @@
 export const dynamic = 'force-dynamic'
 export const maxDuration = 120
 import { NextRequest, NextResponse } from 'next/server'
+import { pickMusicTrack } from '@/lib/instagram-music'
+import { pickAmbient } from '@/lib/instagram-reel-assets'
 
 const CLOUD = process.env.CLOUDINARY_CLOUD_NAME || ''
 const KEY   = process.env.CLOUDINARY_API_KEY || ''
 const SEC   = process.env.CLOUDINARY_API_SECRET || ''
-const ORIGIN = 'https://www.iarest.es'
-const BASE_VIDEO = 'iarest_base_dark'   // clip de color de marca 1080x1920 (ya subido)
+const ORIGIN = process.env.IG_ORIGIN || 'https://www.iarest.es'
+const BASE_VIDEO = 'iarest_base_dark'   // clip de color de marca 1080x1920 (ya subido) — lienzo/timeline
 const W = 1080, H = 1920, DUR = 3, FADE = 800
+
+// Un segmento del reel: o una imagen (slide de texto / mockup de producto, subida
+// a Cloudinary en este run) o un clip de vídeo de ambiente (ya sembrado en Cloudinary).
+type Segmento = { kind: 'image' | 'video'; pid: string }
 
 // Sube un PNG a Cloudinary con basic auth (validado: la firma HMAC manual da Invalid Signature en esta cuenta)
 async function uploadSlide(buf: Buffer, pid: string): Promise<string> {
@@ -29,35 +35,93 @@ async function uploadSlide(buf: Buffer, pid: string): Promise<string> {
   return d.public_id!
 }
 
-// MP4 vertical: splice de cada slide (normalizada con c_pad) sobre el vídeo base, con crossfade.
-function buildReelUrl(pids: string[]): string {
+// MP4 vertical 1080x1920: concatena (fl_splice) cada segmento sobre el vídeo base.
+//   - imagen: c_pad sobre fondo de marca + zoom sutil (Ken Burns) por slide.
+//   - vídeo:  c_fill al frame vertical, audio del clip silenciado (no pelea con la música).
+//   - crossfade entre segmentos; pista de música opcional recortada a la duración total.
+// NOTA: la sintaxis de splice de vídeo + e_zoompan + l_audio es EMPÍRICA en Cloudinary;
+// se valida con un render real (manual) tras deploy. Si Cloudinary rechazara alguna parte,
+// los clips de ambiente quedan tras CLOUDINARY_AMBIENT_IDS (vacío por defecto) y el motion
+// es revertible dejando solo du_${DUR}. La música degrada a reel mudo si falla el pool.
+function buildReelUrl(segs: Segmento[], audioPid?: string | null): string {
   const parts: string[] = [`w_${W},h_${H},c_fill`]
-  pids.forEach((p, i) => {
+  segs.forEach((s, i) => {
+    const off = i * DUR
     const fade = i === 0 ? '' : `,e_fade:${FADE}`
-    parts.push(`l_${p}/c_pad,w_${W},h_${H},b_rgb:14110E/fl_splice,du_${DUR}/so_${i * DUR},fl_layer_apply${fade}`)
+    if (s.kind === 'video') {
+      parts.push(`l_video:${s.pid}/c_fill,w_${W},h_${H},g_auto,e_volume:mute/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
+    } else {
+      const motion = `,e_zoompan:from_(g_center;zoom_1.0);to_(g_center;zoom_1.08)`
+      parts.push(`l_${s.pid}/c_pad,w_${W},h_${H},b_rgb:14110E/fl_splice,du_${DUR}${motion}/so_${off},fl_layer_apply${fade}`)
+    }
   })
+  if (audioPid) {
+    const total = segs.length * DUR
+    parts.push(`l_audio:${audioPid}/du_${total},e_volume:65/fl_layer_apply`)
+  }
   return `https://res.cloudinary.com/${CLOUD}/video/upload/${parts.join('/')}/q_auto/${BASE_VIDEO}.mp4`
 }
 
-// Genera el Reel a partir de slides de /api/ig-img y devuelve la URL del MP4 listo para publicar.
-export async function generarReel(opts: { titulo: string; estilo?: string; puntos: string[] }): Promise<string> {
-  const { titulo, estilo = 'editorial', puntos } = opts
-  const total = puntos.length + 2
-  const t = encodeURIComponent(titulo)
-  const e = encodeURIComponent(estilo)
-  const slideUrls = [`${ORIGIN}/api/ig-img?tipo=slide&estilo=${e}&num=1&total=${total}&titulo=${t}`]
-  puntos.forEach((p, i) => slideUrls.push(`${ORIGIN}/api/ig-img?tipo=slide&estilo=${e}&num=${i + 2}&total=${total}&titulo=${t}&punto=${encodeURIComponent(p)}`))
-  slideUrls.push(`${ORIGIN}/api/ig-img?tipo=slide&estilo=${e}&num=${total}&total=${total}&titulo=${t}`)
+// Construye la URL de una slide de /api/ig-img.
+function slideUrl(params: Record<string, string>): string {
+  const sp = new URLSearchParams()
+  Object.entries(params).forEach(([k, v]) => { if (v) sp.set(k, v) })
+  return `${ORIGIN}/api/ig-img?${sp}`
+}
 
+// Genera el Reel y devuelve la URL del MP4 listo para publicar.
+// Secuencia (lo que "vende" en hostelería): gancho → producto en acción → ambiente real
+// → puntos de valor (intercalando ambiente) → CTA. El ambiente se intercala SOLO si hay
+// clips sembrados; si no, el reel es slides + mockup de producto + música.
+export async function generarReel(opts: {
+  titulo: string
+  estilo?: string
+  puntos: string[]
+  modulo?: string
+  audioPid?: string | null
+}): Promise<string> {
+  const { titulo, estilo = 'editorial', puntos, modulo = '' } = opts
+  const audioPid = opts.audioPid !== undefined ? opts.audioPid : pickMusicTrack()
+  const total = puntos.length + 2 // portada + puntos + cierre (numeración de slides)
+  const m = modulo || ''
+
+  // 1) Slides de imagen a renderizar vía ig-img (portada, mockup producto, puntos, cierre).
+  const imageReqs: Array<{ key: string; url: string }> = []
+  imageReqs.push({ key: 'portada', url: slideUrl({ tipo: 'slide', estilo, num: '1', total: String(total), titulo, modulo: m }) })
+  // Mockup de producto "inventado" por el agente (la app en acción) — credibilidad.
+  imageReqs.push({ key: 'producto', url: slideUrl({ tipo: 'producto', estilo, modulo: m }) })
+  puntos.forEach((p, i) => imageReqs.push({
+    key: `p${i + 1}`,
+    url: slideUrl({ tipo: 'slide', estilo, num: String(i + 2), total: String(total), titulo, punto: p, modulo: m }),
+  }))
+  imageReqs.push({ key: 'cierre', url: slideUrl({ tipo: 'slide', estilo, num: String(total), total: String(total), titulo, modulo: m }) })
+
+  // 2) Renderizar y subir cada slide a Cloudinary.
   const stamp = Date.now()
-  const pids: string[] = []
-  for (let i = 0; i < slideUrls.length; i++) {
-    const r = await fetch(slideUrls[i])
-    if (!r.ok) throw new Error(`Slide ${i + 1} no disponible (${r.status})`)
+  const imgPid: Record<string, string> = {}
+  for (let i = 0; i < imageReqs.length; i++) {
+    const { key, url } = imageReqs[i]
+    const r = await fetch(url)
+    if (!r.ok) throw new Error(`Slide "${key}" no disponible (${r.status})`)
     const buf = Buffer.from(await r.arrayBuffer())
-    pids.push(await uploadSlide(buf, `iarest_reel_${stamp}_${i + 1}`))
+    imgPid[key] = await uploadSlide(buf, `iarest_reel_${stamp}_${i + 1}`)
   }
-  return buildReelUrl(pids)
+
+  // 3) Clips de ambiente (hasta 2) ya sembrados en Cloudinary; [] si no hay env.
+  const amb = pickAmbient(2)
+
+  // 4) Montar la secuencia, intercalando ambiente entre los puntos si lo hay.
+  const segs: Segmento[] = []
+  segs.push({ kind: 'image', pid: imgPid['portada'] })
+  segs.push({ kind: 'image', pid: imgPid['producto'] })
+  if (amb[0]) segs.push({ kind: 'video', pid: amb[0] })
+  puntos.forEach((_, i) => {
+    segs.push({ kind: 'image', pid: imgPid[`p${i + 1}`] })
+    if (i === 0 && amb[1]) segs.push({ kind: 'video', pid: amb[1] })
+  })
+  segs.push({ kind: 'image', pid: imgPid['cierre'] })
+
+  return buildReelUrl(segs, audioPid)
 }
 
 export async function GET(req: NextRequest) {
@@ -66,9 +130,10 @@ export async function GET(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const titulo = sp.get('titulo') || 'ia.rest'
   const estilo = sp.get('estilo') || 'editorial'
+  const modulo = sp.get('modulo') || ''
   const puntos = [sp.get('p1'), sp.get('p2'), sp.get('p3')].filter(Boolean) as string[]
   try {
-    const reelUrl = await generarReel({ titulo, estilo, puntos })
+    const reelUrl = await generarReel({ titulo, estilo, puntos, modulo })
     return NextResponse.json({ ok: true, reelUrl })
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 500 })

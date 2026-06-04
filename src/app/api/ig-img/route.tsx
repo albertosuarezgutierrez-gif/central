@@ -1,9 +1,10 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
+import { temaModulo } from '@/lib/instagram-theme'
 export const runtime = 'edge'
 export const dynamic = 'force-dynamic'
 
-const ORIGIN = 'https://www.iarest.es'
+const ORIGIN = process.env.IG_ORIGIN || 'https://www.iarest.es'
 type FontDef = { name: string; data: ArrayBuffer; weight: 400|500|600|700; style: 'normal'|'italic' }
 let _fonts: FontDef[] | null = null
 async function getFonts(): Promise<FontDef[]> {
@@ -38,6 +39,8 @@ export async function GET(req: NextRequest) {
   const num = parseInt(p.get('num') || '1')
   const total = parseInt(p.get('total') || '5')
   const punto = p.get('punto') || ''
+  const modulo = p.get('modulo') || ''
+  const { accent: AC, glifo: GL } = temaModulo(modulo)
 
   const fonts = await getFonts()
   const R = (el: React.ReactElement) => new ImageResponse(el, { width:S, height:S, fonts })
@@ -91,27 +94,27 @@ export async function GET(req: NextRequest) {
   if (tipo === 'pregunta') return R(
     <div style={{width:S,height:S,background:CR,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'center'}}>
-        <span style={{fontStyle:'italic',fontSize:22,color:INK}}>ia<span style={{color:RED}}>.</span>rest</span>
-        <span style={{fontSize:14,color:I2,fontFamily:'Inter'}}>{sub||'Hostelería · 2026'}</span>
+        <span style={{fontStyle:'italic',fontSize:22,color:INK}}>ia<span style={{color:AC}}>.</span>rest</span>
+        <span style={{fontSize:14,color:I2,fontFamily:'Inter'}}>{GL} {sub||'Hostelería · 2026'}</span>
       </div>
       <div style={{fontStyle:'italic',fontSize:titulo.length>55?58:70,color:INK,lineHeight:1.15,letterSpacing:'-1px'}}>{titulo}</div>
       <div style={{display:'flex',alignItems:'center',gap:14}}>
-        <div style={{width:48,height:3,background:RED}}/>
-        <span style={{fontSize:18,color:RED,letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,fontFamily:'Inter'}}>Léelo en el blog →</span>
+        <div style={{width:48,height:3,background:AC}}/>
+        <span style={{fontSize:18,color:AC,letterSpacing:'0.1em',textTransform:'uppercase',fontWeight:600,fontFamily:'Inter'}}>Léelo en el blog →</span>
       </div>
     </div>)
 
   if (tipo === 'stat') return R(
     <div style={{width:S,height:S,background:DARK,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'Inter'}}>
-      <span style={{fontSize:12,letterSpacing:'0.15em',textTransform:'uppercase',color:RED,background:'rgba(217,68,43,0.12)',padding:'4px 14px',borderRadius:100,alignSelf:'flex-start'}}>{sub||'Dato del sector'}</span>
+      <span style={{fontSize:12,letterSpacing:'0.15em',textTransform:'uppercase',color:AC,background:'rgba(255,255,255,0.06)',padding:'4px 14px',borderRadius:100,alignSelf:'flex-start'}}>{GL} {sub||'Dato del sector'}</span>
       <div style={{display:'flex',flexDirection:'column',gap:8}}>
-        <div style={{fontStyle:'italic',fontSize:160,color:RED,lineHeight:1,fontFamily:'News'}}>{dato}</div>
+        <div style={{fontStyle:'italic',fontSize:160,color:AC,lineHeight:1,fontFamily:'News'}}>{dato}</div>
         <div style={{fontStyle:'italic',fontSize:34,color:I2,fontFamily:'News'}}>{unidad}</div>
       </div>
       <div style={{display:'flex',flexDirection:'column',gap:16,borderTop:'1px solid #2E2720',paddingTop:32}}>
         <div style={{fontSize:22,color:CR,lineHeight:1.5}}>{ctx}</div>
         <div style={{display:'flex',justifyContent:'space-between'}}>
-          <span style={{fontStyle:'italic',fontSize:20,color:I3,fontFamily:'News'}}>ia<span style={{color:RED}}>.</span>rest</span>
+          <span style={{fontStyle:'italic',fontSize:20,color:I3,fontFamily:'News'}}>ia<span style={{color:AC}}>.</span>rest</span>
           <span style={{fontSize:16,color:I3}}>www.iarest.es</span>
         </div>
       </div>
@@ -196,11 +199,11 @@ export async function GET(req: NextRequest) {
     if (esPortada) return R(
       <div style={{width:S,height:S,background:DARK,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontFamily:'Inter'}}>
-          <span style={{fontSize:12,letterSpacing:'0.14em',textTransform:'uppercase',color:RED}}>Blog · ia.rest</span>
+          <span style={{fontSize:12,letterSpacing:'0.14em',textTransform:'uppercase',color:AC}}>{GL} Blog · ia.rest</span>
           <span style={{fontSize:12,letterSpacing:'0.1em',color:I3}}>1 / {total}</span>
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:24}}>
-          <div style={{width:50,height:4,background:RED,borderRadius:2}}/>
+          <div style={{width:50,height:4,background:AC,borderRadius:2}}/>
           <div style={{fontStyle:'italic',fontSize:titulo.length>55?52:64,color:CR,lineHeight:1.15}}>{titulo}</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:12,fontFamily:'Inter'}}>
@@ -210,7 +213,7 @@ export async function GET(req: NextRequest) {
         </div>
       </div>)
     if (esCierre) return R(
-      <div style={{width:S,height:S,background:RED,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
+      <div style={{width:S,height:S,background:AC,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
         <span style={{fontSize:12,letterSpacing:'0.14em',textTransform:'uppercase',color:'rgba(246,241,231,0.5)',fontFamily:'Inter'}}>{num} / {total}</span>
         <div style={{display:'flex',flexDirection:'column',gap:20}}>
           <div style={{fontStyle:'italic',fontSize:56,color:CR,lineHeight:1.15}}>¿Lo probamos en tu restaurante?</div>
@@ -226,7 +229,7 @@ export async function GET(req: NextRequest) {
     return R(
       <div style={{width:S,height:S,background:bg,display:'flex',flexDirection:'column',justifyContent:'space-between',padding:90,fontFamily:'News'}}>
         <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',fontFamily:'Inter'}}>
-          <span style={{fontSize:12,letterSpacing:'0.14em',textTransform:'uppercase',color:I3}}>ia.rest · Blog</span>
+          <span style={{fontSize:12,letterSpacing:'0.14em',textTransform:'uppercase',color:I3}}>{GL} ia.rest · Blog</span>
           <span style={{fontSize:12,color:I3}}>{num} / {total}</span>
         </div>
         <div style={{display:'flex',flexDirection:'column',gap:16}}>
@@ -234,7 +237,7 @@ export async function GET(req: NextRequest) {
           <div style={{fontStyle:'italic',fontSize:punto.length>80?44:54,color:textColor,lineHeight:1.3}}>{punto}</div>
         </div>
         <div style={{display:'flex',alignItems:'center',gap:12}}>
-          <div style={{width:40,height:3,background:RED}}/>
+          <div style={{width:40,height:3,background:AC}}/>
           <span style={{fontStyle:'italic',fontSize:16,color:I3}}>ia.rest</span>
         </div>
       </div>)
