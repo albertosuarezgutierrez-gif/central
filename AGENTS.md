@@ -15,3 +15,14 @@ commiteado. Para no perder contexto:
    "Registro de sesiones" y refresca "Estado actual" / "Pendientes".
 3. El hook `Stop` (`.claude/hooks/persist-memoria.sh`) commitea y empuja ese
    archivo automáticamente — pero el **resumen lo redactas tú** antes de cerrar.
+
+# Skills disponibles
+
+- **`ia-rest-maestro`** — contexto/arquitectura específicos de ia.rest (úsalo siempre).
+- **Metodología (superpowers, subset vendorizado en `.claude/skills/`):**
+  `brainstorming`, `writing-plans`, `systematic-debugging`,
+  `verification-before-completion`, `requesting-code-review`, `receiving-code-review`.
+  El hook `SessionStart` (`.claude/hooks/superpowers-session-start.sh`) inyecta
+  `using-superpowers` al arrancar. Recuerda: **evidencia antes que afirmaciones** —
+  no declares "verde" sin correr la verificación (p. ej. `next build` con deps, no
+  solo `tsc`, que no reproduce el build de Vercel).
