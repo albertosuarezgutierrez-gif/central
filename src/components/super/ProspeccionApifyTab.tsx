@@ -31,6 +31,7 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
   const [data, setData] = useState<Data | null>(null)
   const [loading, setLoading] = useState(false)
   const [lanzando, setLanzando] = useState(false)
+  const [enviandoMail, setEnviandoMail] = useState(false)
   const [msg, setMsg] = useState<string>('')
 
   const headers = useCallback(
@@ -61,6 +62,20 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
       setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
     } finally {
       setLanzando(false)
+    }
+  }
+
+  const enviarMails = async () => {
+    setEnviandoMail(true); setMsg('')
+    try {
+      const r = await fetch('/api/super/lead-hunter-sevilla', { method: 'POST', headers: headers() })
+      const j = await r.json()
+      setMsg(j.error ? `Error: ${j.error}` : `📧 Emails enviados: ${j.enviados ?? 0}${j.motivo ? ` (${j.motivo})` : ''}`)
+      await cargar()
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
+    } finally {
+      setEnviandoMail(false)
     }
   }
 
@@ -96,6 +111,10 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
         <button onClick={lanzar} disabled={lanzando}
           style={{ background: lanzando ? C.bg3 : C.red, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: lanzando ? 'default' : 'pointer' }}>
           {lanzando ? 'Lanzando…' : '🔍 Lanzar una vuelta'}
+        </button>
+        <button onClick={enviarMails} disabled={enviandoMail}
+          style={{ background: enviandoMail ? C.bg3 : C.green, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoMail ? 'default' : 'pointer' }}>
+          {enviandoMail ? 'Enviando…' : '📧 Enviar emails de venta'}
         </button>
         <button onClick={cargar} disabled={loading}
           style={{ background: 'transparent', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontSize: 13, cursor: 'pointer' }}>
