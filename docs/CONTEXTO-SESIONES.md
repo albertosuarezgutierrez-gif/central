@@ -17,38 +17,119 @@
 ## 📌 Estado actual (lo más reciente arriba)
 
 - **Instagram Reels v2 — "que vendan": ambiente real + producto + música** (04/06/2026,
-  rama `claude/elegant-dirac-DJLHF`): tras investigación de mercado (5 frentes), se
-  decidió **mantener el motor Cloudinary** (0€, sin infra nueva) y enriquecerlo en vez
-  de FFmpeg/APIs de pago. Implementado:
+  PR #31 mergeado): tras investigación de mercado (5 frentes), se decidió **mantener el
+  motor Cloudinary** (0€, sin infra nueva) y enriquecerlo en vez de FFmpeg/APIs de pago.
   - `src/lib/instagram-music.ts` (pool `CLOUDINARY_MUSIC_IDS`) + `src/lib/instagram-reel-assets.ts`
     (pool ambiente `CLOUDINARY_AMBIENT_IDS`), ambos con degradación elegante (vacío = sin audio / sin footage).
   - `src/app/api/ig-reel/route.ts` reescrito: secuencia **portada → mockup producto
     (`ig-img tipo=producto`) → ambiente (Pexels) → puntos (intercalando ambiente) → CTA**,
-    con Ken Burns en slides, ambiente silenciado y música recortada a la duración.
-  - `src/app/api/cron/instagram/route.ts`: **viernes → reel** (`formatoDelDia`) con
-    fallback a imagen; usa el callback **`ig_aprobar_reel`** (no `ig_aprobar`) para que
-    `publicarReel` publique el MP4 como vídeo. `maxDuration` 60→120.
+    Ken Burns en slides, ambiente silenciado y música recortada a la duración.
+  - `src/app/api/cron/instagram/route.ts`: **viernes → reel** (`formatoDelDia`) con fallback
+    a imagen; publica vía callback **`ig_aprobar_reel`** (`publicarReel`, MP4 como vídeo).
+    `maxDuration` 60→120. **Texto del agente con `noFallback=true`** (NIM puro, nunca Anthropic
+    → evita el error "credit balance too low" que daba al caer al fallback de Claude sin créditos).
+    Mismo `noFallback=true` aplicado a los botones de `instagram-callback`.
   - `src/app/api/super/instagram/seed-reel-assets/route.ts`: siembra clips de ambiente
-    de Pexels→Cloudinary (Bearer CRON_SECRET, requiere `PEXELS_API_KEY`).
-  - Smoke `scripts/smoke-instagram-reel.ts` (música+ambiente+forma URL) **OK**; `tsc` y
-    `next build` **verdes**.
+    Pexels→Cloudinary (POST Bearer CRON_SECRET, o **GET desde el navegador** logueado en /super).
+  - Smoke `scripts/smoke-instagram-reel.ts` **OK**; `tsc` y `next build` **verdes**.
   - **Riesgo abierto:** la sintaxis Cloudinary de splice de vídeo + `e_zoompan` + `l_audio`
-    es empírica → validar con un render real tras deploy (`?formato=reel&manual=1`). El
+    es empírica → validar con render real (`/api/cron/instagram?manual=1&formato=reel`). El
     footage va tras `CLOUDINARY_AMBIENT_IDS` (vacío) → no bloquea: el reel ya sale con
     slides+producto+música; el ambiente se enciende al sembrar y confirmar el render.
-  - **Pendiente Alberto:** `PEXELS_API_KEY` en Vercel · lanzar seed y pegar
+  - **Pendiente Alberto:** confirmar `PEXELS_API_KEY` (subida) lanzando el seed · pegar
     `CLOUDINARY_AMBIENT_IDS` · subir 3-5 pistas Pixabay y rellenar `CLOUDINARY_MUSIC_IDS`.
 
-- **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026): tarjeta
-  "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
+- **Botón "📧 Enviar emails de venta" en `/super → Apify Sevilla` — 04/06/2026**
+  (PR #33, mergeado): el envío de email frío de Sevilla se extrajo a
+  `lib/lead-hunter-sevilla.ts` (`enviarEmailsSevilla`), compartido por el cron
+  `crm-lead-hunter-sevilla` (ahora wrapper fino) y un endpoint nuevo
+  `POST /api/super/lead-hunter-sevilla` (auth super_admin). El panel gana un botón
+  para lanzar la tanda a mano (1 clic, sin terminal). `tsc`+`lint`+`build` verde.
+
+- **Reorg del panel `/super` por dominios — 04/06/2026** (PR #34, draft):
+  ✅ IMPLEMENTADA la reorg (antes era propuesta). En `src/app/super/page.tsx`:
+  (1) barra principal = **NEGOCIO** (Clientes · CRM · Cobro · Suscripciones);
+  (2) "Apify Sevilla" pasó a **CRM → sub-pestaña `🔍 Prospección`** (capta + envía
+  emails); (3) **Sugerencias** bajó al grupo Soporte; (4) el cajón único SISTEMA se
+  partió en **3 dropdowns por dominio**: Crecimiento (Instagram/Blog), Soporte
+  (Soporte/Sugerencias/Proveedores) y Sistema (Sistema/Autocuras/QA/Agentes/IA
+  Training), con badge agregado por grupo; (5) mecánica de menú generalizada
+  (`openMenu`/`menuRef`/`menuPos`); (6) deep-link `?tab=prospeccion_apify` redirige a
+  CRM/Prospección. Sin cambios de lógica en los componentes. `tsc`+`lint`+`build` verde.
+
+- **Conversión de landings — 04/06/2026** (motivo: ~800 visitas/mes en GA4 y 0
+  formularios → el cuello de botella es convertir). Cambios:
+  - **Botón WhatsApp** (`wa.me/34637349990`, mensaje pre-rellenado) en los heros de
+    `/`, `/catering`, `/espacios` + enlace WhatsApp bajo el formulario de la home.
+    Clase `.btn-wa` (verde #25D366).
+  - **Home: formulario corto** → de 5 campos a **Nombre + Teléfono (req) + Email
+    (opcional)**; `enviar()` valida nombre+teléfono y manda `restaurante/usuarios` vacíos
+    (la API los acepta). Antes pedía restaurante+usuarios y exigía email.
+  - **Home: barra fija (sticky CTA) en móvil** ("Pedir demo" + WhatsApp) + **fila de
+    confianza** en el hero (Sin permanencia · Datos en Europa · Setup 2h · Sin comisión).
+    Sin testimonios inventados.
+  - **Bug arreglado en catering:** el botón "Solicitar demo gratuita" era un `<button>`
+    **sin acción** (no llevaba a ningún sitio); ahora es enlace a `#contacto`.
+  - Pendiente sugerido: medir conversión real (evento GA4 en los CTA) y, si el tráfico
+    resulta ser ruido/bots (ver checklist GA4), priorizar tráfico cualificado.
+
+- **Agente de venta para CATERING + HACIENDAS de eventos (Sevilla) — 04/06/2026**
+  (rama `claude/leais-sales-agent-catering-b5ikA`, PR #25): se extendió todo el
+  pipeline de captación para que sea **consciente del vertical** (catering →
+  `/catering`; eventos/haciendas → `/espacios`; restaurante → `/`, intacto). Piezas:
+  (1) **Apify Google Places** como motor de sourcing nuevo, asíncrono en 2 fases
+  (`src/lib/apify.ts` + cron `/api/cron/prospeccion-apify` `*/30` + tabla de estado
+  `prospeccion_apify_runs`, **aplicada**); rastrea catering+haciendas+restaurantes en
+  Sevilla. (2) `prospeccion-leads`: taxonomía con `eventos`, captura email/telefono y
+  **fix** — `tipo_negocio` se guardaba solo en `estudio_completo` (JSON), ahora también
+  en la **columna** `leads.tipo_negocio` (que es la que leen RPC y presentación).
+  (3) `lead-onboarding`: research y borradores email/WhatsApp por vertical, enlazando la
+  landing correcta. (4) Presentación `src/app/p/[slug]/page.tsx`: bucket `MODULOS_TIPO.eventos`
+  propio (espacios/calendario/solicitudes/contratos/cobros de grupo) + `getModulos`
+  enruta hacienda/finca/espacio → eventos + subheadline por vertical. (5) RPC
+  `search_leads_sevilla_nuevos` **v2** (aplicada): admite catering/eventos de un solo
+  sitio y los de Apify (`origen`), exige email. (6) `crm-lead-hunter-sevilla`: 3 plantillas
+  de email por vertical con CTA a la landing correcta + tracking.
+  - **OJO descubierto:** el archivo `MIGRACIONES_CRM_LEAD_HUNTER.sql` del repo **NO**
+    coincide con la función realmente desplegada (`leads_locales` usa `lead_id`+`aforo`,
+    no `empresa_id`/`num_mesas`; `leads` no tiene `restaurante_id`). La v2 se hizo sobre
+    la función real (vía `pg_get_functiondef`).
+  - **Pendiente:** **`APIFY_TOKEN` en Vercel env** (sin él, `prospeccion-apify` hace
+    no-op y nada más se rompe). Spec y plan en `docs/superpowers/{specs,plans}/`.
+  - **CI:** se arregló de paso un fallo **preexistente** de ESLint en `main`
+    (`eslint.config.mjs` referenciaba reglas `react-hooks/*` y `react/*` sin registrar
+    los plugins → lint abortaba). Verificado `tsc`+`lint`+`build` en verde.
+  - **Ampliación "todo automático" (misma sesión):** (a) **panel en `/super → Apify
+    Sevilla`** (`ProspeccionApifyTab` + `/api/super/prospeccion-apify`) para lanzar el
+    agente a mano y ver el historial de runs/leads; (b) **canal WhatsApp wa.me**
+    (`cron/crm-whatsapp-sevilla`, diario L-V 10:00): genera el enlace wa.me por vertical
+    con el teléfono capturado y lo manda a Telegram con botón "Abrir WhatsApp" (1 toque,
+    sin API de Meta); marca `leads.whatsapp_outreach_at` (**migración aplicada**);
+    (c) **secuencia día 2** (`cron/crm-followup-sevilla`, L-V 11:00): 2º email a quien
+    recibió el día 1 hace ≥3d, no rellenó formulario y no se dio de baja (usa
+    `leads_web_tracking.mensaje_dia2_at`); (d) **backfill** (`cron/backfill-leads-sevilla`,
+    diario 5:00): clasifica el vertical de leads de Sevilla sin `tipo_negocio` y saca
+    email de su web; (e) **más cobertura** Apify (15 queries por zonas: Aljarafe, Sevilla
+    Este, Triana, Dos Hermanas, provincia; cap 30/run). Lógica del agente extraída a
+    `lib/prospeccion-apify.ts` y plantillas a `lib/crm-sevilla.ts` (compartidas cron+panel).
+    `tsc`+`lint`+`build` en verde.
+
+- **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026) — ✅ **FUNCIONANDO**:
+  tarjeta "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
   fuentes/páginas), junto a la de formularios. Endpoint `GET /api/super/ga4-stats`
   (runtime nodejs): autentica como la **service account** `ia-rest-sa@ia-rest-drive`
   firmando un JWT con `GOOGLE_SA_JSON` (`jsonwebtoken`, scope `analytics.readonly`),
   exchange en `oauth2.googleapis.com/token`, y `batchRunReports` de la **GA4 Data API**
   sobre la propiedad **536881804** (`GA4_PROPERTY_ID`, con default hardcode al mismo nº).
-  La SA tiene rol **Lector** en la propiedad (binding creado vía Admin API). Si falta la
-  credencial/acceso, la tarjeta muestra el error en vez de romper (`configured:false`).
-  **Verificar tras deploy:** que `GOOGLE_SA_JSON` en Vercel sea una key válida de esa SA.
+  Si falta la credencial/acceso, la tarjeta muestra el error en vez de romper (`configured:false`).
+  - **`GOOGLE_SA_JSON` ya está puesta en Vercel** (key de la SA en base64). Antes NO existía
+    (el backup de Drive usa OAuth, no esta SA) → por eso al principio daba "Falta GOOGLE_SA_JSON".
+  - **Gotcha clave (binding de la SA en GA4):** la UI de Google Analytics **rechaza** añadir
+    service accounts como usuarios. Se resolvió creando el accessBinding por API con token OAuth
+    del admin (Alberto, scope `analytics.manage.users`) contra el endpoint **`v1alpha`**
+    (`POST .../v1alpha/properties/536881804/accessBindings`), NO `v1beta`. Rol: Lector.
+  - **Dato de negocio:** mucho tráfico (≈49 hoy / 804 en 30d, sobre todo *Direct*) y 0
+    formularios → el cuello de botella es **conversión**, no atracción.
 - **Superpowers instalado (subset) — 04/06/2026** (rama
   `claude/install-superpowers-plugin-F47Fw`): vendorizados en `.claude/skills/` 6
   skills de metodología de obra/superpowers (`brainstorming`, `writing-plans`,

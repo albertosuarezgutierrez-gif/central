@@ -14,6 +14,7 @@ import IaTrainingPanel from '@/components/super/IaTrainingPanel'
 import CRMAgentTab from '@/components/super/CRMAgentTab'
 import CRMEmpresaDetalle from '@/components/super/CRMEmpresaDetalle'
 import QAAgentTab from '@/components/super/QAAgentTab'
+import ProspeccionApifyTab from '@/components/super/ProspeccionApifyTab'
 import StripeOperadorTab from '@/components/super/StripeOperadorTab'
 
 
@@ -121,11 +122,12 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'suscripciones'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'>('clientes')
-  const [tabCRM, setTabCRM] = useState<'leads'|'agente'>('leads')
-  const [showSistemaMenu, setShowSistemaMenu] = useState(false)
-  const sistemaRef = useRef<HTMLDivElement>(null)
-  const [sistemaPos, setSistemaPos] = useState({ top: 0, right: 0 })
+  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'suscripciones'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'|'prospeccion_apify'>('clientes')
+  const [tabCRM, setTabCRM] = useState<'leads'|'agente'|'prospeccion'>('leads')
+  // Menús desplegables por dominio (crecimiento · soporte · sistema). Solo uno abierto a la vez.
+  const [openMenu, setOpenMenu] = useState<string | null>(null)
+  const menuRef = useRef<HTMLDivElement>(null)
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 0 })
   const [subTabClientes, setSubTabClientes] = useState<'locales'|'cuentas'>('locales')
   const [sugerencias, setSugerencias] = useState<any[]>([])
   const [loadingSug, setLoadingSug] = useState(false)
@@ -175,7 +177,9 @@ export default function SuperPage() {
   // Leer ?tab=X de la URL al cargar
   useEffect(() => {
     const tab = new URLSearchParams(window.location.search).get('tab')
-    if (tab) setTabSuper(tab as any)
+    // 'prospeccion_apify' vivía como tab suelto; ahora es la sub-pestaña Prospección del CRM.
+    if (tab === 'prospeccion_apify') { setTabSuper('crm'); setTabCRM('prospeccion') }
+    else if (tab) setTabSuper(tab as any)
   }, [])
 
   useEffect(() => { if (session && tabSuper === 'sugerencias') loadSugerencias() }, [session, tabSuper, loadSugerencias])
@@ -195,12 +199,12 @@ export default function SuperPage() {
       .then(r => r.json()).then(d => setBadgeSoporte((d.tickets ?? []).filter((t: any) => t.estado === 'escalado').length))
   }}, [session])
 
-  // Cerrar dropdown SISTEMA al click/touch fuera
+  // Cerrar el dropdown abierto al click/touch fuera
   useEffect(() => {
-    if (!showSistemaMenu) return
+    if (!openMenu) return
     const handleClose = (e: MouseEvent | TouchEvent) => {
-      if (sistemaRef.current && !sistemaRef.current.contains(e.target as Node)) {
-        setShowSistemaMenu(false)
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenu(null)
       }
     }
     document.addEventListener('mousedown', handleClose)
@@ -209,7 +213,7 @@ export default function SuperPage() {
       document.removeEventListener('mousedown', handleClose)
       document.removeEventListener('touchstart', handleClose)
     }
-  }, [showSistemaMenu])
+  }, [openMenu])
 
   const loadCuentas = async () => {
     if (!session) return
@@ -441,13 +445,12 @@ export default function SuperPage() {
       {/* TABS NAV */}
       <div style={{ borderBottom: `1px solid ${C.rule}`, background: C.bg }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 clamp(12px, 4vw, 32px)', display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {/* Tabs principales */}
+          {/* NEGOCIO — barra principal (el día a día comercial) */}
           {([
             { id: 'clientes',       label: 'Clientes' },
             { id: 'crm',           label: 'CRM' },
             { id: 'cobro',         label: 'Cobro' },
             { id: 'suscripciones', label: '💳 Suscripciones' },
-            { id: 'sugerencias',   label: 'Sugerencias', badge: badgeSug },
           ] as any[]).map((t: any) => (
             <button key={t.id} onClick={() => setTabSuper(t.id as any)}
               className="super-tab-btn"
@@ -462,57 +465,67 @@ export default function SuperPage() {
               }}
             >
               {t.label.toUpperCase()}
-              {(t as any).badge > 0 && (
-                <span style={{ background: C.red, color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', fontFamily: SM }}>
-                  {(t as any).badge}
-                </span>
-              )}
             </button>
           ))}
           <div style={{ flex: 1 }} />
-          {/* Dropdown Sistema */}
-          <div ref={sistemaRef} style={{ position: 'relative', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}>
-            <button
-              onClick={() => {
-                if (!showSistemaMenu && sistemaRef.current) {
-                  const rect = sistemaRef.current.getBoundingClientRect()
-                  setSistemaPos({ top: rect.bottom, right: window.innerWidth - rect.right })
-                }
-                setShowSistemaMenu((v: boolean) => !v)
-              }}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', height: '100%',
-                fontFamily: SM, fontSize: 11, letterSpacing: '.1em', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
-                color: ['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores','qa_agent'].includes(tabSuper) ? C.ink : C.ink3,
-                borderBottom: `2px solid ${['ia_training','sistema','autocuras','soporte','agentes','instagram','blog','proveedores','qa_agent'].includes(tabSuper) ? C.red : 'transparent'}` }}>
-              {'SISTEMA'}
-              {(badgeSoporte + badgeInstagram) > 0
-                ? <span style={{ background: C.red, color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', fontFamily: SM }}>{badgeSoporte + badgeInstagram}</span>
-                : <span style={{ fontSize: 10, color: C.ink4 }}>▾</span>}
-            </button>
-            {showSistemaMenu && (
-              <div style={{ position: 'fixed', right: sistemaPos.right, top: sistemaPos.top, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, zIndex: 9999, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,.5)', overflow: 'hidden' }}>
-                {([
-                  { id: 'ia_training', label: 'IA Training' },
-                  { id: 'autocuras',   label: 'Autocuras' },
-                  { id: 'sistema',     label: 'Sistema' },
-                  { id: 'soporte',     label: 'Soporte', badge: badgeSoporte },
-                  { id: 'agentes',     label: 'Agentes' },
-                  { id: 'instagram',   label: 'Instagram', badge: badgeInstagram },
-                  { id: 'blog',        label: 'Blog' },
-                  { id: 'proveedores', label: 'Proveedores' },
-                  { id: 'qa_agent',    label: 'QA Agent' },
-                ] as any[]).map((t: any) => (
-                  <button key={t.id} onClick={() => { setTabSuper(t.id as any); setShowSistemaMenu(false) }}
-                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
-                      background: tabSuper === t.id ? C.bg3 : 'transparent', border: 'none', cursor: 'pointer',
-                      padding: '10px 16px', fontFamily: SM, fontSize: 11, letterSpacing: '.08em',
-                      color: tabSuper === t.id ? C.paper : C.ink3, textAlign: 'left' }}>
-                    {t.label.toUpperCase()}
-                    {(t.badge ?? 0) > 0 && <span style={{ background: C.red, color: '#fff', borderRadius: 8, padding: '1px 5px', fontSize: 9 }}>{t.badge}</span>}
+          {/* Dropdowns por dominio: Crecimiento · Soporte · Sistema */}
+          <div ref={menuRef} style={{ display: 'flex', alignSelf: 'stretch' }}>
+            {([
+              { id: 'crecimiento', label: 'Crecimiento', badge: badgeInstagram, tabs: [
+                { id: 'instagram', label: 'Instagram', badge: badgeInstagram },
+                { id: 'blog',      label: 'Blog' },
+              ] },
+              { id: 'soporte', label: 'Soporte', badge: badgeSoporte + badgeSug, tabs: [
+                { id: 'soporte',     label: 'Soporte',     badge: badgeSoporte },
+                { id: 'sugerencias', label: 'Sugerencias', badge: badgeSug },
+                { id: 'proveedores', label: 'Proveedores' },
+              ] },
+              { id: 'sistema', label: 'Sistema', badge: 0, tabs: [
+                { id: 'sistema',     label: 'Sistema' },
+                { id: 'autocuras',   label: 'Autocuras' },
+                { id: 'qa_agent',    label: 'QA Agent' },
+                { id: 'agentes',     label: 'Agentes' },
+                { id: 'ia_training', label: 'IA Training' },
+              ] },
+            ] as any[]).map((g: any) => {
+              const activo = g.tabs.some((t: any) => t.id === tabSuper)
+              return (
+                <div key={g.id} style={{ position: 'relative', alignSelf: 'stretch', display: 'flex', alignItems: 'center' }}>
+                  <button
+                    onClick={(e) => {
+                      const isOpen = openMenu === g.id
+                      if (!isOpen) {
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+                        setMenuPos({ top: rect.bottom, right: window.innerWidth - rect.right })
+                      }
+                      setOpenMenu(isOpen ? null : g.id)
+                    }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '14px 16px', height: '100%',
+                      fontFamily: SM, fontSize: 11, letterSpacing: '.1em', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: 6,
+                      color: activo ? C.ink : C.ink3,
+                      borderBottom: `2px solid ${activo ? C.red : 'transparent'}` }}>
+                    {g.label.toUpperCase()}
+                    {g.badge > 0
+                      ? <span style={{ background: C.red, color: '#fff', borderRadius: 10, fontSize: 9, fontWeight: 700, padding: '1px 5px', fontFamily: SM }}>{g.badge}</span>
+                      : <span style={{ fontSize: 10, color: C.ink4 }}>▾</span>}
                   </button>
-                ))}
-              </div>
-            )}
+                  {openMenu === g.id && (
+                    <div style={{ position: 'fixed', right: menuPos.right, top: menuPos.top, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 8, zIndex: 9999, minWidth: 180, boxShadow: '0 8px 24px rgba(0,0,0,.5)', overflow: 'hidden' }}>
+                      {g.tabs.map((t: any) => (
+                        <button key={t.id} onClick={() => { setTabSuper(t.id as any); setOpenMenu(null) }}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%',
+                            background: tabSuper === t.id ? C.bg3 : 'transparent', border: 'none', cursor: 'pointer',
+                            padding: '10px 16px', fontFamily: SM, fontSize: 11, letterSpacing: '.08em',
+                            color: tabSuper === t.id ? C.paper : C.ink3, textAlign: 'left' }}>
+                          {t.label.toUpperCase()}
+                          {(t.badge ?? 0) > 0 && <span style={{ background: C.red, color: '#fff', borderRadius: 8, padding: '1px 5px', fontSize: 9 }}>{t.badge}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       </div>
@@ -527,9 +540,10 @@ export default function SuperPage() {
             {/* Sub-nav CRM */}
             <div style={{ display: 'flex', gap: 4, borderBottom: `1px solid ${C.rule}`, marginBottom: 32, paddingTop: 8 }}>
               {([
-                { id: 'leads', label: '📋 Leads' },
-                { id: 'agente', label: '🤖 Agente CRM' },
-              ] as { id: 'leads'|'agente'; label: string }[]).map(t => (
+                { id: 'leads',       label: '📋 Leads' },
+                { id: 'prospeccion', label: '🔍 Prospección' },
+                { id: 'agente',      label: '🤖 Agente CRM' },
+              ] as { id: 'leads'|'agente'|'prospeccion'; label: string }[]).map(t => (
                 <button key={t.id} onClick={() => setTabCRM(t.id)}
                   style={{ background: 'none', border: 'none', cursor: 'pointer',
                     padding: '10px 18px', fontFamily: SM, fontSize: 12, letterSpacing: '.08em',
@@ -539,10 +553,9 @@ export default function SuperPage() {
                 </button>
               ))}
             </div>
-            {tabCRM === 'leads'
-              ? <LeadsTab C={C} SE={SE} SN={SN} SM={SM} />
-              : <CRMAgentTab />
-            }
+            {tabCRM === 'leads' ? <LeadsTab C={C} SE={SE} SN={SN} SM={SM} />
+              : tabCRM === 'prospeccion' ? <ProspeccionApifyTab session={session} />
+              : <CRMAgentTab />}
           </div>
         ) : tabSuper === 'sugerencias' ? (
           <SugerenciasPanel

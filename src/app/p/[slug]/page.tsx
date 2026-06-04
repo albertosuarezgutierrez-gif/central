@@ -34,6 +34,11 @@ const MODULOS_TIPO: Record<string, { sala: string[][], cocina: string[][], gesti
     cocina: [['🧑‍🍳','Control de tiempos','Qué va en cada pase.'],['📋','Fichas y alérgenos','Trazabilidad por evento.'],['🏷','APPCC','Plato testigo y temperaturas.'],['✅','Sanitario','Cumplimiento automático.']],
     gestion: [['🎉','Portal cliente','Elige menú y confirma online.'],['🤝','Proveedores externos','Todo coordinado desde el sistema.'],['📦','Almacén','Coste por comensal.'],['📷','Albaranes','Foto y listo.'],['🔮','Previsión','Stock listo para cada evento.'],['📱','Captación leads','Formulario web para bodas y eventos.']]
   },
+  eventos: {
+    sala: [['📲','App del evento','Cada invitado ve menú, horarios y ubicación desde su móvil.'],['✅','Check-in QR','Control de acceso y aforo el día del evento.'],['⏰','Timeline del día','Montaje, ceremonia y pases coordinados al minuto.'],['📊','Rentabilidad','Coste real vs presupuesto del evento, en vivo.']],
+    cocina: [['🤝','Catering externo','Coordinas al proveedor de comida desde el sistema.'],['🌸','Proveedores','Flores, música, fotógrafo: todos en una agenda.'],['📋','Menú y alérgenos','El menú del catering y sus alérgenos, por evento.'],['👥','Personal del evento','Quién va, a qué hora y en qué espacio.']],
+    gestion: [['📅','Espacios y calendario','Disponibilidad de cada finca o salón, sin dobles reservas.'],['📥','Solicitudes','Bodas.net, web y llamadas en un solo embudo.'],['🧮','Presupuestos','Calculas el presupuesto y ves el margen neto al instante.'],['✍️','Contratos','Envío, firma y seguimiento del contrato del evento.'],['💳','Cobros de grupo','Cada invitado paga su parte online; tú ves el total.'],['📈','Previsión','La IA anticipa la temporada y capta recomendaciones.']]
+  },
   bar: {
     sala: [['🎙','Comandas rápidas','Tan rápido como hablar.'],['📺','Barra y cocina','Coordinadas al instante.'],['💳','Cobro rápido','Mesa, barra o para llevar.'],['📊','Ranking de tapas','Qué vende más. En tiempo real.']],
     cocina: [['🧑‍🍳','Control salidas','Qué hay pendiente.'],['📋','Escandallos','Coste real de cada tapa.'],['🏷','Caducidades','Control automático.'],['✅','APPCC','Sin registros manuales.']],
@@ -50,7 +55,8 @@ function getModulos(tipo: string) {
   if (!tipo) return MODULOS_TIPO.mediterraneo
   const t = tipo.toLowerCase()
   if (t.includes('indi') || t.includes('nepal') || t.includes('asian') || t.includes('chino') || t.includes('japon')) return MODULOS_TIPO.indio
-  if (t.includes('cater') || t.includes('event') || t.includes('bod')) return MODULOS_TIPO.catering
+  if (t.includes('cater')) return MODULOS_TIPO.catering
+  if (t.includes('event') || t.includes('hacienda') || t.includes('finca') || t.includes('espacio') || t.includes('banquet') || t.includes('bod')) return MODULOS_TIPO.eventos
   if (t.includes('bar') || t.includes('tapa') || t.includes('tabern')) return MODULOS_TIPO.bar
   if (t.includes('multi') || t.includes('grupo') || t.includes('caden')) return MODULOS_TIPO.multilocal
   return MODULOS_TIPO.mediterraneo
@@ -82,10 +88,20 @@ export default async function LandingPersonalizada({ params }: { params: Promise
   const nombre = lead.empresa || lead.restaurante || 'Vuestro restaurante'
   const ciudad = lead.ciudad || ''
   const modulos = getModulos(lead.tipo_negocio || '')
+  // Una hacienda/espacio de eventos no tiene cocina ni barra propias → etiquetas distintas.
+  const seccionLabels = modulos === MODULOS_TIPO.eventos
+    ? ['El día del evento', 'Catering y proveedores', 'Reservas y gestión']
+    : ['En sala', 'En cocina', 'En gestión']
   const MAIL = `mailto:hola@iarest.es?subject=Videollamada%20ia.rest%20–%20${encodeURIComponent(nombre)}&body=Hola%2C%20soy%20de%20${encodeURIComponent(nombre)}%20y%20me%20gustar%C3%ADa%20ver%20ia.rest.`
   const datosOp = (lead as any).datos_operativos || {}
   const headline = `Esto es lo que ia.rest puede hacer por ${nombre.split(' ')[0]}.`
-  const subheadline = datosOp.subheadline || 'Sala, cocina, almacén, proveedores y eventos. Todo conectado y automatizado desde un solo sistema.'
+  const subheadlineDefault =
+    modulos === MODULOS_TIPO.catering
+      ? 'Presupuestos que cuadran, coste real por evento y menos horas de oficina. Todo conectado.'
+      : modulos === MODULOS_TIPO.eventos
+      ? 'Llena el calendario de tu finca y no se te escapa ninguna solicitud. Cada evento, cuadrado, desde un solo sistema.'
+      : 'Sala, cocina, almacén, proveedores y eventos. Todo conectado y automatizado desde un solo sistema.'
+  const subheadline = datosOp.subheadline || subheadlineDefault
   const painPoints: string[] = (lead as any).pain_points_reales || []
   const modulosRec: string[] = (lead as any).modulos_recomendados || []
 
@@ -133,9 +149,9 @@ export default async function LandingPersonalizada({ params }: { params: Promise
       <section style={{ background: D, padding: '72px 28px' }}>
         <div style={{ maxWidth: 780, margin: '0 auto' }}>
           {[
-            { l: 'En sala', c: R, items: modulos.sala },
-            { l: 'En cocina', c: AM, items: modulos.cocina },
-            { l: 'En gestión', c: GR, items: modulos.gestion },
+            { l: seccionLabels[0], c: R, items: modulos.sala },
+            { l: seccionLabels[1], c: AM, items: modulos.cocina },
+            { l: seccionLabels[2], c: GR, items: modulos.gestion },
           ].map(({ l, c, items }) => (
             <div key={l} style={{ marginBottom: 52 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const hace72h = new Date(Date.now() - 72 * 60 * 60 * 1000).toISOString()
   const { data: leads } = await supabase
     .from('leads')
-    .select('id, nombre, empresa, restaurante, web, email, notas, tpv, locales, ciudad, pain_points, datos_operativos')
+    .select('id, nombre, empresa, restaurante, web, email, notas, tpv, locales, ciudad, tipo_negocio, pain_points, datos_operativos')
     .is('research_at', null)
     .neq('estado', 'descartado')
     .gte('created_at', hace72h)
@@ -65,13 +65,16 @@ Responde SOLO con JSON válido, sin texto adicional.`,
 Nombre: ${empresa}
 ${web ? `URL/Red social: ${web}` : ''}
 ${ciudad ? `Ciudad: ${ciudad}` : ''}
+Tipo provisional (de sourcing, confírmalo o corrígelo, NO degrades una hacienda a restaurante): ${(lead.tipo_negocio as string) || 'desconocido'}
+Si es catering: estima eventos/bodas al año, si hace bodas/empresa, aforo máximo, coste por comensal.
+Si es hacienda/finca/espacio de eventos (tipo "eventos"): nº de espacios, aforo, si aparece en bodas.net/zankyou, si gestiona calendario online, si el catering es propio o externo.
 Notas adicionales: ${(lead.notas as string || '').substring(0, 300)}
 Datos conocidos: ${JSON.stringify(datosOp).substring(0, 300)}
 
 Busca en internet TODO lo que puedas encontrar sobre este negocio y devuelve:
 {
   "nombre_oficial": "nombre real del negocio",
-  "tipo_negocio": "restaurante|bar|catering|grupo|mixto",
+  "tipo_negocio": "restaurante|bar|catering|eventos|grupo|mixto",
   "descripcion": "2-3 frases con info real encontrada online",
   "web_oficial": "URL si encontrada",
   "direccion": "dirección completa si encontrada",
@@ -127,6 +130,16 @@ Busca en internet TODO lo que puedas encontrar sobre este negocio y devuelve:
   const slug = slugBase
   const propuestaUrl = `https://www.iarest.es/propuesta/${slug}`
 
+  const tipoNeg = ((estudio.tipo_negocio as string) || (lead.tipo_negocio as string) || '').toLowerCase()
+  const esCatering = tipoNeg.includes('cater')
+  const esEventos = !esCatering && (tipoNeg.includes('event') || tipoNeg.includes('hacienda') || tipoNeg.includes('finca') || tipoNeg.includes('espacio') || tipoNeg.includes('banquet') || tipoNeg.includes('bod'))
+  const landingUrl = esCatering ? 'https://www.iarest.es/catering' : esEventos ? 'https://www.iarest.es/espacios' : 'https://www.iarest.es'
+  const anguloVertical = esCatering
+    ? 'Vertical CATERING: el dolor es cuadrar presupuestos y saber el coste/margen real por evento; menos horas de oficina.'
+    : esEventos
+    ? 'Vertical HACIENDA/ESPACIO DE EVENTOS: el dolor es llenar el calendario de la finca, no perder solicitudes (bodas.net) y cerrar contratos rápido.'
+    : 'Vertical RESTAURANTE/BAR: comandas por voz y control de costes.'
+
   // 3. Email + WhatsApp en paralelo
   const [emailRaw, waRaw] = await Promise.allSettled([
     callAI(
@@ -136,6 +149,8 @@ El objetivo es conseguir una reunión. 1 referencia real al negocio, proponer qu
 Gancho (úsalo adaptado, no literal): ${estudio.argumento_principal}
 Info real del negocio: ${resumenNegocio}
 Pain point principal: ${painPoints[0] || ''}
+${anguloVertical}
+Landing del vertical (enlázala como recurso además de la propuesta): ${landingUrl}
 Reglas: máx 100 palabras, proponer llamada o visita, incluir __PROPUESTA_URL__ al final como "Te dejo esto por si quieres echarle un ojo antes:", firma Alberto · ia.rest
 {"asunto":"máx 60 chars","cuerpo":"texto con \\n, incluir __PROPUESTA_URL__"}`,
       700, 20000, true
@@ -146,6 +161,7 @@ Objetivo: conseguir una reunión. NO explicar el producto.`,
       `WhatsApp para ${empresa}.
 Info real: ${resumenNegocio}
 Algo concreto: ${painPoints[0] || estudio.argumento_principal}
+${anguloVertical}
 2-3 líneas. Saludo natural. 1 referencia real. Propone quedar. Max 1 emoji.`,
       300, 15000, true
     ),

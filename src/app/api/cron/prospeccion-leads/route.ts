@@ -17,6 +17,8 @@ const QUERIES_BUSQUEDA = [
   'restaurante Sevilla busca TPV gestión',
   'cadena hamburgueserías bares Sevilla franquicia',
   'grupo gastronómico Sevilla apertura nuevo local',
+  'empresas de catering Sevilla y provincia bodas eventos',
+  'haciendas fincas para bodas y eventos Sevilla',
 ]
 
 // ── Buscar con Claude web_search ────────────────────────────────────────────
@@ -41,7 +43,8 @@ async function buscarCandidatos(query: string): Promise<string> {
           content: `Busca en internet: "${query}". 
           Encuentra grupos de restaurantes, cadenas de bares, empresas de catering o grupos hosteleros en España con varios locales.
           Para cada candidato devuelve SOLO JSON array:
-          [{"nombre":"Nombre empresa","ciudad":"Ciudad","locales_estimados":3,"web":"url o null","descripcion":"1 frase","tipo":"restaurante|bar|catering|grupo"}]
+          [{"nombre":"Nombre empresa","ciudad":"Ciudad","locales_estimados":3,"web":"url o null","email":"email publico o null","telefono":"telefono o null","descripcion":"1 frase","tipo":"restaurante|bar|catering|eventos|grupo"}]
+          Si es una hacienda, finca o espacio para bodas/eventos usa tipo "eventos". Incluye email y telefono SOLO si aparecen en su web (no inventes).
           Máximo 3 candidatos relevantes. Solo JSON, sin texto adicional.`
         }],
       }),
@@ -118,7 +121,7 @@ export async function GET(req: NextRequest) {
 
   const candidatosBrutos: Array<{
     nombre: string; ciudad: string; locales_estimados: number
-    web: string | null; descripcion: string; tipo: string
+    web: string | null; email?: string | null; telefono?: string | null; descripcion: string; tipo: string
   }> = []
 
   for (const query of queriesSeleccionadas) {
@@ -171,7 +174,10 @@ export async function GET(req: NextRequest) {
         restaurante: c.nombre,
         ciudad: c.ciudad || 'España',
         web: c.web || null,
+        email: c.email || null,
+        telefono: c.telefono || null,
         tipo: 'prospecto',
+        tipo_negocio: c.tipo,
         estado: 'nuevo',
         estado_pipeline: 'prospecto_ia',
         mrr_estimado: c.mrr_estimado,
