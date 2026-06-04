@@ -480,11 +480,16 @@ alertas */2 · cobro-inactividad */5 · feedback-visita */10 · lead-onboarding 
 ---
 
 ## PENDIENTES CRÍTICOS
+> ⚠️ Stripe YA está en LIVE: `STRIPE_SECRET_KEY` es la clave live y Connect funciona
+> (Saboga Catering cobra dinero real vía `/cobro/[slug]`, charges `succeeded` live
+> de 10/40/60 €, verificado 04/06/2026). Lo que queda para "todo a live" abajo.
+
 | # | Tarea | Impacto |
 |---|---|---|
-| P1 | STRIPE_MODE=live en Vercel | Sin esto no hay cobro real |
-| P2 | STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR | QR pago inline bloqueado |
-| P3 | STRIPE_WEBHOOK_SECRET_STOREFRONT | Storefront pagos online |
+| P1 | `STRIPE_MODE=live` en Vercel (ahora sin definir → `test`) | Solo afecta flag de QA y 2 rutas onboarding (proveedores/portal): en `test` usan `STRIPE_SECRET_KEY_TEST`. El core ya cobra live |
+| P2 | `STRIPE_WEBHOOK_SECRET_QR` (endpoint live → `/api/qr/webhook`) | Cierra el cobro inline del QR de mesa. `STRIPE_CLIENT_ID` (Connect) ya activo |
+| P3 | `STRIPE_WEBHOOK_SECRET_STOREFRONT` (endpoint live → `/api/storefront/webhook-pago`) | Confirma pagos del storefront |
+| P3b | Verificar webhooks live: OPERADOR (`/api/webhook/stripe-operador`) y PROPINAS (`/api/propinas/webhook`) | Suscripción del operador y propinas digitales |
 | #12 | API pública | Integraciones externas |
 | RGPD | DPIA + DPA + RAT | Obligación legal — necesita abogado |
 | Azure | AZURE_SPEECH_KEY + REGION | Voice profiles |
@@ -541,8 +546,8 @@ Opcionalmente puede pagar desde el mismo flujo.
 | Modo | Estado |
 |---|---|
 | `sin_pago` | ✅ Completamente funcional |
-| `opcional` | 🔴 Bloqueado — falta STRIPE_CLIENT_ID + WEBHOOK_SECRET_QR en Vercel |
-| `obligatorio` | 🔴 Bloqueado — mismo bloqueo que opcional |
+| `opcional` | 🟡 Connect live OK; solo falta `STRIPE_WEBHOOK_SECRET_QR` (endpoint live) para confirmar el pago |
+| `obligatorio` | 🟡 Mismo estado que opcional |
 
 **Split UI cliente:** Edge Function `qr-split` operativa, pero sin UI cliente implementada.
 **Rotación token por turno:** pendiente implementar.
@@ -687,11 +692,13 @@ El panel muestra el QR descargable para imprimir y colocar en mesa.
 ## Variables de entorno requeridas
 
 ```bash
-STRIPE_CLIENT_ID=...              # para cobro QR con Stripe — PENDIENTE (P2 bloqueante)
-STRIPE_WEBHOOK_SECRET_QR=...      # webhook módulo QR — PENDIENTE (P2 bloqueante)
+STRIPE_CLIENT_ID=...              # Connect — YA configurado (Saboga cobra live)
+STRIPE_WEBHOOK_SECRET_QR=...      # webhook módulo QR — PENDIENTE (endpoint live) para cerrar opcional/obligatorio
 ```
 
-> ⚠️ Pendiente configurar en Vercel. Mientras tanto, solo el modo sin_pago es funcional.
+> Connect ya está en live. Para activar el pago opcional/obligatorio del QR de mesa
+> solo falta crear el endpoint de webhook live (`/api/qr/webhook`) y poner su
+> `STRIPE_WEBHOOK_SECRET_QR` en Vercel. `sin_pago` funciona siempre.
 
 ---
 

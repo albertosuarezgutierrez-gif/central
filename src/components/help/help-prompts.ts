@@ -138,7 +138,7 @@ MÓDULOS TÉCNICOS:
 - Blog SEO: artículos automáticos, outreach portales, Instagram agente.
 - Bridge logs: heartbeats, comandos, errores por restaurante.
 - Vercel env: añadir variables vía API POST /v10/projects/{id}/env.
-- Pendientes críticos: P1 STRIPE_MODE=live, P2 QR pago, P3 Storefront webhook.
+- Stripe YA en live (Connect activo, Saboga cobra real). Pendiente "todo a live": STRIPE_MODE=live + webhooks live por flujo (QR, storefront, operador, propinas).
 
 SOPORTE INFRA:
 - Deploy fallido: revisar build logs en Vercel → Deployments.
