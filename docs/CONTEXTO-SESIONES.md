@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026): tarjeta
+  "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
+  fuentes/páginas), junto a la de formularios. Endpoint `GET /api/super/ga4-stats`
+  (runtime nodejs): autentica como la **service account** `ia-rest-sa@ia-rest-drive`
+  firmando un JWT con `GOOGLE_SA_JSON` (`jsonwebtoken`, scope `analytics.readonly`),
+  exchange en `oauth2.googleapis.com/token`, y `batchRunReports` de la **GA4 Data API**
+  sobre la propiedad **536881804** (`GA4_PROPERTY_ID`, con default hardcode al mismo nº).
+  La SA tiene rol **Lector** en la propiedad (binding creado vía Admin API). Si falta la
+  credencial/acceso, la tarjeta muestra el error en vez de romper (`configured:false`).
+  **Verificar tras deploy:** que `GOOGLE_SA_JSON` en Vercel sea una key válida de esa SA.
 - **Superpowers instalado (subset) — 04/06/2026** (rama
   `claude/install-superpowers-plugin-F47Fw`): vendorizados en `.claude/skills/` 6
   skills de metodología de obra/superpowers (`brainstorming`, `writing-plans`,
