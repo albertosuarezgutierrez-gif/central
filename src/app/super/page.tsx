@@ -1160,6 +1160,72 @@ function LandingStatsCard({ C, SN, SM, sh }: { C: any; SN: string; SM: string; s
   )
 }
 
+function WebVisitsCard({ C, SN, SM, sh }: { C: any; SN: string; SM: string; sh: () => Record<string, string> }) {
+  const [d, setD] = useState<any>(null)
+  const [loaded, setLoaded] = useState(false)
+  useEffect(() => {
+    fetch('/api/super/ga4-stats', { headers: sh() })
+      .then(r => r.json())
+      .then(setD)
+      .catch(() => setD({ configured: false, error: 'No se pudo cargar' }))
+      .finally(() => setLoaded(true))
+  }, [])
+  const Stat = ({ label, value, accent }: { label: string; value: any; accent?: boolean }) => (
+    <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', flex: 1, minWidth: 110 }}>
+      <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.ink4, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 30, fontWeight: 500, lineHeight: 1, color: accent ? C.red : C.ink }}>{value}</div>
+    </div>
+  )
+  return (
+    <div style={{ marginBottom: 24, border: `1px solid ${C.rule}`, borderRadius: 14, padding: 18, background: C.bg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em' }}>VISITAS DE LA WEB</div>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Google Analytics</div>
+      </div>
+      {!loaded ? (
+        <div style={{ fontFamily: SM, fontSize: 12, color: C.ink4 }}>Cargando…</div>
+      ) : d?.configured ? (
+        <>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Stat label="Hoy" value={d.sesiones?.hoy ?? 0} accent={(d.sesiones?.hoy ?? 0) > 0} />
+            <Stat label="Ayer" value={d.sesiones?.ayer ?? 0} />
+            <Stat label="Últimos 7 días" value={d.sesiones?.d7 ?? 0} />
+            <Stat label="Últimos 30 días" value={d.sesiones?.d30 ?? 0} />
+          </div>
+          <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 10 }}>
+            Sesiones · 7d: {d.usuarios?.d7 ?? 0} usuarios · {d.vistas?.d7 ?? 0} páginas vistas
+          </div>
+          {Array.isArray(d.topFuentes) && d.topFuentes.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              {d.topFuentes.map((f: any) => (
+                <span key={f.fuente} style={{ fontFamily: SM, fontSize: 11, color: C.ink3, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 20, padding: '4px 10px' }}>
+                  {f.fuente} · {f.sesiones}
+                </span>
+              ))}
+            </div>
+          )}
+          {Array.isArray(d.topPaginas) && d.topPaginas.length > 0 && (
+            <div style={{ marginTop: 12 }}>
+              <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.ink4, marginBottom: 6 }}>Páginas top · 7d</div>
+              {d.topPaginas.map((p: any) => (
+                <div key={p.path} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', borderBottom: `1px solid ${C.rule}`, fontFamily: SN, fontSize: 12, color: C.ink2 }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '78%' }}>{p.path}</span>
+                  <span style={{ fontFamily: SM, color: C.ink3 }}>{p.vistas}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      ) : (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink4, lineHeight: 1.6 }}>
+          Visitas no disponibles todavía.
+          {d?.error ? <span style={{ display: 'block', fontFamily: SM, fontSize: 11, color: C.ink4, marginTop: 4 }}>Detalle: {String(d.error)}</span> : null}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '', 'Content-Type': 'application/json' })
   const [leads, setLeads] = useState<Lead[]>([])
@@ -1437,6 +1503,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
       </div>
 
       <LandingStatsCard C={C} SN={SN} SM={SM} sh={sh} />
+
+      <WebVisitsCard C={C} SN={SN} SM={SM} sh={sh} />
 
       {showHunter && <LeadHunterPanel C={C} SN={SN} SM={SM} onLeadCreado={(lead: Lead) => setLeads(prev => [lead, ...prev])} sh={sh} />}
 
