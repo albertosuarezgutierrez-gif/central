@@ -14,6 +14,8 @@ const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
   || 'BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc'
+// Opt-in de marketing: oculto hasta que se active (necesita WhatsApp conectado).
+const QR_MARKETING_OPTIN = process.env.NEXT_PUBLIC_QR_MARKETING === '1'
 
 type Screen = 'loading' | 'error' | 'welcome' | 'comensales' | 'preauth' | 'menu' | 'cart' | 'cooking' | 'bill' | 'split_modo' | 'split_igual' | 'split_items' | 'tip' | 'paying'
 
@@ -94,6 +96,12 @@ export default function QrClientApp({ token }: { token: string }) {
   const audioCtxRef = useRef<any>(null)
   const listoPrevRef = useRef(false)
 
+  // Opt-in de marketing (novedades del bar / ia.rest) — consentimientos separados
+  const [telefonoMkt, setTelefonoMkt] = useState('')
+  const [consBar, setConsBar] = useState(false)
+  const [consIarest, setConsIarest] = useState(false)
+  const [mktEstado, setMktEstado] = useState<'idle' | 'guardando' | 'ok' | 'error'>('idle')
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
 
   // Prepara/desbloquea el AudioContext dentro de un gesto del usuario (necesario en móvil)
@@ -163,6 +171,31 @@ export default function QrClientApp({ token }: { token: string }) {
       setAvisoEstado('error')
     }
   }, [comandaIds, sesionId, token, primeAudio])
+
+  // Guardar consentimiento de marketing (RGPD: casillas separadas + prueba de texto)
+  const guardarMarketing = useCallback(async () => {
+    if (!sesionId) return
+    if (!telefonoMkt.trim() || (!consBar && !consIarest)) { setMktEstado('error'); return }
+    setMktEstado('guardando')
+    const nombre = data?.restaurante?.nombre || 'el restaurante'
+    const partes: string[] = []
+    if (consBar) partes.push(`novedades y promociones de ${nombre}`)
+    if (consIarest) partes.push('novedades de ia.rest')
+    const texto = `Acepto recibir ${partes.join(' y ')} por WhatsApp. Puedo darme de baja cuando quiera.`
+    try {
+      const res = await fetch('/api/qr/marketing-consent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token, sesion_id: sesionId, telefono: telefonoMkt,
+          consiente_bar: consBar, consiente_iarest: consIarest, texto,
+        }),
+      }).then(r => r.json())
+      setMktEstado(res?.ok ? 'ok' : 'error')
+    } catch {
+      setMktEstado('error')
+    }
+  }, [sesionId, telefonoMkt, consBar, consIarest, data, token])
 
   // Inicializar idioma desde preferencia guardada
   useEffect(() => {
@@ -490,6 +523,49 @@ export default function QrClientApp({ token }: { token: string }) {
 
   const mostrarHeader = sesionId && !['welcome','paying','preauth'].includes(screen)
 
+  // ── Bloque opt-in marketing (oculto tras flag; consentimientos separados) ──
+  const nombreBar = data?.restaurante?.nombre || 'el restaurante'
+  const marketingBlock = QR_MARKETING_OPTIN ? (
+    mktEstado === 'ok' ? (
+      <div style={{ width:'100%', background:'#3F7D4422', border:`1px solid ${C.green}55`, borderRadius:12, padding:'12px 16px', display:'flex', alignItems:'center', gap:10 }}>
+        <span style={{ fontSize:18 }}>📣</span>
+        <span style={{ fontSize:12.5, color:C.creamMid, textAlign:'left', lineHeight:1.4 }}>¡Hecho! Te avisaremos de las novedades. Puedes darte de baja cuando quieras.</span>
+      </div>
+    ) : (
+      <div style={{ width:'100%', background:C.bg2, border:`1px solid ${C.rule}`, borderRadius:12, padding:'14px 16px', textAlign:'left' }}>
+        <div style={{ fontSize:14, fontWeight:600, color:C.cream, marginBottom:2 }}>📣 ¿Te avisamos de novedades?</div>
+        <div style={{ fontSize:12, color:C.creamDim, marginBottom:12 }}>Fiestas, menús especiales y ofertas. Solo si tú quieres.</div>
+        <input
+          type="tel" inputMode="tel" autoComplete="tel"
+          value={telefonoMkt} onChange={e => setTelefonoMkt(e.target.value)}
+          placeholder="Tu número de WhatsApp"
+          style={{ width:'100%', padding:'11px 13px', background:C.bg, border:`1px solid ${C.rule}`, borderRadius:10, color:C.cream, fontSize:14, marginBottom:11, outline:'none' }}
+        />
+        <label style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:9, cursor:'pointer' }}>
+          <input type="checkbox" checked={consBar} onChange={e => setConsBar(e.target.checked)} style={{ marginTop:2, width:17, height:17, accentColor:C.vermilion, flexShrink:0 }} />
+          <span style={{ fontSize:12.5, color:C.creamMid, lineHeight:1.4 }}>Novedades y ofertas de <b style={{ color:C.cream }}>{nombreBar}</b></span>
+        </label>
+        <label style={{ display:'flex', gap:10, alignItems:'flex-start', marginBottom:12, cursor:'pointer' }}>
+          <input type="checkbox" checked={consIarest} onChange={e => setConsIarest(e.target.checked)} style={{ marginTop:2, width:17, height:17, accentColor:C.vermilion, flexShrink:0 }} />
+          <span style={{ fontSize:12.5, color:C.creamMid, lineHeight:1.4 }}>Novedades de <b style={{ color:C.cream }}>ia.rest</b></span>
+        </label>
+        <button
+          onClick={guardarMarketing}
+          disabled={mktEstado === 'guardando' || (!consBar && !consIarest) || !telefonoMkt.trim()}
+          style={{ width:'100%', padding:'12px', background:(!consBar && !consIarest) || !telefonoMkt.trim() ? C.bg3 : C.vermilion, border:'none', borderRadius:11, color:(!consBar && !consIarest) || !telefonoMkt.trim() ? C.creamDim : 'white', fontSize:13.5, fontWeight:700, cursor:'pointer' }}
+        >
+          {mktEstado === 'guardando' ? 'Guardando...' : 'Quiero enterarme'}
+        </button>
+        {mktEstado === 'error' && (
+          <div style={{ fontSize:11.5, color:C.amber, marginTop:8 }}>Revisa el teléfono y marca al menos una opción.</div>
+        )}
+        <div style={{ fontSize:10.5, color:C.creamDim, marginTop:10, lineHeight:1.5 }}>
+          Te puedes dar de baja en cualquier momento con un clic. No compartimos tu número con terceros.
+        </div>
+      </div>
+    )
+  ) : null
+
   return (
     <div style={s}>
       <style>{`:root{color-scheme:dark} *{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:#2e2720} @keyframes iaPulse{0%,100%{opacity:1}50%{opacity:0.25}} @keyframes iaPop{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}`}</style>
@@ -807,6 +883,8 @@ export default function QrClientApp({ token }: { token: string }) {
             </button>
           )}
 
+          {marketingBlock}
+
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 2 }}>
             <button
               onClick={() => setScreen('menu')}
@@ -830,6 +908,7 @@ export default function QrClientApp({ token }: { token: string }) {
           <div style={{ width: 96, height: 96, borderRadius: '50%', background: '#3F7D4422', border: `2px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 46, animation: 'iaPop 0.5s ease-out' }}>✅</div>
           <div style={{ fontSize: 26, fontStyle: 'italic', color: C.cream }}>¡Tu pedido está listo!</div>
           <div style={{ fontSize: 13.5, color: C.creamMid, lineHeight: 1.5 }}>Ya puede salir de cocina. ¡Que aproveche! 🍽️</div>
+          {marketingBlock}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 6 }}>
             <button
               onClick={() => { setPedidoListo(false); setScreen('menu') }}

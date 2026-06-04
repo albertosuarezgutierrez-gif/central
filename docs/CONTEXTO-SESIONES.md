@@ -88,6 +88,32 @@
 
 ## 📝 Registro de sesiones
 
+### 2026-06-04 (3) — Marketing opt-in del cliente QR (Fase 1: captura de consentimiento)
+- **Idea de Alberto:** aprovechar el aviso de "pedido listo" para que el cliente
+  autorice (opcional) recibir novedades (fiestas, menús de Navidad, ofertas).
+  Decisiones: canal **WhatsApp** (el cliente ya da el móvil para el aviso; email
+  descartado "anticuado"), y **bar + ia.rest con casillas SEPARADAS** (RGPD).
+- **Aviso de coste (Fase 2):** enviar campañas por WhatsApp usa **plantillas de
+  marketing de Meta (de pago + aprobación)**, distinto del aviso transaccional
+  (gratis en ventana 24h). La captura de consentimiento sí es gratis y va ahora.
+- **Fase 1 construida (rama `claude/qr-marketing-consent`):**
+  - Migración `20260604_marketing_consentimientos.sql` → tabla
+    `marketing_consentimientos` (telefono, consiente_bar, consiente_iarest,
+    texto_consentimiento [prueba], baja_token, revocado_*_en). RLS service role.
+    **Aplicada en Supabase.** OJO: almacén SEPARADO del transaccional
+    `qr_avisos_suscripciones` (ese se borra; este se guarda con consentimiento).
+  - `POST /api/qr/marketing-consent` (público, validado por sesión QR) → upsert
+    por (restaurante_id, telefono), guarda consentimientos separados + prueba.
+  - `GET /api/marketing/baja?token=&quien=bar|iarest|todo` → baja de 1 clic
+    (devuelve página HTML). El enlace debe ir en CADA mensaje de marketing.
+  - UI en `QrClientApp.tsx`: bloque opt-in (teléfono + 2 casillas no premarcadas
+    + texto legal de baja) en las pantallas "En cocina" y "pedido listo". **Oculto
+    tras flag** `NEXT_PUBLIC_QR_MARKETING=1` hasta que se active (necesita WhatsApp).
+  - `next build` verde con deps instaladas.
+- **Pendiente Fase 2:** herramienta de creación/envío de campañas (plantillas Meta),
+  panel en /owner para que el bar gestione su lista, y panel ia.rest para campañas
+  globales (query `consiente_iarest=true`, dedup por teléfono). Activar flag + WhatsApp.
+
 ### 2026-06-04 (2) — QR avisos: PR #17 mergeado + landing + RGPD (borrado del dato)
 - **PR #17 MERGEADO** a `main` (squash `cad703b`). El bache de CI fue un tipo:
   `applicationServerKey` esperaba `BufferSource`; el helper con anotación
