@@ -51,7 +51,8 @@ Crea un REEL sobre: "${tema}".
 - p1, p2, p3: tres ideas concretas que avanzan el argumento (máx 70 chars cada una).
 - caption: 120-160 palabras. Primera línea = gancho sin emoji. Lenguaje natural de búsqueda (ej "TPV por voz", "reducir errores de comanda", "digitalizar mi restaurante"). Invita a compartir/guardar. Cierra con www.iarest.es y EXACTAMENTE 4-5 hashtags (base #hosteleria #restaurante + ${hashtags.slice(0,3).join(' ')}).
 SOLO JSON: {"titulo":"","p1":"","p2":"","p3":"","caption":""}`
-  const raw = await callAI('Reel Instagram. SOLO JSON.', prompt, 600)
+  // noFallback=true → NIM puro, NUNCA Anthropic (regla de crons/agentes; evita gasto de créditos externos)
+  const raw = await callAI('Reel Instagram. SOLO JSON.', prompt, 600, 30_000, true)
   return JSON.parse(cleanJSON(raw)) as { titulo: string; p1: string; p2: string; p3: string; caption: string }
 }
 
@@ -98,7 +99,8 @@ CAPTION — REGLAS CRÍTICAS DE ALCANCE 2026 (Instagram funciona como buscador, 
 5. EXACTAMENTE 4-5 hashtags al final (Instagram corta a 5). Mezcla: 2 de nicho hostelero + 1-2 locales/sector + el de marca. Precisos, no genéricos. Base obligatoria: ${hashBase}. Añade de: ${hashtags.slice(0,3).join(' ')}
 6. Largo total: 120-160 palabras.
 SOLO JSON: {"titulo":"","sub":"","dato":"","unidad":"","ctx":"","items":"","caption":""}`
-  const raw = await callAI('Post Instagram. SOLO JSON.', prompt, 600)
+  // noFallback=true → NIM puro, NUNCA Anthropic (regla de crons/agentes; evita gasto de créditos externos)
+  const raw = await callAI('Post Instagram. SOLO JSON.', prompt, 600, 20_000, true)
   return JSON.parse(cleanJSON(raw))
 }
 
