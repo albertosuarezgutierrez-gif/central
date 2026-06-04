@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Tanda QR (04/06/2026) — 4 features:**
+  - **Aviso "pedido listo"** (PR #17, en `main`): cuando la cocina marca lista una
+    comanda QR, el cliente recibe aviso. **Capa 1 (gratis):** pantalla "En cocina"
+    sondea `/api/qr/estado` cada 8s + Wake Lock + ✅/tono WebAudio/vibración al estar
+    listo. **Capa 2 (push web):** "Avísame en el móvil" → `qr_avisos_suscripciones`;
+    disparo server-side `lib/qr-notify.ts` desde `/api/marchar` y `/api/kds/voz`.
+  - **Borrado RGPD del aviso** (PR #18, en `main`): el dato (push/teléfono) se borra
+    al enviar el aviso, al cerrar la cuenta (webhook), y TTL 6h en cron `cobro-inactividad`.
+    Landing home: "QR en mesa" menciona el aviso al móvil.
+  - **Marketing opt-in** (PR #19, en `main`): el cliente autoriza novedades por
+    WhatsApp con **casillas separadas bar/ia.rest** (RGPD). Tabla
+    `marketing_consentimientos` (prueba + baja `baja_token`), `POST /api/qr/marketing-consent`,
+    baja 1 clic `GET /api/marketing/baja`. UI **oculta tras `NEXT_PUBLIC_QR_MARKETING=1`**.
+  - **"Llamar al camarero" configurable** (PR #20, abierto): flag
+    `cobro_config.qr_llamar_camarero` (default true), `qr-session` v3 lo devuelve,
+    toggle en `/owner`, y el cliente oculta el botón si está off (modo 100% autoservicio).
+  - **Migraciones aplicadas en Supabase:** `20260604_qr_avisos_cliente`,
+    `20260604_marketing_consentimientos`, `20260604_qr_llamar_camarero`.
+    **EF desplegada:** `qr-session` v3 (version 4).
+  - **WhatsApp = ENCHUFABLE** (`lib/whatsapp.ts`: `sendWhatsApp` + `whatsappConfigurado`):
+    se enciende con `WHATSAPP_API_TOKEN` + `WHATSAPP_PHONE_ID` en Vercel env.
+  - **Pendiente:** (a) cuenta WhatsApp (360dialog/Meta, Opción B) para encender avisos
+    y marketing; (b) flag `NEXT_PUBLIC_QR_MARKETING=1`; (c) Fase 2 marketing (envío de
+    campañas con plantillas Meta de pago + panel owner/ia.rest); (d) UI cliente wa.me.
 - **Aviso por Telegram de compras en el Congreso Empresarial de Junio** (rama
   `claude/telegram-congress-purchase-alerts-PyI0t`): cuando se confirma un pago en el
   portal de cobros de grupo `congreso-empresarial-junio-2026-mpqtmo7a` ("CONGRESO
@@ -29,22 +53,6 @@
   **aplicada en Supabase**), hoy `true` solo para el congreso; cualquier otro portal se
   enciende poniendo el flag a `true` (sin tocar código). Un toggle en `/owner → Cobros`
   queda como mejora futura opcional. `tsc --noEmit` + `next build` en verde.
-
-- **Avisos al cliente QR "pedido listo"** (rama `claude/qr-order-notifications-hcsxH`):
-  cuando la cocina marca lista una comanda hecha desde el QR de mesa, el cliente
-  recibe aviso. **Capa 1 (gratis, sin infra):** la pantalla "En cocina" de
-  `/q/[token]` sondea `/api/qr/estado` cada 8s, mantiene la pantalla encendida
-  (Wake Lock) y, al estar listo, muestra ✅ + suena (tono WebAudio) + vibra.
-  **Capa 2 (push web):** botón "Avísame en el móvil" → suscripción push guardada
-  en `qr_avisos_suscripciones`; el disparo server-side está en `lib/qr-notify.ts`
-  (`notificarClienteQrListo`), llamado desde `/api/marchar` y `/api/kds/voz` al
-  pasar la comanda a `lista`. **WhatsApp = ENCHUFABLE:** canal `'whatsapp'` ya
-  soportado en `/api/qr/avisar` + `qr-notify` vía `lib/whatsapp.ts` (`sendWhatsApp`,
-  `whatsappConfigurado`); se enciende solo en cuanto haya `WHATSAPP_API_TOKEN` +
-  `WHATSAPP_PHONE_ID` en Vercel env (recomendado: Opción B, cliente abre la
-  conversación → ventana 24h → texto libre sin plantilla). Migración
-  `20260604_qr_avisos_cliente.sql` **aplicada en Supabase**. Pendiente UI cliente
-  de WhatsApp (botón wa.me) para cuando exista la cuenta Meta.
 
 - **Landings con hero animado (demo de producto en movimiento)** — PR #15: las 3
   landings (`/`, `/catering`, `/espacios`) tienen ahora un **hero a 2 columnas** con
@@ -101,6 +109,21 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-04 (4) — "Llamar al camarero" configurable (modo 100% autoservicio)
+- **Petición de Alberto:** un local sin camareros (autoservicio/recogida) no quiere
+  el botón de "llamar al camarero" en el QR → configurable por el dueño.
+- **Rama `claude/qr-llamar-camarero-config`:**
+  - Migración `20260604_qr_llamar_camarero.sql`: columna `qr_llamar_camarero BOOLEAN
+    DEFAULT true` en `cobro_config`. **Aplicada en Supabase.**
+  - EF `qr-session` → **v3** (desplegada en Supabase, version 4, verify_jwt=false):
+    selecciona la columna y devuelve `cobro.llamar_camarero` (default true).
+  - `/api/owner/cobro-config`: `qr_llamar_camarero` en allowed + validación booleana.
+  - Owner UI (`owner/page.tsx`, `CobroConfigSection`): toggle "Botón llamar al
+    camarero" (on = normal / off = 100% autoservicio).
+  - `QrClientApp.tsx`: `llamarCamareroActivo = cobro.llamar_camarero !== false`;
+    oculta el botón del header, el del welcome y el modal cuando está off.
+  - `next build` verde con deps instaladas.
 
 ### 2026-06-04 (3) — Marketing opt-in del cliente QR (Fase 1: captura de consentimiento)
 - **Idea de Alberto:** aprovechar el aviso de "pedido listo" para que el cliente

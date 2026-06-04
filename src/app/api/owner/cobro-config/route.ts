@@ -77,7 +77,7 @@ export async function PUT(req: NextRequest) {
   // restauranteId siempre tiene valor (fallback demo)
 
   const body = await req.json()
-  const allowed = ['modo_cobro', 'timer_inactividad_min']
+  const allowed = ['modo_cobro', 'timer_inactividad_min', 'qr_llamar_camarero']
   const patch: Record<string, unknown> = {}
 
   for (const key of allowed) {
@@ -86,6 +86,11 @@ export async function PUT(req: NextRequest) {
 
   if (Object.keys(patch).length === 0) {
     return NextResponse.json({ error: 'Sin campos válidos' }, { status: 400 })
+  }
+
+  // Validar qr_llamar_camarero (booleano)
+  if ('qr_llamar_camarero' in patch && typeof patch.qr_llamar_camarero !== 'boolean') {
+    return NextResponse.json({ error: 'qr_llamar_camarero inválido' }, { status: 400 })
   }
 
   // Validar modo_cobro
