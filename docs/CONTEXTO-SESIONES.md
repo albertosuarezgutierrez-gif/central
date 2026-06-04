@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Aviso por Telegram de compras en el Congreso Empresarial de Junio** (rama
+  `claude/telegram-congress-purchase-alerts-PyI0t`): cuando se confirma un pago en el
+  portal de cobros de grupo `congreso-empresarial-junio-2026-mpqtmo7a` ("CONGRESO
+  EMPRESARIAL JUNIO 2026"), Alberto recibe un `tgAlert` con el comprador, los menús,
+  el importe de esa compra y el **acumulado recaudado** del congreso. El enganche está
+  en el webhook `src/app/api/webhook/stripe-connect/route.ts` (evento
+  `checkout.session.completed`), en el helper `avisarCompra()`. **Idempotente:** el
+  update de `cobros_grupo_pagos` filtra `.neq('estado','pagado').select(...)`, así que
+  los reintentos de Stripe no duplican el aviso. **Por portal (enchufable):** flag
+  `cobros_grupo.avisar_telegram` (migración `20260604_cobros_aviso_telegram.sql`,
+  **aplicada en Supabase**), hoy `true` solo para el congreso; cualquier otro portal se
+  enciende poniendo el flag a `true` (sin tocar código). Un toggle en `/owner → Cobros`
+  queda como mejora futura opcional. `tsc --noEmit` + `next build` en verde.
+
 - **Avisos al cliente QR "pedido listo"** (rama `claude/qr-order-notifications-hcsxH`):
   cuando la cocina marca lista una comanda hecha desde el QR de mesa, el cliente
   recibe aviso. **Capa 1 (gratis, sin infra):** la pantalla "En cocina" de
