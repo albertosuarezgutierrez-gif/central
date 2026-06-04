@@ -61,6 +61,18 @@
       "schedule": "*/30 * * * *"
     },
     {
+      "path": "/api/cron/backfill-leads-sevilla",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/crm-whatsapp-sevilla",
+      "schedule": "0 10 * * 1-5"
+    },
+    {
+      "path": "/api/cron/crm-followup-sevilla",
+      "schedule": "0 11 * * 1-5"
+    },
+    {
       "path": "/api/cron/instagram",
       "schedule": "0 9 * * 3"
     },
