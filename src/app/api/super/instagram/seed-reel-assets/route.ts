@@ -54,7 +54,17 @@ async function uploadVideoByUrl(remoteUrl: string, pid: string): Promise<string>
 export async function POST(req: NextRequest) {
   if (req.headers.get('authorization') !== `Bearer ${process.env.CRON_SECRET}`)
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  return seed()
+}
 
+// GET: pensado para lanzarlo desde el NAVEGADOR estando logueado en /super.
+// El middleware (escudo __super_shield) ya protege /api/super/*, así que si la
+// petición llega hasta aquí es porque está autorizada — no hace falta más auth.
+export async function GET() {
+  return seed()
+}
+
+async function seed() {
   const PEXELS = process.env.PEXELS_API_KEY
   if (!PEXELS) return NextResponse.json({
     error: 'Falta PEXELS_API_KEY',
