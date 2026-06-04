@@ -104,21 +104,19 @@ export default function HomePage() {
 
     // Form
     async function enviar() {
-      const n = (document.getElementById("nombre") as HTMLInputElement).value.trim()
-      const r = (document.getElementById("restaurante") as HTMLInputElement).value.trim()
-      const em = (document.getElementById("email") as HTMLInputElement).value.trim()
-      const tf = (document.getElementById("telefono") as HTMLInputElement).value.trim()
-      const u = (document.getElementById("usuarios") as HTMLSelectElement).value
+      const n = (document.getElementById("nombre") as HTMLInputElement)?.value.trim() || ""
+      const em = (document.getElementById("email") as HTMLInputElement)?.value.trim() || ""
+      const tf = (document.getElementById("telefono") as HTMLInputElement)?.value.trim() || ""
       // Honeypot anti-spam
       const hp = (document.getElementById("website") as HTMLInputElement)?.value
       if (hp) return
       let ok = true
-      ;([["nombre", n], ["restaurante", r], ["email", em]] as [string,string][]).forEach(([id, v]) => {
+      // Solo pedimos nombre + teléfono (mínima fricción)
+      ;([["nombre", n], ["telefono", tf]] as [string,string][]).forEach(([id, v]) => {
         const el = document.getElementById(id) as HTMLInputElement
-        if (!v) { el.style.borderColor = "rgba(217,68,43,.6)"; ok = false }
-        else el.style.borderColor = ""
+        if (el) { if (!v) { el.style.borderColor = "rgba(217,68,43,.6)"; ok = false } else el.style.borderColor = "" }
       })
-      // Validar formato email con @
+      // Email opcional: validar formato solo si lo rellenan
       const emailEl = document.getElementById("email") as HTMLInputElement
       if (em && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(em)) {
         emailEl.style.borderColor = "rgba(217,68,43,.6)"
@@ -136,7 +134,7 @@ export default function HomePage() {
         await fetch("/api/leads/landing", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ nombre: n, restaurante: r, email: em, telefono: tf, usuarios: u, origen: "landing-principal" }),
+          body: JSON.stringify({ nombre: n, restaurante: "", email: em, telefono: tf, usuarios: "", origen: "landing-principal" }),
         })
       } catch {}
 
@@ -328,6 +326,21 @@ h1 i{font-style:italic;color:var(--red)}
 .btn-p:hover{opacity:.85;transform:translateY(-1px)}
 .btn-s{font-size:14px;font-weight:400;color:var(--ink3);padding:13px 24px;border:1px solid var(--border2);border-radius:6px;text-decoration:none;transition:color .2s,border-color .2s}
 .btn-s:hover{color:var(--ink);border-color:rgba(246,241,231,.2)}
+/* WHATSAPP CTA */
+.btn-wa{display:inline-flex;align-items:center;gap:8px;font-size:14px;font-weight:600;background:#25D366;color:#0B3D2E;padding:13px 22px;border-radius:6px;text-decoration:none;transition:opacity .2s,transform .15s}
+.btn-wa:hover{opacity:.9;transform:translateY(-1px)}
+.btn-wa svg{flex-shrink:0}
+/* TRUST ROW */
+.trust-row{display:flex;gap:18px;flex-wrap:wrap;margin-top:20px;font-size:12px;color:var(--ink3)}
+.hero-copy .trust-row{justify-content:flex-start}
+.trust-row span{display:inline-flex;align-items:center;gap:6px}
+.trust-row span::before{content:'✓';color:var(--green);font-weight:700}
+/* STICKY CTA (móvil) */
+.sticky-cta{display:none;position:fixed;bottom:0;left:0;right:0;z-index:90;background:rgba(20,17,14,.96);backdrop-filter:blur(12px);border-top:1px solid var(--border2);padding:10px 14px;gap:10px}
+.sticky-cta a{flex:1;text-align:center;padding:13px 10px;border-radius:8px;font-family:'Inter Tight',sans-serif;font-size:15px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:7px}
+.sticky-cta .sc-demo{background:var(--red);color:var(--ink)}
+.sticky-cta .sc-wa{background:#25D366;color:#0B3D2E}
+.sticky-cta .sc-wa svg{flex-shrink:0}
 
 /* STRIP */
 .strip{border-top:1px solid var(--border);border-bottom:1px solid var(--border);display:flex}
@@ -479,6 +492,9 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
   .hero-copy .eyebrow{justify-content:center}
   .hero-copy .hero-sub{margin-left:auto;margin-right:auto}
   .hero-copy .hero-cta{justify-content:center}
+  .hero-copy .trust-row{justify-content:center}
+  .sticky-cta{display:flex}
+  body{padding-bottom:72px}
   .manifesto-grid,.elimina-grid,.voz-grid,.healer-grid,.form-grid{grid-template-columns:1fr;gap:48px}
   .cap-grid{grid-template-columns:1fr 1fr}
   .strip{flex-wrap:wrap}
@@ -524,8 +540,9 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
       <p class="hero-sub fi d2" style="max-width:520px">Costes, almacén, escandallos y operación conectados en tiempo real. Para el dueño que quiere saber exactamente cuánto gana, no solo cuánto factura.</p>
       <div class="hero-cta fi d2">
         <a href="#contacto" class="btn-p">Solicitar demo →</a>
-        <a href="#perfiles" class="btn-s">Ver para quién es ↓</a>
+        <a href="https://wa.me/34637349990?text=Hola%2C%20quiero%20ver%20una%20demo%20de%20ia.rest" target="_blank" rel="noopener" class="btn-wa"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 0 1 8.413 3.488 11.82 11.82 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-1.045zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg> WhatsApp</a>
       </div>
+      <div class="trust-row fi d3"><span>Sin permanencia</span><span>Datos en Europa</span><span>Setup en 2 h</span><span>Sin comisión por ventas</span></div>
     </div>
     <div class="hero-demo fi d2">
       <div class="demo-badge"><span class="ddot"></span> En vivo</div>
@@ -821,27 +838,16 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
             {/* Honeypot anti-spam — oculto para humanos, bots lo rellenan */}
             <input type="text" id="website" name="website" style={{display:'none'}} tabIndex={-1} autoComplete="off"/>
             <div class="field"><label>Nombre</label><input type="text" id="nombre" placeholder="Tu nombre" autocomplete="given-name"/></div>
-            <div class="field"><label>Restaurante</label><input type="text" id="restaurante" placeholder="Nombre del local" autocomplete="organization"/></div>
-            <div class="field-row">
-              <div class="field"><label>Email</label><input type="email" id="email" placeholder="tu@email.com"/></div>
-              <div class="field"><label>Teléfono</label><input type="tel" id="telefono" placeholder="+34 6xx xxx xxx"/></div>
-            </div>
-            <div class="field">
-              <label>Personas en sala y cocina</label>
-              <select id="usuarios">
-                <option value="" disabled selected>Selecciona</option>
-                <option value="1">Solo yo (1 usuario)</option>
-                <option value="2-4">Equipo pequeño (2–4)</option>
-                <option value="5-9">Equipo mediano (5–9)</option>
-                <option value="10+">Equipo grande (10+)</option>
-                <option value="grupo">Tengo varios locales</option>
-              </select>
-            </div>
+            <div class="field"><label>Teléfono</label><input type="tel" id="telefono" placeholder="+34 6xx xxx xxx" autocomplete="tel"/></div>
+            <div class="field"><label>Email <span style="color:var(--ink3);font-weight:400;text-transform:none;letter-spacing:0">(opcional)</span></label><input type="email" id="email" placeholder="tu@email.com"/></div>
             <div style="display:flex;align-items:flex-start;gap:10px;margin-bottom:14px;margin-top:4px">
               <input type="checkbox" id="privacidad" style="margin-top:3px;accent-color:var(--red);cursor:pointer;flex-shrink:0"/>
               <label for="privacidad" style="font-size:12px;color:var(--ink2);line-height:1.5;cursor:pointer">He leído y acepto la <a href="/privacidad" target="_blank" style="color:var(--red)">política de privacidad</a>. Consiento que <strong>Alberto Suárez Gutiérrez (NIF 28823484E)</strong>, responsable de ia.rest, trate mis datos para gestionar mi solicitud. Puedo ejercer mis derechos de acceso, rectificación, supresión y oposición en <a href="mailto:hola@iarest.es" style="color:var(--red)">hola@iarest.es</a>.</label>
             </div>
             <button class="submit-btn" id="submitBtn" onclick="enviar()">Solicitar información →</button>
+            <div style="text-align:center;margin-top:14px;font-size:12px;color:var(--ink3)">o más rápido —
+              <a href="https://wa.me/34637349990?text=Hola%2C%20quiero%20ver%20una%20demo%20de%20ia.rest" target="_blank" rel="noopener" style="color:var(--green);font-weight:600;text-decoration:none">escríbenos por WhatsApp →</a>
+            </div>
           </div>
           <div class="success-state" id="successState">
             <div class="success-icon">✓</div>
@@ -855,6 +861,12 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     </div>
   </div>
 </section>
+
+<!-- STICKY CTA (móvil) -->
+<div class="sticky-cta">
+  <a href="#contacto" class="sc-demo">Pedir demo</a>
+  <a href="https://wa.me/34637349990?text=Hola%2C%20quiero%20ver%20una%20demo%20de%20ia.rest" target="_blank" rel="noopener" class="sc-wa"><svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M.057 24l1.687-6.163a11.867 11.867 0 0 1-1.587-5.946C.16 5.335 5.495 0 12.05 0a11.82 11.82 0 0 1 8.413 3.488 11.82 11.82 0 0 1 3.48 8.414c-.003 6.557-5.338 11.892-11.893 11.892a11.9 11.9 0 0 1-5.688-1.448L.057 24zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884a9.86 9.86 0 0 0 1.51 5.26l-.999 3.648 3.978-1.045zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/></svg> WhatsApp</a>
+</div>
 
 <footer>
   <div class="f-logo">ia<b>.</b>rest</div>
