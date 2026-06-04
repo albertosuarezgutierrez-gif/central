@@ -32,6 +32,29 @@
   - `APIFY_TOKEN` (Apify free) **ya está en Vercel** (Production). Pendiente: vigilar
     crédito del plan free si se sondea Sevilla entero.
 
+- **Instagram Reels v2 — "que vendan": ambiente real + producto + música** (04/06/2026,
+  PR #31 mergeado): tras investigación de mercado (5 frentes), se decidió **mantener el
+  motor Cloudinary** (0€, sin infra nueva) y enriquecerlo en vez de FFmpeg/APIs de pago.
+  - `src/lib/instagram-music.ts` (pool `CLOUDINARY_MUSIC_IDS`) + `src/lib/instagram-reel-assets.ts`
+    (pool ambiente `CLOUDINARY_AMBIENT_IDS`), ambos con degradación elegante (vacío = sin audio / sin footage).
+  - `src/app/api/ig-reel/route.ts` reescrito: secuencia **portada → mockup producto
+    (`ig-img tipo=producto`) → ambiente (Pexels) → puntos (intercalando ambiente) → CTA**,
+    Ken Burns en slides, ambiente silenciado y música recortada a la duración.
+  - `src/app/api/cron/instagram/route.ts`: **viernes → reel** (`formatoDelDia`) con fallback
+    a imagen; publica vía callback **`ig_aprobar_reel`** (`publicarReel`, MP4 como vídeo).
+    `maxDuration` 60→120. **Texto del agente con `noFallback=true`** (NIM puro, nunca Anthropic
+    → evita el error "credit balance too low" que daba al caer al fallback de Claude sin créditos).
+    Mismo `noFallback=true` aplicado a los botones de `instagram-callback`.
+  - `src/app/api/super/instagram/seed-reel-assets/route.ts`: siembra clips de ambiente
+    Pexels→Cloudinary (POST Bearer CRON_SECRET, o **GET desde el navegador** logueado en /super).
+  - Smoke `scripts/smoke-instagram-reel.ts` **OK**; `tsc` y `next build` **verdes**.
+  - **Riesgo abierto:** la sintaxis Cloudinary de splice de vídeo + `e_zoompan` + `l_audio`
+    es empírica → validar con render real (`/api/cron/instagram?manual=1&formato=reel`). El
+    footage va tras `CLOUDINARY_AMBIENT_IDS` (vacío) → no bloquea: el reel ya sale con
+    slides+producto+música; el ambiente se enciende al sembrar y confirmar el render.
+  - **Pendiente Alberto:** confirmar `PEXELS_API_KEY` (subida) lanzando el seed · pegar
+    `CLOUDINARY_AMBIENT_IDS` · subir 3-5 pistas Pixabay y rellenar `CLOUDINARY_MUSIC_IDS`.
+
 - **Botón "📧 Enviar emails de venta" en `/super → Apify Sevilla` — 04/06/2026**
   (PR #33, mergeado): el envío de email frío de Sevilla se extrajo a
   `lib/lead-hunter-sevilla.ts` (`enviarEmailsSevilla`), compartido por el cron

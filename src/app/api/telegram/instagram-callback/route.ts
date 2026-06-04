@@ -163,7 +163,7 @@ CAPTION 150-200 palabras. Sin emoji inicio. URL: www.iarest.es
 Hashtags: #hosteleria #restaurante #bar #gestion #hosteleros
 SOLO JSON: {"titulo":"...","sub":"...","dato":"...","unidad":"...","ctx":"...","items":"...","caption":"..."}`
 
-      const raw = await callAI('Genera post Instagram. SOLO JSON.', prompt, 500)
+      const raw = await callAI('Genera post Instagram. SOLO JSON.', prompt, 500, 20_000, true)
       const p = JSON.parse(cleanJSON(raw))
 
       const params = new URLSearchParams({ tipo: formato })
@@ -218,7 +218,7 @@ SOLO JSON: {"titulo":"...","sub":"...","dato":"...","unidad":"...","ctx":"...","
         const prompt = `Agente Instagram ia.rest. Genera contenido para un Reel vertical sobre: "${tema}".
 Devuelve un titulo de portada (max 55 chars) y 3 puntos clave cortos (max 70 chars cada uno) que expliquen el tema a un hostelero. Y un caption de 150 palabras terminando en www.iarest.es con hashtags de hostelería.
 SOLO JSON: {"titulo":"...","p1":"...","p2":"...","p3":"...","caption":"..."}`
-        const raw = await callAI('Genera Reel Instagram. SOLO JSON.', prompt, 500)
+        const raw = await callAI('Genera Reel Instagram. SOLO JSON.', prompt, 500, 30_000, true)
         const p = JSON.parse(cleanJSON(raw))
         const puntos = [p.p1, p.p2, p.p3].filter(Boolean) as string[]
         try {
@@ -240,7 +240,7 @@ SOLO JSON: {"titulo":"...","p1":"...","p2":"...","p3":"...","caption":"..."}`
       // ── Resto de formatos → imagen ──
       const prompt = `Agente Instagram ia.rest. Plantilla "${formato}" sobre: "${tema}"
 SOLO JSON: {"titulo":"...","sub":"...","dato":"...","unidad":"...","ctx":"...","items":"...","caption":"..."}`
-      const raw = await callAI('Genera post Instagram. SOLO JSON.', prompt, 500)
+      const raw = await callAI('Genera post Instagram. SOLO JSON.', prompt, 500, 20_000, true)
       const p = JSON.parse(cleanJSON(raw))
       const params = new URLSearchParams({ tipo: formato })
       if (p.titulo) params.set('titulo', p.titulo)

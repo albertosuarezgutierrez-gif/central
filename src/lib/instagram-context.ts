@@ -51,7 +51,9 @@ NOTICIAS: ${noticiasTexto}
 ÚLTIMO TEMA: "${ultimoTema}"
 NUNCA competidores por nombre.
 SOLO JSON: {"tema":"...","modulo":"...","hashtags":["#tag1","#tag2"]}`
-  const raw = await callAI('Elige tema Instagram. SOLO JSON.', prompt, 300)
+  // noFallback=true → NIM puro, NUNCA Anthropic (agente IG; evita "credit balance too low").
+  // timeout amplio (25s) para que NIM no caiga al fallback por lentitud puntual.
+  const raw = await callAI('Elige tema Instagram. SOLO JSON.', prompt, 300, 25_000, true)
   const d = JSON.parse(cleanJSON(raw))
   const mod = IAREST_MODULOS.find(m => m.modulo === d.modulo)
   return { tema: d.tema || 'gestión digital hostelería', modulo: d.modulo || '', hashtags: [...new Set([...(d.hashtags||[]), ...(mod?.hashtags||[])])].slice(0,4) }

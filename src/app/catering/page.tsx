@@ -1,5 +1,6 @@
 "use client"
 import { useEffect } from "react"
+import LandingClickTracker from "@/components/LandingClickTracker"
 
 export default function CateringPage() {
   useEffect(() => {
@@ -149,6 +150,7 @@ export default function CateringPage() {
 
   return (
     <>
+      <LandingClickTracker />
       <title>Software para Empresas de Catering en España | ia.rest</title>
       <meta name="description" content="ia.rest: presupuesto, portal cliente, APPCC, control de costes y VeriFactu. El ciclo completo de tu catering, automatizado. Desde 59€/mes." />
       <link rel="canonical" href="https://www.iarest.es/catering" />

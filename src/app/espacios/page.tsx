@@ -1,5 +1,6 @@
 "use client"
 import { useEffect } from "react"
+import LandingClickTracker from "@/components/LandingClickTracker"
 
 export default function EspaciosPage() {
   useEffect(() => {
@@ -96,6 +97,7 @@ export default function EspaciosPage() {
 
   return (
     <>
+      <LandingClickTracker />
       <title>Software para Fincas y Espacios de Eventos | ia.rest</title>
       <meta name="description" content="ia.rest gestiona automáticamente las solicitudes de bodas.net. Respuestas automáticas, calendario, contratos digitales y VeriFactu. Desde 59€/mes." />
       <link rel="canonical" href="https://www.iarest.es/espacios" />
