@@ -11,6 +11,15 @@ const WA_TOKEN   = process.env.WHATSAPP_API_TOKEN
 const WA_PHONE   = process.env.WHATSAPP_PHONE_ID  // ID del número de negocio en Meta
 
 /**
+ * ¿Está el canal de WhatsApp listo para usarse? (token + phone id en env).
+ * Permite a los demás módulos decidir si ofrecer/usar WhatsApp sin intentarlo
+ * a ciegas. ENCHUFABLE: en cuanto se rellenan las vars en Vercel, devuelve true.
+ */
+export function whatsappConfigurado(): boolean {
+  return !!(WA_TOKEN && WA_PHONE)
+}
+
+/**
  * Formatea número para WhatsApp: quita espacios, guiones, añade prefijo 34 si ES
  */
 export function formatWA(raw: string): string | null {

@@ -12,6 +12,8 @@ import { leerIdioma, guardarIdioma, CodigoIdioma } from '@/lib/useIdiomasCarta'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const VAPID_PUBLIC_KEY = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+  || 'BKLVkE3Cz7RjzFoSqOdmdXQOaRyoh6lNLPEtMNsA-xATgG-6q6MqbwA2NQkcRk5EWQLbpdaagD_o918fWOwmUbc'
 
 type Screen = 'loading' | 'error' | 'welcome' | 'comensales' | 'preauth' | 'menu' | 'cart' | 'cooking' | 'bill' | 'split_modo' | 'split_igual' | 'split_items' | 'tip' | 'paying'
 
@@ -41,6 +43,13 @@ const C = {
   bg: '#14110E', bg2: '#1E1A15', bg3: '#2A221A',
   vermilion: '#D9442B', cream: '#F6F1E7', creamMid: '#D8CDB6',
   creamDim: '#8C7B69', amber: '#E8A33B', green: '#3F7D44', rule: '#2E2720',
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
+  const raw = window.atob(base64)
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)))
 }
 
 async function callEF(fn: string, body: object) {
@@ -77,7 +86,83 @@ export default function QrClientApp({ token }: { token: string }) {
 
   const [idioma, setIdioma] = useState<CodigoIdioma>('es')
 
+  // ── Avisos "pedido listo" (Capa 1: en página + Capa 2: push web) ──
+  const [comandaIds, setComandaIds] = useState<string[]>([])   // comandas hechas esta sesión
+  const [pedidoListo, setPedidoListo] = useState(false)
+  const [avisoEstado, setAvisoEstado] = useState<'idle' | 'pidiendo' | 'activo' | 'no_soportado' | 'error'>('idle')
+  const wakeLockRef = useRef<any>(null)
+  const audioCtxRef = useRef<any>(null)
+  const listoPrevRef = useRef(false)
+
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  // Prepara/desbloquea el AudioContext dentro de un gesto del usuario (necesario en móvil)
+  const primeAudio = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext
+        if (Ctx) audioCtxRef.current = new Ctx()
+      }
+      if (audioCtxRef.current?.state === 'suspended') audioCtxRef.current.resume()
+    } catch { /* sin audio, seguimos */ }
+  }, [])
+
+  // Sonido + vibración cuando el pedido está listo (sin assets: tono ascendente WebAudio)
+  const reproducirAvisoListo = useCallback(() => {
+    try { navigator.vibrate?.([300, 120, 300, 120, 500]) } catch { /* sin vibración */ }
+    try {
+      const ctx = audioCtxRef.current
+      if (!ctx) return
+      if (ctx.state === 'suspended') ctx.resume()
+      const now = ctx.currentTime
+      ;[660, 880, 1180].forEach((freq, i) => {
+        const t = now + i * 0.18
+        const osc = ctx.createOscillator()
+        const gain = ctx.createGain()
+        osc.type = 'sine'
+        osc.frequency.value = freq
+        gain.gain.setValueAtTime(0.0001, t)
+        gain.gain.exponentialRampToValueAtTime(0.25, t + 0.02)
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.16)
+        osc.connect(gain); gain.connect(ctx.destination)
+        osc.start(t); osc.stop(t + 0.18)
+      })
+    } catch { /* sin sonido, queda el visual */ }
+  }, [])
+
+  // Pedir push y registrar el aviso server-side para esta comanda
+  const suscribirAviso = useCallback(async () => {
+    const comandaId = comandaIds[comandaIds.length - 1]
+    if (!sesionId || !comandaId) return
+    primeAudio()
+    if (typeof Notification === 'undefined' || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+      setAvisoEstado('no_soportado'); return
+    }
+    setAvisoEstado('pidiendo')
+    try {
+      const perm = await Notification.requestPermission()
+      if (perm !== 'granted') { setAvisoEstado('error'); return }
+      const reg = await navigator.serviceWorker.ready
+      let sub = await reg.pushManager.getSubscription()
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        })
+      }
+      const res = await fetch('/api/qr/avisar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token, sesion_id: sesionId, comanda_id: comandaId,
+          canal: 'web_push', subscription: sub.toJSON(),
+        }),
+      }).then(r => r.json())
+      setAvisoEstado(res?.ok ? 'activo' : 'error')
+    } catch {
+      setAvisoEstado('error')
+    }
+  }, [comandaIds, sesionId, token, primeAudio])
 
   // Inicializar idioma desde preferencia guardada
   useEffect(() => {
@@ -193,6 +278,53 @@ export default function QrClientApp({ token }: { token: string }) {
     mountCard()
   }, [screen, preauthClientSecret, data])
 
+  // ── Capa 1: sondear el estado del pedido mientras esperamos en "En cocina" ──
+  useEffect(() => {
+    if (screen !== 'cooking' || !sesionId || comandaIds.length === 0 || pedidoListo) return
+    let cancelado = false
+    const comprobar = async () => {
+      try {
+        const r = await fetch(`/api/qr/estado?sesion_id=${sesionId}&comandas=${comandaIds.join(',')}`)
+        const d = await r.json()
+        if (!cancelado && d?.ok && d.alguna_lista) setPedidoListo(true)
+      } catch { /* reintenta en el siguiente tick */ }
+    }
+    comprobar()
+    const iv = setInterval(comprobar, 8000)
+    return () => { cancelado = true; clearInterval(iv) }
+  }, [screen, sesionId, comandaIds, pedidoListo])
+
+  // Disparar sonido/vibración una sola vez al pasar a "listo"
+  useEffect(() => {
+    if (pedidoListo && !listoPrevRef.current) {
+      listoPrevRef.current = true
+      reproducirAvisoListo()
+    }
+    if (!pedidoListo) listoPrevRef.current = false
+  }, [pedidoListo, reproducirAvisoListo])
+
+  // Mantener la pantalla encendida mientras se espera el pedido (Wake Lock)
+  useEffect(() => {
+    if (screen !== 'cooking' || pedidoListo) {
+      if (wakeLockRef.current) { wakeLockRef.current.release?.().catch(() => {}); wakeLockRef.current = null }
+      return
+    }
+    let liberado = false
+    const pedir = async () => {
+      try {
+        if ('wakeLock' in navigator) wakeLockRef.current = await (navigator as any).wakeLock.request('screen')
+      } catch { /* el navegador puede denegarlo: no pasa nada */ }
+    }
+    pedir()
+    const onVis = () => { if (document.visibilityState === 'visible' && !liberado) pedir() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => {
+      liberado = true
+      document.removeEventListener('visibilitychange', onVis)
+      if (wakeLockRef.current) { wakeLockRef.current.release?.().catch(() => {}); wakeLockRef.current = null }
+    }
+  }, [screen, pedidoListo])
+
   const confirmarPreauth = useCallback(async () => {
     if (!stripeRef.current || !cardElementRef.current || !preauthClientSecret) return
     setPreauthProcessing(true)
@@ -257,11 +389,15 @@ export default function QrClientApp({ token }: { token: string }) {
     })
     if (res.ok) {
       setNumComandas(n => n + 1)
+      if (res.comanda_id) setComandaIds(prev => [...prev, res.comanda_id])
+      setPedidoListo(false)
+      setAvisoEstado('idle')
+      primeAudio()         // desbloquea el sonido dentro de este gesto
       setCart([])          // limpia carrito para el próximo pedido
       setScreen('cooking')
     }
     else showToast('Error al enviar el pedido')
-  }, [data, sesionId, cart])
+  }, [data, sesionId, cart, primeAudio])
 
   const cobrar = useCallback(async (modo: 'completo' | 'igual' | 'items' = 'completo') => {
     if (!sesionId) return
@@ -356,7 +492,7 @@ export default function QrClientApp({ token }: { token: string }) {
 
   return (
     <div style={s}>
-      <style>{`:root{color-scheme:dark} *{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:#2e2720}`}</style>
+      <style>{`:root{color-scheme:dark} *{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{width:3px} ::-webkit-scrollbar-thumb{background:#2e2720} @keyframes iaPulse{0%,100%{opacity:1}50%{opacity:0.25}} @keyframes iaPop{0%{transform:scale(0.6);opacity:0}60%{transform:scale(1.1)}100%{transform:scale(1);opacity:1}}`}</style>
 
       {/* ── HEADER FIJO — nombre restaurante + botón camarero ── */}
       {mostrarHeader && (
@@ -634,20 +770,69 @@ export default function QrClientApp({ token }: { token: string }) {
         </div>
       )}
 
-      {/* ── COOKING ── */}
-      {screen === 'cooking' && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 22px', gap: 20, textAlign: 'center' }}>
+      {/* ── COOKING · esperando ── */}
+      {screen === 'cooking' && !pedidoListo && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 22px', gap: 18, textAlign: 'center' }}>
           <div style={{ fontSize: 56 }}>👨‍🍳</div>
           <div style={{ fontSize: 23, fontStyle: 'italic' }}>En cocina...</div>
           <div style={{ fontSize: 13, color: C.creamDim }}>Tiempo estimado: ~12 min</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 12, color: C.green }}>
+            <span style={{ width: 7, height: 7, borderRadius: '50%', background: C.green, display: 'inline-block', animation: 'iaPulse 1.4s ease-in-out infinite' }} />
+            Te avisamos en esta pantalla en cuanto salga
+          </div>
           {numComandas > 1 && (
             <div style={{ background: C.bg2, borderRadius: 10, padding: '8px 16px', border: `1px solid ${C.rule}` }}>
               <span style={{ fontFamily: 'monospace', fontSize: 11, color: C.creamDim }}>{numComandas} pedidos enviados esta sesión</span>
             </div>
           )}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%' }}>
+
+          {/* Aviso en el móvil (push web) — para poder cerrar/bloquear la pantalla */}
+          {avisoEstado === 'activo' ? (
+            <div style={{ width: '100%', background: '#3F7D4422', border: `1px solid ${C.green}55`, borderRadius: 12, padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <span style={{ fontSize: 18 }}>🔔</span>
+              <span style={{ fontSize: 12.5, color: C.creamMid, textAlign: 'left', lineHeight: 1.4 }}>Listo. Te avisaremos en el móvil aunque cierres esta página.</span>
+            </div>
+          ) : avisoEstado === 'no_soportado' ? (
+            <div style={{ width: '100%', background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '11px 15px', fontSize: 11.5, color: C.creamDim, lineHeight: 1.5 }}>
+              Tu navegador no admite avisos al móvil. Deja esta pantalla abierta y te avisamos aquí.
+            </div>
+          ) : (
+            <button
+              onClick={suscribirAviso}
+              disabled={avisoEstado === 'pidiendo'}
+              style={{ width: '100%', padding: '13px', background: C.bg2, border: `1px solid ${C.amber}77`, borderRadius: 13, color: C.amber, fontSize: 13.5, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+            >
+              <span style={{ fontSize: 16 }}>🔔</span>
+              {avisoEstado === 'pidiendo' ? 'Activando...' : avisoEstado === 'error' ? 'Reintentar aviso al móvil' : 'Avísame en el móvil'}
+            </button>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 2 }}>
             <button
               onClick={() => setScreen('menu')}
+              style={{ width: '100%', padding: '13px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
+            >
+              + Pedir algo más
+            </button>
+            <button
+              onClick={() => setScreen('bill')}
+              style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamDim, fontSize: 13, cursor: 'pointer' }}
+            >
+              Pedir la cuenta
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* ── COOKING · pedido listo ── */}
+      {screen === 'cooking' && pedidoListo && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '28px 22px', gap: 18, textAlign: 'center' }}>
+          <div style={{ width: 96, height: 96, borderRadius: '50%', background: '#3F7D4422', border: `2px solid ${C.green}`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 46, animation: 'iaPop 0.5s ease-out' }}>✅</div>
+          <div style={{ fontSize: 26, fontStyle: 'italic', color: C.cream }}>¡Tu pedido está listo!</div>
+          <div style={{ fontSize: 13.5, color: C.creamMid, lineHeight: 1.5 }}>Ya puede salir de cocina. ¡Que aproveche! 🍽️</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10, width: '100%', marginTop: 6 }}>
+            <button
+              onClick={() => { setPedidoListo(false); setScreen('menu') }}
               style={{ width: '100%', padding: '13px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}
             >
               + Pedir algo más

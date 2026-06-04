@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { crearPrintJobMarchar, crearPrintJobs } from '@/lib/courier'
+import { notificarClienteQrListo } from '@/lib/qr-notify'
 
 export const dynamic = 'force-dynamic'
 
@@ -177,6 +178,10 @@ export async function POST(req: NextRequest) {
   if (updateError) {
     console.error('[MARCHAR] Error actualizando comanda:', updateError)
   }
+
+  // 2b. Avisar al cliente QR si el pedido vino del QR de mesa (push web / WhatsApp).
+  //     Best-effort: nunca rompe el flujo de marchar.
+  notificarClienteQrListo(supabase, comanda_id, req.nextUrl.origin).catch(() => {})
 
   // 3. Actualizar mesa a 'activa'
   const { data: comanda } = await supabase
