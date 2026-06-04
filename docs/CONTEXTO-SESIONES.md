@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Panel de leads de la landing en `/super → CRM → Leads`** (04/06/2026): tarjeta
+  "FORMULARIOS DE LA LANDING" con Hoy / Ayer / 7d / 30d + total + chips por fuente,
+  alimentada por `GET /api/super/leads-landing` (auth super_admin, service role, tz
+  Europe/Madrid) sobre la tabla `leads_landing`. **Ojo:** son formularios, NO visitas
+  de página — las visitas viven en **Google Analytics (G-EN2YQLRLEX)**, no consultable
+  desde el contenedor. Pendiente futuro: panel de visitas vía GA4 Data API. También se
+  sacó `tsconfig.tsbuildinfo` del control de versiones (caché generado) → `.gitignore`.
+
 - **Tanda QR (04/06/2026) — 4 features:**
   - **Aviso "pedido listo"** (PR #17, en `main`): cuando la cocina marca lista una
     comanda QR, el cliente recibe aviso. **Capa 1 (gratis):** pantalla "En cocina"

@@ -1110,6 +1110,56 @@ interface Lead {
   leads_contactos?: { id: string; nombre: string; cargo: string | null; telefono: string | null; email: string | null; es_decisor: boolean; canal_preferido: string }[]
 }
 
+function LandingStatsCard({ C, SN, SM, sh }: { C: any; SN: string; SM: string; sh: () => Record<string, string> }) {
+  const [s, setS] = useState<any>(null)
+  const [err, setErr] = useState(false)
+  useEffect(() => {
+    fetch('/api/super/leads-landing', { headers: sh() })
+      .then(r => r.json())
+      .then(d => { if (d && typeof d.hoy === 'number') setS(d); else setErr(true) })
+      .catch(() => setErr(true))
+  }, [])
+  if (err) return null
+  const Stat = ({ label, value, accent }: { label: string; value: any; accent?: boolean }) => (
+    <div style={{ background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', flex: 1, minWidth: 110 }}>
+      <div style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.1em', textTransform: 'uppercase', color: C.ink4, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontFamily: "'Newsreader',Georgia,serif", fontSize: 30, fontWeight: 500, lineHeight: 1, color: accent ? C.red : C.ink }}>{value}</div>
+    </div>
+  )
+  return (
+    <div style={{ marginBottom: 24, border: `1px solid ${C.rule}`, borderRadius: 14, padding: 18, background: C.bg }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14, flexWrap: 'wrap', gap: 8 }}>
+        <div style={{ fontFamily: SM, fontSize: 11, color: C.red, letterSpacing: '.12em' }}>FORMULARIOS DE LA LANDING</div>
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{s ? `${s.total} en total` : ''}</div>
+      </div>
+      {!s ? (
+        <div style={{ fontFamily: SM, fontSize: 12, color: C.ink4 }}>Cargando…</div>
+      ) : (
+        <>
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Stat label="Hoy" value={s.hoy} accent={s.hoy > 0} />
+            <Stat label="Ayer" value={s.ayer} />
+            <Stat label="Últimos 7 días" value={s.d7} />
+            <Stat label="Últimos 30 días" value={s.d30} />
+          </div>
+          {Array.isArray(s.porFuente30) && s.porFuente30.length > 0 && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
+              {s.porFuente30.map((f: any) => (
+                <span key={f.fuente} style={{ fontFamily: SM, fontSize: 11, color: C.ink3, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 20, padding: '4px 10px' }}>
+                  {String(f.fuente).replace('landing-', '')} · {f.n}
+                </span>
+              ))}
+            </div>
+          )}
+          <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4, marginTop: 12 }}>
+            Esto son formularios, no visitas de página. Las visitas viven en Google Analytics · G-EN2YQLRLEX
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string }) {
   const sh = () => ({ 'x-ia-session': localStorage.getItem('ia_rest_session') ?? '', 'Content-Type': 'application/json' })
   const [leads, setLeads] = useState<Lead[]>([])
@@ -1385,6 +1435,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
           </button>
         </div>
       </div>
+
+      <LandingStatsCard C={C} SN={SN} SM={SM} sh={sh} />
 
       {showHunter && <LeadHunterPanel C={C} SN={SN} SM={SM} onLeadCreado={(lead: Lead) => setLeads(prev => [lead, ...prev])} sh={sh} />}
 

@@ -6,3 +6,7 @@ node_modules/
 scripts/setup-wizard/dist/
 scripts/setup-wizard/node_modules/
 .vercel
+
+# TypeScript incremental build cache (generado)
+tsconfig.tsbuildinfo
+*.tsbuildinfo
