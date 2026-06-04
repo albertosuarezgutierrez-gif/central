@@ -1,6 +1,8 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import reactHooks from "eslint-plugin-react-hooks";
+import reactPlugin from "eslint-plugin-react";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -19,6 +21,10 @@ const eslintConfig = defineConfig([
   // Los errores de compilación (TypeScript) siguen siendo bloqueantes.
   // Mejorar progresivamente en nuevos archivos.
   {
+    plugins: {
+      "react-hooks": reactHooks,
+      "react": reactPlugin,
+    },
     rules: {
       "@typescript-eslint/no-explicit-any":              "warn",
       "@typescript-eslint/no-unused-vars":               "warn",
