@@ -35,8 +35,8 @@ const MODULOS_TIPO: Record<string, { sala: string[][], cocina: string[][], gesti
     gestion: [['🎉','Portal cliente','Elige menú y confirma online.'],['🤝','Proveedores externos','Todo coordinado desde el sistema.'],['📦','Almacén','Coste por comensal.'],['📷','Albaranes','Foto y listo.'],['🔮','Previsión','Stock listo para cada evento.'],['📱','Captación leads','Formulario web para bodas y eventos.']]
   },
   eventos: {
-    sala: [['📲','App del evento','Cada invitado ve menú, horarios y ubicación desde su móvil.'],['✅','Check-in QR','Control de acceso y aforo el día del evento.'],['🍷','Barra por tiers','Barra libre y consumiciones controladas por evento.'],['📊','Rentabilidad','Coste real vs presupuesto del evento, en vivo.']],
-    cocina: [['🎙','Voz en el servicio','Pases del banquete sin papel ni errores.'],['📋','Alérgenos','Declaración de alérgenos por menú de evento.'],['🏷','APPCC','Plato testigo y temperaturas registradas solas.'],['🤝','Catering externo','Coordinas proveedores de comida desde el sistema.']],
+    sala: [['📲','App del evento','Cada invitado ve menú, horarios y ubicación desde su móvil.'],['✅','Check-in QR','Control de acceso y aforo el día del evento.'],['🗓','Timeline del día','Montaje, ceremonia y pases coordinados al minuto.'],['📊','Rentabilidad','Coste real vs presupuesto del evento, en vivo.']],
+    cocina: [['🤝','Catering externo','Coordinas al proveedor de comida desde el sistema.'],['🌸','Proveedores','Flores, música, fotógrafo: todos en una agenda.'],['📋','Menú y alérgenos','El menú del catering y sus alérgenos, por evento.'],['👥','Personal del evento','Quién va, a qué hora y en qué espacio.']],
     gestion: [['📅','Espacios y calendario','Disponibilidad de cada finca o salón, sin dobles reservas.'],['📥','Solicitudes','Bodas.net, web y llamadas en un solo embudo.'],['🧮','Presupuestos','Calculas el presupuesto y ves el margen neto al instante.'],['✍️','Contratos','Envío, firma y seguimiento del contrato del evento.'],['💳','Cobros de grupo','Cada invitado paga su parte online; tú ves el total.'],['📈','Previsión','La IA anticipa la temporada y capta recomendaciones.']]
   },
   bar: {
@@ -88,6 +88,10 @@ export default async function LandingPersonalizada({ params }: { params: Promise
   const nombre = lead.empresa || lead.restaurante || 'Vuestro restaurante'
   const ciudad = lead.ciudad || ''
   const modulos = getModulos(lead.tipo_negocio || '')
+  // Una hacienda/espacio de eventos no tiene cocina ni barra propias → etiquetas distintas.
+  const seccionLabels = modulos === MODULOS_TIPO.eventos
+    ? ['El día del evento', 'Catering y proveedores', 'Reservas y gestión']
+    : ['En sala', 'En cocina', 'En gestión']
   const MAIL = `mailto:hola@iarest.es?subject=Videollamada%20ia.rest%20–%20${encodeURIComponent(nombre)}&body=Hola%2C%20soy%20de%20${encodeURIComponent(nombre)}%20y%20me%20gustar%C3%ADa%20ver%20ia.rest.`
   const datosOp = (lead as any).datos_operativos || {}
   const headline = `Esto es lo que ia.rest puede hacer por ${nombre.split(' ')[0]}.`
@@ -145,9 +149,9 @@ export default async function LandingPersonalizada({ params }: { params: Promise
       <section style={{ background: D, padding: '72px 28px' }}>
         <div style={{ maxWidth: 780, margin: '0 auto' }}>
           {[
-            { l: 'En sala', c: R, items: modulos.sala },
-            { l: 'En cocina', c: AM, items: modulos.cocina },
-            { l: 'En gestión', c: GR, items: modulos.gestion },
+            { l: seccionLabels[0], c: R, items: modulos.sala },
+            { l: seccionLabels[1], c: AM, items: modulos.cocina },
+            { l: seccionLabels[2], c: GR, items: modulos.gestion },
           ].map(({ l, c, items }) => (
             <div key={l} style={{ marginBottom: 52 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 26 }}>
