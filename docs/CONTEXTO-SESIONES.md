@@ -16,21 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **Avisos al cliente QR "pedido listo"** (rama `claude/qr-order-notifications-hcsxH`):
-  cuando la cocina marca lista una comanda hecha desde el QR de mesa, el cliente
-  recibe aviso. **Capa 1 (gratis, sin infra):** la pantalla "En cocina" de
-  `/q/[token]` sondea `/api/qr/estado` cada 8s, mantiene la pantalla encendida
-  (Wake Lock) y, al estar listo, muestra ✅ + suena (tono WebAudio) + vibra.
-  **Capa 2 (push web):** botón "Avísame en el móvil" → suscripción push guardada
-  en `qr_avisos_suscripciones`; el disparo server-side está en `lib/qr-notify.ts`
-  (`notificarClienteQrListo`), llamado desde `/api/marchar` y `/api/kds/voz` al
-  pasar la comanda a `lista`. **WhatsApp = ENCHUFABLE:** canal `'whatsapp'` ya
-  soportado en `/api/qr/avisar` + `qr-notify` vía `lib/whatsapp.ts` (`sendWhatsApp`,
-  `whatsappConfigurado`); se enciende solo en cuanto haya `WHATSAPP_API_TOKEN` +
-  `WHATSAPP_PHONE_ID` en Vercel env (recomendado: Opción B, cliente abre la
-  conversación → ventana 24h → texto libre sin plantilla). Migración
-  `20260604_qr_avisos_cliente.sql` **aplicada en Supabase**. Pendiente UI cliente
-  de WhatsApp (botón wa.me) para cuando exista la cuenta Meta.
+- **Tanda QR (04/06/2026) — 4 features:**
+  - **Aviso "pedido listo"** (PR #17, en `main`): cuando la cocina marca lista una
+    comanda QR, el cliente recibe aviso. **Capa 1 (gratis):** pantalla "En cocina"
+    sondea `/api/qr/estado` cada 8s + Wake Lock + ✅/tono WebAudio/vibración al estar
+    listo. **Capa 2 (push web):** "Avísame en el móvil" → `qr_avisos_suscripciones`;
+    disparo server-side `lib/qr-notify.ts` desde `/api/marchar` y `/api/kds/voz`.
+  - **Borrado RGPD del aviso** (PR #18, en `main`): el dato (push/teléfono) se borra
+    al enviar el aviso, al cerrar la cuenta (webhook), y TTL 6h en cron `cobro-inactividad`.
+    Landing home: "QR en mesa" menciona el aviso al móvil.
+  - **Marketing opt-in** (PR #19, en `main`): el cliente autoriza novedades por
+    WhatsApp con **casillas separadas bar/ia.rest** (RGPD). Tabla
+    `marketing_consentimientos` (prueba + baja `baja_token`), `POST /api/qr/marketing-consent`,
+    baja 1 clic `GET /api/marketing/baja`. UI **oculta tras `NEXT_PUBLIC_QR_MARKETING=1`**.
+  - **"Llamar al camarero" configurable** (PR #20, abierto): flag
+    `cobro_config.qr_llamar_camarero` (default true), `qr-session` v3 lo devuelve,
+    toggle en `/owner`, y el cliente oculta el botón si está off (modo 100% autoservicio).
+  - **Migraciones aplicadas en Supabase:** `20260604_qr_avisos_cliente`,
+    `20260604_marketing_consentimientos`, `20260604_qr_llamar_camarero`.
+    **EF desplegada:** `qr-session` v3 (version 4).
+  - **WhatsApp = ENCHUFABLE** (`lib/whatsapp.ts`: `sendWhatsApp` + `whatsappConfigurado`):
+    se enciende con `WHATSAPP_API_TOKEN` + `WHATSAPP_PHONE_ID` en Vercel env.
+  - **Pendiente:** (a) cuenta WhatsApp (360dialog/Meta, Opción B) para encender avisos
+    y marketing; (b) flag `NEXT_PUBLIC_QR_MARKETING=1`; (c) Fase 2 marketing (envío de
+    campañas con plantillas Meta de pago + panel owner/ia.rest); (d) UI cliente wa.me.
 
 - **Landings con hero animado (demo de producto en movimiento)** — PR #15: las 3
   landings (`/`, `/catering`, `/espacios`) tienen ahora un **hero a 2 columnas** con
