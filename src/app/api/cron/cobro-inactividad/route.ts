@@ -21,6 +21,16 @@ export async function GET(req: NextRequest) {
 
   const supabase = createServerClient()
 
+  // RGPD / minimización (backstop): purgar avisos QR de hace >6h. Cubre las mesas
+  // en modo sin_pago que cierra el camarero en barra (no pasan por el webhook de
+  // Stripe). El dato útil dura minutos; aquí garantizamos que nada queda guardado.
+  try {
+    const hace6h = new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+    await supabase.from('qr_avisos_suscripciones').delete().lt('creado_en', hace6h)
+  } catch (e) {
+    console.error('[cobro-inactividad] purga avisos QR:', e)
+  }
+
   const { data: sesiones, error } = await supabase.rpc('get_sesiones_inactivas')
 
   if (error) {

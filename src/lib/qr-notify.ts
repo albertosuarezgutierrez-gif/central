@@ -87,9 +87,12 @@ export async function notificarClienteQrListo(
     }
 
     if (procesadas.length) {
+      // RGPD / minimización: en cuanto se envía el aviso, el dato (push o teléfono)
+      // ya no hace falta → se BORRA. Solo vive los minutos entre "pedir aviso" y
+      // "pedido listo". Lo que falle queda para reintento y lo barre el TTL del cron.
       await supabase
         .from('qr_avisos_suscripciones')
-        .update({ notificado: true, notificado_en: new Date().toISOString() })
+        .delete()
         .in('id', procesadas)
     }
   } catch (e) {

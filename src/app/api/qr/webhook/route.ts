@@ -67,6 +67,8 @@ export async function POST(req: NextRequest) {
             .from('qr_sesiones_cliente')
             .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
             .eq('id', sesion_id)
+          // RGPD: cuenta cerrada → borrar avisos (push/teléfono) de esta sesión
+          await supabase.from('qr_avisos_suscripciones').delete().eq('sesion_id', sesion_id)
         }
       } else {
         // Pago completo (sin división)
@@ -74,6 +76,8 @@ export async function POST(req: NextRequest) {
           .from('qr_sesiones_cliente')
           .update({ estado: 'pagada', pagado_en: new Date().toISOString() })
           .eq('id', sesion_id)
+        // RGPD: cuenta cerrada → borrar avisos (push/teléfono) de esta sesión
+        await supabase.from('qr_avisos_suscripciones').delete().eq('sesion_id', sesion_id)
       }
 
       // ── REGISTRAR EN RESUMEN COBROS (panel financiero Alberto) ──

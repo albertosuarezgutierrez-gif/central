@@ -88,6 +88,25 @@
 
 ## 📝 Registro de sesiones
 
+### 2026-06-04 (2) — QR avisos: PR #17 mergeado + landing + RGPD (borrado del dato)
+- **PR #17 MERGEADO** a `main` (squash `cad703b`). El bache de CI fue un tipo:
+  `applicationServerKey` esperaba `BufferSource`; el helper con anotación
+  `: Uint8Array` se ensanchaba a `ArrayBufferLike` → se quitó la anotación.
+  Aprendizaje: `npx tsc` sin `node_modules` no reproduce el build de Vercel; hay
+  que correr `next build` con deps instaladas.
+- **Seguimiento (rama `claude/qr-aviso-landing-rgpd`, PR nuevo):**
+  - **Landing** (`src/app/page.tsx`, capacidad 03 "QR en mesa"): añadido el
+    beneficio "…y le avisamos al móvil cuando su pedido está listo". **NO** se puso
+    "ningún programa lo hace" (regla: no nombrar/comparar competidores + riesgo legal
+    de publicidad comparativa). Beneficio = el QUÉ, sin el CÓMO.
+  - **RGPD / minimización del dato** (Alberto: borrar el móvil al cerrar cuenta):
+    `qr_avisos_suscripciones` (push o teléfono) se borra en 3 capas: (1) **al enviar**
+    el aviso, la fila se BORRA (uso único, vive minutos) — `lib/qr-notify.ts`;
+    (2) al **cerrar la cuenta** (`estado='pagada'`) en `/api/qr/webhook`;
+    (3) **TTL backstop** en el cron `cobro-inactividad`: purga filas de >6h (cubre
+    mesas `sin_pago` que cierra el camarero, que no pasan por Stripe).
+  - `next build` verde con deps instaladas.
+
 ### 2026-06-04 — Avisos al cliente QR cuando el pedido está listo (capa 1 + push web; WhatsApp enchufable)
 - **Contexto/decisión (con Alberto):** el cliente que pide por QR no se entera de
   cuándo sale su pedido. Se decidió montar **capa 1 (gratis)** + **push web** ya, y

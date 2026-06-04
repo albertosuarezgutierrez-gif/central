@@ -675,7 +675,7 @@ footer{border-top:1px solid var(--border);padding:40px 48px;display:flex;justify
     <div class="cap-grid fi d1">
       <div class="cap-item"><span class="cap-num">01</span><div class="cap-title">Voz → cocina</div><div class="cap-sub">Sin tocar pantalla. La orden llega sola.</div></div>
       <div class="cap-item"><span class="cap-num">02</span><div class="cap-title">Cocina organizada</div><div class="cap-sub">Cada plato, en su momento. Sin caos.</div></div>
-      <div class="cap-item"><span class="cap-num">03</span><div class="cap-title">QR en mesa</div><div class="cap-sub">El cliente pide solo. Sin app, sin camarero.</div></div>
+      <div class="cap-item"><span class="cap-num">03</span><div class="cap-title">QR en mesa</div><div class="cap-sub">El cliente pide solo y le avisamos al móvil cuando su pedido está listo.</div></div>
       <div class="cap-item"><span class="cap-num">04</span><div class="cap-title">Ventas online propias</div><div class="cap-sub">Delivery y recogida sin intermediarios.</div></div>
       <div class="cap-item"><span class="cap-num">05</span><div class="cap-title">Almacén automático</div><div class="cap-sub">El stock se gestiona solo. Cero entrada manual.</div></div>
       <div class="cap-item"><span class="cap-num">06</span><div class="cap-title">Ciclo de compras</div><div class="cap-sub">Del pedido al pago al proveedor. Todo cerrado.</div></div>
