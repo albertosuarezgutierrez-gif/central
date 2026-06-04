@@ -6576,7 +6576,7 @@ function QRTabOwner({ restauranteId, sh }: { restauranteId: string; sh: () => Re
 
 // ── Sección ia.rest cobro (modo + timer + progreso descuento) ─
 function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
-  const [config, setConfig] = useState<{ modo_cobro: string; timer_inactividad_min: number } | null>(null)
+  const [config, setConfig] = useState<{ modo_cobro: string; timer_inactividad_min: number; qr_llamar_camarero?: boolean } | null>(null)
   const [resumen, setResumen] = useState<{ volumen_eur: number; comision_eur: number; descuento_cuota_eur: number; num_transacciones: number } | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -6690,6 +6690,30 @@ function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: 
               </div>
             ))}
           </div>
+
+          {/* Botón llamar al camarero (100% autoservicio) */}
+          <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 10, letterSpacing: '0.06em' }}>BOTÓN "LLAMAR AL CAMARERO" EN EL QR</div>
+          {(() => {
+            const activo = config.qr_llamar_camarero !== false
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: C.paper, border: `1px solid ${C.rule}`, borderRadius: 12, padding: '12px 16px', marginBottom: 20 }}>
+                <div style={{ maxWidth: 300 }}>
+                  <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{activo ? 'Activado' : 'Desactivado (100% autoservicio)'}</div>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2 }}>
+                    {activo
+                      ? 'El cliente puede avisar al camarero desde su móvil.'
+                      : 'Ocultamos el botón: el cliente pide y recoge sin avisar a nadie.'}
+                  </div>
+                </div>
+                <button
+                  onClick={() => save({ qr_llamar_camarero: !activo })}
+                  aria-label="Activar o desactivar el botón de llamar al camarero"
+                  style={{ flexShrink: 0, width: 46, height: 26, borderRadius: 13, border: 'none', cursor: 'pointer', background: activo ? C.green : C.ink4, position: 'relative', transition: 'background 0.2s' }}>
+                  <span style={{ position: 'absolute', top: 3, left: activo ? 23 : 3, width: 20, height: 20, borderRadius: '50%', background: '#fff', transition: 'left 0.2s' }} />
+                </button>
+              </div>
+            )
+          })()}
 
           {/* Timer inactividad */}
           <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 10, letterSpacing: '0.06em' }}>ALERTA AL CAMARERO SI LA MESA NO PAGA</div>

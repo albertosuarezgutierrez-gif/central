@@ -88,6 +88,21 @@
 
 ## 📝 Registro de sesiones
 
+### 2026-06-04 (4) — "Llamar al camarero" configurable (modo 100% autoservicio)
+- **Petición de Alberto:** un local sin camareros (autoservicio/recogida) no quiere
+  el botón de "llamar al camarero" en el QR → configurable por el dueño.
+- **Rama `claude/qr-llamar-camarero-config`:**
+  - Migración `20260604_qr_llamar_camarero.sql`: columna `qr_llamar_camarero BOOLEAN
+    DEFAULT true` en `cobro_config`. **Aplicada en Supabase.**
+  - EF `qr-session` → **v3** (desplegada en Supabase, version 4, verify_jwt=false):
+    selecciona la columna y devuelve `cobro.llamar_camarero` (default true).
+  - `/api/owner/cobro-config`: `qr_llamar_camarero` en allowed + validación booleana.
+  - Owner UI (`owner/page.tsx`, `CobroConfigSection`): toggle "Botón llamar al
+    camarero" (on = normal / off = 100% autoservicio).
+  - `QrClientApp.tsx`: `llamarCamareroActivo = cobro.llamar_camarero !== false`;
+    oculta el botón del header, el del welcome y el modal cuando está off.
+  - `next build` verde con deps instaladas.
+
 ### 2026-06-04 (3) — Marketing opt-in del cliente QR (Fase 1: captura de consentimiento)
 - **Idea de Alberto:** aprovechar el aviso de "pedido listo" para que el cliente
   autorice (opcional) recibir novedades (fiestas, menús de Navidad, ofertas).

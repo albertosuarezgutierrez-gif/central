@@ -34,7 +34,7 @@ interface CartItem extends Producto { qty: number }
 interface SessionData {
   mesa: { id: string; codigo: string; nombre: string; qr_modo_pago: string; precio_fijo_persona?: number | null; precio_fijo_concepto?: string | null }
   restaurante: { id: string; nombre: string; connect_activo: boolean; stripe_account_id?: string | null }
-  cobro?: { modo_cobro: 'por_ronda' | 'pre_auth' | 'cuenta_abierta'; timer_min: number }
+  cobro?: { modo_cobro: 'por_ronda' | 'pre_auth' | 'cuenta_abierta'; timer_min: number; llamar_camarero?: boolean }
   productos: Producto[]
   sesion_id: string | null
 }
@@ -231,6 +231,8 @@ export default function QrClientApp({ token }: { token: string }) {
   }, [token])
 
   const modoCobro = data?.cobro?.modo_cobro || 'cuenta_abierta'
+  // El dueño puede ocultar el botón de llamar al camarero (locales 100% autoservicio)
+  const llamarCamareroActivo = data?.cobro?.llamar_camarero !== false
 
   // Función auxiliar: crear sesión + manejar flujo post-sesión
   const postCrearSesion = useCallback(async (sid: string, nCom: number, d: SessionData) => {
@@ -577,19 +579,21 @@ export default function QrClientApp({ token }: { token: string }) {
             <div style={{ fontFamily:'monospace', fontSize:9, color:C.creamDim, letterSpacing:'0.08em' }}>{data?.restaurante.nombre.toUpperCase()}</div>
             <div style={{ fontSize:12, fontWeight:600, color:C.cream, marginTop:1 }}>Mesa {data?.mesa.codigo}</div>
           </div>
-          <button
-            onClick={() => setCallModal(true)}
-            disabled={calling}
-            style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', background: calling ? C.bg3 : C.amber, border:'none', borderRadius:20, cursor: calling ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:600, color: calling ? C.creamDim : '#1A1714', transition:'all 0.2s' }}
-          >
-            <span style={{ fontSize:14 }}>{calling ? '⏳' : '🙋'}</span>
-            {calling ? 'Avisando...' : 'Camarero'}
-          </button>
+          {llamarCamareroActivo && (
+            <button
+              onClick={() => setCallModal(true)}
+              disabled={calling}
+              style={{ display:'flex', alignItems:'center', gap:6, padding:'7px 13px', background: calling ? C.bg3 : C.amber, border:'none', borderRadius:20, cursor: calling ? 'not-allowed' : 'pointer', fontSize:12, fontWeight:600, color: calling ? C.creamDim : '#1A1714', transition:'all 0.2s' }}
+            >
+              <span style={{ fontSize:14 }}>{calling ? '⏳' : '🙋'}</span>
+              {calling ? 'Avisando...' : 'Camarero'}
+            </button>
+          )}
         </div>
       )}
 
       {/* ── MODAL MOTIVO LLAMADA ── */}
-      {callModal && (
+      {callModal && llamarCamareroActivo && (
         <div
           onClick={() => setCallModal(false)}
           style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', zIndex:60, display:'flex', alignItems:'flex-end', justifyContent:'center' }}
@@ -644,9 +648,11 @@ export default function QrClientApp({ token }: { token: string }) {
           <button onClick={iniciarSesion} style={{ width: '100%', padding: '15px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
             Ver la carta →
           </button>
-          <button onClick={() => showToast('🙋 Camarero avisado')} style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamDim, fontSize: 13, cursor: 'pointer' }}>
-            🙋 Llamar al camarero
-          </button>
+          {llamarCamareroActivo && (
+            <button onClick={() => showToast('🙋 Camarero avisado')} style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamDim, fontSize: 13, cursor: 'pointer' }}>
+              🙋 Llamar al camarero
+            </button>
+          )}
         </div>
       )}
 

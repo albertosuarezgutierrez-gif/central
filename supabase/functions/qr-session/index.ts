@@ -1,6 +1,7 @@
-// qr-session v2 — Crea/obtiene sesión de cliente QR
+// qr-session v3 — Crea/obtiene sesión de cliente QR
 // GET  ?token=xxx                        → valida token, devuelve restaurante+mesa+carta+config precio fijo
 // POST { token, num_comensales }         → crea sesión activa con número de comensales
+// v3: devuelve cobro.llamar_camarero (configurable por el dueño; 100% autoservicio)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -65,7 +66,7 @@ serve(async (req) => {
     // 2b. Configuración de cobro (modo pre_auth / por_ronda / cuenta_abierta)
     const { data: cobroConfig } = await supabase
       .from('cobro_config')
-      .select('modo_cobro, timer_inactividad_min')
+      .select('modo_cobro, timer_inactividad_min, qr_llamar_camarero')
       .eq('restaurante_id', mesa.restaurante_id)
       .single()
 
@@ -104,6 +105,7 @@ serve(async (req) => {
         cobro: {
           modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
           timer_min: cobroConfig?.timer_inactividad_min || 45,
+          llamar_camarero: cobroConfig?.qr_llamar_camarero !== false,
         },
         productos: productos || [],
         sesion_id: sesionExistente?.id || null,
@@ -150,6 +152,7 @@ serve(async (req) => {
       cobro: {
         modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
         timer_min: cobroConfig?.timer_inactividad_min || 45,
+        llamar_camarero: cobroConfig?.qr_llamar_camarero !== false,
       },
       productos: productos || [],
     })
