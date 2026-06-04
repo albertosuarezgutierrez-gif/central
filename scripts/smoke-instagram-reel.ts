@@ -33,8 +33,8 @@ function buildReelUrl(segs: Seg[], audioPid?: string | null): string {
   segs.forEach((s, i) => {
     const off = i * DUR
     const fade = i === 0 ? '' : `,e_fade:${FADE}`
-    if (s.kind === 'video') parts.push(`l_video:${s.pid}/c_fill,w_${W},h_${H},g_auto,e_volume:mute/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
-    else parts.push(`l_${s.pid}/c_pad,w_${W},h_${H},b_rgb:14110E/fl_splice,du_${DUR},e_zoompan:from_(g_center;zoom_1.0);to_(g_center;zoom_1.08)/so_${off},fl_layer_apply${fade}`)
+    if (s.kind === 'video') parts.push(`l_video:${s.pid}/c_fill,w_${W},h_${H},e_volume:mute/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
+    else parts.push(`l_${s.pid}/c_pad,w_${W},h_${H},b_rgb:14110E/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
   })
   if (audioPid) parts.push(`l_audio:${audioPid}/du_${segs.length * DUR},e_volume:65/fl_layer_apply`)
   return `https://res.cloudinary.com/${CLOUD}/video/upload/${parts.join('/')}/q_auto/${BASE}.mp4`
@@ -50,7 +50,7 @@ const url = buildReelUrl(segs, 'iarest_music_1')
 check(url.includes('l_video:iarest_amb_1'), 'url: capa de vídeo de ambiente')
 check(url.includes('e_volume:mute'), 'url: ambiente silenciado (no pelea con música)')
 check(url.includes('l_audio:iarest_music_1/du_12'), 'url: audio recortado a la duración total (12s)')
-check(url.includes('e_zoompan'), 'url: Ken Burns en slides de imagen')
+check(!url.includes('e_zoompan'), 'url: sin e_zoompan (rompía la reproducción)')
 check(url.split('e_fade').length === segs.length, 'url: crossfade solo a partir del 2º segmento')
 check(!buildReelUrl(segs, null).includes('l_audio'), 'url: sin audio cuando audioPid=null (reel mudo)')
 check(buildReelUrl([{ kind: 'image', pid: 'a' }]).includes('so_0,fl_layer_apply'), 'url: primer segmento en offset 0 sin fade')

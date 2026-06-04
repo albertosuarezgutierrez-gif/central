@@ -48,12 +48,18 @@
   - `src/app/api/super/instagram/seed-reel-assets/route.ts`: siembra clips de ambiente
     Pexels→Cloudinary (POST Bearer CRON_SECRET, o **GET desde el navegador** logueado en /super).
   - Smoke `scripts/smoke-instagram-reel.ts` **OK**; `tsc` y `next build` **verdes**.
-  - **Riesgo abierto:** la sintaxis Cloudinary de splice de vídeo + `e_zoompan` + `l_audio`
-    es empírica → validar con render real (`/api/cron/instagram?manual=1&formato=reel`). El
-    footage va tras `CLOUDINARY_AMBIENT_IDS` (vacío) → no bloquea: el reel ya sale con
-    slides+producto+música; el ambiente se enciende al sembrar y confirmar el render.
-  - **Pendiente Alberto:** confirmar `PEXELS_API_KEY` (subida) lanzando el seed · pegar
-    `CLOUDINARY_AMBIENT_IDS` · subir 3-5 pistas Pixabay y rellenar `CLOUDINARY_MUSIC_IDS`.
+  - **Estado de validación en prod:** el reel base (slides + mockup producto) **se genera
+    bien** (NIM con `noFallback`), pero **NO se reproducía** → causa: `e_zoompan` por slide
+    rompía el render de Cloudinary. **PR #38: e_zoompan quitado** (vuelta a splice+crossfade
+    estático). Pendiente reprobar que ahora reproduce. El **seed de ambiente funcionó** (6
+    clips `iarest_amb_1..6` en Cloudinary), pero el primer reel salió SIN ambiente porque
+    `CLOUDINARY_AMBIENT_IDS` aún no estaba activo al generarlo. Falta: con la env activa,
+    confirmar que el **splice de vídeo (`l_video`) + `l_audio`** rinden (siguen siendo empíricos;
+    no probables desde el contenedor — Cloudinary `Host not in allowlist`).
+  - **Pendiente Alberto:** `CLOUDINARY_AMBIENT_IDS=iarest_amb_1,...,iarest_amb_6` en Vercel +
+    redeploy + reprobar render · subir 3-5 pistas Pixabay → `CLOUDINARY_MUSIC_IDS`.
+  - **Pendiente código:** reañadir motion (Ken Burns) con sintaxis Cloudinary correcta una
+    vez confirmado que el base reproduce.
 
 - **Botón "📧 Enviar emails de venta" en `/super → Apify Sevilla` — 04/06/2026**
   (PR #33, mergeado): el envío de email frío de Sevilla se extrajo a
