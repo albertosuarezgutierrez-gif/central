@@ -2,16 +2,20 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHmac } from 'node:crypto'
 
-// ─── Selector test / live ────────────────────────────────────────────────────
-// Para activar modo LIVE cuando salgas a mercado:
-//   Supabase → Edge Functions → Secrets → STRIPE_MODE = live
+// ─── Selector de secretos (robusto: live + test a la vez) ────────────────────
+// Antes dependía de STRIPE_MODE: si el flag no estaba en "live", validaba los
+// eventos LIVE con el secreto de TEST → firma inválida → 401 (eventos perdidos).
+// Ahora probamos TODOS los secretos configurados. Cada evento se valida contra
+// el secreto que realmente lo firmó (live→live, test→test). Sigue siendo
+// fail-closed: si hay ≥1 secreto y ninguno valida, se rechaza con 401.
+//   Pon el signing secret del endpoint live en: Supabase → Edge Functions →
+//   Secrets → STRIPE_WEBHOOK_SECRET (y el de test en STRIPE_WEBHOOK_SECRET_TEST).
 // ─────────────────────────────────────────────────────────────────────────────
-function getWebhookSecret(): string {
-  const mode = (Deno.env.get("STRIPE_MODE") ?? "test").toLowerCase();
-  if (mode === "test") {
-    return Deno.env.get("STRIPE_WEBHOOK_SECRET_TEST") ?? "";
-  }
-  return Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "";
+function getWebhookSecrets(): string[] {
+  return [
+    Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "",
+    Deno.env.get("STRIPE_WEBHOOK_SECRET_TEST") ?? "",
+  ].filter((s) => s.length > 0);
 }
 
 Deno.serve(async (req: Request) => {
@@ -19,10 +23,11 @@ Deno.serve(async (req: Request) => {
 
   const bodyText = await req.text()
   const signature = req.headers.get('Stripe-Signature') ?? ''
-  const webhookSecret = getWebhookSecret();
+  const webhookSecrets = getWebhookSecrets();
 
-  if (webhookSecret && !verificarFirmaStripe(bodyText, signature, webhookSecret)) {
-    console.warn('[webhook-stripe] Firma inválida')
+  if (webhookSecrets.length > 0 &&
+      !webhookSecrets.some((s) => verificarFirmaStripe(bodyText, signature, s))) {
+    console.warn(`[webhook-stripe] Firma inválida (probados ${webhookSecrets.length} secretos)`)
     return new Response('Unauthorized', { status: 401 })
   }
 
@@ -31,8 +36,7 @@ Deno.serve(async (req: Request) => {
   catch { return new Response('Invalid JSON', { status: 400 }) }
 
   const { type, data } = event
-  const mode = (Deno.env.get("STRIPE_MODE") ?? "test").toLowerCase();
-  console.log(`[webhook-stripe] Evento: ${type} (modo: ${mode})`)
+  console.log(`[webhook-stripe] Evento: ${type}`)
 
   const supabase = createClient(
     Deno.env.get('SUPABASE_URL')!,

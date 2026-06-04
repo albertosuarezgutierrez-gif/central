@@ -62,27 +62,26 @@ Evidencia: pago real `pi_3TdWrLK5xixGkeRI0AsMwctQ` = **10,00 € EUR `succeeded`
 
 ## Fix
 
-1. En **Supabase → Edge Functions → Secrets** (o por CLI), poner el modo y el
-   secreto del endpoint **live** (copiar el signing secret `whsec_…` del endpoint
-   en el dashboard de Stripe → Developers → Webhooks → ese endpoint):
+**[HECHO] Paso 0 — `webhook-stripe` v23 desplegada (robusta).** Se cambió la
+verificación para que pruebe TODOS los secretos configurados (`STRIPE_WEBHOOK_SECRET`
+live y `STRIPE_WEBHOOK_SECRET_TEST`) en vez de elegir uno según `STRIPE_MODE`. Cada
+evento se valida contra el secreto que lo firmó (live→live, test→test); sigue siendo
+fail-closed. Esto elimina la trampa del flag. **Si el signing secret live ya estaba
+en `STRIPE_WEBHOOK_SECRET` (Supabase), la incidencia ya está resuelta.**
 
-   ```bash
-   supabase secrets set STRIPE_MODE=live \
-     STRIPE_WEBHOOK_SECRET=whsec_XXXXXXXXXXXXXXXXXXXXXXXX \
-     --project-ref efncqyvhniaxsirhdxaa
-   ```
+1. **[REQUIERE ALBERTO] Confirmar el secreto live en Supabase.** En
+   **Supabase → Edge Functions → Manage secrets**, asegurar que `STRIPE_WEBHOOK_SECRET`
+   = signing secret (`whsec_…`) del endpoint **live** `…/webhook-stripe` (copiado de
+   Stripe → Developers → Webhooks → ese endpoint → "Signing secret"). Ya no hace falta
+   tocar `STRIPE_MODE` para este flujo. (Los secretos de EF viven en Supabase, no en Vercel.)
 
-   > Los secretos de Edge Functions NO se heredan de Vercel; viven en Supabase.
-   > Verificar que `STRIPE_MODE` quede consistente con el resto del flujo (P1 del
-   > MAESTRO: en Vercel también está sin definir → `test`).
+2. **Verificación**: tras el paso 1, el siguiente evento (o un "Resend") debe
+   responder `200` en los logs de la EF.
 
-2. (Opcional, no hace falta redeploy si sólo cambian secretos) Confirmar que la
-   función recoge el nuevo secreto — el siguiente evento debe responder `200`.
-
-3. **Recuperar los eventos perdidos**: en el dashboard de Stripe (Webhooks → el
-   endpoint → eventos fallidos) usar **"Resend"** sobre los 78 eventos que sigan
-   dentro de la ventana de retención. Como los `pagos` afectados siguen en
-   `pendiente`, el re-envío los pondrá en `completado` correctamente.
+3. **[REQUIERE ALBERTO] Recuperar los eventos perdidos**: en el dashboard de Stripe
+   (Webhooks → el endpoint → eventos fallidos) usar **"Resend"** sobre los 78 eventos
+   que sigan dentro de la ventana de retención (antes del 10 jun). Como los `pagos`
+   afectados siguen en `pendiente`, el re-envío los pondrá en `completado`.
 
 ## Verificación (evidencia, no afirmaciones)
 
