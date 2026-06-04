@@ -67,11 +67,77 @@ export async function POST(req: NextRequest) {
     if (email) update.email_pagador = email
     if (telefono) update.telefono_pagador = telefono
 
-    await supabase
+    // Idempotencia: Stripe reintenta el webhook. Solo transicionamos las filas que
+    // aún no estaban 'pagado' y nos quedamos con las que de verdad acaban de pagarse,
+    // para no enviar el aviso de Telegram dos veces.
+    const { data: recienPagados } = await supabase
       .from('cobros_grupo_pagos')
       .update(update)
       .eq('stripe_checkout_session', session.id)
+      .neq('estado', 'pagado')
+      .select('cobro_grupo_id, concepto, cantidad, importe_eur, nombre_pagador')
+
+    if (recienPagados?.length) {
+      await avisarCompra(supabase, recienPagados)
+    }
   }
 
   return NextResponse.json({ ok: true })
+}
+
+type PagoFila = {
+  cobro_grupo_id: string
+  concepto: string | null
+  cantidad: number | null
+  importe_eur: number | null
+  nombre_pagador: string | null
+}
+
+// Aviso por Telegram al operador cuando se confirma una compra en un portal de cobros
+// de grupo con avisar_telegram = true. Best-effort: nunca rompe el 200 del webhook.
+async function avisarCompra(
+  supabase: ReturnType<typeof createServerClient>,
+  pagados: PagoFila[]
+): Promise<void> {
+  try {
+    const cobroId = pagados[0].cobro_grupo_id
+
+    const { data: portal } = await supabase
+      .from('cobros_grupo')
+      .select('titulo, avisar_telegram')
+      .eq('id', cobroId)
+      .single()
+
+    if (!portal?.avisar_telegram) return
+
+    const eur = (n: number) =>
+      n.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
+
+    const totalCompra = pagados.reduce((s, p) => s + Number(p.importe_eur ?? 0), 0)
+
+    // Acumulado del portal (ya incluye esta compra, que acabamos de marcar 'pagado').
+    const { data: todos } = await supabase
+      .from('cobros_grupo_pagos')
+      .select('importe_eur')
+      .eq('cobro_grupo_id', cobroId)
+      .eq('estado', 'pagado')
+
+    const acumulado = (todos ?? []).reduce((s, p) => s + Number(p.importe_eur ?? 0), 0)
+
+    const nombre = pagados[0].nombre_pagador?.trim() || 'Invitado'
+    const lineas = pagados
+      .map(p => `• ${p.cantidad ?? 1}× ${p.concepto ?? 'Menú'}`)
+      .join('\n')
+
+    await tgAlert(
+      `🛒 Nueva compra · ${portal.titulo}\n\n` +
+      `👤 ${nombre}\n` +
+      `${lineas}\n` +
+      `💶 Esta compra: ${eur(totalCompra)}\n` +
+      `📊 Recaudado del congreso: ${eur(acumulado)}`,
+      'info'
+    )
+  } catch {
+    // Best-effort: un fallo del aviso no debe afectar al procesamiento del pago.
+  }
 }
