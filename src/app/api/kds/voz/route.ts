@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { transcribir } from '@/lib/ear'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
+import { notificarClienteQrListo } from '@/lib/qr-notify'
 
 // ── BRAIN-KDS: system prompt orientado a confirmar platos ──────────────────
 const KDS_PROMPT = `Eres BRAIN-KDS, el agente de confirmación de cocina de ia.rest.
@@ -158,6 +159,9 @@ export async function POST(req: NextRequest) {
       if (todosListos) {
         await supabase.from('comandas').update({ estado: 'lista' }).eq('id', comanda.id)
         await supabase.from('mesas').update({ estado: 'activa' }).eq('id', mesa.id)
+
+        // Avisar al cliente QR si el pedido vino del QR de mesa (best-effort).
+        notificarClienteQrListo(supabase, comanda.id, req.nextUrl.origin).catch(() => {})
 
         if (comanda.camarero_id) {
           fetch('/api/push/send', {

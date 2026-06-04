@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Avisos al cliente QR "pedido listo"** (rama `claude/qr-order-notifications-hcsxH`):
+  cuando la cocina marca lista una comanda hecha desde el QR de mesa, el cliente
+  recibe aviso. **Capa 1 (gratis, sin infra):** la pantalla "En cocina" de
+  `/q/[token]` sondea `/api/qr/estado` cada 8s, mantiene la pantalla encendida
+  (Wake Lock) y, al estar listo, muestra ✅ + suena (tono WebAudio) + vibra.
+  **Capa 2 (push web):** botón "Avísame en el móvil" → suscripción push guardada
+  en `qr_avisos_suscripciones`; el disparo server-side está en `lib/qr-notify.ts`
+  (`notificarClienteQrListo`), llamado desde `/api/marchar` y `/api/kds/voz` al
+  pasar la comanda a `lista`. **WhatsApp = ENCHUFABLE:** canal `'whatsapp'` ya
+  soportado en `/api/qr/avisar` + `qr-notify` vía `lib/whatsapp.ts` (`sendWhatsApp`,
+  `whatsappConfigurado`); se enciende solo en cuanto haya `WHATSAPP_API_TOKEN` +
+  `WHATSAPP_PHONE_ID` en Vercel env (recomendado: Opción B, cliente abre la
+  conversación → ventana 24h → texto libre sin plantilla). Migración
+  `20260604_qr_avisos_cliente.sql` **aplicada en Supabase**. Pendiente UI cliente
+  de WhatsApp (botón wa.me) para cuando exista la cuenta Meta.
+
 - **Landings con hero animado (demo de producto en movimiento)** — PR #15: las 3
   landings (`/`, `/catering`, `/espacios`) tienen ahora un **hero a 2 columnas** con
   animación en bucle del "momento mágico" de cada vertical:
@@ -71,6 +87,36 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-04 — Avisos al cliente QR cuando el pedido está listo (capa 1 + push web; WhatsApp enchufable)
+- **Contexto/decisión (con Alberto):** el cliente que pide por QR no se entera de
+  cuándo sale su pedido. Se decidió montar **capa 1 (gratis)** + **push web** ya, y
+  dejar **WhatsApp enchufable** (Opción B: el cliente abre la conversación → ventana
+  24h → respuesta en texto libre sin plantilla; SMS descartado como principal por
+  coste). En iPhone el push web solo va con PWA instalada → por eso WhatsApp cubre
+  ese hueco más adelante.
+- **Backend nuevo:**
+  - Migración `20260604_qr_avisos_cliente.sql` → tabla `qr_avisos_suscripciones`
+    (sesion_id, comanda_id, token, canal `web_push`|`whatsapp`, subscription/destino,
+    notificado). RLS solo service role. **Aplicada en Supabase** vía MCP.
+  - `lib/qr-notify.ts` → `notificarClienteQrListo(supabase, comandaId, origin)`:
+    si la comanda es `origen='qr_cliente'`, envía push (web-push, mismas VAPID que
+    `/api/push/send`) y/o WhatsApp a las suscripciones pendientes; marca notificado;
+    limpia subs caducadas (410/404). Best-effort, nunca lanza.
+  - `lib/whatsapp.ts` → reutilizado el existente; añadido `whatsappConfigurado()`.
+  - `/api/qr/avisar` (POST, público, valida sesión+comanda) → registra el canal.
+  - `/api/qr/estado` (GET, público) → estados de las comandas de la sesión (polling).
+  - Disparo en `/api/marchar` (tras `estado='lista'`) y en `/api/kds/voz` (cuando
+    todos los items quedan listos).
+- **Cliente (`q/[token]/QrClientApp.tsx`):** captura `comanda_id` de cada pedido;
+  pantalla "En cocina" sondea estado + Wake Lock + (al listo) tono WebAudio + vibración
+  + tarjeta ✅ "¡Tu pedido está listo!"; botón "Avísame en el móvil" (push). Audio se
+  *primea* dentro del gesto de confirmar pedido (requisito móvil). Keyframes `iaPulse`/`iaPop`.
+- **Verificación:** `npx tsc --noEmit` → solo el error preexistente de `@types/node`,
+  0 errores nuevos. Sin test en vivo (la network del contenedor bloquea prod).
+- **Pendiente:** UI cliente de WhatsApp (botón wa.me) + alta de cuenta Meta/360dialog
+  para encender el canal; valorar añadir `origen='qr_cliente'` también a otros caminos
+  que marquen `lista` si aparecieran (hoy: marchar + kds/voz; la capa 1 cubre cualquiera).
 
 ### 2026-06-03 — Acceso a `/super` por email + contraseña + candado a 1 año
 - **Problema de fondo:** entrar a `/super` era un coñazo: llave secreta en la URL (cookie
