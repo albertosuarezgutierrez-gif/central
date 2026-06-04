@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Botón "📧 Enviar emails de venta" en `/super → Apify Sevilla` — 04/06/2026**
+  (PR #33, mergeado): el envío de email frío de Sevilla se extrajo a
+  `lib/lead-hunter-sevilla.ts` (`enviarEmailsSevilla`), compartido por el cron
+  `crm-lead-hunter-sevilla` (ahora wrapper fino) y un endpoint nuevo
+  `POST /api/super/lead-hunter-sevilla` (auth super_admin). El panel gana un botón
+  para lanzar la tanda a mano (1 clic, sin terminal). `tsc`+`lint`+`build` verde.
+
+- **Reorg del panel `/super` por dominios — 04/06/2026** (PR #34, draft):
+  ✅ IMPLEMENTADA la reorg (antes era propuesta). En `src/app/super/page.tsx`:
+  (1) barra principal = **NEGOCIO** (Clientes · CRM · Cobro · Suscripciones);
+  (2) "Apify Sevilla" pasó a **CRM → sub-pestaña `🔍 Prospección`** (capta + envía
+  emails); (3) **Sugerencias** bajó al grupo Soporte; (4) el cajón único SISTEMA se
+  partió en **3 dropdowns por dominio**: Crecimiento (Instagram/Blog), Soporte
+  (Soporte/Sugerencias/Proveedores) y Sistema (Sistema/Autocuras/QA/Agentes/IA
+  Training), con badge agregado por grupo; (5) mecánica de menú generalizada
+  (`openMenu`/`menuRef`/`menuPos`); (6) deep-link `?tab=prospeccion_apify` redirige a
+  CRM/Prospección. Sin cambios de lógica en los componentes. `tsc`+`lint`+`build` verde.
+
 - **Conversión de landings — 04/06/2026** (motivo: ~800 visitas/mes en GA4 y 0
   formularios → el cuello de botella es convertir). Cambios:
   - **Botón WhatsApp** (`wa.me/34637349990`, mensaje pre-rellenado) en los heros de
