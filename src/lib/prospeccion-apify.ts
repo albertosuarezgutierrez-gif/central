@@ -129,10 +129,10 @@ async function ingestar(
       restaurante: it.title!,
       ciudad: it.city || 'Sevilla',
       web: it.website || null,
-      telefono: it.phone || it.phoneUnformatted || null,
+      telefono: it.phone || it.phoneUnformatted || '', // leads.telefono es NOT NULL
       email: it.emails?.[0] || null,
       tipo_negocio: vertical,
-      tipo: 'prospecto',
+      tipo: 'online', // CHECK leads_tipo_check: solo 'online' | 'personal'
       estado: 'nuevo',
       estado_pipeline: 'prospecto_ia',
       origen: 'apify_google_places',
