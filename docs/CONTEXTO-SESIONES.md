@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Botón "📧 Enviar emails de venta" en `/super → Apify Sevilla` — 04/06/2026**
+  (PR #33, mergeado): el envío de email frío de Sevilla se extrajo a
+  `lib/lead-hunter-sevilla.ts` (`enviarEmailsSevilla`), compartido por el cron
+  `crm-lead-hunter-sevilla` (ahora wrapper fino) y un endpoint nuevo
+  `POST /api/super/lead-hunter-sevilla` (auth super_admin). El panel gana un botón
+  para lanzar la tanda a mano (1 clic, sin terminal). `tsc`+`lint`+`build` verde.
+
+- **PROPUESTA pendiente (NO implementada — Alberto eligió "solo analizar") — reorg `/super`:**
+  "Apify Sevilla" vive hoy en el dropdown **SISTEMA** pero es 100% comercial
+  (capta leads + envía emails de venta = boca del embudo CRM). Propuesta: moverlo
+  **dentro de la pestaña CRM como 3ª sub-pestaña "🔍 Prospección"** (reutilizando el
+  patrón de sub-tabs que ya existe: `📋 Leads` · `🤖 Agente CRM`) y quitarlo del
+  dropdown SISTEMA. Así el embudo (captación→leads→agente) queda en un solo sitio y
+  SISTEMA se queda solo con infra/agentes técnicos. Cambio pequeño y de bajo riesgo
+  (mover el render en `src/app/super/page.tsx` ~línea 505 y 527, sin tocar lógica).
+  Opción ampliada barajada: separar en SISTEMA la infra (Sistema/Autocuras/QA/IA
+  Training) de los agentes de crecimiento (Instagram/Blog/Agentes). Pendiente de luz verde.
+
 - **Agente de venta para CATERING + HACIENDAS de eventos (Sevilla) — 04/06/2026**
   (rama `claude/leais-sales-agent-catering-b5ikA`, PR #25): se extendió todo el
   pipeline de captación para que sea **consciente del vertical** (catering →
