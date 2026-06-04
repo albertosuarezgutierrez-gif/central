@@ -57,6 +57,10 @@
       "schedule": "0 9 * * 1"
     },
     {
+      "path": "/api/cron/prospeccion-apify",
+      "schedule": "*/30 * * * *"
+    },
+    {
       "path": "/api/cron/instagram",
       "schedule": "0 9 * * 3"
     },
