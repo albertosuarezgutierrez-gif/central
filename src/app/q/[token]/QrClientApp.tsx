@@ -45,7 +45,7 @@ const C = {
   creamDim: '#8C7B69', amber: '#E8A33B', green: '#3F7D44', rule: '#2E2720',
 }
 
-function urlBase64ToUint8Array(base64String: string): Uint8Array {
+function urlBase64ToUint8Array(base64String: string) {
   const padding = '='.repeat((4 - (base64String.length % 4)) % 4)
   const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/')
   const raw = window.atob(base64)
