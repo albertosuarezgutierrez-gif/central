@@ -16,6 +16,47 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Agente de venta para CATERING + HACIENDAS de eventos (Sevilla) — 04/06/2026**
+  (rama `claude/leais-sales-agent-catering-b5ikA`, PR #25): se extendió todo el
+  pipeline de captación para que sea **consciente del vertical** (catering →
+  `/catering`; eventos/haciendas → `/espacios`; restaurante → `/`, intacto). Piezas:
+  (1) **Apify Google Places** como motor de sourcing nuevo, asíncrono en 2 fases
+  (`src/lib/apify.ts` + cron `/api/cron/prospeccion-apify` `*/30` + tabla de estado
+  `prospeccion_apify_runs`, **aplicada**); rastrea catering+haciendas+restaurantes en
+  Sevilla. (2) `prospeccion-leads`: taxonomía con `eventos`, captura email/telefono y
+  **fix** — `tipo_negocio` se guardaba solo en `estudio_completo` (JSON), ahora también
+  en la **columna** `leads.tipo_negocio` (que es la que leen RPC y presentación).
+  (3) `lead-onboarding`: research y borradores email/WhatsApp por vertical, enlazando la
+  landing correcta. (4) Presentación `src/app/p/[slug]/page.tsx`: bucket `MODULOS_TIPO.eventos`
+  propio (espacios/calendario/solicitudes/contratos/cobros de grupo) + `getModulos`
+  enruta hacienda/finca/espacio → eventos + subheadline por vertical. (5) RPC
+  `search_leads_sevilla_nuevos` **v2** (aplicada): admite catering/eventos de un solo
+  sitio y los de Apify (`origen`), exige email. (6) `crm-lead-hunter-sevilla`: 3 plantillas
+  de email por vertical con CTA a la landing correcta + tracking.
+  - **OJO descubierto:** el archivo `MIGRACIONES_CRM_LEAD_HUNTER.sql` del repo **NO**
+    coincide con la función realmente desplegada (`leads_locales` usa `lead_id`+`aforo`,
+    no `empresa_id`/`num_mesas`; `leads` no tiene `restaurante_id`). La v2 se hizo sobre
+    la función real (vía `pg_get_functiondef`).
+  - **Pendiente:** **`APIFY_TOKEN` en Vercel env** (sin él, `prospeccion-apify` hace
+    no-op y nada más se rompe). Spec y plan en `docs/superpowers/{specs,plans}/`.
+  - **CI:** se arregló de paso un fallo **preexistente** de ESLint en `main`
+    (`eslint.config.mjs` referenciaba reglas `react-hooks/*` y `react/*` sin registrar
+    los plugins → lint abortaba). Verificado `tsc`+`lint`+`build` en verde.
+  - **Ampliación "todo automático" (misma sesión):** (a) **panel en `/super → Apify
+    Sevilla`** (`ProspeccionApifyTab` + `/api/super/prospeccion-apify`) para lanzar el
+    agente a mano y ver el historial de runs/leads; (b) **canal WhatsApp wa.me**
+    (`cron/crm-whatsapp-sevilla`, diario L-V 10:00): genera el enlace wa.me por vertical
+    con el teléfono capturado y lo manda a Telegram con botón "Abrir WhatsApp" (1 toque,
+    sin API de Meta); marca `leads.whatsapp_outreach_at` (**migración aplicada**);
+    (c) **secuencia día 2** (`cron/crm-followup-sevilla`, L-V 11:00): 2º email a quien
+    recibió el día 1 hace ≥3d, no rellenó formulario y no se dio de baja (usa
+    `leads_web_tracking.mensaje_dia2_at`); (d) **backfill** (`cron/backfill-leads-sevilla`,
+    diario 5:00): clasifica el vertical de leads de Sevilla sin `tipo_negocio` y saca
+    email de su web; (e) **más cobertura** Apify (15 queries por zonas: Aljarafe, Sevilla
+    Este, Triana, Dos Hermanas, provincia; cap 30/run). Lógica del agente extraída a
+    `lib/prospeccion-apify.ts` y plantillas a `lib/crm-sevilla.ts` (compartidas cron+panel).
+    `tsc`+`lint`+`build` en verde.
+
 - **Panel de VISITAS de la web (GA4) en `/super → CRM → Leads`** (04/06/2026): tarjeta
   "VISITAS DE LA WEB" (hoy/ayer/7d/30d sesiones + usuarios + páginas vistas + top
   fuentes/páginas), junto a la de formularios. Endpoint `GET /api/super/ga4-stats`
