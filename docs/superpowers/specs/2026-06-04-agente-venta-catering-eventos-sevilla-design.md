@@ -4,6 +4,11 @@
 > Origen: extender el pipeline de captación existente para vender ia.rest a
 > empresas de **catering** y **haciendas/espacios de eventos**, empezando por
 > **Sevilla**, sin perder el negocio core de **restaurantes**.
+>
+> **Alcance real (no solo el email):** se replica el flujo completo que ya existe
+> para restaurantes — **sourcing → research (análisis IA) → presentación/propuesta
+> personalizada → borradores email+WhatsApp → contacto** — haciéndolo consciente
+> del vertical en cada etapa. El email frío es solo la última pieza.
 
 ## 1. Objetivo
 
@@ -29,6 +34,7 @@ Decisión de alcance: **extender** los agentes actuales (no crear uno nuevo).
 | Geografía | Sevilla prioritaria, España de fondo |
 | Sourcing Apify | Async resuelto en **dos fases con tabla de estado** |
 | Verticales Apify | Los **3** en Sevilla: catering + haciendas + restaurantes |
+| Presentación haciendas | **Mismo layout** sala/cocina/gestión con un `MODULOS_TIPO.eventos` propio (no una sección a medida) |
 
 ## 3. Verticales y mapeo
 
@@ -125,7 +131,62 @@ todo, **grupos multi-local** que Google Places no agrupa. Cambios mínimos:
   sin inventar) y guardarlos en el lead.
 - Añadir de fondo 1-2 queries de Sevilla catering/haciendas a la rotación.
 
-## 5. Cambio en la RPC `search_leads_sevilla_nuevos` (migración)
+## 5. Pipeline vertical-aware: research + presentación + borradores
+
+El núcleo del flujo de restaurantes es `/api/cron/lead-onboarding` (Lead Hunter
+v3): coge leads nuevos (`research_at IS NULL`, <72h), hace research con Gemini
+Search, redacta email + WhatsApp, genera el slug de la **propuesta personalizada**
+(`/propuesta/[slug]`, renderizada por `src/app/p/[slug]/page.tsx`) y lo manda a
+Telegram con botones. Hay que hacer **cada etapa** consciente del vertical.
+
+### 5.1 Research — `lead-onboarding` (prompt + taxonomía por vertical)
+
+- Ampliar la taxonomía `tipo_negocio` del prompt a `restaurante|bar|catering|eventos|grupo|mixto` (hoy no existe `eventos` → las haciendas caían en `catering`/`grupo`).
+- Respetar el `tipo_negocio` que ya trae el lead (el de Apify/web_search): pasarlo
+  al prompt como pista fuerte y pedir a la IA que **lo confirme o corrija**, sin
+  degradar una hacienda a restaurante.
+- Pedir señales propias de cada vertical en el JSON de research:
+  - **catering:** nº de eventos/bodas al año (estimado), si hace bodas/empresa,
+    aforo máximo servido, si publica menús/precios, escandallos/coste por comensal.
+  - **eventos (hacienda/espacio):** nº de espacios, aforo, si aparece en bodas.net /
+    zankyou, si gestiona calendario/disponibilidad online, paquetes, exclusividad
+    de catering propio o externo.
+- `pain_points_detectados` y `modulos_criticos` deben salir alineados al vertical
+  (catering → `eventos`, `almacen`, `analytics`; hacienda → `eventos`,
+  `multi_local`/agenda, captación de solicitudes, cobros de grupo).
+- Mantener el resto del flujo igual (slug, `estado_pipeline: 'propuesta_lista'`,
+  Telegram con botones, fallback si el JSON no parsea).
+
+### 5.2 Presentación — `src/app/p/[slug]/page.tsx` (separar catering vs eventos)
+
+- **Separar el bucket único actual** `MODULOS_TIPO.catering` en dos:
+  - `catering` (se mantiene/afina): voz en servicio, KDS por pases, rentabilidad
+    por evento, portal cliente de menú, coste por comensal, captación leads.
+  - **`eventos` (nuevo)** para haciendas/espacios — tarjetas de **gestión de
+    espacios**: `espacios` (calendario y disponibilidad por finca), `solicitudes`
+    (embudo de bodas.net/zankyou centralizado), `presupuestos` (con márgenes),
+    `contratos` (firma y seguimiento), `cobros de grupo` (portal `/cobro/[slug]`),
+    `barra libre`/tiers, check-in QR. Mismo formato de 3 columnas
+    (sala/cocina/gestión) reusando la maqueta, con copy propio del vertical.
+- **`getModulos(tipo)`** enruta:
+  - `cater` → `catering`
+  - `event` / `hacienda` / `finca` / `espacio` / `bod` (boda/banquete) → `eventos`
+  - resto igual que hoy.
+- **Subheadline por vertical** (sustituye el genérico "Sala, cocina, almacén…"):
+  - catering → presupuestos que cuadran y coste real por evento.
+  - eventos → llena el calendario de la finca y no se te escapa ninguna solicitud.
+  - (si `datos_operativos.subheadline` viene del research, tiene prioridad).
+- No se rehace la estructura de la página (decisión: mismo layout). Solo datos +
+  un bucket nuevo + ruteo + subheadline.
+
+### 5.3 Borradores email + WhatsApp — `lead-onboarding` (copy por vertical)
+
+- Los prompts de generación de email/WhatsApp reciben el `tipo_negocio` y el
+  ángulo del vertical, y enlazan a la propuesta + a la landing correcta
+  (`/catering` o `/espacios`) en vez del genérico.
+- Mantener tono Alberto, ≤100 palabras, objetivo reunión, `__PROPUESTA_URL__`.
+
+## 6. Cambio en la RPC `search_leads_sevilla_nuevos` (migración)
 
 Nueva versión de la función (la actual excluiría estos leads):
 - **Bug actual:** exige `num_locales >= 2` o `1 local con >60 mesas`. Un catering
@@ -147,7 +208,7 @@ Nueva versión de la función (la actual excluiría estos leads):
 - Nota de implementación: confirmar que `leads.origen` existe como columna; si el
   origen vive en `estudio_completo->>'origen'`, ajustar el filtro a ese JSON.
 
-## 6. Cambio en el email — `crm-lead-hunter-sevilla` (3 plantillas por vertical)
+## 7. Cambio en el email frío — `crm-lead-hunter-sevilla` (3 plantillas por vertical)
 
 Ramificar por `lead.tipo_negocio` antes de construir el email; cada rama define
 `subject`, `html`, `landingPath` y `utmSource`:
@@ -168,13 +229,13 @@ límite de 3/día, `tgAlert` de resumen (añadiendo el vertical en el texto). El
 Reglas de marca respetadas: nunca nombrar competidores; titular = el QUÉ, no el
 CÓMO; el dolor en beneficio.
 
-## 7. Variables de entorno
+## 8. Variables de entorno
 
 - **`APIFY_TOKEN`** (nuevo) → Vercel env (encrypted, production+preview). Lo añade
   Alberto; el valor no va al repo. Sin él, `prospeccion-apify` hace no-op y nada
   más se rompe. Documentar el nombre en `.env.example` y en el maestro (Sección 7).
 
-## 8. Fuera de alcance (YAGNI)
+## 9. Fuera de alcance (YAGNI)
 
 - Envío real por WhatsApp (solo se **guarda** el teléfono; el wa.me / plantillas
   Meta son fase futura).
@@ -182,7 +243,7 @@ CÓMO; el dolor en beneficio.
 - Enriquecimiento de leads ya existentes sin email (se trabajan los nuevos de
   Apify; un backfill puede ser una mejora posterior).
 
-## 9. Verificación
+## 10. Verificación
 
 - `npx tsc --noEmit` con 0 errores.
 - `next build` con dependencias instaladas (no solo `tsc`: el build de Vercel es
@@ -193,16 +254,22 @@ CÓMO; el dolor en beneficio.
   bloquear `api.apify.com`; si es así, se valida lógica + tipos y se deja el run
   real para Alberto/prod).
 
-## 10. Resumen de archivos tocados
+## 11. Resumen de archivos tocados
 
 | Archivo | Acción |
 |---|---|
 | `src/lib/apify.ts` | **nuevo** — helper start/results Google Places |
-| `src/app/api/cron/prospeccion-apify/route.ts` | **nuevo** — cron dos fases |
+| `src/app/api/cron/prospeccion-apify/route.ts` | **nuevo** — cron dos fases (sourcing) |
 | `supabase/migrations/20260604_prospeccion_apify_runs.sql` | **nuevo** — tabla estado |
 | `supabase/migrations/20260604_search_leads_sevilla_v2.sql` | **nuevo** — RPC v2 |
-| `src/app/api/cron/prospeccion-leads/route.ts` | editar — taxonomía + email/telefono + queries Sevilla |
-| `src/app/api/cron/crm-lead-hunter-sevilla/route.ts` | editar — 3 plantillas por vertical |
+| `src/app/api/cron/prospeccion-leads/route.ts` | editar — taxonomía `eventos` + email/telefono + queries Sevilla |
+| `src/app/api/cron/lead-onboarding/route.ts` | editar — research + borradores por vertical |
+| `src/app/p/[slug]/page.tsx` | editar — split `MODULOS_TIPO.eventos`, `getModulos`, subheadline por vertical |
+| `src/app/api/cron/crm-lead-hunter-sevilla/route.ts` | editar — 3 plantillas email frío por vertical |
 | `vercel.json` | editar — cron `prospeccion-apify` `*/30 * * * *` |
 | `.env.example` | editar — `APIFY_TOKEN` |
 | `docs/CONTEXTO-SESIONES.md` | editar al cierre — registro de sesión |
+
+> Tamaño: sigue siendo **un único plan de implementación** (un pipeline coherente),
+> pero más amplio que "solo el email" — toca sourcing, research, presentación,
+> borradores y email frío. Se puede implementar por etapas en ese orden.
