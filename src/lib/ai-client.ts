@@ -198,7 +198,10 @@ export async function callAI(
   userOrMessages: string | { role: 'user' | 'assistant'; content: string }[],
   maxTokens = 600,
   timeoutMs = 15_000,
-  noFallback = false
+  // Default NIM puro: la cuenta de Anthropic (fallback) está SIN SALDO, así que caer
+  // a ella solo da "credit balance too low". Pasa noFallback=false explícito para
+  // reactivar el fallback (cuando Anthropic tenga crédito de nuevo).
+  noFallback = true
 ): Promise<string> {
   const messages: { role: 'user' | 'assistant'; content: string }[] =
     typeof userOrMessages === 'string'
@@ -287,7 +290,7 @@ export async function callAIVision(
   userText: string,
   maxTokens = 2000,
   timeoutMs = 30_000,
-  noFallback = false
+  noFallback = true // NIM puro por defecto (el fallback Anthropic está sin saldo)
 ): Promise<string> {
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
