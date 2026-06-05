@@ -1111,7 +1111,7 @@ const EVENTO_EMOJIS = ['💬','✉️','📞','📅','🤝','💡','⚠️','✅
 interface LeadEvento { tipo: string; texto: string; fecha: string }
 interface Lead {
   id: string; nombre: string; restaurante: string; telefono: string; email?: string
-  estado: EstadoLead; notas: string | null; created_at: string
+  estado: EstadoLead; estado_pipeline?: string | null; notas: string | null; created_at: string
   tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]
   propuesta_slug?: string; landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
@@ -1348,6 +1348,18 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             <span style={{ fontSize: 9, fontWeight: 700, color: ESTADO_COLOR[lead.estado], background: ESTADO_COLOR[lead.estado] + '22', borderRadius: 3, padding: '2px 6px', textTransform: 'uppercase' }}>
               {lead.estado}
             </span>
+            {/* Sub-fase del bot (estado_pipeline) — solo las que aportan info */}
+            {(() => {
+              const PIPE: Record<string, string> = {
+                prospecto_ia: '🤖 prospecto IA', estudiando: '🔍 investigando',
+                esperando_ok: '⏳ esperando OK', propuesta_lista: '📄 propuesta lista',
+                reunion_agendada: '📅 reunión',
+              }
+              const lbl = lead.estado_pipeline ? PIPE[lead.estado_pipeline] : null
+              return lbl ? (
+                <span style={{ fontSize: 9, color: C.amber, background: C.amber + '22', borderRadius: 3, padding: '2px 6px' }}>{lbl}</span>
+              ) : null
+            })()}
             {lead.puntuacion != null && (
               <span style={{ fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
                 ★ {lead.puntuacion}
