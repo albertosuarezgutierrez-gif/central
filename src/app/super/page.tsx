@@ -1251,6 +1251,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [eventoTipo, setEventoTipo] = useState<Record<string, string>>({})
   const [vistaKanban, setVistaKanban] = useState(true)
   const [dragOver, setDragOver] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroOrigen, setFiltroOrigen] = useState<'todos'|'web'|'apify'|'otros'>('todos')
   const [form, setForm] = useState({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
   const [saving, setSaving] = useState(false)
 
@@ -1302,8 +1304,25 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   const fmtFecha = (f: string) => f
 
-  const personales = leads.filter(l => l.tipo === 'personal')
-  const online = leads.filter(l => l.tipo !== 'personal')
+  // ── Búsqueda + filtros + priorización (para navegar con muchos leads) ──────
+  const _q = busqueda.trim().toLowerCase()
+  const _norm = (s?: string | null) => (s || '').toLowerCase()
+  const leadsVisibles = leads.filter(l => {
+    if (filtroOrigen === 'web'   && l.origen !== 'inbound_web') return false
+    if (filtroOrigen === 'apify' && l.origen !== 'apify_google_places') return false
+    if (filtroOrigen === 'otros' && (l.origen === 'inbound_web' || l.origen === 'apify_google_places')) return false
+    if (!_q) return true
+    return [l.restaurante, l.nombre, l.empresa, l.ciudad, l.email, l.telefono].some(v => _norm(v).includes(_q))
+  })
+  // Calientes (web) primero, luego mayor puntuación, luego más recientes.
+  const ordenar = (arr: Lead[]) => [...arr].sort((a, b) =>
+    (a.origen === 'inbound_web' ? 0 : 1) - (b.origen === 'inbound_web' ? 0 : 1)
+    || (b.puntuacion ?? -1) - (a.puntuacion ?? -1)
+    || (new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  )
+  const TOPE_COLUMNA = 60 // evita pintar cientos de cards en una columna
+  const personales = ordenar(leadsVisibles.filter(l => l.tipo === 'personal'))
+  const online = ordenar(leadsVisibles.filter(l => l.tipo !== 'personal'))
 
   const CardLead = ({ lead }: { lead: Lead }) => {
     const activo = seleccionado?.id === lead.id
@@ -1406,7 +1425,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const KanbanView = () => (
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start', WebkitOverflowScrolling: 'touch' as any, marginLeft: -4, marginRight: -4, paddingLeft: 4 }}>
       {COLUMNAS.map(col => {
-        const colLeads = leads.filter(l => l.estado === col.key)
+        const colLeadsAll = ordenar(leadsVisibles.filter(l => l.estado === col.key))
+        const colLeads = colLeadsAll.slice(0, TOPE_COLUMNA)
         const isOver = dragOver === col.key
         return (
           <div
@@ -1428,7 +1448,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                 {col.label}
               </span>
               <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
-                {colLeads.length}
+                {colLeadsAll.length}
               </span>
             </div>
 
@@ -1493,6 +1513,11 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                   </div>
                 )
               })}
+              {colLeadsAll.length > colLeads.length && (
+                <div style={{ padding: '6px 8px', textAlign: 'center', fontFamily: SM, fontSize: 10, color: C.ink3 }}>
+                  +{colLeadsAll.length - colLeads.length} más · usa el buscador
+                </div>
+              )}
             </div>
           </div>
         )
@@ -1530,6 +1555,35 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
         </div>
       </div>
 
+      {/* Buscador + filtros por origen (para navegar con muchos leads) */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+        <input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="🔍 Buscar por nombre, ciudad, email, teléfono…"
+          style={{ flex: '1 1 240px', minWidth: 0, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '9px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none' }}
+        />
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {([
+            { k: 'todos', label: 'Todos' },
+            { k: 'web',   label: '🔥 Web' },
+            { k: 'apify', label: '🤖 Apify' },
+            { k: 'otros', label: 'Otros' },
+          ] as { k: 'todos'|'web'|'apify'|'otros'; label: string }[]).map(f => (
+            <button key={f.k} onClick={() => setFiltroOrigen(f.k)}
+              style={{ padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600,
+                border: `1px solid ${filtroOrigen === f.k ? C.red : C.rule}`,
+                background: filtroOrigen === f.k ? C.red : C.bg2,
+                color: filtroOrigen === f.k ? '#fff' : C.ink3 }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {(busqueda || filtroOrigen !== 'todos') && (
+          <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>{leadsVisibles.length} resultado{leadsVisibles.length === 1 ? '' : 's'}</span>
+        )}
+      </div>
+
       <LandingStatsCard C={C} SN={SN} SM={SM} sh={sh} />
 
       <WebVisitsCard C={C} SN={SN} SM={SM} sh={sh} />
@@ -1564,8 +1618,11 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {online.length === 0
                 ? <div style={{ color: C.ink3, fontSize: 12, fontStyle: 'italic' }}>Sin leads online</div>
-                : online.map(l => <CardLead key={l.id} lead={l} />)
+                : online.slice(0, 80).map(l => <CardLead key={l.id} lead={l} />)
               }
+              {online.length > 80 && (
+                <div style={{ color: C.ink3, fontSize: 11, fontFamily: SM, padding: '6px 2px' }}>+{online.length - 80} más · usa el buscador o los filtros</div>
+              )}
             </div>
           </div>
         </div>
