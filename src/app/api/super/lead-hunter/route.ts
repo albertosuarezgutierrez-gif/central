@@ -33,6 +33,9 @@ Responde SOLO con JSON válido, sin markdown:
     // ── Modo EMAIL: generar borrador de email comercial (NIM, sin búsqueda) ──
     if (body.modo === 'email') {
       const l = body.lead || {}
+      const slug = (l.nombre || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g, '-').substring(0, 40)
+      const propuestaUrl = l.propuestaUrl || (slug ? `https://www.iarest.es/propuesta/${slug}` : 'https://www.iarest.es')
       const prompt = `Eres Alberto Suárez, fundador de ia.rest (comandas por voz para restaurantes en España).
 Escribe un email comercial corto y personalizado para este prospecto.
 
@@ -48,7 +51,7 @@ Reglas:
 - Asunto: corto, específico, sin spam
 - Cuerpo: máx 150 palabras
 - Mencionar algo específico del negocio
-- Un único CTA: ver propuesta en el link
+- Un único CTA con ESTE enlace escrito tal cual (NUNCA pongas "[enlace]" ni corchetes): ${propuestaUrl}
 - Firma: Alberto · ia.rest · hola@iarest.es
 - Tono: directo, sin florituras, B2B España
 
@@ -57,8 +60,14 @@ ASUNTO: [asunto]
 ---
 [cuerpo del email]`
       try {
-        const texto = await callAI('Eres Alberto, fundador de ia.rest. Escribes emails B2B en español de España.', prompt, 400, 20000, true)
-        return NextResponse.json({ ok: true, email: (texto || '').trim() })
+        let texto = (await callAI('Eres Alberto, fundador de ia.rest. Escribes emails B2B en español de España.', prompt, 400, 20000, true) || '').trim()
+        // Por si la IA deja un placeholder en vez del enlace, lo sustituimos por el real.
+        texto = texto
+          .replace(/\[\s*enlace[^\]]*\]/gi, propuestaUrl)
+          .replace(/\[\s*link[^\]]*\]/gi, propuestaUrl)
+          .replace(/\[\s*propuesta[^\]]*\]/gi, propuestaUrl)
+          .replace(/__PROPUESTA__/g, propuestaUrl)
+        return NextResponse.json({ ok: true, email: texto })
       } catch (e: any) {
         return NextResponse.json({ ok: false, error: `No se pudo generar el email: ${e.message}` })
       }
