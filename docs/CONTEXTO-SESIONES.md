@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Hardening cobros: purga automática de "pendientes" caducados — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`): tras el fix del bug multi-menú
+  (PR #47, ya en `main`), se añade al cron `cobro-inactividad` (cada 5 min) un borrado
+  de `cobros_grupo_pagos` en estado `pendiente` con `created_at` > 48 h. Es seguro
+  (la sesión de Stripe Checkout caduca a 24 h → no se pierde ningún pago) y evita que
+  los intentos abandonados/fallidos vuelvan a ensuciar el panel del portal. Limpieza
+  manual ya hecha: borrado el duplicado de Carmen; portal en **21 pagados = 420 €** y
+  **3 pendientes = 30 €** (todas de Patricia Vera Toronjo, 677763642, pedido real sin
+  pagar; el cron las purgará a las 48 h si no paga).
+
 - **BUG CRÍTICO cobros de grupo: pedidos multi-menú se pagan pero salen "pendiente" — FIX + reconciliación — 05/06/2026**
   (rama `claude/price-discrepancy-480-280-bFj1E`, PR #47): Alberto vio ~480 € pero el
   portal del congreso de Saboga mostraba 280 €. **Causa raíz (verificada contra Stripe

@@ -31,6 +31,22 @@ export async function GET(req: NextRequest) {
     console.error('[cobro-inactividad] purga avisos QR:', e)
   }
 
+  // Limpieza de cobros de grupo "pendiente" caducados: filas creadas hace >48h que
+  // nunca llegaron a pagarse (checkouts abandonados o fallidos). Es seguro borrarlas
+  // porque la sesión de Stripe Checkout caduca a las 24h → ya no se pueden cobrar, así
+  // que no se pierde ningún pago futuro; solo evitamos que esos intentos ensucien el
+  // panel del portal (contadores de "pendientes" e importes inflados).
+  try {
+    const hace48h = new Date(Date.now() - 48 * 60 * 60 * 1000).toISOString()
+    await supabase
+      .from('cobros_grupo_pagos')
+      .delete()
+      .eq('estado', 'pendiente')
+      .lt('created_at', hace48h)
+  } catch (e) {
+    console.error('[cobro-inactividad] purga cobros_grupo pendientes:', e)
+  }
+
   const { data: sesiones, error } = await supabase.rpc('get_sesiones_inactivas')
 
   if (error) {
