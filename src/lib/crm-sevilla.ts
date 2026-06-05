@@ -94,15 +94,20 @@ export function construirSeguimiento(
   }
 }
 
-// Normaliza un teléfono español a formato internacional para wa.me (solo dígitos, prefijo 34).
+// Normaliza un MÓVIL español a formato internacional para wa.me (solo dígitos, prefijo 34).
+// Solo móviles (empiezan por 6 o 7): un fijo no recibe WhatsApp → devuelve null.
 export function normalizarTelefonoEs(telefono?: string | null): string | null {
   if (!telefono) return null
   let d = telefono.replace(/\D/g, '')
   if (d.startsWith('0034')) d = d.slice(4)
   else if (d.startsWith('34') && d.length === 11) d = d.slice(2)
-  if (d.length === 9 && /^[6789]/.test(d)) return `34${d}`
-  if (d.length === 11 && d.startsWith('34')) return d
-  return null // no parece un móvil/fijo español válido
+  if (d.length === 9 && /^[67]/.test(d)) return `34${d}`
+  return null // no parece un MÓVIL español válido
+}
+
+// ¿El teléfono es un móvil español (apto para WhatsApp)?
+export function esMovilEs(telefono?: string | null): boolean {
+  return normalizarTelefonoEs(telefono) !== null
 }
 
 // Mensaje + enlace wa.me (click-to-chat, sin API de Meta) por vertical.
