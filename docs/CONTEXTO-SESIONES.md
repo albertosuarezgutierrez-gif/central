@@ -56,6 +56,25 @@
     `/super → Cobro` (`v_cobro_resumen_super`) refleje los cobros de grupo (hoy 0 para
     Saboga); (c) revisar economía del 1 %.
 
+- **Sacar Anthropic del camino crítico (cuenta SIN saldo) — 05/06/2026** (PRs #43/#44 + 1 más):
+  el fallback a Anthropic daba "credit balance too low". Objetivo de Alberto: **que no falle nada**.
+  - **#43**: `noFallback=true` por **default** en `callAI`/`callAIVision` (`src/lib/ai-client.ts`) →
+    todo lo que solo usaba Anthropic como red de seguridad pasa a **NIM puro**. Quedan 2 `false`
+    explícitos deliberados (`fuzzy-comanda.ts`, `owner/carta`).
+  - **#44**: migradas a **`callAISearch` (Gemini google_search)** las búsquedas de grupos/locales
+    (`cron/prospeccion-leads`, `cron/completar-locales`, `super/leads`,
+    `super/leads/[id]/locales/buscar`) y a **`callAI`** la generación de `cron/blog-seo`. Cada una
+    degrada a `[]`/aviso (locales/buscar ya no da 500). `callAISearch` fallback profundo → NIM puro.
+  - **PR3 (mismo día)**: (a) **anomalía frontend** `super/page.tsx` Lead Hunter modos *caption* y
+    *email* hacían `fetch` directo a `api.anthropic.com` **sin api-key** (rotos siempre) → ahora
+    `POST /api/super/lead-hunter` modos `caption`/`email` con `callAI`. (b) **Guarda de degradación**
+    en los 3 agentes que SIGUEN en Anthropic (`agentes-seo`, `agente-arquitecto`, `agentes-ai`):
+    muestran aviso limpio "no disponible (sin crédito)" en vez de reventar. (c) Doc
+    **`docs/IA-busqueda-web-y-proveedores.md`** (proveedores, opciones SearXNG/Tavily, vLLM/SGLang)
+    + `GEMINI_API_KEY` añadida a `.env.example`.
+  - **`GEMINI_API_KEY` ya está en Vercel** (la usa `lead-onboarding`). Si algún día se recarga
+    Anthropic, los 3 agentes vuelven solos (la guarda solo salta sin saldo).
+
 - **FIX Apify ingest: "0 de 30" → inserta — 04/06/2026** (PR #35, mergeado):
   con `APIFY_TOKEN` ya puesto en Vercel, "Lanzar una vuelta" devolvía
   `Fase B: 0 leads de 30` (run SUCCEEDED pero 0 insertados). Causa: el INSERT del

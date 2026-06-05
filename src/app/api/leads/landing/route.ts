@@ -41,6 +41,32 @@ export async function POST(req: NextRequest) {
       estado: 'nuevo'
     })
 
+    // Además, crear el lead en el CRM (tabla `leads`) para que aparezca en el Kanban
+    // como lead CALIENTE (origen inbound_web). Si ya existe uno con ese email, no duplica.
+    // En su propio try/catch: si falla, el formulario sigue respondiendo OK.
+    try {
+      const { data: existente } = await supabase
+        .from('leads').select('id').eq('email', email).limit(1).maybeSingle()
+      if (!existente) {
+        await supabase.from('leads').insert({
+          nombre,
+          empresa: restaurante,
+          restaurante,
+          email,
+          telefono: telefono || '',
+          ciudad: null,
+          tipo: 'online',
+          estado: 'nuevo',
+          estado_pipeline: 'nuevo',
+          origen: 'inbound_web',
+          notas: `Formulario web (${origenFinal})${usuarios ? ` · ${usuarios} usuarios` : ''}`,
+          eventos: [{ tipo: '🌐', texto: `Llegó por formulario web (${origenFinal})`, fecha: new Date().toISOString().split('T')[0] }],
+        })
+      }
+    } catch (e) {
+      console.error('[leads/landing] no se pudo crear lead CRM:', e)
+    }
+
     // Notificaciones en paralelo
     const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' })
     const tgMsg = [

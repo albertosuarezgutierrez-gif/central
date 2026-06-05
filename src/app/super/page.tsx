@@ -1111,12 +1111,12 @@ const EVENTO_EMOJIS = ['💬','✉️','📞','📅','🤝','💡','⚠️','✅
 interface LeadEvento { tipo: string; texto: string; fecha: string }
 interface Lead {
   id: string; nombre: string; restaurante: string; telefono: string; email?: string
-  estado: EstadoLead; notas: string | null; created_at: string
+  estado: EstadoLead; estado_pipeline?: string | null; notas: string | null; created_at: string
   tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]
   propuesta_slug?: string; landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
   propuesta_url?: string; propuesta_vista_at?: string
-  ciudad?: string; empresa?: string
+  ciudad?: string; empresa?: string; origen?: string | null
   puntuacion?: number | null
   ultima_actividad_at?: string | null
   siguiente_contacto_texto?: string | null; siguiente_contacto_at?: string | null
@@ -1348,6 +1348,21 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             <span style={{ fontSize: 9, fontWeight: 700, color: ESTADO_COLOR[lead.estado], background: ESTADO_COLOR[lead.estado] + '22', borderRadius: 3, padding: '2px 6px', textTransform: 'uppercase' }}>
               {lead.estado}
             </span>
+            {/* Sub-fase del bot (estado_pipeline) — solo las que aportan info */}
+            {(() => {
+              const PIPE: Record<string, string> = {
+                prospecto_ia: '🤖 prospecto IA', estudiando: '🔍 investigando',
+                esperando_ok: '⏳ esperando OK', propuesta_lista: '📄 propuesta lista',
+                reunion_agendada: '📅 reunión',
+              }
+              const lbl = lead.estado_pipeline ? PIPE[lead.estado_pipeline] : null
+              return lbl ? (
+                <span style={{ fontSize: 9, color: C.amber, background: C.amber + '22', borderRadius: 3, padding: '2px 6px' }}>{lbl}</span>
+              ) : null
+            })()}
+            {lead.origen === 'inbound_web' && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: C.green, background: C.green + '22', borderRadius: 3, padding: '2px 6px' }}>🔥 web</span>
+            )}
             {lead.puntuacion != null && (
               <span style={{ fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
                 ★ {lead.puntuacion}
@@ -1783,17 +1798,10 @@ function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; 
     if (!caption.trim()) return
     setLoading(true); setResult(null); setAnalysis(null); setGuardado(false); setPropuestaUrl(null); setShowEmail(false)
     try {
-      const prompt = `Eres un asistente de ventas B2B para ia.rest, SaaS de comandas por voz para restaurantes en España.
-Analiza este post de Instagram/TikTok.${ciudad ? ` Ciudad probable: ${ciudad}.` : ''}
-POST: ${caption}
-Responde SOLO con JSON válido, sin markdown:
-{"es_lead":true,"tipo":"apertura|queja_tpv|reforma|otro","nombre_local":"...","ciudad":"...","tipo_cocina":"...","tamaño_estimado":"pequeño|mediano|grande","tpv_mencionado":"Ágora|Glop|Hiopos|Revo|null","urgencia":"alta|media|baja","notas":"...","dm_sugerido":"DM máx 200 chars, tono cercano, termina con pregunta, sin links, menciona algo específico"}`
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
-      })
+      const r = await fetch('/api/super/lead-hunter', { method: 'POST', headers: sh(), body: JSON.stringify({ caption, ciudad }) })
       const data = await r.json()
-      const parsed = JSON.parse(data.content?.[0]?.text?.replace(/```json|```/g,'').trim() ?? '{}')
+      if (!data.ok) { setResult({ error: data.error || 'No disponible' }); setLoading(false); return }
+      const parsed = data.result
       setResult(parsed)
       if (parsed.es_lead) generarPropuesta(parsed, null)
     } catch(e: any) { setResult({ error: e.message }) }
@@ -1887,36 +1895,21 @@ Responde SOLO con JSON válido, sin markdown:
     const ciudad_ = biz?.ciudad || post?.ciudad || ciudad || ''
     const senial = post?.tipo || 'apertura'
 
-    const prompt = `Eres Alberto Suárez, fundador de ia.rest (comandas por voz para restaurantes en España).
-Escribe un email comercial corto y personalizado para este prospecto.
-
-Info del negocio:
-- Nombre: ${nombre}
-- Ciudad: ${ciudad_}
-- Señal detectada: ${senial}
-- TPV actual: ${biz?.tpv_actual || post?.tpv_mencionado || 'desconocido'}
-- Descripción: ${biz?.descripcion_negocio || post?.notas || ''}
-- Nombre contacto: ${contacto}
-
-Reglas:
-- Asunto: corto, específico, sin spam
-- Cuerpo: máx 150 palabras
-- Mencionar algo específico del negocio
-- Un único CTA: ver propuesta en el link
-- Firma: Alberto · ia.rest · hola@iarest.es
-- Tono: directo, sin florituras, B2B España
-
-Formato de respuesta:
-ASUNTO: [asunto]
----
-[cuerpo del email]`
-
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
-    })
-    const d = await r.json()
-    setEmailContent(d.content?.[0]?.text?.trim() ?? '')
+    try {
+      const r = await fetch('/api/super/lead-hunter', {
+        method: 'POST', headers: sh(),
+        body: JSON.stringify({ modo: 'email', lead: {
+          nombre, ciudad: ciudad_, senial,
+          tpv: biz?.tpv_actual || post?.tpv_mencionado || 'desconocido',
+          descripcion: biz?.descripcion_negocio || post?.notas || '',
+          contacto,
+        } }),
+      })
+      const d = await r.json()
+      setEmailContent(d.ok ? (d.email || '') : `No se pudo generar el email: ${d.error || 'no disponible'}`)
+    } catch (e: any) {
+      setEmailContent(`No se pudo generar el email: ${e.message}`)
+    }
   }
 
   const copiarEmail = () => {
