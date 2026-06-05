@@ -36,23 +36,20 @@ async function uploadSlide(buf: Buffer, pid: string): Promise<string> {
 }
 
 // MP4 vertical 1080x1920: concatena (fl_splice) cada segmento sobre el vídeo base.
-//   - imagen: c_pad sobre fondo de marca + zoom sutil (Ken Burns) por slide.
+//   - imagen: c_pad sobre fondo de marca (estático; sin motion para máxima compatibilidad).
 //   - vídeo:  c_fill al frame vertical, audio del clip silenciado (no pelea con la música).
 //   - crossfade entre segmentos; pista de música opcional recortada a la duración total.
-// NOTA: la sintaxis de splice de vídeo + e_zoompan + l_audio es EMPÍRICA en Cloudinary;
-// se valida con un render real (manual) tras deploy. Si Cloudinary rechazara alguna parte,
-// los clips de ambiente quedan tras CLOUDINARY_AMBIENT_IDS (vacío por defecto) y el motion
-// es revertible dejando solo du_${DUR}. La música degrada a reel mudo si falla el pool.
+// NOTA: el splice de vídeo (l_video) + l_audio son EMPÍRICOS en Cloudinary; se validan con
+// un render real. El motion (e_zoompan) se quitó porque rompía la reproducción del MP4.
 function buildReelUrl(segs: Segmento[], audioPid?: string | null): string {
   const parts: string[] = [`w_${W},h_${H},c_fill`]
   segs.forEach((s, i) => {
     const off = i * DUR
     const fade = i === 0 ? '' : `,e_fade:${FADE}`
     if (s.kind === 'video') {
-      parts.push(`l_video:${s.pid}/c_fill,w_${W},h_${H},g_auto,e_volume:mute/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
+      parts.push(`l_video:${s.pid}/c_fill,w_${W},h_${H},e_volume:mute/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
     } else {
-      const motion = `,e_zoompan:from_(g_center;zoom_1.0);to_(g_center;zoom_1.08)`
-      parts.push(`l_${s.pid}/c_pad,w_${W},h_${H},b_rgb:14110E/fl_splice,du_${DUR}${motion}/so_${off},fl_layer_apply${fade}`)
+      parts.push(`l_${s.pid}/c_pad,w_${W},h_${H},b_rgb:14110E/fl_splice,du_${DUR}/so_${off},fl_layer_apply${fade}`)
     }
   })
   if (audioPid) {
