@@ -1116,7 +1116,7 @@ interface Lead {
   eventos: LeadEvento[]
   propuesta_slug?: string; landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
   propuesta_url?: string; propuesta_vista_at?: string
-  ciudad?: string; empresa?: string
+  ciudad?: string; empresa?: string; origen?: string | null
   puntuacion?: number | null
   ultima_actividad_at?: string | null
   siguiente_contacto_texto?: string | null; siguiente_contacto_at?: string | null
@@ -1360,6 +1360,9 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                 <span style={{ fontSize: 9, color: C.amber, background: C.amber + '22', borderRadius: 3, padding: '2px 6px' }}>{lbl}</span>
               ) : null
             })()}
+            {lead.origen === 'inbound_web' && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: C.green, background: C.green + '22', borderRadius: 3, padding: '2px 6px' }}>🔥 web</span>
+            )}
             {lead.puntuacion != null && (
               <span style={{ fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
                 ★ {lead.puntuacion}
