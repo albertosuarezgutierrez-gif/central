@@ -67,15 +67,28 @@ export async function POST(req: NextRequest) {
     if (email) update.email_pagador = email
     if (telefono) update.telefono_pagador = telefono
 
+    // Enlace AUTORITATIVO por metadata: el checkout guarda los ids de las filas en
+    // `metadata.pago_ids`. Lo usamos como vía principal porque es fiable aunque el
+    // `stripe_checkout_session` no se haya llegado a guardar en la fila (p. ej. un
+    // pedido multi-menú cuyo UPDATE posterior a crear la sesión no persistió). Sin
+    // esto, un pago real se quedaría como 'pendiente' para siempre (dinero cobrado
+    // por el catering pero sin reflejar en el portal).
+    const pagoIds = (session.metadata?.pago_ids || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+
     // Idempotencia: Stripe reintenta el webhook. Solo transicionamos las filas que
     // aún no estaban 'pagado' y nos quedamos con las que de verdad acaban de pagarse,
     // para no enviar el aviso de Telegram dos veces.
-    const { data: recienPagados } = await supabase
-      .from('cobros_grupo_pagos')
-      .update(update)
-      .eq('stripe_checkout_session', session.id)
-      .neq('estado', 'pagado')
-      .select('cobro_grupo_id, concepto, cantidad, importe_eur, nombre_pagador')
+    let q = supabase.from('cobros_grupo_pagos').update(update).neq('estado', 'pagado')
+    q = pagoIds.length
+      ? q.or(`stripe_checkout_session.eq.${session.id},id.in.(${pagoIds.join(',')})`)
+      : q.eq('stripe_checkout_session', session.id)
+
+    const { data: recienPagados } = await q.select(
+      'cobro_grupo_id, concepto, cantidad, importe_eur, nombre_pagador'
+    )
 
     if (recienPagados?.length) {
       await avisarCompra(supabase, recienPagados)

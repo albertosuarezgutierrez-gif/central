@@ -101,31 +101,49 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const pagoIds = pagos.map((p: { id: string }) => p.id).join(',')
 
   const origin = req.headers.get('origin') || 'https://www.iarest.es'
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    payment_method_types: ['card'],
-    line_items: lineItems,
-    customer_email: email_pagador?.trim() || undefined,
-    metadata: {
-      cobro_grupo_id: portal.id,
-      pago_ids: pagoIds,
-      nombre_pagador: nombre_pagador.trim(),
-      telefono_pagador: telefono_pagador?.trim() || ''
-    },
-    success_url: `${origin}/cobro/${slug}?pago=ok`,
-    cancel_url: `${origin}/cobro/${slug}`,
-    payment_intent_data: {
-      application_fee_amount: applicationFee,
-      transfer_data: { destination: portal.stripe_connect_id }
-    }
-  })
 
-  if (pagos?.length) {
+  let session: Stripe.Checkout.Session
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      customer_email: email_pagador?.trim() || undefined,
+      metadata: {
+        cobro_grupo_id: portal.id,
+        pago_ids: pagoIds,
+        nombre_pagador: nombre_pagador.trim(),
+        telefono_pagador: telefono_pagador?.trim() || ''
+      },
+      success_url: `${origin}/cobro/${slug}?pago=ok`,
+      cancel_url: `${origin}/cobro/${slug}`,
+      payment_intent_data: {
+        application_fee_amount: applicationFee,
+        transfer_data: { destination: portal.stripe_connect_id }
+      }
+    })
+  } catch (e) {
+    // Si Stripe no acepta la sesión, borramos las filas 'pendiente' recién insertadas
+    // para que NO queden huérfanas ensuciando el portal (filas pendiente sin sesión
+    // que nunca se podrán cobrar). Logueamos el error real para diagnóstico.
     await supabase
       .from('cobros_grupo_pagos')
-      .update({ stripe_checkout_session: session.id })
+      .delete()
       .in('id', (pagos as { id: string }[]).map(p => p.id))
+    console.error('[cobros/checkout] Stripe checkout.sessions.create falló:', e)
+    return NextResponse.json(
+      { error: 'No se pudo iniciar el pago, inténtalo de nuevo' },
+      { status: 500 }
+    )
   }
+
+  // El enlace autoritativo entre el pago y estas filas viaja en metadata.pago_ids
+  // (lo usa el webhook). Guardar también el session id es best-effort: si fallara,
+  // el webhook ya puede casar el pago por pago_ids.
+  await supabase
+    .from('cobros_grupo_pagos')
+    .update({ stripe_checkout_session: session.id })
+    .in('id', (pagos as { id: string }[]).map(p => p.id))
 
   return NextResponse.json({ checkout_url: session.url })
 }
