@@ -3,7 +3,7 @@ export const maxDuration = 30
 // API Lead Hunter — fetch URL externa + análisis NIM
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { callAI } from '@/lib/ai-client'
+import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlert } from '@/lib/telegram'
 
 export async function POST(req: NextRequest) {
@@ -13,7 +13,59 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
     }
 
-    const { url } = await req.json()
+    const body = await req.json()
+
+    // ── Modo CAPTION: analizar post de Instagram/TikTok (NIM, sin búsqueda) ──
+    if (body.caption) {
+      const prompt = `Eres un asistente de ventas B2B para ia.rest, SaaS de comandas por voz para restaurantes en España.
+Analiza este post de Instagram/TikTok.${body.ciudad ? ` Ciudad probable: ${body.ciudad}.` : ''}
+POST: ${body.caption}
+Responde SOLO con JSON válido, sin markdown:
+{"es_lead":true,"tipo":"apertura|queja_tpv|reforma|otro","nombre_local":"...","ciudad":"...","tipo_cocina":"...","tamaño_estimado":"pequeño|mediano|grande","tpv_mencionado":"Ágora|Glop|Hiopos|Revo|null","urgencia":"alta|media|baja","notas":"...","dm_sugerido":"DM máx 200 chars, tono cercano, termina con pregunta, sin links, menciona algo específico"}`
+      try {
+        const raw = await callAI('Eres un experto en prospección B2B de hostelería española para ia.rest.', prompt, 800, 20000, true)
+        return NextResponse.json({ ok: true, result: JSON.parse(cleanJSON(raw) || '{}') })
+      } catch (e: any) {
+        return NextResponse.json({ ok: false, error: `No se pudo analizar el post: ${e.message}` })
+      }
+    }
+
+    // ── Modo EMAIL: generar borrador de email comercial (NIM, sin búsqueda) ──
+    if (body.modo === 'email') {
+      const l = body.lead || {}
+      const prompt = `Eres Alberto Suárez, fundador de ia.rest (comandas por voz para restaurantes en España).
+Escribe un email comercial corto y personalizado para este prospecto.
+
+Info del negocio:
+- Nombre: ${l.nombre || 'vuestro restaurante'}
+- Ciudad: ${l.ciudad || ''}
+- Señal detectada: ${l.senial || 'apertura'}
+- TPV actual: ${l.tpv || 'desconocido'}
+- Descripción: ${l.descripcion || ''}
+- Nombre contacto: ${l.contacto || 'equipo'}
+
+Reglas:
+- Asunto: corto, específico, sin spam
+- Cuerpo: máx 150 palabras
+- Mencionar algo específico del negocio
+- Un único CTA: ver propuesta en el link
+- Firma: Alberto · ia.rest · hola@iarest.es
+- Tono: directo, sin florituras, B2B España
+
+Formato de respuesta:
+ASUNTO: [asunto]
+---
+[cuerpo del email]`
+      try {
+        const texto = await callAI('Eres Alberto, fundador de ia.rest. Escribes emails B2B en español de España.', prompt, 400, 20000, true)
+        return NextResponse.json({ ok: true, email: (texto || '').trim() })
+      } catch (e: any) {
+        return NextResponse.json({ ok: false, error: `No se pudo generar el email: ${e.message}` })
+      }
+    }
+
+    // ── Modo URL (por defecto): analizar la web del negocio ──
+    const { url } = body
     if (!url) return NextResponse.json({ error: 'URL requerida' }, { status: 400 })
 
     // Detectar URLs que no son scrapebles (Google Maps, share links, etc.)
