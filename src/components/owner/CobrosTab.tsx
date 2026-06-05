@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { C, SE, SN } from '@/lib/colors'
 
 interface Item { id: string; nombre: string; precio_eur: number; pdf_url: string | null; activo: boolean }
-interface Pago { id: string; estado: string; importe_eur: number; nombre_pagador: string; email_pagador: string | null; telefono_pagador: string | null; concepto: string | null; pagado_at: string | null }
+interface Pago { id: string; estado: string; importe_eur: number; cantidad: number | null; nombre_pagador: string; email_pagador: string | null; telefono_pagador: string | null; concepto: string | null; pagado_at: string | null }
 interface Portal { id: string; slug: string; titulo: string; descripcion: string | null; estado: string; imagen_url: string | null; color_primario: string; fecha_evento: string | null; fecha_limite_pago: string | null; repercutir_comision: boolean; modo_seleccion: 'una' | 'varias'; permitir_cantidades: boolean; max_seleccion: number | null; mensaje_confirmacion: string | null; created_at: string; cobros_grupo_items: Item[]; cobros_grupo_pagos: Pago[] }
 interface Props { restauranteId: string; sh: () => Record<string, string> }
 
@@ -598,6 +598,33 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
         const pagados = portal.cobros_grupo_pagos.filter(p => p.estado === 'pagado')
         const pendientes = portal.cobros_grupo_pagos.filter(p => p.estado === 'pendiente')
         const total = pagados.reduce((acc, p) => acc + Number(p.importe_eur), 0)
+        // Resumen por menú (para organizar el catering): unidades + importe de cada concepto pagado
+        const resumenMenu = (() => {
+          const m = new Map<string, { cantidad: number; subtotal: number }>()
+          for (const p of pagados) {
+            const c = p.concepto || 'Sin concepto'
+            const qty = Number(p.cantidad) || 1
+            const prev = m.get(c) || { cantidad: 0, subtotal: 0 }
+            m.set(c, { cantidad: prev.cantidad + qty, subtotal: prev.subtotal + Number(p.importe_eur) })
+          }
+          return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]))
+        })()
+        const totalUnidades = resumenMenu.reduce((a, [, v]) => a + v.cantidad, 0)
+        // Agrupado por persona: cada comprador una vez, con sus menús y su total
+        const personas = (() => {
+          const m = new Map<string, { nombre: string; telefono: string | null; email: string | null; items: { concepto: string; cantidad: number }[]; total: number }>()
+          for (const p of pagados) {
+            const nombre = p.nombre_pagador?.trim() || 'Anónimo'
+            const key = nombre.toLowerCase() + '|' + (p.telefono_pagador || '')
+            const prev = m.get(key) || { nombre, telefono: p.telefono_pagador, email: p.email_pagador, items: [], total: 0 }
+            prev.items.push({ concepto: p.concepto || 'Menú', cantidad: Number(p.cantidad) || 1 })
+            prev.total += Number(p.importe_eur)
+            if (!prev.telefono && p.telefono_pagador) prev.telefono = p.telefono_pagador
+            if (!prev.email && p.email_pagador) prev.email = p.email_pagador
+            m.set(key, prev)
+          }
+          return Array.from(m.values()).sort((a, b) => a.nombre.localeCompare(b.nombre))
+        })()
         const link = `${BASE_URL}/cobro/${portal.slug}`
         const cerrado = portal.estado === 'cerrado'
         const col = portal.color_primario || C.red
@@ -657,27 +684,49 @@ export default function CobrosTab({ restauranteId, sh }: Props) {
 
               {pagados.length > 0 && (
                 <div style={{ borderTop: `1px solid ${C.rule}`, paddingTop: '.75rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                    <span style={lbl}>Pagos recibidos</span>
+                  {/* Resumen para organizar el catering: unidades por menú + total */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <span style={lbl}>Para organizar · menús pagados</span>
                     <button onClick={() => descargarCSV(portal)} style={{ ...btnSec, fontSize: 11, padding: '4px 10px' }}>
                       ⬇ Lista catering (CSV)
                     </button>
                   </div>
-                  <div style={{ maxHeight: 320, overflowY: 'auto' }}>
-                    {pagados.map(p => (
-                      <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, padding: '7px 0', borderBottom: `1px solid ${C.rule}`, fontSize: 13, fontFamily: SN, color: C.ink2 }}>
+                  <div style={{ background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '.75rem .875rem', marginBottom: '.875rem' }}>
+                    {resumenMenu.map(([concepto, v]) => (
+                      <div key={concepto} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, padding: '4px 0', fontFamily: SN, fontSize: 13, color: C.ink2 }}>
+                        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>🍽 {concepto}</span>
+                        <span style={{ flexShrink: 0, color: C.ink }}>
+                          <b style={{ color: col }}>{v.cantidad}</b> ud · {v.subtotal.toFixed(2)} €
+                        </span>
+                      </div>
+                    ))}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: `1px solid ${C.rule}`, marginTop: 6, paddingTop: 6, fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.ink }}>
+                      <span>Total · {personas.length} {personas.length === 1 ? 'persona' : 'personas'}</span>
+                      <span>{totalUnidades} ud · {total.toFixed(2)} €</span>
+                    </div>
+                  </div>
+
+                  {/* Detalle por persona: cada comprador con sus menús (para la lista de invitados) */}
+                  <span style={lbl}>Personas que han comprado</span>
+                  <div style={{ maxHeight: 320, overflowY: 'auto', marginTop: 4 }}>
+                    {personas.map((per, idx) => (
+                      <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, padding: '8px 0', borderBottom: `1px solid ${C.rule}`, fontSize: 13, fontFamily: SN, color: C.ink2 }}>
                         <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.nombre_pagador || 'Anónimo'}</div>
-                          {p.concepto && <div style={{ fontSize: 12, color: C.red }}>🍽 {p.concepto}</div>}
-                          {(p.telefono_pagador || p.email_pagador) && (
+                          <div style={{ fontWeight: 600, color: C.ink, overflow: 'hidden', textOverflow: 'ellipsis' }}>{per.nombre}</div>
+                          <div style={{ fontSize: 12, color: C.red }}>
+                            {per.items.map((it, i) => (
+                              <span key={i}>{i > 0 ? ', ' : '🍽 '}{it.cantidad > 1 ? `${it.cantidad}× ` : ''}{it.concepto}</span>
+                            ))}
+                          </div>
+                          {(per.telefono || per.email) && (
                             <div style={{ fontSize: 11, color: C.ink4 }}>
-                              {p.telefono_pagador && <span>📱 {p.telefono_pagador}</span>}
-                              {p.telefono_pagador && p.email_pagador && <span> · </span>}
-                              {p.email_pagador && <span>✉ {p.email_pagador}</span>}
+                              {per.telefono && <span>📱 {per.telefono}</span>}
+                              {per.telefono && per.email && <span> · </span>}
+                              {per.email && <span>✉ {per.email}</span>}
                             </div>
                           )}
                         </div>
-                        <span style={{ color: C.green, fontWeight: 600, flexShrink: 0 }}>{Number(p.importe_eur).toFixed(2)} €</span>
+                        <span style={{ color: C.green, fontWeight: 600, flexShrink: 0 }}>{per.total.toFixed(2)} €</span>
                       </div>
                     ))}
                   </div>

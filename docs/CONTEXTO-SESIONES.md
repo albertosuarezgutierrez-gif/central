@@ -16,6 +16,46 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **BUG CRÍTICO cobros de grupo: pedidos multi-menú se pagan pero salen "pendiente" — FIX + reconciliación — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`, PR #47): Alberto vio ~480 € pero el
+  portal del congreso de Saboga mostraba 280 €. **Causa raíz (verificada contra Stripe
+  LIVE):** el portal está en `modo_seleccion='varias'`. Cuando un invitado elige
+  **varios menús**, el checkout inserta N filas `pendiente`, crea la sesión de Stripe
+  y guarda el `session_id` en las filas en un UPDATE **posterior** que no persiste para
+  multi-ítem → las filas quedan con `stripe_checkout_session = NULL`. El **webhook solo
+  casaba por `stripe_checkout_session`**, así que esos pagos, **aunque se cobran de
+  verdad y el dinero llega a Saboga**, nunca pasaban a `pagado` → el portal infra-
+  reportaba. Casos reales: **Ivan (ivanrexito@gmail.com) pagó 60 € (pi_3TeXsF, 4 jun)**
+  y **Antonio (antoniojesusgarcia3@gmail.com) pagó 80 € (pi_3TeryD, hoy)** → ambos
+  salían "pendiente". (Mi 1ª hipótesis de "QR/mesa" para esos 140 € era ERRÓNEA: son
+  del congreso.) Total real del congreso = **420 €**, no 280.
+  - **FIX de código (committeado):**
+    - **Webhook** `stripe-connect`: ahora casa las filas por **`session.metadata.pago_ids`**
+      (enlace autoritativo que el checkout siempre escribe) además de por `session_id`.
+      Así un pago real **no puede quedar sin registrar** aunque falle el guardado del
+      session_id. (`.or(stripe_checkout_session.eq…,id.in.(…))`.)
+    - **Checkout** `/api/cobros/[slug]/checkout`: `sessions.create` envuelto en try/catch
+      → si Stripe falla, **borra las filas pendiente huérfanas** y loguea el error real
+      (antes quedaban contaminando el portal). El session_id pasa a ser best-effort.
+  - **Reconciliación de datos en vivo (Supabase):** marcadas `pagado` las 6 filas de
+    Ivan (pi_3TeXsF) y las 2 de Antonio (pi_3TeryD) con su `pagado_at` real. Portal
+    ahora: **21 pagados = 420 €**, 4 pendientes = 70 € (Patricia 30 € = posible pedido
+    perdido por el bug, SIN pago en Stripe → conviene que Saboga la contacte antes del
+    límite; + 1 duplicado de Carmen de 40 € que ya pagó por otra vía).
+  - **Panel para organizar (`CobrosTab.tsx`, lo pedido por Alberto):** resumen por menú
+    (unidades + importe de cada concepto pagado, total de unidades + nº de personas) y
+    pagos **agrupados por persona** (cada comprador una vez con sus menús y total).
+    Añadido `cantidad` al select de `/api/owner/cobros`. `tsc` + `next build` verdes.
+  - **No reproducible aquí:** logs de Vercel del 4-5 jun ya rotados, el MCP de Stripe no
+    crea/lee Checkout Sessions y no hay clave Stripe local → **recomendado test real de
+    un pago multi-menú** antes del límite (17:00) para confirmar end-to-end; el webhook
+    por `pago_ids` ya garantiza el registro de cualquier pago que sí complete.
+  - **Económico (aparte):** ia.rest **pierde 5,85 €** (saldo plataforma negativo): el 1 %
+    de comisión no cubre la tarifa por transacción de Stripe en tickets pequeños (10 €).
+  - **Pendiente/decisión:** (a) caducar pendientes viejos por TTL (cron); (b) que
+    `/super → Cobro` (`v_cobro_resumen_super`) refleje los cobros de grupo (hoy 0 para
+    Saboga); (c) revisar economía del 1 %.
+
 - **Sacar Anthropic del camino crítico (cuenta SIN saldo) — 05/06/2026** (PRs #43/#44 + 1 más):
   el fallback a Anthropic daba "credit balance too low". Objetivo de Alberto: **que no falle nada**.
   - **#43**: `noFallback=true` por **default** en `callAI`/`callAIVision` (`src/lib/ai-client.ts`) →
@@ -34,7 +74,6 @@
     + `GEMINI_API_KEY` añadida a `.env.example`.
   - **`GEMINI_API_KEY` ya está en Vercel** (la usa `lead-onboarding`). Si algún día se recarga
     Anthropic, los 3 agentes vuelven solos (la guarda solo salta sin saldo).
-
 
 - **FIX Apify ingest: "0 de 30" → inserta — 04/06/2026** (PR #35, mergeado):
   con `APIFY_TOKEN` ya puesto en Vercel, "Lanzar una vuelta" devolvía
