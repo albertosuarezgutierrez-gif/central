@@ -3,7 +3,7 @@ export const maxDuration = 30
 // API Lead Hunter — fetch URL externa + análisis NIM
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
-import { callAI, cleanJSON } from '@/lib/ai-client'
+import { callAI, callAISearch, cleanJSON } from '@/lib/ai-client'
 import { tgAlert } from '@/lib/telegram'
 
 export async function POST(req: NextRequest) {
@@ -99,18 +99,18 @@ ASUNTO: [asunto]
       contenido = `[Página sin contenido texto. URL: ${url}]`
     }
 
-    // NIM analiza el contenido
+    // Gemini con búsqueda web analiza y VERIFICA los datos (no adivina la ciudad)
     const prompt = `Eres un asistente de ventas B2B para ia.rest, SaaS de comandas por voz para restaurantes en España.
-Analiza el siguiente contenido de la web de un negocio de hostelería español.
+Analiza este negocio de hostelería español a partir de su web y de lo que encuentres en internet.
 URL: ${url}
-CONTENIDO: ${contenido}
-Si el contenido es escaso, infiere lo que puedas de la URL y el nombre del negocio.
+CONTENIDO DE LA WEB: ${contenido}
+IMPORTANTE: usa la búsqueda web para CONFIRMAR la ciudad/ubicación real, el nombre, la web, el email y el teléfono. NO inventes la ciudad ni asumas "Madrid" por defecto: si el negocio está en Sevilla u otra ciudad, indícala correctamente (p. ej. "Plaza del Salvador" es Sevilla).
 Responde SOLO con JSON válido, sin markdown:
 {"nombre":"...","grupo":"...","ciudad":"...","tipo_cocina":"...","num_locales":1,"num_mesas_estimado":20,"tpv_actual":null,"tiene_delivery":false,"tiene_eventos":false,"tiene_carta_vinos":false,"email_contacto":null,"telefono":null,"nombre_contacto":null,"descripcion_negocio":"...","puntos_dolor":["...","...","..."],"cita_inventada":"...","precio_mrr_estimado":99,"headline_operativa":"...","modulos_recomendados":["voz","kds"],"objecion_principal":"...","respuesta_objecion":"..."}`
 
     let raw = ''
     try {
-      raw = await callAI('Eres un experto en análisis de negocios de hostelería española para ia.rest.', prompt, 1200, 20000, true)
+      raw = await callAISearch('Eres un experto en análisis de negocios de hostelería española para ia.rest. Verificas los datos con búsqueda web.', prompt, 1200, 45_000)
     } catch (e: any) {
       return NextResponse.json({ error: `Error IA: ${e.message}` }, { status: 500 })
     }
@@ -121,7 +121,7 @@ Responde SOLO con JSON válido, sin markdown:
 
     let analysis: any
     try {
-      analysis = JSON.parse(raw.replace(/```json|```/g, '').trim())
+      analysis = JSON.parse(cleanJSON(raw))
     } catch {
       return NextResponse.json({ error: 'Error al procesar la respuesta IA', raw }, { status: 500 })
     }
