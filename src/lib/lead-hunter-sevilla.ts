@@ -57,6 +57,19 @@ export async function enviarEmailsSevilla(
 
         enviados++
         console.log(`✅ Email enviado a ${lead.nombre} (${lead.email})`)
+
+        // Kanban honesto: al contactar de verdad, el lead deja de ser "Nuevo".
+        // Solo movemos 'nuevo' → 'contactado' (no pisamos estados más avanzados).
+        // En su propio try/catch: si falla, el email ya salió, no abortamos.
+        try {
+          await supabase
+            .from('leads')
+            .update({ estado: 'contactado', ultima_actividad_at: new Date().toISOString() })
+            .eq('id', lead.id)
+            .eq('estado', 'nuevo')
+        } catch (e) {
+          console.error(`No se pudo marcar contactado ${lead.id}:`, e)
+        }
       } catch (err) {
         console.error(`Error lead ${lead.id}:`, err)
         continue
