@@ -55,7 +55,7 @@ export async function GET(req: NextRequest) {
         const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`
 
         await resend.emails.send({
-          from: 'Alberto <alberto@iarest.es>',
+          from: 'Alberto <hola@iarest.es>',
           to: lead.email,
           subject: `${lead.nombre}, no te lo pierdas... 👀`,
           html: `

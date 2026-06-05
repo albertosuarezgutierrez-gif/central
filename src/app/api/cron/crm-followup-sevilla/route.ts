@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
       const tpl = construirSeguimiento({ id: lead.id, nombre: lead.nombre, tipo_negocio: lead.tipo_negocio }, jwtToken, unsubUrl)
 
       const emailResult = await resend.emails.send({
-        from: 'Alberto <alberto@iarest.es>',
+        from: 'Alberto <hola@iarest.es>',
         to: lead.email,
         subject: tpl.subject,
         html: tpl.html,

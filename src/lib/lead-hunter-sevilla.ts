@@ -48,7 +48,7 @@ export async function enviarEmailsSevilla(
         if (trackErr) { console.error(`Tracking error ${lead.nombre}:`, trackErr.message); continue }
 
         const emailResult = await resend.emails.send({
-          from: 'Alberto <alberto@iarest.es>',
+          from: 'Alberto <hola@iarest.es>',
           to: lead.email,
           subject: tpl.subject,
           html: tpl.html,
