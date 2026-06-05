@@ -2,7 +2,7 @@ import { createServerClient } from '@/lib/supabase'
 import { NextRequest, NextResponse } from 'next/server'
 import { enviarEmailsSevilla } from '@/lib/lead-hunter-sevilla'
 
-// Margen para enviar la tanda diaria (hasta 20 emails seguidos vía Resend).
+// Margen para enviar la tanda diaria (hasta ~10 emails seguidos vía Resend).
 export const maxDuration = 60
 
 export async function GET(req: NextRequest) {
@@ -10,7 +10,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const supabase = createServerClient()
-  // 20 emails fríos por día laborable (cron 10:00 España). El botón manual sigue en 3.
-  const result = await enviarEmailsSevilla(supabase, 20)
+  // 10 emails fríos por día laborable (cron 10:00 España). Ramp prudente: iarest.es
+  // también manda transaccional (facturas/portales), así que no quemamos su reputación
+  // con frío masivo. El botón manual sigue en 3. Subir solo si la entregabilidad va bien.
+  const result = await enviarEmailsSevilla(supabase, 10)
   return NextResponse.json({ ...result, timestamp: new Date().toISOString() }, { status: result.ok ? 200 : 500 })
 }
