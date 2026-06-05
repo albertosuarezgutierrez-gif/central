@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
 import { tgAlert } from '@/lib/telegram'
-import Anthropic from '@anthropic-ai/sdk'
+import { callAISearch, cleanJSON } from '@/lib/ai-client'
 
 interface LocalEncontrado {
   nombre: string
@@ -48,24 +48,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // 3. Nombre del grupo a buscar
   const nombreGrupo = lead.empresa || lead.restaurante || lead.nombre
 
-  // 4. Llamar a Anthropic con web_search para localizar los locales
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
+  // 4. Buscar los locales con Gemini grounding (callAISearch) — sin Anthropic
   let localesEncontrados: LocalEncontrado[] = []
 
   try {
-    const response = await client.messages.create({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 2000,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
-      system: `Eres un investigador comercial especializado en hostelería española.
-Tu tarea es encontrar TODOS los locales (restaurantes, bares, cafeterías, etc.) 
-de un grupo hostelero en España.
+    const texto = await callAISearch(
+      `Eres un investigador comercial especializado en hostelería española.
+Tu tarea es encontrar TODOS los locales (restaurantes, bares, cafeterías, etc.) de un grupo hostelero en España.
 Responde SOLO con un JSON válido, sin backticks ni explicaciones.`,
-      messages: [
-        {
-          role: 'user',
-          content: `Busca todos los locales del grupo hostelero "${nombreGrupo}" en España.
+      `Busca todos los locales del grupo hostelero "${nombreGrupo}" en España.
 Necesito: nombre exacto de cada local, ciudad, tipo (restaurante/bar/cafetería/catering/otro) y aforo si aparece.
 
 Devuelve EXACTAMENTE este JSON (array de locales encontrados):
@@ -82,91 +73,19 @@ Devuelve EXACTAMENTE este JSON (array de locales encontrados):
 
 Si no encuentras ningún local concreto del grupo, devuelve [].
 Solo incluye locales que puedas verificar en internet. No inventes.`,
-        },
-      ],
-    })
+      2000,
+      45_000
+    )
 
-    // Extraer el texto de la respuesta final
-    let textoRespuesta = ''
-    for (const block of response.content) {
-      if (block.type === 'text') {
-        textoRespuesta += block.text
-      }
-    }
-
-    // Si hay tool_use (búsquedas), puede haber más turnos — manejar stop_reason
-    // Si stop_reason es 'tool_use', hacer follow-up
-    let finalContent = response.content
-    let currentResponse = response
-
-    while (currentResponse.stop_reason === 'tool_use') {
-      // Recopilar resultados de herramientas
-      const toolUseBlocks = currentResponse.content.filter((b) => b.type === 'tool_use')
-      const toolResults = toolUseBlocks.map((b) => {
-        if (b.type !== 'tool_use') return null
-        return {
-          type: 'tool_result' as const,
-          tool_use_id: b.id,
-          content: 'Búsqueda completada',
-        }
-      }).filter(Boolean)
-
-      if (toolResults.length === 0) break
-
-      // Continuar conversación con resultados
-      const followUp = await client.messages.create({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2000,
-        tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
-        system: `Eres un investigador comercial especializado en hostelería española.
-Responde SOLO con un JSON válido, sin backticks ni explicaciones.`,
-        messages: [
-          {
-            role: 'user',
-            content: `Busca todos los locales del grupo hostelero "${nombreGrupo}" en España.
-Devuelve EXACTAMENTE un JSON array con: nombre, ciudad, tipo, aforo, fuente, verificado.`,
-          },
-          {
-            role: 'assistant',
-            content: currentResponse.content,
-          },
-          {
-            role: 'user',
-            content: toolResults as Anthropic.Messages.ToolResultBlockParam[],
-          },
-        ],
-      })
-
-      currentResponse = followUp
-      finalContent = followUp.content
-    }
-
-    // Extraer texto final
-    textoRespuesta = ''
-    for (const block of finalContent) {
-      if (block.type === 'text') {
-        textoRespuesta += block.text
-      }
-    }
-
-    // Parsear JSON
-    const clean = textoRespuesta
-      .trim()
-      .replace(/^```json\s*/i, '')
-      .replace(/^```\s*/i, '')
-      .replace(/\s*```$/i, '')
-      .trim()
-
-    const parsed = JSON.parse(clean)
+    const match = cleanJSON(texto).match(/\[[\s\S]*\]/)
+    const parsed = match ? JSON.parse(match[0]) : []
     if (Array.isArray(parsed)) {
       localesEncontrados = parsed
     }
   } catch (err) {
+    // No romper la pantalla: si la IA falla, seguimos con 0 locales (no 500).
     console.error('[buscar-locales] Error IA:', err)
-    return NextResponse.json(
-      { error: 'Error al buscar locales con IA', detalle: String(err) },
-      { status: 500 }
-    )
+    localesEncontrados = []
   }
 
   if (localesEncontrados.length === 0) {
