@@ -58,7 +58,7 @@ Responde SOLO con JSON válido, sin markdown:
 
     let raw = ''
     try {
-      raw = await callAI('Eres un experto en análisis de negocios de hostelería española para ia.rest.', prompt, 1200)
+      raw = await callAI('Eres un experto en análisis de negocios de hostelería española para ia.rest.', prompt, 1200, 20000, true)
     } catch (e: any) {
       return NextResponse.json({ error: `Error IA: ${e.message}` }, { status: 500 })
     }
