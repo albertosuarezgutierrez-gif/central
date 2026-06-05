@@ -118,7 +118,7 @@
     },
     {
       "path": "/api/cron/crm-lead-hunter-sevilla",
-      "schedule": "0 8 * * 1-5"
+      "schedule": "0 6 * * 1-5"
     },
     {
       "path": "/api/cron/crm-recordatorio-dia2",
