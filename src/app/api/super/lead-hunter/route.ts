@@ -1,5 +1,5 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 30
+export const maxDuration = 60 // el modo URL usa Gemini (callAISearch); margen para que no lo mate Vercel
 // API Lead Hunter — fetch URL externa + análisis NIM
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
@@ -110,7 +110,7 @@ Responde SOLO con JSON válido, sin markdown:
 
     let raw = ''
     try {
-      raw = await callAISearch('Eres un experto en análisis de negocios de hostelería española para ia.rest. Verificas los datos con búsqueda web.', prompt, 1200, 45_000)
+      raw = await callAISearch('Eres un experto en análisis de negocios de hostelería española para ia.rest. Verificas los datos con búsqueda web.', prompt, 1200, 35_000)
     } catch (e: any) {
       return NextResponse.json({ error: `Error IA: ${e.message}` }, { status: 500 })
     }

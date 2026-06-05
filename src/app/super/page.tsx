@@ -1871,7 +1871,8 @@ function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; 
     setLoading(true); setResult(null); setAnalysis(null); setGuardado(false); setPropuestaUrl(null); setShowEmail(false)
     try {
       const r = await fetch('/api/super/lead-hunter', { method: 'POST', headers: sh(), body: JSON.stringify({ url: urlNegocio }) })
-      const d = await r.json()
+      let d: any = {}
+      try { d = await r.json() } catch { d = { ok: false, error: 'El análisis tardó demasiado o el servidor falló. Reinténtalo en unos segundos.' } }
       if (!d.ok) { setAnalysis({ error: d.error }); setLoading(false); return }
       setAnalysis(d.analysis)
       generarPropuesta(null, d.analysis)
