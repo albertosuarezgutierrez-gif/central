@@ -109,7 +109,7 @@ Genera este JSON exacto:
 
   let estudio: Record<string, unknown> = {}
   try {
-    const raw = await callAI(systemPrompt, userPrompt, 1500, 30000)
+    const raw = await callAI(systemPrompt, userPrompt, 1500, 30000, true)
     const clean = raw.replace(/```json|```/g, '').trim()
     estudio = JSON.parse(clean)
   } catch (e) {
@@ -156,7 +156,7 @@ JSON:
 
   let emailData = { asunto: `ia.rest para ${empresa}`, cuerpo: `Hola,\n\n[Email generado con error - revisar]\n\nAlberto · ia.rest` }
   try {
-    const rawEmail = await callAI(emailSystem, emailUser, 800, 20000)
+    const rawEmail = await callAI(emailSystem, emailUser, 800, 20000, true)
     const cleanEmail = rawEmail.replace(/```json|```/g, '').trim()
     emailData = JSON.parse(cleanEmail)
   } catch (e) {
@@ -186,7 +186,7 @@ Notas/relación: ${(lead.notas as string || '').substring(0, 200)}
 Pain point principal: ${(estudio.pain_points as string[])?.[0] || ''}
 Argumento: ${estudio.argumento_principal}
 2-4 líneas. Saludo cercano. 1 cosa concreta del negocio. Propone quedar. Max 2 emojis. Sin palabrería corporativa.`,
-      250, 15000
+      250, 15000, true
     )
     waDraft = `${waRaw.trim()}\n\n🔗 ${propuestaUrl}\n🌐 www.iarest.es`
   } catch {

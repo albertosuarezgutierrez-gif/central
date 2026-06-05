@@ -182,7 +182,7 @@ Responde SOLO JSON válido sin markdown.`,
 
 JSON exacto:
 {"resumen_negocio":"2-3 frases","tipo_negocio":"bar|restaurante|cafeteria|grupo|catering","ciudad":"ciudad","num_locales_estimado":1,"num_empleados_estimado":8,"ticket_medio_estimado":25,"tpv_actual":"TPV o Desconocido","coste_tpv_actual_mes":0,"pain_points":["p1","p2","p3"],"oportunidades":["o1","o2"],"modulos_criticos":["voz","kds"],"modulos_secundarios":["almacen"],"mrr_estimado":150,"ahorro_mensual_estimado":200,"argumento_principal":"argumento clave en 1 frase","objeciones_probables":["obj1"],"resolucion_objeciones":{"obj1":"resp"},"tono_propuesta":"profesional","nivel_urgencia":"media","puntuacion_lead":70}`,
-    1500, 30000
+    1500, 30000, true
   )
 
   let estudio: Record<string, unknown> = {}
