@@ -5,6 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 import { tgAnswerCallback, tgEditMessage, tgAlert } from '@/lib/telegram'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { sendEmail } from '@/lib/email'
+import { construirEmail } from '@/lib/crm-sevilla'
 
 // Estado temporal para leads esperando cambio de foco
 const pendingFoco: Map<string, { leadId: string; messageId: number }> = new Map()
@@ -91,6 +92,48 @@ export async function POST(req: NextRequest) {
     if (action === 'revisar_email') {
       await tgAnswerCallback(callbackId, 'Revísalo en /super')
       await tgEditMessage(messageId, message.text + '\n\n👆 <i>Revísalo y envíalo desde <a href="https://www.iarest.es/super">/super</a></i>')
+    }
+
+    // Aprobar y enviar el email frío de Sevilla (router de contacto). Reconstruye la
+    // plantilla por vertical y envía desde hola@iarest.es vía Resend.
+    if (action === 'enviar_sevilla') {
+      await tgAnswerCallback(callbackId, '📨 Enviando…')
+      await tgEditMessage(messageId, message.text + '\n\n⏳ <i>Enviando…</i>')
+      try {
+        const { data: lead } = await supabase
+          .from('leads').select('id, nombre, email, tipo_negocio').eq('id', leadId).single()
+        if (!lead?.email) {
+          await tgEditMessage(messageId, message.text + '\n\n⚠️ <i>El lead no tiene email</i>')
+          return NextResponse.json({ ok: true })
+        }
+        const jwt = (await import('jsonwebtoken')).default
+        const { Resend } = await import('resend')
+        const resend = new Resend(process.env.RESEND_API_KEY)
+        const secret = process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026'
+        const jwtToken = jwt.sign({ lead_id: lead.id, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 }, secret)
+        const unsubToken = jwt.sign({ lead_id: lead.id }, secret)
+        const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`
+        const tpl = construirEmail(lead, jwtToken, unsubUrl)
+        const r = await resend.emails.send({ from: 'Alberto <hola@iarest.es>', to: lead.email, subject: tpl.subject, html: tpl.html }) as { error?: unknown }
+        if (r.error) throw new Error(typeof r.error === 'string' ? r.error : JSON.stringify(r.error))
+
+        await supabase.from('leads_web_tracking')
+          .update({ estado: 'enviado_dia1', mensaje_dia1_at: new Date().toISOString() })
+          .eq('lead_id', lead.id).eq('estado', 'propuesto')
+        await supabase.from('leads')
+          .update({ estado: 'contactado', ultima_actividad_at: new Date().toISOString() })
+          .eq('id', lead.id).eq('estado', 'nuevo')
+
+        await tgEditMessage(messageId, `✅ <b>Email enviado a ${lead.email}</b>`)
+      } catch (e: unknown) {
+        await tgEditMessage(messageId, `❌ Error enviando email: ${e instanceof Error ? e.message : 'desconocido'}`)
+      }
+    }
+
+    if (action === 'descartar_sevilla') {
+      await tgAnswerCallback(callbackId, 'Descartado')
+      await supabase.from('leads_web_tracking').update({ estado: 'descartado_email' }).eq('lead_id', leadId).eq('estado', 'propuesto')
+      await tgEditMessage(messageId, message.text + '\n\n❌ <i>Descartado (no se envía)</i>')
     }
 
     if (action === 'ver_whatsapp') {

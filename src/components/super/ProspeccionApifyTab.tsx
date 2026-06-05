@@ -70,7 +70,7 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
     try {
       const r = await fetch('/api/super/lead-hunter-sevilla', { method: 'POST', headers: headers() })
       const j = await r.json()
-      setMsg(j.error ? `Error: ${j.error}` : `📧 Emails enviados: ${j.enviados ?? 0}${j.motivo ? ` (${j.motivo})` : ''}`)
+      setMsg(j.error ? `Error: ${j.error}` : `📧 ${j.enviados ?? 0} email(s) listos para aprobar en Telegram${j.motivo ? ` (${j.motivo})` : ''}`)
       await cargar()
     } catch (e) {
       setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
@@ -114,7 +114,7 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
         </button>
         <button onClick={enviarMails} disabled={enviandoMail}
           style={{ background: enviandoMail ? C.bg3 : C.green, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoMail ? 'default' : 'pointer' }}>
-          {enviandoMail ? 'Enviando…' : '📧 Enviar emails de venta'}
+          {enviandoMail ? 'Preparando…' : '📧 Preparar emails (a aprobar)'}
         </button>
         <button onClick={cargar} disabled={loading}
           style={{ background: 'transparent', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontSize: 13, cursor: 'pointer' }}>
