@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
       modo_seleccion, permitir_cantidades, max_seleccion, mensaje_confirmacion,
       created_at,
       cobros_grupo_items(id, nombre, precio_eur, pdf_url, activo, orden),
-      cobros_grupo_pagos(id, estado, importe_eur, nombre_pagador, email_pagador, telefono_pagador, concepto, pagado_at)
+      cobros_grupo_pagos(id, estado, importe_eur, cantidad, nombre_pagador, email_pagador, telefono_pagador, concepto, pagado_at)
     `)
     .eq('restaurante_id', rid)
     .order('created_at', { ascending: false })

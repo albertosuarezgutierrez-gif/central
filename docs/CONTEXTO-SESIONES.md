@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **"Discrepancia 480 vs 280" del congreso de Saboga — RESUELTA (no falta dinero) + panel para organizar — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`): Alberto vio ~480 € en el Stripe
+  de la plataforma y solo 280 € "de Saboga". **Reconciliación verificada contra Stripe
+  LIVE + Supabase:** los 15 pagos de la semana (= **420 €**, coincide con "1 SEMANA"
+  de la captura) tienen **TODOS** `transfer_data.destination = acct_1Tbzm… (Saboga)`.
+  De esos: **280 € = portal del Congreso** (13 pagos, en `cobros_grupo_pagos`) y
+  **140 € (80+60) = otro canal de Saboga** (QR/mesa `qr-cobro`, registrado en tablas
+  operativas, no en el portal). ia.rest solo retiene el **1 %** y de hecho **pierde
+  5,85 €** (el "Volumen de ventas neto −5,85 €" = saldo de la plataforma: el 1 % no
+  cubre la tarifa por transacción de Stripe en tickets pequeños). El portal tiene
+  además **12 filas `pendiente` (210 €) que NUNCA se pagaron** (checkouts
+  abandonados/fallidos; 11 ni crearon sesión de Stripe; 1 duplicado de Carmen) →
+  280 + 210 = 490 ≈ "480". **No se borró nada** en vivo.
+  - **Hecho (lo pedido por Alberto: "que Saboga vea el total y los datos de quién ha
+    comprado para organizar"):** en `/owner → Cobros` (`CobrosTab.tsx`) se añadió un
+    **resumen por menú** (unidades + importe de cada concepto pagado, con total de
+    unidades y nº de personas) y el detalle de pagos se **agrupa por persona** (cada
+    comprador una vez, con sus menús y su total). Se añadió `cantidad` al select de
+    `/api/owner/cobros`. Todo a partir de pagos `pagado` (cuadra con 280 €). `tsc`
+    limpio + `next build` verde con deps.
+  - **Pendiente/decisión (no hecho aún, a tu criterio):** (a) limpiar los 12
+    pendientes fantasma + arreglar el checkout para que cree la sesión de Stripe ANTES
+    de insertar (o limpie huérfanos) y caduque pendientes viejos; (b) que `/super →
+    Cobro` (`v_cobro_resumen_super`) refleje los cobros de grupo (hoy muestra 0 para
+    Saboga); (c) revisar la economía del 1 % en tickets pequeños.
+
 - **FIX Apify ingest: "0 de 30" → inserta — 04/06/2026** (PR #35, mergeado):
   con `APIFY_TOKEN` ya puesto en Vercel, "Lanzar una vuelta" devolvía
   `Fase B: 0 leads de 30` (run SUCCEEDED pero 0 insertados). Causa: el INSERT del
