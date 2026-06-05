@@ -277,8 +277,8 @@ export async function callAISearch(
     }
   }
 
-  // Fallback a NIM→Haiku sin search grounding
-  return callAI(system, user, maxTokens, timeoutMs, false)
+  // Fallback a NIM puro sin search grounding (sin tocar Anthropic, que está sin saldo)
+  return callAI(system, user, maxTokens, timeoutMs, true)
 }
 
 /**

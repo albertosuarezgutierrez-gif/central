@@ -3,10 +3,8 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import { callAI, cleanJSON } from '@/lib/ai-client'
+import { callAI, callAISearch, cleanJSON } from '@/lib/ai-client'
 import { tgAlert } from '@/lib/telegram'
-
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || ''
 
 // Queries de búsqueda para encontrar leads potenciales en España
 const QUERIES_BUSQUEDA = [
@@ -21,41 +19,22 @@ const QUERIES_BUSQUEDA = [
   'haciendas fincas para bodas y eventos Sevilla',
 ]
 
-// ── Buscar con Claude web_search ────────────────────────────────────────────
+// ── Buscar con Gemini grounding (callAISearch) ──────────────────────────────
 async function buscarCandidatos(query: string): Promise<string> {
-  if (!ANTHROPIC_KEY) return ''
-
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': ANTHROPIC_KEY,
-        'anthropic-version': '2023-06-01',
-        'anthropic-beta': 'web-search-2025-03-05',
-      },
-      body: JSON.stringify({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1000,
-        tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-        messages: [{
-          role: 'user',
-          content: `Busca en internet: "${query}". 
-          Encuentra grupos de restaurantes, cadenas de bares, empresas de catering o grupos hosteleros en España con varios locales.
-          Para cada candidato devuelve SOLO JSON array:
-          [{"nombre":"Nombre empresa","ciudad":"Ciudad","locales_estimados":3,"web":"url o null","email":"email publico o null","telefono":"telefono o null","descripcion":"1 frase","tipo":"restaurante|bar|catering|eventos|grupo"}]
-          Si es una hacienda, finca o espacio para bodas/eventos usa tipo "eventos". Incluye email y telefono SOLO si aparecen en su web (no inventes).
-          Máximo 3 candidatos relevantes. Solo JSON, sin texto adicional.`
-        }],
-      }),
-    })
-
-    const data = await res.json()
-    // Extraer texto de la respuesta (puede tener bloques de tool_use + text)
-    const textBlock = data.content?.find((b: { type: string }) => b.type === 'text')
-    return textBlock?.text || ''
+    return await callAISearch(
+      'Eres un investigador de grupos hosteleros en España. Respondes SOLO con un JSON array, sin texto ni backticks.',
+      `Busca en internet: "${query}".
+Encuentra grupos de restaurantes, cadenas de bares, empresas de catering o grupos hosteleros en España con varios locales.
+Para cada candidato devuelve SOLO JSON array:
+[{"nombre":"Nombre empresa","ciudad":"Ciudad","locales_estimados":3,"web":"url o null","email":"email publico o null","telefono":"telefono o null","descripcion":"1 frase","tipo":"restaurante|bar|catering|eventos|grupo"}]
+Si es una hacienda, finca o espacio para bodas/eventos usa tipo "eventos". Incluye email y telefono SOLO si aparecen en su web (no inventes).
+Máximo 3 candidatos relevantes. Solo JSON, sin texto adicional.`,
+      1000,
+      45_000
+    )
   } catch (e) {
-    console.error('[prospeccion] Error Claude search:', e)
+    console.error('[prospeccion] Error búsqueda candidatos:', e)
     return ''
   }
 }
