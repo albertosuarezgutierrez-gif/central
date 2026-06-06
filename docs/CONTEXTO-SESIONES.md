@@ -16,6 +16,36 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
+  (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
+  tipo `etiqueta_producto`) estaba **roto en silencio** y, aunque funcionara, era un
+  dead-end. Dos problemas y sus fixes:
+  - **Bug de BD:** el CHECK de `documentos_escaneados.tipo` (migración 20260518) NO
+    incluía `etiqueta_producto`, así que el INSERT fallaba, `dbError` solo se logueaba
+    y `scan_id` volvía null → el scan nunca se persistía. **Fix:** migración
+    `20260606_smart_scan_etiqueta_producto.sql` (drop/recreate idempotente del CHECK
+    añadiendo `etiqueta_producto`). ⚠️ **Pendiente aplicar en Supabase remoto** (la tabla
+    vive en remoto; la migración del repo es la fuente, pero hay que ejecutarla).
+  - **Dead-end UI:** el botón "Usar en Recepción" redirigía a `&recepcion=1` (sin leer)
+    y no llevaba los datos. **Fix (puente):** `SmartScanModal` guarda los datos en
+    `sessionStorage('ia_scan_etiqueta')` y redirige a `?tab=almacen&recepcion=etiqueta`;
+    `AlmacenTab` lo lee al montar, **prefija la checklist de Recepción** (nombre, EAN,
+    lote, caducidad ISO, cantidad/unidad) y reutiliza `confirmarRecepcion()` → crea la
+    recepción confirmada → `fn_confirmar_recepcion` sube `stock_actual` y el lote aparece
+    en FEFO. Sin rutas de escritura nuevas. Al confirmar, enlaza el doc de auditoría con
+    `archivado_en='recepcion:<uuid>'`.
+  - **Mejora incluida (GS1):** extraído `parseGS1`/`detectBarcode` del flujo ASN a
+    `src/lib/barcode.ts` y reutilizado en el escáner del owner: si la foto lleva código
+    de barras legible (EAN-13/GS1-128/DataMatrix), su EAN/lote/caducidad **sobrescriben**
+    lo que leyó la visión (que confunde fechas tipo "04.06.26"). La route normaliza
+    además `fecha_caducidad`/`fecha_fabricacion` a ISO para el `<input type=date>`.
+  - **Verificación:** `npx tsc --noEmit` y `npx next build` **verdes**. Falta prueba
+    funcional end-to-end en el navegador (escanear → confirmar → ver en FEFO) y **aplicar
+    la migración en Supabase**.
+  - **Mejoras siguientes (NO hechas, documentadas en el plan):** aviso si caducidad ya
+    pasó / gating por confianza antes de escribir; cron `caducidades` con `tgAlert`
+    (FEFO proactivo); columna `codigo_barras` en `stock_articulos` para auto-match EAN→artículo.
+
 - **Maître IA — recomendador de carta para el comensal (QR) — 06/06/2026**
   (rama `claude/ai-meal-recommender-3vVLJ`): nueva feature gemela del recomendador de
   vino, pero para platos. El comensal en `/q/[token]` marca alérgenos (chips) + escribe
