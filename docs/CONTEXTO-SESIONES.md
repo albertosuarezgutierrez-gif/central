@@ -22,11 +22,12 @@
   Análisis previo: el QR ya tenía ~85% (pedido móvil, `pre_auth` SetupIntent, cobro `off_session`,
   Connect, VeriFactu, split). El hueco real: TODO colgaba de la **mesa**, no de la **persona**, y
   el reparto era reactivo. Cambio de fondo implementado: **cobro por persona, no por mesa**.
-  - **Migración** `20260606_qr_cuenta_individual.sql` (NO aplicada aún en prod): `cobro_config.qr_modo_consumo`
+  - **Migración** `20260606_qr_cuenta_individual.sql` **APLICADA en Supabase (06/06)**: `cobro_config.qr_modo_consumo`
     (`mesa_unica`|`individual`|`cliente_elige`, default mesa_unica → sin cambios para nadie);
     `qr_sesiones_cliente.{device_id,nombre_cliente,tipo}`; **`comandas.sesion_qr_id`** (el eslabón
-    persona↔item). Aditiva y backward-compatible.
-  - **EFs (NO desplegadas aún):** `qr-session` v4 (subcuenta por `device_id`, N activas por mesa,
+    persona↔item). Aditiva y backward-compatible. Verificado: 5 columnas presentes con defaults OK;
+    `qr_sesiones_cliente` vacía (0 datos en riesgo).
+  - **EFs (NO desplegadas aún — paso pendiente):** `qr-session` v4 (subcuenta por `device_id`, N activas por mesa,
     devuelve `cobro.modo_consumo`); `qr-order` v6 (escribe `sesion_qr_id` en la comanda); `qr-cobro`
     v2 (en `tipo='individual'` suma SOLO por `sesion_qr_id`; en mesa, por mesa = legado).
   - **Config dueño:** `/api/owner/cobro-config` (allowlist + validación `qr_modo_consumo`) + selector
@@ -38,10 +39,13 @@
     a las cuentas individuales con tarjeta guardada (solo si el dueño eligió `modo_cobro='pre_auth'`)
     pasado el timer. Si se va sin pulsar, se cobra solo.
   - **Verificado:** `npm install` + `tsc --noEmit` (0) + `next build` (exit 0) en verde.
-  - **PENDIENTE activación en prod (en este orden):** (1) aplicar la migración en Supabase;
-    (2) desplegar EFs `qr-session`/`qr-order`/`qr-cobro`; (3) prueba 2 móviles misma mesa →
-    A paga solo su caña, no la de B. Limitación v1: en individual no hay "bote común" (lo
-    compartido lo paga quien lo pide); coexistencia mesa+individual = Fase 2.
+    Vercel preview READY (ia-rest/ia-rest-docs/repo). **Test DB del fix (Postgres prod):** misma
+    mesa, 2 personas, 1 caña 3€ c/u → individual cobra **3,30€** (solo lo suyo), legado/mesa **6,60€**.
+  - **PENDIENTE activación en prod:** (1) ✅ migración aplicada; (2) **desplegar EFs**
+    `qr-session` v4 / `qr-order` v6 / `qr-cobro` v2 (siguen sin desplegar; las versiones vivas son
+    v3/v5/v1 → la feature aún no está activa, pero NADA roto: en mesa_unica el código es idéntico);
+    (3) prueba 2 móviles misma mesa → A paga solo su caña, no la de B. Limitación v1: en individual
+    no hay "bote común" (lo compartido lo paga quien lo pide); coexistencia mesa+individual = Fase 2.
 
 - **Hardening cobros: purga automática de "pendientes" caducados — 05/06/2026**
   (rama `claude/price-discrepancy-480-280-bFj1E`): tras el fix del bug multi-menú
