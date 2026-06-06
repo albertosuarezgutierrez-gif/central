@@ -65,6 +65,21 @@ export async function POST(req: NextRequest) {
   const parts = cb.data.split(':')
   const accion = parts[0]
 
+  // ── Acciones del CRM/ventas → las maneja /api/telegram/webhook ─────────
+  // Este endpoint es el webhook del bot (Telegram postea aquí), pero solo sabe
+  // de Instagram/blog. Lo que es del CRM (propuestas, emails de venta, WhatsApp)
+  // lo reenviamos al dispatcher de ventas, que valida por chat_id.
+  const CRM_ACCIONES = new Set([
+    'propuesta_ok', 'propuesta_no', 'propuesta_foco', 'enviar_email', 'revisar_email',
+    'enviar_sevilla', 'descartar_sevilla', 'ver_whatsapp', 'qa_activar', 'qa_descartar',
+  ])
+  if (CRM_ACCIONES.has(accion)) {
+    await fetch('https://www.iarest.es/api/telegram/webhook', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+    }).catch((e) => console.error('[tg] reenvío CRM:', e))
+    return NextResponse.json({ ok: true })
+  }
+
   // ── Aprobar y publicar REEL ───────────────────────────────────────────
   if (accion === 'ig_aprobar_reel') {
     const borradorId = parts[1]
