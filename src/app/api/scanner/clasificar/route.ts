@@ -7,6 +7,20 @@ import { callAIVision, cleanJSON } from '@/lib/ai-client'
 
 const ROLES_SIEMPRE = ['owner', 'super_admin', 'jefe_sala']
 
+// Normaliza fechas a ISO (YYYY-MM-DD) para que entren directas en <input type="date">.
+// Acepta DD/MM/YYYY, DD.MM.YY, DD-MM-YYYY, etc. Devuelve null si no reconoce el formato.
+function toISODate(v: unknown): string | null {
+  if (!v || typeof v !== 'string') return null
+  const s = v.trim()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s
+  const m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})[\/.\-](\d{2,4})$/)
+  if (!m) return null
+  const d = m[1].padStart(2, '0')
+  const mo = m[2].padStart(2, '0')
+  const y = m[3].length === 2 ? '20' + m[3] : m[3]
+  return `${y}-${mo}-${d}`
+}
+
 const SYSTEM_PROMPT = `Eres un clasificador experto de documentos y etiquetas para restaurantes en España.
 Analiza la imagen y responde ÚNICAMENTE con un objeto JSON válido, sin texto adicional, sin markdown.
 
@@ -128,6 +142,14 @@ export async function POST(req: NextRequest) {
     datos = { descripcion_breve: 'Error al analizar — revisa manualmente' }
   }
 
+  // Etiqueta de producto: normalizar fechas a ISO para el puente a Recepción.
+  if (tipoDetectado === 'etiqueta_producto') {
+    const isoCad = toISODate(datos.fecha_caducidad)
+    if (isoCad) datos.fecha_caducidad = isoCad
+    const isoFab = toISODate(datos.fecha_fabricacion)
+    if (isoFab) datos.fecha_fabricacion = isoFab
+  }
+
   // Campos con confianza baja (< 0.7) → marcar para revisión
   const camposARevisar = Object.entries(confianzaPorCampo)
     .filter(([, v]) => v < 0.7)
@@ -153,6 +175,10 @@ export async function POST(req: NextRequest) {
 
   if (dbError) console.error('[scanner/clasificar] BD error:', dbError.message)
 
+  // El puente etiqueta→stock depende de que el scan se haya persistido (necesita scan_id).
+  // Si falla la persistencia de una etiqueta, no lo tragamos en silencio: forzamos revisión.
+  const persistError = dbError ? dbError.message : null
+
   // Para albaranes: extraer productos con sus caducidades
   const productosConCaducidad = tipoDetectado === 'albaran'
     ? ((datos.productos as { descripcion?: string; cantidad?: string; precio_unitario?: string; fecha_caducidad?: string | null; codigo_barras?: string | null }[] | undefined) ?? [])
@@ -168,10 +194,12 @@ export async function POST(req: NextRequest) {
     confianza_pct:          Math.round(confianza * 100),
     nivel_confianza:        confianza >= 0.85 ? 'alta' : confianza >= 0.65 ? 'media' : 'baja',
     campos_a_revisar:       camposARevisar,
-    requiere_revision:      camposARevisar.length > 0 || confianza < 0.75,
+    requiere_revision:      camposARevisar.length > 0 || confianza < 0.75
+                              || (tipoDetectado === 'etiqueta_producto' && !!persistError),
     datos,
     productos_con_caducidad: productosConCaducidad,
     nim_error:              nimError,
+    persist_error:          persistError,
   })
 }
 
