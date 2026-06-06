@@ -980,6 +980,74 @@ function TabIATraining({ trainingStats, C, SE, SN, SM }: { trainingStats: any; C
   )
 }
 
+// ── Editor de comisión por restaurante (cobros de grupo) ──────
+function ComisionEditor({ session, C, SN, SM }: { session: any; C: any; SN: string; SM: string }) {
+  const [rows, setRows] = useState<any[]>([])
+  const [defaults, setDefaults] = useState<any>({ pct: 2, fija: 0.35, minimo: 3 })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [okMsg, setOkMsg] = useState<string | null>(null)
+  const tok = () => (typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') : '') || ''
+
+  useEffect(() => {
+    if (!session) return
+    fetch('/api/super/cobro-config-comision', { headers: { 'x-ia-session': tok() } })
+      .then(r => r.json())
+      .then(d => {
+        setRows((d.restaurantes || []).map((r: any) => ({
+          ...r,
+          comision_pct: r.comision_pct ?? '',
+          comision_fija_eur: r.comision_fija_eur ?? '',
+          minimo_producto_eur: r.minimo_producto_eur ?? '',
+        })))
+        if (d.defaults) setDefaults(d.defaults)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [session])
+
+  const upd = (id: string, k: string, v: string) => setRows(rs => rs.map(r => r.id === id ? { ...r, [k]: v } : r))
+  const guardar = async (r: any) => {
+    setSaving(r.id); setOkMsg(null)
+    const res = await fetch('/api/super/cobro-config-comision', {
+      method: 'POST', headers: { 'x-ia-session': tok(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurante_id: r.id, comision_pct: r.comision_pct, comision_fija_eur: r.comision_fija_eur, minimo_producto_eur: r.minimo_producto_eur })
+    })
+    setSaving(null)
+    if (res.ok) { setOkMsg(r.id); setTimeout(() => setOkMsg(null), 1500) }
+  }
+
+  if (loading) return null
+  const inp: any = { width: 64, padding: '6px 8px', background: C.dark, border: `1px solid ${C.dkRule}`, borderRadius: 8, color: C.dkFg, fontFamily: SM, fontSize: 12, outline: 'none' }
+
+  return (
+    <div style={{ marginBottom: 36 }}>
+      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.1em', marginBottom: 6 }}>COMISIÓN POR RESTAURANTE · COBROS DE GRUPO</div>
+      <div style={{ fontFamily: SN, fontSize: 11, color: C.dkFg3, marginBottom: 14 }}>
+        Comisión = % · precio + fijo (una vez por pago). Vacío = default de plataforma
+        ({defaults.pct}% + {Number(defaults.fija).toFixed(2)}€ · mínimo {Number(defaults.minimo).toFixed(2)}€).
+      </div>
+      <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.dkRule}`, overflow: 'hidden' }}>
+        {rows.map((r: any, i: number) => (
+          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '12px 20px', borderBottom: i < rows.length - 1 ? `1px solid ${C.dkRule}` : 'none' }}>
+            <div style={{ flex: '1 1 150px', fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.dkFg }}>{r.nombre}</div>
+            <label style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, display: 'flex', alignItems: 'center', gap: 4 }}>%
+              <input style={inp} type="number" step="0.1" min="0" placeholder={String(defaults.pct)} value={r.comision_pct} onChange={e => upd(r.id, 'comision_pct', e.target.value)} /></label>
+            <label style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, display: 'flex', alignItems: 'center', gap: 4 }}>Fijo €
+              <input style={inp} type="number" step="0.05" min="0" placeholder={String(defaults.fija)} value={r.comision_fija_eur} onChange={e => upd(r.id, 'comision_fija_eur', e.target.value)} /></label>
+            <label style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, display: 'flex', alignItems: 'center', gap: 4 }}>Mín €
+              <input style={inp} type="number" step="0.5" min="0" placeholder={String(defaults.minimo)} value={r.minimo_producto_eur} onChange={e => upd(r.id, 'minimo_producto_eur', e.target.value)} /></label>
+            <button onClick={() => guardar(r)} disabled={saving === r.id}
+              style={{ padding: '6px 14px', background: okMsg === r.id ? C.green : C.red, color: '#fff', border: 'none', borderRadius: 8, fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              {saving === r.id ? '...' : okMsg === r.id ? '✓ Guardado' : 'Guardar'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Panel financiero ia.rest cobro (super admin) ──────────────
 function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }) {
   const [data, setData] = useState<any>(null)
@@ -1008,14 +1076,14 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, fontStyle: 'italic', marginBottom: 4 }}>ia.rest cobro</div>
-        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Panel financiero · Comisiones QR de la plataforma</div>
+        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Panel financiero · Comisiones de la plataforma (QR + cobros de grupo)</div>
       </div>
 
       {/* KPIs globales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 36 }}>
         {[
           { label: 'Volumen mes', value: fmtK(totales.volumen_mes), sub: mesActual, color: C.dkFg },
-          { label: 'Comisión mes', value: fmt(totales.comision_mes), sub: '0,5% de ' + fmtK(totales.volumen_mes), color: C.green },
+          { label: 'Comisión mes', value: fmt(totales.comision_mes), sub: 'ingreso ia.rest', color: C.green },
           { label: 'Volumen año', value: fmtK(totales.volumen_anio), sub: new Date().getFullYear().toString(), color: C.dkFg },
           { label: 'Comisión año', value: fmt(totales.comision_anio), sub: 'acumulado ' + new Date().getFullYear(), color: C.green },
           { label: 'Transacciones', value: (totales.txn_mes || 0).toString(), sub: 'este mes', color: C.blue },
@@ -1062,6 +1130,9 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
           ))}
         </div>
       </div>
+
+      {/* Editor de comisión por restaurante */}
+      <ComisionEditor session={session} C={C} SN={SN} SM={SM} />
 
       {/* Histórico global últimos 12 meses */}
       {historico && historico.length > 0 && (
