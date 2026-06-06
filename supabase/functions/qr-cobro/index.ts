@@ -1,5 +1,7 @@
-// qr-cobro v1 — Crea Stripe Checkout Session en la cuenta Connect del restaurante
+// qr-cobro v2 — Crea Stripe Checkout Session en la cuenta Connect del restaurante
 // POST { sesion_id, propina_pct, success_url, cancel_url }
+// v2: en sesiones 'individual' suma SOLO los items de esa subcuenta (comandas.sesion_qr_id);
+//     en sesiones de mesa mantiene la suma por mesa (comportamiento actual).
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -26,7 +28,7 @@ serve(async (req) => {
     // 1. Obtener sesión y datos del restaurante
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, restaurante_id, mesa_id, estado')
+      .select('id, restaurante_id, mesa_id, estado, tipo')
       .eq('id', sesion_id)
       .eq('estado', 'activa')
       .single()
@@ -45,13 +47,21 @@ serve(async (req) => {
       return new Response(JSON.stringify({ error: 'El restaurante no tiene pagos QR configurados' }), { status: 400, headers: { ...cors, 'Content-Type': 'application/json' } })
     }
 
-    // 2. Calcular total de comandas QR de esta sesión
-    const { data: items } = await supabase
+    // 2. Calcular total. En individual sumamos SOLO los items de esta subcuenta
+    //    (comandas.sesion_qr_id); en mesa, todos los items QR de la mesa (legado).
+    let itemsQuery = supabase
       .from('comanda_items')
-      .select('precio_unitario, cantidad, comandas!inner(mesa_id, origen, restaurante_id)')
-      .eq('comandas.mesa_id', sesion.mesa_id)
+      .select('precio_unitario, cantidad, comandas!inner(mesa_id, origen, restaurante_id, sesion_qr_id)')
       .eq('comandas.origen', 'qr_cliente')
       .eq('comandas.restaurante_id', sesion.restaurante_id)
+
+    if (sesion.tipo === 'individual') {
+      itemsQuery = itemsQuery.eq('comandas.sesion_qr_id', sesion.id)
+    } else {
+      itemsQuery = itemsQuery.eq('comandas.mesa_id', sesion.mesa_id)
+    }
+
+    const { data: items } = await itemsQuery
 
     let subtotal = 0
     for (const item of items || []) {

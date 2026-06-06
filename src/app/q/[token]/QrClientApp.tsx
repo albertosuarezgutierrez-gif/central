@@ -34,7 +34,7 @@ interface CartItem extends Producto { qty: number }
 interface SessionData {
   mesa: { id: string; codigo: string; nombre: string; qr_modo_pago: string; precio_fijo_persona?: number | null; precio_fijo_concepto?: string | null }
   restaurante: { id: string; nombre: string; connect_activo: boolean; stripe_account_id?: string | null }
-  cobro?: { modo_cobro: 'por_ronda' | 'pre_auth' | 'cuenta_abierta'; timer_min: number; llamar_camarero?: boolean }
+  cobro?: { modo_cobro: 'por_ronda' | 'pre_auth' | 'cuenta_abierta'; timer_min: number; llamar_camarero?: boolean; modo_consumo?: 'mesa_unica' | 'individual' | 'cliente_elige' }
   productos: Producto[]
   sesion_id: string | null
 }
@@ -67,6 +67,18 @@ export default function QrClientApp({ token }: { token: string }) {
   const [screen, setScreen] = useState<Screen>('loading')
   const [data, setData] = useState<SessionData | null>(null)
   const [sesionId, setSesionId] = useState<string | null>(null)
+  // Identidad del móvil del comensal (cuenta individual). Persiste para reconectar al recargar.
+  const [deviceId] = useState<string>(() => {
+    if (typeof window === 'undefined') return ''
+    let d = localStorage.getItem('ia_qr_device_id')
+    if (!d) {
+      d = (window.crypto?.randomUUID?.() ?? (Date.now().toString(36) + Math.random().toString(36).slice(2)))
+      localStorage.setItem('ia_qr_device_id', d)
+    }
+    return d
+  })
+  // 'mesa' = cuenta compartida (clásico) · 'individual' = cuenta propia por persona
+  const [tipoCuenta, setTipoCuenta] = useState<'mesa' | 'individual'>('mesa')
   const [cart, setCart] = useState<CartItem[]>([])
   const [numComensales, setNumComensales] = useState(1)
   const [numComandas, setNumComandas] = useState(0)   // cuántas comandas ha hecho en esta sesión
@@ -219,7 +231,8 @@ export default function QrClientApp({ token }: { token: string }) {
   }
 
   useEffect(() => {
-    fetch(`${SUPABASE_URL}/functions/v1/qr-session?token=${token}`, {
+    const dev = deviceId ? `&device_id=${encodeURIComponent(deviceId)}` : ''
+    fetch(`${SUPABASE_URL}/functions/v1/qr-session?token=${token}${dev}`, {
       headers: { 'apikey': ANON_KEY }
     })
       .then(r => r.json())
@@ -228,9 +241,10 @@ export default function QrClientApp({ token }: { token: string }) {
         setData(d); setScreen('welcome')
       })
       .catch(() => { setError('Error de conexión'); setScreen('error') })
-  }, [token])
+  }, [token, deviceId])
 
   const modoCobro = data?.cobro?.modo_cobro || 'cuenta_abierta'
+  const modoConsumo = data?.cobro?.modo_consumo || 'mesa_unica'
   // El dueño puede ocultar el botón de llamar al camarero (locales 100% autoservicio)
   const llamarCamareroActivo = data?.cobro?.llamar_camarero !== false
 
@@ -262,18 +276,24 @@ export default function QrClientApp({ token }: { token: string }) {
     }
   }, [])
 
-  const iniciarSesion = useCallback(async () => {
+  const iniciarSesion = useCallback(async (tipoElegido?: 'mesa' | 'individual') => {
     if (!data) return
-    if (data.mesa.precio_fijo_persona && modoCobro !== 'pre_auth') {
-      // Sin pre_auth: pedir comensales primero, sesión se crea en confirmarComensales
+    // Tipo efectivo: el dueño manda salvo en 'cliente_elige', donde decide el cliente
+    const tipoEf: 'mesa' | 'individual' =
+      modoConsumo === 'individual' ? 'individual'
+      : modoConsumo === 'mesa_unica' ? 'mesa'
+      : (tipoElegido || 'mesa')
+    setTipoCuenta(tipoEf)
+
+    // En cuenta individual cada cuenta = 1 persona: saltamos el paso de comensales
+    if (tipoEf === 'mesa' && data.mesa.precio_fijo_persona && modoCobro !== 'pre_auth') {
       setScreen('comensales')
     } else {
-      // Con pre_auth O sin precio fijo: crear sesión ya
-      const d = await callEF('qr-session', { token, num_comensales: 1 })
+      const d = await callEF('qr-session', { token, num_comensales: 1, device_id: deviceId, tipo: tipoEf })
       if (!d.sesion_id) { setError('No se pudo iniciar sesión'); setScreen('error'); return }
       await postCrearSesion(d.sesion_id, 1, { ...data, ...d })
     }
-  }, [data, token, modoCobro, postCrearSesion])
+  }, [data, token, modoCobro, modoConsumo, deviceId, postCrearSesion])
 
   // Cargar Stripe.js y montar card element cuando entramos en pantalla preauth
   useEffect(() => {
@@ -405,10 +425,10 @@ export default function QrClientApp({ token }: { token: string }) {
       setScreen('menu')
       return
     }
-    const d = await callEF('qr-session', { token, num_comensales: n })
+    const d = await callEF('qr-session', { token, num_comensales: n, device_id: deviceId, tipo: tipoCuenta })
     if (d.sesion_id) { setSesionId(d.sesion_id); setNumComensales(n); setScreen('menu') }
     else { setError('No se pudo iniciar sesión'); setScreen('error') }
-  }, [token, sesionId, data])
+  }, [token, sesionId, data, deviceId, tipoCuenta])
 
   const confirmarPedido = useCallback(async () => {
     if (!data || !sesionId || !cart.length) return
@@ -645,9 +665,20 @@ export default function QrClientApp({ token }: { token: string }) {
               </div>
             ))}
           </div>
-          <button onClick={iniciarSesion} style={{ width: '100%', padding: '15px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
-            Ver la carta →
-          </button>
+          {modoConsumo === 'cliente_elige' ? (
+            <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <button onClick={() => iniciarSesion('individual')} style={{ width: '100%', padding: '15px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+                🍺 Mi cuenta — pago lo mío →
+              </button>
+              <button onClick={() => iniciarSesion('mesa')} style={{ width: '100%', padding: '13px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamMid, fontSize: 14, cursor: 'pointer' }}>
+                👥 Cuenta de la mesa
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => iniciarSesion()} style={{ width: '100%', padding: '15px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 15, fontWeight: 700, cursor: 'pointer' }}>
+              {modoConsumo === 'individual' ? 'Abrir mi cuenta →' : 'Ver la carta →'}
+            </button>
+          )}
           {llamarCamareroActivo && (
             <button onClick={() => showToast('🙋 Camarero avisado')} style={{ width: '100%', padding: '12px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamDim, fontSize: 13, cursor: 'pointer' }}>
               🙋 Llamar al camarero
@@ -966,11 +997,13 @@ export default function QrClientApp({ token }: { token: string }) {
           </div>
           <div style={{ padding: '14px 18px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: 9 }}>
             <button onClick={() => setScreen('tip')} style={{ width: '100%', padding: '14px', background: C.vermilion, border: 'none', borderRadius: 13, color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
-              Pagar todo — {fmt(total)}
+              {tipoCuenta === 'individual' ? `Cerrar mi cuenta — ${fmt(total)}` : `Pagar todo — ${fmt(total)}`}
             </button>
-            <button onClick={() => setScreen('split_modo')} style={{ width: '100%', padding: '13px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamMid, fontSize: 14, cursor: 'pointer' }}>
-              👥 Dividir la cuenta
-            </button>
+            {tipoCuenta !== 'individual' && (
+              <button onClick={() => setScreen('split_modo')} style={{ width: '100%', padding: '13px', background: 'transparent', border: `1px solid ${C.rule}`, borderRadius: 13, color: C.creamMid, fontSize: 14, cursor: 'pointer' }}>
+                👥 Dividir la cuenta
+              </button>
+            )}
             <div style={{ textAlign: 'center', fontSize: 12, color: C.creamDim }}>🔒 Pago seguro via Stripe</div>
           </div>
         </div>

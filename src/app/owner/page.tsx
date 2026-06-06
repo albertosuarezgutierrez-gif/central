@@ -6576,7 +6576,7 @@ function QRTabOwner({ restauranteId, sh }: { restauranteId: string; sh: () => Re
 
 // ── Sección ia.rest cobro (modo + timer + progreso descuento) ─
 function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: () => Record<string,string> }) {
-  const [config, setConfig] = useState<{ modo_cobro: string; timer_inactividad_min: number; qr_llamar_camarero?: boolean } | null>(null)
+  const [config, setConfig] = useState<{ modo_cobro: string; timer_inactividad_min: number; qr_llamar_camarero?: boolean; qr_modo_consumo?: string } | null>(null)
   const [resumen, setResumen] = useState<{ volumen_eur: number; comision_eur: number; descuento_cuota_eur: number; num_transacciones: number } | null>(null)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
@@ -6622,6 +6622,12 @@ function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: 
     { val: 'cuenta_abierta', label: 'Cuenta abierta',     desc: 'Máxima comodidad. El cliente paga al final cuando quiere' },
     { val: 'pre_auth',       label: 'Pre-autorización',   desc: 'Se verifica la tarjeta al abrir sesión. Si se va sin pagar, cobras igualmente' },
     { val: 'por_ronda',      label: 'Pago por ronda',     desc: 'Cada pedido se cobra al momento. Impago imposible' },
+  ]
+
+  const consumoOpts = [
+    { val: 'mesa_unica',    label: 'Una cuenta por mesa',     desc: 'Clásico: todos a la misma cuenta. La división, al final si quieren' },
+    { val: 'individual',    label: 'Cuenta propia por persona', desc: 'Cada uno pide desde su móvil y paga SOLO lo suyo. Ideal para cañas rápidas' },
+    { val: 'cliente_elige', label: 'Que elija el cliente',    desc: 'Al escanear, cada uno decide: cuenta propia o cuenta de mesa' },
   ]
 
   return (
@@ -6671,9 +6677,29 @@ function CobroConfigSection({ restauranteId, sh }: { restauranteId: string; sh: 
         )}
       </div>
 
-      {/* Modo cobro */}
+      {/* Modo de consumo (mesa única / individual / cliente elige) */}
       {config && (
         <>
+          <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 10, letterSpacing: '0.06em' }}>MODO DE CONSUMO QR</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
+            {consumoOpts.map(opt => {
+              const sel = (config.qr_modo_consumo || 'mesa_unica') === opt.val
+              return (
+                <div key={opt.val}
+                  onClick={() => save({ qr_modo_consumo: opt.val })}
+                  style={{ background: sel ? C.redS : C.paper, border: `1px solid ${sel ? C.red + '55' : C.rule}`, borderRadius: 12, padding: '12px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${sel ? C.red : C.ink3}`, background: sel ? C.red : 'transparent', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {sel && <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#fff' }} />}
+                  </div>
+                  <div>
+                    <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.ink }}>{opt.label}</div>
+                    <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 2 }}>{opt.desc}</div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
           <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, marginBottom: 10, letterSpacing: '0.06em' }}>MODO DE COBRO QR</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 20 }}>
             {modoOpts.map(opt => (

@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **QR cuenta individual — "cada uno pide su caña y se le cobra lo suyo" — 06/06/2026**
+  (rama `claude/individual-beer-ordering-billing-oRwzB`): feature **100% configurable por el
+  dueño**. Idea de Alberto (escenario Sevilla: cañas rápidas, cada uno pide y paga lo suyo).
+  Análisis previo: el QR ya tenía ~85% (pedido móvil, `pre_auth` SetupIntent, cobro `off_session`,
+  Connect, VeriFactu, split). El hueco real: TODO colgaba de la **mesa**, no de la **persona**, y
+  el reparto era reactivo. Cambio de fondo implementado: **cobro por persona, no por mesa**.
+  - **Migración** `20260606_qr_cuenta_individual.sql` (NO aplicada aún en prod): `cobro_config.qr_modo_consumo`
+    (`mesa_unica`|`individual`|`cliente_elige`, default mesa_unica → sin cambios para nadie);
+    `qr_sesiones_cliente.{device_id,nombre_cliente,tipo}`; **`comandas.sesion_qr_id`** (el eslabón
+    persona↔item). Aditiva y backward-compatible.
+  - **EFs (NO desplegadas aún):** `qr-session` v4 (subcuenta por `device_id`, N activas por mesa,
+    devuelve `cobro.modo_consumo`); `qr-order` v6 (escribe `sesion_qr_id` en la comanda); `qr-cobro`
+    v2 (en `tipo='individual'` suma SOLO por `sesion_qr_id`; en mesa, por mesa = legado).
+  - **Config dueño:** `/api/owner/cobro-config` (allowlist + validación `qr_modo_consumo`) + selector
+    "MODO DE CONSUMO QR" en `owner/page.tsx` (`CobroConfigSection`). Reusa el `modo_cobro` existente
+    (cuenta_abierta/pre_auth/por_ronda) como "cómo paga cada cuenta" → sin set de flags redundante.
+  - **Cliente** `q/[token]/QrClientApp.tsx`: `device_id` en localStorage; bienvenida ofrece "Mi
+    cuenta / Cuenta de mesa" si `cliente_elige`; "Cerrar mi cuenta" y oculta el split en individual.
+  - **Red de seguridad:** cron `cobro-inactividad` → `autoCerrarIndividuales()` cobra `off_session`
+    a las cuentas individuales con tarjeta guardada (solo si el dueño eligió `modo_cobro='pre_auth'`)
+    pasado el timer. Si se va sin pulsar, se cobra solo.
+  - **Verificado:** `npm install` + `tsc --noEmit` (0) + `next build` (exit 0) en verde.
+  - **PENDIENTE activación en prod (en este orden):** (1) aplicar la migración en Supabase;
+    (2) desplegar EFs `qr-session`/`qr-order`/`qr-cobro`; (3) prueba 2 móviles misma mesa →
+    A paga solo su caña, no la de B. Limitación v1: en individual no hay "bote común" (lo
+    compartido lo paga quien lo pide); coexistencia mesa+individual = Fase 2.
+
 - **Hardening cobros: purga automática de "pendientes" caducados — 05/06/2026**
   (rama `claude/price-discrepancy-480-280-bFj1E`): tras el fix del bug multi-menú
   (PR #47, ya en `main`), se añade al cron `cobro-inactividad` (cada 5 min) un borrado

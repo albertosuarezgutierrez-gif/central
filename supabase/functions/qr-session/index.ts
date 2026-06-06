@@ -1,7 +1,10 @@
-// qr-session v3 — Crea/obtiene sesión de cliente QR
-// GET  ?token=xxx                        → valida token, devuelve restaurante+mesa+carta+config precio fijo
-// POST { token, num_comensales }         → crea sesión activa con número de comensales
-// v3: devuelve cobro.llamar_camarero (configurable por el dueño; 100% autoservicio)
+// qr-session v4 — Crea/obtiene sesión de cliente QR
+// GET  ?token=xxx[&device_id=yyy]        → valida token, devuelve restaurante+mesa+carta+config
+// POST { token, num_comensales, device_id?, nombre_cliente?, tipo? } → crea/recupera sesión
+// PATCH { sesion_id, num_comensales?, precio_fijo_aplicado?, nombre_cliente? } → actualiza
+// v3: devuelve cobro.llamar_camarero (100% autoservicio)
+// v4: cuenta individual — cada móvil (device_id) abre su propia subcuenta bajo la mesa.
+//     cobro.modo_consumo: 'mesa_unica' | 'individual' | 'cliente_elige' (configurable por el dueño)
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -23,27 +26,28 @@ serve(async (req) => {
     const url = new URL(req.url)
     const isGet = req.method === 'GET'
     const isPatch = req.method === 'PATCH'
-    const token = isGet
-      ? url.searchParams.get('token')
-      : (await req.json().catch(() => ({}))).token
+    const body = !isGet ? await req.json().catch(() => ({})) : {}
+    const token = isGet ? url.searchParams.get('token') : body.token
 
     if (!token && !isPatch) {
       return res400('token requerido')
     }
 
-    // PATCH: actualizar num_comensales en sesión existente (flujo pre_auth + precio_fijo)
+    // PATCH: actualizar num_comensales / nombre en sesión existente
     if (isPatch) {
-      const body = await req.json().catch(() => ({}))
-      const { sesion_id, num_comensales, precio_fijo_aplicado } = body
+      const { sesion_id, num_comensales, precio_fijo_aplicado, nombre_cliente } = body
       if (!sesion_id) return res400('sesion_id requerido')
-      const nc = Math.max(1, parseInt(num_comensales) || 1)
-      const pf = parseFloat(precio_fijo_aplicado) || 0
+      const patch: Record<string, unknown> = {}
+      if (num_comensales !== undefined) patch.num_comensales = Math.max(1, parseInt(num_comensales) || 1)
+      if (precio_fijo_aplicado !== undefined) patch.precio_fijo_aplicado = parseFloat(precio_fijo_aplicado) || 0
+      if (nombre_cliente !== undefined) patch.nombre_cliente = String(nombre_cliente).slice(0, 60) || null
+      if (Object.keys(patch).length === 0) return res400('nada que actualizar')
       await supabase
         .from('qr_sesiones_cliente')
-        .update({ num_comensales: nc, precio_fijo_aplicado: pf })
+        .update(patch)
         .eq('id', sesion_id)
         .eq('estado', 'activa')
-      return resOK({ updated: true, num_comensales: nc, precio_fijo_aplicado: pf })
+      return resOK({ updated: true, ...patch })
     }
 
     // 1. Buscar mesa por token
@@ -63,12 +67,34 @@ serve(async (req) => {
       .eq('id', mesa.restaurante_id)
       .single()
 
-    // 2b. Configuración de cobro (modo pre_auth / por_ronda / cuenta_abierta)
+    // 2b. Configuración de cobro (modo_cobro + modo_consumo)
     const { data: cobroConfig } = await supabase
       .from('cobro_config')
-      .select('modo_cobro, timer_inactividad_min, qr_llamar_camarero')
+      .select('modo_cobro, timer_inactividad_min, qr_llamar_camarero, qr_modo_consumo')
       .eq('restaurante_id', mesa.restaurante_id)
       .single()
+
+    const modoConsumo = cobroConfig?.qr_modo_consumo || 'mesa_unica'
+
+    const cobroOut = {
+      modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
+      timer_min: cobroConfig?.timer_inactividad_min || 45,
+      llamar_camarero: cobroConfig?.qr_llamar_camarero !== false,
+      modo_consumo: modoConsumo,
+    }
+
+    const restOut = {
+      id: rest?.id, nombre: rest?.nombre,
+      connect_activo: rest?.stripe_connect_onboarded,
+      stripe_account_id: rest?.stripe_account_id || null,
+    }
+
+    const mesaOut = {
+      id: mesa.id, codigo: mesa.codigo, nombre: mesa.nombre,
+      qr_modo_pago: mesa.qr_modo_pago,
+      precio_fijo_persona: mesa.qr_precio_fijo_persona,
+      precio_fijo_concepto: mesa.qr_precio_fijo_concepto || 'Cubierto',
+    }
 
     // 3. Carta activa
     const { data: productos } = await supabase
@@ -81,79 +107,98 @@ serve(async (req) => {
 
     // 4. GET: devolver config sin crear sesión
     if (isGet) {
-      const { data: sesionExistente } = await supabase
+      const deviceId = url.searchParams.get('device_id')
+      // En modo individual buscamos la subcuenta de ESTE móvil; si no, la cuenta de mesa.
+      let q = supabase
         .from('qr_sesiones_cliente')
-        .select('id, estado, payment_method_id, num_comensales, precio_fijo_aplicado')
+        .select('id, estado, payment_method_id, preauth_completado, num_comensales, precio_fijo_aplicado, tipo, nombre_cliente')
         .eq('mesa_id', mesa.id)
         .eq('estado', 'activa')
         .order('creado_en', { ascending: false })
         .limit(1)
-        .single()
+
+      if (modoConsumo !== 'mesa_unica' && deviceId) {
+        q = q.eq('device_id', deviceId)
+      } else {
+        q = q.eq('tipo', 'mesa')
+      }
+
+      const { data: sesionExistente } = await q.maybeSingle()
 
       return resOK({
-        mesa: {
-          id: mesa.id, codigo: mesa.codigo, nombre: mesa.nombre,
-          qr_modo_pago: mesa.qr_modo_pago,
-          precio_fijo_persona: mesa.qr_precio_fijo_persona,
-          precio_fijo_concepto: mesa.qr_precio_fijo_concepto || 'Cubierto',
-        },
-        restaurante: {
-          id: rest?.id, nombre: rest?.nombre,
-          connect_activo: rest?.stripe_connect_onboarded,
-          stripe_account_id: rest?.stripe_account_id || null,
-        },
-        cobro: {
-          modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
-          timer_min: cobroConfig?.timer_inactividad_min || 45,
-          llamar_camarero: cobroConfig?.qr_llamar_camarero !== false,
-        },
+        mesa: mesaOut,
+        restaurante: restOut,
+        cobro: cobroOut,
         productos: productos || [],
         sesion_id: sesionExistente?.id || null,
         num_comensales: sesionExistente?.num_comensales || null,
         precio_fijo_aplicado: sesionExistente?.precio_fijo_aplicado || 0,
-        tiene_tarjeta: !!sesionExistente?.payment_method_id,
+        tipo: sesionExistente?.tipo || null,
+        nombre_cliente: sesionExistente?.nombre_cliente || null,
+        tiene_tarjeta: !!sesionExistente?.payment_method_id || !!sesionExistente?.preauth_completado,
       })
     }
 
-    // 5. POST: crear sesión con num_comensales
-    const body = await req.json().catch(() => ({}))
+    // 5. POST: crear (o recuperar) sesión
     const num_comensales = Math.max(1, parseInt(body.num_comensales) || 1)
+    const deviceId = body.device_id ? String(body.device_id).slice(0, 80) : null
+    const nombreCliente = body.nombre_cliente ? String(body.nombre_cliente).slice(0, 60) : null
+    // tipo efectivo: en modo_unica siempre 'mesa'; si no, lo que pida el cliente (default individual)
+    const tipo = modoConsumo === 'mesa_unica'
+      ? 'mesa'
+      : (body.tipo === 'mesa' ? 'mesa' : 'individual')
+
+    // Recuperar subcuenta activa de este móvil (evita duplicar al recargar)
+    if (tipo === 'individual' && deviceId) {
+      const { data: existente } = await supabase
+        .from('qr_sesiones_cliente')
+        .select('id, num_comensales, precio_fijo_aplicado')
+        .eq('mesa_id', mesa.id)
+        .eq('device_id', deviceId)
+        .eq('estado', 'activa')
+        .maybeSingle()
+      if (existente) {
+        if (nombreCliente) {
+          await supabase.from('qr_sesiones_cliente')
+            .update({ nombre_cliente: nombreCliente }).eq('id', existente.id)
+        }
+        return resOK({
+          sesion_id: existente.id, num_comensales: existente.num_comensales || num_comensales,
+          precio_fijo_aplicado: existente.precio_fijo_aplicado || 0, tipo, nombre_cliente: nombreCliente,
+          mesa: mesaOut, restaurante: restOut, cobro: cobroOut, productos: productos || [],
+        })
+      }
+    }
+
+    // En individual no aplicamos precio fijo por mesa multiplicado por comensales globales
     const precio_fijo_persona = mesa.qr_precio_fijo_persona || 0
-    const precio_fijo_aplicado = precio_fijo_persona > 0
+    const precio_fijo_aplicado = (tipo === 'mesa' && precio_fijo_persona > 0)
       ? Math.round(precio_fijo_persona * num_comensales * 100) / 100
-      : 0
+      : (tipo === 'individual' && precio_fijo_persona > 0 ? precio_fijo_persona : 0)
 
     const { data: nuevaSesion } = await supabase
       .from('qr_sesiones_cliente')
       .insert({
         restaurante_id: mesa.restaurante_id,
         mesa_id: mesa.id,
-        num_comensales,
+        num_comensales: tipo === 'individual' ? 1 : num_comensales,
         precio_fijo_aplicado,
+        device_id: deviceId,
+        nombre_cliente: nombreCliente,
+        tipo,
       })
       .select('id')
       .single()
 
     return resOK({
       sesion_id: nuevaSesion?.id,
-      num_comensales,
+      num_comensales: tipo === 'individual' ? 1 : num_comensales,
       precio_fijo_aplicado,
-      mesa: {
-        id: mesa.id, codigo: mesa.codigo, nombre: mesa.nombre,
-        qr_modo_pago: mesa.qr_modo_pago,
-        precio_fijo_persona,
-        precio_fijo_concepto: mesa.qr_precio_fijo_concepto || 'Cubierto',
-      },
-      restaurante: {
-        id: rest?.id, nombre: rest?.nombre,
-        connect_activo: rest?.stripe_connect_onboarded,
-        stripe_account_id: rest?.stripe_account_id || null,
-      },
-      cobro: {
-        modo_cobro: cobroConfig?.modo_cobro || 'cuenta_abierta',
-        timer_min: cobroConfig?.timer_inactividad_min || 45,
-        llamar_camarero: cobroConfig?.qr_llamar_camarero !== false,
-      },
+      tipo,
+      nombre_cliente: nombreCliente,
+      mesa: mesaOut,
+      restaurante: restOut,
+      cobro: cobroOut,
       productos: productos || [],
     })
 
