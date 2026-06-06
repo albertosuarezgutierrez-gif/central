@@ -66,6 +66,11 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
       const importeCentimos = Math.round(total * 100)
       const comisionCentimos = Math.round(importeCentimos * COMISION_RATE)
 
+      // idempotencyKey: si el cargo tuvo éxito pero el update de BD falló, el
+      // siguiente tick del cron NO vuelve a cobrar (Stripe devuelve el PI original).
+      const opts: Stripe.RequestOptions = { idempotencyKey: `qr-auto-${s.id}` }
+      if (rest?.stripe_account_id) opts.stripeAccount = rest.stripe_account_id
+
       const pi = await stripe.paymentIntents.create(
         {
           amount: importeCentimos,
@@ -76,7 +81,7 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
           application_fee_amount: comisionCentimos,
           metadata: { sesion_id: s.id, restaurante_id: s.restaurante_id, tipo: 'qr_cobro_auto_inactividad' },
         },
-        rest?.stripe_account_id ? { stripeAccount: rest.stripe_account_id } : {}
+        opts
       )
 
       if (pi.status !== 'succeeded') return false

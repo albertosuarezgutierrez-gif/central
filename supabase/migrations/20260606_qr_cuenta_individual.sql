@@ -19,8 +19,10 @@ ALTER TABLE qr_sesiones_cliente
   ADD COLUMN IF NOT EXISTS nombre_cliente TEXT,
   ADD COLUMN IF NOT EXISTS tipo TEXT DEFAULT 'mesa';
 
--- Una subcuenta activa por (mesa, móvil): permite reconectar al recargar el navegador
-CREATE INDEX IF NOT EXISTS idx_qr_sesiones_mesa_device
+-- Una subcuenta activa por (mesa, móvil): permite reconectar al recargar el navegador.
+-- UNIQUE para garantizar la invariante (no duplicar subcuentas del mismo móvil). Las
+-- sesiones 'mesa' guardan device_id NULL → no chocan (NULLs son distintos en Postgres).
+CREATE UNIQUE INDEX IF NOT EXISTS idx_qr_sesiones_mesa_device
   ON qr_sesiones_cliente (mesa_id, device_id)
   WHERE estado = 'activa';
 

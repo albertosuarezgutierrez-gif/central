@@ -156,6 +156,8 @@ serve(async (req) => {
         .eq('mesa_id', mesa.id)
         .eq('device_id', deviceId)
         .eq('estado', 'activa')
+        .order('creado_en', { ascending: false })
+        .limit(1)
         .maybeSingle()
       if (existente) {
         if (nombreCliente) {
@@ -183,7 +185,9 @@ serve(async (req) => {
         mesa_id: mesa.id,
         num_comensales: tipo === 'individual' ? 1 : num_comensales,
         precio_fijo_aplicado,
-        device_id: deviceId,
+        // device_id solo identifica subcuentas individuales; en 'mesa' va null para
+        // no chocar con el índice único parcial (mesa_id, device_id) WHERE activa.
+        device_id: tipo === 'individual' ? deviceId : null,
         nombre_cliente: nombreCliente,
         tipo,
       })

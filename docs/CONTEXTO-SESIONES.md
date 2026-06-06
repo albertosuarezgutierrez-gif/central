@@ -27,10 +27,17 @@
     `qr_sesiones_cliente.{device_id,nombre_cliente,tipo}`; **`comandas.sesion_qr_id`** (el eslabón
     persona↔item). Aditiva y backward-compatible. Verificado: 5 columnas presentes con defaults OK;
     `qr_sesiones_cliente` vacía (0 datos en riesgo).
-  - **EFs DESPLEGADAS en Supabase (06/06):** `qr-session` **v5** (subcuenta por `device_id`, N activas
-    por mesa, devuelve `cobro.modo_consumo`); `qr-order` **v9** (escribe `sesion_qr_id` en la comanda);
-    `qr-cobro` **v4** (en `tipo='individual'` suma SOLO por `sesion_qr_id`; en mesa, por mesa = legado).
-    Todas ACTIVE, `verify_jwt=false`. Deploy aceptado por el bundler Deno (compila en edge runtime).
+  - **EFs DESPLEGADAS en Supabase (06/06):** `qr-session` **v6**, `qr-order` **v9**,
+    `qr-cobro` **v5**. Todas ACTIVE, `verify_jwt=false`.
+  - **Code review (06/06) — 4 fixes aplicados y desplegados:**
+    1. `qr-cobro` mesa-branch ahora **excluye** los items de subcuentas individuales (en `cliente_elige`,
+       el que elige "cuenta de mesa" ya NO carga con las cañas de los individuales; antes doble-cobro).
+       Verificado en SQL: A indiv paga 3,0 / B mesa paga 4,0 (antes B pagaba 7,0).
+    2. cron `autoCerrarIndividuales`: `idempotencyKey: qr-auto-<sesion_id>` en el PaymentIntent →
+       si el cargo OK pero el update de BD falla, el siguiente tick NO recobra.
+    3. `qr-session` recover por device: `.order(creado_en desc).limit(1)` antes de `maybeSingle()`.
+    4. Índice `idx_qr_sesiones_mesa_device` → **UNIQUE** (migración `20260606b_qr_unique_device_index.sql`
+       APLICADA). Las sesiones 'mesa' guardan `device_id NULL` (no chocan). tsc --noEmit verde.
   - **Config dueño:** `/api/owner/cobro-config` (allowlist + validación `qr_modo_consumo`) + selector
     "MODO DE CONSUMO QR" en `owner/page.tsx` (`CobroConfigSection`). Reusa el `modo_cobro` existente
     (cuenta_abierta/pre_auth/por_ronda) como "cómo paga cada cuenta" → sin set de flags redundante.

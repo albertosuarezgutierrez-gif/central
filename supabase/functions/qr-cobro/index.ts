@@ -63,8 +63,23 @@ serve(async (req) => {
 
     const { data: items } = await itemsQuery
 
+    // En 'mesa' la suma por mesa NO debe incluir lo de subcuentas individuales
+    // (modo cliente_elige): cada individual paga lo suyo aparte, así que el que
+    // elige "cuenta de mesa" no debe cargar con las cañas de los individuales.
+    let excluirSesiones = new Set<string>()
+    if (sesion.tipo !== 'individual') {
+      const { data: indiv } = await supabase
+        .from('qr_sesiones_cliente')
+        .select('id')
+        .eq('mesa_id', sesion.mesa_id)
+        .eq('tipo', 'individual')
+      excluirSesiones = new Set((indiv || []).map((s: any) => s.id))
+    }
+
     let subtotal = 0
     for (const item of items || []) {
+      const sqid = (item as any).comandas?.sesion_qr_id
+      if (sesion.tipo !== 'individual' && sqid && excluirSesiones.has(sqid)) continue
       subtotal += item.precio_unitario * item.cantidad
     }
 
