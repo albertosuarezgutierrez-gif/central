@@ -46,6 +46,48 @@
     pasó / gating por confianza antes de escribir; cron `caducidades` con `tgAlert`
     (FEFO proactivo); columna `codigo_barras` en `stock_articulos` para auto-match EAN→artículo.
 
+- **Maître IA — recomendador de carta para el comensal (QR) — 06/06/2026**
+  (rama `claude/ai-meal-recommender-3vVLJ`): nueva feature gemela del recomendador de
+  vino, pero para platos. El comensal en `/q/[token]` marca alérgenos (chips) + escribe
+  qué le apetece y la IA recomienda 2-3 platos seguros de la carta, que selecciona y
+  añade al pedido. **Spec** y **plan** en `docs/superpowers/`. Implementado:
+  - `src/lib/carta-recomendar.ts` — motor: **filtro de seguridad de alérgenos EN CÓDIGO**
+    (no se confía al LLM), platos sin alérgenos declarados excluidos por defecto, descarte
+    de ids alucinados (defensa en profundidad), prompt + `callAI`.
+  - `src/app/api/qr/recomendar/route.ts` — GET (config UI) + POST (recomienda), valida
+    token QR sin sesión (como `carta-i18n`).
+  - `src/components/qr/MaitreSheet.tsx` — bottom sheet (chips + antojo + resultados).
+    ⚠ Los `value` de los chips coinciden con la convención REAL de `productos.alergenos`
+    (verificada en BD: minúsculas sin tildes, guion bajo → `lacteos`, `crustaceos`,
+    `frutos_secos`). Si fueran "bonitos" el filtro no casaría.
+  - Owner: módulo `carta_ia` + config `configuracion.maitre_ia` en `ModulosTab` (nombre,
+    tono, nº sugerencias, 3 toggles). Gating como `carta_vinos`.
+  - Verificado: `tsc` 0 errores, `eslint` 0 errores, `next build` OK.
+  - Pendiente/futuro (YAGNI): maridaje de vino en la tarjeta, puerta `/edge` del camarero
+    (motor ya reutilizable), voz, aprendizaje sobre qué sugerencias acaban en comanda.
+
+- **Cobros de grupo: comisión configurable por restaurante + ahorro de costes — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`): se sustituye el 1% fijo (con el que ia.rest
+  **perdía** en todo cobro: 1% < 1,5%+0,25€ de Stripe) por **comisión = % · precio + fijo**
+  (la fija una vez por pago), configurable **por restaurante** desde `/super`. Defaults de
+  plataforma `2% + 0,35€ · mínimo 3€` (`lib/cobros-comision.ts`, con fallback). Smoke
+  `scripts/smoke-cobros-comision.ts`: neto plataforma > 0 en todos los casos (café 10€ pasa de
+  −0,30€ a +0,15€). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-05-cobros-comision-*`.
+  - **Migración aplicada** (`cobros_comision_config`): `comision_pct/comision_fija_eur/minimo_producto_eur`
+    en `cobro_config`; `email_cierre_enviado` en `cobros_grupo`; `recordatorio_enviado_at` en `cobros_grupo_pagos`.
+  - **Checkout**: lee la config; el menú va a precio base y, si se repercute, añade línea
+    "Gastos de gestión"; `application_fee = comisión`. **GET portal** + página pública muestran
+    desglose importe/gestión/total. **Mínimo por producto** validado al crear/editar menús.
+  - **Webhook `stripe-connect`**: registra volumen + comisión en `resumen_cobros_mensual`
+    (`registrar_pago_cobro`) → `/super → Cobro` ya refleja el margen real (antes 0 para Saboga).
+    OJO: los cobros históricos reconciliados a mano NO se backfillean (usaban el 1% viejo).
+  - **`/super → Cobro`**: nuevo editor de comisión por restaurante (`/api/super/cobro-config-comision`).
+  - **Cron nuevo `cobros-eventos`** (`0 * * * *`, en `vercel.json`): (A) email de **cierre** al dueño
+    con pagados + pendientes (`enviarEmailCierreCobros`); (B) **recordatorio** a invitados con el pago
+    a medias antes del límite (`enviarEmailRecordatorioPagoCobro`). Idempotentes por flags.
+  - **v2 aparcado:** cuenta "tab" cobrada al cierre por persona; política de reembolsos (Stripe no
+    devuelve su comisión en un refund). **Pendiente Alberto:** ajustar % / fijo por restaurante en /super.
+
 - **Hardening cobros: purga automática de "pendientes" caducados — 05/06/2026**
   (rama `claude/price-discrepancy-480-280-bFj1E`): tras el fix del bug multi-menú
   (PR #47, ya en `main`), se añade al cron `cobro-inactividad` (cada 5 min) un borrado

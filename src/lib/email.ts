@@ -531,6 +531,80 @@ export async function enviarEmailNuevoLead({
 }
 
 // ── Función genérica de envío (para propuestas y otros usos internos) ─────────
+// ── EMAIL: Cierre de un portal de cobros de grupo (resumen al dueño) ──
+export async function enviarEmailCierreCobros({
+  email,
+  nombreRestaurante,
+  titulo,
+  totalPagado,
+  pagados,
+  pendientes,
+}: {
+  email: string
+  nombreRestaurante: string
+  titulo: string
+  totalPagado: number
+  pagados: Array<{ nombre: string; concepto: string; importe: number }>
+  pendientes: Array<{ nombre: string; concepto: string; telefono?: string | null }>
+}) {
+  const td = `padding:6px 8px;border-bottom:1px solid ${C.rule};font-size:13px;color:${C.fg2}`
+  const filasPag = pagados.length
+    ? pagados.map(p => `<tr><td style="${td}">${p.nombre}</td><td style="${td}">${p.concepto}</td><td style="${td};text-align:right;white-space:nowrap">${p.importe.toFixed(2)} €</td></tr>`).join('')
+    : `<tr><td style="${td}" colspan="3">Sin pagos registrados</td></tr>`
+  const filasPend = pendientes.length
+    ? pendientes.map(p => `<tr><td style="${td}">${p.nombre}</td><td style="${td}">${p.concepto}</td><td style="${td}">${p.telefono || '—'}</td></tr>`).join('')
+    : `<tr><td style="${td}" colspan="3">Ninguno 🎉</td></tr>`
+
+  const html = layout(`
+    <div class="card">
+      <h1>Cierre de “${titulo}”.</h1>
+      <p>Hola ${nombreRestaurante}, el portal de cobro ha cerrado. Aquí tienes el resumen para organizar.</p>
+      <p><strong>Total cobrado:</strong> ${totalPagado.toFixed(2)} € · ${pagados.length} pago${pagados.length !== 1 ? 's' : ''}</p>
+      <hr class="divider">
+      <p style="font-weight:700;margin-bottom:6px">Pagados</p>
+      <table style="width:100%;border-collapse:collapse">${filasPag}</table>
+      <hr class="divider">
+      <p style="font-weight:700;margin-bottom:6px">Pendientes <span style="font-weight:400;color:${C.fg3}">(por si quieres llamarles)</span></p>
+      <table style="width:100%;border-collapse:collapse">${filasPend}</table>
+    </div>
+  `, `Resumen de cobros — ${titulo}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Resumen de cobros — ${titulo}`,
+    html,
+  })
+}
+
+// ── EMAIL: Recordatorio a un invitado que dejó el pago a medias ──
+export async function enviarEmailRecordatorioPagoCobro({
+  email,
+  nombre,
+  titulo,
+  link,
+}: {
+  email: string
+  nombre: string
+  titulo: string
+  link: string
+}) {
+  const html = layout(`
+    <div class="card">
+      <h1>Te queda un pago pendiente.</h1>
+      <p>Hola ${nombre || ''}, dejaste tu pago a medias para <strong>${titulo}</strong> y el plazo termina pronto. Puedes completarlo en un minuto:</p>
+      <a href="${link}" class="btn">Completar mi pago →</a>
+    </div>
+  `, `Pago pendiente — ${titulo}`)
+
+  return getResend().emails.send({
+    from: FROM,
+    to: email,
+    subject: `Te queda pendiente tu pago — ${titulo}`,
+    html,
+  })
+}
+
 export async function sendEmail({
   to,
   subject,
