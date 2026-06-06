@@ -13,6 +13,7 @@ interface Portal {
   mensaje_confirmacion: string | null
   items: Item[]
   restaurantes: { nombre: string; logo_url: string | null }
+  comision?: { repercutir: boolean; pct: number; fija: number }
 }
 
 function CobroInner() {
@@ -162,6 +163,14 @@ function CobroInner() {
       : totalImporteMulti
 
   const mensajeConfirmacion = portal!.mensaje_confirmacion || '¡Gracias!'
+
+  // Gastos de gestión (si el portal repercute la comisión): % sobre el importe + fijo,
+  // una sola vez por pago. Se suma al total que paga el invitado.
+  const com = portal!.comision
+  const gestionEur = com?.repercutir && haySeleccion
+    ? Math.round((importeTotal * (com.pct / 100) + com.fija) * 100) / 100
+    : 0
+  const totalConGestion = Math.round((importeTotal + gestionEur) * 100) / 100
 
   return (
     <div style={{ minHeight: '100vh', background: '#F6F1E7', fontFamily: 'Inter Tight,sans-serif' }}>
@@ -364,11 +373,26 @@ function CobroInner() {
               </div>
             )}
 
+            {/* Gastos de gestión (si el portal los repercute) */}
+            {gestionEur > 0 && (
+              <div style={{ background: '#FBF8F1', border: '1px solid #D8CDB6', borderRadius: 12, padding: '10px 14px', marginBottom: '1rem', fontSize: 13, color: '#6B5F52' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span>Importe</span><span>{importeTotal.toFixed(2)} €</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
+                  <span>Gastos de gestión</span><span>{gestionEur.toFixed(2)} €</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, color: '#1A1714', borderTop: '1px solid #D8CDB6', paddingTop: 6 }}>
+                  <span>Total</span><span>{totalConGestion.toFixed(2)} €</span>
+                </div>
+              </div>
+            )}
+
             <button onClick={pagar} disabled={!haySeleccion || !nombre.trim() || !telefono.trim() || cargando}
               style={{ width: '100%', padding: 14, background: col, color: textCol, border: 'none', borderRadius: 12,
                 fontSize: 15, fontWeight: 600, cursor: !haySeleccion || !nombre.trim() || !telefono.trim() ? 'not-allowed' : 'pointer',
                 opacity: !haySeleccion || !nombre.trim() || !telefono.trim() || cargando ? .5 : 1, transition: 'opacity .2s' }}>
-              {cargando ? 'Procesando...' : haySeleccion ? `Pagar ${importeTotal.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
+              {cargando ? 'Procesando...' : haySeleccion ? `Pagar ${totalConGestion.toFixed(2)} € con tarjeta` : 'Pagar con tarjeta'}
             </button>
             <p style={{ fontSize: 11, color: '#9C8E7E', textAlign: 'center', marginTop: 8 }}>🔒 Pago seguro procesado por Stripe</p>
           </>
