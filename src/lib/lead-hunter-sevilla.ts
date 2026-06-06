@@ -17,9 +17,12 @@ export async function enviarEmailsSevilla(
   limite = 3
 ): Promise<{ ok: boolean; enviados: number; propuestos?: number; motivo?: string; error?: string }> {
   try {
+    // Sobre-pedimos al RPC: ~la mitad del pool tiene móvil (van por WhatsApp), así que
+    // pedimos de más para llegar a `limite` emails NO-móvil reales.
+    const pedir = Math.min(Math.max(limite * 3, limite + 12), 80)
     const { data: leads, error: leadsError } = await supabase.rpc(
       'search_leads_sevilla_nuevos',
-      { limit_count: limite }
+      { limit_count: pedir }
     )
     if (leadsError) throw new Error(leadsError.message)
     if (!leads || leads.length === 0) {
@@ -37,6 +40,7 @@ export async function enviarEmailsSevilla(
     let propuestos = 0
     for (const lead of leads) {
       try {
+        if (propuestos >= limite) break // ya alcanzamos la tanda objetivo
         if (tieneMovil.get(lead.id)) continue // tiene móvil → WhatsApp
 
         const tpl = construirEmail(lead, '', '') // solo para asunto/utm en la propuesta
