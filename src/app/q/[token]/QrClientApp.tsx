@@ -8,6 +8,7 @@ import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useCallback, useRef } from 'react'
 
 import SelectorIdioma from '@/components/qr/SelectorIdioma'
+import MaitreSheet from '@/components/qr/MaitreSheet'
 import { leerIdioma, guardarIdioma, CodigoIdioma } from '@/lib/useIdiomasCarta'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
@@ -88,6 +89,11 @@ export default function QrClientApp({ token }: { token: string }) {
 
   const [idioma, setIdioma] = useState<CodigoIdioma>('es')
 
+  // ── Maître IA (recomendador de carta) ──
+  const [maitreActivo, setMaitreActivo] = useState(false)
+  const [maitreConfig, setMaitreConfig] = useState<{ nombre_asistente: string; permitir_antojo_texto: boolean; mostrar_precios: boolean }>({ nombre_asistente: 'Maître IA', permitir_antojo_texto: true, mostrar_precios: true })
+  const [maitreOpen, setMaitreOpen] = useState(false)
+
   // ── Avisos "pedido listo" (Capa 1: en página + Capa 2: push web) ──
   const [comandaIds, setComandaIds] = useState<string[]>([])   // comandas hechas esta sesión
   const [pedidoListo, setPedidoListo] = useState(false)
@@ -103,6 +109,16 @@ export default function QrClientApp({ token }: { token: string }) {
   const [mktEstado, setMktEstado] = useState<'idle' | 'guardando' | 'ok' | 'error'>('idle')
 
   const showToast = (msg: string) => { setToast(msg); setTimeout(() => setToast(''), 3000) }
+
+  // Carga config del Maître IA (gating + textos) una vez al montar
+  useEffect(() => {
+    let vivo = true
+    fetch(`/api/qr/recomendar?token=${encodeURIComponent(token)}`)
+      .then(r => r.json())
+      .then(d => { if (vivo && d?.activo) { setMaitreActivo(true); if (d.config) setMaitreConfig(d.config) } })
+      .catch(() => {})
+    return () => { vivo = false }
+  }, [token])
 
   // Prepara/desbloquea el AudioContext dentro de un gesto del usuario (necesario en móvil)
   const primeAudio = useCallback(() => {
@@ -502,6 +518,16 @@ export default function QrClientApp({ token }: { token: string }) {
     return ex ? prev.map(p => p.id === prod.id ? { ...p, qty: p.qty + 1 } : p) : [...prev, { ...prod, qty: 1 }]
   })
 
+  // Añade al carrito los platos recomendados por el Maître (mapea ids → producto completo)
+  const addRecomendados = (ids: string[]) => {
+    const productos = data?.productos ?? []
+    ids.forEach(id => {
+      const prod = productos.find(p => p.id === id)
+      if (prod) addToCart(prod)
+    })
+    showToast('Añadido a tu pedido ✓')
+  }
+
   const totalItems = cart.reduce((a, b) => a + b.qty, 0)
   const subtotal     = cart.reduce((a, b) => a + b.precio * b.qty, 0)
   const precioFijo   = (data?.mesa.precio_fijo_persona || 0) * numComensales
@@ -737,6 +763,12 @@ export default function QrClientApp({ token }: { token: string }) {
             </div>
           </div>
           <div style={{ flex: 1, overflowY: 'auto', padding: '6px 18px' }}>
+            {maitreActivo && (
+              <button onClick={() => setMaitreOpen(true)}
+                style={{ width: '100%', margin: '8px 0 6px', padding: '12px 14px', borderRadius: 12, border: `1px solid ${C.vermilion}`, background: '#D9442B14', color: C.cream, fontFamily: SN, fontSize: 14, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+                ✨ ¿No sabes qué pedir? Pregúntale al {maitreConfig.nombre_asistente}
+              </button>
+            )}
             {data.productos.map(prod => {
               const inCart = cart.find(p => p.id === prod.id)
               return (
@@ -1142,6 +1174,17 @@ export default function QrClientApp({ token }: { token: string }) {
           </span>
         </a>
       </div>
+
+      {maitreOpen && (
+        <MaitreSheet
+          token={token}
+          idioma={idioma}
+          comensales={numComensales || 1}
+          config={maitreConfig}
+          onAddIds={addRecomendados}
+          onClose={() => setMaitreOpen(false)}
+        />
+      )}
     </div>
   )
 }
