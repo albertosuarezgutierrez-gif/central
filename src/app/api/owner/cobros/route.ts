@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
+import { resolverComisionConfig } from '@/lib/cobros-comision'
 
 export async function GET(req: NextRequest) {
   const supabase = createServerClient()
@@ -41,6 +42,16 @@ export async function POST(req: NextRequest) {
 
   if (!titulo?.trim()) return NextResponse.json({ error: 'Título requerido' }, { status: 400 })
   if (!items?.length) return NextResponse.json({ error: 'Al menos un menú requerido' }, { status: 400 })
+
+  // Mínimo por producto (configurable por restaurante, con default de plataforma)
+  const { data: cfgRow } = await supabase
+    .from('cobro_config').select('minimo_producto_eur').eq('restaurante_id', rid).maybeSingle()
+  const { minimo } = resolverComisionConfig(cfgRow)
+  const itemsConPrecio = (items as { nombre?: string; precio_eur: number }[])
+    .filter(i => i.nombre?.trim() && parseFloat(String(i.precio_eur)) > 0)
+  if (itemsConPrecio.some(i => parseFloat(String(i.precio_eur)) < minimo)) {
+    return NextResponse.json({ error: `El precio mínimo por menú es ${minimo.toFixed(2)} €` }, { status: 400 })
+  }
 
   const base = titulo.toLowerCase()
     .normalize('NFD').replace(/[\u0300-\u036f]/g, '')

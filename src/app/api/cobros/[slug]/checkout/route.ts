@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
-
-const COMISION_TOTAL = 0.025
+import { resolverComisionConfig, calcularComision } from '@/lib/cobros-comision'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { data: portal } = await supabase
     .from('cobros_grupo')
     .select(`
-      id, titulo, estado, stripe_connect_id, repercutir_comision,
+      id, titulo, estado, stripe_connect_id, repercutir_comision, restaurante_id,
       cobros_grupo_items(id, nombre, precio_eur, activo)
     `)
     .eq('slug', slug)
@@ -50,14 +49,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     if (!item) return NextResponse.json({ error: `Menú no disponible: ${item_id}` }, { status: 404 })
 
     const precioBase = Number(item.precio_eur)
-    const precioFinal = portal.repercutir_comision
-      ? Math.round(precioBase * (1 + COMISION_TOTAL) * 100) / 100
-      : precioBase
 
+    // El menú va a su precio base. Si se repercute la comisión, se añade una única
+    // línea "Gastos de gestión" más abajo (no se infla cada menú).
     lineItems.push({
       price_data: {
         currency: 'eur',
-        unit_amount: Math.round(precioFinal * 100),
+        unit_amount: Math.round(precioBase * 100),
         product_data: { name: `${item.nombre} — ${portal.titulo}` }
       },
       quantity: cantidad
@@ -72,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       nombre_pagador: nombre_pagador.trim(),
       email_pagador: email_pagador?.trim() || null,
       telefono_pagador: telefono_pagador?.trim() || null,
-      importe_eur: precioFinal * cantidad,
+      importe_eur: precioBase * cantidad,
       importe_base_eur: precioBase * cantidad,
       estado: 'pendiente',
       cantidad
@@ -81,7 +79,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!lineItems.length) return NextResponse.json({ error: 'Sin items válidos' }, { status: 400 })
 
-  const applicationFee = Math.round(totalBase * 0.01 * 100)
+  // Comisión configurable por restaurante (fallback a defaults de plataforma).
+  const { data: cfgRow } = await supabase
+    .from('cobro_config')
+    .select('comision_pct, comision_fija_eur, minimo_producto_eur')
+    .eq('restaurante_id', portal.restaurante_id)
+    .maybeSingle()
+  const cfg = resolverComisionConfig(cfgRow)
+  const { comisionEur } = calcularComision(totalBase, cfg)
+
+  // Repercutir: el invitado paga la comisión como una línea aparte → el restaurante
+  // recibe el precio base íntegro. Si no se repercute, la comisión sale del precio base
+  // (el restaurante recibe base − comisión). En ambos casos la comisión = application_fee.
+  if (portal.repercutir_comision && comisionEur > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'eur',
+        unit_amount: Math.round(comisionEur * 100),
+        product_data: { name: 'Gastos de gestión' }
+      },
+      quantity: 1
+    })
+  }
+
+  const applicationFee = Math.round(comisionEur * 100)
 
   const { data: pagos, error: pagosError } = await supabase
     .from('cobros_grupo_pagos')
