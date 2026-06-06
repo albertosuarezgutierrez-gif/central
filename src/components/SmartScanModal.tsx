@@ -1,6 +1,7 @@
 'use client'
 import { C, SE, SN, SM, SC } from '@/lib/colors'
 import React, { useState, useRef, useCallback } from 'react'
+import { parseGS1, detectBarcode } from '@/lib/barcode'
 
 /* ── Paleta crema (light, igual que /edge) ── */
 
@@ -132,6 +133,27 @@ export default function SmartScanModal({ onClose, sessionNombre, sessionRol }: P
         return
       }
 
+      // Etiqueta de producto: si la imagen lleva código de barras legible, sus datos
+      // (EAN / lote / caducidad) son inequívocos → sobrescriben lo que leyó la visión,
+      // que tiende a confundir fechas (p. ej. "04.06.26"). Si no hay código, se queda lo de NIM.
+      if (data?.tipo === 'etiqueta_producto') {
+        try {
+          const bc = await detectBarcode(file)
+          if (bc) {
+            const datos = { ...(data.datos ?? {}) }
+            if (bc.format === 'ean_13' || bc.format === 'ean_8') {
+              datos.codigo_barras = bc.raw
+            } else {
+              const g = parseGS1(bc.raw)
+              if (g.gtin)      datos.codigo_barras  = g.gtin
+              if (g.lote)      datos.lote           = g.lote
+              if (g.caducidad) datos.fecha_caducidad = g.caducidad // ya viene en ISO YYYY-MM-DD
+            }
+            data.datos = datos
+          }
+        } catch { /* sin código legible — seguimos con la extracción por visión */ }
+      }
+
       setResult(data)
       setFase('resultado')
     } catch (err) {
@@ -152,6 +174,12 @@ export default function SmartScanModal({ onClose, sessionNombre, sessionRol }: P
       body: JSON.stringify({ id: result.scan_id, estado: 'archivado' }),
     })
 
+    // Etiqueta de producto: pasamos los datos extraídos a Almacén para prefijar la
+    // checklist de Recepción (el almacén los lee de sessionStorage al montar).
+    if (result.tipo === 'etiqueta_producto' && typeof window !== 'undefined') {
+      sessionStorage.setItem('ia_scan_etiqueta', JSON.stringify({ scan_id: result.scan_id, datos: result.datos }))
+    }
+
     setArchivandoOk(true)
     setTimeout(() => {
       // Redirigir al módulo según tipo
@@ -159,7 +187,7 @@ export default function SmartScanModal({ onClose, sessionNombre, sessionRol }: P
       if (result.tipo === 'albaran')           window.location.href = '/owner?tab=almacen'
       if (result.tipo === 'factura_proveedor') window.location.href = '/owner?tab=gastos'
       if (result.tipo === 'carta')             window.location.href = '/owner?tab=carta'
-      if (result.tipo === 'etiqueta_producto') window.location.href = '/owner?tab=almacen&recepcion=1'
+      if (result.tipo === 'etiqueta_producto') window.location.href = '/owner?tab=almacen&recepcion=etiqueta'
       if (result.tipo === 'otro')              onClose()
     }, 800)
   }, [result, onClose])

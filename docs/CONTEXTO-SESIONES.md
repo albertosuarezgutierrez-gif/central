@@ -16,6 +16,78 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
+  (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
+  tipo `etiqueta_producto`) estaba **roto en silencio** y, aunque funcionara, era un
+  dead-end. Dos problemas y sus fixes:
+  - **Bug de BD:** el CHECK de `documentos_escaneados.tipo` (migración 20260518) NO
+    incluía `etiqueta_producto`, así que el INSERT fallaba, `dbError` solo se logueaba
+    y `scan_id` volvía null → el scan nunca se persistía. **Fix:** migración
+    `20260606_smart_scan_etiqueta_producto.sql` (drop/recreate idempotente del CHECK
+    añadiendo `etiqueta_producto`). ⚠️ **Pendiente aplicar en Supabase remoto** (la tabla
+    vive en remoto; la migración del repo es la fuente, pero hay que ejecutarla).
+  - **Dead-end UI:** el botón "Usar en Recepción" redirigía a `&recepcion=1` (sin leer)
+    y no llevaba los datos. **Fix (puente):** `SmartScanModal` guarda los datos en
+    `sessionStorage('ia_scan_etiqueta')` y redirige a `?tab=almacen&recepcion=etiqueta`;
+    `AlmacenTab` lo lee al montar, **prefija la checklist de Recepción** (nombre, EAN,
+    lote, caducidad ISO, cantidad/unidad) y reutiliza `confirmarRecepcion()` → crea la
+    recepción confirmada → `fn_confirmar_recepcion` sube `stock_actual` y el lote aparece
+    en FEFO. Sin rutas de escritura nuevas. Al confirmar, enlaza el doc de auditoría con
+    `archivado_en='recepcion:<uuid>'`.
+  - **Mejora incluida (GS1):** extraído `parseGS1`/`detectBarcode` del flujo ASN a
+    `src/lib/barcode.ts` y reutilizado en el escáner del owner: si la foto lleva código
+    de barras legible (EAN-13/GS1-128/DataMatrix), su EAN/lote/caducidad **sobrescriben**
+    lo que leyó la visión (que confunde fechas tipo "04.06.26"). La route normaliza
+    además `fecha_caducidad`/`fecha_fabricacion` a ISO para el `<input type=date>`.
+  - **Verificación:** `npx tsc --noEmit` y `npx next build` **verdes**. Falta prueba
+    funcional end-to-end en el navegador (escanear → confirmar → ver en FEFO) y **aplicar
+    la migración en Supabase**.
+  - **Mejoras siguientes (NO hechas, documentadas en el plan):** aviso si caducidad ya
+    pasó / gating por confianza antes de escribir; cron `caducidades` con `tgAlert`
+    (FEFO proactivo); columna `codigo_barras` en `stock_articulos` para auto-match EAN→artículo.
+
+- **Maître IA — recomendador de carta para el comensal (QR) — 06/06/2026**
+  (rama `claude/ai-meal-recommender-3vVLJ`): nueva feature gemela del recomendador de
+  vino, pero para platos. El comensal en `/q/[token]` marca alérgenos (chips) + escribe
+  qué le apetece y la IA recomienda 2-3 platos seguros de la carta, que selecciona y
+  añade al pedido. **Spec** y **plan** en `docs/superpowers/`. Implementado:
+  - `src/lib/carta-recomendar.ts` — motor: **filtro de seguridad de alérgenos EN CÓDIGO**
+    (no se confía al LLM), platos sin alérgenos declarados excluidos por defecto, descarte
+    de ids alucinados (defensa en profundidad), prompt + `callAI`.
+  - `src/app/api/qr/recomendar/route.ts` — GET (config UI) + POST (recomienda), valida
+    token QR sin sesión (como `carta-i18n`).
+  - `src/components/qr/MaitreSheet.tsx` — bottom sheet (chips + antojo + resultados).
+    ⚠ Los `value` de los chips coinciden con la convención REAL de `productos.alergenos`
+    (verificada en BD: minúsculas sin tildes, guion bajo → `lacteos`, `crustaceos`,
+    `frutos_secos`). Si fueran "bonitos" el filtro no casaría.
+  - Owner: módulo `carta_ia` + config `configuracion.maitre_ia` en `ModulosTab` (nombre,
+    tono, nº sugerencias, 3 toggles). Gating como `carta_vinos`.
+  - Verificado: `tsc` 0 errores, `eslint` 0 errores, `next build` OK.
+  - Pendiente/futuro (YAGNI): maridaje de vino en la tarjeta, puerta `/edge` del camarero
+    (motor ya reutilizable), voz, aprendizaje sobre qué sugerencias acaban en comanda.
+
+- **Cobros de grupo: comisión configurable por restaurante + ahorro de costes — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`): se sustituye el 1% fijo (con el que ia.rest
+  **perdía** en todo cobro: 1% < 1,5%+0,25€ de Stripe) por **comisión = % · precio + fijo**
+  (la fija una vez por pago), configurable **por restaurante** desde `/super`. Defaults de
+  plataforma `2% + 0,35€ · mínimo 3€` (`lib/cobros-comision.ts`, con fallback). Smoke
+  `scripts/smoke-cobros-comision.ts`: neto plataforma > 0 en todos los casos (café 10€ pasa de
+  −0,30€ a +0,15€). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-05-cobros-comision-*`.
+  - **Migración aplicada** (`cobros_comision_config`): `comision_pct/comision_fija_eur/minimo_producto_eur`
+    en `cobro_config`; `email_cierre_enviado` en `cobros_grupo`; `recordatorio_enviado_at` en `cobros_grupo_pagos`.
+  - **Checkout**: lee la config; el menú va a precio base y, si se repercute, añade línea
+    "Gastos de gestión"; `application_fee = comisión`. **GET portal** + página pública muestran
+    desglose importe/gestión/total. **Mínimo por producto** validado al crear/editar menús.
+  - **Webhook `stripe-connect`**: registra volumen + comisión en `resumen_cobros_mensual`
+    (`registrar_pago_cobro`) → `/super → Cobro` ya refleja el margen real (antes 0 para Saboga).
+    OJO: los cobros históricos reconciliados a mano NO se backfillean (usaban el 1% viejo).
+  - **`/super → Cobro`**: nuevo editor de comisión por restaurante (`/api/super/cobro-config-comision`).
+  - **Cron nuevo `cobros-eventos`** (`0 * * * *`, en `vercel.json`): (A) email de **cierre** al dueño
+    con pagados + pendientes (`enviarEmailCierreCobros`); (B) **recordatorio** a invitados con el pago
+    a medias antes del límite (`enviarEmailRecordatorioPagoCobro`). Idempotentes por flags.
+  - **v2 aparcado:** cuenta "tab" cobrada al cierre por persona; política de reembolsos (Stripe no
+    devuelve su comisión en un refund). **Pendiente Alberto:** ajustar % / fijo por restaurante en /super.
+
 - **Hardening cobros: purga automática de "pendientes" caducados — 05/06/2026**
   (rama `claude/price-discrepancy-480-280-bFj1E`): tras el fix del bug multi-menú
   (PR #47, ya en `main`), se añade al cron `cobro-inactividad` (cada 5 min) un borrado

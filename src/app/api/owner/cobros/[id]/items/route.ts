@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
+import { resolverComisionConfig } from '@/lib/cobros-comision'
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -21,6 +22,14 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { items } = await req.json() as {
     items: Array<{ id: string; nombre: string; precio_eur: number; pdf_url: string | null }>
+  }
+
+  // Mínimo por producto (configurable por restaurante, con default de plataforma)
+  const { data: cfgRow } = await supabase
+    .from('cobro_config').select('minimo_producto_eur').eq('restaurante_id', rid).maybeSingle()
+  const { minimo } = resolverComisionConfig(cfgRow)
+  if (items.some(i => Number(i.precio_eur) < minimo)) {
+    return NextResponse.json({ error: `El precio mínimo por menú es ${minimo.toFixed(2)} €` }, { status: 400 })
   }
 
   // Actualizar cada ítem individualmente

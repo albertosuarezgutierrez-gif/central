@@ -7,7 +7,7 @@ import { getRestauranteId } from '@/lib/session'
 const TODOS_MODULOS = [
   'voz','mesas','comandas','cobro','impresion','turnos',
   'kds','supervisor','forecaster','fichajes','verifactu',
-  'almacen','carta_vinos','qr','storefront','reservas',
+  'almacen','carta_vinos','carta_ia','qr','storefront','reservas',
   'rrhh','escaner','contabilidad','analytics',
 ]
 
@@ -31,7 +31,7 @@ export async function PUT(req: NextRequest) {
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
   const body = await req.json()
-  const { modulos_activos, modo_vinos } = body
+  const { modulos_activos, modo_vinos, maitre_ia } = body
 
   if (!Array.isArray(modulos_activos)) {
     return NextResponse.json({ error: 'modulos_activos debe ser un array' }, { status: 400 })
@@ -53,6 +53,11 @@ export async function PUT(req: NextRequest) {
   // Actualizar modo_vinos si se envía y es válido
   if (modo_vinos === 'basico' || modo_vinos === 'carta') {
     configNueva.modo_vinos = modo_vinos
+  }
+
+  // Actualizar config del Maître IA si se envía (merge sobre lo existente)
+  if (maitre_ia && typeof maitre_ia === 'object') {
+    configNueva.maitre_ia = { ...(configActual.maitre_ia ?? {}), ...maitre_ia }
   }
 
   const { error } = await supabase
