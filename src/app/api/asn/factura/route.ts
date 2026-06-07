@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       .from('pedidos_proveedor')
       .select(`
         id, cantidad, unidad_compra, proveedor_nombre, proveedor_email,
-        restaurante_id, asn_token_expires_at,
+        local_id, asn_token_expires_at,
         stock_articulos(nombre, coste_unitario)
       `)
       .eq('asn_token', token)
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const { data: orden } = await supabase
       .from('ordenes_pago_proveedor')
       .select('id, importe, estado, recepcion_id')
-      .eq('local_id', pedido.restaurante_id)
+      .eq('local_id', pedido.local_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -156,7 +156,7 @@ SOLO JSON, sin texto adicional.`
     const { data: factura, error: fcErr } = await supabase
       .from('facturas_compra')
       .insert({
-        local_id:  pedido.restaurante_id,
+        local_id:  pedido.local_id,
         recepcion_id:    orden?.recepcion_id ?? null,
         orden_pago_id:   orden?.id ?? null,
         proveedor_nombre: parsed.proveedor_nombre ?? pedido.proveedor_nombre,

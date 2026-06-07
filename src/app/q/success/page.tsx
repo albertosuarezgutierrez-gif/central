@@ -67,15 +67,15 @@ function QrSuccessInner() {
       const body: Record<string, unknown> = {
         sesion_id: sesionId,
         estrellas,
-        ...(rest && { restaurante_id: undefined }) // se obtiene por FK desde sesion
+        ...(rest && { local_id: undefined }) // se obtiene por FK desde sesion
       }
       // Necesitamos el restaurante_id — lo sacamos de la sesión
-      const sesRes = await fetch(`${SUPABASE_URL}/rest/v1/qr_sesiones_cliente?id=eq.${sesionId}&select=restaurante_id`, {
+      const sesRes = await fetch(`${SUPABASE_URL}/rest/v1/qr_sesiones_cliente?id=eq.${sesionId}&select=local_id`, {
         headers: { 'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}` }
       })
       const sesData = await sesRes.json()
-      const restaurante_id = sesData?.[0]?.restaurante_id
-      if (!restaurante_id) return null
+      const local_id = sesData?.[0]?.local_id
+      if (!local_id) return null
 
       const res = await fetch(`${SUPABASE_URL}/rest/v1/qr_valoraciones`, {
         method: 'POST',
@@ -83,7 +83,7 @@ function QrSuccessInner() {
           'apikey': ANON_KEY, 'Authorization': `Bearer ${ANON_KEY}`,
           'Content-Type': 'application/json', 'Prefer': 'return=representation'
         },
-        body: JSON.stringify({ sesion_id: sesionId, restaurante_id, estrellas })
+        body: JSON.stringify({ sesion_id: sesionId, local_id, estrellas })
       })
       const data = await res.json()
       return data?.[0]?.id ?? null
