@@ -130,7 +130,24 @@ export function esMovilEs(telefono?: string | null): boolean {
   return normalizarTelefonoEs(telefono) !== null
 }
 
-// Mensaje + enlace wa.me (click-to-chat, sin API de Meta) por vertical.
+// Mensaje + enlace para DM de Instagram (envío MANUAL desde la cuenta, sin API).
+// El enlace abre su perfil si lo conocemos (web de IG) o, si no, una búsqueda.
+export function construirInstagram(
+  lead: LeadVenta & { web?: string | null }
+): { texto: string; link: string } {
+  const vertical = detectarVertical(lead.tipo_negocio)
+  const texto =
+    vertical === 'catering'
+      ? `¡Hola! 👋 Soy Alberto, de ia.rest (también somos de Sevilla). Ayudamos a caterings de aquí a saber el margen real de cada evento antes de aceptarlo: escandallos, coste por comensal y presupuesto al instante, sin pelearte con el Excel. ¿Te lo enseño en 5 min por videollamada? Sin compromiso 🙌`
+      : vertical === 'eventos'
+      ? `¡Hola! 👋 Soy Alberto, de ia.rest (Sevilla). Para fincas/haciendas de eventos juntamos calendario, solicitudes, presupuestos y contratos en un sitio para que no se escape ni una boda. ¿Te lo enseño en 5 min? Sin compromiso 🙌`
+      : `¡Hola! 👋 Soy Alberto, de ia.rest (Sevilla). Ayudamos a hostelería a ganar margen con comandas por voz e IA. ¿Te lo enseño en 5 min? Sin compromiso 🙌`
+  const web = (lead.web || '').toLowerCase()
+  const link = web.includes('instagram.com')
+    ? (lead.web as string)
+    : `https://www.google.com/search?q=${encodeURIComponent(`${lead.nombre || ''} Sevilla instagram`)}`
+  return { texto, link }
+}
 export function construirWhatsApp(lead: LeadVenta, telefono: string): { texto: string; link: string } | null {
   const intl = normalizarTelefonoEs(telefono)
   if (!intl) return null

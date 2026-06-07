@@ -6,7 +6,7 @@
 
 import type { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
-import { construirEmail, esMovilEs, detectarVertical } from '@/lib/crm-sevilla'
+import { construirEmail, esMovilEs, detectarVertical, construirInstagram } from '@/lib/crm-sevilla'
 
 type SupabaseSrv = ReturnType<typeof createServerClient>
 
@@ -174,6 +174,68 @@ export async function proponerEmailsFranquicia(
     const msg = error instanceof Error ? error.message : 'Error desconocido'
     console.error('Error franquicias:', msg)
     await tgAlert(`🔴 CRM Franquicias ERROR: ${msg}`, 'critico')
+    return { ok: false, enviados: 0, error: msg }
+  }
+}
+
+// ── INSTAGRAM (catering Sevilla) ───────────────────────────────────────────
+// Propone DMs de Instagram (envío MANUAL) a caterings de Sevilla: por cada uno,
+// mensaje a Telegram con botón "Abrir Instagram" + el DM para copiar. Marca
+// instagram_outreach_at al proponer (como WhatsApp) para no repetir.
+export async function proponerInstagramCatering(
+  supabase: SupabaseSrv,
+  limite = 15
+): Promise<{ ok: boolean; enviados: number; motivo?: string; error?: string }> {
+  try {
+    const { data: leads, error } = await supabase
+      .from('leads')
+      .select('id, nombre, empresa, tipo_negocio, web')
+      .ilike('ciudad', '%Sevilla%')
+      .eq('tipo_negocio', 'catering')
+      .is('instagram_outreach_at', null)
+      .neq('estado', 'descartado')
+      .limit(limite)
+    if (error) throw new Error(error.message)
+    if (!leads || leads.length === 0) {
+      return { ok: true, enviados: 0, motivo: 'Sin caterings de Sevilla pendientes por Instagram' }
+    }
+
+    const token = process.env.TELEGRAM_BOT_TOKEN
+    const chat = process.env.TELEGRAM_CHAT_ID
+
+    let enviados = 0
+    for (const lead of leads) {
+      try {
+        const nombre = (lead.nombre || lead.empresa || 'Catering') as string
+        const ig = construirInstagram({ id: lead.id, nombre, tipo_negocio: lead.tipo_negocio, web: lead.web })
+        if (token && chat) {
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chat,
+              parse_mode: 'HTML',
+              text: [
+                `📸 <b>Instagram: ${esc(nombre)}</b>`,
+                ``,
+                `<i>Toca el mensaje para copiarlo y pégalo en su DM:</i>`,
+                `<code>${esc(ig.texto)}</code>`,
+              ].join('\n'),
+              reply_markup: { inline_keyboard: [[{ text: '📸 Abrir Instagram', url: ig.link }]] },
+            }),
+          }).catch((e) => console.error('[instagram] telegram:', e))
+        }
+        await supabase.from('leads').update({ instagram_outreach_at: new Date().toISOString() }).eq('id', lead.id)
+        enviados++
+      } catch (e) {
+        console.error('instagram lead', lead.id, e); continue
+      }
+    }
+    if (enviados > 0) await tgAlert(`📸 ${enviados} catering(s) listos para DM de Instagram (arriba).`, 'info')
+    return { ok: true, enviados }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido'
+    console.error('Error instagram catering:', msg)
     return { ok: false, enviados: 0, error: msg }
   }
 }

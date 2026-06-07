@@ -33,6 +33,7 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
   const [lanzando, setLanzando] = useState(false)
   const [enviandoMail, setEnviandoMail] = useState(false)
   const [enviandoFranq, setEnviandoFranq] = useState(false)
+  const [enviandoIg, setEnviandoIg] = useState(false)
   const [reenviando, setReenviando] = useState(false)
   const [reparando, setReparando] = useState(false)
   const [msg, setMsg] = useState<string>('')
@@ -93,6 +94,19 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
       setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
     } finally {
       setEnviandoFranq(false)
+    }
+  }
+
+  const instagramCatering = async () => {
+    setEnviandoIg(true); setMsg('')
+    try {
+      const r = await fetch('/api/super/instagram-catering', { method: 'POST', headers: headers() })
+      const j = await r.json()
+      setMsg(j.error ? `Error: ${j.error}` : `📸 ${j.enviados ?? 0} catering(s) listos para DM en Telegram${j.motivo ? ` (${j.motivo})` : ''}`)
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
+    } finally {
+      setEnviandoIg(false)
     }
   }
 
@@ -163,6 +177,10 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
         <button onClick={enviarFranquicias} disabled={enviandoFranq}
           style={{ background: enviandoFranq ? C.bg3 : C.ink, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoFranq ? 'default' : 'pointer' }}>
           {enviandoFranq ? 'Preparando…' : '🏢 Preparar emails franquicias'}
+        </button>
+        <button onClick={instagramCatering} disabled={enviandoIg}
+          style={{ background: enviandoIg ? C.bg3 : '#C13584', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontWeight: 700, fontSize: 13, cursor: enviandoIg ? 'default' : 'pointer' }}>
+          {enviandoIg ? '…' : '📸 Instagram catering'}
         </button>
         <button onClick={reenviarPendientes} disabled={reenviando}
           style={{ background: reenviando ? C.bg3 : C.green, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontWeight: 700, fontSize: 13, cursor: reenviando ? 'default' : 'pointer' }}>
