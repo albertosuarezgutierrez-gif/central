@@ -64,11 +64,26 @@
       `local_id` añadido en paralelo en **168 tablas base** + backfill + trigger
       `sync_local_restaurante_id` (bidireccional, insert/update) → ambas columnas siempre cuadran.
       `getLocalId()` canónico en `lib/session.ts` (envuelve getRestauranteId). Cero downtime.
-    - **⏭️ FASE 2 MIGRATE (pendiente, grande)**: cambiar los 352 ficheros restaurante_id→local_id por
-      LOTES (verificando tsc + next build en cada uno). ⚠️ CUIDADO: el objeto de **sesión firmado HMAC**
-      usa la clave `restaurante_id` (en `session-sign`, login, localStorage `ia_rest_session`); migrar
-      con compatibilidad para NO invalidar sesiones en curso. Las VISTAS con restaurante_id (~33) habrá
-      que recrearlas para exponer local_id. NO hacer sed ciego (rompe la sesión).
+    - **🔄 FASE 2 MIGRATE (EN CURSO, por lotes verificados con tsc + next build)**:
+      - **✅ Lote 1 (commit `4cf28d2`) — compat de sesión**: `ApiSession`/`Session` con campo
+        `local_id?` opcional; `getSession()` deriva `local_id = restaurante_id` **DESPUÉS de verificar
+        la firma HMAC** (no altera el payload firmado → no invalida sesiones). `getLocalId()` ya canónico.
+      - **✅ Lote 2 (commit tras este doc) — filtros**: 610 call-sites de FILTRO migrados a `local_id`
+        (`.eq/.in/.neq/.is/.order/.not/.gte/...('restaurante_id'`) en 252 ficheros. Seguro: el trigger
+        bidireccional sincroniza ambas columnas y los filtros NO cambian columnas devueltas. tsc+build verde.
+      - **⏭️ Lotes pendientes (los DELICADOS, NO bloquean hasta Fase 3 porque el trigger rellena
+        `restaurante_id` desde `local_id` igualmente):**
+        1. **Escrituras** `restaurante_id:` en payloads `.insert/.update/.upsert` (599 calls). ⚠️ NO tocar
+           las claves en los **12 ficheros que llaman `firmarSesion`** (auth/* + session-sign) — ahí la
+           clave construye el objeto de sesión FIRMADO. Ej. trampa: `auth/route.ts:99,123`.
+        2. **Selects acoplados**: `.select('...restaurante_id...')` (75) van JUNTO con sus lecturas
+           `row.restaurante_id` aguas abajo (si migras el select y no la lectura → `undefined`).
+        3. **55 declaraciones de TIPO** `restaurante_id: string` (types/index.ts:80, etc.) — cascadean a
+           todos los lectores; migrar con cuidado y tsc.
+        4. **231 acceso a miembro** `.restaurante_id` (mezcla token de sesión + filas de BD).
+      - ⚠️ **INTOCABLES siempre**: `session-sign.ts` (cadena canónica HMAC usa `restaurante_id`),
+        `session.ts` (compat a propósito usa ambas), `brain-router.ts` (BINARIO — sed lo corrompe).
+        Las VISTAS con restaurante_id (~33) habrá que recrearlas para exponer local_id.
     - **⏭️ FASE 3 CONTRACT (pendiente)**: cuando ningún código use restaurante_id → eliminar columna +
       triggers + (opcional) renombrar tabla `restaurantes`→`locales` con vista compat.
 
