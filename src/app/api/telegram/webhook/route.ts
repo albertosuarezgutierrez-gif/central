@@ -103,6 +103,14 @@ export async function POST(req: NextRequest) {
           await tgEditMessage(messageId, message.text + '\n\n⚠️ <i>El lead no tiene email</i>')
           return NextResponse.json({ ok: true })
         }
+        // Idempotencia: solo se envía si la propuesta sigue 'propuesto'. Evita duplicados
+        // si se pulsa dos veces o se pulsa un mensaje antiguo ya enviado.
+        const { data: tProp } = await supabase
+          .from('leads_web_tracking').select('id').eq('lead_id', lead.id).eq('estado', 'propuesto').maybeSingle()
+        if (!tProp) {
+          await tgEditMessage(messageId, message.text + '\n\n✅ <i>Ya se había enviado</i>')
+          return NextResponse.json({ ok: true })
+        }
         const jwt = (await import('jsonwebtoken')).default
         const { Resend } = await import('resend')
         const resend = new Resend(process.env.RESEND_API_KEY)
