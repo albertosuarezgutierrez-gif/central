@@ -27,6 +27,13 @@ export const QUERIES: Array<{ vertical: ApifyVertical; query: string }> = [
   { vertical: 'restaurante', query: 'restaurantes Sevilla Este' },
   { vertical: 'restaurante', query: 'restaurantes Triana Sevilla' },
   { vertical: 'restaurante', query: 'restaurantes Dos Hermanas y Aljarafe' },
+  // Franquicias / cadenas de hostelería (nacional — locales de marca)
+  { vertical: 'franquicia', query: 'franquicias de restauración Madrid' },
+  { vertical: 'franquicia', query: 'franquicias de hostelería Barcelona' },
+  { vertical: 'franquicia', query: 'franquicias de comida rápida Valencia' },
+  { vertical: 'franquicia', query: 'cadenas de restaurantes Sevilla' },
+  { vertical: 'franquicia', query: 'franquicias de cafetería y heladería España' },
+  { vertical: 'franquicia', query: 'franquicias de hamburgueserías Málaga' },
 ]
 export const MAX_PLACES = 30
 
@@ -72,7 +79,8 @@ export async function avanzarProspeccionApify(
     }).eq('id', run.id)
 
     if (insertados > 0) {
-      await tgAlert(`📍 Apify (${run.vertical}) Sevilla: ${insertados} leads nuevos de ${items.length} sitios.`, 'info')
+      const ambito = run.vertical === 'franquicia' ? 'nacional' : 'Sevilla'
+      await tgAlert(`📍 Apify (${run.vertical}) ${ambito}: ${insertados} leads nuevos de ${items.length} sitios.`, 'info')
     }
     return { ok: true, fase: 'B', run: run.id, insertados, total: items.length }
   }
@@ -127,7 +135,7 @@ async function ingestar(
       nombre: it.title!,
       empresa: it.title!,
       restaurante: it.title!,
-      ciudad: it.city || 'Sevilla',
+      ciudad: it.city || (vertical === 'franquicia' ? 'España' : 'Sevilla'),
       web: it.website || null,
       telefono: it.phone || it.phoneUnformatted || '', // leads.telefono es NOT NULL
       email: it.emails?.[0] || null,
@@ -139,7 +147,7 @@ async function ingestar(
       notas: [it.categoryName, it.totalScore ? `⭐${it.totalScore}` : null].filter(Boolean).join(' · '),
       eventos: [{
         tipo: '🤖',
-        texto: `Encontrado por Apify Google Places (Sevilla, ${vertical})`,
+        texto: `Encontrado por Apify Google Places (${vertical === 'franquicia' ? 'nacional' : 'Sevilla'}, ${vertical})`,
         fecha: new Date().toISOString().split('T')[0],
       }],
     }))

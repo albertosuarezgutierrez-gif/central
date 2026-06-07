@@ -5,7 +5,7 @@
 const APIFY = 'https://api.apify.com/v2'
 const ACTOR = 'compass~crawler-google-places'
 
-export type ApifyVertical = 'catering' | 'eventos' | 'restaurante'
+export type ApifyVertical = 'catering' | 'eventos' | 'restaurante' | 'franquicia'
 
 export interface ApifyPlace {
   title?: string
