@@ -27,7 +27,7 @@ interface LineaCarrito {
 }
 
 export default function TiendaPage() {
-  const { session, checking } = useAuth(['tienda'])
+  const { session, checking } = useAuth(['tienda', 'owner'])
   const [catalogo, setCatalogo] = useState<Producto[]>([])
   const [resultados, setResultados] = useState<Producto[] | null>(null)
   const [carrito, setCarrito] = useState<LineaCarrito[]>([])
