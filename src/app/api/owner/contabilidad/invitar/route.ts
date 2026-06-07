@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       local_id: rid, contable_id: contable.id,
       email_contable: emailNorm, nombre_contable: nombre,
       updated_at: new Date().toISOString(),
-    }, { onConflict: 'restaurante_id' })
+    }, { onConflict: 'local_id' })
 
   // ── Enviar email ─────────────────────────────────────────────────────────
   const url = `https://www.iarest.es/asesoria`

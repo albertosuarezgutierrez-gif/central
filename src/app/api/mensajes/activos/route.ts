@@ -15,8 +15,8 @@ export async function GET(req: NextRequest) {
   // Camareros con sesión válida (no expirada, no revocada) en este restaurante
   const { data, error } = await supabase
     .from('sesiones_activas')
-    .select('camarero_id, personal!inner(id, nombre, rol, restaurante_id)')
-    .eq('personal.restaurante_id', rid)
+    .select('camarero_id, personal!inner(id, nombre, rol, local_id)')
+    .eq('personal.local_id', rid)
     .gt('expires_at', new Date().toISOString())
     .is('revoked_at', null)
 

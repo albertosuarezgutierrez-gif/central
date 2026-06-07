@@ -53,7 +53,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('config_tienda')
-    .upsert(row, { onConflict: 'restaurante_id' })
+    .upsert(row, { onConflict: 'local_id' })
     .select()
     .single()
 

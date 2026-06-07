@@ -61,7 +61,7 @@ export function useMensajes(
         event: 'INSERT',
         schema: 'public',
         table: 'mensajes_turno',
-        filter: `restaurante_id=eq.${restauranteId}`,
+        filter: `local_id=eq.${restauranteId}`,
       }, (payload: any) => {
         const nuevo = payload.new as Mensaje
         setMensajes(prev => {

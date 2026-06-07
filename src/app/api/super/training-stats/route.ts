@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     supabase.from('v_training_global').select('*').single(),
     supabase.from('v_training_por_fuente').select('*'),
     supabase.from('ia_training_log')
-      .select('id, input_raw, fuente, calidad, confianza, fue_corregido, created_at, restaurante_id')
+      .select('id, input_raw, fuente, calidad, confianza, fue_corregido, created_at, local_id')
       .order('created_at', { ascending: false })
       .limit(20),
   ])

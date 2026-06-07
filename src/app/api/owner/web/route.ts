@@ -44,7 +44,7 @@ export async function PATCH(req: NextRequest) {
     .from('web_restaurante')
     .upsert(
       { local_id: restauranteId, ...body, updated_at: new Date().toISOString() },
-      { onConflict: 'restaurante_id' }
+      { onConflict: 'local_id' }
     )
     .select()
     .single()

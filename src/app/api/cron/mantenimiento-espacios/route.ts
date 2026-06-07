@@ -68,7 +68,7 @@ export async function GET(req: NextRequest) {
     .select(`
       *,
       espacio:espacio_id(nombre, local_id),
-      restaurante:restaurante_id(nombre, email_contacto)
+      restaurante:local_id(nombre, email_contacto)
     `)
     .in('estado', ['proximo', 'vencido'])
     .or(`notificado_at.is.null,notificado_at.lt.${hace24h}`)

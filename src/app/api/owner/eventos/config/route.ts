@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('config_eventos')
     .upsert({ ...body, local_id: restauranteId, updated_at: new Date().toISOString() },
-      { onConflict: 'restaurante_id' })
+      { onConflict: 'local_id' })
     .select()
     .single()
 

@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     .upsert({
       local_id: session.restaurante_id,
       ...body,
-    }, { onConflict: 'restaurante_id' })
+    }, { onConflict: 'local_id' })
     .select()
     .single()
 

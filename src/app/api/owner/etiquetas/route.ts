@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       pais_origen:              pais_origen ?? 'España',
       incluir_tabla_nutricional: incluir_tabla_nutricional ?? false,
       updated_at:               new Date().toISOString(),
-    }, { onConflict: 'restaurante_id' })
+    }, { onConflict: 'local_id' })
     .select()
     .single()
 

@@ -187,7 +187,7 @@ export function useServicioPendiente(restauranteId?: string) {
       .channel(`servicio-pendiente-${restauranteId ?? 'all'}`)
       .on('postgres_changes', {
         event: '*', schema: 'public', table: 'marchar_log',
-        filter: restauranteId ? `restaurante_id=eq.${restauranteId}` : undefined,
+        filter: restauranteId ? `local_id=eq.${restauranteId}` : undefined,
       }, fetchPendientes)
       .subscribe()
     return () => { supabase.removeChannel(ch) }

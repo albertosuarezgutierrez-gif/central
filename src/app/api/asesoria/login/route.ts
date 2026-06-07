@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   // Cargar restaurantes clientes
   const { data: clientes } = await supabase
     .from('contable_clientes')
-    .select('restaurante_id, permisos, restaurantes(id, nombre, ciudad, logo_url)')
+    .select('local_id, permisos, restaurantes(id, nombre, ciudad, logo_url)')
     .eq('contable_id', contable.id)
     .eq('activo', true)
 

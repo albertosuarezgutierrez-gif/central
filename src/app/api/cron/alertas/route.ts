@@ -107,12 +107,12 @@ async function evalSinComanda(supabase: ReturnType<typeof createServerClient>, r
 
 async function evalPlatoSinLlegar(supabase: ReturnType<typeof createServerClient>, rid: string, regla: ReglaActiva, alertas: string[]) {
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
-  // Join directo para filtrar por restaurante_id sin N+1 queries
+  // Join directo para filtrar por local_id sin N+1 queries
   const { data: items } = await supabase
     .from('comanda_items')
-    .select('id, nombre, created_at, comanda:comandas!inner(id, restaurante_id, mesa:mesas(codigo))')
+    .select('id, nombre, created_at, comanda:comandas!inner(id, local_id, mesa:mesas(codigo))')
     .eq('estado', 'pendiente')
-    .eq('comanda.restaurante_id', rid)
+    .eq('comanda.local_id', rid)
     .lt('created_at', hace)
     .limit(20)
   for (const it of items ?? []) {
@@ -133,9 +133,9 @@ async function evalTicketSinTocar(supabase: ReturnType<typeof createServerClient
   const hace = new Date(Date.now() - getUmbral(regla) * 60_000).toISOString()
   const { data: items } = await supabase
     .from('comanda_items')
-    .select('id, nombre, created_at, comanda:comandas!inner(id, restaurante_id, mesa:mesas(codigo))')
+    .select('id, nombre, created_at, comanda:comandas!inner(id, local_id, mesa:mesas(codigo))')
     .eq('estado', 'pendiente')
-    .eq('comanda.restaurante_id', rid)
+    .eq('comanda.local_id', rid)
     .lt('created_at', hace)
     .limit(20)
   for (const it of items ?? []) {

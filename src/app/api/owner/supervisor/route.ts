@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('alerta_reglas')
-    .select('id, restaurante_id, nombre, activa, condicion, umbral_minutos, objeto, mensaje, horario_desde, horario_hasta, dias_semana, zona_ids, destinatario_tipo, camarero_id, canal_vox, canal_push, canal_hub, escalar_a, escalar_minutos, prioridad, created_at, updated_at')
+    .select('id, local_id, nombre, activa, condicion, umbral_minutos, objeto, mensaje, horario_desde, horario_hasta, dias_semana, zona_ids, destinatario_tipo, camarero_id, canal_vox, canal_push, canal_hub, escalar_a, escalar_minutos, prioridad, created_at, updated_at')
     .eq('local_id', rid)
     .order('prioridad', { ascending: true })
     .order('created_at', { ascending: true })
