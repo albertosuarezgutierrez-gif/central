@@ -346,6 +346,19 @@ export async function POST(req: NextRequest) {
           .maybeSingle()
         comanda = existente ?? null
         if (comanda) comandaId = comanda.id
+      } else if (brainResult.tipo === 'marchar') {
+        // 'marchar' NO crea comanda: actúa sobre la comanda activa existente de la mesa.
+        // (Antes insertaba una comanda nueva tipo 'marchar' → fantasma. Fix auditoría voz.)
+        const { data: activa } = await supabase.from('comandas')
+          .select('*')
+          .eq('mesa_id', mesa.id)
+          .eq('restaurante_id', rid)
+          .in('estado', ['en_cocina', 'nueva', 'lista'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        comanda = activa ?? null
+        if (comanda) comandaId = comanda.id
       } else {
         // requireConfirm=true → comanda nace en 'pendiente_confirmacion', sin print_jobs.
         // PATCH /confirmar la activa cuando el camarero confirma en pantalla.
@@ -451,7 +464,9 @@ export async function POST(req: NextRequest) {
       const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
       const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
 
-      if (brainResult.items.length > 0) {
+      // 'marchar' NO inserta items (solo marca como listos los existentes vía MARCHAR
+      // GRANULAR más abajo); insertarlos duplicaría líneas en la comanda activa.
+      if (brainResult.items.length > 0 && brainResult.tipo !== 'marchar') {
         const itemsConFormato = brainResult.items.filter(i => i.formato)
         const precioMap: Record<string, { id: string; precio: number }> = {}
 
@@ -539,7 +554,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Solo crear print_jobs si no requiere confirmación — si la requiere, /confirmar los crea
-      if (!requireConfirm && ['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
+      // `comanda` puede ser null en marchar si la mesa no tiene comanda activa → no hay nada que marchar.
+      if (!requireConfirm && comanda && ['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
         const { data: camarero } = await supabase.from('personal').select('nombre').eq('id', camareroId).single()
 
         if (brainResult.tipo === 'marchar') {
