@@ -16,8 +16,6 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-<<<<<<< HEAD
-=======
 - **Auditoría del pipeline de comandas por voz + fixes — 07/06/2026**
   (rama `claude/minimax-voice-commands-WjMkA`, **PR #74 draft**): nació de una consulta de
   Alberto sobre si **MiniMax** mejoraría las comandas por voz. Respuesta: **no para el ASR**
@@ -61,7 +59,6 @@
     - Idea futura (no urgente): capa de **TTS** (confirmación hablada al camarero / avisos KDS);
       empezar con Web Speech API gratis, MiniMax solo si se quiere voz de marca premium.
 
->>>>>>> origin/main
 - **Agente de ventas: router de contacto + franquicias + Instagram — 07/06/2026**
   (rama `claude/leais-sales-agent-catering-b5ikA`). Sesión larga; toda la maquinaria de
   outreach quedó operativa y verificada en prod.
