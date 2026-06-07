@@ -177,3 +177,68 @@ export async function proponerEmailsFranquicia(
     return { ok: false, enviados: 0, error: msg }
   }
 }
+
+// ── REENVIAR PENDIENTES ────────────────────────────────────────────────────
+// Re-emite mensajes de Telegram (con botón Enviar) para las propuestas que siguen
+// en 'propuesto' (p.ej. quedaron sin enviar). NO crea filas nuevas: reutiliza las
+// existentes, así que no duplica nada.
+export async function reenviarPropuestasPendientes(
+  supabase: SupabaseSrv,
+  limite = 30
+): Promise<{ ok: boolean; reenviados: number; motivo?: string; error?: string }> {
+  try {
+    const { data: rows, error } = await supabase
+      .from('leads_web_tracking')
+      .select('lead_id')
+      .eq('estado', 'propuesto')
+      .limit(limite)
+    if (error) throw new Error(error.message)
+    if (!rows || rows.length === 0) return { ok: true, reenviados: 0, motivo: 'No hay propuestas pendientes' }
+
+    const ids = rows.map((r: { lead_id: string }) => r.lead_id)
+    const { data: leads } = await supabase
+      .from('leads').select('id, nombre, email, tipo_negocio').in('id', ids)
+
+    const token = process.env.TELEGRAM_BOT_TOKEN
+    const chat = process.env.TELEGRAM_CHAT_ID
+    let reenviados = 0
+    for (const lead of leads || []) {
+      try {
+        if (!lead.email) continue
+        const tpl = construirEmail(lead, '', '')
+        const esFranq = detectarVertical(lead.tipo_negocio) === 'franquicia'
+        if (token && chat) {
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chat,
+              parse_mode: 'HTML',
+              text: [
+                `${esFranq ? '🏢' : '📧'} <b>${esFranq ? 'Franquicia' : 'Email'}: ${esc(lead.nombre)}</b>`,
+                `✉️ ${esc(lead.email)}`,
+                ``,
+                `<b>Asunto:</b> ${esc(tpl.subject)}`,
+                ``,
+                `<i>(Reenvío) Toca Enviar para mandarlo desde hola@iarest.es</i>`,
+              ].join('\n'),
+              reply_markup: { inline_keyboard: [[
+                { text: '✅ Enviar email', callback_data: `enviar_sevilla:${lead.id}` },
+                { text: '❌ Descartar', callback_data: `descartar_sevilla:${lead.id}` },
+              ]] },
+            }),
+          }).catch((e) => console.error('[reenvio] telegram:', e))
+        }
+        reenviados++
+      } catch (e) {
+        console.error('reenvio lead', lead.id, e); continue
+      }
+    }
+    if (reenviados > 0) await tgAlert(`🔁 ${reenviados} propuesta(s) reenviadas para aprobar (arriba).`, 'info')
+    return { ok: true, reenviados }
+  } catch (error) {
+    const msg = error instanceof Error ? error.message : 'Error desconocido'
+    console.error('Error reenviar pendientes:', msg)
+    return { ok: false, reenviados: 0, error: msg }
+  }
+}
