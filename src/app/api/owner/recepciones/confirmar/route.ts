@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
 
   const { data: rec } = await supabase
     .from('recepciones_mercancia')
-    .select('id, estado, restaurante_id, proveedor_id, albaran_numero')
+    .select('id, estado, local_id, proveedor_id, albaran_numero')
     .eq('id', recepcion_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!rec) return NextResponse.json({ error: 'Recepción no encontrada' }, { status: 404 })
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
         id: string; nombre_articulo: string; estado: string
         cantidad_pedida: number | null; cantidad_recibida: number; precio_facturado: number | null
       }) => ({
-        restaurante_id:  rid,
+        local_id:  rid,
         proveedor_id:    rec.proveedor_id,
         recepcion_id,
         tipo:            it.estado,
@@ -151,8 +151,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (rec.proveedor_id) {
-      const { data: totalInc }   = await supabase.from('incidencias_proveedor').select('id', { count: 'exact' }).eq('proveedor_id', rec.proveedor_id).eq('restaurante_id', rid)
-      const { data: totalItems } = await supabase.from('recepcion_items').select('id', { count: 'exact' }).eq('restaurante_id', rid)
+      const { data: totalInc }   = await supabase.from('incidencias_proveedor').select('id', { count: 'exact' }).eq('proveedor_id', rec.proveedor_id).eq('local_id', rid)
+      const { data: totalItems } = await supabase.from('recepcion_items').select('id', { count: 'exact' }).eq('local_id', rid)
       const fiab = totalItems?.length
         ? Math.max(0, Math.round((1 - (totalInc?.length ?? 0) / totalItems.length) * 100))
         : 100
@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
       const { data: nuevaOrden } = await supabase
         .from('ordenes_pago_proveedor')
         .insert({
-          restaurante_id:    rid,
+          local_id:    rid,
           proveedor_id:      rec.proveedor_id,
           recepcion_id,
           proveedor_nombre:  prov.nombre,

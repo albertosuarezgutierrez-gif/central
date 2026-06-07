@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_valoracion')
     .select('*, evento:eventos(id, cliente_nombre, fecha_evento)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

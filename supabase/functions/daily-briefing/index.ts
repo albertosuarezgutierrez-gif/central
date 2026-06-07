@@ -51,7 +51,7 @@ async function getMetricas(supabase: ReturnType<typeof createClient>, restaurant
   const hoy  = new Date(); hoy.setHours(0, 0, 0, 0)
 
   const { data: comandas } = await supabase
-    .from('comandas').select('id').eq('restaurante_id', restauranteId)
+    .from('comandas').select('id').eq('local_id', restauranteId)
     .gte('created_at', ayer.toISOString()).lt('created_at', hoy.toISOString())
 
   const ids = (comandas ?? []).map((c: { id: string }) => c.id)
@@ -73,7 +73,7 @@ async function getMetricas(supabase: ReturnType<typeof createClient>, restaurant
 
   const { data: stockAlertas } = await supabase
     .from('almacen').select('producto_id, stock_actual, stock_minimo')
-    .eq('restaurante_id', restauranteId).gt('stock_minimo', 0)
+    .eq('local_id', restauranteId).gt('stock_minimo', 0)
     .filter('stock_actual', 'lte', 'stock_minimo').limit(5)
 
   let alertas: string[] = []
@@ -86,7 +86,7 @@ async function getMetricas(supabase: ReturnType<typeof createClient>, restaurant
   }
 
   const { data: turnos } = await supabase.from('turnos')
-    .select('camarero_id').eq('restaurante_id', restauranteId).is('salida_at', null)
+    .select('camarero_id').eq('local_id', restauranteId).is('salida_at', null)
 
   return { numComandas, totalVentas: totalVentas.toFixed(2), ticketMedio, top5, alertas, personalActivo: (turnos ?? []).length }
 }

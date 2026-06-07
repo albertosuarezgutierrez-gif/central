@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   await supabase.from('web_restaurante')
     .update({ foto_portada_url: url })
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true, foto_portada_url: url })
 }

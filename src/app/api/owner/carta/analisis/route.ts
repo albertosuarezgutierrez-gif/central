@@ -46,7 +46,7 @@ async function analisisDirecto(
   const { data: ventas } = await supabase
     .from('comanda_items')
     .select('producto_id, cantidad, precio_unitario, comandas!inner(created_at, estado)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .in('comandas.estado', ['cerrada', 'en_cocina', 'en_curso'])
     .gte('comandas.created_at', new Date(Date.now() - dias * 86400000).toISOString())
 
@@ -69,7 +69,7 @@ async function analisisDirecto(
   const { data: productos } = await supabase
     .from('productos')
     .select('id, nombre, precio, categoria, activo')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .eq('es_fuera_carta', false)
 
@@ -77,7 +77,7 @@ async function analisisDirecto(
   const { data: escandallos } = await supabase
     .from('v_escandallos')
     .select('producto_id, margen_pct, margen_eur, coste_por_racion')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
 
   const escandalloMap: Record<string, { margen_pct: number; margen_eur: number }> = {}

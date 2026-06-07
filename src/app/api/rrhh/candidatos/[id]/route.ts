@@ -38,7 +38,7 @@ export async function PATCH(
     .from('candidatos')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
@@ -66,7 +66,7 @@ export async function DELETE(
     .from('candidatos')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

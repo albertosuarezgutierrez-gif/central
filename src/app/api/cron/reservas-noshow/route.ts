@@ -45,11 +45,11 @@ export async function GET(req: NextRequest) {
   console.log(`[reservas-noshow] ${liberadas.length} reservas marcadas como no_show`)
 
   // ── Notificar a owner/jefe de sala de cada restaurante ─────────
-  type Liberada = { reserva_id: string; restaurante_id: string; mesa_id: string | null; nombre_cliente: string }
+  type Liberada = { reserva_id: string; local_id: string; mesa_id: string | null; nombre_cliente: string }
   const byRest: Record<string, Liberada[]> = {}
   for (const r of liberadas as Liberada[]) {
-    if (!byRest[r.restaurante_id]) byRest[r.restaurante_id] = []
-    byRest[r.restaurante_id].push(r)
+    if (!byRest[r.local_id]) byRest[r.local_id] = []
+    byRest[r.local_id].push(r)
   }
 
   const pushUrl = `${process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.iarest.es'}/api/push/send`

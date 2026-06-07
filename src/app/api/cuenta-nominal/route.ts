@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     const { data: turno } = await supabase
       .from('turnos').select('id')
-      .eq('restaurante_id', rid).eq('estado', 'activo')
+      .eq('local_id', rid).eq('estado', 'activo')
       .single()
     if (!turno) return NextResponse.json({ cuentas: [] })
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         id, nombre_cuenta, tipo, estado, created_at, camarero_id,
         comanda_items(nombre, cantidad, precio_unitario, notas)
       `)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('turno_id', turno.id)
       .not('nombre_cuenta', 'is', null)
       .not('estado', 'in', '(cerrada,cancelada)')
@@ -73,13 +73,13 @@ export async function DELETE(req: NextRequest) {
 
     const { data: turno } = await supabase
       .from('turnos').select('id')
-      .eq('restaurante_id', rid).eq('estado', 'activo')
+      .eq('local_id', rid).eq('estado', 'activo')
       .single()
     if (!turno) return NextResponse.json({ error: 'Sin turno activo' }, { status: 400 })
 
     await supabase.from('comandas')
       .update({ estado: 'cerrada' })
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('turno_id', turno.id)
       .eq('nombre_cuenta', nombre_cuenta)
       .not('estado', 'in', '(cerrada,cancelada)')

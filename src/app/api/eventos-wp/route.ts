@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       espacios_evento(id, nombre, tipo, aforo_maximo),
       created_at
     `)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .not('estado', 'eq', 'cancelado')
     .order('fecha_evento', { ascending: true })
 
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   const { data: evento, error } = await supabase
     .from('eventos')
     .insert({
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       cuenta_id: rest?.cuenta_id,
       coordinador_id: session.id,
       tipo: tipo ?? 'otro',
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('espacio_bloqueos').insert({
       espacio_id,
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       evento_id: evento.id,
       coordinador_id: session.id,
       fecha_inicio: fecha_evento,
@@ -137,7 +137,7 @@ export async function PUT(req: NextRequest) {
   const { data, error } = await supabase
     .from('eventos').update(updates)
     .eq('id', id)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .eq('coordinador_id', session.id) // solo puede editar los suyos
     .select().single()
 

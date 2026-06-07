@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const { data: cam } = await supabase
     .from('personal')
-    .select('id, nombre, rol, restaurante_id, seccion_id, puede_comandar, modulos_gestion, activo')
+    .select('id, nombre, rol, local_id, seccion_id, puede_comandar, modulos_gestion, activo')
     .eq('id', camarero_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .maybeSingle()
 
   if (!cam || cam.activo === false) {
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
       camarero_id: cam.id,
       nombre: cam.nombre,
       rol: cam.rol,
-      restaurante_id: cam.restaurante_id,
+      restaurante_id: cam.local_id,
       restaurante_nombre: rest?.nombre ?? '',
       seccion_id: cam.seccion_id ?? null,
       puede_comandar: cam.puede_comandar ?? false,

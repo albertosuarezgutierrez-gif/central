@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const { data: tokenExistente } = await supabase
     .from('bridge_tokens')
     .select('token')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .single()
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!bridgeToken) {
     bridgeToken = crypto.randomBytes(20).toString('hex')
     await supabase.from('bridge_tokens').insert({
-      restaurante_id: rid,
+      local_id: rid,
       token: bridgeToken,
       activo: true,
       nombre: 'Principal',

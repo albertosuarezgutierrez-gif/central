@@ -417,8 +417,8 @@ export default function FueraCartaSection({restauranteId}:{restauranteId:string}
   const cargar = useCallback(async()=>{
     setCargando(true)
     const [{data:prods},{data:secc}] = await Promise.all([
-      supabase.from('v_fuera_carta_activos').select('*').eq('restaurante_id',restauranteId),
-      supabase.from('secciones_cocina').select('id,nombre').eq('restaurante_id',restauranteId).order('nombre'),
+      supabase.from('v_fuera_carta_activos').select('*').eq('local_id',restauranteId),
+      supabase.from('secciones_cocina').select('id,nombre').eq('local_id',restauranteId).order('nombre'),
     ])
     setProductos(prods??[])
     setSecciones(secc??[])
@@ -430,7 +430,7 @@ export default function FueraCartaSection({restauranteId}:{restauranteId:string}
   const eliminar = async(id:string)=>{
     setEliminando(id)
     await supabase.from('productos').update({activo:false,es_fuera_carta:false})
-      .eq('id',id).eq('restaurante_id',restauranteId)
+      .eq('id',id).eq('local_id',restauranteId)
     await cargar()
     setEliminando(null)
   }

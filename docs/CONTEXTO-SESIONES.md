@@ -16,6 +16,129 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **DISEÑO: ia.rest → plataforma de verticales (arquitectura definitiva) — 07/06/2026**
+  (rama `claude/store-module-pos-MQUyV`): sesión larga de brainstorming que empezó por "¿añadir
+  un TPV de tienda?" y derivó en formalizar ia.rest como **plataforma de punto de venta con
+  verticales enchufables**. Spec completo en `docs/superpowers/specs/2026-06-07-plataforma-
+  verticales-design.md`. Decisiones clave:
+  - **Sin parches, arquitectura definitiva en secuencia segura** (no hay clientes aún → ventana;
+    Saboga fue puntual y ya terminó). NO big-bang: cada fase aterriza final, sistema funcionando.
+  - **5 planos**: Núcleo (identidad + venta/proyecto genéricos + motor de módulos/verticales) →
+    Verticales/captura (2 familias: transaccional y proyecto/servicio) → Módulos transversales
+    vendibles → Conectores externos (puertos&adaptadores, MCP) → Monetización.
+  - **Núcleo neutro, jerga solo en su vertical** (regla de PROMOCIÓN: se neutraliza al compartirse).
+    `comandas`→vista `ventas`+`comandas.tipo`; `eventos`→vista `proyectos`. NO renombrar físico.
+  - **Decisión gorda tomada**: `restaurante_id → local_id` (rename físico, tabla `restaurantes`→
+    `locales` con vista compat) + RLS `app.local_id` + `get_tenant_id()`. Va en Fase A.
+  - Fundamentos: **bus de eventos (outbox)**, API pública + **ia.rest como servidor MCP**,
+    entitlements, tests de contrato, **offline-first**, RBAC con ámbito, precios/promos, fiscal
+    por país. Multi-marca (matriz sin nombre aún: candidatos ia.OS/Vendia/Comercia; ia.rest pasa
+    a sub-marca del vertical restaurante). Tenancy grupo: cuenta→nodos(venta/almacén/**producción**)→local.
+  - **Validado contra 9 negocios reales** (restaurante, catering, retail, pescadería Mariscos
+    González con manipulación, franquicia panadería con obrador, grupo mixto, fontanería,
+    electricista, admin. comunidades). Todos encajan.
+  - **Fases**: A núcleo (+rename local_id +bus +offline) · B restaurante+org+RBAC · C retail+Mariscos
+    · D módulos-conector+entitlements+precios · E catering+franquicia+field-service · F plataforma.
+  - **YA CONSTRUIDO Y EN EL PR #77** (Alberto dijo "haz todo"; todo con tsc limpio):
+    - `src/lib/negocio.ts` — motor de verticales (TipoNegocio, PRESETS_NEGOCIO, NUCLEO_PLATAFORMA, LABELS).
+    - Rol `tienda` cableado: `useAuth.ts` (tipo Rol + REDIRECT + `Session.tipo_negocio`) y `login/page.tsx`.
+    - Migración `20260607_modulo_tienda.sql` **APLICADA al remoto** (verificada): `productos.es_tienda`,
+      índice `idx_productos_ean` sobre `ean_codigo`, tabla `config_tienda` + 2 RLS. SIN trigger.
+    - Backend retail: `src/app/api/tienda/{config,buscar,venta}/route.ts` (venta = comanda `tipo='tienda'`
+      sin mesa + descuento de stock en código + reutiliza `/api/factura/cerrar` para cobrar).
+  - **HALLAZGO clave del esquema REAL** (vía supabase MCP): `productos` ya tiene `ean_codigo`,
+    `venta_por_peso`, `precio_por_kg`, `stock_actual`; `comandas` ya tiene `tipo` (texto libre sin CHECK).
+    Retail necesita MUCHO menos de lo que el spec asumía (corregido en el spec).
+  - **VERTICAL RETAIL COMPLETO Y PULIDO** (todo verificado tsc + next build en Vercel, PR #77):
+    - Pantalla `src/app/tienda/page.tsx` (TPV: buscar/escanear EAN, carrito, venta por peso, cobro
+      con CobrarSheet → /api/tienda/venta → /api/factura/cerrar). Accesible por rol `tienda` y `owner`.
+    - `src/components/owner/TiendaTab.tsx` + grupo 'Tienda' en /owner (gated por modulo 'tienda') +
+      `'tienda'` en TODOS_MODULOS. Config: modo catálogo, hardware (lector/báscula/táctil), descontar stock.
+    - RRHHTab: rol 'Dependiente/a tienda'. help-prompts: entrada '/tienda'.
+  - **RENAME tenant restaurante_id → local_id: expand-contract EN CURSO** (decisión de Alberto).
+    Datos reales del alcance: **1.565 ocurrencias en 352 ficheros** + `getRestauranteId` (606) +
+    `x-ia-restaurante-id` (11) + `from('restaurantes')` (104) + 44 migraciones. Constraint clave:
+    **BD Supabase única compartida** → un rename directo rompería `main` (code/BD mismatch). Por eso
+    expand-contract.
+    - **✅ FASE 1 EXPAND (aplicada al remoto + commit `20260607_rename_tenant_expand_fase1.sql`)**:
+      `local_id` añadido en paralelo en **168 tablas base** + backfill + trigger
+      `sync_local_restaurante_id` (bidireccional, insert/update) → ambas columnas siempre cuadran.
+      `getLocalId()` canónico en `lib/session.ts` (envuelve getRestauranteId). Cero downtime.
+    - **🧪 DIAGNÓSTICO con cliente tipado (commit `539ba84`) — HALLAZGO CRÍTICO**:
+      generé los tipos `Database` de Supabase y tipé el cliente como experimento. Resultado:
+      593 errores tsc = **545 PREEXISTENTES** ajenos al rename (overloads, RPC, `cerrada_at`
+      inexistente...) → tipar el cliente entero es un proyecto aparte, NO se hace en este PR
+      (revertí el tipado y borré `database.types.ts`; regenerable vía MCP `generate_typescript_types`
+      project `efncqyvhniaxsirhdxaa`). PERO encontró **20 BUGS REALES míos**: los lotes 2-3
+      migraron filtros/selects a `local_id` sobre **VISTAS que no tienen esa columna**
+      (`stock_articulos`, `escandallos`, `elaboraciones_kds`, `v_fuera_carta_activos`,
+      `salud_curas`, `almacen`, `leads`...) → PostgREST daría 400 en runtime. **REVERTIDOS** a
+      restaurante_id. ⚠️ **LECCIÓN**: el trigger de Fase 1 es SOLO sobre TABLAS BASE; las VISTAS
+      exponen `restaurante_id` y NO `local_id`. Para migrar queries sobre vistas hay que
+      **recrear las vistas con local_id primero** (parte de Fase 3). Hasta entonces, queries
+      sobre vistas SE QUEDAN en restaurante_id.
+    - **🔄 FASE 2 MIGRATE (EN CURSO, por lotes verificados con tsc + next build)**:
+      - **✅ Lote 1 (commit `4cf28d2`) — compat de sesión**: `ApiSession`/`Session` con campo
+        `local_id?` opcional; `getSession()` deriva `local_id = restaurante_id` **DESPUÉS de verificar
+        la firma HMAC** (no altera el payload firmado → no invalida sesiones). `getLocalId()` ya canónico.
+      - **✅ Lote 2 (commit tras este doc) — filtros**: 610 call-sites de FILTRO migrados a `local_id`
+        (`.eq/.in/.neq/.is/.order/.not/.gte/...('restaurante_id'`) en 252 ficheros. Seguro: el trigger
+        bidireccional sincroniza ambas columnas y los filtros NO cambian columnas devueltas. tsc+build verde.
+      - **✅ Lote 3 (commit `8252178`) — escrituras**: claves de payload `restaurante_id:` en
+        `.insert/.update/.upsert` migradas a `local_id` en 151 rutas de API (seguro por el trigger).
+        Ajustados tipos locales acoplados (ComandaInfo/CuentaParams/ReglaActiva/...) + sus lecturas
+        para consistencia (tsc fue la red: 49 errores → 0). Revertidas 4 claves que eran sesión/petición
+        (notifyError→Edge Function `restaurante_id`, tipos de `session` en turnos/*). tsc + build exit 0.
+      - ⚠️ **HALLAZGO (riesgo lotes 4-5)**: el cliente Supabase es **NO tipado** (`createClient` sin
+        `<Database>`, no hay tipos generados en `src/types`). Consecuencia: migrar un `.select` y dejarse
+        una lectura `row.restaurante_id` → `undefined` SILENCIOSO que **ni `tsc` ni `next build` cazan**.
+        Por eso los lotes 4-5 NO se pueden hacer con sed+build; requieren revisión por query (o generar
+        tipos `Database` antes, lo que convertiría tsc en red de seguridad). NO bloquean nada (trigger).
+      - **⏭️ Lotes pendientes (los DELICADOS, NO bloquean hasta Fase 3 porque el trigger rellena
+        `restaurante_id` desde `local_id` igualmente):**
+        1. **Selects + lecturas acopladas**: quedan `.select('...restaurante_id...')` y accesos a miembro
+           `row.restaurante_id` de filas de BD (los que tsc no obligó a tocar porque el select aún devuelve
+           restaurante_id). Migrar select+lectura JUNTOS por fichero (si migras select y no la lectura →
+           `undefined`). NO confundir con `session.restaurante_id` (token, se queda).
+        2. **Declaraciones de TIPO** `restaurante_id: string` que describen filas de BD (types/index.ts:80,
+           etc.) — cascadean; migrar con tsc de guía.
+        3. **Claves INTOCABLES (token/contrato, NUNCA migrar)**: las de los 12 ficheros `firmarSesion`
+           (auth/*), cabeceras `x-ia-session`, cuerpos de petición/respuesta HTTP, `notifyError`/Edge
+           Functions, firmas RPC `p_restaurante_id`. Acceso a miembro de SESIÓN `session.restaurante_id`.
+      - ⚠️ **INTOCABLES siempre**: `session-sign.ts` (cadena canónica HMAC usa `restaurante_id`),
+        `session.ts` (compat a propósito usa ambas), `brain-router.ts` (BINARIO — sed lo corrompe).
+        Las VISTAS con restaurante_id (~33) habrá que recrearlas para exponer local_id.
+    - **🔄 FASE 3 CONTRACT (EN CURSO)**:
+      - **✅ Paso 1 (commit `071dced`, aplicada al remoto)**: las **33 vistas** con restaurante_id
+        ahora exponen también `local_id` (recreadas envolviendo su def + columna al final). Migración
+        `20260607_rename_tenant_fase3_vistas.sql`. Desbloquea migrar a local_id las queries de vistas.
+      - **⏭️ Pasos pendientes para poder DROP restaurante_id (orden importa)**:
+        1. Migrar a local_id el resto de lecturas de código (selects/lecturas de vistas y tablas
+           diferidos + tipos exportados). ⚠️ Cliente Supabase NO tipado → riesgo silencioso; lo seguro
+           es tiparlo, pero eso destapa **545 errores preexistentes** = proyecto propio.
+        2. Migrar el **token de sesión** (restaurante_id firmado) — con doble-campo para no invalidar
+           sesiones en curso.
+        3. Recrear las vistas para que NO referencien restaurante_id (usar local_id internamente).
+        4. DROP column restaurante_id en las 168 tablas base + DROP triggers `trg_sync_local_id` +
+           función `sync_local_restaurante_id`. (opcional: tabla `restaurantes`→`locales`).
+      - **✅ Stage 1 código (commit `8473f3f`)**: ~140 refs de BD (selects/filtros/insert/upsert/lecturas)
+        migradas a local_id en 48 ficheros, guiado por cliente tipado con restaurante_id eliminado
+        (tsc: 208→6; los 6 leaves = tabla `leads` sin columna tenant [bug preexistente] + retornos RPC).
+      - **✅ Índices únicos local_id (commit `0af9d49`)**: cobro_config(local_id), clientes_fiscales(local_id,nif)
+        para que los upsert onConflict('local_id') funcionen. Migración `20260607_..._unique_idx.sql`.
+      - **✅ FASE 3 CONTRACT COMPLETA (07/06, commit `6f18f3c`) — RENAME TERMINADO**. El DROP se ejecutó
+        como migración dedicada, atómica y verificada (data-safe: local_id == restaurante_id). Migraciones
+        `20260607_rename_tenant_drop_p1..p6` aplicadas al remoto + en repo:
+        - p1 funciones (67), p2 RLS (258), p3 vistas (33) regeneradas a local_id por word-boundary
+          (`\m..\M`) → conserva los params `p_restaurante_id` de las RPC (precedidos de `_`).
+        - p4 espejo en local_id de 22 uniques(+1 PK→unique), 128 FKs, 166 índices.
+        - p5 drop trigger+func `sync_local_restaurante_id`. p6 DROP COLUMN restaurante_id en 167 tablas.
+        - Código: 8 onConflict, 3 filtros realtime, 9 selects+lecturas, 1 embed FK → local_id.
+        - **Verificado**: 0 columnas/funciones/RLS/vistas con restaurante_id; 428 RLS preservadas; tsc+build verde.
+      - **Lo que SE MANTIENE a propósito**: el campo `restaurante_id` del **token de sesión** (JWT firmado,
+        no es columna BD) y los params API/RPC `p_restaurante_id` / `?restaurante_id=` (contrato, valor=id).
+      - **Preexistentes NO tocados** (bugs ajenos al rename): `login_pin` no devuelve tenant
+        (super-pin/validar-pin leen un campo inexistente); tabla `leads` no tiene columna de tenant.
 - **Auditoría del pipeline de comandas por voz + fixes — 07/06/2026**
   (rama `claude/minimax-voice-commands-WjMkA`, **PR #74 draft**): nació de una consulta de
   Alberto sobre si **MiniMax** mejoraría las comandas por voz. Respuesta: **no para el ASR**

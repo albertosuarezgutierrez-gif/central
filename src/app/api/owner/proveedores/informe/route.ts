@@ -23,13 +23,13 @@ export async function GET(req: NextRequest) {
 
   const [rProv, rInc, rPedidos, rRecepciones] = await Promise.all([
     // Datos del proveedor
-    supabase.from('proveedores').select('*').eq('id', provId).eq('restaurante_id', rid).single(),
+    supabase.from('proveedores').select('*').eq('id', provId).eq('local_id', rid).single(),
 
     // Incidencias registradas
     supabase
       .from('incidencias_proveedor')
       .select('*')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('proveedor_id', provId)
       .gte('created_at', desde)
       .order('created_at', { ascending: false }),
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     supabase
       .from('pedidos_proveedor')
       .select('id, created_at, enviado_at, estado, cantidad, unidad_compra, stock_articulos(nombre)')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('proveedor_id', provId)
       .gte('created_at', desde)
       .order('created_at', { ascending: false }),
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
         id, fecha_recepcion, estado, albaran_numero,
         recepcion_items(id, nombre_articulo, cantidad_pedida, cantidad_recibida, precio_facturado, estado, fecha_caducidad, numero_lote)
       `)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('proveedor_id', provId)
       .eq('estado', 'confirmada')
       .gte('fecha_recepcion', desde)

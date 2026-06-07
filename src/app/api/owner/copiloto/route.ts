@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       modulo: 'copiloto',
       nivel: 'aviso',
       mensaje: 'Petición al copiloto sin sesión válida (x-ia-session ausente o inválido)',
-      restaurante_id: null,
+      local_id: null,
     }).then(() => {})
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -37,12 +37,12 @@ export async function POST(req: NextRequest) {
   ] = await Promise.all([
     supabase.from('restaurantes').select('nombre, num_mesas').eq('id', restauranteId).single(),
     supabase.from('comandas').select('*', { count: 'exact', head: true })
-      .eq('restaurante_id', restauranteId).gte('created_at', hace30.toISOString()),
+      .eq('local_id', restauranteId).gte('created_at', hace30.toISOString()),
     supabase.from('comanda_items').select('nombre, cantidad')
-      .eq('restaurante_id', restauranteId).gte('created_at', hace30.toISOString()).limit(200),
-    supabase.from('almacen').select('producto_id').eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId).gte('created_at', hace30.toISOString()).limit(200),
+    supabase.from('almacen').select('producto_id').eq('local_id', restauranteId)
       .filter('stock_actual', 'lte', 'stock_minimo').gt('stock_minimo', 0),
-    supabase.from('turnos').select('camarero_id').eq('restaurante_id', restauranteId).is('salida_at', null),
+    supabase.from('turnos').select('camarero_id').eq('local_id', restauranteId).is('salida_at', null),
   ])
 
   const conteo: Record<string, number> = {}
@@ -69,7 +69,7 @@ Responde en español, tono cálido y directo, hostelero. Máximo 3 frases. No in
   // El copiloto genera pares pregunta/respuesta sobre datos reales del restaurante.
   // Calidad 3: útil para aprender qué métricas consultan los dueños y cómo responder.
   await logTraining({
-    restaurante_id: restauranteId,
+    local_id: restauranteId,
     input_raw: pregunta,
     input_context: {
       modulo: 'copiloto_owner',

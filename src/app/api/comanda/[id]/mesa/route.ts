@@ -37,7 +37,7 @@ export async function PATCH(
     .from('comandas')
     .select('id, mesa_id, estado')
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (!comanda || errComanda) {
@@ -57,7 +57,7 @@ export async function PATCH(
     .from('mesas')
     .select('id, codigo, estado, zona_id, zonas(nombre)')
     .eq('id', mesa_destino_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (!mesaDestino) {
@@ -82,7 +82,7 @@ export async function PATCH(
       zona_nombre: zona_nombre_nueva,
     })
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (errComandaUpdate) {
     console.error('[CAMBIO-MESA] Error update comanda:', errComandaUpdate)
@@ -95,7 +95,7 @@ export async function PATCH(
       .from('mesas')
       .update({ estado: 'libre', camarero_id: null })
       .eq('id', mesa_origen_id)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
   }
 
   // -- 5. Ocupar mesa destino ----------------------
@@ -103,7 +103,7 @@ export async function PATCH(
     .from('mesas')
     .update({ estado: 'ocupada' })
     .eq('id', mesa_destino_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   // -- 6. Invalidar QR activo en mesa origen -------
   if (mesa_origen_id) {
@@ -111,7 +111,7 @@ export async function PATCH(
       .from('qr_sesiones_cliente')
       .update({ estado: 'expirada' })
       .eq('mesa_id', mesa_origen_id)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .eq('estado', 'activa')
   }
 

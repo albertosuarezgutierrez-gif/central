@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .from('evento_galeria')
     .select('*, subida_por_personal:personal(id, nombre)')
     .eq('evento_id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data, error } = await supabase
     .from('evento_galeria')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       evento_id: id,
       url, cloudinary_id, caption,
       subida_por: session.id
@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .update(updates)
     .eq('id', foto_id)
     .eq('evento_id', eventoId)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -80,7 +80,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     .delete()
     .eq('id', foto_id)
     .eq('evento_id', eventoId)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

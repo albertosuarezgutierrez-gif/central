@@ -19,8 +19,8 @@ export async function POST(req: NextRequest) {
 
   // Verificar que el evento y el menú pertenecen al restaurante
   const [{ data: evento }, { data: menu }] = await Promise.all([
-    supabase.from('eventos').select('id, aforo_previsto, cliente_nombre').eq('id', evento_id).eq('restaurante_id', restauranteId).single(),
-    supabase.from('menus_evento').select('id, nombre, precio_por_persona').eq('id', menu_id).eq('restaurante_id', restauranteId).single(),
+    supabase.from('eventos').select('id, aforo_previsto, cliente_nombre').eq('id', evento_id).eq('local_id', restauranteId).single(),
+    supabase.from('menus_evento').select('id, nombre, precio_por_persona').eq('id', menu_id).eq('local_id', restauranteId).single(),
   ])
 
   if (!evento) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })

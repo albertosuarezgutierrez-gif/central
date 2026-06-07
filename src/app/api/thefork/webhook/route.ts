@@ -132,7 +132,7 @@ export async function POST(req: NextRequest) {
     const { data: mesaPorCodigo } = await supabase
       .from('mesas')
       .select('id, codigo')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .or(`codigo.eq.${codigoTheFork},codigo.ilike.%${codigoTheFork}`)
       .limit(1)
       .single()
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
     const { data: mesaLibre } = await supabase
       .from('mesas')
       .select('id, codigo')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('estado', ['libre', 'disponible'])
       .order('codigo', { ascending: true })
       .limit(1)
@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     texto_original: `[TheFork ARRIVED] ${customer?.firstName ?? ''} ${customer?.lastName ?? ''} · ${pax ?? '?'} pax · ${alergenosMesa.join(', ') || 'sin alergias'}`,
     texto_brain: { source: 'thefork', orderId, mealStatus, nota },
     latencia_ms: 0,
-    restaurante_id: rid,
+    local_id: rid,
   })
 
   console.log('[TheFork] Mesa abierta:', mesa.codigo, '| TheFork order:', orderId, '| Alergenos:', alergenosMesa)

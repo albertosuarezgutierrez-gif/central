@@ -23,7 +23,7 @@ export async function PUT(
       .from('comandas')
       .update({ num_comensales })
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
 
     if (error) throw error
     return NextResponse.json({ ok: true })

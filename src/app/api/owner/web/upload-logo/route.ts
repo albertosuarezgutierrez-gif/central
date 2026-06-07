@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
     const { data: webActual } = await supabase
       .from('web_restaurante')
       .select('template')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .maybeSingle()
     if (!webActual?.template) {
       update.template = identidad.template_sugerido
@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
   await supabase
     .from('web_restaurante')
     .update(update)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   return NextResponse.json({
     ok: true,

@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     const hace7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
     const { data: cerrados } = await supabase
       .from('cobros_grupo')
-      .select('id, titulo, restaurante_id, restaurantes(nombre, email_contacto)')
+      .select('id, titulo, local_id, restaurantes(nombre, email_contacto)')
       .eq('estado', 'cerrado')
       .eq('email_cierre_enviado', false)
       .gte('fecha_limite_pago', hace7d)

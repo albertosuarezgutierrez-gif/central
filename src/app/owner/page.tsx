@@ -22,6 +22,7 @@ import ManualVozTab from '@/components/owner/ManualVozTab'
 import DashboardTab from '@/components/owner/DashboardTab'
 import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
+import TiendaTab from '@/components/owner/TiendaTab'
 import AnalisisCartaTab from '@/components/owner/AnalisisCartaTab'
 import EtiquetasTab from '@/components/owner/EtiquetasTab'
 import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
@@ -5726,7 +5727,7 @@ function ModificacionesTab({ restauranteId }: { restauranteId: string }) {
     const hoy = new Date(); hoy.setHours(0,0,0,0)
 
     let query = supabase.from('comanda_modificaciones')
-      .select('*').eq('restaurante_id', restauranteId)
+      .select('*').eq('local_id', restauranteId)
       .gte('created_at', new Date(Date.now()-24*60*60*1000).toISOString())
       .order('created_at',{ascending:false}).limit(200)
     if (filtroTipo!=='todos') query = (query as unknown as {eq:(a:string,b:string)=>typeof query}).eq('tipo_accion', filtroTipo) as typeof query
@@ -5735,7 +5736,7 @@ function ModificacionesTab({ restauranteId }: { restauranteId: string }) {
 
     const {data:hoyData} = await supabase.from('comanda_modificaciones')
       .select('tipo_accion,estado_item_en_kds')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .gte('created_at', hoy.toISOString())
     if (hoyData) {
       const h = hoyData as unknown as {tipo_accion:string;estado_item_en_kds:string|null}[]
@@ -7600,6 +7601,12 @@ const GRUPOS = [
     ]
   },
   {
+    id: 'tienda', label: 'Tienda', icon: ICONS.receipt, modulo: 'tienda',
+    tabs: [
+      { id: 'tienda-config', label: 'TPV Tienda', icon: ICONS.receipt },
+    ]
+  },
+  {
     id: 'ia', label: 'IA', icon: ICONS.sparkle, modulo: 'ia',
     tabs: [
       { id: 'forecaster', label: 'Eventos IA',  icon: ICONS.chart  },
@@ -8517,6 +8524,7 @@ export default function OwnerPage() {
             {tab === 'analisis'       && <AnalisisCartaTab sh={sh} />}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'almacen'         && <AlmacenTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'tienda-config'   && <TiendaTab sh={sh} />}
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'pagos'          && <PagosProveedorTab sh={sh} />}
             {tab === 'contabilidad'   && <ContabilidadTab sh={sh} />}

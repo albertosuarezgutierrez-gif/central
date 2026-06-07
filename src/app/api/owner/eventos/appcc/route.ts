@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     .from('evento_appcc')
     .select('*, registrado_por_personal:personal(id, nombre)')
     .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('hora_registro', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     .from('evento_appcc')
     .insert({
       evento_id,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo_registro,
       valor: valor !== undefined ? valor : null,
       limite_legal,
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       .from('eventos')
       .update({ plato_testigo_ok: false })
       .eq('id', evento_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
   }
 
   // Si es plato testigo OK, marcar en evento
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       .from('eventos')
       .update({ plato_testigo_ok: true })
       .eq('id', evento_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
   }
 
   return NextResponse.json({ registro: data, cumple, limite_legal }, { status: 201 })
@@ -121,7 +121,7 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = await req.json()
   await supabase.from('evento_appcc').delete()
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true })
 }

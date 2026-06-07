@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('clientes_fiscales')
     .select('id, nif, razon_social, direccion, email')
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (nif) {
     query = query.eq('nif', nif)
@@ -84,12 +84,12 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('clientes_fiscales')
     .upsert({
-      restaurante_id,
+      local_id: restaurante_id,
       nif: nif.toUpperCase(),
       razon_social: razon_social.trim(),
       direccion: direccion?.trim() ?? null,
       email: email?.trim() ?? null,
-    }, { onConflict: 'restaurante_id,nif' })
+    }, { onConflict: 'local_id,nif' })
     .select()
     .single()
 

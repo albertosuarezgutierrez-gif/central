@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('recepciones_mercancia')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const { data: recepcion, error: recErr } = await supabase
     .from('recepciones_mercancia')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo_entrada,
       modo_cantidad,
       producto_id: producto_id || null,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
   // Si es por peso y hay producto_id → registrar entrada en stock
   if (modo_cantidad === 'peso_kg' && cantidad_kg && producto_id) {
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       producto_id,
       tipo: 'entrada_recepcion',
       cantidad: cantidad_kg,  // positivo = entrada
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         precio_por_kg: precio_venta_kg,
       })
       .eq('id', producto_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
   }
 
   // Si hay precio_compra_kg → actualizar escandallos asociados
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       .from('escandallos')
       .update({ coste_kg: precio_compra_kg })
       .eq('producto_materia_prima_id', producto_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
   }
 
   // ─── IMPUTAR COSTE AL EVENTO si el pedido tiene evento_id ───────────────
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         const concepto = `${nombre_libre || 'Ingrediente'} — ${pedido.proveedor_nombre ?? 'Proveedor'}`
         await supabase.from('evento_costes').insert({
           evento_id: pedido.evento_id,
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           tipo: 'ingredientes',
           concepto,
           importe: Math.round(importe * 100) / 100,

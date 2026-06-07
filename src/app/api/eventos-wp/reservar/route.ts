@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     .from('espacio_bloqueos')
     .insert({
       espacio_id,
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       evento_id: evento_id ?? null,
       coordinador_id: session.id,
       fecha_inicio,
@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
         espacio_bloqueado_hasta: expira_at,
       })
       .eq('id', evento_id)
-      .eq('restaurante_id', session.restaurante_id)
+      .eq('local_id', session.restaurante_id)
   }
 
   return NextResponse.json({
@@ -99,7 +99,7 @@ export async function DELETE(req: NextRequest) {
     .from('espacio_bloqueos')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .eq('coordinador_id', session.id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('ordenes_pago_proveedor')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_vencimiento', { ascending: true })
 
   if (estado) q = q.eq('estado', estado)
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('ordenes_pago_proveedor')
     .insert({
-      restaurante_id:   rid,
+      local_id:   rid,
       proveedor_id:     proveedor_id ?? null,
       recepcion_id:     recepcion_id ?? null,
       proveedor_nombre,
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
     .from('ordenes_pago_proveedor')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await supabase
     .from('facturas_cliente')
     .select('*', { count: 'exact' })
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .gte('created_at', `${desde}T00:00:00`)
     .lte('created_at', `${hasta}T23:59:59`)
     .order('created_at', { ascending: false })

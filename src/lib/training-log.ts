@@ -14,7 +14,7 @@
 import { createServerClient } from '@/lib/supabase'
 
 export interface TrainingEntry {
-  restaurante_id: string
+  local_id: string
   input_raw: string
   input_context?: Record<string, unknown>
   output_brain?: Record<string, unknown>
@@ -35,7 +35,7 @@ export async function logTraining(entry: TrainingEntry): Promise<void> {
   try {
     const supabase = createServerClient()
     await supabase.from('ia_training_log').insert({
-      restaurante_id: entry.restaurante_id,
+      local_id: entry.local_id,
       input_raw: entry.input_raw,
       input_context: entry.input_context ?? null,
       output_brain: entry.output_brain ?? null,

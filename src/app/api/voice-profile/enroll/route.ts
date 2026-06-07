@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       .from('personal')
       .select('id, nombre')
       .eq('id', camareroId)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .maybeSingle()
 
     if (!camarero) {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
       const { error: upsertError } = await supabase.from('voice_profiles').upsert({
         camarero_id:        camareroId,
-        restaurante_id:     restauranteId,
+        local_id:     restauranteId,
         estado:             nuevoEstado,
         frases_completadas: frases,
         segundos_enrollados: frases * 5,
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       azureProfileId = await crearPerfilAzure()
       await supabase.from('voice_profiles').insert({
         camarero_id:        camareroId,
-        restaurante_id:     restauranteId,
+        local_id:     restauranteId,
         azure_profile_id:   azureProfileId,
         estado:             'calibrando',
         frases_completadas: 0,
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
         const supabase = createServerClient()
         await supabase.from('voice_profiles').upsert({
           camarero_id:    camareroId,
-          restaurante_id: getRestauranteId(req),
+          local_id: getRestauranteId(req),
           estado:         'error',
           error_msg:      msg.substring(0, 200),
         }, { onConflict: 'camarero_id' })

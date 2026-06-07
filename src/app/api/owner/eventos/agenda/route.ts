@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
       briefing:evento_briefing(id, cliente_nombre, estado),
       evento:eventos(id, cliente_nombre, fecha_evento)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .gte('fecha_hora', desde)
     .order('fecha_hora')
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     .from('comercial_agenda')
     .insert({
       ...body,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       comercial_id: body.comercial_id || session.id
     })
     .select()
@@ -70,7 +70,7 @@ export async function PATCH(req: NextRequest) {
     .from('comercial_agenda')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

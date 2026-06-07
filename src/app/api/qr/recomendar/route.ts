@@ -20,12 +20,12 @@ async function resolverSesion(token: string | null) {
   const supabase = createServerClient()
   const { data: sesion } = await supabase
     .from('qr_sesiones_cliente')
-    .select('restaurante_id, estado')
+    .select('local_id, estado')
     .eq('token', token)
     .single()
   if (!sesion) return { error: NextResponse.json({ error: 'Token QR inválido' }, { status: 404 }) }
   if (sesion.estado === 'expirada') return { error: NextResponse.json({ error: 'Sesión QR expirada' }, { status: 410 }) }
-  return { supabase, restauranteId: sesion.restaurante_id as string }
+  return { supabase, restauranteId: sesion.local_id as string }
 }
 
 async function leerEstado(supabase: ReturnType<typeof createServerClient>, rid: string) {
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const { data: productos } = await r.supabase
       .from('productos')
       .select('id, nombre, descripcion, precio, seccion, categoria, alergenos')
-      .eq('restaurante_id', r.restauranteId)
+      .eq('local_id', r.restauranteId)
       .eq('activo', true)
 
     const platos = await recomendarPlatos({

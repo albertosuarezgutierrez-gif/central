@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data: stock } = await supabase
     .from('almacen').select('producto_id, stock_actual, stock_minimo, unidad')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (!stock?.length) return NextResponse.json({ error: 'Sin stock definido' }, { status: 422 })
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const hace14 = new Date(); hace14.setDate(hace14.getDate() - 14)
   const { data: consumo } = await supabase
     .from('comanda_items').select('nombre, cantidad')
-    .eq('restaurante_id', restauranteId).gte('created_at', hace14.toISOString())
+    .eq('local_id', restauranteId).gte('created_at', hace14.toISOString())
 
   const consumoPorNombre: Record<string, number> = {}
   for (const c of consumo ?? []) consumoPorNombre[c.nombre] = (consumoPorNombre[c.nombre] ?? 0) + (c.cantidad ?? 1)
@@ -54,7 +54,7 @@ pedido_urgente = en mínimos O rotura <3 días. pedido_esta_semana = rotura 3-7 
   try { prediccion = JSON.parse(cleanJSON(raw ?? '')) } catch { /* sin prediccion */ }
   if (prediccion) {
     await logTraining({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       input_raw: `Predicción almacén ${new Date().toLocaleDateString('es-ES')}`,
       input_context: { modulo: 'almacen_prediccion', num_productos: stockConConsumo.length },
       output_brain: prediccion,

@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
   // ── 1. Verificar comanda ────────────────────────────────────
   const { data: comanda } = await supabase
     .from('comandas')
-    .select('id, estado, restaurante_id, camarero_id, turno_id, mesa_id')
-    .eq('id', comanda_id).eq('restaurante_id', restaurante_id).single()
+    .select('id, estado, local_id, camarero_id, turno_id, mesa_id')
+    .eq('id', comanda_id).eq('local_id', restaurante_id).single()
 
   if (!comanda)
     return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   // ── 3. Guardar pago parcial en pagos ────────────────────────
   await supabase.from('pagos').insert({
-    restaurante_id,
+    local_id: restaurante_id,
     comanda_id,
     metodo_id,
     importe:      importe_real,
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   const { data: items } = await supabase
     .from('comanda_items')
     .select('precio_unitario, cantidad, nombre')
-    .eq('comanda_id', comanda_id).eq('restaurante_id', restaurante_id)
+    .eq('comanda_id', comanda_id).eq('local_id', restaurante_id)
 
   const importe_total = Math.round(
     (items ?? []).reduce((s, it) => s + (it.precio_unitario ?? 0) * (it.cantidad ?? 1), 0) * 100
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
   const { data: factura } = await supabase
     .from('facturas_verifactu')
     .insert({
-      restaurante_id, ...facturaData,
+      local_id: restaurante_id, ...facturaData,
       metodo_pago:  'Dividida',
       metodo_tipo:  'dividida',
       entregado:    0,
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
   if (comanda.mesa_id) {
     await supabase.from('mesas')
       .update({ estado: 'libre', camarero_id: null, ultima_comanda: new Date().toISOString() })
-      .eq('id', comanda.mesa_id).eq('restaurante_id', restaurante_id)
+      .eq('id', comanda.mesa_id).eq('local_id', restaurante_id)
   }
 
   // ── 10. Imprimir ticket cobrado ─────────────────────────────
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     const mesaObj = mesaData as any
 
     await crearPrintJobCuenta({
-      comanda_id, restaurante_id, mesa_label,
+      comanda_id, local_id: restaurante_id, mesa_label,
       zona_tipo:           mesaObj?.zona?.tipo   ?? null,
       zona_nombre:         mesaObj?.zona?.nombre ?? null,
       camarero_nombre:     camData?.nombre ?? 'Equipo',

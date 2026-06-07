@@ -20,7 +20,7 @@ export async function GET(
       .from('comanda_audit_log')
       .select('id, accion, camarero_nombre, item_nombre, item_cantidad_antes, item_cantidad_despues, notas_antes, notas_despues, es_propietario, created_at')
       .eq('comanda_id', comanda_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .order('created_at', { ascending: false })
 
     if (error) throw error

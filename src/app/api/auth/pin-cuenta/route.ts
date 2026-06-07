@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
       .from('personal')
       .select('id, nombre, rol')
       .eq('cuenta_id', cuenta.id)
-      .eq('restaurante_id', r.id)
+      .eq('local_id', r.id)
       .eq('rol', 'owner')
       .single()
 

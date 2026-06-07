@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { data: arqueoExistente } = await supabase
     .from('arqueos_caja')
     .select('id, estado')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('fecha', fecha)
     .maybeSingle()
   if (arqueoExistente?.estado === 'cerrado') {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const { data: facturas } = await supabase
     .from('facturas_verifactu')
     .select('importe_total, iva_desglosado, metodo_pago')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha', `${fecha}T00:00:00`)
     .lt('fecha',  `${fecha}T23:59:59`)
     .eq('estado', 'emitida')
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const { data: propinasData } = await supabase
     .from('propinas')
     .select('importe, canal')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('created_at', `${fecha}T00:00:00`)
     .lt('created_at',  `${fecha}T23:59:59`)
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   const { data: cfgData } = await supabase
     .from('config_contabilidad')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .maybeSingle()
 
   const cfg: ConfigContabilidad = {
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   }
 
   const arqueoInput = {
-    restaurante_id: rid, fecha,
+    local_id: rid, fecha,
     base_10: Math.round(base_10 * 100) / 100, iva_10: Math.round(iva_10 * 100) / 100,
     base_21: Math.round(base_21 * 100) / 100, iva_21: Math.round(iva_21 * 100) / 100,
     base_4:  Math.round(base_4  * 100) / 100, iva_4:  Math.round(iva_4  * 100) / 100,
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
   const { data: asiento, error: asientoErr } = await supabase
     .from('asientos_contables')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       num_asiento: numAsiento,
       fecha,
       concepto,

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
         )
       `)
       .eq('id', menu_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .single()
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
       temporada, tipo_evento, min_comensales, max_comensales,
       tiene_menu_infantil, precio_infantil
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('nombre')
 
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   const { data: menu, error: menuErr } = await supabase
     .from('menus_evento')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       cuenta_id: rest?.cuenta_id,
       nombre, descripcion, precio_por_persona, temporada,
       tipo_evento, min_comensales, max_comensales,
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         .from('menu_evento_pases')
         .insert({
           menu_id: menu.id,
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           numero_pase: pase.numero_pase,
           nombre: pase.nombre,
           hora_offset_min: pase.hora_offset_min ?? 0,
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
           }) => ({
             pase_id: paseCreado.id,
             menu_id: menu.id,
-            restaurante_id: restauranteId,
+            local_id: restauranteId,
             nombre: item.nombre,
             descripcion: item.descripcion,
             cantidad_por_persona: item.cantidad_por_persona ?? 1,
@@ -140,7 +140,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('menus_evento').update(updates)
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -156,7 +156,7 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = await req.json()
   await supabase.from('menus_evento').update({ activo: false })
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true })
 }

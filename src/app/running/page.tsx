@@ -255,7 +255,7 @@ export default function RunningPage() {
       .select('*')
       .eq('receptor_id', session.id)
       .eq('recogido', false)
-      .eq('restaurante_id', session.restaurante_id)
+      .eq('local_id', session.restaurante_id)
       .order('created_at', { ascending: true })
     setItems((data ?? []) as MarcharItem[])
     setLoading(false)

@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const { data: bt } = await sb
     .from('bridge_tokens')
     .select('token, nombre')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .order('created_at')
     .limit(1)
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   // No hay token — crear uno automáticamente
   const { data: nuevo, error } = await sb
     .from('bridge_tokens')
-    .insert({ restaurante_id: rid, nombre: 'Bridge automático' })
+    .insert({ local_id: rid, nombre: 'Bridge automático' })
     .select('token, nombre')
     .single()
 

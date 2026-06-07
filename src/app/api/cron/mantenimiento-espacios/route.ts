@@ -67,8 +67,8 @@ export async function GET(req: NextRequest) {
     .from('espacio_mantenimiento')
     .select(`
       *,
-      espacio:espacio_id(nombre, restaurante_id),
-      restaurante:restaurante_id(nombre, email_contacto)
+      espacio:espacio_id(nombre, local_id),
+      restaurante:local_id(nombre, email_contacto)
     `)
     .in('estado', ['proximo', 'vencido'])
     .or(`notificado_at.is.null,notificado_at.lt.${hace24h}`)
@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 
   const resultados = await Promise.allSettled(
     items.map(async (item) => {
-      const espacio = item.espacio as { nombre: string; restaurante_id: string } | null
+      const espacio = item.espacio as { nombre: string; local_id: string } | null
       const restaurante = item.restaurante as { nombre: string; email_contacto: string | null } | null
       const email = restaurante?.email_contacto
       if (!email) return

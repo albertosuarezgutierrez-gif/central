@@ -65,7 +65,7 @@ Deno.serve(async (req) => {
         modulo,
         mensaje,
         detalle,
-        restaurante_id,
+        local_id: restaurante_id,
         nivel,
         resuelta: nivel === 'resuelto',
         auto_resuelta,

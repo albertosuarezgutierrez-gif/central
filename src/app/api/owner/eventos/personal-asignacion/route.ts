@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('personal_evento_asignacion')
     .select('*, personal:personal(id, nombre, rol)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (evento_id) query = query.eq('evento_id', evento_id)
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { data, error } = await supabase
     .from('personal_evento_asignacion')
-    .insert({ ...body, restaurante_id: restauranteId })
+    .insert({ ...body, local_id: restauranteId })
     .select()
     .single()
 
@@ -62,7 +62,7 @@ export async function PATCH(req: NextRequest) {
     .from('personal_evento_asignacion')
     .update(finalUpdates)
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select()
     .single()
 

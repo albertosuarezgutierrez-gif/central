@@ -45,15 +45,15 @@ export async function GET(req: NextRequest) {
     // Ventas hoy y ayer por restaurante (desde comanda_items)
     const { data: ventasHoy } = await supabase
       .from('comandas')
-      .select('restaurante_id, comanda_items(precio_unitario, cantidad)')
-      .in('restaurante_id', rids)
+      .select('local_id, comanda_items(precio_unitario, cantidad)')
+      .in('local_id', rids)
       .eq('estado', 'cerrada')
       .gte('cobrado_at', hoy.toISOString())
 
     const { data: ventasAyer } = await supabase
       .from('comandas')
-      .select('restaurante_id, comanda_items(precio_unitario, cantidad)')
-      .in('restaurante_id', rids)
+      .select('local_id, comanda_items(precio_unitario, cantidad)')
+      .in('local_id', rids)
       .eq('estado', 'cerrada')
       .gte('cobrado_at', ayer.toISOString())
       .lt('cobrado_at', hoy.toISOString())
@@ -61,15 +61,15 @@ export async function GET(req: NextRequest) {
     // Comandas activas ahora
     const { data: activas } = await supabase
       .from('comandas')
-      .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .select('local_id')
+      .in('local_id', rids)
       .in('estado', ['nueva','en_cocina','en_curso'])
 
     // Stock crítico
     const { data: stock } = await supabase
       .from('stock_articulos')
-      .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .select('local_id')
+      .in('local_id', rids)
       .eq('alerta_activa', true)
       .eq('activo', true)
 
@@ -77,25 +77,25 @@ export async function GET(req: NextRequest) {
     const en24h = new Date(Date.now() + 24*3600000).toISOString()
     const { data: elabs } = await supabase
       .from('elaboraciones_propias')
-      .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .select('local_id')
+      .in('local_id', rids)
       .eq('estado', 'activa')
       .lte('fecha_caducidad', en24h)
 
     // Turnos activos (para saber si está abierto)
     const { data: turnos } = await supabase
       .from('turnos')
-      .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .select('local_id')
+      .in('local_id', rids)
       .eq('estado', 'activo')
       .is('camarero_id', null)
 
     // Calcular ventas por restaurante_id
-    const calcPorRid = (rows: {restaurante_id: string; comanda_items: {precio_unitario: number; cantidad: number}[]}[] | null) => {
+    const calcPorRid = (rows: {local_id: string; comanda_items: {precio_unitario: number; cantidad: number}[]}[] | null) => {
       const m: Record<string, number> = {}
       for (const c of rows ?? []) {
         const sum = (c.comanda_items ?? []).reduce((s, i) => s + Number(i.precio_unitario) * Number(i.cantidad), 0)
-        m[c.restaurante_id] = (m[c.restaurante_id] ?? 0) + sum
+        m[c.local_id] = (m[c.local_id] ?? 0) + sum
       }
       return m
     }
@@ -103,19 +103,19 @@ export async function GET(req: NextRequest) {
     const vHoy  = calcPorRid(ventasHoy  as Parameters<typeof calcPorRid>[0])
     const vAyer = calcPorRid(ventasAyer as Parameters<typeof calcPorRid>[0])
 
-    const countPorRid = (rows: {restaurante_id: string}[] | null) => {
+    const countPorRid = (rows: {local_id: string}[] | null) => {
       const m: Record<string, number> = {}
-      for (const r of rows ?? []) m[r.restaurante_id] = (m[r.restaurante_id] ?? 0) + 1
+      for (const r of rows ?? []) m[r.local_id] = (m[r.local_id] ?? 0) + 1
       return m
     }
 
     const activasMap  = countPorRid(activas)
     const stockMap    = countPorRid(stock)
     const elabsMap    = countPorRid(elabs)
-    const turnosSet   = new Set((turnos ?? []).map(t => t.restaurante_id))
+    const turnosSet   = new Set((turnos ?? []).map(t => t.local_id))
 
     const locales = restaurantes.map(r => ({
-      restaurante_id:        r.id,
+      local_id:        r.id,
       restaurante_nombre:    r.nombre,
       turno_abierto:         turnosSet.has(r.id),
       comandas_activas:      activasMap[r.id] ?? 0,
@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
     const { data: rows } = await supabase
       .from('comandas')
       .select('cobrado_at, comanda_items(precio_unitario, cantidad)')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('estado', 'cerrada')
       .gte('cobrado_at', new Date(Date.now() - 7 * 86400000).toISOString())
 

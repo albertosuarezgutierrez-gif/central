@@ -32,7 +32,7 @@ serve(async (req) => {
     // Validar sesión activa
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, estado, restaurante_id, mesa_id')
+      .select('id, estado, local_id, mesa_id')
       .eq('id', sesion_id)
       .eq('estado', 'activa')
       .single()
@@ -40,7 +40,7 @@ serve(async (req) => {
     if (!sesion) return json({ error: 'Sesión no válida o expirada' }, 403)
 
     // Verificar que mesa_id coincide con la sesión (anti-spoofing)
-    if (sesion.mesa_id !== mesa_id || sesion.restaurante_id !== restaurante_id) {
+    if (sesion.mesa_id !== mesa_id || sesion.local_id !== restaurante_id) {
       return json({ error: 'Mesa o restaurante no coinciden con la sesión' }, 403)
     }
 
@@ -48,7 +48,7 @@ serve(async (req) => {
     const { data: turno } = await supabase
       .from('turnos')
       .select('id')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .eq('estado', 'activo')
       .order('created_at', { ascending: false })
       .limit(1)
@@ -62,7 +62,7 @@ serve(async (req) => {
     const { data: comanda, error: cmdErr } = await supabase
       .from('comandas')
       .insert({
-        restaurante_id,
+        local_id: restaurante_id,
         mesa_id,
         turno_id:  turno.id,
         sesion_qr_id: sesion.id,   // ata la comanda a la subcuenta de quien pide
@@ -76,10 +76,10 @@ serve(async (req) => {
 
     if (cmdErr) throw new Error(cmdErr.message)
 
-    // Items — restaurante_id requerido por RLS
+    // Items — local_id requerido por RLS
     const itemsInsert = (items as { producto_id?: string; nombre: string; cantidad: number; notas?: string; precio_unitario?: number }[]).map(item => ({
       comanda_id:      comanda.id,
-      restaurante_id,
+      local_id: restaurante_id,
       nombre:          item.nombre,
       producto_id:     item.producto_id ?? null,
       cantidad:        item.cantidad,
@@ -93,13 +93,13 @@ serve(async (req) => {
     // Actualizar estado de mesa
     await supabase.from('mesas')
       .update({ estado: 'activa', ultima_comanda: new Date().toISOString() })
-      .eq('id', mesa_id).eq('restaurante_id', restaurante_id)
+      .eq('id', mesa_id).eq('local_id', restaurante_id)
 
     // Notificar push a camareros y jefes de sala
     const { data: camareros } = await supabase
       .from('personal')
       .select('id')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .in('rol', ['camarero', 'jefe_sala'])
       .eq('activo', true)
 

@@ -60,17 +60,17 @@ async function getMetricasPeriodo(
     // Ventas desde facturas VeriFactu
     supabase.from('facturas_verifactu')
       .select('importe_total, metodo_pago, fecha')
-      .eq('restaurante_id', rid).eq('estado', 'emitida')
+      .eq('local_id', rid).eq('estado', 'emitida')
       .gte('fecha', desde).lte('fecha', hasta),
     // Comandas para ticket medio y conteo
     supabase.from('comandas')
       .select('id, total_cobrado, created_at, mesa:mesas(nombre, zona)')
-      .eq('restaurante_id', rid).eq('estado', 'cerrada')
+      .eq('local_id', rid).eq('estado', 'cerrada')
       .gte('created_at', desde).lte('created_at', hasta),
     // Productos más vendidos
     supabase.from('comanda_items')
-      .select('nombre, cantidad, precio_unitario, comandas!inner(restaurante_id, created_at, estado)')
-      .eq('comandas.restaurante_id', rid).eq('comandas.estado', 'cerrada')
+      .select('nombre, cantidad, precio_unitario, comandas!inner(local_id, created_at, estado)')
+      .eq('comandas.local_id', rid).eq('comandas.estado', 'cerrada')
       .gte('comandas.created_at', desde).lte('comandas.created_at', hasta),
   ])
 

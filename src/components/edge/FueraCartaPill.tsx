@@ -95,7 +95,7 @@ export default function FueraCartaPill({ restauranteId }: { restauranteId: strin
     const { data } = await supabase
       .from('v_fuera_carta_disponibles')
       .select('id, nombre, precio, descripcion, categoria, alergenos, expira_label, horas_restantes')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
     setEspeciales(data ?? [])
   }, [restauranteId])
 

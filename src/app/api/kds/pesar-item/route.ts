@@ -18,9 +18,9 @@ export async function POST(req: NextRequest) {
   // Obtener item + precio_por_kg del producto
   const { data: item, error: itemErr } = await supabase
     .from('comanda_items')
-    .select('id, nombre, producto_id, precio_unitario, restaurante_id, comanda_id, productos(precio_por_kg)')
+    .select('id, nombre, producto_id, precio_unitario, local_id, comanda_id, productos(precio_por_kg)')
     .eq('id', comanda_item_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (itemErr || !item) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       precio_kg_en_venta: precioPorKg,
     })
     .eq('id', comanda_item_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 })
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   if (item.producto_id) {
     const cantidad = -(peso_gramos / 1000) // negativo = salida, en kg
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       producto_id: item.producto_id,
       tipo: 'salida_venta_directa',
       cantidad,

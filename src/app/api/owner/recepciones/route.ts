@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       proveedores(nombre),
       recepcion_items(id, nombre_articulo, cantidad_pedida, cantidad_recibida, estado, precio_facturado)
     `)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_recepcion', { ascending: false })
     .limit(limit)
 
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const { data: rec, error: recErr } = await supabase
     .from('recepciones_mercancia')
     .insert({
-      restaurante_id:       rid,
+      local_id:       rid,
       proveedor_id:         proveedor_id ?? null,
       pedido_proveedor_id:  pedido_proveedor_id ?? null,
       albaran_numero:       albaran_numero?.trim() || null,
@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     numero_lote?: string
   }) => ({
     recepcion_id:       rec.id,
-    restaurante_id:     rid,
+    local_id:     rid,
     stock_articulo_id:  it.stock_articulo_id ?? null,
     nombre_articulo:    it.nombre_articulo,
     cantidad_pedida:    it.cantidad_pedida ?? null,

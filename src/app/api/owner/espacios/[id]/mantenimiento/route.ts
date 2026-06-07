@@ -15,7 +15,7 @@ export async function GET(
   const { data, error } = await supabase
     .from('espacio_mantenimiento')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('espacio_id', espacioId)
     .order('proxima_revision', { ascending: true })
 
@@ -37,7 +37,7 @@ export async function POST(
   const { data, error } = await supabase
     .from('espacio_mantenimiento')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       espacio_id: espacioId,
       tipo: body.tipo,
       descripcion: body.descripcion,
@@ -88,7 +88,7 @@ export async function PATCH(
     .from('espacio_mantenimiento')
     .update(updates)
     .eq('id', itemId)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select()
     .single()
 
@@ -112,7 +112,7 @@ export async function DELETE(
     .from('espacio_mantenimiento')
     .delete()
     .eq('id', itemId!)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

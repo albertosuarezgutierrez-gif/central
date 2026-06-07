@@ -752,7 +752,7 @@ export async function checkDemo(sb: ReturnType<typeof createServerClient>): Prom
 
     // Check productos demo
     if (rest?.length) {
-      const { data: prods } = await sb.from('productos').select('id').eq('restaurante_id',rest[0].id).eq('activo',true).limit(5)
+      const { data: prods } = await sb.from('productos').select('id').eq('local_id',rest[0].id).eq('activo',true).limit(5)
       checks.push({ categoria:'DEMO 🗓️', nombre:'Productos demo cargados',
         estado: (prods?.length ?? 0) > 0 ? 'ok' : 'warning', severidad:(prods?.length ?? 0) > 0 ? 'info' : 'degradado',
         detalle: (prods?.length ?? 0) > 0 ? `${prods!.length}+ productos activos` : 'Sin productos en demo' })

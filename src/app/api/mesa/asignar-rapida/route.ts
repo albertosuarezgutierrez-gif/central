@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const { data: reservaActiva } = await supabase
     .from('reservas')
     .select('id, mesa_id, nombre_cliente, hora_reserva, mesas(id, codigo, zona, capacidad)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('fecha_reserva', new Date().toISOString().slice(0, 10))
     .in('estado', ['pendiente', 'confirmada'])
     .ilike('nombre_cliente', `%${alias_cliente.trim()}%`)
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
     const { data: mesasZona } = await supabase
       .from('mesas')
       .select('id, codigo, capacidad')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .ilike('zona', `%${zona}%`)
       .order('codigo', { ascending: true })
 
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
     const { data: activas } = await supabase
       .from('comandas')
       .select('mesa_id')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('estado', ['nueva', 'en_cocina', 'cuenta', 'cuenta_pedida'])
 
     const ocupadas = new Set((activas ?? []).map(c => c.mesa_id))
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       const { data: todasZonas } = await supabase
         .from('mesas')
         .select('zona')
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
         .not('id', 'in', `(${[...ocupadas, ...bloqSet].join(',') || '\'00000000-0000-0000-0000-000000000000\''})`)
 
       const otrasZonas = [...new Set((todasZonas ?? []).map(m => m.zona).filter(z => z !== zona))]
@@ -118,14 +118,14 @@ export async function POST(req: NextRequest) {
   // Obtener turno activo
   const { data: turnoActivo } = await supabase
     .from('turnos').select('id')
-    .eq('restaurante_id', rid).eq('estado', 'activo')
+    .eq('local_id', rid).eq('estado', 'activo')
     .order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!turnoActivo) return err('Sin turno activo — abre el turno antes de asignar mesas', 400)
 
   const { data: comanda, error: errComanda } = await supabase
     .from('comandas')
     .insert({
-      restaurante_id:   rid,
+      local_id:   rid,
       mesa_id:          mesaId,
       camarero_id:      session.id,
       turno_id:         turnoActivo.id,
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
     estado: 'activa',
     camarero_id: session.id,
     ultima_comanda: new Date().toISOString(),
-  }).eq('id', mesaId).eq('restaurante_id', rid)
+  }).eq('id', mesaId).eq('local_id', rid)
 
   // ─── 4. Si había reserva → marcar como sentada ───────────────
   if (reservaId) {

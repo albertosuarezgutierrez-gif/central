@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabase
     .from('comanda_audit_log')
     .select('id,accion,camarero_nombre,item_nombre,item_cantidad_antes,item_cantidad_despues,notas_antes,notas_despues,es_propietario,created_at')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('created_at', desde.toISOString())
     .order('created_at', { ascending: false })
     .limit(200)

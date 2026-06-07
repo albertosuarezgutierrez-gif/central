@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         producto:productos(id, nombre, precio_venta, tier_barra)
       )
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('orden')
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
   const { data: tier, error } = await supabase
     .from('barra_tiers')
-    .insert({ restaurante_id: restauranteId, nombre, precio_persona_hora: precio_persona_hora || 0, orden: orden || 0, requiere_consulta: !!requiere_consulta })
+    .insert({ local_id: restauranteId, nombre, precio_persona_hora: precio_persona_hora || 0, orden: orden || 0, requiere_consulta: !!requiere_consulta })
     .select()
     .single()
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   if (productos?.length) {
     await supabase.from('barra_tier_productos').insert(
       productos.map((p: { producto_id: string; categoria?: string; es_sin_alcohol?: boolean }) => ({
-        restaurante_id: restauranteId,
+        local_id: restauranteId,
         tier_id: tier.id,
         producto_id: p.producto_id,
         categoria: p.categoria,

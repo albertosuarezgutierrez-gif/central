@@ -15,14 +15,14 @@ export async function GET(req: NextRequest) {
   const hace30 = new Date(); hace30.setDate(hace30.getDate() - 30)
   const { data: turnos } = await supabase
     .from('turnos').select('entrada_at, salida_at, horas_totales, camarero_id')
-    .eq('restaurante_id', restauranteId).gte('entrada_at', hace30.toISOString())
+    .eq('local_id', restauranteId).gte('entrada_at', hace30.toISOString())
     .not('salida_at', 'is', null).not('camarero_id', 'is', null)
 
   if (!turnos?.length) return NextResponse.json({ error: 'Sin datos de turnos (mínimo 1 mes)' }, { status: 422 })
 
   const { data: comandas } = await supabase
     .from('comandas').select('created_at')
-    .eq('restaurante_id', restauranteId).gte('created_at', hace30.toISOString())
+    .eq('local_id', restauranteId).gte('created_at', hace30.toISOString())
 
   const cmdPorHora: Record<number, number> = {}
   for (const c of comandas ?? []) {
@@ -65,7 +65,7 @@ Solo JSON: {"horas_criticas":[{"hora":"H:00","situacion":"sobredotado|infradotad
   try { analisis = JSON.parse(cleanJSON(raw ?? '')) } catch { /* sin analisis */ }
   if (analisis) {
     await logTraining({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       input_raw: `Análisis turnos ${new Date().toLocaleDateString('es-ES')}`,
       input_context: { modulo: 'turnos_analisis', dias: 30 },
       output_brain: analisis,

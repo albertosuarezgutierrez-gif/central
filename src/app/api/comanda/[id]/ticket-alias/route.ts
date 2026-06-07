@@ -26,7 +26,7 @@ export async function GET(
     .from('ticket_aliases')
     .select('*')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -62,7 +62,7 @@ export async function POST(
     .from('comandas')
     .select('id, estado')
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
@@ -75,7 +75,7 @@ export async function POST(
     .from('ticket_aliases')
     .upsert({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       creado_por: session.id,
       motivo: motivo ?? null,
       items,
@@ -90,7 +90,7 @@ export async function POST(
   try {
     await supabase.from('comanda_audit_log').insert({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       camarero_id: session.id,
       accion: 'ticket_alias_guardado',
       detalle: JSON.stringify({ motivo, num_items_modificados: items.filter(i => i.nombre_alias).length }),

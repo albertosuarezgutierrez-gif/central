@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('documentos_escaneados')
     .select('id, tipo, confianza, datos_extraidos, escaneado_por_nombre, escaneado_por_rol, archivado_en, estado, created_at, imagen_base64')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
     .limit(limit)
 
@@ -54,7 +54,7 @@ export async function PUT(req: NextRequest) {
     .from('documentos_escaneados')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

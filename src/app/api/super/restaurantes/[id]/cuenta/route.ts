@@ -79,7 +79,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Actualizar también los camareros del restaurante para mantener consistencia
-  await sb.from('personal').update({ cuenta_id }).eq('restaurante_id', id)
+  await sb.from('personal').update({ cuenta_id }).eq('local_id', id)
 
   return NextResponse.json({ ok: true, cuenta_nombre: cuenta.nombre })
 }

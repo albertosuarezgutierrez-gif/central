@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
     supabase.from('evento_appcc').select('tipo_registro, valor, cumple, plato_testigo_plato').eq('evento_id', evento_id),
     supabase.from('proveedores_evento_asignaciones')
       .select('servicio_descripcion, importe, comision_pct, comision_importe, estado')
-      .eq('evento_id', evento_id).eq('restaurante_id', restauranteId),
+      .eq('evento_id', evento_id).eq('local_id', restauranteId),
     supabase.from('evento_costes').select('tipo, descripcion, importe').eq('evento_id', evento_id),
     supabase.from('evento_pases').select('numero_pase, nombre, estado, hora_prevista, hora_real').eq('evento_id', evento_id),
   ])
@@ -101,7 +101,7 @@ JSON requerido (sin texto extra): {"puntuacion":<1-10>,"resumen":"<2 frases>","p
 
   // Guardar en cache
   await supabase.from('evento_scoring_cache').upsert({
-    evento_id, restaurante_id: restauranteId,
+    evento_id, local_id: restauranteId,
     scoring_json: result, generado_at: new Date().toISOString(),
   })
 

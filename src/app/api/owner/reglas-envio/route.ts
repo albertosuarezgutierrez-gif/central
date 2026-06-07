@@ -23,30 +23,30 @@ export async function GET(req: NextRequest) {
     supabase
       .from('reglas_envio')
       .select('*')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .order('es_fallback', { ascending: true })
       .order('prioridad', { ascending: false })
       .order('created_at'),
     supabase
       .from('impresoras')
       .select('id, nombre, seccion_id, activa, connection_type')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activa', true),
     supabase
       .from('secciones_cocina')
       .select('id, nombre, color_kds, icono')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activa', true)
       .order('orden'),
     supabase
       .from('zonas')
       .select('id, tipo, nombre')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activa', true),
     supabase
       .from('productos')
       .select('id, nombre, seccion, precio')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activo', true)
       .order('nombre'),
   ])
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerClient()
   const { data, error } = await supabase.from('reglas_envio').insert({
-    restaurante_id:      rid,
+    local_id:      rid,
     nombre:              nombre || null,
     zona_tipo:           zonaTipos.length === 1 ? zonaTipos[0] : null,
     zona_tipos:          zonaTipos,
@@ -143,7 +143,7 @@ export async function PATCH(req: NextRequest) {
   }
 
   const supabase = createServerClient()
-  const { data, error } = await supabase.from('reglas_envio').update(update).eq('id', id).eq('restaurante_id', rid).select().single()
+  const { data, error } = await supabase.from('reglas_envio').update(update).eq('id', id).eq('local_id', rid).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
@@ -156,7 +156,7 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
 
   const supabase = createServerClient()
-  const { error } = await supabase.from('reglas_envio').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('reglas_envio').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

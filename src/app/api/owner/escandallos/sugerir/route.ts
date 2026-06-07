@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const { data: articulos } = await supabase
     .from('almacen_articulos')
     .select('id, nombre, unidad_compra')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('nombre')
 
   if (!articulos?.length) {
@@ -88,7 +88,7 @@ Reglas:
   const resueltos = ingredientesConId.filter(i => i.articulo_id).length
   if (resueltos > 0) {
     await logTraining({
-      restaurante_id:  restauranteId,
+      local_id:  restauranteId,
       input_raw:       `Sugerir escandallo: ${nombre}`,
       input_context:   { modulo: 'escandallos_sugerir', articulos_disponibles: articulos.length },
       output_brain:    { ingredientes: ingredientesConId, raciones: data.raciones },

@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   let evQuery = supabase
     .from('eventos')
     .select(`id, cliente_nombre, tipo, fecha_evento, hora_inicio,
-      aforo_confirmado, aforo_previsto, factor_escandallo, estado, restaurante_id,
+      aforo_confirmado, aforo_previsto, factor_escandallo, estado, local_id,
       restaurantes!inner(nombre)`)
     .gte('fecha_evento', desde).lte('fecha_evento', hasta)
     .neq('estado', 'cancelado').order('fecha_evento')
@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
     const { data: myRest } = await supabase.from('restaurantes').select('cuenta_id').eq('id', restauranteId).single()
     if (myRest?.cuenta_id) {
       const { data: grupo } = await supabase.from('restaurantes').select('id').eq('cuenta_id', myRest.cuenta_id)
-      evQuery = evQuery.in('restaurante_id', (grupo ?? []).map(r => r.id))
-    } else { evQuery = evQuery.eq('restaurante_id', restauranteId) }
-  } else { evQuery = evQuery.eq('restaurante_id', restauranteId) }
+      evQuery = evQuery.in('local_id', (grupo ?? []).map(r => r.id))
+    } else { evQuery = evQuery.eq('local_id', restauranteId) }
+  } else { evQuery = evQuery.eq('local_id', restauranteId) }
 
   const { data: eventos } = await evQuery
   if (!eventos?.length) {
@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
         ingredientes:escandallo_ingredientes(cantidad,
           articulo:stock_articulos(id, nombre, unidad_compra, coste_unitario, stock_actual,
             proveedor_id, proveedor_nombre, proveedor_email))`)
-      .in('producto_id', productoIds).eq('restaurante_id', restauranteId).eq('activo', true)
+      .in('producto_id', productoIds).eq('local_id', restauranteId).eq('activo', true)
 
     if (!escandallos?.length) continue
     const escByProducto: Record<string, typeof escandallos[0]> = {}
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
   for (const art of articulos) {
     if ((art.cantidad_a_pedir ?? 0) <= 0) continue
     await supabase.from('pedidos_proveedor').insert({
-      restaurante_id: restauranteId, stock_articulo_id: art.articulo_id,
+      local_id: restauranteId, stock_articulo_id: art.articulo_id,
       proveedor_nombre: art.proveedor_nombre, proveedor_email: art.proveedor_email,
       cantidad: art.cantidad_a_pedir, unidad: art.unidad, origen: 'produccion_eventos',
       notas: notas_pedido ?? `Producción: ${art.por_evento?.map((e: { cliente: string }) => e.cliente).join(', ')}`,

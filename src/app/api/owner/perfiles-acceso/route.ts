@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('perfiles_acceso')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('nombre')
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('perfiles_acceso')
-    .insert({ ...body, restaurante_id: restauranteId })
+    .insert({ ...body, local_id: restauranteId })
     .select()
     .single()
 
@@ -49,7 +49,7 @@ export async function PATCH(req: NextRequest) {
     .from('perfiles_acceso')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

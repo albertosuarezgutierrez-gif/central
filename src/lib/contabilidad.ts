@@ -62,7 +62,7 @@ export interface LineaAsiento {
 }
 
 export interface DatosArqueo {
-  restaurante_id: string
+  local_id: string
   fecha:          string   // YYYY-MM-DD
   base_10:        number
   iva_10:         number

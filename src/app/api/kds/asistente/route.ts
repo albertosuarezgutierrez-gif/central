@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
         nombre_cuenta,
         comanda_items(nombre, cantidad, notas, seccion_id)
       `)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('estado', ['en_cocina', 'en_curso', 'nueva'])
       .order('created_at', { ascending: true })
 
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     const { data: stockBajo } = await supabase
       .from('stock_articulos')
       .select('nombre, stock_actual, stock_minimo, unidad_compra')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('alerta_activa', true)
       .eq('activo', true)
 
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
     const { data: elaboraciones } = await supabase
       .from('elaboraciones_propias')
       .select('nombre, lote, fecha_caducidad, horas_restantes, urgencia')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('estado', 'activa')
       .lte('fecha_caducidad', en24h)
       .order('fecha_caducidad', { ascending: true })

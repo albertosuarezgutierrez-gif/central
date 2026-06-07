@@ -120,7 +120,7 @@ export default function PedidosOnlinePage() {
   useEffect(() => {
     if (!session) return
     const ch = supabase.channel('pedidos-online-owner')
-      .on('postgres_changes', { event:'*', schema:'public', table:'pedidos_online', filter:`restaurante_id=eq.${session.restaurante_id}` },
+      .on('postgres_changes', { event:'*', schema:'public', table:'pedidos_online', filter:`local_id=eq.${session.restaurante_id}` },
         () => cargar())
       .subscribe()
     return () => { supabase.removeChannel(ch) }

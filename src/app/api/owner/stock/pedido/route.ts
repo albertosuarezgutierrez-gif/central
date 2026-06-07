@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('pedidos_proveedor')
     .select('*, stock_articulos(nombre, unidad_compra)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const { data: art } = await supabase
     .from('stock_articulos')
     .select('nombre, unidad_compra, proveedor_nombre, proveedor_email, proveedor_telefono, stock_actual, stock_minimo')
-    .eq('id', articulo_id).eq('restaurante_id', rid).single()
+    .eq('id', articulo_id).eq('local_id', rid).single()
   if (!art) return NextResponse.json({ error: 'Artículo no encontrado' }, { status: 404 })
 
   // Cargar datos del restaurante para el email
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const { data: pedido, error: errPed } = await supabase
     .from('pedidos_proveedor')
     .insert({
-      restaurante_id:    rid,
+      local_id:    rid,
       stock_articulo_id: articulo_id,
       proveedor_nombre:  art.proveedor_nombre,
       proveedor_email:   art.proveedor_email,
@@ -164,6 +164,6 @@ export async function PATCH(req: NextRequest) {
     estado,
     ...(estado === 'recibido' ? { recibido_at: new Date().toISOString() } : {}),
     updated_at: new Date().toISOString(),
-  }).eq('id', id).eq('restaurante_id', rid)
+  }).eq('id', id).eq('local_id', rid)
   return NextResponse.json({ ok: true })
 }

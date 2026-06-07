@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { data: web } = await supabase
     .from('web_restaurante')
     .select('slug, color_acento')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   if (!web?.slug) return new NextResponse('Web no configurada', { status: 404 })

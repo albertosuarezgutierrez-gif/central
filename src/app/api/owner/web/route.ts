@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('web_restaurante')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -43,8 +43,8 @@ export async function PATCH(req: NextRequest) {
   const { data, error } = await supabase
     .from('web_restaurante')
     .upsert(
-      { restaurante_id: restauranteId, ...body, updated_at: new Date().toISOString() },
-      { onConflict: 'restaurante_id' }
+      { local_id: restauranteId, ...body, updated_at: new Date().toISOString() },
+      { onConflict: 'local_id' }
     )
     .select()
     .single()

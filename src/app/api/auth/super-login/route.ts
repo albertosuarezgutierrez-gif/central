@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const { data: row } = await supabase
     .from('personal')
-    .select('id, nombre, rol, restaurante_id, password_hash, activo')
+    .select('id, nombre, rol, local_id, password_hash, activo')
     .eq('email', email)
     .eq('rol', 'super_admin')
     .eq('activo', true)
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
       camarero_id: row.id,
       nombre: row.nombre,
       rol: 'super_admin',
-      restaurante_id: row.restaurante_id ?? SUPER_RESTAURANTE_ID,
+      restaurante_id: row.local_id ?? SUPER_RESTAURANTE_ID,
       restaurante_nombre: 'ia.rest',
       seccion_id: null,
       onboarding_completado: true,

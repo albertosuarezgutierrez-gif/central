@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('evento_transporte')
     .select('*, vehiculo:vehiculos_grupo(id, nombre, matricula), conductor:personal(id, nombre)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (evento_id) query = query.eq('evento_id', evento_id)
 
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { data, error } = await supabase
     .from('evento_transporte')
-    .insert({ ...body, restaurante_id: restauranteId })
+    .insert({ ...body, local_id: restauranteId })
     .select()
     .single()
 

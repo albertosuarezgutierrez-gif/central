@@ -123,20 +123,20 @@ async function registrarComisionResumen(
     }
     const { data: portales } = await supabase
       .from('cobros_grupo')
-      .select('id, restaurante_id')
+      .select('id, local_id')
       .in('id', Array.from(porCobro.keys()))
 
-    for (const portal of (portales ?? []) as { id: string; restaurante_id: string }[]) {
+    for (const portal of (portales ?? []) as { id: string; local_id: string }[]) {
       const importe = porCobro.get(portal.id) ?? 0
       if (importe <= 0) continue
       const { data: cfgRow } = await supabase
         .from('cobro_config')
         .select('comision_pct, comision_fija_eur')
-        .eq('restaurante_id', portal.restaurante_id)
+        .eq('local_id', portal.local_id)
         .maybeSingle()
       const { comisionEur } = calcularComision(importe, resolverComisionConfig(cfgRow))
       await supabase.rpc('registrar_pago_cobro', {
-        p_restaurante_id: portal.restaurante_id,
+        p_restaurante_id: portal.local_id,
         p_importe_eur: importe,
         p_comision_eur: comisionEur,
       })

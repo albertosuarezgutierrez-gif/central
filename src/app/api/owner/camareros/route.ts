@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('personal')
     .select('id, nombre, pin, rol, activo, seccion_id, created_at, puede_escanear, puede_comandar, modulos_gestion')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .neq('rol', 'owner').neq('rol', 'super_admin')
     .order('created_at', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -24,10 +24,10 @@ export async function POST(req: NextRequest) {
   if (!nombre || !pin || pin.length !== 4 || !/^\d{4}$/.test(pin))
     return NextResponse.json({ error: 'Nombre y PIN de 4 dígitos requeridos' }, { status: 400 })
   const { data: existing } = await supabase
-    .from('personal').select('id').eq('pin', pin).eq('restaurante_id', rid).single()
+    .from('personal').select('id').eq('pin', pin).eq('local_id', rid).single()
   if (existing) return NextResponse.json({ error: 'PIN ya en uso' }, { status: 409 })
   const { data, error } = await supabase.from('personal')
-    .insert({ nombre, pin, rol: rol || 'camarero', activo: true, restaurante_id: rid, seccion_id: seccion_id || null })
+    .insert({ nombre, pin, rol: rol || 'camarero', activo: true, local_id: rid, seccion_id: seccion_id || null })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ camarero: data })
@@ -42,7 +42,7 @@ export async function PUT(req: NextRequest) {
     if (!/^\d{4}$/.test(pin))
       return NextResponse.json({ error: 'PIN debe tener 4 dígitos' }, { status: 400 })
     const { data: existing } = await supabase
-      .from('personal').select('id').eq('pin', pin).eq('restaurante_id', rid).neq('id', id).single()
+      .from('personal').select('id').eq('pin', pin).eq('local_id', rid).neq('id', id).single()
     if (existing) return NextResponse.json({ error: 'PIN ya en uso' }, { status: 409 })
   }
   const updates: Record<string, unknown> = {}
@@ -55,7 +55,7 @@ export async function PUT(req: NextRequest) {
   if (puede_comandar !== undefined) updates.puede_comandar = puede_comandar
   if (modulos_gestion !== undefined) updates.modulos_gestion = modulos_gestion
   const { data, error } = await supabase.from('personal')
-    .update(updates).eq('id', id).eq('restaurante_id', rid).select().single()
+    .update(updates).eq('id', id).eq('local_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ camarero: data })
 }
@@ -65,7 +65,7 @@ export async function DELETE(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
-  const { error } = await supabase.from('personal').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('personal').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

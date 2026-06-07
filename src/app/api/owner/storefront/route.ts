@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabase
     .from('storefront_config')
     .select('*')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .single()
 
   return NextResponse.json({ config: data ?? null })
@@ -40,9 +40,9 @@ export async function POST(req: NextRequest) {
     const slugLimpio = body.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-')
     const { data: existente } = await supabase
       .from('storefront_config')
-      .select('restaurante_id')
+      .select('local_id')
       .eq('slug', slugLimpio)
-      .neq('restaurante_id', session.restaurante_id)
+      .neq('local_id', session.restaurante_id)
       .single()
 
     if (existente) {
@@ -54,9 +54,9 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('storefront_config')
     .upsert({
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       ...body,
-    }, { onConflict: 'restaurante_id' })
+    }, { onConflict: 'local_id' })
     .select()
     .single()
 

@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   if (!evento_id) return NextResponse.json({ error: 'Falta evento_id' }, { status: 400 })
   const { data, error } = await supabase.from('proveedores_evento_asignaciones')
     .select('*, proveedor:proveedores_evento(nombre, tipo, contacto_telefono, contacto_email, token_portal, portal_activo)')
-    .eq('evento_id', evento_id).eq('restaurante_id', restauranteId).order('created_at')
+    .eq('evento_id', evento_id).eq('local_id', restauranteId).order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   const totalComisiones = (data ?? []).reduce((a, p) => a + (p.comision_importe ?? 0), 0)
   const cobradas = (data ?? []).filter(p => p.estado === 'comision_cobrada').reduce((a, p) => a + (p.comision_importe ?? 0), 0)
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
   const comisionImporte = (body.importe ?? 0) * (comisionPct ?? 0) / 100
   const { data, error } = await supabase.from('proveedores_evento_asignaciones').insert({
-    evento_id: body.evento_id, proveedor_id: body.proveedor_id, restaurante_id: restauranteId,
+    evento_id: body.evento_id, proveedor_id: body.proveedor_id, local_id: restauranteId,
     servicio_descripcion: body.servicio_descripcion, importe: body.importe ?? 0,
     comision_pct: comisionPct, comision_importe: comisionImporte, iva_tipo: ivaTipo,
     hora_llegada: body.hora_llegada ?? null, briefing: body.briefing ?? null, notas: body.notas ?? null,
@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest) {
   const cambio = accion === 'cobrar_comision'
     ? { estado: 'comision_cobrada', comision_cobrada_at: new Date().toISOString(), updated_at: new Date().toISOString() }
     : { ...updates, updated_at: new Date().toISOString() }
-  const { error } = await supabase.from('proveedores_evento_asignaciones').update(cambio).eq('id', id).eq('restaurante_id', restauranteId)
+  const { error } = await supabase.from('proveedores_evento_asignaciones').update(cambio).eq('id', id).eq('local_id', restauranteId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -65,6 +65,6 @@ export async function DELETE(req: NextRequest) {
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
   const { id } = await req.json()
-  await supabase.from('proveedores_evento_asignaciones').delete().eq('id', id).eq('restaurante_id', restauranteId)
+  await supabase.from('proveedores_evento_asignaciones').delete().eq('id', id).eq('local_id', restauranteId)
   return NextResponse.json({ ok: true })
 }

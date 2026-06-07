@@ -53,7 +53,7 @@ serve(async (req) => {
     // 1. Buscar mesa por token
     const { data: mesa, error: mesaErr } = await supabase
       .from('mesas')
-      .select('id, codigo, nombre, restaurante_id, qr_habilitado, qr_modo_pago, qr_precio_fijo_persona, qr_precio_fijo_concepto')
+      .select('id, codigo, nombre, local_id, qr_habilitado, qr_modo_pago, qr_precio_fijo_persona, qr_precio_fijo_concepto')
       .eq('qr_token', token)
       .single()
 
@@ -64,14 +64,14 @@ serve(async (req) => {
     const { data: rest } = await supabase
       .from('restaurantes')
       .select('id, nombre, stripe_connect_account_id, stripe_connect_onboarded, stripe_account_id')
-      .eq('id', mesa.restaurante_id)
+      .eq('id', mesa.local_id)
       .single()
 
     // 2b. Configuración de cobro (modo_cobro + modo_consumo)
     const { data: cobroConfig } = await supabase
       .from('cobro_config')
       .select('modo_cobro, timer_inactividad_min, qr_llamar_camarero, qr_modo_consumo')
-      .eq('restaurante_id', mesa.restaurante_id)
+      .eq('local_id', mesa.local_id)
       .single()
 
     const modoConsumo = cobroConfig?.qr_modo_consumo || 'mesa_unica'
@@ -100,7 +100,7 @@ serve(async (req) => {
     const { data: productos } = await supabase
       .from('productos')
       .select('id, nombre, descripcion, precio, imagen_url, categoria, alergenos, activo')
-      .eq('restaurante_id', mesa.restaurante_id)
+      .eq('local_id', mesa.local_id)
       .eq('activo', true)
       .order('categoria')
       .order('nombre')
@@ -181,7 +181,7 @@ serve(async (req) => {
     const { data: nuevaSesion } = await supabase
       .from('qr_sesiones_cliente')
       .insert({
-        restaurante_id: mesa.restaurante_id,
+        local_id: mesa.local_id,
         mesa_id: mesa.id,
         num_comensales: tipo === 'individual' ? 1 : num_comensales,
         precio_fijo_aplicado,

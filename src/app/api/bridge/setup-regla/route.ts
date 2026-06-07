@@ -24,7 +24,7 @@ export async function POST(req: Request) {
 
     const { data: bt, error: btErr } = await supabase
       .from('bridge_tokens')
-      .select('restaurante_id, activo')
+      .select('local_id, activo')
       .eq('token', token)
       .eq('activo', true)
       .single()
@@ -33,7 +33,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Token no válido' }, { status: 401 })
     }
 
-    const rid = bt.restaurante_id
+    const rid = bt.local_id
     const tiposTicket: string[] = Array.isArray(tipos_ticket) && tipos_ticket.length > 0
       ? tipos_ticket : ['comanda', 'cuenta']
     const seccionIds: string[] = Array.isArray(seccion_ids) ? seccion_ids : []
@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const { data: existente } = await supabase
       .from('reglas_envio')
       .select('id')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('destino_tipo', 'impresora')
       .eq('destino_ref', impresora_id)
       .maybeSingle()
@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     const { data: nueva, error: insErr } = await supabase
       .from('reglas_envio')
       .insert({
-        restaurante_id:      rid,
+        local_id:      rid,
         destino_tipo:        'impresora',
         destino_ref:         impresora_id,
         seccion_ids:         seccionIds,

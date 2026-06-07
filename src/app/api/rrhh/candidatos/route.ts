@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('v_candidatos_con_analisis')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_subida', { ascending: false })
 
   if (estado) q = q.eq('estado', estado)
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   // 1. Crear candidato
   const { data: candidato, error: errCand } = await supabase
     .from('candidatos')
-    .insert({ restaurante_id: rid, nombre, email, telefono, rol_solicitado, cv_texto })
+    .insert({ local_id: rid, nombre, email, telefono, rol_solicitado, cv_texto })
     .select('id')
     .single()
 
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
     .from('cv_analisis')
     .insert({
       candidato_id:     candidato.id,
-      restaurante_id:   rid,
+      local_id:   rid,
       score:            Number(analisis.score) || null,
       experiencia_anos: Number(analisis.experiencia_anos) || 0,
       idiomas:          analisis.idiomas ?? [],

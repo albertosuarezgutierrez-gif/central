@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     supabase
       .from('ordenes_pago_proveedor')
       .select('*, proveedores(iban, bic, nombre)')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('estado', 'aprobado')
       .in('id', orden_ids),
     supabase

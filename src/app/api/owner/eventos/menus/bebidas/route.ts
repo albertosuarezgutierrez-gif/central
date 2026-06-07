@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     .from('menu_bebidas_evento')
     .select('*, botellas:menu_bebidas_botellas(*)')
     .eq('menu_id', menuId)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('orden')
 
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .from('menu_bebidas_evento')
     .upsert({
       ...bebidaData,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
     })
     .select()
     .single()
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         botellas.map((b: Record<string, unknown>, i: number) => ({
           ...b,
           bebida_evento_id: bebida.id,
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           orden: i,
         }))
       )
@@ -85,7 +85,7 @@ export async function DELETE(req: NextRequest) {
     .from('menu_bebidas_evento')
     .update({ activo: false })
     .eq('id', bebidaId)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

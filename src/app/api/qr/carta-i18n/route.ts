@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     // Validar token QR
     const { data: sesion, error: sesErr } = await supabase
       .from('qr_sesiones_cliente')
-      .select('restaurante_id, estado')
+      .select('local_id, estado')
       .eq('token', token)
       .single()
 
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       const { data: productos, error: prodErr } = await supabase
         .from('productos')
         .select('id, nombre, descripcion, precio, seccion, categoria, alergenos')
-        .eq('restaurante_id', sesion.restaurante_id)
+        .eq('local_id', sesion.local_id)
         .eq('activo', true)
         .order('seccion')
         .order('nombre')
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
     // Otros idiomas: usar RPC con fallback español
     const { data: productos, error: rpcErr } = await supabase
       .rpc('get_carta_i18n', {
-        p_restaurante_id: sesion.restaurante_id,
+        p_restaurante_id: sesion.local_id,
         p_idioma: idioma,
       })
 

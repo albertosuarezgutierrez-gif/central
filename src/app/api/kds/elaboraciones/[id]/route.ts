@@ -33,7 +33,7 @@ export async function PATCH(
       .from('elaboraciones_propias')
       .select('etiqueta_impresa_veces')
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     updates.etiqueta_impresa_at = new Date().toISOString()
@@ -44,7 +44,7 @@ export async function PATCH(
     .from('elaboraciones_propias')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select()
     .single()
 
@@ -57,7 +57,7 @@ export async function PATCH(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify({ restaurante_id: rid }) },
       body: JSON.stringify({
-        restaurante_id: rid,
+        local_id: rid,
         roles: ['cocina', 'jefe_sala'],
         title: '✅ Elaboración consumida',
         body: `${data.nombre} (lote ${data.lote}) marcada como consumida.`,

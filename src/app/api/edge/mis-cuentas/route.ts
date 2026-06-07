@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       camarero:camareros(id, nombre),
       items:comanda_items(id, nombre, cantidad, precio_unitario, notas, estado)
     `)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .eq('camarero_id', session.id)
     .not('estado', 'in', '(cerrada,cancelada)')
     .order('created_at', { ascending: false })

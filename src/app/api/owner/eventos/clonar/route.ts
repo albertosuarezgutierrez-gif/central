@@ -16,9 +16,9 @@ export async function POST(req: NextRequest) {
   // Verificar que el evento pertenece al restaurante
   const { data: original } = await supabase
     .from('eventos')
-    .select('id, restaurante_id')
+    .select('id, local_id')
     .eq('id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (!original) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })

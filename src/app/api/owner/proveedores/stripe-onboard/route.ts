@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     .from('proveedores')
     .select('id, nombre, email, stripe_account_id, stripe_onboarded')
     .eq('id', proveedor_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!prov) return NextResponse.json({ error: 'Proveedor no encontrado' }, { status: 404 })
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         email: prov.email ?? undefined,
         capabilities: { transfers: { requested: true } },
         business_type: 'company',
-        metadata: { proveedor_id, restaurante_id: rid, proveedor_nombre: prov.nombre },
+        metadata: { proveedor_id, local_id: rid, proveedor_nombre: prov.nombre },
       })
       accountId = account.id
       await supabase.from('proveedores').update({ stripe_account_id: accountId }).eq('id', proveedor_id)
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       .from('ordenes_pago_proveedor')
       .select('id, importe, concepto, estado')
       .eq('id', orden_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     if (!orden) return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 })
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       currency: 'eur',
       destination: prov.stripe_account_id,
       description: orden.concepto,
-      metadata: { orden_id, proveedor_id, restaurante_id: rid },
+      metadata: { orden_id, proveedor_id, local_id: rid },
     })
 
     await supabase.from('ordenes_pago_proveedor').update({

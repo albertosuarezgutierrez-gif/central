@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
   // Obtener restaurante_id del ticket
   const { data: ticket } = await sb()
     .from('soporte_tickets')
-    .select('restaurante_id')
+    .select('local_id')
     .eq('id', ticket_id)
     .single()
 
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   // Insertar respuesta de Alberto
   const { error } = await sb().from('soporte_mensajes').insert({
     ticket_id,
-    restaurante_id: ticket.restaurante_id,
+    local_id: ticket.local_id,
     rol: 'alberto',
     texto: texto.trim(),
   })

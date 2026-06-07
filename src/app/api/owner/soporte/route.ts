@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
       .from('soporte_mensajes')
       .select('id, rol, texto, created_at')
       .eq('ticket_id', ticketId)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .order('created_at', { ascending: true })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ mensajes: data ?? [] })
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await sb()
     .from('soporte_tickets')
     .select('id, asunto, estado, created_at, updated_at')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('updated_at', { ascending: false })
     .limit(20)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     const asunto = texto.length > 80 ? texto.slice(0, 77) + '…' : texto
     const { data: nuevoTicket, error: errTicket } = await sb()
       .from('soporte_tickets')
-      .insert({ restaurante_id: rid, asunto })
+      .insert({ local_id: rid, asunto })
       .select('id')
       .single()
     if (errTicket) return NextResponse.json({ error: errTicket.message }, { status: 500 })
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   // 2. Guardar mensaje del usuario
   await sb().from('soporte_mensajes').insert({
     ticket_id: ticketId,
-    restaurante_id: rid,
+    local_id: rid,
     rol: 'usuario',
     texto: texto.trim(),
   })
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
   // 7. Guardar respuesta de la IA
   await sb().from('soporte_mensajes').insert({
     ticket_id: ticketId,
-    restaurante_id: rid,
+    local_id: rid,
     rol: 'ia',
     texto: respuestaIA,
   })
@@ -181,7 +181,7 @@ export async function PATCH(req: NextRequest) {
     .from('soporte_tickets')
     .update({ estado, resuelto_por: estado === 'resuelto' ? 'usuario' : undefined })
     .eq('id', ticket_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

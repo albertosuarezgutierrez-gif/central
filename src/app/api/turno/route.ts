@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     .from('turnos')
     .select('*')
     .eq('estado', 'activo')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .is('camarero_id', null)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
       .from('turnos')
       .select('*')
       .eq('estado', 'activo')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('camarero_id', session.id)
       .order('created_at', { ascending: false })
       .limit(1)
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     .from('turnos')
     .select('id, nombre, created_at')
     .eq('estado', 'activo')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .is('camarero_id', null)
     .maybeSingle()
 
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
       .from('comandas')
       .select('id, items:comanda_items(precio_unitario, cantidad)')
       .eq('turno_id', turnoActivo.id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('estado', 'cerrada')
     if (stats) {
       numComandas = stats.length
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
     .from('turnos')
     .update({ estado: 'cerrado' })
     .eq('estado', 'activo')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   // Notificación Telegram cierre de caja
   if (turnoActivo && (totalVentas > 0 || numComandas > 0)) {
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     .from('turnos')
     .insert({
       nombre: nombre || `Turno ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`,
-      restaurante_id: rid,
+      local_id: rid,
     })
     .select()
     .single()
@@ -125,7 +125,7 @@ export async function POST(req: NextRequest) {
   const { data: mesas } = await supabase
     .from('mesas')
     .select('id')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('qr_habilitado', true)
 
   if (mesas?.length) {

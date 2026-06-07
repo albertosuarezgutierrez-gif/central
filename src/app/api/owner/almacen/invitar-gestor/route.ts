@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   // Vincular restaurante
   await supabase.from('contable_clientes').upsert({
     contable_id:    contable.id,
-    restaurante_id: rid,
+    local_id: rid,
     permisos:       ['ver_stock', 'ver_pedidos', 'crear_pedido'],
     modulos:        modulosFinales,
     activo:         true,

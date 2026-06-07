@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
     const { data: turnos } = await supabase
       .from('turnos')
       .select('camarero_id, personal(nombre)')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .eq('estado', 'activo')
       .not('camarero_id', 'is', null)
     const personal = (turnos ?? []).filter(t => t.camarero_id)

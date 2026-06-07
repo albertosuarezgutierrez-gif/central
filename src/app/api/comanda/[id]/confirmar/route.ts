@@ -27,9 +27,9 @@ export async function PATCH(
     // ── 1. Leer comanda ───────────────────────────────────────────────────
     const { data: comanda, error: fetchErr } = await supabase
       .from('comandas')
-      .select('id, camarero_id, estado, tipo, mesa_id, nombre_cuenta, nota_general, numero_ticket, created_at, restaurante_id')
+      .select('id, camarero_id, estado, tipo, mesa_id, nombre_cuenta, nota_general, numero_ticket, created_at, local_id')
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle()
 
     if (fetchErr || !comanda) {
@@ -71,7 +71,7 @@ export async function PATCH(
         .from('mesas')
         .select('codigo, zona, zonas(nombre)')
         .eq('id', comanda.mesa_id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
         .single()
 
       if (mesa) {
@@ -87,7 +87,7 @@ export async function PATCH(
         .from('comanda_items')
         .select('nombre, cantidad, precio_unitario')
         .eq('comanda_id', id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
 
       const { data: restData } = await supabase
         .from('restaurantes')
@@ -103,7 +103,7 @@ export async function PATCH(
 
       await crearPrintJobCuenta({
         comanda_id:            id,
-        restaurante_id:        rid,
+        local_id:        rid,
         mesa_label:            mesaCodigo ?? '—',
         zona_tipo:             zonaTipo,
         zona_nombre:           zonaNombre,
@@ -122,7 +122,7 @@ export async function PATCH(
         .from('comanda_items')
         .select('nombre, cantidad, notas, seccion_id')
         .eq('comanda_id', id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
 
       if ((items ?? []).length > 0) {
         const mesaLabel = mesaCodigo
@@ -138,7 +138,7 @@ export async function PATCH(
             mesa_codigo:     mesaLabel,
             camarero_nombre: camareroNombre,
             numero_ticket:   comanda.numero_ticket ?? undefined,
-            restaurante_id:  rid,
+            local_id:  rid,
             zona_tipo:       zonaTipo,
             zona_nombre:     zonaNombre,
             nota_general:    comanda.nota_general ?? null,
@@ -158,7 +158,7 @@ export async function PATCH(
       .from('comandas')
       .update({ estado: 'en_cocina' })
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
 
     // ── 6. Actualizar estado mesa ─────────────────────────────────────────
     if (comanda.mesa_id) {
@@ -176,7 +176,7 @@ export async function PATCH(
           camarero_id:    comanda.camarero_id,
         })
         .eq('id', comanda.mesa_id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
     }
 
     return NextResponse.json({ ok: true })

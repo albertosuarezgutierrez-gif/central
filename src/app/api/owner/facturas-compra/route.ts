@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('facturas_compra')
     .select('*, ordenes_pago_proveedor(estado, importe, fecha_vencimiento, metodo)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
       .from('ordenes_pago_proveedor')
       .select('importe')
       .eq('id', orden_pago_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     if (orden) {
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('facturas_compra')
     .insert({
-      restaurante_id: rid, recepcion_id: recepcion_id ?? null,
+      local_id: rid, recepcion_id: recepcion_id ?? null,
       orden_pago_id: orden_pago_id ?? null, proveedor_nombre,
       numero_factura: numero_factura ?? null, fecha_factura: fecha_factura ?? null,
       importe_total: Number(importe_total), importe_base: importe_base ?? null,

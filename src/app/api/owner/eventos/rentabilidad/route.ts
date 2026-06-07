@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('v_rentabilidad_eventos')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('fecha_evento', { ascending: false })
 
   if (desde) query = query.gte('fecha_evento', desde)

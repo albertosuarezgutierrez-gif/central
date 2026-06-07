@@ -37,13 +37,13 @@ serve(async (req) => {
     // 1. Datos de la sesión + mesa + zona
     const { data: sesion } = await sb
       .from('qr_sesiones_cliente')
-      .select('restaurante_id, mesa_id, mesas(codigo, nombre, zona_id, zonas(nombre, prefijo))')
+      .select('local_id, mesa_id, mesas(codigo, nombre, zona_id, zonas(nombre, prefijo))')
       .eq('id', sesion_id)
       .single()
 
     if (!sesion) return err('Sesión no válida')
 
-    const { restaurante_id, mesa_id } = sesion
+    const { local_id, mesa_id } = sesion
     const mesa = sesion.mesas as any
     const zona_id = mesa?.zona_id
 
@@ -57,7 +57,7 @@ serve(async (req) => {
       const { data: camareroZona } = await sb
         .from('personal')
         .select('id')
-        .eq('restaurante_id', restaurante_id)
+        .eq('local_id', local_id)
         .eq('rol', 'camarero')
         .eq('zona_id', zona_id)     // columna zona_id en camareros (si existe)
         .limit(1)
@@ -71,7 +71,7 @@ serve(async (req) => {
       const { data: camareros } = await sb
         .from('personal')
         .select('id')
-        .eq('restaurante_id', restaurante_id)
+        .eq('local_id', local_id)
         .eq('rol', 'camarero')
 
       for (const c of camareros || []) destinatarios.push(c.id)
@@ -81,7 +81,7 @@ serve(async (req) => {
     const { data: jefes } = await sb
       .from('personal')
       .select('id')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', local_id)
       .eq('rol', 'jefe_sala')
 
     for (const j of jefes || []) {
@@ -104,7 +104,7 @@ serve(async (req) => {
 
     // 6. Log del aviso
     await sb.from('alerta_log').insert({
-      restaurante_id,
+      local_id,
       tipo: 'qr_llamada',
       descripcion: `${titulo} — ${cuerpo}`,
       mesa_id,

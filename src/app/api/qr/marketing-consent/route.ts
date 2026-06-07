@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     // Validar sesión QR activa → obtener restaurante.
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, restaurante_id, estado')
+      .select('id, local_id, estado')
       .eq('id', sesion_id)
       .eq('estado', 'activa')
       .maybeSingle()
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const { data: existente } = await supabase
       .from('marketing_consentimientos')
       .select('id')
-      .eq('restaurante_id', sesion.restaurante_id)
+      .eq('local_id', sesion.local_id)
       .eq('telefono', tel)
       .maybeSingle()
 
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         .eq('id', existente.id)
     } else {
       await supabase.from('marketing_consentimientos').insert({
-        restaurante_id: sesion.restaurante_id,
+        local_id: sesion.local_id,
         telefono: tel,
         consiente_bar: !!consiente_bar,
         consiente_iarest: !!consiente_iarest,

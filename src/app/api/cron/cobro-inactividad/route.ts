@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
       const { data: camareros } = await supabase
         .from('personal')
         .select('id, nombre')
-        .eq('restaurante_id', s.restaurante_id)
+        .eq('local_id', s.restaurante_id)
         .in('rol', ['camarero', 'jefe_sala'])
         .eq('activo', true)
 

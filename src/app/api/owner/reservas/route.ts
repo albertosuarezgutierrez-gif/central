@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       notas, estado, canal, created_at, thefork_id,
       mesa_id, mesas(id, codigo, nombre)
     `)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('fecha_reserva', fecha)
     .not('estado', 'in', '("cancelada","no_show")')
     .order('hora_reserva', { ascending: true })
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   const { data: mesas } = await supabase
     .from('mesas')
     .select('id, codigo, nombre, zona, capacidad')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('codigo')
 
   return NextResponse.json({ reservas: data || [], mesas: mesas || [] })
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('reservas')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       nombre_cliente: nombre_cliente.trim(),
       telefono:       telefono?.trim() || null,
       num_personas,
@@ -104,7 +104,7 @@ export async function PATCH(req: NextRequest) {
   // Verificar que pertenece al restaurante
   const { data: existing } = await supabase
     .from('reservas').select('id')
-    .eq('id', id).eq('restaurante_id', rid).single()
+    .eq('id', id).eq('local_id', rid).single()
   if (!existing) return err('Reserva no encontrada', 404)
 
   const allowed = ['nombre_cliente', 'telefono', 'num_personas', 'fecha_reserva',
@@ -136,7 +136,7 @@ export async function DELETE(req: NextRequest) {
     .from('reservas')
     .update({ estado: 'cancelada' })
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return err(error.message, 500)
   return NextResponse.json({ ok: true })

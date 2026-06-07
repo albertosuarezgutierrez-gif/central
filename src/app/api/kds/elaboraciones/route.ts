@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('v_elaboraciones_activas')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_caducidad', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const { data: elab, error } = await supabase
     .from('elaboraciones_propias')
     .insert({
-      restaurante_id:       rid,
+      local_id:       rid,
       nombre:               nombre.trim(),
       lote,
       producto_id:          producto_id ?? null,
@@ -94,7 +94,7 @@ export async function POST(req: NextRequest) {
       .from('stock_articulos')
       .select('stock_actual')
       .eq('id', stock_articulo_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     if (sa) {
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         .eq('id', stock_articulo_id)
 
       await supabase.from('stock_movimientos').insert({
-        restaurante_id:   rid,
+        local_id:   rid,
         stock_articulo_id,
         tipo:             'consumo_produccion',
         cantidad:         -Number(cantidad),
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify({ restaurante_id: rid }) },
     body: JSON.stringify({
-      restaurante_id: rid,
+      local_id: rid,
       roles: ['jefe_sala', 'owner'],
       title: '🏷️ Nueva elaboración',
       body: `${nombre} — lote ${lote}. Caduca en ${diasLabel}.`,

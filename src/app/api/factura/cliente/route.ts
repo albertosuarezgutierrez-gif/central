@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     .from('facturas_cliente')
     .select('*')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .maybeSingle()
 
   return NextResponse.json({ factura: data ?? null })
@@ -77,9 +77,9 @@ export async function POST(req: NextRequest) {
   // ── 1. Verificar comanda cerrada ────────────────────────
   const { data: comanda } = await supabase
     .from('comandas')
-    .select('id, estado, restaurante_id')
+    .select('id, estado, local_id')
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     .from('comanda_items')
     .select('id, nombre, cantidad, precio_unitario')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (errItems || !items?.length) {
     return NextResponse.json({ error: 'Comanda sin items' }, { status: 422 })
@@ -146,17 +146,17 @@ export async function POST(req: NextRequest) {
   await supabase
     .from('clientes_fiscales')
     .upsert({
-      restaurante_id,
+      local_id: restaurante_id,
       nif: nifClean,
       razon_social: cliente.razon_social.trim(),
       direccion: cliente.direccion?.trim() ?? null,
       email: cliente.email?.trim() ?? null,
-    }, { onConflict: 'restaurante_id,nif' })
+    }, { onConflict: 'local_id,nif' })
 
   const { data: clienteGuardado } = await supabase
     .from('clientes_fiscales')
     .select('id')
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .eq('nif', nifClean)
     .single()
 
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
   const { data: factura, error: errInsert } = await supabase
     .from('facturas_cliente')
     .insert({
-      restaurante_id,
+      local_id: restaurante_id,
       comanda_id,
       cliente_fiscal_id: clienteGuardado?.id ?? null,
       factura_verifactu_id: factVeri?.id ?? null,
@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
   try {
     await supabase.from('comanda_audit_log').insert({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       camarero_id: session.id,
       accion: 'factura_cliente_emitida',
       detalle: JSON.stringify({

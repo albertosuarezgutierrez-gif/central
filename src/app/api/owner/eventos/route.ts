@@ -42,10 +42,10 @@ export async function GET(req: NextRequest) {
     if (rest?.cuenta_id) {
       query = query.eq('cuenta_id', rest.cuenta_id)
     } else {
-      query = query.eq('restaurante_id', restauranteId)
+      query = query.eq('local_id', restauranteId)
     }
   } else {
-    query = query.eq('restaurante_id', restauranteId)
+    query = query.eq('local_id', restauranteId)
   }
 
   if (estado) query = query.eq('estado', estado)
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   const { data: evento, error } = await supabase
     .from('eventos')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       cuenta_id: rest?.cuenta_id,
       tipo: tipo || 'otro',
       cliente_nombre, cliente_telefono, cliente_email, cliente_fiscal_id,
@@ -123,9 +123,9 @@ export async function POST(req: NextRequest) {
   // Crear locales itinerantes si aplica
   if (es_itinerante && locales_itinerante?.length) {
     await supabase.from('evento_locales').insert(
-      locales_itinerante.map((l: { restaurante_id: string; orden: number; hora_inicio?: string; hora_fin?: string; descripcion?: string }) => ({
+      locales_itinerante.map((l: { local_id: string; orden: number; hora_inicio?: string; hora_fin?: string; descripcion?: string }) => ({
         evento_id: evento.id,
-        restaurante_id: l.restaurante_id,
+        local_id: l.local_id,
         orden: l.orden,
         hora_inicio: l.hora_inicio,
         hora_fin: l.hora_fin,
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('evento_pases').insert(
       pases.map((p: { numero_pase: number; nombre: string; hora_prevista?: string; comensales?: number }) => ({
         evento_id: evento.id,
-        restaurante_id: restauranteId,
+        local_id: restauranteId,
         numero_pase: p.numero_pase,
         nombre: p.nombre,
         hora_prevista: p.hora_prevista,
@@ -174,7 +174,7 @@ export async function PUT(req: NextRequest) {
     .from('eventos')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select()
     .single()
 
@@ -196,7 +196,7 @@ export async function DELETE(req: NextRequest) {
     .from('eventos')
     .update({ estado: 'cancelado' })
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

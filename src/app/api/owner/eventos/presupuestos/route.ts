@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       comercial:personal!comercial_id(id, nombre),
       evento:eventos(id, cliente_nombre, fecha_evento, tipo)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (evento_id) query = query.eq('evento_id', evento_id)
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const { data: config } = await supabase
     .from('config_eventos')
     .select('descuento_requiere_aprobacion_desde, modelo_comision, rentabilidad_minima_pct')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   const desc = body.descuento_aplicado_pct || 0
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     .from('presupuestos_evento')
     .upsert({
       ...body,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       margen_real_pct: Math.round(margen_real_pct * 100) / 100,
       rentable: margen_real_pct >= (config?.rentabilidad_minima_pct || 25),
       updated_at: new Date().toISOString()
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (body.estado === 'aceptado' && body.evento_id) {
     const { data: ev } = await supabase.from('eventos').select('tipo, fecha_evento').eq('id', body.evento_id).single()
     await supabase.from('evento_historico_precios').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo_evento: ev?.tipo,
       adultos: body.adultos,
       precio_adulto_final: body.precio_adulto,

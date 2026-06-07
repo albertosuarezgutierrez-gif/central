@@ -14,7 +14,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .from('evento_informe_ia')
     .select('*')
     .eq('evento_id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('generado_at', { ascending: false })
     .limit(1)
     .maybeSingle()

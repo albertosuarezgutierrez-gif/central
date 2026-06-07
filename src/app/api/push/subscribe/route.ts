@@ -23,6 +23,6 @@ export async function DELETE(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { camarero_id } = await req.json()
   if (!camarero_id) return NextResponse.json({ error: 'Falta camarero_id' }, { status: 400 })
-  await supabase.from('push_subscriptions').delete().eq('camarero_id', camarero_id).eq('restaurante_id', rid)
+  await supabase.from('push_subscriptions').delete().eq('camarero_id', camarero_id).eq('local_id', rid)
   return NextResponse.json({ ok: true })
 }

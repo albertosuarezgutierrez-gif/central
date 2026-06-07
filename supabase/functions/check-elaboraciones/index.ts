@@ -30,7 +30,7 @@ serve(async (req) => {
 
     const { data: elaboraciones } = await supabase
       .from('elaboraciones_propias')
-      .select('id, restaurante_id, nombre, lote, fecha_caducidad, alerta_24h_enviada, alerta_hoy_enviada, elaborado_por_nombre')
+      .select('id, local_id, nombre, lote, fecha_caducidad, alerta_24h_enviada, alerta_hoy_enviada, elaborado_por_nombre')
       .eq('estado', 'activa')
       .lte('fecha_caducidad', en24h) // caduca en las próximas 24h
 
@@ -51,7 +51,7 @@ serve(async (req) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            restaurante_id: elab.restaurante_id,
+            restaurante_id: elab.local_id,
             roles: ['camarero', 'jefe_sala', 'cocina'],
             title: '⚠️ Caduca pronto',
             body: `${elab.nombre} caduca en ${tiempoLabel}. ¡Recomiéndalo ahora!`,
@@ -78,7 +78,7 @@ serve(async (req) => {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            restaurante_id: elab.restaurante_id,
+            restaurante_id: elab.local_id,
             roles: ['jefe_sala', 'cocina', 'owner'],
             title: '🏷️ Caduca mañana',
             body: `${elab.nombre} (lote ${elab.lote}) caduca el ${fechaLabel}. Planifica la venta.`,

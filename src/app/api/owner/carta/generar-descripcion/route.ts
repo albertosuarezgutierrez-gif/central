@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const { data: prod, error } = await supabase
     .from('productos').select('nombre, precio, categoria, alergenos')
-    .eq('id', producto_id).eq('restaurante_id', restauranteId).single()
+    .eq('id', producto_id).eq('local_id', restauranteId).single()
 
   if (error || !prod) return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 })
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   await supabase.from('productos').update({
     descripcion_storefront: descripcion.trim(),
     descripcion_nim_at: new Date().toISOString(),
-  }).eq('id', producto_id).eq('restaurante_id', restauranteId)
+  }).eq('id', producto_id).eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true, descripcion: descripcion.trim() })
 }
@@ -49,7 +49,7 @@ export async function DELETE(req: NextRequest) {
   const supabase = createServerClient()
   await supabase.from('productos')
     .update({ descripcion_storefront: null, descripcion_nim_at: null })
-    .eq('id', producto_id).eq('restaurante_id', restauranteId)
+    .eq('id', producto_id).eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true })
 }

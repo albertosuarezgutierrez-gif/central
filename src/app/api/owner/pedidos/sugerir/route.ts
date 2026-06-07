@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const { data: stockArticulos } = await supabase
     .from('stock_articulos')
     .select('id, nombre, stock_actual, stock_minimo, cantidad_pedido, unidad_compra, coste_unitario, proveedor_id, proveedor_nombre')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .order('nombre')
 
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
       menu_evento_id,
       menus_evento(nombre, precio_por_persona)
     `)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .in('estado', ['confirmado', 'en_curso'])
     .gte('fecha_evento', new Date().toISOString().slice(0, 10))
     .lte('fecha_evento', fechaLimite)
@@ -93,7 +93,7 @@ export async function GET(req: NextRequest) {
   const { data: eventosEntorno } = await supabase
     .from('eventos_entorno')
     .select('nombre, fecha_inicio, impacto_estimado_pct, categoria')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha_inicio', new Date().toISOString().slice(0, 10))
     .lte('fecha_inicio', en14d)
     .order('fecha_inicio')
@@ -104,7 +104,7 @@ export async function GET(req: NextRequest) {
   const { data: movimientos } = await supabase
     .from('stock_movimientos')
     .select('stock_articulo_id, cantidad')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('tipo', 'salida')
     .gte('created_at', hace30)
 

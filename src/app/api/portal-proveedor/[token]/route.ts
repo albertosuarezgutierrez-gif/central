@@ -6,7 +6,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   const { token } = await params
   const supabase = createServerClient()
   const { data: proveedor, error } = await supabase.from('proveedores_evento')
-    .select('id, nombre, tipo, contacto_nombre, restaurante_id')
+    .select('id, nombre, tipo, contacto_nombre, local_id')
     .eq('token_portal', token).eq('portal_activo', true).single()
   if (error || !proveedor) return NextResponse.json({ error: 'Enlace no válido' }, { status: 404 })
   const hace60 = new Date(); hace60.setDate(hace60.getDate() - 60)

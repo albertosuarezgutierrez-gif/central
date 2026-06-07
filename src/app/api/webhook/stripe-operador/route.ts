@@ -181,7 +181,7 @@ export async function POST(req: NextRequest) {
         ]
 
         await sb.from('asientos_contables').insert({
-          restaurante_id: restaurante.id,
+          local_id: restaurante.id,
           num_asiento: numAsiento,
           fecha: fechaAsientoStr,
           concepto: `Suscripción ia.rest — ${mesAno}`,

@@ -41,7 +41,7 @@ serve(async (req) => {
       const { data: items } = await sb
         .from('comanda_items')
         .select('id, cantidad, precio_unitario, notas, productos(nombre, emoji)')
-        .eq('comandas.restaurante_id', sesion.restaurante_id)
+        .eq('comandas.local_id', sesion.local_id)
         .eq('comandas.mesa_id', sesion.mesa_id)
         .eq('comandas.origen', 'qr_cliente')
       return items || []
@@ -100,7 +100,7 @@ serve(async (req) => {
       const personaNum = (slotsExistentes?.length || 0) + 1
 
       const { data: slot } = await sb.from('qr_division_slots').insert({
-        sesion_id, restaurante_id: (await getSesion()).restaurante_id,
+        sesion_id, local_id: (await getSesion()).local_id,
         persona_num: personaNum, modo: 'por_items',
         item_ids, importe: total + propina, propina_amt: propina
       }).select('id').single()
@@ -134,7 +134,7 @@ serve(async (req) => {
         const personaNum = (slotsExistentes?.length || 0) + 1
 
         const { data: nuevoSlot } = await sb.from('qr_division_slots').insert({
-          sesion_id, restaurante_id: sesion.restaurante_id,
+          sesion_id, local_id: sesion.local_id,
           persona_num: personaNum, modo: 'igual',
           importe, propina_amt: propina
         }).select('id').single()
@@ -159,7 +159,7 @@ serve(async (req) => {
         }],
         success_url: success_url || `${Deno.env.get('NEXT_PUBLIC_APP_URL')}/q/success?slot=${slotDbId}`,
         cancel_url: cancel_url || `${Deno.env.get('NEXT_PUBLIC_APP_URL')}/q/split?sesion=${sesion_id}`,
-        metadata: { sesion_id, slot_id: slotDbId, restaurante_id: sesion.restaurante_id },
+        metadata: { sesion_id, slot_id: slotDbId, restaurante_id: sesion.local_id },
         payment_intent_data: {
           application_fee_amount: appFee,
           transfer_data: { destination: sesion.restaurantes.stripe_connect_account_id },

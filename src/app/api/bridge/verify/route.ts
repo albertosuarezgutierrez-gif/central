@@ -17,7 +17,7 @@ export async function POST(req: Request) {
 
     const { data: bt, error } = await supabase
       .from('bridge_tokens')
-      .select('id, restaurante_id, activo, ultimo_ping, restaurantes(nombre)')
+      .select('id, local_id, activo, ultimo_ping, restaurantes(nombre)')
       .eq('token', token)
       .eq('activo', true)
       .single()
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      restaurante_id: bt.restaurante_id,
+      local_id: bt.local_id,
       nombre: restaurante?.nombre || 'Mi restaurante',
     })
   } catch {

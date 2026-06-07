@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     .from('recomendaciones_carta')
     .select(`id, producto_id, nota, hora_desde, hora_hasta, cantidad_max, cantidad_servida, fecha, activa, created_at,
              productos(nombre, precio, categoria)`)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .gte('fecha', hace7)
     .order('fecha', { ascending: false })
     .order('created_at', { ascending: false })
@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await db
     .from('recomendaciones_carta')
     .insert({
-      restaurante_id,
+      local_id: restaurante_id,
       producto_id,
       nota:        nota?.trim()             || null,
       hora_desde:  hora_desde               || null,
@@ -81,7 +81,7 @@ export async function PATCH(req: NextRequest) {
       .from('recomendaciones_carta')
       .select('cantidad_servida')
       .eq('id', id)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .single()
     if (re || !rec) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
     await db.from('recomendaciones_carta').update({ cantidad_servida: (rec.cantidad_servida ?? 0) + 1 }).eq('id', id)
@@ -104,7 +104,7 @@ export async function PATCH(req: NextRequest) {
     .from('recomendaciones_carta')
     .update(patch)
     .eq('id', id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
@@ -128,7 +128,7 @@ export async function DELETE(req: NextRequest) {
     .from('recomendaciones_carta')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, mesa_id, restaurante_id')
+      .select('id, mesa_id, local_id')
       .eq('id', sesionId)
       .maybeSingle()
     if (!sesion) return NextResponse.json({ error: 'Sesión no válida' }, { status: 403 })
@@ -36,10 +36,10 @@ export async function GET(req: NextRequest) {
     if (ids.length) {
       const { data } = await supabase
         .from('comandas')
-        .select('id, estado, numero_ticket, mesa_id, restaurante_id')
+        .select('id, estado, numero_ticket, mesa_id, local_id')
         .in('id', ids)
         .eq('mesa_id', sesion.mesa_id)
-        .eq('restaurante_id', sesion.restaurante_id)
+        .eq('local_id', sesion.local_id)
       pedidos = (data || []).map(c => ({
         comanda_id: c.id,
         estado: c.estado,

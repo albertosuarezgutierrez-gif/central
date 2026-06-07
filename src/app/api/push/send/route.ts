@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { title, body, mesa, camarero_ids, camarero_id, roles, restaurante_id: ridOverride, data } = await req.json()
 
-  // Resolver restaurante_id: header tiene prioridad, pero crons pueden pasarlo en el body
+  // Resolver local_id: header tiene prioridad, pero crons pueden pasarlo en el body
   const restauranteId = rid !== '00000000-0000-0000-0000-000000000001' ? rid : (ridOverride ?? rid)
 
   // Aceptar tanto camarero_id (singular, desde KDS) como camarero_ids (plural)
@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     const { data: cams } = await supabase
       .from('personal')
       .select('id')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .in('rol', roles)
       .eq('activo', true)
     rolesIds = (cams ?? []).map((c: { id: string }) => c.id)
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const finalIds = ids.length > 0 ? ids : rolesIds
 
   // Filtrar suscripciones por restaurante (multi-tenant) + ids si se pasan
-  let query = supabase.from('push_subscriptions').select('*').eq('restaurante_id', restauranteId)
+  let query = supabase.from('push_subscriptions').select('*').eq('local_id', restauranteId)
   if (finalIds.length) query = query.in('camarero_id', finalIds)
   const { data: subs, error } = await query
 

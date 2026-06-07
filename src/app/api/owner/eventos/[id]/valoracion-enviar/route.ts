@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .from('eventos')
     .select('cliente_nombre, cliente_email')
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (!evento?.cliente_email)
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   } else {
     const { data: nueva } = await supabase
       .from('evento_valoracion')
-      .insert({ restaurante_id: restauranteId, evento_id: id, cliente_email: evento.cliente_email })
+      .insert({ local_id: restauranteId, evento_id: id, cliente_email: evento.cliente_email })
       .select('token')
       .single()
     token = nueva?.token || null

@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     .from('facturas_verifactu')
     .select('*')
     .eq('id', factura_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (error || !factura) {

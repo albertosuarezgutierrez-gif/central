@@ -26,7 +26,7 @@ export async function PATCH(
       .from('comanda_items')
       .select('nombre, cantidad, notas')
       .eq('id', item_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
     if (!itemActual) return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 })
 
@@ -34,7 +34,7 @@ export async function PATCH(
     const update: Record<string, unknown> = {}
     if (cantidad !== undefined) update.cantidad = cantidad
     if (notas !== undefined) update.notas = notas
-    await supabase.from('comanda_items').update(update).eq('id', item_id).eq('restaurante_id', rid)
+    await supabase.from('comanda_items').update(update).eq('id', item_id).eq('local_id', rid)
 
     // Audit log
     await supabase.rpc('log_comanda_accion', {
@@ -69,12 +69,12 @@ export async function DELETE(
       .from('comanda_items')
       .select('nombre, cantidad')
       .eq('id', item_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     if (!itemActual) return NextResponse.json({ error: 'Item no encontrado' }, { status: 404 })
 
-    await supabase.from('comanda_items').delete().eq('id', item_id).eq('restaurante_id', rid)
+    await supabase.from('comanda_items').delete().eq('id', item_id).eq('local_id', rid)
 
     await supabase.rpc('log_comanda_accion', {
       p_comanda_id: comanda_id, p_camarero_id: session.id,

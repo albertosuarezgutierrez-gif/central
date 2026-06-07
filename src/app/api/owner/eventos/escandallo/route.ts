@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     .from('eventos')
     .select('aforo_confirmado, aforo_previsto, cliente_nombre, factor_escandallo')
     .eq('id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (!evento) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       )
     `)
     .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   if (!menuEvento) {
@@ -105,7 +105,7 @@ export async function PATCH(req: NextRequest) {
     .from('eventos')
     .update({ factor_escandallo })
     .eq('id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true })
 }

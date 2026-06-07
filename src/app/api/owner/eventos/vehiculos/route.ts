@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('vehiculos_grupo')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('nombre')
 
@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('vehiculos_grupo')
-    .insert({ ...body, restaurante_id: restauranteId })
+    .insert({ ...body, local_id: restauranteId })
     .select()
     .single()
 

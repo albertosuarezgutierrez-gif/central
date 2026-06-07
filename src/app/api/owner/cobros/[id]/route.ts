@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     .from('cobros_grupo')
     .update(update)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
@@ -50,7 +50,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     .from('cobros_grupo')
     .select('id')
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
   if (!portal) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
@@ -65,7 +65,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   await supabase.from('cobros_grupo_pagos').delete().eq('cobro_grupo_id', id)
   await supabase.from('cobros_grupo_items').delete().eq('cobro_grupo_id', id)
-  const { error } = await supabase.from('cobros_grupo').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('cobros_grupo').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   return NextResponse.json({ ok: true })

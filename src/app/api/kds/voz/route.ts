@@ -30,14 +30,14 @@ FRASES QUE DEBES ENTENDER (ejemplos):
 SCHEMA (responde EXACTAMENTE con este formato):
 {"mesa":"S4","confianza":0.95,"raw":"texto original"}`
 
-async function buildZonasKDS(restaurante_id: string): Promise<string> {
+async function buildZonasKDS(local_id: string): Promise<string> {
   try {
     const supabase = createServerClient()
     const { data: zonas } = await supabase
       .from('zonas')
       .select('nombre, prefijo')
       .eq('activa', true)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', local_id)
       .order('orden')
 
     if (!zonas?.length) return ''
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
       .from('mesas')
       .select('id, codigo')
       .eq('codigo', kdsResult.mesa)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     if (!mesa) {
@@ -111,7 +111,7 @@ export async function POST(req: NextRequest) {
       .from('comandas')
       .select('id, camarero_id, numero_ticket, items:comanda_items(id, seccion_id)')
       .eq('mesa_id', mesa.id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('tipo', ['comanda', 'marchar'])
       .in('estado', ['nueva', 'en_cocina'])
 

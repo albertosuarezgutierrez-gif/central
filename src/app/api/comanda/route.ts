@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     let turno_id = ''
     const { data: turnoServicio } = await supabase
       .from('turnos').select('id')
-      .eq('restaurante_id', rid).eq('estado', 'activo')
+      .eq('local_id', rid).eq('estado', 'activo')
       .is('camarero_id', null)
       .order('created_at', { ascending: false })
       .limit(1).maybeSingle()
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     } else if (camarero_id) {
       const { data: turnoPropio } = await supabase
         .from('turnos').select('id')
-        .eq('restaurante_id', rid).eq('estado', 'activo')
+        .eq('local_id', rid).eq('estado', 'activo')
         .eq('camarero_id', camarero_id)
         .order('created_at', { ascending: false })
         .limit(1).maybeSingle()
@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           nombre_cuenta: nombre_cuenta.trim(),
           camarero_id, turno_id,
           tipo, estado: tipo === 'cuenta' ? 'nueva' : (require_confirm ? 'pendiente_confirmacion' : 'en_cocina'),
-          restaurante_id: rid,
+          local_id: rid,
           ...(nota_general ? { nota_general } : {}),
         })
         .select().single()
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
           notas: it.notas ?? null,
           producto_id: it.producto_id ?? null,
           precio_unitario: it.precio_unitario ?? null,
-          restaurante_id: rid,
+          local_id: rid,
         }))
       )
 
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string; formato_nombre?: string }) => ({
           nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id, formato_nombre: i.formato_nombre ?? null,
         }))
-        await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: camarero_nombre, restaurante_id: rid, nota_general: nota_general ?? null }, itemsPrint)
+        await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: camarero_nombre, local_id: rid, nota_general: nota_general ?? null }, itemsPrint)
       } catch (e) { console.error('[COMANDA] Print error:', e) }
       return NextResponse.json({ ok: true, comanda_id: comanda.id, numero_ticket: comanda.numero_ticket, nombre_cuenta: nombre_cuenta.trim() })
     }
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       .insert({
         mesa_id, camarero_id, turno_id,
         tipo, estado: tipo === 'cuenta' ? 'nueva' : (require_confirm ? 'pendiente_confirmacion' : 'en_cocina'),
-        restaurante_id: rid,
+        local_id: rid,
         ...(num_comensales ? { num_comensales } : {}),
         ...(nota_general ? { nota_general } : {}),
       })
@@ -193,13 +193,13 @@ export async function POST(req: NextRequest) {
       const nombres = [...new Set(sinPrecio.map(it => it.nombre))]
       const { data: prods } = await supabase
         .from('productos').select('id,nombre,precio')
-        .in('nombre', nombres).eq('restaurante_id', rid)
+        .in('nombre', nombres).eq('local_id', rid)
       const precioMap: Record<string, { id: string; precio: number }> = {}
       for (const p of prods ?? []) if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
       // Fallback: si no matcheó (diferencia capitalización), buscar todos y comparar con norm()
       const noMatcheados = nombres.filter(n => !precioMap[norm(n)])
       if (noMatcheados.length > 0) {
-        const { data: todos } = await supabase.from('productos').select('id,nombre,precio').eq('restaurante_id', rid).eq('activo', true)
+        const { data: todos } = await supabase.from('productos').select('id,nombre,precio').eq('local_id', rid).eq('activo', true)
         for (const p of todos ?? []) {
           const pn = norm(p.nombre)
           if (noMatcheados.some(n => norm(n) === pn) && p.precio != null) {
@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
         .from('productos')
         .select('id, venta_por_peso, precio_por_kg')
         .in('id', idsConProducto)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
       productosPeso = (pp ?? []) as { id: string; venta_por_peso: boolean; precio_por_kg: number | null }[]
     }
     const pesoPorProducto = new Map(productosPeso.map(p => [p.id, p]))
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
         formato_id: it.formato_id ?? null,
         formato_nombre: it.formato_nombre ?? null,
         seccion_id: it.seccion_id ?? null,
-        restaurante_id: rid,
+        local_id: rid,
         peso_gramos: it.peso_gramos ?? null,
         pesado_en_cocina: it.peso_gramos ? true : false,
         precio_kg_en_venta: esPeso ? prod!.precio_por_kg : null,
@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
         producto_id: null,
         precio_unitario: servicioPrecioFinal,
         formato_id: null, formato_nombre: null, seccion_id: null,
-        restaurante_id: rid,
+        local_id: rid,
         peso_gramos: null,
         pesado_en_cocina: false,
         precio_kg_en_venta: null,
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
         .from('stock_rendimientos')
         .select('stock_articulo_id, producto_id, consumo_por_venta')
         .in('producto_id', productoIds.map(p => p.id))
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
 
       if (rendimientos && rendimientos.length > 0) {
         // Agrupar consumo total por artículo
@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
           const { data: art } = await supabase
             .from('stock_articulos')
             .select('stock_actual, stock_minimo, alerta_activa, proveedor_email, proveedor_nombre, pedido_auto, cantidad_pedido, unidad_compra, nombre')
-            .eq('id', artId).eq('restaurante_id', rid).single()
+            .eq('id', artId).eq('local_id', rid).single()
           if (!art) continue
 
           const nuevo = Math.max(0, Number(art.stock_actual) - consumo)
@@ -308,10 +308,10 @@ export async function POST(req: NextRequest) {
             stock_actual: nuevo,
             alerta_activa: alerta,
             updated_at: new Date().toISOString(),
-          }).eq('id', artId).eq('restaurante_id', rid)
+          }).eq('id', artId).eq('local_id', rid)
 
           await supabase.from('stock_movimientos').insert({
-            restaurante_id:    rid,
+            local_id:    rid,
             stock_articulo_id: artId,
             tipo:              'venta',
             cantidad:          -consumo,
@@ -323,7 +323,7 @@ export async function POST(req: NextRequest) {
           if (alerta && !art.alerta_activa && art.pedido_auto && art.proveedor_email) {
             const cantPedido = art.cantidad_pedido ?? (Number(art.stock_minimo) * 3)
             await supabase.from('pedidos_proveedor').insert({
-              restaurante_id:    rid,
+              local_id:    rid,
               stock_articulo_id: artId,
               proveedor_nombre:  art.proveedor_nombre,
               proveedor_email:   art.proveedor_email,
@@ -362,7 +362,7 @@ export async function POST(req: NextRequest) {
 
       await supabase.from('marchar_log').insert({
         comanda_id:     comanda.id,
-        restaurante_id: rid,
+        local_id: rid,
         receptor_id:    runningId || camarero_id,
         mesa_id,
         mesa_codigo:    mesaData.codigo ?? '?',
@@ -387,7 +387,7 @@ export async function POST(req: NextRequest) {
       }))
       await crearPrintJobs({
         id: comanda.id, tipo, mesa_codigo: mesaData?.codigo ?? 'Mesa',
-        camarero_nombre: camarero_nombre, restaurante_id: rid,
+        camarero_nombre: camarero_nombre, local_id: rid,
         zona_tipo: ((mesaData?.zonas as unknown) as { tipo?: string } | null)?.tipo ?? null,
         nota_general: nota_general ?? null,
       }, itemsPrint)

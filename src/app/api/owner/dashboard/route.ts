@@ -32,24 +32,24 @@ export async function GET(req: NextRequest) {
   ] = await Promise.all([
     // Comandas + ventas de hoy
     supabase.from('comandas').select('id, estado, cobrado_at, comanda_items(precio_unitario, cantidad)')
-      .eq('restaurante_id', rid).eq('estado', 'cerrada')
+      .eq('local_id', rid).eq('estado', 'cerrada')
       .gte('cobrado_at', hoy.toISOString()),
 
     // Comandas ayer para comparativa
     supabase.from('comandas').select('id, comanda_items(precio_unitario, cantidad)')
-      .eq('restaurante_id', rid).eq('estado', 'cerrada')
+      .eq('local_id', rid).eq('estado', 'cerrada')
       .gte('cobrado_at', ayer.toISOString())
       .lt('cobrado_at', hoy.toISOString()),
 
     // Stock crítico
     supabase.from('stock_articulos').select('id, nombre, stock_actual, stock_minimo, unidad_compra')
-      .eq('restaurante_id', rid).eq('alerta_activa', true).eq('activo', true)
+      .eq('local_id', rid).eq('alerta_activa', true).eq('activo', true)
       .order('stock_actual', { ascending: true }).limit(5),
 
     // Elaboraciones próximas a caducar
     supabase.from('v_elaboraciones_activas')
       .select('id, nombre, lote, fecha_caducidad, horas_restantes, urgencia')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('urgencia', ['critica', 'hoy'])
       .order('fecha_caducidad', { ascending: true }).limit(5),
 
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
 
     // Top 5 productos de hoy
     supabase.from('comanda_items').select('nombre, cantidad, precio_unitario')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .gte('created_at', hoy.toISOString())
       .limit(100),
   ])

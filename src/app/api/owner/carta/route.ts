@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data, error } = await supabase.from('productos')
     .select('*, producto_formatos(id, nombre, precio, orden, activo)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('categoria').order('orden').order('nombre')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ productos: data })
@@ -35,14 +35,14 @@ export async function POST(req: NextRequest) {
       familia: familia ?? null,
       nombre_alternativo: aliases,
       metadata: metadata && typeof metadata === 'object' ? metadata : {},
-      restaurante_id: rid })
+      local_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // Generar alias IA en background si el owner no los escribió manualmente
   if (aliases.length === 0 && data?.id) {
     generarAliasFoneticos(nombre.trim()).then(async (generados) => {
       if (!generados.length) return
-      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('restaurante_id', rid)
+      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('local_id', rid)
       invalidarCache(rid)
       console.log(`[ALIAS-IA] ${nombre}: ${generados.join(', ')}`)
     }).catch(() => {})
@@ -57,23 +57,23 @@ export async function PUT(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
   const { data, error } = await supabase.from('productos')
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id).eq('restaurante_id', rid).select().single()
+    .eq('id', id).eq('local_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   invalidarCache(rid)
   // Si se cambió nombre y alias vacíos → regenerar alias IA en alias_ia
   if (updates.nombre && data?.id && (!updates.nombre_alternativo || (updates.nombre_alternativo as string[]).length === 0)) {
     generarAliasFoneticos(updates.nombre.trim()).then(async (generados) => {
       if (!generados.length) return
-      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('restaurante_id', rid)
+      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('local_id', rid)
       invalidarCache(rid)
       console.log(`[ALIAS-IA] ${updates.nombre} (edit): ${generados.join(', ')}`)
     }).catch(() => {})
   }
   if (updates.activo === false && data) {
     const { data: turno } = await supabase.from('turnos').select('id')
-      .eq('estado', 'activo').eq('restaurante_id', rid).order('created_at', { ascending: false }).limit(1).single()
+      .eq('estado', 'activo').eq('local_id', rid).order('created_at', { ascending: false }).limit(1).single()
     if (turno) await supabase.from('productos_86')
-      .insert({ nombre: data.nombre, turno_id: turno.id, restaurante_id: rid })
+      .insert({ nombre: data.nombre, turno_id: turno.id, local_id: rid })
   }
   return NextResponse.json({ producto: data })
 }
@@ -100,7 +100,7 @@ export async function POST_BULK(req: NextRequest) {
       : (p.precio ?? null),
     categoria: p.categoria || 'Sin categoría',
     alergenos: Array.isArray(p.alergenos) ? p.alergenos : [],
-    activo: true, orden: i, restaurante_id: rid,
+    activo: true, orden: i, local_id: rid,
   }))
 
   const { data, error } = await supabase.from('productos').insert(rows).select()
@@ -108,7 +108,7 @@ export async function POST_BULK(req: NextRequest) {
 
   // Crear producto_formatos para productos con múltiples precios
   const formatosToInsert: {
-    producto_id: string; restaurante_id: string
+    producto_id: string; local_id: string
     nombre: string; precio: number; orden: number; activo: boolean
   }[] = []
 
@@ -120,7 +120,7 @@ export async function POST_BULK(req: NextRequest) {
       if (f.nombre && f.precio != null) {
         formatosToInsert.push({
           producto_id: inserted.id,
-          restaurante_id: rid,
+          local_id: rid,
           nombre: f.nombre,
           precio: Number(f.precio),
           orden: j,
@@ -149,7 +149,7 @@ export async function DELETE(req: NextRequest) {
   }
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
-  const { error } = await supabase.from('productos').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('productos').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

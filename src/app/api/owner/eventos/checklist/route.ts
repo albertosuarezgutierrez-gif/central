@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('evento_checklist_item')
     .select('*, completado_por_personal:personal(id, nombre)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('orden')
 
   if (evento_id) query = query.eq('evento_id', evento_id)
@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_checklist_item')
     .insert(itemsToInsert.map((item: { texto: string; orden?: number; horas_antes_alerta?: number }, i: number) => ({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       evento_id,
       plantilla_id: plantilla_id || null,
       texto: item.texto,
@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest) {
       completado_at: completado ? new Date().toISOString() : null
     })
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select()
     .single()
 

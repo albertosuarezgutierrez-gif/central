@@ -21,16 +21,16 @@ export async function GET(req: NextRequest) {
   const [rArqueos, rCompras, rOrdenes, rLiqIva] = await Promise.all([
     supabase.from('arqueos_caja')
       .select('fecha, total_ventas, base_10, iva_10, base_21, iva_21, efectivo, tarjeta, bizum, num_tickets, ticket_medio')
-      .eq('restaurante_id', rid).gte('fecha', desde).lte('fecha', hasta),
+      .eq('local_id', rid).gte('fecha', desde).lte('fecha', hasta),
     supabase.from('facturas_compra')
       .select('importe_total, importe_base, importe_iva, proveedor_nombre, fecha_factura')
-      .eq('restaurante_id', rid).gte('fecha_factura', desde).lte('fecha_factura', hasta),
+      .eq('local_id', rid).gte('fecha_factura', desde).lte('fecha_factura', hasta),
     supabase.from('ordenes_pago_proveedor')
       .select('importe, estado')
-      .eq('restaurante_id', rid).gte('created_at', `${desde}T00:00:00`).lte('created_at', `${hasta}T23:59:59`),
+      .eq('local_id', rid).gte('created_at', `${desde}T00:00:00`).lte('created_at', `${hasta}T23:59:59`),
     supabase.from('liquidaciones_iva')
       .select('cuota_diferencial, estado, fecha_limite')
-      .eq('restaurante_id', rid).eq('año', year).lte('trimestre', Math.ceil(month / 3)),
+      .eq('local_id', rid).eq('año', year).lte('trimestre', Math.ceil(month / 3)),
   ])
 
   const arqueos = rArqueos.data ?? []

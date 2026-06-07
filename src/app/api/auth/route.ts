@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   const rpcResult = data[0]
   const { data: personalData } = await supabase
     .from('personal')
-    .select('id, nombre, rol, restaurante_id, seccion_id, puede_comandar, modulos_gestion')
+    .select('id, nombre, rol, local_id, seccion_id, puede_comandar, modulos_gestion')
     .eq('id', rpcResult.camarero_id)
     .single()
 
@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     camarero_id:     rpcResult.camarero_id,
     nombre:          personalData?.nombre ?? rpcResult.nombre,
     rol:             personalData?.rol ?? rpcResult.rol,
-    restaurante_id:  personalData?.restaurante_id ?? restaurante_id,
+    restaurante_id:  personalData?.local_id ?? restaurante_id,
     restaurante_nombre: restaurante_nombre,
     seccion_id:      personalData?.seccion_id ?? null,
     puede_comandar:  personalData?.puede_comandar ?? false,

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     .from('turnos')
     .select('id, entrada_at, nombre, tipo')
     .eq('camarero_id', session.id)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .eq('estado', 'activo')
     .order('entrada_at', { ascending: false })
     .limit(1)

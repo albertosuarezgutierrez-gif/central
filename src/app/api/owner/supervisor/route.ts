@@ -13,8 +13,8 @@ export async function GET(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('alerta_reglas')
-    .select('id, restaurante_id, nombre, activa, condicion, umbral_minutos, objeto, mensaje, horario_desde, horario_hasta, dias_semana, zona_ids, destinatario_tipo, camarero_id, canal_vox, canal_push, canal_hub, escalar_a, escalar_minutos, prioridad, created_at, updated_at')
-    .eq('restaurante_id', rid)
+    .select('id, local_id, nombre, activa, condicion, umbral_minutos, objeto, mensaje, horario_desde, horario_hasta, dias_semana, zona_ids, destinatario_tipo, camarero_id, canal_vox, canal_push, canal_hub, escalar_a, escalar_minutos, prioridad, created_at, updated_at')
+    .eq('local_id', rid)
     .order('prioridad', { ascending: true })
     .order('created_at', { ascending: true })
 
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('alerta_reglas')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       nombre: nombre.trim(),
       activa: true,
       logica: 'AND',
@@ -92,14 +92,14 @@ export async function PUT(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
 
   const { data: existing } = await supabase
-    .from('alerta_reglas').select('id').eq('id', id).eq('restaurante_id', rid).single()
+    .from('alerta_reglas').select('id').eq('id', id).eq('local_id', rid).single()
   if (!existing) return NextResponse.json({ error: 'Regla no encontrada' }, { status: 404 })
 
   const { data, error } = await supabase
     .from('alerta_reglas')
     .update({ ...updates, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select()
     .single()
 
@@ -124,7 +124,7 @@ export async function DELETE(req: NextRequest) {
     .from('alerta_reglas')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

@@ -19,12 +19,12 @@ export async function GET(req: NextRequest) {
     supabase
       .from('etiquetas_config')
       .select('*')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle(),
     supabase
       .from('productos')
       .select('id, nombre, descripcion, precio, categoria, alergenos, familia, ean_codigo, stock_actual, unidad_stock')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activo', true)
       .order('categoria')
       .order('nombre'),
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('etiquetas_config')
     .upsert({
-      restaurante_id:           rid,
+      local_id:           rid,
       nombre_operador:          nombre_operador ?? '',
       nif_operador:             nif_operador ?? '',
       direccion_operador:       direccion_operador ?? '',
@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
       pais_origen:              pais_origen ?? 'España',
       incluir_tabla_nutricional: incluir_tabla_nutricional ?? false,
       updated_at:               new Date().toISOString(),
-    }, { onConflict: 'restaurante_id' })
+    }, { onConflict: 'local_id' })
     .select()
     .single()
 
@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest) {
     .from('productos')
     .update({ ean_codigo: ean_codigo?.trim() || null })
     .eq('id', producto_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

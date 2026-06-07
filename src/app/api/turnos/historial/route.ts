@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
       camarero_id,
       camareros!inner(nombre, rol)
     `)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .not('camarero_id', 'is', null)
     .gte('fecha', desde)
     .lte('fecha', hasta)
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
   const { data: activos } = await supabase
     .from('turnos')
     .select('id, camarero_id, entrada_at, camareros!inner(nombre, rol)')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .eq('estado', 'activo')
     .not('camarero_id', 'is', null)
 
@@ -84,7 +84,7 @@ export async function PATCH(req: NextRequest) {
     .from('turnos')
     .update(update)
     .eq('id', turno_id)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

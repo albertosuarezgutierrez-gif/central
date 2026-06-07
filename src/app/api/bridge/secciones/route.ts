@@ -17,7 +17,7 @@ export async function GET(req: Request) {
     // Verificar token y obtener restaurante_id
     const { data: bt, error: btErr } = await supabase
       .from('bridge_tokens')
-      .select('restaurante_id, activo')
+      .select('local_id, activo')
       .eq('token', token)
       .eq('activo', true)
       .single()
@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     const { data: secciones } = await supabase
       .from('secciones_cocina')
       .select('id, nombre')
-      .eq('restaurante_id', bt.restaurante_id)
+      .eq('local_id', bt.local_id)
       .eq('activa', true)
       .order('nombre')
 

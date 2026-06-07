@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const { data: orden } = await supabase
       .from('ordenes_pago_proveedor')
       .select('id, importe, estado, recepcion_id')
-      .eq('restaurante_id', pedido.restaurante_id)
+      .eq('local_id', pedido.restaurante_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()
@@ -156,7 +156,7 @@ SOLO JSON, sin texto adicional.`
     const { data: factura, error: fcErr } = await supabase
       .from('facturas_compra')
       .insert({
-        restaurante_id:  pedido.restaurante_id,
+        local_id:  pedido.restaurante_id,
         recepcion_id:    orden?.recepcion_id ?? null,
         orden_pago_id:   orden?.id ?? null,
         proveedor_nombre: parsed.proveedor_nombre ?? pedido.proveedor_nombre,

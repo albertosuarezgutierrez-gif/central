@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     .from('facturas_verifactu')
     .select('*')
     .eq('id', factura_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!factura) return NextResponse.json({ error: 'Factura no encontrada' }, { status: 404 })

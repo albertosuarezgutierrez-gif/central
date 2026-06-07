@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_conceptos_gasto')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('orden')
 
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
     })
     const { data: nuevos } = await supabase
       .from('evento_conceptos_gasto')
-      .select('*').eq('restaurante_id', restauranteId).eq('activo', true).order('orden')
+      .select('*').eq('local_id', restauranteId).eq('activo', true).order('orden')
     return NextResponse.json({ conceptos: nuevos ?? [] })
   }
 
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('evento_conceptos_gasto')
-    .insert({ restaurante_id: restauranteId, cuenta_id: rest?.cuenta_id, nombre, tipo, importe_defecto, icono: icono ?? '💶', orden: orden ?? 99 })
+    .insert({ local_id: restauranteId, cuenta_id: rest?.cuenta_id, nombre, tipo, importe_defecto, icono: icono ?? '💶', orden: orden ?? 99 })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -63,7 +63,7 @@ export async function PUT(req: NextRequest) {
   const { id, ...updates } = await req.json()
   const { data, error } = await supabase
     .from('evento_conceptos_gasto').update(updates)
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ concepto: data })
@@ -76,6 +76,6 @@ export async function DELETE(req: NextRequest) {
   const supabase = createServerClient()
   const { id } = await req.json()
   await supabase.from('evento_conceptos_gasto').update({ activo: false })
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
   return NextResponse.json({ ok: true })
 }

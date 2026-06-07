@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
       comercial:personal!comercial_id(id, nombre),
       evento_id, sesion_menu_id
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (estado) query = query.eq('estado', estado)
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_briefing')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       comercial_id: comercial_id || session.id,
       cliente_nombre, cliente_email, cliente_telefono,
       expires_at: new Date(Date.now() + dias_expiracion * 86400000).toISOString()

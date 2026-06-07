@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data: web } = await supabase
     .from('web_restaurante')
     .select('visitas_total, activa, slug, created_at, updated_at, idiomas_activos, template')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   if (!web) return NextResponse.json({ existe: false })

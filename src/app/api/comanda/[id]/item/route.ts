@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .from('comanda_items')
     .select('id, nombre, cantidad, precio_unitario, notas')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ items: data ?? [] })
@@ -43,13 +43,13 @@ export async function POST(
     const { data: comanda } = await supabase
       .from('comandas')
       .select('id, estado, tipo, numero_ticket, nombre_cuenta, nota_general, mesa_id, camarero_id')
-      .eq('id', comanda_id).eq('restaurante_id', rid).single()
+      .eq('id', comanda_id).eq('local_id', rid).single()
     if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
 
     // Insertar items
     const insertados = await supabase.from('comanda_items').insert(
       items.map(it => ({
-        comanda_id, restaurante_id: rid,
+        comanda_id, local_id: rid,
         nombre: it.nombre, cantidad: it.cantidad,
         notas: it.notas ?? null,
         precio_unitario: it.precio_unitario ?? null,
@@ -80,7 +80,7 @@ export async function POST(
       if (comanda.mesa_id) {
         const { data: mesa } = await supabase
           .from('mesas').select('codigo, zona, zonas(nombre)')
-          .eq('id', comanda.mesa_id).eq('restaurante_id', rid).single()
+          .eq('id', comanda.mesa_id).eq('local_id', rid).single()
         if (mesa) {
           mesaCodigo = mesa.codigo
           zonaTipo   = (mesa as Record<string, unknown>).zona as string ?? null
@@ -97,7 +97,7 @@ export async function POST(
           mesa_codigo:     mesaCodigo,
           camarero_nombre: cam?.nombre ?? session.nombre ?? 'Equipo',
           numero_ticket:   comanda.numero_ticket ?? undefined,
-          restaurante_id:  rid,
+          local_id:  rid,
           zona_tipo:       zonaTipo,
           zona_nombre:     zonaNombre,
           nota_general:    comanda.nota_general ?? null,

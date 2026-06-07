@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('proveedores')
     .select('*, stock_articulos(id, nombre)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .order('nombre')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { nombre, email, telefono, whatsapp, web, contacto_nombre, categoria, notas, dias_reparto, hora_corte, pedido_minimo_eur } = await req.json()
   if (!nombre?.trim()) return NextResponse.json({ error: 'nombre requerido' }, { status: 400 })
   const { data, error } = await supabase.from('proveedores').insert({
-    restaurante_id: rid, nombre: nombre.trim(),
+    local_id: rid, nombre: nombre.trim(),
     email: email?.trim() || null, telefono: telefono?.trim() || null,
     whatsapp: whatsapp?.trim() || null,
     web: web?.trim() || null, contacto_nombre: contacto_nombre?.trim() || null,
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
     ...(hora_corte !== undefined ? { hora_corte: hora_corte || null } : {}),
     ...(pedido_minimo_eur !== undefined ? { pedido_minimo_eur: pedido_minimo_eur ?? null } : {}),
     updated_at: new Date().toISOString(),
-  }).eq('id', id).eq('restaurante_id', rid)
+  }).eq('id', id).eq('local_id', rid)
   return NextResponse.json({ ok: true })
 }
 
@@ -69,6 +69,6 @@ export async function DELETE(req: NextRequest) {
   const supabase = createServerClient()
   const rid = getRestauranteId(req)
   const { id } = await req.json()
-  await supabase.from('proveedores').update({ activo: false }).eq('id', id).eq('restaurante_id', rid)
+  await supabase.from('proveedores').update({ activo: false }).eq('id', id).eq('local_id', rid)
   return NextResponse.json({ ok: true })
 }

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const query = supabase
     .from('producto_formatos')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('orden')
 
   const finalQuery = producto_id ? query.eq('producto_id', producto_id) : query
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
   const { data, error } = await supabase.from('producto_formatos')
-    .insert({ producto_id, nombre, precio: Number(precio), orden: orden ?? 0, restaurante_id: rid })
+    .insert({ producto_id, nombre, precio: Number(precio), orden: orden ?? 0, local_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ formato: data })
@@ -50,7 +50,7 @@ export async function PUT(req: NextRequest) {
   const { data, error } = await supabase.from('producto_formatos')
     .update(fields)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ formato: data })
@@ -66,7 +66,7 @@ export async function DELETE(req: NextRequest) {
   const { error } = await supabase.from('producto_formatos')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

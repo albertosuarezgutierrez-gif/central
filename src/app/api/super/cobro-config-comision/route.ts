@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
 
   const { data: cfgs } = await supabase
     .from('cobro_config')
-    .select('restaurante_id, comision_pct, comision_fija_eur, minimo_producto_eur')
+    .select('local_id, comision_pct, comision_fija_eur, minimo_producto_eur')
 
-  const byId = new Map((cfgs ?? []).map((c: Record<string, unknown>) => [c.restaurante_id as string, c]))
+  const byId = new Map((cfgs ?? []).map((c: Record<string, unknown>) => [c.local_id as string, c]))
   const restaurantes = (rests ?? []).map((r: { id: string; nombre: string }) => {
     const c = (byId.get(r.id) ?? {}) as Record<string, unknown>
     return {
@@ -63,12 +63,12 @@ export async function POST(req: NextRequest) {
     .from('cobro_config')
     .upsert(
       {
-        restaurante_id,
+        local_id: restaurante_id,
         comision_pct: num(body.comision_pct),
         comision_fija_eur: num(body.comision_fija_eur),
         minimo_producto_eur: num(body.minimo_producto_eur),
       },
-      { onConflict: 'restaurante_id' }
+      { onConflict: 'local_id' }
     )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

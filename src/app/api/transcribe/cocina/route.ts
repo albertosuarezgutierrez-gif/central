@@ -24,9 +24,9 @@ async function buildCocinaPrompt(rid: string, supabase: ReturnType<typeof create
 
   // Cargar productos de carta + elaboraciones activas + secciones
   const [{ data: productos }, { data: elaboraciones }, { data: secciones }] = await Promise.all([
-    supabase.from('productos').select('nombre').eq('restaurante_id', rid).eq('activo', true).limit(50),
-    supabase.from('elaboraciones_propias').select('nombre').eq('restaurante_id', rid).eq('estado', 'activa').limit(20),
-    supabase.from('secciones_cocina').select('nombre').eq('restaurante_id', rid).eq('activa', true).limit(10),
+    supabase.from('productos').select('nombre').eq('local_id', rid).eq('activo', true).limit(50),
+    supabase.from('elaboraciones_propias').select('nombre').eq('local_id', rid).eq('estado', 'activa').limit(20),
+    supabase.from('secciones_cocina').select('nombre').eq('local_id', rid).eq('activa', true).limit(10),
   ])
 
   const nombreProductos = (productos ?? []).map((p: { nombre: string }) => p.nombre).join(', ')

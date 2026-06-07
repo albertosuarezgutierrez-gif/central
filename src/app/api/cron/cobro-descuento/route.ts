@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const { data: descuentos, error } = await supabase
     .from('resumen_cobros_mensual')
-    .select('restaurante_id, descuento_cuota_eur, volumen_eur, comision_eur')
+    .select('local_id, descuento_cuota_eur, volumen_eur, comision_eur')
     .eq('mes', mesStr)
     .gt('descuento_cuota_eur', 0)
 
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, procesados: 0, mensaje: `Sin descuentos en ${mesLabel}` })
   }
 
-  const restauranteIds = descuentos.map((d: any) => d.restaurante_id)
+  const restauranteIds = descuentos.map((d: any) => d.local_id)
 
   const [{ data: cuentas }, { data: restaurantes }] = await Promise.all([
     supabase.from('cuentas').select('id, stripe_customer_id').not('stripe_customer_id', 'is', null),
@@ -63,9 +63,9 @@ export async function GET(req: NextRequest) {
   // ── Paralelo: aplicar créditos Stripe a la vez ────────────────
   const resultados = await Promise.allSettled(
     (descuentos as any[]).map(async (d) => {
-      const customerId = customerMap[d.restaurante_id]
+      const customerId = customerMap[d.local_id]
       if (!customerId) {
-        log.push(`${d.restaurante_id}: sin stripe_customer_id — omitido`)
+        log.push(`${d.local_id}: sin stripe_customer_id — omitido`)
         return { omitido: true }
       }
 
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         currency: 'eur',
         description: `ia.rest cobro — descuento ${mesLabel}: ${d.volumen_eur.toFixed(2)}€ procesados`,
         metadata: {
-          restaurante_id: d.restaurante_id,
+          local_id: d.local_id,
           mes: mesStr,
           volumen_eur:    d.volumen_eur.toString(),
           comision_eur:   d.comision_eur.toString(),
@@ -84,7 +84,7 @@ export async function GET(req: NextRequest) {
         },
       })
 
-      log.push(`${d.restaurante_id}: -${d.descuento_cuota_eur}€ aplicados como crédito Stripe`)
+      log.push(`${d.local_id}: -${d.descuento_cuota_eur}€ aplicados como crédito Stripe`)
       return { aplicado: true }
     })
   )
@@ -95,7 +95,7 @@ export async function GET(req: NextRequest) {
 
   resultados.forEach((r, i) => {
     if (r.status === 'rejected') {
-      const rid = (descuentos as any[])[i]?.restaurante_id
+      const rid = (descuentos as any[])[i]?.local_id
       log.push(`${rid}: ERROR — ${(r.reason as Error)?.message ?? r.reason}`)
       console.error(`[cobro-descuento] Error en ${rid}:`, r.reason)
     }

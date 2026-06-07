@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
 
   const { data: productos, error } = await supabase
     .from('productos')
-    .select('id, nombre, restaurante_id')
+    .select('id, nombre, local_id')
     .eq('activo', true)
     .or('alias_ia.is.null,alias_ia.eq.{}')
     .limit(30)
@@ -48,9 +48,9 @@ export async function GET(req: NextRequest) {
         .from('productos')
         .update({ alias_ia: alias })
         .eq('id', p.id)
-        .eq('restaurante_id', p.restaurante_id)
+        .eq('local_id', p.local_id)
       if (upErr) { fallidos++; return }
-      restaurantesAfectados.add(p.restaurante_id)
+      restaurantesAfectados.add(p.local_id)
       generados++
       console.log(`[ALIAS-IA] ${p.nombre}: [${alias.join(', ')}]`)
     }))

@@ -72,7 +72,7 @@ export default function BienvenidaPage() {
         const { data: bt } = await sb
           .from('bridge_tokens')
           .select('token')
-          .eq('restaurante_id', d.id)
+          .eq('local_id', d.id)
           .eq('activo', true)
           .single()
 

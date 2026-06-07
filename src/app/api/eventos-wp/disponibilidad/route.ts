@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const espaciosQuery = supabase
     .from('espacios_evento')
     .select('id, nombre, tipo, aforo_maximo, descripcion')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .eq('activo', true)
 
   if (espacio_id) espaciosQuery.eq('id', espacio_id)
@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   const { data: eventos } = await supabase
     .from('eventos')
     .select('id, numero_evento, tipo, estado, fecha_evento, hora_inicio, hora_fin, cliente_nombre, aforo_previsto, espacio_id, coordinador_id')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .not('estado', 'in', '(cancelado)')
     .gte('fecha_evento', desde)
     .lte('fecha_evento', hasta)
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   const bloqueoQuery = supabase
     .from('espacio_bloqueos')
     .select('id, espacio_id, fecha_inicio, fecha_fin, hora_inicio, hora_fin, tipo, confirmado, expira_at, notas, coordinador_id, evento_id')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .gte('fecha_fin', desde)
     .lte('fecha_inicio', hasta)
 

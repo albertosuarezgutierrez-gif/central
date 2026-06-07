@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       .from('personal')
       .select('puede_escanear')
       .eq('id', session.id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
     puedeEscanear = cam?.puede_escanear === true
   }
@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
   const { data: docGuardado, error: dbError } = await supabase
     .from('documentos_escaneados')
     .insert({
-      restaurante_id:       rid,
+      local_id:       rid,
       escaneado_por_id:     ROLES_SIEMPRE.includes(session.rol) ? null : session.id,
       escaneado_por_nombre: session.nombre,
       escaneado_por_rol:    session.rol,
@@ -211,7 +211,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('documentos_escaneados')
     .select('id, tipo, confianza, estado, created_at, datos_extraidos, camareros(nombre)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
     .limit(50)
 

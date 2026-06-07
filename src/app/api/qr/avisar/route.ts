@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     // Validar que la sesión QR existe y está activa.
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, mesa_id, restaurante_id, estado')
+      .select('id, mesa_id, local_id, estado')
       .eq('id', sesion_id)
       .eq('estado', 'activa')
       .maybeSingle()
@@ -37,10 +37,10 @@ export async function POST(req: NextRequest) {
     // Validar que la comanda pertenece a la misma mesa/restaurante (anti-spoofing).
     const { data: comanda } = await supabase
       .from('comandas')
-      .select('id, mesa_id, restaurante_id, estado')
+      .select('id, mesa_id, local_id, estado')
       .eq('id', comanda_id)
       .maybeSingle()
-    if (!comanda || comanda.mesa_id !== sesion.mesa_id || comanda.restaurante_id !== sesion.restaurante_id) {
+    if (!comanda || comanda.mesa_id !== sesion.mesa_id || comanda.local_id !== sesion.local_id) {
       return NextResponse.json({ error: 'Comanda no coincide con la sesión' }, { status: 403 })
     }
 
@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     await dq
 
     const { error } = await supabase.from('qr_avisos_suscripciones').insert({
-      restaurante_id: sesion.restaurante_id,
+      local_id: sesion.local_id,
       sesion_id: sesion.id,
       comanda_id,
       mesa_id: sesion.mesa_id,

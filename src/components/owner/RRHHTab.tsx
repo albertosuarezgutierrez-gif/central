@@ -33,6 +33,7 @@ const ROLES = [
   { v: 'barra',           l: 'Barman / Barmaid' },
   { v: 'limpieza',        l: 'Limpieza' },
   { v: 'encargado',       l: 'Encargado/a' },
+  { v: 'tienda',          l: 'Dependiente/a tienda' },
   { v: 'otro',            l: 'Otro' },
 ]
 
