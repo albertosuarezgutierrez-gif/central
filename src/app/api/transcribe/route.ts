@@ -324,7 +324,11 @@ export async function POST(req: NextRequest) {
     }
 
     let comandaId: string | null = null
-    if (mesa) {
+    // aviso / 86 / recomendacion_vino NO crean comanda y NO dependen de una mesa
+    // resoluble (mesa='cocina'|'barra'|''|'T00'…). Se manejan más abajo, fuera de
+    // este bloque. Antes estaban anidados aquí dentro → nunca se ejecutaban
+    // (mensajes_turno y productos_86 con 0 filas históricas). Fix auditoría voz.
+    if (mesa && brainResult.tipo !== 'aviso' && brainResult.tipo !== '86' && brainResult.tipo !== 'recomendacion_vino') {
       // ── Para 'cuenta': buscar comanda activa existente (NO insertar nueva vacía)
       // Si insertamos nueva, los items están vacíos → ticket sin productos → total €0,00
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -341,6 +345,19 @@ export async function POST(req: NextRequest) {
           .limit(1)
           .maybeSingle()
         comanda = existente ?? null
+        if (comanda) comandaId = comanda.id
+      } else if (brainResult.tipo === 'marchar') {
+        // 'marchar' NO crea comanda: actúa sobre la comanda activa existente de la mesa.
+        // (Antes insertaba una comanda nueva tipo 'marchar' → fantasma. Fix auditoría voz.)
+        const { data: activa } = await supabase.from('comandas')
+          .select('*')
+          .eq('mesa_id', mesa.id)
+          .eq('restaurante_id', rid)
+          .in('estado', ['en_cocina', 'nueva', 'lista'])
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle()
+        comanda = activa ?? null
         if (comanda) comandaId = comanda.id
       } else {
         // requireConfirm=true → comanda nace en 'pendiente_confirmacion', sin print_jobs.
@@ -363,14 +380,9 @@ export async function POST(req: NextRequest) {
       // en el turno activo, insertar línea de servicio automáticamente.
       let servicioInsertado = false
       if (brainResult.num_comensales && brainResult.num_comensales > 0) {
-        const { data: esPrimera } = await supabase
-          .rpc('es_primera_comanda', {
-            p_mesa_id:  mesa.id,
-            p_turno_id: turnoId,
-          })
-          // es_primera_comanda comprueba ANTES de insertar esta comanda,
-          // pero ya la insertamos — así que chequeamos si no hay OTRAS comandas
-        // Realmente necesitamos saber si ésta es la única comanda de la mesa en el turno
+        // Comanda ya insertada arriba → chequeamos si NO hay OTRAS comandas de la mesa
+        // en el turno (post-insert es más preciso que el RPC es_primera_comanda, que
+        // mide el estado previo a la inserción).
         const { count: otrasComandas } = await supabase
           .from('comandas')
           .select('id', { count: 'exact', head: true })
@@ -378,8 +390,6 @@ export async function POST(req: NextRequest) {
           .eq('turno_id', turnoId)
           .neq('id', comanda.id)
           .not('estado', 'in', '(cancelada,cerrada)')
-
-        void esPrimera // usamos otrasComandas que es más preciso post-insert
 
         if ((otrasComandas ?? 1) === 0) {
           // Primera comanda — verificar config servicio
@@ -454,7 +464,9 @@ export async function POST(req: NextRequest) {
       const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
       const formatoMap: Record<string, { id: string; nombre: string; precio: number }> = {}
 
-      if (brainResult.items.length > 0) {
+      // 'marchar' NO inserta items (solo marca como listos los existentes vía MARCHAR
+      // GRANULAR más abajo); insertarlos duplicaría líneas en la comanda activa.
+      if (brainResult.items.length > 0 && brainResult.tipo !== 'marchar') {
         const itemsConFormato = brainResult.items.filter(i => i.formato)
         const precioMap: Record<string, { id: string; precio: number }> = {}
 
@@ -542,7 +554,8 @@ export async function POST(req: NextRequest) {
       }
 
       // Solo crear print_jobs si no requiere confirmación — si la requiere, /confirmar los crea
-      if (!requireConfirm && ['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
+      // `comanda` puede ser null en marchar si la mesa no tiene comanda activa → no hay nada que marchar.
+      if (!requireConfirm && comanda && ['comanda', 'marchar'].includes(brainResult.tipo) && brainResult.items.length > 0) {
         const { data: camarero } = await supabase.from('personal').select('nombre').eq('id', camareroId).single()
 
         if (brainResult.tipo === 'marchar') {
@@ -647,90 +660,8 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      if (brainResult.tipo === '86') {
-        await supabase.from('productos_86').insert(
-          brainResult.items.map((item) => ({ nombre: item.nombre, turno_id: turnoId, restaurante_id: rid }))
-        )
-      }
-
-      // ── AVISO / MENSAJE entre roles ───────────────────────────────────────
-      if (brainResult.tipo === 'aviso' && brainResult.nota_general) {
-        const ROL_MAP: Record<string, string> = {
-          cocina: 'cocina', barra: 'camarero', sala: 'camarero', todos: 'todos',
-        }
-        let rolDestino = 'todos'
-        let destinatarioId: string | null = null
-        let seccionImpresoraId: string | null = null
-
-        if (brainResult.destinatario_nombre) {
-          // Mensaje privado a persona
-          const { data: destinatario } = await supabase
-            .from('personal')
-            .select('id, rol')
-            .eq('restaurante_id', rid)
-            .eq('activo', true)
-            .ilike('nombre', `${brainResult.destinatario_nombre}%`)
-            .limit(1)
-            .maybeSingle()
-          if (destinatario) {
-            destinatarioId = destinatario.id
-            rolDestino = destinatario.rol ?? 'camarero'
-          }
-        } else {
-          const destRaw = (brainResult.mesa ?? 'todos').toLowerCase()
-          if (ROL_MAP[destRaw]) {
-            rolDestino = ROL_MAP[destRaw]
-          } else {
-            // Puede ser nombre de sección — buscar en secciones_cocina
-            const { data: seccion } = await supabase
-              .from('secciones_cocina')
-              .select('id, impresora_id')
-              .eq('restaurante_id', rid)
-              .ilike('nombre', `${brainResult.mesa}%`)
-              .limit(1)
-              .maybeSingle()
-            if (seccion) {
-              seccionImpresoraId = seccion.impresora_id
-              rolDestino = 'cocina'
-              // Si la sección tiene impresora → print_job de tipo aviso
-              if (seccion.impresora_id) {
-                try {
-                  await supabase.from('print_jobs').insert({
-                    restaurante_id: rid,
-                    impresora_id:   seccion.impresora_id,
-                    tipo:           'aviso',
-                    estado:         'pendiente', // qa-ignore: tabla print_jobs, no comandas
-                    payload: {
-                      tipo:    'aviso',
-                      mensaje: brainResult.nota_general,
-                      origen:  session.nombre,
-                      mesa:    mesa?.codigo ?? null,
-                      seccion: brainResult.mesa,
-                    },
-                  })
-                } catch (e) { console.error('[AVISO-SECCION] print_job:', e) }
-              }
-            }
-          }
-        }
-
-        try {
-          await supabase.from('mensajes_turno').insert({
-            restaurante_id:  rid,
-            turno_id:        turnoId ?? null,
-            camarero_id:     camareroId,
-            rol_origen:      session.rol,
-            nombre_origen:   session.nombre,
-            rol_destino:     rolDestino,
-            destinatario_id: destinatarioId,
-            tipo:            'voz',
-            texto:           brainResult.nota_general,
-            mesa_ref:        mesa?.codigo ?? null,
-            leido_por:       [camareroId],
-          })
-        } catch (e) { console.error('[AVISO-VOZ] mensajes_turno:', e) }
-        void seccionImpresoraId
-      }
+      // (El manejo de '86' y 'aviso' se hace fuera de este bloque — ver más abajo —
+      //  porque no dependen de una mesa resoluble.)
 
       // ── MARCHAR GRANULAR: si hay items, actualizar estado en comanda_items ─
       if (brainResult.tipo === 'marchar' && brainResult.items.length > 0 && mesa) {
@@ -759,6 +690,98 @@ export async function POST(req: NextRequest) {
           }
         } catch (e) { console.error('[MARCHAR-GRANULAR]', e) }
       }
+    }
+
+    // ── 86 / AGOTADO (independiente de mesa, no crea comanda) ────────────────
+    // Antes estaba anidado en `if (mesa)` y el patron devuelve mesa='T00' → nunca
+    // se registraba. Ahora se registra siempre. Lo lee el chequeo-86 de arriba.
+    if (brainResult.tipo === '86' && brainResult.items.length > 0) {
+      try {
+        await supabase.from('productos_86').insert(
+          brainResult.items.map((item) => ({ nombre: item.nombre, turno_id: turnoId, restaurante_id: rid }))
+        )
+      } catch (e) { console.error('[86-VOZ] productos_86:', e) }
+    }
+
+    // ── AVISO / MENSAJE entre roles (independiente de mesa, no crea comanda) ─
+    // El destino de un aviso es 'cocina'|'barra'|'sala'|'todos' o un nombre/sección,
+    // nunca un código de mesa. Antes estaba dentro de `if (mesa)` → no se ejecutaba.
+    if (brainResult.tipo === 'aviso' && brainResult.nota_general) {
+      const ROL_MAP: Record<string, string> = {
+        cocina: 'cocina', barra: 'camarero', sala: 'camarero', todos: 'todos',
+      }
+      let rolDestino = 'todos'
+      let destinatarioId: string | null = null
+      let seccionImpresoraId: string | null = null
+
+      if (brainResult.destinatario_nombre) {
+        // Mensaje privado a persona
+        const { data: destinatario } = await supabase
+          .from('personal')
+          .select('id, rol')
+          .eq('restaurante_id', rid)
+          .eq('activo', true)
+          .ilike('nombre', `${brainResult.destinatario_nombre}%`)
+          .limit(1)
+          .maybeSingle()
+        if (destinatario) {
+          destinatarioId = destinatario.id
+          rolDestino = destinatario.rol ?? 'camarero'
+        }
+      } else {
+        const destRaw = (brainResult.mesa ?? 'todos').toLowerCase()
+        if (ROL_MAP[destRaw]) {
+          rolDestino = ROL_MAP[destRaw]
+        } else if (brainResult.mesa) {
+          // Puede ser nombre de sección — buscar en secciones_cocina
+          const { data: seccion } = await supabase
+            .from('secciones_cocina')
+            .select('id, impresora_id')
+            .eq('restaurante_id', rid)
+            .ilike('nombre', `${brainResult.mesa}%`)
+            .limit(1)
+            .maybeSingle()
+          if (seccion) {
+            seccionImpresoraId = seccion.impresora_id
+            rolDestino = 'cocina'
+            // Si la sección tiene impresora → print_job de tipo aviso
+            if (seccion.impresora_id) {
+              try {
+                await supabase.from('print_jobs').insert({
+                  restaurante_id: rid,
+                  impresora_id:   seccion.impresora_id,
+                  tipo:           'aviso',
+                  estado:         'pendiente', // qa-ignore: tabla print_jobs, no comandas
+                  payload: {
+                    tipo:    'aviso',
+                    mensaje: brainResult.nota_general,
+                    origen:  session.nombre,
+                    mesa:    mesa?.codigo ?? null,
+                    seccion: brainResult.mesa,
+                  },
+                })
+              } catch (e) { console.error('[AVISO-SECCION] print_job:', e) }
+            }
+          }
+        }
+      }
+
+      try {
+        await supabase.from('mensajes_turno').insert({
+          restaurante_id:  rid,
+          turno_id:        turnoId ?? null,
+          camarero_id:     camareroId,
+          rol_origen:      session.rol,
+          nombre_origen:   session.nombre,
+          rol_destino:     rolDestino,
+          destinatario_id: destinatarioId,
+          tipo:            'voz',
+          texto:           brainResult.nota_general,
+          mesa_ref:        mesa?.codigo ?? null,
+          leido_por:       [camareroId],
+        })
+      } catch (e) { console.error('[AVISO-VOZ] mensajes_turno:', e) }
+      void seccionImpresoraId
     }
 
     // ── CUENTA NOMINAL: si BRAIN devuelve nombre_cuenta sin mesa ────────────

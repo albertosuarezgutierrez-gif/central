@@ -23,8 +23,6 @@ export class AudioDemasiadoCortoError extends Error {
 
 /** Transcribe audio. Intenta Groq Whisper primero, fallback automático a OpenAI si falla. */
 export async function transcribir(audioBlob: Blob, prompt?: string, idioma = 'es'): Promise<TranscripcionResult> {
-  const start = Date.now()
-
   // ── Intentar Groq primero ──────────────────────────────────────────────────
   if (process.env.GROQ_API_KEY && process.env.EAR_PROVIDER !== 'openai') {
     try {
