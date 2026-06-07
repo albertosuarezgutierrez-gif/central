@@ -25,13 +25,10 @@ export async function POST(req: NextRequest) {
   if (body.callback_query) {
     const { id: callbackId, data, message, from } = body.callback_query
     const messageId = message?.message_id
-    const chatId = from?.id?.toString()
-
-    // Solo responder al chat autorizado
-    if (chatId !== process.env.TELEGRAM_CHAT_ID) {
-      await tgAnswerCallback(callbackId, 'No autorizado')
-      return NextResponse.json({ ok: true })
-    }
+    const chatId = (from?.id?.toString()) || process.env.TELEGRAM_CHAT_ID || ''
+    // La autenticación ya la hace el secret de la URL (arriba). No exigimos además
+    // que from.id == TELEGRAM_CHAT_ID: al reenviar desde instagram-callback el
+    // from es el usuario que pulsa, que en un grupo no coincide con el chat.
 
     const [action, leadId] = data.split(':')
 
@@ -104,6 +101,14 @@ export async function POST(req: NextRequest) {
           .from('leads').select('id, nombre, email, tipo_negocio').eq('id', leadId).single()
         if (!lead?.email) {
           await tgEditMessage(messageId, message.text + '\n\n⚠️ <i>El lead no tiene email</i>')
+          return NextResponse.json({ ok: true })
+        }
+        // Idempotencia: solo se envía si la propuesta sigue 'propuesto'. Evita duplicados
+        // si se pulsa dos veces o se pulsa un mensaje antiguo ya enviado.
+        const { data: tProp } = await supabase
+          .from('leads_web_tracking').select('id').eq('lead_id', lead.id).eq('estado', 'propuesto').maybeSingle()
+        if (!tProp) {
+          await tgEditMessage(messageId, message.text + '\n\n✅ <i>Ya se había enviado</i>')
           return NextResponse.json({ ok: true })
         }
         const jwt = (await import('jsonwebtoken')).default

@@ -3,10 +3,106 @@
 // Detecta sesiones QR abiertas sin pago pasado el timer configurado por el dueño
 // y envía push al camarero asignado
 import { NextRequest, NextResponse } from 'next/server'
+import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
+
+const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
+const COMISION_RATE = 0.005
+
+// Cierre automático de cuentas INDIVIDUALES con tarjeta guardada (pre_auth) que llevan
+// más del timer del dueño sin cerrar. Cobra a cada una SOLO su consumición (sesion_qr_id).
+// Es la red de seguridad del "cerrar mi cuenta": si el cliente se va sin pulsar, se cobra solo.
+async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerClient>): Promise<number> {
+  const { data: sesiones } = await supabase
+    .from('qr_sesiones_cliente')
+    .select('id, restaurante_id, creado_en, preauth_payment_method_id, precio_fijo_aplicado')
+    .eq('tipo', 'individual')
+    .eq('estado', 'activa')
+    .eq('preauth_completado', true)
+    .not('preauth_payment_method_id', 'is', null)
+
+  if (!sesiones?.length) return 0
+
+  // Timer + modo de cobro por restaurante (solo auto-cobramos si el dueño eligió pre_auth)
+  const restIds = [...new Set(sesiones.map((s: any) => s.restaurante_id))]
+  const { data: configs } = await supabase
+    .from('cobro_config')
+    .select('restaurante_id, timer_inactividad_min, modo_cobro')
+    .in('restaurante_id', restIds)
+  const cfgMap = new Map((configs || []).map((c: any) => [c.restaurante_id, c]))
+
+  const stripe = getStripe()
+  const ahora = Date.now()
+
+  const resultados = await Promise.allSettled(
+    sesiones.map(async (s: any) => {
+      const cfg = cfgMap.get(s.restaurante_id)
+      if (!cfg || cfg.modo_cobro !== 'pre_auth') return false
+      const timerMin = cfg.timer_inactividad_min || 45
+      const edadMin = (ahora - new Date(s.creado_en).getTime()) / 60000
+      if (edadMin < timerMin) return false
+
+      // Total de ESTA subcuenta (subtotal + IVA 10% + precio fijo)
+      const { data: items } = await supabase
+        .from('comanda_items')
+        .select('precio_unitario, cantidad, comandas!inner(sesion_qr_id, origen)')
+        .eq('comandas.sesion_qr_id', s.id)
+        .eq('comandas.origen', 'qr_cliente')
+      let subtotal = 0
+      for (const it of items || []) subtotal += (it.precio_unitario || 0) * (it.cantidad || 0)
+      const total = subtotal * 1.10 + (s.precio_fijo_aplicado || 0)
+      if (total <= 0) {
+        // Nada que cobrar: cerramos la sesión para no reintentar eternamente
+        await supabase.from('qr_sesiones_cliente').update({ estado: 'abandonada' }).eq('id', s.id)
+        return false
+      }
+
+      const { data: rest } = await supabase
+        .from('restaurantes').select('stripe_account_id').eq('id', s.restaurante_id).single()
+
+      const importeCentimos = Math.round(total * 100)
+      const comisionCentimos = Math.round(importeCentimos * COMISION_RATE)
+
+      // idempotencyKey: si el cargo tuvo éxito pero el update de BD falló, el
+      // siguiente tick del cron NO vuelve a cobrar (Stripe devuelve el PI original).
+      const opts: Stripe.RequestOptions = { idempotencyKey: `qr-auto-${s.id}` }
+      if (rest?.stripe_account_id) opts.stripeAccount = rest.stripe_account_id
+
+      const pi = await stripe.paymentIntents.create(
+        {
+          amount: importeCentimos,
+          currency: 'eur',
+          payment_method: s.preauth_payment_method_id,
+          confirm: true,
+          off_session: true,
+          application_fee_amount: comisionCentimos,
+          metadata: { sesion_id: s.id, restaurante_id: s.restaurante_id, tipo: 'qr_cobro_auto_inactividad' },
+        },
+        opts
+      )
+
+      if (pi.status !== 'succeeded') return false
+
+      const totalEur = Math.round(total * 100) / 100
+      await supabase.from('qr_sesiones_cliente').update({
+        estado: 'pagada', pagado_en: new Date().toISOString(),
+        total_cobrado: totalEur, payment_intent_id: pi.id,
+      }).eq('id', s.id)
+
+      await supabase.rpc('registrar_pago_cobro', {
+        p_restaurante_id: s.restaurante_id,
+        p_importe_eur: totalEur,
+        p_comision_eur: Math.round(totalEur * COMISION_RATE * 100) / 100,
+      }).then(() => {}, () => {})
+
+      return true
+    })
+  )
+  return resultados.filter(r => r.status === 'fulfilled' && r.value === true).length
+}
 
 function autorizado(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
@@ -47,6 +143,14 @@ export async function GET(req: NextRequest) {
     console.error('[cobro-inactividad] purga cobros_grupo pendientes:', e)
   }
 
+  // Auto-cierre de cuentas individuales con tarjeta guardada (red de seguridad del "cerrar mi cuenta")
+  let cobradasAuto = 0
+  try {
+    cobradasAuto = await autoCerrarIndividuales(supabase)
+  } catch (e) {
+    console.error('[cobro-inactividad] auto-cierre individuales:', e)
+  }
+
   const { data: sesiones, error } = await supabase.rpc('get_sesiones_inactivas')
 
   if (error) {
@@ -55,7 +159,7 @@ export async function GET(req: NextRequest) {
   }
 
   if (!sesiones || sesiones.length === 0) {
-    return NextResponse.json({ ok: true, procesadas: 0 })
+    return NextResponse.json({ ok: true, procesadas: 0, cobradas_auto: cobradasAuto })
   }
 
   const pushUrl  = `${process.env.SUPABASE_URL}/functions/v1/push-send`
@@ -111,5 +215,6 @@ export async function GET(req: NextRequest) {
     procesadas: sesiones.length,
     alertas_enviadas: enviadas,
     errores,
+    cobradas_auto: cobradasAuto,
   })
 }

@@ -32,6 +32,9 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
   const [loading, setLoading] = useState(false)
   const [lanzando, setLanzando] = useState(false)
   const [enviandoMail, setEnviandoMail] = useState(false)
+  const [enviandoFranq, setEnviandoFranq] = useState(false)
+  const [enviandoIg, setEnviandoIg] = useState(false)
+  const [reenviando, setReenviando] = useState(false)
   const [reparando, setReparando] = useState(false)
   const [msg, setMsg] = useState<string>('')
 
@@ -77,6 +80,46 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
       setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
     } finally {
       setEnviandoMail(false)
+    }
+  }
+
+  const enviarFranquicias = async () => {
+    setEnviandoFranq(true); setMsg('')
+    try {
+      const r = await fetch('/api/super/lead-hunter-franquicia', { method: 'POST', headers: headers() })
+      const j = await r.json()
+      setMsg(j.error ? `Error: ${j.error}` : `🏢 ${j.enviados ?? 0} franquicia(s) listas para aprobar en Telegram${j.motivo ? ` (${j.motivo})` : ''}`)
+      await cargar()
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
+    } finally {
+      setEnviandoFranq(false)
+    }
+  }
+
+  const instagramDM = async (vertical: 'catering' | 'eventos') => {
+    setEnviandoIg(true); setMsg('')
+    try {
+      const r = await fetch(`/api/super/instagram-${vertical}`, { method: 'POST', headers: headers() })
+      const j = await r.json()
+      setMsg(j.error ? `Error: ${j.error}` : `📸 ${j.enviados ?? 0} ${vertical} listos para DM en Telegram${j.motivo ? ` (${j.motivo})` : ''}`)
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
+    } finally {
+      setEnviandoIg(false)
+    }
+  }
+
+  const reenviarPendientes = async () => {
+    setReenviando(true); setMsg('')
+    try {
+      const r = await fetch('/api/super/reenviar-pendientes', { method: 'POST', headers: headers() })
+      const j = await r.json()
+      setMsg(j.error ? `Error: ${j.error}` : `🔁 ${j.reenviados ?? 0} propuesta(s) reenviadas a Telegram${j.motivo ? ` (${j.motivo})` : ''}`)
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
+    } finally {
+      setReenviando(false)
     }
   }
 
@@ -130,6 +173,22 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
         <button onClick={enviarMails} disabled={enviandoMail}
           style={{ background: enviandoMail ? C.bg3 : C.green, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoMail ? 'default' : 'pointer' }}>
           {enviandoMail ? 'Preparando…' : '📧 Preparar emails (a aprobar)'}
+        </button>
+        <button onClick={enviarFranquicias} disabled={enviandoFranq}
+          style={{ background: enviandoFranq ? C.bg3 : C.ink, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoFranq ? 'default' : 'pointer' }}>
+          {enviandoFranq ? 'Preparando…' : '🏢 Preparar emails franquicias'}
+        </button>
+        <button onClick={() => instagramDM('catering')} disabled={enviandoIg}
+          style={{ background: enviandoIg ? C.bg3 : '#C13584', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontWeight: 700, fontSize: 13, cursor: enviandoIg ? 'default' : 'pointer' }}>
+          {enviandoIg ? '…' : '📸 Instagram catering'}
+        </button>
+        <button onClick={() => instagramDM('eventos')} disabled={enviandoIg}
+          style={{ background: enviandoIg ? C.bg3 : '#833AB4', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontWeight: 700, fontSize: 13, cursor: enviandoIg ? 'default' : 'pointer' }}>
+          {enviandoIg ? '…' : '📸 Instagram eventos'}
+        </button>
+        <button onClick={reenviarPendientes} disabled={reenviando}
+          style={{ background: reenviando ? C.bg3 : C.green, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontWeight: 700, fontSize: 13, cursor: reenviando ? 'default' : 'pointer' }}>
+          {reenviando ? '…' : '🔁 Reenviar pendientes'}
         </button>
         <button onClick={repararWebhook} disabled={reparando}
           style={{ background: 'transparent', color: C.ink3, border: `1px solid ${C.rule}`, borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontSize: 13, cursor: reparando ? 'default' : 'pointer' }}>
