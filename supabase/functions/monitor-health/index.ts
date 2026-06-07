@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
       .from('incidencias_sistema')
       .select('id', { count: 'exact', head: true })
       .eq('tipo', inc.tipo)
-      .eq('restaurante_id', inc.restaurante_id ?? null)
+      .eq('local_id', inc.restaurante_id ?? null)
       .eq('resuelta', false)
       .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
 
@@ -72,7 +72,7 @@ Deno.serve(async (req) => {
       .from('incidencias_sistema')
       .update({ resuelta: true, auto_resuelta: true, resuelta_at: new Date().toISOString(), resuelta_por: 'auto' })
       .eq('tipo', params.tipo)
-      .eq('restaurante_id', params.restaurante_id ?? null)
+      .eq('local_id', params.restaurante_id ?? null)
       .eq('resuelta', false)
 
     // 2. Insertar registro de resolución
@@ -82,7 +82,7 @@ Deno.serve(async (req) => {
       nivel: 'resuelto',
       mensaje: `⚡ Auto-fix: ${params.mensaje}`,
       detalle: params.detalle ?? {},
-      restaurante_id: params.restaurante_id ?? null,
+      local_id: params.restaurante_id ?? null,
       resuelta: true,
       auto_resuelta: true,
       resuelta_at: new Date().toISOString(),
@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
     // 3. Training log: cada curación = dato de aprendizaje
     try {
       await supabase.from('ia_training_log').insert({
-        restaurante_id: params.restaurante_id ?? null,
+        local_id: params.restaurante_id ?? null,
         tipo: 'auto_healer',
         fuente: 'auto_healer',
         input: params.mensaje,
@@ -121,7 +121,7 @@ Deno.serve(async (req) => {
   try {
     const { data: bridges } = await supabase
       .from('bridge_tokens')
-      .select('restaurante_id, ultimo_ping, activo')
+      .select('local_id, ultimo_ping, activo')
       .eq('activo', true)
       .not('ultimo_ping', 'is', null)
 
@@ -138,7 +138,7 @@ Deno.serve(async (req) => {
         modulo: 'bridge',
         mensaje: `Bridge desconectado hace ${Math.round(min)} min`,
         detalle: { ultimo_ping: b.ultimo_ping, minutos: Math.round(min) },
-        restaurante_id: b.restaurante_id,
+        restaurante_id: b.local_id,
         nivel: min > 60 ? 'critico' : 'aviso',
       })
     }
@@ -151,7 +151,7 @@ Deno.serve(async (req) => {
 
     const { data: comandasSinPrint } = await supabase
       .from('comandas')
-      .select('id, restaurante_id, created_at, nombre_cuenta, mesa:mesas(codigo)')
+      .select('id, local_id, created_at, nombre_cuenta, mesa:mesas(codigo)')
       .eq('estado', 'nueva')
       .lt('created_at', tresMinAtras)
 
@@ -178,7 +178,7 @@ Deno.serve(async (req) => {
           modulo: 'comanda',
           mensaje: `Comanda mesa ${mesaLabel} reimpresa automáticamente`,
           detalle: { comanda_id: comanda.id, created_at: comanda.created_at },
-          restaurante_id: comanda.restaurante_id,
+          restaurante_id: comanda.local_id,
         })
       } else {
         await notificar({
@@ -186,7 +186,7 @@ Deno.serve(async (req) => {
           modulo: 'comanda',
           mensaje: `Comanda mesa ${mesaLabel} sin imprimir > 3 min — no se pudo auto-fix`,
           detalle: { comanda_id: comanda.id, error: reencolarError.message },
-          restaurante_id: comanda.restaurante_id,
+          restaurante_id: comanda.local_id,
           nivel: 'aviso',
         })
       }
@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
   try {
     const { data: jobsFallidos } = await supabase
       .from('print_jobs')
-      .select('id, restaurante_id, comanda_id, attempts, error_msg')
+      .select('id, local_id, comanda_id, attempts, error_msg')
       .eq('status', 'error')
       .gte('attempts', 3)
       .lt('attempts', 6)
@@ -217,14 +217,14 @@ Deno.serve(async (req) => {
         modulo: 'bridge',
         mensaje: `Print job reseteado a pendiente (intento ${job.attempts + 1})`,
         detalle: { job_id: job.id, intentos_anteriores: job.attempts, error: job.error_msg },
-        restaurante_id: job.restaurante_id,
+        restaurante_id: job.local_id,
       })
     }
 
     // Jobs con >= 6 fallos → alerta crítica
     const { data: jobsCriticos } = await supabase
       .from('print_jobs')
-      .select('id, restaurante_id, comanda_id, attempts, error_msg')
+      .select('id, local_id, comanda_id, attempts, error_msg')
       .eq('status', 'error')
       .gte('attempts', 6)
       .gte('created_at', new Date(Date.now() - 60 * 60 * 1000).toISOString())
@@ -235,7 +235,7 @@ Deno.serve(async (req) => {
         modulo: 'bridge',
         mensaje: `Impresión fallida ${job.attempts} veces — requiere intervención manual`,
         detalle: { job_id: job.id, comanda_id: job.comanda_id, error: job.error_msg },
-        restaurante_id: job.restaurante_id,
+        restaurante_id: job.local_id,
         nivel: 'critico',
       })
     }
@@ -275,7 +275,7 @@ Deno.serve(async (req) => {
       const { data: turnoActivo } = await supabase
         .from('turnos')
         .select('id, entrada_at')
-        .eq('restaurante_id', rest.id)
+        .eq('local_id', rest.id)
         .is('camarero_id', null)
         .is('salida_at', null)
         .order('entrada_at', { ascending: false })
@@ -288,7 +288,7 @@ Deno.serve(async (req) => {
       const { data: ochoSeis } = await supabase
         .from('productos_86')
         .select('id')
-        .eq('restaurante_id', rest.id)
+        .eq('local_id', rest.id)
         .lt('created_at', turnoActivo.entrada_at)
 
       if ((ochoSeis?.length ?? 0) > 0) {
@@ -316,7 +316,7 @@ Deno.serve(async (req) => {
 
       const { data: mesasZombie } = await supabase
         .from('mesas')
-        .select('id, codigo, restaurante_id, ocupada_desde')
+        .select('id, codigo, local_id, ocupada_desde')
         .in('estado', ['activa', 'marchar', 'aviso'])
         .lt('ocupada_desde', ochoHorasAtras)
 
@@ -344,7 +344,7 @@ Deno.serve(async (req) => {
           modulo: 'sala',
           mensaje: `Mesa ${mesa.codigo} reseteada a libre (estaba activa >8h sin comanda)`,
           detalle: { mesa_id: mesa.id, codigo: mesa.codigo, ocupada_desde: mesa.ocupada_desde },
-          restaurante_id: mesa.restaurante_id,
+          restaurante_id: mesa.local_id,
         })
       }
       resultados.mesas_zombie_reseteadas = mesasReseteadas
@@ -359,7 +359,7 @@ Deno.serve(async (req) => {
 
       const { data: turnosAbiertos } = await supabase
         .from('turnos')
-        .select('id, restaurante_id, camarero_id, entrada_at')
+        .select('id, local_id, camarero_id, entrada_at')
         .not('camarero_id', 'is', null)  // solo fichaje individual
         .is('salida_at', null)
         .lt('entrada_at', catorceHorasAtras)
@@ -383,7 +383,7 @@ Deno.serve(async (req) => {
           modulo: 'fichaje',
           mensaje: `Turno de fichaje cerrado automáticamente (>14h abierto)`,
           detalle: { turno_id: turno.id, entrada_at: turno.entrada_at, camarero_id: turno.camarero_id },
-          restaurante_id: turno.restaurante_id,
+          restaurante_id: turno.local_id,
         })
       }
       resultados.turnos_fichaje_cerrados = turnosCerrados
@@ -394,7 +394,7 @@ Deno.serve(async (req) => {
   try {
     const { data: productosGratis } = await supabase
       .from('productos')
-      .select('id, nombre, restaurante_id, precio')
+      .select('id, nombre, local_id, precio')
       .eq('activo', true)
       .or('precio.eq.0,precio.is.null')
 
@@ -403,7 +403,7 @@ Deno.serve(async (req) => {
       const { count: turnoActivo } = await supabase
         .from('turnos')
         .select('id', { count: 'exact', head: true })
-        .eq('restaurante_id', prod.restaurante_id)
+        .eq('local_id', prod.local_id)
         .is('camarero_id', null)
         .is('salida_at', null)
 
@@ -414,7 +414,7 @@ Deno.serve(async (req) => {
         modulo: 'carta',
         mensaje: `Producto "${prod.nombre}" tiene precio 0 o sin precio y está activo en carta`,
         detalle: { producto_id: prod.id, nombre: prod.nombre, precio: prod.precio },
-        restaurante_id: prod.restaurante_id,
+        restaurante_id: prod.local_id,
         nivel: 'aviso',
       })
     }
@@ -427,15 +427,15 @@ Deno.serve(async (req) => {
 
     const { data: fallosRepetidos } = await supabase
       .from('incidencias_sistema')
-      .select('tipo, restaurante_id, modulo')
+      .select('tipo, local_id, modulo')
       .eq('resuelta', false)
       .gte('created_at', unaHoraAtras)
 
     // Agrupar manualmente
     const conteo: Record<string, { count: number; modulo: string; restaurante_id: string | null }> = {}
     for (const f of fallosRepetidos ?? []) {
-      const key = `${f.tipo}:${f.restaurante_id ?? 'global'}`
-      if (!conteo[key]) conteo[key] = { count: 0, modulo: f.modulo, restaurante_id: f.restaurante_id }
+      const key = `${f.tipo}:${f.local_id ?? 'global'}`
+      if (!conteo[key]) conteo[key] = { count: 0, modulo: f.modulo, restaurante_id: f.local_id }
       conteo[key].count++
     }
 
@@ -465,7 +465,7 @@ Deno.serve(async (req) => {
 
     const { data: patronesFrecuentes } = await supabase
       .from('incidencias_sistema')
-      .select('tipo, modulo, restaurante_id, dia_semana, hora_dia')
+      .select('tipo, modulo, local_id, dia_semana, hora_dia')
       .eq('dia_semana', diaHoy)
       .eq('hora_dia', horaActual2)
       .gte('created_at', new Date(Date.now() - 28 * 24 * 60 * 60 * 1000).toISOString())
@@ -473,8 +473,8 @@ Deno.serve(async (req) => {
     // Agrupar por tipo+restaurante
     const patronConteo: Record<string, { count: number; modulo: string; restaurante_id: string | null }> = {}
     for (const p of patronesFrecuentes ?? []) {
-      const key = `${p.tipo}:${p.restaurante_id ?? 'global'}`
-      if (!patronConteo[key]) patronConteo[key] = { count: 0, modulo: p.modulo, restaurante_id: p.restaurante_id }
+      const key = `${p.tipo}:${p.local_id ?? 'global'}`
+      if (!patronConteo[key]) patronConteo[key] = { count: 0, modulo: p.modulo, restaurante_id: p.local_id }
       patronConteo[key].count++
     }
 
@@ -507,7 +507,7 @@ Deno.serve(async (req) => {
     // Buscar jobs impresos con items aún pendientes (excluir tipo 'cambio')
     const { data: jobsDesync } = await supabase
       .from('print_jobs')
-      .select('id, comanda_id, restaurante_id, payload, acked_at')
+      .select('id, comanda_id, local_id, payload, acked_at')
       .eq('status', 'impreso')
       .not('comanda_id', 'is', null)
       .gte('acked_at', treintaMinAtras)
@@ -552,7 +552,7 @@ Deno.serve(async (req) => {
           modulo: 'bridge',
           mensaje: `${pendientes} items sincronizados a impreso (job acked pero items pendientes)`,
           detalle: { job_id: job.id, comanda_id: job.comanda_id, items_sync: pendientes },
-          restaurante_id: job.restaurante_id,
+          restaurante_id: job.local_id,
         })
       }
     }
@@ -567,7 +567,7 @@ Deno.serve(async (req) => {
 
     const { data: cambiosSinAck } = await supabase
       .from('print_jobs')
-      .select('id, comanda_id, restaurante_id, created_at')
+      .select('id, comanda_id, local_id, created_at')
       .in('status', ['pendiente', 'encolado'])
       .lt('created_at', dosMinAtras)
       .filter('payload->>tipo', 'eq', 'cambio')
@@ -580,7 +580,7 @@ Deno.serve(async (req) => {
         modulo: 'bridge',
         mensaje: `Cambio/anulación no confirmado por impresora (${minutos} min) — avisa a cocina manualmente`,
         detalle: { job_id: job.id, comanda_id: job.comanda_id, minutos },
-        restaurante_id: job.restaurante_id,
+        restaurante_id: job.local_id,
         nivel: minutos > 5 ? 'critico' : 'aviso',
       })
     }
@@ -596,7 +596,7 @@ Deno.serve(async (req) => {
     // ¿Hay bridge master activo?
     const { data: bridgeMaster } = await supabase
       .from('bridge_tokens')
-      .select('id, restaurante_id, rol, ultimo_ping, bridge_version')
+      .select('id, local_id, rol, ultimo_ping, bridge_version')
       .eq('activo', true)
       .eq('rol', 'master')
       .gt('ultimo_ping', new Date(Date.now() - 60 * 1000).toISOString())
@@ -608,7 +608,7 @@ Deno.serve(async (req) => {
       const { count: jobsBloqueados } = await supabase
         .from('print_jobs')
         .select('id', { count: 'exact', head: true })
-        .eq('restaurante_id', bridgeMaster.restaurante_id)
+        .eq('local_id', bridgeMaster.local_id)
         .eq('status', 'pendiente')
         .eq('attempts', 0)
         .lt('created_at', cincoMinAtras)
@@ -619,7 +619,7 @@ Deno.serve(async (req) => {
         await supabase
           .from('print_jobs')
           .update({ status: 'pendiente' })
-          .eq('restaurante_id', bridgeMaster.restaurante_id)
+          .eq('local_id', bridgeMaster.local_id)
           .eq('status', 'encolado')
           .eq('attempts', 0)
           .lt('created_at', cincoMinAtras)
@@ -634,7 +634,7 @@ Deno.serve(async (req) => {
             bridge_ultimo_ping: bridgeMaster.ultimo_ping,
             sugerencia: 'Verificar connection_type de impresoras y enum printer_connection_type en BD'
           },
-          restaurante_id: bridgeMaster.restaurante_id,
+          restaurante_id: bridgeMaster.local_id,
           nivel: 'critico',
         })
       }
@@ -650,7 +650,7 @@ Deno.serve(async (req) => {
 
     const { data: impresoras } = await supabase
       .from('impresoras')
-      .select('id, nombre, connection_type, restaurante_id')
+      .select('id, nombre, connection_type, local_id')
       .eq('activa', true)
 
     const tiposDesconocidos = (impresoras ?? []).filter(
@@ -664,7 +664,7 @@ Deno.serve(async (req) => {
           modulo: 'bridge',
           mensaje: `Impresora "${imp.nombre}" tiene connection_type="${imp.connection_type}" no reconocido — no recibirá jobs`,
           detalle: { impresora_id: imp.id, connection_type: imp.connection_type, tipos_validos: TIPOS_VALIDOS },
-          restaurante_id: imp.restaurante_id,
+          restaurante_id: imp.local_id,
           nivel: 'critico',
         })
       }
@@ -684,7 +684,7 @@ Deno.serve(async (req) => {
       .from('recepcion_items')
       .select(`
         id, nombre_articulo, cantidad_recibida, unidad, fecha_caducidad, numero_lote,
-        recepciones_mercancia!inner(estado, restaurante_id)
+        recepciones_mercancia!inner(estado, local_id)
       `)
       .eq('recepciones_mercancia.estado', 'confirmada')
       .not('fecha_caducidad', 'is', null)
@@ -694,7 +694,7 @@ Deno.serve(async (req) => {
     for (const lote of lotesCaducan ?? []) {
       const caducidad = lote.fecha_caducidad as string
       const dias = Math.ceil((new Date(caducidad).getTime() - hoy.getTime()) / (1000 * 60 * 60 * 24))
-      const restauranteId = (lote.recepciones_mercancia as { restaurante_id: string }).restaurante_id
+      const restauranteId = (lote.recepciones_mercancia as { local_id: string }).local_id
 
       if (dias <= 3) {
         await notificar({
@@ -713,7 +713,7 @@ Deno.serve(async (req) => {
     }).length
   } catch (e) { console.error('Check 15 caducidades:', e) }
 
-
+  return new Response(JSON.stringify({
     ok: true,
     timestamp: new Date().toISOString(),
     modo: esMadrugada ? 'madrugada' : 'servicio',

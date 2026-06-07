@@ -28,7 +28,7 @@ serve(async (req) => {
     // 1. Obtener sesión y datos del restaurante
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, restaurante_id, mesa_id, estado, tipo')
+      .select('id, local_id, mesa_id, estado, tipo')
       .eq('id', sesion_id)
       .eq('estado', 'activa')
       .single()
@@ -40,7 +40,7 @@ serve(async (req) => {
     const { data: rest } = await supabase
       .from('restaurantes')
       .select('nombre, stripe_connect_account_id, stripe_connect_onboarded')
-      .eq('id', sesion.restaurante_id)
+      .eq('id', sesion.local_id)
       .single()
 
     if (!rest?.stripe_connect_onboarded || !rest.stripe_connect_account_id) {
@@ -51,9 +51,9 @@ serve(async (req) => {
     //    (comandas.sesion_qr_id); en mesa, todos los items QR de la mesa (legado).
     let itemsQuery = supabase
       .from('comanda_items')
-      .select('precio_unitario, cantidad, comandas!inner(mesa_id, origen, restaurante_id, sesion_qr_id)')
+      .select('precio_unitario, cantidad, comandas!inner(mesa_id, origen, local_id, sesion_qr_id)')
       .eq('comandas.origen', 'qr_cliente')
-      .eq('comandas.restaurante_id', sesion.restaurante_id)
+      .eq('comandas.local_id', sesion.local_id)
 
     if (sesion.tipo === 'individual') {
       itemsQuery = itemsQuery.eq('comandas.sesion_qr_id', sesion.id)
@@ -141,7 +141,7 @@ serve(async (req) => {
       ],
       success_url: success_url || `${Deno.env.get('NEXT_PUBLIC_APP_URL')}/q/success?sesion=${sesion_id}`,
       cancel_url: cancel_url || `${Deno.env.get('NEXT_PUBLIC_APP_URL')}/q/cancel?sesion=${sesion_id}`,
-      metadata: { sesion_id, restaurante_id: sesion.restaurante_id, mesa_id: sesion.mesa_id },
+      metadata: { sesion_id, restaurante_id: sesion.local_id, mesa_id: sesion.mesa_id },
       payment_intent_data: {
         application_fee_amount: applicationFee,
         transfer_data: { destination: rest.stripe_connect_account_id },

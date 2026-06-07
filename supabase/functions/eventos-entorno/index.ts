@@ -64,7 +64,7 @@ serve(async () => {
           const aforo = ev.accessibility?.seatCount ?? ev.place?.capacity ?? 2000
           const venue = ev._embedded?.venues?.[0]
           await supabase.from('eventos_entorno').upsert({
-            restaurante_id:    rest.id,
+            local_id:    rest.id,
             nombre:            ev.name,
             fecha_inicio:      ev.dates?.start?.dateTime ?? `${ev.dates?.start?.localDate}T00:00:00Z`,
             tipo:              ev.classifications?.[0]?.segment?.name?.toLowerCase().includes('sport') ? 'deportes' : 'concierto',
@@ -74,7 +74,7 @@ serve(async () => {
             venue_nombre:      venue?.name ?? null,
             venue_direccion:   venue?.address?.line1 ?? null,
             raw:               ev,
-          }, { onConflict: 'restaurante_id,nombre,fecha_inicio', ignoreDuplicates: true })
+          }, { onConflict: 'local_id,nombre,fecha_inicio', ignoreDuplicates: true })
           insertados++
         }
       } catch (e) {
@@ -108,14 +108,14 @@ serve(async () => {
 
           if (nombre) {
             await supabase.from('eventos_entorno').upsert({
-              restaurante_id:   rest.id,
+              local_id:   rest.id,
               nombre,
               fecha_inicio:     `${d.time[i]}T00:00:00Z`,
               tipo:             'clima',
               fuente:           'open-meteo',
               impacto_estimado: impacto,
               raw:              { fecha: d.time[i], lluvia: d.precipitation_sum[i], temp: d.temperature_2m_max[i], wmo: d.weathercode[i] },
-            }, { onConflict: 'restaurante_id,nombre,fecha_inicio', ignoreDuplicates: true })
+            }, { onConflict: 'local_id,nombre,fecha_inicio', ignoreDuplicates: true })
             insertados++
           }
         }
@@ -136,7 +136,7 @@ serve(async () => {
       // Comprobar si ya corrió esta semana
       const { data: yaHecho } = await supabase
         .from('eventos_entorno').select('id')
-        .eq('restaurante_id', rest.id).eq('fuente', 'claude-websearch')
+        .eq('local_id', rest.id).eq('fuente', 'claude-websearch')
         .gte('created_at', new Date(Date.now() - 6 * 86400000).toISOString()).limit(1)
       if (yaHecho?.length) continue
 
@@ -144,7 +144,7 @@ serve(async () => {
       const { data: existentes } = await supabase
         .from('eventos_entorno')
         .select('nombre, fecha_inicio')
-        .eq('restaurante_id', rest.id)
+        .eq('local_id', rest.id)
         .gte('fecha_inicio', `${fechaHoy}T00:00:00Z`)
         .lte('fecha_inicio', `${fecha180}T23:59:59Z`)
         .order('fecha_inicio', { ascending: true })
@@ -200,11 +200,11 @@ Si no hay nada nuevo: {"eventos":[]}` }],
 
           const aforo = ev.aforo_estimado ?? 5000
           await supabase.from('eventos_entorno').upsert({
-            restaurante_id: rest.id, nombre: ev.nombre,
+            local_id: rest.id, nombre: ev.nombre,
             fecha_inicio: `${ev.fecha}T00:00:00Z`,
             tipo: ev.tipo ?? 'otro', fuente: 'claude-websearch',
             aforo_estimado: aforo, impacto_estimado: calcularImpacto(aforo), raw: ev,
-          }, { onConflict: 'restaurante_id,nombre,fecha_inicio', ignoreDuplicates: true })
+          }, { onConflict: 'local_id,nombre,fecha_inicio', ignoreDuplicates: true })
           insertados++
         }
       } catch(e) { console.error(`Claude websearch error ${rest.nombre}:`, e) }
