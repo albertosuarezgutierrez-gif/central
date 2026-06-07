@@ -64,6 +64,19 @@
       `local_id` añadido en paralelo en **168 tablas base** + backfill + trigger
       `sync_local_restaurante_id` (bidireccional, insert/update) → ambas columnas siempre cuadran.
       `getLocalId()` canónico en `lib/session.ts` (envuelve getRestauranteId). Cero downtime.
+    - **🧪 DIAGNÓSTICO con cliente tipado (commit `539ba84`) — HALLAZGO CRÍTICO**:
+      generé los tipos `Database` de Supabase y tipé el cliente como experimento. Resultado:
+      593 errores tsc = **545 PREEXISTENTES** ajenos al rename (overloads, RPC, `cerrada_at`
+      inexistente...) → tipar el cliente entero es un proyecto aparte, NO se hace en este PR
+      (revertí el tipado y borré `database.types.ts`; regenerable vía MCP `generate_typescript_types`
+      project `efncqyvhniaxsirhdxaa`). PERO encontró **20 BUGS REALES míos**: los lotes 2-3
+      migraron filtros/selects a `local_id` sobre **VISTAS que no tienen esa columna**
+      (`stock_articulos`, `escandallos`, `elaboraciones_kds`, `v_fuera_carta_activos`,
+      `salud_curas`, `almacen`, `leads`...) → PostgREST daría 400 en runtime. **REVERTIDOS** a
+      restaurante_id. ⚠️ **LECCIÓN**: el trigger de Fase 1 es SOLO sobre TABLAS BASE; las VISTAS
+      exponen `restaurante_id` y NO `local_id`. Para migrar queries sobre vistas hay que
+      **recrear las vistas con local_id primero** (parte de Fase 3). Hasta entonces, queries
+      sobre vistas SE QUEDAN en restaurante_id.
     - **🔄 FASE 2 MIGRATE (EN CURSO, por lotes verificados con tsc + next build)**:
       - **✅ Lote 1 (commit `4cf28d2`) — compat de sesión**: `ApiSession`/`Session` con campo
         `local_id?` opcional; `getSession()` deriva `local_id = restaurante_id` **DESPUÉS de verificar
