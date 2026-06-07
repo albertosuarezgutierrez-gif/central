@@ -22,6 +22,7 @@ import ManualVozTab from '@/components/owner/ManualVozTab'
 import DashboardTab from '@/components/owner/DashboardTab'
 import ForecasterTab from '@/components/owner/ForecasterTab'
 import RRHHTab from '@/components/owner/RRHHTab'
+import TiendaTab from '@/components/owner/TiendaTab'
 import AnalisisCartaTab from '@/components/owner/AnalisisCartaTab'
 import EtiquetasTab from '@/components/owner/EtiquetasTab'
 import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
@@ -7574,6 +7575,12 @@ const GRUPOS = [
     ]
   },
   {
+    id: 'tienda', label: 'Tienda', icon: ICONS.receipt, modulo: 'tienda',
+    tabs: [
+      { id: 'tienda-config', label: 'TPV Tienda', icon: ICONS.receipt },
+    ]
+  },
+  {
     id: 'ia', label: 'IA', icon: ICONS.sparkle, modulo: 'ia',
     tabs: [
       { id: 'forecaster', label: 'Eventos IA',  icon: ICONS.chart  },
@@ -8491,6 +8498,7 @@ export default function OwnerPage() {
             {tab === 'analisis'       && <AnalisisCartaTab sh={sh} />}
             {tab === 'recomendaciones' && <RecomendacionesTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'almacen'         && <AlmacenTab sh={sh} restauranteId={session.restaurante_id} />}
+            {tab === 'tienda-config'   && <TiendaTab sh={sh} />}
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'pagos'          && <PagosProveedorTab sh={sh} />}
             {tab === 'contabilidad'   && <ContabilidadTab sh={sh} />}
