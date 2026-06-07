@@ -178,12 +178,14 @@ export async function proponerEmailsFranquicia(
   }
 }
 
-// ── INSTAGRAM (catering Sevilla) ───────────────────────────────────────────
-// Propone DMs de Instagram (envío MANUAL) a caterings de Sevilla: por cada uno,
-// mensaje a Telegram con botón "Abrir Instagram" + el DM para copiar. Marca
-// instagram_outreach_at al proponer (como WhatsApp) para no repetir.
-export async function proponerInstagramCatering(
+// ── INSTAGRAM (Sevilla) ────────────────────────────────────────────────────
+// Propone DMs de Instagram (envío MANUAL) a leads de Sevilla de un vertical
+// (catering / eventos): por cada uno, mensaje a Telegram con botón "Abrir
+// Instagram" + el DM para copiar. Marca instagram_outreach_at al proponer
+// (como WhatsApp) para no repetir.
+export async function proponerInstagramSevilla(
   supabase: SupabaseSrv,
+  vertical: 'catering' | 'eventos' = 'catering',
   limite = 15
 ): Promise<{ ok: boolean; enviados: number; motivo?: string; error?: string }> {
   try {
@@ -191,13 +193,13 @@ export async function proponerInstagramCatering(
       .from('leads')
       .select('id, nombre, empresa, tipo_negocio, web')
       .ilike('ciudad', '%Sevilla%')
-      .eq('tipo_negocio', 'catering')
+      .eq('tipo_negocio', vertical)
       .is('instagram_outreach_at', null)
       .neq('estado', 'descartado')
       .limit(limite)
     if (error) throw new Error(error.message)
     if (!leads || leads.length === 0) {
-      return { ok: true, enviados: 0, motivo: 'Sin caterings de Sevilla pendientes por Instagram' }
+      return { ok: true, enviados: 0, motivo: `Sin ${vertical} de Sevilla pendientes por Instagram` }
     }
 
     const token = process.env.TELEGRAM_BOT_TOKEN
@@ -231,11 +233,11 @@ export async function proponerInstagramCatering(
         console.error('instagram lead', lead.id, e); continue
       }
     }
-    if (enviados > 0) await tgAlert(`📸 ${enviados} catering(s) listos para DM de Instagram (arriba).`, 'info')
+    if (enviados > 0) await tgAlert(`📸 ${enviados} ${vertical} listos para DM de Instagram (arriba).`, 'info')
     return { ok: true, enviados }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido'
-    console.error('Error instagram catering:', msg)
+    console.error('Error instagram sevilla:', msg)
     return { ok: false, enviados: 0, error: msg }
   }
 }
