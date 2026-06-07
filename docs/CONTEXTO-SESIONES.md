@@ -45,10 +45,13 @@
     comanda fantasma**; el `if (mesa)` queda restringido a comanda/cuenta/marchar (flujo de
     comanda/cuenta intacto).
   - **Verificado:** `tsc --noEmit` 0 · `npm run qa` 0 errores · `next build` OK · test 14/14.
+  - **PR #74 MERGEADO a `main`** (squash `667d52d`); luego **PR #75** remató `marchar`.
+  - **PR #75 (marchar) — ✅ HECHO:** `marchar` por voz ahora **reusa la comanda activa** de la mesa
+    (estado en_cocina/nueva/lista) en vez de crear una comanda nueva fantasma; **no inserta items**
+    (solo marca los existentes como `listo` vía MARCHAR GRANULAR) y se protege si la mesa no tiene
+    comanda activa (`comanda` null → no hace nada). `tsc` 0 · `next build` OK · test 14/14.
+    → con esto las 5 funciones de voz (comanda/cuenta/aviso/86/marchar) quedan correctas.
   - **Pendiente:**
-    - **`marchar` por voz** se dejó **igual a propósito** (crea comanda nueva en vez de reusar la
-      activa → fantasma; pero 0 filas reales → sin uso, y su refactor arriesga el camino que
-      funciona). Queda para un cambio dedicado con pruebas (reusar comanda activa + no insertar items).
     - Opcional: añadir `recomendacion_vino` al CHECK de `comandas.tipo` (hoy mitigado porque ya
       no se inserta ese tipo).
     - **Tras merge+deploy:** re-consultar BD para confirmar que aparecen filas nuevas en
