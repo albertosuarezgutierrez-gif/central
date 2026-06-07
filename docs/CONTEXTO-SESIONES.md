@@ -16,6 +16,42 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Agente de ventas: router de contacto + franquicias + Instagram — 07/06/2026**
+  (rama `claude/leais-sales-agent-catering-b5ikA`). Sesión larga; toda la maquinaria de
+  outreach quedó operativa y verificada en prod.
+  - **Router de contacto Sevilla:** un solo canal por lead, **todo a aprobación por Telegram**.
+    Móvil (ES 6/7) → WhatsApp (`normalizarTelefonoEs` ahora SOLO móvil); sin móvil + email →
+    email. El email frío **ya no auto-envía**: `enviarEmailsSevilla` **propone** a Telegram con
+    botón ✅ Enviar (excluye móviles, marca tracking `propuesto`). Límite = nº emails no-móvil
+    (sobre-pide al RPC); botón panel 20, cron 12.
+  - **Callback `enviar_sevilla`** (en `/api/telegram/webhook`): reconstruye el email por
+    `tipo_negocio` y envía desde `hola@iarest.es` (Resend), tracking `propuesto`→`enviado_dia1`.
+    **Idempotente** (solo si sigue `propuesto` → no duplica). `descartar_sevilla` también.
+  - **FIX CRÍTICO Telegram:** el bot apunta (vía `setup-webhook`) a `/api/telegram/instagram-callback`,
+    que solo maneja `ig_*`/`blog_*`. Ahora **reenvía** las acciones CRM a `/api/telegram/webhook`
+    **con `?secret=TELEGRAM_WEBHOOK_SECRET` en la URL** (el webhook lo exige) y se quitó el doble-auth
+    `from.id==TELEGRAM_CHAT_ID`. Además el `secret_token` estaba desalineado → 401: se arregla
+    **re-registrando** el webhook (botón **🔧 Reparar webhook Telegram** en el panel, que llama a
+    `setup-webhook` con la sesión; abrir la URL directa da "No autorizado" porque usa header `x-ia-session`).
+    **Verificado:** 31 emails enviados el 07/06, 0 pendientes.
+  - **Franquicias (nacional):** vertical `franquicia` en `crm-sevilla.ts` (email de PRESENTACIÓN:
+    operativa única, panel central, margen por local, VeriFactu). Captación Apify nacional
+    (`ApifyVertical` gana 'franquicia', queries en `prospeccion-apify.ts`). `proponerEmailsFranquicia`
+    + endpoint `/api/super/lead-hunter-franquicia` + botón 🏢. **20 centrales sembradas**
+    (origen `bot_prospeccion`, marca+web+ciudad). **Emails reales solo 3** (resto usa FORMULARIO):
+    Lizarran y Muerde la Pasta → `expansion@comessgroup.com`, Rodilla → `departamento_expansion@damm.com`
+    (las 3 ya enviadas). Las 16 sin email tienen el enlace de su formulario en `notas`; Goiko no franquicia.
+  - **Instagram (DM manual, sin API/ToS):** columna `leads.instagram_outreach_at` (migración
+    `20260607_leads_instagram_outreach_at.sql`). `construirInstagram` (mensaje por vertical + enlace:
+    perfil si la web es de IG, si no búsqueda Google). `proponerInstagramSevilla(vertical)` manda a
+    Telegram el DM en `<code>` (toque=copiar) + botón 📸 Abrir Instagram, marca outreach. Botones
+    **📸 Instagram catering** y **📸 Instagram eventos** en el panel.
+  - **Botón 🔁 Reenviar pendientes:** re-emite a Telegram las propuestas atascadas en `propuesto`
+    sin duplicar (`reenviarPropuestasPendientes`).
+  - **PRs mergeados (squash):** #57, #64, #65, #66, #68, #69, #71, #72 (+ el de eventos/Instagram).
+  - **PENDIENTE / ideas:** enriquecer emails de las 16 centrales (formulario/LinkedIn);
+    flujo LinkedIn "click-to-LinkedIn" desde Telegram (botón a perfil + mensaje IA a pegar, opción A,
+    sin scraping); opcional: cron que proponga franquicias-locales e Instagram automáticamente.
 - **QR cuenta individual — "cada uno pide su caña y se le cobra lo suyo" — 06/06/2026**
   (rama `claude/individual-beer-ordering-billing-oRwzB`): feature **100% configurable por el
   dueño**. Idea de Alberto (escenario Sevilla: cañas rápidas, cada uno pide y paga lo suyo).
