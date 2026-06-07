@@ -55,11 +55,22 @@
     - `src/components/owner/TiendaTab.tsx` + grupo 'Tienda' en /owner (gated por modulo 'tienda') +
       `'tienda'` en TODOS_MODULOS. Config: modo catálogo, hardware (lector/báscula/táctil), descontar stock.
     - RRHHTab: rol 'Dependiente/a tienda'. help-prompts: entrada '/tienda'.
-  - **ÚNICO PENDIENTE GORDO**: **rename `restaurante_id → local_id`** (50 tablas + RLS `app.local_id`
-    + ~176 refs + tabla `restaurantes`→`locales` con vista compat). Decisión: hacerlo en **RAMA de
-    Supabase** (probar→verificar→promover), NO en prod a ciegas, y **crear antes** la red mínima de
-    tests (4 costuras + venta→cobro→factura→stock). Es la operación de más riesgo → sesión dedicada
-    con contexto fresco. El resto de la plataforma (Fases B/D/E/F) según el spec.
+  - **RENAME tenant restaurante_id → local_id: expand-contract EN CURSO** (decisión de Alberto).
+    Datos reales del alcance: **1.565 ocurrencias en 352 ficheros** + `getRestauranteId` (606) +
+    `x-ia-restaurante-id` (11) + `from('restaurantes')` (104) + 44 migraciones. Constraint clave:
+    **BD Supabase única compartida** → un rename directo rompería `main` (code/BD mismatch). Por eso
+    expand-contract.
+    - **✅ FASE 1 EXPAND (aplicada al remoto + commit `20260607_rename_tenant_expand_fase1.sql`)**:
+      `local_id` añadido en paralelo en **168 tablas base** + backfill + trigger
+      `sync_local_restaurante_id` (bidireccional, insert/update) → ambas columnas siempre cuadran.
+      `getLocalId()` canónico en `lib/session.ts` (envuelve getRestauranteId). Cero downtime.
+    - **⏭️ FASE 2 MIGRATE (pendiente, grande)**: cambiar los 352 ficheros restaurante_id→local_id por
+      LOTES (verificando tsc + next build en cada uno). ⚠️ CUIDADO: el objeto de **sesión firmado HMAC**
+      usa la clave `restaurante_id` (en `session-sign`, login, localStorage `ia_rest_session`); migrar
+      con compatibilidad para NO invalidar sesiones en curso. Las VISTAS con restaurante_id (~33) habrá
+      que recrearlas para exponer local_id. NO hacer sed ciego (rompe la sesión).
+    - **⏭️ FASE 3 CONTRACT (pendiente)**: cuando ningún código use restaurante_id → eliminar columna +
+      triggers + (opcional) renombrar tabla `restaurantes`→`locales` con vista compat.
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
