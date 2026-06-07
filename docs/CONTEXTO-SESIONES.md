@@ -121,10 +121,22 @@
         3. Recrear las vistas para que NO referencien restaurante_id (usar local_id internamente).
         4. DROP column restaurante_id en las 168 tablas base + DROP triggers `trg_sync_local_id` +
            función `sync_local_restaurante_id`. (opcional: tabla `restaurantes`→`locales`).
-      - **NOTA de criterio**: el estado actual ya es funcionalmente correcto (local_id canónico en todo
-        lo seguro; restaurante_id = alias legacy sincronizado por trigger en tablas+vistas). El DROP
-        aporta solo limpieza y conlleva el riesgo silencioso → puede mantenerse el alias indefinidamente
-        sin coste. Decidir antes de acometer pasos 1-4.
+      - **✅ Stage 1 código (commit `8473f3f`)**: ~140 refs de BD (selects/filtros/insert/upsert/lecturas)
+        migradas a local_id en 48 ficheros, guiado por cliente tipado con restaurante_id eliminado
+        (tsc: 208→6; los 6 leaves = tabla `leads` sin columna tenant [bug preexistente] + retornos RPC).
+      - **✅ Índices únicos local_id (commit `0af9d49`)**: cobro_config(local_id), clientes_fiscales(local_id,nif)
+        para que los upsert onConflict('local_id') funcionen. Migración `20260607_..._unique_idx.sql`.
+      - **⚠️ ALCANCE REAL DEL DROP (medido 07/06, ENORME)**: para eliminar restaurante_id de las **167
+        tablas base** hay que migrar antes en la BD de PROD: **258 políticas RLS**, **128 foreign keys**,
+        **68 funciones** (+ acoplamiento params `p_restaurante_id` ↔ llamadas `.rpc()` en código),
+        **188 índices**, **22 constraints**, recrear **33 vistas** sin restaurante_id, y (opcional) token
+        de sesión. Es un refactor de ~600 objetos, con RLS (seguridad multi-tenant) e irreversible.
+      - **DECISIÓN/criterio**: el rename está **funcionalmente completo** (local_id canónico en código y
+        en BD; restaurante_id = alias sincronizado por trigger en tablas+vistas). El DROP físico es
+        cosmético y de ALTO RIESGO (258 RLS) → NO se rushea. Se hará como migración DEDICADA y verificada
+        (semánticamente segura porque local_id == restaurante_id, vía DO-loops que regeneran
+        funciones/policies/FKs/índices reemplazando el nombre, + recrear vistas, + drop columnas/triggers,
+        + renombrar params RPC con su código). Aprovechar la ventana sin clientes pero con calma y verificación.
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
