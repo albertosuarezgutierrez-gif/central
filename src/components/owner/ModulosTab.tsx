@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { C, SE, SN, SM } from '@/lib/colors'
 import { invalidarCacheModulos } from '@/hooks/useModulo'
+import { MAITRE_DEFAULTS, type MaitreConfig } from '@/lib/carta-recomendar'
 
 interface Props {
   restauranteId: string
@@ -33,6 +34,7 @@ const MODULOS = [
   // OPCIONALES
   { id: 'almacen',        label: 'Almacén',          grupo: 'opcional', desc: 'Stock, movimientos y reposición automática. Requiere actualización diaria para ser útil. Desbloquea escandallos y pedidos a proveedor.' },
   { id: 'carta_vinos',    label: 'Carta de vinos',   grupo: 'opcional', desc: 'Catálogo de vinos, WineScanner IA y recomendador por plato.' },
+  { id: 'carta_ia',       label: 'Maître IA',        grupo: 'opcional', desc: 'El comensal marca alérgenos y qué le apetece, y la IA le recomienda platos seguros de la carta desde el QR.' },
   { id: 'qr',             label: 'QR Mesa',          grupo: 'opcional', desc: 'Carta digital, pedido y cobro desde el móvil del cliente (+12€/mesa/mes).' },
   { id: 'storefront',     label: 'Storefront',       grupo: 'opcional', desc: 'Tienda online propia para delivery y recogida.' },
   { id: 'reservas',       label: 'Reservas',         grupo: 'opcional', desc: 'Gestión de reservas, cubiertas y asignación de mesas.' },
@@ -52,6 +54,7 @@ const GRUPOS_LABEL: Record<string, { label: string; color: string; bgColor: stri
 export default function ModulosTab({ restauranteId, sh }: Props) {
   const [activos, setActivos] = useState<string[]>([])
   const [modoVinos, setModoVinos] = useState<'basico' | 'carta'>('basico')
+  const [maitre, setMaitre] = useState<MaitreConfig>(MAITRE_DEFAULTS)
   const [cargando, setCargando] = useState(true)
   const [guardando, setGuardando] = useState(false)
   const [ok, setOk] = useState(false)
@@ -62,6 +65,7 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
       const d = await r.json()
       setActivos(d.modulos_activos ?? [])
       setModoVinos(d.configuracion?.modo_vinos ?? 'basico')
+      setMaitre({ ...MAITRE_DEFAULTS, ...(d.configuracion?.maitre_ia ?? {}) })
     } catch { /* usa todos por defecto */ }
     finally { setCargando(false) }
   }, [sh])
@@ -82,7 +86,7 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
       await fetch('/api/owner/modulos', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', ...sh() },
-        body: JSON.stringify({ modulos_activos: activos, modo_vinos: modoVinos }),
+        body: JSON.stringify({ modulos_activos: activos, modo_vinos: modoVinos, maitre_ia: maitre }),
       })
       invalidarCacheModulos(restauranteId)
       setOk(true)
@@ -221,6 +225,66 @@ export default function ModulosTab({ restauranteId, sh }: Props) {
                               </button>
                             ))}
                           </div>
+                        </div>
+                      )}
+                      {/* Config Maître IA — solo cuando carta_ia está activo */}
+                      {m.id === 'carta_ia' && esActivo && (
+                        <div
+                          onClick={e => e.stopPropagation()}
+                          style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.ruleS}`, display: 'flex', flexDirection: 'column', gap: 10 }}
+                        >
+                          {/* Nombre del asistente */}
+                          <div>
+                            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4 }}>Nombre del asistente</div>
+                            <input
+                              value={maitre.nombre_asistente}
+                              onChange={e => { setMaitre(p => ({ ...p, nombre_asistente: e.target.value })); setOk(false) }}
+                              maxLength={40}
+                              style={{ width: '100%', fontFamily: SN, fontSize: 12, color: C.ink, padding: '7px 9px', border: `1px solid ${C.ruleS}`, borderRadius: 6, background: C.paper }}
+                            />
+                          </div>
+                          {/* Personalidad */}
+                          <div>
+                            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4 }}>Tono</div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              {([
+                                { v: 'clasico', label: 'Clásico' },
+                                { v: 'cercano', label: 'Cercano' },
+                                { v: 'gastro',  label: 'Gastronómico' },
+                              ] as const).map(op => (
+                                <button key={op.v}
+                                  onClick={() => { setMaitre(p => ({ ...p, personalidad: op.v })); setOk(false) }}
+                                  style={{ flex: 1, padding: '7px 8px', border: `1px solid ${maitre.personalidad === op.v ? C.red : C.ruleS}`, borderRadius: 6, background: maitre.personalidad === op.v ? '#D9442B14' : C.paper, cursor: 'pointer', fontFamily: SN, fontSize: 12, fontWeight: 600, color: maitre.personalidad === op.v ? C.red : C.ink }}>
+                                  {op.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Nº sugerencias */}
+                          <div>
+                            <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginBottom: 4 }}>Nº de sugerencias</div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              {[2, 3].map(num => (
+                                <button key={num}
+                                  onClick={() => { setMaitre(p => ({ ...p, num_sugerencias: num })); setOk(false) }}
+                                  style={{ flex: 1, padding: '7px 8px', border: `1px solid ${maitre.num_sugerencias === num ? C.red : C.ruleS}`, borderRadius: 6, background: maitre.num_sugerencias === num ? '#D9442B14' : C.paper, cursor: 'pointer', fontFamily: SN, fontSize: 12, fontWeight: 600, color: maitre.num_sugerencias === num ? C.red : C.ink }}>
+                                  {num}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          {/* Toggles */}
+                          {([
+                            { k: 'permitir_antojo_texto', label: 'Permitir que el comensal escriba qué le apetece' },
+                            { k: 'mostrar_precios',       label: 'Mostrar precios en las sugerencias' },
+                            { k: 'incluir_no_declarados', label: 'Incluir platos SIN alérgenos declarados (⚠ bajo tu responsabilidad)' },
+                          ] as const).map(t => (
+                            <label key={t.k} style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: SN, fontSize: 11, color: C.ink2 }}>
+                              <input type="checkbox" checked={maitre[t.k]}
+                                onChange={e => { setMaitre(p => ({ ...p, [t.k]: e.target.checked })); setOk(false) }} />
+                              {t.label}
+                            </label>
+                          ))}
                         </div>
                       )}
                     </div>

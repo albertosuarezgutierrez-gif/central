@@ -8588,7 +8588,11 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
     precio_facturado: string
     fecha_caducidad: string
     estado: 'ok' | 'merma' | 'precio_diferente' | 'no_pedido'
+    numero_lote?: string | null
+    ean?: string | null
   }[]>([])
+  // Scan de etiqueta que originó esta recepción (para cerrar el bucle de auditoría)
+  const [recScanId, setRecScanId] = useState<string | null>(null)
   const [recProveedorId, setRecProveedorId] = useState<string | null>(null)
   const [recPedidoId, setRecPedidoId]       = useState<string | null>(null)
   const [recAlbaran, setRecAlbaran]         = useState('')
@@ -8724,6 +8728,44 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
 
   useEffect(() => { load() }, [])
 
+  // Prefija la checklist de Recepción con los datos de una etiqueta escaneada.
+  const prefillDesdeEtiqueta = (datos: Record<string, unknown>) => {
+    const s = (v: unknown) => (v === null || v === undefined) ? '' : String(v)
+    setRecItems([{
+      stock_articulo_id: null,
+      nombre_articulo:   s(datos.nombre_producto),
+      cantidad_pedida:   null,
+      cantidad_recibida: s(datos.cantidad),
+      unidad:            s(datos.unidad) || 'unidad',
+      precio_facturado:  '',
+      fecha_caducidad:   s(datos.fecha_caducidad),
+      estado:            'ok' as const,
+      numero_lote:       s(datos.lote) || null,
+      ean:               s(datos.codigo_barras) || null,
+    }])
+    setRecPedidoId(null)
+    setRecProveedorId(null)
+    setRecAlbaran('')
+    setRecStep('checklist')
+    setModal('recibir')
+  }
+
+  // Handoff desde el escáner de etiquetas (SmartScanModal): /owner?tab=almacen&recepcion=etiqueta
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('recepcion') !== 'etiqueta') return
+    const raw = sessionStorage.getItem('ia_scan_etiqueta')
+    if (!raw) return
+    sessionStorage.removeItem('ia_scan_etiqueta')
+    try {
+      const parsed = JSON.parse(raw) as { scan_id?: string | null; datos?: Record<string, unknown> }
+      setRecScanId(parsed.scan_id ?? null)
+      prefillDesdeEtiqueta(parsed.datos ?? {})
+    } catch { /* payload corrupto — ignorar */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const openCreate = () => {
     setForm(emptyForm); setRendimientos([]); setErr(''); setModal('crear')
   }
@@ -8773,6 +8815,7 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
 
   const openRecibir = async () => {
     setRecStep('fuente'); setRecItems([]); setRecProveedorId(null); setRecPedidoId(null)
+    setRecScanId(null)
     setRecAlbaran(''); setRecLoading(true); setModal('recibir')
     const r = await fetch('/api/owner/stock/pedido?estado=enviado', { headers: sh() })
     const d = await r.json().catch(() => ({ pedidos: [] }))
@@ -8850,6 +8893,17 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
       })
       const confD = await confR.json()
       if (!confR.ok) throw new Error(confD.error)
+
+      // Si esta recepción vino de una etiqueta escaneada, enlazamos el documento
+      // de auditoría con la recepción creada (cierra el bucle scan → stock).
+      if (recScanId && crearD.recepcion_id) {
+        fetch('/api/owner/scanner', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', ...sh() },
+          body: JSON.stringify({ id: recScanId, archivado_en: `recepcion:${crearD.recepcion_id}` }),
+        }).catch(() => { /* el enlace de auditoría no debe bloquear la recepción */ })
+        setRecScanId(null)
+      }
 
       await load(); setModal(null)
       const inc = confD.incidencias ?? 0
@@ -9323,7 +9377,9 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
                       <div style={{ marginTop:6, display:'flex', gap:8, alignItems:'center', flexWrap:'wrap' as const }}>
                         <span style={{ fontFamily:SM, fontSize:9, color:C.ink4, flexShrink:0 }}>EAN</span>
                         <input
+                          key={`ean-rec-${i}-${it.ean ?? ''}`}
                           id={`ean-rec-${i}`}
+                          defaultValue={it.ean ?? ''}
                           placeholder="8412345…" maxLength={14}
                           style={{ width:120, padding:'3px 7px', border:`1px solid ${C.rule}`, borderRadius:6, fontFamily:SM, fontSize:11, color:C.ink3, background:'transparent', outline:'none' }}
                           onBlur={e => lookupEAN(i, e.target.value)}

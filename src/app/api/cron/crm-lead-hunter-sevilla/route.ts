@@ -10,9 +10,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
   const supabase = createServerClient()
-  // 10 emails fríos por día laborable (cron 10:00 España). Ramp prudente: iarest.es
-  // también manda transaccional (facturas/portales), así que no quemamos su reputación
-  // con frío masivo. El botón manual sigue en 3. Subir solo si la entregabilidad va bien.
-  const result = await enviarEmailsSevilla(supabase, 10)
+  // Hasta 12 propuestas de email NO-móvil por día laborable (cron 10:00 España). Ya no
+  // se auto-envía: se PROPONE en Telegram y Alberto aprueba. El botón manual prepara 20.
+  const result = await enviarEmailsSevilla(supabase, 12)
   return NextResponse.json({ ...result, timestamp: new Date().toISOString() }, { status: result.ok ? 200 : 500 })
 }
