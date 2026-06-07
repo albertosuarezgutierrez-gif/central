@@ -8,7 +8,7 @@ const TODOS_MODULOS = [
   'voz','mesas','comandas','cobro','impresion','turnos',
   'kds','supervisor','forecaster','fichajes','verifactu',
   'almacen','carta_vinos','carta_ia','qr','storefront','reservas',
-  'rrhh','escaner','contabilidad','analytics',
+  'rrhh','escaner','contabilidad','analytics','tienda',
 ]
 
 const NUCLEO = ['voz','mesas','comandas','cobro','impresion','turnos','verifactu']
