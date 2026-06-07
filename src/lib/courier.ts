@@ -463,7 +463,7 @@ export async function crearPrintJobs(
         comanda_id:    comanda.id,
         impresora_id:  imp.id,
         seccion_id:    grupo.seccion_label || imp.seccion_id,
-        restaurante_id: comanda.local_id ?? null,
+        local_id: comanda.local_id ?? null,
         payload,
         print_data:    printData,
         status:        'pendiente',
@@ -481,7 +481,7 @@ export async function crearPrintJobs(
           : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
         const { data: jobFallback } = await supabase
           .from('print_jobs')
-          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, restaurante_id: comanda.local_id ?? null, payload, print_data: printDataFallback, status: 'pendiente' })
+          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, local_id: comanda.local_id ?? null, payload, print_data: printDataFallback, status: 'pendiente' })
           .select('id')
           .single()
         if (jobFallback) jobIds.push(jobFallback.id)
@@ -575,7 +575,7 @@ export async function crearPrintJobMarchar(
 
     const { data: job } = await supabase
       .from('print_jobs')
-      .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, restaurante_id: comanda.local_id ?? null, payload, print_data: printData, status: 'pendiente' })
+      .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, local_id: comanda.local_id ?? null, payload, print_data: printData, status: 'pendiente' })
       .select('id')
       .single()
 
@@ -1051,7 +1051,7 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
     .insert({
       impresora_id:    elegida.id,
       seccion_id:      null,
-      restaurante_id:  p.local_id,
+      local_id:  p.local_id,
       comanda_id:      p.comanda_id,
       payload, print_data, status: 'pendiente',
     })

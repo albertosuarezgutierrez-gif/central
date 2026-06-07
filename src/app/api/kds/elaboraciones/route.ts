@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('v_elaboraciones_activas')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_caducidad', { ascending: true })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

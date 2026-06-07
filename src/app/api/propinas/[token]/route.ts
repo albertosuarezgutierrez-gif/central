@@ -17,7 +17,7 @@ export async function GET(
   const { data } = await supabase
     .from('propinas')
     .select(`
-      estado, restaurante_id,
+      estado, local_id,
       restaurantes(nombre, propinas_opciones_eur),
       turno_id,
       comanda_id,

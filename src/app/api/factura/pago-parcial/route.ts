@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
 
   // ── 3. Guardar pago parcial en pagos ────────────────────────
   await supabase.from('pagos').insert({
-    restaurante_id,
+    local_id: restaurante_id,
     comanda_id,
     metodo_id,
     importe:      importe_real,
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
   const { data: factura } = await supabase
     .from('facturas_verifactu')
     .insert({
-      restaurante_id, ...facturaData,
+      local_id: restaurante_id, ...facturaData,
       metodo_pago:  'Dividida',
       metodo_tipo:  'dividida',
       entregado:    0,

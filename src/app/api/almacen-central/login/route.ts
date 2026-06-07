@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   // Restaurantes con acceso a almacén
   const { data: accesos } = await supabase
     .from('contable_clientes')
-    .select('restaurante_id, permisos, restaurantes(id, nombre, ciudad, cuenta_id)')
+    .select('local_id, permisos, restaurantes(id, nombre, ciudad, cuenta_id)')
     .eq('contable_id', contable.id)
     .eq('activo', true)
     .contains('modulos', ['almacen'])

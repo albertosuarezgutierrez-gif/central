@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
       .from('productos')
       .select('id, nombre, precio')
       .in('id', productoIds)
-      .eq('local_id', config.restaurante_id)
+      .eq('local_id', config.local_id)
 
     const precioMap = Object.fromEntries((productosDB ?? []).map(p => [p.id, p.precio]))
 
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     const { data: pedido, error: pedErr } = await supabase
       .from('pedidos_online')
       .insert({
-        local_id: config.restaurante_id,
+        local_id: config.local_id,
         tipo,
         estado: 'pendiente',
         cliente_nombre: cliente_nombre.trim(),
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       currency: 'eur',
       metadata: {
         pedido_id: pedido.id,
-        local_id: config.restaurante_id,
+        local_id: config.local_id,
         slug,
       },
       description: `Pedido #${pedido.numero} — ${config.nombre_publico ?? slug}`,

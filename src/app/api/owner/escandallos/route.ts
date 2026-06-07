@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('v_escandallos')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .order('nombre')
 

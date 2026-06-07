@@ -36,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Buscar el primer camarero con rol owner o admin del restaurante
   const { data: camareros } = await supabase
     .from('personal')
-    .select('id, nombre, rol, restaurante_id, seccion_id')
+    .select('id, nombre, rol, local_id, seccion_id')
     .eq('local_id', id)
     .eq('activo', true)
     .in('rol', ['owner', 'jefe_sala'])
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!camarero) {
     const { data: cualquiera } = await supabase
       .from('personal')
-      .select('id, nombre, rol, restaurante_id, seccion_id')
+      .select('id, nombre, rol, local_id, seccion_id')
       .eq('local_id', id)
       .eq('activo', true)
       .limit(1)
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     camarero_id: camarero.id,
     nombre: camarero.nombre,
     rol: camarero.rol,
-    restaurante_id: camarero.restaurante_id,
+    restaurante_id: camarero.local_id,
     restaurante_nombre: restaurante.nombre_comercial || restaurante.nombre,
     seccion_id: camarero.seccion_id ?? null,
     // Marcamos que es una sesiÃ³n impersonada por el super admin

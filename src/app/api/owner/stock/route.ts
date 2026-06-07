@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('v_stock_resumen')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('nombre')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ articulos: data ?? [] })

@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await db
     .from('recomendaciones_carta')
     .insert({
-      restaurante_id,
+      local_id: restaurante_id,
       producto_id,
       nota:        nota?.trim()             || null,
       hora_desde:  hora_desde               || null,

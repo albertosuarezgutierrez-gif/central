@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     // Verificar que la sesión existe y está activa
     const { data: sesion } = await supabase
       .from('qr_sesiones_cliente')
-      .select('id, estado, preauth_completado, restaurante_id')
+      .select('id, estado, preauth_completado, local_id')
       .eq('id', sesion_id)
       .eq('local_id', restaurante_id)
       .single()

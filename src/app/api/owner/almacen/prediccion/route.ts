@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data: stock } = await supabase
     .from('almacen').select('producto_id, stock_actual, stock_minimo, unidad')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (!stock?.length) return NextResponse.json({ error: 'Sin stock definido' }, { status: 422 })
 

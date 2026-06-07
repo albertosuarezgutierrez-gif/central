@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
   const { data: factura, error: errInsert } = await supabase
     .from('facturas_verifactu')
     .insert({
-      restaurante_id, ...facturaData,
+      local_id: restaurante_id, ...facturaData,
       metodo_pago:  metodo.nombre,
       metodo_tipo:  metodo.tipo,
       entregado:    metodo.tipo === 'efectivo' ? entregado : 0,
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
 
   // ── 7. Registrar pago ───────────────────────────────────
   await supabase.from('pagos').insert({
-    restaurante_id, comanda_id,
+    local_id: restaurante_id, comanda_id,
     metodo_id,
     importe: importe_total,
     entregado: metodo.tipo === 'efectivo' ? entregado : 0,
@@ -171,7 +171,7 @@ export async function POST(req: NextRequest) {
     if (restConfig?.propinas_activas) {
       propina_token = `${comanda_id.slice(0,8)}-${Date.now()}-${Math.random().toString(36).slice(2,7)}`
       await supabase.from('propinas').insert({
-        restaurante_id,
+        local_id: restaurante_id,
         comanda_id,
         token: propina_token,
         // qa-ignore: 'pendiente' es estado de la tabla propinas, no de comandas

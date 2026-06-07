@@ -12,7 +12,7 @@ async function buildRecomendacionesContext(restaurante_id?: string): Promise<str
     const { data } = await db
       .from('v_recomendaciones_activas')
       .select('producto_nombre, precio, nota, hora_hasta, cantidad_restante')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .limit(10)
     if (!data?.length) return ''
     const lineas = data.map(r => {

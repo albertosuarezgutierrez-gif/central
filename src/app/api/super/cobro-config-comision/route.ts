@@ -63,12 +63,12 @@ export async function POST(req: NextRequest) {
     .from('cobro_config')
     .upsert(
       {
-        restaurante_id,
+        local_id: restaurante_id,
         comision_pct: num(body.comision_pct),
         comision_fija_eur: num(body.comision_fija_eur),
         minimo_producto_eur: num(body.minimo_producto_eur),
       },
-      { onConflict: 'restaurante_id' }
+      { onConflict: 'local_id' }
     )
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

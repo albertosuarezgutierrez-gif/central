@@ -67,7 +67,7 @@ export async function GET(req: NextRequest) {
     .from('espacio_mantenimiento')
     .select(`
       *,
-      espacio:espacio_id(nombre, restaurante_id),
+      espacio:espacio_id(nombre, local_id),
       restaurante:restaurante_id(nombre, email_contacto)
     `)
     .in('estado', ['proximo', 'vencido'])

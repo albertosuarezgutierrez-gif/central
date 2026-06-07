@@ -417,7 +417,7 @@ export default function FueraCartaSection({restauranteId}:{restauranteId:string}
   const cargar = useCallback(async()=>{
     setCargando(true)
     const [{data:prods},{data:secc}] = await Promise.all([
-      supabase.from('v_fuera_carta_activos').select('*').eq('restaurante_id',restauranteId),
+      supabase.from('v_fuera_carta_activos').select('*').eq('local_id',restauranteId),
       supabase.from('secciones_cocina').select('id,nombre').eq('local_id',restauranteId).order('nombre'),
     ])
     setProductos(prods??[])

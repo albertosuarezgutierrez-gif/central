@@ -144,7 +144,7 @@ export async function GET(req: NextRequest) {
       .maybeSingle(),
     supabase.from('v_cashlogy_stats')
       .select('*')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle(),
   ])
 

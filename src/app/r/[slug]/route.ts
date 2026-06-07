@@ -274,7 +274,7 @@ export async function GET(
     const { data: rest } = await supabase
       .from('restaurantes')
       .select('nombre, direccion, ciudad, telefono, tipo_negocio, latitud, longitud')
-      .eq('id', web.restaurante_id)
+      .eq('id', web.local_id)
       .maybeSingle()
 
     let carta: any[] = []
@@ -282,7 +282,7 @@ export async function GET(
       const { data: prods } = await supabase
         .from('productos')
         .select('nombre, descripcion, precio, categoria')
-        .eq('local_id', web.restaurante_id)
+        .eq('local_id', web.local_id)
         .eq('activo', true)
         .order('categoria')
       carta = prods ?? []

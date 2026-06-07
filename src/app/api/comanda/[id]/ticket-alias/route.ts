@@ -75,7 +75,7 @@ export async function POST(
     .from('ticket_aliases')
     .upsert({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       creado_por: session.id,
       motivo: motivo ?? null,
       items,
@@ -90,7 +90,7 @@ export async function POST(
   try {
     await supabase.from('comanda_audit_log').insert({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       camarero_id: session.id,
       accion: 'ticket_alias_guardado',
       detalle: JSON.stringify({ motivo, num_items_modificados: items.filter(i => i.nombre_alias).length }),

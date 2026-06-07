@@ -146,12 +146,12 @@ export async function POST(req: NextRequest) {
   await supabase
     .from('clientes_fiscales')
     .upsert({
-      restaurante_id,
+      local_id: restaurante_id,
       nif: nifClean,
       razon_social: cliente.razon_social.trim(),
       direccion: cliente.direccion?.trim() ?? null,
       email: cliente.email?.trim() ?? null,
-    }, { onConflict: 'restaurante_id,nif' })
+    }, { onConflict: 'local_id,nif' })
 
   const { data: clienteGuardado } = await supabase
     .from('clientes_fiscales')
@@ -190,7 +190,7 @@ export async function POST(req: NextRequest) {
   const { data: factura, error: errInsert } = await supabase
     .from('facturas_cliente')
     .insert({
-      restaurante_id,
+      local_id: restaurante_id,
       comanda_id,
       cliente_fiscal_id: clienteGuardado?.id ?? null,
       factura_verifactu_id: factVeri?.id ?? null,
@@ -223,7 +223,7 @@ export async function POST(req: NextRequest) {
   try {
     await supabase.from('comanda_audit_log').insert({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       camarero_id: session.id,
       accion: 'factura_cliente_emitida',
       detalle: JSON.stringify({

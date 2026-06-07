@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     }
 
     const { error: insertErr } = await sb.from('contract_acceptances').insert({
-      restaurante_id,
+      local_id: restaurante_id,
       email: email.trim().toLowerCase(),
       contract_version: '1.0',
       ip_address: ip,

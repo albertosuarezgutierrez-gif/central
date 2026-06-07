@@ -12,7 +12,7 @@ export async function POST(req: NextRequest) {
   // Buscar coordinador por PIN en el restaurante
   const { data: coordinador, error } = await supabase
     .from('personal')
-    .select('id, nombre, rol, pin, restaurante_id, activo')
+    .select('id, nombre, rol, pin, local_id, activo')
     .eq('local_id', restaurante_id)
     .eq('pin', pin)
     .eq('rol', 'coordinador_eventos')

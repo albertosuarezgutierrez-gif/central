@@ -243,7 +243,7 @@ export async function registrarCorreccionFuzzy(
 
   try {
     await supabase.from('ia_training_log').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       turno_id: turnoId ?? null,
       capa: 'fuzzy_capa1',
       input_raw: correccion.original,

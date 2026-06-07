@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { data: portal } = await supabase
     .from('cobros_grupo')
     .select(`
-      id, titulo, estado, stripe_connect_id, repercutir_comision, restaurante_id,
+      id, titulo, estado, stripe_connect_id, repercutir_comision, local_id,
       cobros_grupo_items(id, nombre, precio_eur, activo)
     `)
     .eq('slug', slug)
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { data: cfgRow } = await supabase
     .from('cobro_config')
     .select('comision_pct, comision_fija_eur, minimo_producto_eur')
-    .eq('local_id', portal.restaurante_id)
+    .eq('local_id', portal.local_id)
     .maybeSingle()
   const cfg = resolverComisionConfig(cfgRow)
   const { comisionEur } = calcularComision(totalBase, cfg)

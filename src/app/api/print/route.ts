@@ -245,7 +245,7 @@ export async function POST(req: NextRequest) {
   if (status === 'error' && newAttempts >= 3) {
     const { data: job } = await sb
       .from('print_jobs')
-      .select('restaurante_id, comanda_id')
+      .select('local_id, comanda_id')
       .eq('id', job_id)
       .single()
 
@@ -254,7 +254,7 @@ export async function POST(req: NextRequest) {
       modulo: 'bridge',
       mensaje: `Impresión fallida ${newAttempts} veces consecutivas`,
       detalle: { job_id, comanda_id: current?.comanda_id, error: error_msg, intentos: newAttempts },
-      restaurante_id: job?.restaurante_id ?? null,
+      restaurante_id: job?.local_id ?? null,
       nivel: newAttempts >= 5 ? 'critico' : 'aviso',
     })
   }

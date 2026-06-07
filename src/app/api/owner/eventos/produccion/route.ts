@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   let evQuery = supabase
     .from('eventos')
     .select(`id, cliente_nombre, tipo, fecha_evento, hora_inicio,
-      aforo_confirmado, aforo_previsto, factor_escandallo, estado, restaurante_id,
+      aforo_confirmado, aforo_previsto, factor_escandallo, estado, local_id,
       restaurantes!inner(nombre)`)
     .gte('fecha_evento', desde).lte('fecha_evento', hasta)
     .neq('estado', 'cancelado').order('fecha_evento')

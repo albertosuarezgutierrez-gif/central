@@ -81,7 +81,7 @@ export async function GET(req: NextRequest) {
   const { data: comandas, error } = await supabase
     .from('comandas')
     .select(`
-      id, restaurante_id, cerrada_at,
+      id, local_id, cerrada_at,
       cliente_email, cliente_nombre,
       restaurantes(nombre, email_contacto, feedback_activo, dominio_custom)
     `)
@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
     // Guardar token en BD
     await supabase.from('feedback_visita').insert({
       comanda_id:      c.id,
-      local_id:  c.restaurante_id,
+      local_id:  c.local_id,
       cliente_email:   c.cliente_email,
       cliente_nombre:  c.cliente_nombre ?? null,
       token,

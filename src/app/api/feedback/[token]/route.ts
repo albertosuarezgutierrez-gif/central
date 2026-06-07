@@ -18,7 +18,7 @@ export async function GET(
 
   const { data } = await supabase
     .from('feedback_visita')
-    .select('estado, restaurante_id, restaurantes(nombre, google_review_url)')
+    .select('estado, local_id, restaurantes(nombre, google_review_url)')
     .eq('token', token)
     .maybeSingle()
 
@@ -46,7 +46,7 @@ export async function POST(
   // Verificar token
   const { data: fb } = await supabase
     .from('feedback_visita')
-    .select('id, estado, restaurante_id, restaurantes(nombre, google_review_url, email_contacto)')
+    .select('id, estado, local_id, restaurantes(nombre, google_review_url, email_contacto)')
     .eq('token', token)
     .maybeSingle()
 

@@ -35,13 +35,13 @@ export async function GET(req: NextRequest) {
 
     // Última recepción por restaurante
     supabase.from('recepciones_mercancia')
-      .select('restaurante_id, fecha_recepcion, estado')
+      .select('local_id, fecha_recepcion, estado')
       .in('local_id', rids)
       .order('fecha_recepcion', { ascending: false }),
 
     // Top artículos más críticos del grupo (para el panel central)
     supabase.from('stock_articulos')
-      .select('restaurante_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id')
+      .select('local_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id')
       .in('local_id', rids)
       .eq('activo', true)
       .lte('stock_actual', supabase.rpc as unknown as number) // workaround — usar filter
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   // Artículos bajo mínimo del grupo (directo sin vista)
   const { data: articulosCriticos } = await supabase
     .from('stock_articulos')
-    .select('restaurante_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id, precio_ultimo_compra, coste_unitario')
+    .select('local_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id, precio_ultimo_compra, coste_unitario')
     .in('local_id', rids)
     .eq('activo', true)
     .filter('stock_actual', 'lte', supabase.from as unknown as string)
@@ -61,7 +61,7 @@ export async function GET(req: NextRequest) {
   const { data: criticos } = await supabase.rpc
     ? await supabase
         .from('stock_articulos')
-        .select('id, restaurante_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id, precio_ultimo_compra, coste_unitario')
+        .select('id, local_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id, precio_ultimo_compra, coste_unitario')
         .in('local_id', rids)
         .eq('activo', true)
     : { data: [] }
@@ -74,15 +74,15 @@ export async function GET(req: NextRequest) {
   // Última recepción por restaurante
   const ultimasRecepciones: Record<string, string | null> = {}
   for (const rid of rids) {
-    const rec = (rRecepciones.data ?? []).find(r => r.restaurante_id === rid)
+    const rec = (rRecepciones.data ?? []).find(r => r.local_id === rid)
     ultimasRecepciones[rid] = rec?.fecha_recepcion ?? null
   }
 
   // Construir respuesta por restaurante
   const grupo = session.restaurantes.map(r => {
-    const critico  = (rCritico.data  ?? []).find(x => x.restaurante_id === r.id)
-    const pedidos  = (rPedidos.data  ?? []).find(x => x.restaurante_id === r.id)
-    const artCrit  = articulos_criticos_lista.filter(a => a.restaurante_id === r.id)
+    const critico  = (rCritico.data  ?? []).find(x => x.local_id === r.id)
+    const pedidos  = (rPedidos.data  ?? []).find(x => x.local_id === r.id)
+    const artCrit  = articulos_criticos_lista.filter(a => a.local_id === r.id)
 
     return {
       ...r,
@@ -116,7 +116,7 @@ export async function GET(req: NextRequest) {
     if (!artPorNombre[key]) {
       artPorNombre[key] = { nombre: a.nombre, locales: [], total_necesario: 0, proveedor_nombre: a.proveedor_nombre, proveedor_id: a.proveedor_id }
     }
-    artPorNombre[key].locales.push(a.restaurante_id)
+    artPorNombre[key].locales.push(a.local_id)
     artPorNombre[key].total_necesario += Math.max(0, Number(a.stock_minimo) - Number(a.stock_actual))
   }
   const oportunidades_grupal = Object.values(artPorNombre)

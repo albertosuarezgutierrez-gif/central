@@ -39,7 +39,7 @@ export async function POST(
   const { data: comanda, error: errComanda } = await supabase
     .from('comandas')
     .select(`
-      id, estado, restaurante_id, mesa_id, numero_ticket,
+      id, estado, local_id, mesa_id, numero_ticket,
       camarero_id,
       items:comanda_items(nombre, cantidad, precio_unitario),
       mesa:mesas(codigo, zona_id, zona:zonas(id, nombre, tipo))

@@ -22,7 +22,7 @@ export async function POST(
   // Verificar token
   const { data: propina } = await supabase
     .from('propinas')
-    .select('id, estado, restaurante_id, restaurantes(nombre)')
+    .select('id, estado, local_id, restaurantes(nombre)')
     .eq('token', token)
     .maybeSingle()
 
@@ -54,7 +54,7 @@ export async function POST(
       propina_id: propina.id,
       token,
       importe: importe.toString(),
-      local_id: propina.restaurante_id,
+      local_id: propina.local_id,
     },
   })
 

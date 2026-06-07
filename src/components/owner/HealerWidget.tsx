@@ -53,7 +53,7 @@ export default function HealerWidget({ restauranteId }: Props) {
       const { data: s } = await supabase
         .from('v_heal_stats_restaurante')
         .select('*')
-        .eq('restaurante_id', restauranteId)
+        .eq('local_id', restauranteId)
         .maybeSingle()
       setStats(s)
 

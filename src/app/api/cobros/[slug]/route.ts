@@ -11,7 +11,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
     .from('cobros_grupo')
     .select(`
       id, titulo, descripcion, estado, imagen_url, color_primario, stripe_connect_id,
-      fecha_evento, fecha_limite_pago, repercutir_comision, restaurante_id,
+      fecha_evento, fecha_limite_pago, repercutir_comision, local_id,
       modo_seleccion, permitir_cantidades, max_seleccion, mensaje_confirmacion,
       restaurantes(nombre, logo_url),
       cobros_grupo_items(id, nombre, descripcion, precio_eur, pdf_url, activo, orden)
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const { data: cfgRow } = await supabase
     .from('cobro_config')
     .select('comision_pct, comision_fija_eur')
-    .eq('local_id', portal.restaurante_id)
+    .eq('local_id', portal.local_id)
     .maybeSingle()
   const cfg = resolverComisionConfig(cfgRow)
 
