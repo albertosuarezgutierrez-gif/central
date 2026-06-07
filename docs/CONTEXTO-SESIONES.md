@@ -126,17 +126,19 @@
         (tsc: 208→6; los 6 leaves = tabla `leads` sin columna tenant [bug preexistente] + retornos RPC).
       - **✅ Índices únicos local_id (commit `0af9d49`)**: cobro_config(local_id), clientes_fiscales(local_id,nif)
         para que los upsert onConflict('local_id') funcionen. Migración `20260607_..._unique_idx.sql`.
-      - **⚠️ ALCANCE REAL DEL DROP (medido 07/06, ENORME)**: para eliminar restaurante_id de las **167
-        tablas base** hay que migrar antes en la BD de PROD: **258 políticas RLS**, **128 foreign keys**,
-        **68 funciones** (+ acoplamiento params `p_restaurante_id` ↔ llamadas `.rpc()` en código),
-        **188 índices**, **22 constraints**, recrear **33 vistas** sin restaurante_id, y (opcional) token
-        de sesión. Es un refactor de ~600 objetos, con RLS (seguridad multi-tenant) e irreversible.
-      - **DECISIÓN/criterio**: el rename está **funcionalmente completo** (local_id canónico en código y
-        en BD; restaurante_id = alias sincronizado por trigger en tablas+vistas). El DROP físico es
-        cosmético y de ALTO RIESGO (258 RLS) → NO se rushea. Se hará como migración DEDICADA y verificada
-        (semánticamente segura porque local_id == restaurante_id, vía DO-loops que regeneran
-        funciones/policies/FKs/índices reemplazando el nombre, + recrear vistas, + drop columnas/triggers,
-        + renombrar params RPC con su código). Aprovechar la ventana sin clientes pero con calma y verificación.
+      - **✅ FASE 3 CONTRACT COMPLETA (07/06, commit `6f18f3c`) — RENAME TERMINADO**. El DROP se ejecutó
+        como migración dedicada, atómica y verificada (data-safe: local_id == restaurante_id). Migraciones
+        `20260607_rename_tenant_drop_p1..p6` aplicadas al remoto + en repo:
+        - p1 funciones (67), p2 RLS (258), p3 vistas (33) regeneradas a local_id por word-boundary
+          (`\m..\M`) → conserva los params `p_restaurante_id` de las RPC (precedidos de `_`).
+        - p4 espejo en local_id de 22 uniques(+1 PK→unique), 128 FKs, 166 índices.
+        - p5 drop trigger+func `sync_local_restaurante_id`. p6 DROP COLUMN restaurante_id en 167 tablas.
+        - Código: 8 onConflict, 3 filtros realtime, 9 selects+lecturas, 1 embed FK → local_id.
+        - **Verificado**: 0 columnas/funciones/RLS/vistas con restaurante_id; 428 RLS preservadas; tsc+build verde.
+      - **Lo que SE MANTIENE a propósito**: el campo `restaurante_id` del **token de sesión** (JWT firmado,
+        no es columna BD) y los params API/RPC `p_restaurante_id` / `?restaurante_id=` (contrato, valor=id).
+      - **Preexistentes NO tocados** (bugs ajenos al rename): `login_pin` no devuelve tenant
+        (super-pin/validar-pin leen un campo inexistente); tabla `leads` no tiene columna de tenant.
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
