@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
       modo_cobro: 'cuenta_abierta',
       timer_inactividad_min: 45,
       ia_cobro_activo: false,
+      qr_modo_consumo: 'mesa_unica',
     },
     mes_actual: resumen ?? {
       volumen_eur: 0,
@@ -77,7 +78,7 @@ export async function PUT(req: NextRequest) {
   // restauranteId siempre tiene valor (fallback demo)
 
   const body = await req.json()
-  const allowed = ['modo_cobro', 'timer_inactividad_min', 'qr_llamar_camarero']
+  const allowed = ['modo_cobro', 'timer_inactividad_min', 'qr_llamar_camarero', 'qr_modo_consumo']
   const patch: Record<string, unknown> = {}
 
   for (const key of allowed) {
@@ -96,6 +97,11 @@ export async function PUT(req: NextRequest) {
   // Validar modo_cobro
   if (patch.modo_cobro && !['por_ronda', 'pre_auth', 'cuenta_abierta'].includes(patch.modo_cobro as string)) {
     return NextResponse.json({ error: 'modo_cobro inválido' }, { status: 400 })
+  }
+
+  // Validar qr_modo_consumo
+  if (patch.qr_modo_consumo && !['mesa_unica', 'individual', 'cliente_elige'].includes(patch.qr_modo_consumo as string)) {
+    return NextResponse.json({ error: 'qr_modo_consumo inválido' }, { status: 400 })
   }
 
   // Validar timer

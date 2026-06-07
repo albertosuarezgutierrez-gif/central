@@ -1,10 +1,11 @@
 // Helpers compartidos del agente de venta de Sevilla (catering / eventos / restaurante):
 // detección de vertical, plantillas de email (inicial + seguimiento día 2) y WhatsApp.
 
-export type VerticalVenta = 'catering' | 'eventos' | 'restaurante'
+export type VerticalVenta = 'catering' | 'eventos' | 'restaurante' | 'franquicia'
 
 export function detectarVertical(tipo?: string | null): VerticalVenta {
   const t = (tipo || '').toLowerCase()
+  if (t.includes('franquic') || t.includes('cadena')) return 'franquicia'
   if (t.includes('cater')) return 'catering'
   if (t.includes('event') || t.includes('hacienda') || t.includes('finca') || t.includes('espacio') || t.includes('banquet') || t.includes('bod')) return 'eventos'
   return 'restaurante'
@@ -14,6 +15,7 @@ const CFG: Record<VerticalVenta, { utm: string; path: string; txt: string }> = {
   catering: { utm: 'crm_catering', path: '/catering', txt: 'iarest.es/catering' },
   eventos: { utm: 'crm_eventos', path: '/espacios', txt: 'iarest.es/espacios' },
   restaurante: { utm: 'crm_lead', path: '', txt: 'www.iarest.es' },
+  franquicia: { utm: 'crm_franquicia', path: '', txt: 'www.iarest.es' },
 }
 
 type LeadVenta = { id: string; nombre: string; tipo_negocio?: string | null }
@@ -58,6 +60,22 @@ export function construirEmail(
         ${cta}${FIRMA}${BAJA(unsubUrl)}</div>`,
     }
   }
+  if (vertical === 'franquicia') {
+    return {
+      utm: cfg.utm,
+      subject: `${lead.nombre}: una operativa única para toda la red de locales 🏢`,
+      html: `<div style="font-family:Arial,sans-serif;color:#333;max-width:600px;"><p>Hola,</p>
+        <p>Os escribo desde <b>ia.rest</b>. En una red de locales como <b>${lead.nombre}</b>, el reto no es abrir: es que <b>todos operen igual y con datos en tiempo real</b>.</p>
+        <p>Lo que aportamos a una franquicia:</p>
+        <ul>
+          <li><b>🎤 TPV por voz + IA</b> igual en cada local → menos errores y formación más rápida en nuevas aperturas.</li>
+          <li><b>📊 Panel central</b>: ventas, escandallos y <b>margen real por local</b> en una sola pantalla.</li>
+          <li><b>🧾 VeriFactu</b> homogéneo en toda la red, sin sustos normativos.</li>
+        </ul>
+        <p>¿Agendamos <b>15 min</b> con vuestro equipo de expansión/operaciones y os lo enseño con vuestros números?</p>
+        ${cta}${FIRMA}${BAJA(unsubUrl)}</div>`,
+    }
+  }
   return {
     utm: cfg.utm,
     subject: `${lead.nombre}, ¿sabes cuánto ganas de verdad? 🤔`,
@@ -83,6 +101,8 @@ export function construirSeguimiento(
       ? 'saber el margen real de cada evento antes de aceptarlo'
       : vertical === 'eventos'
       ? 'no perder ni una solicitud de boda y llenar el calendario'
+      : vertical === 'franquicia'
+      ? 'unificar la operativa y ver el margen por local en tiempo real'
       : 'recuperar el margen que se pierde en gestión manual'
   return {
     utm: cfg.utm,
@@ -110,7 +130,24 @@ export function esMovilEs(telefono?: string | null): boolean {
   return normalizarTelefonoEs(telefono) !== null
 }
 
-// Mensaje + enlace wa.me (click-to-chat, sin API de Meta) por vertical.
+// Mensaje + enlace para DM de Instagram (envío MANUAL desde la cuenta, sin API).
+// El enlace abre su perfil si lo conocemos (web de IG) o, si no, una búsqueda.
+export function construirInstagram(
+  lead: LeadVenta & { web?: string | null }
+): { texto: string; link: string } {
+  const vertical = detectarVertical(lead.tipo_negocio)
+  const texto =
+    vertical === 'catering'
+      ? `¡Hola! 👋 Soy Alberto, de ia.rest (también somos de Sevilla). Ayudamos a caterings de aquí a saber el margen real de cada evento antes de aceptarlo: escandallos, coste por comensal y presupuesto al instante, sin pelearte con el Excel. ¿Te lo enseño en 5 min por videollamada? Sin compromiso 🙌`
+      : vertical === 'eventos'
+      ? `¡Hola! 👋 Soy Alberto, de ia.rest (Sevilla). Para fincas/haciendas de eventos juntamos calendario, solicitudes, presupuestos y contratos en un sitio para que no se escape ni una boda. ¿Te lo enseño en 5 min? Sin compromiso 🙌`
+      : `¡Hola! 👋 Soy Alberto, de ia.rest (Sevilla). Ayudamos a hostelería a ganar margen con comandas por voz e IA. ¿Te lo enseño en 5 min? Sin compromiso 🙌`
+  const web = (lead.web || '').toLowerCase()
+  const link = web.includes('instagram.com')
+    ? (lead.web as string)
+    : `https://www.google.com/search?q=${encodeURIComponent(`${lead.nombre || ''} Sevilla instagram`)}`
+  return { texto, link }
+}
 export function construirWhatsApp(lead: LeadVenta, telefono: string): { texto: string; link: string } | null {
   const intl = normalizarTelefonoEs(telefono)
   if (!intl) return null
@@ -121,6 +158,8 @@ export function construirWhatsApp(lead: LeadVenta, telefono: string): { texto: s
       ? `Hola, soy Alberto de ia.rest. Trabajáis catering en Sevilla y montamos algo que calcula el coste y el margen real de cada evento al instante. ¿Te viene bien que te lo enseñe en 5 min? ${cfg.txt}`
       : vertical === 'eventos'
       ? `Hola, soy Alberto de ia.rest. Para fincas/haciendas de eventos juntamos calendario, solicitudes (bodas.net), presupuestos y contratos en un sitio. ¿5 min para que te lo enseñe? ${cfg.txt}`
+      : vertical === 'franquicia'
+      ? `Hola, soy Alberto de ia.rest. Para una red de locales unificamos la operativa (TPV por voz + IA), con panel central de ventas y margen por local y VeriFactu en toda la red. ¿15 min para enseñároslo? ${cfg.txt}`
       : `Hola, soy Alberto de ia.rest. Ayudamos a hostelería de Sevilla a ganar margen con comandas por voz e IA. ¿Te viene bien que te lo enseñe en 5 min? ${cfg.txt}`
   const link = `https://wa.me/${intl}?text=${encodeURIComponent(texto)}`
   return { texto, link }

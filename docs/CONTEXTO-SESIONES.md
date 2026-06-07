@@ -139,6 +139,141 @@
         no es columna BD) y los params API/RPC `p_restaurante_id` / `?restaurante_id=` (contrato, valor=id).
       - **Preexistentes NO tocados** (bugs ajenos al rename): `login_pin` no devuelve tenant
         (super-pin/validar-pin leen un campo inexistente); tabla `leads` no tiene columna de tenant.
+- **Auditoría del pipeline de comandas por voz + fixes — 07/06/2026**
+  (rama `claude/minimax-voice-commands-WjMkA`, **PR #74 draft**): nació de una consulta de
+  Alberto sobre si **MiniMax** mejoraría las comandas por voz. Respuesta: **no para el ASR**
+  (Groq Whisper turbo ya es óptimo en latencia/precisión; su prompt ya inyecta carta+motos+
+  vinos+personal; MiniMax usa Whisper por debajo) — MiniMax solo aportaría **TTS premium**
+  como feature nueva, no mejora la transcripción. De ahí, auditoría completa del pipeline
+  (ear → transcribe → brain-router → brain-patron/brain-cache → brain → ai-client).
+  - **Veredicto:** arquitectura sólida (idempotencia 2 capas, anti-spoofing camarero_id,
+    ruido multicapa, fuzzy + few-shot por turno, fallbacks). Pero se hallaron **2 funciones
+    de voz ROTAS** + bugs de la capa rápida, **confirmados empíricamente en BD prod (solo lectura)**:
+    - `aviso`/mensaje por voz **no hacía nada** (`mensajes_turno` tipo voz = **0 filas histórico**)
+      y `86`/agotado por voz **no hacía nada** (`productos_86` = **0 filas**): sus handlers
+      estaban anidados en `if (mesa)` de `transcribe/route.ts`, pero esos comandos no llevan
+      mesa resoluble (aviso→cocina/barra/''; 86→'T00') → `mesa=null` → bloque saltado.
+    - **BUG capa 8b** (`brain-router.ts`): leía `(cache as any).mesas`, campo inexistente →
+      el prompt del 8b listaba MESAS vacío → escalaba al 70b de más.
+    - Comandas **fantasma** (`comandas` tipo `aviso`=2 filas) + `recomendacion_vino` no está
+      en el CHECK de `comandas.tipo` (insert lanzaría error si llegara con mesa).
+    - **BUG-2 DESCARTADO:** un regex de `parseJSON` parecía pasar guiones a espacios; `cat -A`
+      reveló que es `/[\x00-\x1f\x7f]/g` (borra caracteres de control) → **ya correcto**, no se tocó.
+  - **PR-1 (commit `de39870`, bajo riesgo):** brain-router (el 8b ahora recibe **zonas**:
+    prefijos+ejemplos); brain-cache (fallback de zonas sin colisión, **S=salon/T=terraza/B=barra**);
+    ear (var `start` muerta); transcribe (eliminada llamada RPC `es_primera_comanda` desperdiciada);
+    **nuevo `scripts/test-brain-patron.ts`** (test de regresión determinista, 14 casos, sin BD/red).
+  - **PR-2 (commit `77307db`, refactor del camino caliente):** `aviso` y `86` **sacados de
+    `if (mesa)`** → ahora se registran siempre; `aviso`/`86`/`recomendacion_vino` ya **no crean
+    comanda fantasma**; el `if (mesa)` queda restringido a comanda/cuenta/marchar (flujo de
+    comanda/cuenta intacto).
+  - **Verificado:** `tsc --noEmit` 0 · `npm run qa` 0 errores · `next build` OK · test 14/14.
+  - **PR #74 MERGEADO a `main`** (squash `667d52d`); luego **PR #75** remató `marchar`.
+  - **PR #75 (marchar) — ✅ HECHO:** `marchar` por voz ahora **reusa la comanda activa** de la mesa
+    (estado en_cocina/nueva/lista) en vez de crear una comanda nueva fantasma; **no inserta items**
+    (solo marca los existentes como `listo` vía MARCHAR GRANULAR) y se protege si la mesa no tiene
+    comanda activa (`comanda` null → no hace nada). `tsc` 0 · `next build` OK · test 14/14.
+    → con esto las 5 funciones de voz (comanda/cuenta/aviso/86/marchar) quedan correctas.
+  - **Pendiente:**
+    - Opcional: añadir `recomendacion_vino` al CHECK de `comandas.tipo` (hoy mitigado porque ya
+      no se inserta ese tipo).
+    - **Tras merge+deploy:** re-consultar BD para confirmar que aparecen filas nuevas en
+      `mensajes_turno` (voz) y `productos_86` al usar aviso/86 (cierre del loop empírico).
+    - Idea futura (no urgente): capa de **TTS** (confirmación hablada al camarero / avisos KDS);
+      empezar con Web Speech API gratis, MiniMax solo si se quiere voz de marca premium.
+
+- **Agente de ventas: router de contacto + franquicias + Instagram — 07/06/2026**
+  (rama `claude/leais-sales-agent-catering-b5ikA`). Sesión larga; toda la maquinaria de
+  outreach quedó operativa y verificada en prod.
+  - **Router de contacto Sevilla:** un solo canal por lead, **todo a aprobación por Telegram**.
+    Móvil (ES 6/7) → WhatsApp (`normalizarTelefonoEs` ahora SOLO móvil); sin móvil + email →
+    email. El email frío **ya no auto-envía**: `enviarEmailsSevilla` **propone** a Telegram con
+    botón ✅ Enviar (excluye móviles, marca tracking `propuesto`). Límite = nº emails no-móvil
+    (sobre-pide al RPC); botón panel 20, cron 12.
+  - **Callback `enviar_sevilla`** (en `/api/telegram/webhook`): reconstruye el email por
+    `tipo_negocio` y envía desde `hola@iarest.es` (Resend), tracking `propuesto`→`enviado_dia1`.
+    **Idempotente** (solo si sigue `propuesto` → no duplica). `descartar_sevilla` también.
+  - **FIX CRÍTICO Telegram:** el bot apunta (vía `setup-webhook`) a `/api/telegram/instagram-callback`,
+    que solo maneja `ig_*`/`blog_*`. Ahora **reenvía** las acciones CRM a `/api/telegram/webhook`
+    **con `?secret=TELEGRAM_WEBHOOK_SECRET` en la URL** (el webhook lo exige) y se quitó el doble-auth
+    `from.id==TELEGRAM_CHAT_ID`. Además el `secret_token` estaba desalineado → 401: se arregla
+    **re-registrando** el webhook (botón **🔧 Reparar webhook Telegram** en el panel, que llama a
+    `setup-webhook` con la sesión; abrir la URL directa da "No autorizado" porque usa header `x-ia-session`).
+    **Verificado:** 31 emails enviados el 07/06, 0 pendientes.
+  - **Franquicias (nacional):** vertical `franquicia` en `crm-sevilla.ts` (email de PRESENTACIÓN:
+    operativa única, panel central, margen por local, VeriFactu). Captación Apify nacional
+    (`ApifyVertical` gana 'franquicia', queries en `prospeccion-apify.ts`). `proponerEmailsFranquicia`
+    + endpoint `/api/super/lead-hunter-franquicia` + botón 🏢. **20 centrales sembradas**
+    (origen `bot_prospeccion`, marca+web+ciudad). **Emails reales solo 3** (resto usa FORMULARIO):
+    Lizarran y Muerde la Pasta → `expansion@comessgroup.com`, Rodilla → `departamento_expansion@damm.com`
+    (las 3 ya enviadas). Las 16 sin email tienen el enlace de su formulario en `notas`; Goiko no franquicia.
+  - **Instagram (DM manual, sin API/ToS):** columna `leads.instagram_outreach_at` (migración
+    `20260607_leads_instagram_outreach_at.sql`). `construirInstagram` (mensaje por vertical + enlace:
+    perfil si la web es de IG, si no búsqueda Google). `proponerInstagramSevilla(vertical)` manda a
+    Telegram el DM en `<code>` (toque=copiar) + botón 📸 Abrir Instagram, marca outreach. Botones
+    **📸 Instagram catering** y **📸 Instagram eventos** en el panel.
+  - **Botón 🔁 Reenviar pendientes:** re-emite a Telegram las propuestas atascadas en `propuesto`
+    sin duplicar (`reenviarPropuestasPendientes`).
+  - **PRs mergeados (squash):** #57, #64, #65, #66, #68, #69, #71, #72 (+ el de eventos/Instagram).
+  - **PENDIENTE / ideas:** enriquecer emails de las 16 centrales (formulario/LinkedIn);
+    flujo LinkedIn "click-to-LinkedIn" desde Telegram (botón a perfil + mensaje IA a pegar, opción A,
+    sin scraping); opcional: cron que proponga franquicias-locales e Instagram automáticamente.
+- **QR cuenta individual — "cada uno pide su caña y se le cobra lo suyo" — 06/06/2026**
+  (rama `claude/individual-beer-ordering-billing-oRwzB`): feature **100% configurable por el
+  dueño**. Idea de Alberto (escenario Sevilla: cañas rápidas, cada uno pide y paga lo suyo).
+  Análisis previo: el QR ya tenía ~85% (pedido móvil, `pre_auth` SetupIntent, cobro `off_session`,
+  Connect, VeriFactu, split). El hueco real: TODO colgaba de la **mesa**, no de la **persona**, y
+  el reparto era reactivo. Cambio de fondo implementado: **cobro por persona, no por mesa**.
+  - **Migración** `20260606_qr_cuenta_individual.sql` **APLICADA en Supabase (06/06)**: `cobro_config.qr_modo_consumo`
+    (`mesa_unica`|`individual`|`cliente_elige`, default mesa_unica → sin cambios para nadie);
+    `qr_sesiones_cliente.{device_id,nombre_cliente,tipo}`; **`comandas.sesion_qr_id`** (el eslabón
+    persona↔item). Aditiva y backward-compatible. Verificado: 5 columnas presentes con defaults OK;
+    `qr_sesiones_cliente` vacía (0 datos en riesgo).
+  - **EFs DESPLEGADAS en Supabase (06/06):** `qr-session` **v6**, `qr-order` **v9**,
+    `qr-cobro` **v5**. Todas ACTIVE, `verify_jwt=false`.
+  - **Code review (06/06) — 4 fixes aplicados y desplegados:**
+    1. `qr-cobro` mesa-branch ahora **excluye** los items de subcuentas individuales (en `cliente_elige`,
+       el que elige "cuenta de mesa" ya NO carga con las cañas de los individuales; antes doble-cobro).
+       Verificado en SQL: A indiv paga 3,0 / B mesa paga 4,0 (antes B pagaba 7,0).
+    2. cron `autoCerrarIndividuales`: `idempotencyKey: qr-auto-<sesion_id>` en el PaymentIntent →
+       si el cargo OK pero el update de BD falla, el siguiente tick NO recobra.
+    3. `qr-session` recover por device: `.order(creado_en desc).limit(1)` antes de `maybeSingle()`.
+    4. Índice `idx_qr_sesiones_mesa_device` → **UNIQUE** (migración `20260606b_qr_unique_device_index.sql`
+       APLICADA). Las sesiones 'mesa' guardan `device_id NULL` (no chocan). tsc --noEmit verde.
+  - **Config dueño:** `/api/owner/cobro-config` (allowlist + validación `qr_modo_consumo`) + selector
+    "MODO DE CONSUMO QR" en `owner/page.tsx` (`CobroConfigSection`). Reusa el `modo_cobro` existente
+    (cuenta_abierta/pre_auth/por_ronda) como "cómo paga cada cuenta" → sin set de flags redundante.
+  - **Cliente** `q/[token]/QrClientApp.tsx`: `device_id` en localStorage; bienvenida ofrece "Mi
+    cuenta / Cuenta de mesa" si `cliente_elige`; "Cerrar mi cuenta" y oculta el split en individual.
+  - **Red de seguridad:** cron `cobro-inactividad` → `autoCerrarIndividuales()` cobra `off_session`
+    a las cuentas individuales con tarjeta guardada (solo si el dueño eligió `modo_cobro='pre_auth'`)
+    pasado el timer. Si se va sin pulsar, se cobra solo.
+  - **Verificado:** `npm install` + `tsc --noEmit` (0) + `next build` (exit 0) en verde.
+    Vercel preview READY (ia-rest/ia-rest-docs/repo). **Test DB del fix (Postgres prod):** misma
+    mesa, 2 personas, 1 caña 3€ c/u → individual cobra **3,30€** (solo lo suyo), legado/mesa **6,60€**.
+  - **ACTIVACIÓN EN PROD HECHA:** (1) ✅ migración aplicada; (2) ✅ EFs desplegadas (v5/v9/v4).
+    La feature está VIVA pero **inerte por defecto** (`qr_modo_consumo='mesa_unica'` en todos →
+    comportamiento idéntico al actual). Para encenderla en un local: `/owner → ia.rest cobro →
+    Modo de consumo QR → "Cuenta propia por persona"` (o "Que elija el cliente").
+  - **PENDIENTE (manual, no hacible desde el contenedor — network bloquea `*.supabase.co`):**
+    prueba HTTP en vivo con 2 móviles en la misma mesa → A paga solo su caña, no la de B; validar
+    `application_fee` 0,5% + transfer al Connect en Stripe. Limitación v1: en individual no hay "bote
+    común" (lo compartido lo paga quien lo pide); coexistencia mesa+individual = Fase 2.
+- **MERGEADO a `main` (07/06):** PR #60 squash-merged. Producción tendrá la feature tras el
+  redeploy de Vercel. Sigue inerte por defecto (`mesa_unica`). Demo en `individual` para pruebas.
+
+- **Reels: música + previsualización + warm-up + gancho con movimiento** (PR #67, 07/06/2026):
+  el reel ya reproduce en prod (sin zoom) con ambiente real; faltaba audio y poder previsualizarlo.
+  - `src/app/api/super/instagram/seed-music/route.ts`: siembra MÚSICA en Cloudinary desde
+    enlaces MP3 públicos (Pixabay) → devuelve `musicIdsEnv` para `CLOUDINARY_MUSIC_IDS`.
+    POST Bearer o **GET desde navegador** logueado en /super: `?urls=<mp3_1>|<mp3_2>|...`.
+  - **Previsualización**: el mensaje de Telegram del reel lleva `👁️ Ver vídeo` (enlace al MP4).
+  - **Warm-up + chequeo** (`warmAndCheckReel` en `ig-reel`): calienta el MP4 y, si Cloudinary
+    da error claro (4xx), el cron **cae a imagen** en vez de proponer un reel roto.
+  - **Gancho con movimiento**: si hay ambiente, el reel **abre con un clip real** y el texto después.
+  - `tsc`+smoke+`next build` verdes. **Pendiente Alberto:** sembrar música (3-5 MP3 Pixabay)
+    → `CLOUDINARY_MUSIC_IDS` + redeploy → reprobar que **suena** (valida `l_audio`; si no,
+    fallback `l_audio:` → `l_`).
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
@@ -528,6 +663,32 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-07 — MiniMax (consulta) → auditoría del pipeline de voz + fixes (PRs #74 y #75, MERGEADOS)
+- **Consulta de Alberto:** ¿MiniMax mejoraría las comandas por voz? **Respuesta:** no para
+  el ASR (Groq Whisper turbo ya óptimo; MiniMax usa Whisper por debajo y añade latencia);
+  MiniMax solo aportaría **TTS premium** como feature nueva. De ahí pidió **auditar y probar**
+  que todo es correcto, y "hazlo todo tú solo".
+- **Método:** lectura del código real de toda la cadena + **verificación empírica en BD prod**
+  (Supabase MCP, solo lectura) — clave para no inventar: `mensajes_turno` voz=0, `productos_86`=0,
+  `comandas` por tipo (aviso=2 fantasma), CHECK real de `comandas.tipo`.
+- **Hallazgos y fixes:** ver bloque detallado en "Estado actual" (arriba). Resumen: `aviso` y
+  `86` por voz estaban **muertos** (anidados en `if(mesa)`); 8b leía `cache.mesas` inexistente;
+  comandas fantasma; un "BUG-2" del regex se **descartó** tras `cat -A` (era correcto).
+- **Entregado y MERGEADO a `main`:**
+  - **PR #74** (squash `667d52d`): capa 8b recibe zonas + limpiezas (fallback zonas, var muerta,
+    RPC `es_primera_comanda` desperdiciada) + `aviso`/`86` sacados de `if(mesa)` (ya funcionan) +
+    sin comandas fantasma para aviso/86/recomendacion_vino + test `scripts/test-brain-patron.ts`.
+  - **PR #75** (squash `37cbf1c`): `marchar` reusa la comanda activa (sin fantasma, no inserta
+    items, no-op si no hay comanda activa). → las **5 funciones de voz quedan correctas**.
+- **Nota git:** el squash de #74 rompió el enlace de ancestros → la rama necesitó re-merge de
+  `main` (conflicto solo en este doc) para que #75 fuera mergeable. Force-push está bloqueado por
+  el clasificador; se resolvió con merges no destructivos.
+- **Verificado en cada paso:** `tsc` 0 · `qa` 0 · `next build` OK · `tsx scripts/test-brain-patron.ts` 14/14.
+- **Aprendizaje:** `cat -A` antes de "arreglar" un regex evitó romper código correcto
+  (los caracteres de control se renderizaban invisibles en el editor). Evidencia > suposición.
+- **Pendiente verificación en vivo:** que aparezcan filas reales en `mensajes_turno` (voz) y
+  `productos_86` cuando el personal dicte aviso/86 en prod (no se puede forzar desde aquí).
 
 ### 2026-06-04 (5) — Instalación de superpowers (subset) + hook SessionStart
 - **Petición de Alberto:** intentó `/plugin install superpowers@claude-plugins-official`

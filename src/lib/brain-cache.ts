@@ -143,8 +143,10 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
 
   // Fallback zonas si la BD no tiene configuradas
   if (zonasCache.length === 0) {
+    // Prefijos alineados con BASE_PROMPT (brain.ts) y transcribe: S=salon, T=terraza, B=barra.
+    // Sin colisión de prefijo (antes Salón y Terraza compartían 'T').
     const defaults: ZonaCacheItem[] = [
-      { prefijo: 'T', nombre: 'Salón', tipo: 'salon' },
+      { prefijo: 'S', nombre: 'Salón', tipo: 'salon' },
       { prefijo: 'T', nombre: 'Terraza', tipo: 'terraza' },
       { prefijo: 'B', nombre: 'Barra', tipo: 'barra' },
     ]
