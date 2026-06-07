@@ -49,10 +49,17 @@
   - **HALLAZGO clave del esquema REAL** (vía supabase MCP): `productos` ya tiene `ean_codigo`,
     `venta_por_peso`, `precio_por_kg`, `stock_actual`; `comandas` ya tiene `tipo` (texto libre sin CHECK).
     Retail necesita MUCHO menos de lo que el spec asumía (corregido en el spec).
-  - **PENDIENTE inmediato**: (1) pantalla `/tienda` (TPV: buscar/escanear EAN + carrito + cobro con
-    CobrarSheet); (2) `TiendaTab` en /owner + `'tienda'` en TODOS_MODULOS; (3) **rename `restaurante_id
-    →local_id`** (decisión: hacerlo en RAMA de Supabase, verificar, luego promover — NO tocar prod a ciegas).
-  - **NOTA**: aún sin red de tests automatizada; antes del rename grande, crear tests de las 4 costuras.
+  - **VERTICAL RETAIL COMPLETO Y PULIDO** (todo verificado tsc + next build en Vercel, PR #77):
+    - Pantalla `src/app/tienda/page.tsx` (TPV: buscar/escanear EAN, carrito, venta por peso, cobro
+      con CobrarSheet → /api/tienda/venta → /api/factura/cerrar). Accesible por rol `tienda` y `owner`.
+    - `src/components/owner/TiendaTab.tsx` + grupo 'Tienda' en /owner (gated por modulo 'tienda') +
+      `'tienda'` en TODOS_MODULOS. Config: modo catálogo, hardware (lector/báscula/táctil), descontar stock.
+    - RRHHTab: rol 'Dependiente/a tienda'. help-prompts: entrada '/tienda'.
+  - **ÚNICO PENDIENTE GORDO**: **rename `restaurante_id → local_id`** (50 tablas + RLS `app.local_id`
+    + ~176 refs + tabla `restaurantes`→`locales` con vista compat). Decisión: hacerlo en **RAMA de
+    Supabase** (probar→verificar→promover), NO en prod a ciegas, y **crear antes** la red mínima de
+    tests (4 costuras + venta→cobro→factura→stock). Es la operación de más riesgo → sesión dedicada
+    con contexto fresco. El resto de la plataforma (Fases B/D/E/F) según el spec.
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
