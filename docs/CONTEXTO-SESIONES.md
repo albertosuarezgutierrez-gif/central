@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Reels: música + previsualización + warm-up + gancho con movimiento** (PR #67, 07/06/2026):
+  el reel ya reproduce en prod (sin zoom) con ambiente real; faltaba audio y poder previsualizarlo.
+  - `src/app/api/super/instagram/seed-music/route.ts`: siembra MÚSICA en Cloudinary desde
+    enlaces MP3 públicos (Pixabay) → devuelve `musicIdsEnv` para `CLOUDINARY_MUSIC_IDS`.
+    POST Bearer o **GET desde navegador** logueado en /super: `?urls=<mp3_1>|<mp3_2>|...`.
+  - **Previsualización**: el mensaje de Telegram del reel lleva `👁️ Ver vídeo` (enlace al MP4).
+  - **Warm-up + chequeo** (`warmAndCheckReel` en `ig-reel`): calienta el MP4 y, si Cloudinary
+    da error claro (4xx), el cron **cae a imagen** en vez de proponer un reel roto.
+  - **Gancho con movimiento**: si hay ambiente, el reel **abre con un clip real** y el texto después.
+  - `tsc`+smoke+`next build` verdes. **Pendiente Alberto:** sembrar música (3-5 MP3 Pixabay)
+    → `CLOUDINARY_MUSIC_IDS` + redeploy → reprobar que **suena** (valida `l_audio`; si no,
+    fallback `l_audio:` → `l_`).
+
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
   tipo `etiqueta_producto`) estaba **roto en silencio** y, aunque funcionara, era un
