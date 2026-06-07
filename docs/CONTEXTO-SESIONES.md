@@ -108,8 +108,23 @@
       - ⚠️ **INTOCABLES siempre**: `session-sign.ts` (cadena canónica HMAC usa `restaurante_id`),
         `session.ts` (compat a propósito usa ambas), `brain-router.ts` (BINARIO — sed lo corrompe).
         Las VISTAS con restaurante_id (~33) habrá que recrearlas para exponer local_id.
-    - **⏭️ FASE 3 CONTRACT (pendiente)**: cuando ningún código use restaurante_id → eliminar columna +
-      triggers + (opcional) renombrar tabla `restaurantes`→`locales` con vista compat.
+    - **🔄 FASE 3 CONTRACT (EN CURSO)**:
+      - **✅ Paso 1 (commit `071dced`, aplicada al remoto)**: las **33 vistas** con restaurante_id
+        ahora exponen también `local_id` (recreadas envolviendo su def + columna al final). Migración
+        `20260607_rename_tenant_fase3_vistas.sql`. Desbloquea migrar a local_id las queries de vistas.
+      - **⏭️ Pasos pendientes para poder DROP restaurante_id (orden importa)**:
+        1. Migrar a local_id el resto de lecturas de código (selects/lecturas de vistas y tablas
+           diferidos + tipos exportados). ⚠️ Cliente Supabase NO tipado → riesgo silencioso; lo seguro
+           es tiparlo, pero eso destapa **545 errores preexistentes** = proyecto propio.
+        2. Migrar el **token de sesión** (restaurante_id firmado) — con doble-campo para no invalidar
+           sesiones en curso.
+        3. Recrear las vistas para que NO referencien restaurante_id (usar local_id internamente).
+        4. DROP column restaurante_id en las 168 tablas base + DROP triggers `trg_sync_local_id` +
+           función `sync_local_restaurante_id`. (opcional: tabla `restaurantes`→`locales`).
+      - **NOTA de criterio**: el estado actual ya es funcionalmente correcto (local_id canónico en todo
+        lo seguro; restaurante_id = alias legacy sincronizado por trigger en tablas+vistas). El DROP
+        aporta solo limpieza y conlleva el riesgo silencioso → puede mantenerse el alias indefinidamente
+        sin coste. Decidir antes de acometer pasos 1-4.
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
