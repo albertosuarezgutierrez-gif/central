@@ -541,7 +541,7 @@
 
 ## 📝 Registro de sesiones
 
-### 2026-06-07 — MiniMax (consulta) → auditoría del pipeline de voz + fixes (PR #74)
+### 2026-06-07 — MiniMax (consulta) → auditoría del pipeline de voz + fixes (PRs #74 y #75, MERGEADOS)
 - **Consulta de Alberto:** ¿MiniMax mejoraría las comandas por voz? **Respuesta:** no para
   el ASR (Groq Whisper turbo ya óptimo; MiniMax usa Whisper por debajo y añade latencia);
   MiniMax solo aportaría **TTS premium** como feature nueva. De ahí pidió **auditar y probar**
@@ -552,12 +552,20 @@
 - **Hallazgos y fixes:** ver bloque detallado en "Estado actual" (arriba). Resumen: `aviso` y
   `86` por voz estaban **muertos** (anidados en `if(mesa)`); 8b leía `cache.mesas` inexistente;
   comandas fantasma; un "BUG-2" del regex se **descartó** tras `cat -A` (era correcto).
-- **Entregado en 2 commits sobre `claude/minimax-voice-commands-WjMkA` (PR #74 draft):**
-  PR-1 `de39870` (8b recibe zonas + limpiezas + test de regresión) y PR-2 `77307db`
-  (aviso/86 fuera de `if(mesa)` + sin comandas fantasma).
-- **Verificado:** `tsc` 0 · `qa` 0 · `next build` OK · `tsx scripts/test-brain-patron.ts` 14/14.
+- **Entregado y MERGEADO a `main`:**
+  - **PR #74** (squash `667d52d`): capa 8b recibe zonas + limpiezas (fallback zonas, var muerta,
+    RPC `es_primera_comanda` desperdiciada) + `aviso`/`86` sacados de `if(mesa)` (ya funcionan) +
+    sin comandas fantasma para aviso/86/recomendacion_vino + test `scripts/test-brain-patron.ts`.
+  - **PR #75** (squash `37cbf1c`): `marchar` reusa la comanda activa (sin fantasma, no inserta
+    items, no-op si no hay comanda activa). → las **5 funciones de voz quedan correctas**.
+- **Nota git:** el squash de #74 rompió el enlace de ancestros → la rama necesitó re-merge de
+  `main` (conflicto solo en este doc) para que #75 fuera mergeable. Force-push está bloqueado por
+  el clasificador; se resolvió con merges no destructivos.
+- **Verificado en cada paso:** `tsc` 0 · `qa` 0 · `next build` OK · `tsx scripts/test-brain-patron.ts` 14/14.
 - **Aprendizaje:** `cat -A` antes de "arreglar" un regex evitó romper código correcto
   (los caracteres de control se renderizaban invisibles en el editor). Evidencia > suposición.
+- **Pendiente verificación en vivo:** que aparezcan filas reales en `mensajes_turno` (voz) y
+  `productos_86` cuando el personal dicte aviso/86 en prod (no se puede forzar desde aquí).
 
 ### 2026-06-04 (5) — Instalación de superpowers (subset) + hook SessionStart
 - **Petición de Alberto:** intentó `/plugin install superpowers@claude-plugins-official`
