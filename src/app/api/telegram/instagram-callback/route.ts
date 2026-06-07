@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
     'enviar_sevilla', 'descartar_sevilla', 'ver_whatsapp', 'qa_activar', 'qa_descartar',
   ])
   if (CRM_ACCIONES.has(accion)) {
-    await fetch('https://www.iarest.es/api/telegram/webhook', {
+    await fetch(`https://www.iarest.es/api/telegram/webhook?secret=${encodeURIComponent(process.env.TELEGRAM_WEBHOOK_SECRET ?? '')}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
     }).catch((e) => console.error('[tg] reenvío CRM:', e))
     return NextResponse.json({ ok: true })
