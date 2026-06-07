@@ -71,16 +71,22 @@
       - **✅ Lote 2 (commit tras este doc) — filtros**: 610 call-sites de FILTRO migrados a `local_id`
         (`.eq/.in/.neq/.is/.order/.not/.gte/...('restaurante_id'`) en 252 ficheros. Seguro: el trigger
         bidireccional sincroniza ambas columnas y los filtros NO cambian columnas devueltas. tsc+build verde.
+      - **✅ Lote 3 (commit `8252178`) — escrituras**: claves de payload `restaurante_id:` en
+        `.insert/.update/.upsert` migradas a `local_id` en 151 rutas de API (seguro por el trigger).
+        Ajustados tipos locales acoplados (ComandaInfo/CuentaParams/ReglaActiva/...) + sus lecturas
+        para consistencia (tsc fue la red: 49 errores → 0). Revertidas 4 claves que eran sesión/petición
+        (notifyError→Edge Function `restaurante_id`, tipos de `session` en turnos/*). tsc + build exit 0.
       - **⏭️ Lotes pendientes (los DELICADOS, NO bloquean hasta Fase 3 porque el trigger rellena
         `restaurante_id` desde `local_id` igualmente):**
-        1. **Escrituras** `restaurante_id:` en payloads `.insert/.update/.upsert` (599 calls). ⚠️ NO tocar
-           las claves en los **12 ficheros que llaman `firmarSesion`** (auth/* + session-sign) — ahí la
-           clave construye el objeto de sesión FIRMADO. Ej. trampa: `auth/route.ts:99,123`.
-        2. **Selects acoplados**: `.select('...restaurante_id...')` (75) van JUNTO con sus lecturas
-           `row.restaurante_id` aguas abajo (si migras el select y no la lectura → `undefined`).
-        3. **55 declaraciones de TIPO** `restaurante_id: string` (types/index.ts:80, etc.) — cascadean a
-           todos los lectores; migrar con cuidado y tsc.
-        4. **231 acceso a miembro** `.restaurante_id` (mezcla token de sesión + filas de BD).
+        1. **Selects + lecturas acopladas**: quedan `.select('...restaurante_id...')` y accesos a miembro
+           `row.restaurante_id` de filas de BD (los que tsc no obligó a tocar porque el select aún devuelve
+           restaurante_id). Migrar select+lectura JUNTOS por fichero (si migras select y no la lectura →
+           `undefined`). NO confundir con `session.restaurante_id` (token, se queda).
+        2. **Declaraciones de TIPO** `restaurante_id: string` que describen filas de BD (types/index.ts:80,
+           etc.) — cascadean; migrar con tsc de guía.
+        3. **Claves INTOCABLES (token/contrato, NUNCA migrar)**: las de los 12 ficheros `firmarSesion`
+           (auth/*), cabeceras `x-ia-session`, cuerpos de petición/respuesta HTTP, `notifyError`/Edge
+           Functions, firmas RPC `p_restaurante_id`. Acceso a miembro de SESIÓN `session.restaurante_id`.
       - ⚠️ **INTOCABLES siempre**: `session-sign.ts` (cadena canónica HMAC usa `restaurante_id`),
         `session.ts` (compat a propósito usa ambas), `brain-router.ts` (BINARIO — sed lo corrompe).
         Las VISTAS con restaurante_id (~33) habrá que recrearlas para exponer local_id.
