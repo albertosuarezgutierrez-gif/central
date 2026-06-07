@@ -107,11 +107,13 @@ export async function generarReel(opts: {
   // 3) Clips de ambiente (hasta 2) ya sembrados en Cloudinary; [] si no hay env.
   const amb = pickAmbient(2)
 
-  // 4) Montar la secuencia, intercalando ambiente entre los puntos si lo hay.
+  // 4) Montar la secuencia. GANCHO CON MOVIMIENTO: si hay ambiente, el reel ABRE con un
+  //    clip real (frame de portada que para el scroll) y el texto entra justo después;
+  //    el 2º clip se intercala tras el primer punto.
   const segs: Segmento[] = []
+  if (amb[0]) segs.push({ kind: 'video', pid: amb[0] })
   segs.push({ kind: 'image', pid: imgPid['portada'] })
   segs.push({ kind: 'image', pid: imgPid['producto'] })
-  if (amb[0]) segs.push({ kind: 'video', pid: amb[0] })
   puntos.forEach((_, i) => {
     segs.push({ kind: 'image', pid: imgPid[`p${i + 1}`] })
     if (i === 0 && amb[1]) segs.push({ kind: 'video', pid: amb[1] })
@@ -119,6 +121,24 @@ export async function generarReel(opts: {
   segs.push({ kind: 'image', pid: imgPid['cierre'] })
 
   return buildReelUrl(segs, audioPid)
+}
+
+// Calienta el MP4 en Cloudinary (el primer request dispara el render) y comprueba salud.
+// Devuelve 'ok' | 'bad' (error claro de transformación → conviene caer a imagen) |
+// 'unknown' (timeout / transitorio → seguir, probablemente renderiza al abrirlo).
+// Range 0-1 para no descargar el vídeo entero, solo forzar la derivación.
+export async function warmAndCheckReel(url: string): Promise<'ok' | 'bad' | 'unknown'> {
+  try {
+    const res = await Promise.race([
+      fetch(url, { headers: { Range: 'bytes=0-1' } }),
+      new Promise<never>((_, r) => setTimeout(() => r(new Error('timeout')), 25_000)),
+    ])
+    if (res.ok || res.status === 206) return 'ok'
+    if ([400, 401, 403, 404, 422].includes(res.status)) return 'bad'
+    return 'unknown'
+  } catch {
+    return 'unknown'
+  }
 }
 
 export async function GET(req: NextRequest) {

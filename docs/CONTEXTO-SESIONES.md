@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Reels: música + previsualización + warm-up + gancho con movimiento** (05/06/2026):
+  el reel ya reproduce en prod (sin zoom) con ambiente real; faltaba audio y poder
+  previsualizarlo. Añadido:
+  - `src/app/api/super/instagram/seed-music/route.ts`: siembra MÚSICA en Cloudinary a
+    partir de enlaces MP3 públicos (Pixabay) → devuelve `musicIdsEnv` para `CLOUDINARY_MUSIC_IDS`.
+    POST Bearer o **GET desde navegador** logueado en /super: `?urls=<mp3_1>|<mp3_2>|...`.
+  - **Previsualización**: el mensaje de Telegram del reel ahora lleva `👁️ Ver vídeo`
+    (enlace al MP4) — antes no había forma de verlo antes de publicar.
+  - **Warm-up + chequeo** (`warmAndCheckReel` en `ig-reel`): calienta el MP4 y, si Cloudinary
+    da error claro (4xx), el cron **cae a imagen** en vez de proponer un reel roto.
+  - **Gancho con movimiento**: si hay ambiente, el reel **abre con un clip real** y el texto
+    entra después.
+  - `tsc` + smoke + `next build` verdes. **Pendiente Alberto:** sembrar música (3-5 MP3
+    Pixabay) → `CLOUDINARY_MUSIC_IDS` + redeploy → reprobar que **suena** (valida `l_audio`,
+    último trozo empírico; si no sonara, fallback `l_audio:` → `l_`).
+
 - **FIX Apify ingest: "0 de 30" → inserta — 04/06/2026** (PR #35, mergeado):
   con `APIFY_TOKEN` ya puesto en Vercel, "Lanzar una vuelta" devolvía
   `Fase B: 0 leads de 30` (run SUCCEEDED pero 0 insertados). Causa: el INSERT del

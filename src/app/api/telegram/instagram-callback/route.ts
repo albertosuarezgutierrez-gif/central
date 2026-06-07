@@ -4,7 +4,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { publicarEnInstagram, publicarReel } from '@/lib/instagram'
-import { generarReel } from '@/app/api/ig-reel/route'
+import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/lib/telegram'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { obtenerNoticias, leerContextoDrive } from '@/lib/instagram-context'
@@ -223,11 +223,12 @@ SOLO JSON: {"titulo":"...","p1":"...","p2":"...","p3":"...","caption":"..."}`
         const puntos = [p.p1, p.p2, p.p3].filter(Boolean) as string[]
         try {
           const reelUrl = await generarReel({ titulo: p.titulo || tema, estilo: 'editorial', puntos })
+          await warmAndCheckReel(reelUrl).catch(() => {}) // calienta el MP4 (best-effort)
           await supabase.from('instagram_borradores').update({
             plantilla: 'reel', titulo: p.titulo || tema, caption: p.caption, image_url: reelUrl,
           }).eq('id', b.id)
           await tgAlertButtons(
-            `🎬 <b>Reel listo</b>\n\n<b>${(p.titulo || tema).slice(0,60)}</b>\n\n<i>${p.caption?.slice(0,150)}...</i>`,
+            `🎬 <b>Reel listo</b>\n\n<b>${(p.titulo || tema).slice(0,60)}</b>\n\n<i>${p.caption?.slice(0,150)}...</i>\n\n<a href="${reelUrl}">👁️ Ver vídeo</a>`,
             'info',
             [[{ texto: '✅ Publicar Reel', callback: `ig_aprobar_reel:${b.id}` }, { texto: '🗑️ Descartar', callback: `ig_descartar:${b.id}` }]]
           )

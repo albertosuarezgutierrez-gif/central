@@ -5,7 +5,7 @@ import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
-import { generarReel } from '@/app/api/ig-reel/route'
+import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { pickMusicTrack } from '@/lib/instagram-music'
 
 type Plantilla = 'stat'|'pregunta'|'comparativa'|'tip'|'cita'|'producto'
@@ -167,13 +167,15 @@ export async function GET(req: NextRequest) {
         const puntos = [reel.p1, reel.p2, reel.p3].filter(Boolean)
         const audioPid = pickMusicTrack()
         const reelUrl = await generarReel({ titulo: reel.titulo, estilo, puntos, modulo, audioPid })
+        // Warm-up + chequeo: calienta el MP4 y, si Cloudinary da error claro, cae a imagen.
+        if (await warmAndCheckReel(reelUrl) === 'bad') throw new Error('Cloudinary no renderiza el reel (revisar transformación)')
         const { data: bReel } = await supabase.from('instagram_borradores').insert({
           plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: reelUrl,
           tema_elegido: tema, modulo_relacionado: modulo,
         }).select('id').single()
         if (bReel?.id) {
           await tgAlertButtons(
-            `🎬 <b>Nuevo Reel listo</b>\n\n🎞️ <code>reel</code> · ${modulo||'—'}${audioPid?' · 🎵':' · 🔇'}\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\n<i>${reel.caption?.slice(0,150)}...</i>`,
+            `🎬 <b>Nuevo Reel listo</b>\n\n🎞️ <code>reel</code> · ${modulo||'—'}${audioPid?' · 🎵':' · 🔇'}\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\n<i>${reel.caption?.slice(0,150)}...</i>\n\n<a href="${reelUrl}">👁️ Ver vídeo</a>`,
             'info',
             [[{ texto:'✅ Publicar Reel', callback:`ig_aprobar_reel:${bReel.id}` },{ texto:'🗑️ Descartar', callback:`ig_descartar:${bReel.id}` }]]
           )
