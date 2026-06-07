@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
     const { data: bt } = await supabase
       .from('bridge_tokens')
-      .select('restaurante_id')
+      .select('local_id')
       .eq('token', token)
       .eq('activo', true)
       .single()
@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         .from('impresoras')
         .update(updates)
         .eq('id', impresora_id)
-        .eq('local_id', bt.restaurante_id)
+        .eq('local_id', bt.local_id)
         .select('id, nombre, ip_address')
         .single()
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       .from('impresoras')
       .update(updates)
       .eq('mac_address', mac_address)
-      .eq('local_id', bt.restaurante_id)
+      .eq('local_id', bt.local_id)
       .select('id, nombre, ip_address')
       .single()
 

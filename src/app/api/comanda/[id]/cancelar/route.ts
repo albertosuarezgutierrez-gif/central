@@ -21,7 +21,7 @@ export async function PATCH(
     // Verificar que la comanda pertenece al camarero y es muy reciente (<90s)
     const { data: comanda, error: fetchErr } = await supabase
       .from('comandas')
-      .select('id, camarero_id, estado, created_at, restaurante_id')
+      .select('id, camarero_id, estado, created_at, local_id')
       .eq('id', id)
       .eq('local_id', session.restaurante_id)
       .maybeSingle()

@@ -28,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
   const { data: val } = await supabase
     .from('evento_valoracion')
-    .select('id, restaurante_id, evento_id, nps')
+    .select('id, local_id, evento_id, nps')
     .eq('token', token)
     .single()
 
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     const { data: rest } = await supabase
       .from('restaurantes')
       .select('google_review_url')
-      .eq('id', val.restaurante_id)
+      .eq('id', val.local_id)
       .single()
 
     if (rest?.google_review_url) {
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     await tgAlert(`⚠️ <b>NPS bajo en evento</b>\nNPS: ${nps}/10\nComentario: ${comentario || 'sin comentario'}`, 'aviso')
   }
 
-  const google_url = nps >= 9 ? (await supabase.from('restaurantes').select('google_review_url').eq('id', val.restaurante_id).single()).data?.google_review_url : null
+  const google_url = nps >= 9 ? (await supabase.from('restaurantes').select('google_review_url').eq('id', val.local_id).single()).data?.google_review_url : null
 
   return NextResponse.json({ ok: true, mostrar_reseña: nps >= 9, google_url })
 }

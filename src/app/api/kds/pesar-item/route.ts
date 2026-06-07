@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   // Obtener item + precio_por_kg del producto
   const { data: item, error: itemErr } = await supabase
     .from('comanda_items')
-    .select('id, nombre, producto_id, precio_unitario, restaurante_id, comanda_id, productos(precio_por_kg)')
+    .select('id, nombre, producto_id, precio_unitario, local_id, comanda_id, productos(precio_por_kg)')
     .eq('id', comanda_item_id)
     .eq('local_id', restauranteId)
     .single()

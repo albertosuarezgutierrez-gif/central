@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   // ── 2. Leer sugerencias recientes ──────────────────────────────────────
   const { data: sugerencias } = await supabase
     .from('sugerencias')
-    .select('contenido, categoria, restaurante_id')
+    .select('contenido, categoria, local_id')
     .gte('created_at', hace2semanas)
     .order('created_at', { ascending: false })
     .limit(10)

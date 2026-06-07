@@ -13,7 +13,7 @@ export async function POST(req: Request) {
 
     const { data: bt } = await supabase
       .from('bridge_tokens')
-      .select('restaurante_id')
+      .select('local_id')
       .eq('token', token)
       .eq('activo', true)
       .single()
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       const { data } = await supabase
         .from('impresoras')
         .select('id')
-        .eq('local_id', bt.restaurante_id)
+        .eq('local_id', bt.local_id)
         .eq('mac_address', mac_address)
         .single()
       existing = data
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       const { data } = await supabase
         .from('impresoras')
         .select('id')
-        .eq('local_id', bt.restaurante_id)
+        .eq('local_id', bt.local_id)
         .eq('ip_address', ip_address)
         .single()
       existing = data
@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     if (existing) {
       result = await supabase.from('impresoras').update(fields).eq('id', existing.id).select('id').single()
     } else {
-      result = await supabase.from('impresoras').insert({ local_id: bt.restaurante_id, ...fields }).select('id').single()
+      result = await supabase.from('impresoras').insert({ local_id: bt.local_id, ...fields }).select('id').single()
     }
 
     if (result.error) return NextResponse.json({ error: result.error.message }, { status: 500 })

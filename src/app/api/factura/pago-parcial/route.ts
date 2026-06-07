@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
   // ── 1. Verificar comanda ────────────────────────────────────
   const { data: comanda } = await supabase
     .from('comandas')
-    .select('id, estado, restaurante_id, camarero_id, turno_id, mesa_id')
+    .select('id, estado, local_id, camarero_id, turno_id, mesa_id')
     .eq('id', comanda_id).eq('local_id', restaurante_id).single()
 
   if (!comanda)

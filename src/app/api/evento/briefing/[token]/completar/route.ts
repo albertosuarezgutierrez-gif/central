@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   // Validar token
   const { data: briefing, error: bErr } = await supabase
     .from('evento_briefing')
-    .select('id, restaurante_id, comercial_id, estado, expires_at')
+    .select('id, local_id, comercial_id, estado, expires_at')
     .eq('token', token)
     .eq('estado', 'pendiente')
     .gt('expires_at', new Date().toISOString())
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const { data: menus } = await supabase
     .from('menus_evento')
     .select('id, nombre, descripcion, precio_por_persona, tipo_evento, tiene_menu_infantil, precio_infantil')
-    .eq('local_id', briefing.restaurante_id)
+    .eq('local_id', briefing.local_id)
     .eq('activo', true)
     .limit(10)
 
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
   const { data: config } = await supabase
     .from('config_eventos')
     .select('margen_food_pct, margen_bebidas_pct')
-    .eq('local_id', briefing.restaurante_id)
+    .eq('local_id', briefing.local_id)
     .maybeSingle()
 
   // NIM analiza el briefing

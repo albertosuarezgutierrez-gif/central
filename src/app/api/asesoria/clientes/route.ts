@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
   // Ventas del mes por restaurante
   const { data: arqueos } = await supabase
     .from('arqueos_caja')
-    .select('restaurante_id, base_10, iva_10, base_21, iva_21, fecha')
+    .select('local_id, base_10, iva_10, base_21, iva_21, fecha')
     .in('local_id', rids)
     .gte('fecha', mesDesde)
     .lte('fecha', mesHasta)
@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
   // Estado 303 del trimestre por restaurante
   const { data: liqs } = await supabase
     .from('liquidaciones_iva')
-    .select('restaurante_id, cuota_diferencial, estado, fecha_limite')
+    .select('local_id, cuota_diferencial, estado, fecha_limite')
     .in('local_id', rids)
     .eq('año', year)
     .eq('trimestre', trimestre)
@@ -65,27 +65,27 @@ export async function GET(req: NextRequest) {
   // Último arqueo por restaurante
   const { data: ultimos } = await supabase
     .from('arqueos_caja')
-    .select('restaurante_id, fecha, estado')
+    .select('local_id, fecha, estado')
     .in('local_id', rids)
     .order('fecha', { ascending: false })
 
   // Facturas de compra pendientes de revisar
   const { data: facturasPendientes } = await supabase
     .from('facturas_compra')
-    .select('restaurante_id')
+    .select('local_id')
     .in('local_id', rids)
     .in('match_estado', ['diferencia_leve', 'diferencia_grave'])
 
   // Construir respuesta por restaurante
   const clientes = session.restaurantes.map(r => {
-    const arq = (arqueos ?? []).filter(a => a.restaurante_id === r.id)
+    const arq = (arqueos ?? []).filter(a => a.local_id === r.id)
     const ventas_mes = arq.reduce((s, a) => s + Number(a.base_10 ?? 0) + Number(a.iva_10 ?? 0) + Number(a.base_21 ?? 0) + Number(a.iva_21 ?? 0), 0)
     const base_mes   = arq.reduce((s, a) => s + Number(a.base_10 ?? 0) + Number(a.base_21 ?? 0), 0)
     const iva_rep    = arq.reduce((s, a) => s + Number(a.iva_10 ?? 0) + Number(a.iva_21 ?? 0), 0)
 
-    const liq = (liqs ?? []).find(l => l.restaurante_id === r.id)
-    const ultimo = (ultimos ?? []).find(u => u.restaurante_id === r.id)
-    const pendientes = (facturasPendientes ?? []).filter(f => f.restaurante_id === r.id).length
+    const liq = (liqs ?? []).find(l => l.local_id === r.id)
+    const ultimo = (ultimos ?? []).find(u => u.local_id === r.id)
+    const pendientes = (facturasPendientes ?? []).filter(f => f.local_id === r.id).length
 
     return {
       ...r,

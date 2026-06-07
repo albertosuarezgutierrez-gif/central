@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
 
   const { data: rec } = await supabase
     .from('recepciones_mercancia')
-    .select('id, estado, restaurante_id, proveedor_id, albaran_numero')
+    .select('id, estado, local_id, proveedor_id, albaran_numero')
     .eq('id', recepcion_id)
     .eq('local_id', rid)
     .single()

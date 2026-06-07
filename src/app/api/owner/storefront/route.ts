@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const slugLimpio = body.slug.toLowerCase().replace(/[^a-z0-9-]/g, '-')
     const { data: existente } = await supabase
       .from('storefront_config')
-      .select('restaurante_id')
+      .select('local_id')
       .eq('slug', slugLimpio)
       .neq('local_id', session.restaurante_id)
       .single()

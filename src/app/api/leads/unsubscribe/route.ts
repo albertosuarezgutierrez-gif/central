@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     // Obtener lead para restaurante_id
     const { data: lead, error: leadError } = await supabase
       .from('leads')
-      .select('id, restaurante_id')
+      .select('id, local_id')
       .eq('id', leadId)
       .single()
 
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       .from('leads_unsubscribes')
       .insert({
         lead_id: leadId,
-        local_id: lead.restaurante_id,
+        local_id: lead.local_id,
         razon: 'no_interesado',
         unsubscribed_at: new Date().toISOString()
       })

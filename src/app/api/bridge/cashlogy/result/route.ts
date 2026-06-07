@@ -18,13 +18,13 @@ export async function POST(req: NextRequest) {
   // Verificar token del bridge
   const { data: bt } = await supabase
     .from('bridge_tokens')
-    .select('restaurante_id, activo')
+    .select('local_id, activo')
     .eq('token', token)
     .eq('activo', true)
     .maybeSingle()
 
   if (!bt) return NextResponse.json({ error: 'Token inválido' }, { status: 401 })
-  const rid = bt.restaurante_id
+  const rid = bt.local_id
 
   const body = await req.json()
   const {

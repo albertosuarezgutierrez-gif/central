@@ -27,7 +27,7 @@ export async function PATCH(
     // ── 1. Leer comanda ───────────────────────────────────────────────────
     const { data: comanda, error: fetchErr } = await supabase
       .from('comandas')
-      .select('id, camarero_id, estado, tipo, mesa_id, nombre_cuenta, nota_general, numero_ticket, created_at, restaurante_id')
+      .select('id, camarero_id, estado, tipo, mesa_id, nombre_cuenta, nota_general, numero_ticket, created_at, local_id')
       .eq('id', id)
       .eq('local_id', rid)
       .maybeSingle()

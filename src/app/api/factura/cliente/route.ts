@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
   // ── 1. Verificar comanda cerrada ────────────────────────
   const { data: comanda } = await supabase
     .from('comandas')
-    .select('id, estado, restaurante_id')
+    .select('id, estado, local_id')
     .eq('id', comanda_id)
     .eq('local_id', restaurante_id)
     .single()

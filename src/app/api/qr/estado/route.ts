@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     if (ids.length) {
       const { data } = await supabase
         .from('comandas')
-        .select('id, estado, numero_ticket, mesa_id, restaurante_id')
+        .select('id, estado, numero_ticket, mesa_id, local_id')
         .in('id', ids)
         .eq('mesa_id', sesion.mesa_id)
         .eq('local_id', sesion.restaurante_id)

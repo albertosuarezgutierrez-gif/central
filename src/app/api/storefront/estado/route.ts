@@ -32,7 +32,7 @@ export async function PATCH(req: NextRequest) {
   // Cargar pedido y verificar que pertenece al restaurante
   const { data: pedido } = await supabase
     .from('pedidos_online')
-    .select('id, estado, restaurante_id')
+    .select('id, estado, local_id')
     .eq('id', pedido_id)
     .eq('local_id', session.restaurante_id)
     .single()

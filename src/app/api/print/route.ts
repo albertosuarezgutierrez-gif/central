@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   // Verificar token de bridge
   const { data: bridge } = await sb
     .from('bridge_tokens')
-    .select('id, activo, restaurante_id, scan_requested, rol, en_wifi')
+    .select('id, activo, local_id, scan_requested, rol, en_wifi')
     .eq('token', token)
     .single()
 
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   const { count: nodosActivos } = await sb
     .from('bridge_tokens')
     .select('id', { count: 'exact', head: true })
-    .eq('local_id', bridge.restaurante_id)
+    .eq('local_id', bridge.local_id)
     .eq('activo', true)
     .gt('ultimo_ping', meshDeadline)
 
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
   const { data: impresoras } = await sb
     .from('impresoras')
     .select('id, ip_address, port, connection_type')
-    .eq('local_id', bridge.restaurante_id)
+    .eq('local_id', bridge.local_id)
     .in('connection_type', TIPOS_TCP)
     .eq('activa', true)
 
@@ -161,7 +161,7 @@ export async function POST(req: NextRequest) {
   if (body.trigger === 'test' && body.impresora_id) {
     const { data: imp } = await sb
       .from('impresoras')
-      .select('id, nombre, seccion_id, restaurante_id, ip_address, port, connection_type')
+      .select('id, nombre, seccion_id, local_id, ip_address, port, connection_type')
       .eq('id', body.impresora_id)
       .single()
 
@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
       .insert({
         impresora_id:  imp.id,
         seccion_id:    imp.seccion_id,
-        local_id: imp.restaurante_id,
+        local_id: imp.local_id,
         payload,
         print_data:    printData,
         status:        'pendiente',
@@ -226,7 +226,7 @@ export async function POST(req: NextRequest) {
 
   const { data: current } = await sb
     .from('print_jobs')
-    .select('attempts, comanda_id, seccion_id, payload, restaurante_id')
+    .select('attempts, comanda_id, seccion_id, payload, local_id')
     .eq('id', job_id)
     .single()
 

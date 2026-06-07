@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
 
   const { data: bt } = await supabase
     .from('bridge_tokens')
-    .select('restaurante_id')
+    .select('local_id')
     .eq('token', token)
     .eq('activo', true)
     .single()
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   const { data: impresoras } = await supabase
     .from('impresoras')
     .select('id, nombre, ip_address, port, connection_type, mac_address')
-    .eq('local_id', bt.restaurante_id)
+    .eq('local_id', bt.local_id)
     .eq('activa', true)
     .in('connection_type', ['ip_local', 'usb_bridge'])
 

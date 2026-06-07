@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   // Actualizar estado del evento a confirmado si estaba en presupuesto
   const { data: contratoCompleto } = await supabase
     .from('evento_contratos')
-    .select('evento_id, restaurante_id')
+    .select('evento_id, local_id')
     .eq('id', contrato.id).single()
 
   if (contratoCompleto) {
