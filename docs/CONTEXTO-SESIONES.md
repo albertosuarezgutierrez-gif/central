@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **DISEÑO: ia.rest → plataforma de verticales (arquitectura definitiva) — 07/06/2026**
+  (rama `claude/store-module-pos-MQUyV`): sesión larga de brainstorming que empezó por "¿añadir
+  un TPV de tienda?" y derivó en formalizar ia.rest como **plataforma de punto de venta con
+  verticales enchufables**. Spec completo en `docs/superpowers/specs/2026-06-07-plataforma-
+  verticales-design.md`. Decisiones clave:
+  - **Sin parches, arquitectura definitiva en secuencia segura** (no hay clientes aún → ventana;
+    Saboga fue puntual y ya terminó). NO big-bang: cada fase aterriza final, sistema funcionando.
+  - **5 planos**: Núcleo (identidad + venta/proyecto genéricos + motor de módulos/verticales) →
+    Verticales/captura (2 familias: transaccional y proyecto/servicio) → Módulos transversales
+    vendibles → Conectores externos (puertos&adaptadores, MCP) → Monetización.
+  - **Núcleo neutro, jerga solo en su vertical** (regla de PROMOCIÓN: se neutraliza al compartirse).
+    `comandas`→vista `ventas`+`comandas.tipo`; `eventos`→vista `proyectos`. NO renombrar físico.
+  - **Decisión gorda tomada**: `restaurante_id → local_id` (rename físico, tabla `restaurantes`→
+    `locales` con vista compat) + RLS `app.local_id` + `get_tenant_id()`. Va en Fase A.
+  - Fundamentos: **bus de eventos (outbox)**, API pública + **ia.rest como servidor MCP**,
+    entitlements, tests de contrato, **offline-first**, RBAC con ámbito, precios/promos, fiscal
+    por país. Multi-marca (matriz sin nombre aún: candidatos ia.OS/Vendia/Comercia; ia.rest pasa
+    a sub-marca del vertical restaurante). Tenancy grupo: cuenta→nodos(venta/almacén/**producción**)→local.
+  - **Validado contra 9 negocios reales** (restaurante, catering, retail, pescadería Mariscos
+    González con manipulación, franquicia panadería con obrador, grupo mixto, fontanería,
+    electricista, admin. comunidades). Todos encajan.
+  - **Fases**: A núcleo (+rename local_id +bus +offline) · B restaurante+org+RBAC · C retail+Mariscos
+    · D módulos-conector+entitlements+precios · E catering+franquicia+field-service · F plataforma.
+  - **PRÓXIMO PASO**: invocar `writing-plans` para detallar la **Fase A** y empezar a construir.
+    Antes de los refactors grandes: crear red mínima de tests (4 costuras + venta→cobro→factura→stock).
+
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
   tipo `etiqueta_producto`) estaba **roto en silencio** y, aunque funcionara, era un
