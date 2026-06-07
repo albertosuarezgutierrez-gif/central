@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
     .from('comercial_agenda')
     .insert({
       ...body,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       comercial_id: body.comercial_id || session.id
     })
     .select()

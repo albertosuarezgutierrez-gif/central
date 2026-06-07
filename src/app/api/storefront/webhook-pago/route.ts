@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
       turno_id: turno.id,
       tipo: 'comanda',
       estado: 'en_cocina',
-      restaurante_id: pedido.restaurante_id,
+      local_id: pedido.restaurante_id,
       nota_general: pedido.cliente_notas ?? null,
       num_comensales: 1,
     })
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       notas: it.notas ?? null,
       producto_id: it.producto_id ?? null,
       precio_unitario: it.precio_unitario ?? null,
-      restaurante_id: pedido.restaurante_id,
+      local_id: pedido.restaurante_id,
     }))
   )
 
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         tipo: 'comanda',
         mesa_codigo: etiqueta,
         camarero_nombre: pedido.tipo === 'delivery' ? 'Delivery' : 'Recogida',
-        restaurante_id: pedido.restaurante_id,
+        local_id: pedido.restaurante_id,
       },
       items.map(i => ({
         nombre: i.nombre,

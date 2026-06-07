@@ -84,7 +84,7 @@ Datos del evento:
   if (evento?.cliente_email) {
     const { data: valToken } = await supabase.from('evento_valoracion')
       .insert({
-        restaurante_id: restauranteId,
+        local_id: restauranteId,
         evento_id: id,
         cliente_email: evento.cliente_email
       })

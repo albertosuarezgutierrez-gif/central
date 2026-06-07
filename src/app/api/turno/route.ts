@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
     .from('turnos')
     .insert({
       nombre: nombre || `Turno ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`,
-      restaurante_id: rid,
+      local_id: rid,
     })
     .select()
     .single()

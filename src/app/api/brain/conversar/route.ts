@@ -108,7 +108,7 @@ Ejemplos de buenas preguntas:
   try {
     const calidad = parsed.resuelto ? 5 : 3
     await supabase.from('ia_training_log').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       input_raw: texto_original,
       input_context: {
         historial_previo: turnosPrevios,

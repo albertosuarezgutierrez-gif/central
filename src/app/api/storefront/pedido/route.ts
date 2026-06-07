@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     const { data: pedido, error: pedErr } = await supabase
       .from('pedidos_online')
       .insert({
-        restaurante_id: config.restaurante_id,
+        local_id: config.restaurante_id,
         tipo,
         estado: 'pendiente',
         cliente_nombre: cliente_nombre.trim(),
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       currency: 'eur',
       metadata: {
         pedido_id: pedido.id,
-        restaurante_id: config.restaurante_id,
+        local_id: config.restaurante_id,
         slug,
       },
       description: `Pedido #${pedido.numero} — ${config.nombre_publico ?? slug}`,

@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('storefront_config')
     .upsert({
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       ...body,
     }, { onConflict: 'restaurante_id' })
     .select()

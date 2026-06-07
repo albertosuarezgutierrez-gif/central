@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   const { data: portal, error: portalErr } = await supabase
     .from('cobros_grupo')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       slug,
       titulo,
       descripcion: descripcion || null,

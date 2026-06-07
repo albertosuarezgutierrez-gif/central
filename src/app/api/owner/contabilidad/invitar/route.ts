@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
     .from('contable_clientes')
     .upsert({
       contable_id:    contable.id,
-      restaurante_id: rid,
+      local_id: rid,
       permisos:       ['ver_resumen', 'ver_303', 'exportar', 'ver_asientos'],
       activo:         true,
       invitado_por:   session.id ?? null,
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   await userSupa
     .from('config_contabilidad')
     .upsert({
-      restaurante_id: rid, contable_id: contable.id,
+      local_id: rid, contable_id: contable.id,
       email_contable: emailNorm, nombre_contable: nombre,
       updated_at: new Date().toISOString(),
     }, { onConflict: 'restaurante_id' })

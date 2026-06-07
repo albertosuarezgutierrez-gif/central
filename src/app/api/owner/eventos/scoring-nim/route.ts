@@ -101,7 +101,7 @@ JSON requerido (sin texto extra): {"puntuacion":<1-10>,"resumen":"<2 frases>","p
 
   // Guardar en cache
   await supabase.from('evento_scoring_cache').upsert({
-    evento_id, restaurante_id: restauranteId,
+    evento_id, local_id: restauranteId,
     scoring_json: result, generado_at: new Date().toISOString(),
   })
 

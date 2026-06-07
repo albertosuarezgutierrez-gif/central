@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
     .from('presupuestos_evento')
     .upsert({
       ...body,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       margen_real_pct: Math.round(margen_real_pct * 100) / 100,
       rentable: margen_real_pct >= (config?.rentabilidad_minima_pct || 25),
       updated_at: new Date().toISOString()
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
   if (body.estado === 'aceptado' && body.evento_id) {
     const { data: ev } = await supabase.from('eventos').select('tipo, fecha_evento').eq('id', body.evento_id).single()
     await supabase.from('evento_historico_precios').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo_evento: ev?.tipo,
       adultos: body.adultos,
       precio_adulto_final: body.precio_adulto,

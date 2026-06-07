@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!evento_id || !tipo || !concepto || !importe) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
   const { data, error } = await supabase.from('evento_costes')
-    .insert({ evento_id, restaurante_id: restauranteId, tipo, concepto, importe, es_estimado: es_estimado ?? false })
+    .insert({ evento_id, local_id: restauranteId, tipo, concepto, importe, es_estimado: es_estimado ?? false })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

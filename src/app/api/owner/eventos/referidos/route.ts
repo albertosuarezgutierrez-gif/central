@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { data, error } = await supabase
     .from('evento_referidos')
-    .insert({ ...body, restaurante_id: restauranteId })
+    .insert({ ...body, local_id: restauranteId })
     .select()
     .single()
 

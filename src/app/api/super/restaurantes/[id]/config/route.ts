@@ -118,7 +118,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   // Log en security_log
   await supabase.from('security_log').insert({
     evento: 'super_config_update',
-    restaurante_id: id,
+    local_id: id,
     detalles: { updated_fields: Object.keys(update), by: session.nombre || 'super_admin' },
   }).then(() => {})
 

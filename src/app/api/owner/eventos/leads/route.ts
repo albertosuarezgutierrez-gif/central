@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('leads_evento')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       coordinador_id: session.rol === 'coordinador_eventos' ? session.id : (body.coordinador_id ?? session.id),
       nombre_cliente, email, telefono, tipo_evento: tipo_evento ?? 'boda',
       fecha_tentativa, aforo_estimado, espacio_id, presupuesto_cliente,
@@ -92,7 +92,7 @@ export async function PUT(req: NextRequest) {
   // Si viene una nota, añadirla
   if (nota) {
     await supabase.from('leads_evento_notas').insert({
-      lead_id: id, restaurante_id: restauranteId,
+      lead_id: id, local_id: restauranteId,
       personal_id: session.id,
       contenido: nota, tipo: tipo_nota ?? 'nota',
     })

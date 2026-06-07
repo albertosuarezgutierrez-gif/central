@@ -57,7 +57,7 @@ export async function PATCH(
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify({ restaurante_id: rid }) },
       body: JSON.stringify({
-        restaurante_id: rid,
+        local_id: rid,
         roles: ['cocina', 'jefe_sala'],
         title: '✅ Elaboración consumida',
         body: `${data.nombre} (lote ${data.lote}) marcada como consumida.`,

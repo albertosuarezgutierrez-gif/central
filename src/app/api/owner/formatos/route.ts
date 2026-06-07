@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
   const { data, error } = await supabase.from('producto_formatos')
-    .insert({ producto_id, nombre, precio: Number(precio), orden: orden ?? 0, restaurante_id: rid })
+    .insert({ producto_id, nombre, precio: Number(precio), orden: orden ?? 0, local_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ formato: data })

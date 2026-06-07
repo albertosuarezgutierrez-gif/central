@@ -66,7 +66,7 @@ export async function POST(req: Request) {
     const { data: nueva, error: insErr } = await supabase
       .from('reglas_envio')
       .insert({
-        restaurante_id:      rid,
+        local_id:      rid,
         destino_tipo:        'impresora',
         destino_ref:         impresora_id,
         seccion_ids:         seccionIds,

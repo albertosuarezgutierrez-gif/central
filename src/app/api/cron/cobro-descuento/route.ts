@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
         currency: 'eur',
         description: `ia.rest cobro — descuento ${mesLabel}: ${d.volumen_eur.toFixed(2)}€ procesados`,
         metadata: {
-          restaurante_id: d.restaurante_id,
+          local_id: d.restaurante_id,
           mes: mesStr,
           volumen_eur:    d.volumen_eur.toString(),
           comision_eur:   d.comision_eur.toString(),

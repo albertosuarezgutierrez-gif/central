@@ -280,7 +280,7 @@ interface ComandaInfo {
   camarero_nombre: string
   ticket_num?: number       // legacy fallback
   numero_ticket?: number    // número de comanda del turno (preferido)
-  restaurante_id?: string
+  local_id?: string
   zona_tipo?: string | null
   zona_nombre?: string | null
   nota_general?: string | null // nota de la comanda → se imprime en todos sus tickets
@@ -305,11 +305,11 @@ export async function crearPrintJobs(
 
   // 2. Cargar reglas de enrutamiento del restaurante (si las hay)
   let reglas: ReglaEnvio[] = []
-  if (comanda.restaurante_id) {
+  if (comanda.local_id) {
     const { data: reglasDB } = await supabase
       .from('reglas_envio')
       .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta, tipos_ticket')
-      .eq('local_id', comanda.restaurante_id)
+      .eq('local_id', comanda.local_id)
       .eq('activa', true)
     reglas = (reglasDB ?? []).map((r: Record<string, unknown>) => ({
       ...r,
@@ -328,10 +328,10 @@ export async function crearPrintJobs(
   const impresorasQuery = supabase.from('impresoras')
     .select('id, seccion_id, secciones_ids, nombre, connection_type, impresora_fallback_id')
     .eq('activa', true)
-  const { data: impresoras } = await (comanda.restaurante_id
-    ? impresorasQuery.eq('local_id', comanda.restaurante_id)
+  const { data: impresoras } = await (comanda.local_id
+    ? impresorasQuery.eq('local_id', comanda.local_id)
     : impresorasQuery)
-  console.log('[COURIER] reglas:', reglas.length, 'impresoras:', (impresoras??[]).length, 'rid:', comanda.restaurante_id)
+  console.log('[COURIER] reglas:', reglas.length, 'impresoras:', (impresoras??[]).length, 'rid:', comanda.local_id)
 
   // Mapa seccion → impresora (lógica legacy, soporta multi-sección)
   const impresoraMap: Record<string, { id: string; connection_type: string; fallback_id?: string | null }> = {}
@@ -463,7 +463,7 @@ export async function crearPrintJobs(
         comanda_id:    comanda.id,
         impresora_id:  imp.id,
         seccion_id:    grupo.seccion_label || imp.seccion_id,
-        restaurante_id: comanda.restaurante_id ?? null,
+        restaurante_id: comanda.local_id ?? null,
         payload,
         print_data:    printData,
         status:        'pendiente',
@@ -481,7 +481,7 @@ export async function crearPrintJobs(
           : Buffer.from(generarTextoPlano(payload), 'utf8').toString('base64')
         const { data: jobFallback } = await supabase
           .from('print_jobs')
-          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, restaurante_id: comanda.restaurante_id ?? null, payload, print_data: printDataFallback, status: 'pendiente' })
+          .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: grupo.seccion_label || imp.seccion_id, restaurante_id: comanda.local_id ?? null, payload, print_data: printDataFallback, status: 'pendiente' })
           .select('id')
           .single()
         if (jobFallback) jobIds.push(jobFallback.id)
@@ -508,13 +508,13 @@ export async function crearPrintJobMarchar(
   const supabase = createServerClient()
   const jobIds: string[] = []
 
-  if (!comanda.restaurante_id || items.length === 0) return jobIds
+  if (!comanda.local_id || items.length === 0) return jobIds
 
   // Cargar reglas con pase activo
   const { data: reglasDB } = await supabase
     .from('reglas_envio')
     .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
-    .eq('local_id', comanda.restaurante_id)
+    .eq('local_id', comanda.local_id)
     .eq('activa', true)
     .eq('imprimir_al_marchar', true)
 
@@ -575,7 +575,7 @@ export async function crearPrintJobMarchar(
 
     const { data: job } = await supabase
       .from('print_jobs')
-      .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, restaurante_id: comanda.restaurante_id ?? null, payload, print_data: printData, status: 'pendiente' })
+      .insert({ comanda_id: comanda.id, impresora_id: imp.id, seccion_id: imp.seccion_id, restaurante_id: comanda.local_id ?? null, payload, print_data: printData, status: 'pendiente' })
       .select('id')
       .single()
 
@@ -763,7 +763,7 @@ async function getNextTicketNum(
 
 interface CuentaParams {
   comanda_id:           string
-  restaurante_id:       string
+  local_id:             string
   mesa_label:           string
   zona_tipo?:           string | null
   zona_nombre?:         string | null
@@ -951,7 +951,7 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   const { data: reglasDB } = await supabase
     .from('reglas_envio')
     .select('id, zona_tipo, zona_tipos, destino_tipo, destino_ref, prioridad, es_fallback, hora_desde, hora_hasta, tipos_ticket')
-    .eq('local_id', p.restaurante_id)
+    .eq('local_id', p.local_id)
     .eq('activa', true)
     .contains('tipos_ticket', ['cuenta'])
     .order('es_fallback', { ascending: true })
@@ -990,13 +990,13 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   if (!impresoraId) {
     const { data: imp } = await supabase
       .from('impresoras').select('id')
-      .eq('local_id', p.restaurante_id).eq('activa', true)
+      .eq('local_id', p.local_id).eq('activa', true)
       .order('created_at').limit(1).single()
     impresoraId = imp?.id ?? null
   }
 
   if (!impresoraId) {
-    console.warn('[COURIER-CUENTA] Sin impresora disponible para restaurante', p.restaurante_id)
+    console.warn('[COURIER-CUENTA] Sin impresora disponible para restaurante', p.local_id)
     return null
   }
 
@@ -1051,7 +1051,7 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
     .insert({
       impresora_id:    elegida.id,
       seccion_id:      null,
-      restaurante_id:  p.restaurante_id,
+      restaurante_id:  p.local_id,
       comanda_id:      p.comanda_id,
       payload, print_data, status: 'pendiente',
     })

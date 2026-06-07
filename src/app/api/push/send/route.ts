@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { title, body, mesa, camarero_ids, camarero_id, roles, restaurante_id: ridOverride, data } = await req.json()
 
-  // Resolver restaurante_id: header tiene prioridad, pero crons pueden pasarlo en el body
+  // Resolver local_id: header tiene prioridad, pero crons pueden pasarlo en el body
   const restauranteId = rid !== '00000000-0000-0000-0000-000000000001' ? rid : (ridOverride ?? rid)
 
   // Aceptar tanto camarero_id (singular, desde KDS) como camarero_ids (plural)

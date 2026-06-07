@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('reservas')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       nombre_cliente: nombre_cliente.trim(),
       telefono:       telefono?.trim() || null,
       num_personas,

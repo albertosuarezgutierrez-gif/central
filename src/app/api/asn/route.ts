@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
   const { data: rec } = await supabase
     .from('recepciones_mercancia')
     .insert({
-      restaurante_id: pedido.restaurante_id,
+      local_id: pedido.restaurante_id,
       proveedor_id: pedido.proveedor_id,
       pedido_proveedor_id: pedido.id,
       albaran_numero: albaran_numero ?? null,
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
     // Crear items de la pre-recepción
     const rows = asnItems.map((item: { articulo: string; cantidad: number; unidad: string; precio?: number; lote?: string; caducidad?: string }) => ({
       recepcion_id: rec.id,
-      restaurante_id: pedido.restaurante_id,
+      local_id: pedido.restaurante_id,
       stock_articulo_id: asnItems.length === 1 ? pedido.stock_articulo_id : null,
       nombre_articulo: item.articulo,
       cantidad_pedida: pedido.cantidad,
@@ -130,7 +130,7 @@ export async function POST(req: NextRequest) {
 
   // Notificar al restaurante vía ia_training_log (push en monitor-health lo enviará)
   await supabase.from('ia_training_log').insert({
-    restaurante_id: pedido.restaurante_id,
+    local_id: pedido.restaurante_id,
     capa: 'sistema',
     input: `ASN recibido de ${pedido.proveedor_nombre}`,
     output: JSON.stringify({ pedido_id: pedido.id, items: asnItems.length }),

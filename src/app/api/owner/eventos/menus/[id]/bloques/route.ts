@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data: bloque, error: bErr } = await supabase
       .from('menu_evento_bloques')
       .insert({
-        restaurante_id: restauranteId,
+        local_id: restauranteId,
         menu_evento_id: id,
         nombre: b.nombre,
         orden: i,
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
           precio_coste?: number; precio_venta?: number;
           es_opcion_base?: boolean; precio_diferencial?: number; alergenos?: string[]
         }) => ({
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           bloque_id: bloque.id,
           nombre: o.nombre,
           descripcion: o.descripcion,

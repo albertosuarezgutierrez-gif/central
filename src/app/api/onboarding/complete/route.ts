@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   if (!bridgeToken) {
     bridgeToken = crypto.randomBytes(20).toString('hex')
     await supabase.from('bridge_tokens').insert({
-      restaurante_id: rid,
+      local_id: rid,
       token: bridgeToken,
       activo: true,
       nombre: 'Principal',

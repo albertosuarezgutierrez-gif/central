@@ -195,7 +195,7 @@ export async function POST(req: NextRequest) {
 
     await crearPrintJobCuenta({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       mesa_label,
       zona_tipo:   mesaObj?.zona?.tipo   ?? null,
       zona_nombre: mesaObj?.zona?.nombre ?? null,

@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
   for (const art of articulos) {
     if ((art.cantidad_a_pedir ?? 0) <= 0) continue
     await supabase.from('pedidos_proveedor').insert({
-      restaurante_id: restauranteId, stock_articulo_id: art.articulo_id,
+      local_id: restauranteId, stock_articulo_id: art.articulo_id,
       proveedor_nombre: art.proveedor_nombre, proveedor_email: art.proveedor_email,
       cantidad: art.cantidad_a_pedir, unidad: art.unidad, origen: 'produccion_eventos',
       notas: notas_pedido ?? `Producción: ${art.por_evento?.map((e: { cliente: string }) => e.cliente).join(', ')}`,

@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('secciones_cocina')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       id: nombre.trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\s+/g,'_').replace(/[^a-z0-9_]/g,''),
       nombre: nombre.trim(),
       color_kds: color_kds || '#D9442B',

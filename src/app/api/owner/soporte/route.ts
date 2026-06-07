@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     const asunto = texto.length > 80 ? texto.slice(0, 77) + '…' : texto
     const { data: nuevoTicket, error: errTicket } = await sb()
       .from('soporte_tickets')
-      .insert({ restaurante_id: rid, asunto })
+      .insert({ local_id: rid, asunto })
       .select('id')
       .single()
     if (errTicket) return NextResponse.json({ error: errTicket.message }, { status: 500 })
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   // 2. Guardar mensaje del usuario
   await sb().from('soporte_mensajes').insert({
     ticket_id: ticketId,
-    restaurante_id: rid,
+    local_id: rid,
     rol: 'usuario',
     texto: texto.trim(),
   })
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
   // 7. Guardar respuesta de la IA
   await sb().from('soporte_mensajes').insert({
     ticket_id: ticketId,
-    restaurante_id: rid,
+    local_id: rid,
     rol: 'ia',
     texto: respuestaIA,
   })

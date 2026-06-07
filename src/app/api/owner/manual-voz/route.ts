@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       ejemplo_antes: ejemplo_antes?.trim() || null,
       ejemplo_despues: ejemplo_despues?.trim() || null,
       rol_afectado: rol_afectado || 'todos',
-      restaurante_id: rid,
+      local_id: rid,
     })
     .select()
     .single()

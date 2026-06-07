@@ -45,7 +45,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('config_contabilidad')
-    .upsert({ ...body, restaurante_id: rid, updated_at: new Date().toISOString() }, { onConflict: 'restaurante_id' })
+    .upsert({ ...body, local_id: rid, updated_at: new Date().toISOString() }, { onConflict: 'restaurante_id' })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

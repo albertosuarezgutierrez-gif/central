@@ -187,7 +187,7 @@ export async function POST(req: NextRequest) {
     texto_original: `[TheFork ARRIVED] ${customer?.firstName ?? ''} ${customer?.lastName ?? ''} · ${pax ?? '?'} pax · ${alergenosMesa.join(', ') || 'sin alergias'}`,
     texto_brain: { source: 'thefork', orderId, mealStatus, nota },
     latencia_ms: 0,
-    restaurante_id: rid,
+    local_id: rid,
   })
 
   console.log('[TheFork] Mesa abierta:', mesa.codigo, '| TheFork order:', orderId, '| Alergenos:', alergenosMesa)

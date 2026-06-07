@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
     zona_id: string | null
     zona_tipo: string | null   // 'salon' | 'terraza' | ... (mesas.zona text column)
     zona_nombre: string | null
-    restaurante_id: string
+    local_id: string
     notif_config: { marchar: NotifConfig }
   }
 
@@ -204,7 +204,7 @@ export async function POST(req: NextRequest) {
     camarero_id:   receptor.camarero_id,
     items_resumen: resumenItems(items ?? []),
     items_detalle: items ?? [],
-    restaurante_id: rid,
+    local_id: rid,
   })
 
   if (logError) console.error('[MARCHAR] Error insertando marchar_log:', logError)
@@ -279,7 +279,7 @@ export async function POST(req: NextRequest) {
             tipo:            'marchar',   // ← 'marchar' genera el footer "*** MARCHAR ***"
             mesa_codigo,
             camarero_nombre: receptor.camarero_nombre ?? 'Sala',
-            restaurante_id:  receptor.restaurante_id,
+            local_id:  receptor.local_id,
             zona_tipo:       receptor.zona_tipo ?? null,
             zona_nombre:     receptor.zona_nombre ?? null,
           },
@@ -300,7 +300,7 @@ export async function POST(req: NextRequest) {
           tipo:            'marchar',
           mesa_codigo,
           camarero_nombre: receptor.camarero_nombre ?? 'Equipo',
-          restaurante_id:  receptor.restaurante_id,
+          local_id:  receptor.local_id,
           zona_tipo:       receptor.zona_tipo ?? null,
           zona_nombre:     receptor.zona_nombre ?? null,
         },

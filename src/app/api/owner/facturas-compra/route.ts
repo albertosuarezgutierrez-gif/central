@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('facturas_compra')
     .insert({
-      restaurante_id: rid, recepcion_id: recepcion_id ?? null,
+      local_id: rid, recepcion_id: recepcion_id ?? null,
       orden_pago_id: orden_pago_id ?? null, proveedor_nombre,
       numero_factura: numero_factura ?? null, fecha_factura: fecha_factura ?? null,
       importe_total: Number(importe_total), importe_base: importe_base ?? null,

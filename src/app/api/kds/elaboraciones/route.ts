@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
   const { data: elab, error } = await supabase
     .from('elaboraciones_propias')
     .insert({
-      restaurante_id:       rid,
+      local_id:       rid,
       nombre:               nombre.trim(),
       lote,
       producto_id:          producto_id ?? null,
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
         .eq('id', stock_articulo_id)
 
       await supabase.from('stock_movimientos').insert({
-        restaurante_id:   rid,
+        local_id:   rid,
         stock_articulo_id,
         tipo:             'consumo_produccion',
         cantidad:         -Number(cantidad),
@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', 'x-ia-session': JSON.stringify({ restaurante_id: rid }) },
     body: JSON.stringify({
-      restaurante_id: rid,
+      local_id: rid,
       roles: ['jefe_sala', 'owner'],
       title: '🏷️ Nueva elaboración',
       body: `${nombre} — lote ${lote}. Caduca en ${diasLabel}.`,

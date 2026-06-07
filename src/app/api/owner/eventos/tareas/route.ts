@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
   if (!evento_id || !titulo) return NextResponse.json({ error: 'Faltan campos' }, { status: 400 })
 
   const { data, error } = await supabase.from('evento_tareas').insert({
-    evento_id, restaurante_id: restauranteId, titulo, descripcion,
+    evento_id, local_id: restauranteId, titulo, descripcion,
     fecha_limite, responsable: responsable ?? 'coordinador', orden: orden ?? 99,
   }).select().single()
 

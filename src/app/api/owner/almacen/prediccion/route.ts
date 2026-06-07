@@ -54,7 +54,7 @@ pedido_urgente = en mínimos O rotura <3 días. pedido_esta_semana = rotura 3-7 
   try { prediccion = JSON.parse(cleanJSON(raw ?? '')) } catch { /* sin prediccion */ }
   if (prediccion) {
     await logTraining({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       input_raw: `Predicción almacén ${new Date().toLocaleDateString('es-ES')}`,
       input_context: { modulo: 'almacen_prediccion', num_productos: stockConConsumo.length },
       output_brain: prediccion,

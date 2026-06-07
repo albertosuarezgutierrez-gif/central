@@ -74,7 +74,7 @@ export async function POST(req: NextRequest) {
   const { data: evento, error } = await supabase
     .from('eventos')
     .insert({
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       cuenta_id: rest?.cuenta_id,
       coordinador_id: session.id,
       tipo: tipo ?? 'otro',
@@ -102,7 +102,7 @@ export async function POST(req: NextRequest) {
 
     await supabase.from('espacio_bloqueos').insert({
       espacio_id,
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       evento_id: evento.id,
       coordinador_id: session.id,
       fecha_inicio: fecha_evento,

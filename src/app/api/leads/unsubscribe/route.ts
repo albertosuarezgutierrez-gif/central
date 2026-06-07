@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
       .from('leads_unsubscribes')
       .insert({
         lead_id: leadId,
-        restaurante_id: lead.restaurante_id,
+        local_id: lead.restaurante_id,
         razon: 'no_interesado',
         unsubscribed_at: new Date().toISOString()
       })

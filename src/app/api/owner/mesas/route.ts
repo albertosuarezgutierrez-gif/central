@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .insert({
       codigo, nombre: nombre || null, zona,
       capacidad: capacidad || 4,
-      restaurante_id: rid,
+      local_id: rid,
       pos_x: pos_x ?? null,
       pos_y: pos_y ?? null,
       forma: forma ?? 'round',

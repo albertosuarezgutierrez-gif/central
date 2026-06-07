@@ -30,14 +30,14 @@ FRASES QUE DEBES ENTENDER (ejemplos):
 SCHEMA (responde EXACTAMENTE con este formato):
 {"mesa":"S4","confianza":0.95,"raw":"texto original"}`
 
-async function buildZonasKDS(restaurante_id: string): Promise<string> {
+async function buildZonasKDS(local_id: string): Promise<string> {
   try {
     const supabase = createServerClient()
     const { data: zonas } = await supabase
       .from('zonas')
       .select('nombre, prefijo')
       .eq('activa', true)
-      .eq('local_id', restaurante_id)
+      .eq('local_id', local_id)
       .order('orden')
 
     if (!zonas?.length) return ''

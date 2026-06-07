@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const precio_total = body.precio_por_persona && body.aforo_previsto ? parseFloat(body.precio_por_persona) * parseInt(body.aforo_previsto) : null
 
   const { data: evento, error } = await supabase.from('eventos').insert({
-    restaurante_id: restauranteId, cuenta_id: rest?.cuenta_id,
+    local_id: restauranteId, cuenta_id: rest?.cuenta_id,
     coordinador_id: session.id,
     tipo: body.tipo ?? 'boda', cliente_nombre: body.cliente_nombre,
     cliente_telefono: body.cliente_telefono, cliente_email: body.cliente_email,
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
 
   if (evento && body.espacio_id) {
     await supabase.from('bloqueos_espacio').insert({
-      restaurante_id: restauranteId, espacio_id: body.espacio_id,
+      local_id: restauranteId, espacio_id: body.espacio_id,
       evento_id: evento.id, fecha_inicio: body.fecha_evento, fecha_fin: body.fecha_evento,
       tipo: 'evento', created_by: session.id,
     })

@@ -68,7 +68,7 @@ Reglas:
       .filter(lang => traducciones[lang]?.nombre?.trim())
       .map(lang => ({
         producto_id,
-        restaurante_id: rid,
+        local_id: rid,
         idioma: lang,
         nombre: traducciones[lang].nombre.trim(),
         descripcion: traducciones[lang].descripcion?.trim() || null,

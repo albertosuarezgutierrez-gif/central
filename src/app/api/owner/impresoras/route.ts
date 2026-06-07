@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
     nombre,
     seccion_id:    secciones[0],   // campo legacy = primera sección
     secciones_ids: secciones,
-    restaurante_id: rid,
+    local_id: rid,
     modelo: modelo || null,
     activa: true,
     configurada: true,

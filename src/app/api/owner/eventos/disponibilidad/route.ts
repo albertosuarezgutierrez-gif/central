@@ -67,7 +67,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('bloqueos_espacio')
-    .insert({ restaurante_id: restauranteId, espacio_id, fecha_inicio, fecha_fin, tipo, notas, evento_id: evento_id ?? null, created_by: session.id })
+    .insert({ local_id: restauranteId, espacio_id, fecha_inicio, fecha_fin, tipo, notas, evento_id: evento_id ?? null, created_by: session.id })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

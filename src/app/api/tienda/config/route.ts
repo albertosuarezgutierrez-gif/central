@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const row = {
-    restaurante_id: rid,
+    local_id: rid,
     modo_catalogo: body.modo_catalogo === 'separado' ? 'separado' : 'mismo',
     barcode_activo: !!body.barcode_activo,
     barcode_modo: ['usb', 'camara', 'ambos'].includes(body.barcode_modo) ? body.barcode_modo : 'usb',

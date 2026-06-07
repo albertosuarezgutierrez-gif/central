@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
   const { data: menu, error: menuErr } = await supabase
     .from('menus_evento')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       cuenta_id: rest?.cuenta_id,
       nombre, descripcion, precio_por_persona, temporada,
       tipo_evento, min_comensales, max_comensales,
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         .from('menu_evento_pases')
         .insert({
           menu_id: menu.id,
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           numero_pase: pase.numero_pase,
           nombre: pase.nombre,
           hora_offset_min: pase.hora_offset_min ?? 0,
@@ -110,7 +110,7 @@ export async function POST(req: NextRequest) {
           }) => ({
             pase_id: paseCreado.id,
             menu_id: menu.id,
-            restaurante_id: restauranteId,
+            local_id: restauranteId,
             nombre: item.nombre,
             descripcion: item.descripcion,
             cantidad_por_persona: item.cantidad_por_persona ?? 1,

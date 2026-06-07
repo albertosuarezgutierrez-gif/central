@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const body = await req.json()
   const { data, error } = await supabase.from('beo_eventos').upsert({
-    evento_id: body.evento_id, restaurante_id: restauranteId,
+    evento_id: body.evento_id, local_id: restauranteId,
     timeline: body.timeline ?? [], layout_tipo: body.layout_tipo ?? 'banquete_redondas',
     layout_imagen_url: body.layout_imagen_url ?? null, layout_notas: body.layout_notas ?? null,
     personal_asignado: body.personal_asignado ?? [], equipamiento: body.equipamiento ?? [],

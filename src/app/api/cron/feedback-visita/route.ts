@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
     // Guardar token en BD
     await supabase.from('feedback_visita').insert({
       comanda_id:      c.id,
-      restaurante_id:  c.restaurante_id,
+      local_id:  c.restaurante_id,
       cliente_email:   c.cliente_email,
       cliente_nombre:  c.cliente_nombre ?? null,
       token,

@@ -33,7 +33,7 @@ export async function GET(req: NextRequest) {
   // No hay token — crear uno automáticamente
   const { data: nuevo, error } = await sb
     .from('bridge_tokens')
-    .insert({ restaurante_id: rid, nombre: 'Bridge automático' })
+    .insert({ local_id: rid, nombre: 'Bridge automático' })
     .select('token, nombre')
     .single()
 

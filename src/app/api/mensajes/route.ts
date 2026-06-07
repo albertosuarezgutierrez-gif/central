@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('mensajes_turno')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       turno_id:       turno_id ?? null,
       camarero_id:    session.id,
       rol_origen:     session.rol,

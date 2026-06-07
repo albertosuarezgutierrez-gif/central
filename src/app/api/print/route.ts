@@ -202,7 +202,7 @@ export async function POST(req: NextRequest) {
       .insert({
         impresora_id:  imp.id,
         seccion_id:    imp.seccion_id,
-        restaurante_id: imp.restaurante_id,
+        local_id: imp.restaurante_id,
         payload,
         print_data:    printData,
         status:        'pendiente',

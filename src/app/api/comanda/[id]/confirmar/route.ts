@@ -103,7 +103,7 @@ export async function PATCH(
 
       await crearPrintJobCuenta({
         comanda_id:            id,
-        restaurante_id:        rid,
+        local_id:        rid,
         mesa_label:            mesaCodigo ?? '—',
         zona_tipo:             zonaTipo,
         zona_nombre:           zonaNombre,
@@ -138,7 +138,7 @@ export async function PATCH(
             mesa_codigo:     mesaLabel,
             camarero_nombre: camareroNombre,
             numero_ticket:   comanda.numero_ticket ?? undefined,
-            restaurante_id:  rid,
+            local_id:  rid,
             zona_tipo:       zonaTipo,
             zona_nombre:     zonaNombre,
             nota_general:    comanda.nota_general ?? null,

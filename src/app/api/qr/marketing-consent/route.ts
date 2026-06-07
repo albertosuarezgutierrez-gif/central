@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
         .eq('id', existente.id)
     } else {
       await supabase.from('marketing_consentimientos').insert({
-        restaurante_id: sesion.restaurante_id,
+        local_id: sesion.restaurante_id,
         telefono: tel,
         consiente_bar: !!consiente_bar,
         consiente_iarest: !!consiente_iarest,

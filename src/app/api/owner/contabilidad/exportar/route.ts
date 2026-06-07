@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
 
   // Log exportación
   await supabase.from('exportaciones_contables').insert({
-    restaurante_id: rid,
+    local_id: rid,
     formato,
     periodo_desde: desde,
     periodo_hasta: hasta,

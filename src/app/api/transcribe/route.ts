@@ -349,7 +349,7 @@ export async function POST(req: NextRequest) {
         const { data: nuevaComanda, error: comandaError } = await supabase.from('comandas')
           .insert({ mesa_id: mesa.id, camarero_id: camareroId, turno_id: turnoId,
             tipo: brainResult.tipo, estado: estadoInicial,
-            restaurante_id: rid,
+            local_id: rid,
             ...(brainResult.num_comensales ? { num_comensales: brainResult.num_comensales } : {}),
             ...(brainResult.nota_general ? { nota_general: brainResult.nota_general } : {}) })
           .select().single()
@@ -416,7 +416,7 @@ export async function POST(req: NextRequest) {
               notas:          null,
               producto_id:    null,
               precio_unitario: servicioPrecioZona,
-              restaurante_id: rid,
+              local_id: rid,
             })
 
             // Tarea para running
@@ -427,7 +427,7 @@ export async function POST(req: NextRequest) {
                 p_zona_id: mesaZona.zona_id, p_restaurante_id: rid,
               })
               await supabase.from('marchar_log').insert({
-                restaurante_id: rid,
+                local_id: rid,
                 receptor_id:    runningId || camareroId,
                 mesa_id:        mesa.id,
                 mesa_codigo:    mesa.codigo,
@@ -533,7 +533,7 @@ export async function POST(req: NextRequest) {
               notas: item.notas || null,
               producto_id: item.producto_id ?? prodBase?.id ?? null,
               precio_unitario: fmtData?.precio ?? item.precio_unitario ?? prodBase?.precio ?? null,
-              restaurante_id: rid,
+              local_id: rid,
               formato_id: fmtData?.id ?? null,
               formato_nombre: fmtData?.nombre ?? null,
             }
@@ -572,7 +572,7 @@ export async function POST(req: NextRequest) {
               mesa_codigo: mesa.codigo,
               camarero_nombre: camarero?.nombre ?? 'Equipo',
               numero_ticket: comanda.numero_ticket ?? undefined,
-              restaurante_id: rid,
+              local_id: rid,
               zona_tipo:   (mesa as Record<string, unknown>).zona as string ?? null,
               zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
               nota_general: brainResult.nota_general ?? null,
@@ -625,7 +625,7 @@ export async function POST(req: NextRequest) {
           try {
             const printResult = await crearPrintJobCuenta({
               comanda_id: comanda.id,
-              restaurante_id: rid,
+              local_id: rid,
               mesa_label: mesa.codigo,
               zona_tipo: (mesa as Record<string, unknown>).zona as string ?? null,
               zona_nombre: ((mesa as Record<string, unknown>).zonas as { nombre?: string } | null)?.nombre ?? null,
@@ -649,7 +649,7 @@ export async function POST(req: NextRequest) {
 
       if (brainResult.tipo === '86') {
         await supabase.from('productos_86').insert(
-          brainResult.items.map((item) => ({ nombre: item.nombre, turno_id: turnoId, restaurante_id: rid }))
+          brainResult.items.map((item) => ({ nombre: item.nombre, turno_id: turnoId, local_id: rid }))
         )
       }
 
@@ -696,7 +696,7 @@ export async function POST(req: NextRequest) {
               if (seccion.impresora_id) {
                 try {
                   await supabase.from('print_jobs').insert({
-                    restaurante_id: rid,
+                    local_id: rid,
                     impresora_id:   seccion.impresora_id,
                     tipo:           'aviso',
                     estado:         'pendiente', // qa-ignore: tabla print_jobs, no comandas
@@ -716,7 +716,7 @@ export async function POST(req: NextRequest) {
 
         try {
           await supabase.from('mensajes_turno').insert({
-            restaurante_id:  rid,
+            local_id:  rid,
             turno_id:        turnoId ?? null,
             camarero_id:     camareroId,
             rol_origen:      session.rol,
@@ -774,7 +774,7 @@ export async function POST(req: NextRequest) {
           tipo: brainResult.tipo === 'cuenta' ? 'comanda' : brainResult.tipo,
           // Fix #2: respetar requireConfirm también en cuentas nominales
           estado: requireConfirm ? 'pendiente_confirmacion' : 'en_cocina',
-          restaurante_id: rid,
+          local_id: rid,
         })
         .select().single()
       if (cErr) throw cErr
@@ -821,7 +821,7 @@ export async function POST(req: NextRequest) {
               notas: item.notas || null,
               producto_id: item.producto_id ?? prodBase?.id ?? null,
               precio_unitario: item.precio_unitario ?? prodBase?.precio ?? null,
-              restaurante_id: rid,
+              local_id: rid,
             }
           })
         )
@@ -835,7 +835,7 @@ export async function POST(req: NextRequest) {
             mesa_codigo: `★ ${nombreNorm}`,
             camarero_nombre: camarero?.nombre ?? 'Equipo',
             numero_ticket: comanda.numero_ticket ?? undefined,
-            restaurante_id: rid,
+            local_id: rid,
             zona_tipo: null,
             nota_general: brainResult.nota_general ?? null,
           },
@@ -849,7 +849,7 @@ export async function POST(req: NextRequest) {
     const latenciaTotal = Date.now() - start
     await supabase.from('transcripciones').insert({
       camarero_id: camareroId, turno_id: turnoId, texto_original: texto,
-      texto_brain: brainResult, latencia_ms: latenciaTotal, comanda_id: comandaId, restaurante_id: rid,
+      texto_brain: brainResult, latencia_ms: latenciaTotal, comanda_id: comandaId, local_id: rid,
       fuente_brain: brainResult.fuente,
       latencia_brain_ms: brainResult.latencia_brain_ms,
       speaker_match: speakerMatch,
@@ -862,7 +862,7 @@ export async function POST(req: NextRequest) {
         a.alergenos.map(al => ({
           comanda_id: comandaId,
           mesa_id: mesa!.id,
-          restaurante_id: rid,
+          local_id: rid,
           producto_nombre: a.producto,
           alergeno: al,
           confirmado_por: camareroId,
@@ -886,7 +886,7 @@ export async function POST(req: NextRequest) {
       else calidad = 1                                                       // fallo
 
       await supabase.from('ia_training_log').insert({
-        restaurante_id: rid,
+        local_id: rid,
         input_raw: texto,
         input_context: {
           hora: new Date().toISOString(),
@@ -943,7 +943,7 @@ export async function POST(req: NextRequest) {
       const supabaseErr = createServerClient()
       const ridErr = req.headers.get('x-restaurante-id') ?? 'unknown'
       await supabaseErr.from('system_errors').insert({
-        restaurante_id: ridErr !== 'unknown' ? ridErr : null,
+        local_id: ridErr !== 'unknown' ? ridErr : null,
         funcion_origen: 'transcribe',
         mensaje: msg.substring(0, 500),
         contexto: { is401, url: req.url },

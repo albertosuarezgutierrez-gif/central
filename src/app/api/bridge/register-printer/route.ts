@@ -64,7 +64,7 @@ export async function POST(req: Request) {
     if (existing) {
       result = await supabase.from('impresoras').update(fields).eq('id', existing.id).select('id').single()
     } else {
-      result = await supabase.from('impresoras').insert({ restaurante_id: bt.restaurante_id, ...fields }).select('id').single()
+      result = await supabase.from('impresoras').insert({ local_id: bt.restaurante_id, ...fields }).select('id').single()
     }
 
     if (result.error) return NextResponse.json({ error: result.error.message }, { status: 500 })

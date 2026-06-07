@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
       .upsert(
         {
           producto_id,
-          restaurante_id: rid,
+          local_id: rid,
           idioma,
           nombre: nombre.trim(),
           descripcion: descripcion?.trim() || null,

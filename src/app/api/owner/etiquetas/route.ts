@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('etiquetas_config')
     .upsert({
-      restaurante_id:           rid,
+      local_id:           rid,
       nombre_operador:          nombre_operador ?? '',
       nif_operador:             nif_operador ?? '',
       direccion_operador:       direccion_operador ?? '',

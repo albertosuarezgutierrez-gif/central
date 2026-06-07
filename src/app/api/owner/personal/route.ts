@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     .from('personal').select('id').eq('pin', pin).eq('local_id', rid).single()
   if (existing) return NextResponse.json({ error: 'PIN ya en uso' }, { status: 409 })
   const { data, error } = await supabase.from('personal')
-    .insert({ nombre, pin, rol: rol || 'camarero', activo: true, restaurante_id: rid, seccion_id: seccion_id || null })
+    .insert({ nombre, pin, rol: rol || 'camarero', activo: true, local_id: rid, seccion_id: seccion_id || null })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ camarero: data })

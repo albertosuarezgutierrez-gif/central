@@ -41,7 +41,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       ok: true,
-      restaurante_id: bt.restaurante_id,
+      local_id: bt.restaurante_id,
       nombre: restaurante?.nombre || 'Mi restaurante',
     })
   } catch {

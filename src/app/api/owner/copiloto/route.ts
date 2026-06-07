@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       modulo: 'copiloto',
       nivel: 'aviso',
       mensaje: 'Petición al copiloto sin sesión válida (x-ia-session ausente o inválido)',
-      restaurante_id: null,
+      local_id: null,
     }).then(() => {})
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   }
@@ -69,7 +69,7 @@ Responde en español, tono cálido y directo, hostelero. Máximo 3 frases. No in
   // El copiloto genera pares pregunta/respuesta sobre datos reales del restaurante.
   // Calidad 3: útil para aprender qué métricas consultan los dueños y cómo responder.
   await logTraining({
-    restaurante_id: restauranteId,
+    local_id: restauranteId,
     input_raw: pregunta,
     input_context: {
       modulo: 'copiloto_owner',

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   // 2. Imputar coste espacio
   if (coste_espacio) {
     await supabase.from('evento_costes').insert({
-      evento_id, restaurante_id: restauranteId,
+      evento_id, local_id: restauranteId,
       tipo: 'espacio', concepto: 'Coste espacio/hacienda',
       importe: coste_espacio, es_estimado: false,
     })
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       const horas = Math.abs((new Date(`1970-01-01T${p.hora_fin}`).getTime() - new Date(`1970-01-01T${p.hora_inicio}`).getTime()) / 3600000)
       const nombre = (p as unknown as { personal: { nombre: string } | null }).personal?.nombre ?? p.nombre_externo ?? p.rol
       await supabase.from('evento_costes').insert({
-        evento_id, restaurante_id: restauranteId,
+        evento_id, local_id: restauranteId,
         tipo: 'personal',
         concepto: `${nombre} — ${p.rol} (${horas}h × ${p.coste_hora}€)`,
         importe: p.coste_hora * horas, personal_ev_id: p.id, es_estimado: false,
@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   if (costes_extra?.length) {
     await supabase.from('evento_costes').insert(
       costes_extra.map((c: { tipo: string; concepto: string; importe: number }) => ({
-        evento_id, restaurante_id: restauranteId,
+        evento_id, local_id: restauranteId,
         tipo: c.tipo, concepto: c.concepto, importe: c.importe, es_estimado: false,
       }))
     )

@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { nombre, email, telefono, whatsapp, web, contacto_nombre, categoria, notas, dias_reparto, hora_corte, pedido_minimo_eur } = await req.json()
   if (!nombre?.trim()) return NextResponse.json({ error: 'nombre requerido' }, { status: 400 })
   const { data, error } = await supabase.from('proveedores').insert({
-    restaurante_id: rid, nombre: nombre.trim(),
+    local_id: rid, nombre: nombre.trim(),
     email: email?.trim() || null, telefono: telefono?.trim() || null,
     whatsapp: whatsapp?.trim() || null,
     web: web?.trim() || null, contacto_nombre: contacto_nombre?.trim() || null,

@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
     const { data: pedido, error: pedErr } = await supabase
       .from('pedidos_online')
       .insert({
-        restaurante_id: session.restaurante_id,
+        local_id: session.restaurante_id,
         canal,
         tipo: tipo ?? (canal === 'mostrador' ? 'recogida' : tipo),
         cobro: cobro ?? 'efectivo',
@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
         turno_id: turno.id,
         tipo: 'comanda',
         estado: 'en_cocina',
-        restaurante_id: session.restaurante_id,
+        local_id: session.restaurante_id,
         nota_general: cliente_notas?.trim() ?? null,
         num_comensales: 1,
       })
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
         notas: it.notas,
         producto_id: it.producto_id,
         precio_unitario: it.precio_unitario,
-        restaurante_id: session.restaurante_id,
+        local_id: session.restaurante_id,
       }))
     )
 
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
           tipo: 'comanda',
           mesa_codigo: etiquetaComanda,
           camarero_nombre: session.nombre,
-          restaurante_id: session.restaurante_id,
+          local_id: session.restaurante_id,
         },
         itemsVerificados.map((i: { nombre: string; cantidad: number; notas: string | null }) => ({
           nombre: i.nombre,

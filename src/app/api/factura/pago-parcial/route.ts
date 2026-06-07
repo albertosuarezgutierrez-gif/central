@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
     const mesaObj = mesaData as any
 
     await crearPrintJobCuenta({
-      comanda_id, restaurante_id, mesa_label,
+      comanda_id, local_id: restaurante_id, mesa_label,
       zona_tipo:           mesaObj?.zona?.tipo   ?? null,
       zona_nombre:         mesaObj?.zona?.nombre ?? null,
       camarero_nombre:     camData?.nombre ?? 'Equipo',

@@ -27,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: evento, error: eErr } = await supabase
     .from('eventos')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       briefing_id: id,
       tipo: resp.tipo_evento || 'evento',
       estado: 'presupuesto',
@@ -52,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: presupuesto, error: pErr } = await supabase
     .from('presupuestos_evento')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       evento_id: evento.id,
       briefing_id: id,
       comercial_id: briefing.comercial_id,
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const alergenos = resp.alergenos as string[] || []
   if (alergenos.length > 0 || resp.restricciones_dieteticas) {
     await supabase.from('evento_alergenos_declaracion').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       evento_id: evento.id,
       briefing_id: id,
       alergenos_declarados: alergenos,

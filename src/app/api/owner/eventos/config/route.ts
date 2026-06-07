@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   if (!data) {
     return NextResponse.json({
       config: {
-        restaurante_id: restauranteId,
+        local_id: restauranteId,
         margen_food_pct: 35, margen_bebidas_pct: 45, margen_servicio_pct: 25,
         consumo_litros_hora: 0.8, merma_pct_defecto: 8,
         precio_referencia: 'precio_medio', modelo_comision: 'precio_final',
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('config_eventos')
-    .upsert({ ...body, restaurante_id: restauranteId, updated_at: new Date().toISOString() },
+    .upsert({ ...body, local_id: restauranteId, updated_at: new Date().toISOString() },
       { onConflict: 'restaurante_id' })
     .select()
     .single()

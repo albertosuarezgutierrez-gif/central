@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
 
     // Registrar movimiento
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: rid,
+      local_id: rid,
       stock_articulo_id: articulo_id,
       tipo: 'entrada',
       cantidad: Number(cantidad),
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   if (!nombre?.trim()) return NextResponse.json({ error: 'nombre requerido' }, { status: 400 })
 
   const { data: art, error } = await supabase.from('stock_articulos').insert({
-    restaurante_id: rid,
+    local_id: rid,
     nombre: nombre.trim(),
     unidad_compra: unidad_compra ?? 'unidad',
     stock_actual: stock_inicial ?? 0,
@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
       .map((r: { producto_id: string; consumo: number }) => ({
         stock_articulo_id: art.id,
         producto_id: r.producto_id,
-        restaurante_id: rid,
+        local_id: rid,
         consumo_por_venta: r.consumo,
       }))
     if (rows.length > 0) await supabase.from('stock_rendimientos').insert(rows)
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   // Si hay stock inicial, registrar movimiento de entrada
   if (stock_inicial > 0) {
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: rid,
+      local_id: rid,
       stock_articulo_id: art.id,
       tipo: 'entrada',
       cantidad: stock_inicial,
@@ -139,7 +139,7 @@ export async function PUT(req: NextRequest) {
     }).eq('id', articulo_id).eq('local_id', rid)
 
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: rid,
+      local_id: rid,
       stock_articulo_id: articulo_id,
       tipo: 'ajuste',
       cantidad: diferencia,
@@ -178,7 +178,7 @@ export async function PUT(req: NextRequest) {
       .map((r: { producto_id: string; consumo: number }) => ({
         stock_articulo_id: id,
         producto_id: r.producto_id,
-        restaurante_id: rid,
+        local_id: rid,
         consumo_por_venta: r.consumo,
       }))
     if (rows.length > 0) await supabase.from('stock_rendimientos').insert(rows)

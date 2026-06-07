@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     await dq
 
     const { error } = await supabase.from('qr_avisos_suscripciones').insert({
-      restaurante_id: sesion.restaurante_id,
+      local_id: sesion.restaurante_id,
       sesion_id: sesion.id,
       comanda_id,
       mesa_id: sesion.mesa_id,

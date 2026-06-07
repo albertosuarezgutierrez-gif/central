@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('perfiles_acceso')
-    .insert({ ...body, restaurante_id: restauranteId })
+    .insert({ ...body, local_id: restauranteId })
     .select()
     .single()
 

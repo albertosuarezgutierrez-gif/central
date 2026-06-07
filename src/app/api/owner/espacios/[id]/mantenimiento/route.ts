@@ -37,7 +37,7 @@ export async function POST(
   const { data, error } = await supabase
     .from('espacio_mantenimiento')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       espacio_id: espacioId,
       tipo: body.tipo,
       descripcion: body.descripcion,

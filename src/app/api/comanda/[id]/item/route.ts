@@ -49,7 +49,7 @@ export async function POST(
     // Insertar items
     const insertados = await supabase.from('comanda_items').insert(
       items.map(it => ({
-        comanda_id, restaurante_id: rid,
+        comanda_id, local_id: rid,
         nombre: it.nombre, cantidad: it.cantidad,
         notas: it.notas ?? null,
         precio_unitario: it.precio_unitario ?? null,
@@ -97,7 +97,7 @@ export async function POST(
           mesa_codigo:     mesaCodigo,
           camarero_nombre: cam?.nombre ?? session.nombre ?? 'Equipo',
           numero_ticket:   comanda.numero_ticket ?? undefined,
-          restaurante_id:  rid,
+          local_id:  rid,
           zona_tipo:       zonaTipo,
           zona_nombre:     zonaNombre,
           nota_general:    comanda.nota_general ?? null,

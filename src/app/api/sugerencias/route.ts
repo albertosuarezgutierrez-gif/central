@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     const { data, error } = await db
       .from('sugerencias')
       .insert({
-        restaurante_id: session.restaurante_id || null,
+        local_id: session.restaurante_id || null,
         camarero_id: session.id || null,
         rol: session.rol,
         nombre_usuario: session.nombre,

@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('alerta_reglas')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       nombre: nombre.trim(),
       activa: true,
       logica: 'AND',

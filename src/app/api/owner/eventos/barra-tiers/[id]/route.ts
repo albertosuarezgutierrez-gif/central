@@ -28,7 +28,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (productos.length) {
       await supabase.from('barra_tier_productos').insert(
         productos.map((p: { producto_id: string; categoria?: string; es_sin_alcohol?: boolean }) => ({
-          restaurante_id: restauranteId, tier_id: id,
+          local_id: restauranteId, tier_id: id,
           producto_id: p.producto_id, categoria: p.categoria, es_sin_alcohol: !!p.es_sin_alcohol
         }))
       )

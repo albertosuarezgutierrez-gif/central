@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('running_zonas')
     .upsert(
-      { camarero_id, zona_id, restaurante_id: rid, activo: true },
+      { camarero_id, zona_id, local_id: rid, activo: true },
       { onConflict: 'camarero_id,zona_id' }
     )
     .select()

@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
   // FIX: solo cierra el turno de SERVICIO (camarero_id IS NULL), nunca los fichajes individuales
   await supabase.from('turnos').update({ estado: 'cerrado' }).eq('estado', 'activo').eq('local_id', rid).is('camarero_id', null)
   const { data, error } = await supabase.from('turnos')
-    .insert({ nombre: nombre || `Turno ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`, restaurante_id: rid })
+    .insert({ nombre: nombre || `Turno ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`, local_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ turno: data })

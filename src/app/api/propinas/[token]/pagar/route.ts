@@ -54,7 +54,7 @@ export async function POST(
       propina_id: propina.id,
       token,
       importe: importe.toString(),
-      restaurante_id: propina.restaurante_id,
+      local_id: propina.restaurante_id,
     },
   })
 

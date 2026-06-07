@@ -57,7 +57,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   return NextResponse.json({
     ok: true,
-    restaurante_id: rid,
+    local_id: rid,
     resumen: { total_articulos: stock.length, criticos: criticos.length, agotados: agotados.length, ok: ok.length, valor_stock_eur: Math.round(valorTotal * 100) / 100 },
     stock_critico: criticos.map(a => ({ id: a.id, nombre: a.nombre, stock_actual: Number(a.stock_actual), stock_minimo: Number(a.stock_minimo), unidad: a.unidad_compra, proveedor: a.proveedor_nombre, proveedor_id: a.proveedor_id, necesario: Math.max(0, Number(a.stock_minimo) - Number(a.stock_actual)) })),
     stock_completo: stock,
@@ -109,7 +109,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const { data: pedido } = await supabase
           .from('pedidos_proveedor')
           .insert({
-            restaurante_id:    restauranteId,
+            local_id:    restauranteId,
             stock_articulo_id: sa?.id ?? null,
             proveedor_nombre:  provNombre ?? 'Pendiente',
             proveedor_id:      provId,

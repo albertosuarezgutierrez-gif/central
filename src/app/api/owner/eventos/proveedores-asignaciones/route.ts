@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
   }
   const comisionImporte = (body.importe ?? 0) * (comisionPct ?? 0) / 100
   const { data, error } = await supabase.from('proveedores_evento_asignaciones').insert({
-    evento_id: body.evento_id, proveedor_id: body.proveedor_id, restaurante_id: restauranteId,
+    evento_id: body.evento_id, proveedor_id: body.proveedor_id, local_id: restauranteId,
     servicio_descripcion: body.servicio_descripcion, importe: body.importe ?? 0,
     comision_pct: comisionPct, comision_importe: comisionImporte, iva_tipo: ivaTipo,
     hora_llegada: body.hora_llegada ?? null, briefing: body.briefing ?? null, notas: body.notas ?? null,

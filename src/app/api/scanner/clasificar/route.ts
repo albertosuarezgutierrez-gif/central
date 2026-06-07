@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
   const { data: docGuardado, error: dbError } = await supabase
     .from('documentos_escaneados')
     .insert({
-      restaurante_id:       rid,
+      local_id:       rid,
       escaneado_por_id:     ROLES_SIEMPRE.includes(session.rol) ? null : session.id,
       escaneado_por_nombre: session.nombre,
       escaneado_por_rol:    session.rol,

@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const { nombre } = await req.json()
   const { data, error } = await sb()
     .from('bridge_tokens')
-    .insert({ nombre: nombre || 'Bridge local', restaurante_id: rid })
+    .insert({ nombre: nombre || 'Bridge local', local_id: rid })
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

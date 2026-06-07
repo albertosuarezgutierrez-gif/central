@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
   const { data: esc, error } = await supabase
     .from('escandallos')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       nombre: nombre.trim(),
       producto_id: producto_id ?? null,
       rendimiento: rendimiento ?? 1,
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
       .map((i: { stock_articulo_id: string; cantidad: number; notas?: string }) => ({
         escandallo_id: esc.id,
         stock_articulo_id: i.stock_articulo_id,
-        restaurante_id: rid,
+        local_id: rid,
         cantidad: i.cantidad,
         notas: i.notas ?? null,
       }))
@@ -93,7 +93,7 @@ export async function PUT(req: NextRequest) {
       .map((i: { stock_articulo_id: string; cantidad: number; notas?: string }) => ({
         escandallo_id: id,
         stock_articulo_id: i.stock_articulo_id,
-        restaurante_id: rid,
+        local_id: rid,
         cantidad: i.cantidad,
         notas: i.notas ?? null,
       }))

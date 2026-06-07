@@ -107,7 +107,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('cobro_config')
-    .upsert({ restaurante_id: restauranteId, ...patch }, { onConflict: 'restaurante_id' })
+    .upsert({ local_id: restauranteId, ...patch }, { onConflict: 'restaurante_id' })
     .select()
     .single()
 

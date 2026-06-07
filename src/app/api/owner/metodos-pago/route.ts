@@ -21,7 +21,7 @@ const METODOS_DEFAULT = [
 
 // ── Asegura que el restaurante tenga los 6 métodos sembrados ────────────────
 async function seedMetodos(supabase: ReturnType<typeof createServerClient>, restauranteId: string) {
-  const inserts = METODOS_DEFAULT.map(m => ({ ...m, restaurante_id: restauranteId }))
+  const inserts = METODOS_DEFAULT.map(m => ({ ...m, local_id: restauranteId }))
   await supabase
     .from('metodos_pago')
     .upsert(inserts, { onConflict: 'restaurante_id,tipo', ignoreDuplicates: true })

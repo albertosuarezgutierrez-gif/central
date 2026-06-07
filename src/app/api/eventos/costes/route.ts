@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     .from('evento_costes')
     .insert({
       evento_id,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo,
       descripcion,
       importe: parseFloat(importe),

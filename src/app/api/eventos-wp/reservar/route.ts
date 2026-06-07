@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
     .from('espacio_bloqueos')
     .insert({
       espacio_id,
-      restaurante_id: session.restaurante_id,
+      local_id: session.restaurante_id,
       evento_id: evento_id ?? null,
       coordinador_id: session.id,
       fecha_inicio,

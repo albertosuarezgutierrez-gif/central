@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({
     ok:              true,
-    restaurante_id:  bt.restaurante_id,
+    local_id:  bt.restaurante_id,
     rol:             nuevoRol,         // 'master' | 'standby' — el bridge usa esto
     nodos_activos:   nodosActivos ?? 1,
     impresoras:      impresoras ?? [],

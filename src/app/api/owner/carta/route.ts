@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
       familia: familia ?? null,
       nombre_alternativo: aliases,
       metadata: metadata && typeof metadata === 'object' ? metadata : {},
-      restaurante_id: rid })
+      local_id: rid })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // Generar alias IA en background si el owner no los escribió manualmente
@@ -73,7 +73,7 @@ export async function PUT(req: NextRequest) {
     const { data: turno } = await supabase.from('turnos').select('id')
       .eq('estado', 'activo').eq('local_id', rid).order('created_at', { ascending: false }).limit(1).single()
     if (turno) await supabase.from('productos_86')
-      .insert({ nombre: data.nombre, turno_id: turno.id, restaurante_id: rid })
+      .insert({ nombre: data.nombre, turno_id: turno.id, local_id: rid })
   }
   return NextResponse.json({ producto: data })
 }
@@ -100,7 +100,7 @@ export async function POST_BULK(req: NextRequest) {
       : (p.precio ?? null),
     categoria: p.categoria || 'Sin categoría',
     alergenos: Array.isArray(p.alergenos) ? p.alergenos : [],
-    activo: true, orden: i, restaurante_id: rid,
+    activo: true, orden: i, local_id: rid,
   }))
 
   const { data, error } = await supabase.from('productos').insert(rows).select()
@@ -108,7 +108,7 @@ export async function POST_BULK(req: NextRequest) {
 
   // Crear producto_formatos para productos con múltiples precios
   const formatosToInsert: {
-    producto_id: string; restaurante_id: string
+    producto_id: string; local_id: string
     nombre: string; precio: number; orden: number; activo: boolean
   }[] = []
 
@@ -120,7 +120,7 @@ export async function POST_BULK(req: NextRequest) {
       if (f.nombre && f.precio != null) {
         formatosToInsert.push({
           producto_id: inserted.id,
-          restaurante_id: rid,
+          local_id: rid,
           nombre: f.nombre,
           precio: Number(f.precio),
           orden: j,

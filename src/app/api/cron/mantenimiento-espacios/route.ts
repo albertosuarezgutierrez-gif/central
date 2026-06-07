@@ -77,7 +77,7 @@ export async function GET(req: NextRequest) {
 
   const resultados = await Promise.allSettled(
     items.map(async (item) => {
-      const espacio = item.espacio as { nombre: string; restaurante_id: string } | null
+      const espacio = item.espacio as { nombre: string; local_id: string } | null
       const restaurante = item.restaurante as { nombre: string; email_contacto: string | null } | null
       const email = restaurante?.email_contacto
       if (!email) return

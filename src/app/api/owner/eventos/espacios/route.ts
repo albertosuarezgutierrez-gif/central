@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('espacios_evento')
-    .insert({ restaurante_id: restauranteId, cuenta_id: rest?.cuenta_id, nombre, tipo, aforo_maximo, direccion, descripcion })
+    .insert({ local_id: restauranteId, cuenta_id: rest?.cuenta_id, nombre, tipo, aforo_maximo, direccion, descripcion })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const { data: op } = await supabase
       .from('cashlogy_operaciones')
       .insert({
-        restaurante_id:     rid,
+        local_id:     rid,
         comanda_id:         comanda_id ?? null,
         op_num:             opNum,
         importe_solicitado: importe,
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   const { data: cmd, error: cmdErr } = await supabase
     .from('bridge_commands')
     .insert({
-      restaurante_id: rid,
+      local_id: rid,
       impresora_id:   null, // no aplica para Cashlogy
       payload: {
         tipo,

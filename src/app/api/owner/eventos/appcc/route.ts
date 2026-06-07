@@ -75,7 +75,7 @@ export async function POST(req: NextRequest) {
     .from('evento_appcc')
     .insert({
       evento_id,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo_registro,
       valor: valor !== undefined ? valor : null,
       limite_legal,

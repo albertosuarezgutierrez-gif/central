@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const header = req.headers.get('x-ia-session')
   if (!header) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  let session: { rol: string; cuenta_id?: string; restaurante_id: string } | null = null
+  let session: { rol: string; cuenta_id?: string; local_id: string } | null = null
   try { session = JSON.parse(header) } catch { return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) }
 
   if (!session || (session.rol !== 'owner' && session.rol !== 'super_admin')) {

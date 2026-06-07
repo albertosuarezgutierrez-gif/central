@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
     const cambioEur  = (cambio ?? 0) / 100
 
     await supabase.from('pagos').insert({
-      restaurante_id: rid,
+      local_id: rid,
       comanda_id:     op.comanda_id,
       metodo:         'efectivo_cashlogy',
       importe:        importeEur,

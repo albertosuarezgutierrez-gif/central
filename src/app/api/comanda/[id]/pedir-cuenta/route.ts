@@ -138,7 +138,7 @@ export async function POST(
   try {
     const result = await crearPrintJobCuenta({
       comanda_id,
-      restaurante_id,
+      local_id: restaurante_id,
       mesa_label,
       zona_tipo,
       zona_nombre,

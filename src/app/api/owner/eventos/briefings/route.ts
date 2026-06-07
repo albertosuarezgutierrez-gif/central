@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_briefing')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       comercial_id: comercial_id || session.id,
       cliente_nombre, cliente_email, cliente_telefono,
       expires_at: new Date(Date.now() + dias_expiracion * 86400000).toISOString()

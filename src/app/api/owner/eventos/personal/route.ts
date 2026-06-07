@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('evento_personal')
-    .insert({ evento_id, restaurante_id: restauranteId, personal_id, nombre_externo, rol, hora_inicio, hora_fin, coste_hora })
+    .insert({ evento_id, local_id: restauranteId, personal_id, nombre_externo, rol, hora_inicio, hora_fin, coste_hora })
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

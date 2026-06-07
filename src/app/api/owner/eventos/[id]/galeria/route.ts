@@ -35,7 +35,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data, error } = await supabase
     .from('evento_galeria')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       evento_id: id,
       url, cloudinary_id, caption,
       subida_por: session.id

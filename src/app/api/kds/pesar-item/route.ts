@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
   if (item.producto_id) {
     const cantidad = -(peso_gramos / 1000) // negativo = salida, en kg
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       producto_id: item.producto_id,
       tipo: 'salida_venta_directa',
       cantidad,

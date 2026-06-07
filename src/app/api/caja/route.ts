@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
   const saldo_nuevo = saldo_ant + delta
 
   const { data: mov } = await supabase.from('movimientos_caja').insert({
-    restaurante_id: rid,
+    local_id: rid,
     turno_id: turno.id,
     tipo,
     concepto,

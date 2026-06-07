@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       nombre: 'Admin',
       pin: '0000',
       rol: 'jefe_sala',
-      restaurante_id: rest.id,
+      local_id: rest.id,
       activo: true,
     })
 
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   // Crear turno inicial
   await supabase.from('turnos').insert({
     nombre: 'Turno 1',
-    restaurante_id: rest.id,
+    local_id: rest.id,
     estado: 'activo',
   })
 

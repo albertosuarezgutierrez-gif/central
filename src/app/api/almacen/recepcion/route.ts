@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const { data: recepcion, error: recErr } = await supabase
     .from('recepciones_mercancia')
     .insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       tipo_entrada,
       modo_cantidad,
       producto_id: producto_id || null,
@@ -78,7 +78,7 @@ export async function POST(req: NextRequest) {
   // Si es por peso y hay producto_id → registrar entrada en stock
   if (modo_cantidad === 'peso_kg' && cantidad_kg && producto_id) {
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       producto_id,
       tipo: 'entrada_recepcion',
       cantidad: cantidad_kg,  // positivo = entrada
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
         const concepto = `${nombre_libre || 'Ingrediente'} — ${pedido.proveedor_nombre ?? 'Proveedor'}`
         await supabase.from('evento_costes').insert({
           evento_id: pedido.evento_id,
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           tipo: 'ingredientes',
           concepto,
           importe: Math.round(importe * 100) / 100,

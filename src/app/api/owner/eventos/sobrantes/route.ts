@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   const cantidad_sobrante = cantidad_pedida && cantidad_consumida ? cantidad_pedida - cantidad_consumida : null
   const porcentaje_merma = cantidad_pedida && cantidad_sobrante ? Math.round(cantidad_sobrante / cantidad_pedida * 100 * 10) / 10 : null
   const { data, error } = await supabase.from('evento_sobrantes').insert({
-    evento_id, restaurante_id: restauranteId, nombre,
+    evento_id, local_id: restauranteId, nombre,
     cantidad_pedida, cantidad_consumida, cantidad_sobrante,
     unidad, stock_articulo_id, porcentaje_merma, notas,
   }).select().single()
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   // Si hay sobrante y stock_articulo_id, devolver al almacén automáticamente
   if (cantidad_sobrante && cantidad_sobrante > 0 && stock_articulo_id) {
     await supabase.from('stock_movimientos').insert({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       stock_articulo_id,
       tipo: 'entrada',
       cantidad: cantidad_sobrante,

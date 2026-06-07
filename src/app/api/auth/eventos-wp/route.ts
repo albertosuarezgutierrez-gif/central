@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     id: coordinador.id,
     nombre: coordinador.nombre,
     rol: coordinador.rol,
-    restaurante_id: restaurante_id,
+    local_id: restaurante_id,
     ts: Date.now(),
   }
 

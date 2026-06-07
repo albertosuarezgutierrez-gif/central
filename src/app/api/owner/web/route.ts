@@ -43,7 +43,7 @@ export async function PATCH(req: NextRequest) {
   const { data, error } = await supabase
     .from('web_restaurante')
     .upsert(
-      { restaurante_id: restauranteId, ...body, updated_at: new Date().toISOString() },
+      { local_id: restauranteId, ...body, updated_at: new Date().toISOString() },
       { onConflict: 'restaurante_id' }
     )
     .select()

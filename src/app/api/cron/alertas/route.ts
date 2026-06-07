@@ -57,7 +57,7 @@ async function registrar(
   rid: string, regla: ReglaActiva, ref: string, mensaje: string
 ) {
   await supabase.from('alerta_log').insert({
-    restaurante_id: rid,
+    local_id: rid,
     regla_id: regla.id ?? null,
     regla_nombre: regla.nombre ?? '',
     referencia_id: ref,
@@ -71,7 +71,7 @@ async function registrar(
 }
 
 interface ReglaActiva {
-  id?: string; restaurante_id: string; nombre?: string
+  id?: string; local_id: string; nombre?: string
   condicion?: string; tipo?: string; objeto?: string
   umbral_minutos?: number; threshold_min?: number
   horario_desde?: string | null; horario_hasta?: string | null
@@ -230,8 +230,8 @@ export async function GET(req: NextRequest) {
     if (!reglas?.length) return NextResponse.json({ ok: true, alertas: [] })
     const porRestaurante = new Map<string, ReglaActiva[]>()
     for (const r of reglas as ReglaActiva[]) {
-      if (!porRestaurante.has(r.restaurante_id)) porRestaurante.set(r.restaurante_id, [])
-      porRestaurante.get(r.restaurante_id)!.push(r)
+      if (!porRestaurante.has(r.local_id)) porRestaurante.set(r.local_id, [])
+      porRestaurante.get(r.local_id)!.push(r)
     }
     for (const [rid, reglasR] of porRestaurante) {
       const ordenadas = reglasR.sort((a, b) => (a.prioridad ?? 0) - (b.prioridad ?? 0))

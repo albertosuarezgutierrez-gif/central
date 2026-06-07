@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
         turno_id: turno.id,
         tipo: 'tienda',
         estado: 'nueva',
-        restaurante_id: rid,
+        local_id: rid,
         nota_general: nota,
         num_comensales: 1,
       })
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
         cantidad: it.cantidad,
         producto_id: it.producto_id,
         precio_unitario: it.precio_unitario,
-        restaurante_id: rid,
+        local_id: rid,
       }))
     )
     if (itErr) throw itErr

@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Cashdro no configurado' }, { status: 400 })
   const { data: comando, error } = await supabase
     .from('cashdro_comandos')
-    .insert({ restaurante_id: rid, camarero_id: session.id, accion, importe: importe ?? null, referencia: referencia ?? null, estado: 'pendiente' })
+    .insert({ local_id: rid, camarero_id: session.id, accion, importe: importe ?? null, referencia: referencia ?? null, estado: 'pendiente' })
     .select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, comando_id: comando.id })

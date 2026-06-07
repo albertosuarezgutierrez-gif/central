@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     .from('menu_bebidas_evento')
     .upsert({
       ...bebidaData,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
     })
     .select()
     .single()
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
         botellas.map((b: Record<string, unknown>, i: number) => ({
           ...b,
           bebida_evento_id: bebida.id,
-          restaurante_id: restauranteId,
+          local_id: restauranteId,
           orden: i,
         }))
       )

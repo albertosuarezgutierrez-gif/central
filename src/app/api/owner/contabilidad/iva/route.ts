@@ -64,7 +64,7 @@ export async function GET(req: NextRequest) {
 
   // 4. Upsert liquidación en BD
   await supabase.from('liquidaciones_iva').upsert({
-    restaurante_id: rid,
+    local_id: rid,
     año, trimestre,
     ...liq,
     fecha_limite: limite,

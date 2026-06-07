@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const body = await req.json()
   const { data, error } = await supabase.from('proveedores_evento').insert({
-    restaurante_id: restauranteId, nombre: body.nombre, tipo: body.tipo ?? 'otro',
+    local_id: restauranteId, nombre: body.nombre, tipo: body.tipo ?? 'otro',
     contacto_nombre: body.contacto_nombre ?? null, contacto_telefono: body.contacto_telefono ?? null,
     contacto_email: body.contacto_email ?? null, web: body.web ?? null, notas: body.notas ?? null,
     comision_pct: body.comision_pct ?? 0, iva_tipo: body.iva_tipo ?? 21, portal_activo: body.portal_activo ?? false,

@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
   // Insertar respuesta de Alberto
   const { error } = await sb().from('soporte_mensajes').insert({
     ticket_id,
-    restaurante_id: ticket.restaurante_id,
+    local_id: ticket.restaurante_id,
     rol: 'alberto',
     texto: texto.trim(),
   })

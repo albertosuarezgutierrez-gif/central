@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_checklist_item')
     .insert(itemsToInsert.map((item: { texto: string; orden?: number; horas_antes_alerta?: number }, i: number) => ({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       evento_id,
       plantilla_id: plantilla_id || null,
       texto: item.texto,

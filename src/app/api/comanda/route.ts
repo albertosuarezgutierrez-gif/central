@@ -104,7 +104,7 @@ export async function POST(req: NextRequest) {
           nombre_cuenta: nombre_cuenta.trim(),
           camarero_id, turno_id,
           tipo, estado: tipo === 'cuenta' ? 'nueva' : (require_confirm ? 'pendiente_confirmacion' : 'en_cocina'),
-          restaurante_id: rid,
+          local_id: rid,
           ...(nota_general ? { nota_general } : {}),
         })
         .select().single()
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
           notas: it.notas ?? null,
           producto_id: it.producto_id ?? null,
           precio_unitario: it.precio_unitario ?? null,
-          restaurante_id: rid,
+          local_id: rid,
         }))
       )
 
@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
         const itemsPrint = items.map((i: { nombre: string; cantidad: number; notas?: string; seccion_id?: string; formato_nombre?: string }) => ({
           nombre: i.nombre, cantidad: i.cantidad, notas: i.notas, seccion_id: i.seccion_id, formato_nombre: i.formato_nombre ?? null,
         }))
-        await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: camarero_nombre, restaurante_id: rid, nota_general: nota_general ?? null }, itemsPrint)
+        await crearPrintJobs({ id: comanda.id, tipo, mesa_codigo: nombre_cuenta.trim(), camarero_nombre: camarero_nombre, local_id: rid, nota_general: nota_general ?? null }, itemsPrint)
       } catch (e) { console.error('[COMANDA] Print error:', e) }
       return NextResponse.json({ ok: true, comanda_id: comanda.id, numero_ticket: comanda.numero_ticket, nombre_cuenta: nombre_cuenta.trim() })
     }
@@ -172,7 +172,7 @@ export async function POST(req: NextRequest) {
       .insert({
         mesa_id, camarero_id, turno_id,
         tipo, estado: tipo === 'cuenta' ? 'nueva' : (require_confirm ? 'pendiente_confirmacion' : 'en_cocina'),
-        restaurante_id: rid,
+        local_id: rid,
         ...(num_comensales ? { num_comensales } : {}),
         ...(nota_general ? { nota_general } : {}),
       })
@@ -244,7 +244,7 @@ export async function POST(req: NextRequest) {
         formato_id: it.formato_id ?? null,
         formato_nombre: it.formato_nombre ?? null,
         seccion_id: it.seccion_id ?? null,
-        restaurante_id: rid,
+        local_id: rid,
         peso_gramos: it.peso_gramos ?? null,
         pesado_en_cocina: it.peso_gramos ? true : false,
         precio_kg_en_venta: esPeso ? prod!.precio_por_kg : null,
@@ -261,7 +261,7 @@ export async function POST(req: NextRequest) {
         producto_id: null,
         precio_unitario: servicioPrecioFinal,
         formato_id: null, formato_nombre: null, seccion_id: null,
-        restaurante_id: rid,
+        local_id: rid,
         peso_gramos: null,
         pesado_en_cocina: false,
         precio_kg_en_venta: null,
@@ -311,7 +311,7 @@ export async function POST(req: NextRequest) {
           }).eq('id', artId).eq('local_id', rid)
 
           await supabase.from('stock_movimientos').insert({
-            restaurante_id:    rid,
+            local_id:    rid,
             stock_articulo_id: artId,
             tipo:              'venta',
             cantidad:          -consumo,
@@ -323,7 +323,7 @@ export async function POST(req: NextRequest) {
           if (alerta && !art.alerta_activa && art.pedido_auto && art.proveedor_email) {
             const cantPedido = art.cantidad_pedido ?? (Number(art.stock_minimo) * 3)
             await supabase.from('pedidos_proveedor').insert({
-              restaurante_id:    rid,
+              local_id:    rid,
               stock_articulo_id: artId,
               proveedor_nombre:  art.proveedor_nombre,
               proveedor_email:   art.proveedor_email,
@@ -362,7 +362,7 @@ export async function POST(req: NextRequest) {
 
       await supabase.from('marchar_log').insert({
         comanda_id:     comanda.id,
-        restaurante_id: rid,
+        local_id: rid,
         receptor_id:    runningId || camarero_id,
         mesa_id,
         mesa_codigo:    mesaData.codigo ?? '?',
@@ -387,7 +387,7 @@ export async function POST(req: NextRequest) {
       }))
       await crearPrintJobs({
         id: comanda.id, tipo, mesa_codigo: mesaData?.codigo ?? 'Mesa',
-        camarero_nombre: camarero_nombre, restaurante_id: rid,
+        camarero_nombre: camarero_nombre, local_id: rid,
         zona_tipo: ((mesaData?.zonas as unknown) as { tipo?: string } | null)?.tipo ?? null,
         nota_general: nota_general ?? null,
       }, itemsPrint)

@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
     .from('evento_contratos')
     .insert({
       evento_id,
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       coordinador_id: ev?.coordinador_id ?? session.id,
       fecha_evento: ev?.fecha_evento,
       aforo: ev?.aforo_previsto,

@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
   const supabase = createServerClient()
   const { data, error } = await supabase.from('reglas_envio').insert({
-    restaurante_id:      rid,
+    local_id:      rid,
     nombre:              nombre || null,
     zona_tipo:           zonaTipos.length === 1 ? zonaTipos[0] : null,
     zona_tipos:          zonaTipos,

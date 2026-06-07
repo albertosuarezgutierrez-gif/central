@@ -65,7 +65,7 @@ Solo JSON: {"horas_criticas":[{"hora":"H:00","situacion":"sobredotado|infradotad
   try { analisis = JSON.parse(cleanJSON(raw ?? '')) } catch { /* sin analisis */ }
   if (analisis) {
     await logTraining({
-      restaurante_id: restauranteId,
+      local_id: restauranteId,
       input_raw: `Análisis turnos ${new Date().toLocaleDateString('es-ES')}`,
       input_context: { modulo: 'turnos_analisis', dias: 30 },
       output_brain: analisis,
