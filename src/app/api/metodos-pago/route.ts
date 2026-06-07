@@ -10,6 +10,6 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data } = await supabase
     .from('metodos_pago').select('id, nombre, tipo, icono, color')
-    .eq('restaurante_id', rid).eq('activo', true).order('orden')
+    .eq('local_id', rid).eq('activo', true).order('orden')
   return NextResponse.json({ metodos: data ?? [] })
 }

@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
   const { data: tokenExistente } = await supabase
     .from('bridge_tokens')
     .select('token')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .single()
 

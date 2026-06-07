@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await sb()
     .from('bridge_tokens')
     .select('id, token, nombre, activo, ultimo_ping, rol, en_wifi, ip_lan, platform, device_name')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ tokens: data })
@@ -48,7 +48,7 @@ export async function DELETE(req: NextRequest) {
     .from('bridge_tokens')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

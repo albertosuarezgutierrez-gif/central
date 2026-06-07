@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('mensajes_turno')
     .select('id,camarero_id,rol_origen,nombre_origen,rol_destino,destinatario_id,tipo,texto,mesa_ref,leido_por,created_at')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     // Mensajes privados (destinatario_id != null): solo el emisor y el destinatario los ven
     // Mensajes de grupo (destinatario_id = null): todos los ven
     .or(`destinatario_id.is.null,destinatario_id.eq.${uid},camarero_id.eq.${uid}`)

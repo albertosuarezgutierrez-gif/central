@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
         .from('productos')
         .select('id, precio')
         .in('id', productoIds)
-        .eq('restaurante_id', session.restaurante_id)
+        .eq('local_id', session.restaurante_id)
 
       precioMap = Object.fromEntries((productosDB ?? []).map(p => [p.id, p.precio]))
     }
@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
     const { data: turno } = await supabase
       .from('turnos')
       .select('id')
-      .eq('restaurante_id', session.restaurante_id)
+      .eq('local_id', session.restaurante_id)
       .eq('estado', 'activo')
       .single()
 

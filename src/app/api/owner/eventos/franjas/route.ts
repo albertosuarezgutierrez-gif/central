@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
       *,
       disponibilidad:espacio_disponibilidad(id, fecha, estado, evento_id)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activa', true)
     .order('hora_inicio')
 

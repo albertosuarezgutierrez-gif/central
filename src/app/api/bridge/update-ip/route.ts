@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         .from('impresoras')
         .update(updates)
         .eq('id', impresora_id)
-        .eq('restaurante_id', bt.restaurante_id)
+        .eq('local_id', bt.restaurante_id)
         .select('id, nombre, ip_address')
         .single()
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
       .from('impresoras')
       .update(updates)
       .eq('mac_address', mac_address)
-      .eq('restaurante_id', bt.restaurante_id)
+      .eq('local_id', bt.restaurante_id)
       .select('id, nombre, ip_address')
       .single()
 

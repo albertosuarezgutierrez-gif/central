@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabase
     .from('config_tienda')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .maybeSingle()
 
   return NextResponse.json({ config: data ?? { restaurante_id: rid, ...DEFAULTS } })

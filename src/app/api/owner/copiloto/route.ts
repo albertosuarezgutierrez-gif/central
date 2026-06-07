@@ -37,12 +37,12 @@ export async function POST(req: NextRequest) {
   ] = await Promise.all([
     supabase.from('restaurantes').select('nombre, num_mesas').eq('id', restauranteId).single(),
     supabase.from('comandas').select('*', { count: 'exact', head: true })
-      .eq('restaurante_id', restauranteId).gte('created_at', hace30.toISOString()),
+      .eq('local_id', restauranteId).gte('created_at', hace30.toISOString()),
     supabase.from('comanda_items').select('nombre, cantidad')
-      .eq('restaurante_id', restauranteId).gte('created_at', hace30.toISOString()).limit(200),
-    supabase.from('almacen').select('producto_id').eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId).gte('created_at', hace30.toISOString()).limit(200),
+    supabase.from('almacen').select('producto_id').eq('local_id', restauranteId)
       .filter('stock_actual', 'lte', 'stock_minimo').gt('stock_minimo', 0),
-    supabase.from('turnos').select('camarero_id').eq('restaurante_id', restauranteId).is('salida_at', null),
+    supabase.from('turnos').select('camarero_id').eq('local_id', restauranteId).is('salida_at', null),
   ])
 
   const conteo: Record<string, number> = {}

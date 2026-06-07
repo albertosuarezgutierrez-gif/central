@@ -28,21 +28,21 @@ export async function GET(req: NextRequest) {
 
   const [rCritico, rPedidos, rRecepciones, rStock] = await Promise.all([
     // Artículos bajo mínimo por restaurante
-    supabase.from('v_stock_critico_grupo').select('*').in('restaurante_id', rids),
+    supabase.from('v_stock_critico_grupo').select('*').in('local_id', rids),
 
     // Pedidos pendientes
-    supabase.from('v_pedidos_pendientes_grupo').select('*').in('restaurante_id', rids),
+    supabase.from('v_pedidos_pendientes_grupo').select('*').in('local_id', rids),
 
     // Última recepción por restaurante
     supabase.from('recepciones_mercancia')
       .select('restaurante_id, fecha_recepcion, estado')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .order('fecha_recepcion', { ascending: false }),
 
     // Top artículos más críticos del grupo (para el panel central)
     supabase.from('stock_articulos')
       .select('restaurante_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('activo', true)
       .lte('stock_actual', supabase.rpc as unknown as number) // workaround — usar filter
       .order('stock_actual', { ascending: true })
@@ -53,7 +53,7 @@ export async function GET(req: NextRequest) {
   const { data: articulosCriticos } = await supabase
     .from('stock_articulos')
     .select('restaurante_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id, precio_ultimo_compra, coste_unitario')
-    .in('restaurante_id', rids)
+    .in('local_id', rids)
     .eq('activo', true)
     .filter('stock_actual', 'lte', supabase.from as unknown as string)
 
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
     ? await supabase
         .from('stock_articulos')
         .select('id, restaurante_id, nombre, stock_actual, stock_minimo, unidad_compra, proveedor_nombre, proveedor_id, precio_ultimo_compra, coste_unitario')
-        .in('restaurante_id', rids)
+        .in('local_id', rids)
         .eq('activo', true)
     : { data: [] }
 

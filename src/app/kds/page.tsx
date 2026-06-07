@@ -295,7 +295,7 @@ function KDSInner() {
     const { data } = await supabase
       .from('secciones_cocina')
       .select('id,nombre,color_kds')
-      .eq('restaurante_id', effectiveSession.restaurante_id)
+      .eq('local_id', effectiveSession.restaurante_id)
       .order('orden', { ascending: true })
     if (data) setSecciones(data)
   }, [effectiveSession])
@@ -321,7 +321,7 @@ function KDSInner() {
     const { data } = await supabase
       .from('comandas')
       .select('*,mesa:mesas(codigo,nombre),camarero:camareros(nombre),items:comanda_items(*)')
-      .eq('restaurante_id', effectiveSession.restaurante_id)
+      .eq('local_id', effectiveSession.restaurante_id)
       .in('tipo', ['comanda', 'marchar'])
       .in('estado', ['nueva', 'en_cocina'])
       .order('created_at', { ascending: true })
@@ -356,7 +356,7 @@ function KDSInner() {
     await supabase.from('comanda_items')
       .update({ estado: estado === 'listo' ? 'pendiente' : 'listo' })
       .eq('id', itemId)
-      .eq('restaurante_id', effectiveSession!.restaurante_id)
+      .eq('local_id', effectiveSession!.restaurante_id)
     fetchData()
   }
 

@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
   const { data: coordinador, error } = await supabase
     .from('personal')
     .select('id, nombre, rol, pin, restaurante_id, activo')
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .eq('pin', pin)
     .eq('rol', 'coordinador_eventos')
     .eq('activo', true)

@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
         .select('id, estado, numero_ticket, mesa_id, restaurante_id')
         .in('id', ids)
         .eq('mesa_id', sesion.mesa_id)
-        .eq('restaurante_id', sesion.restaurante_id)
+        .eq('local_id', sesion.restaurante_id)
       pedidos = (data || []).map(c => ({
         comanda_id: c.id,
         estado: c.estado,

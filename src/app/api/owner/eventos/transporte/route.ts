@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('evento_transporte')
     .select('*, vehiculo:vehiculos_grupo(id, nombre, matricula), conductor:personal(id, nombre)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (evento_id) query = query.eq('evento_id', evento_id)
 

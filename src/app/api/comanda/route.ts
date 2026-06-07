@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
     let turno_id = ''
     const { data: turnoServicio } = await supabase
       .from('turnos').select('id')
-      .eq('restaurante_id', rid).eq('estado', 'activo')
+      .eq('local_id', rid).eq('estado', 'activo')
       .is('camarero_id', null)
       .order('created_at', { ascending: false })
       .limit(1).maybeSingle()
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest) {
     } else if (camarero_id) {
       const { data: turnoPropio } = await supabase
         .from('turnos').select('id')
-        .eq('restaurante_id', rid).eq('estado', 'activo')
+        .eq('local_id', rid).eq('estado', 'activo')
         .eq('camarero_id', camarero_id)
         .order('created_at', { ascending: false })
         .limit(1).maybeSingle()
@@ -193,13 +193,13 @@ export async function POST(req: NextRequest) {
       const nombres = [...new Set(sinPrecio.map(it => it.nombre))]
       const { data: prods } = await supabase
         .from('productos').select('id,nombre,precio')
-        .in('nombre', nombres).eq('restaurante_id', rid)
+        .in('nombre', nombres).eq('local_id', rid)
       const precioMap: Record<string, { id: string; precio: number }> = {}
       for (const p of prods ?? []) if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
       // Fallback: si no matcheó (diferencia capitalización), buscar todos y comparar con norm()
       const noMatcheados = nombres.filter(n => !precioMap[norm(n)])
       if (noMatcheados.length > 0) {
-        const { data: todos } = await supabase.from('productos').select('id,nombre,precio').eq('restaurante_id', rid).eq('activo', true)
+        const { data: todos } = await supabase.from('productos').select('id,nombre,precio').eq('local_id', rid).eq('activo', true)
         for (const p of todos ?? []) {
           const pn = norm(p.nombre)
           if (noMatcheados.some(n => norm(n) === pn) && p.precio != null) {
@@ -225,7 +225,7 @@ export async function POST(req: NextRequest) {
         .from('productos')
         .select('id, venta_por_peso, precio_por_kg')
         .in('id', idsConProducto)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
       productosPeso = (pp ?? []) as { id: string; venta_por_peso: boolean; precio_por_kg: number | null }[]
     }
     const pesoPorProducto = new Map(productosPeso.map(p => [p.id, p]))
@@ -281,7 +281,7 @@ export async function POST(req: NextRequest) {
         .from('stock_rendimientos')
         .select('stock_articulo_id, producto_id, consumo_por_venta')
         .in('producto_id', productoIds.map(p => p.id))
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
 
       if (rendimientos && rendimientos.length > 0) {
         // Agrupar consumo total por artículo
@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
           const { data: art } = await supabase
             .from('stock_articulos')
             .select('stock_actual, stock_minimo, alerta_activa, proveedor_email, proveedor_nombre, pedido_auto, cantidad_pedido, unidad_compra, nombre')
-            .eq('id', artId).eq('restaurante_id', rid).single()
+            .eq('id', artId).eq('local_id', rid).single()
           if (!art) continue
 
           const nuevo = Math.max(0, Number(art.stock_actual) - consumo)
@@ -308,7 +308,7 @@ export async function POST(req: NextRequest) {
             stock_actual: nuevo,
             alerta_activa: alerta,
             updated_at: new Date().toISOString(),
-          }).eq('id', artId).eq('restaurante_id', rid)
+          }).eq('id', artId).eq('local_id', rid)
 
           await supabase.from('stock_movimientos').insert({
             restaurante_id:    rid,

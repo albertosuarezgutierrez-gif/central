@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
   const { data: turno } = await supabase
     .from('turnos')
     .select('id')
-    .eq('restaurante_id', pedido.restaurante_id)
+    .eq('local_id', pedido.restaurante_id)
     .eq('estado', 'activo')
     .single()
 

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('zonas')
     .select('id, nombre, tipo, prefijo, descripcion, orden, activa')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('orden')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data ?? [])
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const { data: existing } = await supabase
       .from('zonas')
       .select('tipo')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .ilike('tipo', `${slug}%`)
 
     const usados = new Set(existing?.map(z => z.tipo) ?? [])
@@ -73,7 +73,7 @@ export async function PUT(req: NextRequest) {
   if (orden !== undefined) updates.orden = orden
   if (activa !== undefined) updates.activa = activa
   const { data, error } = await supabase
-    .from('zonas').update(updates).eq('id', id).eq('restaurante_id', rid).select().single()
+    .from('zonas').update(updates).eq('id', id).eq('local_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json(data)
 }
@@ -83,7 +83,7 @@ export async function DELETE(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
-  const { error } = await supabase.from('zonas').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('zonas').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

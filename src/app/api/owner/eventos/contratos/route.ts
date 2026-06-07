@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from('evento_contratos')
       .select('*, coordinador:personal(nombre)')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .order('created_at', { ascending: false })
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ contratos: data })
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
     .from('evento_contratos')
     .select('*')
     .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (error) return NextResponse.json({ contrato: null })
@@ -100,7 +100,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('evento_contratos').update(updates)
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

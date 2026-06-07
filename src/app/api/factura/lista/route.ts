@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   const { data, error, count } = await supabase
     .from('facturas_verifactu')
     .select('*', { count: 'exact' })
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .gte('fecha_expedicion', `${desde}T00:00:00`)
     .lte('fecha_expedicion', `${hasta}T23:59:59`)
     .order('numero_factura', { ascending: false })

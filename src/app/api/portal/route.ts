@@ -46,14 +46,14 @@ export async function GET(req: NextRequest) {
     const { data: ventasHoy } = await supabase
       .from('comandas')
       .select('restaurante_id, comanda_items(precio_unitario, cantidad)')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('estado', 'cerrada')
       .gte('cobrado_at', hoy.toISOString())
 
     const { data: ventasAyer } = await supabase
       .from('comandas')
       .select('restaurante_id, comanda_items(precio_unitario, cantidad)')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('estado', 'cerrada')
       .gte('cobrado_at', ayer.toISOString())
       .lt('cobrado_at', hoy.toISOString())
@@ -62,14 +62,14 @@ export async function GET(req: NextRequest) {
     const { data: activas } = await supabase
       .from('comandas')
       .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .in('estado', ['nueva','en_cocina','en_curso'])
 
     // Stock crítico
     const { data: stock } = await supabase
       .from('stock_articulos')
       .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('alerta_activa', true)
       .eq('activo', true)
 
@@ -78,7 +78,7 @@ export async function GET(req: NextRequest) {
     const { data: elabs } = await supabase
       .from('elaboraciones_propias')
       .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('estado', 'activa')
       .lte('fecha_caducidad', en24h)
 
@@ -86,7 +86,7 @@ export async function GET(req: NextRequest) {
     const { data: turnos } = await supabase
       .from('turnos')
       .select('restaurante_id')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('estado', 'activo')
       .is('camarero_id', null)
 
@@ -151,7 +151,7 @@ export async function GET(req: NextRequest) {
     const { data: rows } = await supabase
       .from('comandas')
       .select('cobrado_at, comanda_items(precio_unitario, cantidad)')
-      .in('restaurante_id', rids)
+      .in('local_id', rids)
       .eq('estado', 'cerrada')
       .gte('cobrado_at', new Date(Date.now() - 7 * 86400000).toISOString())
 

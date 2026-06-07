@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const hace90 = new Date(); hace90.setDate(hace90.getDate() - 90)
   const { data: comandas } = await supabase
     .from('comandas').select('id, created_at')
-    .eq('restaurante_id', restauranteId).gte('created_at', hace90.toISOString())
+    .eq('local_id', restauranteId).gte('created_at', hace90.toISOString())
 
   if (!comandas?.length)
     return NextResponse.json({ error: 'Sin datos suficientes (mínimo 1 semana de comandas)' }, { status: 422 })
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
   const { data: eventos } = await supabase
     .from('eventos_entorno')
     .select('id, nombre, fecha_inicio, tipo, fuente, aforo_estimado, impacto_estimado, venue_nombre, venue_direccion')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .gte('fecha_inicio', new Date().toISOString())
     .lte('fecha_inicio', en90d.toISOString())
     .order('fecha_inicio', { ascending: true })

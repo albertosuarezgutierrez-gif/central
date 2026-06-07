@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
     const { data: existente } = await supabase
       .from('marketing_consentimientos')
       .select('id')
-      .eq('restaurante_id', sesion.restaurante_id)
+      .eq('local_id', sesion.restaurante_id)
       .eq('telefono', tel)
       .maybeSingle()
 

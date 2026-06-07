@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('metodos_pago')
     .select('id, nombre, tipo, icono, color, activo, orden')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('orden')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -69,7 +69,7 @@ export async function PUT(req: NextRequest) {
     .from('metodos_pago')
     .select('id')
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!check)
@@ -79,7 +79,7 @@ export async function PUT(req: NextRequest) {
     .from('metodos_pago')
     .update({ activo })
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

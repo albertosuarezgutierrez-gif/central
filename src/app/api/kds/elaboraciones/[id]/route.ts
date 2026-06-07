@@ -33,7 +33,7 @@ export async function PATCH(
       .from('elaboraciones_propias')
       .select('etiqueta_impresa_veces')
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     updates.etiqueta_impresa_at = new Date().toISOString()
@@ -44,7 +44,7 @@ export async function PATCH(
     .from('elaboraciones_propias')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select()
     .single()
 

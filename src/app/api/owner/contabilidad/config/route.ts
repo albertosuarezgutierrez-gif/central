@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabase
     .from('config_contabilidad')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .maybeSingle()
 
   // Si no existe aún, devolver defaults

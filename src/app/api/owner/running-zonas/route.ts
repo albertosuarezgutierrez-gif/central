@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('running_zonas')
     .select('id, camarero_id, zona_id, activo, created_at, zonas(id, nombre, tipo)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (camareroId) query = query.eq('camarero_id', camareroId)
 
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     .from('personal')
     .select('rol')
     .eq('id', camarero_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!cam) return NextResponse.json({ error: 'Camarero no encontrado' }, { status: 404 })
@@ -66,7 +66,7 @@ export async function PUT(req: NextRequest) {
     .from('running_zonas')
     .update({ activo })
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select()
     .single()
 
@@ -84,7 +84,7 @@ export async function DELETE(req: NextRequest) {
     .from('running_zonas')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

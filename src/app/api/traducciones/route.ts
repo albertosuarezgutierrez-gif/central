@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       .from('producto_traducciones')
       .select('idioma, nombre, descripcion')
       .eq('producto_id', productoId)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
 
     if (error) throw error
     return NextResponse.json({ ok: true, traducciones: data ?? [] })
@@ -91,7 +91,7 @@ export async function DELETE(req: NextRequest) {
       .delete()
       .eq('producto_id', productoId)
       .eq('idioma', idioma)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
 
     if (error) throw error
     return NextResponse.json({ ok: true })

@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data: vals } = await supabase
     .from('qr_valoraciones')
     .select('sentiment_label, sentiment_tags, sentiment_resumen, puntuacion, comentario, created_at, sentiment_at')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   const totales = { positivo: 0, neutro: 0, negativo: 0 }
   const tagConteo: Record<string, number> = {}

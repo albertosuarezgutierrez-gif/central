@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('v_candidatos_con_analisis')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_subida', { ascending: false })
 
   if (estado) q = q.eq('estado', estado)

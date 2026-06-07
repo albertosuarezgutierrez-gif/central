@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       completado_at:    new Date().toISOString(),
     })
     .eq('id', operacion_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select('comanda_id, importe_solicitado, importe_cobrado')
     .single()
 
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
       await supabase.from('comandas')
         .update({ estado: 'cerrada', cerrada_at: new Date().toISOString() })
         .eq('id', op.comanda_id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
     }
   }
 

@@ -50,8 +50,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const hasta = `${mes}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`
 
     const [rArq, rComp] = await Promise.all([
-      supabase.from('arqueos_caja').select('fecha, base_10, iva_10, base_21, iva_21, efectivo, tarjeta, bizum, num_tickets, ticket_medio').eq('restaurante_id', rid).gte('fecha', desde).lte('fecha', hasta),
-      supabase.from('facturas_compra').select('importe_total, importe_base, importe_iva').eq('restaurante_id', rid).gte('fecha_factura', desde).lte('fecha_factura', hasta),
+      supabase.from('arqueos_caja').select('fecha, base_10, iva_10, base_21, iva_21, efectivo, tarjeta, bizum, num_tickets, ticket_medio').eq('local_id', rid).gte('fecha', desde).lte('fecha', hasta),
+      supabase.from('facturas_compra').select('importe_total, importe_base, importe_iva').eq('local_id', rid).gte('fecha_factura', desde).lte('fecha_factura', hasta),
     ])
 
     const arqueos = rArq.data ?? []
@@ -86,8 +86,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     const { desde, hasta, limite } = fechasPeriodo(año, trimestre)
 
     const [rArq, rComp] = await Promise.all([
-      supabase.from('arqueos_caja').select('base_10, iva_10, base_21, iva_21, base_4, iva_4').eq('restaurante_id', rid).gte('fecha', desde).lte('fecha', hasta),
-      supabase.from('facturas_compra').select('importe_base, importe_iva, tipo_iva').eq('restaurante_id', rid).gte('fecha_factura', desde).lte('fecha_factura', hasta).not('importe_iva', 'is', null),
+      supabase.from('arqueos_caja').select('base_10, iva_10, base_21, iva_21, base_4, iva_4').eq('local_id', rid).gte('fecha', desde).lte('fecha', hasta),
+      supabase.from('facturas_compra').select('importe_base, importe_iva, tipo_iva').eq('local_id', rid).gte('fecha_factura', desde).lte('fecha_factura', hasta).not('importe_iva', 'is', null),
     ])
 
     const liq = calcularLiquidacionIVA({
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: asientos } = await supabase
     .from('asientos_contables')
     .select('num_asiento, fecha, concepto, tipo, lineas')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha', desde).lte('fecha', hasta)
     .order('fecha', { ascending: true }).order('num_asiento', { ascending: true })
 

@@ -72,7 +72,7 @@ export async function POST(req: NextRequest) {
     const { data: productos } = await r.supabase
       .from('productos')
       .select('id, nombre, descripcion, precio, seccion, categoria, alergenos')
-      .eq('restaurante_id', r.restauranteId)
+      .eq('local_id', r.restauranteId)
       .eq('activo', true)
 
     const platos = await recomendarPlatos({

@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabase
     .from('storefront_config')
     .select('*')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .single()
 
   return NextResponse.json({ config: data ?? null })
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       .from('storefront_config')
       .select('restaurante_id')
       .eq('slug', slugLimpio)
-      .neq('restaurante_id', session.restaurante_id)
+      .neq('local_id', session.restaurante_id)
       .single()
 
     if (existente) {

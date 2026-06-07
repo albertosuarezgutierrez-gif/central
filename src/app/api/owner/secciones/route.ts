@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     supabase
       .from('secciones_cocina')
       .select('id, nombre, color_kds, icono, orden, activa')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .order('orden', { ascending: true }),
     supabase
       .from('restaurantes')
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const { nombre, color_kds, icono } = await req.json()
   if (!nombre?.trim()) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 })
   const { count } = await supabase
-    .from('secciones_cocina').select('*', { count: 'exact', head: true }).eq('restaurante_id', rid)
+    .from('secciones_cocina').select('*', { count: 'exact', head: true }).eq('local_id', rid)
   const { data, error } = await supabase
     .from('secciones_cocina')
     .insert({
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
   if (activa   !== undefined) patch.activa    = activa
   if (orden    !== undefined) patch.orden     = orden
   const { error } = await supabase
-    .from('secciones_cocina').update(patch).eq('id', id).eq('restaurante_id', rid)
+    .from('secciones_cocina').update(patch).eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -71,11 +71,11 @@ export async function DELETE(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
   const { count } = await supabase
     .from('productos').select('*', { count: 'exact', head: true })
-    .eq('seccion', id).eq('restaurante_id', rid).eq('activo', true)
+    .eq('seccion', id).eq('local_id', rid).eq('activo', true)
   if ((count ?? 0) > 0)
     return NextResponse.json({ error: `Esta sección tiene ${count} productos activos. Muévelos primero.` }, { status: 409 })
   const { error } = await supabase
-    .from('secciones_cocina').delete().eq('id', id).eq('restaurante_id', rid)
+    .from('secciones_cocina').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

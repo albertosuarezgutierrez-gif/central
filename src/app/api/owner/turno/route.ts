@@ -9,11 +9,11 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   // FIX: solo turno de SERVICIO (camarero_id IS NULL) — los fichajes son independientes
   const { data: activo } = await supabase.from('turnos')
-    .select('*').eq('estado', 'activo').eq('restaurante_id', rid)
+    .select('*').eq('estado', 'activo').eq('local_id', rid)
     .is('camarero_id', null)
     .order('created_at', { ascending: false }).limit(1).maybeSingle()
   const { data: ultimo } = await supabase.from('turnos')
-    .select('*').eq('estado', 'cerrado').eq('restaurante_id', rid)
+    .select('*').eq('estado', 'cerrado').eq('local_id', rid)
     .is('camarero_id', null)
     .order('created_at', { ascending: false }).limit(1).maybeSingle()
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     const { data: cActivas } = await supabase.from('comandas')
       .select('mesa:mesas(codigo)')
       .eq('turno_id', activo.id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('estado', ['nueva', 'en_cocina'])
     if (cActivas && cActivas.length > 0) {
       const mesas = [...new Set(cActivas.map((c) => {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   if (ultimo) {
     const { data: comandas } = await supabase.from('comandas')
       .select('id, mesa_id, created_at, updated_at, tipo, mesas(codigo)')
-      .eq('turno_id', ultimo.id).eq('restaurante_id', rid)
+      .eq('turno_id', ultimo.id).eq('local_id', rid)
     if (comandas && comandas.length > 0) {
       const { data: txs } = await supabase.from('transcripciones')
         .select('latencia_ms').eq('turno_id', ultimo.id).not('latencia_ms', 'is', null)
@@ -61,7 +61,7 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { nombre } = await req.json()
   // FIX: solo cierra el turno de SERVICIO (camarero_id IS NULL), nunca los fichajes individuales
-  await supabase.from('turnos').update({ estado: 'cerrado' }).eq('estado', 'activo').eq('restaurante_id', rid).is('camarero_id', null)
+  await supabase.from('turnos').update({ estado: 'cerrado' }).eq('estado', 'activo').eq('local_id', rid).is('camarero_id', null)
   const { data, error } = await supabase.from('turnos')
     .insert({ nombre: nombre || `Turno ${new Date().toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' })}`, restaurante_id: rid })
     .select().single()
@@ -74,7 +74,7 @@ export async function DELETE(req: NextRequest) {
   const rid = getRestauranteId(req)
   // FIX: solo cierra turno de SERVICIO (camarero_id IS NULL), maybeSingle evita error si no hay ninguno
   const { data, error } = await supabase.from('turnos')
-    .update({ estado: 'cerrado' }).eq('estado', 'activo').eq('restaurante_id', rid).is('camarero_id', null).select().maybeSingle()
+    .update({ estado: 'cerrado' }).eq('estado', 'activo').eq('local_id', rid).is('camarero_id', null).select().maybeSingle()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ turno: data })
 }

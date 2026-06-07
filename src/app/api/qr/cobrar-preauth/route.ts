@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
       .from('qr_sesiones_cliente')
       .select('id, estado, preauth_payment_method_id, preauth_completado, restaurante_id, mesa_id')
       .eq('id', sesion_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .single()
 
     if (!sesion) {

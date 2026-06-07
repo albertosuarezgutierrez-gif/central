@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
       alerta_24h_enviada, alerta_hoy_enviada,
       notas, created_at
     `)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
     .limit(limite)
 

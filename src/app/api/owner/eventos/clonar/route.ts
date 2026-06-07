@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     .from('eventos')
     .select('id, restaurante_id')
     .eq('id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (!original) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })

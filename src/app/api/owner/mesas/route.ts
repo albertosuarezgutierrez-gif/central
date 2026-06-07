@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data, error } = await supabase.from('mesas')
     .select('id, codigo, nombre, zona, capacidad, estado, pos_x, pos_y, forma, qr_habilitado, qr_modo_pago, qr_precio_fijo_persona, qr_precio_fijo_concepto, qr_token')
-    .eq('restaurante_id', rid).order('codigo', { ascending: true })
+    .eq('local_id', rid).order('codigo', { ascending: true })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
   // Inyectar estado 'reservada' en mesas bloqueadas por reserva activa
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { codigo, nombre, zona, capacidad, pos_x, pos_y, forma } = await req.json()
   if (!codigo || !zona) return NextResponse.json({ error: 'Código y zona requeridos' }, { status: 400 })
-  const { data: existing } = await supabase.from('mesas').select('id').eq('codigo', codigo).eq('restaurante_id', rid).single()
+  const { data: existing } = await supabase.from('mesas').select('id').eq('codigo', codigo).eq('local_id', rid).single()
   if (existing) return NextResponse.json({ error: 'Código ya existe' }, { status: 409 })
   const { data, error } = await supabase.from('mesas')
     .insert({
@@ -62,7 +62,7 @@ export async function PUT(req: NextRequest) {
   if (pos_x     !== undefined) updates.pos_x     = pos_x
   if (pos_y     !== undefined) updates.pos_y     = pos_y
   if (forma     !== undefined) updates.forma     = forma
-  const { data, error } = await supabase.from('mesas').update(updates).eq('id', id).eq('restaurante_id', rid).select().single()
+  const { data, error } = await supabase.from('mesas').update(updates).eq('id', id).eq('local_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ mesa: data })
 }
@@ -80,7 +80,7 @@ export async function PATCH(req: NextRequest) {
   if (qr_precio_fijo_persona  !== undefined) updates.qr_precio_fijo_persona  = qr_precio_fijo_persona
   if (qr_precio_fijo_concepto !== undefined) updates.qr_precio_fijo_concepto = qr_precio_fijo_concepto
   const { data, error } = await supabase.from('mesas')
-    .update(updates).eq('id', id).eq('restaurante_id', rid)
+    .update(updates).eq('id', id).eq('local_id', rid)
     .select('id, codigo, qr_habilitado, qr_modo_pago, qr_precio_fijo_persona, qr_precio_fijo_concepto, qr_token').single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ mesa: data })
@@ -91,7 +91,7 @@ export async function DELETE(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
-  const { error } = await supabase.from('mesas').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('mesas').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

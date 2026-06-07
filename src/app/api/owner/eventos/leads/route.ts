@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from('leads_evento')
       .select('*, notas:leads_evento_notas(*), espacio:espacios_evento(id,nombre), coordinador:personal(id,nombre)')
-      .eq('id', lead_id).eq('restaurante_id', restauranteId).single()
+      .eq('id', lead_id).eq('local_id', restauranteId).single()
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     return NextResponse.json({ lead: data })
   }
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('leads_evento')
     .select('*, espacio:espacios_evento(nombre), coordinador:personal(nombre)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('updated_at', { ascending: false })
 
   // El coordinador solo ve sus propios leads
@@ -107,7 +107,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('leads_evento').update(updates)
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -121,6 +121,6 @@ export async function DELETE(req: NextRequest) {
   const supabase = createServerClient()
   const { id } = await req.json()
   await supabase.from('leads_evento').update({ estado: 'perdido', motivo_perdida: 'Eliminado manualmente' })
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
   return NextResponse.json({ ok: true })
 }

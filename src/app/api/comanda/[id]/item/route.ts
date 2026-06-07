@@ -17,7 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .from('comanda_items')
     .select('id, nombre, cantidad, precio_unitario, notas')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ items: data ?? [] })
@@ -43,7 +43,7 @@ export async function POST(
     const { data: comanda } = await supabase
       .from('comandas')
       .select('id, estado, tipo, numero_ticket, nombre_cuenta, nota_general, mesa_id, camarero_id')
-      .eq('id', comanda_id).eq('restaurante_id', rid).single()
+      .eq('id', comanda_id).eq('local_id', rid).single()
     if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
 
     // Insertar items
@@ -80,7 +80,7 @@ export async function POST(
       if (comanda.mesa_id) {
         const { data: mesa } = await supabase
           .from('mesas').select('codigo, zona, zonas(nombre)')
-          .eq('id', comanda.mesa_id).eq('restaurante_id', rid).single()
+          .eq('id', comanda.mesa_id).eq('local_id', rid).single()
         if (mesa) {
           mesaCodigo = mesa.codigo
           zonaTipo   = (mesa as Record<string, unknown>).zona as string ?? null

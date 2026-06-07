@@ -29,7 +29,7 @@ export async function DELETE(req: NextRequest) {
     // Verificar que el camarero pertenece al restaurante
     const { data: cam } = await supabase
       .from('personal').select('id')
-      .eq('id', camareroId).eq('restaurante_id', rid).maybeSingle()
+      .eq('id', camareroId).eq('local_id', rid).maybeSingle()
     if (!cam) return NextResponse.json({ error: 'Camarero no encontrado' }, { status: 404 })
 
     const { data: vp } = await supabase

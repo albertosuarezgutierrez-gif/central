@@ -32,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data: config } = await supabase
     .from('config_eventos')
     .select('margen_bebidas_pct, consumo_litros_hora, rentabilidad_minima_pct')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   // Calcular barra si se especificó tier

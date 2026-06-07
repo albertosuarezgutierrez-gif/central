@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     const { data: cfg } = await supabase
       .from('cobro_config')
       .select('cashlogy_activo, cashlogy_ip, cashlogy_port, cashlogy_status')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle()
 
     if (!cfg?.cashlogy_activo)
@@ -131,7 +131,7 @@ export async function GET(req: NextRequest) {
       .from('cashlogy_operaciones')
       .select('*')
       .eq('id', opId)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
     return NextResponse.json({ operacion: data })
   }
@@ -140,11 +140,11 @@ export async function GET(req: NextRequest) {
   const [{ data: cfg }, { data: stats }] = await Promise.all([
     supabase.from('cobro_config')
       .select('cashlogy_activo, cashlogy_ip, cashlogy_port, cashlogy_status, cashlogy_version, cashlogy_descubierta_at')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle(),
     supabase.from('v_cashlogy_stats')
       .select('*')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle(),
   ])
 

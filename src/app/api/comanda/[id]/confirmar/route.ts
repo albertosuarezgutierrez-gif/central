@@ -29,7 +29,7 @@ export async function PATCH(
       .from('comandas')
       .select('id, camarero_id, estado, tipo, mesa_id, nombre_cuenta, nota_general, numero_ticket, created_at, restaurante_id')
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle()
 
     if (fetchErr || !comanda) {
@@ -71,7 +71,7 @@ export async function PATCH(
         .from('mesas')
         .select('codigo, zona, zonas(nombre)')
         .eq('id', comanda.mesa_id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
         .single()
 
       if (mesa) {
@@ -87,7 +87,7 @@ export async function PATCH(
         .from('comanda_items')
         .select('nombre, cantidad, precio_unitario')
         .eq('comanda_id', id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
 
       const { data: restData } = await supabase
         .from('restaurantes')
@@ -122,7 +122,7 @@ export async function PATCH(
         .from('comanda_items')
         .select('nombre, cantidad, notas, seccion_id')
         .eq('comanda_id', id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
 
       if ((items ?? []).length > 0) {
         const mesaLabel = mesaCodigo
@@ -158,7 +158,7 @@ export async function PATCH(
       .from('comandas')
       .update({ estado: 'en_cocina' })
       .eq('id', id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
 
     // ── 6. Actualizar estado mesa ─────────────────────────────────────────
     if (comanda.mesa_id) {
@@ -176,7 +176,7 @@ export async function PATCH(
           camarero_id:    comanda.camarero_id,
         })
         .eq('id', comanda.mesa_id)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
     }
 
     return NextResponse.json({ ok: true })

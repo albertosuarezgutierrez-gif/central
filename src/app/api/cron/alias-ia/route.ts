@@ -48,7 +48,7 @@ export async function GET(req: NextRequest) {
         .from('productos')
         .update({ alias_ia: alias })
         .eq('id', p.id)
-        .eq('restaurante_id', p.restaurante_id)
+        .eq('local_id', p.restaurante_id)
       if (upErr) { fallidos++; return }
       restaurantesAfectados.add(p.restaurante_id)
       generados++

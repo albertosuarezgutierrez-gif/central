@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
         producto:productos(id, nombre, precio_venta, tier_barra)
       )
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('orden')
 

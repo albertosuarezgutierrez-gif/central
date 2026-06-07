@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
     .from('facturas_cliente')
     .select('*')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .maybeSingle()
 
   return NextResponse.json({ factura: data ?? null })
@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     .from('comandas')
     .select('id, estado, restaurante_id')
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
     .from('comanda_items')
     .select('id, nombre, cantidad, precio_unitario')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (errItems || !items?.length) {
     return NextResponse.json({ error: 'Comanda sin items' }, { status: 422 })
@@ -156,7 +156,7 @@ export async function POST(req: NextRequest) {
   const { data: clienteGuardado } = await supabase
     .from('clientes_fiscales')
     .select('id')
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .eq('nif', nifClean)
     .single()
 

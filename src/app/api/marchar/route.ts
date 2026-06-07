@@ -173,7 +173,7 @@ export async function POST(req: NextRequest) {
     .from('comandas')
     .update({ estado: 'lista' })
     .eq('id', comanda_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (updateError) {
     console.error('[MARCHAR] Error actualizando comanda:', updateError)

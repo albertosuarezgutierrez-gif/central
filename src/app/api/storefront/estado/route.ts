@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest) {
     .from('pedidos_online')
     .select('id, estado, restaurante_id')
     .eq('id', pedido_id)
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .single()
 
   if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
   const { data: pedidos } = await supabase
     .from('pedidos_online')
     .select('id, numero, tipo, canal, estado, cliente_nombre, cliente_telefono, cliente_direccion, items, total, cobro, tiempo_recogida_min, created_at')
-    .eq('restaurante_id', session.restaurante_id)
+    .eq('local_id', session.restaurante_id)
     .not('estado', 'in', '("entregado","cancelado")')
     .order('created_at', { ascending: true })
 

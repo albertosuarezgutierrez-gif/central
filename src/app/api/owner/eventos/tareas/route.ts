@@ -16,14 +16,14 @@ export async function GET(req: NextRequest) {
     let { data, error } = await supabase
       .from('checklist_templates')
       .select('*, items:checklist_template_items(*)')
-      .eq('restaurante_id', restauranteId).eq('activo', true)
+      .eq('local_id', restauranteId).eq('activo', true)
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
     // Si no hay plantillas, crear la de boda por defecto
     if (!data?.length) {
       await supabase.rpc('crear_checklist_defecto_boda', { p_restaurante_id: restauranteId })
       const res2 = await supabase.from('checklist_templates')
         .select('*, items:checklist_template_items(*)')
-        .eq('restaurante_id', restauranteId).eq('activo', true)
+        .eq('local_id', restauranteId).eq('activo', true)
       data = res2.data
     }
     return NextResponse.json({ templates: data ?? [] })
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('evento_tareas')
     .select('*')
-    .eq('evento_id', evento_id).eq('restaurante_id', restauranteId)
+    .eq('evento_id', evento_id).eq('local_id', restauranteId)
     .order('orden')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -95,7 +95,7 @@ export async function PUT(req: NextRequest) {
   if (notas !== undefined) patch.notas = notas
 
   const { data, error } = await supabase.from('evento_tareas').update(patch)
-    .eq('id', id).eq('restaurante_id', restauranteId).select().single()
+    .eq('id', id).eq('local_id', restauranteId).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ tarea: data })

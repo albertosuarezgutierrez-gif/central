@@ -45,7 +45,7 @@ export async function POST(
       mesa:mesas(codigo, zona_id, zona:zonas(id, nombre, tipo))
     `)
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (errComanda || !comanda) {
@@ -74,7 +74,7 @@ export async function POST(
     .from('comandas')
     .update({ estado: 'cuenta_pedida' })
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (errUpdate) {
     console.error('[PEDIR-CUENTA] Error update:', errUpdate)
@@ -87,7 +87,7 @@ export async function POST(
       .from('mesas')
       .update({ estado: 'cuenta' })
       .eq('id', comanda.mesa_id)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
   }
 
   // ── 3. Datos para el ticket ───────────────────────────────
@@ -100,7 +100,7 @@ export async function POST(
     const nombres = [...new Set(sinPrecio.map(i => i.nombre))]
     const { data: prods } = await supabase
       .from('productos').select('nombre, precio')
-      .in('nombre', nombres).eq('restaurante_id', restaurante_id)
+      .in('nombre', nombres).eq('local_id', restaurante_id)
     const map: Record<string, number> = {}
     for (const p of prods ?? []) if (p.precio) map[p.nombre] = Number(p.precio)
     for (const it of items) {

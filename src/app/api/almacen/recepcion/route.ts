@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('recepciones_mercancia')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
     .limit(50)
 
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
         precio_por_kg: precio_venta_kg,
       })
       .eq('id', producto_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
   }
 
   // Si hay precio_compra_kg → actualizar escandallos asociados
@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       .from('escandallos')
       .update({ coste_kg: precio_compra_kg })
       .eq('producto_materia_prima_id', producto_id)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
   }
 
   // ─── IMPUTAR COSTE AL EVENTO si el pedido tiene evento_id ───────────────

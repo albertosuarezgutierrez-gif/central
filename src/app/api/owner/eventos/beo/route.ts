@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServerClient()
   const evento_id = new URL(req.url).searchParams.get('evento_id')
   if (!evento_id) return NextResponse.json({ error: 'Falta evento_id' }, { status: 400 })
-  const { data } = await supabase.from('beo_eventos').select('*').eq('evento_id', evento_id).eq('restaurante_id', restauranteId).maybeSingle()
+  const { data } = await supabase.from('beo_eventos').select('*').eq('evento_id', evento_id).eq('local_id', restauranteId).maybeSingle()
   return NextResponse.json({ beo: data })
 }
 
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
     version: body.version ?? 1, updated_at: new Date().toISOString(),
   }, { onConflict: 'evento_id' }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  await supabase.from('eventos').update({ beo_estado: body.estado ?? 'borrador' }).eq('id', body.evento_id).eq('restaurante_id', restauranteId)
+  await supabase.from('eventos').update({ beo_estado: body.estado ?? 'borrador' }).eq('id', body.evento_id).eq('local_id', restauranteId)
   if (body.estado === 'distribuido') {
     const { data: ev } = await supabase.from('eventos').select('nombre, fecha_evento').eq('id', body.evento_id).single()
     if (ev) await tgAlert(`📋 <b>BEO distribuido</b>\nEvento: ${ev.nombre}\nFecha: ${new Date(ev.fecha_evento).toLocaleDateString('es-ES')}`, 'info')

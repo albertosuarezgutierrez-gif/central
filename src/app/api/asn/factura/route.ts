@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
     const { data: orden } = await supabase
       .from('ordenes_pago_proveedor')
       .select('id, importe, estado, recepcion_id')
-      .eq('restaurante_id', pedido.restaurante_id)
+      .eq('local_id', pedido.restaurante_id)
       .order('created_at', { ascending: false })
       .limit(1)
       .maybeSingle()

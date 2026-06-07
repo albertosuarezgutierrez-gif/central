@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   if (!evento_id) return NextResponse.json({ error: 'Falta evento_id' }, { status: 400 })
   const { data, error } = await supabase
     .from('evento_sobrantes').select('*')
-    .eq('evento_id', evento_id).eq('restaurante_id', restauranteId)
+    .eq('evento_id', evento_id).eq('local_id', restauranteId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ sobrantes: data })
 }

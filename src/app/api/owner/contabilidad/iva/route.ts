@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   const { data: arqueos } = await supabase
     .from('arqueos_caja')
     .select('base_10, iva_10, base_21, iva_21, base_4, iva_4')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha', desde)
     .lte('fecha', hasta)
 
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
   const { data: compras } = await supabase
     .from('facturas_compra')
     .select('importe_base, importe_iva, tipo_iva')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha_factura', desde)
     .lte('fecha_factura', hasta)
     .not('importe_iva', 'is', null)
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   const { data: liqAnterior } = await supabase
     .from('liquidaciones_iva')
     .select('cuota_diferencial')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('año', añoAnterior)
     .eq('trimestre', trimAnterior)
     .maybeSingle()
@@ -107,7 +107,7 @@ export async function PATCH(req: NextRequest) {
 
   const { error } = await supabase.from('liquidaciones_iva')
     .update({ estado, fecha_presentacion, importe_ingresado, updated_at: new Date().toISOString() })
-    .eq('restaurante_id', rid).eq('año', año).eq('trimestre', trimestre)
+    .eq('local_id', rid).eq('año', año).eq('trimestre', trimestre)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

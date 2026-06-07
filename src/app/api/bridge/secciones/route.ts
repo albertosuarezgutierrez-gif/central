@@ -30,7 +30,7 @@ export async function GET(req: Request) {
     const { data: secciones } = await supabase
       .from('secciones_cocina')
       .select('id, nombre')
-      .eq('restaurante_id', bt.restaurante_id)
+      .eq('local_id', bt.restaurante_id)
       .eq('activa', true)
       .order('nombre')
 

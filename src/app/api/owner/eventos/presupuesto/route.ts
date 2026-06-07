@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       restaurantes!inner(nombre, nif, razon_social, direccion_fiscal, telefono, email)
     `)
     .eq('id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (evError || !evento) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })

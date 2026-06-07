@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     .from('evento_pases')
     .select('*, items:evento_pase_items(id, nombre, cantidad, precio_unitario, notas, estado, producto_id)')
     .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('numero_pase')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -72,7 +72,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('evento_pases').update(updates)
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

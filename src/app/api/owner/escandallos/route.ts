@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('v_escandallos')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .order('nombre')
 
@@ -83,7 +83,7 @@ export async function PUT(req: NextRequest) {
     ...(notas !== undefined ? { notas } : {}),
     ...(margen_minimo !== undefined ? { margen_minimo } : {}),
     updated_at: new Date().toISOString(),
-  }).eq('id', id).eq('restaurante_id', rid)
+  }).eq('id', id).eq('local_id', rid)
 
   // Reemplazar ingredientes
   if (Array.isArray(ingredientes)) {
@@ -110,6 +110,6 @@ export async function DELETE(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'id requerido' }, { status: 400 })
-  await supabase.from('escandallos').update({ activo: false }).eq('id', id).eq('restaurante_id', rid)
+  await supabase.from('escandallos').update({ activo: false }).eq('id', id).eq('local_id', rid)
   return NextResponse.json({ ok: true })
 }

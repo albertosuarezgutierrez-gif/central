@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
     const { data: bridges } = await sb()
       .from('bridge_tokens')
       .select('id, nombre, activo, ultimo_ping, bridge_version')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activo', true)
 
     const bridgeStatus = (bridges ?? []).map(b => {
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
     const { data: comandas } = await sb()
       .from('comandas')
       .select('id, estado, created_at, updated_at, mesas(codigo)')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .gte('created_at', hace24h)
       .order('created_at', { ascending: false })
       .limit(15)
@@ -54,7 +54,7 @@ export async function GET(req: NextRequest) {
     const { data: errores } = await sb()
       .from('system_errors')
       .select('id, nivel, categoria, mensaje, funcion_origen, created_at, resuelto')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('resuelto', false)
       .order('created_at', { ascending: false })
       .limit(10)
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     const { data: erroresGlobales } = await sb()
       .from('system_errors')
       .select('id, nivel, categoria, mensaje, created_at')
-      .is('restaurante_id', null)
+      .is('local_id', null)
       .eq('resuelto', false)
       .gte('created_at', hace1h)
       .order('created_at', { ascending: false })
@@ -73,13 +73,13 @@ export async function GET(req: NextRequest) {
     const { data: impresoras } = await sb()
       .from('impresoras')
       .select('id, nombre, activa, configurada, ultimo_ping, connection_type, ip_address, port, mac_address')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
 
     // ── 6. Resumen del turno activo ───────────────────────────────
     const { data: turno } = await sb()
       .from('turnos')
       .select('id, nombre, estado, created_at')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('estado', 'activo')
       .maybeSingle()
 

@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
     .from('comanda_items')
     .select('id, nombre, producto_id, precio_unitario, restaurante_id, comanda_id, productos(precio_por_kg)')
     .eq('id', comanda_item_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (itemErr || !item) {
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
       precio_kg_en_venta: precioPorKg,
     })
     .eq('id', comanda_item_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (updateErr) {
     return NextResponse.json({ error: updateErr.message }, { status: 500 })

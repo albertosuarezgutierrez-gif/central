@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const { data } = await supabase
     .from('cashdro_comandos')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('estado', 'pendiente')
     .order('created_at', { ascending: true })
     .limit(10)
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
   if (!accion) return NextResponse.json({ error: 'accion requerida' }, { status: 400 })
   const supabase = createServerClient()
   const { data: config } = await supabase
-    .from('cobro_config').select('cashdro_activo, cashdro_url').eq('restaurante_id', rid).maybeSingle()
+    .from('cobro_config').select('cashdro_activo, cashdro_url').eq('local_id', rid).maybeSingle()
   if (!config?.cashdro_activo || !config?.cashdro_url)
     return NextResponse.json({ error: 'Cashdro no configurado' }, { status: 400 })
   const { data: comando, error } = await supabase
@@ -46,7 +46,7 @@ export async function PATCH(req: NextRequest) {
   const { error } = await supabase
     .from('cashdro_comandos')
     .update({ estado, resultado: resultado ?? null, ejecutado_at: new Date().toISOString() })
-    .eq('id', id).eq('restaurante_id', rid)
+    .eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

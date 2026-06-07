@@ -47,7 +47,7 @@ export async function GET(req: NextRequest) {
     const { data: masterActivo } = await sb
       .from('bridge_tokens')
       .select('id')
-      .eq('restaurante_id', bt.restaurante_id)
+      .eq('local_id', bt.restaurante_id)
       .eq('activo', true)
       .eq('rol', 'master')
       .eq('en_wifi', true)
@@ -83,7 +83,7 @@ export async function GET(req: NextRequest) {
   const { data: impresoras } = await sb
     .from('impresoras')
     .select('id, nombre, ip_address, port, mac_address, activa')
-    .eq('restaurante_id', bt.restaurante_id)
+    .eq('local_id', bt.restaurante_id)
     .eq('activa', true)
 
   // ── Cuántos nodos activos hay en total (para info del bridge) ─
@@ -91,7 +91,7 @@ export async function GET(req: NextRequest) {
   const { count: nodosActivos } = await sb
     .from('bridge_tokens')
     .select('id', { count: 'exact', head: true })
-    .eq('restaurante_id', bt.restaurante_id)
+    .eq('local_id', bt.restaurante_id)
     .eq('activo', true)
     .gt('ultimo_ping', deadline15)
 

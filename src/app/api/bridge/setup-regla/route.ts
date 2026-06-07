@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     const { data: existente } = await supabase
       .from('reglas_envio')
       .select('id')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('destino_tipo', 'impresora')
       .eq('destino_ref', impresora_id)
       .maybeSingle()

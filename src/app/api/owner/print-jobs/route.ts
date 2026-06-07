@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   let query = sb()
     .from('print_jobs')
     .select('id, status, seccion_id, created_at, sent_at, acked_at, attempts, error_msg, impresoras(nombre)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (jobId) {
     query = query.eq('id', jobId).limit(1)

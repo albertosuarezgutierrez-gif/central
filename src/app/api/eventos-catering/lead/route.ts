@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
   const supabase = createServerClient()
   const restaurante_id = new URL(req.url).searchParams.get('restaurante_id')
   if (!restaurante_id) return NextResponse.json({ error: 'Falta restaurante_id' }, { status: 400 })
-  const { data } = await supabase.from('leads_eventos').select('*').eq('restaurante_id', restaurante_id).order('created_at', { ascending: false }).limit(100)
+  const { data } = await supabase.from('leads_eventos').select('*').eq('local_id', restaurante_id).order('created_at', { ascending: false }).limit(100)
   return NextResponse.json({ leads: data })
 }
 

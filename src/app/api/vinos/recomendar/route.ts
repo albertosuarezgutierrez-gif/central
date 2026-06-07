@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const { data: vinos } = await supabase
     .from('productos')
     .select('nombre, precio, precio_copa, copas_por_botella, familia, metadata')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('categoria', 'vino')
     .eq('activo', true)
     .order('nombre')

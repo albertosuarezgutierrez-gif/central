@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
     .from('evento_costes')
     .select('*')
     .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -106,7 +106,7 @@ export async function DELETE(req: NextRequest) {
   }
 
   await supabase.from('evento_costes').delete()
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true })
 }

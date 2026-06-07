@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await sb()
     .from('impresoras')
     .select('id, nombre, seccion_id, secciones_ids, cloud_device_id, modelo, activa, ultimo_ping, configurada, connection_type, ip_address, port, impresora_fallback_id, es_caja, zonas_caja')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   // Normalizar: si secciones_ids está vacío, rellenar desde seccion_id legacy
@@ -91,7 +91,7 @@ export async function PATCH(req: NextRequest) {
     .from('impresoras')
     .update(update)
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .select()
     .single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -103,7 +103,7 @@ export async function DELETE(req: NextRequest) {
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'Falta id' }, { status: 400 })
   // Verificar que la impresora pertenece a este restaurante antes de borrar
-  const { error } = await sb().from('impresoras').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await sb().from('impresoras').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

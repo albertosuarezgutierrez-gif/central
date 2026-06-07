@@ -25,7 +25,7 @@ export async function GET(
         )
       `)
       .eq('mesa_id', mesa_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('estado', ['nueva', 'en_cocina', 'cuenta', 'cuenta_pedida'])
       .order('created_at', { ascending: false })
       .limit(1)
@@ -43,7 +43,7 @@ export async function GET(
       const nombres = [...new Set(sinPrecio.map(it => it.nombre))]
       const { data: prods } = await supabase
         .from('productos').select('nombre, precio')
-        .in('nombre', nombres).eq('restaurante_id', rid)
+        .in('nombre', nombres).eq('local_id', rid)
 
       const precioMap: Record<string, number> = {}
       for (const p of prods ?? []) {

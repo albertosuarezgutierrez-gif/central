@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
   // ── 1. Verificar comanda ────────────────────────────────
   const { data: comanda } = await supabase
     .from('comandas').select('id, estado, restaurante_id, camarero_id, turno_id, mesa_id')
-    .eq('id', comanda_id).eq('restaurante_id', restaurante_id).single()
+    .eq('id', comanda_id).eq('local_id', restaurante_id).single()
 
   if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
 
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   // ── 3. Items y total ────────────────────────────────────
   const { data: items, error: errItems } = await supabase
     .from('comanda_items').select('precio_unitario, cantidad, nombre')
-    .eq('comanda_id', comanda_id).eq('restaurante_id', restaurante_id)
+    .eq('comanda_id', comanda_id).eq('local_id', restaurante_id)
 
   if (errItems || !items?.length)
     return NextResponse.json({ error: 'Comanda sin items — no se puede facturar' }, { status: 422 })
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
     await supabase.from('mesas')
       .update({ estado: 'libre', camarero_id: null, ultima_comanda: new Date().toISOString() })
       .eq('id', comanda.mesa_id)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
   }
 
   // ── 9b. Generar token propina digital si lo pidió el camarero ──

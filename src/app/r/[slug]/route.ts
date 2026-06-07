@@ -282,7 +282,7 @@ export async function GET(
       const { data: prods } = await supabase
         .from('productos')
         .select('nombre, descripcion, precio, categoria')
-        .eq('restaurante_id', web.restaurante_id)
+        .eq('local_id', web.restaurante_id)
         .eq('activo', true)
         .order('categoria')
       carta = prods ?? []

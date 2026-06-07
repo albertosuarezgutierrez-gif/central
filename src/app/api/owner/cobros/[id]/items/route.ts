@@ -16,7 +16,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     .from('cobros_grupo')
     .select('id')
     .eq('id', id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
   if (!portal) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
 
@@ -26,7 +26,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   // Mínimo por producto (configurable por restaurante, con default de plataforma)
   const { data: cfgRow } = await supabase
-    .from('cobro_config').select('minimo_producto_eur').eq('restaurante_id', rid).maybeSingle()
+    .from('cobro_config').select('minimo_producto_eur').eq('local_id', rid).maybeSingle()
   const { minimo } = resolverComisionConfig(cfgRow)
   if (items.some(i => Number(i.precio_eur) < minimo)) {
     return NextResponse.json({ error: `El precio mínimo por menú es ${minimo.toFixed(2)} €` }, { status: 400 })

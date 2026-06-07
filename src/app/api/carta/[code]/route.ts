@@ -46,7 +46,7 @@ export async function GET(
     const { data, error: prodErr } = await supabase
       .from('productos')
       .select('id, nombre, descripcion, precio, categoria, familia, metadata, alergenos')
-      .eq('restaurante_id', rest.id)
+      .eq('local_id', rest.id)
       .eq('activo', true)
       .order('categoria')
       .order('orden', { ascending: true })

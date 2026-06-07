@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
   const { data: config } = await supabase
     .from('cobro_config')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   // Obtener resumen mes actual
@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
   const { data: resumen } = await supabase
     .from('resumen_cobros_mensual')
     .select('volumen_eur, comision_eur, num_transacciones, descuento_cuota_eur')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('mes', mesStr)
     .single()
 
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   const { data: historial } = await supabase
     .from('resumen_cobros_mensual')
     .select('mes, volumen_eur, comision_eur, num_transacciones, descuento_cuota_eur')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('mes', { ascending: false })
     .limit(6)
 

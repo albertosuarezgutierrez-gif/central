@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     .from('personal')
     .select('puede_escanear')
     .eq('id', session.id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   return NextResponse.json({ puede_escanear: data?.puede_escanear === true })

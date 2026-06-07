@@ -16,7 +16,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     .from('evento_briefing')
     .select('*')
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .single()
 
   if (bErr || !briefing) return NextResponse.json({ error: 'Briefing no encontrado' }, { status: 404 })

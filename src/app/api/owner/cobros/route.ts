@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       cobros_grupo_items(id, nombre, precio_eur, pdf_url, activo, orden),
       cobros_grupo_pagos(id, estado, importe_eur, cantidad, nombre_pagador, email_pagador, telefono_pagador, concepto, pagado_at)
     `)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
 
   // Mínimo por producto (configurable por restaurante, con default de plataforma)
   const { data: cfgRow } = await supabase
-    .from('cobro_config').select('minimo_producto_eur').eq('restaurante_id', rid).maybeSingle()
+    .from('cobro_config').select('minimo_producto_eur').eq('local_id', rid).maybeSingle()
   const { minimo } = resolverComisionConfig(cfgRow)
   const itemsConPrecio = (items as { nombre?: string; precio_eur: number }[])
     .filter(i => i.nombre?.trim() && parseFloat(String(i.precio_eur)) > 0)

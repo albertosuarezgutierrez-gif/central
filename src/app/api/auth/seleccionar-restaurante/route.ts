@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     .from('personal')
     .select('id, nombre, rol')
     .eq('cuenta_id', cuenta_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .eq('rol', 'owner')
     .single()
 

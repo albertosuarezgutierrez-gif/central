@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
     const { data: camareros } = await supabase
       .from('personal')
       .select('id, nombre, rol, seccion_id')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .eq('activo', true)
 
     if (!camareros?.length) {

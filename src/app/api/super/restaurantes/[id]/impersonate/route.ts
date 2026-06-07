@@ -37,7 +37,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { data: camareros } = await supabase
     .from('personal')
     .select('id, nombre, rol, restaurante_id, seccion_id')
-    .eq('restaurante_id', id)
+    .eq('local_id', id)
     .eq('activo', true)
     .in('rol', ['owner', 'jefe_sala'])
     .order('rol') // owner primero
@@ -50,7 +50,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     const { data: cualquiera } = await supabase
       .from('personal')
       .select('id, nombre, rol, restaurante_id, seccion_id')
-      .eq('restaurante_id', id)
+      .eq('local_id', id)
       .eq('activo', true)
       .limit(1)
     camarero = cualquiera?.[0]

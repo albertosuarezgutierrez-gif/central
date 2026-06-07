@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
   let q = supabase
     .from('mensajes_turno')
     .select('id,camarero_id,rol_origen,nombre_origen,rol_destino,destinatario_id,tipo,texto,mesa_ref,leido_por,created_at')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('created_at', desde)
     .lte('created_at', hasta)
     .order('created_at', { ascending: true })

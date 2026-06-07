@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
   const { data: arqueos } = await supabase
     .from('arqueos_caja')
     .select('restaurante_id, base_10, iva_10, base_21, iva_21, fecha')
-    .in('restaurante_id', rids)
+    .in('local_id', rids)
     .gte('fecha', mesDesde)
     .lte('fecha', mesHasta)
 
@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
   const { data: liqs } = await supabase
     .from('liquidaciones_iva')
     .select('restaurante_id, cuota_diferencial, estado, fecha_limite')
-    .in('restaurante_id', rids)
+    .in('local_id', rids)
     .eq('año', year)
     .eq('trimestre', trimestre)
 
@@ -66,14 +66,14 @@ export async function GET(req: NextRequest) {
   const { data: ultimos } = await supabase
     .from('arqueos_caja')
     .select('restaurante_id, fecha, estado')
-    .in('restaurante_id', rids)
+    .in('local_id', rids)
     .order('fecha', { ascending: false })
 
   // Facturas de compra pendientes de revisar
   const { data: facturasPendientes } = await supabase
     .from('facturas_compra')
     .select('restaurante_id')
-    .in('restaurante_id', rids)
+    .in('local_id', rids)
     .in('match_estado', ['diferencia_leve', 'diferencia_grave'])
 
   // Construir respuesta por restaurante

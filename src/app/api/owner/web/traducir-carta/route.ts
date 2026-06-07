@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { data: productos } = await supabase
     .from('productos')
     .select('nombre, descripcion, precio, categoria')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('categoria')
 
@@ -61,7 +61,7 @@ Respond ONLY with a JSON array with the same structure, translated to ${nombreId
   const { data: webActual } = await supabase
     .from('web_restaurante')
     .select('carta_traducciones, idiomas_activos')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   const cartaActual = webActual?.carta_traducciones ?? {}
@@ -72,7 +72,7 @@ Respond ONLY with a JSON array with the same structure, translated to ${nombreId
       carta_traducciones: { ...cartaActual, ...traducciones },
       idiomas_activos: idiomasActivos,
     })
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   return NextResponse.json({
     ok: true,

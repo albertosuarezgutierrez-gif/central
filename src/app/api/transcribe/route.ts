@@ -28,19 +28,19 @@ async function buildWhisperPrompt(restauranteId: string, supabase: ReturnType<ty
     supabase
       .from('productos')
       .select('nombre, nombre_alternativo')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .eq('activo', true)
       .limit(60),
     supabase
       .from('personal')
       .select('nombre')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .eq('activo', true)
       .limit(20),
     supabase
       .from('secciones_cocina')
       .select('nombre')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .eq('activa', true)
       .limit(10),
   ])
@@ -249,7 +249,7 @@ export async function POST(req: NextRequest) {
         .from('productos_86')
         .select('nombre')
         .eq('turno_id', turnoId)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
       if (activos86?.length) {
         const nombres86 = activos86.map(p => p.nombre.toLowerCase())
         alertas86 = brainResult.items
@@ -267,7 +267,7 @@ export async function POST(req: NextRequest) {
     let { data: mesa } = await supabase.from('mesas')
       .select('id, codigo, estado, alergenos_mesa, numero, zona, zona_id, zonas(nombre)')
       .eq('codigo', brainResult.mesa)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle()
 
     // Paso 2: fallback por numero extraído del codigo BRAIN
@@ -282,7 +282,7 @@ export async function POST(req: NextRequest) {
 
         const { data: candidatas } = await supabase.from('mesas')
           .select('id, codigo, estado, alergenos_mesa, numero, zona, zona_id, zonas(nombre)')
-          .eq('restaurante_id', rid)
+          .eq('local_id', rid)
           .eq('numero', num)
 
         if (candidatas?.length === 1) {
@@ -308,7 +308,7 @@ export async function POST(req: NextRequest) {
         .from('productos')
         .select('nombre, alergenos')
         .in('nombre', nombresItems)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
         .not('alergenos', 'is', null)
       if (productosConAlergenos?.length) {
         for (const prod of productosConAlergenos) {
@@ -335,7 +335,7 @@ export async function POST(req: NextRequest) {
         const { data: existente } = await supabase.from('comandas')
           .select('*, comanda_items!inner(id)')
           .eq('mesa_id', mesa.id)
-          .eq('restaurante_id', rid)
+          .eq('local_id', rid)
           .in('estado', ['en_cocina', 'marchar', 'nueva', 'pendiente_confirmacion'])
           .order('created_at', { ascending: false })
           .limit(1)
@@ -461,7 +461,7 @@ export async function POST(req: NextRequest) {
         // Precio base de TODOS los productos (lookup automático desde carta)
         const todosNombres = [...new Set(brainResult.items.map(i => i.nombre))]
         const { data: todosProds } = await supabase
-          .from('productos').select('id,nombre,precio').in('nombre', todosNombres).eq('restaurante_id', rid)
+          .from('productos').select('id,nombre,precio').in('nombre', todosNombres).eq('local_id', rid)
         for (const p of todosProds ?? []) {
           if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
         }
@@ -472,7 +472,7 @@ export async function POST(req: NextRequest) {
         if (nombresNoMatcheados.length > 0) {
           const { data: prodsPorAlias } = await supabase
             .from('productos').select('id,nombre,precio,nombre_alternativo')
-            .eq('restaurante_id', rid).eq('activo', true)
+            .eq('local_id', rid).eq('activo', true)
           for (const p of prodsPorAlias ?? []) {
             // Fix: comparar nombre canónico case-insensitive (norm() quita tildes+mayúsculas)
             const nombreNorm = norm(p.nombre)
@@ -512,7 +512,7 @@ export async function POST(req: NextRequest) {
         if (itemsConFormato.length > 0) {
           const nombresUnicos = [...new Set(itemsConFormato.map(i => i.nombre))]
           const { data: prods } = await supabase
-            .from('productos').select('id,nombre').in('nombre', nombresUnicos).eq('restaurante_id', rid)
+            .from('productos').select('id,nombre').in('nombre', nombresUnicos).eq('local_id', rid)
           if (prods?.length) {
             const { data: formatos } = await supabase
               .from('producto_formatos').select('id,producto_id,nombre,precio')
@@ -595,7 +595,7 @@ export async function POST(req: NextRequest) {
 
       const nuevoEstado = ({ comanda: 'activa', marchar: 'marchar', '86': mesa.estado, cuenta: 'cuenta_pedida', aviso: 'aviso' })[brainResult.tipo] as string
       // No actualizar mesa si requireConfirm — se actualiza al confirmar en /confirmar
-      if (!requireConfirm) await supabase.from('mesas').update({ estado: brainResult.tipo === 'cuenta' ? 'cuenta' : nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('restaurante_id', rid)
+      if (!requireConfirm) await supabase.from('mesas').update({ estado: brainResult.tipo === 'cuenta' ? 'cuenta' : nuevoEstado, ultima_comanda: new Date().toISOString(), camarero_id: camareroId }).eq('id', mesa.id).eq('local_id', rid)
 
       // ── PEDIR CUENTA por voz ───────────────────────────────
       // Si requireConfirm, el ticket de cuenta espera a la confirmación del camarero
@@ -606,7 +606,7 @@ export async function POST(req: NextRequest) {
         // Datos para ticket de cuenta
         const { data: itemsCuenta } = await supabase
           .from('comanda_items').select('nombre, cantidad, precio_unitario')
-          .eq('comanda_id', comanda.id).eq('restaurante_id', rid)
+          .eq('comanda_id', comanda.id).eq('local_id', rid)
 
         const { data: restData } = await supabase
           .from('restaurantes').select('nombre, direccion').eq('id', rid).single()
@@ -667,7 +667,7 @@ export async function POST(req: NextRequest) {
           const { data: destinatario } = await supabase
             .from('personal')
             .select('id, rol')
-            .eq('restaurante_id', rid)
+            .eq('local_id', rid)
             .eq('activo', true)
             .ilike('nombre', `${brainResult.destinatario_nombre}%`)
             .limit(1)
@@ -685,7 +685,7 @@ export async function POST(req: NextRequest) {
             const { data: seccion } = await supabase
               .from('secciones_cocina')
               .select('id, impresora_id')
-              .eq('restaurante_id', rid)
+              .eq('local_id', rid)
               .ilike('nombre', `${brainResult.mesa}%`)
               .limit(1)
               .maybeSingle()
@@ -740,7 +740,7 @@ export async function POST(req: NextRequest) {
             .from('comandas')
             .select('id')
             .eq('mesa_id', mesa.id)
-            .eq('restaurante_id', rid)
+            .eq('local_id', rid)
             .in('estado', ['en_cocina', 'nueva', 'lista'])
             .order('created_at', { ascending: false })
             .limit(1)
@@ -752,7 +752,7 @@ export async function POST(req: NextRequest) {
                 .from('comanda_items')
                 .update({ estado: 'listo' })
                 .eq('comanda_id', comanda.id)
-                .eq('restaurante_id', rid)
+                .eq('local_id', rid)
                 .ilike('nombre', `%${item.nombre}%`)
                 .eq('estado', 'pendiente')
             }
@@ -786,7 +786,7 @@ export async function POST(req: NextRequest) {
         const norm = (s: string) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
         const todosNombres = [...new Set(brainResult.items.map(i => i.nombre))]
         const { data: todosProds } = await supabase
-          .from('productos').select('id,nombre,precio').in('nombre', todosNombres).eq('restaurante_id', rid)
+          .from('productos').select('id,nombre,precio').in('nombre', todosNombres).eq('local_id', rid)
         const precioMap: Record<string, { id: string; precio: number }> = {}
         for (const p of todosProds ?? []) {
           if (p.precio != null) precioMap[norm(p.nombre)] = { id: p.id, precio: Number(p.precio) }
@@ -796,7 +796,7 @@ export async function POST(req: NextRequest) {
         if (nombresNoMatcheados2.length > 0) {
           const { data: prodsPorAlias2 } = await supabase
             .from('productos').select('id,nombre,precio,nombre_alternativo')
-            .eq('restaurante_id', rid).eq('activo', true)
+            .eq('local_id', rid).eq('activo', true)
           for (const p of prodsPorAlias2 ?? []) {
             const aliases2: string[] = Array.isArray(p.nombre_alternativo) ? p.nombre_alternativo : []
             for (const alias of aliases2) {

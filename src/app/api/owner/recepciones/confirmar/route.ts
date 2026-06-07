@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     .from('recepciones_mercancia')
     .select('id, estado, restaurante_id, proveedor_id, albaran_numero')
     .eq('id', recepcion_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!rec) return NextResponse.json({ error: 'Recepción no encontrada' }, { status: 404 })
@@ -151,8 +151,8 @@ export async function POST(req: NextRequest) {
     }
 
     if (rec.proveedor_id) {
-      const { data: totalInc }   = await supabase.from('incidencias_proveedor').select('id', { count: 'exact' }).eq('proveedor_id', rec.proveedor_id).eq('restaurante_id', rid)
-      const { data: totalItems } = await supabase.from('recepcion_items').select('id', { count: 'exact' }).eq('restaurante_id', rid)
+      const { data: totalInc }   = await supabase.from('incidencias_proveedor').select('id', { count: 'exact' }).eq('proveedor_id', rec.proveedor_id).eq('local_id', rid)
+      const { data: totalItems } = await supabase.from('recepcion_items').select('id', { count: 'exact' }).eq('local_id', rid)
       const fiab = totalItems?.length
         ? Math.max(0, Math.round((1 - (totalInc?.length ?? 0) / totalItems.length) * 100))
         : 100

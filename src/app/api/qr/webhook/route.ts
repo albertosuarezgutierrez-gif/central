@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
       const { data: camareros } = await supabase
         .from('personal')
         .select('id')
-        .eq('restaurante_id', restaurante_id)
+        .eq('local_id', restaurante_id)
         .in('rol', ['camarero', 'jefe_sala'])
 
       for (const cam of camareros || []) {

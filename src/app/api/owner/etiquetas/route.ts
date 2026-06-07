@@ -19,12 +19,12 @@ export async function GET(req: NextRequest) {
     supabase
       .from('etiquetas_config')
       .select('*')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle(),
     supabase
       .from('productos')
       .select('id, nombre, descripcion, precio, categoria, alergenos, familia, ean_codigo, stock_actual, unidad_stock')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('activo', true)
       .order('categoria')
       .order('nombre'),
@@ -86,7 +86,7 @@ export async function PATCH(req: NextRequest) {
     .from('productos')
     .update({ ean_codigo: ean_codigo?.trim() || null })
     .eq('id', producto_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

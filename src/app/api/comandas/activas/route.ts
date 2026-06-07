@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       mesa:mesas(id, codigo, zona),
       camarero:camareros(id, nombre),
       items:comanda_items(cantidad, nombre, estado)`)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .in('estado', ['nueva', 'en_cocina'])
     .order('created_at', { ascending: false })
     .limit(50)

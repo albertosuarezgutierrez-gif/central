@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { data: espacios } = await supabase
     .from('espacios_evento')
     .select('id, nombre, tipo, aforo_maximo')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .order('nombre')
 
@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
   let bloqueoQuery = supabase
     .from('bloqueos_espacio')
     .select('id, espacio_id, fecha_inicio, fecha_fin, tipo, notas, evento_id, eventos(numero_evento, tipo, cliente_nombre, aforo_previsto, estado)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .lte('fecha_inicio', hasta)
     .gte('fecha_fin', desde)
     .order('fecha_inicio')
@@ -81,6 +81,6 @@ export async function DELETE(req: NextRequest) {
   const supabase = createServerClient()
 
   const { id } = await req.json()
-  await supabase.from('bloqueos_espacio').delete().eq('id', id).eq('restaurante_id', restauranteId)
+  await supabase.from('bloqueos_espacio').delete().eq('id', id).eq('local_id', restauranteId)
   return NextResponse.json({ ok: true })
 }

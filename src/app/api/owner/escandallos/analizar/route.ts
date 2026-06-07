@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
 
   const { data: escandallos } = await supabase
     .from('escandallos').select('nombre, coste_racion, precio_venta, margen_porcentaje, categoria')
-    .eq('restaurante_id', restauranteId).order('margen_porcentaje', { ascending: true })
+    .eq('local_id', restauranteId).order('margen_porcentaje', { ascending: true })
 
   if (!escandallos?.length)
     return NextResponse.json({ error: 'Sin escandallos definidos' }, { status: 422 })
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   const hace30 = new Date(); hace30.setDate(hace30.getDate() - 30)
   const { data: ventas } = await supabase
     .from('comanda_items').select('nombre, cantidad')
-    .eq('restaurante_id', restauranteId).gte('created_at', hace30.toISOString())
+    .eq('local_id', restauranteId).gte('created_at', hace30.toISOString())
 
   const ventasPorNombre: Record<string, number> = {}
   for (const v of ventas ?? []) ventasPorNombre[v.nombre] = (ventasPorNombre[v.nombre] ?? 0) + (v.cantidad ?? 1)

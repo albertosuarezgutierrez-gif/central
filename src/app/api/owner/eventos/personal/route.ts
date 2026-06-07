@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     .from('evento_personal')
     .select('*, personal:personal(id, nombre, rol)')
     .eq('evento_id', evento_id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('rol')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -56,7 +56,7 @@ export async function PUT(req: NextRequest) {
 
   const { data, error } = await supabase
     .from('evento_personal').update(updates)
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -71,7 +71,7 @@ export async function DELETE(req: NextRequest) {
 
   const { id } = await req.json()
   await supabase.from('evento_personal').delete()
-    .eq('id', id).eq('restaurante_id', restauranteId)
+    .eq('id', id).eq('local_id', restauranteId)
 
   return NextResponse.json({ ok: true })
 }

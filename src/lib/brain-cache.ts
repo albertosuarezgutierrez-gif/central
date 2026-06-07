@@ -75,28 +75,28 @@ async function cargarCache(restaurante_id: string): Promise<MenuCache> {
       .from('productos')
       .select('id, nombre, nombre_alternativo, alias_ia, precio, seccion, familia')
       .eq('activo', true)
-      .eq('restaurante_id', restaurante_id),
+      .eq('local_id', restaurante_id),
     supabase
       .from('producto_formatos')
       .select('id, producto_id, nombre, precio')
       .eq('activo', true)
-      .eq('restaurante_id', restaurante_id),
+      .eq('local_id', restaurante_id),
     supabase
       .from('zonas')
       .select('prefijo, nombre, tipo')
       .eq('activa', true)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .order('orden'),
     supabase
       .from('personal')
       .select('id, nombre, rol')
       .eq('activo', true)
-      .eq('restaurante_id', restaurante_id),
+      .eq('local_id', restaurante_id),
     supabase
       .from('secciones_cocina')
       .select('id, nombre, impresora_id')
       .eq('activa', true)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .order('orden'),
   ])
 

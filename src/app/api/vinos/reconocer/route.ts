@@ -103,7 +103,7 @@ export async function POST(req: NextRequest) {
     const { data: carta } = await supabase
       .from('productos')
       .select('id, nombre, metadata, precio')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .or("familia.like.vino%,metadata->>tipo.eq.vino")
 
     const TIPOS_ALB = ['tinto','blanco','rosado','espumoso','cava','otro']

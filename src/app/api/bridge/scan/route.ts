@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const { data: bt } = await supabase
     .from('bridge_tokens')
     .select('id')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .single()
 
@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   const { data: bt } = await supabase
     .from('bridge_tokens')
     .select('scan_results, scan_requested')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
     .single()
 

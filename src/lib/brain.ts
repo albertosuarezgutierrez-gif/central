@@ -12,7 +12,7 @@ async function buildRecomendacionesContext(restaurante_id?: string): Promise<str
     const { data } = await db
       .from('v_recomendaciones_activas')
       .select('producto_nombre, precio, nota, hora_hasta, cantidad_restante')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .limit(10)
     if (!data?.length) return ''
     const lineas = data.map(r => {
@@ -87,7 +87,7 @@ async function buildZonasContext(restaurante_id?: string): Promise<string> {
     const supabase = createServerClient()
     const { data: zonas } = await supabase
       .from('zonas').select('nombre, tipo, prefijo').eq('activa', true)
-      .eq('restaurante_id', restaurante_id ?? '00000000-0000-0000-0000-000000000001').order('orden')
+      .eq('local_id', restaurante_id ?? '00000000-0000-0000-0000-000000000001').order('orden')
     if (!zonas?.length) return ''
     const lines = zonas.filter(z => z.prefijo).map(z => `  ${z.prefijo}XX = ${z.nombre} (ej: ${z.prefijo}01, ${z.prefijo}12)`).join('\n')
     return `\nZONAS DEL LOCAL (prefijos de mesa):\n${lines}\n`
@@ -102,7 +102,7 @@ async function buildPersonalContext(restaurante_id?: string): Promise<string> {
       .from('personal')
       .select('id, nombre, rol')
       .eq('activo', true)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .order('nombre')
     if (!data?.length) return ''
     const lines = data.map((c: { id: string; nombre: string; rol: string }) =>
@@ -120,7 +120,7 @@ async function buildSeccionesContext(restaurante_id?: string): Promise<string> {
       .from('secciones_cocina')
       .select('id, nombre, impresora_id')
       .eq('activa', true)
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .order('orden')
     if (!data?.length) return ''
     const lines = data.map((s: { id: string; nombre: string; impresora_id: string | null }) =>
@@ -138,7 +138,7 @@ async function buildVinosContext(restaurante_id?: string): Promise<string> {
     const { data } = await supabase
       .from('productos')
       .select('nombre, precio, precio_copa, familia, metadata')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .eq('categoria', 'vino')
       .eq('activo', true)
       .order('nombre')
@@ -183,7 +183,7 @@ async function buildSesionContext(
     const query = supabase
       .from('ia_training_log')
       .select('input_raw, output_brain, calidad, camarero_id')
-      .eq('restaurante_id', restaurante_id)
+      .eq('local_id', restaurante_id)
       .eq('turno_id', turno_id)
       .gte('calidad', 3)
       .not('output_brain', 'is', null)

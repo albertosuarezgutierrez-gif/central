@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
     .from('personal')
     .select('id, nombre, rol, restaurante_id, seccion_id, puede_comandar, modulos_gestion, activo')
     .eq('id', camarero_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .maybeSingle()
 
   if (!cam || cam.activo === false) {

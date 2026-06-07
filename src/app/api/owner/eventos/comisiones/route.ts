@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       comercial:personal!comercial_id(id, nombre),
       evento:eventos(id, cliente_nombre, fecha_evento, tipo)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('comision_estado', estado)
     .not('comercial_id', 'is', null)
     .order('created_at', { ascending: false })

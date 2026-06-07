@@ -30,7 +30,7 @@ export async function POST(req: Request) {
       const { data } = await supabase
         .from('impresoras')
         .select('id')
-        .eq('restaurante_id', bt.restaurante_id)
+        .eq('local_id', bt.restaurante_id)
         .eq('mac_address', mac_address)
         .single()
       existing = data
@@ -39,7 +39,7 @@ export async function POST(req: Request) {
       const { data } = await supabase
         .from('impresoras')
         .select('id')
-        .eq('restaurante_id', bt.restaurante_id)
+        .eq('local_id', bt.restaurante_id)
         .eq('ip_address', ip_address)
         .single()
       existing = data

@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
       comercial:personal!comercial_id(id, nombre),
       evento:eventos(id, cliente_nombre, fecha_evento, tipo)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (evento_id) query = query.eq('evento_id', evento_id)
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   const { data: config } = await supabase
     .from('config_eventos')
     .select('descuento_requiere_aprobacion_desde, modelo_comision, rentabilidad_minima_pct')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .maybeSingle()
 
   const desc = body.descuento_aplicado_pct || 0

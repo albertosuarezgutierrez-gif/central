@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   try {
     const { data: mesas } = await supabase
       .from('mesas').select('codigo, estado, nombre')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .in('estado', ['activa', 'marchar', 'aviso', 'cuenta']).limit(20)
     if (mesas?.length) mesasCtx = `\nMESAS ACTIVAS: ${mesas.map(m => m.codigo).join(', ')}`
   } catch { /* continuar */ }

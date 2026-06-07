@@ -38,19 +38,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     { count: numComandasHoy },
     { count: numFacturas },
   ] = await Promise.all([
-    supabase.from('personal').select('*', { count: 'exact', head: true }).eq('restaurante_id', id).eq('activo', true),
-    supabase.from('mesas').select('*', { count: 'exact', head: true }).eq('restaurante_id', id),
+    supabase.from('personal').select('*', { count: 'exact', head: true }).eq('local_id', id).eq('activo', true),
+    supabase.from('mesas').select('*', { count: 'exact', head: true }).eq('local_id', id),
     supabase.from('comandas').select('*', { count: 'exact', head: true })
-      .eq('restaurante_id', id)
+      .eq('local_id', id)
       .gte('created_at', new Date().toISOString().slice(0, 10)),
-    supabase.from('facturas_verifactu').select('*', { count: 'exact', head: true }).eq('restaurante_id', id),
+    supabase.from('facturas_verifactu').select('*', { count: 'exact', head: true }).eq('local_id', id),
   ])
 
   // Última comanda
   const { data: ultimaComanda } = await supabase
     .from('comandas')
     .select('created_at')
-    .eq('restaurante_id', id)
+    .eq('local_id', id)
     .order('created_at', { ascending: false })
     .limit(1)
     .single()
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const { data: pagos } = await supabase
     .from('pagos')
     .select('importe')
-    .eq('restaurante_id', id)
+    .eq('local_id', id)
     .eq('estado', 'completado')
     .gte('created_at', inicioMes.toISOString())
 

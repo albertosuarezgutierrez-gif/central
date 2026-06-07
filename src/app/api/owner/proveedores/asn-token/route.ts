@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
       proveedores(nombre, email, whatsapp, telefono)
     `)
     .eq('id', pedido_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!pedido) return NextResponse.json({ error: 'Pedido no encontrado' }, { status: 404 })

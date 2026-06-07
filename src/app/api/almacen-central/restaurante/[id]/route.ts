@@ -34,17 +34,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const [rStock, rPedidos, rRecepciones] = await Promise.all([
     supabase.from('stock_articulos')
       .select('id, nombre, stock_actual, stock_minimo, unidad_compra, coste_unitario, precio_ultimo_compra, proveedor_nombre, proveedor_id, alerta_activa')
-      .eq('restaurante_id', rid).eq('activo', true)
+      .eq('local_id', rid).eq('activo', true)
       .order('nombre'),
     supabase.from('pedidos_proveedor')
       .select('id, proveedor_nombre, cantidad, unidad_compra, estado, created_at, asn_token, asn_subido_at, stock_articulos(nombre)')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .in('estado', ['pendiente', 'enviado', 'recibido_parcial'])
       .order('created_at', { ascending: false })
       .limit(20),
     supabase.from('recepciones_mercancia')
       .select('id, fecha_recepcion, estado, proveedor_id, albaran_numero')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .order('fecha_recepcion', { ascending: false })
       .limit(10),
   ])
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const { data: sa } = await supabase
           .from('stock_articulos')
           .select('id, proveedor_nombre, proveedor_email, proveedor_id')
-          .eq('restaurante_id', restauranteId)
+          .eq('local_id', restauranteId)
           .ilike('nombre', art.nombre)
           .maybeSingle()
 

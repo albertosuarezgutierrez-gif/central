@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       total_cobrado, inactividad_alerta_enviada,
       mesas!mesa_id (codigo, nombre)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('preauth_completado', true)
     .eq('estado', 'activa')
     .is('pagado_en', null)

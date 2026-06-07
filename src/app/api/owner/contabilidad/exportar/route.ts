@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
   const { data: asientos, error } = await supabase
     .from('asientos_contables')
     .select('num_asiento, fecha, concepto, tipo, lineas')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha', desde)
     .lte('fecha', hasta)
     .order('fecha', { ascending: true })
@@ -47,7 +47,7 @@ export async function POST(req: NextRequest) {
   let filename: string
 
   if (formato === 'a3') {
-    const { data: cfg } = await supabase.from('config_contabilidad').select('ejercicio_actual').eq('restaurante_id', rid).maybeSingle()
+    const { data: cfg } = await supabase.from('config_contabilidad').select('ejercicio_actual').eq('local_id', rid).maybeSingle()
     contenido   = exportarA3(asientosExport, '001', cfg?.ejercicio_actual ?? new Date().getFullYear())
     contentType = 'text/plain; charset=windows-1252'
     filename    = `SUENLACE_${fechaHoy}.DAT`
@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
   // Marcar asientos como exportados
   await supabase.from('asientos_contables')
     .update({ estado: 'exportado', exportado_at: new Date().toISOString() })
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha', desde)
     .lte('fecha', hasta)
     .eq('estado', 'confirmado')

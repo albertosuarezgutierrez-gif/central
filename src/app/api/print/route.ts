@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
   const { count: nodosActivos } = await sb
     .from('bridge_tokens')
     .select('id', { count: 'exact', head: true })
-    .eq('restaurante_id', bridge.restaurante_id)
+    .eq('local_id', bridge.restaurante_id)
     .eq('activo', true)
     .gt('ultimo_ping', meshDeadline)
 
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
   const { data: impresoras } = await sb
     .from('impresoras')
     .select('id, ip_address, port, connection_type')
-    .eq('restaurante_id', bridge.restaurante_id)
+    .eq('local_id', bridge.restaurante_id)
     .in('connection_type', TIPOS_TCP)
     .eq('activa', true)
 

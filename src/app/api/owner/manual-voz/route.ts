@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const { data: ultima } = await supabase
     .from('manual_voz_novedades')
     .select('version')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('created_at', { ascending: false })
     .limit(1)
     .maybeSingle()
@@ -92,7 +92,7 @@ export async function DELETE(req: NextRequest) {
     .from('manual_voz_novedades')
     .delete()
     .eq('id', id)
-    .eq('restaurante_id', rid) // Solo puede borrar las suyas, nunca las globales
+    .eq('local_id', rid) // Solo puede borrar las suyas, nunca las globales
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

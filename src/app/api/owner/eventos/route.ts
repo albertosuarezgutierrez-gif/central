@@ -42,10 +42,10 @@ export async function GET(req: NextRequest) {
     if (rest?.cuenta_id) {
       query = query.eq('cuenta_id', rest.cuenta_id)
     } else {
-      query = query.eq('restaurante_id', restauranteId)
+      query = query.eq('local_id', restauranteId)
     }
   } else {
-    query = query.eq('restaurante_id', restauranteId)
+    query = query.eq('local_id', restauranteId)
   }
 
   if (estado) query = query.eq('estado', estado)
@@ -174,7 +174,7 @@ export async function PUT(req: NextRequest) {
     .from('eventos')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select()
     .single()
 
@@ -196,7 +196,7 @@ export async function DELETE(req: NextRequest) {
     .from('eventos')
     .update({ estado: 'cancelado' })
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })

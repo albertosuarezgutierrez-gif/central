@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   const { data: productos } = await supabase
     .from('productos')
     .select('nombre')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activo', true)
     .limit(12)
 

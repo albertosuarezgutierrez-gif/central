@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
       .from('personal')
       .select('id, nombre')
       .eq('id', camareroId)
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .maybeSingle()
 
     if (!camarero) {

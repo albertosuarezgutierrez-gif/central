@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('v_stock_actual')
     .select('*')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('nombre')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

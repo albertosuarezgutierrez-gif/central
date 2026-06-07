@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
-  const { data, error } = await supabase.from('proveedores_evento').select('*').eq('restaurante_id', restauranteId).eq('activo', true).order('nombre')
+  const { data, error } = await supabase.from('proveedores_evento').select('*').eq('local_id', restauranteId).eq('activo', true).order('nombre')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ proveedores: data })
 }
@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest) {
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
   const { id, ...updates } = await req.json()
-  const { error } = await supabase.from('proveedores_evento').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('restaurante_id', restauranteId)
+  const { error } = await supabase.from('proveedores_evento').update({ ...updates, updated_at: new Date().toISOString() }).eq('id', id).eq('local_id', restauranteId)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }
@@ -56,6 +56,6 @@ export async function DELETE(req: NextRequest) {
   const restauranteId = getRestauranteId(req)
   const supabase = createServerClient()
   const { id } = await req.json()
-  await supabase.from('proveedores_evento').update({ activo: false }).eq('id', id).eq('restaurante_id', restauranteId)
+  await supabase.from('proveedores_evento').update({ activo: false }).eq('id', id).eq('local_id', restauranteId)
   return NextResponse.json({ ok: true })
 }

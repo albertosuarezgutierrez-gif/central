@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('plantillas_evento')
     .select('*, menu_evento:menus_evento(id,nombre), barra:barra_tiers(id,nombre)')
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .eq('activa', true)
     .order('usos', { ascending: false })
 

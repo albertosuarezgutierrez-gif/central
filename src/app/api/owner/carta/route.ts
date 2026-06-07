@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   const rid = getRestauranteId(req)
   const { data, error } = await supabase.from('productos')
     .select('*, producto_formatos(id, nombre, precio, orden, activo)')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('categoria').order('orden').order('nombre')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ productos: data })
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
   if (aliases.length === 0 && data?.id) {
     generarAliasFoneticos(nombre.trim()).then(async (generados) => {
       if (!generados.length) return
-      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('restaurante_id', rid)
+      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('local_id', rid)
       invalidarCache(rid)
       console.log(`[ALIAS-IA] ${nombre}: ${generados.join(', ')}`)
     }).catch(() => {})
@@ -57,21 +57,21 @@ export async function PUT(req: NextRequest) {
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
   const { data, error } = await supabase.from('productos')
     .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id).eq('restaurante_id', rid).select().single()
+    .eq('id', id).eq('local_id', rid).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   invalidarCache(rid)
   // Si se cambió nombre y alias vacíos → regenerar alias IA en alias_ia
   if (updates.nombre && data?.id && (!updates.nombre_alternativo || (updates.nombre_alternativo as string[]).length === 0)) {
     generarAliasFoneticos(updates.nombre.trim()).then(async (generados) => {
       if (!generados.length) return
-      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('restaurante_id', rid)
+      await supabase.from('productos').update({ alias_ia: generados }).eq('id', data.id).eq('local_id', rid)
       invalidarCache(rid)
       console.log(`[ALIAS-IA] ${updates.nombre} (edit): ${generados.join(', ')}`)
     }).catch(() => {})
   }
   if (updates.activo === false && data) {
     const { data: turno } = await supabase.from('turnos').select('id')
-      .eq('estado', 'activo').eq('restaurante_id', rid).order('created_at', { ascending: false }).limit(1).single()
+      .eq('estado', 'activo').eq('local_id', rid).order('created_at', { ascending: false }).limit(1).single()
     if (turno) await supabase.from('productos_86')
       .insert({ nombre: data.nombre, turno_id: turno.id, restaurante_id: rid })
   }
@@ -149,7 +149,7 @@ export async function DELETE(req: NextRequest) {
   }
   const { id } = await req.json()
   if (!id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
-  const { error } = await supabase.from('productos').delete().eq('id', id).eq('restaurante_id', rid)
+  const { error } = await supabase.from('productos').delete().eq('id', id).eq('local_id', rid)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true })
 }

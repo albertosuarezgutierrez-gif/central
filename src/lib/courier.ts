@@ -309,7 +309,7 @@ export async function crearPrintJobs(
     const { data: reglasDB } = await supabase
       .from('reglas_envio')
       .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta, tipos_ticket')
-      .eq('restaurante_id', comanda.restaurante_id)
+      .eq('local_id', comanda.restaurante_id)
       .eq('activa', true)
     reglas = (reglasDB ?? []).map((r: Record<string, unknown>) => ({
       ...r,
@@ -329,7 +329,7 @@ export async function crearPrintJobs(
     .select('id, seccion_id, secciones_ids, nombre, connection_type, impresora_fallback_id')
     .eq('activa', true)
   const { data: impresoras } = await (comanda.restaurante_id
-    ? impresorasQuery.eq('restaurante_id', comanda.restaurante_id)
+    ? impresorasQuery.eq('local_id', comanda.restaurante_id)
     : impresorasQuery)
   console.log('[COURIER] reglas:', reglas.length, 'impresoras:', (impresoras??[]).length, 'rid:', comanda.restaurante_id)
 
@@ -514,7 +514,7 @@ export async function crearPrintJobMarchar(
   const { data: reglasDB } = await supabase
     .from('reglas_envio')
     .select('zona_tipo, zona_tipos, seccion_id, seccion_ids, producto_ids, destino_tipo, destino_ref, destino_kds_ref, prioridad, es_fallback, imprimir_al_marchar, impresora_pase_id, hora_desde, hora_hasta')
-    .eq('restaurante_id', comanda.restaurante_id)
+    .eq('local_id', comanda.restaurante_id)
     .eq('activa', true)
     .eq('imprimir_al_marchar', true)
 
@@ -951,7 +951,7 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   const { data: reglasDB } = await supabase
     .from('reglas_envio')
     .select('id, zona_tipo, zona_tipos, destino_tipo, destino_ref, prioridad, es_fallback, hora_desde, hora_hasta, tipos_ticket')
-    .eq('restaurante_id', p.restaurante_id)
+    .eq('local_id', p.restaurante_id)
     .eq('activa', true)
     .contains('tipos_ticket', ['cuenta'])
     .order('es_fallback', { ascending: true })
@@ -990,7 +990,7 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   if (!impresoraId) {
     const { data: imp } = await supabase
       .from('impresoras').select('id')
-      .eq('restaurante_id', p.restaurante_id).eq('activa', true)
+      .eq('local_id', p.restaurante_id).eq('activa', true)
       .order('created_at').limit(1).single()
     impresoraId = imp?.id ?? null
   }

@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
       evento_origen:eventos!evento_origen_id(id, cliente_nombre, fecha_evento),
       evento_referido:eventos!evento_referido_id(id, cliente_nombre, fecha_evento)
     `)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('created_at', { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -50,7 +50,7 @@ export async function PATCH(req: NextRequest) {
     .from('evento_referidos')
     .update(updates)
     .eq('id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

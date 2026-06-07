@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       proveedores(nombre),
       recepcion_items(id, nombre_articulo, cantidad_pedida, cantidad_recibida, estado, precio_facturado)
     `)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .order('fecha_recepcion', { ascending: false })
     .limit(limit)
 

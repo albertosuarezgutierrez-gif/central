@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
   // FIX: filtrar solo turno de SERVICIO (camarero_id IS NULL) y usar maybeSingle (evita error con múltiples turnos activos por fichaje)
   const { data: turno } = await supabase
     .from('turnos').select('id, nombre, created_at')
-    .eq('restaurante_id', rid).eq('estado', 'activo')
+    .eq('local_id', rid).eq('estado', 'activo')
     .is('camarero_id', null)
     .order('created_at', { ascending: false })
     .limit(1).maybeSingle()
@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
   const { data: movs } = await supabase
     .from('movimientos_caja')
     .select('id, tipo, concepto, importe, saldo_acumulado, camarero_nombre, mesa_label, notas, desglose_monedas, created_at')
-    .eq('restaurante_id', rid).eq('turno_id', turno.id)
+    .eq('local_id', rid).eq('turno_id', turno.id)
     .order('created_at', { ascending: false })
 
   const lista = movs ?? []
@@ -64,14 +64,14 @@ export async function POST(req: NextRequest) {
 
   // FIX: filtrar turno de SERVICIO (camarero_id IS NULL) + maybeSingle
   const { data: turno } = await supabase
-    .from('turnos').select('id').eq('restaurante_id', rid).eq('estado', 'activo')
+    .from('turnos').select('id').eq('local_id', rid).eq('estado', 'activo')
     .is('camarero_id', null).order('created_at', { ascending: false }).limit(1).maybeSingle()
   if (!turno) return NextResponse.json({ error: 'Sin turno activo' }, { status: 400 })
 
   // Saldo actual
   const { data: ultimo } = await supabase
     .from('movimientos_caja').select('saldo_acumulado')
-    .eq('restaurante_id', rid).eq('turno_id', turno.id)
+    .eq('local_id', rid).eq('turno_id', turno.id)
     .order('created_at', { ascending: false }).limit(1).single()
 
   const saldo_ant = ultimo?.saldo_acumulado ?? 0

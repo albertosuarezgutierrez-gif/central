@@ -25,7 +25,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ slug
   const { data: cfgRow } = await supabase
     .from('cobro_config')
     .select('comision_pct, comision_fija_eur')
-    .eq('restaurante_id', portal.restaurante_id)
+    .eq('local_id', portal.restaurante_id)
     .maybeSingle()
   const cfg = resolverComisionConfig(cfgRow)
 

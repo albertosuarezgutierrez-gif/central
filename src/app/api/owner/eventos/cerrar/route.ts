@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     estado: 'completado', aforo_real: aforo_real ?? null,
     precio_total_real: precio_total_real ?? null,
     coste_espacio: coste_espacio ?? null,
-  }).eq('id', evento_id).eq('restaurante_id', restauranteId)
+  }).eq('id', evento_id).eq('local_id', restauranteId)
 
   // 2. Imputar coste espacio
   if (coste_espacio) {

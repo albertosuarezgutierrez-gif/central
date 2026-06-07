@@ -5727,7 +5727,7 @@ function ModificacionesTab({ restauranteId }: { restauranteId: string }) {
     const hoy = new Date(); hoy.setHours(0,0,0,0)
 
     let query = supabase.from('comanda_modificaciones')
-      .select('*').eq('restaurante_id', restauranteId)
+      .select('*').eq('local_id', restauranteId)
       .gte('created_at', new Date(Date.now()-24*60*60*1000).toISOString())
       .order('created_at',{ascending:false}).limit(200)
     if (filtroTipo!=='todos') query = (query as unknown as {eq:(a:string,b:string)=>typeof query}).eq('tipo_accion', filtroTipo) as typeof query
@@ -5736,7 +5736,7 @@ function ModificacionesTab({ restauranteId }: { restauranteId: string }) {
 
     const {data:hoyData} = await supabase.from('comanda_modificaciones')
       .select('tipo_accion,estado_item_en_kds')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .gte('created_at', hoy.toISOString())
     if (hoyData) {
       const h = hoyData as unknown as {tipo_accion:string;estado_item_en_kds:string|null}[]

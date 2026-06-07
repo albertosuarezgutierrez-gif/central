@@ -26,7 +26,7 @@ export async function GET(
     .from('ticket_aliases')
     .select('*')
     .eq('comanda_id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .maybeSingle()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -62,7 +62,7 @@ export async function POST(
     .from('comandas')
     .select('id, estado')
     .eq('id', comanda_id)
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .single()
 
   if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })

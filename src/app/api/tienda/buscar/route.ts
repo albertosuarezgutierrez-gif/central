@@ -26,14 +26,14 @@ export async function GET(req: NextRequest) {
   const { data: cfg } = await supabase
     .from('config_tienda')
     .select('modo_catalogo')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .maybeSingle()
   const soloTienda = cfg?.modo_catalogo === 'separado'
 
   let query = supabase
     .from('productos')
     .select(COLS)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('activo', true)
 
   if (soloTienda) query = query.eq('es_tienda', true)

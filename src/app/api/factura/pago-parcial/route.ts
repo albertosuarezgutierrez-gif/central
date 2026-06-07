@@ -46,7 +46,7 @@ export async function POST(req: NextRequest) {
   const { data: comanda } = await supabase
     .from('comandas')
     .select('id, estado, restaurante_id, camarero_id, turno_id, mesa_id')
-    .eq('id', comanda_id).eq('restaurante_id', restaurante_id).single()
+    .eq('id', comanda_id).eq('local_id', restaurante_id).single()
 
   if (!comanda)
     return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
@@ -91,7 +91,7 @@ export async function POST(req: NextRequest) {
   const { data: items } = await supabase
     .from('comanda_items')
     .select('precio_unitario, cantidad, nombre')
-    .eq('comanda_id', comanda_id).eq('restaurante_id', restaurante_id)
+    .eq('comanda_id', comanda_id).eq('local_id', restaurante_id)
 
   const importe_total = Math.round(
     (items ?? []).reduce((s, it) => s + (it.precio_unitario ?? 0) * (it.cantidad ?? 1), 0) * 100
@@ -160,7 +160,7 @@ export async function POST(req: NextRequest) {
   if (comanda.mesa_id) {
     await supabase.from('mesas')
       .update({ estado: 'libre', camarero_id: null, ultima_comanda: new Date().toISOString() })
-      .eq('id', comanda.mesa_id).eq('restaurante_id', restaurante_id)
+      .eq('id', comanda.mesa_id).eq('local_id', restaurante_id)
   }
 
   // ── 10. Imprimir ticket cobrado ─────────────────────────────

@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
   const { data: productos } = await supabase
     .from('productos')
     .select('id, nombre, descripcion, precio, seccion, stock_agotado_at, es_fuera_carta, alergenos')
-    .eq('restaurante_id', config.restaurante_id)
+    .eq('local_id', config.restaurante_id)
     .eq('activo', true)
     .is('stock_agotado_at', null)
     .order('seccion')

@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await db
     .from('v_recomendaciones_activas')
     .select('id, producto_nombre, precio, categoria, nota, hora_desde, hora_hasta, cantidad_max, cantidad_servida, cantidad_restante')
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
     .order('producto_nombre')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

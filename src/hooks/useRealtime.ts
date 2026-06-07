@@ -12,7 +12,7 @@ export function useMesas(restauranteId?: string) {
       .from('mesas')
       .select('*, camarero:camareros(id, nombre)')
       .order('codigo')
-    if (restauranteId) q = q.eq('restaurante_id', restauranteId)
+    if (restauranteId) q = q.eq('local_id', restauranteId)
     const { data } = await q
     if (data) setMesas(data)
     setLoading(false)
@@ -42,7 +42,7 @@ export function useComandas(turnoId?: string, restauranteId?: string) {
       .order('created_at', { ascending: true })
 
     if (turnoId) query = query.eq('turno_id', turnoId)
-    if (restauranteId) query = query.eq('restaurante_id', restauranteId)
+    if (restauranteId) query = query.eq('local_id', restauranteId)
 
     const { data } = await query
     if (data) setComandasState(data)
@@ -75,7 +75,7 @@ export function useTranscripciones(turnoId?: string, limit = 20, restauranteId?:
         .limit(limit)
 
       if (turnoId) query = query.eq('turno_id', turnoId)
-      if (restauranteId) query = query.eq('restaurante_id', restauranteId)
+      if (restauranteId) query = query.eq('local_id', restauranteId)
       const { data } = await query
       if (data) setTranscripciones(data)
     }
@@ -104,7 +104,7 @@ export function useProductos86(turnoId?: string, restauranteId?: string) {
         .order('created_at', { ascending: false })
 
       if (turnoId) query = query.eq('turno_id', turnoId)
-      if (restauranteId) query = query.eq('restaurante_id', restauranteId)
+      if (restauranteId) query = query.eq('local_id', restauranteId)
       const { data } = await query
       if (data) setProductos(data)
     }
@@ -175,7 +175,7 @@ export function useServicioPendiente(restauranteId?: string) {
     const { data } = await supabase
       .from('marchar_log')
       .select('mesa_id')
-      .eq('restaurante_id', restauranteId)
+      .eq('local_id', restauranteId)
       .eq('tipo', 'servicio')
       .eq('recogido', false)
     setMesasConPendiente(new Set((data ?? []).map((r: { mesa_id: string }) => r.mesa_id)))

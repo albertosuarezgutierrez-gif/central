@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
   const { data: arqueoExistente } = await supabase
     .from('arqueos_caja')
     .select('id, estado')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .eq('fecha', fecha)
     .maybeSingle()
   if (arqueoExistente?.estado === 'cerrado') {
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
   const { data: facturas } = await supabase
     .from('facturas_verifactu')
     .select('importe_total, iva_desglosado, metodo_pago')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('fecha', `${fecha}T00:00:00`)
     .lt('fecha',  `${fecha}T23:59:59`)
     .eq('estado', 'emitida')
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const { data: propinasData } = await supabase
     .from('propinas')
     .select('importe, canal')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .gte('created_at', `${fecha}T00:00:00`)
     .lt('created_at',  `${fecha}T23:59:59`)
 
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
   const { data: cfgData } = await supabase
     .from('config_contabilidad')
     .select('*')
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .maybeSingle()
 
   const cfg: ConfigContabilidad = {

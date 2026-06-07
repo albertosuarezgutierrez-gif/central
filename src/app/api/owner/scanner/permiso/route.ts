@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     .from('personal')
     .update({ puede_escanear: !!puede_escanear })
     .eq('id', camarero_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ ok: true, puede_escanear: !!puede_escanear })

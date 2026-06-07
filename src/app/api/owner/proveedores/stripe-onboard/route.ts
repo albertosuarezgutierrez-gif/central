@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     .from('proveedores')
     .select('id, nombre, email, stripe_account_id, stripe_onboarded')
     .eq('id', proveedor_id)
-    .eq('restaurante_id', rid)
+    .eq('local_id', rid)
     .single()
 
   if (!prov) return NextResponse.json({ error: 'Proveedor no encontrado' }, { status: 404 })
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
       .from('ordenes_pago_proveedor')
       .select('id, importe, concepto, estado')
       .eq('id', orden_id)
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .single()
 
     if (!orden) return NextResponse.json({ error: 'Orden no encontrada' }, { status: 404 })

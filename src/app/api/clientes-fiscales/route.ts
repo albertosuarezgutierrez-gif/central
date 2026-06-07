@@ -43,7 +43,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from('clientes_fiscales')
     .select('id, nif, razon_social, direccion, email')
-    .eq('restaurante_id', restaurante_id)
+    .eq('local_id', restaurante_id)
 
   if (nif) {
     query = query.eq('nif', nif)

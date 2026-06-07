@@ -45,7 +45,7 @@ export async function POST(req: NextRequest) {
         .from('productos')
         .select('id, precio, stock_actual')
         .in('id', productoIds)
-        .eq('restaurante_id', rid)
+        .eq('local_id', rid)
       precioMap = Object.fromEntries((prods ?? []).map(p => [p.id, Number(p.precio ?? 0)]))
       stockMap = Object.fromEntries((prods ?? []).map(p => [p.id, p.stock_actual]))
     }
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     const { data: turno } = await supabase
       .from('turnos')
       .select('id')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .eq('estado', 'activo')
       .is('camarero_id', null)
       .maybeSingle()
@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
     const { data: cfg } = await supabase
       .from('config_tienda')
       .select('descontar_stock')
-      .eq('restaurante_id', rid)
+      .eq('local_id', rid)
       .maybeSingle()
     if (cfg?.descontar_stock !== false) {
       for (const it of itemsVerificados) {
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
           .from('productos')
           .update({ stock_actual: nuevo, updated_at: new Date().toISOString() })
           .eq('id', it.producto_id)
-          .eq('restaurante_id', rid)
+          .eq('local_id', rid)
       }
     }
 

@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       )
     `)
     .eq('menu_evento_id', id)
-    .eq('restaurante_id', restauranteId)
+    .eq('local_id', restauranteId)
     .order('orden')
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
@@ -41,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   // Borrar bloques existentes del menú
   await supabase.from('menu_evento_bloques').delete()
-    .eq('menu_evento_id', id).eq('restaurante_id', restauranteId)
+    .eq('menu_evento_id', id).eq('local_id', restauranteId)
 
   // Insertar nuevos bloques con sus opciones
   const resultados: Record<string, unknown>[] = []
