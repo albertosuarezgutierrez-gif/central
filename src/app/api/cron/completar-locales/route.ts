@@ -4,9 +4,7 @@ export const maxDuration = 60
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
-import Anthropic from '@anthropic-ai/sdk'
-
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || ''
+import { callAISearch, cleanJSON } from '@/lib/ai-client'
 
 interface LocalEncontrado {
   nombre: string
@@ -18,50 +16,19 @@ interface LocalEncontrado {
 }
 
 async function buscarLocalesGrupo(nombreGrupo: string): Promise<LocalEncontrado[]> {
-  if (!ANTHROPIC_KEY) return []
-
   try {
-    const client = new Anthropic({ apiKey: ANTHROPIC_KEY })
-
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1500,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
-      system: `Eres un investigador de hostelería española. Responde SOLO con JSON válido, sin backticks.`,
-      messages: [{
-        role: 'user',
-        content: `Busca todos los locales (restaurantes, bares, haciendas, etc.) del grupo hostelero "${nombreGrupo}" en España.
+    const texto = await callAISearch(
+      `Eres un investigador de hostelería española. Responde SOLO con JSON válido, sin backticks.`,
+      `Busca todos los locales (restaurantes, bares, haciendas, etc.) del grupo hostelero "${nombreGrupo}" en España.
 
 Devuelve SOLO este JSON array:
 [{"nombre":"Local exacto","ciudad":"Ciudad","tipo":"restaurante","aforo":null,"fuente":"URL donde lo viste","verificado":true}]
 
 Si no encuentras ninguno con seguridad, devuelve []. No inventes locales.`,
-      }],
-    })
-
-    // Seguir turnos si hay tool_use
-    let current = response
-    while (current.stop_reason === 'tool_use') {
-      const toolUses = current.content.filter(b => b.type === 'tool_use')
-      if (toolUses.length === 0) break
-
-      const followUp = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1500,
-        tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
-        system: `Eres un investigador de hostelería española. Responde SOLO con JSON válido, sin backticks.`,
-        messages: [
-          { role: 'user', content: `Busca todos los locales del grupo hostelero "${nombreGrupo}" en España. Devuelve SOLO JSON array con: nombre, ciudad, tipo, aforo, fuente, verificado.` },
-          { role: 'assistant', content: current.content },
-          { role: 'user', content: toolUses.map(b => b.type === 'tool_use' ? ({ type: 'tool_result' as const, tool_use_id: b.id, content: 'Búsqueda completada' }) : null).filter(Boolean) as Anthropic.Messages.ToolResultBlockParam[] },
-        ],
-      })
-      current = followUp
-    }
-
-    const texto = current.content.filter(b => b.type === 'text').map(b => b.type === 'text' ? b.text : '').join('')
-    const clean = texto.trim().replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/\s*```$/i, '').trim()
-    const match = clean.match(/\[[\s\S]*\]/)
+      1500,
+      45_000
+    )
+    const match = cleanJSON(texto).match(/\[[\s\S]*\]/)
     if (!match) return []
     const parsed = JSON.parse(match[0])
     return Array.isArray(parsed) ? parsed : []

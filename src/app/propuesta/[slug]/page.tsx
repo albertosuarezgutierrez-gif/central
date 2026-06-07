@@ -27,6 +27,14 @@ async function getLead(supabase: ReturnType<typeof createServerClient>, slug: st
 
   if (exact) return exact
 
+  // 1b. Buscar por landing_slug (unificación: /p/[slug] redirige a /propuesta/[slug])
+  const { data: byLanding } = await supabase
+    .from('leads')
+    .select('empresa, restaurante, nombre, ciudad, estudio_completo, modulos_recomendados, pain_points, mrr_estimado, propuesta_slug, propuesta_vista_at')
+    .eq('landing_slug', slug)
+    .maybeSingle()
+  if (byLanding) return byLanding
+
   // 2. Fallback: buscar por alias de empresa
   const keyword = SLUG_ALIASES[slug]
   if (!keyword) return null

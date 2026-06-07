@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
+import { resolverComisionConfig, calcularComision } from '@/lib/cobros-comision'
 
 export async function POST(req: NextRequest) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
@@ -67,17 +68,31 @@ export async function POST(req: NextRequest) {
     if (email) update.email_pagador = email
     if (telefono) update.telefono_pagador = telefono
 
+    // Enlace AUTORITATIVO por metadata: el checkout guarda los ids de las filas en
+    // `metadata.pago_ids`. Lo usamos como vía principal porque es fiable aunque el
+    // `stripe_checkout_session` no se haya llegado a guardar en la fila (p. ej. un
+    // pedido multi-menú cuyo UPDATE posterior a crear la sesión no persistió). Sin
+    // esto, un pago real se quedaría como 'pendiente' para siempre (dinero cobrado
+    // por el catering pero sin reflejar en el portal).
+    const pagoIds = (session.metadata?.pago_ids || '')
+      .split(',')
+      .map((s) => s.trim())
+      .filter(Boolean)
+
     // Idempotencia: Stripe reintenta el webhook. Solo transicionamos las filas que
     // aún no estaban 'pagado' y nos quedamos con las que de verdad acaban de pagarse,
     // para no enviar el aviso de Telegram dos veces.
-    const { data: recienPagados } = await supabase
-      .from('cobros_grupo_pagos')
-      .update(update)
-      .eq('stripe_checkout_session', session.id)
-      .neq('estado', 'pagado')
-      .select('cobro_grupo_id, concepto, cantidad, importe_eur, nombre_pagador')
+    let q = supabase.from('cobros_grupo_pagos').update(update).neq('estado', 'pagado')
+    q = pagoIds.length
+      ? q.or(`stripe_checkout_session.eq.${session.id},id.in.(${pagoIds.join(',')})`)
+      : q.eq('stripe_checkout_session', session.id)
+
+    const { data: recienPagados } = await q.select(
+      'cobro_grupo_id, concepto, cantidad, importe_eur, nombre_pagador'
+    )
 
     if (recienPagados?.length) {
+      await registrarComisionResumen(supabase, recienPagados)
       await avisarCompra(supabase, recienPagados)
     }
   }
@@ -91,6 +106,44 @@ type PagoFila = {
   cantidad: number | null
   importe_eur: number | null
   nombre_pagador: string | null
+}
+
+// Registra el cobro de grupo en resumen_cobros_mensual (volumen + comisión ia.rest) para
+// que aparezca en el panel /super → Cobro. La comisión se calcula con la config del
+// restaurante (misma fórmula que el checkout). Best-effort: nunca rompe el webhook.
+async function registrarComisionResumen(
+  supabase: ReturnType<typeof createServerClient>,
+  pagados: PagoFila[]
+): Promise<void> {
+  try {
+    // Importe (base) por portal de esta tanda de pagos
+    const porCobro = new Map<string, number>()
+    for (const p of pagados) {
+      porCobro.set(p.cobro_grupo_id, (porCobro.get(p.cobro_grupo_id) ?? 0) + Number(p.importe_eur ?? 0))
+    }
+    const { data: portales } = await supabase
+      .from('cobros_grupo')
+      .select('id, restaurante_id')
+      .in('id', Array.from(porCobro.keys()))
+
+    for (const portal of (portales ?? []) as { id: string; restaurante_id: string }[]) {
+      const importe = porCobro.get(portal.id) ?? 0
+      if (importe <= 0) continue
+      const { data: cfgRow } = await supabase
+        .from('cobro_config')
+        .select('comision_pct, comision_fija_eur')
+        .eq('restaurante_id', portal.restaurante_id)
+        .maybeSingle()
+      const { comisionEur } = calcularComision(importe, resolverComisionConfig(cfgRow))
+      await supabase.rpc('registrar_pago_cobro', {
+        p_restaurante_id: portal.restaurante_id,
+        p_importe_eur: importe,
+        p_comision_eur: comisionEur,
+      })
+    }
+  } catch (e) {
+    console.error('[stripe-connect] registrar comisión en resumen:', e)
+  }
 }
 
 // Aviso por Telegram al operador cuando se confirma una compra en un portal de cobros

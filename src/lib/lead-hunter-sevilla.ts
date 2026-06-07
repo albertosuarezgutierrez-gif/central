@@ -1,72 +1,89 @@
-// Núcleo del envío de email frío de venta en Sevilla (3 plantillas por vertical).
+// Router de contacto de Sevilla (email).
+// El email frío YA NO se auto-envía: se PROPONE por Telegram con botón "✅ Enviar"
+// (lo aprueba Alberto; el envío real ocurre en /api/telegram/webhook → enviar_sevilla).
+// Además, los leads CON móvil se excluyen aquí: esos van por WhatsApp (crm-whatsapp-sevilla).
 // Lo usan el cron `/api/cron/crm-lead-hunter-sevilla` y el panel `/api/super/lead-hunter-sevilla`.
 
 import type { createServerClient } from '@/lib/supabase'
-import jwt from 'jsonwebtoken'
 import { tgAlert } from '@/lib/telegram'
-import { construirEmail } from '@/lib/crm-sevilla'
+import { construirEmail, esMovilEs, detectarVertical } from '@/lib/crm-sevilla'
 
 type SupabaseSrv = ReturnType<typeof createServerClient>
+
+const esc = (s: unknown) => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
 
 export async function enviarEmailsSevilla(
   supabase: SupabaseSrv,
   limite = 3
-): Promise<{ ok: boolean; enviados: number; motivo?: string; error?: string }> {
-  const { Resend } = await import('resend')
-  const resend = new Resend(process.env.RESEND_API_KEY)
-
+): Promise<{ ok: boolean; enviados: number; propuestos?: number; motivo?: string; error?: string }> {
   try {
+    // Sobre-pedimos al RPC: ~la mitad del pool tiene móvil (van por WhatsApp), así que
+    // pedimos de más para llegar a `limite` emails NO-móvil reales.
+    const pedir = Math.min(Math.max(limite * 3, limite + 12), 80)
     const { data: leads, error: leadsError } = await supabase.rpc(
       'search_leads_sevilla_nuevos',
-      { limit_count: limite }
+      { limit_count: pedir }
     )
     if (leadsError) throw new Error(leadsError.message)
     if (!leads || leads.length === 0) {
       return { ok: true, enviados: 0, motivo: 'Sin leads nuevos disponibles' }
     }
 
-    let enviados = 0
+    // Excluir los que tienen MÓVIL (esos se contactan por WhatsApp, no por email).
+    const ids = leads.map((l: { id: string }) => l.id)
+    const { data: tels } = await supabase.from('leads').select('id, telefono').in('id', ids)
+    const tieneMovil = new Map((tels || []).map((t: { id: string; telefono: string | null }) => [t.id, esMovilEs(t.telefono)]))
+
+    const token = process.env.TELEGRAM_BOT_TOKEN
+    const chat = process.env.TELEGRAM_CHAT_ID
+
+    let propuestos = 0
     for (const lead of leads) {
       try {
-        const jwtToken = jwt.sign(
-          { lead_id: lead.id, exp: Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60 },
-          process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026'
-        )
-        const unsubToken = jwt.sign({ lead_id: lead.id }, process.env.JWT_SECRET_CRM || 'ia-rest-crm-2026')
-        const unsubUrl = `https://www.iarest.es/api/leads/unsubscribe?token=${unsubToken}`
-        const tpl = construirEmail(lead, jwtToken, unsubUrl)
+        if (propuestos >= limite) break // ya alcanzamos la tanda objetivo
+        if (tieneMovil.get(lead.id)) continue // tiene móvil → WhatsApp
 
-        // INSERT tracking — sin restaurante_id (tabla CRM global)
+        const tpl = construirEmail(lead, '', '') // solo para asunto/utm en la propuesta
+        // Marca como "propuesto" para que el RPC no lo vuelva a proponer (excluye leads con tracking).
         const { error: trackErr } = await supabase
           .from('leads_web_tracking')
-          .insert({
-            lead_id: lead.id,
-            mensaje_dia1_at: new Date().toISOString(),
-            estado: 'enviado_dia1',
-            utm_source: tpl.utm,
-          })
-        if (trackErr) { console.error(`Tracking error ${lead.nombre}:`, trackErr.message); continue }
+          .insert({ lead_id: lead.id, estado: 'propuesto', utm_source: tpl.utm })
+        if (trackErr) { console.error(`Tracking propuesto ${lead.nombre}:`, trackErr.message); continue }
 
-        const emailResult = await resend.emails.send({
-          from: 'Alberto <alberto@iarest.es>',
-          to: lead.email,
-          subject: tpl.subject,
-          html: tpl.html,
-        })
-        if (emailResult.error) { console.error(`Email error ${lead.email}:`, emailResult.error); continue }
-
-        enviados++
-        console.log(`✅ Email enviado a ${lead.nombre} (${lead.email})`)
+        if (token && chat) {
+          await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              chat_id: chat,
+              parse_mode: 'HTML',
+              text: [
+                `📧 <b>Email listo: ${esc(lead.nombre)}</b>`,
+                `${detectarVertical(lead.tipo_negocio)} · ✉️ ${esc(lead.email)}`,
+                ``,
+                `<b>Asunto:</b> ${esc(tpl.subject)}`,
+                ``,
+                `<i>Toca Enviar para mandarlo desde hola@iarest.es</i>`,
+              ].join('\n'),
+              reply_markup: { inline_keyboard: [[
+                { text: '✅ Enviar email', callback_data: `enviar_sevilla:${lead.id}` },
+                { text: '❌ Descartar', callback_data: `descartar_sevilla:${lead.id}` },
+              ]] },
+            }),
+          }).catch((e) => console.error('[lead-hunter] telegram:', e))
+        }
+        propuestos++
       } catch (err) {
         console.error(`Error lead ${lead.id}:`, err)
         continue
       }
     }
 
-    if (enviados > 0) {
-      await tgAlert(`📧 CRM Lead Hunter — ${enviados} emails de venta enviados (Sevilla).`, 'info')
+    if (propuestos > 0) {
+      await tgAlert(`📧 ${propuestos} email(s) de venta listos para aprobar (botón "Enviar" arriba).`, 'info')
     }
-    return { ok: true, enviados }
+    // `enviados` se mantiene por compatibilidad con cron/panel: aquí = nº propuestos.
+    return { ok: true, enviados: propuestos, propuestos }
   } catch (error) {
     const msg = error instanceof Error ? error.message : 'Error desconocido'
     console.error('Error lead-hunter-sevilla:', msg)

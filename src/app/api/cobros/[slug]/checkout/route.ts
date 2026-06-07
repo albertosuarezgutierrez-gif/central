@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
-
-const COMISION_TOTAL = 0.025
+import { resolverComisionConfig, calcularComision } from '@/lib/cobros-comision'
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ slug: string }> }) {
   const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
@@ -28,7 +27,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const { data: portal } = await supabase
     .from('cobros_grupo')
     .select(`
-      id, titulo, estado, stripe_connect_id, repercutir_comision,
+      id, titulo, estado, stripe_connect_id, repercutir_comision, restaurante_id,
       cobros_grupo_items(id, nombre, precio_eur, activo)
     `)
     .eq('slug', slug)
@@ -50,14 +49,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
     if (!item) return NextResponse.json({ error: `Menú no disponible: ${item_id}` }, { status: 404 })
 
     const precioBase = Number(item.precio_eur)
-    const precioFinal = portal.repercutir_comision
-      ? Math.round(precioBase * (1 + COMISION_TOTAL) * 100) / 100
-      : precioBase
 
+    // El menú va a su precio base. Si se repercute la comisión, se añade una única
+    // línea "Gastos de gestión" más abajo (no se infla cada menú).
     lineItems.push({
       price_data: {
         currency: 'eur',
-        unit_amount: Math.round(precioFinal * 100),
+        unit_amount: Math.round(precioBase * 100),
         product_data: { name: `${item.nombre} — ${portal.titulo}` }
       },
       quantity: cantidad
@@ -72,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
       nombre_pagador: nombre_pagador.trim(),
       email_pagador: email_pagador?.trim() || null,
       telefono_pagador: telefono_pagador?.trim() || null,
-      importe_eur: precioFinal * cantidad,
+      importe_eur: precioBase * cantidad,
       importe_base_eur: precioBase * cantidad,
       estado: 'pendiente',
       cantidad
@@ -81,7 +79,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
 
   if (!lineItems.length) return NextResponse.json({ error: 'Sin items válidos' }, { status: 400 })
 
-  const applicationFee = Math.round(totalBase * 0.01 * 100)
+  // Comisión configurable por restaurante (fallback a defaults de plataforma).
+  const { data: cfgRow } = await supabase
+    .from('cobro_config')
+    .select('comision_pct, comision_fija_eur, minimo_producto_eur')
+    .eq('restaurante_id', portal.restaurante_id)
+    .maybeSingle()
+  const cfg = resolverComisionConfig(cfgRow)
+  const { comisionEur } = calcularComision(totalBase, cfg)
+
+  // Repercutir: el invitado paga la comisión como una línea aparte → el restaurante
+  // recibe el precio base íntegro. Si no se repercute, la comisión sale del precio base
+  // (el restaurante recibe base − comisión). En ambos casos la comisión = application_fee.
+  if (portal.repercutir_comision && comisionEur > 0) {
+    lineItems.push({
+      price_data: {
+        currency: 'eur',
+        unit_amount: Math.round(comisionEur * 100),
+        product_data: { name: 'Gastos de gestión' }
+      },
+      quantity: 1
+    })
+  }
+
+  const applicationFee = Math.round(comisionEur * 100)
 
   const { data: pagos, error: pagosError } = await supabase
     .from('cobros_grupo_pagos')
@@ -101,31 +122,49 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ slu
   const pagoIds = pagos.map((p: { id: string }) => p.id).join(',')
 
   const origin = req.headers.get('origin') || 'https://www.iarest.es'
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    payment_method_types: ['card'],
-    line_items: lineItems,
-    customer_email: email_pagador?.trim() || undefined,
-    metadata: {
-      cobro_grupo_id: portal.id,
-      pago_ids: pagoIds,
-      nombre_pagador: nombre_pagador.trim(),
-      telefono_pagador: telefono_pagador?.trim() || ''
-    },
-    success_url: `${origin}/cobro/${slug}?pago=ok`,
-    cancel_url: `${origin}/cobro/${slug}`,
-    payment_intent_data: {
-      application_fee_amount: applicationFee,
-      transfer_data: { destination: portal.stripe_connect_id }
-    }
-  })
 
-  if (pagos?.length) {
+  let session: Stripe.Checkout.Session
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: lineItems,
+      customer_email: email_pagador?.trim() || undefined,
+      metadata: {
+        cobro_grupo_id: portal.id,
+        pago_ids: pagoIds,
+        nombre_pagador: nombre_pagador.trim(),
+        telefono_pagador: telefono_pagador?.trim() || ''
+      },
+      success_url: `${origin}/cobro/${slug}?pago=ok`,
+      cancel_url: `${origin}/cobro/${slug}`,
+      payment_intent_data: {
+        application_fee_amount: applicationFee,
+        transfer_data: { destination: portal.stripe_connect_id }
+      }
+    })
+  } catch (e) {
+    // Si Stripe no acepta la sesión, borramos las filas 'pendiente' recién insertadas
+    // para que NO queden huérfanas ensuciando el portal (filas pendiente sin sesión
+    // que nunca se podrán cobrar). Logueamos el error real para diagnóstico.
     await supabase
       .from('cobros_grupo_pagos')
-      .update({ stripe_checkout_session: session.id })
+      .delete()
       .in('id', (pagos as { id: string }[]).map(p => p.id))
+    console.error('[cobros/checkout] Stripe checkout.sessions.create falló:', e)
+    return NextResponse.json(
+      { error: 'No se pudo iniciar el pago, inténtalo de nuevo' },
+      { status: 500 }
+    )
   }
+
+  // El enlace autoritativo entre el pago y estas filas viaja en metadata.pago_ids
+  // (lo usa el webhook). Guardar también el session id es best-effort: si fallara,
+  // el webhook ya puede casar el pago por pago_ids.
+  await supabase
+    .from('cobros_grupo_pagos')
+    .update({ stripe_checkout_session: session.id })
+    .in('id', (pagos as { id: string }[]).map(p => p.id))
 
   return NextResponse.json({ checkout_url: session.url })
 }

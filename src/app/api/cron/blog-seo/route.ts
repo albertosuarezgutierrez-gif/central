@@ -3,11 +3,11 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { callAI } from '@/lib/ai-client'
 
 const CLIENT_ID     = process.env.GOOGLE_CLIENT_ID || ''
 const CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || ''
 const GSC_SITE      = 'https://www.iarest.es/'
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY || ''
 const TELEGRAM_BOT  = process.env.TELEGRAM_BOT_TOKEN || ''
 const TELEGRAM_CHAT = process.env.TELEGRAM_CHAT_ID || ''
 const GH_PAT        = process.env.GH_PAT || ''
@@ -121,22 +121,11 @@ RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
   "cta_texto": "texto del CTA final"
 }`
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  })
-
-  const data = await res.json()
-  const raw = data.content?.[0]?.text || ''
+  const raw = await callAI(
+    'Eres un experto en SEO y copywriting para hostelería española. Respondes SOLO con un JSON válido, sin markdown ni backticks.',
+    prompt,
+    4096
+  )
 
   let parsed: any
   try {

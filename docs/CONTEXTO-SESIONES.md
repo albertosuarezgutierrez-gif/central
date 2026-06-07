@@ -16,21 +16,159 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **Reels: música + previsualización + warm-up + gancho con movimiento** (05/06/2026):
-  el reel ya reproduce en prod (sin zoom) con ambiente real; faltaba audio y poder
-  previsualizarlo. Añadido:
-  - `src/app/api/super/instagram/seed-music/route.ts`: siembra MÚSICA en Cloudinary a
-    partir de enlaces MP3 públicos (Pixabay) → devuelve `musicIdsEnv` para `CLOUDINARY_MUSIC_IDS`.
+- **Reels: música + previsualización + warm-up + gancho con movimiento** (PR #67, 07/06/2026):
+  el reel ya reproduce en prod (sin zoom) con ambiente real; faltaba audio y poder previsualizarlo.
+  - `src/app/api/super/instagram/seed-music/route.ts`: siembra MÚSICA en Cloudinary desde
+    enlaces MP3 públicos (Pixabay) → devuelve `musicIdsEnv` para `CLOUDINARY_MUSIC_IDS`.
     POST Bearer o **GET desde navegador** logueado en /super: `?urls=<mp3_1>|<mp3_2>|...`.
-  - **Previsualización**: el mensaje de Telegram del reel ahora lleva `👁️ Ver vídeo`
-    (enlace al MP4) — antes no había forma de verlo antes de publicar.
+  - **Previsualización**: el mensaje de Telegram del reel lleva `👁️ Ver vídeo` (enlace al MP4).
   - **Warm-up + chequeo** (`warmAndCheckReel` en `ig-reel`): calienta el MP4 y, si Cloudinary
     da error claro (4xx), el cron **cae a imagen** en vez de proponer un reel roto.
-  - **Gancho con movimiento**: si hay ambiente, el reel **abre con un clip real** y el texto
-    entra después.
-  - `tsc` + smoke + `next build` verdes. **Pendiente Alberto:** sembrar música (3-5 MP3
-    Pixabay) → `CLOUDINARY_MUSIC_IDS` + redeploy → reprobar que **suena** (valida `l_audio`,
-    último trozo empírico; si no sonara, fallback `l_audio:` → `l_`).
+  - **Gancho con movimiento**: si hay ambiente, el reel **abre con un clip real** y el texto después.
+  - `tsc`+smoke+`next build` verdes. **Pendiente Alberto:** sembrar música (3-5 MP3 Pixabay)
+    → `CLOUDINARY_MUSIC_IDS` + redeploy → reprobar que **suena** (valida `l_audio`; si no,
+    fallback `l_audio:` → `l_`).
+
+- **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
+  (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
+  tipo `etiqueta_producto`) estaba **roto en silencio** y, aunque funcionara, era un
+  dead-end. Dos problemas y sus fixes:
+  - **Bug de BD:** el CHECK de `documentos_escaneados.tipo` (migración 20260518) NO
+    incluía `etiqueta_producto`, así que el INSERT fallaba, `dbError` solo se logueaba
+    y `scan_id` volvía null → el scan nunca se persistía. **Fix:** migración
+    `20260606_smart_scan_etiqueta_producto.sql` (drop/recreate idempotente del CHECK
+    añadiendo `etiqueta_producto`). ⚠️ **Pendiente aplicar en Supabase remoto** (la tabla
+    vive en remoto; la migración del repo es la fuente, pero hay que ejecutarla).
+  - **Dead-end UI:** el botón "Usar en Recepción" redirigía a `&recepcion=1` (sin leer)
+    y no llevaba los datos. **Fix (puente):** `SmartScanModal` guarda los datos en
+    `sessionStorage('ia_scan_etiqueta')` y redirige a `?tab=almacen&recepcion=etiqueta`;
+    `AlmacenTab` lo lee al montar, **prefija la checklist de Recepción** (nombre, EAN,
+    lote, caducidad ISO, cantidad/unidad) y reutiliza `confirmarRecepcion()` → crea la
+    recepción confirmada → `fn_confirmar_recepcion` sube `stock_actual` y el lote aparece
+    en FEFO. Sin rutas de escritura nuevas. Al confirmar, enlaza el doc de auditoría con
+    `archivado_en='recepcion:<uuid>'`.
+  - **Mejora incluida (GS1):** extraído `parseGS1`/`detectBarcode` del flujo ASN a
+    `src/lib/barcode.ts` y reutilizado en el escáner del owner: si la foto lleva código
+    de barras legible (EAN-13/GS1-128/DataMatrix), su EAN/lote/caducidad **sobrescriben**
+    lo que leyó la visión (que confunde fechas tipo "04.06.26"). La route normaliza
+    además `fecha_caducidad`/`fecha_fabricacion` a ISO para el `<input type=date>`.
+  - **Verificación:** `npx tsc --noEmit` y `npx next build` **verdes**. Falta prueba
+    funcional end-to-end en el navegador (escanear → confirmar → ver en FEFO) y **aplicar
+    la migración en Supabase**.
+  - **Mejoras siguientes (NO hechas, documentadas en el plan):** aviso si caducidad ya
+    pasó / gating por confianza antes de escribir; cron `caducidades` con `tgAlert`
+    (FEFO proactivo); columna `codigo_barras` en `stock_articulos` para auto-match EAN→artículo.
+
+- **Maître IA — recomendador de carta para el comensal (QR) — 06/06/2026**
+  (rama `claude/ai-meal-recommender-3vVLJ`): nueva feature gemela del recomendador de
+  vino, pero para platos. El comensal en `/q/[token]` marca alérgenos (chips) + escribe
+  qué le apetece y la IA recomienda 2-3 platos seguros de la carta, que selecciona y
+  añade al pedido. **Spec** y **plan** en `docs/superpowers/`. Implementado:
+  - `src/lib/carta-recomendar.ts` — motor: **filtro de seguridad de alérgenos EN CÓDIGO**
+    (no se confía al LLM), platos sin alérgenos declarados excluidos por defecto, descarte
+    de ids alucinados (defensa en profundidad), prompt + `callAI`.
+  - `src/app/api/qr/recomendar/route.ts` — GET (config UI) + POST (recomienda), valida
+    token QR sin sesión (como `carta-i18n`).
+  - `src/components/qr/MaitreSheet.tsx` — bottom sheet (chips + antojo + resultados).
+    ⚠ Los `value` de los chips coinciden con la convención REAL de `productos.alergenos`
+    (verificada en BD: minúsculas sin tildes, guion bajo → `lacteos`, `crustaceos`,
+    `frutos_secos`). Si fueran "bonitos" el filtro no casaría.
+  - Owner: módulo `carta_ia` + config `configuracion.maitre_ia` en `ModulosTab` (nombre,
+    tono, nº sugerencias, 3 toggles). Gating como `carta_vinos`.
+  - Verificado: `tsc` 0 errores, `eslint` 0 errores, `next build` OK.
+  - Pendiente/futuro (YAGNI): maridaje de vino en la tarjeta, puerta `/edge` del camarero
+    (motor ya reutilizable), voz, aprendizaje sobre qué sugerencias acaban en comanda.
+
+- **Cobros de grupo: comisión configurable por restaurante + ahorro de costes — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`): se sustituye el 1% fijo (con el que ia.rest
+  **perdía** en todo cobro: 1% < 1,5%+0,25€ de Stripe) por **comisión = % · precio + fijo**
+  (la fija una vez por pago), configurable **por restaurante** desde `/super`. Defaults de
+  plataforma `2% + 0,35€ · mínimo 3€` (`lib/cobros-comision.ts`, con fallback). Smoke
+  `scripts/smoke-cobros-comision.ts`: neto plataforma > 0 en todos los casos (café 10€ pasa de
+  −0,30€ a +0,15€). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-05-cobros-comision-*`.
+  - **Migración aplicada** (`cobros_comision_config`): `comision_pct/comision_fija_eur/minimo_producto_eur`
+    en `cobro_config`; `email_cierre_enviado` en `cobros_grupo`; `recordatorio_enviado_at` en `cobros_grupo_pagos`.
+  - **Checkout**: lee la config; el menú va a precio base y, si se repercute, añade línea
+    "Gastos de gestión"; `application_fee = comisión`. **GET portal** + página pública muestran
+    desglose importe/gestión/total. **Mínimo por producto** validado al crear/editar menús.
+  - **Webhook `stripe-connect`**: registra volumen + comisión en `resumen_cobros_mensual`
+    (`registrar_pago_cobro`) → `/super → Cobro` ya refleja el margen real (antes 0 para Saboga).
+    OJO: los cobros históricos reconciliados a mano NO se backfillean (usaban el 1% viejo).
+  - **`/super → Cobro`**: nuevo editor de comisión por restaurante (`/api/super/cobro-config-comision`).
+  - **Cron nuevo `cobros-eventos`** (`0 * * * *`, en `vercel.json`): (A) email de **cierre** al dueño
+    con pagados + pendientes (`enviarEmailCierreCobros`); (B) **recordatorio** a invitados con el pago
+    a medias antes del límite (`enviarEmailRecordatorioPagoCobro`). Idempotentes por flags.
+  - **v2 aparcado:** cuenta "tab" cobrada al cierre por persona; política de reembolsos (Stripe no
+    devuelve su comisión en un refund). **Pendiente Alberto:** ajustar % / fijo por restaurante en /super.
+
+- **Hardening cobros: purga automática de "pendientes" caducados — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`): tras el fix del bug multi-menú
+  (PR #47, ya en `main`), se añade al cron `cobro-inactividad` (cada 5 min) un borrado
+  de `cobros_grupo_pagos` en estado `pendiente` con `created_at` > 48 h. Es seguro
+  (la sesión de Stripe Checkout caduca a 24 h → no se pierde ningún pago) y evita que
+  los intentos abandonados/fallidos vuelvan a ensuciar el panel del portal. Limpieza
+  manual ya hecha: borrado el duplicado de Carmen; portal en **21 pagados = 420 €** y
+  **3 pendientes = 30 €** (todas de Patricia Vera Toronjo, 677763642, pedido real sin
+  pagar; el cron las purgará a las 48 h si no paga).
+
+- **BUG CRÍTICO cobros de grupo: pedidos multi-menú se pagan pero salen "pendiente" — FIX + reconciliación — 05/06/2026**
+  (rama `claude/price-discrepancy-480-280-bFj1E`, PR #47): Alberto vio ~480 € pero el
+  portal del congreso de Saboga mostraba 280 €. **Causa raíz (verificada contra Stripe
+  LIVE):** el portal está en `modo_seleccion='varias'`. Cuando un invitado elige
+  **varios menús**, el checkout inserta N filas `pendiente`, crea la sesión de Stripe
+  y guarda el `session_id` en las filas en un UPDATE **posterior** que no persiste para
+  multi-ítem → las filas quedan con `stripe_checkout_session = NULL`. El **webhook solo
+  casaba por `stripe_checkout_session`**, así que esos pagos, **aunque se cobran de
+  verdad y el dinero llega a Saboga**, nunca pasaban a `pagado` → el portal infra-
+  reportaba. Casos reales: **Ivan (ivanrexito@gmail.com) pagó 60 € (pi_3TeXsF, 4 jun)**
+  y **Antonio (antoniojesusgarcia3@gmail.com) pagó 80 € (pi_3TeryD, hoy)** → ambos
+  salían "pendiente". (Mi 1ª hipótesis de "QR/mesa" para esos 140 € era ERRÓNEA: son
+  del congreso.) Total real del congreso = **420 €**, no 280.
+  - **FIX de código (committeado):**
+    - **Webhook** `stripe-connect`: ahora casa las filas por **`session.metadata.pago_ids`**
+      (enlace autoritativo que el checkout siempre escribe) además de por `session_id`.
+      Así un pago real **no puede quedar sin registrar** aunque falle el guardado del
+      session_id. (`.or(stripe_checkout_session.eq…,id.in.(…))`.)
+    - **Checkout** `/api/cobros/[slug]/checkout`: `sessions.create` envuelto en try/catch
+      → si Stripe falla, **borra las filas pendiente huérfanas** y loguea el error real
+      (antes quedaban contaminando el portal). El session_id pasa a ser best-effort.
+  - **Reconciliación de datos en vivo (Supabase):** marcadas `pagado` las 6 filas de
+    Ivan (pi_3TeXsF) y las 2 de Antonio (pi_3TeryD) con su `pagado_at` real. Portal
+    ahora: **21 pagados = 420 €**, 4 pendientes = 70 € (Patricia 30 € = posible pedido
+    perdido por el bug, SIN pago en Stripe → conviene que Saboga la contacte antes del
+    límite; + 1 duplicado de Carmen de 40 € que ya pagó por otra vía).
+  - **Panel para organizar (`CobrosTab.tsx`, lo pedido por Alberto):** resumen por menú
+    (unidades + importe de cada concepto pagado, total de unidades + nº de personas) y
+    pagos **agrupados por persona** (cada comprador una vez con sus menús y total).
+    Añadido `cantidad` al select de `/api/owner/cobros`. `tsc` + `next build` verdes.
+  - **No reproducible aquí:** logs de Vercel del 4-5 jun ya rotados, el MCP de Stripe no
+    crea/lee Checkout Sessions y no hay clave Stripe local → **recomendado test real de
+    un pago multi-menú** antes del límite (17:00) para confirmar end-to-end; el webhook
+    por `pago_ids` ya garantiza el registro de cualquier pago que sí complete.
+  - **Económico (aparte):** ia.rest **pierde 5,85 €** (saldo plataforma negativo): el 1 %
+    de comisión no cubre la tarifa por transacción de Stripe en tickets pequeños (10 €).
+  - **Pendiente/decisión:** (a) caducar pendientes viejos por TTL (cron); (b) que
+    `/super → Cobro` (`v_cobro_resumen_super`) refleje los cobros de grupo (hoy 0 para
+    Saboga); (c) revisar economía del 1 %.
+
+- **Sacar Anthropic del camino crítico (cuenta SIN saldo) — 05/06/2026** (PRs #43/#44 + 1 más):
+  el fallback a Anthropic daba "credit balance too low". Objetivo de Alberto: **que no falle nada**.
+  - **#43**: `noFallback=true` por **default** en `callAI`/`callAIVision` (`src/lib/ai-client.ts`) →
+    todo lo que solo usaba Anthropic como red de seguridad pasa a **NIM puro**. Quedan 2 `false`
+    explícitos deliberados (`fuzzy-comanda.ts`, `owner/carta`).
+  - **#44**: migradas a **`callAISearch` (Gemini google_search)** las búsquedas de grupos/locales
+    (`cron/prospeccion-leads`, `cron/completar-locales`, `super/leads`,
+    `super/leads/[id]/locales/buscar`) y a **`callAI`** la generación de `cron/blog-seo`. Cada una
+    degrada a `[]`/aviso (locales/buscar ya no da 500). `callAISearch` fallback profundo → NIM puro.
+  - **PR3 (mismo día)**: (a) **anomalía frontend** `super/page.tsx` Lead Hunter modos *caption* y
+    *email* hacían `fetch` directo a `api.anthropic.com` **sin api-key** (rotos siempre) → ahora
+    `POST /api/super/lead-hunter` modos `caption`/`email` con `callAI`. (b) **Guarda de degradación**
+    en los 3 agentes que SIGUEN en Anthropic (`agentes-seo`, `agente-arquitecto`, `agentes-ai`):
+    muestran aviso limpio "no disponible (sin crédito)" en vez de reventar. (c) Doc
+    **`docs/IA-busqueda-web-y-proveedores.md`** (proveedores, opciones SearXNG/Tavily, vLLM/SGLang)
+    + `GEMINI_API_KEY` añadida a `.env.example`.
+  - **`GEMINI_API_KEY` ya está en Vercel** (la usa `lead-onboarding`). Si algún día se recarga
+    Anthropic, los 3 agentes vuelven solos (la guarda solo salta sin saldo).
 
 - **FIX Apify ingest: "0 de 30" → inserta — 04/06/2026** (PR #35, mergeado):
   con `APIFY_TOKEN` ya puesto en Vercel, "Lanzar una vuelta" devolvía

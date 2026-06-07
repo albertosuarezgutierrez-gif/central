@@ -3,10 +3,8 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
-import { callAI } from '@/lib/ai-client'
+import { callAI, callAISearch, cleanJSON } from '@/lib/ai-client'
 import { tgAlert, tgEstudio } from '@/lib/telegram'
-import { cleanJSON } from '@/lib/ai-client'
-import Anthropic from '@anthropic-ai/sdk'
 
 // ── Busca locales del grupo en internet y los inserta en leads_locales ────────
 async function buscarEInsertarLocales(
@@ -14,39 +12,14 @@ async function buscarEInsertarLocales(
   nombreGrupo: string,
   supabase: ReturnType<typeof createServerClient>
 ): Promise<void> {
-  const key = process.env.ANTHROPIC_API_KEY
-  if (!key) return
-
   try {
-    const client = new Anthropic({ apiKey: key })
-    const response = await client.messages.create({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1200,
-      tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
-      system: `Investigador de hostelería española. Responde SOLO JSON válido, sin backticks.`,
-      messages: [{ role: 'user', content: `Busca todos los locales (restaurantes, bares, haciendas, etc.) del grupo hostelero "${nombreGrupo}" en España. Devuelve SOLO JSON array: [{"nombre":"Local","ciudad":"Ciudad","tipo":"restaurante","aforo":null,"fuente":"URL","verificado":true}]. Si no encuentras nada con seguridad, devuelve [].` }],
-    })
-
-    let current = response
-    while (current.stop_reason === 'tool_use') {
-      const toolUses = current.content.filter(b => b.type === 'tool_use')
-      if (!toolUses.length) break
-      const followUp = await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
-        max_tokens: 1200,
-        tools: [{ type: 'web_search_20250305' as const, name: 'web_search' }],
-        system: `Investigador de hostelería española. Responde SOLO JSON válido, sin backticks.`,
-        messages: [
-          { role: 'user', content: `Busca locales del grupo "${nombreGrupo}" en España. SOLO JSON array.` },
-          { role: 'assistant', content: current.content },
-          { role: 'user', content: toolUses.map(b => b.type === 'tool_use' ? ({ type: 'tool_result' as const, tool_use_id: b.id, content: 'ok' }) : null).filter(Boolean) as Anthropic.Messages.ToolResultBlockParam[] },
-        ],
-      })
-      current = followUp
-    }
-
-    const texto = current.content.filter(b => b.type === 'text').map(b => b.type === 'text' ? b.text : '').join('')
-    const match = texto.replace(/```json|```/g, '').trim().match(/\[[\s\S]*\]/)
+    const texto = await callAISearch(
+      `Investigador de hostelería española. Responde SOLO JSON válido, sin backticks.`,
+      `Busca todos los locales (restaurantes, bares, haciendas, etc.) del grupo hostelero "${nombreGrupo}" en España. Devuelve SOLO JSON array: [{"nombre":"Local","ciudad":"Ciudad","tipo":"restaurante","aforo":null,"fuente":"URL","verificado":true}]. Si no encuentras nada con seguridad, devuelve [].`,
+      1200,
+      45_000
+    )
+    const match = cleanJSON(texto).match(/\[[\s\S]*\]/)
     if (!match) return
     const locales: { nombre: string; ciudad: string | null; tipo: string; aforo: number | null; fuente: string; verificado: boolean }[] = JSON.parse(match[0])
     const validos = locales.filter(l => l.verificado && l.nombre?.trim())
@@ -182,7 +155,7 @@ Responde SOLO JSON válido sin markdown.`,
 
 JSON exacto:
 {"resumen_negocio":"2-3 frases","tipo_negocio":"bar|restaurante|cafeteria|grupo|catering","ciudad":"ciudad","num_locales_estimado":1,"num_empleados_estimado":8,"ticket_medio_estimado":25,"tpv_actual":"TPV o Desconocido","coste_tpv_actual_mes":0,"pain_points":["p1","p2","p3"],"oportunidades":["o1","o2"],"modulos_criticos":["voz","kds"],"modulos_secundarios":["almacen"],"mrr_estimado":150,"ahorro_mensual_estimado":200,"argumento_principal":"argumento clave en 1 frase","objeciones_probables":["obj1"],"resolucion_objeciones":{"obj1":"resp"},"tono_propuesta":"profesional","nivel_urgencia":"media","puntuacion_lead":70}`,
-    1500, 30000
+    1500, 30000, true
   )
 
   let estudio: Record<string, unknown> = {}

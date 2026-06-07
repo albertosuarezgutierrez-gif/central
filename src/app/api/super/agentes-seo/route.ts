@@ -212,7 +212,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
   const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY no configurada' }, { status: 500 })
+  const AVISO_ANTHROPIC = '⚠️ Esta función usa búsqueda web/herramientas vía Anthropic, que ahora mismo no está disponible (sin crédito). El resto del panel funciona con normalidad.'
+  if (!apiKey) return NextResponse.json({ error: AVISO_ANTHROPIC }, { status: 500 })
 
   try {
     const { messages } = await req.json()
@@ -281,6 +282,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ text: finalText || 'Sin respuesta.', toolLog })
   } catch (err: any) {
     console.error('[agentes-seo]', err)
-    return NextResponse.json({ error: err.message }, { status: 500 })
+    const m = String(err?.message || err)
+    const sinSaldo = /credit balance|too low|insufficient|x-api-key|authentication|\b401\b|\b403\b/i.test(m)
+    return NextResponse.json({ error: sinSaldo ? AVISO_ANTHROPIC : m }, { status: 500 })
   }
 }

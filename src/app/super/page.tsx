@@ -980,6 +980,74 @@ function TabIATraining({ trainingStats, C, SE, SN, SM }: { trainingStats: any; C
   )
 }
 
+// ── Editor de comisión por restaurante (cobros de grupo) ──────
+function ComisionEditor({ session, C, SN, SM }: { session: any; C: any; SN: string; SM: string }) {
+  const [rows, setRows] = useState<any[]>([])
+  const [defaults, setDefaults] = useState<any>({ pct: 2, fija: 0.35, minimo: 3 })
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState<string | null>(null)
+  const [okMsg, setOkMsg] = useState<string | null>(null)
+  const tok = () => (typeof window !== 'undefined' ? localStorage.getItem('ia_rest_session') : '') || ''
+
+  useEffect(() => {
+    if (!session) return
+    fetch('/api/super/cobro-config-comision', { headers: { 'x-ia-session': tok() } })
+      .then(r => r.json())
+      .then(d => {
+        setRows((d.restaurantes || []).map((r: any) => ({
+          ...r,
+          comision_pct: r.comision_pct ?? '',
+          comision_fija_eur: r.comision_fija_eur ?? '',
+          minimo_producto_eur: r.minimo_producto_eur ?? '',
+        })))
+        if (d.defaults) setDefaults(d.defaults)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [session])
+
+  const upd = (id: string, k: string, v: string) => setRows(rs => rs.map(r => r.id === id ? { ...r, [k]: v } : r))
+  const guardar = async (r: any) => {
+    setSaving(r.id); setOkMsg(null)
+    const res = await fetch('/api/super/cobro-config-comision', {
+      method: 'POST', headers: { 'x-ia-session': tok(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ restaurante_id: r.id, comision_pct: r.comision_pct, comision_fija_eur: r.comision_fija_eur, minimo_producto_eur: r.minimo_producto_eur })
+    })
+    setSaving(null)
+    if (res.ok) { setOkMsg(r.id); setTimeout(() => setOkMsg(null), 1500) }
+  }
+
+  if (loading) return null
+  const inp: any = { width: 64, padding: '6px 8px', background: C.dark, border: `1px solid ${C.dkRule}`, borderRadius: 8, color: C.dkFg, fontFamily: SM, fontSize: 12, outline: 'none' }
+
+  return (
+    <div style={{ marginBottom: 36 }}>
+      <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, letterSpacing: '.1em', marginBottom: 6 }}>COMISIÓN POR RESTAURANTE · COBROS DE GRUPO</div>
+      <div style={{ fontFamily: SN, fontSize: 11, color: C.dkFg3, marginBottom: 14 }}>
+        Comisión = % · precio + fijo (una vez por pago). Vacío = default de plataforma
+        ({defaults.pct}% + {Number(defaults.fija).toFixed(2)}€ · mínimo {Number(defaults.minimo).toFixed(2)}€).
+      </div>
+      <div style={{ background: C.dark2, borderRadius: 14, border: `1px solid ${C.dkRule}`, overflow: 'hidden' }}>
+        {rows.map((r: any, i: number) => (
+          <div key={r.id} style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '12px 20px', borderBottom: i < rows.length - 1 ? `1px solid ${C.dkRule}` : 'none' }}>
+            <div style={{ flex: '1 1 150px', fontFamily: SN, fontSize: 13, fontWeight: 600, color: C.dkFg }}>{r.nombre}</div>
+            <label style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, display: 'flex', alignItems: 'center', gap: 4 }}>%
+              <input style={inp} type="number" step="0.1" min="0" placeholder={String(defaults.pct)} value={r.comision_pct} onChange={e => upd(r.id, 'comision_pct', e.target.value)} /></label>
+            <label style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, display: 'flex', alignItems: 'center', gap: 4 }}>Fijo €
+              <input style={inp} type="number" step="0.05" min="0" placeholder={String(defaults.fija)} value={r.comision_fija_eur} onChange={e => upd(r.id, 'comision_fija_eur', e.target.value)} /></label>
+            <label style={{ fontFamily: SM, fontSize: 10, color: C.dkFg3, display: 'flex', alignItems: 'center', gap: 4 }}>Mín €
+              <input style={inp} type="number" step="0.5" min="0" placeholder={String(defaults.minimo)} value={r.minimo_producto_eur} onChange={e => upd(r.id, 'minimo_producto_eur', e.target.value)} /></label>
+            <button onClick={() => guardar(r)} disabled={saving === r.id}
+              style={{ padding: '6px 14px', background: okMsg === r.id ? C.green : C.red, color: '#fff', border: 'none', borderRadius: 8, fontFamily: SN, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+              {saving === r.id ? '...' : okMsg === r.id ? '✓ Guardado' : 'Guardar'}
+            </button>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ── Panel financiero ia.rest cobro (super admin) ──────────────
 function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; SN: string; SM: string }) {
   const [data, setData] = useState<any>(null)
@@ -1008,14 +1076,14 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
       {/* Header */}
       <div style={{ marginBottom: 32 }}>
         <div style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, color: C.ink, fontStyle: 'italic', marginBottom: 4 }}>ia.rest cobro</div>
-        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Panel financiero · Comisiones QR de la plataforma</div>
+        <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Panel financiero · Comisiones de la plataforma (QR + cobros de grupo)</div>
       </div>
 
       {/* KPIs globales */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 36 }}>
         {[
           { label: 'Volumen mes', value: fmtK(totales.volumen_mes), sub: mesActual, color: C.dkFg },
-          { label: 'Comisión mes', value: fmt(totales.comision_mes), sub: '0,5% de ' + fmtK(totales.volumen_mes), color: C.green },
+          { label: 'Comisión mes', value: fmt(totales.comision_mes), sub: 'ingreso ia.rest', color: C.green },
           { label: 'Volumen año', value: fmtK(totales.volumen_anio), sub: new Date().getFullYear().toString(), color: C.dkFg },
           { label: 'Comisión año', value: fmt(totales.comision_anio), sub: 'acumulado ' + new Date().getFullYear(), color: C.green },
           { label: 'Transacciones', value: (totales.txn_mes || 0).toString(), sub: 'este mes', color: C.blue },
@@ -1062,6 +1130,9 @@ function Cobro({ session, C, SE, SN, SM }: { session: any; C: any; SE: string; S
           ))}
         </div>
       </div>
+
+      {/* Editor de comisión por restaurante */}
+      <ComisionEditor session={session} C={C} SN={SN} SM={SM} />
 
       {/* Histórico global últimos 12 meses */}
       {historico && historico.length > 0 && (
@@ -1111,12 +1182,12 @@ const EVENTO_EMOJIS = ['💬','✉️','📞','📅','🤝','💡','⚠️','✅
 interface LeadEvento { tipo: string; texto: string; fecha: string }
 interface Lead {
   id: string; nombre: string; restaurante: string; telefono: string; email?: string
-  estado: EstadoLead; notas: string | null; created_at: string
+  estado: EstadoLead; estado_pipeline?: string | null; notas: string | null; created_at: string
   tipo: 'online' | 'personal'; locales?: string; tpv?: string; contacto?: string
   eventos: LeadEvento[]
   propuesta_slug?: string; landing_slug?: string; landing_vista_at?: string; landing_vistas?: number
   propuesta_url?: string; propuesta_vista_at?: string
-  ciudad?: string; empresa?: string
+  ciudad?: string; empresa?: string; origen?: string | null
   puntuacion?: number | null
   ultima_actividad_at?: string | null
   siguiente_contacto_texto?: string | null; siguiente_contacto_at?: string | null
@@ -1251,6 +1322,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const [eventoTipo, setEventoTipo] = useState<Record<string, string>>({})
   const [vistaKanban, setVistaKanban] = useState(true)
   const [dragOver, setDragOver] = useState<string | null>(null)
+  const [busqueda, setBusqueda] = useState('')
+  const [filtroOrigen, setFiltroOrigen] = useState<'todos'|'web'|'apify'|'otros'>('todos')
   const [form, setForm] = useState({ nombre: '', restaurante: '', telefono: '', email: '', locales: '', tpv: '', contacto: '', notas: '' })
   const [saving, setSaving] = useState(false)
 
@@ -1302,8 +1375,25 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
   const fmtFecha = (f: string) => f
 
-  const personales = leads.filter(l => l.tipo === 'personal')
-  const online = leads.filter(l => l.tipo !== 'personal')
+  // ── Búsqueda + filtros + priorización (para navegar con muchos leads) ──────
+  const _q = busqueda.trim().toLowerCase()
+  const _norm = (s?: string | null) => (s || '').toLowerCase()
+  const leadsVisibles = leads.filter(l => {
+    if (filtroOrigen === 'web'   && l.origen !== 'inbound_web') return false
+    if (filtroOrigen === 'apify' && l.origen !== 'apify_google_places') return false
+    if (filtroOrigen === 'otros' && (l.origen === 'inbound_web' || l.origen === 'apify_google_places')) return false
+    if (!_q) return true
+    return [l.restaurante, l.nombre, l.empresa, l.ciudad, l.email, l.telefono].some(v => _norm(v).includes(_q))
+  })
+  // Calientes (web) primero, luego mayor puntuación, luego más recientes.
+  const ordenar = (arr: Lead[]) => [...arr].sort((a, b) =>
+    (a.origen === 'inbound_web' ? 0 : 1) - (b.origen === 'inbound_web' ? 0 : 1)
+    || (b.puntuacion ?? -1) - (a.puntuacion ?? -1)
+    || (new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  )
+  const TOPE_COLUMNA = 60 // evita pintar cientos de cards en una columna
+  const personales = ordenar(leadsVisibles.filter(l => l.tipo === 'personal'))
+  const online = ordenar(leadsVisibles.filter(l => l.tipo !== 'personal'))
 
   const CardLead = ({ lead }: { lead: Lead }) => {
     const activo = seleccionado?.id === lead.id
@@ -1348,6 +1438,21 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             <span style={{ fontSize: 9, fontWeight: 700, color: ESTADO_COLOR[lead.estado], background: ESTADO_COLOR[lead.estado] + '22', borderRadius: 3, padding: '2px 6px', textTransform: 'uppercase' }}>
               {lead.estado}
             </span>
+            {/* Sub-fase del bot (estado_pipeline) — solo las que aportan info */}
+            {(() => {
+              const PIPE: Record<string, string> = {
+                prospecto_ia: '🤖 prospecto IA', estudiando: '🔍 investigando',
+                esperando_ok: '⏳ esperando OK', propuesta_lista: '📄 propuesta lista',
+                reunion_agendada: '📅 reunión',
+              }
+              const lbl = lead.estado_pipeline ? PIPE[lead.estado_pipeline] : null
+              return lbl ? (
+                <span style={{ fontSize: 9, color: C.amber, background: C.amber + '22', borderRadius: 3, padding: '2px 6px' }}>{lbl}</span>
+              ) : null
+            })()}
+            {lead.origen === 'inbound_web' && (
+              <span style={{ fontSize: 9, fontWeight: 700, color: C.green, background: C.green + '22', borderRadius: 3, padding: '2px 6px' }}>🔥 web</span>
+            )}
             {lead.puntuacion != null && (
               <span style={{ fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 3, padding: '2px 5px' }}>
                 ★ {lead.puntuacion}
@@ -1391,7 +1496,8 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
   const KanbanView = () => (
     <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 8, alignItems: 'flex-start', WebkitOverflowScrolling: 'touch' as any, marginLeft: -4, marginRight: -4, paddingLeft: 4 }}>
       {COLUMNAS.map(col => {
-        const colLeads = leads.filter(l => l.estado === col.key)
+        const colLeadsAll = ordenar(leadsVisibles.filter(l => l.estado === col.key))
+        const colLeads = colLeadsAll.slice(0, TOPE_COLUMNA)
         const isOver = dragOver === col.key
         return (
           <div
@@ -1413,7 +1519,7 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                 {col.label}
               </span>
               <span style={{ fontFamily: SM, fontSize: 10, color: C.ink3, background: C.bg3, borderRadius: 4, padding: '1px 6px', fontWeight: 700 }}>
-                {colLeads.length}
+                {colLeadsAll.length}
               </span>
             </div>
 
@@ -1478,6 +1584,11 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
                   </div>
                 )
               })}
+              {colLeadsAll.length > colLeads.length && (
+                <div style={{ padding: '6px 8px', textAlign: 'center', fontFamily: SM, fontSize: 10, color: C.ink3 }}>
+                  +{colLeadsAll.length - colLeads.length} más · usa el buscador
+                </div>
+              )}
             </div>
           </div>
         )
@@ -1515,6 +1626,35 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
         </div>
       </div>
 
+      {/* Buscador + filtros por origen (para navegar con muchos leads) */}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', marginBottom: 16 }}>
+        <input
+          value={busqueda}
+          onChange={e => setBusqueda(e.target.value)}
+          placeholder="🔍 Buscar por nombre, ciudad, email, teléfono…"
+          style={{ flex: '1 1 240px', minWidth: 0, background: C.bg2, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '9px 12px', color: C.ink, fontFamily: SN, fontSize: 13, outline: 'none' }}
+        />
+        <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+          {([
+            { k: 'todos', label: 'Todos' },
+            { k: 'web',   label: '🔥 Web' },
+            { k: 'apify', label: '🤖 Apify' },
+            { k: 'otros', label: 'Otros' },
+          ] as { k: 'todos'|'web'|'apify'|'otros'; label: string }[]).map(f => (
+            <button key={f.k} onClick={() => setFiltroOrigen(f.k)}
+              style={{ padding: '8px 12px', borderRadius: 8, cursor: 'pointer', fontFamily: SM, fontSize: 12, fontWeight: 600,
+                border: `1px solid ${filtroOrigen === f.k ? C.red : C.rule}`,
+                background: filtroOrigen === f.k ? C.red : C.bg2,
+                color: filtroOrigen === f.k ? '#fff' : C.ink3 }}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+        {(busqueda || filtroOrigen !== 'todos') && (
+          <span style={{ fontFamily: SM, fontSize: 12, color: C.ink3 }}>{leadsVisibles.length} resultado{leadsVisibles.length === 1 ? '' : 's'}</span>
+        )}
+      </div>
+
       <LandingStatsCard C={C} SN={SN} SM={SM} sh={sh} />
 
       <WebVisitsCard C={C} SN={SN} SM={SM} sh={sh} />
@@ -1549,8 +1689,11 @@ function LeadsTab({ C, SN, SM }: { C: any; SE: string; SN: string; SM: string })
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {online.length === 0
                 ? <div style={{ color: C.ink3, fontSize: 12, fontStyle: 'italic' }}>Sin leads online</div>
-                : online.map(l => <CardLead key={l.id} lead={l} />)
+                : online.slice(0, 80).map(l => <CardLead key={l.id} lead={l} />)
               }
+              {online.length > 80 && (
+                <div style={{ color: C.ink3, fontSize: 11, fontFamily: SM, padding: '6px 2px' }}>+{online.length - 80} más · usa el buscador o los filtros</div>
+              )}
             </div>
           </div>
         </div>
@@ -1783,17 +1926,10 @@ function LeadHunterPanel({ C, SN, SM, onLeadCreado, sh }: { C: any; SN: string; 
     if (!caption.trim()) return
     setLoading(true); setResult(null); setAnalysis(null); setGuardado(false); setPropuestaUrl(null); setShowEmail(false)
     try {
-      const prompt = `Eres un asistente de ventas B2B para ia.rest, SaaS de comandas por voz para restaurantes en España.
-Analiza este post de Instagram/TikTok.${ciudad ? ` Ciudad probable: ${ciudad}.` : ''}
-POST: ${caption}
-Responde SOLO con JSON válido, sin markdown:
-{"es_lead":true,"tipo":"apertura|queja_tpv|reforma|otro","nombre_local":"...","ciudad":"...","tipo_cocina":"...","tamaño_estimado":"pequeño|mediano|grande","tpv_mencionado":"Ágora|Glop|Hiopos|Revo|null","urgencia":"alta|media|baja","notas":"...","dm_sugerido":"DM máx 200 chars, tono cercano, termina con pregunta, sin links, menciona algo específico"}`
-      const r = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 800, messages: [{ role: 'user', content: prompt }] })
-      })
+      const r = await fetch('/api/super/lead-hunter', { method: 'POST', headers: sh(), body: JSON.stringify({ caption, ciudad }) })
       const data = await r.json()
-      const parsed = JSON.parse(data.content?.[0]?.text?.replace(/```json|```/g,'').trim() ?? '{}')
+      if (!data.ok) { setResult({ error: data.error || 'No disponible' }); setLoading(false); return }
+      const parsed = data.result
       setResult(parsed)
       if (parsed.es_lead) generarPropuesta(parsed, null)
     } catch(e: any) { setResult({ error: e.message }) }
@@ -1806,7 +1942,8 @@ Responde SOLO con JSON válido, sin markdown:
     setLoading(true); setResult(null); setAnalysis(null); setGuardado(false); setPropuestaUrl(null); setShowEmail(false)
     try {
       const r = await fetch('/api/super/lead-hunter', { method: 'POST', headers: sh(), body: JSON.stringify({ url: urlNegocio }) })
-      const d = await r.json()
+      let d: any = {}
+      try { d = await r.json() } catch { d = { ok: false, error: 'El análisis tardó demasiado o el servidor falló. Reinténtalo en unos segundos.' } }
       if (!d.ok) { setAnalysis({ error: d.error }); setLoading(false); return }
       setAnalysis(d.analysis)
       generarPropuesta(null, d.analysis)
@@ -1887,36 +2024,21 @@ Responde SOLO con JSON válido, sin markdown:
     const ciudad_ = biz?.ciudad || post?.ciudad || ciudad || ''
     const senial = post?.tipo || 'apertura'
 
-    const prompt = `Eres Alberto Suárez, fundador de ia.rest (comandas por voz para restaurantes en España).
-Escribe un email comercial corto y personalizado para este prospecto.
-
-Info del negocio:
-- Nombre: ${nombre}
-- Ciudad: ${ciudad_}
-- Señal detectada: ${senial}
-- TPV actual: ${biz?.tpv_actual || post?.tpv_mencionado || 'desconocido'}
-- Descripción: ${biz?.descripcion_negocio || post?.notas || ''}
-- Nombre contacto: ${contacto}
-
-Reglas:
-- Asunto: corto, específico, sin spam
-- Cuerpo: máx 150 palabras
-- Mencionar algo específico del negocio
-- Un único CTA: ver propuesta en el link
-- Firma: Alberto · ia.rest · hola@iarest.es
-- Tono: directo, sin florituras, B2B España
-
-Formato de respuesta:
-ASUNTO: [asunto]
----
-[cuerpo del email]`
-
-    const r = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ model: 'claude-sonnet-4-20250514', max_tokens: 400, messages: [{ role: 'user', content: prompt }] })
-    })
-    const d = await r.json()
-    setEmailContent(d.content?.[0]?.text?.trim() ?? '')
+    try {
+      const r = await fetch('/api/super/lead-hunter', {
+        method: 'POST', headers: sh(),
+        body: JSON.stringify({ modo: 'email', lead: {
+          nombre, ciudad: ciudad_, senial,
+          tpv: biz?.tpv_actual || post?.tpv_mencionado || 'desconocido',
+          descripcion: biz?.descripcion_negocio || post?.notas || '',
+          contacto,
+        } }),
+      })
+      const d = await r.json()
+      setEmailContent(d.ok ? (d.email || '') : `No se pudo generar el email: ${d.error || 'no disponible'}`)
+    } catch (e: any) {
+      setEmailContent(`No se pudo generar el email: ${e.message}`)
+    }
   }
 
   const copiarEmail = () => {
