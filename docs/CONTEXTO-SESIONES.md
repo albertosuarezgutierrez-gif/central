@@ -76,6 +76,11 @@
         Ajustados tipos locales acoplados (ComandaInfo/CuentaParams/ReglaActiva/...) + sus lecturas
         para consistencia (tsc fue la red: 49 errores → 0). Revertidas 4 claves que eran sesión/petición
         (notifyError→Edge Function `restaurante_id`, tipos de `session` en turnos/*). tsc + build exit 0.
+      - ⚠️ **HALLAZGO (riesgo lotes 4-5)**: el cliente Supabase es **NO tipado** (`createClient` sin
+        `<Database>`, no hay tipos generados en `src/types`). Consecuencia: migrar un `.select` y dejarse
+        una lectura `row.restaurante_id` → `undefined` SILENCIOSO que **ni `tsc` ni `next build` cazan**.
+        Por eso los lotes 4-5 NO se pueden hacer con sed+build; requieren revisión por query (o generar
+        tipos `Database` antes, lo que convertiría tsc en red de seguridad). NO bloquean nada (trigger).
       - **⏭️ Lotes pendientes (los DELICADOS, NO bloquean hasta Fase 3 porque el trigger rellena
         `restaurante_id` desde `local_id` igualmente):**
         1. **Selects + lecturas acopladas**: quedan `.select('...restaurante_id...')` y accesos a miembro
