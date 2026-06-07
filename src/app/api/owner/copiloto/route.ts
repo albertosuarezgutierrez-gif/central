@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       .eq('local_id', restauranteId).gte('created_at', hace30.toISOString()),
     supabase.from('comanda_items').select('nombre, cantidad')
       .eq('local_id', restauranteId).gte('created_at', hace30.toISOString()).limit(200),
-    supabase.from('almacen').select('producto_id').eq('local_id', restauranteId)
+    supabase.from('almacen').select('producto_id').eq('restaurante_id', restauranteId)
       .filter('stock_actual', 'lte', 'stock_minimo').gt('stock_minimo', 0),
     supabase.from('turnos').select('camarero_id').eq('local_id', restauranteId).is('salida_at', null),
   ])

@@ -77,7 +77,7 @@ async function analisisDirecto(
   const { data: escandallos } = await supabase
     .from('v_escandallos')
     .select('producto_id, margen_pct, margen_eur, coste_por_racion')
-    .eq('local_id', rid)
+    .eq('restaurante_id', rid)
     .eq('activo', true)
 
   const escandalloMap: Record<string, { margen_pct: number; margen_eur: number }> = {}

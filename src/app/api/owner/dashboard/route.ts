@@ -49,7 +49,7 @@ export async function GET(req: NextRequest) {
     // Elaboraciones próximas a caducar
     supabase.from('v_elaboraciones_activas')
       .select('id, nombre, lote, fecha_caducidad, horas_restantes, urgencia')
-      .eq('local_id', rid)
+      .eq('restaurante_id', rid)
       .in('urgencia', ['critica', 'hoy'])
       .order('fecha_caducidad', { ascending: true }).limit(5),
 

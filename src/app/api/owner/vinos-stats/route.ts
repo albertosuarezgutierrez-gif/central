@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await supabase
     .from('v_vinos_stats')
     .select('*')
-    .eq('local_id', rid)
+    .eq('restaurante_id', rid)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

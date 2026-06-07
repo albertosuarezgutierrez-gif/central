@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
   const { data: articulos } = await supabase
     .from('almacen_articulos')
     .select('id, nombre, unidad_compra')
-    .eq('local_id', restauranteId)
+    .eq('restaurante_id', restauranteId)
     .order('nombre')
 
   if (!articulos?.length) {
