@@ -1,7 +1,8 @@
 'use client'
 import { useEffect, useState } from 'react'
+import type { TipoNegocio } from '@/lib/negocio'
 
-export type Rol = 'super_admin' | 'owner' | 'jefe_sala' | 'camarero' | 'cocina' | 'running' | 'coordinador_eventos'
+export type Rol = 'super_admin' | 'owner' | 'jefe_sala' | 'camarero' | 'cocina' | 'running' | 'coordinador_eventos' | 'tienda'
 
 export interface Session {
   id: string
@@ -13,6 +14,7 @@ export interface Session {
   seccion_id?: string | null
   puede_comandar?: boolean
   modulos_gestion?: string[]
+  tipo_negocio?: TipoNegocio   // vertical del local (motor de verticales); opcional hasta cablear auth
 }
 
 const REDIRECT: Record<Rol, string> = {
@@ -23,6 +25,7 @@ const REDIRECT: Record<Rol, string> = {
   cocina:               '/kds',
   running:              '/running',
   coordinador_eventos:  '/eventos',
+  tienda:               '/tienda',
 }
 
 // Lee sesión de localStorage de forma síncrona (sin flicker)

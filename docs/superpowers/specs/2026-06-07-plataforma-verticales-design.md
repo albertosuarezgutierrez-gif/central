@@ -197,15 +197,21 @@ La venta de tienda es una `venta`/comanda con `tipo='tienda'`, `mesa_id=null`, n
 cierra `'cerrada'` en el mismo acto (no pasa por KDS). Reutiliza cobro/VeriFactu/caja/ticket sin
 tocarlos (precedente sin mesa: `storefront/pedido-operador`; `cerrar` ya hace `if (comanda.mesa_id)`).
 
-Migración `supabase/migrations/20260607_modulo_tienda.sql` (idempotente, español):
-- `productos`: `codigo_barras TEXT`, `es_tienda BOOLEAN`, `stock_articulo_id UUID`; índice único
-  parcial `(local_id, codigo_barras) WHERE codigo_barras IS NOT NULL`.
+**CORRECCIÓN tras leer el esquema REAL del remoto (07/06):** `productos` YA tiene
+`ean_codigo` (código de barras), `venta_por_peso`, `precio_por_kg` y stock directo
+(`stock_actual`, `stock_minimo`, `unidad_stock`, `modo_reposicion`). Y `comandas` YA tiene
+columna `tipo` (texto libre, SIN CHECK). Las exploraciones previas (basadas en migraciones
+del repo) no las vieron porque viven solo en el remoto. → Retail necesita MUCHO menos.
+
+Migración `supabase/migrations/20260607_modulo_tienda.sql` (idempotente, español) — APLICADA:
+- `productos.es_tienda BOOLEAN default false` (para `modo_catalogo='separado'`).
+- Índice `idx_productos_ean` sobre `(restaurante_id, ean_codigo)` (NO único: puede haber EAN
+  repetidos hoy). Se reutiliza `ean_codigo` existente como código de barras.
 - `config_tienda` (1/local, RLS): `modo_catalogo`(`mismo|separado`), `barcode_activo`,
   `barcode_modo`(`usb|camara|ambos`), `bascula_activa`, `solo_tactil`, `descontar_stock`.
-- Trigger `trg_descuento_stock_tienda` (AFTER INSERT ON `comanda_items`, condicionado a
-  `tipo='tienda'`): si producto tiene `stock_articulo_id`, baja `stock_articulos` + registra
-  `stock_movimientos` (verificar enum `tipo`: `entrada`/`ajuste`; si no hay `salida`, usar
-  `ajuste` negativo).
+- **SIN trigger**: el descuento de stock en venta se hace en CÓDIGO (`/api/tienda/venta`,
+  decrementa `productos.stock_actual`), NO en trigger sobre `comanda_items` (hot-path de TODO
+  el sistema → riesgo alto). La venta de tienda usa `comandas.tipo='tienda'` (ya existe).
 
 Rol+pantalla: rol `tienda` en `useAuth.ts`, `login/page.tsx`, `RRHHTab.tsx`, `help-prompts.ts`.
 `src/app/tienda/page.tsx` (`useAuth(['tienda'])`): buscador+grid+carrito; input enfocado capta
