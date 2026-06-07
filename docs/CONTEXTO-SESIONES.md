@@ -45,8 +45,8 @@
     comanda fantasma**; el `if (mesa)` queda restringido a comanda/cuenta/marchar (flujo de
     comanda/cuenta intacto).
   - **Verificado:** `tsc --noEmit` 0 · `npm run qa` 0 errores · `next build` OK · test 14/14.
-  - **PR #74 MERGEADO a `main`** (squash `667d52d`); luego **PR-3** sobre la misma rama remató `marchar`.
-  - **PR-3 (marchar) — ✅ HECHO:** `marchar` por voz ahora **reusa la comanda activa** de la mesa
+  - **PR #74 MERGEADO a `main`** (squash `667d52d`); luego **PR #75** remató `marchar`.
+  - **PR #75 (marchar) — ✅ HECHO:** `marchar` por voz ahora **reusa la comanda activa** de la mesa
     (estado en_cocina/nueva/lista) en vez de crear una comanda nueva fantasma; **no inserta items**
     (solo marca los existentes como `listo` vía MARCHAR GRANULAR) y se protege si la mesa no tiene
     comanda activa (`comanda` null → no hace nada). `tsc` 0 · `next build` OK · test 14/14.
