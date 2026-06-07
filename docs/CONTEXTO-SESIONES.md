@@ -16,6 +16,46 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **Auditoría del pipeline de comandas por voz + fixes — 07/06/2026**
+  (rama `claude/minimax-voice-commands-WjMkA`, **PR #74 draft**): nació de una consulta de
+  Alberto sobre si **MiniMax** mejoraría las comandas por voz. Respuesta: **no para el ASR**
+  (Groq Whisper turbo ya es óptimo en latencia/precisión; su prompt ya inyecta carta+motos+
+  vinos+personal; MiniMax usa Whisper por debajo) — MiniMax solo aportaría **TTS premium**
+  como feature nueva, no mejora la transcripción. De ahí, auditoría completa del pipeline
+  (ear → transcribe → brain-router → brain-patron/brain-cache → brain → ai-client).
+  - **Veredicto:** arquitectura sólida (idempotencia 2 capas, anti-spoofing camarero_id,
+    ruido multicapa, fuzzy + few-shot por turno, fallbacks). Pero se hallaron **2 funciones
+    de voz ROTAS** + bugs de la capa rápida, **confirmados empíricamente en BD prod (solo lectura)**:
+    - `aviso`/mensaje por voz **no hacía nada** (`mensajes_turno` tipo voz = **0 filas histórico**)
+      y `86`/agotado por voz **no hacía nada** (`productos_86` = **0 filas**): sus handlers
+      estaban anidados en `if (mesa)` de `transcribe/route.ts`, pero esos comandos no llevan
+      mesa resoluble (aviso→cocina/barra/''; 86→'T00') → `mesa=null` → bloque saltado.
+    - **BUG capa 8b** (`brain-router.ts`): leía `(cache as any).mesas`, campo inexistente →
+      el prompt del 8b listaba MESAS vacío → escalaba al 70b de más.
+    - Comandas **fantasma** (`comandas` tipo `aviso`=2 filas) + `recomendacion_vino` no está
+      en el CHECK de `comandas.tipo` (insert lanzaría error si llegara con mesa).
+    - **BUG-2 DESCARTADO:** un regex de `parseJSON` parecía pasar guiones a espacios; `cat -A`
+      reveló que es `/[\x00-\x1f\x7f]/g` (borra caracteres de control) → **ya correcto**, no se tocó.
+  - **PR-1 (commit `de39870`, bajo riesgo):** brain-router (el 8b ahora recibe **zonas**:
+    prefijos+ejemplos); brain-cache (fallback de zonas sin colisión, **S=salon/T=terraza/B=barra**);
+    ear (var `start` muerta); transcribe (eliminada llamada RPC `es_primera_comanda` desperdiciada);
+    **nuevo `scripts/test-brain-patron.ts`** (test de regresión determinista, 14 casos, sin BD/red).
+  - **PR-2 (commit `77307db`, refactor del camino caliente):** `aviso` y `86` **sacados de
+    `if (mesa)`** → ahora se registran siempre; `aviso`/`86`/`recomendacion_vino` ya **no crean
+    comanda fantasma**; el `if (mesa)` queda restringido a comanda/cuenta/marchar (flujo de
+    comanda/cuenta intacto).
+  - **Verificado:** `tsc --noEmit` 0 · `npm run qa` 0 errores · `next build` OK · test 14/14.
+  - **Pendiente:**
+    - **`marchar` por voz** se dejó **igual a propósito** (crea comanda nueva en vez de reusar la
+      activa → fantasma; pero 0 filas reales → sin uso, y su refactor arriesga el camino que
+      funciona). Queda para un cambio dedicado con pruebas (reusar comanda activa + no insertar items).
+    - Opcional: añadir `recomendacion_vino` al CHECK de `comandas.tipo` (hoy mitigado porque ya
+      no se inserta ese tipo).
+    - **Tras merge+deploy:** re-consultar BD para confirmar que aparecen filas nuevas en
+      `mensajes_turno` (voz) y `productos_86` al usar aviso/86 (cierre del loop empírico).
+    - Idea futura (no urgente): capa de **TTS** (confirmación hablada al camarero / avisos KDS);
+      empezar con Web Speech API gratis, MiniMax solo si se quiere voz de marca premium.
+
 - **Agente de ventas: router de contacto + franquicias + Instagram — 07/06/2026**
   (rama `claude/leais-sales-agent-catering-b5ikA`). Sesión larga; toda la maquinaria de
   outreach quedó operativa y verificada en prod.
@@ -497,6 +537,24 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-07 — MiniMax (consulta) → auditoría del pipeline de voz + fixes (PR #74)
+- **Consulta de Alberto:** ¿MiniMax mejoraría las comandas por voz? **Respuesta:** no para
+  el ASR (Groq Whisper turbo ya óptimo; MiniMax usa Whisper por debajo y añade latencia);
+  MiniMax solo aportaría **TTS premium** como feature nueva. De ahí pidió **auditar y probar**
+  que todo es correcto, y "hazlo todo tú solo".
+- **Método:** lectura del código real de toda la cadena + **verificación empírica en BD prod**
+  (Supabase MCP, solo lectura) — clave para no inventar: `mensajes_turno` voz=0, `productos_86`=0,
+  `comandas` por tipo (aviso=2 fantasma), CHECK real de `comandas.tipo`.
+- **Hallazgos y fixes:** ver bloque detallado en "Estado actual" (arriba). Resumen: `aviso` y
+  `86` por voz estaban **muertos** (anidados en `if(mesa)`); 8b leía `cache.mesas` inexistente;
+  comandas fantasma; un "BUG-2" del regex se **descartó** tras `cat -A` (era correcto).
+- **Entregado en 2 commits sobre `claude/minimax-voice-commands-WjMkA` (PR #74 draft):**
+  PR-1 `de39870` (8b recibe zonas + limpiezas + test de regresión) y PR-2 `77307db`
+  (aviso/86 fuera de `if(mesa)` + sin comandas fantasma).
+- **Verificado:** `tsc` 0 · `qa` 0 · `next build` OK · `tsx scripts/test-brain-patron.ts` 14/14.
+- **Aprendizaje:** `cat -A` antes de "arreglar" un regex evitó romper código correcto
+  (los caracteres de control se renderizaban invisibles en el editor). Evidencia > suposición.
 
 ### 2026-06-04 (5) — Instalación de superpowers (subset) + hook SessionStart
 - **Petición de Alberto:** intentó `/plugin install superpowers@claude-plugins-official`
