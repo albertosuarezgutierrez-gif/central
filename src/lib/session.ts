@@ -6,6 +6,7 @@ export interface ApiSession {
   nombre: string
   rol: string
   restaurante_id: string
+  local_id?: string          // canónico (rename expand-contract); derivado de restaurante_id tras verificar firma
   restaurante_nombre: string
   cuenta_id?: string
   camarero_id?: string
@@ -30,11 +31,15 @@ export function getSession(req: NextRequest): ApiSession | null {
   // Si trae firma: tiene que ser válida SIEMPRE. Una firma presente pero
   // incorrecta = manipulación → se rechaza aunque no estemos en enforce.
   if (parsed._sig) {
-    return verificarSesion(parsed) ? parsed : null
+    if (!verificarSesion(parsed)) return null
+  } else if (ENFORCE) {
+    // Sin firma: solo se tolera durante la migración (ENFORCE=false).
+    return null
   }
 
-  // Sin firma: solo se tolera durante la migración (ENFORCE=false).
-  return ENFORCE ? null : parsed
+  // Canónico derivado tras verificar la firma (NO altera el payload firmado).
+  if (parsed.restaurante_id && !parsed.local_id) parsed.local_id = parsed.restaurante_id
+  return parsed
 }
 
 export function getRestauranteId(req: NextRequest): string {

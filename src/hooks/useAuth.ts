@@ -9,6 +9,7 @@ export interface Session {
   nombre: string
   rol: Rol
   restaurante_id: string
+  local_id?: string          // canónico (rename expand-contract); = restaurante_id durante la migración
   restaurante_nombre: string
   cuenta_id?: string
   seccion_id?: string | null
