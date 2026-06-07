@@ -51,3 +51,11 @@ export function getRestauranteId(req: NextRequest): string {
   if (s?.restaurante_id) return s.restaurante_id
   return '00000000-0000-0000-0000-000000000001'
 }
+
+// ── Canónico (rename expand-contract restaurante_id → local_id) ──────────────
+// El código NUEVO debe usar getLocalId(). Durante la migración envuelve a
+// getRestauranteId() (misma fuente: sesión firmada / header). Cuando todo el
+// código use local_id y la sesión migre su clave, esto pasará a ser la fuente.
+export function getLocalId(req: NextRequest): string {
+  return getRestauranteId(req)
+}
