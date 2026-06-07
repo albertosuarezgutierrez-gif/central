@@ -198,12 +198,17 @@ ${anguloVertical}
     }]
   }
 
-  // Enriquecer lead con datos encontrados
+  // Enriquecer lead con datos encontrados (la dirección ya va dentro de estudio_completo;
+  // NO existe columna leads.direccion → escribirla rompía el UPDATE entero).
   if (estudio.web_oficial && !lead.web) updateData.web = estudio.web_oficial
-  if (estudio.direccion) updateData.direccion = estudio.direccion
   if (estudio.ciudad && !lead.ciudad) updateData.ciudad = estudio.ciudad
 
-  await supabase.from('leads').update(updateData).eq('id', lead.id as string)
+  const { error: updErr } = await supabase.from('leads').update(updateData).eq('id', lead.id as string)
+  if (updErr) {
+    // Si no persiste (p.ej. columna inexistente), NO notificamos: evita el bucle de
+    // re-notificar el mismo lead en cada ejecución del cron.
+    throw new Error(`update leads falló: ${updErr.message}`)
+  }
 
   // 5. Telegram
   const tgToken = process.env.TELEGRAM_BOT_TOKEN
