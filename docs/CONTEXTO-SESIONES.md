@@ -16,6 +16,50 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **QR cuenta individual — "cada uno pide su caña y se le cobra lo suyo" — 06/06/2026**
+  (rama `claude/individual-beer-ordering-billing-oRwzB`): feature **100% configurable por el
+  dueño**. Idea de Alberto (escenario Sevilla: cañas rápidas, cada uno pide y paga lo suyo).
+  Análisis previo: el QR ya tenía ~85% (pedido móvil, `pre_auth` SetupIntent, cobro `off_session`,
+  Connect, VeriFactu, split). El hueco real: TODO colgaba de la **mesa**, no de la **persona**, y
+  el reparto era reactivo. Cambio de fondo implementado: **cobro por persona, no por mesa**.
+  - **Migración** `20260606_qr_cuenta_individual.sql` **APLICADA en Supabase (06/06)**: `cobro_config.qr_modo_consumo`
+    (`mesa_unica`|`individual`|`cliente_elige`, default mesa_unica → sin cambios para nadie);
+    `qr_sesiones_cliente.{device_id,nombre_cliente,tipo}`; **`comandas.sesion_qr_id`** (el eslabón
+    persona↔item). Aditiva y backward-compatible. Verificado: 5 columnas presentes con defaults OK;
+    `qr_sesiones_cliente` vacía (0 datos en riesgo).
+  - **EFs DESPLEGADAS en Supabase (06/06):** `qr-session` **v6**, `qr-order` **v9**,
+    `qr-cobro` **v5**. Todas ACTIVE, `verify_jwt=false`.
+  - **Code review (06/06) — 4 fixes aplicados y desplegados:**
+    1. `qr-cobro` mesa-branch ahora **excluye** los items de subcuentas individuales (en `cliente_elige`,
+       el que elige "cuenta de mesa" ya NO carga con las cañas de los individuales; antes doble-cobro).
+       Verificado en SQL: A indiv paga 3,0 / B mesa paga 4,0 (antes B pagaba 7,0).
+    2. cron `autoCerrarIndividuales`: `idempotencyKey: qr-auto-<sesion_id>` en el PaymentIntent →
+       si el cargo OK pero el update de BD falla, el siguiente tick NO recobra.
+    3. `qr-session` recover por device: `.order(creado_en desc).limit(1)` antes de `maybeSingle()`.
+    4. Índice `idx_qr_sesiones_mesa_device` → **UNIQUE** (migración `20260606b_qr_unique_device_index.sql`
+       APLICADA). Las sesiones 'mesa' guardan `device_id NULL` (no chocan). tsc --noEmit verde.
+  - **Config dueño:** `/api/owner/cobro-config` (allowlist + validación `qr_modo_consumo`) + selector
+    "MODO DE CONSUMO QR" en `owner/page.tsx` (`CobroConfigSection`). Reusa el `modo_cobro` existente
+    (cuenta_abierta/pre_auth/por_ronda) como "cómo paga cada cuenta" → sin set de flags redundante.
+  - **Cliente** `q/[token]/QrClientApp.tsx`: `device_id` en localStorage; bienvenida ofrece "Mi
+    cuenta / Cuenta de mesa" si `cliente_elige`; "Cerrar mi cuenta" y oculta el split en individual.
+  - **Red de seguridad:** cron `cobro-inactividad` → `autoCerrarIndividuales()` cobra `off_session`
+    a las cuentas individuales con tarjeta guardada (solo si el dueño eligió `modo_cobro='pre_auth'`)
+    pasado el timer. Si se va sin pulsar, se cobra solo.
+  - **Verificado:** `npm install` + `tsc --noEmit` (0) + `next build` (exit 0) en verde.
+    Vercel preview READY (ia-rest/ia-rest-docs/repo). **Test DB del fix (Postgres prod):** misma
+    mesa, 2 personas, 1 caña 3€ c/u → individual cobra **3,30€** (solo lo suyo), legado/mesa **6,60€**.
+  - **ACTIVACIÓN EN PROD HECHA:** (1) ✅ migración aplicada; (2) ✅ EFs desplegadas (v5/v9/v4).
+    La feature está VIVA pero **inerte por defecto** (`qr_modo_consumo='mesa_unica'` en todos →
+    comportamiento idéntico al actual). Para encenderla en un local: `/owner → ia.rest cobro →
+    Modo de consumo QR → "Cuenta propia por persona"` (o "Que elija el cliente").
+  - **PENDIENTE (manual, no hacible desde el contenedor — network bloquea `*.supabase.co`):**
+    prueba HTTP en vivo con 2 móviles en la misma mesa → A paga solo su caña, no la de B; validar
+    `application_fee` 0,5% + transfer al Connect en Stripe. Limitación v1: en individual no hay "bote
+    común" (lo compartido lo paga quien lo pide); coexistencia mesa+individual = Fase 2.
+- **MERGEADO a `main` (07/06):** PR #60 squash-merged. Producción tendrá la feature tras el
+  redeploy de Vercel. Sigue inerte por defecto (`mesa_unica`). Demo en `individual` para pruebas.
+
 - **Reels: música + previsualización + warm-up + gancho con movimiento** (PR #67, 07/06/2026):
   el reel ya reproduce en prod (sin zoom) con ambiente real; faltaba audio y poder previsualizarlo.
   - `src/app/api/super/instagram/seed-music/route.ts`: siembra MÚSICA en Cloudinary desde
