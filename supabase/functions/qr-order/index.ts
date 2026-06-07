@@ -1,6 +1,7 @@
-// qr-order v5 — El cliente crea una comanda desde el QR
+// qr-order v6 — El cliente crea una comanda desde el QR
 // POST { sesion_id, mesa_id, restaurante_id, items }
 // FIXES: estado 'nueva' (no 'pendiente'), restaurante_id en items, guard turno activo
+// v6: liga la comanda a la subcuenta (sesion_qr_id) → permite cobrar a cada uno SOLO lo suyo
 
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
@@ -64,6 +65,7 @@ serve(async (req) => {
         restaurante_id,
         mesa_id,
         turno_id:  turno.id,
+        sesion_qr_id: sesion.id,   // ata la comanda a la subcuenta de quien pide
         estado:    'nueva',
         tipo:      'comanda',
         origen:    'qr_cliente',
