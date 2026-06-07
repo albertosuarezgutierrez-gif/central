@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **RENAME restaurante_id→local_id: COMPLETO + MERGEADO a main (PR #77 y #79) — 07/06/2026**.
+  Tras el DROP en BD (prod), el merge-review destapó que TODAS las superficies que tocan la BD
+  debían migrarse. Estado final:
+  - ✅ App (Next) mergeada a main (#77). ✅ 2 selects que se escaparon del commit (asn/factura,
+    q/success) → main (#79). ✅ BD: funciones/RLS/vistas/FKs/índices migrados + DROP columna (167
+    tablas). ✅ cron job 9 (alerta_log) → local_id. ✅ Edge desplegadas a local_id: **daily-briefing,
+    check-elaboraciones**.
+  - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
+    local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
+    `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
+  - ⏭️ **PENDIENTE DE DEPLOY (crons no-cliente; fuente migrada YA en main, sin desplegar)**:
+    `eventos-entorno` y `monitor-health`. No desplegadas por riesgo de escapado inline (243/722 líneas).
+    ⚠️ `monitor-health` tiene DRIFT repo↔deploy (bug de sintaxis preexistente l.716 ya corregido en repo)
+    → deploy deliberado. Mecanismo: dashboard Supabase o `supabase functions deploy <name>`.
+  - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
+    tabla `leads` sin columna de tenant.
+  - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
+
 - **DISEÑO: ia.rest → plataforma de verticales (arquitectura definitiva) — 07/06/2026**
   (rama `claude/store-module-pos-MQUyV`): sesión larga de brainstorming que empezó por "¿añadir
   un TPV de tienda?" y derivó en formalizar ia.rest como **plataforma de punto de venta con
