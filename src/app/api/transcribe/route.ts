@@ -363,14 +363,9 @@ export async function POST(req: NextRequest) {
       // en el turno activo, insertar línea de servicio automáticamente.
       let servicioInsertado = false
       if (brainResult.num_comensales && brainResult.num_comensales > 0) {
-        const { data: esPrimera } = await supabase
-          .rpc('es_primera_comanda', {
-            p_mesa_id:  mesa.id,
-            p_turno_id: turnoId,
-          })
-          // es_primera_comanda comprueba ANTES de insertar esta comanda,
-          // pero ya la insertamos — así que chequeamos si no hay OTRAS comandas
-        // Realmente necesitamos saber si ésta es la única comanda de la mesa en el turno
+        // Comanda ya insertada arriba → chequeamos si NO hay OTRAS comandas de la mesa
+        // en el turno (post-insert es más preciso que el RPC es_primera_comanda, que
+        // mide el estado previo a la inserción).
         const { count: otrasComandas } = await supabase
           .from('comandas')
           .select('id', { count: 'exact', head: true })
@@ -378,8 +373,6 @@ export async function POST(req: NextRequest) {
           .eq('turno_id', turnoId)
           .neq('id', comanda.id)
           .not('estado', 'in', '(cancelada,cerrada)')
-
-        void esPrimera // usamos otrasComandas que es más preciso post-insert
 
         if ((otrasComandas ?? 1) === 0) {
           // Primera comanda — verificar config servicio
