@@ -39,8 +39,20 @@
     electricista, admin. comunidades). Todos encajan.
   - **Fases**: A núcleo (+rename local_id +bus +offline) · B restaurante+org+RBAC · C retail+Mariscos
     · D módulos-conector+entitlements+precios · E catering+franquicia+field-service · F plataforma.
-  - **PRÓXIMO PASO**: invocar `writing-plans` para detallar la **Fase A** y empezar a construir.
-    Antes de los refactors grandes: crear red mínima de tests (4 costuras + venta→cobro→factura→stock).
+  - **YA CONSTRUIDO Y EN EL PR #77** (Alberto dijo "haz todo"; todo con tsc limpio):
+    - `src/lib/negocio.ts` — motor de verticales (TipoNegocio, PRESETS_NEGOCIO, NUCLEO_PLATAFORMA, LABELS).
+    - Rol `tienda` cableado: `useAuth.ts` (tipo Rol + REDIRECT + `Session.tipo_negocio`) y `login/page.tsx`.
+    - Migración `20260607_modulo_tienda.sql` **APLICADA al remoto** (verificada): `productos.es_tienda`,
+      índice `idx_productos_ean` sobre `ean_codigo`, tabla `config_tienda` + 2 RLS. SIN trigger.
+    - Backend retail: `src/app/api/tienda/{config,buscar,venta}/route.ts` (venta = comanda `tipo='tienda'`
+      sin mesa + descuento de stock en código + reutiliza `/api/factura/cerrar` para cobrar).
+  - **HALLAZGO clave del esquema REAL** (vía supabase MCP): `productos` ya tiene `ean_codigo`,
+    `venta_por_peso`, `precio_por_kg`, `stock_actual`; `comandas` ya tiene `tipo` (texto libre sin CHECK).
+    Retail necesita MUCHO menos de lo que el spec asumía (corregido en el spec).
+  - **PENDIENTE inmediato**: (1) pantalla `/tienda` (TPV: buscar/escanear EAN + carrito + cobro con
+    CobrarSheet); (2) `TiendaTab` en /owner + `'tienda'` en TODOS_MODULOS; (3) **rename `restaurante_id
+    →local_id`** (decisión: hacerlo en RAMA de Supabase, verificar, luego promover — NO tocar prod a ciegas).
+  - **NOTA**: aún sin red de tests automatizada; antes del rename grande, crear tests de las 4 costuras.
 
 - **Puente etiqueta_producto → stock + fix del CHECK silencioso — 06/06/2026**
   (rama `claude/tag-scanning-ZcXnf`): el escáner de etiquetas (`/api/scanner/clasificar`,
