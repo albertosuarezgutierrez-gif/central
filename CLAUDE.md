@@ -1,1 +1,27 @@
-@AGENTS.md
+# CLAUDE.md — Matriz (casa de marcas)
+
+> **Esta es la MATRIZ del monorepo, no una vertical.** No contiene lógica de producto.
+> Lee **`MATRIZ.md`** para la estructura (raíz = matriz, `packages/*` = módulos compartidos,
+> `apps/*` = verticales) y `docs/CONTEXTO-SESIONES.md` para el estado vivo del proyecto.
+
+## Verticales (cada una con su propio CLAUDE.md/AGENTS.md y proyecto Vercel)
+- **`apps/ia-rest`** — Voice POS / hostelería (`iarest.es`). Consume `packages/core-ai` y
+  `packages/core-fiscal` vía `file:` deps. Ver `apps/ia-rest/CLAUDE.md`.
+- **`apps/sivra`** — intranet de pisos turísticos. Ver `apps/sivra/CLAUDE.md`.
+- **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Ver `apps/ialimp/CLAUDE.md`.
+
+## Módulos compartidos (`packages/*`, fuente TS pura, portables)
+- `@iarest/core-ai`, `@iarest/core-fiscal`, `@iarest/core-identity`.
+
+## Memoria entre sesiones (entorno efímero)
+El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo commiteado.
+Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba). El hook `Stop`
+(`.claude/hooks/persist-memoria.sh`) lo commitea y empuja.
+
+## Reglas de la matriz
+- Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
+  proyecto Vercel con **Root Directory `apps/<app>`** + install `npm install --legacy-peer-deps`.
+- **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
+  repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
+- Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
+  apps los consumen con `file:` deps (build aislado por Root Directory, sin pnpm/turbo).

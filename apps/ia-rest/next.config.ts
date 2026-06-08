@@ -1,4 +1,10 @@
 import type { NextConfig } from "next"
+import path from "path"
+
+// Casa de marcas: ia-rest vive en apps/ia-rest; los packages compartidos están en
+// ../../packages. Declaramos la raíz del monorepo para que Turbopack/tracing resuelvan
+// los @iarest/* (consumidos vía `file:` deps → node_modules/@iarest/*) fuera de apps/ia-rest.
+const monorepoRoot = path.join(__dirname, "..", "..")
 
 // cache-bust: 2026-05-26
 const nextConfig: NextConfig = {
@@ -8,6 +14,8 @@ const nextConfig: NextConfig = {
 
   // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
   transpilePackages: ['@iarest/core-ai', '@iarest/core-fiscal'],
+  outputFileTracingRoot: monorepoRoot,
+  turbopack: { root: monorepoRoot },
 
   async headers() {
     return [
