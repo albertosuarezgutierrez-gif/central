@@ -16,6 +16,34 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **UNIFICACIÓN "casa de marcas" (ia.rest · SIVRA · IALIMP): PLAN REFINADO, pendiente de OK — 08/06/2026**
+  (rama `claude/adoring-hawking-s1cFi`). Tarea: unir las 3 apps de Alberto en una plataforma común vía
+  **monorepo de paquetes `core-*`**, sin fusionar apps ni converger BBDD de entrada.
+  - ⚠️ **El HANDOFF y el "§16" que pedía el prompt NO existían** (draft de sesión efímera previa, nunca
+    commiteado). Recreados aquí: doc de entrada `docs/HANDOFF-unificacion-casa-marcas.md` + spec **§15**.
+  - ✅ **Auditoría read-only real** de SIVRA e IALIMP (vía 2 subagentes Explore):
+    - SIVRA = `roi-intranet`, Next 15.3, **NextAuth v5-beta**, **single-tenant** (pisos de Alberto, sin
+      `empresa_id`). Fuerte en PMS Smoobu, pricing dinámico STR, mensajería huésped IA, ROI. Sin fiscal/
+      cobro/CRM/RGPD. `properties` (Prisma, 5) ≠ `propiedades` (limpiadoras, 106).
+    - IALIMP = Next 15.5, **JWT jose+bcrypt+JTI**, **multi-tenant `empresa_id`** (frontera RGPD), **prod
+      con cliente real (Sique Brilla) → intocable**. Fuerte en white-label, app limpiadora, nóminas,
+      cold-email, portal propietario, `lib/ical-sync.ts`, `lib/rgpd.ts`, OCR doc. VeriFactu para 2027.
+    - BD `wswbehlcuxqxyinousql` COMPARTIDA SIVRA↔IALIMP; IALIMP escribe con anon key desde cliente →
+      NINGÚN `core-*` toca RLS/buckets/GRANTs/DDL.
+  - ✅ **Árbol `core-*` refinado** (3 hallazgos que reescriben el plan naíf): `core-auth` DESCARTADO
+    (3 modelos de auth incompatibles → paquetes identity-agnostic); `core-pricing` NO unificado (3
+    dominios distintos); `core-reservas` = net-new para ia.rest (mayor ganancia de producto). Extraer
+    primero: `core-ai`, `core-fiscal`, `core-ui/brand`, `core-rgpd`; luego `core-reservas`, `core-ocr`;
+    diferir `core-cobro`/`core-crm`.
+  - ✅ **Decisiones de Alberto**: topología = **monorepo único turborepo/pnpm** (con 1 proyecto Vercel
+    por app + builds por path + subtree con historial + IALIMP migrado el último, BD intacta); primer
+    paquete piloto = **`core-ai`** (el más completo/canónico, semilla ia.rest).
+  - ✅ **5 fases**: 0 andamiaje (cero runtime) · 1 núcleo puro (`core-ai`+`core-fiscal`) · 2 marca+RGPD ·
+    3 reservas STR+OCR · 4 cobro+CRM+entitlements · 5 plataforma (naming/SSO/API+MCP/monetización).
+  - ⏳ **PENDIENTE: OK de Alberto para ejecutar Fase 0.** Hasta entonces NADA de código/infra; `sivra` e
+    `ialimp` no se tocan. Este commit (rama `claude/adoring-hawking-s1cFi`, solo docs en ia.rest) es la
+    persistencia del plan, no su ejecución.
+
 - **RENAME restaurante_id→local_id: COMPLETO + MERGEADO a main (PR #77 y #79) — 07/06/2026**.
   Tras el DROP en BD (prod), el merge-review destapó que TODAS las superficies que tocan la BD
   debían migrarse. Estado final:

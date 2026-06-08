@@ -250,3 +250,39 @@ Restaurante · catering · retail · pescadería con manipulación (Mariscos) ·
 panadería con obrador central · grupo mixto cafeterías+panaderías · fontanería · electricista ·
 admin. de comunidades con mantenimiento + socorristas estacionales. **Todos encajan**: el núcleo
 es universal; solo cambia la captura. Probar más casos confirma, no altera el diseño.
+
+## 15. Unificación "casa de marcas" (ia.rest · SIVRA · IALIMP) — plan refinado
+
+> Añadido 2026-06-08. Doc de entrada: `docs/HANDOFF-unificacion-casa-marcas.md` (detalle completo,
+> auditoría y guardarraíles). **Estado: PLAN REFINADO, pendiente de OK para ejecutar.** Nota: el
+> prompt de arranque hablaba de "§16"; ese número venía de un draft perdido (efímero, nunca
+> commiteado) — esta es la sección real (§15).
+
+**Alcance:** no es la verticalización *interna* de ia.rest (§1–14), sino **unir 3 apps de Alberto
+en 2 clústeres / 2 BBDD** en una plataforma común vía **monorepo de paquetes `core-*`**, sin fusionar
+apps ni converger BBDD de entrada. ia.rest (`efncqyvhniaxsirhdxaa`, POS, sin clientes) · SIVRA
+(`wswbehlcuxqxyinousql`, intranet pisos, NextAuth v5, single-tenant) · IALIMP (misma BD que SIVRA,
+SaaS limpieza, JWT propio, `empresa_id`, **prod con cliente real → intocable**).
+
+**Decisiones (Alberto):** (1) **monorepo único turborepo/pnpm** — pero con un proyecto Vercel por
+app + builds ignorados por path + subtree con historial + **IALIMP migrado el último**, su `main`=prod
+y BD intactos; (2) primer paquete piloto **`core-ai`** (el más completo/canónico).
+
+**Árbol `core-*` (auditado):**
+- EXTRAER bajo riesgo: `core-ai` (semilla ia.rest), `core-fiscal` (verifactu ia.rest + validadores
+  IALIMP, puro sin BD), `core-ui/brand` (white-label IALIMP + labels `negocio.ts`), `core-rgpd`
+  (consent IALIMP, responsable configurable).
+- EXTRAER valor alto: `core-reservas` (iCal SSRF-safe + Smoobu; **net-new para ia.rest**), `core-ocr`.
+- DIFERIR: `core-cobro` (ia.rest ya completo), `core-crm` (el de IALIMP es global de superadmin).
+- DESCARTAR: `core-auth` (3 modelos incompatibles → paquetes **identity-agnostic**), `core-pricing`
+  unificado (3 dominios distintos; en su día `core-pricing-str` aparte).
+- **BD**: ningún `core-*` ejecuta DDL ni toca RLS/buckets/GRANTs de la BD compartida.
+
+**5 fases** (cada una ia.rest → SIVRA → IALIMP-último, tras preview verde): **0** andamiaje
+(turborepo+subtree+CI+Vercel-por-app, cero runtime) · **1** núcleo puro (`core-ai`+`core-fiscal`) ·
+**2** marca+cumplimiento (`core-ui/brand`+`core-rgpd`) · **3** reservas STR + OCR · **4** cobro+CRM+
+entitlements (planificar, no ejecutar, convergencia de datos) · **5** plataforma (naming matriz,
+identidad/SSO, API+MCP, monetización; convergencia BBDD solo si se justifica).
+
+**Guardarraíles:** IALIMP prod intocable (BD/RLS/buckets/`empresa_id`=frontera RGPD); no big-bang;
+`properties`≠`propiedades`; pre-push `tsc`+`next build`; auth no se comparte.
