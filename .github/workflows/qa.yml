@@ -25,15 +25,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: apps/ia-rest/package-lock.json
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --no-frozen-lockfile
 
       # ── QA Check: detecta patrones problemáticos conocidos ─────────────────
       # Reglas activas (ver scripts/qa-check.ts y Drive → qa-protocolo.md):
@@ -46,7 +49,7 @@ jobs:
       #   - await-params-dynamic-routes → params Promise en App Router
       #   - no-ink-on-dark-background   → colores incorrectos
       - name: QA Check — patrones conocidos
-        run: npx tsx scripts/qa-check.ts
+        run: pnpm exec tsx scripts/qa-check.ts
 
       # ── Resumen si falla ───────────────────────────────────────────────────
       - name: Instrucciones si falla
