@@ -1,0 +1,8 @@
+-- alerta_log fue rediseñada (tipo/canal/mensaje -> trigger_tipos[]/mensaje_voz). Tres funciones
+-- (fn_alerta_super, fn_avisos_trial, fn_generar_alertas_consumo) seguían insertando el esquema
+-- viejo -> error "column alerta_log.tipo does not exist". Adaptadas a columnas reales.
+-- (Aplicada al remoto 2026-06-08. Ver historial Supabase para el cuerpo completo regenerado.)
+-- Resumen del cambio en los INSERT INTO alerta_log de las 3 funciones:
+--   (local_id, tipo, [mensaje|mensaje_voz], canal, leida) -> (local_id, trigger_tipos, mensaje_voz, leida)
+--   con tipo  ->  trigger_tipos = ARRAY[tipo]   y   canal eliminado.
+-- El cuerpo regenerado completo está en el historial de migraciones de Supabase.
