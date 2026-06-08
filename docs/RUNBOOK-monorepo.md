@@ -8,35 +8,46 @@
 ## Estado actual (rama `claude/adoring-hawking-s1cFi`, PR #88, NO mergeado)
 - `apps/sivra/` y `apps/ialimp/` = copia de sus `origin/main`. **Inertes**: excluidos de tsconfig,
   eslint y `.vercelignore` de ia.rest → el proyecto Vercel `ia-rest` y su CI siguen verdes.
-- `packages/core-ai`, `packages/core-fiscal` ya en `main`.
+- `packages/core-ai`, `packages/core-fiscal` en `main`; `packages/core-identity` en este PR.
 - ia.rest sigue en la raíz; despliega como siempre. SIVRA e IALIMP siguen desplegando desde sus repos
   propios. **Nada roto, rollback trivial.**
+- **✅ DE-RISK HECHO (08/06):** los **3 apps compilan en verde desde `apps/*`** en aislamiento
+  (`npm install --legacy-peer-deps` en su propio dir + su `buildCommand`): IALIMP (`next build` OK con
+  sus envs, incl. `JWT_SECRET`), SIVRA (OK) y ia.rest (CI). **Conclusión clave:** con **Root Directory
+  por app** cada uno usa su propio `node_modules` y su propia versión de Next → **NO se necesita pnpm
+  ni mover ia.rest para el primer corte** (las 3 versiones de Next nunca se cruzan). pnpm/turbo pasan a
+  ser una mejora *posterior*, solo cuando un app empiece a consumir `packages/*`.
 
-## Secuencia de corte (orden estricto)
+## OPCIÓN RECOMENDADA — Corte mínimo (PROBADO, sin pnpm, sin mover ia.rest)
+Riesgo mínimo: ia.rest no se toca; SIVRA/IALIMP ya están co-localizados; cada Vercel project compila su
+carpeta con npm. Pasos:
 
-### A. Código (Claude, en rama PR #88) — pasos restantes de Fase 1
-1. `pnpm-workspace.yaml` (`apps/*`, `packages/*`) + `pnpm-lock.yaml` (borrar `package-lock.json`).
-2. Mover ia.rest raíz → `apps/ia-rest/` (git mv de `src/`, `public/`, `supabase/`, `scripts/`,
-   `next.config.*`, `tsconfig.json`, `vercel.json`, `eslint.config.mjs`, `postcss`, `package.json` de
-   app, `next-env.d.ts`). Quedan en la raíz: `packages/`, `.github/`, `CLAUDE.md`/`AGENTS.md`, `docs/`,
-   `.claude/`, `turbo.json`, `pnpm-workspace.yaml`, `package.json` raíz (workspace root).
-3. `packages/base` (raíz/plantilla: `tsconfig.base.json`, eslint base, patrón de registro de módulos)
-   y, opcional, `packages/core-identity` (contrato `Session`/`getTenantId()`).
-4. Cada `apps/<app>` declara `@<scope>/core-*` como `workspace:*` + `transpilePackages`.
-5. CI (`.github/workflows/{ci,qa}.yml`) → pnpm + `turbo run ... -F ia-rest` (y luego por app). Mover
-   `apps/ialimp/.github/workflows/deploy-landing.yml` a la raíz con `paths: apps/ialimp/landing/...`.
-   > Tras esto el **CI de la rama se pondrá ROJO** hasta que apliques B (es esperado).
+### A. Código — **ya está** (nada que mover)
+Las apps están en `apps/sivra` y `apps/ialimp` con su `package.json`/`vercel.json` propios. No hace
+falta pnpm, ni `pnpm-workspace.yaml`, ni mover ia.rest. (El único cambio de código pendiente sería
+mover `apps/ialimp/.github/workflows/deploy-landing.yml` a la raíz con `paths: apps/ialimp/landing/**`
+para que el deploy de la landing siga disparándose; lo hace Claude cuando digas.)
 
-### B. Vercel (TÚ, en el panel — no se puede por git). Aplicar ANTES de mergear.
-Equipo `team_f4gPpt6dPuNcd5YyMt3q27uf`. Para **cada** proyecto: Settings → Build & Development →
-**Root Directory** y **Install Command**; Settings → Git → **Connected Repository**.
+### B. Vercel (TÚ, en el panel). Aplicar y luego mergear.
+Equipo `team_f4gPpt6dPuNcd5YyMt3q27uf`. Por **cada** proyecto: Settings → Build & Deployment →
+**Root Directory**; Settings → Git → **Connected Repository**.
 
 | Proyecto Vercel | Repo conectado | Root Directory | Install Command |
 |---|---|---|---|
-| `ia-rest` (prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo) | ia.rest (igual) | `apps/ia-rest` | `pnpm install` |
-| `sivra` (su proyecto actual) | **cambiar** sivra → **ia.rest** | `apps/sivra` | `pnpm install` |
-| `ialimp` (proyecto `ialimp`) | **cambiar** ialimp → **ia.rest** | `apps/ialimp` | `pnpm install` |
+| `ia-rest` (prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo) | ia.rest (**no tocar**) | — (raíz, igual) | (igual) |
+| `sivra` (su proyecto actual) | **cambiar** sivra → **ia.rest** | `apps/sivra` | `npm install --legacy-peer-deps` |
+| `ialimp` (proyecto `ialimp`) | **cambiar** ialimp → **ia.rest** | `apps/ialimp` | `npm install --legacy-peer-deps` |
 | `ialimp-landing` (prj_41U7iFmAbFStPBqfms1cuDpJB8y4) | **cambiar** ialimp → **ia.rest** | `apps/ialimp/landing/ialimp-es` | (estático, sin build) |
+
+> En el corte mínimo, ia.rest **se queda en la raíz y NO se toca** → cero riesgo para iarest.
+> El Install Command es el `npm install --legacy-peer-deps` que ya usan (NO pnpm).
+
+## OPCIÓN POSTERIOR (opcional) — pnpm + ia.rest→`apps/ia-rest`
+Solo cuando se quiera (a) compartir `packages/*` dentro de las apps o (b) la simetría total
+"todas en `apps/`". Entonces sí: `pnpm-workspace.yaml`, mover ia.rest a `apps/ia-rest`, `workspace:*`
++ `transpilePackages`, CI a pnpm/turbo, y en Vercel cambiar `ia-rest` a Root Directory `apps/ia-rest`
++ Install `pnpm install`. Se hace app por app (ia.rest primero, IALIMP el último). No es necesario
+para tener el monorepo funcionando.
 
 - **Build Command:** dejar el de cada `vercel.json` (ia.rest `next build`; sivra `prisma generate &&
   next build`; ialimp `node scripts/fetch-fonts.mjs && prisma generate && next build`). Vercel con Root

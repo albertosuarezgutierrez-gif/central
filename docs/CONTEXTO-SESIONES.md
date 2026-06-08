@@ -39,8 +39,20 @@
     (Root Directory + repo conectado + install pnpm de cada proyecto). Tras los pasos de código el CI de
     la rama se pondrá ROJO hasta aplicar Vercel (esperado); la verificación real de SIVRA/IALIMP es su
     preview de Vercel tras reapuntar.
-  - 🟡 **Bloqueo para continuar**: el corte estructural necesita los cambios de Vercel de Alberto (fuera
-    de git) + no es verificable en el entorno efímero. IALIMP el último, su BD/RLS/buckets intactos.
+  - ✅ **DE-RISK del corte (08/06):** ensayo local — los **3 apps compilan en VERDE desde `apps/*`** en
+    aislamiento (`npm install --legacy-peer-deps` + su `buildCommand`): **IALIMP** `next build` OK (con
+    `JWT_SECRET` y demás envs que Vercel ya tiene), **SIVRA** OK, **ia.rest** CI. Son self-contained (sin
+    deps `@iarest/*` ni imports que escapen). **Hallazgo clave:** con **Root Directory por app**, cada uno
+    usa su propio `node_modules`/versión de Next → **el primer corte NO necesita pnpm ni mover ia.rest**
+    (las 3 versiones de Next nunca se cruzan). pnpm/turbo quedan para *después* (solo al compartir
+    `packages/*`). Runbook reescrito con esta **OPCIÓN RECOMENDADA — corte mínimo** (ia.rest no se toca;
+    Install = npm, no pnpm).
+  - ✅ **Backup de Sique Brilla (Vanessa) entregado a Alberto** (ZIP: `restore.sql` type-safe validado +
+    JSON 1.039 filas/44 tablas + manifiesto de 21 objetos de Storage). El corte NO toca su BD/Storage;
+    backup = seguridad extra. Falta (sus 2 clics): backup nativo Supabase + bytes de fotos (no tengo
+    credenciales). Decisión: **sin prisa, IALIMP el último**.
+  - 🟡 **Bloqueo para continuar**: el corte necesita los cambios de Vercel de Alberto (Root Directory +
+    repo conectado; fuera de git). Con la opción mínima ya probada, su parte es mínima y de bajo riesgo.
   - **Sugerencias incorporadas al plan**: scope de paquetes de la matriz (no `@iarest`),
     `core-identity` (contrato sesión/tenant), `packages/ui` (design system), Changesets + tests de
     contrato, catálogo de módulos + generador `create-vertical`, raíz multi-tenant/white-label de
