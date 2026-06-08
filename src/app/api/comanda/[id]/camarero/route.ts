@@ -37,7 +37,7 @@ export async function PATCH(
     await supabase.from('mesas').update({ camarero_id: camarero_destino_id }).eq('id', comanda.mesa_id).eq('local_id', restaurante_id)
   }
   await supabase.from('comanda_audit').insert({
-    comanda_id, restaurante_id,
+    comanda_id, local_id: restaurante_id,
     camarero_id: session.id,
     camarero_nombre: session.nombre ?? 'Sistema',
     accion: 'transferencia',

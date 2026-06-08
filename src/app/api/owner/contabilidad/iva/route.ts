@@ -71,7 +71,7 @@ export async function GET(req: NextRequest) {
     estado: 'calculado',
     datos_303: { arqueos: arqueos?.length ?? 0, facturas_compra: compras?.length ?? 0, periodo: `${desde} → ${hasta}` },
     updated_at: new Date().toISOString(),
-  }, { onConflict: 'restaurante_id,año,trimestre' })
+  }, { onConflict: 'local_id,año,trimestre' })
 
   return NextResponse.json({
     ok: true,

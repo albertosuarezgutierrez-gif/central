@@ -63,7 +63,7 @@ export async function POST(req: NextRequest) {
       permisos:       ['ver_resumen', 'ver_303', 'exportar', 'ver_asientos'],
       activo:         true,
       invitado_por:   session.id ?? null,
-    }, { onConflict: 'contable_id,restaurante_id' })
+    }, { onConflict: 'contable_id,local_id' })
   if (linkErr) return NextResponse.json({ error: linkErr.message }, { status: 500 })
 
   // Actualizar config_contabilidad con referencia al contable

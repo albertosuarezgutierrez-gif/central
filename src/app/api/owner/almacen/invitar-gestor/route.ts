@@ -60,7 +60,7 @@ export async function POST(req: NextRequest) {
     modulos:        modulosFinales,
     activo:         true,
     invitado_por:   session.id ?? null,
-  }, { onConflict: 'contable_id,restaurante_id' })
+  }, { onConflict: 'contable_id,local_id' })
 
   const tieneAlmacen = modulosFinales.includes('almacen')
   const tieneContab  = modulosFinales.includes('contabilidad')

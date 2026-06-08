@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
     .eq('local_id', rid)
     .maybeSingle()
 
-  return NextResponse.json({ config: data ?? { restaurante_id: rid, ...DEFAULTS } })
+  return NextResponse.json({ config: data ?? { local_id: rid, ...DEFAULTS } })
 }
 
 export async function PUT(req: NextRequest) {

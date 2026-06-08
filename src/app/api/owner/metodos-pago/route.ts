@@ -24,7 +24,7 @@ async function seedMetodos(supabase: ReturnType<typeof createServerClient>, rest
   const inserts = METODOS_DEFAULT.map(m => ({ ...m, local_id: restauranteId }))
   await supabase
     .from('metodos_pago')
-    .upsert(inserts, { onConflict: 'restaurante_id,tipo', ignoreDuplicates: true })
+    .upsert(inserts, { onConflict: 'local_id,tipo', ignoreDuplicates: true })
 }
 
 export async function GET(req: NextRequest) {

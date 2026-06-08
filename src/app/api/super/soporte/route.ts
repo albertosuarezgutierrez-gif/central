@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
   let q = sb()
     .from('soporte_tickets')
     .select(`
-      id, asunto, estado, resuelto_por, created_at, updated_at, restaurante_id,
+      id, asunto, estado, resuelto_por, created_at, updated_at, local_id,
       restaurantes(nombre)
     `)
     .order('updated_at', { ascending: false })
