@@ -50,6 +50,21 @@ Equipo `team_f4gPpt6dPuNcd5YyMt3q27uf`. Por **cada** proyecto: Settings → Buil
 > En el corte mínimo, ia.rest **se queda en la raíz y NO se toca** → cero riesgo para iarest.
 > El Install Command es el `npm install --legacy-peer-deps` que ya usan (NO pnpm).
 
+> **⚠️ GOTCHA REAL (08/06, primer intento de SIVRA falló — `prisma: command not found`, exit 127):**
+> dos ficheros de la **raíz** del repo se colaban en el build de cada app y hacían que Vercel
+> construyera **la raíz (ia.rest)** en vez de `apps/<app>` (instalaba las deps de la raíz, detectaba
+> Next 16.2.6 en vez de la versión de la app, y `apps/<app>` ni se construía):
+> 1. **`turbo.json` en la raíz** → Vercel detecta "Turborepo" ("Detected Turbo. Adjusting default
+>    settings…") y pasa a modo monorepo-desde-raíz, ignorando el Root Directory. **No lo usa nadie**
+>    (no hay `turbo` en ninguna `package.json` ni en el lock) → **se ELIMINÓ**.
+> 2. **`.vercelignore` de la raíz con `apps/`** → en ese modo borra `apps/<app>` antes de construir.
+>    Se mantiene (lo necesita el proyecto `ia-rest`); al quitar `turbo.json`, Vercel respeta el Root
+>    Directory por app y ya no lo aplica para borrar la propia carpeta del build.
+> Además, `prisma` estaba en **devDependencies** de SIVRA → se movió a **dependencies** (como ya lo
+> tiene IALIMP) para que el binario `prisma` esté siempre disponible en el build. **Verificar SIEMPRE
+> con el preview real del proyecto Vercel de la app (no con build aislado), porque la config de la
+> raíz del repo —`.vercelignore`, `turbo.json`, workspaces— se hereda en los builds por-app.**
+
 ## OPCIÓN POSTERIOR (opcional) — pnpm + ia.rest→`apps/ia-rest`
 Solo cuando se quiera (a) compartir `packages/*` dentro de las apps o (b) la simetría total
 "todas en `apps/`". Entonces sí: `pnpm-workspace.yaml`, mover ia.rest a `apps/ia-rest`, `workspace:*`
