@@ -143,6 +143,16 @@ Todo se diseña para ser **enchufable y sustituible** en cualquier vertical o pr
 | `core-storage` | candidato | signed URLs/fotos en las 3 |
 | `core-security` | candidato | rate-limit en BD (ialimp) reutilizable en logins |
 
+> **⚠️ Límite conocido del enfoque `file:` deps (sin pnpm) — verificado 08/06/2026.**
+> Funciona para núcleos **puros** (sin deps npm propias): `core-ai/core-fiscal/core-identity` (usan
+> `fetch`/crypto). **NO funciona** para un núcleo que **importe una dependencia npm** (`web-push`,
+> `nodemailer`, `@supabase/supabase-js`…): al compilarse en la app vía `transpilePackages`, webpack
+> resuelve desde `packages/core-x/` y **no alcanza** `apps/<app>/node_modules` (son hermanos) →
+> `Module not found` en el build de Vercel (`serverExternalPackages` no lo arregla). **Implicación:**
+> `core-push/core-email/core-storage` requieren **pnpm workspaces** (que sí hoistea/symlinka deps), un
+> cambio de infra mayor acoplado a Vercel. **Decisión actual:** Fase 3 cerrada en `core-ai`; el resto
+> aplazado (DRY marginal). Núcleos nuevos: mantenerlos **puros** mientras sigamos con `file:` deps.
+
 ## 7. Fronteras (innegociables)
 Multi-tenant con scoping por inquilino (`empresa_id` / `local_id`); identity-agnostic; **no compartir BD
 entre verticales sin contrato** (hoy SIVRA↔IALIMP comparten Supabase con anon-key en cliente = frontera

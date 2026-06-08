@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ FASE 3 (adopción de núcleos) — cerrada en core-ai; resto APLAZADO por límite de infra — 08/06/2026**
+  - **`core-ai` adoptado en las 3 verticales y en producción** (PR #91 sivra, #92 ialimp; ia.rest ya lo
+    usaba). Se extendió `core-ai` con `nimChat` (multi-turno) + `signal` opcional en `nimVision`. Cada
+    app envuelve el núcleo preservando su API/timeouts/modelos. **Victoria real de DRY del cliente NIM.**
+  - 🔴 **HALLAZGO (límite del enfoque `file:` deps SIN pnpm):** un paquete de `packages/*` que se compila
+    en la app (`transpilePackages`) y que **importa una dependencia npm propia** (p.ej. `web-push`,
+    `nodemailer`, `@supabase/supabase-js`) **NO resuelve en el build de Vercel**: webpack resuelve desde
+    la carpeta del paquete (`packages/core-x/`), que no alcanza `apps/<app>/node_modules` (son hermanos).
+    `serverExternalPackages` no lo arregla (el fallo es en resolución de **build**). Verificado con 3
+    builds fallidos del preview de `core-push` (PR #93, **cerrado sin mergear**, prod intacta).
+  - **Por eso:** `core-ai/core-fiscal/core-identity` funcionan = son **puros** (fetch/crypto, sin deps
+    npm). `core-push/core-email/core-storage` necesitarían deps npm → **bloqueados** con `file:` deps.
+  - **DECISIÓN (definitiva):** **parar Fase 3 en core-ai.** Extraer push/email/storage da DRY marginal
+    (ficheros pequeños y estables) y exigiría **migrar a pnpm workspaces** (cambio de infra grande,
+    acoplado a Vercel: install command + workspace config de los 3 proyectos, re-verificar como el
+    corte). No compensa ahora. **pnpm queda como opción futura** documentada, solo si un módulo
+    compartido con deps npm llega a justificarlo. (Contexto: aún sin clientes de pago; Vanessa no ha
+    pagado todavía.)
+
 - **✅ MATRIZ DEFINITIVA: `ia.rest` bajado a `apps/ia-rest`, LIVE en producción — 08/06/2026 (PR #90)**
   - **Las 3 verticales viven bajo `apps/` y la raíz es la matriz.** `iarest.es` ya sirve desde
     `apps/ia-rest` (deploy de producción **READY**, Next 16.2.6, `✓ Compiled`, alias `iarest.es`/
