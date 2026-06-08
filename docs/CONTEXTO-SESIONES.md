@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ MATRIZ DEFINITIVA: `ia.rest` bajado a `apps/ia-rest`, LIVE en producción — 08/06/2026 (PR #90)**
+  - **Las 3 verticales viven bajo `apps/` y la raíz es la matriz.** `iarest.es` ya sirve desde
+    `apps/ia-rest` (deploy de producción **READY**, Next 16.2.6, `✓ Compiled`, alias `iarest.es`/
+    `www.iarest.es`). `sivra` y `ialimp` ya estaban en `apps/*`.
+  - **Cómo se resolvió que `apps/ia-rest` consuma `packages/*` sin pnpm** (patrón para futuras
+    verticales): `file:` deps (`@iarest/core-ai|core-fiscal` → `node_modules/@iarest/*` por symlink) +
+    `next.config` con `outputFileTracingRoot`/`turbopack.root` = raíz del monorepo + se quitaron los
+    `tsconfig paths` de `@iarest/*` (resuelven por node_modules). CI a `working-directory: apps/ia-rest`.
+    Detalle en `MATRIZ.md`.
+  - **Cutover sin downtime (orden CRÍTICO):** primero Root Directory del proyecto Vercel `ia-rest` →
+    `apps/ia-rest`, **después** merge. (Al revés: la raíz-matriz genera un build vacío de ~1s que
+    "tiene éxito" y **reemplazaría producción** → caída.) Red: Instant Rollback de Vercel.
+  - Verificado antes de mergear: build/tsc/lint/qa **locales** en verde + **CI de GitHub** verde
+    (ambos ya en `apps/ia-rest`).
+  - 🟡 **Limpieza pendiente (sin prisa):** proyectos Vercel `ia-rest-docs` y `repo` (catch-all del
+    root, `live:false`, solo dominios `*.vercel.app`) ahora fallan porque la raíz ya no es app →
+    **borrarlos** o ignorarlos (no afectan a producción). + archivar/borrar repos viejos `sivra`/
+    `ialimp`. + Fase 3 (adopción de `packages/core-*` por sivra/ialimp).
+
 - **🏛️ MATRIZ definida + corrección: `ia.rest` es una VERTICAL, no la matriz — 08/06/2026**
   - Alberto corrige (acertadamente): en la casa de marcas, **`ia.rest` es una vertical más**, no la
     matriz. La raíz hace de matriz; las 3 verticales son hermanas bajo `apps/`. Manifiesto nuevo:

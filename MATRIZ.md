@@ -16,7 +16,7 @@
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]
-│   └── ia-rest        ← Voice POS / hostelería (iarest.es)                [⏳ PENDIENTE: aún en la raíz]
+│   └── ia-rest        ← Voice POS / hostelería (iarest.es)                [✅ en apps/]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
@@ -24,32 +24,34 @@
 
 | Vertical | Producto | Proyecto Vercel | Estado |
 |---|---|---|---|
-| **ia-rest** | Voice POS / hostelería | `ia-rest` | ⏳ **Todavía en la raíz** del repo. Falta bajarlo a `apps/ia-rest` (ver abajo). |
+| **ia-rest** | Voice POS / hostelería | `ia-rest` | ✅ En `apps/ia-rest`, Root Directory `apps/ia-rest` (live en `iarest.es`). |
 | **sivra** | Intranet pisos turísticos | `sivra` | ✅ En `apps/sivra`, Root Directory `apps/sivra`. |
 | **ialimp** | SaaS de limpiezas | `ialimp` | ✅ En `apps/ialimp`, Root Directory `apps/ialimp`. |
 
-## Por qué `ia.rest` sigue en la raíz (y cómo bajarlo a `apps/ia-rest`)
+## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 
-La raíz **no puede ser a la vez** "la app de `ia.rest`" y "la matriz". Para que la matriz quede
-limpia, `ia.rest` debe bajar a `apps/ia-rest` como las demás. **No es un simple `git mv`** porque
-`ia.rest` **ya consume `packages/*`** (`@iarest/core-ai`, `@iarest/core-fiscal` vía `tsconfig
-paths` + `transpilePackages`), con rutas **relativas a la raíz**. El movimiento requiere:
+La raíz **no puede ser a la vez** "la app de `ia.rest`" y "la matriz", así que `ia.rest` bajó a
+`apps/ia-rest` como las demás. **No fue un simple `git mv`** porque `ia.rest` **consume `packages/*`**
+(`@iarest/core-ai`, `@iarest/core-fiscal`). Lo que se hizo (referencia para futuras verticales que
+consuman `packages/*`):
 
-1. **Workspace que abarque `apps/*` + `packages/*`** (pnpm recomendado, o npm workspaces) para que
-   el build aislado de `apps/ia-rest` (Vercel con Root Directory `apps/ia-rest`) resuelva `@iarest/*`.
-2. **`git mv`** de la app de `ia.rest` (`src/ lib/ public/ android/ scripts/ supabase/` + configs
-   `next.config.* tsconfig.json eslint.config.mjs postcss.config.mjs vercel.json package.json` +
-   `AGENTS.md/CLAUDE.md/README.md` específicos) a `apps/ia-rest/`. Ajustar en su `tsconfig` los
-   `paths` de `@iarest/*` a `../../packages/...`.
-3. **Cutover en Vercel** (lo hace Alberto): cambiar el Root Directory del proyecto `ia-rest` a
-   `apps/ia-rest`. **OJO:** es la app de hostelería **en vivo** y **no se puede pre-validar con
-   preview** (es el propio proyecto que se reubica) → hacerlo **vigilado**, con verificación en vivo
-   de `iarest.es` y rollback en 1 clic (Root Directory de vuelta a la raíz). Es la "OPCIÓN POSTERIOR"
-   del runbook (`docs/RUNBOOK-monorepo.md`).
+1. **`file:` deps** en `apps/ia-rest/package.json` (`@iarest/core-ai: file:../../packages/core-ai`,
+   idem core-fiscal) → `npm install` crea `node_modules/@iarest/*` por symlink. **Self-contained, sin
+   pnpm/turbo** (Vercel instala aislado por Root Directory, igual que sivra/ialimp).
+2. **`next.config(.ts/.js)`**: `outputFileTracingRoot` + `turbopack.root` = raíz del monorepo
+   (`path.join(__dirname,'..','..')`) → Turbopack/tracing resuelven `packages/` fuera de `apps/ia-rest`.
+3. Se **quitaron los `tsconfig paths` de `@iarest/*`** (resuelven por `node_modules`, que respeta el
+   export `./es` de core-fiscal). Se mantiene `@/* → ./src/*`.
+4. **CI** (`.github/workflows/ci.yml`, `qa.yml`): `defaults.run.working-directory: apps/ia-rest` +
+   `cache-dependency-path: apps/ia-rest/package-lock.json`.
+5. **Cutover en Vercel** (vigilado, sin downtime): se cambió **primero** el Root Directory del
+   proyecto `ia-rest` a `apps/ia-rest` (no auto-redeploy), **luego** se mergeó el PR → build de
+   producción desde `apps/ia-rest` en verde (`✓ Compiled`, Next 16.2.6) → `iarest.es` promovido.
+   Red de seguridad disponible: **Instant Rollback** de Vercel.
 
-Hasta entonces, `ia.rest` funciona como vertical **in situ** en la raíz (su proyecto Vercel
-despliega desde la raíz, sin cambios). La matriz queda **definida** (este archivo + `packages/*`);
-su consolidación física (raíz sin app) se completa cuando `ia.rest` baje a `apps/ia-rest`.
+> ⚠️ **Trampa evitada:** si se mergea ANTES de cambiar el Root Directory, la raíz (ya matriz, sin app)
+> produce un **build vacío de ~1s que ÉXITO-pero-vacío** y **reemplazaría producción** (caída). Por eso
+> el orden es **Root Directory primero, merge después**.
 
 ## Regla
 
