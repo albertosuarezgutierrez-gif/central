@@ -105,10 +105,11 @@ serve(async (req) => {
     // 6. Log del aviso
     await sb.from('alerta_log').insert({
       local_id,
-      tipo: 'qr_llamada',
-      descripcion: `${titulo} — ${cuerpo}`,
+      trigger_tipos: ['qr_llamada'],
       mesa_id,
-      datos: { sesion_id, motivo, destinatarios_count: destinatarios.length }
+      mensaje_voz: `${titulo} — ${cuerpo}`,
+      contexto: { sesion_id, motivo, destinatarios_count: destinatarios.length },
+      leida: false,
     }).select().maybeSingle()
 
     const enviados = resultados.filter(r => r.status === 'fulfilled').length
