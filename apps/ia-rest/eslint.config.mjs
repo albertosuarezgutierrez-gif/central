@@ -1,8 +1,6 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
-import reactHooks from "eslint-plugin-react-hooks";
-import reactPlugin from "eslint-plugin-react";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -23,11 +21,10 @@ const eslintConfig = defineConfig([
   // Reglas convertidas a warn — código legado preexistente.
   // Los errores de compilación (TypeScript) siguen siendo bloqueantes.
   // Mejorar progresivamente en nuevos archivos.
+  // Los plugins react-hooks/react/@next/next ya los registran nextVitals/nextTs;
+  // aquí solo bajamos algunas reglas a "warn" (código legado). No re-registrar
+  // los plugins (con pnpm serían otra instancia y eslint flat config lo prohíbe).
   {
-    plugins: {
-      "react-hooks": reactHooks,
-      "react": reactPlugin,
-    },
     rules: {
       "@typescript-eslint/no-explicit-any":              "warn",
       "@typescript-eslint/no-unused-vars":               "warn",
