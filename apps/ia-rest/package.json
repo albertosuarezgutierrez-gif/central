@@ -10,8 +10,8 @@
     "qa": "tsx scripts/qa-check.ts"
   },
   "dependencies": {
-    "@iarest/core-ai": "file:../../packages/core-ai",
-    "@iarest/core-fiscal": "file:../../packages/core-fiscal",
+    "@iarest/core-ai": "workspace:*",
+    "@iarest/core-fiscal": "workspace:*",
     "@anthropic-ai/sdk": "^0.92.0",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.5.0",

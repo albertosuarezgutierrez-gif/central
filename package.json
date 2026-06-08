@@ -2,8 +2,19 @@
   "name": "casa-de-marcas",
   "version": "1.0.0",
   "private": true,
-  "description": "Matriz de la casa de marcas (monorepo). La raíz NO es una vertical: las verticales viven en apps/* y los módulos compartidos en packages/*. Ver MATRIZ.md.",
-  "workspaces": [
-    "packages/*"
-  ]
+  "description": "Matriz de la casa de marcas (monorepo). La raíz NO es una vertical: las verticales viven en apps/* y los módulos compartidos en packages/*. Workspaces gestionados por pnpm (pnpm-workspace.yaml). Ver MATRIZ.md.",
+  "packageManager": "pnpm@10.33.0",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "esbuild",
+      "@swc/core",
+      "@parcel/watcher",
+      "msedge-tts",
+      "unrs-resolver"
+    ]
+  }
 }

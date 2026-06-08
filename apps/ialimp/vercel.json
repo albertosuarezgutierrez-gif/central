@@ -1,6 +1,6 @@
 {
   "buildCommand": "node scripts/fetch-fonts.mjs && prisma generate && next build",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "crons": [
     {
