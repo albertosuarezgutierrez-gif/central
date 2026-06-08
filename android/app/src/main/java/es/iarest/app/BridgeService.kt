@@ -193,7 +193,7 @@ class BridgeService : Service() {
                 Log.i(TAG, "Realtime conectado")
                 // Suscribir a print_jobs del restaurante
                 val join = JSONObject().apply {
-                    put("topic", "realtime:public:print_jobs:restaurante_id=eq.$rid")
+                    put("topic", "realtime:public:print_jobs:local_id=eq.$rid")
                     put("event", "phx_join")
                     put("payload", JSONObject().apply {
                         put("config", JSONObject().apply {
@@ -202,7 +202,7 @@ class BridgeService : Service() {
                                     put("event", "INSERT")
                                     put("schema", "public")
                                     put("table", "print_jobs")
-                                    put("filter", "restaurante_id=eq.$rid")
+                                    put("filter", "local_id=eq.$rid")
                                 })
                             })
                         })
@@ -220,7 +220,7 @@ class BridgeService : Service() {
                         ?.optJSONObject("record")
                         ?: return
                     if (record.optString("status") == "pendiente" &&
-                        record.optString("restaurante_id") == rid) {
+                        record.optString("local_id") == rid) {
                         Log.i(TAG, "Nuevo job via Realtime")
                         val tkn = getToken(this@BridgeService) ?: return
                         procesarJobs(tkn)

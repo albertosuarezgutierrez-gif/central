@@ -116,7 +116,7 @@ export async function POST(req: NextRequest) {
   // 5. Upsert arqueo
   const { data: arqueo, error: arqueoErr } = await supabase
     .from('arqueos_caja')
-    .upsert({ ...arqueoInput, estado: 'borrador' }, { onConflict: 'restaurante_id,fecha' })
+    .upsert({ ...arqueoInput, estado: 'borrador' }, { onConflict: 'local_id,fecha' })
     .select('id').single()
   if (arqueoErr) return NextResponse.json({ error: arqueoErr.message }, { status: 500 })
 

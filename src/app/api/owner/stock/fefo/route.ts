@@ -27,9 +27,9 @@ export async function GET(req: NextRequest) {
     .select(`
       id, nombre_articulo, cantidad_recibida, unidad, fecha_caducidad, numero_lote,
       stock_articulo_id,
-      recepciones_mercancia!inner(estado, fecha_recepcion, restaurante_id, proveedores(nombre))
+      recepciones_mercancia!inner(estado, fecha_recepcion, local_id, proveedores(nombre))
     `)
-    .eq('recepciones_mercancia.restaurante_id', rid)
+    .eq('recepciones_mercancia.local_id', rid)
     .eq('recepciones_mercancia.estado', 'confirmada')
     .not('fecha_caducidad', 'is', null)
     .lte('fecha_caducidad', limite.toISOString().split('T')[0])

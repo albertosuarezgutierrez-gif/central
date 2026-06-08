@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     .select(`
       id, nombre, slug, codigo_acceso, plan, plan_status, activo, ciudad,
       created_at, trial_end, max_camareros, stripe_subscription_id,
-      personal!restaurante_id(count),
+      personal!local_id(count),
       mesas:mesas(count),
       comandas:comandas(count)
     `)

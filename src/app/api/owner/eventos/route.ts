@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
       modo_local, es_itinerante, acceso_qr_activo,
       es_recurrente, senial_pagada, requiere_appcc,
       notas_internas, notas_cocina, notas_sala,
-      restaurante_id, cuenta_id,
+      local_id, cuenta_id,
       espacio_id, espacios_evento(id, nombre, tipo, aforo_maximo),
       created_at, updated_at
     `)

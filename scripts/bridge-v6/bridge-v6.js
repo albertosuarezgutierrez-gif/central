@@ -535,11 +535,11 @@ function wsConnect(TOKEN, restauranteId) {
 
     // Suscribir
     ws.send(JSON.stringify({
-      topic: `realtime:public:print_jobs:restaurante_id=eq.${restauranteId}`,
+      topic: `realtime:public:print_jobs:local_id=eq.${restauranteId}`,
       event: 'phx_join',
       payload: {
         config: {
-          postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'print_jobs', filter: `restaurante_id=eq.${restauranteId}` }]
+          postgres_changes: [{ event: 'INSERT', schema: 'public', table: 'print_jobs', filter: `local_id=eq.${restauranteId}` }]
         }
       },
       ref: String(joinRef++)
@@ -552,7 +552,7 @@ function wsConnect(TOKEN, restauranteId) {
     try {
       const msg = JSON.parse(raw)
       const record = msg.payload?.data?.record || msg.payload?.record
-      if (record?.status === 'pendiente' && record?.restaurante_id === restauranteId) {
+      if (record?.status === 'pendiente' && record?.local_id === restauranteId) {
         console.log(`${B}[WS]${X} Nuevo job: ${record.id?.slice(0,8)}`)
         ;(async () => {
           try {
