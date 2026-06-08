@@ -3,7 +3,10 @@
 *.md
 SKILL.md
 
-# Monorepo casa de marcas: las otras verticales viven en apps/ y NO las construye
-# el proyecto Vercel de ia.rest (cada app tendrá su propio proyecto con Root Directory
-# = apps/<app> tras el corte). Mantener fuera del deploy actual de ia-rest.
-apps/
+# ⚠️ NO añadir `apps/` aquí. Este .vercelignore se aplica (relativo a la raíz del repo)
+# a TODOS los proyectos Vercel de este monorepo, incluidos los que tienen Root Directory
+# = apps/<app> (sivra, ialimp). Si se ignora `apps/`, Vercel BORRA apps/<app> antes de
+# construir y el proyecto de esa app cae a construir la raíz (ia.rest) → instala las deps
+# de la raíz, detecta el Next de ia.rest y falla (p.ej. `prisma: command not found`).
+# El proyecto ia-rest ya excluye apps/ de su build por tsconfig/eslint (no por aquí):
+# `next build` en la raíz no compila esas carpetas.
