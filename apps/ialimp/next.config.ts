@@ -6,7 +6,9 @@ import path from "path"
 const monorepoRoot = path.join(__dirname, "..", "..")
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["node-ical"],
+  // web-push lo importa @iarest/core-push (fuera del app root); como `serverExternalPackage`
+  // Next no intenta bundlearlo y lo require() en runtime desde node_modules.
+  serverExternalPackages: ["node-ical", "web-push"],
   transpilePackages: ["@iarest/core-ai", "@iarest/core-push"],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
