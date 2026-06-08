@@ -50,7 +50,7 @@ serve(async (req) => {
     const TELEGRAM_CHAT_ID   = Deno.env.get('TELEGRAM_CHAT_ID')!
 
     const { data: errores } = await supabase
-      .from('system_errors').select('id, funcion_origen, mensaje, stack_trace')
+      .from('system_errors').select('id, funcion_origen, mensaje, contexto')
       .is('nim_diagnostico_at', null).eq('resuelto', false)
       .order('created_at', { ascending: false }).limit(10)
 
@@ -58,7 +58,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({ ok: true, procesados: 0 }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
 
     for (const err of errores) {
-      const r = await diagnosticar(NVIDIA_API_KEY, err.funcion_origen ?? 'desconocida', err.mensaje ?? '', err.stack_trace)
+      const r = await diagnosticar(NVIDIA_API_KEY, err.funcion_origen ?? 'desconocida', err.mensaje ?? '', err.contexto ? JSON.stringify(err.contexto) : undefined)
       await supabase.from('system_errors').update({
         nim_diagnostico: r.diagnostico, nim_accion: r.accion,
         nim_diagnostico_at: new Date().toISOString(),

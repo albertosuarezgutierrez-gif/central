@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **RENAME restaurante_id→local_id: COMPLETO + MERGEADO a main (PR #77 y #79) — 07/06/2026**.
+  Tras el DROP en BD (prod), el merge-review destapó que TODAS las superficies que tocan la BD
+  debían migrarse. Estado final:
+  - ✅ App (Next) mergeada a main (#77). ✅ 2 selects que se escaparon del commit (asn/factura,
+    q/success) → main (#79). ✅ BD: funciones/RLS/vistas/FKs/índices migrados + DROP columna (167
+    tablas). ✅ cron job 9 (alerta_log) → local_id. ✅ Edge desplegadas a local_id: **daily-briefing,
+    check-elaboraciones**.
+  - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
+    local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
+    `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
+  - ✅ Edge desplegadas a local_id (12): daily-briefing, check-elaboraciones, qr-order, qr-session,
+    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron, notify-error, eventos-entorno,
+    **nim-diagnostico** (+fix bug preexistente stack_trace→contexto), **infra-monitor-cron** (migrada).
+  - ✅ Crons REACTIVADOS: `23 nim-diagnostico`, `16 infra-monitor`.
+  - ⏸️ ÚNICO pendiente: `19 monitor-health` sigue pausado. Su función está **rename-migrada en el repo**
+    (722 líneas) pero NO la desplegué inline por riesgo de escapado. Desplegar con
+    `supabase functions deploy monitor-health` y `select cron.alter_job(19, active=>true)`.
+  - ⚠️ Drift a sanear: `alerta-ritmo-cron` e `infra-monitor-cron` se migraron y desplegaron pero son
+    **repo-less** (no están en supabase/functions/) → añadirlas al repo para no repetir el drift.
+  - ⚠️ Bug PREEXISTENTE aparte (no edge): ruta app `cron/feedback-visita` pide `comandas.cerrada_at`
+    (columna inexistente; comandas tiene `estado`/`estado_cobro`). Fuera del rename.
+  - **Rename: 100% completo.** Solo queda 1 deploy de observabilidad (monitor-health) por CLI.
+  - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
+    tabla `leads` sin columna de tenant.
+  - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
+
 - **DISEÑO: ia.rest → plataforma de verticales (arquitectura definitiva) — 07/06/2026**
   (rama `claude/store-module-pos-MQUyV`): sesión larga de brainstorming que empezó por "¿añadir
   un TPV de tienda?" y derivó en formalizar ia.rest como **plataforma de punto de venta con
