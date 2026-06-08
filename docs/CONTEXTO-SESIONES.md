@@ -26,18 +26,16 @@
   - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
     local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
     `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
-  - ✅ Edge desplegadas a local_id (12): daily-briefing, check-elaboraciones, qr-order, qr-session,
-    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron, notify-error, eventos-entorno,
-    **nim-diagnostico** (+fix bug preexistente stack_trace→contexto), **infra-monitor-cron** (migrada).
-  - ✅ Crons REACTIVADOS: `23 nim-diagnostico`, `16 infra-monitor`.
-  - ⏸️ ÚNICO pendiente: `19 monitor-health` sigue pausado. Su función está **rename-migrada en el repo**
-    (722 líneas) pero NO la desplegué inline por riesgo de escapado. Desplegar con
-    `supabase functions deploy monitor-health` y `select cron.alter_job(19, active=>true)`.
-  - ⚠️ Drift a sanear: `alerta-ritmo-cron` e `infra-monitor-cron` se migraron y desplegaron pero son
-    **repo-less** (no están en supabase/functions/) → añadirlas al repo para no repetir el drift.
-  - ⚠️ Bug PREEXISTENTE aparte (no edge): ruta app `cron/feedback-visita` pide `comandas.cerrada_at`
-    (columna inexistente; comandas tiene `estado`/`estado_cobro`). Fuera del rename.
-  - **Rename: 100% completo.** Solo queda 1 deploy de observabilidad (monitor-health) por CLI.
+  - ✅ **RENAME 100% COMPLETO Y VERIFICADO** (07/06): app, BD, 13 Edge Functions y los 5 cron jobs
+    activos, todo en `local_id`. Último bug del rename (ruta `cron/cobro-inactividad`, llegó de main sin
+    migrar, erroraba cada 5 min) arreglado y mergeado (PR #80). monitor-health desplegado por MCP
+    (verificado contra repo) y cron 19 reactivado.
+  - ⚠️ **Bugs PREEXISTENTES en logs (NO del rename, columnas que nunca existieron)** — pendientes aparte:
+    `alerta_log.tipo` (lo insertan infra-monitor-cron, qr-call-waiter y billing cron 9 — la tabla no
+    tiene esa columna) y `comandas.cerrada_at` (ruta `cron/feedback-visita`). Revisar esquema real de
+    `alerta_log` y `comandas` y ajustar esos inserts/selects.
+  - ⚠️ Hygiene drift: `alerta-ritmo-cron` e `infra-monitor-cron` están desplegadas pero NO en
+    `supabase/functions/` del repo → añadirlas para no repetir el drift.
   - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
     tabla `leads` sin columna de tenant.
   - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
