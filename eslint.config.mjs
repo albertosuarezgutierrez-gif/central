@@ -16,6 +16,9 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Deno Edge Functions — no son Next.js, ESLint no aplica aquí
     "supabase/functions/**",
+    // Monorepo casa de marcas: las otras verticales (apps/*) tienen su propio
+    // lint/CI; el proyecto ia-rest no las lintea.
+    "apps/**",
   ]),
   // Reglas convertidas a warn — código legado preexistente.
   // Los errores de compilación (TypeScript) siguen siendo bloqueantes.

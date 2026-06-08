@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Manual de ialimp — Guía completa</title>
+<style>
+  /* Fuentes AUTO-ALOJADAS (sin Google Fonts → no se transfiere la IP del visitante).
+     Los .woff2 se descargan a /fonts en el build (scripts/fetch-fonts.mjs). Si
+     faltaran, degrada a la fuente del sistema. */
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/dm-sans-400.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/dm-sans-500.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/dm-sans-600.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/dm-sans-700.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:800;font-display:swap;src:url('/fonts/dm-sans-800.woff2') format('woff2')}
+  @font-face{font-family:'Syne';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/syne-400.woff2') format('woff2')}
+  @font-face{font-family:'Syne';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/syne-700.woff2') format('woff2')}
+  @font-face{font-family:'Syne';font-style:normal;font-weight:800;font-display:swap;src:url('/fonts/syne-800.woff2') format('woff2')}
+  :root{
+    --primary:#4f46e5; --brand:#6366f1; --light:#eef2ff;
+    --bg:#f1f5f9; --text:#1e1b4b; --muted:#64748b; --border:#e2e8f0;
+    --ok:#16a34a; --okBg:#f0fdf4; --warn:#d97706; --warnBg:#fffbeb;
+    --white:#ffffff; --radius:16px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);
+    line-height:1.6;font-size:16px;-webkit-font-smoothing:antialiased;
+  }
+  .logo{font-family:'Syne',sans-serif;letter-spacing:-.5px}
+  .logo b{font-weight:800}.logo span{font-weight:400}
+
+  /* ── HEADER ── */
+  header.top{
+    background:var(--primary);color:#fff;padding:34px 24px 30px;
+    background-image:radial-gradient(circle at 100% 0,rgba(255,255,255,.12),transparent 45%);
+  }
+  header.top .wrap{max-width:1080px;margin:0 auto}
+  header.top .logo{font-size:30px;color:#fff;display:inline-block}
+  header.top h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(26px,5vw,40px);margin:14px 0 6px;line-height:1.1}
+  header.top p{color:rgba(255,255,255,.82);font-size:16px;max-width:560px}
+  header.top .meta{margin-top:18px;font-size:13px;color:rgba(255,255,255,.65)}
+
+  /* ── LAYOUT ── */
+  .shell{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:240px 1fr;gap:32px;padding:32px 24px 80px}
+  nav.toc{position:sticky;top:24px;align-self:start;font-size:14px}
+  nav.toc .group{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin:18px 0 8px}
+  nav.toc a{display:block;color:var(--muted);text-decoration:none;padding:6px 12px;border-radius:9px;font-weight:500;transition:.15s}
+  nav.toc a:hover{background:var(--light);color:var(--primary)}
+  main{min-width:0}
+
+  /* ── SECTIONS ── */
+  section{scroll-margin-top:24px;margin-bottom:38px}
+  section h2{font-family:'Syne',sans-serif;font-weight:800;font-size:24px;margin-bottom:6px;display:flex;align-items:center;gap:10px}
+  section .lead{color:var(--muted);margin-bottom:18px}
+  h3{font-size:17px;font-weight:700;margin:22px 0 8px}
+  p{margin-bottom:10px}
+  ul,ol{margin:0 0 12px 22px}
+  li{margin-bottom:6px}
+  a.inline{color:var(--primary);font-weight:600;text-decoration:none;border-bottom:1.5px solid var(--light)}
+  code{background:var(--light);color:var(--primary);padding:2px 7px;border-radius:6px;font-size:.88em;font-weight:600;font-family:'DM Sans',monospace}
+
+  .card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;margin-bottom:14px}
+  .card.soft{background:var(--light);border-color:#dfe2ff}
+
+  /* highlighted answer box */
+  .spotlight{background:linear-gradient(135deg,#4f46e5,#6366f1);color:#fff;border:none}
+  .spotlight h2{color:#fff}
+  .spotlight .lead{color:rgba(255,255,255,.85)}
+  .spotlight .pill{display:inline-block;background:rgba(255,255,255,.2);color:#fff;font-size:12px;font-weight:700;padding:4px 12px;border-radius:20px;margin-bottom:12px}
+
+  /* numbered steps */
+  ol.steps{list-style:none;margin:0;counter-reset:s}
+  ol.steps>li{counter-increment:s;position:relative;padding:14px 0 14px 52px;border-bottom:1px solid var(--border)}
+  ol.steps>li:last-child{border-bottom:none}
+  ol.steps>li::before{
+    content:counter(s);position:absolute;left:0;top:12px;width:34px;height:34px;
+    background:var(--primary);color:#fff;border-radius:10px;display:flex;align-items:center;justify-content:center;
+    font-weight:800;font-family:'Syne',sans-serif;font-size:15px;
+  }
+  ol.steps.onwhite>li::before{background:var(--primary)}
+  .spotlight ol.steps>li{border-color:rgba(255,255,255,.25)}
+  .spotlight ol.steps>li::before{background:#fff;color:var(--primary)}
+  ol.steps b{font-weight:700}
+
+  /* module grid */
+  .mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-top:6px}
+  .mod{background:var(--white);border:1px solid var(--border);border-radius:14px;padding:16px;border-left:4px solid var(--brand)}
+  .mod .ic{font-size:22px}
+  .mod .nm{font-weight:700;margin-top:4px}
+  .mod .ds{font-size:13px;color:var(--muted);margin-top:2px}
+
+  /* breadcrumb path */
+  .path{display:inline-flex;flex-wrap:wrap;gap:6px;align-items:center;background:var(--light);border-radius:10px;padding:8px 12px;font-size:13.5px;font-weight:600;color:var(--primary);margin:6px 0 12px}
+  .path .sep{color:var(--brand);font-weight:800}
+
+  .note{border-left:4px solid var(--warn);background:var(--warnBg);border-radius:0 12px 12px 0;padding:12px 16px;font-size:14px;margin:12px 0}
+  .note b{color:var(--warn)}
+  .tip{border-left:4px solid var(--ok);background:var(--okBg);border-radius:0 12px 12px 0;padding:12px 16px;font-size:14px;margin:12px 0}
+  .tip b{color:var(--ok)}
+
+  table{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+
+  /* FAQ */
+  details{background:var(--white);border:1px solid var(--border);border-radius:12px;padding:4px 18px;margin-bottom:10px}
+  details summary{cursor:pointer;font-weight:700;padding:12px 0;list-style:none}
+  details summary::-webkit-details-marker{display:none}
+  details summary::before{content:'＋';color:var(--primary);font-weight:800;margin-right:10px}
+  details[open] summary::before{content:'－'}
+  details p{padding-bottom:12px;color:var(--muted)}
+
+  footer{background:var(--primary);color:rgba(255,255,255,.8);text-align:center;padding:28px 24px;font-size:14px}
+  footer .logo{color:#fff;font-size:18px}
+
+  @media(max-width:820px){
+    .shell{grid-template-columns:1fr;gap:0;padding:20px 16px 60px}
+    nav.toc{display:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <span class="logo"><b>ia</b><span>limp</span></span>
+    <h1>Manual de uso</h1>
+    <p>Todo lo que necesitas para gestionar tu empresa de limpieza desde el ordenador o el móvil: clientes, pisos, limpiezas, equipo y materiales.</p>
+    <div class="meta">Sique Brilla SL · Guía para administradores · Actualizado mayo 2026</div>
+  </div>
+</header>
+
+<div class="shell">
+
+  <nav class="toc">
+    <div class="group">Empezar</div>
+    <a href="#intro">Qué es ialimp</a>
+    <a href="#entrar">Cómo entrar</a>
+    <a href="#menu">El menú</a>
+    <div class="group">Lo esencial</div>
+    <a href="#pisos">⭐ Añadir pisos</a>
+    <a href="#clientes">Clientes</a>
+    <a href="#limpieza">Crear una limpieza</a>
+    <a href="#protocolos">📋 Protocolos y fotos IA</a>
+    <div class="group">Gestión</div>
+    <a href="#equipo">Equipo y limpiadoras</a>
+    <a href="#materiales">Materiales y stock</a>
+    <a href="#chat">Chat</a>
+    <a href="#informes">Informes y facturas</a>
+    <a href="#contabilidad">Contabilidad</a>
+    <div class="group">En la calle</div>
+    <a href="#app">App de la limpiadora</a>
+    <a href="#propietario">Portal del propietario</a>
+    <a href="#faq">Dudas frecuentes</a>
+  </nav>
+
+  <main>
+
+    <!-- INTRO -->
+    <section id="intro">
+      <h2>👋 ¿Qué es <span class="logo"><b>ia</b><span>limp</span></span>?</h2>
+      <p class="lead">ialimp es el programa donde controlas toda tu empresa de limpieza desde un solo sitio.</p>
+      <p>Con ialimp puedes gestionar tus <b>clientes</b> (los propietarios), sus <b>pisos</b>, programar y registrar cada <b>limpieza</b>, organizar a tu <b>equipo</b> de limpiadoras, controlar el <b>material y la lencería</b>, y generar <b>informes y facturas</b> automáticamente.</p>
+      <p>Hay dos formas de usarlo, según quién seas:</p>
+      <div class="card soft">
+        <p><b>🖥️ Tú (administradora):</b> entras a la versión completa desde el ordenador o el móvil para gestionar todo el negocio.</p>
+        <p style="margin:0"><b>🧹 Tus limpiadoras:</b> entran a una app sencilla con su PIN, donde solo ven sus limpiezas del día, el checklist y cómo llegar a cada piso.</p>
+      </div>
+    </section>
+
+    <!-- ENTRAR -->
+    <section id="entrar">
+      <h2>🔑 Cómo entrar</h2>
+      <p class="lead">Cada persona entra por una puerta distinta.</p>
+
+      <h3>Administradora (tú)</h3>
+      <ol class="steps onwhite">
+        <li>Abre <code>app.ialimp.es</code> en el navegador (Chrome, Safari…).</li>
+        <li>Introduce tu <b>correo</b> y tu <b>contraseña</b>.</li>
+        <li>Entrarás directamente en el <b>Inicio</b> (el panel principal).</li>
+      </ol>
+      <div class="tip"><b>Consejo:</b> guarda la página como acceso directo en la pantalla de inicio del móvil. ialimp funciona como una app: se instala y se abre con un toque.</div>
+
+      <h3>Limpiadora</h3>
+      <p>La limpiadora <b>NUNCA</b> usa correo ni contraseña (eso es solo para ti y para los propietarios). Tiene dos formas de entrar, las dos a la misma app:</p>
+      <ol class="steps onwhite">
+        <li><b>Enlace directo (lo más fácil):</b> desde <b>Equipo › Limpiadoras</b> pulsa <b>«📲 Enviar acceso»</b> y mándale el enlace por WhatsApp. Ella solo lo <b>toca y entra directa</b>, sin escribir nada.</li>
+        <li><b>Con su PIN:</b> abre el enlace de la app (acaba en <code>/l</code>) e introduce el <b>PIN</b> (4–6 dígitos) que le asignaste.</li>
+      </ol>
+      <p>En ambos casos verá <b>solo sus limpiezas del día</b>; no accede al resto del negocio.</p>
+      <div class="note"><b>Si a la limpiadora le piden «correo y contraseña»</b>, es que abrió un enlace que no era el suyo (el de administración o el del propietario). Usa el botón <b>«📲 Enviar acceso»</b> y mándale ese enlace: con él entra directa, sin contraseñas.</div>
+    </section>
+
+    <!-- MENU -->
+    <section id="menu">
+      <h2>🧭 El menú: 5 módulos</h2>
+      <p class="lead">Todo en ialimp se organiza en estos módulos. Los tienes en el menú lateral (ordenador) y en la barra inferior (móvil).</p>
+      <div class="mods">
+        <div class="mod"><div class="ic">🏠</div><div class="nm">Inicio</div><div class="ds">Resumen del día: limpiezas, ingresos y avisos.</div></div>
+        <div class="mod"><div class="ic">🗓️</div><div class="nm">Operaciones</div><div class="ds">Las limpiezas en curso, programadas y su estado.</div></div>
+        <div class="mod"><div class="ic">💼</div><div class="nm">Negocio</div><div class="ds">Clientes, leads (CRM), facturas e informes.</div></div>
+        <div class="mod"><div class="ic">📦</div><div class="nm">Materiales</div><div class="ds">Stock, lencería, proveedores, checklists y documentos.</div></div>
+        <div class="mod"><div class="ic">👥</div><div class="nm">Equipo</div><div class="ds">Tres bloques: <b>Equipo</b> (limpiadoras, disponibilidad, accesos), <b>Economía</b> (tarifas, nóminas) y <b>Operación</b> (quejas, kits, IA).</div></div>
+        <div class="mod"><div class="ic">⚙️</div><div class="nm">Configuración</div><div class="ds">Catálogos y ajustes del cotizador.</div></div>
+      </div>
+      <p style="margin-top:14px">En el móvil, el botón central <b>＋</b> de la barra inferior es el atajo para <b>crear una limpieza nueva</b> al instante.</p>
+    </section>
+
+    <!-- PISOS — LA RESPUESTA DESTACADA -->
+    <section id="pisos">
+      <div class="card spotlight">
+        <span class="pill">La duda más habitual</span>
+        <h2>🏠 Cómo añadir pisos</h2>
+        <p class="lead">En ialimp, un <b>piso</b> (propiedad) siempre pertenece a un <b>cliente</b>. Por eso, antes de añadir un piso, tiene que existir el cliente al que pertenece. Una vez creado el cliente, le añades todos los pisos que quieras.</p>
+
+        <h3 style="color:#fff;margin-top:8px">Paso a paso</h3>
+        <ol class="steps">
+          <li><b>Asegúrate de tener el cliente creado.</b> Si aún no existe (por ejemplo, el propietario de los pisos), créalo primero — ver la sección «Clientes» justo debajo.</li>
+          <li>En el menú, abre <b>💼 Negocio</b> y entra en la pestaña <b>👥 Clientes</b>. Verás la lista de tus clientes.</li>
+          <li>En la tarjeta del cliente, pulsa el botón <b>🏠 Propiedades</b>.</li>
+          <li>Pulsa <b>＋ Añadir</b> (arriba a la derecha) para abrir el formulario de un piso nuevo.</li>
+          <li>Rellena los datos del piso y pulsa <b>Guardar</b>. ¡Listo! El piso ya está disponible para programar limpiezas.</li>
+        </ol>
+      </div>
+
+      <h3>Qué te pide el formulario del piso</h3>
+      <p>No te agobies: solo el <b>Nombre</b> es obligatorio. El resto lo puedes completar después.</p>
+      <table>
+        <tr><th>Campo</th><th>Para qué sirve</th></tr>
+        <tr><td><b>Tipo</b></td><td>Piso turístico, comunidad, local, oficina, obra u otro.</td></tr>
+        <tr><td><b>Nombre *</b></td><td>Cómo lo identificas. Ej: «Casa Socorro», «Luxury Busto».</td></tr>
+        <tr><td><b>Modelo de facturación</b></td><td>Cómo cobras esa limpieza: precio fijo, por horas, por m², cuota mensual o mixto.</td></tr>
+        <tr><td><b>Dirección</b></td><td>Vía, número, piso y puerta por separado.</td></tr>
+        <tr><td><b>Código postal</b></td><td>Al escribirlo, ialimp rellena solo el municipio y la provincia.</td></tr>
+        <tr><td><b>Ref. catastral</b></td><td>Opcional.</td></tr>
+        <tr><td><b>Características</b></td><td>Nº de camas, baños, huéspedes, piscina, terraza… (ayuda a estimar el trabajo).</td></tr>
+        <tr><td><b>Gestión de lencería</b></td><td>Quién pone las sábanas y toallas: propietario, tu empresa, lavandería o mixto.</td></tr>
+      </table>
+      <div class="tip"><b>Editar o desactivar un piso:</b> en la misma lista de propiedades, cada piso tiene su botón para editarlo. Si dejas de limpiar un piso, puedes desactivarlo sin borrar su historial.</div>
+    </section>
+
+    <!-- CLIENTES -->
+    <section id="clientes">
+      <h2>👥 Clientes</h2>
+      <p class="lead">Un cliente es quien te contrata: normalmente el propietario o la empresa dueña de los pisos.</p>
+      <h3>Crear un cliente nuevo</h3>
+      <div class="path">💼 Negocio <span class="sep">›</span> 👥 Clientes <span class="sep">›</span> ＋ Nuevo cliente</div>
+      <ol class="steps onwhite">
+        <li>Abre el módulo <b>Negocio</b> y quédate en la pestaña <b>Clientes</b>.</li>
+        <li>Pulsa <b>＋ Nuevo cliente</b>.</li>
+        <li>Rellena el nombre y los datos de contacto (teléfono, email). El <b>tipo de alojamiento</b> (piso turístico, comunidad, oficina…) no se define en el cliente, sino en cada una de sus <b>propiedades</b>: un mismo cliente puede tener un hotel, apartamentos, una comunidad o lo que sea a la vez.</li>
+        <li>Pulsa <b>Guardar</b>. Ya puedes añadirle pisos (ver sección anterior).</li>
+      </ol>
+      <p>Una vez creado el cliente, ya puedes añadirle pisos: en la misma lista (<b>Negocio › Clientes</b>) pulsa el botón <b>🏠 Propiedades</b> de ese cliente. Como alternativa, todo esto también está en la pantalla <code>app.ialimp.es/admin/clientes</code>, que reúne la lista, <b>Ver detalle</b> y <b>🏠 Propiedades</b> de cada cliente.</p>
+
+      <h3>La ficha del cliente: tipo, contactos y facturación</h3>
+      <div class="path">👥 Clientes <span class="sep">›</span> (un cliente) <span class="sep">›</span> 🧾 Ficha y facturación</div>
+      <p>Desde la tarjeta de un cliente, pulsa <b>🧾 Ficha y facturación</b> para abrir su ficha completa, dividida en tres partes:</p>
+      <ol class="steps onwhite">
+        <li><b>Datos generales</b> — el nombre y el <b>tipo</b>: <b>Particular</b>, <b>Autónomo</b> o <b>Empresa</b>. (Solo cambia las etiquetas: una empresa muestra «Razón social» y «CIF»; un particular o autónomo, «Nombre» y «NIF/DNI».) También hay un campo de <b>notas</b> para apuntar lo que quieras.</li>
+        <li><b>Contactos</b> — las personas del cliente. Pulsa <b>＋ Añadir</b> para crear uno con <b>nombre, cargo, teléfono y email</b>. Puedes tener <b>varios contactos</b> en un mismo cliente (por ejemplo, uno de administración y otro de gestión) y marcar cuál es el <b>principal</b> y cuál es el <b>pagador / persona fiscal</b> (a quien se le factura; útil cuando un autónomo es también el contacto). Cada contacto lleva un teléfono y un email; si una persona tiene más de uno, añade otro contacto.</li>
+        <li><b>Facturación</b> — los datos fiscales se muestran según el tipo: una <b>empresa</b> muestra «Razón social» y «CIF» (se factura a la empresa); un <b>autónomo o particular</b> muestra «Nombre fiscal» y «NIF/DNI», porque la persona es quien factura — puedes rellenarlos al vuelo con <b>«⤵ Copiar del contacto»</b>. Marca «<i>El domicilio fiscal es el mismo que la dirección del cliente</i>» para no repetir la dirección, o desmárcala para escribir un domicilio fiscal distinto. Completa también el <b>IBAN</b> y el <b>email de facturación</b> (es el email al que se envían las facturas e informes). Si el NIF/CIF o el IBAN tienen un formato no válido, verás un aviso.</li>
+      </ol>
+      <div class="note"><b>Recuerda:</b> los contactos se pueden añadir a cualquier cliente, sea empresa, autónomo o particular. Cuando termines de editar, pulsa <b>Guardar datos del cliente</b>.</div>
+
+      <h3>Enviar al cliente el acceso a su intranet</h3>
+      <div class="path">👥 Clientes <span class="sep">›</span> (tarjeta del cliente) <span class="sep">›</span> ✉️ Acceso</div>
+      <p>Cada cliente tiene su propia <b>intranet privada</b> (la zona del propietario), donde ve en tiempo real el estado de sus limpiezas, las fotos de cada servicio, sus facturas y documentos. Para que pueda entrar, envíale el enlace de acceso por email:</p>
+      <ol class="steps onwhite">
+        <li>En la lista de clientes (<b>Negocio › Clientes</b>), busca la tarjeta del cliente y pulsa el botón <b>✉️ Acceso</b>.</li>
+        <li>Se propone el email que tengas guardado del cliente; puedes confirmarlo o escribir otro distinto.</li>
+        <li>El cliente recibe un correo con un botón <b>«Entrar en mi intranet»</b> que abre directamente su zona privada, sin contraseña.</li>
+      </ol>
+      <div class="note"><b>Ten en cuenta:</b> el enlace es <b>personal</b> de cada cliente; conviene recordarle que no lo comparta. Si el cliente no tenía email guardado, añádele uno en su ficha (o escríbelo en la ventana de envío) antes de mandarle el acceso.</div>
+    </section>
+
+    <!-- LIMPIEZA -->
+    <section id="limpieza">
+      <h2>🧼 Crear una limpieza</h2>
+      <p class="lead">Cuando hay que limpiar un piso, registras la limpieza en 3 pasos sencillos.</p>
+      <div class="path">＋ Nueva limpieza</div>
+      <p>Pulsa el botón <b>＋</b> (en el Inicio o en la barra inferior del móvil). Se abre un asistente de 3 pasos:</p>
+      <ol class="steps onwhite">
+        <li><b>Cliente</b> — eliges de quién es el trabajo. Si tienes muchos clientes, arriba aparece un <b>buscador</b> 🔍: escribe el nombre y la lista se filtra al momento.</li>
+        <li><b>Propiedad</b> — aparecen automáticamente los pisos de ese cliente; eliges cuál se limpia.</li>
+        <li><b>Trabajo</b> — pones la fecha, la limpiadora y los detalles, y guardas.</li>
+      </ol>
+      <div class="note"><b>Importante:</b> si un cliente no tiene pisos creados, en el paso 2 no aparecerá nada. Por eso conviene añadir los pisos primero (sección «Añadir pisos»).</div>
+      <p>Las limpiezas de tus pisos turísticos conectados a un PMS (como Smoobu) también se crean solas a partir de las reservas, así que muchas veces no tendrás ni que hacerlo a mano.</p>
+
+      <h3>Asignar limpiezas automáticamente</h3>
+      <p>En el <b>Inicio</b>, justo debajo de los indicadores, tienes el botón <b>«Asignar limpiezas ahora»</b>. Al pulsarlo, ialimp reparte entre tu equipo todas las limpiezas de <b>hoy y mañana</b> que estén sin limpiadora, eligiendo a la persona más adecuada (que conozca el piso y tenga menos carga) y avisándola al móvil con la hora de inicio.</p>
+      <p>No hace falta pulsarlo cada día: el reparto se hace <b>solo, dos veces al día</b> — de madrugada y a las <b>16:00</b>, cuando se envían los cuadrantes del día siguiente. El botón está para cuando quieras lanzarlo a mano (por ejemplo, si entra una reserva nueva por la tarde).</p>
+      <div class="note"><b>Recuerda:</b> solo se asigna a limpiadoras con <b>disponibilidad marcada</b> (ver «Equipo › Disponibilidad»).</div>
+
+      <h3>Cambiar la limpiadora desde Inicio (2 toques)</h3>
+      <p>En la lista de <b>Limpiezas</b> del <b>Inicio</b>, cada tarjeta muestra un chip con la limpiadora (p. ej. <b>«👤 Alex»</b>). <b>Tócalo</b> y se abre una lista para elegir otra limpiadora: la limpieza se reasigna <b>al instante</b>, sin recargar, y verás un aviso «Reasignada a…».</p>
+      <ul>
+        <li>Si la limpieza está <b>sin asignar</b>, el chip pone <b>«➕ Asignar»</b> y abre la misma lista.</li>
+        <li>Si tienes muchas limpiadoras, la lista incluye un <b>buscador</b> 🔍 para encontrarla por nombre.</li>
+        <li>Al asignarla o cambiarla, a la limpiadora le llega un <b>aviso al móvil</b> con el piso y la hora.</li>
+        <li>Elige <b>«✕ Sin asignar»</b> para quitarla (recuerda: el reparto automático de las 16:00 podría volver a asignarla).</li>
+        <li>Las limpiezas <b>completadas</b> quedan fijadas y no se reasignan.</li>
+      </ul>
+
+      <h3>🔴 Pisos con entrada de huésped (prioridad)</h3>
+      <p>Cuando un piso tiene <b>entrada de un huésped nuevo</b> ese mismo día, la limpieza se marca en <b>rojo</b> con la etiqueta <b>«🔴 Entra HH:MM»</b> (la hora a la que llega el nuevo huésped). Si el hueco entre la salida y la entrada es muy justo, añade <b>«⚠️ Ventana ajustada»</b>. Verás estas marcas en el <b>Inicio</b>, en la <b>Agenda</b> y en la <b>app de la limpiadora</b>.</p>
+      <div class="tip"><b>Son la prioridad:</b> estas limpiezas salen <b>las primeras de la lista</b> (las de ventana más ajustada, arriba del todo), tanto en tus pantallas como en la app de la limpiadora, para que se hagan antes de que llegue el huésped.</div>
+
+      <h3>Asignar o cambiar a mano (Agenda)</h3>
+      <p>Cuando quieras decidir tú quién limpia cada piso, ve a la <b>Agenda</b>. Debajo del cuadrante semanal tienes el panel <b>«Asignar limpiadora por día»</b>.</p>
+      <div class="path">Agenda › Asignar limpiadora por día</div>
+      <ol class="steps onwhite">
+        <li>Elige el día con los botones <b>Hoy</b> / <b>Mañana</b> o con el <b>calendario</b>.</li>
+        <li>En cada limpieza, abre el desplegable y elige la <b>limpiadora</b> para <b>asignarla o cambiarla</b>.</li>
+        <li>Para <b>quitar</b> la limpiadora, elige <b>«— Sin asignar —»</b>.</li>
+      </ol>
+      <p>Puedes reasignar también las limpiezas de <b>hoy</b>, siempre que no estén <b>completadas</b>. Las limpiezas ya terminadas se muestran bloqueadas (en verde) y no se tocan.</p>
+      <div class="note"><b>Si dejas una limpieza sin asignar:</b> el reparto automático de las <b>16:00</b> podría volver a asignarla solo. Si quieres que la haga una persona concreta, asígnasela tú directamente en vez de dejarla en blanco.</div>
+      <div class="note"><b>Eliminar una limpieza:</b> el botón <b>«Eliminar»</b> solo aparece en limpiezas <b>creadas a mano</b> que aún no han empezado. Las que vienen de <b>Smoobu</b> no se pueden borrar: volverían a crearse en la siguiente sincronización (para «saltarte» una de esas, déjala sin asignar).</div>
+
+      <h3>Briefing diario con IA</h3>
+      <p>En la parte superior del <b>Inicio</b> tienes la tarjeta <b>«Briefing diario con IA»</b>. Pulsa <b>✨ Generar</b> y ialimp te escribe en segundos un resumen en lenguaje natural con <b>todo lo importante del día</b>, para saber de un vistazo cómo va la jornada sin revisar pantalla por pantalla.</p>
+      <p>El resumen recoge:</p>
+      <ul>
+        <li><b>Limpiezas de hoy</b> — cuántas hay, cuántas están <b>hechas</b> y cuántas siguen <b>sin asignar</b>.</li>
+        <li><b>Mañana</b> — sesiones previstas y las que aún no tienen limpiadora.</li>
+        <li><b>Equipo</b> — qué limpiadoras están <b>ausentes</b> hoy (vacaciones o baja).</li>
+        <li><b>Avisos y quejas</b> — alertas activas e incidencias de calidad pendientes.</li>
+        <li><b>Stock</b> — productos por debajo del mínimo.</li>
+        <li><b>Facturación</b> — importe <b>pendiente de cobro</b> y, destacadas, las facturas <b>vencidas</b>.</li>
+      </ul>
+      <div class="tip"><b>Consejo:</b> genéralo a primera hora. Si hay algo urgente (limpiezas sin asignar, una factura vencida o una queja grave), el briefing lo pone delante.</div>
+    </section>
+
+    <!-- PROTOCOLOS -->
+    <section id="protocolos">
+      <h2>📋 Protocolos y fotos con IA</h2>
+      <p class="lead">Cada piso puede tener su <b>protocolo</b>: cómo debe quedar cada estancia, con fotos de referencia. La limpiadora las ve en su app y, en los puntos clave, la IA compara su foto con la de referencia y te avisa si algo no cuadra.</p>
+
+      <h3>Qué es un protocolo</h3>
+      <p>Es la <b>ficha del piso digitalizada</b>: la lista de tareas por estancia (baño, cocina, dormitorio…) junto con las <b>fotos de cómo debe quedar</b>. Esas fotos «objetivo» son la referencia con la que se compara el trabajo terminado.</p>
+
+      <h3>La limpiadora ve la referencia</h3>
+      <p>En su app, en los puntos importantes del piso, la limpiadora puede pulsar <b>«Ver referencia»</b> y comparar de un vistazo cómo tiene que quedar la zona antes de subir su foto.</p>
+
+      <h3>La IA revisa la foto (semáforo)</h3>
+      <p>Cuando la limpiadora sube la foto de un punto que tiene referencia, la IA la compara con la foto objetivo y deja un resultado:</p>
+      <ol class="steps onwhite">
+        <li><b>🟢 OK</b> — la foto coincide con la referencia. No tienes que hacer nada.</li>
+        <li><b>🟠 Revisar</b> — algo no cuadra (parece otra estancia, falta un elemento o se ve suciedad/desorden). Te llega un aviso a <b>Avisos</b> para que lo mires.</li>
+      </ol>
+      <div class="note"><b>Muy importante:</b> la IA es solo un <b>semáforo de apoyo para ti</b>. <b>Nunca bloquea ni rechaza</b> una limpieza: si ve algo raro, te avisa y <b>decides tú</b>. No se fija en la luz, el ángulo ni el encuadre, solo en lo importante. Las primeras semanas conviene ir afinándola con fotos reales.</div>
+    </section>
+
+    <!-- EQUIPO -->
+    <section id="equipo">
+      <h2>👤 Equipo y limpiadoras</h2>
+      <p class="lead">Aquí gestionas a las personas que limpian y sus accesos.</p>
+      <div class="path">👥 Equipo</div>
+      <p>El módulo está organizado en <b>tres bloques</b> (los botones de arriba), y dentro de cada uno hay sus pestañas:</p>
+      <ul>
+        <li><b>👥 Equipo</b> — las personas:
+          <ul>
+            <li><b>🧹 Limpiadoras</b> — da de alta a cada limpiadora con su <b>PIN</b> para que entre en la app <code>/l</code>. En cada una tienes el botón <b>«📲 Enviar acceso»</b> (genera su <b>enlace directo</b> y te deja <b>copiarlo</b> o <b>enviarlo por WhatsApp</b>; con ese enlace entra sin escribir nada, y puedes <b>regenerarlo</b> si hace falta) y el botón <b>«🤖 Analizar»</b>, que te da un resumen del rendimiento de esa limpiadora.</li>
+            <li><b>📅 Disponibilidad</b> — marca en qué <b>días</b> y <b>turnos</b> puede trabajar cada una: <b>Mañana</b> (08:00–14:00), <b>Tarde</b> (14:00–20:00) o <b>Completo</b> (08:00–20:00). Aquí también registras ausencias y vacaciones. <b>Importante:</b> sin disponibilidad marcada, esa limpiadora no aparece para asignarle limpiezas.</li>
+            <li><b>🔐 Accesos del equipo</b> — la lista de <b>todas las personas</b> que trabajan contigo (administración, limpiadoras, contabilidad…) con su rol y quién puede entrar al panel o a la app.</li>
+          </ul>
+        </li>
+        <li><b>💶 Economía</b> — el dinero del equipo:
+          <ul>
+            <li><b>💶 Tarifas</b> — el catálogo de <b>precios y tiempos</b> de cada piso y servicio (ver más abajo).</li>
+            <li><b>🧾 Nóminas</b> — qué hizo cada limpiadora cada quincena y cuánto se le paga (ver más abajo).</li>
+          </ul>
+        </li>
+        <li><b>🛠️ Operación</b> — el día a día:
+          <ul>
+            <li><b>⚠️ Quejas</b> — registra y sigue incidencias de calidad.</li>
+            <li><b>🎒 Kits</b> — el material asignado a cada limpiadora y sus reposiciones.</li>
+            <li><b>🤖 Análisis IA</b> — resúmenes automáticos de patrones del equipo (últimos 60 días).</li>
+          </ul>
+        </li>
+      </ul>
+      <div class="tip"><b>El PIN es la llave de la limpiadora.</b> Es el código que usa para entrar en su app del día a día. Si lo olvida, lo ves o lo regeneras desde esta misma pantalla.</div>
+
+      <h3>💶 Tarifas — catálogo de precios y tiempos</h3>
+      <div class="path">👥 Equipo › 💶 Tarifas</div>
+      <p>Es tu «base de datos» de cada piso y servicio con su <b>tiempo presupuestado</b> y su <b>precio</b> (lo que se le paga a la limpiadora). De aquí salen los importes de las nóminas.</p>
+      <ul>
+        <li>Busca por nombre y filtra por categoría: <b>Piso</b>, <b>Servicio</b> (limpieza profunda, hora extra, repaso, desplazamiento, sofás…) o <b>PC</b>.</li>
+        <li><b>+ Nuevo concepto</b> para añadir uno; el lápiz ✏️ para editar precio o tiempo; la × para borrarlo.</li>
+        <li>Cada concepto tiene un <b>precio para la limpiadora</b> y, opcionalmente, un <b>precio para el cliente</b>.</li>
+      </ul>
+      <div class="note"><b>Conceptos «PC» (2ª persona).</b> Son la parte de una <b>segunda limpiadora</b>: cuando un piso (normalmente una reserva puntual) hay que sacarlo rápido y lo hacen <b>entre dos personas</b>, la fila «PC» es el tiempo y el pago de esa segunda persona. Se le añade como un parte más en su nómina.</div>
+
+      <h3>🧾 Nóminas — qué hizo cada limpiadora por quincena</h3>
+      <div class="path">👥 Equipo › 🧾 Nóminas</div>
+      <p>Sustituye al Excel del Drive: aquí queda guardado <b>quién hizo cada limpieza</b> y se calcula sola la nómina de la quincena.</p>
+      <ul>
+        <li>Elige el <b>mes</b> y la <b>1ª</b> (días 1–15) o <b>2ª quincena</b> (16–fin de mes).</li>
+        <li><b>➕ Añadir parte</b>: eliges limpiadora, concepto del catálogo (autocompleta precio y tiempo), fecha y cantidad. Sirve también para trabajos sueltos que <b>no se facturan al cliente</b> (p. ej. una limpieza profunda puntual de 5 h) pero sí se le cuentan a la limpiadora.</li>
+        <li><b>🔄 Importar de sesiones</b>: crea los partes automáticamente a partir de las limpiezas ya <b>completadas</b> en la app. Se puede repetir sin duplicar.</li>
+        <li>Cada limpiadora muestra su <b>total de tiempo</b> y su <b>total a pagar</b>; despliégala para ver, editar o borrar cada parte.</li>
+        <li><b>🖨 Imprimir</b> o <b>⬇️ CSV</b> para llevarte la nómina.</li>
+      </ul>
+    </section>
+
+    <!-- MATERIALES -->
+    <section id="materiales">
+      <h2>📦 Materiales y stock</h2>
+      <p class="lead">Controla los productos de limpieza, la lencería y los proveedores.</p>
+      <div class="path">📦 Materiales</div>
+      <p>Pestañas del módulo:</p>
+      <ul>
+        <li><b>📦 Stock</b> — tus productos y cuánto te queda de cada uno. Cada artículo puede llevar su <b>proveedor</b> (a quién se lo compras), que se ve en la ficha y eliges al crear o editar.</li>
+        <li><b>🛏️ Lencería</b> — sábanas, toallas y ropa de cama, por piso. Cada partida muestra su <b>estado</b> (limpio, sucio, en lavandería…), su <b>cantidad</b> y su <b>proveedor</b>; puedes cambiar el estado al vuelo desde el desplegable de cada partida.</li>
+        <li><b>🏪 Proveedores</b> — a quién compras cada cosa. Desde aquí también gestionas el <b>📦 Catálogo</b> de productos con su proveedor, referencia y precio.</li>
+        <li><b>✅ Checklists</b> — la lista de tareas que ve la limpiadora en cada piso (puedes marcar tareas como «foto obligatoria» o «crítica»).</li>
+        <li><b>📄 Documentos</b> — sube albaranes o facturas y el escáner inteligente los lee solo, genera el apunte contable y actualiza el stock. Para quitar un documento (o un escaneo erróneo), pulsa el icono 🗑 de su tarjeta y confirma.</li>
+      </ul>
+      <h3>Sobre los kits y reponer material</h3>
+      <p>Cada limpiadora lleva su propio kit. La idea es que, cuando se le acabe algo, lo <b>reporte</b> para que tú lo veas en el stock y puedas reponerlo a tiempo. Así el inventario refleja siempre lo que hay de verdad y no te quedas sin producto en mitad de una limpieza.</p>
+    </section>
+
+    <!-- CHAT -->
+    <section id="chat">
+      <h2>💬 Chat</h2>
+      <p class="lead">Comunicación con tu equipo y por cada limpieza.</p>
+      <div class="path">💬 Chat</div>
+      <p>Desde el Chat puedes hablar con el equipo en general o abrir una conversación ligada a una limpieza o a un piso concreto. Es el sitio donde se centralizan las dudas, fotos y avisos, en vez de andar perdiéndolos por WhatsApp.</p>
+    </section>
+
+    <!-- INFORMES -->
+    <section id="informes">
+      <h2>📄 Informes y facturas</h2>
+      <p class="lead">Lo que cobras y lo que reportas a tus clientes, automatizado.</p>
+      <div class="path">💼 Negocio <span class="sep">›</span> 🧾 Facturas / 📄 Informes</div>
+      <ul>
+        <li><b>🧾 Facturas</b> — genera la factura de cada cliente por periodo. Puedes verla en PDF y enviarla por email desde el propio programa.</li>
+        <li><b>📄 Informes</b> — informes mensuales de la actividad de limpieza por cliente.</li>
+      </ul>
+      <p>Una vez al mes, ialimp prepara estos documentos por ti; tú solo revisas y envías.</p>
+      <div class="note"><b>Datos fiscales:</b> al generar una factura, ialimp toma los datos de facturación de la ficha del cliente (razón social o nombre, NIF/CIF y domicilio) y los <b>deja guardados en esa factura</b>. Así, aunque luego cambies los datos del cliente, las facturas antiguas conservan los datos correctos del momento en que se emitieron. Por eso conviene tener bien rellena la pestaña <b>Facturación</b> del cliente antes de facturar.</div>
+      <div class="note"><b>Factura con varios pisos:</b> al crear una factura a mano puedes asignar cada <b>línea</b> a un <b>piso</b> (desplegable «piso»). Así, si una misma factura cubre varios pisos, el coste queda repartido por piso en la contabilidad del propietario. Las facturas autogeneradas desde las limpiezas ya reparten el piso solas.</div>
+    </section>
+
+    <!-- CONTABILIDAD -->
+    <section id="contabilidad">
+      <h2>📊 Contabilidad</h2>
+      <p class="lead">La foto económica de tu negocio: lo que ingresas, lo que gastas y lo que debes a Hacienda.</p>
+      <div class="path">💼 Negocio <span class="sep">›</span> 📊 Contabilidad</div>
+      <p>Tiene cinco pestañas:</p>
+      <ul>
+        <li><b>📊 Resultado</b> — ingresos, gastos y beneficio mes a mes del año elegido.</li>
+        <li><b>📒 Apuntes</b> — todos tus movimientos de empresa: <b>gastos</b> e <b>ingresos</b> que añades a mano, además de los gastos que entran solos al <b>escanear una factura</b>. Los ingresos en verde, los gastos en rojo.</li>
+        <li><b>🧾 IVA</b> — IVA repercutido, soportado y lo que toca liquidar, por trimestre.</li>
+        <li><b>💰 Tesorería</b> — cobros y pagos reales, y las facturas que aún tienes <b>pendientes de cobro</b> (puedes marcarlas como cobradas).</li>
+        <li><b>📈 Rentabilidad</b> — beneficio y margen de cada piso.</li>
+      </ul>
+      <h3>Añadir un apunte (gasto o ingreso)</h3>
+      <p>Pulsa el botón <b>«➕ Apunte»</b> de la <b>cabecera</b> (arriba a la derecha, visible desde cualquier pestaña) — o, dentro de la pestaña <b>📒 Apuntes</b>, el botón <b>«➕ Nuevo apunte»</b>. Arriba elige <b>💸 Gasto</b> o <b>💶 Ingreso</b>. Indica el concepto (y el proveedor si es gasto), la fecha, la categoría y la <b>base imponible</b>; el IVA y el total se calculan solos a partir del % que pongas (pon <b>0</b> si va sin IVA). Marca <b>«Ya pagado / Ya cobrado»</b> si el dinero ya entró o salió de caja (así cuenta en Tesorería). Aparece al instante en Resultado, IVA y Tesorería. Para borrar uno que añadiste a mano, usa el icono 🗑.</p>
+      <h3>🔁 Gastos e ingresos recurrentes</h3>
+      <p>Si un apunte se repite siempre igual (un alquiler, un seguro, la gestoría…), marca <b>«🔁 Recurrente»</b> al crearlo y elige la frecuencia (<b>mensual</b>, <b>trimestral</b>, <b>semestral</b> o <b>anual</b>) y, si quieres, una fecha de fin. La app <b>crea sola el apunte de cada periodo</b> y sigue generándolo los próximos meses/años, así no tienes que meterlo cada vez. Verás tus plantillas en «🔁 Recurrentes activos» dentro de Apuntes; bórralas ahí cuando dejen de aplicar (los apuntes ya generados se conservan).</p>
+      <h3>📎 Adjuntar justificante</h3>
+      <p>Al crear un apunte puedes <b>adjuntar el documento</b> (la factura o el recibo en PDF o foto). Queda guardado y luego lo abres desde el icono 📎 del apunte en la lista.</p>
+      <div class="note"><b>De dónde salen los ingresos:</b> de las <b>facturas que emites</b> a tus clientes (pestaña Facturas) <b>y</b> de los <b>ingresos manuales</b> que añadas en la pestaña 📒 Apuntes.</div>
+      <div class="note"><b>Exportar:</b> el botón <b>⬇️ Excel</b> descarga el resultado anual y el resumen de IVA en una hoja de cálculo.</div>
+    </section>
+
+    <!-- APP LIMPIADORA -->
+    <section id="app">
+      <h2>🧹 La app de la limpiadora</h2>
+      <p class="lead">Lo que ve tu equipo cuando entra con su PIN en <code>app.ialimp.es/l</code>.</p>
+      <div class="card">
+        <ul style="margin-bottom:0">
+          <li><b>Sus limpiezas del día</b>, ordenadas y con los datos del piso.</li>
+          <li><b>Checklist de tareas</b>: va marcando lo que hace.</li>
+          <li><b>Fotos</b>: en las tareas marcadas como obligatorias, debe subir una foto (algunas se comparan con una foto de referencia).</li>
+          <li><b>📍 Cómo llegar</b>: abre la ruta directa al piso.</li>
+          <li><b>🧴 Productos usados</b>: al terminar, anota cuántas unidades de cada producto ha gastado. Cada unidad que registra se <b>descuenta del stock</b> automáticamente, para que el inventario refleje siempre lo que queda de verdad. La limpiadora <b>no ve los precios</b> de los productos (eso es información tuya).</li>
+        </ul>
+      </div>
+      <p>Es una app pensada para el móvil y muy simple, para que la limpiadora se centre en limpiar y no se pierda entre menús.</p>
+    </section>
+
+    <section id="propietario">
+      <h2>🏠 Portal del propietario</h2>
+      <p class="lead">El propietario entra a su portal desde una dirección fija — <code>app.ialimp.es/propietario</code> — con su <b>email y su contraseña</b>, donde ve sus limpiezas, finanzas, documentos e instrucciones de acceso. Ya no necesita guardar ningún enlace ni código: entra como en cualquier web.</p>
+      <div class="card">
+        <ul style="margin-bottom:0">
+          <li><b>Hoy</b>: estado de cada piso y datos del día.</li>
+          <li><b>Reservas</b>: todas sus limpiezas con filtros por piso, estado y fecha.</li>
+          <li><b>Calendario iCal</b>: conecta el calendario de Booking/Airbnb de cada piso para que las limpiezas se creen solas.</li>
+          <li><b>Finanzas, Documentos, Acceso y Chat</b> con tu empresa.</li>
+        </ul>
+      </div>
+      <h3>Conectar el calendario (iCal)</h3>
+      <p>En la pestaña <b>🔗 Calendario iCal</b> el propietario pega, para cada piso, el <b>enlace iCal</b> de su anuncio en Booking, Airbnb o VRBO. ialimp lo lee <b>solo, cada pocas horas</b>, y crea una limpieza por cada salida de huésped.</p>
+      <div class="card">
+        <ol style="margin-bottom:0">
+          <li>Copia el <b>enlace de exportar calendario</b> del portal (en Booking: <i>Calendario → Sincronizar calendarios → Exportar</i>; en Airbnb: <i>Calendario → Disponibilidad → Conectar calendarios → Exportar</i>).</li>
+          <li>Pégalo en el piso correspondiente y pulsa <b>«Guardar y probar»</b>.</li>
+          <li>Al instante verás si está <b>conectado</b> y cuántas reservas se han sincronizado (o el error si el enlace no es válido).</li>
+        </ol>
+      </div>
+      <div class="note"><b>Reservas de última hora:</b> si en una sincronización aparece una reserva con <b>salida HOY</b> (una limpieza de última hora), tu empresa recibe al momento un <b>aviso urgente en alertas</b> y, además, un <b>email al correo de la empresa</b> — salvo que ese piso ya conste limpio hoy — para asignar limpiadora a tiempo. Puedes pegar <b>varios calendarios</b> en el mismo piso (p. ej. Booking + Airbnb).</div>
+      <div class="note"><b>Cómo das acceso al propietario (email + contraseña):</b> el alta la haces <b>tú</b> — el propietario <b>no se registra solo</b>. En la ficha del cliente pulsa <b>«✉️ Enviar acceso a la intranet»</b>: le llega un correo con un enlace para <b>crear su contraseña</b> (mayúscula, minúscula, número y símbolo; el enlace caduca a los 7 días). A partir de ahí entra siempre desde <span class="path">app.ialimp.es/propietario</span> con su <b>email + contraseña</b>, sin enlaces. Si la olvida, en esa pantalla pulsa <b>«¿Olvidaste tu contraseña?»</b> (solo funciona para cuentas que ya hayas activado). Los <b>enlaces de acceso antiguos</b> (por código) siguen funcionando.</div>
+      <div class="note"><b>Sus ingresos y gastos en Finanzas:</b> dentro de <b>Finanzas</b>, el propietario registra sus propios movimientos con los botones <b>💰 Añadir ingreso</b> (reservas por portal, nº de noches…) y <b>➕ Añadir gasto</b> (con <b>categorías</b>, <b>gastos recurrentes</b> y <b>escaneo IA</b> de tickets/facturas). Todo se resume en KPIs, gráficos por mes, gastos por categoría y rentabilidad por piso. Es la contabilidad propia del propietario; no se mezcla con la de tu empresa.</div>
+      <div class="note"><b>Documentos del piso:</b> en la pestaña <b>📄 Documentos</b> el propietario tiene dos cosas: arriba, el <b>escáner de facturas con IA</b> (foto del ticket/factura → apunte contable); y debajo, un <b>archivador por piso</b> donde guarda cualquier documento — <b>contrato de alquiler/explotación, licencia turística (VFT), seguro, escritura, IBI, certificado energético…</b> Cada documento puede llevar <b>fecha de caducidad</b> (se avisa en 🟡 amarillo cuando va a caducar y en 🔴 rojo si ya venció — útil para la VFT y los seguros) y un interruptor <b>🔒 privado / 👁 compartido</b>: por defecto es privado (solo lo ve el propietario); si lo marca como compartido, lo verás tú en la ficha del piso del cliente (<span class="path">Clientes › (cliente) › Propiedades</span>). Los archivos privados nunca los ve la empresa.</div>
+      <div class="note"><b>Facturas en Finanzas:</b> dentro de <b>Finanzas</b>, la pestaña <b>🧾 Facturas</b> muestra al propietario las facturas que le has emitido, con el <b>desglose por piso</b> dentro de cada una, y un botón <b>⬇ Descargar PDF</b>. El importe de esas facturas se cuenta como <b>gasto de limpieza</b> en su contabilidad, repartido por piso (así no se cuenta dos veces). Solo aparecen las facturas <b>emitidas</b>: mientras una está en borrador, el propietario no la ve.</div>
+      <div class="note"><b>Autorización de datos (RGPD) la primera vez:</b> la primera vez que el propietario abre su enlace, antes de ver nada, aparece una pantalla con <b>dos casillas</b>: una <b>obligatoria</b> (autorizar el tratamiento de sus datos para prestarle el servicio y darle acceso a la intranet) y otra <b>opcional</b> (recibir ofertas comerciales de IALIMP y sus empresas asociadas). Solo la obligatoria hace falta para entrar; la de ofertas puede dejarla sin marcar y la puede revocar cuando quiera. Hasta que no marca la obligatoria y pulsa «Aceptar y entrar», no se cargan ni se muestran sus datos. Queda registrada la aceptación (fecha, IP, navegador y si aceptó o no las ofertas) como prueba. Si más adelante actualizamos el texto legal, se le volverá a pedir la autorización una sola vez.</div>
+      <div class="note"><b>Aviso de cookies y páginas legales:</b> la aplicación solo usa <b>cookies técnicas necesarias</b> (las de sesión); no hay seguimiento ni publicidad. Por eso, al entrar, aparece abajo un <b>aviso informativo de cookies</b> con un botón <b>«Aceptar»</b> (se recuerda en ese dispositivo). En el pie del login y en cada página legal están enlazados el <b>Aviso legal</b>, la <b>Política de privacidad</b> y la <b>Política de cookies</b> (en <span class="path">/legal/aviso-legal</span>, <span class="path">/legal/privacidad</span> y <span class="path">/legal/cookies</span>).</div>
+      <h3>Crear una limpieza directamente</h3>
+      <p>En la <b>barra superior</b> del portal, junto al menú, el propietario verá un botón <span class="path">＋</span>. Es un acceso directo para pedir un servicio sin llamarte:</p>
+      <div class="card">
+        <ol style="margin-bottom:0">
+          <li>Elige uno de <b>sus pisos</b>.</li>
+          <li>Indica la <b>fecha</b> y, si quiere, nº de huéspedes.</li>
+          <li>Escoge el <b>tipo de servicio</b> (rotación, check-out, extra o profunda).</li>
+          <li>Opcional: <b>horas de salida y entrada</b> (si el hueco es menor de 2 h, se marca como ventana ajustada) y <b>notas</b> para el equipo.</li>
+          <li>Al guardar, la limpieza queda <b>pendiente</b> y tu empresa recibe un <b>aviso en alertas</b> para asignar limpiadora.</li>
+        </ol>
+      </div>
+      <p>El piso y las fechas se validan automáticamente: un propietario solo puede crear limpiezas en pisos que sean suyos.</p>
+    </section>
+
+    <!-- FAQ -->
+    <section id="faq">
+      <h2>❓ Dudas frecuentes</h2>
+
+      <details open>
+        <summary>He entrado pero no sé cómo añadir pisos</summary>
+        <p>Los pisos cuelgan de un cliente. En el menú ve a <b>💼 Negocio › 👥 Clientes</b>, pulsa <b>🏠 Propiedades</b> en la tarjeta del cliente y luego <b>＋ Añadir</b>. Si el cliente todavía no existe, créalo primero con <b>＋ Nuevo cliente</b>. Lo tienes detallado en la sección «Añadir pisos».</p>
+      </details>
+
+      <details>
+        <summary>Al crear una limpieza no me aparece ningún piso</summary>
+        <p>Es porque el cliente que has elegido en el paso 1 aún no tiene pisos. Añádele al menos uno y volverán a aparecer en el paso 2.</p>
+      </details>
+
+      <details>
+        <summary>¿Cómo le doy acceso a una limpiadora?</summary>
+        <p>En el módulo <b>Equipo › Limpiadoras</b>, dala de alta. El sistema le crea un PIN automáticamente. Ese PIN es lo que ella usa para entrar en <code>/l</code>.</p>
+      </details>
+
+      <details>
+        <summary>¿Tengo que pagar a Booking o calcular comisiones aquí?</summary>
+        <p>No. ialimp es el programa de la <b>empresa de limpieza</b>. Las comisiones de los portales (Booking, Airbnb…) son cosa del propietario en su propio sistema; aquí tú gestionas las limpiezas y lo que facturas por ellas.</p>
+      </details>
+
+      <details>
+        <summary>¿Funciona en el móvil?</summary>
+        <p>Sí, está pensado para móvil. Puedes incluso instalarlo como app desde el navegador y abrirlo con un icono en la pantalla de inicio.</p>
+      </details>
+    </section>
+
+  </main>
+</div>
+
+<footer>
+  <div class="logo"><b>ia</b><span>limp</span></div>
+  <p style="margin-top:8px">Manual de uso · Si te atascas con algo, anótalo y lo repasamos.</p>
+</footer>
+
+</body>
+</html>

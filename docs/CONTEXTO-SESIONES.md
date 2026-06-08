@@ -16,6 +16,52 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **MONOREPO casa de marcas — PLAN APROBADO + Fase 1 paso 1 hecho — 08/06/2026**
+  - **Decisión de Alberto**: crear UNA central con todo (ia.rest = repo anfitrión); ia.rest pasa a ser
+    **una vertical más** (`apps/ia-rest`), SIVRA/IALIMP entran como `apps/`; **módulos comunes** en
+    `packages/`; **marca matriz** por encima. Visión = "fábrica de marcas": módulos **independientes y
+    portables** (enchufables a cualquier proyecto) + una **raíz/plantilla común** + verticales con la
+    **misma estructura**. Plan completo aprobado en `/root/.claude/plans/...` y reflejado en
+    `docs/HANDOFF-...` + `docs/RUNBOOK-monorepo.md`.
+  - **Tooling decidido**: pnpm + turbo (aísla deps; 3 versiones de Next 16/15.5/15.3 conviven).
+  - ✅ **#87 mergeado** (core-ai con `geminiSearch`, 3 proveedores) — ya en `main` junto a #85/#86.
+  - ✅ **`@iarest/core-identity` añadido en #88** (keystone de portabilidad): contrato de
+    sesión/inquilino + puerto `IdentityProvider` (puertos&adaptadores) agnóstico del auth
+    (Supabase/jose/NextAuth) + helpers `requireSession`/`requireTenantId`/`assertRole` y errores
+    401/403. Paquete puro, sin deps. **Verificado igual que el CI** (tsc+lint+build verdes en local).
+    Es lo que hace que los módulos de `packages/*` se escriban una vez y sirvan a cualquier vertical.
+  - ✅ **Paso 1 (PR #88, draft, NO MERGEAR): co-localizado el código** de SIVRA (`apps/sivra`, 138
+    ficheros) e IALIMP (`apps/ialimp`, 337) desde sus `origin/main`. **Inertes**: excluidos de
+    `tsconfig`/`eslint.config`/`.vercelignore` de ia.rest → **CI y los 3 previews Vercel en VERDE**
+    (nada roto). Verificado.
+  - 📋 **`docs/RUNBOOK-monorepo.md`**: corte llave-en-mano. Pasos restantes de código (pnpm, mover
+    ia.rest→`apps/ia-rest`, `packages/base`, adopción) + **pasos de Vercel que SOLO puede hacer Alberto**
+    (Root Directory + repo conectado + install pnpm de cada proyecto). Tras los pasos de código el CI de
+    la rama se pondrá ROJO hasta aplicar Vercel (esperado); la verificación real de SIVRA/IALIMP es su
+    preview de Vercel tras reapuntar.
+  - ✅ **DE-RISK del corte (08/06):** ensayo local — los **3 apps compilan en VERDE desde `apps/*`** en
+    aislamiento (`npm install --legacy-peer-deps` + su `buildCommand`): **IALIMP** `next build` OK (con
+    `JWT_SECRET` y demás envs que Vercel ya tiene), **SIVRA** OK, **ia.rest** CI. Son self-contained (sin
+    deps `@iarest/*` ni imports que escapen). **Hallazgo clave:** con **Root Directory por app**, cada uno
+    usa su propio `node_modules`/versión de Next → **el primer corte NO necesita pnpm ni mover ia.rest**
+    (las 3 versiones de Next nunca se cruzan). pnpm/turbo quedan para *después* (solo al compartir
+    `packages/*`). Runbook reescrito con esta **OPCIÓN RECOMENDADA — corte mínimo** (ia.rest no se toca;
+    Install = npm, no pnpm).
+  - ✅ **Backup de Sique Brilla (Vanessa) entregado a Alberto** (ZIP: `restore.sql` type-safe validado +
+    JSON 1.039 filas/44 tablas + manifiesto de 21 objetos de Storage). El corte NO toca su BD/Storage;
+    backup = seguridad extra. Falta (sus 2 clics): backup nativo Supabase + bytes de fotos (no tengo
+    credenciales). Decisión: **sin prisa, IALIMP el último**.
+  - 🟡 **Pendiente conocido (APLAZADO, Opción 3):** la landing `ialimp.es` (proyecto Vercel
+    `ialimp-landing`, fuente en `apps/ialimp/landing/ialimp-es/`) dejará de auto-publicarse tras el corte
+    porque su GitHub Action quedó en `apps/ialimp/.github/workflows/` (GitHub solo corre los de la raíz).
+    Decisión de Alberto: NO tocarlo ahora; arreglar cuando edite la landing (opciones en el runbook).
+  - 🟡 **Bloqueo para continuar**: el corte necesita los cambios de Vercel de Alberto (Root Directory +
+    repo conectado; fuera de git). Con la opción mínima ya probada, su parte es mínima y de bajo riesgo.
+  - **Sugerencias incorporadas al plan**: scope de paquetes de la matriz (no `@iarest`),
+    `core-identity` (contrato sesión/tenant), `packages/ui` (design system), Changesets + tests de
+    contrato, catálogo de módulos + generador `create-vertical`, raíz multi-tenant/white-label de
+    fábrica, puertos&adaptadores.
+
 - **CASA DE MARCAS — Fase 1 EN MARCHA: 2 paquetes núcleo mergeados a main — 08/06/2026**
   - ✅ **#85 mergeado** (`core-ai`, andamiaje monorepo) · ✅ **#86 mergeado** (`core-fiscal`). Ambos con
     CI verde (Lint·TypeCheck·Build + Patrones + Vercel). Squash en main.

@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "siteName": "House Sevillana",
+    "homeTitle": "Appartamento con parcheggio nel centro di Siviglia | House Sevillana",
+    "homeDescription": "Casa storica restaurata di 290 m² con 6 camere, parcheggio privato e terrazza nel centro storico di Siviglia. Ideale per famiglie e gruppi. Prenotazione diretta, senza commissioni.",
+    "ogAlt": "Patio interno di House Sevillana nel centro storico di Siviglia"
+  },
+  "nav": {
+    "home": "Home",
+    "house": "La casa",
+    "location": "Posizione",
+    "rates": "Prezzi",
+    "contact": "Contatti",
+    "bookNow": "Prenota"
+  },
+  "hero": {
+    "h1": "Casa con parcheggio privato nel centro storico di Siviglia, per gruppi e famiglie",
+    "subtitle": "Casa storica restaurata di 290 m² con 6 camere, 4 bagni e terrazza. A 10 minuti a piedi dalla Cattedrale, in una casa-palazzo del centro storico.",
+    "ctaPrimary": "Verifica disponibilità",
+    "ctaSecondary": "Visita la casa"
+  },
+  "valueProps": {
+    "title": "Perché scegliere House Sevillana",
+    "items": {
+      "parking": {
+        "title": "Parcheggio privato in struttura",
+        "body": "Parcheggiare nel centro storico di Siviglia è complicato. Qui hai il tuo posto incluso, senza costi extra né perdite di tempo a cercare."
+      },
+      "capacity": {
+        "title": "6 camere e 4 bagni",
+        "body": "Spazio reale per famiglie multigenerazionali e gruppi fino a 12 persone, con bagni a sufficienza per non fare la fila."
+      },
+      "heritage": {
+        "title": "Casa-palazzo del centro storico",
+        "body": "Patio andaluso, piastrelle originali, ristrutturazione moderna. A pochi passi da Plaza San Marcos, in una zona autentica e tranquilla."
+      },
+      "direct": {
+        "title": "Prenotazione diretta, senza intermediari",
+        "body": "Miglior prezzo garantito e contatto diretto con il proprietario. Niente commissioni di piattaforma che gonfiano il prezzo finale."
+      }
+    }
+  },
+  "house": {
+    "title": "All'interno della casa",
+    "intro": "290 metri quadri distribuiti in una casa-palazzo restaurata, con tutti gli elementi caratteristici dell'architettura sivigliana: patio interno, piastrelle originali, terrazza con vista sulla città e un giardino dove rilassarsi.",
+    "specsTitle": "In sintesi",
+    "specs": {
+      "size": "290 m²",
+      "sizeLabel": "Superficie",
+      "bedrooms": "6",
+      "bedroomsLabel": "Camere",
+      "bathrooms": "4",
+      "bathroomsLabel": "Bagni",
+      "guests": "Fino a 12",
+      "guestsLabel": "Ospiti"
+    },
+    "amenitiesTitle": "Servizi",
+    "amenities": [
+      "Parcheggio privato in struttura",
+      "Wi-Fi gratuito in tutta la casa",
+      "Aria condizionata in tutte le stanze",
+      "Cucina completamente attrezzata (forno, microonde, frigo, macchina del caffè)",
+      "Terrazza con vista sulla città",
+      "Patio interno e giardino",
+      "TV a schermo piatto con canali satellitari",
+      "Lenzuola e asciugamani inclusi",
+      "Asciugacapelli",
+      "Adatta a famiglie con bambini"
+    ]
+  },
+  "location": {
+    "title": "Nel cuore del centro storico",
+    "intro": "House Sevillana si trova in Calle Bustos Tavera, accanto a Plaza de San Marcos, nel quartiere di San Julián. Una zona autentica e tranquilla da cui tutto l'essenziale è raggiungibile a piedi.",
+    "poisTitle": "A piedi dalla casa",
+    "pois": [
+      {
+        "name": "Chiesa di San Luis de los Franceses",
+        "distance": "300 m"
+      },
+      {
+        "name": "Palacio de las Dueñas",
+        "distance": "5 min"
+      },
+      {
+        "name": "Setas de Sevilla (Metropol Parasol)",
+        "distance": "8 min"
+      },
+      {
+        "name": "Cattedrale e Giralda",
+        "distance": "10 min"
+      },
+      {
+        "name": "Quartiere Santa Cruz",
+        "distance": "15 min"
+      },
+      {
+        "name": "Real Alcázar",
+        "distance": "20 min"
+      }
+    ],
+    "transportTitle": "Come arrivare",
+    "transport": {
+      "airport": "Aeroporto di Siviglia (SVQ): 11 km, ~16 min in auto",
+      "station": "Stazione Santa Justa: 10 min in auto",
+      "bus": "Fermata bus Plaza Ponce de León a pochi minuti a piedi"
+    }
+  },
+  "audience": {
+    "title": "Ideale per",
+    "intro": "Per dimensioni e disposizione, House Sevillana funziona benissimo per alcuni viaggiatori e meno per altri. Meglio saperlo prima di prenotare.",
+    "yes": {
+      "title": "Perfetta per",
+      "items": [
+        "Famiglie multigenerazionali (nonni, genitori e bambini insieme)",
+        "Grandi gruppi di amici (da 8 a 12 persone)",
+        "Matrimoni o eventi in cui più coppie viaggiano insieme",
+        "Viaggiatori in auto che hanno bisogno di parcheggio in centro"
+      ]
+    },
+    "no": {
+      "title": "Non è la scelta migliore se",
+      "items": [
+        "Siete una coppia (lo spazio è eccessivo)",
+        "Cercate feste o addii al celibato/nubilato (non consentiti)",
+        "Avete bisogno di un hotel con reception 24h"
+      ]
+    }
+  },
+  "directBooking": {
+    "title": "Perché prenotare qui e non su Booking o Airbnb?",
+    "body": "Prenotare direttamente su housesevillana.vercel.app garantisce il miglior prezzo disponibile. Piattaforme come Booking applicano una commissione di quasi il 20%, che si trasferisce sul prezzo che paghi. Qui non ci sono intermediari: stesso appartamento, stesso servizio e contatto diretto con il proprietario per qualsiasi domanda prima e durante il soggiorno.",
+    "cta": "Vedi disponibilità e prenota"
+  },
+  "faq": {
+    "title": "Domande frequenti",
+    "items": [
+      {
+        "q": "House Sevillana ha un parcheggio privato?",
+        "a": "Sì. La casa dispone di parcheggio privato in struttura, una rarità nel centro storico di Siviglia. Il posto è incluso nel prezzo, senza costi aggiuntivi e senza dover cercare parcheggio a pagamento."
+      },
+      {
+        "q": "Per quante persone è House Sevillana?",
+        "a": "La casa ha 6 camere e 4 bagni distribuiti su 290 m², con capacità fino a 12 ospiti. Ideale quando più coppie o più generazioni viaggiano insieme."
+      },
+      {
+        "q": "A che distanza si trova la Cattedrale di Siviglia?",
+        "a": "Cattedrale e Giralda sono a circa 10 minuti a piedi. Il Real Alcázar a circa 20. Tutti i punti iconici del centro sono raggiungibili a piedi."
+      },
+      {
+        "q": "Sono ammessi bambini e animali?",
+        "a": "I bambini di tutte le età sono i benvenuti — la disposizione rende la casa particolarmente comoda per le famiglie. Per gli animali, chiedere prima di prenotare."
+      },
+      {
+        "q": "Sono ammessi addii al celibato/nubilato o feste?",
+        "a": "No. Per rispetto del vicinato e della casa stessa, feste ed eventi simili non sono consentiti. Orario di silenzio obbligatorio dalle 21:00 alle 09:00."
+      },
+      {
+        "q": "Quali sono gli orari di check-in e check-out?",
+        "a": "Check-in dalle 16:00 e check-out entro le 11:00. Per orari diversi scrivici prima di prenotare e vediamo cosa è possibile."
+      }
+    ]
+  },
+  "footer": {
+    "tagline": "Casa-palazzo restaurata con parcheggio privato nel centro storico di Siviglia.",
+    "navTitle": "Navigazione",
+    "legalTitle": "Note legali",
+    "contactTitle": "Contatti",
+    "rights": "© {year} House Sevillana. Tutti i diritti riservati.",
+    "vftLabel": "N° licenza turistica (VFT)",
+    "vftPending": "VFT/SE/01179",
+    "phoneLabel": "Telefono",
+    "phone": "+34 637 349 990",
+    "email": "alberto.suarez.gutierrez@gmail.com"
+  }
+}

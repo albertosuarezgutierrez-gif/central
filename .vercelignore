@@ -2,3 +2,8 @@
 # but we don't want to confuse Vercel with them
 *.md
 SKILL.md
+
+# Monorepo casa de marcas: las otras verticales viven en apps/ y NO las construye
+# el proyecto Vercel de ia.rest (cada app tendrá su propio proyecto con Root Directory
+# = apps/<app> tras el corte). Mantener fuera del deploy actual de ia-rest.
+apps/

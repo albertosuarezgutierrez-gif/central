@@ -1,0 +1,43 @@
+name: Deploy landing (ialimp.es)
+
+# Despliega la landing estática `landing/ialimp-es/` al proyecto Vercel
+# `ialimp-landing` (dominio ialimp.es), que NO está conectado a git por sí mismo.
+# Se ejecuta al cambiar la landing en `main`, o a mano (workflow_dispatch).
+#
+# Requisito: añadir el secreto del repo `VERCEL_TOKEN`
+#   (GitHub → Settings → Secrets and variables → Actions → New repository secret).
+#   El token se crea en Vercel → Account Settings → Tokens.
+# Los IDs de equipo/proyecto NO son secretos (son identificadores), van fijos abajo.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'landing/ialimp-es/**'
+      - '.github/workflows/deploy-landing.yml'
+  workflow_dispatch: {}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: team_f4gPpt6dPuNcd5YyMt3q27uf
+      VERCEL_PROJECT_ID: prj_41U7iFmAbFStPBqfms1cuDpJB8y4
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Descargar fuentes (Nunito, auto-alojada)
+        working-directory: landing/ialimp-es
+        run: bash fetch-fonts.sh || echo "fetch-fonts falló; se despliega igual (fuente del sistema)"
+
+      - name: Instalar Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Deploy a producción (proyecto ialimp-landing)
+        working-directory: landing/ialimp-es
+        run: vercel deploy --prod --yes --token="$VERCEL_TOKEN"
