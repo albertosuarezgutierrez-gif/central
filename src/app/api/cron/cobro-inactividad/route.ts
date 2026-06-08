@@ -18,7 +18,7 @@ const COMISION_RATE = 0.005
 async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerClient>): Promise<number> {
   const { data: sesiones } = await supabase
     .from('qr_sesiones_cliente')
-    .select('id, restaurante_id, creado_en, preauth_payment_method_id, precio_fijo_aplicado')
+    .select('id, local_id, creado_en, preauth_payment_method_id, precio_fijo_aplicado')
     .eq('tipo', 'individual')
     .eq('estado', 'activa')
     .eq('preauth_completado', true)
@@ -27,19 +27,19 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
   if (!sesiones?.length) return 0
 
   // Timer + modo de cobro por restaurante (solo auto-cobramos si el dueño eligió pre_auth)
-  const restIds = [...new Set(sesiones.map((s: any) => s.restaurante_id))]
+  const restIds = [...new Set(sesiones.map((s: any) => s.local_id))]
   const { data: configs } = await supabase
     .from('cobro_config')
-    .select('restaurante_id, timer_inactividad_min, modo_cobro')
-    .in('restaurante_id', restIds)
-  const cfgMap = new Map((configs || []).map((c: any) => [c.restaurante_id, c]))
+    .select('local_id, timer_inactividad_min, modo_cobro')
+    .in('local_id', restIds)
+  const cfgMap = new Map((configs || []).map((c: any) => [c.local_id, c]))
 
   const stripe = getStripe()
   const ahora = Date.now()
 
   const resultados = await Promise.allSettled(
     sesiones.map(async (s: any) => {
-      const cfg = cfgMap.get(s.restaurante_id)
+      const cfg = cfgMap.get(s.local_id)
       if (!cfg || cfg.modo_cobro !== 'pre_auth') return false
       const timerMin = cfg.timer_inactividad_min || 45
       const edadMin = (ahora - new Date(s.creado_en).getTime()) / 60000
@@ -61,7 +61,7 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
       }
 
       const { data: rest } = await supabase
-        .from('restaurantes').select('stripe_account_id').eq('id', s.restaurante_id).single()
+        .from('restaurantes').select('stripe_account_id').eq('id', s.local_id).single()
 
       const importeCentimos = Math.round(total * 100)
       const comisionCentimos = Math.round(importeCentimos * COMISION_RATE)
@@ -79,7 +79,7 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
           confirm: true,
           off_session: true,
           application_fee_amount: comisionCentimos,
-          metadata: { sesion_id: s.id, restaurante_id: s.restaurante_id, tipo: 'qr_cobro_auto_inactividad' },
+          metadata: { sesion_id: s.id, restaurante_id: s.local_id, tipo: 'qr_cobro_auto_inactividad' },
         },
         opts
       )
@@ -93,7 +93,7 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
       }).eq('id', s.id)
 
       await supabase.rpc('registrar_pago_cobro', {
-        p_restaurante_id: s.restaurante_id,
+        p_restaurante_id: s.local_id,
         p_importe_eur: totalEur,
         p_comision_eur: Math.round(totalEur * COMISION_RATE * 100) / 100,
       }).then(() => {}, () => {})
@@ -173,7 +173,7 @@ export async function GET(req: NextRequest) {
       const { data: camareros } = await supabase
         .from('personal')
         .select('id, nombre')
-        .eq('local_id', s.restaurante_id)
+        .eq('local_id', s.local_id)
         .in('rol', ['camarero', 'jefe_sala'])
         .eq('activo', true)
 
