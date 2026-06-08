@@ -4,7 +4,7 @@ const nextConfig = {
   // NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY: configuradas en Vercel
   // SUPABASE_SERVICE_ROLE_KEY: solo server-side, configurada en Vercel (nunca hardcodear aquí)
 
-  // Monorepo casa de marcas: compila el paquete workspace (fuente TS) en el build.
-  transpilePackages: ['@iarest/core-ai'],
+  // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
+  transpilePackages: ['@iarest/core-ai', '@iarest/core-fiscal'],
 }
 module.exports = nextConfig

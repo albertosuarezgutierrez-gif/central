@@ -6,8 +6,8 @@ const nextConfig: NextConfig = {
   // Evita "supabaseUrl is required" durante el build estático
   // (las env vars de Supabase solo están disponibles en runtime)
 
-  // Monorepo casa de marcas: compila el paquete workspace (fuente TS) en el build.
-  transpilePackages: ['@iarest/core-ai'],
+  // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
+  transpilePackages: ['@iarest/core-ai', '@iarest/core-fiscal'],
 
   async headers() {
     return [

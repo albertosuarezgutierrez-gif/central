@@ -22,7 +22,9 @@
     ],
     "paths": {
       "@/*": ["./src/*"],
-      "@iarest/core-ai": ["./packages/core-ai/src/index.ts"]
+      "@iarest/core-ai": ["./packages/core-ai/src/index.ts"],
+      "@iarest/core-fiscal": ["./packages/core-fiscal/src/index.ts"],
+      "@iarest/core-fiscal/es": ["./packages/core-fiscal/src/es/index.ts"]
     }
   },
   "include": [

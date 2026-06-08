@@ -7,19 +7,22 @@
 //   Sección 9.1.1 — Encadenamiento de registros de facturación
 // ============================================================
 
-import crypto from 'crypto'
+import {
+  calcularFiscal,
+  calcularHuella,
+  generarQrData,
+  parseFechaLocalAEAT,
+  escapeXml,
+} from '@iarest/core-fiscal'
+import type { RegistroFactura } from '@iarest/core-fiscal'
 
-// ── Tipos ────────────────────────────────────────────────────
-
-export interface RegistroFactura {
-  nif_emisor:       string
-  numero_serie:     string
-  numero_factura:   number
-  fecha_expedicion: string   // ISO 8601 con offset: '2026-05-02T20:14:33+02:00'
-  importe_total:    number
-  cuota_iva:        number
-  huella_anterior:  string | null
-}
+// Las primitivas PURAS (huella AEAT encadenada, QR, IVA, helpers) viven en el
+// núcleo compartido @iarest/core-fiscal (casa de marcas). Aquí se re-exportan
+// para conservar la API pública de @/lib/verifactu, y se quedan los ADAPTADORES
+// específicos de ia.rest: construirFactura (now()/huso) y generarXmlLROE
+// (bloque SistemaInformatico con la identidad del sistema).
+export { calcularFiscal, calcularHuella, generarQrData }
+export type { RegistroFactura }
 
 export interface FacturaVeri {
   numero_serie:     string
@@ -38,83 +41,6 @@ export interface FacturaVeri {
   comanda_id:       string
   mesa_label:       string
   num_items:        number
-}
-
-// ── Parseo de fecha LOCAL (CRÍTICO para hash correcto) ───────
-// La spec AEAT exige la hora LOCAL del emisor, no UTC.
-// new Date(iso).getHours() devuelve UTC en algunos entornos → bug.
-// Solución: parsear el string ISO directamente sin conversión.
-
-function parseFechaLocalAEAT(iso: string): string {
-  // '2026-05-02T20:14:33+02:00' → '02-05-2026 20:14:33'
-  const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})/)
-  if (!m) {
-    // fallback: fecha actual en Madrid
-    const dt = new Date()
-    const pad = (n: number) => String(n).padStart(2, '0')
-    return `${pad(dt.getDate())}-${pad(dt.getMonth()+1)}-${dt.getFullYear()} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`
-  }
-  return `${m[3]}-${m[2]}-${m[1]} ${m[4]}:${m[5]}:${m[6]}`
-}
-
-// ── Hash SHA-256 (spec AEAT v1.0.3, sección 9.1.1) ──────────
-// Campos en orden obligatorio separados por '&':
-//   IDEmisorFactura & NumSerieFactura & FechaExpedicion &
-//   TipoFactura & CuotaTotal & Encadenamiento
-
-export function calcularHuella(reg: RegistroFactura): string {
-  const fechaAEAT = parseFechaLocalAEAT(reg.fecha_expedicion)
-  const numSerie = `${reg.numero_serie}-${String(reg.numero_factura).padStart(8, '0')}`
-
-  const cadena = [
-    `IDEmisorFactura=${reg.nif_emisor}`,
-    `NumSerieFactura=${numSerie}`,
-    `FechaExpedicionFacturaEmisor=${fechaAEAT}`,
-    `TipoFactura=F2`,
-    `CuotaTotal=${reg.importe_total.toFixed(2)}`,
-    `Encadenamiento=${reg.huella_anterior ?? '0'}`,
-  ].join('&')
-
-  return crypto
-    .createHash('sha256')
-    .update(cadena, 'utf8')
-    .digest('hex')
-    .toUpperCase()
-}
-
-// ── QR data (formato TIKE-CONT, Orden HAC/1177/2024) ────────
-
-export function generarQrData(params: {
-  nif:     string
-  serie:   string
-  numero:  number
-  fecha:   string   // YYYY-MM-DD
-  importe: number
-}): string {
-  const base = 'https://www2.agenciatributaria.gob.es/wlpl/TIKE-CONT'
-  const qs = new URLSearchParams({
-    nif:     params.nif,
-    ser:     params.serie,
-    nfac:    String(params.numero).padStart(8, '0'),
-    fecha:   params.fecha,
-    importe: params.importe.toFixed(2),
-  })
-  return `${base}?${qs.toString()}`
-}
-
-// ── Cálculo fiscal ────────────────────────────────────────────
-
-export function calcularFiscal(importeConIva: number, tipoIva = 10): {
-  base_imponible: number
-  cuota_iva:      number
-  tipo_iva:       number
-} {
-  const base = importeConIva / (1 + tipoIva / 100)
-  return {
-    base_imponible: Math.round(base * 100) / 100,
-    cuota_iva:      Math.round((importeConIva - base) * 100) / 100,
-    tipo_iva:       tipoIva,
-  }
 }
 
 // ── Construir FacturaVeri completa ───────────────────────────
@@ -263,15 +189,6 @@ export function generarXmlLROE(params: {
     </sum:RegFactuSistemaFacturacion>
   </soapenv:Body>
 </soapenv:Envelope>`
-}
-
-function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;')
 }
 
 // ── Estado de conformidad VeriFactu ──────────────────────────
