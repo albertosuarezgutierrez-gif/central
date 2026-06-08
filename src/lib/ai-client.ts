@@ -1,6 +1,14 @@
+import { cleanJSON, nimText, nimVision } from '@iarest/core-ai'
+import type { ImageInput, NimConfig } from '@iarest/core-ai'
+
 /**
  * ai-client.ts
  * Cliente IA centralizado: NVIDIA NIM (gratis) primero → Anthropic Claude (fallback)
+ *
+ * El cliente NIM canónico vive en el paquete compartido `@iarest/core-ai`
+ * (casa de marcas, identity-agnostic). Este módulo conserva la API pública del
+ * proyecto (callAI/callAISearch/callAIVision/cleanJSON/ImageInput), la config de
+ * entorno y el fallback a Claude — solo delega la llamada NIM en el paquete.
  *
  * Uso:
  *   import { callAI, callAIVision, callAISearch } from '@/lib/ai-client'
@@ -63,84 +71,30 @@
  *   4. Decidir si forzar un modelo concreto o mantener el fallback
  */
 
-export interface ImageInput {
-  data: string       // base64 puro (sin prefijo data:)
-  mediaType: string  // 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
-}
+// Re-export para no romper importadores existentes (`@/lib/ai-client`).
+export { cleanJSON }
+export type { ImageInput }
 
 // Modelos por defecto (sobrescribibles via env var si hace falta)
 const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.3-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
 const TEXT_MODEL_ANTHROPIC = 'claude-haiku-4-5-20251001'
 
-const NVIDIA_API_URL = 'https://integrate.api.nvidia.com/v1/chat/completions'
-
-// ── Limpia markdown que algunos modelos añaden alrededor del JSON ──────────
-export function cleanJSON(raw: string): string {
-  return raw
-    .trim()
-    .replace(/^```json\s*/i, '')
-    .replace(/^```\s*/i, '')
-    .replace(/\s*```$/i, '')
-    .trim()
+// Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env).
+function nimConfig(): NimConfig {
+  const apiKey = process.env.NVIDIA_API_KEY
+  if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada')
+  return { apiKey, textModel: TEXT_MODEL_NVIDIA, visionModel: VISION_MODEL_NVIDIA }
 }
 
-// ── NVIDIA: llamada texto ────────────────────────────────────────────────────
+// ── NVIDIA: llamada texto (delega en @iarest/core-ai) ────────────────────────
 async function nvidiaText(system: string, user: string, maxTokens = 600): Promise<string> {
-  const key = process.env.NVIDIA_API_KEY
-  if (!key) throw new Error('NVIDIA_API_KEY no configurada')
-
-  const res = await fetch(NVIDIA_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: TEXT_MODEL_NVIDIA,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user',   content: user },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0.2,
-      stream: false,
-    }),
-  })
-  if (!res.ok) throw new Error(`NVIDIA HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
-  const data = await res.json()
-  const text = data?.choices?.[0]?.message?.content
-  if (!text) throw new Error('NVIDIA: respuesta vacía')
-  return text
+  return nimText(nimConfig(), system, user, maxTokens)
 }
 
-// ── NVIDIA: llamada visión (multi-imagen) ────────────────────────────────────
+// ── NVIDIA: llamada visión (multi-imagen, delega en @iarest/core-ai) ─────────
 async function nvidiaVision(system: string, images: ImageInput[], userText: string, maxTokens = 2000): Promise<string> {
-  const key = process.env.NVIDIA_API_KEY
-  if (!key) throw new Error('NVIDIA_API_KEY no configurada')
-
-  // Formato OpenAI-compatible con image_url base64
-  const imageContent = images.map(img => ({
-    type: 'image_url' as const,
-    image_url: { url: `data:${img.mediaType};base64,${img.data}` },
-  }))
-
-  const res = await fetch(NVIDIA_API_URL, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-    body: JSON.stringify({
-      model: VISION_MODEL_NVIDIA,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user',   content: [...imageContent, { type: 'text', text: userText }] },
-      ],
-      max_tokens: maxTokens,
-      temperature: 0.1,
-      stream: false,
-    }),
-  })
-  if (!res.ok) throw new Error(`NVIDIA-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
-  const data = await res.json()
-  const text = data?.choices?.[0]?.message?.content
-  if (!text) throw new Error('NVIDIA-Vision: respuesta vacía')
-  return text
+  return nimVision(nimConfig(), system, images, userText, maxTokens)
 }
 
 // ── Anthropic: texto (fallback) ──────────────────────────────────────────────

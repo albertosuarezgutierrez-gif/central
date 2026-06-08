@@ -120,6 +120,22 @@ es el **último** consumidor de cada paquete.
 
 - ✅ Auditoría read-only de SIVRA e IALIMP completada (stack, esquema, auth/tenancy, solape, net-new).
 - ✅ Árbol `core-*` y 5 fases refinados contra el código real.
-- ✅ Decisiones de topología y primer paquete tomadas.
-- ⏳ **PENDIENTE: OK de Alberto para ejecutar Fase 0.** Hasta entonces, NADA de código/infra y los
-  repos `sivra`/`ialimp` no se tocan.
+- ✅ Decisiones de topología y primer paquete tomadas; **OK de Alberto recibido** (08/06, "lo que veas
+  mejor, lo pongo automático").
+- 🟡 **Fase 0 + Fase 1 (piloto) EN MARCHA — acotadas a ia.rest** (arranque seguro; `sivra`/`ialimp`
+  NO se tocan todavía):
+  - **Andamiaje monorepo** dentro de ia.rest: `npm workspaces` (`packages/*`) + `turbo.json` (scaffold).
+  - **Paquete piloto `@iarest/core-ai`** (`packages/core-ai/`): cliente NVIDIA NIM **identity-agnostic**
+    (`nimText`/`nimVision` reciben config, no leen `process.env`) + `cleanJSON` + tipos `ImageInput`/
+    `NimConfig`. Es la implementación **canónica** que luego adoptan SIVRA e IALIMP.
+  - **ia.rest lo consume** vía alias de `tsconfig` (`@iarest/core-ai`) + `transpilePackages` en ambos
+    `next.config`. `src/lib/ai-client.ts` mantiene su **API pública byte-a-byte** (callAI/callAISearch/
+    callAIVision/cleanJSON/ImageInput), su config de entorno y el fallback a Claude; solo **delega** la
+    llamada NIM en el paquete. 30+ rutas importadoras intactas.
+  - **Verificación:** `tsc` del paquete en aislado = **verde**. El build completo de la app se verifica
+    en el **preview de Vercel** del PR draft #85 (no hay `node_modules` en el entorno efímero para
+    reproducir `next build` localmente). Si el preview falla, se diagnostica por el webhook del PR.
+- ⏭️ **Siguiente** (tras preview verde): extraer al paquete el resto de la superficie NIM/brain y
+  empezar `core-fiscal`; luego adoptar `core-ai` en SIVRA. La conversión a **monorepo único real**
+  (subtree de los 3 repos + turbo load-bearing + 1 Vercel por app) es un paso deliberado posterior,
+  con IALIMP el último.

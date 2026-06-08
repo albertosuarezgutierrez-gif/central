@@ -40,9 +40,20 @@
     paquete piloto = **`core-ai`** (el más completo/canónico, semilla ia.rest).
   - ✅ **5 fases**: 0 andamiaje (cero runtime) · 1 núcleo puro (`core-ai`+`core-fiscal`) · 2 marca+RGPD ·
     3 reservas STR+OCR · 4 cobro+CRM+entitlements · 5 plataforma (naming/SSO/API+MCP/monetización).
-  - ⏳ **PENDIENTE: OK de Alberto para ejecutar Fase 0.** Hasta entonces NADA de código/infra; `sivra` e
-    `ialimp` no se tocan. Este commit (rama `claude/adoring-hawking-s1cFi`, solo docs en ia.rest) es la
-    persistencia del plan, no su ejecución.
+  - ✅ **OK de Alberto recibido** (08/06: "lo que veas mejor, lo pongo automático").
+  - 🟡 **Fase 0 + Fase 1 piloto EN MARCHA, acotadas a ia.rest** (arranque seguro; `sivra`/`ialimp` sin
+    tocar): andamiaje `npm workspaces` + `turbo.json`; **paquete piloto `@iarest/core-ai`**
+    (`packages/core-ai/`) = cliente NIM **identity-agnostic** (`nimText`/`nimVision` reciben config, no
+    leen env) + `cleanJSON` + tipos. `src/lib/ai-client.ts` lo consume vía alias tsconfig
+    (`@iarest/core-ai`) + `transpilePackages` (ambos `next.config`), manteniendo su **API pública
+    byte-a-byte** y el fallback a Claude. 30+ rutas importadoras intactas.
+  - ✅ **Verificación**: `tsc` del paquete aislado = verde. El `next build` completo se verifica en el
+    **preview de Vercel del PR #85** (entorno efímero sin `node_modules` para reproducirlo aquí). Ojo:
+    en ia.rest `next build` NO está en `vercel.json buildCommand` custom — usa `npm run build`; el
+    preview del PR es la prueba real (si falla, llega por webhook y se diagnostica).
+  - ⏭️ **Siguiente** (tras preview verde): ampliar `core-ai` (resto de superficie NIM/brain) + arrancar
+    `core-fiscal`; adoptar `core-ai` en SIVRA. El **monorepo único real** (subtree de los 3 repos +
+    turbo load-bearing + 1 Vercel por app, IALIMP el último) es un paso deliberado posterior.
 
 - **RENAME restaurante_id→local_id: COMPLETO + MERGEADO a main (PR #77 y #79) — 07/06/2026**.
   Tras el DROP en BD (prod), el merge-review destapó que TODAS las superficies que tocan la BD
