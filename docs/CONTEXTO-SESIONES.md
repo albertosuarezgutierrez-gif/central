@@ -25,6 +25,11 @@
     `docs/HANDOFF-...` + `docs/RUNBOOK-monorepo.md`.
   - **Tooling decidido**: pnpm + turbo (aísla deps; 3 versiones de Next 16/15.5/15.3 conviven).
   - ✅ **#87 mergeado** (core-ai con `geminiSearch`, 3 proveedores) — ya en `main` junto a #85/#86.
+  - ✅ **`@iarest/core-identity` añadido en #88** (keystone de portabilidad): contrato de
+    sesión/inquilino + puerto `IdentityProvider` (puertos&adaptadores) agnóstico del auth
+    (Supabase/jose/NextAuth) + helpers `requireSession`/`requireTenantId`/`assertRole` y errores
+    401/403. Paquete puro, sin deps. **Verificado igual que el CI** (tsc+lint+build verdes en local).
+    Es lo que hace que los módulos de `packages/*` se escriban una vez y sirvan a cualquier vertical.
   - ✅ **Paso 1 (PR #88, draft, NO MERGEAR): co-localizado el código** de SIVRA (`apps/sivra`, 138
     ficheros) e IALIMP (`apps/ialimp`, 337) desde sus `origin/main`. **Inertes**: excluidos de
     `tsconfig`/`eslint.config`/`.vercelignore` de ia.rest → **CI y los 3 previews Vercel en VERDE**
