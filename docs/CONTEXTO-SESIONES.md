@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ MATRIZ definida + corrección: `ia.rest` es una VERTICAL, no la matriz — 08/06/2026**
+  - Alberto corrige (acertadamente): en la casa de marcas, **`ia.rest` es una vertical más**, no la
+    matriz. La raíz hace de matriz; las 3 verticales son hermanas bajo `apps/`. Manifiesto nuevo:
+    **`MATRIZ.md`** (raíz) define estructura, verticales y regla.
+  - **Hallazgo técnico (cambia el riesgo del movimiento de ia.rest):** `ia.rest` **ya consume
+    `packages/*`** (`@iarest/core-ai`, `@iarest/core-fiscal` vía `tsconfig paths` +
+    `transpilePackages`, rutas relativas a la raíz). Por eso **bajar `ia.rest` a `apps/ia-rest` NO es
+    un `git mv` simple**: requiere montar **workspace** (pnpm/npm que abarque `apps/*`+`packages/*`)
+    para que el build aislado de `apps/ia-rest` resuelva `@iarest/*`. Es la "OPCIÓN POSTERIOR" del
+    runbook, y **no se puede pre-validar con preview** (es el propio proyecto live el que se reubica).
+  - **Decisión de ejecución:** hoy se **funda la matriz** (docs + estructura, riesgo cero) y se deja
+    el movimiento físico de `ia.rest` **preparado y documentado** (plan en `MATRIZ.md` y runbook). El
+    **cutover de Vercel de `ia.rest`** (app de hostelería EN VIVO) se hará como **paso dedicado y
+    vigilado**, con verificación en vivo de `iarest.es` + rollback en 1 clic (Root Directory de vuelta
+    a la raíz). **Pendiente de go/no-go de Alberto** para ejecutar ese movimiento.
+  - Estado físico hoy: `ia.rest` sigue desplegando **desde la raíz** (sin cambios, prod intacta);
+    `sivra`/`ialimp` ya en `apps/*`.
+
 - **✅ MONOREPO casa de marcas — CORTE COMPLETADO (SIVRA + IALIMP en producción) — 08/06/2026**
   - **SIVRA e IALIMP ya viven en `ia.rest` y despliegan desde el monorepo, ambos en producción:**
     - `sivra` → repo `ia.rest` (branch `main`), Root Directory `apps/sivra`, install `npm install
