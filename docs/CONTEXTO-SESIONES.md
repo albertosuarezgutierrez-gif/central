@@ -684,11 +684,29 @@
 ## ⏳ Pendientes / decisiones abiertas
 
 - (P1) `STRIPE_MODE=live` en Vercel — sin esto no hay cobro real (ver maestro §PENDIENTES).
+- (P2) **Feature a medio implementar**: emails de feedback al cliente (`cron/feedback-visita`) — espera
+  una migración que añada `comandas.cerrada_at`, `comandas.cliente_email/cliente_nombre` y
+  `restaurantes.feedback_activo/dominio_custom`. Hoy degrada con gracia ("migración pendiente"); el
+  SELECT falla en logs pero se captura. Decidir si se implementa o se retira la ruta.
+- (P3) Plataforma de verticales: Fase A pendiente de bus de eventos (outbox) + offline-first; luego
+  Fases B-F (RBAC, retail/Mariscos, entitlements, catering/franquicia, API/MCP/monetización). Ver spec.
+- **Token Supabase** `sbp_…` pegado en chat el 07/06: **revocar** en dashboard/account/tokens (no se usó).
 - Nada urgente abierto del módulo de cobros tras la sesión 2026-06-01.
 
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-07/08 — Plataforma de verticales (Fase A) + rename `restaurante_id → local_id` COMPLETO (PRs #77, #79, #80)
+- **Diseño** `ia.rest → plataforma de verticales` (spec en `docs/superpowers/specs/`) + **módulo tienda/retail** (Fase C mínima: `/tienda` TPV, TiendaTab owner, rol dependiente, backend config/buscar/venta).
+- **Rename físico `restaurante_id → local_id`** ejecutado en expand-contract con cliente Supabase tipado como red de seguridad:
+  - **EXPAND** (`local_id` + trigger en 167 tablas) → **MIGRATE** código por lotes (filtros, escrituras, selects/lecturas) → **CONTRACT/DROP**.
+  - El **DROP** fue una migración dedicada y atómica (≈600 objetos): 67 funciones, 258 RLS, 33 vistas, 128 FKs, índices y uniques regenerados a local_id (word-boundary, conservando params `p_restaurante_id`), drop trigger sync + **DROP COLUMN** en 167 tablas. Data-safe (local_id == restaurante_id).
+- **Diagnóstico con cliente tipado** encontró y arregló **20 bugs reales** (queries a local_id sobre vistas que no la tenían, pre-drop).
+- **Incidente del DROP** (BD prod compartida; main/edge aún con restaurante_id): resuelto surface por surface → merge a main (app), **14 Edge Functions** redesplegadas a local_id (familia QR de cliente + crons + alerta/monitor), pg_cron job 9, y `cron/cobro-inactividad` (llegó de main sin migrar, erroraba cada 5 min).
+- **Limpieza de preexistentes** (no del rename): `alerta_log` rediseñada → adaptados 6 inserters (3 funcs SQL + billing cron + 2 edge) de `tipo/canal` a `trigger_tipos[]/mensaje_voz`. Drift de hygiene resuelto (alerta-ritmo-cron + infra-monitor-cron añadidas al repo). monitor-health desplegado por MCP (verificado char-a-char) — la CLI estaba bloqueada por la política de red del entorno.
+- **Lección clave**: la BD Supabase es **única y compartida** → el DROP en prod rompe todo lo que aún no apunta a local_id (main, Edge Functions desplegadas con drift, pg_cron, funciones). Antes de un DROP así: migrar/redesplegar TODAS las superficies primero, o aceptar ventana de incidente. Las Edge Functions tenían **drift repo↔deploy** preexistente que el DROP destapó.
+
 
 ### 2026-06-07 — MiniMax (consulta) → auditoría del pipeline de voz + fixes (PRs #74 y #75, MERGEADOS)
 - **Consulta de Alberto:** ¿MiniMax mejoraría las comandas por voz? **Respuesta:** no para
