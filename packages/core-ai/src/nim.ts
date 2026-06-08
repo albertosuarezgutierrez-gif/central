@@ -42,6 +42,55 @@ export async function nimText(
   return text
 }
 
+/** Mensaje estilo OpenAI para conversaciones multi-turno. */
+export interface NimChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
+/** Opciones por llamada de `nimChat` (la POLÍTICA —timeout/modelo— la pone la app). */
+export interface NimChatOptions {
+  system?: string
+  model?: string
+  maxTokens?: number
+  temperature?: number
+  signal?: AbortSignal
+}
+
+/**
+ * Llamada de texto **multi-turno** a NVIDIA NIM (array de mensajes estilo OpenAI).
+ * Variante de `nimText` para chats/agentes conversacionales. `opts.system` se
+ * antepone como mensaje de sistema. La app inyecta `signal` para su propio timeout.
+ */
+export async function nimChat(
+  config: NimConfig,
+  messages: NimChatMessage[],
+  opts: NimChatOptions = {},
+): Promise<string> {
+  const key = requireKey(config)
+  const msgs = [
+    ...(opts.system ? [{ role: 'system' as const, content: opts.system }] : []),
+    ...messages,
+  ]
+  const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
+    body: JSON.stringify({
+      model: opts.model ?? config.textModel ?? DEFAULT_TEXT_MODEL,
+      messages: msgs,
+      max_tokens: opts.maxTokens ?? 800,
+      temperature: opts.temperature ?? 0.3,
+      stream: false,
+    }),
+    signal: opts.signal,
+  })
+  if (!res.ok) throw new Error(`NVIDIA HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
+  const data = await res.json()
+  const text = data?.choices?.[0]?.message?.content
+  if (!text) throw new Error('NVIDIA: respuesta vacía')
+  return text
+}
+
 /** Llamada de visión (multi-imagen) a NVIDIA NIM. Formato image_url base64. */
 export async function nimVision(
   config: NimConfig,
@@ -49,6 +98,7 @@ export async function nimVision(
   images: ImageInput[],
   userText: string,
   maxTokens = 2000,
+  signal?: AbortSignal,
 ): Promise<string> {
   const key = requireKey(config)
   const imageContent = images.map(img => ({
@@ -69,6 +119,7 @@ export async function nimVision(
       temperature: 0.1,
       stream: false,
     }),
+    signal,
   })
   if (!res.ok) throw new Error(`NVIDIA-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()

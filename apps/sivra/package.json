@@ -13,6 +13,7 @@
     "postcss": "^8.5.14"
   },
   "dependencies": {
+    "@iarest/core-ai": "file:../../packages/core-ai",
     "@prisma/client": "^5.22.0",
     "prisma": "^5.22.0",
     "clsx": "^2.1.1",
