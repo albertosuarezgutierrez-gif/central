@@ -24,9 +24,17 @@ carpeta con npm. Pasos:
 
 ### A. Código — **ya está** (nada que mover)
 Las apps están en `apps/sivra` y `apps/ialimp` con su `package.json`/`vercel.json` propios. No hace
-falta pnpm, ni `pnpm-workspace.yaml`, ni mover ia.rest. (El único cambio de código pendiente sería
-mover `apps/ialimp/.github/workflows/deploy-landing.yml` a la raíz con `paths: apps/ialimp/landing/**`
-para que el deploy de la landing siga disparándose; lo hace Claude cuando digas.)
+falta pnpm, ni `pnpm-workspace.yaml`, ni mover ia.rest.
+
+> **Pendiente conocido (DECISIÓN: aplazado — Opción 3, 08/06):** el GitHub Action de la landing
+> `apps/ialimp/.github/workflows/deploy-landing.yml` **no se ejecuta** ahí (GitHub solo corre los de
+> `.github/workflows/` de la raíz) → tras el corte la landing `ialimp.es` **deja de auto-publicarse**.
+> NO se arregla ahora a propósito (la landing casi no cambia). Cuando se edite la landing, elegir:
+> (1) conectar el proyecto Vercel `ialimp-landing` al repo `ia.rest` con Root Directory
+> `apps/ialimp/landing/ialimp-es` + Build `bash fetch-fonts.sh` y **borrar** el workflow (recomendado,
+> sin secreto); o (2) mover el workflow a la raíz con `paths: apps/ialimp/landing/ialimp-es/**` y añadir
+> el secreto `VERCEL_TOKEN` al repo `ia.rest`. Mientras tanto, despliegue manual: `bash fetch-fonts.sh`
+> + `npx vercel deploy --prod` desde esa carpeta.
 
 ### B. Vercel (TÚ, en el panel). Aplicar y luego mergear.
 Equipo `team_f4gPpt6dPuNcd5YyMt3q27uf`. Por **cada** proyecto: Settings → Build & Deployment →

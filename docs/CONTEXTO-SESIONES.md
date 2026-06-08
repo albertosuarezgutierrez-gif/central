@@ -51,6 +51,10 @@
     JSON 1.039 filas/44 tablas + manifiesto de 21 objetos de Storage). El corte NO toca su BD/Storage;
     backup = seguridad extra. Falta (sus 2 clics): backup nativo Supabase + bytes de fotos (no tengo
     credenciales). Decisión: **sin prisa, IALIMP el último**.
+  - 🟡 **Pendiente conocido (APLAZADO, Opción 3):** la landing `ialimp.es` (proyecto Vercel
+    `ialimp-landing`, fuente en `apps/ialimp/landing/ialimp-es/`) dejará de auto-publicarse tras el corte
+    porque su GitHub Action quedó en `apps/ialimp/.github/workflows/` (GitHub solo corre los de la raíz).
+    Decisión de Alberto: NO tocarlo ahora; arreglar cuando edite la landing (opciones en el runbook).
   - 🟡 **Bloqueo para continuar**: el corte necesita los cambios de Vercel de Alberto (Root Directory +
     repo conectado; fuera de git). Con la opción mínima ya probada, su parte es mínima y de bajo riesgo.
   - **Sugerencias incorporadas al plan**: scope de paquetes de la matriz (no `@iarest`),
