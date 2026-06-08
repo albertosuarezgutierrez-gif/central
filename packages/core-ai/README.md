@@ -9,10 +9,14 @@ config (con su propia `apiKey`) y la pasa. Así el mismo núcleo sirve a las 3 a
 sin acoplar credenciales ni auth.
 
 ## Superficie
+Adaptadores de proveedor **puros**; la **política** (fallback, timeouts, modelo)
+vive en cada app:
 - `cleanJSON(raw)` — quita el ```` ```json ```` que envuelven algunos modelos.
 - `nimText(config, system, user, maxTokens?)` — texto vía NVIDIA NIM.
 - `nimVision(config, system, images, userText, maxTokens?)` — visión multi-imagen.
-- Tipos: `ImageInput`, `NimConfig`.
+- `geminiSearch(config, system, user, { maxTokens?, timeoutMs? })` — búsqueda web
+  (Gemini + Google Search grounding); lanza error si falla (la app decide el fallback).
+- Tipos: `ImageInput`, `NimConfig`, `GeminiConfig`.
 
 La lógica de **fallback** (p. ej. a Claude), timeouts y selección de modelo se queda
 en cada app (ia.rest: `src/lib/ai-client.ts`), que envuelve esta superficie.

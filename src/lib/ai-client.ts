@@ -1,4 +1,4 @@
-import { cleanJSON, nimText, nimVision } from '@iarest/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch } from '@iarest/core-ai'
 import type { ImageInput, NimConfig } from '@iarest/core-ai'
 
 /**
@@ -204,28 +204,8 @@ export async function callAISearch(
 
   if (geminiKey) {
     try {
-      const res = await Promise.race([
-        fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${geminiKey}`,
-          {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              system_instruction: { parts: [{ text: system }] },
-              contents: [{ role: 'user', parts: [{ text: user }] }],
-              tools: [{ google_search: {} }],
-              generationConfig: { maxOutputTokens: maxTokens, temperature: 0.2 },
-            }),
-          }
-        ),
-        new Promise<never>((_, r) => setTimeout(() => r(new Error('Gemini timeout')), timeoutMs)),
-      ])
-
-      if (!res.ok) throw new Error(`Gemini HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
-      const data = await res.json()
-      const text = data?.candidates?.[0]?.content?.parts?.find((p: { text?: string }) => p.text)?.text
-      if (!text) throw new Error('Gemini: respuesta vacía')
-      return text
+      // Adaptador Gemini (búsqueda web) en el núcleo compartido @iarest/core-ai.
+      return await geminiSearch({ apiKey: geminiKey }, system, user, { maxTokens, timeoutMs })
     } catch (e) {
       console.warn('[AI-CLIENT] Gemini Search falló, fallback callAI:', (e as Error).message)
     }

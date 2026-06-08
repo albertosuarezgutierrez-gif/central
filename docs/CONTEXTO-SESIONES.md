@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **CASA DE MARCAS — Fase 1 EN MARCHA: 2 paquetes núcleo mergeados a main — 08/06/2026**
+  - ✅ **#85 mergeado** (`core-ai`, andamiaje monorepo) · ✅ **#86 mergeado** (`core-fiscal`). Ambos con
+    CI verde (Lint·TypeCheck·Build + Patrones + Vercel). Squash en main.
+  - ✅ **`core-ai` completado a 3 proveedores** (PR en curso): además de NIM texto/visión + `cleanJSON`,
+    añadido el adaptador **`geminiSearch`** (búsqueda web Gemini, identity-agnostic). `ai-client.ts`
+    `callAISearch` lo consume; la política de fallback se queda en la app. Sin cambios de deps.
+  - 🔑 **Patrón de los paquetes** (probado x3): adaptadores PUROS identity-agnostic (reciben config, no
+    leen `process.env` ni secretos); la app envuelve con su env + política. Wiring: npm workspaces +
+    alias `tsconfig` + `transpilePackages` (ambos `next.config`) + **`package-lock` en sync** (CI usa
+    `npm ci`; Vercel `npm install` — lección de #85).
+  - 🟡 **Bifurcación pendiente de criterio de Alberto**: lo que queda del núcleo (brand/rgpd/reservas/ocr)
+    tiene su semilla en IALIMP/SIVRA, no en ia.rest → el avance real ya toca otros repos. El **monorepo
+    único real** (subtree de los 3 repos + reconfigurar despliegues Vercel root-dir) NO se ejecuta a
+    ciegas: toca despliegues en vivo fuera de git y no es verificable en el entorno efímero. IALIMP el
+    último, su BD/RLS/buckets intactos. Pendiente: acceso/verificación Vercel para ese salto.
+  - `sivra`/`ialimp` **sin tocar** en toda la sesión.
+
 - **UNIFICACIÓN "casa de marcas" (ia.rest · SIVRA · IALIMP): PLAN REFINADO, pendiente de OK — 08/06/2026**
   (rama `claude/adoring-hawking-s1cFi`). Tarea: unir las 3 apps de Alberto en una plataforma común vía
   **monorepo de paquetes `core-*`**, sin fusionar apps ni converger BBDD de entrada.
