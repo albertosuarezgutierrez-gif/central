@@ -51,9 +51,18 @@
     **preview de Vercel del PR #85** (entorno efímero sin `node_modules` para reproducirlo aquí). Ojo:
     en ia.rest `next build` NO está en `vercel.json buildCommand` custom — usa `npm run build`; el
     preview del PR es la prueba real (si falla, llega por webhook y se diagnostica).
-  - ⏭️ **Siguiente** (tras preview verde): ampliar `core-ai` (resto de superficie NIM/brain) + arrancar
-    `core-fiscal`; adoptar `core-ai` en SIVRA. El **monorepo único real** (subtree de los 3 repos +
-    turbo load-bearing + 1 Vercel por app, IALIMP el último) es un paso deliberado posterior.
+  - ✅ **PR #85 MERGEADO a main** (squash `971ecfb`, CI verde: Lint·TypeCheck·Build + Patrones + Vercel).
+    Bug de CI resuelto: `npm ci` exige el workspace en `package-lock.json` (Vercel usa `npm install` y no
+    fallaba) → regenerado con `--package-lock-only`.
+  - ✅ **`core-fiscal` añadido** (Fase 1, ia.rest-scoped): `packages/core-fiscal/` = IVA universal
+    (`calcularFiscal`) + primitivas **España/AEAT VeriFactu** puras (`calcularHuella` SHA-256 encadenada,
+    `generarQrData`, `parseFechaLocalAEAT`) + `escapeXml`, con diseño **conector por jurisdicción**
+    (`/es`). `src/lib/verifactu.ts` las consume y re-exporta (API pública intacta); se quedan los
+    adaptadores `construirFactura` (now()/huso) y `generarXmlLROE` (`SistemaInformatico`). OJO: ia.rest
+    es AEAT VeriFactu común (no LROE vasco pese al nombre de la función). PR aparte.
+  - ⏭️ **Siguiente**: más núcleo en ia.rest (`core-ui/brand`, `core-ocr`, ampliar `core-ai`). La adopción
+    cross-app (SIVRA/IALIMP) requiere antes el **monorepo real** (subtree 3 repos + turbo + 1 Vercel/app)
+    o publicar paquetes — paso deliberado posterior, IALIMP el último, su BD intacta.
 
 - **RENAME restaurante_id→local_id: COMPLETO + MERGEADO a main (PR #77 y #79) — 07/06/2026**.
   Tras el DROP en BD (prod), el merge-review destapó que TODAS las superficies que tocan la BD

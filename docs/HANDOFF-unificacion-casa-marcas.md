@@ -135,7 +135,14 @@ es el **último** consumidor de cada paquete.
   - **Verificación:** `tsc` del paquete en aislado = **verde**. El build completo de la app se verifica
     en el **preview de Vercel** del PR draft #85 (no hay `node_modules` en el entorno efímero para
     reproducir `next build` localmente). Si el preview falla, se diagnostica por el webhook del PR.
-- ⏭️ **Siguiente** (tras preview verde): extraer al paquete el resto de la superficie NIM/brain y
-  empezar `core-fiscal`; luego adoptar `core-ai` en SIVRA. La conversión a **monorepo único real**
-  (subtree de los 3 repos + turbo load-bearing + 1 Vercel por app) es un paso deliberado posterior,
-  con IALIMP el último.
+- ✅ **PR #85 MERGEADO a `main`** (squash `971ecfb`, CI verde) — `core-ai` ya en main.
+- ✅ **`core-fiscal` añadido** (`packages/core-fiscal/`, Fase 1): IVA universal (`calcularFiscal`) +
+  primitivas **España/AEAT VeriFactu** puras (`calcularHuella` SHA-256 encadenada, `generarQrData`,
+  `parseFechaLocalAEAT`) + `escapeXml`. Diseño **conector por jurisdicción** (submódulo `/es`).
+  `src/lib/verifactu.ts` las consume y re-exporta (API pública intacta); se quedan en la app los
+  **adaptadores** específicos: `construirFactura` (now()/huso) y `generarXmlLROE` (bloque
+  `SistemaInformatico`). Verificado: tsc de los ficheros puros = verde; resto en CI/preview.
+- ⏭️ **Siguiente**: ampliar `core-ai` (resto superficie NIM/brain) + más núcleo (`core-ocr`,
+  `core-ui/brand`). La adopción en SIVRA/IALIMP requiere antes el **monorepo real** (subtree de los
+  3 repos + turbo + 1 Vercel por app) o publicar los paquetes — paso deliberado posterior, IALIMP el
+  último, su BD/RLS/buckets intactos.
