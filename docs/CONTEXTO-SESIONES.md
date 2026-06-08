@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **UNIFICACIÓN CASA DE MARCAS: ia.rest + SIVRA + IALIMP (08/06, PR #84) — spec §16**:
+  - Inventario de los desarrollos de Alberto: NO son 3 apps para fusionar en 1, son **2 clústeres
+    en 2 BBDD**. POS (`efncqyvhniaxsirhdxaa`, ia.rest, sin clientes) + Turismo/Limpieza
+    (`wswbehlcuxqxyinousql`, **SIVRA** intranet gestión pisos turísticos de Alberto + **IALIMP**
+    SaaS limpieza spin-off de SIVRA, **cliente real Sique Brilla en prod, main=prod**).
+  - **Reencuadre**: SIVRA+IALIMP = el vertical "alojamiento turístico" ya construido (SIVRA=gestor,
+    IALIMP=operativo limpieza Familia B). `cleaning_session` valida la cita ligera §12; `parte_trabajo`
+    el parte de trabajo field-service §3.
+  - **Hallazgo bidireccional**: IALIMP/SIVRA ya RESUELVEN pendientes de ia.rest → suben al núcleo:
+    white-label por login (resuelve §6 casa de marcas), RGPD con evidencia, staffing con scoring,
+    pricing dinámico, OCR gastos por visión, agente mensajería cliente, conector Smoobu/PMS. Los 3
+    usan NVIDIA NIM. Duplicados a consolidar: VeriFactu (×2), OCR, scraping/intel.
+  - **Costuras (el coste real)**: 3 auth distintos (HMAC / NextAuth v5 / JWT jose), 2 BBDD, tenancy
+    `local`/`empresa`, Prisma en SIVRA/IALIMP (5/90 tipadas). Cliente vivo en BD compartida.
+  - **TARGET decidido**: NO fusionar apps ni converger BBDD de entrada. **Monorepo de paquetes
+    `core-*`** (fiscal, cobro, reservas, crm, ai, ocr, pricing, ui/brand, rgpd); cada app = capa fina
+    sobre el core, mantiene su BD/auth; convergencia luego por fases, IALIMP prod intocable. 5 fases.
+  - "zebra" NO existe (era confusión); "sinvra" = SIVRA (transcripción de voz). Universo = 3 apps.
+  - ⏳ Pendiente: dar acceso GitHub a repos SIVRA/IALIMP (vía GitHub App + sesión nueva con los repos)
+    para auditar código real y afinar el árbol `core-*`. Briefing de traspaso ya redactado en chat.
+
 - **VERTICAL CITAS/SERVICIOS + análisis reutilización catering (08/06, PR #84 draft)**:
   - Pregunta de Alberto: una terapeuta/clínica quiere "un bot que le genere su calendario".
     ¿Está plasmado? → Respuesta: parcialmente (hay `reservas` de mesa + agenda comercial de

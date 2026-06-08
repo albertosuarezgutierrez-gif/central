@@ -321,3 +321,84 @@ admin. de comunidades con mantenimiento + socorristas estacionales · **clínica
 varios profesionales** (vertical Citas, §12: captura ligera = `reservas` generalizado + bot de
 calendario). **Todos encajan**: el núcleo es universal; solo cambia la captura. Probar más casos
 confirma, no altera el diseño.
+
+## 16. Unificación "casa de marcas" — ia.rest + SIVRA + IALIMP 🆕
+
+Inventario real de los desarrollos de Alberto (08/06): **no son 3 apps sueltas para fusionar en
+una, son DOS clústeres sobre DOS bases de datos**.
+
+- **Clúster POS/Comercio** (Supabase `efncqyvhniaxsirhdxaa`): **ia.rest** — la plataforma de este
+  spec. **Sin clientes** (ventana libre para refactors).
+- **Clúster Turismo/Limpieza** (Supabase `wswbehlcuxqxyinousql`, compartida):
+  - **SIVRA** (`roi-intranet`): intranet interna de gestión de pisos turísticos en Sevilla del
+    propio Alberto (ingresos/gastos/ROI, pricing dinámico, mensajería huéspedes+IA, coordinación
+    de limpiadoras). Mono-usuario/interno. NextAuth v5 + Prisma (solo 5/90 tablas tipadas).
+  - **IALIMP**: SaaS multi-empresa de gestión de limpiezas (spin-off del módulo limpiadoras de
+    SIVRA). **Cliente real en producción** (Sique Brilla SL) → `main` = prod inmediato. JWT propio
+    (jose+bcrypt), tenancy `empresa_id`, white-label por login.
+
+**Reencuadre clave:** SIVRA + IALIMP **son** el vertical "**gestión de alojamiento turístico**"
+ya construido y repartido en dos apps (SIVRA = lado gestor/propietario; IALIMP = lado operativo
+limpieza, Familia B servicio agendado). La captura `cleaning_session` valida al milímetro la
+"cita/agenda ligera" (§12) y `parte_trabajo` el "parte de trabajo facturable" de field-service (§3).
+
+### Mapa de módulos (qué es cada pieza en la plataforma)
+| Pieza | Origen | En la plataforma | Acción |
+|---|---|---|---|
+| `cleaning_session` + app limpiadora `/l` | IALIMP | Vertical Familia B (servicio agendado) | captura = `reservas` generalizado (recurso=limpiadora) |
+| Pricing dinámico (A/B, snapshots) | SIVRA | Módulo: motor de precios | = fundamento #7, ya implementado |
+| Intel de mercado (scraping + Serper) | SIVRA | Módulo: market-intel | dedup con lead-hunter/Apify de ia.rest |
+| Gastos por visión IA | SIVRA | Módulo: OCR documentos | dedup con Recepción v2 (albarán) de ia.rest |
+| Mensajería huésped + auto-reply IA | SIVRA | Módulo: agente conversacional cliente | net-new al núcleo |
+| Smoobu / iCal sync | SIVRA+IALIMP | Conector PMS (adaptador) | reutilizable en Citas y alojamiento |
+| White-label por login (`--brand-*` en BD) | IALIMP | Núcleo: theming casa de marcas | **resuelve la §6**, ia.rest lo tenía a medias |
+| RGPD granular + evidencia (`cliente_consentimientos`) | IALIMP | Núcleo: cumplimiento | resuelve pendiente crítico de ia.rest |
+| Auto-asignación con scoring + crons | IALIMP | Módulo: staffing | = "staffing estacional" anotado para comunidades |
+| Sesión única (`session_jti`, anti-compartir) | IALIMP | Núcleo: seguridad sesión | mejora transversal |
+| VeriFactu | ia.rest + IALIMP | Núcleo: fiscal | **2 implementaciones → consolidar a 1** |
+
+**Hallazgo importante (bidireccional):** no es "los otros reusan ia.rest". IALIMP/SIVRA ya
+**resuelven piezas pendientes de ia.rest** (white-label por login, RGPD con evidencia, staffing
+con scoring, pricing dinámico). Al unificar, esas suben al núcleo. Los tres usan **NVIDIA NIM**
+(IA ya alineada).
+
+### Las costuras (el coste real de unificar)
+| | ia.rest | SIVRA | IALIMP |
+|---|---|---|---|
+| Auth | sesión HMAC | NextAuth v5 | JWT propio (jose) |
+| BD | `efncqyvhniaxsirhdxaa` | `wswbehlcuxqxyinousql` | misma que SIVRA |
+| Tenancy | `cuenta`→`local` | mono-usuario | `empresa_id` |
+| ORM | SQL directo | Prisma (5/90) + SQL crudo | Prisma + SQL crudo |
+| Cliente prod | ninguno | interno | **Sique Brilla (main=prod)** |
+
+Tres sistemas de auth y una BD compartida con un cliente vivo = ese es el trabajo, no la lógica.
+
+### TARGET (decisión de arquitectura)
+**No fusionar apps ni converger BBDD de entrada.** Extraer el **núcleo a una capa compartida
+(monorepo de paquetes `core`)** que las 3 apps consuman; cada app mantiene su BD/runtime/auth;
+la convergencia de datos/tenancy/auth se hace **después, por fases, sin tocar lo que factura**
+(IALIMP prod intocable). 80% del valor (dejar de mantener fiscal/OCR/precios/white-label por
+triplicado) con 20% del riesgo.
+
+Árbol de paquetes propuesto: `core-fiscal` (VeriFactu) · `core-cobro` (Stripe Connect) ·
+`core-reservas` (captura agendada generalizada recurso/servicio) · `core-crm` (leads+pipeline+
+propuestas) · `core-ai` (cliente NIM) · `core-ocr` (visión facturas/albaranes) · `core-pricing` ·
+`core-ui`/`core-brand` (white-label por login) · `core-rgpd`. Cada app = capa fina (su captura +
+su auth + su BD) sobre esos paquetes.
+
+### Fases (secuencia segura, IALIMP prod protegido)
+1. **Monorepo + extracción no-disruptiva**: mover a `core-*` lo que NO toca runtime/BD de IALIMP
+   (UI/brand, AI/NIM, utilidades). Cada app sigue desplegando igual. Riesgo casi nulo.
+2. **Consolidar duplicados** de lógica pura: 1 sola VeriFactu, 1 OCR, 1 motor de precios, 1
+   intel/scraping. Verificar contra prod de IALIMP antes de cada corte.
+3. **Promover net-new al núcleo**: white-label por login (→ §6), RGPD con evidencia, staffing
+   scoring, conector Smoobu/PMS.
+4. **Reconciliar auth y tenancy** (lo más caro): unificar a un modelo (`cuenta`→`local`/`empresa`
+   como el mismo concepto) y un auth. Solo cuando 1-3 estén estables.
+5. **Convergencia de BBDD** (opcional, lo último): solo si compensa; mientras, dos instancias.
+
+### Decisiones abiertas
+- Nombre de la matriz (§6, pospuesto). Sub-marcas: ia.rest · ia.limp · (turismo: ¿ia.stay?).
+- ¿El `core` nace de ia.rest, o extracción neutra de los tres? (recomendado: neutra, pero
+  sembrada con el núcleo más maduro = ia.rest para fiscal/cobro/almacén, IALIMP para brand/RGPD).
+- Momento de converger BBDD/auth (fase 4-5): no urge.
