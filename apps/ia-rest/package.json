@@ -1,0 +1,51 @@
+{
+  "name": "ia-rest-app",
+  "version": "2.6.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint",
+    "qa": "tsx scripts/qa-check.ts"
+  },
+  "dependencies": {
+    "@iarest/core-ai": "file:../../packages/core-ai",
+    "@iarest/core-fiscal": "file:../../packages/core-fiscal",
+    "@anthropic-ai/sdk": "^0.92.0",
+    "@stripe/react-stripe-js": "^6.3.0",
+    "@stripe/stripe-js": "^9.5.0",
+    "@supabase/ssr": "^0.10.2",
+    "@supabase/supabase-js": "^2.105.1",
+    "@types/qrcode": "^1.5.6",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "date-fns": "^4.1.0",
+    "fuse.js": "^7.3.0",
+    "groq-sdk": "^1.1.2",
+    "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.14.0",
+    "msedge-tts": "^2.0.5",
+    "next": "^16.2.6",
+    "qrcode": "^1.5.4",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "resend": "^6.12.3",
+    "stripe": "^22.1.1",
+    "web-push": "^3.6.7"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^20.19.41",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/web-push": "^3.6.4",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
+    "glob": "^13.0.6",
+    "tailwindcss": "^4",
+    "tsx": "^4.22.4",
+    "typescript": "^5"
+  }
+}

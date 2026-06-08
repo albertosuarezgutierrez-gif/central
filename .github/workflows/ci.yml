@@ -17,6 +17,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Casa de marcas: ia-rest es una vertical en apps/ia-rest (la raíz es la matriz).
+    defaults:
+      run:
+        working-directory: apps/ia-rest
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -26,6 +31,7 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
+          cache-dependency-path: apps/ia-rest/package-lock.json
 
       - name: Install dependencies
         run: npm ci
