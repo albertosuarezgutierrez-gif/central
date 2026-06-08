@@ -58,6 +58,9 @@ entrelazados en la UI de `/owner` y el flujo de restaurante pero son separables.
   **eventos ya es el prototipo del ~70 %** de esta familia (presupuestos, costes, personal,
   portal cliente, galería, briefings). Nuevo de field-service: agenda/scheduling, parte de
   trabajo móvil (firma/fotos in situ), horas de mano de obra facturables.
+  - **B tiene dos capturas según peso**: *cita/agenda* (ligera: terapia, peluquería, consulta →
+    `reservas` generalizado, vertical Citas §12) y *proyecto* (pesada: catering, reforma →
+    motor `eventos`). El bloque eventos+CRM es ya el motor genérico de B (~95 % reutilizable).
 - Ambas familias **convergen en el mismo núcleo** (venta/proyecto→cobro→factura→stock→CRM→RRHH).
 
 ## 4. Abstracciones núcleo (estado final)
@@ -184,8 +187,9 @@ Anotado (futuro, no fundamento): i18n, importación de datos al onboarding, RGPD
   online/recogida. (Detalle en §11.)
 - **D — Módulos como conectores**: puertos+adaptadores (empezar Contabilidad/Cobro) + entitlements
   + motor de precios/promos + fiscal por país + scaffolding de vertical.
-- **E — Catering + Franquicia**: eventos como vertical formal (`proyecto`) + nodo de producción
-  central + grupo mixto + familia field-service/comunidades.
+- **E — Catering + Franquicia + Servicios**: eventos como vertical formal (`proyecto`) + nodo de
+  producción central + grupo mixto + familia field-service/comunidades + **vertical Citas** (§12:
+  `reservas` generalizado a recurso/profesional; bot de calendario en F).
 - **F — Plataforma**: multi-marca + API pública + servidor MCP + monetización.
 
 > Tras cada fase: `npx tsc --noEmit` limpio + `next build` OK + verificación funcional +
@@ -227,7 +231,72 @@ Etiquetado + Transformación(despiece) + Trazabilidad GS1/pesquera + Storefront(
 Cobro/VeriFactu. Casi todo ya existe; delta: peso en línea de venta, movimiento de transformación,
 campos de trazabilidad pesquera.
 
-## 12. Riesgos y guardarraíles
+## 12. Vertical Citas/Servicios (Familia B — servicio agendado) 🆕
+
+Origen: caso real (terapeuta / clínica con varios profesionales) que quiere "un bot que le
+genere su calendario". Encaja como vertical NUEVO de Familia B **sin reescribir**: el núcleo
+(cobro, factura/VeriFactu, CRM, portal cliente, valoración) ya sirve; solo cambia la captura.
+
+### La captura = hueco de agenda (generalizar `reservas`)
+Familia B tiene **dos capturas** según el peso del trabajo:
+- **Cita/agenda (ligera)** — sesión corta con un profesional (terapia, peluquería, fisio,
+  consulta). Captura = `reservas` **generalizado**.
+- **Proyecto (pesada)** — trabajo que se construye en el tiempo (catering, reforma,
+  instalación). Captura = `eventos` (motor proyecto, §4).
+
+Una clínica usa sobre todo la ligera; puede subir a proyecto si vende paquetes/programas.
+
+`reservas` HOY está atada a `mesa_id` (jerga restaurante) → se **generaliza** (beneficia
+también a restaurante, precedente `personal→camareros`):
+- `mesa_id` → `recurso_id` (la mesa es UN tipo de recurso; en clínica el profesional/box).
+- `+ servicio_id` (qué se reserva: cada servicio con su duración/precio; `duracion_min` ya existe).
+- `+ recurso.tipo` (`mesa|profesional|box|sala`). **Multi-terapeuta = varios recursos** (igual
+  que varias mesas en un restaurante).
+- `canal` ya contempla orígenes externos (`thefork|covermanager|web`) → **el bot de calendario
+  entra como un `canal` más** que crea filas en `reservas`. Cero lógica nueva de cobro/ficha.
+- La etiqueta "mesa" vive solo en el vertical restaurante (`LABELS`); un Centro ve "Agenda/Profesional".
+
+### El bot de calendario (lo ÚNICO net-new)
+- Ofrece huecos libres según disponibilidad del recurso (`reservas` + `duracion_min` + horario
+  del profesional), confirma y agenda. Recordatorio/no-show: el cron `reservas-noshow` ya existe.
+- Sobre el booking online (el preset incluye `storefront`). Adaptador de canal
+  (Telegram/WhatsApp/web) reutilizando la infra de webhooks existente.
+
+### Reutilización del bloque catering/comercial (cross-sector) — análisis del código
+El subsistema **eventos + CRM** es de facto el motor genérico de Familia B (~95 % reutilizable).
+Mapa (verificado en rutas/tablas reales):
+
+**Reutilizable tal cual (motor proyecto/servicio + captación):**
+- *Proyecto*: `eventos`, `evento_briefing` (descubrimiento), `presupuestos_evento` (con
+  margen/rentabilidad), `evento_checklist_item` (tareas), `personal_evento_asignacion` (asignar
+  profesional + estado de pago), `evento_galeria`, `evento_valoracion` (NPS), `evento_contratos`,
+  `plantillas_evento`, `espacios_evento` (consultorios/salas), `comercial_agenda` (seguimiento).
+  Rutas `/api/owner/eventos/{presupuesto,briefings,checklist,personal-asignacion,galeria,
+  valoraciones,contratos,plantillas,agenda}`.
+- *CRM/captación*: `leads` (+`estado_pipeline`, `propuesta_slug`, `mrr_estimado`),
+  `leads_contactos` (multi-decisor), `leads_comunicacion` (histórico), propuestas dinámicas
+  `/propuesta/[slug]` (sin precio), crons `pipeline-comercial`, `lead-hunter`, `crm-recordatorios`.
+  El pipeline kanban + propuesta-vista + recordatorios sirve para captar pacientes/clientes igual
+  que eventos.
+
+**Jerga catering — NO se reutiliza (se queda en el vertical catering):** BEO,
+menaje (`inventario_menaje`), barra libre/tiers, pases, APPCC, transporte/vehículos. Si otro
+vertical necesita inventario de recursos, se **promueve** a una tabla neutra (`inventario_recurso`)
+— regla de PROMOCIÓN (§8), no antes.
+
+**A generalizar SOLO al promoverse:** `eventos`→vista `proyectos`, `personal_evento_asignacion`→
+`personal_proyecto_asignacion`, métrica `aforo`→neutra (tamaño/usuarios). Mientras viva solo en
+catering, su nombre está bien.
+
+### Preset y fase
+- `tipo_negocio='citas'` **ya declarado** en `src/lib/negocio.ts` (preset: `reservas` +
+  `storefront` + `fichajes`/`rrhh` + cobro/factura/contabilidad/analytics del núcleo; labels
+  Centro/Cita/Profesional/Agenda/Servicios).
+- Construcción: la generalización de `reservas` (captura ligera) va con la **abstracción de
+  captura de Fase A/B**; el motor proyecto se formaliza en **Fase E**; el bot de booking en
+  **Fase F** (canal/integración). Esfuerzo real bajo-medio: casi todo ya existe.
+
+## 13. Riesgos y guardarraíles
 
 - **No big-bang**: sistema funcionando siempre; cada fase verificada antes de seguir.
 - **No renombrar `comandas`/`eventos` físicamente**: usar vistas `ventas`/`proyectos`.
@@ -248,5 +317,7 @@ campos de trazabilidad pesquera.
 
 Restaurante · catering · retail · pescadería con manipulación (Mariscos) · franquicia de
 panadería con obrador central · grupo mixto cafeterías+panaderías · fontanería · electricista ·
-admin. de comunidades con mantenimiento + socorristas estacionales. **Todos encajan**: el núcleo
-es universal; solo cambia la captura. Probar más casos confirma, no altera el diseño.
+admin. de comunidades con mantenimiento + socorristas estacionales · **clínica/terapeuta con
+varios profesionales** (vertical Citas, §12: captura ligera = `reservas` generalizado + bot de
+calendario). **Todos encajan**: el núcleo es universal; solo cambia la captura. Probar más casos
+confirma, no altera el diseño.

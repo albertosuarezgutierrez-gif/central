@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **VERTICAL CITAS/SERVICIOS + análisis reutilización catering (08/06, PR #84 draft)**:
+  - Pregunta de Alberto: una terapeuta/clínica quiere "un bot que le genere su calendario".
+    ¿Está plasmado? → Respuesta: parcialmente (hay `reservas` de mesa + agenda comercial de
+    catering), pero el módulo concreto NO. Decisión (Alberto): **adaptar lo que hay, misma base,
+    100% adaptable** — no duplicar.
+  - **Cableado**: `tipo_negocio='citas'` añadido a `src/lib/negocio.ts` (preset reservas+booking
+    online+fichajes/rrhh+núcleo; labels Centro/Cita/Profesional/Agenda/Servicios). `tsc` limpio.
+  - **Spec ampliado** (`...plataforma-verticales-design.md` §12 nuevo + §3): Familia B tiene
+    **dos capturas** — *cita/agenda ligera* (`reservas` generalizado `mesa_id`→`recurso_id`+
+    `servicio_id`+`recurso.tipo`; el bot entra como un `canal` más, como TheFork) y *proyecto
+    pesado* (motor `eventos`). Multi-terapeuta = varios recursos (= varias mesas).
+  - **Análisis cross-sector** (agente Explore sobre código real): el bloque **eventos+CRM es el
+    motor genérico de Familia B (~95% reutilizable)**. Reutilizable tal cual: presupuestos,
+    briefing, checklist, asignación personal, galería, valoración(NPS), contratos, plantillas,
+    espacios, comercial_agenda + CRM (leads, pipeline kanban, propuestas sin precio, lead-hunter,
+    recordatorios). Jerga catering que NO se reusa (se queda en su vertical): BEO, menaje, barra/
+    tiers, pases, APPCC, transporte. Se promueven a neutro SOLO al compartirse (regla §8).
+  - Lo único net-new: el **bot de calendario** (ofrece huecos/confirma; `reservas-noshow` ya existe).
+
 - **AUDITORÍA COMPLETA post-rename (08/06, PR #83) — sin regresiones, reparaciones aplicadas**:
   - **Código**: 12 refs de columna `restaurante_id` que tsc/build NO cazan (selects multi-línea, embeds
     PostgREST `tabla!restaurante_id(`, `onConflict` multi-columna) → `local_id`. + bridge de impresoras
@@ -710,6 +729,13 @@
 ---
 
 ## 📝 Registro de sesiones
+
+### 2026-06-08 — Vertical Citas/Servicios + análisis reutilización catering cross-sector (PR #84 draft)
+- Arranca con la pregunta de Alberto: una terapeuta/clínica querría "un bot que le genere su calendario" — ¿está en el proyecto? Conclusión tras leer código (`reservas`, `comercial_agenda`, `negocio.ts`): parcialmente; falta el módulo concreto.
+- **Decisión de Alberto**: adaptar lo que hay, **misma base, 100% adaptable** (no duplicar). La cita es captura *ligera* = `reservas` **generalizado** (`mesa_id`→`recurso_id`+`servicio_id`+`recurso.tipo`); multi-terapeuta = varios recursos. El bot entra como un `canal` más (igual que TheFork).
+- **Hecho**: `tipo_negocio='citas'` cableado en `src/lib/negocio.ts` (preset + labels; `tsc` limpio). Spec ampliado (§12 nuevo "Vertical Citas/Servicios" + §3 "dos capturas de Familia B" + casos §15 + fase E). 
+- **Análisis cross-sector** (agente Explore sobre rutas/tablas reales): el bloque **eventos+CRM es el motor genérico de Familia B (~95% reutilizable)** para field-service/comunidades/servicios profesionales. Mapa de qué se reutiliza tal cual vs jerga catering (BEO/menaje/barra/pases/APPCC) que se queda en su vertical hasta promoverse. Documentado en spec §12.
+- **Lección**: "segmentar lo que tenemos" en Familia B es sobre todo **formalizar fronteras + generalizar 1 columna** (`mesa_id`→`recurso_id`), no reescribir. El núcleo ya es universal.
 
 ### 2026-06-07/08 — Plataforma de verticales (Fase A) + rename `restaurante_id → local_id` COMPLETO (PRs #77, #79, #80)
 - **Diseño** `ia.rest → plataforma de verticales` (spec en `docs/superpowers/specs/`) + **módulo tienda/retail** (Fase C mínima: `/tienda` TPV, TiendaTab owner, rol dependiente, backend config/buscar/venta).
