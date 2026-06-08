@@ -26,10 +26,18 @@
   - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
     local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
     `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
-  - ⏭️ **PENDIENTE DE DEPLOY (crons no-cliente; fuente migrada YA en main, sin desplegar)**:
-    `eventos-entorno` y `monitor-health`. No desplegadas por riesgo de escapado inline (243/722 líneas).
-    ⚠️ `monitor-health` tiene DRIFT repo↔deploy (bug de sintaxis preexistente l.716 ya corregido en repo)
-    → deploy deliberado. Mecanismo: dashboard Supabase o `supabase functions deploy <name>`.
+  - ✅ Edge desplegadas a local_id: **daily-briefing, check-elaboraciones, qr-order, qr-session, qr-cobro**.
+  - 🔴 **DRIFT Edge Functions (PREEXISTENTE, destapado por el DROP)**: el repo ya estaba en local_id pero
+    las funciones DESPLEGADAS nunca se redesplegaron → sus versiones vivas usaban `restaurante_id` y
+    ROMPÍAN tras el drop (confirmado en logs: qr-order desplegada v9 usaba restaurante_id). **Pendiente
+    redesplegar** (todas ya en local_id en el repo, solo falta `deploy`): `qr-connect`, `qr-split`,
+    `qr-call-waiter`, `notify-error`, `eventos-entorno`, `monitor-health` (722 líneas, +fix sintaxis).
+    Y **sin fuente en repo** (fetch deployed → migrar → deploy): `alerta-ritmo-cron`, `infra-monitor-cron`,
+    `nim-diagnostico` (las invocan crons cada 2-5min → spam de errores en logs). Revisar también por drift:
+    webhook-stripe, cobro-stripe, courier-route, etc.
+  - **FIX EFICIENTE recomendado**: `supabase functions deploy` (redespliega TODAS desde repo de una) con
+    `SUPABASE_ACCESS_TOKEN`. El MCP deploy es 1-a-1 e inline (costoso). NO hay clientes reales aún →
+    sin impacto de usuario; main + BD correctos. Los crons de observabilidad rotos solo hacen ruido.
   - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
     tabla `leads` sin columna de tenant.
   - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
