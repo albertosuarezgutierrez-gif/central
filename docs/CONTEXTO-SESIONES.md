@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ MONOREPO casa de marcas — CORTE COMPLETADO (SIVRA + IALIMP en producción) — 08/06/2026**
+  - **SIVRA e IALIMP ya viven en `ia.rest` y despliegan desde el monorepo, ambos en producción:**
+    - `sivra` → repo `ia.rest` (branch `main`), Root Directory `apps/sivra`, install `npm install
+      --legacy-peer-deps` (override), build = su `vercel.json`. **Ready** (login carga).
+    - `ialimp` → repo `ia.rest` (branch `main`), Root Directory `apps/ialimp`, install ya era
+      `npm install --legacy-peer-deps`, build = su `vercel.json` (fetch-fonts + prisma + next).
+      **Ready en `app.ialimp.es`**. **Env Vars intactas** (no se tocaron).
+    - `ia-rest` (raíz) **sin tocar** → sigue verde y desplegando como siempre.
+  - **PR #88 mergeado** (co-localización `apps/sivra` + `apps/ialimp` + `core-identity`) y **PR #89
+    mergeado** (el fix que desbloqueó el build por-app).
+  - 🐞 **GOTCHA resuelto (clave para el futuro):** al reapuntar SIVRA, el build falló con
+    `prisma: command not found` (exit 127). Causa raíz: **`apps/` en el `.vercelignore` de la raíz** —
+    se aplica a TODOS los proyectos del repo relativo a la raíz, así que borraba `apps/sivra` antes de
+    construir y el proyecto caía a construir la raíz (ia.rest, Next 16.2.6, sin prisma). Fix (PR #89):
+    (1) **quitar `apps/` del `.vercelignore`**; (2) **eliminar `turbo.json`** vestigial (hacía que
+    Vercel detectara Turborepo y reforzara el build-desde-raíz); (3) **`prisma` → `dependencies`** en
+    SIVRA. **REGLA: nunca poner `apps/` en el `.vercelignore` de la raíz; verificar siempre con el
+    preview real del proyecto Vercel de la app.** Detalle en `docs/RUNBOOK-monorepo.md`.
+  - 🟡 **Pendiente (aplazado, Opción 3):** la landing `ialimp.es` (proyecto `ialimp-landing`) deja de
+    auto-publicarse tras el corte (su GitHub Action quedó en `apps/ialimp/.github/`). Arreglar cuando
+    se edite la landing (opciones en el runbook). No bloquea nada.
+  - 🟡 **Pendiente (limpieza, sin prisa):** tras unos días estables, archivar/borrar los repos viejos
+    `sivra` e `ialimp` en GitHub. La adopción de `packages/core-*` por las apps (Fase 3) sigue abierta,
+    app por app, IALIMP el último.
+
 - **MONOREPO casa de marcas — PLAN APROBADO + Fase 1 paso 1 hecho — 08/06/2026**
   - **Decisión de Alberto**: crear UNA central con todo (ia.rest = repo anfitrión); ia.rest pasa a ser
     **una vertical más** (`apps/ia-rest`), SIVRA/IALIMP entran como `apps/`; **módulos comunes** en

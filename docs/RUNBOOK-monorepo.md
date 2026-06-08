@@ -2,8 +2,17 @@
 
 > Cómo activar el monorepo (ia.rest = repo central; SIVRA/IALIMP como `apps/`) **sin romper
 > despliegues**. Plan completo: `docs/HANDOFF-unificacion-casa-marcas.md` y el plan aprobado.
-> Estado: **Paso 1 hecho** (código co-localizado en `apps/`, inerte, CI verde). Lo de abajo es el
-> resto, que mezcla pasos de código (Claude, en rama) con pasos de Vercel (**tú**, en el panel).
+>
+> ## ✅ ESTADO: CORTE COMPLETADO (08/06/2026)
+> **SIVRA e IALIMP ya despliegan desde este monorepo, ambos en producción** (PR #88 + #89 mergeados):
+> - `sivra` → repo `ia.rest`/`main`, Root Directory `apps/sivra`, install `npm install --legacy-peer-deps`. **Ready**.
+> - `ialimp` → repo `ia.rest`/`main`, Root Directory `apps/ialimp`, install `npm install --legacy-peer-deps`. **Ready en `app.ialimp.es`** (Env Vars intactas).
+> - `ia-rest` (raíz) sin tocar, verde.
+> El fix que lo desbloqueó (quitar `apps/` del `.vercelignore` + borrar `turbo.json` + `prisma`→deps en SIVRA)
+> está en el GOTCHA de la sección B. **Queda solo** (sin prisa): landing `ialimp.es` (Opción 3, aplazada),
+> archivar/borrar repos viejos `sivra`/`ialimp`, y la adopción de `packages/core-*` (Fase 3, IALIMP el último).
+>
+> Lo de abajo es la guía original del corte (ya ejecutada), útil como referencia y para futuras verticales.
 
 ## Estado actual (rama `claude/adoring-hawking-s1cFi`, PR #88, NO mergeado)
 - `apps/sivra/` y `apps/ialimp/` = copia de sus `origin/main`. **Inertes**: excluidos de tsconfig,
