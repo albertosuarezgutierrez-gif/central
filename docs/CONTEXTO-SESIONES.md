@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **AUDITORÍA COMPLETA post-rename (08/06, PR #83) — sin regresiones, reparaciones aplicadas**:
+  - **Código**: 12 refs de columna `restaurante_id` que tsc/build NO cazan (selects multi-línea, embeds
+    PostgREST `tabla!restaurante_id(`, `onConflict` multi-columna) → `local_id`. + bridge de impresoras
+    (`scripts/bridge-v6.js`, `android/BridgeService.kt`) filtro realtime `print_jobs` → `local_id`.
+  - **BD**: añadida `comandas.cerrada_at` (faltaba; factura/cerrar y cashlogy fallaban en silencio al
+    marcar 'cerrada'). Hardening: `local_id` NOT NULL en tablas base + PK de `config_tienda` restaurado.
+  - **Verificado sin regresión**: 0 `restaurante_id` en TODO objeto BD; vistas recreadas mantienen
+    GRANTs y `security_definer` (convención preexistente); logs en vivo limpios; 366 advisor-lints todos
+    preexistentes (search_path, security-definer funcs, RLS).
+
 - **RENAME restaurante_id→local_id: COMPLETO + MERGEADO a main (PR #77 y #79) — 07/06/2026**.
   Tras el DROP en BD (prod), el merge-review destapó que TODAS las superficies que tocan la BD
   debían migrarse. Estado final:
@@ -691,6 +701,10 @@
 - (P3) Plataforma de verticales: Fase A pendiente de bus de eventos (outbox) + offline-first; luego
   Fases B-F (RBAC, retail/Mariscos, entitlements, catering/franquicia, API/MCP/monetización). Ver spec.
 - **Token Supabase** `sbp_…` pegado en chat el 07/06: **revocar** en dashboard/account/tokens (no se usó).
+- (P4) **Bugs PREEXISTENTES** detectados en la auditoría (ajenos al rename, decidir): tabla `comanda_audit`
+  no existe (insert fire-and-forget en `comanda/[id]/camarero` falla en silencio → o crear la tabla o
+  quitar el insert); tabla `leads` sin columna de tenant (`leads/unsubscribe`); `login_pin` no devuelve
+  tenant (`super-pin`/`cocina/validar-pin` leen un campo inexistente).
 - Nada urgente abierto del módulo de cobros tras la sesión 2026-06-01.
 
 ---
