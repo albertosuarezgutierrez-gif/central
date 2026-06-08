@@ -26,16 +26,18 @@
   - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
     local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
     `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
-  - ✅ Edge desplegadas a local_id (10): daily-briefing, check-elaboraciones, qr-order, qr-session,
-    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron, **notify-error, eventos-entorno**. Toda la
-    superficie de CLIENTE + las relevantes al rename, en local_id. (qr-connect no lo necesita.)
-  - ⏸️ **3 cron jobs siguen PAUSADOS** (`16 infra-monitor`, `19 monitor-health`, `23 nim-diagnostico`).
-    NO es por el rename: tienen **bugs PREEXISTENTES** (los logs muestran `system_errors.stack_trace` y
-    `comandas.cerrada_at` "does not exist" — columnas que el código pide y no existen). `nim-diagnostico`
-    ni referencia restaurante_id. Reactivarlos = tarea APARTE (arreglar esas columnas). `monitor-health`
-    está rename-migrado en repo (722 líneas) pero igualmente arrastra bugs preexistentes.
-    Reactivar: `select cron.alter_job(ID, active=>true)` tras arreglar y redesplegar.
-  - **Rename: 100% completo en todo lo relevante** (app, BD, superficie de cliente, crons activos).
+  - ✅ Edge desplegadas a local_id (12): daily-briefing, check-elaboraciones, qr-order, qr-session,
+    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron, notify-error, eventos-entorno,
+    **nim-diagnostico** (+fix bug preexistente stack_trace→contexto), **infra-monitor-cron** (migrada).
+  - ✅ Crons REACTIVADOS: `23 nim-diagnostico`, `16 infra-monitor`.
+  - ⏸️ ÚNICO pendiente: `19 monitor-health` sigue pausado. Su función está **rename-migrada en el repo**
+    (722 líneas) pero NO la desplegué inline por riesgo de escapado. Desplegar con
+    `supabase functions deploy monitor-health` y `select cron.alter_job(19, active=>true)`.
+  - ⚠️ Drift a sanear: `alerta-ritmo-cron` e `infra-monitor-cron` se migraron y desplegaron pero son
+    **repo-less** (no están en supabase/functions/) → añadirlas al repo para no repetir el drift.
+  - ⚠️ Bug PREEXISTENTE aparte (no edge): ruta app `cron/feedback-visita` pide `comandas.cerrada_at`
+    (columna inexistente; comandas tiene `estado`/`estado_cobro`). Fuera del rename.
+  - **Rename: 100% completo.** Solo queda 1 deploy de observabilidad (monitor-health) por CLI.
   - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
     tabla `leads` sin columna de tenant.
   - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
