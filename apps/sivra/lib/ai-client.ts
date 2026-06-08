@@ -1,9 +1,11 @@
 /**
- * ai-client.ts — Wrapper IA unificado para SIVRA
- * Proveedor único: NVIDIA NIM (gratis, meta/llama-3.3-70b-instruct)
+ * ai-client.ts — Wrapper IA para SIVRA
+ * Envuelve `@iarest/core-ai` (NVIDIA NIM) preservando la API local
+ * (`aiComplete` / `aiExtractInvoice`). El núcleo es identity-agnostic: la config
+ * (apiKey + modelos) la inyecta esta app; la política (timeout) también.
  */
+import { nimChat, nimVision, type NimConfig } from '@iarest/core-ai'
 
-const NVIDIA_BASE    = 'https://integrate.api.nvidia.com/v1'
 const NVIDIA_MODEL   = 'meta/llama-3.3-70b-instruct'
 const NVIDIA_VISION  = 'meta/llama-3.2-90b-vision-instruct'
 const TIMEOUT_MS     = 25_000
@@ -20,14 +22,14 @@ export interface AiOptions {
   model?:       string   // override del modelo NVIDIA
 }
 
-function nvidiaKey(): string {
-  const k = process.env.NVIDIA_API_KEY
-  if (!k) throw new Error('NVIDIA_API_KEY no configurada en Vercel')
-  return k
+function nimConfig(): NimConfig {
+  const apiKey = process.env.NVIDIA_API_KEY
+  if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada en Vercel')
+  return { apiKey, textModel: NVIDIA_MODEL, visionModel: NVIDIA_VISION }
 }
 
 /**
- * Genera una completion de texto con NVIDIA NIM.
+ * Genera una completion de texto con NVIDIA NIM (vía core-ai).
  */
 export async function aiComplete(
   messages:  AiMessage[],
@@ -35,34 +37,13 @@ export async function aiComplete(
 ): Promise<string> {
   const { system, maxTokens = 800, temperature = 0.3, model } = options
 
-  const nvidiaMessages = [
-    ...(system ? [{ role: 'system' as const, content: system }] : []),
-    ...messages,
-  ]
-
-  const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
-    method:  'POST',
-    headers: {
-      'Content-Type':  'application/json',
-      'Authorization': `Bearer ${nvidiaKey()}`,
-    },
-    body: JSON.stringify({
-      model:       model || NVIDIA_MODEL,
-      messages:    nvidiaMessages,
-      max_tokens:  maxTokens,
-      temperature,
-    }),
+  const text = await nimChat(nimConfig(), messages, {
+    system,
+    model,
+    maxTokens,
+    temperature,
     signal: AbortSignal.timeout(TIMEOUT_MS),
   })
-
-  if (!res.ok) {
-    const err = await res.text()
-    throw new Error(`NVIDIA ${res.status}: ${err}`)
-  }
-
-  const data = await res.json()
-  const text = data.choices?.[0]?.message?.content as string | undefined
-  if (!text?.trim()) throw new Error('NVIDIA: respuesta vacía')
 
   console.log('[ai] provider=nvidia model=' + (model || NVIDIA_MODEL))
   return text
@@ -97,30 +78,16 @@ export async function aiExtractInvoice(input: {
   imageBase64?:  string
   mimeType?:     string
 }): Promise<Record<string, any>> {
-  const key = nvidiaKey()
-
   // ── Imagen: modelo visión ────────────────────────────────────────────────
   if (input.imageBase64 && input.mimeType) {
-    const res = await fetch(`${NVIDIA_BASE}/chat/completions`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${key}` },
-      body: JSON.stringify({
-        model:       NVIDIA_VISION,
-        max_tokens:  512,
-        temperature: 0.1,
-        messages: [{
-          role:    'user',
-          content: [
-            { type: 'image_url', image_url: { url: `data:${input.mimeType};base64,${input.imageBase64}` } },
-            { type: 'text',      text: INVOICE_SYSTEM + '\n\nExtrae los datos de esta factura en JSON:' }
-          ]
-        }]
-      }),
-      signal: AbortSignal.timeout(30_000),
-    })
-    if (!res.ok) throw new Error(`NVIDIA vision ${res.status}`)
-    const data  = await res.json()
-    const txt   = data.choices?.[0]?.message?.content || '{}'
+    const txt = await nimVision(
+      nimConfig(),
+      INVOICE_SYSTEM,
+      [{ data: input.imageBase64, mediaType: input.mimeType }],
+      'Extrae los datos de esta factura en JSON:',
+      512,
+      AbortSignal.timeout(30_000),
+    )
     const clean = txt.replace(/```json|```/g, '').trim()
     try { return JSON.parse(clean) } catch { return {} }
   }
