@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@iarest/core-ai": "file:../../packages/core-ai",
+    "@iarest/core-ai": "workspace:*",
     "jimp": "^0.22.12",
     "next": "^15.5.18",
     "react": "^19.0.0",

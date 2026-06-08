@@ -1,7 +1,7 @@
 {
   "buildCommand": "prisma generate && next build",
   "framework": "nextjs",
-  "installCommand": "npm install --legacy-peer-deps",
+  "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile",
   "crons": [
     {
       "path": "/api/updates/sync",
