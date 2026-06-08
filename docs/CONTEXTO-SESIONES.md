@@ -26,16 +26,14 @@
   - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
     local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
     `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
-  - ✅ Edge desplegadas a local_id: **daily-briefing, check-elaboraciones, qr-order, qr-session, qr-cobro,
-    alerta-ritmo-cron** (6). El flujo de cliente QR (session→order→cobro) y el evaluador de alertas ya en local_id.
-  - ⏸️ **Cron jobs PAUSADOS para cortar el spam de logs** (sus Edge seguían stale): `16 infra-monitor`,
-    `19 monitor-health-cron`, `23 nim-diagnostico`. **Reactivar** (`select cron.alter_job(ID, active=>true)`)
-    tras redesplegar sus funciones.
-  - ⏭️ **Edge pendientes de redeploy** (repo ya en local_id; sin clientes → sin impacto):
-    `qr-connect`, `qr-split`, `qr-call-waiter`, `notify-error`, `eventos-entorno`, `monitor-health` (repo
-    migrado +fix sintaxis). Sin fuente en repo (fetch deployed→migrar→deploy): `infra-monitor-cron`,
-    `nim-diagnostico`. Revisar drift en: webhook-stripe, cobro-stripe, courier-route, etc.
-  - **FIX EFICIENTE**: `supabase functions deploy` (todas desde repo de una) con `SUPABASE_ACCESS_TOKEN`.
+  - ✅ Edge desplegadas a local_id (8): **daily-briefing, check-elaboraciones, qr-order, qr-session,
+    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron**. Familia QR de cliente COMPLETA en local_id.
+    (qr-connect no necesita: solo usa restaurante_id como param + `.eq('id',…)` sobre restaurantes.)
+  - ⏸️ Cron jobs PAUSADOS (cortan spam; reactivar `cron.alter_job(ID, active=>true)` tras redeploy):
+    `16 infra-monitor`, `19 monitor-health-cron`, `23 nim-diagnostico`.
+  - ⏭️ Edge pendientes (no-cliente, sin impacto): `notify-error`, `eventos-entorno`, `monitor-health`
+    (repo migrado), y sin fuente en repo `infra-monitor-cron`, `nim-diagnostico` (fetch→migrar→deploy).
+    Revisar drift en webhook-stripe/cobro-stripe/courier-route. Vía limpia: `supabase functions deploy` con token.
   - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
     tabla `leads` sin columna de tenant.
   - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
