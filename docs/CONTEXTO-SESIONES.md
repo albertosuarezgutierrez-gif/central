@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **MONOREPO casa de marcas — PLAN APROBADO + Fase 1 paso 1 hecho — 08/06/2026**
+  - **Decisión de Alberto**: crear UNA central con todo (ia.rest = repo anfitrión); ia.rest pasa a ser
+    **una vertical más** (`apps/ia-rest`), SIVRA/IALIMP entran como `apps/`; **módulos comunes** en
+    `packages/`; **marca matriz** por encima. Visión = "fábrica de marcas": módulos **independientes y
+    portables** (enchufables a cualquier proyecto) + una **raíz/plantilla común** + verticales con la
+    **misma estructura**. Plan completo aprobado en `/root/.claude/plans/...` y reflejado en
+    `docs/HANDOFF-...` + `docs/RUNBOOK-monorepo.md`.
+  - **Tooling decidido**: pnpm + turbo (aísla deps; 3 versiones de Next 16/15.5/15.3 conviven).
+  - ✅ **#87 mergeado** (core-ai con `geminiSearch`, 3 proveedores) — ya en `main` junto a #85/#86.
+  - ✅ **Paso 1 (PR #88, draft, NO MERGEAR): co-localizado el código** de SIVRA (`apps/sivra`, 138
+    ficheros) e IALIMP (`apps/ialimp`, 337) desde sus `origin/main`. **Inertes**: excluidos de
+    `tsconfig`/`eslint.config`/`.vercelignore` de ia.rest → **CI y los 3 previews Vercel en VERDE**
+    (nada roto). Verificado.
+  - 📋 **`docs/RUNBOOK-monorepo.md`**: corte llave-en-mano. Pasos restantes de código (pnpm, mover
+    ia.rest→`apps/ia-rest`, `packages/base`, adopción) + **pasos de Vercel que SOLO puede hacer Alberto**
+    (Root Directory + repo conectado + install pnpm de cada proyecto). Tras los pasos de código el CI de
+    la rama se pondrá ROJO hasta aplicar Vercel (esperado); la verificación real de SIVRA/IALIMP es su
+    preview de Vercel tras reapuntar.
+  - 🟡 **Bloqueo para continuar**: el corte estructural necesita los cambios de Vercel de Alberto (fuera
+    de git) + no es verificable en el entorno efímero. IALIMP el último, su BD/RLS/buckets intactos.
+  - **Sugerencias incorporadas al plan**: scope de paquetes de la matriz (no `@iarest`),
+    `core-identity` (contrato sesión/tenant), `packages/ui` (design system), Changesets + tests de
+    contrato, catálogo de módulos + generador `create-vertical`, raíz multi-tenant/white-label de
+    fábrica, puertos&adaptadores.
+
 - **CASA DE MARCAS — Fase 1 EN MARCHA: 2 paquetes núcleo mergeados a main — 08/06/2026**
   - ✅ **#85 mergeado** (`core-ai`, andamiaje monorepo) · ✅ **#86 mergeado** (`core-fiscal`). Ambos con
     CI verde (Lint·TypeCheck·Build + Patrones + Vercel). Squash en main.
