@@ -1,6 +1,9 @@
 // @iarest/core-ai — núcleo IA compartido (casa de marcas).
-// Superficie mínima y estable; identity-agnostic (la config la inyecta la app).
+// Adaptadores de proveedor PUROS e identity-agnostic (la config la inyecta la
+// app). La POLÍTICA (fallback, timeouts, selección de modelo) vive en cada app.
 
 export { cleanJSON } from './clean-json'
 export { nimText, nimVision } from './nim'
+export { geminiSearch } from './gemini'
+export type { GeminiConfig } from './gemini'
 export type { ImageInput, NimConfig } from './types'
