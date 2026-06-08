@@ -1,0 +1,45 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ─── MULTI-TENANT ────────────────────────────────────────────────
+model Empresa {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre        String
+  email         String   @unique
+  password_hash String
+  plan          String   @default("starter")
+  activa        Boolean  @default(true)
+  created_at    DateTime @default(now()) @db.Timestamptz
+
+  // Marca por empresa (white-label). Por defecto = ialimp.
+  marca_nombre     String?
+  logo_url         String?
+  color_primario   String  @default("#4f46e5")
+  color_secundario String  @default("#6366f1")
+  color_light      String  @default("#eef2ff")
+
+  @@map("empresas")
+}
+
+// ─── CONEXIONES PMS (iCal / webhook) ─────────────────────────────
+model PmsConnection {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  empresa_id      String    @db.Uuid
+  cliente_nombre  String
+  pms_tipo        String    // smoobu | octorate | icnea | hostify | kross | ical | airbnb
+  ical_url        String?
+  webhook_secret  String?
+  activa          Boolean   @default(true)
+  ultimo_sync     DateTime? @db.Timestamptz
+  sync_error      String?
+  created_at      DateTime  @default(now()) @db.Timestamptz
+
+  @@map("pms_connections")
+}

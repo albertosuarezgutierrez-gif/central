@@ -1,0 +1,41 @@
+{
+  "name": "ialimp",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "node scripts/fetch-fonts.mjs && prisma generate && next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "jimp": "^0.22.12",
+    "next": "^15.5.18",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
+    "date-fns": "^4.1.0",
+    "zod": "^3.23.8",
+    "bcryptjs": "^2.4.3",
+    "jose": "^5.9.3",
+    "node-ical": "^0.19.0",
+    "nodemailer": "^8.0.7",
+    "stripe": "^16.0.0",
+    "web-push": "^3.6.7",
+    "@supabase/supabase-js": "^2.46.2",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/bcryptjs": "^2.4.6",
+    "typescript": "^5",
+    "tailwindcss": "^3.4.1",
+    "autoprefixer": "^10.4.20",
+    "postcss": "^8.4.49",
+    "@types/web-push": "^3.6.4"
+  },
+  "installCommand": "npm install --legacy-peer-deps"
+}

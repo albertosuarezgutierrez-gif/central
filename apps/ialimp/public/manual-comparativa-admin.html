@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comparativa /admin — antes y después</title>
+<style>
+  /* Fuentes AUTO-ALOJADAS (sin Google Fonts). Los .woff2 se descargan a /fonts
+     en el build (scripts/fetch-fonts.mjs). Si faltaran, degrada a fuente del sistema. */
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/dm-sans-400.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/dm-sans-500.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/dm-sans-600.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/dm-sans-700.woff2') format('woff2')}
+  @font-face{font-family:'DM Sans';font-style:normal;font-weight:800;font-display:swap;src:url('/fonts/dm-sans-800.woff2') format('woff2')}
+  @font-face{font-family:'Syne';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/syne-400.woff2') format('woff2')}
+  @font-face{font-family:'Syne';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/syne-700.woff2') format('woff2')}
+  @font-face{font-family:'Syne';font-style:normal;font-weight:800;font-display:swap;src:url('/fonts/syne-800.woff2') format('woff2')}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'DM Sans',sans-serif;background:#e2e8f0;color:#1e1b4b;padding:24px 16px 60px;line-height:1.5}
+  .wrap{max-width:1000px;margin:0 auto}
+  .syne{font-family:'Syne',sans-serif}
+  h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(22px,4vw,30px);margin-bottom:4px}
+  .sub{color:#64748b;margin-bottom:24px;font-size:15px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .col{display:flex;flex-direction:column}
+  .tag{font-weight:800;font-size:13px;letter-spacing:.05em;text-transform:uppercase;margin-bottom:8px;display:inline-flex;align-items:center;gap:8px}
+  .tag.bad{color:#b45309}.tag.good{color:#4f46e5}
+  .dot{width:10px;height:10px;border-radius:50%}
+  .dot.bad{background:#d97706}.dot.good{background:#4f46e5}
+
+  /* device frame */
+  .device{border:1px solid #cbd5e1;border-radius:16px;overflow:hidden;background:#fff;box-shadow:0 8px 24px rgba(15,23,42,.10)}
+  .browserbar{background:#f1f5f9;border-bottom:1px solid #e2e8f0;padding:8px 12px;font-size:11px;color:#64748b;display:flex;align-items:center;gap:6px}
+  .browserbar .url{background:#fff;border:1px solid #e2e8f0;border-radius:6px;padding:3px 8px;flex:1;font-family:monospace;font-size:10.5px;color:#475569}
+
+  /* ── ANTES (verde) ── */
+  .h-old{background:linear-gradient(135deg,#1B4332,#2D6A4F);padding:20px 18px 0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;position:relative}
+  .h-old .row{position:relative;color:#fff;margin-bottom:14px;min-height:54px}
+  .h-old .backbtn{display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;border:1px solid rgba(255,255,255,.35);background:rgba(255,255,255,.12);color:#fff;font-size:13px;font-weight:600;position:absolute;top:0;left:0;z-index:2}
+  .h-old .logo{position:absolute;top:8px;left:120px;font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:#fff;opacity:.8;z-index:1}
+  .h-old .title{font-size:22px;font-weight:800;padding-top:34px}
+  .h-old .tabs{display:flex;gap:0}
+  .h-old .tab{padding:10px 16px;font-size:13px;color:rgba(255,255,255,.6);font-weight:500;border-bottom:3px solid transparent}
+  .h-old .tab.active{color:#fff;font-weight:700;border-bottom:3px solid #a3e635}
+
+  /* ── DESPUÉS (indigo) ── */
+  .h-new{background:#4f46e5;padding:0 18px;font-family:'DM Sans',sans-serif}
+  .h-new .row{display:flex;align-items:center;gap:14px;padding:18px 0 0}
+  .h-new .back{color:rgba(255,255,255,.7);font-size:13px;text-decoration:none}
+  .h-new .logo{font-family:'Syne',sans-serif;font-weight:800;font-size:13px;color:#fff;opacity:.8}
+  .h-new .title{color:#fff;font-weight:800;font-size:22px;margin-top:8px}
+  .h-new .tabs{display:flex;gap:0;margin-top:12px}
+  .h-new .tab{padding:10px 16px;font-size:13px;color:rgba(255,255,255,.55);font-weight:400;border-bottom:2.5px solid transparent}
+  .h-new .tab.active{color:#fff;font-weight:700;border-bottom:2.5px solid #fff}
+
+  /* body of each screen */
+  .body{padding:16px;display:flex;flex-direction:column;gap:12px}
+  .body.old{background:#f9fafb}
+  .body.new{background:#f1f5f9}
+  .kpis{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+  .kpi{background:#fff;border:1px solid #eef0f3;border-radius:12px;padding:12px;text-align:center}
+  .kpi .v{font-weight:800;font-size:20px}
+  .kpi .l{font-size:11px;color:#64748b}
+  .v.k1{color:#1e1b4b}.v.k2{color:#d97706}.v.k3{color:#16a34a}.v.k4{color:#2563eb}
+  .prop{background:#fff;border:1px solid #eef0f3;border-radius:12px;padding:12px 14px}
+  .prop .nm{font-weight:800;font-size:14px;color:#9333ea;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .chip{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px}
+  .chip.est{background:#eef2ff;color:#4f46e5}
+  .chip.pend{background:#f1f5f9;color:#64748b;border:1px solid #e2e8f0}
+  .prop .sel{margin-top:8px;border:1px solid #e2e8f0;border-radius:8px;padding:7px 10px;font-size:12px;color:#475569;background:#fff}
+  .prop .sel.green{border-color:#16a34a}
+  .prop .sel.indigo{border-color:#4f46e5}
+
+  .notes{margin-top:26px;background:#fff;border:1px solid #e2e8f0;border-radius:14px;padding:18px 20px}
+  .notes h2{font-family:'Syne',sans-serif;font-size:17px;margin-bottom:10px}
+  .notes ul{margin:0;padding-left:18px}
+  .notes li{margin-bottom:7px;font-size:14.5px}
+  .notes b{color:#4f46e5}
+  .arrow{text-align:center;color:#94a3b8;font-size:22px;margin:6px 0}
+  @media(min-width:761px){.arrow{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Pantalla «Gestión limpiadoras» — antes y después</h1>
+  <p class="sub">Misma pantalla (<span style="font-family:monospace">/admin</span>), recreada con los valores reales del código. Izquierda: como estaba. Derecha: con los colores corporativos.</p>
+
+  <div class="grid">
+    <!-- ANTES -->
+    <div class="col">
+      <span class="tag bad"><span class="dot bad"></span>Antes — verde + logo solapado</span>
+      <div class="device">
+        <div class="browserbar"><span class="url">app.ialimp.es/admin</span></div>
+        <div class="h-old">
+          <div class="row">
+            <span class="backbtn">← Volver al inicio</span>
+            <span class="logo">ialimp</span>
+            <div class="title">Gestión limpiadoras</div>
+          </div>
+          <div class="tabs">
+            <div class="tab active">Hoy</div>
+            <div class="tab">Semana</div>
+          </div>
+        </div>
+        <div class="body old">
+          <div class="kpis">
+            <div class="kpi"><div class="v k1">60</div><div class="l">Total hoy</div></div>
+            <div class="kpi"><div class="v k2">58</div><div class="l">Pendientes</div></div>
+            <div class="kpi"><div class="v k3">2</div><div class="l">Completadas</div></div>
+            <div class="kpi"><div class="v k4">3h 13m</div><div class="l">Tiempo total</div></div>
+          </div>
+          <div class="prop">
+            <div class="nm">Luxury Busto <span class="chip est">✏️ Estándar</span> <span class="chip pend">○ Pendiente</span></div>
+            <div class="sel green">✏️ Estándar — Wendy</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="arrow">↓</div>
+
+    <!-- DESPUÉS -->
+    <div class="col">
+      <span class="tag good"><span class="dot good"></span>Después — indigo corporativo</span>
+      <div class="device">
+        <div class="browserbar"><span class="url">app.ialimp.es/admin</span></div>
+        <div class="h-new">
+          <div class="row">
+            <a class="back" href="#">← Dashboard</a>
+            <span class="logo">ialimp</span>
+          </div>
+          <div class="title">Gestión limpiadoras</div>
+          <div class="tabs">
+            <div class="tab active">Hoy</div>
+            <div class="tab">Semana</div>
+          </div>
+        </div>
+        <div class="body new">
+          <div class="kpis">
+            <div class="kpi"><div class="v k1">60</div><div class="l">Total hoy</div></div>
+            <div class="kpi"><div class="v k2">58</div><div class="l">Pendientes</div></div>
+            <div class="kpi"><div class="v k3">2</div><div class="l">Completadas</div></div>
+            <div class="kpi"><div class="v k4">3h 13m</div><div class="l">Tiempo total</div></div>
+          </div>
+          <div class="prop">
+            <div class="nm">Luxury Busto <span class="chip est">✏️ Estándar</span> <span class="chip pend">○ Pendiente</span></div>
+            <div class="sel indigo">✏️ Estándar — Wendy</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="notes">
+    <h2>Qué cambió exactamente</h2>
+    <ul>
+      <li><b>Color de cabecera:</b> verde <span style="font-family:monospace">#1B4332→#2D6A4F</span> → indigo corporativo <span style="font-family:monospace">#4f46e5</span>.</li>
+      <li><b>Subrayado de pestaña activa:</b> verde lima <span style="font-family:monospace">#a3e635</span> → blanco (como el resto de pantallas).</li>
+      <li><b>Logo solapado:</b> el "ialimp" se montaba sobre el botón. Ahora va en una fila limpia junto a <b>← Dashboard</b>.</li>
+      <li><b>Botón de volver:</b> antes "← Volver al inicio"; ahora <b>← Dashboard</b>, el mismo enlace que usan Equipo, Negocio, Materiales…</li>
+      <li><b>Fuente y fondo:</b> tipografía del sistema → <b>DM Sans</b>; fondo <span style="font-family:monospace">#f9fafb</span> → <span style="font-family:monospace">#f1f5f9</span>.</li>
+      <li><b>No tocado:</b> los colores de estado (Pendientes naranja, Completadas verde) — son señales, no marca.</li>
+    </ul>
+  </div>
+</div>
+</body>
+</html>

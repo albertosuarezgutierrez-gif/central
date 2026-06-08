@@ -1,0 +1,47 @@
+{
+  "buildCommand": "prisma generate && next build",
+  "framework": "nextjs",
+  "installCommand": "npm install --legacy-peer-deps",
+  "crons": [
+    {
+      "path": "/api/updates/sync",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/limpiadoras/auto-sessions",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/mensajes/auto-reply",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/rates/snapshot",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/mercado/cron",
+      "schedule": "15 7 * * *"
+    },
+    {
+      "path": "/api/pricing/experiments/check-results",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/pricing/detect-opportunities",
+      "schedule": "5 8 * * *"
+    },
+    {
+      "path": "/api/limpiadoras/auto-assign",
+      "schedule": "30 5 * * *"
+    },
+    {
+      "path": "/api/resumen-semanal",
+      "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/limpiadoras/alerta-ventana",
+      "schedule": "0 8 * * *"
+    }
+  ]
+}

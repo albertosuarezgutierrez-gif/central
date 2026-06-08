@@ -1,0 +1,134 @@
+// schema.prisma — ROI Intranet
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Property {
+  id        String    @id @default(cuid())
+  name      String
+  location  String
+  smoobuId  Int?
+  bedrooms  Int?
+  beds      Int?
+  bathrooms Int?
+  maxGuests Int?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  incomes   Income[]
+  expenses  Expense[]
+  @@map("properties")
+}
+
+model Income {
+  id            String    @id @default(cuid())
+  propertyId    String
+  date          DateTime
+  amount        Float
+  amount_gross  Float?
+  portal        Portal
+  reservationId String?   @unique
+  guestName     String?
+  checkIn       DateTime?
+  checkOut      DateTime?
+  nights        Int?
+  createdAt     DateTime  @default(now())
+  property      Property  @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  @@index([propertyId])
+  @@index([date])
+  @@map("incomes")
+}
+
+model Expense {
+  id             String          @id @default(cuid())
+  propertyId     String
+  title          String
+  amount         Float
+  date           DateTime
+  category       ExpenseCategory
+  isRecurring    Boolean         @default(false)
+  recurrenceType RecurrenceType?
+  driveFileId    String?
+  driveFileUrl   String?
+  notes          String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  property       Property        @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  @@index([propertyId])
+  @@index([date])
+  @@map("expenses")
+}
+
+model UpdateLog {
+  id            String    @id @default(cuid())
+  reservationId String
+  propertyId    String?
+  type          String
+  guestName     String?
+  portal        String?
+  amount        Float?
+  checkIn       DateTime?
+  checkOut      DateTime?
+  changes       Json?
+  syncedAt      DateTime  @default(now())
+  @@index([syncedAt])
+  @@index([type])
+  @@index([reservationId])
+  @@map("update_logs")
+}
+
+enum Portal {
+  BOOKING
+  AIRBNB
+  VRBO
+  DIRECTO
+  EXPEDIA
+  AGODA
+  OTRO
+}
+
+enum ExpenseCategory {
+  LIMPIEZA
+  MANTENIMIENTO
+  SUMINISTROS
+  SEGURO
+  IMPUESTOS
+  GESTION
+  REFORMAS
+  MARKETING
+  OTRO
+}
+
+enum RecurrenceType {
+  MENSUAL
+  TRIMESTRAL
+  ANUAL
+}
+
+model SeoProposal {
+  id                 String    @id @default(cuid())
+  title              String
+  description        String
+  ogDescription      String
+  schemaDescription  String?
+  topCompetitors     Json?
+  analysis           String    @db.Text
+  currentTitle       String
+  currentDescription String
+  token              String    @unique
+  status             SeoStatus @default(PENDING)
+  createdAt          DateTime  @default(now())
+  appliedAt          DateTime?
+  @@map("seo_proposals")
+}
+
+enum SeoStatus {
+  PENDING
+  APPLIED
+  REJECTED
+}

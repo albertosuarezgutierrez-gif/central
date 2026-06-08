@@ -1,0 +1,59 @@
+{
+  "buildCommand": "node scripts/fetch-fonts.mjs && prisma generate && next build",
+  "installCommand": "npm install --legacy-peer-deps",
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/pms/sync",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/admin/programaciones/generar",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/admin/auto-assign",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/admin/auto-assign",
+      "schedule": "30 4 * * *"
+    },
+    {
+      "path": "/api/admin/auto-assign",
+      "schedule": "0 14 * * *"
+    },
+    {
+      "path": "/api/admin/auto-assign",
+      "schedule": "0 15 * * *"
+    },
+    {
+      "path": "/api/admin/informes/cron",
+      "schedule": "0 7 1 * *"
+    },
+    {
+      "path": "/api/admin/ausencias",
+      "schedule": "30 9 * * *"
+    },
+    {
+      "path": "/api/admin/fotos-cleanup",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/admin/alertas-gastos",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/procesar-documentos",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/admin/contabilidad/generar-recurrentes",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/superadmin/mailing/cron",
+      "schedule": "*/3 * * * *"
+    }
+  ]
+}

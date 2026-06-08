@@ -1,0 +1,3 @@
+export function calcularROI(ingresos: number, gastos: number) { const beneficio = ingresos - gastos; const roi = gastos > 0 ? ((ingresos - gastos) / gastos) * 100 : 0; return { ingresos, gastos, beneficio, roi } }
+export function formatEUR(amount: number) { return new Intl.NumberFormat("es-ES", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(amount) }
+export function formatROI(roi: number) { return `${roi >= 0 ? "+" : ""}${roi.toFixed(1)}%` }

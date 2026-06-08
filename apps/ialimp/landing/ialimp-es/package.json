@@ -1,0 +1,9 @@
+{
+  "name": "ialimp-landing",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Landing estática de ialimp.es. La única dependencia (nodemailer) la usa la función serverless api/contacto.js para enviar el formulario por SMTP (IONOS). No hay paso de build: los .html/.css se sirven tal cual.",
+  "dependencies": {
+    "nodemailer": "^6.9.14"
+  }
+}
