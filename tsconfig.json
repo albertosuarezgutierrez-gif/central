@@ -21,7 +21,8 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@iarest/core-ai": ["./packages/core-ai/src/index.ts"]
     }
   },
   "include": [
