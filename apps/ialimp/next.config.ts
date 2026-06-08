@@ -7,7 +7,7 @@ const monorepoRoot = path.join(__dirname, "..", "..")
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["node-ical"],
-  transpilePackages: ["@iarest/core-ai"],
+  transpilePackages: ["@iarest/core-ai", "@iarest/core-push"],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true }
