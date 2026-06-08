@@ -30,12 +30,14 @@
     activos, todo en `local_id`. Último bug del rename (ruta `cron/cobro-inactividad`, llegó de main sin
     migrar, erroraba cada 5 min) arreglado y mergeado (PR #80). monitor-health desplegado por MCP
     (verificado contra repo) y cron 19 reactivado.
-  - ⚠️ **Bugs PREEXISTENTES en logs (NO del rename, columnas que nunca existieron)** — pendientes aparte:
-    `alerta_log.tipo` (lo insertan infra-monitor-cron, qr-call-waiter y billing cron 9 — la tabla no
-    tiene esa columna) y `comandas.cerrada_at` (ruta `cron/feedback-visita`). Revisar esquema real de
-    `alerta_log` y `comandas` y ajustar esos inserts/selects.
-  - ⚠️ Hygiene drift: `alerta-ritmo-cron` e `infra-monitor-cron` están desplegadas pero NO en
-    `supabase/functions/` del repo → añadirlas para no repetir el drift.
+  - ✅ **Bugs preexistentes de `alerta_log` (rediseño tipo/canal→trigger_tipos[]/mensaje_voz) RESUELTOS**:
+    adaptados los 6 sitios que insertaban el esquema viejo → 3 funciones SQL (fn_alerta_super,
+    fn_avisos_trial, fn_generar_alertas_consumo, migración `20260608_fix_alerta_log_tipo_funciones`),
+    billing cron 9, y las edge infra-monitor-cron + qr-call-waiter. Verificado: 0 funcs insertan tipo.
+  - ✅ **Hygiene drift resuelto**: `alerta-ritmo-cron` e `infra-monitor-cron` añadidas a `supabase/functions/`.
+  - ⚠️ Único error benigno que queda en logs: `comandas.cerrada_at` de la ruta `cron/feedback-visita` —
+    es una **feature a medio implementar** (emails de feedback al cliente) que **degrada con gracia**
+    ("migración pendiente"); el SELECT falla pero se captura y devuelve ok. No es bug, es feature pendiente.
   - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
     tabla `leads` sin columna de tenant.
   - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
