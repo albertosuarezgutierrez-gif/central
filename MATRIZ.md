@@ -58,3 +58,10 @@ consuman `packages/*`):
 Toda **vertical nueva** entra como `apps/<app>` con su propio `package.json`/`vercel.json` y un
 proyecto Vercel con Root Directory `apps/<app>`. Los **módulos compartidos** viven en `packages/*`
 (portables, sin acoplarse a ninguna vertical). La **matriz** (raíz) no contiene lógica de producto.
+
+## Ver también
+- **`docs/ARQUITECTURA-casa-marcas.md`** — mapa-norte de módulos: las **especialidades** encienden
+  **módulos** (capacidades de negocio + de plataforma) sobre **núcleos técnicos** (`packages/*`).
+  Incluye catálogo de módulos por vertical, mecanismo de "encender", heurística de qué baja a
+  `packages/*` y reglas de dependencia.
+- **`docs/CONTEXTO-SESIONES.md`** — estado vivo del proyecto entre sesiones.
