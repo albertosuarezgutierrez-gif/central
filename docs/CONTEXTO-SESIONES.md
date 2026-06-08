@@ -26,14 +26,16 @@
   - ✅ Edge `qr-*` (order/cobro/session/connect/split/call-waiter) y notify-error: **ya usaban
     local_id** (local_id preexistía en tablas core; la Fase 1 fue `add column if not exists`). El param
     `restaurante_id` del request es CONTRATO (se mantiene); columna = local_id.
-  - ✅ Edge desplegadas a local_id (8): **daily-briefing, check-elaboraciones, qr-order, qr-session,
-    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron**. Familia QR de cliente COMPLETA en local_id.
-    (qr-connect no necesita: solo usa restaurante_id como param + `.eq('id',…)` sobre restaurantes.)
-  - ⏸️ Cron jobs PAUSADOS (cortan spam; reactivar `cron.alter_job(ID, active=>true)` tras redeploy):
-    `16 infra-monitor`, `19 monitor-health-cron`, `23 nim-diagnostico`.
-  - ⏭️ Edge pendientes (no-cliente, sin impacto): `notify-error`, `eventos-entorno`, `monitor-health`
-    (repo migrado), y sin fuente en repo `infra-monitor-cron`, `nim-diagnostico` (fetch→migrar→deploy).
-    Revisar drift en webhook-stripe/cobro-stripe/courier-route. Vía limpia: `supabase functions deploy` con token.
+  - ✅ Edge desplegadas a local_id (10): daily-briefing, check-elaboraciones, qr-order, qr-session,
+    qr-cobro, qr-call-waiter, qr-split, alerta-ritmo-cron, **notify-error, eventos-entorno**. Toda la
+    superficie de CLIENTE + las relevantes al rename, en local_id. (qr-connect no lo necesita.)
+  - ⏸️ **3 cron jobs siguen PAUSADOS** (`16 infra-monitor`, `19 monitor-health`, `23 nim-diagnostico`).
+    NO es por el rename: tienen **bugs PREEXISTENTES** (los logs muestran `system_errors.stack_trace` y
+    `comandas.cerrada_at` "does not exist" — columnas que el código pide y no existen). `nim-diagnostico`
+    ni referencia restaurante_id. Reactivarlos = tarea APARTE (arreglar esas columnas). `monitor-health`
+    está rename-migrado en repo (722 líneas) pero igualmente arrastra bugs preexistentes.
+    Reactivar: `select cron.alter_job(ID, active=>true)` tras arreglar y redesplegar.
+  - **Rename: 100% completo en todo lo relevante** (app, BD, superficie de cliente, crons activos).
   - ⚠️ Bugs PREEXISTENTES ajenos (no tocados): `login_pin` no devuelve tenant (super-pin/validar-pin);
     tabla `leads` sin columna de tenant.
   - Sesión: el campo `restaurante_id` del token JWT firmado se MANTIENE (no es columna BD).
