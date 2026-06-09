@@ -58,10 +58,14 @@
     calidad):** Busto **161€** · Duplex **175€** · Luxury **219€** · House **614€**.
   - **ÚNICO paso que NO ejecuto sin OK explícito de Alberto:** escribir precios reales en Smoobu (irreversible / de cara al
     exterior). Todo lo demás del modelo está aplicado y verificado.
-  - **🧪 PILOTO EN MARCHA (09/06):** validación manual en **Busto Reform**. Baseline guardada en
-    `apps/sivra/docs/pricing-automatico.md §7` (ocupación 75%, reseñas 6,9, recomendado 161€). Recordatorio en Google
-    Calendar de Alberto **16/06 10:00** para analizar a 1 semana. Acción de Alberto: poner el precio del test en Smoobu a mano.
-    El **16/06**: pedir a Claude "analiza el piloto de Busto Reform" y decidir si se extiende + se construye el push a Smoobu.
+  - **🧪 PILOTO EN MARCHA (09/06):** validación en **Busto Reform**. Baseline en `apps/sivra/docs/pricing-automatico.md §7`
+    (ocupación 75%, reseñas 6,9, recomendado 161€). Recordatorio en Google Calendar de Alberto **16/06 10:00**.
+    **Acción de Alberto:** desconectar **PriceLabs** en Busto Reform (si no, sobrescribe el precio) + aplicar el test.
+  - **✅ PUSH A SMOOBU CONSTRUIDO — `POST /api/pricing/apply`** (Alberto confirmó que sí se puede por la API de Smoobu).
+    Escribe el precio recomendado en Smoobu (corre en Vercel, que alcanza Smoobu; el dev NO). Protecciones: `dryRun=true` por
+    defecto, gate `apply_enabled` por piso, acotado a [suelo,techo] y `max_change_pct` (20%), auditoría `pricing_applied`,
+    `CRON_SECRET`. ⚠️ **Verificar el formato del POST `/api/rates` de Smoobu en un preview antes de `dryRun=false` en prod.**
+    El **16/06**: analizar piloto y decidir si se extiende a los otros 3 pisos.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:

@@ -121,8 +121,17 @@ para el **16/06/2026 10:00** (análisis a 1 semana).
 - Precio **recomendado por el motor: 161€** · Precio fórmula antigua (junio): ~253€
 - Ingresos registrados históricos Busto Reform: 332 filas en `incomes`.
 
-**Acción manual de Alberto:** fijar el precio del test en Smoobu (recomendado 161€; decisión suya con su contexto real,
-ya que el motor *baja* respecto a la fórmula antigua porque las reseñas son bajas).
+**Acción de Alberto:** (1) **Desconectar/pausar PriceLabs en Busto Reform** — si no, sobrescribe nuestro precio en su
+próximo sync y el test no se lee limpio. (2) Aplicar el precio del test (recomendado 161€; decisión suya con su contexto,
+el motor *baja* respecto a la fórmula antigua porque las reseñas son bajas), **manualmente en Smoobu** o vía el endpoint
+de abajo.
+
+**`POST /api/pricing/apply` — push a Smoobu (recomendar → aplicar).** Escribe el precio recomendado en Smoobu vía su API
+(corre en Vercel, que sí alcanza Smoobu; el entorno dev NO). 🔒 Protecciones: `dryRun=true` por defecto (calcula y audita
+sin escribir; escribe sólo con `?dryRun=false`), sólo pisos con `apply_enabled=true`, precio acotado a [suelo, techo] del
+mercado y a `max_change_pct` (def. 20%) por aplicación, auditoría en `pricing_applied`, protegido por `CRON_SECRET`.
+⚠️ **Verificar el formato del POST a Smoobu en un preview** (con una fecha de prueba) ANTES de poner `dryRun=false` en prod.
+Para el piloto: poner `apply_enabled=true` SÓLO en Busto Reform.
 
 **Cómo analizar el 16/06:** comparar ocupación/ingresos y reservas nuevas de Busto Reform vs esta baseline. Consulta base:
 `SELECT (1-AVG(available)) FROM rate_snapshots WHERE property_id='prop_busto_reform' AND rate_date>=CURRENT_DATE AND snapshot_date=(SELECT MAX(snapshot_date) FROM rate_snapshots)`
