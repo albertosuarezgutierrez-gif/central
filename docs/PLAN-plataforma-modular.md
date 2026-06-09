@@ -49,9 +49,14 @@ distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos real
 - **Otro lead:** **empresa de fontanería** + **taller de coches** → 1 cuenta, 2 negocios, 2 sectores.
 
 **Consecuencias para la arquitectura:**
-1. **Jerarquía de datos:** `Cuenta (dueño) → Negocios (N) → cada negocio es de un Sector`. Los
-   módulos se scopean **por negocio**. (Multi-tenant jerárquico; `core-identity` = pieza CENTRAL,
-   no un extra: un login ve TODOS sus negocios y salta entre ellos.)
+1. **Jerarquía de datos (ADAPTABLE 100%):** `Cuenta (dueño) → Sociedades/CIF (1..N, flexible) →
+   Negocios/Fincas → módulos`. El dueño puede tener **todo en 1 CIF** o **varias empresas con
+   contabilidades separadas** — la plataforma se adapta a las dos sin forzar estructura. Los módulos
+   se scopean por negocio/finca; la contabilidad legal cuadra por CIF. `core-identity` = pieza CENTRAL:
+   un login ve TODO lo suyo y salta entre unidades.
+1.bis **Inmuebles/Fincas:** una finca puede estar **en propiedad o alquilada**, y enlazarse a un
+   negocio (qué negocio la ocupa) → distingue activo propio / gasto de alquiler / ingreso de alquiler.
+   Cada finca lleva su contabilidad y su **almacén** (almacén **multi-ubicación**; ia.rest ya hace multi-local).
 2. **Los SECTORES son ENCHUFABLES, no una lista fija de 3.** Hoy: hostelería, limpieza,
    inmobiliario. Habrá que poder añadir **transporte/logística, fontanería/instalaciones, taller/
    automoción, retail/tiendas…** Cada sector = núcleo operativo propio + los módulos que enciende.
@@ -59,6 +64,12 @@ distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos real
    son ~iguales** en un restaurante, una empresa de camiones, una fontanería o un taller → son el
    **80% de cualquier negocio**. Unificarlos hace que **abrir un sector nuevo cueste poco** (solo
    su operativa específica). El sector aporta el 20%; la plataforma da el 80%.
+4. **CUADRO DE MANDO CONSOLIDADO (torre de control) = FEATURE CLAVE.** El dueño ve, en una pantalla,
+   el **resumen de TODAS sus empresas/negocios/fincas** cruzando CIFs y sectores: facturación y gastos
+   totales, **resultado**, **tesorería total** (cuánto dinero tengo en conjunto), qué negocio gana/
+   pierde, alertas, y **drill-down** (total → sociedad → negocio/finca). La consolidación es casi
+   **gratis** porque los módulos comparten formato de datos. Es el **gancho de venta** para un empresario
+   con varios negocios — y lo que ningún competidor de un solo sector puede dar.
 
 ## 4. Plan de obra por FASES (conceptual — cada fase con esquema + preview verde antes de prod)
 - **Fase 0 — Fundación:** monorepo pnpm + 5 núcleos técnicos (`core-ai/fiscal/push/storage/email`). ✅ **HECHO, en producción.**
