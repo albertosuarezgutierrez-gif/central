@@ -16,19 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🚧 HITO 2 CIMIENTO — `Cuenta → Sociedad → Negocio` + `apps/plataforma` shell — 09/06/2026**
-  (PR en rama `feat/hito2-cimiento-cuenta`)
-  - **`packages/core-identity`** extendido con tipos `Cuenta`, `Sociedad`, `Negocio`, `Sector`, `CuentaSession`.
-  - **BD compartida (`wswbehlcuxqxyinousql`):** tablas `cuentas`, `sociedades`, `negocios` aplicadas (migración
-    `apps/ialimp/prisma/migrations/2026-06-09_cuentas_sociedades_negocios.sql`).
-  - **`apps/plataforma`**: nueva vertical del cuadro de mando consolidado. Stack: Next.js 15 · jose/bcryptjs ·
-    Prisma → BD compartida. Auth: cookie `plataforma_session` + rotación de `session_jti`. Páginas: `/login`,
-    `/dashboard` (tarjetas por sociedad+negocio, con links a cada vertical; stub financiero "—" hasta federar
-    `module-contabilidad`).
-  - **Pendiente para completar el HITO 2:**
-    - Crear proyecto Vercel `plataforma` (Root Dir `apps/plataforma`, envs `DATABASE_URL`/`DIRECT_URL`/`JWT_SECRET`).
-    - Alta de cuentas por UI (hoy a mano vía Supabase).
-    - Resumen financiero real (federar `module-contabilidad` por negocio) → HITO 3.
+- **✅ HITO 2 CIMIENTO — `Cuenta → Sociedad → Negocio` + `apps/plataforma` shell — 09/06/2026**
+  (PR #101 mergeado; Vercel `https://plataforma-ten-flame.vercel.app`)
+  - **`packages/core-identity`** extendido: `Cuenta`, `Sociedad`, `Negocio`, `Sector`, `CuentaSession`.
+  - **BD compartida (`wswbehlcuxqxyinousql`):** tablas `cuentas/sociedades/negocios` aplicadas.
+    Cuenta de Alberto cargada con 3 negocios: ia.rest (hosteleria), Sique Brilla (limpieza), Casa Sevillana (inmobiliario).
+  - **`apps/plataforma`** en producción: login + dashboard consolidado por sociedad/negocio + links a verticales.
+    Auth: `plataforma_session` + `session_jti`. Stack: Next.js 15 · jose/bcryptjs · Prisma → BD compartida.
+  - **HITO 3 siguiente:** resumen financiero real en tarjetas (federar `module-contabilidad` cruzando las 2 BD).
 
 - **✅ HITO 1 CONTABILIDAD — `packages/module-contabilidad` creado y adoptado en las 3 verticales — 09/06/2026**
   (PR #100, rama `feat/module-contabilidad`, rebased sobre main con pnpm `workspace:*`)
