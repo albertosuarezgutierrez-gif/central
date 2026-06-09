@@ -3,7 +3,8 @@
 // nimChat/nimText directamente con su NimConfig inyectado.
 
 import { nimChat } from './nim'
-import type { NimChatMessage, NimConfig } from './types'
+import type { NimChatMessage } from './nim'
+import type { NimConfig } from './types'
 
 const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
 
