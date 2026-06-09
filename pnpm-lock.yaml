@@ -384,6 +384,8 @@ importers:
 
   packages/module-contabilidad: {}
 
+  packages/module-crm: {}
+
 packages:
 
   '@alloc/quick-lru@5.2.0':

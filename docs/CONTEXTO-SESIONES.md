@@ -34,6 +34,10 @@
     `inventario_menaje*` (alquiler: tarifas, fianza, daños) y `vehiculos_grupo`+`evento_transporte` (flota:
     ITV/seguro/mantenimiento, rutas multi-parada, asignación inteligente) hacia `module-*`, con doble
     facturación interno(intercompany)/externo. **Pendiente:** extracción real de los `module-*` y construir las verticales.
+  - **`packages/module-crm` (contrato, hecho):** primer `module-*` real — tipos genéricos (`Oportunidad`,
+    `ParentRef` con `parentType` = costura del Encargo), puertos (`OportunidadRepository`, `OportunidadAdapter<T>`)
+    y lógica pura de pipeline (`resumenPipeline`, `valorPonderado`, probabilidad por estado). Agnóstico de BD,
+    typecheck verde. **Sin tocar ia-rest** (la extracción con `LeadsEventoAdapter` es la siguiente ronda).
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
