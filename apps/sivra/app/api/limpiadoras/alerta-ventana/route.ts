@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import nodemailer from "nodemailer"
+import { gmailTransporter } from "@iarest/core-email"
 
 export const dynamic = "force-dynamic"
 
@@ -51,10 +51,7 @@ export async function GET() {
     }
 
     if (alertas.length > 0 && process.env.GMAIL_USER && process.env.GMAIL_APP_PASSWORD) {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
-      })
+      const transporter = gmailTransporter()!
       const html = `<div style="font-family:Arial,sans-serif;padding:20px">
         <h3 style="color:#dc2626">⚠️ Ventana ajustada de limpieza</h3>
         ${alertas.map(a => `

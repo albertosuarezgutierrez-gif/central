@@ -125,6 +125,9 @@ importers:
       '@iarest/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
+      '@iarest/core-email':
+        specifier: workspace:*
+        version: link:../../packages/core-email
       '@iarest/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
@@ -213,6 +216,9 @@ importers:
       '@iarest/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
+      '@iarest/core-email':
+        specifier: workspace:*
+        version: link:../../packages/core-email
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
@@ -294,6 +300,16 @@ importers:
         version: 5.9.3
 
   packages/core-ai: {}
+
+  packages/core-email:
+    dependencies:
+      nodemailer:
+        specifier: ^8.0.7
+        version: 8.0.10
+    devDependencies:
+      '@types/nodemailer':
+        specifier: ^8.0.0
+        version: 8.0.0
 
   packages/core-fiscal: {}
 
@@ -5054,7 +5070,7 @@ snapshots:
 
   '@types/nodemailer@8.0.0':
     dependencies:
-      '@types/node': 22.19.20
+      '@types/node': 20.19.42
 
   '@types/qrcode@1.5.6':
     dependencies:

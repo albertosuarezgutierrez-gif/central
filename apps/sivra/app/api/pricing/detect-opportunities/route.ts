@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import nodemailer from "nodemailer"
+import { gmailTransporter } from "@iarest/core-email"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -144,10 +144,7 @@ export async function GET() {
   let emailSent = false
   if (gmailUser && gmailPass) {
     try {
-      const transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: { user: gmailUser, pass: gmailPass },
-      })
+      const transporter = gmailTransporter()!
       await transporter.sendMail({
         from: `SIVRA Pricing <${gmailUser}>`,
         to: "alberto.suarez.gutierrez@gmail.com",
