@@ -2,10 +2,13 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { signCleaningPhoto } from '@/lib/cleaning-photos'
+import { nimVision } from '@iarest/core-ai'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
+const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
+const nimConfig = () => ({ apiKey: NVIDIA_API_KEY, visionModel: VISION_MODEL })
 
 // Tipos de respuesta del agente
 interface AnalisisCalidad {
@@ -43,33 +46,11 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown, sin explicaciones
 
 Si no hay ningún problema visible, usa: hay_incidencia=false, tipo="ninguno", severidad="baja".`
 
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Bearer ' + NVIDIA_API_KEY,
-    },
-    body: JSON.stringify({
-      model: 'meta/llama-3.2-90b-vision-instruct',
-      messages: [{
-        role: 'user',
-        content: [
-          {
-            type: 'image_url',
-            image_url: { url: `data:${mimeType};base64,${base64}` }
-          },
-          { type: 'text', text: prompt }
-        ]
-      }],
-      temperature: 0.1,
-      max_tokens: 256,
-    }),
-  })
-
-  if (!res.ok) throw new Error('Error IA visión: ' + res.status)
-
-  const data    = await res.json()
-  const content = data.choices?.[0]?.message?.content || '{}'
+  const content = await nimVision(
+    nimConfig(), '',
+    [{ data: base64, mediaType: mimeType }],
+    prompt, 256, { temperature: 0.1 },
+  )
 
   // Limpiar posibles markdown fences
   const clean = content.replace(/```json|```/g, '').trim()
