@@ -149,6 +149,18 @@ del canal). Implicaciones:
   tras las 07:00 se verifica en `rate_snapshots`: si aparece 110 → subida OK de punta a punta. A 110 base el huésped ve ~128 en
   Booking (por debajo de 168 → vendible) y el host neta ~110 (cubre costes de sobra).
 
+**🚨 TODA LA CARTERA INFRAVALORADA (base actual Smoobu 09/06, mismo margen de canal en los 4):**
+
+| Piso | base actual | min noches | huésped Booking (×1,16) | mercado (huésped) | infravalorado |
+| --- | --- | --- | --- | --- | --- |
+| Busto Reform | 65€ | 1 | ~75€ | 168€ | **−55%** |
+| Duplex Center | 95€ | 2 | ~110€ | 180€ | **−39%** |
+| Luxury Busto | 92€ | 1 | ~107€ | 228€ | **−53%** |
+| House Sevillana | 450€ | 2 | ~522€ | 650€ | **−20%** |
+
+PriceLabs infravaloraba **los 4**, no sólo Busto. Oportunidad de revenue grande en toda la cartera. Plan: validar Busto primero;
+si funciona, extender con el ajuste de margen (base ≈ objetivo_huésped/(1+margen)). Recordar el **min-stay** (Duplex/House = 2).
+
 **Acción de Alberto:** (1) **Desconectar/pausar PriceLabs en Busto Reform** — si no, sobrescribe nuestro precio en su
 próximo sync y el test no se lee limpio. (2) Aplicar el precio del test (recomendado 161€; decisión suya con su contexto,
 el motor *baja* respecto a la fórmula antigua porque las reseñas son bajas), **manualmente en Smoobu** o vía el endpoint
