@@ -52,9 +52,11 @@
     piso** y **sólo activo si contratan**. Implementado: tabla **`pricing_settings`** por piso (`enabled`, `target_pctl`,
     `floor/ceil_pctl`, `position_factor`, `quality_k`, `own_score`, `min/max_price`); los 4 pisos propios sembrados `enabled=true`.
     `/api/pricing/recommend` reescrito para leer estos ajustes + ajuste por calidad (reseñas) + hook de demanda.
-  - **Afinar modelo (en curso, elegido por Alberto):** falta alimentar **demanda** (capturar disponibilidad del mercado en el
-    ingest) y **calidad** (rellenar `own_score` real por piso); añadir Trivago como 2ª fuente. Luego: aprobar "recomendar"→"aplicar"
-    (push a Smoobu con tope).
+  - **Modelo afinado (09/06):** **demanda** ✅ real desde ocupación propia (`rate_snapshots`, fechas futuras), perillas
+    `demand_k`/`demand_baseline` por piso, ±8%. **2ª fuente** Trivago en Duplex (concuerda con Booking). **Calidad** mecánica
+    lista, falta `own_score` real (NO se inventa). **Salida verificada:** Busto 174€ · Duplex 183€ · Luxury 233€ · House 624€.
+  - **ÚNICO paso que NO ejecuto sin OK explícito de Alberto:** escribir precios reales en Smoobu (irreversible / de cara al
+    exterior). Todo lo demás del modelo está aplicado y verificado.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:

@@ -96,11 +96,16 @@ PR **#108** (draft, CI verde) en branch `claude/tourist-apartments-auto-pricing-
   (multiplicador manual), `quality_k` (sensibilidad reseñas), `own_score`, `min_price`/`max_price` (suelo/techo abs.).
   Semilla: los 4 pisos propios activados con posicionamiento neutro (mediana).
 
-**Pendiente del modelo (afinar antes de aplicar):**
-- **Demanda (idea #3):** capturar disponibilidad/ocupación del mercado en los comps (ingest) para alimentar
-  `demandFactor` (hoy neutral 1.0).
-- **Calidad:** rellenar `own_score` por piso (nuestras reseñas reales) para que el ajuste tenga efecto.
-- **2ª fuente:** añadir Trivago a los comps de los 4 pisos (hoy Booking).
+**Estado del modelo (afinado):**
+- ✅ **Demanda (idea #3):** `demandFactor` real desde la **ocupación propia** (Smoobu, `rate_snapshots`, fechas
+  futuras): si nos llenamos, sube; si no, baja. Acotado ±8%. Perillas por piso `demand_k`/`demand_baseline`.
+  Verificado 09/06: Busto 75%→×1.04 · Duplex/Luxury 63%→×1.02 · House 25%→×0.96.
+- ⏳ **Calidad:** mecánica lista (`own_score` vs mediana del mercado, ±10%); falta **rellenar `own_score` real** por
+  piso (de nuestras reseñas Smoobu/Booking) para que tenga efecto. NO se inventa.
+- 🟡 **2ª fuente:** Trivago añadido en **Duplex** (Booking 187 / Trivago 185, concuerdan). Falta Busto ya lo tiene;
+  Luxury/House pendientes (Trivago adelgaza a 5/12 pax).
 
-**Decisión de negocio pendiente (toca dinero):** aprobar el salto de "recomendar" → "aplicar" (push a Smoobu) y con
-qué tope/aprobación.
+**Salida verificada del motor (09/06, recomendado final con demanda):** Busto 174€ · Duplex 183€ · Luxury 233€ · House 624€.
+
+**Decisión de negocio pendiente (toca dinero, NO se ejecuta sin OK explícito):** aprobar el salto de "recomendar" →
+"aplicar" (escribir el precio en Smoobu vía API) y con qué tope/aprobación.

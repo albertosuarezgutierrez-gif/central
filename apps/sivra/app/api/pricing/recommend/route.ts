@@ -46,7 +46,7 @@ export async function GET() {
   const props = await prisma.$queryRaw<{
     scenario: string; name: string | null; max_guests: number | null
     enabled: boolean; target_pctl: number; floor_pctl: number; ceil_pctl: number
-    position_factor: number; quality_k: number
+    position_factor: number; quality_k: number; demand_k: number; demand_baseline: number
     own_score: number | null; min_price: number | null; max_price: number | null
   }[]>(Prisma.sql`
     SELECT
@@ -57,12 +57,26 @@ export async function GET() {
       COALESCE(s.ceil_pctl, 0.90)::float8       AS ceil_pctl,
       COALESCE(s.position_factor, 1.0)::float8  AS position_factor,
       COALESCE(s.quality_k, 0.04)::float8       AS quality_k,
+      COALESCE(s.demand_k, 0.16)::float8        AS demand_k,
+      COALESCE(s.demand_baseline, 0.50)::float8 AS demand_baseline,
       s.own_score::float8 AS own_score, s.min_price, s.max_price
     FROM properties p
     LEFT JOIN pricing_settings s ON s.property_id = p.id
     WHERE p.id LIKE 'prop_%' AND p."maxGuests" IS NOT NULL
     ORDER BY p."maxGuests"
   `)
+
+  // 1b) DEMANDA: ocupación propia (Smoobu) en fechas futuras, del snapshot más reciente.
+  // Señal real de revenue management: si nos estamos llenando, subimos; si no, bajamos.
+  const occ = await prisma.$queryRaw<{ scenario: string; occupancy: number }[]>(Prisma.sql`
+    SELECT property_id AS scenario, (1 - AVG(available))::float8 AS occupancy
+    FROM rate_snapshots
+    WHERE snapshot_date = (SELECT MAX(snapshot_date) FROM rate_snapshots)
+      AND rate_date >= CURRENT_DATE AND available IS NOT NULL
+    GROUP BY property_id
+  `)
+  const occByScenario: Record<string, number> = {}
+  for (const o of occ) occByScenario[o.scenario] = Number(o.occupancy)
 
   // Agrupa el mercado por piso.
   const byScenario: Record<string, { prices: number[]; scores: number[] }> = {}
@@ -93,9 +107,12 @@ export async function GET() {
       ? clamp(1 + (Number(p.own_score) - mktScore) * Number(p.quality_k), 0.90, 1.10)
       : 1.0
 
-    // Ajuste por DEMANDA (idea #3): hook listo, neutral hasta capturar disponibilidad
-    // del mercado en los comps (próximo paso de datos).
-    const demandFactor = 1.0
+    // Ajuste por DEMANDA (idea #3): ocupación propia (Smoobu) vs ocupación neutra.
+    // Acotado a ±~8% para que no se dispare. Neutral si no hay datos de ocupación.
+    const occupancy = occByScenario[p.scenario]
+    const demandFactor = (occupancy != null && Number.isFinite(occupancy))
+      ? clamp(1 + (occupancy - Number(p.demand_baseline)) * Number(p.demand_k), 0.92, 1.10)
+      : 1.0
 
     let price = Math.round(target * Number(p.position_factor) * qualityFactor * demandFactor)
     price = clamp(price, Math.round(floor), Math.round(ceil))
@@ -115,7 +132,8 @@ export async function GET() {
         target_price: Math.round(target),
         ceil: Math.round(ceil),
         quality_factor: Number(qualityFactor.toFixed(3)),
-        demand_factor: demandFactor,
+        demand_factor: Number(demandFactor.toFixed(3)),
+        occupancy: occupancy != null ? Number(occupancy.toFixed(2)) : null,
         market_score_median: mktScore != null ? Number(mktScore.toFixed(1)) : null,
         own_score: p.own_score,
         position_factor: p.position_factor,
