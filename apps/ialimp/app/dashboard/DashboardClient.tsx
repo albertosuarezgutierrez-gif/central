@@ -24,7 +24,7 @@ const TIPO_ICON: Record<string,string> = {
 
 const NAV = [
   { href:'/dashboard',           icon:'🏠', label:'Inicio'        },
-  { href:'/admin/operaciones',   icon:'🗓️', label:'Operaciones'   },
+  { href:'/admin/operaciones',   icon:'🗃️', label:'Operaciones'   },
   { href:'/admin/equipo',        icon:'👥', label:'Equipo'        },
   { href:'/admin/negocio',       icon:'💼', label:'Negocio'       },
   { href:'/admin/materiales',    icon:'📦', label:'Materiales'    },
@@ -54,6 +54,8 @@ export default function DashboardClient({
   const [busyId,       setBusyId]       = useState<string|null>(null)
   const [buscaLimp,    setBuscaLimp]    = useState('')               // filtro de limpiadora en el sheet
   const [toast,        setToast]        = useState<{msg:string;tipo:'ok'|'warn'|'error'}|null>(null)
+  const [editSesion,   setEditSesion]   = useState<any|null>(null)
+  const [soloSinAsignar, setSoloSinAsignar] = useState(false)
 
   function showToast(msg: string, tipo: 'ok'|'warn'|'error' = 'ok') {
     setToast({ msg, tipo })
@@ -73,6 +75,14 @@ export default function DashboardClient({
     return (s.includes('T') ? s.split('T')[1] : s).slice(0, 5)
   }
   function prioridad(a: any, b: any) {
+    const am = a.orden_manual ?? null, bm = b.orden_manual ?? null
+    if (am !== null || bm !== null) {
+      if (am === null) return 1
+      if (bm === null) return -1
+      if (am !== bm) return am - bm
+    }
+    const au = a.urgente_manual ? 0 : 1, bu = b.urgente_manual ? 0 : 1
+    if (au !== bu) return au - bu
     const av = a.alerta_ventana ? 0 : 1, bv = b.alerta_ventana ? 0 : 1
     if (av !== bv) return av - bv
     const ae = a.hora_checkin_siguiente ? 0 : 1, be = b.hora_checkin_siguiente ? 0 : 1
@@ -82,10 +92,22 @@ export default function DashboardClient({
     return (hhmm(a.hora_inicio) || '99:99').localeCompare(hhmm(b.hora_inicio) || '99:99')
   }
 
+  // minutos desde "HH:MM" (helper para detectar solapamientos)
+  const minsDe = (v: any): number | null => {
+    const t = hhmm(v)
+    if (!t) return null
+    const [h, m] = t.split(':').map(Number)
+    return h * 60 + m
+  }
+
+  const sinAsignar = sesiones.filter(s => !s.limpiadora_id && !s.completed_at)
+
   const sesionesFiltradas = (filtroEstado === 'all'      ? sesiones
     : filtroEstado === 'pendiente' ? pendientes
     : filtroEstado === 'en_curso'  ? enCurso
-    : completadas).slice().sort(prioridad)
+    : completadas)
+    .filter(s => !soloSinAsignar || (!s.limpiadora_id && !s.completed_at))
+    .slice().sort(prioridad)
 
   async function cargarBriefing() {
     setLoadingBriefing(true)
@@ -170,10 +192,141 @@ export default function DashboardClient({
       })
       const d = await r.json().catch(() => ({}))
       if (!r.ok) { setSesiones(prev); showToast(d.error || 'No se pudo reasignar', 'error'); return }
-      if (limpiadoraId) showToast('Reasignada a ' + (limp?.nombre || ''), 'ok')
+      if (limpiadoraId) {
+        showToast('Reasignada a ' + (limp?.nombre || ''), 'ok')
+        avisarSolapamiento(sessionId, limpiadoraId)
+      }
       else showToast('Limpiadora quitada · el auto-asignador (16:00) podría reasignarla', 'warn')
     } catch { setSesiones(prev); showToast('Error de red', 'error') }
     finally { setBusyId(null) }
+  }
+
+  // Aviso (no bloqueante) de solapamiento: misma limpiadora con otra sesión no completada
+  // a menos de 90 min de la sesión indicada.
+  function avisarSolapamiento(sessionId: string, limpiadoraId: string) {
+    const s = sesiones.find(x => x.id === sessionId)
+    const min = s ? minsDe(s.hora_inicio) : null
+    if (min == null) return
+    const limp = limpiadoras.find((l: any) => l.id === limpiadoraId)
+    const choca = sesiones.some(o => o.id !== sessionId && o.limpiadora_id === limpiadoraId
+      && !o.completed_at && (() => { const m = minsDe(o.hora_inicio); return m != null && Math.abs(m - min) < 90 })())
+    if (choca) showToast('⚠️ ' + (limp?.nombre || 'Limpiadora') + ' ya tiene otra limpieza cerca de esa hora', 'warn')
+  }
+
+  // ── Editar/reordenar/duplicar (update optimista + toast) ──
+  function onSesionActualizada(s: any) {
+    const limp = limpiadoras.find((l: any) => l.id === s.limpiadora_id)
+    setSesiones(prev => {
+      // Si se movió de día, quitarla de la lista actual
+      if (s.session_date && s.session_date !== fecha) return prev.filter(x => x.id !== s.id)
+      return prev.map(x => x.id === s.id
+        ? { ...x, ...s,
+            limpiadora_nombre: s.limpiadora_id ? (limp?.nombre ?? x.limpiadora_nombre ?? null) : null,
+            cliente_nombre:    s.cliente_nombre ?? x.cliente_nombre ?? null }
+        : x)
+    })
+    if (s.session_date && s.session_date !== fecha) showToast('Movida a ' + s.session_date, 'ok')
+    else { showToast('Limpieza actualizada', 'ok'); if (s.limpiadora_id) avisarSolapamiento(s.id, s.limpiadora_id) }
+  }
+
+  function onSesionEliminada(id: string) {
+    setSesiones(prev => prev.filter(x => x.id !== id))
+    showToast('Limpieza eliminada', 'ok')
+  }
+
+  async function moverDia(s: any, dias: number) {
+    const base = new Date((String(s.session_date).slice(0, 10) || fecha) + 'T12:00:00')
+    base.setDate(base.getDate() + dias)
+    const nueva = base.toISOString().slice(0, 10)
+    const prev = sesiones
+    if (nueva !== fecha) setSesiones(ss => ss.filter(x => x.id !== s.id))  // optimista
+    try {
+      const r = await fetch('/api/admin/sesiones/' + s.id, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_date: nueva }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setSesiones(prev); showToast(d.error || 'No se pudo mover', 'error'); return }
+      showToast(dias > 0 ? 'Movida a mañana' : 'Movida a hoy', 'ok')
+    } catch { setSesiones(prev); showToast('Error de red', 'error') }
+  }
+
+  async function toggleUrgente(s: any) {
+    const nuevo = !s.urgente_manual
+    const prev = sesiones
+    setSesiones(ss => ss.map(x => x.id === s.id ? { ...x, urgente_manual: nuevo } : x))  // optimista
+    try {
+      const r = await fetch('/api/admin/sesiones/' + s.id, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urgente_manual: nuevo }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setSesiones(prev); showToast(d.error || 'No se pudo guardar', 'error'); return }
+      showToast(nuevo ? '🔥 Marcada urgente' : 'Urgente quitado', 'ok')
+    } catch { setSesiones(prev); showToast('Error de red', 'error') }
+  }
+
+  async function mover(s: any, dir: -1 | 1) {
+    const lista = sesionesFiltradas
+    const idx = lista.findIndex(x => x.id === s.id)
+    const j = idx + dir
+    if (idx < 0 || j < 0 || j >= lista.length) return
+    const reordenada = lista.slice()
+    const tmp = reordenada[idx]; reordenada[idx] = reordenada[j]; reordenada[j] = tmp
+    const ids = reordenada.map(x => x.id)
+    const ordenById: Record<string, number> = {}
+    ids.forEach((id, i) => { ordenById[id] = i })
+    const prev = sesiones
+    setSesiones(ss => ss.map(x => x.id in ordenById ? { ...x, orden_manual: ordenById[x.id] } : x))  // optimista
+    try {
+      const r = await fetch('/api/admin/sesiones/reordenar', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_date: fecha, orden: ids }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setSesiones(prev); showToast(d.error || 'No se pudo reordenar', 'error'); return }
+    } catch { setSesiones(prev); showToast('Error de red', 'error') }
+  }
+
+  async function ordenAutomatico() {
+    const prev = sesiones
+    setSesiones(ss => ss.map(x => ({ ...x, orden_manual: null })))  // optimista
+    try {
+      const r = await fetch('/api/admin/sesiones/reordenar', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_date: fecha, reset: true }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { setSesiones(prev); showToast(d.error || 'No se pudo restaurar', 'error'); return }
+      showToast('Orden automático restaurado', 'ok')
+    } catch { setSesiones(prev); showToast('Error de red', 'error') }
+  }
+
+  async function duplicar(s: any) {
+    try {
+      const r = await fetch('/api/admin/sesiones', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cliente_id:    s.cliente_id,
+          propiedad_id:  s.propiedad_id,
+          property_name: s.property_name,
+          session_date:  fecha,
+          tipo_servicio: s.tipo_servicio,
+          notas:         s.notas || null,
+        }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { showToast(d.error || 'No se pudo duplicar', 'error'); return }
+      setSesiones(ss => [...ss, { ...d.sesion,
+        limpiadora_nombre: null, cliente_nombre: s.cliente_nombre ?? null }])
+      showToast('Limpieza duplicada', 'ok')
+      setEditSesion({ ...d.sesion, cliente_nombre: s.cliente_nombre, property_name: s.property_name })
+    } catch { showToast('Error de red', 'error') }
   }
 
   async function logout() {
@@ -525,6 +678,16 @@ export default function DashboardClient({
         .ses-chip-btn:hover { filter: brightness(.96); }
         .ses-chip-btn:disabled { opacity: .6; cursor: default; }
 
+        /* ── Botones de acción de la tarjeta ── */
+        .ses-act {
+          display: inline-flex; align-items: center; gap: 3px;
+          padding: 4px 9px; border-radius: 8px;
+          border: 1px solid #e2e8f0; background: #f8fafc; color: #475569;
+          font-family: inherit; font-size: 11px; font-weight: 700;
+          cursor: pointer; white-space: nowrap; transition: filter .12s ease, background .12s;
+        }
+        .ses-act:hover { background: var(--brand-light); color: var(--brand-primary); }
+
         /* ── Bottom-sheet de asignación ── */
         .sheet-backdrop {
           position: fixed; inset: 0; background: rgba(15,23,42,.45);
@@ -818,7 +981,7 @@ export default function DashboardClient({
               )}
             </div>
 
-            {/* Fecha + botón */}
+            {/* Fecha + filtro sin asignar */}
             <div className="date-row">
               <input
                 type="date"
@@ -826,6 +989,18 @@ export default function DashboardClient({
                 onChange={e => cambiarFecha(e.target.value)}
                 className="date-input"
               />
+              <button
+                onClick={() => setSoloSinAsignar(v => !v)}
+                title="Mostrar solo las limpiezas sin limpiadora asignada"
+                style={{
+                  flexShrink: 0, padding: '9px 12px', borderRadius: 10, cursor: 'pointer',
+                  fontFamily: 'inherit', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+                  border: '1px solid ' + (soloSinAsignar ? '#fdba74' : '#e2e8f0'),
+                  background: soloSinAsignar ? '#fff7ed' : 'white',
+                  color: soloSinAsignar ? '#c2410c' : '#64748b',
+                }}>
+                ⚠️ Sin asignar ({sinAsignar.length}){soloSinAsignar ? ' ✕' : ''}
+              </button>
             </div>
 
             {/* Tabs */}
@@ -918,10 +1093,36 @@ export default function DashboardClient({
                                 ⚠️ Ventana ajustada
                               </span>
                             )}
+                            {s.urgente_manual && (
+                              <span className="ses-chip" style={{ background:'#fef2f2', color:'#dc2626', borderColor:'#fca5a5', fontWeight:800 }}>🔥 Urgente</span>
+                            )}
+                            {s.notas && (
+                              <span className="ses-chip" style={{ background:'#fffbeb', color:'#b45309' }} title={s.notas}>📝 con notas</span>
+                            )}
                             {manual && (
                               <span className="ses-chip" style={{ background:'#f5f3ff', color:'#7c3aed' }}>manual</span>
                             )}
                           </div>
+
+                          {/* Fila de acciones */}
+                          {!s.completed_at && (
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginTop:9 }}>
+                              <button className="ses-act" onClick={() => setEditSesion(s)} title="Editar fecha, hora o detalles">✏️ Editar</button>
+                              <button className="ses-act" onClick={() => mover(s, -1)} title="Subir en el orden">↑</button>
+                              <button className="ses-act" onClick={() => mover(s, 1)} title="Bajar en el orden">↓</button>
+                              {String(s.session_date).slice(0,10) === today && (
+                                <button className="ses-act" onClick={() => moverDia(s, 1)} title="Mover a mañana">⏰→Mañana</button>
+                              )}
+                              {String(s.session_date).slice(0,10) > today && (
+                                <button className="ses-act" onClick={() => moverDia(s, -1)} title="Traer a hoy">←Hoy</button>
+                              )}
+                              <button className="ses-act" onClick={() => toggleUrgente(s)} title="Marcar/quitar urgente"
+                                style={s.urgente_manual ? { background:'#fef2f2', color:'#dc2626', borderColor:'#fca5a5' } : undefined}>
+                                🔥 Urgente
+                              </button>
+                              <button className="ses-act" onClick={() => duplicar(s)} title="Duplicar limpieza">⧉ Duplicar</button>
+                            </div>
+                          )}
                         </div>
                         <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
                           <span className={statusCls(s)}>{statusLbl(s)}</span>
@@ -1012,6 +1213,19 @@ export default function DashboardClient({
         />
       )}
 
+      {/* Modal de edición de una limpieza existente (PATCH) */}
+      {editSesion && (
+        <NuevaLimpiezaModal
+          clientes={clientes}
+          limpiadoras={limpiadoras}
+          sesion={editSesion}
+          onCreada={() => {}}
+          onActualizada={(s) => { onSesionActualizada(s); setEditSesion(null) }}
+          onEliminada={(id) => { onSesionEliminada(id); setEditSesion(null) }}
+          onClose={() => setEditSesion(null)}
+        />
+      )}
+
       {/* Bottom-sheet: elegir limpiadora */}
       {sheet && (
         <div className="sheet-backdrop" onClick={() => { setSheet(null); setBuscaLimp('') }}>
@@ -1052,4 +1266,3 @@ export default function DashboardClient({
     </>
   )
 }
-
