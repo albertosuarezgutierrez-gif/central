@@ -9,6 +9,9 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "jose": "^5.9.3"
+  },
   "sideEffects": false,
   "license": "UNLICENSED"
 }

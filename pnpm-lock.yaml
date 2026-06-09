@@ -389,7 +389,11 @@ importers:
 
   packages/core-fiscal: {}
 
-  packages/core-identity: {}
+  packages/core-identity:
+    dependencies:
+      jose:
+        specifier: ^5.9.3
+        version: 5.10.0
 
   packages/core-push:
     dependencies:
