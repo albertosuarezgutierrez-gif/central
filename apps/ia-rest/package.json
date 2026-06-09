@@ -15,6 +15,7 @@
     "@iarest/core-push": "workspace:*",
     "@iarest/module-contabilidad": "workspace:*",
     "@iarest/module-crm": "workspace:*",
+    "@iarest/module-inventario": "workspace:*",
     "@anthropic-ai/sdk": "^0.92.0",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.5.0",

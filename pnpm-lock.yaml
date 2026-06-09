@@ -28,6 +28,9 @@ importers:
       '@iarest/module-crm':
         specifier: workspace:*
         version: link:../../packages/module-crm
+      '@iarest/module-inventario':
+        specifier: workspace:*
+        version: link:../../packages/module-inventario
       '@stripe/react-stripe-js':
         specifier: ^6.3.0
         version: 6.6.0(@stripe/stripe-js@9.7.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -388,6 +391,8 @@ importers:
   packages/module-contabilidad: {}
 
   packages/module-crm: {}
+
+  packages/module-inventario: {}
 
 packages:
 
