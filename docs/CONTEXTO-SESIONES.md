@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔄 SIVRA pricing — fuente de mercado real (Booking+Trivago) + piloto Busto Reform (claude/tourist-apartments-auto-pricing) — 09/06/2026**
+  El "precio automático" (motor `rates/snapshot` + `pricing/detect-opportunities` + experimentos) ya estaba en prod, pero la
+  competencia salía de **scraping de Google (Serper) + IA**, dato aproximado. Mejora de la fuente:
+  - **Conectores evaluados** (MCP de Claude, NO llamables desde el cron de Vercel): el mejor para **apartamentos** es
+    **Booking** (`accommodations_search`) + **Trivago** (radius search) — precio real/noche, score, reseñas, barrio.
+    DirectBooker/Wyndham/lastminute/TripAdvisor son de hoteles → no sirven de comparable de pisos.
+  - **Estrategia 1 (coste 0, elegida para el piloto):** Claude actúa de recolector y vuelca comparables reales en
+    `market_rates`. Cargados **20 comps reales** para `scenario='prop_busto_reform'` (13→14 jun, 4 pax):
+    Booking avg **187€** (p50 180) · Trivago avg **192€** (p50 192) → mercado centro ≈ **187–192€/noche**.
+  - **Nuevo endpoint `POST /api/mercado/ingest`** (protegido por `CRON_SECRET` si está): la "tubería" para meter comps reales
+    sin Serper; upsert idempotente con la misma clave que el cron. Es también el hook para una futura API de pago (Estrategia 2).
+  - **Pendiente / decisión de Alberto:** validar el piloto y decidir si se pasa a **Estrategia 2** (suscribir una API real
+    Booking/Expedia para que el cron sea 100% autónomo). Ojo: `OUR_PRICES` de Busto Reform (normal 80€) está MUY por debajo del
+    mercado (≈190€) → revisar fórmula del motor en la siguiente iteración.
+
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
   - **`core-ai/nim.ts`**: `nimVision` 6º param `signal?` → `opts: {temperature?, signal?}` (aditivo). Permite afinar temperatura
