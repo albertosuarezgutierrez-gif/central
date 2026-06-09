@@ -1,10 +1,14 @@
 name: Deploy landing (ialimp.es)
 
-# Despliega la landing estática `landing/ialimp-es/` al proyecto Vercel
+# Despliega la landing estática `apps/ialimp/landing/ialimp-es/` al proyecto Vercel
 # `ialimp-landing` (dominio ialimp.es), que NO está conectado a git por sí mismo.
 # Se ejecuta al cambiar la landing en `main`, o a mano (workflow_dispatch).
 #
-# Requisito: añadir el secreto del repo `VERCEL_TOKEN`
+# OJO monorepo: este workflow DEBE vivir en `.github/workflows/` de la RAÍZ del repo
+# (GitHub Actions ignora los workflows anidados en subcarpetas como
+# `apps/ialimp/.github/`). La fuente de la landing vive en `apps/ialimp/landing/ialimp-es/`.
+#
+# Requisito: el secreto del repo `VERCEL_TOKEN` debe estar en ESTE repo (ia.rest)
 #   (GitHub → Settings → Secrets and variables → Actions → New repository secret).
 #   El token se crea en Vercel → Account Settings → Tokens.
 # Los IDs de equipo/proyecto NO son secretos (son identificadores), van fijos abajo.
@@ -13,7 +17,7 @@ on:
   push:
     branches: [main]
     paths:
-      - 'landing/ialimp-es/**'
+      - 'apps/ialimp/landing/ialimp-es/**'
       - '.github/workflows/deploy-landing.yml'
   workflow_dispatch: {}
 
@@ -32,12 +36,12 @@ jobs:
           node-version: 20
 
       - name: Descargar fuentes (Nunito, auto-alojada)
-        working-directory: landing/ialimp-es
+        working-directory: apps/ialimp/landing/ialimp-es
         run: bash fetch-fonts.sh || echo "fetch-fonts falló; se despliega igual (fuente del sistema)"
 
       - name: Instalar Vercel CLI
         run: npm i -g vercel@latest
 
       - name: Deploy a producción (proyecto ialimp-landing)
-        working-directory: landing/ialimp-es
+        working-directory: apps/ialimp/landing/ialimp-es
         run: vercel deploy --prod --yes --token="$VERCEL_TOKEN"
