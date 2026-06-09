@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
-import { randomBytes, createHash } from 'crypto'
+import { randomBytes } from 'crypto'
+import { sha256Hex } from '@iarest/core-identity'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
@@ -58,8 +59,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     // 2.b Token de un solo uso para que el propietario fije su contraseña.
     //     El admin es quien da el alta (el propietario no se registra solo).
     //     Hash SHA-256 igual que valida /api/propietario/auth/set-password.
-    const rawToken   = randomBytes(32).toString('hex')
-    const tokenHash  = createHash('sha256').update(rawToken).digest('hex')
+    const rawToken  = randomBytes(32).toString('hex')
+    const tokenHash = await sha256Hex(rawToken)
     await prisma.$executeRaw(Prisma.sql`
       INSERT INTO cliente_auth_tokens (cliente_id, empresa_id, token_hash, purpose, email, expires_at)
       VALUES (${id}::uuid, ${empresa_id}::uuid, ${tokenHash}, 'set_password', ${destinatario}, now() + interval '7 days')
