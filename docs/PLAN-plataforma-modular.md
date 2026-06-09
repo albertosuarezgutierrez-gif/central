@@ -40,8 +40,31 @@ adaptador por vertical** (sus datos/fuentes/UI). Ejemplo con **Contabilidad/Fina
 - **Ojo:** "Contabilidad" (registrar/reportar) y **"Facturación"** (emitir facturas VeriFactu)
   son **módulos hermanos distintos** (sivra hoy ni factura, solo lleva ingresos/gastos).
 
+## 3.bis. EL CLIENTE REAL: un DUEÑO con VARIOS negocios de sectores distintos (CLAVE)
+**"Todo dueño tiene que tener acceso a todo lo suyo."** El cliente NO es un negocio de un
+sector — es un **empresario con una cartera de negocios** que pueden ser de **sectores muy
+distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos reales (leads):
+- **Joaquín Jaén:** restaurante + catering + **empresa de camiones** + quiere **tiendas de
+  comida para llevar** → 1 cuenta, 4 negocios, 3 sectores distintos.
+- **Otro lead:** **empresa de fontanería** + **taller de coches** → 1 cuenta, 2 negocios, 2 sectores.
+
+**Consecuencias para la arquitectura:**
+1. **Jerarquía de datos:** `Cuenta (dueño) → Negocios (N) → cada negocio es de un Sector`. Los
+   módulos se scopean **por negocio**. (Multi-tenant jerárquico; `core-identity` = pieza CENTRAL,
+   no un extra: un login ve TODOS sus negocios y salta entre ellos.)
+2. **Los SECTORES son ENCHUFABLES, no una lista fija de 3.** Hoy: hostelería, limpieza,
+   inmobiliario. Habrá que poder añadir **transporte/logística, fontanería/instalaciones, taller/
+   automoción, retail/tiendas…** Cada sector = núcleo operativo propio + los módulos que enciende.
+3. **Esto REFUERZA unificar los módulos:** **contabilidad, RRHH, ventas, almacén, facturación, CRM
+   son ~iguales** en un restaurante, una empresa de camiones, una fontanería o un taller → son el
+   **80% de cualquier negocio**. Unificarlos hace que **abrir un sector nuevo cueste poco** (solo
+   su operativa específica). El sector aporta el 20%; la plataforma da el 80%.
+
 ## 4. Plan de obra por FASES (conceptual — cada fase con esquema + preview verde antes de prod)
 - **Fase 0 — Fundación:** monorepo pnpm + 5 núcleos técnicos (`core-ai/fiscal/push/storage/email`). ✅ **HECHO, en producción.**
+- **Fase 0.5 — Cimiento de plataforma (NUEVO, por el §3.bis):** modelo `Cuenta(dueño) → Negocios →
+  Sector` + **identidad única** (`core-identity`) + el conmutador "cambiar de negocio". Es el
+  esqueleto sobre el que se montan los módulos compartidos. (Diseñar para que los sectores sean enchufables.)
 - **Fase 1 — 1er módulo transversal: CONTABILIDAD.** La de `ialimp` es la más madura
   (vistas SQL `v_contab_*`) → se convierte en **módulo compartido**; cada vertical lo enciende
   con su enchufe de datos. (Detallar como esquema antes de código.)
