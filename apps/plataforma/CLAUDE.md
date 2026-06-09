@@ -22,6 +22,8 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `IAREST_URL` | `https://iarest.es` |
 | `IALIMP_URL` | `https://app.ialimp.es` |
 | `SIVRA_URL` | URL de sivra |
+| `IAREST_SUPABASE_URL` | `https://efncqyvhniaxsirhdxaa.supabase.co` (BD separada de ia-rest) |
+| `IAREST_SUPABASE_SERVICE_KEY` | service_role de la Supabase de ia-rest (solo lectura del financiero) |
 
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
@@ -32,7 +34,9 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Registro de cuenta por UI** (`/register` → `POST /api/auth/register`, auto-login).
 - [x] **CRUD sociedad/negocio por UI** (crear/editar/eliminar, scoped por `cuenta_id`).
 - [x] **Resumen financiero real** por negocio (HITO 3): ialimp (`v_contab_pyg`) + sivra (`incomes`/`expenses`).
-- [ ] ia-rest financiero (BD separada `efncqyvhniaxsirhdxaa`; sin clientes aún → muestra "📊 BD separada").
+- [x] **ia-rest financiero (HITO 3)**: lee la vista `v_resumen_financiero_anual` de la BD separada
+  `efncqyvhniaxsirhdxaa` vía cliente service-role `lib/iarest.ts` (`getResumenIaRest`). `refExt` = `local_id`.
+  Requiere `IAREST_SUPABASE_URL` + `IAREST_SUPABASE_SERVICE_KEY` en Vercel; sin ellas degrada a "error al leer ia-rest".
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
