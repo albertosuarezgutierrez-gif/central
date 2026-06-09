@@ -16,6 +16,34 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ pnpm WORKSPACES + FASE 3 REANUDADA (core-push, core-storage) — TODO EN PRODUCCIÓN — 09/06/2026**
+  - **Migración a pnpm workspaces (PR #94, en prod las 3 verticales).** Sustituye los `file:` deps por
+    `workspace:*`. Esto **desbloquea** núcleos compartidos con **dependencia npm propia** (lo que `file:`
+    deps no resolvía en Vercel). Config: `pnpm-workspace.yaml`, `.npmrc` (`strict-peer-dependencies=false`
+    + `auto-install-peers` + reintentos de fetch), root `package.json` con `packageManager: pnpm@10.33.0`
+    + `pnpm.onlyBuiltDependencies` (pnpm 10 no corre postinstall por defecto). CI (ci/qa.yml) migrado a pnpm.
+  - 🔴 **CAUSA RAÍZ del fallo de build (resuelta) — LECCIÓN CLAVE:** Vercel **NO usa** nuestro
+    `packageManager`; autodetecta otro pnpm que considera el `pnpm-lock.yaml` *"not compatible"* y
+    **re-resuelve todo el workspace** contra el registro en vivo → tormenta de metadatos → bug de undici
+    `ERR_INVALID_THIS` (`Value of "this" must be of type URLSearchParams`) → install KO. **NO era la
+    versión de Node** (pasaba en 20 y 24). **FIX (en los 3 `apps/*/vercel.json`):** `installCommand` =
+    **`npx --yes pnpm@10.33.0 install --no-frozen-lockfile`** → usa SIEMPRE 10.33, honra el lockfile,
+    sin re-resolución → sin fetches → sin `ERR_INVALID_THIS`, determinista con store fría o caliente.
+  - **Fase 3 reanudada — 2 núcleos nuevos extraídos y EN PRODUCCIÓN:**
+    - **`@iarest/core-push` (PR #95)** — envoltura pura sobre `web-push` (`sendWebPush` → `{ok,gone,...}`).
+      **1er núcleo con dep npm propia** (la prueba de que pnpm lo desbloquea). Consumido por **ia-rest**
+      (`/api/push/send`) e **ialimp** (`lib/push.ts`). Pendiente menor: migrar `ia-rest/lib/qr-notify.ts`.
+    - **`@iarest/core-storage` (PR #96)** — firmado de signed URLs de Supabase Storage vía REST (puro,
+      sin `supabase-js`): `storageObjectPath`/`signStorageObject`/`publicStorageUrl`. Consumido por
+      **ialimp** (`lib/cleaning-photos.ts`, exports preservados) y **sivra** (`/api/limpiadoras/photo`).
+  - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage` (+ `core-identity`
+    sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
+    las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
+  - **Pendiente Fase 3 (opcional):** `core-email` (ialimp usa nodemailer multi-proveedor; ia-rest usa
+    Resend → necesitaría puerto/adaptador, menos directo), `core-security` (rate-limit en BD, 1 consumidor),
+    adoptar `core-identity`. **Limpieza:** archivar repos viejos `sivra`/`ialimp`, borrar proyectos Vercel
+    comodín (`ia-rest-docs`, `repo`). **Marca de la matriz:** elegir nombre → renombrar scope `@iarest/*`.
+
 - **✅ FASE 3 (adopción de núcleos) — cerrada en core-ai; resto APLAZADO por límite de infra — 08/06/2026**
   - **`core-ai` adoptado en las 3 verticales y en producción** (PR #91 sivra, #92 ialimp; ia.rest ya lo
     usaba). Se extendió `core-ai` con `nimChat` (multi-turno) + `signal` opcional en `nimVision`. Cada
