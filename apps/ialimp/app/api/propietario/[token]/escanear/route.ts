@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { nimVision } from '@iarest/core-ai'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
+const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
+const nimConfig = () => ({ apiKey: NVIDIA_API_KEY, visionModel: VISION_MODEL })
 
 const PGC_MAP: Record<string, { cuenta: string; nombre: string }> = {
   limpieza:      { cuenta: '623000', nombre: 'Material de limpieza' },
@@ -51,21 +54,12 @@ ${catalogoStr}
 
 Mapea producto_id si coincide nombre/descripción con el catálogo. IVA 21% si no se especifica.`
 
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + NVIDIA_API_KEY },
-    body: JSON.stringify({
-      model: 'meta/llama-3.2-90b-vision-instruct',
-      messages: [{ role: 'user', content: [
-        { type: 'image_url', image_url: { url: `data:${mediaType};base64,${base64}` } },
-        { type: 'text', text: prompt },
-      ]}],
-      temperature: 0.1, max_tokens: 1200,
-    }),
-  })
-  if (!res.ok) throw new Error('Error NVIDIA NIM: ' + res.status)
-  const data = await res.json()
-  const content = (data.choices?.[0]?.message?.content || '{}').replace(/```json|```/g, '').trim()
+  const raw = await nimVision(
+    nimConfig(), '',
+    [{ data: base64, mediaType }],
+    prompt, 1200, { temperature: 0.1 },
+  )
+  const content = raw.replace(/```json|```/g, '').trim()
   try {
     const parsed = JSON.parse(content) as any
     if (parsed.nivel_certeza && !parsed.confianza) {

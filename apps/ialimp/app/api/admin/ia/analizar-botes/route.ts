@@ -2,8 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { nimVision } from '@iarest/core-ai'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
+const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
+const nimConfig = () => ({ apiKey: NVIDIA_API_KEY, visionModel: VISION_MODEL })
 
 // POST /api/admin/ia/analizar-botes
 // Recibe foto de los botes del kit y estima el nivel de cada producto
@@ -48,22 +51,12 @@ Rules:
 - confianza alta = clearly visible, media = partially visible, baja = estimated
 - If a bottle is clearly new/full = 95-100%, clearly almost empty = 5-10%`
 
-    const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + NVIDIA_API_KEY },
-      body: JSON.stringify({
-        model: 'meta/llama-3.2-90b-vision-instruct',
-        messages: [{ role: 'user', content: [
-          { type: 'image_url', image_url: { url: `data:${media_type || 'image/jpeg'};base64,${imagen_base64}` } },
-          { type: 'text', text: prompt },
-        ]}],
-        temperature: 0.05, max_tokens: 600,
-      }),
-    })
-
-    if (!res.ok) throw new Error('NVIDIA error ' + res.status)
-    const data = await res.json()
-    const content = (data.choices?.[0]?.message?.content || '[]').replace(/```json|```/g, '').trim()
+    const raw = await nimVision(
+      nimConfig(), '',
+      [{ data: imagen_base64, mediaType: media_type || 'image/jpeg' }],
+      prompt, 600, { temperature: 0.05 },
+    )
+    const content = raw.replace(/```json|```/g, '').trim()
 
     let niveles: any[] = []
     try {
