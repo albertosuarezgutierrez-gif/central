@@ -52,9 +52,10 @@
     piso** y **sólo activo si contratan**. Implementado: tabla **`pricing_settings`** por piso (`enabled`, `target_pctl`,
     `floor/ceil_pctl`, `position_factor`, `quality_k`, `own_score`, `min/max_price`); los 4 pisos propios sembrados `enabled=true`.
     `/api/pricing/recommend` reescrito para leer estos ajustes + ajuste por calidad (reseñas) + hook de demanda.
-  - **Modelo afinado (09/06):** **demanda** ✅ real desde ocupación propia (`rate_snapshots`, fechas futuras), perillas
-    `demand_k`/`demand_baseline` por piso, ±8%. **2ª fuente** Trivago en Duplex (concuerda con Booking). **Calidad** mecánica
-    lista, falta `own_score` real (NO se inventa). **Salida verificada:** Busto 174€ · Duplex 183€ · Luxury 233€ · House 624€.
+  - **Modelo afinado (09/06):** **demanda** ✅ real desde ocupación propia (`rate_snapshots`, ±8%). **2ª fuente** Trivago en
+    Duplex. **Calidad** ✅ `own_score` real (Busto 6,9 · Duplex 7,6 · Luxury 7,2 · House 8,4, dados por Alberto desde Booking)
+    — están BAJO la mediana del mercado (8,7–8,8) → la calidad **baja** el precio. **Salida final verificada (mercado×demanda×
+    calidad):** Busto **161€** · Duplex **175€** · Luxury **219€** · House **614€**.
   - **ÚNICO paso que NO ejecuto sin OK explícito de Alberto:** escribir precios reales en Smoobu (irreversible / de cara al
     exterior). Todo lo demás del modelo está aplicado y verificado.
 
