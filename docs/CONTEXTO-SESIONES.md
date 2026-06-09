@@ -16,29 +16,39 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
-  Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
-  - **`core-ai/nim.ts`**: `nimVision` 6º param `signal?` → `opts: {temperature?, signal?}` (aditivo). Permite afinar temperatura
-    (OCR 0.05 / fotos 0.1; antes fija 0.1). Si `system` va vacío, NO envía mensaje de sistema (replica el patrón
-    single-user-message de los agentes ialimp). Conserva `nimChat` (multi-turno) de main.
-  - **Rutas migradas** (preservan modelo 90b-vision, temp y max_tokens exactos): `admin/ia/{analizar-foto(0.1/256),
-    comparar-foto(0.1/400),analizar-botes(0.05/600)}`, `admin/escanear/process(0.05/800)`,
-    `cron/procesar-documentos(0.05/800)`, `propietario/[token]/escanear(0.1/1200)`.
-  - **sivra** `aiExtractInvoice`: adapta su llamada a `{ signal: AbortSignal.timeout(30_000) }` (forma opts). **ia-rest** `callAIVision`
-    pasa 5 args → sin cambios. `upload-photo` solo llama a analizar/comparar server-to-server → no toca NVIDIA.
-  - PR en draft; CI en cola. **Pendiente:** validar preview ialimp (escáner docs + análisis fotos) antes de mergear.
+- **🔄 PR en curso — Gestión de limpiezas para Vanessa (feat/vanessa-gestion-limpiezas) — 09/06/2026**
+  Vanessa (Sique Brilla, cliente piloto en producción) pidió 5 mejoras. Todo en rama `feat/vanessa-gestion-limpiezas`:
+  - **✅ Migración aplicada en Supabase (`wswbehlcuxqxyinousql`):**
+    - `cleaning_sessions.orden_manual` (int, nullable): orden manual por día; `NULL` = auto.
+    - `cleaning_sessions.urgente_manual` (bool, default false): prioridad manual.
+    - Índice `idx_cleaning_sessions_orden_manual` (por empresa/día).
+    - Vista `sesiones_limpiadora` recreada añadiendo `notas`, `orden_manual`, `urgente_manual`.
+  - **✅ Backend:**
+    - `PATCH /api/admin/sesiones/[id]` extendido: `hora_checkout`/`hora_checkin_siguiente` (cast `::time`), `num_huespedes`, `orden_manual`, `urgente_manual`, recálculo de `ventana_minutos`/`alerta_ventana`, push «⏰ Cambio de horario» si cambia fecha/hora con limpiadora asignada.
+    - `POST /api/admin/sesiones/reordenar` (NUEVO): ordena el día con `unnest WITH ORDINALITY`; `{reset:true}` → `orden_manual = NULL`.
+    - Orden actualizado en `/api/admin/agenda` y `/api/l/sesiones`: `orden_manual` lidera, luego `urgente_manual` → `alerta_ventana` → `hora_checkin_siguiente` → hora.
+  - **✅ `NuevaLimpiezaModal` modo edición:** prop `sesion?` → PATCH en vez de POST, salta pasos 1-2, precarga paso 3, muestra botón 🗑️ Eliminar solo si `origen=manual` + sin empezar. Nota label: "(la limpiadora las verá)".
+  - **✅ UI admin:**
+    - **Inicio (`DashboardClient.tsx`)**: botón ✏️ Editar por tarjeta, flechas ↑↓, atajo «→Mañana/←Hoy», 🔥 Urgente, badge sin asignar, filtro «Sin asignar», chips urgente/notas, aviso solapamiento, botón ↺ Orden automático, duplicar. Función `prioridad()` incluye `orden_manual`+`urgente_manual`.
+    - **Agenda (`app/admin/agenda/page.tsx`)**: igual que Inicio — ✏️ editar, ↑↓, mover día, 🔥 urgente, ↺ orden auto, modal de edición montado, limpiezas pre-cargadas desde `/api/admin/clientes`.
+  - **✅ App limpiadora (`/l/page.tsx`)**: muestra `notas` como bloque «📝 Indicaciones» destacado antes del checklist; badge 🔥 Urgente en la tarjeta y en el detalle.
+  - **✅ Documentación:**
+    - `docs/guia-limpiadoras.md` — guía WhatsApp de 7 pasos para limpiadoras (fotos, incidencias, chat).
+    - `docs/mejoras-vanessa.md` — manual para Vanessa con todas las funciones nuevas.
+    - `public/manual.html` — sección limpiadora ampliada (fotos/incidencias/chat) + sección nueva «Editar, mover, ordenar y priorizar limpiezas».
+    - `CLAUDE.md` actualizado: `orden_manual`/`urgente_manual`, `/reordenar`, modo edición PATCH, push horario, orden nuevo.
+  - **Gotcha recordada:** `hora_inicio` es TEXT → nunca `::time`. `hora_checkout`/`hora_checkin_siguiente` sí son TIME.
+  - **✅ Push realizado a GitHub** — rama `feat/vanessa-gestion-limpiezas` actualizada (09/06/2026).
+  - **Pendiente:** preview verde en Vercel + merge a `main`.
 
-- **✅ PR #105 + #106 MERGEADOS A PRODUCCIÓN — 09/06/2026** (deploy ialimp `app.ialimp.es` READY, verificado en Vercel)
-  - **#105** (unificar crypto + aiComplete): `core-identity/crypto.ts` (`genHex/genJti/sha256Hex`) + `core-ai/client.ts`
-    (`aiComplete`). Adopción en ialimp (auth, propietario-auth, ai-client, enviar-acceso, 4 rutas hashPin), plataforma (auth),
-    sivra (ai-client). Fix CI: `NimChatMessage` se importa de `./nim`, no `./types`. Fix audit: `enviar-acceso` usa `sha256Hex`.
-  - **#106** (demo ia.rest): `GET /api/demo` + `POST /api/demo/seed` (protegido por env `DEMO_SEED_SECRET`) → crea "Bar Demo"
-    (slug `demo`, código `DEMO`, PINs 1234/2222/3333/4444, 8 mesas, 17 productos, turno activo). Idempotente.
-    **PENDIENTE de Alberto:** añadir env `DEMO_SEED_SECRET` en Vercel `ia-rest` y llamar al seed para testear.
-  - **Auditoría exhaustiva del monorepo** (7 módulos + 4 apps): estado SANO. Pendientes menores: 2 rutas sivra con
-    `crypto.subtle` inline (opcional), ia-rest financiero en plataforma (BD separada). **ia.rest mensajería** = tabla
-    `mensajes_turno` (chat camarero↔cocina, privado/grupo, audio), totalmente implementada.
-  - **Vanessa puede trabajar**: producción intacta y estable (los cambios solo mueven código, sin tocar BD/RLS/buckets).
+- **🔄 PR #105 — Unificar módulos crypto y aiComplete (feat/unificar-modulos-crypto-ai) — 09/06/2026**
+  3 duplicaciones eliminadas entre `ialimp`, `sivra` y `plataforma`:
+  - **`packages/core-identity/src/crypto.ts`** (NUEVO): `genHex`, `genJti`, `sha256Hex` — Web Crypto puro, sin deps, edge-safe.
+    Adopción: `ialimp/lib/auth.ts`, `ialimp/lib/propietario-auth.ts`, `plataforma/lib/auth.ts`, 4 rutas de ialimp (hashPin).
+  - **`packages/core-ai/src/client.ts`** (NUEVO): `aiComplete(promptOrMessages, options)` — lee `NVIDIA_API_KEY` del entorno.
+    Adopción: `ialimp/lib/ai-client.ts` (3 líneas), `sivra/lib/ai-client.ts` (conserva `aiExtractInvoice` local).
+  - **ia-rest mailer NO migrado** (intencional): ia-rest usa Resend SDK; `core-email` usa nodemailer. Transportes distintos.
+  - PR en draft; CI en progreso al cierre de sesión.
 
 - **✅ BD plataforma desmembrada (estructura real) — 09/06/2026**
   Sociedades reales en `wswbehlcuxqxyinousql` (tabla `sociedades`):
@@ -151,10 +161,10 @@
     - **`core-push` cerrado en ia-rest (PR #98):** `lib/qr-notify.ts` (último `web-push` inline) migrado a
       `sendWebPush`; se eliminó la dep `web-push`/`@types/web-push` de ia-rest (el núcleo trae su copia).
   - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage`, `core-email`
-    (+ `core-identity` con consumidores: crypto en ialimp/plataforma, identidad en plataforma). Patrón para añadir uno:
-    `packages/core-x` (mirror de `core-ai`) + `workspace:*`/`file:` en las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json`.
+    (+ `core-identity` sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
+    las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
   - **Pendiente Fase 3 (opcional):** que ia-rest adopte `core-email` para su envío con Resend (hoy usa su
-    propio cliente); `core-security` (rate-limit en BD, 1 consumidor).
+    propio cliente); `core-security` (rate-limit en BD, 1 consumidor); adoptar `core-identity`.
   - **Limpieza HECHA por Alberto (09/06):** auto-delete head branches ✅ activado · Vercel `ia-rest-app`
     e `ialimp-fuentes` ✅ borrados · repos viejos `sivra`/`ialimp` ✅ ARCHIVADOS (read-only). Quedan por
     borrar 10 ramas mergeadas (comando `git push origin --delete …` desde su terminal).
@@ -167,35 +177,3 @@
   - **Pendiente clave:** **Marca de la matriz** → elegir nombre (Claude Design recomienda **"Encaje"**;
     dominios `encaje.ai`/`encaje.app` libres, `.com`/`.es` ocupados) → renombrar scope `@iarest/* → @<marca>/*`
     (rename mecánico, listo para ejecutar en cuanto se decida).
-
-- **ℹ️ NOTA OPERATIVA (sesión 09/06):** el **proxy git local da 503 en push** toda la sesión → los push se hacen
-  vía **MCP github** (`push_files`/`create_pull_request`), que sí funciona (API de GitHub directa). El repo GitHub
-  sigue llamándose `ia.rest` (redirige desde/hacia `central`); las llamadas MCP usan `repo: "ia.rest"`.
-
-- **✅ MATRIZ DEFINITIVA: `ia.rest` bajado a `apps/ia-rest`, LIVE en producción — 08/06/2026 (PR #90)**
-  - **Las 3 verticales viven bajo `apps/` y la raíz es la matriz.** `iarest.es` ya sirve desde
-    `apps/ia-rest` (deploy de producción **READY**, Next 16.2.6, `✓ Compiled`, alias `iarest.es`/
-    `www.iarest.es`). `sivra` y `ialimp` ya estaban en `apps/*`.
-  - **Cómo se resolvió que `apps/ia-rest` consuma `packages/*` sin pnpm** (patrón para futuras
-    verticales): `file:` deps (`@iarest/core-ai|core-fiscal` → `node_modules/@iarest/*` por symlink) +
-    `next.config` con `outputFileTracingRoot`/`turbopack.root` = raíz del monorepo + se quitaron los
-    `tsconfig paths` de `@iarest/*` (resuelven por node_modules). CI a `working-directory: apps/ia-rest`.
-    Detalle en `MATRIZ.md`.
-  - **Cutover sin downtime (orden CRÍTICO):** primero Root Directory del proyecto Vercel `ia-rest` →
-    `apps/ia-rest`, **después** merge. (Al revés: la raíz-matriz genera un build vacío de ~1s que
-    "tiene éxito" y **reemplazaría producción** → caída.) Red: Instant Rollback de Vercel.
-  - Verificado antes de mergear: build/tsc/lint/qa **locales** en verde + **CI de GitHub** verde
-    (ambos ya en `apps/ia-rest`).
-  - 🟡 **Limpieza pendiente (sin prisa):** proyectos Vercel `ia-rest-docs` y `repo` (catch-all del
-    root, `live:false`, solo dominios `*.vercel.app`) ahora fallan porque la raíz ya no es app →
-    **borrarlos** o ignorarlos (no afectan a producción). + archivar/borrar repos viejos `sivra`/
-    `ialimp`. + Fase 3 (adopción de `packages/core-*` por sivra/ialimp).
-
-- **🏛️ MATRIZ definida + corrección: `ia.rest` es una VERTICAL, no la matriz — 08/06/2026**
-  - Alberto corrige (acertadamente): en la casa de marcas, **`ia.rest` es una vertical más**, no la
-    matriz. La raíz hace de matriz; las 3 verticales son hermanas bajo `apps/`. Manifiesto nuevo:
-    **`MATRIZ.md`** (raíz) define estructura, verticales y regla.
-  - **Hallazgo técnico (cambia el riesgo del movimiento de ia.rest):** `ia.rest` **ya consume
-    `packages/*`** (`@iarest/core-ai`, `@iarest/core-fiscal` vía `tsconfig paths` +
-    `transpilePackages`, rutas relativas a la raíz). Por eso **bajar `ia.rest` a `apps/ia-rest` NO es
-    un `git mv` simple**: requiere montar **workspace** (pnpm/npm que abarque `apps/*`+`packages/*`)
