@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ HITO 1 CONTABILIDAD — `packages/module-contabilidad` creado y adoptado en las 3 verticales — 09/06/2026**
+  (PR #100, rama `feat/module-contabilidad`, rebased sobre main con pnpm `workspace:*`)
+  - `packages/module-contabilidad`: módulo TS puro, sin deps npm, DB-agnostic. Exports: tipos PORT
+    (`Apunte`, `IVATrimestral`, `ResumenTesoreria`, `RentabilidadEntidad`, `PlantillaRecurrente`) +
+    funciones puras (`calcularIVA`, `calcularPyG`, `calcularTesoreria`, `calcularRentabilidad`,
+    `calcularCuotaIva`, `calcularTotal`, `round2`).
+  - **ialimp** — `calcularCuotaIva`/`calcularTotal` en `apuntes/route.ts` e `ingresos/route.ts`.
+  - **sivra** — `round2` en `facturacion/route.ts` (reemplaza `Math.round(x*100)/100` × 4 usos).
+  - **ia-rest** — `round2` en `cron/cobro-inactividad/route.ts` (totalEur + comisión).
+  - Todas las apps usan `workspace:*` + `transpilePackages` + `outputFileTracingRoot`.
+  - Previews Vercel: **ialimp ✅ · sivra ✅ · ia-rest ✅** (tras rebase sobre main).
+
 - **🧭 DECISIÓN ESTRATÉGICA: plataforma modular unificada — 09/06/2026 (ver `docs/PLAN-plataforma-modular.md`)**
   - **Norte del proyecto:** unificar los **módulos transversales** (contabilidad, ventas, almacén,
     RRHH, marketing, SEO, web, mensajería, IA) en UNA implementación que se **enciende** por vertical;
