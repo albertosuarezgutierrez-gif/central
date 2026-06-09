@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { round2 } from '@iarest/module-contabilidad'
 
 export async function GET(req: NextRequest) {
   const lid = new URL(req.url).searchParams.get('limpiadora_id')
@@ -55,9 +56,9 @@ export async function POST(req: NextRequest) {
       property_id: s.property_id,
       fecha: s.session_date,
       descripcion: `Limpieza ${new Date(s.session_date).toLocaleDateString('es-ES')}`,
-      horas: Math.round(horas*100)/100,
+      horas: round2(horas),
       tarifa: t ? Number(t.importe) : 0,
-      importe: Math.round(imp*100)/100,
+      importe: round2(imp),
     })
   }
 
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
     INSERT INTO facturas_limpiadoras
       (limpiadora_id, numero, periodo_inicio, periodo_fin, num_sesiones, total_horas, importe_total)
     VALUES (${limpiadora_id}::uuid, ${num}, ${desde}::date, ${hasta}::date,
-            ${sessions.length}, ${Math.round(totalH*100)/100}, ${Math.round(totalImporte*100)/100})
+            ${sessions.length}, ${round2(totalH)}, ${round2(totalImporte)})
     RETURNING *
   `)
   const fid = (factura as any[])[0].id

@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
+import { round2 } from '@iarest/module-contabilidad'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -86,7 +87,7 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
 
       if (pi.status !== 'succeeded') return false
 
-      const totalEur = Math.round(total * 100) / 100
+      const totalEur = round2(total)
       await supabase.from('qr_sesiones_cliente').update({
         estado: 'pagada', pagado_en: new Date().toISOString(),
         total_cobrado: totalEur, payment_intent_id: pi.id,
@@ -95,7 +96,7 @@ async function autoCerrarIndividuales(supabase: ReturnType<typeof createServerCl
       await supabase.rpc('registrar_pago_cobro', {
         p_restaurante_id: s.local_id,
         p_importe_eur: totalEur,
-        p_comision_eur: Math.round(totalEur * COMISION_RATE * 100) / 100,
+        p_comision_eur: round2(totalEur * COMISION_RATE),
       }).then(() => {}, () => {})
 
       return true
