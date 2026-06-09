@@ -31,9 +31,21 @@
     dormitorios no está en los conectores; se usa la ocupación (nº huéspedes) como proxy.
   - **Nuevo endpoint `POST /api/mercado/ingest`** (protegido por `CRON_SECRET` si está): la "tubería" para meter comps reales
     sin Serper; upsert idempotente con la misma clave que el cron. Es también el hook para una futura API de pago (Estrategia 2).
-  - **Pendiente / decisión de Alberto:** validar el piloto y decidir si se pasa a **Estrategia 2** (suscribir una API real
-    Booking/Expedia para que el cron sea 100% autónomo). Ojo: `OUR_PRICES` de Busto Reform (normal 80€) está MUY por debajo del
-    mercado (≈168€) y NO cuadra con la base 175€ del motor `snapshot` → revisar/reconciliar fórmula en la siguiente iteración.
+  - **🎯 OBJETIVO DE NEGOCIO: esto se va a VENDER como producto (automatización de pricing para pisos turísticos) → "no puede
+    fallar".** Implica que el estado actual (piloto, semi-manual) NO es todavía product-grade. Checklist para hacerlo vendible:
+    1. **Autonomía real (Estrategia 2):** hoy la fuente de mercado depende de que Claude la recolecte en sesión (Estrategia 1).
+       Un producto necesita una **API real** (Booking/Expedia partner o RapidAPI) llamada por el cron, sin humano en el bucle.
+    2. **Comps por capacidad para los 4 pisos:** sólo Busto Reform (2 pax) está corregido. Faltan Duplex (4), Luxury (5),
+       House (12). Comparar contra la ocupación correcta es **crítico** (un fallo aquí = precio mal puesto = cliente perdido).
+    3. **Reconciliar la fórmula del motor:** 3 números no cuadran para Busto Reform → `OUR_PRICES.normal` 80€ vs base 175€ del
+       `snapshot` vs mercado real ~168€. Hasta resolver esto, el "precio recomendado" no es de fiar.
+    4. **Cerrar el bucle a Smoobu:** hoy `detect-opportunities` sólo manda email; un producto debe **escribir el precio** en el
+       canal (Smoobu API) con tope de seguridad y aprobación opcional.
+    5. **Robustez/observabilidad:** reintentos, alertas si una fuente falla, validación de outliers (precio absurdo no se aplica),
+       y log/auditoría de cada cambio de precio (para defender el resultado ante el cliente).
+  - **Hecho esta sesión:** evaluación de conectores, fuente real Booking+Trivago, endpoint `/api/mercado/ingest`, piloto Busto
+    Reform cargado y **corregido por capacidad**, memoria actualizada. PR **#108** (draft, CI verde). Branch
+    `claude/tourist-apartments-auto-pricing-jq0v4z`.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
