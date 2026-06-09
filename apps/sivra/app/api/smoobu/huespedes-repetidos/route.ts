@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import nodemailer from "nodemailer"
+import { gmailTransporter } from "@iarest/core-email"
 
 export const dynamic = "force-dynamic"
 
@@ -39,10 +39,7 @@ export async function GET(req: Request) {
       })
     }
 
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: { user: process.env.GMAIL_USER, pass: process.env.GMAIL_APP_PASSWORD }
-    })
+    const transporter = gmailTransporter()!
 
     let enviados = 0
     for (const h of repetidos) {
