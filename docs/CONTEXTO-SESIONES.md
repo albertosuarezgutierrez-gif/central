@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **✅ pnpm WORKSPACES + FASE 3 REANUDADA (core-push, core-storage) — TODO EN PRODUCCIÓN — 09/06/2026**
+- **✅ pnpm WORKSPACES + FASE 3 REANUDADA (core-push, core-storage, core-email) — TODO EN PRODUCCIÓN — 09/06/2026**
   - **Migración a pnpm workspaces (PR #94, en prod las 3 verticales).** Sustituye los `file:` deps por
     `workspace:*`. Esto **desbloquea** núcleos compartidos con **dependencia npm propia** (lo que `file:`
     deps no resolvía en Vercel). Config: `pnpm-workspace.yaml`, `.npmrc` (`strict-peer-dependencies=false`
@@ -36,13 +36,20 @@
     - **`@iarest/core-storage` (PR #96)** — firmado de signed URLs de Supabase Storage vía REST (puro,
       sin `supabase-js`): `storageObjectPath`/`signStorageObject`/`publicStorageUrl`. Consumido por
       **ialimp** (`lib/cleaning-photos.ts`, exports preservados) y **sivra** (`/api/limpiadoras/photo`).
-  - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage` (+ `core-identity`
-    sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
+    - **`@iarest/core-email` (PR #97)** — transporter de `nodemailer` desde env (dep npm propia):
+      `createMailTransporter()` (multi-proveedor Resend→SMTP→Gmail) + `gmailTransporter()` (Gmail
+      explícito) + `MAIL_TIMEOUTS`. **ialimp** (`lib/mailer.ts` `getTransporter`/`MAIL_FROM`, idéntico)
+      y **sivra** (4 rutas: resumen-semanal, alerta-ventana, huespedes-repetidos, detect-opportunities,
+      usaban Gmail inline → `gmailTransporter()`; el stub auto-reply no se tocó). sivra solo tiene
+      `GMAIL_*` → mismo proveedor, sin riesgo de cambio.
+  - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage`, `core-email`
+    (+ `core-identity` sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
     las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
-  - **Pendiente Fase 3 (opcional):** `core-email` (ialimp usa nodemailer multi-proveedor; ia-rest usa
-    Resend → necesitaría puerto/adaptador, menos directo), `core-security` (rate-limit en BD, 1 consumidor),
-    adoptar `core-identity`. **Limpieza:** archivar repos viejos `sivra`/`ialimp`, borrar proyectos Vercel
-    comodín (`ia-rest-docs`, `repo`). **Marca de la matriz:** elegir nombre → renombrar scope `@iarest/*`.
+  - **Pendiente Fase 3 (opcional):** migrar `ia-rest/lib/qr-notify.ts` a `core-push`; que ia-rest adopte
+    `core-email` para su envío con Resend (hoy usa su propio cliente); `core-security` (rate-limit en BD,
+    1 consumidor); adoptar `core-identity`. **Limpieza:** archivar repos viejos `sivra`/`ialimp`, borrar
+    proyectos Vercel comodín (`ia-rest-docs`, `repo`). **Marca de la matriz:** elegir nombre → renombrar
+    scope `@iarest/*`.
 
 - **✅ FASE 3 (adopción de núcleos) — cerrada en core-ai; resto APLAZADO por límite de infra — 08/06/2026**
   - **`core-ai` adoptado en las 3 verticales y en producción** (PR #91 sivra, #92 ialimp; ia.rest ya lo
