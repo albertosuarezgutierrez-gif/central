@@ -400,6 +400,8 @@ importers:
 
   packages/core-storage: {}
 
+  packages/module-agenda: {}
+
   packages/module-asn: {}
 
   packages/module-contabilidad: {}
