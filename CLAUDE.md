@@ -11,7 +11,7 @@
 - **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Ver `apps/ialimp/CLAUDE.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
-- `@iarest/core-ai`, `@iarest/core-fiscal`, `@iarest/core-push`, `@iarest/core-identity`.
+- `@iarest/core-ai`, `@iarest/core-fiscal`, `@iarest/core-push`, `@iarest/core-storage`, `@iarest/core-identity`.
   - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
     dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
     (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.
