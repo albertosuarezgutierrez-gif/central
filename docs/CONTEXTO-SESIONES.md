@@ -52,8 +52,12 @@
     `apps/ia-rest/src/lib/presupuestos-evento.ts` (`presupuestoEventoAdapter` + `costesDeEvento`, mapea la
     tarifa adulto/niño + costes a líneas genéricas); la ruta `api/owner/eventos/presupuestos` delega el cálculo
     de margen/rentabilidad en el módulo. `next build` verde.
-  - **Patrón validado 3× (pipeline, inventario, margen).** Roadmap restante (mismo patrón): `module-proveedores`,
-    `module-feedback`, `module-asn`, `module-agenda`.
+  - **`packages/module-proveedores` + extracción en ia-rest (HECHO):** módulo genérico (`ProveedorServicio` con
+    `parent`, `calcularComision`, `totalComisiones`, `comisionesCobradas`). ia-rest:
+    `apps/ia-rest/src/lib/proveedores-evento.ts` (`proveedorServicioAdapter`, estado `comision_cobrada`↔`cobrada`);
+    ruta `api/owner/eventos/proveedores-asignaciones` delega comisión y sumas. `next build` verde.
+  - **Patrón validado 4× (pipeline, inventario, margen, comisiones).** Roadmap restante: `module-feedback`,
+    `module-asn`, `module-agenda`.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
