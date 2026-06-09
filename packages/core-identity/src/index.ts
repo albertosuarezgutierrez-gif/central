@@ -6,7 +6,7 @@
 // usa `requireTenantId` para forzar el scoping por inquilino en cada query.
 // Ver docs/HANDOFF-unificacion-casa-marcas.md (Fase 1).
 
-export type { Session, Tenant, TenantBranding, TenantId, UserId } from './types'
+export type { Session, Tenant, TenantBranding, TenantId, UserId, Cuenta, CuentaSession, Negocio, Sector, Sociedad } from './types'
 export { UnauthenticatedError, ForbiddenError } from './errors'
 export type { IdentityProvider } from './port'
 export { requireSession, requireTenantId, assertRole, hasRole } from './port'

@@ -9,6 +9,8 @@
   `packages/core-fiscal` vía `file:` deps. Ver `apps/ia-rest/CLAUDE.md`.
 - **`apps/sivra`** — intranet de pisos turísticos. Ver `apps/sivra/CLAUDE.md`.
 - **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Ver `apps/ialimp/CLAUDE.md`.
+- **`apps/plataforma`** — cuadro de mando consolidado (HITO 2). Jerarquía `Cuenta → Sociedad → Negocio`.
+  BD compartida con sivra+ialimp. Ver `apps/plataforma/CLAUDE.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
 - `@iarest/core-ai`, `@iarest/core-fiscal`, `@iarest/core-push`, `@iarest/core-storage`, `@iarest/core-email`, `@iarest/core-identity`.
