@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ HITO 4 — Gestión de sociedades y negocios por UI en plataforma — 09/06/2026**
+  (PR #103 mergeado; producción `https://plataforma-ten-flame.vercel.app`)
+  - `POST/DELETE /api/sociedades` y `POST/DELETE /api/negocios` — CRUD completo, scoped por `cuenta_id`.
+  - `GestionSociedad.tsx` — modales client-side: ＋ Sociedad, ＋ Negocio, ✕ en cada elemento.
+  - Dashboard actualizado: botones de gestión integrados, `router.refresh()` tras cada operación.
+  - **Listo para volcar Sique Brilla:** crear sociedad + negocio (sector `limpieza`, app `ialimp`, refExt = UUID empresa Sique Brilla).
+
 - **✅ HITO 3 — Dashboard financiero en plataforma (ialimp + sivra) — 09/06/2026**
   (PR #102 mergeado; preview producción `https://plataforma-ten-flame.vercel.app`)
   - **`apps/plataforma/lib/financiero.ts`** nuevo: `getResumenNegocio(app, refExt, anio)` dispatcher.
