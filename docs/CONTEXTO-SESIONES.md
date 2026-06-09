@@ -16,14 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔄 PR #105 — Unificar módulos crypto y aiComplete (feat/unificar-modulos-crypto-ai) — 09/06/2026**
-  3 duplicaciones eliminadas entre `ialimp`, `sivra` y `plataforma`:
-  - **`packages/core-identity/src/crypto.ts`** (NUEVO): `genHex`, `genJti`, `sha256Hex` — Web Crypto puro, sin deps, edge-safe.
-    Adopción: `ialimp/lib/auth.ts`, `ialimp/lib/propietario-auth.ts`, `plataforma/lib/auth.ts`, 4 rutas de ialimp (hashPin).
-  - **`packages/core-ai/src/client.ts`** (NUEVO): `aiComplete(promptOrMessages, options)` — lee `NVIDIA_API_KEY` del entorno.
-    Adopción: `ialimp/lib/ai-client.ts` (3 líneas), `sivra/lib/ai-client.ts` (conserva `aiExtractInvoice` local).
-  - **ia-rest mailer NO migrado** (intencional): ia-rest usa Resend SDK; `core-email` usa nodemailer. Transportes distintos.
-  - PR en draft; CI en progreso al cierre de sesión.
+- **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
+  Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
+  - **`core-ai/nim.ts`**: `nimVision` 6º param `signal?` → `opts: {temperature?, signal?}` (aditivo). Permite afinar temperatura
+    (OCR 0.05 / fotos 0.1; antes fija 0.1). Si `system` va vacío, NO envía mensaje de sistema (replica el patrón
+    single-user-message de los agentes ialimp). Conserva `nimChat` (multi-turno) de main.
+  - **Rutas migradas** (preservan modelo 90b-vision, temp y max_tokens exactos): `admin/ia/{analizar-foto(0.1/256),
+    comparar-foto(0.1/400),analizar-botes(0.05/600)}`, `admin/escanear/process(0.05/800)`,
+    `cron/procesar-documentos(0.05/800)`, `propietario/[token]/escanear(0.1/1200)`.
+  - **sivra** `aiExtractInvoice`: adapta su llamada a `{ signal: AbortSignal.timeout(30_000) }` (forma opts). **ia-rest** `callAIVision`
+    pasa 5 args → sin cambios. `upload-photo` solo llama a analizar/comparar server-to-server → no toca NVIDIA.
+  - PR en draft; CI en cola. **Pendiente:** validar preview ialimp (escáner docs + análisis fotos) antes de mergear.
+
+- **✅ PR #105 + #106 MERGEADOS A PRODUCCIÓN — 09/06/2026** (deploy ialimp `app.ialimp.es` READY, verificado en Vercel)
+  - **#105** (unificar crypto + aiComplete): `core-identity/crypto.ts` (`genHex/genJti/sha256Hex`) + `core-ai/client.ts`
+    (`aiComplete`). Adopción en ialimp (auth, propietario-auth, ai-client, enviar-acceso, 4 rutas hashPin), plataforma (auth),
+    sivra (ai-client). Fix CI: `NimChatMessage` se importa de `./nim`, no `./types`. Fix audit: `enviar-acceso` usa `sha256Hex`.
+  - **#106** (demo ia.rest): `GET /api/demo` + `POST /api/demo/seed` (protegido por env `DEMO_SEED_SECRET`) → crea "Bar Demo"
+    (slug `demo`, código `DEMO`, PINs 1234/2222/3333/4444, 8 mesas, 17 productos, turno activo). Idempotente.
+    **PENDIENTE de Alberto:** añadir env `DEMO_SEED_SECRET` en Vercel `ia-rest` y llamar al seed para testear.
+  - **Auditoría exhaustiva del monorepo** (7 módulos + 4 apps): estado SANO. Pendientes menores: 2 rutas sivra con
+    `crypto.subtle` inline (opcional), ia-rest financiero en plataforma (BD separada). **ia.rest mensajería** = tabla
+    `mensajes_turno` (chat camarero↔cocina, privado/grupo, audio), totalmente implementada.
+  - **Vanessa puede trabajar**: producción intacta y estable (los cambios solo mueven código, sin tocar BD/RLS/buckets).
 
 - **✅ BD plataforma desmembrada (estructura real) — 09/06/2026**
   Sociedades reales en `wswbehlcuxqxyinousql` (tabla `sociedades`):
@@ -136,10 +151,10 @@
     - **`core-push` cerrado en ia-rest (PR #98):** `lib/qr-notify.ts` (último `web-push` inline) migrado a
       `sendWebPush`; se eliminó la dep `web-push`/`@types/web-push` de ia-rest (el núcleo trae su copia).
   - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage`, `core-email`
-    (+ `core-identity` sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
-    las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
+    (+ `core-identity` con consumidores: crypto en ialimp/plataforma, identidad en plataforma). Patrón para añadir uno:
+    `packages/core-x` (mirror de `core-ai`) + `workspace:*`/`file:` en las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json`.
   - **Pendiente Fase 3 (opcional):** que ia-rest adopte `core-email` para su envío con Resend (hoy usa su
-    propio cliente); `core-security` (rate-limit en BD, 1 consumidor); adoptar `core-identity`.
+    propio cliente); `core-security` (rate-limit en BD, 1 consumidor).
   - **Limpieza HECHA por Alberto (09/06):** auto-delete head branches ✅ activado · Vercel `ia-rest-app`
     e `ialimp-fuentes` ✅ borrados · repos viejos `sivra`/`ialimp` ✅ ARCHIVADOS (read-only). Quedan por
     borrar 10 ramas mergeadas (comando `git push origin --delete …` desde su terminal).
@@ -153,24 +168,9 @@
     dominios `encaje.ai`/`encaje.app` libres, `.com`/`.es` ocupados) → renombrar scope `@iarest/* → @<marca>/*`
     (rename mecánico, listo para ejecutar en cuanto se decida).
 
-- **✅ FASE 3 (adopción de núcleos) — cerrada en core-ai; resto APLAZADO por límite de infra — 08/06/2026**
-  - **`core-ai` adoptado en las 3 verticales y en producción** (PR #91 sivra, #92 ialimp; ia.rest ya lo
-    usaba). Se extendió `core-ai` con `nimChat` (multi-turno) + `signal` opcional en `nimVision`. Cada
-    app envuelve el núcleo preservando su API/timeouts/modelos. **Victoria real de DRY del cliente NIM.**
-  - 🔴 **HALLAZGO (límite del enfoque `file:` deps SIN pnpm):** un paquete de `packages/*` que se compila
-    en la app (`transpilePackages`) y que **importa una dependencia npm propia** (p.ej. `web-push`,
-    `nodemailer`, `@supabase/supabase-js`) **NO resuelve en el build de Vercel**: webpack resuelve desde
-    la carpeta del paquete (`packages/core-x/`), que no alcanza `apps/<app>/node_modules` (son hermanos).
-    `serverExternalPackages` no lo arregla (el fallo es en resolución de **build**). Verificado con 3
-    builds fallidos del preview de `core-push` (PR #93, **cerrado sin mergear**, prod intacta).
-  - **Por eso:** `core-ai/core-fiscal/core-identity` funcionan = son **puros** (fetch/crypto, sin deps
-    npm). `core-push/core-email/core-storage` necesitarían deps npm → **bloqueados** con `file:` deps.
-  - **DECISIÓN (definitiva):** **parar Fase 3 en core-ai.** Extraer push/email/storage da DRY marginal
-    (ficheros pequeños y estables) y exigiría **migrar a pnpm workspaces** (cambio de infra grande,
-    acoplado a Vercel: install command + workspace config de los 3 proyectos, re-verificar como el
-    corte). No compensa ahora. **pnpm queda como opción futura** documentada, solo si un módulo
-    compartido con deps npm llega a justificarlo. (Contexto: aún sin clientes de pago; Vanessa no ha
-    pagado todavía.)
+- **ℹ️ NOTA OPERATIVA (sesión 09/06):** el **proxy git local da 503 en push** toda la sesión → los push se hacen
+  vía **MCP github** (`push_files`/`create_pull_request`), que sí funciona (API de GitHub directa). El repo GitHub
+  sigue llamándose `ia.rest` (redirige desde/hacia `central`); las llamadas MCP usan `repo: "ia.rest"`.
 
 - **✅ MATRIZ DEFINITIVA: `ia.rest` bajado a `apps/ia-rest`, LIVE en producción — 08/06/2026 (PR #90)**
   - **Las 3 verticales viven bajo `apps/` y la raíz es la matriz.** `iarest.es` ya sirve desde
