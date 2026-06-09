@@ -60,7 +60,9 @@
     exterior). Todo lo demás del modelo está aplicado y verificado.
   - **🧪 PILOTO EN MARCHA (09/06):** validación en **Busto Reform**. Baseline en `apps/sivra/docs/pricing-automatico.md §7`
     (ocupación 75%, reseñas 6,9, recomendado 161€). Recordatorio en Google Calendar de Alberto **16/06 10:00**.
-    **Acción de Alberto:** desconectar **PriceLabs** en Busto Reform (si no, sobrescribe el precio) + aplicar el test.
+    **Acción de Alberto:** desconectar **PriceLabs** en Busto Reform (✅ HECHO 09/06, confirmado por captura) + aplicar el test.
+    **🚨 HALLAZGO:** PriceLabs tenía Busto Reform a **~70€/noche** (la mitad del mercado 168€). Salto a 161€ = +130% (brusco)
+    → recomendado subir por escalones (test ~120€ una semana) o ir al objetivo si Alberto lo ve. apply_enabled=true ya puesto.
   - **✅ PUSH A SMOOBU CONSTRUIDO — `POST /api/pricing/apply`** (Alberto confirmó que sí se puede por la API de Smoobu).
     Escribe el precio recomendado en Smoobu (corre en Vercel, que alcanza Smoobu; el dev NO). Protecciones: `dryRun=true` por
     defecto, gate `apply_enabled` por piso, acotado a [suelo,techo] y `max_change_pct` (20%), auditoría `pricing_applied`,

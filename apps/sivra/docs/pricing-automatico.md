@@ -118,8 +118,12 @@ para el **16/06/2026 10:00** (análisis a 1 semana).
 
 **Baseline (antes, 09/06):**
 - Ocupación próx. 7 días: **75%** · Reseñas propias: **6,9** · Mercado comparable (2 plazas) mediana: **168€**
-- Precio **recomendado por el motor: 161€** · Precio fórmula antigua (junio): ~253€
-- Ingresos registrados históricos Busto Reform: 332 filas en `incomes`.
+- **🚨 Precio REAL que tenía PriceLabs en Smoobu: ~70€/noche (rango 65-81)** — menos de la mitad del mercado (168€).
+- Precio **recomendado por el motor: 161€** (con descuento por reseñas bajas ya aplicado).
+- PriceLabs DESCONECTADO en Busto Reform (confirmado por captura 09/06); los otros 3 pisos siguen en PriceLabs.
+
+**Hallazgo clave:** PriceLabs infravaloraba Busto Reform a la mitad. Salto a 161€ = +130% → demasiado brusco de golpe;
+plan recomendado: subir por escalones (p.ej. test a ~120€ una semana) y medir, o ir al objetivo si Alberto lo ve claro.
 
 **Acción de Alberto:** (1) **Desconectar/pausar PriceLabs en Busto Reform** — si no, sobrescribe nuestro precio en su
 próximo sync y el test no se lee limpio. (2) Aplicar el precio del test (recomendado 161€; decisión suya con su contexto,
