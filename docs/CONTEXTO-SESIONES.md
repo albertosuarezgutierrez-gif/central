@@ -42,14 +42,19 @@
       y **sivra** (4 rutas: resumen-semanal, alerta-ventana, huespedes-repetidos, detect-opportunities,
       usaban Gmail inline → `gmailTransporter()`; el stub auto-reply no se tocó). sivra solo tiene
       `GMAIL_*` → mismo proveedor, sin riesgo de cambio.
+    - **`core-push` cerrado en ia-rest (PR #98):** `lib/qr-notify.ts` (último `web-push` inline) migrado a
+      `sendWebPush`; se eliminó la dep `web-push`/`@types/web-push` de ia-rest (el núcleo trae su copia).
   - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage`, `core-email`
     (+ `core-identity` sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
     las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
-  - **Pendiente Fase 3 (opcional):** migrar `ia-rest/lib/qr-notify.ts` a `core-push`; que ia-rest adopte
-    `core-email` para su envío con Resend (hoy usa su propio cliente); `core-security` (rate-limit en BD,
-    1 consumidor); adoptar `core-identity`. **Limpieza:** archivar repos viejos `sivra`/`ialimp`, borrar
-    proyectos Vercel comodín (`ia-rest-docs`, `repo`). **Marca de la matriz:** elegir nombre → renombrar
-    scope `@iarest/*`.
+  - **Pendiente Fase 3 (opcional):** que ia-rest adopte `core-email` para su envío con Resend (hoy usa su
+    propio cliente); `core-security` (rate-limit en BD, 1 consumidor); adoptar `core-identity`.
+  - **Limpieza (auditada 09/06, requiere acción manual de Alberto — yo no puedo borrar ramas/proyectos
+    desde el entorno):** (1) **37 ramas `claude/*`** acumuladas → activar "Automatically delete head
+    branches" en Settings del repo + borrar las mergeadas. (2) **Vercel `ia-rest-app`** = duplicado
+    huérfano (deploy ERROR, sin dominio) → BORRAR; **`ialimp-fuentes`** (vivo, ¿fuentes?) → verificar
+    antes. `ia-rest-docs`/`repo` ya no existen. (3) **Repos viejos `sivra`/`ialimp`** (absorbidos por el
+    monorepo) → ARCHIVAR (no borrar). **Marca de la matriz:** elegir nombre → renombrar scope `@iarest/*`.
 
 - **✅ FASE 3 (adopción de núcleos) — cerrada en core-ai; resto APLAZADO por límite de infra — 08/06/2026**
   - **`core-ai` adoptado en las 3 verticales y en producción** (PR #91 sivra, #92 ialimp; ia.rest ya lo
