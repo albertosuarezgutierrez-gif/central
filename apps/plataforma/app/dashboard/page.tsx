@@ -3,7 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import LogoutButton from './LogoutButton'
-import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn } from './GestionSociedad'
+import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
 const SECTOR_LABEL: Record<string, string> = {
   hosteleria:  '🍽️ Hostelería',
@@ -118,8 +118,9 @@ export default async function DashboardPage() {
                   CIF {soc.cif}
                 </span>
               )}
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '4px', alignItems: 'center' }}>
                 <NuevoNegocioBtn sociedadId={soc.id} />
+                <EditarSociedadBtn id={soc.id} nombre={soc.nombre} cif={soc.cif} />
                 <EliminarSociedadBtn id={soc.id} nombre={soc.nombre} />
               </div>
             </div>
@@ -131,6 +132,7 @@ export default async function DashboardPage() {
                 return (
                   <div key={neg.id} style={{ position: 'relative' }}>
                     <NegocioCard neg={neg} fin={fin} url={url} anio={anio} />
+                    <EditarNegocioBtn id={neg.id} nombre={neg.nombre} sector={neg.sector} app={neg.app} refExt={neg.refExt} />
                     <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
                       <EliminarNegocioBtn id={neg.id} nombre={neg.nombre} />
                     </div>
