@@ -3,6 +3,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import LogoutButton from './LogoutButton'
+import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn } from './GestionSociedad'
 
 const SECTOR_LABEL: Record<string, string> = {
   hosteleria:  '🍽️ Hostelería',
@@ -89,8 +90,9 @@ export default async function DashboardPage() {
         )}
 
         {/* Welcome */}
-        <div style={{ marginBottom: '28px' }}>
+        <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
           <h1 style={{ fontSize: '22px', fontWeight: 700 }}>Hola, {session.nombre}</h1>
+          <NuevaSociedadBtn />
         </div>
 
         {/* Empty state */}
@@ -109,13 +111,17 @@ export default async function DashboardPage() {
         {/* Sociedades + negocios */}
         {sociedadesConNegocios.map(soc => (
           <section key={soc.id} style={{ marginBottom: '32px' }}>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', flexWrap: 'wrap' }}>
               <h2 style={{ fontSize: '17px', fontWeight: 700 }}>{soc.nombre}</h2>
               {soc.cif && (
                 <span style={{ fontSize: '13px', color: 'var(--muted)', fontFamily: 'monospace' }}>
                   CIF {soc.cif}
                 </span>
               )}
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                <NuevoNegocioBtn sociedadId={soc.id} />
+                <EliminarSociedadBtn id={soc.id} nombre={soc.nombre} />
+              </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
@@ -123,7 +129,12 @@ export default async function DashboardPage() {
                 const url = neg.app ? APP_URL[neg.app] : null
                 const fin = neg.financiero
                 return (
-                  <NegocioCard key={neg.id} neg={neg} fin={fin} url={url} anio={anio} />
+                  <div key={neg.id} style={{ position: 'relative' }}>
+                    <NegocioCard neg={neg} fin={fin} url={url} anio={anio} />
+                    <div style={{ position: 'absolute', top: '8px', right: '8px' }}>
+                      <EliminarNegocioBtn id={neg.id} nombre={neg.nombre} />
+                    </div>
+                  </div>
                 )
               })}
 
