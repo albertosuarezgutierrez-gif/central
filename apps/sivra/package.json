@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@iarest/core-ai": "workspace:*",
+    "@iarest/core-storage": "workspace:*",
     "@prisma/client": "^5.22.0",
     "prisma": "^5.22.0",
     "clsx": "^2.1.1",
