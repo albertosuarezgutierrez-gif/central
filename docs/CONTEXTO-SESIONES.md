@@ -48,8 +48,13 @@
     y **`GET /api/pricing/recommend`** = motor anclado al mercado (idea #1, sólo recomienda, no aplica). Doc de producto
     `apps/sivra/docs/pricing-automatico.md` con las 4 ideas. PR **#108** (draft, CI verde). Branch
     `claude/tourist-apartments-auto-pricing-jq0v4z`.
-  - **Decisiones de negocio pendientes (tocan dinero):** posicionamiento objetivo por piso (p50 vs +/-), ajuste por calidad
-    (falta score propio por piso), y aprobar el salto de "recomendar" → "aplicar" (push a Smoobu con tope).
+  - **Producto vendible (decisión de Alberto):** será un **SaaS de pago** para propietarios; el pricing es **100% adaptable por
+    piso** y **sólo activo si contratan**. Implementado: tabla **`pricing_settings`** por piso (`enabled`, `target_pctl`,
+    `floor/ceil_pctl`, `position_factor`, `quality_k`, `own_score`, `min/max_price`); los 4 pisos propios sembrados `enabled=true`.
+    `/api/pricing/recommend` reescrito para leer estos ajustes + ajuste por calidad (reseñas) + hook de demanda.
+  - **Afinar modelo (en curso, elegido por Alberto):** falta alimentar **demanda** (capturar disponibilidad del mercado en el
+    ingest) y **calidad** (rellenar `own_score` real por piso); añadir Trivago como 2ª fuente. Luego: aprobar "recomendar"→"aplicar"
+    (push a Smoobu con tope).
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:

@@ -87,11 +87,20 @@ dormitorios; se usa la **ocupación (huéspedes)** como proxy.
 PR **#108** (draft, CI verde) en branch `claude/tourist-apartments-auto-pricing-jq0v4z`. Hecho:
 - `POST /api/mercado/ingest` — tubería de comps reales (Estrategia 1).
 - Comps a-capacidad cargados para los **4 pisos** (ver §3 / §4).
-- `GET /api/pricing/recommend` — **motor anclado al mercado** (idea #1): recomienda precio por piso desde el
-  percentil del mercado comparable, con suelo/techo. Sólo **calcula**, NO cambia precio en vivo ni escribe en Smoobu.
-  Perillas por defecto: objetivo p50, suelo p25, techo p90.
+- `GET /api/pricing/recommend` — **motor anclado al mercado** (idea #1), **100% adaptable por piso**: recomienda
+  precio desde el percentil del mercado comparable, ajustado por **calidad** (reseñas) y con hook de **demanda**.
+  Sólo **calcula**, NO cambia precio en vivo ni escribe en Smoobu.
+- **`pricing_settings` (tabla, por piso) — clave del producto vendible.** Es un SaaS de pago para propietarios:
+  cada uno configura lo suyo y **sólo se calcula/aplica si `enabled=true` (contratado)**. Columnas: `enabled`,
+  `target_pctl` (posicionamiento, def. 0.50), `floor_pctl`/`ceil_pctl` (suelo/techo de seguridad), `position_factor`
+  (multiplicador manual), `quality_k` (sensibilidad reseñas), `own_score`, `min_price`/`max_price` (suelo/techo abs.).
+  Semilla: los 4 pisos propios activados con posicionamiento neutro (mediana).
 
-**Decisiones de negocio pendientes** (las que tocan dinero, "no puede fallar"):
-- Posicionamiento objetivo por piso (mediana p50 vs algo por encima/debajo).
-- Ajuste por calidad (nuestras reseñas vs mercado) — falta el dato de score propio por piso.
-- Aprobar el paso de "recomendar" a "aplicar" (push a Smoobu) y con qué tope/aprobación.
+**Pendiente del modelo (afinar antes de aplicar):**
+- **Demanda (idea #3):** capturar disponibilidad/ocupación del mercado en los comps (ingest) para alimentar
+  `demandFactor` (hoy neutral 1.0).
+- **Calidad:** rellenar `own_score` por piso (nuestras reseñas reales) para que el ajuste tenga efecto.
+- **2ª fuente:** añadir Trivago a los comps de los 4 pisos (hoy Booking).
+
+**Decisión de negocio pendiente (toca dinero):** aprobar el salto de "recomendar" → "aplicar" (push a Smoobu) y con
+qué tope/aprobación.
