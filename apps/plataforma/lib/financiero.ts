@@ -94,15 +94,25 @@ export async function getResumenIaRest(localId: string | null, anio: number): Pr
   }
 }
 
+// Registro de proveedores de KPIs por vertical (DataConnector SPI). Añadir una
+// vertical nueva = añadir una entrada aquí, sin tocar el dispatcher. Cada proveedor
+// sabe de qué BD lee (Prisma compartida, o cliente service-role para BD separada).
+type ResumenProvider = (refExt: string | null, anio: number) => Promise<ResumenFinanciero>
+
+const PROVIDERS: Record<string, ResumenProvider> = {
+  ialimp: (refExt, anio) => (refExt ? getResumenIalimp(refExt, anio) : Promise.resolve(NULO)),
+  sivra: (refExt, anio) => getResumenSivra(anio, refExt),
+  'ia-rest': (refExt, anio) => (refExt ? getResumenIaRest(refExt, anio) : Promise.resolve(NULO)),
+}
+
 export async function getResumenNegocio(
   app: string | null,
   refExt: string | null,
   anio: number,
 ): Promise<ResumenFinanciero> {
-  if (app === 'ialimp' && refExt) return getResumenIalimp(refExt, anio)
-  if (app === 'sivra') return getResumenSivra(anio, refExt)
-  if (app === 'ia-rest' && refExt) return getResumenIaRest(refExt, anio)
-  return NULO
+  const provider = app ? PROVIDERS[app] : undefined
+  if (!provider) return NULO
+  return provider(refExt, anio)
 }
 
 export function fmtEur(n: number): string {
