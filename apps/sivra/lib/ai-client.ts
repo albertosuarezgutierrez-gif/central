@@ -34,7 +34,7 @@ export async function aiComplete(
   return _aiComplete(messages, { system, maxTokens, temperature, timeoutMs, model })
 }
 
-// ─── Invoice extraction ───────────────────────────────────────────────────────
+// ─── Invoice extraction ───────────────────────────────────────────────
 
 const INVOICE_SYSTEM = `Eres un extractor de datos de facturas españolas.
 Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
@@ -63,7 +63,7 @@ export async function aiExtractInvoice(input: {
   imageBase64?:  string
   mimeType?:     string
 }): Promise<Record<string, any>> {
-  // ── Imagen: modelo visión ────────────────────────────────────────────────
+  // ── Imagen: modelo visión ────────────────────────────────────────────
   if (input.imageBase64 && input.mimeType) {
     const txt = await nimVision(
       nimConfig(),
@@ -71,13 +71,13 @@ export async function aiExtractInvoice(input: {
       [{ data: input.imageBase64, mediaType: input.mimeType }],
       'Extrae los datos de esta factura en JSON:',
       512,
-      AbortSignal.timeout(30_000),
+      { signal: AbortSignal.timeout(30_000) },
     )
     const clean = txt.replace(/```json|```/g, '').trim()
     try { return JSON.parse(clean) } catch { return {} }
   }
 
-  // ── Texto (PDF extraído): modelo texto ───────────────────────────────────
+  // ── Texto (PDF extraído): modelo texto ─────────────────────────────────
   if (input.text) {
     const txt   = await aiComplete(
       [{ role: 'user', content: `Factura:\n${input.text.slice(0, 4000)}` }],

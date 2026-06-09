@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { signCleaningPhoto } from '@/lib/cleaning-photos'
+import { nimVision } from '@iarest/core-ai'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -9,6 +10,7 @@ export const maxDuration = 60
 const SUPABASE_ANON  = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
 const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
+const nimConfig = () => ({ apiKey: NVIDIA_API_KEY, visionModel: VISION_MODEL })
 
 interface Comparacion {
   coincide: boolean
@@ -55,22 +57,11 @@ NO marques revisar por diferencias de iluminacion, angulo, encuadre, calidad de 
 Responde UNICAMENTE con JSON valido, sin markdown:
 {"coincide": true|false, "accion": "ok"|"revisar", "observaciones": ["maximo 3 frases breves"]}`
 
-  const res = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + NVIDIA_API_KEY },
-    body: JSON.stringify({
-      model: VISION_MODEL,
-      temperature: 0.1,
-      max_tokens: 400,
-      messages: [{ role: 'user', content: [
-        { type: 'image_url', image_url: { url: `data:image/jpeg;base64,${montajeB64}` } },
-        { type: 'text', text: prompt },
-      ] }],
-    }),
-  })
-  if (!res.ok) throw new Error('Error IA vision: ' + res.status)
-  const data  = await res.json()
-  const txt   = data.choices?.[0]?.message?.content || '{}'
+  const txt = await nimVision(
+    nimConfig(), '',
+    [{ data: montajeB64, mediaType: 'image/jpeg' }],
+    prompt, 400, { temperature: 0.1 },
+  )
   const clean = txt.replace(/```json|```/g, '').trim()
   try {
     const j = JSON.parse(clean)

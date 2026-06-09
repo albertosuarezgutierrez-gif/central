@@ -91,14 +91,21 @@ export async function nimChat(
   return text
 }
 
-/** Llamada de visión (multi-imagen) a NVIDIA NIM. Formato image_url base64. */
+/**
+ * Llamada de visión (multi-imagen) a NVIDIA NIM. Formato image_url base64.
+ *
+ * `opts.temperature` permite afinar el determinismo (p. ej. OCR de facturas usa
+ * 0.05); por defecto 0.1. `opts.signal` permite cancelar/timeout. Si `system` va
+ * vacío, NO se envía mensaje de sistema (el prompt completo viaja en `userText`,
+ * junto a la imagen) — replica el patrón "single user message" de algunos agentes.
+ */
 export async function nimVision(
   config: NimConfig,
   system: string,
   images: ImageInput[],
   userText: string,
   maxTokens = 2000,
-  signal?: AbortSignal,
+  opts: { temperature?: number; signal?: AbortSignal } = {},
 ): Promise<string> {
   const key = requireKey(config)
   const imageContent = images.map(img => ({
@@ -106,20 +113,21 @@ export async function nimVision(
     image_url: { url: `data:${img.mediaType};base64,${img.data}` },
   }))
 
+  const messages: Array<Record<string, unknown>> = []
+  if (system) messages.push({ role: 'system', content: system })
+  messages.push({ role: 'user', content: [...imageContent, { type: 'text', text: userText }] })
+
   const res = await fetch(config.baseUrl ?? DEFAULT_BASE_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
     body: JSON.stringify({
       model: config.visionModel ?? DEFAULT_VISION_MODEL,
-      messages: [
-        { role: 'system', content: system },
-        { role: 'user', content: [...imageContent, { type: 'text', text: userText }] },
-      ],
+      messages,
       max_tokens: maxTokens,
-      temperature: 0.1,
+      temperature: opts.temperature ?? 0.1,
       stream: false,
     }),
-    signal,
+    signal: opts.signal,
   })
   if (!res.ok) throw new Error(`NVIDIA-Vision HTTP ${res.status}: ${(await res.text()).substring(0, 150)}`)
   const data = await res.json()
