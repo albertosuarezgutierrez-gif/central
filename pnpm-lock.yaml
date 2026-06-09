@@ -79,9 +79,6 @@ importers:
       stripe:
         specifier: ^22.1.1
         version: 22.2.0(@types/node@20.19.42)
-      web-push:
-        specifier: ^3.6.7
-        version: 3.6.7
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -98,9 +95,6 @@ importers:
       '@types/react-dom':
         specifier: ^19
         version: 19.2.3(@types/react@19.2.17)
-      '@types/web-push':
-        specifier: ^3.6.4
-        version: 3.6.4
       eslint:
         specifier: ^9
         version: 9.39.4(jiti@2.7.0)

@@ -10,6 +10,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsApp, whatsappConfigurado } from './whatsapp'
+import { sendWebPush } from '@iarest/core-push'
 
 // Mismas claves VAPID que /api/push/send (fallback a las reales del proyecto).
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
@@ -17,11 +18,7 @@ const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
 const VAPID_PRIVATE = process.env.VAPID_PRIVATE_KEY
   || 'g9A32b3wnr_c4Q0ZHtOAllFxwB4ez8TXiH1v1PdXH88'
 
-async function getWebPush() {
-  const webpush = (await import('web-push')).default
-  webpush.setVapidDetails('mailto:hola@ia.rest', VAPID_PUBLIC, VAPID_PRIVATE)
-  return webpush
-}
+const VAPID = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@ia.rest' }
 
 /**
  * Notifica al cliente que su comanda QR está lista, por los canales que tenga
@@ -50,7 +47,6 @@ export async function notificarClienteQrListo(
     if (!subs?.length) return
 
     const base = (origin || 'https://www.iarest.es').replace(/\/$/, '')
-    let webpush: Awaited<ReturnType<typeof getWebPush>> | null = null
     const procesadas: string[] = []
 
     for (const sub of subs as Array<{
@@ -59,15 +55,16 @@ export async function notificarClienteQrListo(
       const link = sub.token ? `${base}/q/${sub.token}` : base
       try {
         if (sub.canal === 'web_push' && sub.subscription) {
-          if (!webpush) webpush = await getWebPush()
           const payload = JSON.stringify({
             title: '✅ ¡Tu pedido está listo!',
             body: 'Ya puedes recogerlo. ¡Que aproveche!',
             tag: `qr-listo-${comandaId}`,
             data: { url: link, tipo: 'qr_listo' },
           })
-          await webpush.sendNotification(JSON.parse(sub.subscription), payload)
-          procesadas.push(sub.id)
+          const res = await sendWebPush(VAPID, JSON.parse(sub.subscription), payload)
+          if (res.ok) procesadas.push(sub.id)
+          else if (res.gone) await supabase.from('qr_avisos_suscripciones').delete().eq('id', sub.id)
+          else console.error('[qr-notify] envío falló:', res.error)
         } else if (sub.canal === 'whatsapp' && sub.destino && whatsappConfigurado()) {
           const r = await sendWhatsApp(
             sub.destino,
