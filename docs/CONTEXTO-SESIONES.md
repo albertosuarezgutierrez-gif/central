@@ -60,8 +60,10 @@
     `parent`/token, `resumenValoraciones`, `totalPropinas`, `propinasPagadas`). ia-rest:
     `apps/ia-rest/src/lib/feedback-visita.ts` (`feedbackVisitaAdapter` + `propinaAdapter`); las rutas
     `api/owner/feedback` y `api/owner/propinas` añaden un `resumen` agregado vía el módulo. `next build` verde.
-  - **Patrón validado 5× (pipeline, inventario, margen, comisiones, valoraciones).** Roadmap restante:
-    `module-asn`, `module-agenda`.
+  - **`packages/module-asn` + extracción en ia-rest (HECHO):** módulo genérico (`ASN`, `LineaASN`,
+    `totalLineas`, `unidadesTotales`). ia-rest: `apps/ia-rest/src/lib/asn-pedido.ts` (`asnItemAdapter` sobre
+    `pedidos_proveedor.asn_items`); la ruta pública `api/asn` añade `total_albaran` vía el módulo. `next build` verde.
+  - **Patrón validado 6× (pipeline, inventario, margen, comisiones, valoraciones, ASN).** Falta `module-agenda`.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:

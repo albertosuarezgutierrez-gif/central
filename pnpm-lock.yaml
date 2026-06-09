@@ -22,6 +22,9 @@ importers:
       '@iarest/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
+      '@iarest/module-asn':
+        specifier: workspace:*
+        version: link:../../packages/module-asn
       '@iarest/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
@@ -396,6 +399,8 @@ importers:
         version: 3.6.4
 
   packages/core-storage: {}
+
+  packages/module-asn: {}
 
   packages/module-contabilidad: {}
 

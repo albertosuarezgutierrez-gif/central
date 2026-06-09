@@ -2,6 +2,8 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { totalLineas } from '@iarest/module-asn'
+import { asnItemAdapter, type AsnItemRow } from '@/lib/asn-pedido'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -138,9 +140,13 @@ export async function POST(req: NextRequest) {
     tokens_usados: 0,
   })
 
+  // Total del albarán (si el proveedor informó precios) — vía @iarest/module-asn.
+  const total_albaran = totalLineas((asnItems as AsnItemRow[]).map(asnItemAdapter.toLinea))
+
   return NextResponse.json({
     ok: true,
     mensaje: '¡Gracias! Hemos recibido tu notificación. El restaurante ya tiene los datos preparados para cuando llegue el pedido.',
     recepcion_id: rec?.id ?? null,
+    total_albaran,
   }, { headers: corsHeaders })
 }
