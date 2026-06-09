@@ -35,19 +35,33 @@ export async function getResumenIalimp(empresaId: string, anio: number): Promise
   }
 }
 
-export async function getResumenSivra(anio: number): Promise<ResumenFinanciero> {
+export async function getResumenSivra(anio: number, propertyId?: string | null): Promise<ResumenFinanciero> {
   try {
     const [ing, gas] = await Promise.all([
-      prisma.$queryRaw<Array<{ total: unknown }>>`
-        SELECT COALESCE(SUM(amount), 0)::float AS total
-        FROM incomes
-        WHERE EXTRACT(YEAR FROM date) = ${anio}
-      `,
-      prisma.$queryRaw<Array<{ total: unknown }>>`
-        SELECT COALESCE(SUM(amount), 0)::float AS total
-        FROM expenses
-        WHERE EXTRACT(YEAR FROM date) = ${anio}
-      `,
+      propertyId
+        ? prisma.$queryRaw<Array<{ total: unknown }>>`
+            SELECT COALESCE(SUM(amount), 0)::float AS total
+            FROM incomes
+            WHERE EXTRACT(YEAR FROM date) = ${anio}
+              AND "propertyId" = ${propertyId}
+          `
+        : prisma.$queryRaw<Array<{ total: unknown }>>`
+            SELECT COALESCE(SUM(amount), 0)::float AS total
+            FROM incomes
+            WHERE EXTRACT(YEAR FROM date) = ${anio}
+          `,
+      propertyId
+        ? prisma.$queryRaw<Array<{ total: unknown }>>`
+            SELECT COALESCE(SUM(amount), 0)::float AS total
+            FROM expenses
+            WHERE EXTRACT(YEAR FROM date) = ${anio}
+              AND "propertyId" = ${propertyId}
+          `
+        : prisma.$queryRaw<Array<{ total: unknown }>>`
+            SELECT COALESCE(SUM(amount), 0)::float AS total
+            FROM expenses
+            WHERE EXTRACT(YEAR FROM date) = ${anio}
+          `,
     ])
     const i = Number(ing[0].total)
     const g = Number(gas[0].total)
@@ -67,7 +81,7 @@ export async function getResumenNegocio(
   anio: number,
 ): Promise<ResumenFinanciero> {
   if (app === 'ialimp' && refExt) return getResumenIalimp(refExt, anio)
-  if (app === 'sivra') return getResumenSivra(anio)
+  if (app === 'sivra') return getResumenSivra(anio, refExt)
   if (app === 'ia-rest') return getResumenIaRest()
   return NULO
 }
