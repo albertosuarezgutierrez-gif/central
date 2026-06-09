@@ -1,4 +1,4 @@
-# 🧠 Memoria de sesiones — ia.rest
+# 🧠 Memoria de sesiones — central (repo GitHub: ia.rest → renombrar)
 
 > Contexto persistente entre sesiones de Claude Code. El entorno cloud es
 > **efímero** (el contenedor se borra al acabar), así que lo único que sobrevive

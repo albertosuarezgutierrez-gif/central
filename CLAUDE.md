@@ -1,7 +1,8 @@
-# CLAUDE.md — Matriz (casa de marcas)
+# CLAUDE.md — Central (casa de marcas)
 
-> **Esta es la MATRIZ del monorepo, no una vertical.** No contiene lógica de producto.
-> Lee **`MATRIZ.md`** para la estructura (raíz = matriz, `packages/*` = módulos compartidos,
+> **Este repo se llama provisionalmente `central`** (repo GitHub aún `ia.rest` hasta renombrar).
+> Es la RAÍZ del monorepo, no una vertical. No contiene lógica de producto.
+> Lee **`MATRIZ.md`** para la estructura (raíz = central, `packages/*` = módulos compartidos,
 > `apps/*` = verticales) y `docs/CONTEXTO-SESIONES.md` para el estado vivo del proyecto.
 
 ## Verticales (cada una con su propio CLAUDE.md/AGENTS.md y proyecto Vercel)
