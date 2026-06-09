@@ -115,6 +115,25 @@ distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos real
 - Orden fino dentro de Fase 1 (qué vertical migrar primero a la contabilidad compartida).
 - Modelo de cobro de servicios entre verticales (cuando se monte el marketplace).
 
+## 9.bis Banco de ideas / capacidades futuras (solo posibles por tener todo unificado)
+1. **Copiloto IA ÚNICO sobre todos los negocios:** preguntar en lenguaje natural "¿cuánto gané este
+   mes entre todo?", "¿qué finca tiene peor margen?", "¿a quién pago esta semana?". Posible porque los
+   datos comparten formato (módulos comunes). Hoy cada app tiene su IA suelta → unificar = un asistente que lo ve todo.
+2. **Sinergias entre los negocios del PROPIO dueño (intercompany automático):** un servicio que un
+   negocio suyo da a otro (limpieza de SUS fincas, transporte entre SUS tiendas) se registra solo como
+   gasto en uno e ingreso en el otro. Cuadra el intercompany sin trabajo manual.
+3. **Marketplace / RED de dos lados entre clientes de la plataforma:** una empresa de limpieza de la
+   plataforma encuentra propietarios DENTRO de la plataforma (y viceversa). Realiza la idea "pueden o no
+   trabajar con ialimp": el propietario contrata servicios de OTROS clientes. Efecto red.
+4. **Banco conectado (open-banking) + fiscal automático:** conciliación bancaria contra la contabilidad
+   (tesorería REAL, no estimada) + presentar IVA/modelos AEAT por cada CIF. "Tu gestoría dentro".
+5. **Empleados/RRHH compartidos entre negocios:** un empleado puede trabajar en varios negocios del
+   dueño; nóminas y fichaje a nivel cuenta, asignables por negocio.
+6. **Alta de negocio nuevo en 5 min por sector (plantillas):** elegir sector → viene preconfigurado
+   (módulos típicos, plan contable del sector, catálogo base). Hace trivial añadir negocios/sectores.
+7. **Motor de reglas/automatizaciones cross-sector:** "si una finca lleva 5 días sin limpiar, avísame";
+   "si un negocio baja del X% de margen, alerta"; "stock bajo en cualquier almacén → pide". Vale para todos.
+
 ## 8. Decidido (no re-preguntar)
 - Verticales = especialidades, **se quedan**; se unifican los **módulos**.
 - `sivra` + portal-propietario `ialimp` = **se unifican** (Inmobiliario/Propietarios).
