@@ -110,3 +110,20 @@ PR **#108** (draft, CI verde) en branch `claude/tourist-apartments-auto-pricing-
 
 **Decisión de negocio pendiente (toca dinero, NO se ejecuta sin OK explícito):** aprobar el salto de "recomendar" →
 "aplicar" (escribir el precio en Smoobu vía API) y con qué tope/aprobación.
+
+## 7. PILOTO EN CURSO — Busto Reform (inicio 09/06/2026)
+
+Validación manual en **1 apartamento** antes de construir el push automático. Recordatorio en Google Calendar de Alberto
+para el **16/06/2026 10:00** (análisis a 1 semana).
+
+**Baseline (antes, 09/06):**
+- Ocupación próx. 7 días: **75%** · Reseñas propias: **6,9** · Mercado comparable (2 plazas) mediana: **168€**
+- Precio **recomendado por el motor: 161€** · Precio fórmula antigua (junio): ~253€
+- Ingresos registrados históricos Busto Reform: 332 filas en `incomes`.
+
+**Acción manual de Alberto:** fijar el precio del test en Smoobu (recomendado 161€; decisión suya con su contexto real,
+ya que el motor *baja* respecto a la fórmula antigua porque las reseñas son bajas).
+
+**Cómo analizar el 16/06:** comparar ocupación/ingresos y reservas nuevas de Busto Reform vs esta baseline. Consulta base:
+`SELECT (1-AVG(available)) FROM rate_snapshots WHERE property_id='prop_busto_reform' AND rate_date>=CURRENT_DATE AND snapshot_date=(SELECT MAX(snapshot_date) FROM rate_snapshots)`
+y revisar `pricing_experiments`/`incomes`. Si funciona → extender a los otros 3 pisos + construir push a Smoobu.
