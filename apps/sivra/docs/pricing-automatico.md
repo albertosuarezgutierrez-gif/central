@@ -123,7 +123,18 @@ para el **16/06/2026 10:00** (análisis a 1 semana).
 - PriceLabs DESCONECTADO en Busto Reform (confirmado por captura 09/06); los otros 3 pisos siguen en PriceLabs.
 
 **Hallazgo clave:** PriceLabs infravaloraba Busto Reform a la mitad. Salto a 161€ = +130% → demasiado brusco de golpe;
-plan recomendado: subir por escalones (p.ej. test a ~120€ una semana) y medir, o ir al objetivo si Alberto lo ve claro.
+plan: subir por escalones y medir.
+
+**💶 COSTES (debe cubrirlos) — decidido 09/06:** la BD `expenses` NO tiene registrados alquiler/limpiezas/impuestos de
+este piso (sólo "Suministros" ~26€/mes), así que el break-even se estima con datos de Alberto: **alquiler 300€/mes** + agua/luz
++ limpiezas + impuestos + comisión de portal (~15%). Break-even ≈ **58–98€/noche** según ocupación. **PENDIENTE: cargar los
+gastos reales en `expenses` para que el suelo sea exacto.**
+- **Suelo de coste DURO fijado:** `pricing_settings.min_price = 90€` en Busto Reform → el motor **nunca** recomienda por
+  debajo de cubrir gastos.
+- **PRECIO DE TEST = 110€** (techo del piloto `max_price = 110`). A 110€: neto tras comisión ~93€, contribución ~73€/noche →
+  con **~5 noches/mes** ya se cubren TODOS los costes; el resto es beneficio. Muy por debajo del mercado (168€) → sigue vendible.
+- Nota: el alquiler es coste **hundido** (se paga reserve o no), así que el riesgo de un precio "alto" son noches vacías, no
+  vender bajo coste — y el suelo de 90€ garantiza que toda venta es rentable.
 
 **Acción de Alberto:** (1) **Desconectar/pausar PriceLabs en Busto Reform** — si no, sobrescribe nuestro precio en su
 próximo sync y el test no se lee limpio. (2) Aplicar el precio del test (recomendado 161€; decisión suya con su contexto,
