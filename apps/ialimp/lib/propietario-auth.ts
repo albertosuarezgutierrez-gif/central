@@ -5,6 +5,7 @@ import { cookies } from 'next/headers'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { genHex, sha256Hex } from '@iarest/core-identity'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET
@@ -43,18 +44,7 @@ export async function getPropietarioSession(): Promise<PropietarioSession | null
   }
 }
 
-// ── Cripto (Web Crypto: vale en node serverless y es edge-safe) ──────
-export function genHex(bytes = 32): string {
-  const arr = new Uint8Array(bytes)
-  crypto.getRandomValues(arr)
-  return Array.from(arr).map(b => b.toString(16).padStart(2, '0')).join('')
-}
-
-export async function sha256Hex(input: string): Promise<string> {
-  const data = new TextEncoder().encode(input)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+export { genHex, sha256Hex }
 
 // ── Rate limiter en memoria (por proceso) ────────────────────────────
 const attempts = new Map<string, { count: number; resetAt: number }>()

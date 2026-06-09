@@ -1,14 +1,17 @@
 /**
  * ai-client.ts — Wrapper IA para SIVRA
- * Envuelve `@iarest/core-ai` (NVIDIA NIM) preservando la API local
- * (`aiComplete` / `aiExtractInvoice`). El núcleo es identity-agnostic: la config
- * (apiKey + modelos) la inyecta esta app; la política (timeout) también.
+ * `aiComplete` delega en @iarest/core-ai.
+ * `aiExtractInvoice` es específico de SIVRA (extrae facturas) y se mantiene aquí.
  */
-import { nimChat, nimVision, type NimConfig } from '@iarest/core-ai'
+import { aiComplete as _aiComplete, nimVision, type NimConfig } from '@iarest/core-ai'
 
-const NVIDIA_MODEL   = 'meta/llama-3.3-70b-instruct'
-const NVIDIA_VISION  = 'meta/llama-3.2-90b-vision-instruct'
-const TIMEOUT_MS     = 25_000
+const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
+
+function nimConfig(): NimConfig {
+  const apiKey = process.env.NVIDIA_API_KEY
+  if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada en Vercel')
+  return { apiKey, visionModel: NVIDIA_VISION }
+}
 
 export interface AiMessage {
   role:    'user' | 'assistant'
@@ -19,34 +22,16 @@ export interface AiOptions {
   system?:      string
   maxTokens?:   number
   temperature?: number
-  model?:       string   // override del modelo NVIDIA
+  timeoutMs?:   number
+  model?:       string
 }
 
-function nimConfig(): NimConfig {
-  const apiKey = process.env.NVIDIA_API_KEY
-  if (!apiKey) throw new Error('NVIDIA_API_KEY no configurada en Vercel')
-  return { apiKey, textModel: NVIDIA_MODEL, visionModel: NVIDIA_VISION }
-}
-
-/**
- * Genera una completion de texto con NVIDIA NIM (vía core-ai).
- */
 export async function aiComplete(
-  messages:  AiMessage[],
-  options:   AiOptions = {}
+  messages: AiMessage[],
+  options:  AiOptions = {}
 ): Promise<string> {
-  const { system, maxTokens = 800, temperature = 0.3, model } = options
-
-  const text = await nimChat(nimConfig(), messages, {
-    system,
-    model,
-    maxTokens,
-    temperature,
-    signal: AbortSignal.timeout(TIMEOUT_MS),
-  })
-
-  console.log('[ai] provider=nvidia model=' + (model || NVIDIA_MODEL))
-  return text
+  const { system, maxTokens = 800, temperature = 0.3, timeoutMs = 25_000, model } = options
+  return _aiComplete(messages, { system, maxTokens, temperature, timeoutMs, model })
 }
 
 // ─── Invoice extraction ───────────────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
+import { genJti } from '@iarest/core-identity'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET
@@ -16,14 +17,7 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
   return bcrypt.compare(password, hash)
 }
 
-// Identificador de sesión (jti) para "sesión única": se guarda en la fila del
-// usuario y se incrusta en el JWT; al entrar en otro dispositivo se rota y el
-// token anterior deja de valer.
-export function genJti(): string {
-  const a = new Uint8Array(16)
-  crypto.getRandomValues(a)
-  return Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+export { genJti }
 
 // ── Empresa dueña (cuenta master) ────────────────────────────────────
 // Devuelve { token, jti }: el jti hay que guardarlo en empresas.session_jti.

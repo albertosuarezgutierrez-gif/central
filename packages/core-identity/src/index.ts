@@ -10,3 +10,4 @@ export type { Session, Tenant, TenantBranding, TenantId, UserId, Cuenta, CuentaS
 export { UnauthenticatedError, ForbiddenError } from './errors'
 export type { IdentityProvider } from './port'
 export { requireSession, requireTenantId, assertRole, hasRole } from './port'
+export { genHex, genJti, sha256Hex } from './crypto'

@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
-
-async function hashPin(pin: string): Promise<string> {
-  const data = new TextEncoder().encode(pin)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+import { sha256Hex as hashPin } from '@iarest/core-identity'
 
 // GET — listar limpiadoras de la empresa
 export async function GET() {
