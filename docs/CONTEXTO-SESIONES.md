@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ BD plataforma desmembrada (estructura real) — 09/06/2026**
+  Sociedades reales en `wswbehlcuxqxyinousql` (tabla `sociedades`):
+  - **Alberto Suárez Gutiérrez** (CIF vacío — editable desde `/dashboard` con ✎):
+    - ia.rest (hostelería, app=ia-rest) — sin clientes aún, muestra "📊 BD separada"
+    - Casa Sevillana (inmobiliario, app=sivra)
+  - **Sique Brilla SL** (B22992523, NIF real de `empresas`):
+    - Sique Brilla (limpieza, app=ialimp, `ref_ext=05edacff-ea49-42fe-8997-f9369613a845`)
+  Eliminada la sociedad fake "Tu Empresa SL" (CIF B12345678). Restructurado por SQL directo vía Supabase MCP.
+  **Próximo paso:** cuando Vanessa empiece a operar (reactivar `documentos_contables.activo=true`), el financiero de Sique Brilla aparecerá automáticamente en el dashboard. Alberto puede ajustar el CIF de su sociedad personal desde la UI.
+
 - **✅ HITO 5 — Plataforma CRUD completo (edición + registro de cuenta) — 09/06/2026**
   (PR #104 mergeado; producción `https://plataforma-ten-flame.vercel.app`)
   - `PATCH /api/sociedades/[id]` y `PATCH /api/negocios/[id]` — edición scoped por `cuenta_id`.
