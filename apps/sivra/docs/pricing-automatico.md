@@ -136,6 +136,19 @@ gastos reales en `expenses` para que el suelo sea exacto.**
 - Nota: el alquiler es coste **hundido** (se paga reserve o no), así que el riesgo de un precio "alto" son noches vacías, no
   vender bajo coste — y el suelo de 90€ garantiza que toda venta es rentable.
 
+**⚠️ SMOOBU: "precio base" ≠ precio que ve el huésped (descubierto 09/06 por captura de Alberto).** En Smoobu se fija un
+**precio base** y cada canal le suma su **margen**: Airbnb +15%, Booking.com +16%, Expedia +20%, Agoda +15%, HomeToGo +15%.
+Ej.: base 65€ → huésped ve 75 (Airbnb) / 76 (Booking) / 78 (Expedia). El **host neta ~la base** (el margen compensa la comisión
+del canal). Implicaciones:
+- Nuestros comparables de `market_rates` son **precios de huésped** (con margen). Smoobu `daily_price` (lo que escribe
+  `/api/pricing/apply`) es la **base**. **→ El motor debe escribir como base ≈ precio_objetivo_huésped / (1+margen)**, o
+  sobrepasaríamos el mercado (escribir 161 de base = ~187 en Booking, por encima de 168). PENDIENTE de ajustar en el endpoint.
+- `rate_snapshots.price_pricelabs` = **precio base** de Smoobu (coincide con la captura: 65). Por eso el snapshot sirve para
+  verificar lo que se escribe como base.
+- **Test de subida (en marcha):** Alberto cambia el **precio base** de una fecha disponible (09 ó 10 jun) 65→**110**. Mañana
+  tras las 07:00 se verifica en `rate_snapshots`: si aparece 110 → subida OK de punta a punta. A 110 base el huésped ve ~128 en
+  Booking (por debajo de 168 → vendible) y el host neta ~110 (cubre costes de sobra).
+
 **Acción de Alberto:** (1) **Desconectar/pausar PriceLabs en Busto Reform** — si no, sobrescribe nuestro precio en su
 próximo sync y el test no se lee limpio. (2) Aplicar el precio del test (recomendado 161€; decisión suya con su contexto,
 el motor *baja* respecto a la fórmula antigua porque las reseñas son bajas), **manualmente en Smoobu** o vía el endpoint

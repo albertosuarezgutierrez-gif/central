@@ -72,8 +72,12 @@
     `/api/pricing/recommend`, `/api/pricing/apply`. **Estado que vive en BD Supabase `wswbehlcuxqxyinousql` (NO en git, pero
     persiste):** tablas `pricing_settings` (own_score Busto 6,9/Duplex 7,6/Luxury 7,2/House 8,4; `apply_enabled=true` sólo en
     Busto), `pricing_applied` (auditoría), comps en `market_rates` (scenario=`prop_*`). **Recordatorio Google Calendar 16/06 10:00.**
-    **ÚNICA acción abierta:** Alberto confirma el precio de test de Busto Reform (recomendado escalón ~120€) y lo pone en Smoobu;
-    el 16/06 pedir "analiza el piloto de Busto Reform". Resto del modelo: aplicado y verificado.
+    Suelo de coste `min_price=90` + techo del test `max_price=110` en Busto Reform → motor recomienda **110€**.
+    **⚠️ SMOOBU base ≠ precio huésped:** Smoobu fija un *precio base* y cada canal le suma margen (Booking +16%, Airbnb/Agoda/
+    HomeToGo +15%, Expedia +20%); el host neta ~la base. Nuestros `market_rates` son precios de huésped → **el motor debe escribir
+    base ≈ objetivo_huésped/(1+margen)** (PENDIENTE ajustar en `/api/pricing/apply`). `rate_snapshots.price_pricelabs` = base Smoobu.
+    **TEST EN MARCHA:** Alberto pone *precio base* 65→**110** en una fecha (09/10 jun); **mañana tras 07:00** verificar en
+    `rate_snapshots` (si aparece 110 → subida OK). El 16/06: "analiza el piloto de Busto Reform".
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
