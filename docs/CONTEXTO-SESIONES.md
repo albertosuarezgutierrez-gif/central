@@ -68,6 +68,12 @@
     defecto, gate `apply_enabled` por piso, acotado a [suelo,techo] y `max_change_pct` (20%), auditoría `pricing_applied`,
     `CRON_SECRET`. ⚠️ **Verificar el formato del POST `/api/rates` de Smoobu en un preview antes de `dryRun=false` en prod.**
     El **16/06**: analizar piloto y decidir si se extiende a los otros 3 pisos.
+  - **📌 PARA RETOMAR (próxima sesión):** doc maestro = `apps/sivra/docs/pricing-automatico.md`. Endpoints: `/api/mercado/ingest`,
+    `/api/pricing/recommend`, `/api/pricing/apply`. **Estado que vive en BD Supabase `wswbehlcuxqxyinousql` (NO en git, pero
+    persiste):** tablas `pricing_settings` (own_score Busto 6,9/Duplex 7,6/Luxury 7,2/House 8,4; `apply_enabled=true` sólo en
+    Busto), `pricing_applied` (auditoría), comps en `market_rates` (scenario=`prop_*`). **Recordatorio Google Calendar 16/06 10:00.**
+    **ÚNICA acción abierta:** Alberto confirma el precio de test de Busto Reform (recomendado escalón ~120€) y lo pone en Smoobu;
+    el 16/06 pedir "analiza el piloto de Busto Reform". Resto del modelo: aplicado y verificado.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
