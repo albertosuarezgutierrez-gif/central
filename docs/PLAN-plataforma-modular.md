@@ -64,6 +64,12 @@ distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos real
    son ~iguales** en un restaurante, una empresa de camiones, una fontanería o un taller → son el
    **80% de cualquier negocio**. Unificarlos hace que **abrir un sector nuevo cueste poco** (solo
    su operativa específica). El sector aporta el 20%; la plataforma da el 80%.
+
+   **🏅 REGLA DE ORO (la promesa que hace todo esto escalable):** cuando un cliente (p.ej. Joaquín)
+   llama porque quiere montar **OTRO tipo de empresa** (sector nuevo), **los módulos importantes YA
+   están** → solo se construye **su operativa específica (~20%)** y se **CONECTA** a los desarrollos
+   generales (contabilidad, facturación, RRHH, ventas/CRM, almacén, IA documental, cuadro de mando,
+   banco). **Nunca se reescribe lo común.** Por eso cada sector nuevo es barato y rápido = el foso.
 4. **CUADRO DE MANDO CONSOLIDADO (torre de control) = FEATURE CLAVE.** El dueño ve, en una pantalla,
    el **resumen de TODAS sus empresas/negocios/fincas** cruzando CIFs y sectores: facturación y gastos
    totales, **resultado**, **tesorería total** (cuánto dinero tengo en conjunto), qué negocio gana/
@@ -115,7 +121,7 @@ distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos real
 - Orden fino dentro de Fase 1 (qué vertical migrar primero a la contabilidad compartida).
 - Modelo de cobro de servicios entre verticales (cuando se monte el marketplace).
 
-## 9.bis Banco de ideas / capacidades futuras (solo posibles por tener todo unificado)
+## 9.bis Capacidades acordadas — TODAS entran (Alberto: «añade todo»). Se construyen progresivamente; solo posibles por tener todo unificado.
 1. **Copiloto IA ÚNICO sobre todos los negocios:** preguntar en lenguaje natural "¿cuánto gané este
    mes entre todo?", "¿qué finca tiene peor margen?", "¿a quién pago esta semana?". Posible porque los
    datos comparten formato (módulos comunes). Hoy cada app tiene su IA suelta → unificar = un asistente que lo ve todo.
