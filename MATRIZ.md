@@ -12,6 +12,7 @@
 ├── packages/          ← módulos compartidos, portables y enchufables
 │   ├── core-ai        ← IA (proveedores, geminiSearch, …)
 │   ├── core-fiscal    ← fiscalidad (VeriFactu, ES, …)
+│   ├── core-push      ← Web Push (envoltura pura sobre web-push; dep npm propia)
 │   └── core-identity  ← contrato de sesión/inquilino (puertos & adaptadores)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]

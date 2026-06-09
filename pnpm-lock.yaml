@@ -19,6 +19,9 @@ importers:
       '@iarest/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
+      '@iarest/core-push':
+        specifier: workspace:*
+        version: link:../../packages/core-push
       '@stripe/react-stripe-js':
         specifier: ^6.3.0
         version: 6.6.0(@stripe/stripe-js@9.7.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -122,6 +125,9 @@ importers:
       '@iarest/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
+      '@iarest/core-push':
+        specifier: workspace:*
+        version: link:../../packages/core-push
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -286,6 +292,16 @@ importers:
   packages/core-fiscal: {}
 
   packages/core-identity: {}
+
+  packages/core-push:
+    dependencies:
+      web-push:
+        specifier: ^3.6.7
+        version: 3.6.7
+    devDependencies:
+      '@types/web-push':
+        specifier: ^3.6.4
+        version: 3.6.4
 
 packages:
 

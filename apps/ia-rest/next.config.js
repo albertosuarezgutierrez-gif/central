@@ -12,7 +12,7 @@ const nextConfig = {
   // SUPABASE_SERVICE_ROLE_KEY: solo server-side, configurada en Vercel (nunca hardcodear aquí)
 
   // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
-  transpilePackages: ['@iarest/core-ai', '@iarest/core-fiscal'],
+  transpilePackages: ['@iarest/core-ai', '@iarest/core-fiscal', '@iarest/core-push'],
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
 }
