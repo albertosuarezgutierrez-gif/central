@@ -56,7 +56,11 @@
     `parent`, `calcularComision`, `totalComisiones`, `comisionesCobradas`). ia-rest:
     `apps/ia-rest/src/lib/proveedores-evento.ts` (`proveedorServicioAdapter`, estado `comision_cobrada`↔`cobrada`);
     ruta `api/owner/eventos/proveedores-asignaciones` delega comisión y sumas. `next build` verde.
-  - **Patrón validado 4× (pipeline, inventario, margen, comisiones).** Roadmap restante: `module-feedback`,
+  - **`packages/module-feedback` + extracción en ia-rest (HECHO):** módulo genérico (`Feedback`, `Propina` con
+    `parent`/token, `resumenValoraciones`, `totalPropinas`, `propinasPagadas`). ia-rest:
+    `apps/ia-rest/src/lib/feedback-visita.ts` (`feedbackVisitaAdapter` + `propinaAdapter`); las rutas
+    `api/owner/feedback` y `api/owner/propinas` añaden un `resumen` agregado vía el módulo. `next build` verde.
+  - **Patrón validado 5× (pipeline, inventario, margen, comisiones, valoraciones).** Roadmap restante:
     `module-asn`, `module-agenda`.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**

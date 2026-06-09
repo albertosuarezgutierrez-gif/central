@@ -28,6 +28,9 @@ importers:
       '@iarest/module-crm':
         specifier: workspace:*
         version: link:../../packages/module-crm
+      '@iarest/module-feedback':
+        specifier: workspace:*
+        version: link:../../packages/module-feedback
       '@iarest/module-inventario':
         specifier: workspace:*
         version: link:../../packages/module-inventario
@@ -397,6 +400,8 @@ importers:
   packages/module-contabilidad: {}
 
   packages/module-crm: {}
+
+  packages/module-feedback: {}
 
   packages/module-inventario: {}
 
