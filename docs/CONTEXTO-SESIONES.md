@@ -47,6 +47,13 @@
     `resumenStock`). ia-rest: `apps/ia-rest/src/lib/inventario-menaje.ts` (`menajeArticuloAdapter` +
     `menajeAsignacionAdapter` sobre `inventario_menaje`/`inventario_menaje_evento`); la ruta `api/owner/menaje`
     delega la regla de disponibilidad en el módulo. Base del futuro **alquiler de materiales**. `next build` verde.
+  - **`packages/module-presupuestos` + extracción en ia-rest (HECHO, definitivo):** módulo genérico (líneas,
+    costes, descuento, `calcularMargen`, `esRentable`, `resumenPresupuesto`). ia-rest:
+    `apps/ia-rest/src/lib/presupuestos-evento.ts` (`presupuestoEventoAdapter` + `costesDeEvento`, mapea la
+    tarifa adulto/niño + costes a líneas genéricas); la ruta `api/owner/eventos/presupuestos` delega el cálculo
+    de margen/rentabilidad en el módulo. `next build` verde.
+  - **Patrón validado 3× (pipeline, inventario, margen).** Roadmap restante (mismo patrón): `module-proveedores`,
+    `module-feedback`, `module-asn`, `module-agenda`.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
