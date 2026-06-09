@@ -1,10 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { sendWebPush } from '@iarest/core-push'
 
 /**
  * Envía una notificación web-push a todas las suscripciones de una limpiadora.
  * No crítico: si faltan claves VAPID o no hay suscripciones, no hace nada.
- * Scope por empresa_id (frontera multi-tenant).
+ * Scope por empresa_id (frontera multi-tenant). El envío en sí lo hace el núcleo
+ * compartido `@iarest/core-push`; aquí queda el scope, el payload y el borrado.
  */
 export async function sendPushToLimpiadora(
   empresa_id: string,
@@ -25,21 +27,19 @@ export async function sendPushToLimpiadora(
     `)
     if (!subs.length) return
 
-    const webpush = (await import('web-push')).default
-    webpush.setVapidDetails('mailto:hola@ialimp.com', VAPID_PUBLIC, VAPID_PRIVATE)
+    const vapid = { publicKey: VAPID_PUBLIC, privateKey: VAPID_PRIVATE, subject: 'mailto:hola@ialimp.com' }
+    const payload = { title: titulo, body: cuerpo, icon: '/icon-192.png', badge: '/icon-192.png' }
 
     for (const sub of subs) {
-      try {
-        await webpush.sendNotification(
-          { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
-          JSON.stringify({ title: titulo, body: cuerpo, icon: '/icon-192.png', badge: '/icon-192.png' })
-        )
-      } catch (e: any) {
-        if (e.statusCode === 410) {
-          await prisma.$executeRaw(Prisma.sql`
-            DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}
-          `)
-        }
+      const res = await sendWebPush(
+        vapid,
+        { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth_key } },
+        payload,
+      )
+      if (res.gone) {
+        await prisma.$executeRaw(Prisma.sql`
+          DELETE FROM push_subscriptions WHERE endpoint = ${sub.endpoint}
+        `)
       }
     }
   } catch (_) { /* push no crítico */ }

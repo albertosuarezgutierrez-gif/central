@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@iarest/core-ai": "workspace:*",
+    "@iarest/core-push": "workspace:*",
     "jimp": "^0.22.12",
     "next": "^15.5.18",
     "react": "^19.0.0",
