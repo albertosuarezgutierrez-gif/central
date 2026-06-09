@@ -49,3 +49,49 @@ export interface Tenant {
   /** Marca para white-label; los módulos de UI la consumen. */
   branding?: TenantBranding
 }
+
+// ── Jerarquía de cuenta (HITO 2: Cuenta → Sociedad → Negocio) ────────────
+
+/**
+ * Sector de un negocio. La lista es abierta (enchufable).
+ * Los valores conocidos son los 3 existentes; cualquier string válido es aceptado.
+ */
+export type Sector = 'hosteleria' | 'limpieza' | 'inmobiliario' | (string & {})
+
+/** El dueño — persona o empresa que tiene la cuenta en la plataforma. */
+export interface Cuenta {
+  id: string
+  nombre: string
+  email: string
+}
+
+/**
+ * Empresa o CIF bajo una cuenta.
+ * Adaptable: puede ser 1 solo CIF o varias empresas separadas.
+ */
+export interface Sociedad {
+  id: string
+  cuentaId: string
+  nombre: string
+  cif?: string
+}
+
+/**
+ * Unidad operativa de un sector (negocio, local, finca…).
+ * `refExt` = ID en la app vertical (empresa_id en ialimp/sivra, local_id en ia.rest).
+ * `app` = qué vertical lo gestiona.
+ */
+export interface Negocio {
+  id: string
+  sociedadId: string
+  nombre: string
+  sector: Sector
+  refExt?: string
+  app?: 'ia-rest' | 'ialimp' | 'sivra' | (string & {})
+}
+
+/** Sesión de cuenta (plataforma). Distinta de `Session` (sesión de vertical). */
+export interface CuentaSession {
+  cuentaId: string
+  email: string
+}

@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Cuenta {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String?    @map("password_hash")
+  sessionJti   String?    @map("session_jti")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  sociedades   Sociedad[]
+
+  @@map("cuentas")
+}
+
+model Sociedad {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId  String    @map("cuenta_id") @db.Uuid
+  nombre    String
+  cif       String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  cuenta    Cuenta    @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+  negocios  Negocio[]
+
+  @@map("sociedades")
+}
+
+model Negocio {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sociedadId String   @map("sociedad_id") @db.Uuid
+  nombre     String
+  sector     String
+  refExt     String?  @map("ref_ext")
+  app        String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  sociedad   Sociedad @relation(fields: [sociedadId], references: [id], onDelete: Cascade)
+
+  @@map("negocios")
+}
