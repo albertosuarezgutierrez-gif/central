@@ -318,8 +318,20 @@
         <li>Para <b>quitar</b> la limpiadora, elige <b>«— Sin asignar —»</b>.</li>
       </ol>
       <p>Puedes reasignar también las limpiezas de <b>hoy</b>, siempre que no estén <b>completadas</b>. Las limpiezas ya terminadas se muestran bloqueadas (en verde) y no se tocan.</p>
-      <div class="note"><b>Si dejas una limpieza sin asignar:</b> el reparto automático de las <b>16:00</b> podría volver a asignarla solo. Si quieres que la haga una persona concreta, asígnasela tú directamente en vez de dejarla en blanco.</div>
+      <div class="note"><b>Si dejas una limpieza sin asignar:</b> el reparto automático de las <b>16:00</b> podría volver a asignarla solo. Si quieres que la haga una persona concreta, asignásela tú directamente en vez de dejarla en blanco.</div>
       <div class="note"><b>Eliminar una limpieza:</b> el botón <b>«Eliminar»</b> solo aparece en limpiezas <b>creadas a mano</b> que aún no han empezado. Las que vienen de <b>Smoobu</b> no se pueden borrar: volverían a crearse en la siguiente sincronización (para «saltarte» una de esas, déjala sin asignar).</div>
+
+      <h3>Editar, mover, ordenar y priorizar limpiezas</h3>
+      <p>Tanto en el <b>Inicio</b> como en la <b>Agenda</b>, cada limpieza (que no esté completada) tiene una fila de botones para gestionarla sin recargar la pantalla:</p>
+      <ul>
+        <li><b>✏️ Editar</b> — abre la limpieza para cambiar <b>fecha, hora, tipo de servicio, nº de huéspedes y notas</b>. Si cambias la fecha o la hora de una limpieza que ya tiene limpiadora, ella recibe un <b>aviso al móvil</b> («⏰ Cambio de horario») con los nuevos datos.</li>
+        <li><b>↑ / ↓</b> — <b>reordena</b> a mano el orden en que se hacen las limpiezas del día (sube o baja la tarjeta). El orden que fijes manda sobre el automático; con <b>↺ Orden automático</b> (en la Agenda) vuelves al orden por prioridad.</li>
+        <li><b>⏰→Mañana / ←Hoy</b> — <b>mueve</b> la limpieza a otro día con un toque (al día siguiente o al anterior). Desaparece del día actual y aparece en el nuevo.</li>
+        <li><b>🔥 Urgente</b> — marca la limpieza como <b>urgente</b>: salta arriba de la lista (en tus pantallas y en la app de la limpiadora). Vuelve a pulsar para quitarlo.</li>
+        <li><b>⧉ Duplicar</b> (Inicio) — crea una <b>copia</b> de la limpieza (mismo piso y tipo) y la abre para que ajustes fecha y hora. Útil para repetir un servicio.</li>
+        <li><b>⚠️ Sin asignar</b> (Inicio) — un filtro rápido que muestra <b>solo las limpiezas sin limpiadora</b>, para repartirlas de un vistazo.</li>
+      </ul>
+      <div class="tip"><b>Orden de la lista:</b> primero el <b>orden manual</b> que hayas fijado, luego las <b>🔥 urgentes</b>, luego las de <b>ventana ajustada</b>, luego las que tienen <b>entrada de huésped</b> (antes quien entra primero) y, por último, por <b>hora</b>. La app de la limpiadora respeta ese mismo orden.</div>
 
       <h3>Briefing diario con IA</h3>
       <p>En la parte superior del <b>Inicio</b> tienes la tarjeta <b>«Briefing diario con IA»</b>. Pulsa <b>✨ Generar</b> y ialimp te escribe en segundos un resumen en lenguaje natural con <b>todo lo importante del día</b>, para saber de un vistazo cómo va la jornada sin revisar pantalla por pantalla.</p>
@@ -475,9 +487,12 @@
       <p class="lead">Lo que ve tu equipo cuando entra con su PIN en <code>app.ialimp.es/l</code>.</p>
       <div class="card">
         <ul style="margin-bottom:0">
-          <li><b>Sus limpiezas del día</b>, ordenadas y con los datos del piso.</li>
+          <li><b>Sus limpiezas del día</b>, ordenadas por prioridad y con los datos del piso. Las <b>urgentes</b> y las que tienen <b>entrada de huésped</b> salen arriba del todo.</li>
+          <li><b>📝 Indicaciones</b>: si has escrito <b>notas</b> en la limpieza (al crearla o editarla), la limpiadora las ve <b>destacadas</b> al abrir el piso, antes del checklist. Si la marcaste como <b>🔥 urgente</b>, también lo ve.</li>
           <li><b>Checklist de tareas</b>: va marcando lo que hace.</li>
-          <li><b>Fotos</b>: en las tareas marcadas como obligatorias, debe subir una foto (algunas se comparan con una foto de referencia).</li>
+          <li><b>📷 Subir fotos</b>: en las tareas marcadas como obligatorias, la limpiadora pulsa <b>«Subir foto»</b> y la hace con la cámara del móvil. La tarea no cuenta como terminada hasta que la foto está subida; algunas se comparan automáticamente con una <b>foto de referencia</b> (semáforo IA). Al cerrar la limpieza también puede hacer una <b>foto de sus botes de producto</b> para que la IA registre el nivel que queda.</li>
+          <li><b>⚠️ Reportar incidencias</b>: si encuentra algo (un desperfecto, una avería, algo que falta), pulsa <b>«+ Añadir»</b> en el bloque de <b>Incidencias</b> y lo describe. Queda registrado con la hora y tú lo ves en la sesión.</li>
+          <li><b>💬 Chat de equipo</b>: el botón <b>«💬 Chat equipo»</b> abre la conversación con tu empresa (y un chat propio de cada limpieza). Sirve para resolver dudas al momento; si hay mensajes sin leer, aparece un <b>contador rojo</b>.</li>
           <li><b>📍 Cómo llegar</b>: abre la ruta directa al piso.</li>
           <li><b>🧴 Productos usados</b>: al terminar, anota cuántas unidades de cada producto ha gastado. Cada unidad que registra se <b>descuenta del stock</b> automáticamente, para que el inventario refleje siempre lo que queda de verdad. La limpiadora <b>no ve los precios</b> de los productos (eso es información tuya).</li>
         </ul>
