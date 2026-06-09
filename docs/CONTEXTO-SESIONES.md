@@ -49,12 +49,18 @@
     las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
   - **Pendiente Fase 3 (opcional):** que ia-rest adopte `core-email` para su envío con Resend (hoy usa su
     propio cliente); `core-security` (rate-limit en BD, 1 consumidor); adoptar `core-identity`.
-  - **Limpieza (auditada 09/06, requiere acción manual de Alberto — yo no puedo borrar ramas/proyectos
-    desde el entorno):** (1) **37 ramas `claude/*`** acumuladas → activar "Automatically delete head
-    branches" en Settings del repo + borrar las mergeadas. (2) **Vercel `ia-rest-app`** = duplicado
-    huérfano (deploy ERROR, sin dominio) → BORRAR; **`ialimp-fuentes`** (vivo, ¿fuentes?) → verificar
-    antes. `ia-rest-docs`/`repo` ya no existen. (3) **Repos viejos `sivra`/`ialimp`** (absorbidos por el
-    monorepo) → ARCHIVAR (no borrar). **Marca de la matriz:** elegir nombre → renombrar scope `@iarest/*`.
+  - **Limpieza HECHA por Alberto (09/06):** auto-delete head branches ✅ activado · Vercel `ia-rest-app`
+    e `ialimp-fuentes` ✅ borrados · repos viejos `sivra`/`ialimp` ✅ ARCHIVADOS (read-only). Quedan por
+    borrar 10 ramas mergeadas (comando `git push origin --delete …` desde su terminal).
+  - **🔧 Fix derivado del archivado (PR #99):** archivar el repo `ialimp` detuvo su Action "Deploy landing"
+    = el ÚNICO que desplegaba `ialimp.es` (el workflow del monorepo estaba en `apps/ialimp/.github/`, que
+    GitHub NO ejecuta — solo corre `.github/workflows/` de la RAÍZ). Reubicado a la raíz con rutas a
+    `apps/ialimp/landing/ialimp-es`. **PENDIENTE de Alberto:** añadir el secreto **`VERCEL_TOKEN`** al repo
+    `ia.rest` (Settings → Secrets → Actions) para que la landing vuelva a auto-desplegar; probar con "Run
+    workflow". `ialimp.es` sigue ONLINE (lo ya publicado no se cayó). Proyecto Vercel `ialimp-landing` intacto.
+  - **Pendiente clave:** **Marca de la matriz** → elegir nombre (Claude Design recomienda **"Encaje"**;
+    dominios `encaje.ai`/`encaje.app` libres, `.com`/`.es` ocupados) → renombrar scope `@iarest/* → @<marca>/*`
+    (rename mecánico, listo para ejecutar en cuanto se decida).
 
 - **✅ FASE 3 (adopción de núcleos) — cerrada en core-ai; resto APLAZADO por límite de infra — 08/06/2026**
   - **`core-ai` adoptado en las 3 verticales y en producción** (PR #91 sivra, #92 ialimp; ia.rest ya lo
