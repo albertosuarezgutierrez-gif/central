@@ -83,6 +83,13 @@ distintos**, y quiere **una sola cuenta** para gestionarlos todos. Ejemplos real
 3. **Datos compartidos vs aislados:** ialimp+sivra comparten BD; ia.rest tiene otra → el
    módulo común debe contemplar **mismo motor, distintos orígenes de datos** desde el día 1.
 4. (Opcional) **Dashboard de matriz** para Alberto: vista consolidada de todos sus negocios.
+5. **Capacidad transversal de IA — RECONOCIMIENTO DOCUMENTAL (sobre `core-ai`):** OCR/visión de
+   **facturas, albaranes, tickets, CVs, fotos**. Se construye 1 vez y **queda disponible en TODOS los
+   negocios/sectores a la vez**; cada mejora del reconocimiento mejora a todos. Alimenta:
+   **Contabilidad** (factura/albarán/ticket → asiento automático) y **RRHH** (CV → ficha de candidato),
+   y casos de sector (foto de limpieza/obra → control de calidad). **Hoy está TRIPLICADO** (ia.rest
+   scanner de albaranes · ialimp escáner contable + selección de CVs · sivra parse-invoice) → unificarlo
+   es el mismo patrón "construye una vez, enchufa en todos". Ejemplo perfecto de la idea.
 
 ## 6. Restricciones / invariantes
 - **Vanessa (Sique Brilla)** sigue en su `ialimp` actual **sin romper nada**; migración
