@@ -26,20 +26,17 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
-## Estado HITO 2 (09/06/2026)
+## Estado (09/06/2026) — COMPLETO
 - [x] Tablas `cuentas/sociedades/negocios` aplicadas en Supabase.
-- [x] Shell completo: login, dashboard con tarjetas por negocio.
-- [ ] Stub financiero (las tarjetas muestran "—" hasta federar con `module-contabilidad`).
-- [ ] Alta de cuentas por UI (hoy se inserta a mano en Supabase).
-- [ ] Resumen financiero real por negocio (HITO 3).
+- [x] Shell: login + dashboard con tarjetas por negocio.
+- [x] **Registro de cuenta por UI** (`/register` → `POST /api/auth/register`, auto-login).
+- [x] **CRUD sociedad/negocio por UI** (crear/editar/eliminar, scoped por `cuenta_id`).
+- [x] **Resumen financiero real** por negocio (HITO 3): ialimp (`v_contab_pyg`) + sivra (`incomes`/`expenses`).
+- [ ] ia-rest financiero (BD separada `efncqyvhniaxsirhdxaa`; sin clientes aún → muestra "📊 BD separada").
 
-## Añadir una cuenta manualmente (hasta que haya UI)
-```sql
--- En el SQL editor de Supabase (proyecto wswbehlcuxqxyinousql):
-INSERT INTO cuentas (nombre, email, password_hash)
-VALUES ('Alberto', 'tu@email.com', '<bcrypt hash>');
--- Generar el hash: node -e "require('bcryptjs').hash('tuPassword', 12).then(console.log)"
-```
+## Registrar una cuenta
+Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
+El alta manual por SQL ya no es necesaria.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

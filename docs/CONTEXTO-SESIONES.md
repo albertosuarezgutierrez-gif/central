@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ HITO 5 — Plataforma CRUD completo (edición + registro de cuenta) — 09/06/2026**
+  (PR #104 mergeado; producción `https://plataforma-ten-flame.vercel.app`)
+  - `PATCH /api/sociedades/[id]` y `PATCH /api/negocios/[id]` — edición scoped por `cuenta_id`.
+  - `POST /api/auth/register` + `/register` — alta de cuenta por UI con auto-login (`/register` público en middleware).
+  - `EditarSociedadBtn`/`EditarNegocioBtn` — modales ✎ con valores precargados.
+  - **Plataforma COMPLETA**: registro · login · CRUD sociedad/negocio · financiero real (ialimp+sivra).
+  - **PENDIENTE:** volcar Sique Brilla (cuenta real) + ia-rest financiero (sin clientes aún).
+
+- **✅ HITO 4 — Gestión de sociedades y negocios por UI en plataforma — 09/06/2026**
+  (PR #103 mergeado)
+  - `POST/DELETE /api/sociedades` y `POST/DELETE /api/negocios` — crear/eliminar scoped por `cuenta_id`.
+  - `GestionSociedad.tsx` — modales ＋ Sociedad / ＋ Negocio / ✕, con `router.refresh()`.
+
 - **✅ HITO 3 — Dashboard financiero en plataforma (ialimp + sivra) — 09/06/2026**
   (PR #102 mergeado; preview producción `https://plataforma-ten-flame.vercel.app`)
   - **`apps/plataforma/lib/financiero.ts`** nuevo: `getResumenNegocio(app, refExt, anio)` dispatcher.
