@@ -43,9 +43,13 @@
        canal (Smoobu API) con tope de seguridad y aprobación opcional.
     5. **Robustez/observabilidad:** reintentos, alertas si una fuente falla, validación de outliers (precio absurdo no se aplica),
        y log/auditoría de cada cambio de precio (para defender el resultado ante el cliente).
-  - **Hecho esta sesión:** evaluación de conectores, fuente real Booking+Trivago, endpoint `/api/mercado/ingest`, piloto Busto
-    Reform cargado y **corregido por capacidad**, memoria actualizada. PR **#108** (draft, CI verde). Branch
+  - **Hecho esta sesión:** evaluación de conectores, fuente real Booking+Trivago, endpoint `/api/mercado/ingest`, comps
+    a-capacidad cargados para los **4 pisos** (Busto 2pax p50 168€ · Duplex 4pax 180€ · Luxury 5pax 228€ · House 12pax 650€),
+    y **`GET /api/pricing/recommend`** = motor anclado al mercado (idea #1, sólo recomienda, no aplica). Doc de producto
+    `apps/sivra/docs/pricing-automatico.md` con las 4 ideas. PR **#108** (draft, CI verde). Branch
     `claude/tourist-apartments-auto-pricing-jq0v4z`.
+  - **Decisiones de negocio pendientes (tocan dinero):** posicionamiento objetivo por piso (p50 vs +/-), ajuste por calidad
+    (falta score propio por piso), y aprobar el salto de "recomendar" → "aplicar" (push a Smoobu con tope).
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:

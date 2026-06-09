@@ -53,7 +53,8 @@ dormitorios; se usa la **ocupación (huéspedes)** como proxy.
 ## 4. Checklist para que sea VENDIBLE ("no puede fallar")
 
 - [ ] **Autonomía (Estrategia 2):** API real de mercado llamada por el cron, sin humano en el bucle.
-- [ ] **Comps por capacidad para los 4 pisos:** sólo Busto Reform está corregido; faltan Duplex/Luxury/House.
+- [x] **Comps por capacidad para los 4 pisos** (09/06): Busto 2pax p50 168€ · Duplex 4pax p50 180€ ·
+      Luxury 5pax p50 228€ · House 12pax p50 650€. (Booking; falta añadir Trivago como 2ª fuente.)
 - [ ] **Reconciliar la fórmula:** para Busto Reform no cuadran `OUR_PRICES.normal` (80€) vs base `snapshot`
       (175€) vs mercado real (~168€). Definir una única fuente de verdad del "precio recomendado".
 - [ ] **Cerrar el bucle a Smoobu:** escribir el precio en el canal vía Smoobu API (con tope de seguridad
@@ -63,7 +64,34 @@ dormitorios; se usa la **ocupación (huéspedes)** como proxy.
 - [ ] **Multi-propiedad / multi-cliente:** generalizar de 4 pisos fijos a N propiedades por cuenta
       (encaja con la jerarquía `Cuenta→Sociedad→Negocio` de `apps/plataforma`).
 
+## 6. Ideas de producto (priorizadas)
+
+1. **Motor anclado al MERCADO (en vez de fórmula a mano) — la grande.** Hoy el precio sale de
+   multiplicadores inventados (`EVENTS/SEASONAL/DOW`) imposibles de defender ante un cliente. Con el
+   mercado real por fecha/capacidad, el motor debe ser: **"posiciónate en el percentil X del mercado
+   comparable, ajustado por calidad (reseñas), con suelo/techo de seguridad"**. Ventajas: resuelve la
+   reconciliación de fórmula de raíz (el mercado es la verdad), es **explicable/vendible**
+   ("te pongo en el p55 de tu competencia real"), y se autoajusta a Feria/Semana Santa sin tablas a mano.
+2. **Diferencial comercial: pricing + operaciones + fiscal en uno.** PriceLabs/Beyond/Wheelhouse solo
+   hacen pricing. El monorepo ya tiene limpiezas (ialimp), fiscal (core-fiscal) y cuadro de mando
+   (plataforma) → gancho: **"pricing + limpieza + facturación, integrado, en español"** para gestores
+   pequeños. Difícil de copiar.
+3. **Medir DEMANDA, no solo precio.** Los conectores devuelven disponibilidad; si la competencia se
+   llena para una fecha, es señal de subir. Ya existe `was_booked` en `rate_snapshots` → revenue
+   management real (sube/baja por ocupación del mercado).
+4. **Validar el piloto YA (coste 0).** Para Busto Reform ya hay mercado (~168€). Fijar un precio de
+   prueba anclado al mercado y medir si se reserva con el bucle de experimentos existente, mientras se
+   construye el resto.
+
 ## 5. Estado a 09/06/2026
-PR **#108** (draft, CI verde) en branch `claude/tourist-apartments-auto-pricing-jq0v4z`: endpoint de ingesta +
-piloto Busto Reform cargado y corregido por capacidad. Falta decidir el siguiente paso (comps de los otros 3
-pisos / reconciliar fórmula / Estrategia 2).
+PR **#108** (draft, CI verde) en branch `claude/tourist-apartments-auto-pricing-jq0v4z`. Hecho:
+- `POST /api/mercado/ingest` — tubería de comps reales (Estrategia 1).
+- Comps a-capacidad cargados para los **4 pisos** (ver §3 / §4).
+- `GET /api/pricing/recommend` — **motor anclado al mercado** (idea #1): recomienda precio por piso desde el
+  percentil del mercado comparable, con suelo/techo. Sólo **calcula**, NO cambia precio en vivo ni escribe en Smoobu.
+  Perillas por defecto: objetivo p50, suelo p25, techo p90.
+
+**Decisiones de negocio pendientes** (las que tocan dinero, "no puede fallar"):
+- Posicionamiento objetivo por piso (mediana p50 vs algo por encima/debajo).
+- Ajuste por calidad (nuestras reseñas vs mercado) — falta el dato de score propio por piso.
+- Aprobar el paso de "recomendar" a "aplicar" (push a Smoobu) y con qué tope/aprobación.
