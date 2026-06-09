@@ -11,6 +11,7 @@ export default function StockPage() {
   const [unidades,   setUnidades]   = useState<any[]>([])
   const [form, setForm] = useState({ nombre: '', categoria: '', unidad: '', stock_actual: '', stock_minimo: '', precio_unitario: '' })
   const [saving, setSaving] = useState(false)
+  const [editProducto, setEditProducto] = useState<any | null>(null)
 
   useEffect(() => { cargar() }, [])
 
@@ -30,11 +31,43 @@ export default function StockPage() {
     setLoading(false)
   }
 
+  function abrirEditar(p: any) {
+    setEditProducto(p)
+    setForm({
+      nombre:          p.nombre          || '',
+      categoria:       p.categoria       || '',
+      unidad:          p.unidad          || '',
+      stock_actual:    p.stock_actual    != null ? String(p.stock_actual)    : '',
+      stock_minimo:    p.stock_minimo    != null ? String(p.stock_minimo)    : '',
+      precio_unitario: p.precio_unitario != null ? String(p.precio_unitario) : '',
+    })
+    setShowForm(true)
+  }
+
+  function cerrarForm() {
+    setShowForm(false)
+    setEditProducto(null)
+    setForm(f => ({ ...f, nombre: '', stock_actual: '', stock_minimo: '', precio_unitario: '' }))
+  }
+
   async function guardar(e: React.FormEvent) {
     e.preventDefault(); setSaving(true)
-    await fetch('/api/admin/stock', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-    await cargar(); setShowForm(false); setSaving(false)
-    setForm(f => ({ ...f, nombre: '', stock_actual: '', stock_minimo: '', precio_unitario: '' }))
+    if (editProducto) {
+      await fetch('/api/admin/stock', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editProducto.id, ...form })
+      })
+    } else {
+      await fetch('/api/admin/stock', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      })
+    }
+    await cargar()
+    cerrarForm()
+    setSaving(false)
   }
 
   const getEmoji = (catId: string) => categorias.find(c => c.id === catId)?.emoji || '📦'
@@ -48,7 +81,7 @@ export default function StockPage() {
           <h1 style={{ color: 'white', fontWeight: 800, fontSize: 20 }}>Stock y materiales</h1>
           <p style={{ color: 'rgba(255,255,255,0.65)', fontSize: 12 }}>{productos.length} productos · {alertas > 0 ? alertas + ' ⚠️ stock bajo' : 'todo OK'}</p>
         </div>
-        <button onClick={() => setShowForm(true)} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
+        <button onClick={() => { setEditProducto(null); setShowForm(true) }} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer' }}>
           + Producto
         </button>
       </header>
@@ -67,10 +100,14 @@ export default function StockPage() {
             <div key={p.id} style={{ background: 'white', borderRadius: 12, border: `1px solid ${p.alerta_stock ? '#fcd34d' : C.border}`, padding: '16px', borderLeft: `4px solid ${p.alerta_stock ? C.warn : C.ok}`, boxShadow: '0 1px 3px rgba(0,0,0,0.04)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
                 <span style={{ fontSize: 22 }}>{getEmoji(p.categoria)}</span>
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontWeight: 700, fontSize: 14, color: C.text }}>{p.nombre}</div>
                   <div style={{ fontSize: 11, color: C.muted }}>{p.categoria} · {p.unidad}</div>
                 </div>
+                <button onClick={() => abrirEditar(p)} title="Editar producto"
+                  style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, padding: '4px 8px', fontSize: 13, cursor: 'pointer', color: C.muted, flexShrink: 0 }}>
+                  ✏️
+                </button>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <div style={{ background: p.alerta_stock ? C.warnBg : C.okBg, borderRadius: 8, padding: '8px 10px' }}>
@@ -90,10 +127,10 @@ export default function StockPage() {
 
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 440, padding: '24px' }}>
+          <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 440, maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h3 style={{ fontWeight: 800, fontSize: 17, color: C.text }}>Nuevo producto</h3>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: C.muted, cursor: 'pointer' }}>✕</button>
+              <h3 style={{ fontWeight: 800, fontSize: 17, color: C.text }}>{editProducto ? 'Editar producto' : 'Nuevo producto'}</h3>
+              <button onClick={cerrarForm} style={{ background: 'none', border: 'none', fontSize: 22, color: C.muted, cursor: 'pointer' }}>✕</button>
             </div>
             <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {[
@@ -126,9 +163,9 @@ export default function StockPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
-                <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, padding: 11, background: 'white', border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
+                <button type="button" onClick={cerrarForm} style={{ flex: 1, padding: 11, background: 'white', border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 14, cursor: 'pointer' }}>Cancelar</button>
                 <button type="submit" disabled={saving} style={{ flex: 2, padding: 11, background: C.primary, color: 'white', border: 'none', borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
-                  {saving ? 'Guardando...' : '+ Añadir producto'}
+                  {saving ? 'Guardando...' : editProducto ? 'Guardar cambios' : '+ Añadir producto'}
                 </button>
               </div>
             </form>
