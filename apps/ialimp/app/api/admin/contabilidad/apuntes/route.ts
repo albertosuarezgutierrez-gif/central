@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
+import { calcularCuotaIva, calcularTotal } from '@iarest/module-contabilidad'
 
 // GET /api/admin/contabilidad/apuntes?year=2026
 // Lista los apuntes contables (gastos) de la empresa: tanto escaneados como
@@ -72,10 +73,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Indica un proveedor o un concepto' }, { status: 400 })
     }
 
-    // Cálculo de IVA y total (se respeta lo que llegue, si no se calcula)
+    // Cálculo de IVA y total (se respeta lo que llegue, si no se calcula con el módulo compartido)
     const pct   = porcentaje_iva != null && porcentaje_iva !== '' ? Number(porcentaje_iva) : 21
-    const cuota = cuota_iva != null && cuota_iva !== '' ? Number(cuota_iva) : Math.round(base * pct) / 100
-    const tot   = total != null && total !== '' ? Number(total) : Math.round((base + cuota) * 100) / 100
+    const cuota = cuota_iva != null && cuota_iva !== '' ? Number(cuota_iva) : calcularCuotaIva(base, pct)
+    const tot   = total != null && total !== '' ? Number(total) : calcularTotal(base, cuota)
 
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO documentos_contables (
