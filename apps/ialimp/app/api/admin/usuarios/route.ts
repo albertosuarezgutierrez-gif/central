@@ -2,13 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(pin)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+import { sha256Hex as hashPin } from '@iarest/core-identity'
 
 // Verifica que el PIN no esté en uso en la misma empresa (excluyendo el id dado)
 async function pinDuplicado(empresa_id: string, pinHash: string, excludeId?: string): Promise<boolean> {

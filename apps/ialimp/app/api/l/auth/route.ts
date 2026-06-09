@@ -3,13 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
-
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(pin)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+import { sha256Hex as hashPin } from '@iarest/core-identity'
 // ────────────────────────────────────────────────────────────────────
 
 // Crea la sesión de la limpiadora y devuelve la respuesta con cookies.

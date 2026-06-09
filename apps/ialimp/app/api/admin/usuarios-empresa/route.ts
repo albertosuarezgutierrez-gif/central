@@ -4,13 +4,7 @@ import { Prisma } from '@prisma/client'
 import { serialize } from '@/lib/serialize'
 import { requireEmpresaId, isOwner, isSuperadmin } from '@/lib/tenant'
 import { hashPassword } from '@/lib/auth'
-
-async function hashPin(pin: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(pin)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+import { sha256Hex as hashPin } from '@iarest/core-identity'
 
 export async function GET() {
   try {

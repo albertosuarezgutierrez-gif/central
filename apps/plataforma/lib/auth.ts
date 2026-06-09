@@ -1,5 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
+import { genJti } from '@iarest/core-identity'
 
 export const COOKIE_NAME = 'plataforma_session'
 const COOKIE_OPTS = { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 } as const
@@ -12,11 +13,7 @@ const secret = () =>
       : 'plataforma-dev-secret-change-in-prod'),
   )
 
-export function genJti(): string {
-  const a = new Uint8Array(16)
-  crypto.getRandomValues(a)
-  return Array.from(a).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+export { genJti }
 
 export const hashPassword = (p: string) => bcrypt.hash(p, 12)
 export const verifyPassword = (p: string, hash: string) => bcrypt.compare(p, hash)
