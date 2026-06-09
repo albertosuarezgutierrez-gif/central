@@ -23,13 +23,17 @@
     **Booking** (`accommodations_search`) + **Trivago** (radius search) — precio real/noche, score, reseñas, barrio.
     DirectBooker/Wyndham/lastminute/TripAdvisor son de hoteles → no sirven de comparable de pisos.
   - **Estrategia 1 (coste 0, elegida para el piloto):** Claude actúa de recolector y vuelca comparables reales en
-    `market_rates`. Cargados **20 comps reales** para `scenario='prop_busto_reform'` (13→14 jun, 4 pax):
-    Booking avg **187€** (p50 180) · Trivago avg **192€** (p50 192) → mercado centro ≈ **187–192€/noche**.
+    `market_rates`. Cargados 14 comps reales para `scenario='prop_busto_reform'`.
+  - **⚠️ CAPACIDAD IMPORTA — corregido:** Busto Reform es **1 dorm / 2 plazas** (`properties.maxGuests`). La 1ª carga se hizo
+    a 4 plazas (pisos más grandes/caros, ~190€) → MAL. Recargado a **2 plazas**: Booking avg **168€** (p50 168, rango 140–220) ·
+    Trivago **166€** → mercado real ≈ **166–168€/noche**. Capacidades: Busto Reform 2 · Duplex Center 4 · Luxury Busto 5 ·
+    House Sevillana 12. **Cada piso necesita comps a SU ocupación** (pendiente para los otros 3). Matiz: el filtro por nº de
+    dormitorios no está en los conectores; se usa la ocupación (nº huéspedes) como proxy.
   - **Nuevo endpoint `POST /api/mercado/ingest`** (protegido por `CRON_SECRET` si está): la "tubería" para meter comps reales
     sin Serper; upsert idempotente con la misma clave que el cron. Es también el hook para una futura API de pago (Estrategia 2).
   - **Pendiente / decisión de Alberto:** validar el piloto y decidir si se pasa a **Estrategia 2** (suscribir una API real
     Booking/Expedia para que el cron sea 100% autónomo). Ojo: `OUR_PRICES` de Busto Reform (normal 80€) está MUY por debajo del
-    mercado (≈190€) → revisar fórmula del motor en la siguiente iteración.
+    mercado (≈168€) y NO cuadra con la base 175€ del motor `snapshot` → revisar/reconciliar fórmula en la siguiente iteración.
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
