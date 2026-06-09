@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — 09/06/2026**
+  (2 PRs en borrador, ramas dedicadas basadas en `main`; pendiente validar preview Vercel + merge)
+  - **PR #111 `feat/vanessa-gestion-limpiezas`** (IALIMP):
+    - `cleaning_sessions` + columnas `orden_manual` (int) y `urgente_manual` (bool) (migración `2026-06-09_orden_manual_sesiones.sql`, aplicada en Supabase). Vista `sesiones_limpiadora` ampliada con `notas`/`orden_manual`/`urgente_manual`.
+    - `PATCH /api/admin/sesiones/[id]` ampliado (session_date, hora_inicio [TEXT, sin cast], hora_checkout/checkin [::time], num_huespedes, notas, orden_manual, urgente_manual; recalcula ventana; push «⏰ Cambio de horario» si cambia fecha/hora de sesión asignada).
+    - `POST /api/admin/sesiones/reordenar` (orden manual por día; `reset:true` → auto).
+    - `NuevaLimpiezaModal` modo edición (prop `sesion` → PATCH; eliminar si `origen='manual'`). Botones ✏️/↑↓/⏰mover-día/🔥urgente/⧉duplicar + filtro ⚠️ sin asignar + aviso solapamiento en Inicio y Agenda.
+    - **App limpiadora `/l`**: `SesionCard` con chips 🔥 Urgente / 📝 Indicaciones (+ borde prioridad); `SesionDetalle` con bloque destacado de urgente + notas antes del checklist.
+    - Docs: `public/manual.html` (editar/ordenar/urgente/duplicar + app limpiadora con fotos/incidencias/chat), `docs/guia-limpiadoras.md` (WhatsApp), `docs/mejoras-vanessa.md` (admin), `apps/ialimp/CLAUDE.md`.
+  - **PR #112 `feat/patrones-reutilizables`**: modo edición (✏️ + PUT) en Stock y Lencería (ialimp), modo edición en `ProgramacionModal` (PATCH + eliminar), botones ↑/↓ para reordenar la carta del owner en ia-rest (swap `orden` + PUT).
+  - Nota operativa: el push HTTP del contenedor daba 503 → se subió todo vía `mcp__github__push_files`. El PR #109 (mezclaba ambos trabajos + arrastraba commits de plataforma) se **cerró** a favor de los 2 PRs limpios.
+
 - **🔄 PR en curso — Gestión de limpiezas para Vanessa (feat/vanessa-gestion-limpiezas) — 09/06/2026**
   Vanessa (Sique Brilla, cliente piloto en producción) pidió 5 mejoras. Todo en rama `feat/vanessa-gestion-limpiezas`:
   - **✅ Migración aplicada en Supabase (`wswbehlcuxqxyinousql`):**
