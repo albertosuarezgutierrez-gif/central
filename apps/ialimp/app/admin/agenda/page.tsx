@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import NuevaLimpiezaModal from '@/components/NuevaLimpiezaModal'
 
 const C = {
   primary: 'var(--brand-primary)', brand: 'var(--brand-secondary)', light: 'var(--brand-light)',
@@ -20,16 +21,45 @@ function getLunes(d = new Date()) {
 
 function isoDate(d: Date) { return d.toISOString().split('T')[0] }
 
+// hora_* puede llegar como Date, ISO o "HH:MM:SS" → la dejamos en "HH:MM"
+const hhmm = (v: any): string => {
+  if (!v) return ''
+  if (v instanceof Date) return isNaN(v.getTime()) ? '' : v.toISOString().slice(11, 16)
+  const s = String(v)
+  return (s.includes('T') ? s.split('T')[1] : s).slice(0, 5)
+}
+
+// Misma regla de orden que en Inicio: manual → urgente → ventana → entrada → hora
+function prioridad(a: any, b: any) {
+  const am = a.orden_manual ?? null, bm = b.orden_manual ?? null
+  if (am !== null || bm !== null) {
+    if (am === null) return 1
+    if (bm === null) return -1
+    if (am !== bm) return am - bm
+  }
+  const au = a.urgente_manual ? 0 : 1, bu = b.urgente_manual ? 0 : 1
+  if (au !== bu) return au - bu
+  const av = a.alerta_ventana ? 0 : 1, bv = b.alerta_ventana ? 0 : 1
+  if (av !== bv) return av - bv
+  const ae = a.hora_checkin_siguiente ? 0 : 1, be = b.hora_checkin_siguiente ? 0 : 1
+  if (ae !== be) return ae - be
+  const ac = hhmm(a.hora_checkin_siguiente) || '99:99', bc = hhmm(b.hora_checkin_siguiente) || '99:99'
+  if (ac !== bc) return ac < bc ? -1 : 1
+  return (hhmm(a.hora_inicio) || '99:99').localeCompare(hhmm(b.hora_inicio) || '99:99')
+}
+
 export default function AgendaPage() {
   const [semana, setSemana]   = useState(getLunes())
   const [sesiones, setSes]    = useState<any[]>([])
   const [limp, setLimp]       = useState<any[]>([])
+  const [clientes, setClientes] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Gestión manual por día (asignar / reasignar / desasignar / cancelar)
+  // Gestión manual por día (asignar / reasignar / desasignar / cancelar / editar / reordenar)
   const [gestDate, setGestDate] = useState(isoDate(new Date()))
   const [gestSes, setGestSes]   = useState<any[]>([])
   const [busyId, setBusyId]     = useState<string | null>(null)
+  const [editSesion, setEditSesion] = useState<any | null>(null)
   const [toast, setToast]       = useState<{ msg: string; tipo: 'ok' | 'warn' | 'error' } | null>(null)
 
   useEffect(() => { cargar() }, [semana])
@@ -46,14 +76,17 @@ export default function AgendaPage() {
       const d = new Date(semana); d.setDate(semana.getDate() + i)
       return isoDate(d)
     })
-    const [r1, r2] = await Promise.all([
+    const [r1, r2, r3] = await Promise.all([
       fetch('/api/admin/agenda?desde=' + dias[0] + '&hasta=' + dias[6], { credentials: 'include' }),
-      fetch('/api/admin/limpiadoras/usuarios', { credentials: 'include' })
+      fetch('/api/admin/limpiadoras/usuarios', { credentials: 'include' }),
+      fetch('/api/admin/clientes', { credentials: 'include' }),
     ])
     const d1 = await r1.json()
     const d2 = await r2.json()
+    const d3 = await r3.json().catch(() => ({}))
     setSes(d1.sesiones || [])
     setLimp(d2.limpiadoras || [])
+    setClientes(d3.clientes || [])
     setLoading(false)
   }
 
@@ -62,7 +95,7 @@ export default function AgendaPage() {
       const r = await fetch('/api/admin/agenda?desde=' + gestDate + '&hasta=' + gestDate, { credentials: 'include' })
       const d = await r.json()
       if (!r.ok) { showToast(d.error || 'No se pudieron cargar las sesiones', 'error'); return }
-      setGestSes(d.sesiones || [])
+      setGestSes((d.sesiones || []).slice().sort(prioridad))
     } catch { showToast('Error de red al cargar', 'error') }
   }
 
@@ -97,6 +130,90 @@ export default function AgendaPage() {
       await Promise.all([cargarGest(), cargar()])
     } catch { showToast('Error de red', 'error') }
     finally { setBusyId(null) }
+  }
+
+  // Mover de día (±n) — PATCH session_date; optimista (sale del día actual)
+  async function moverDia(s: any, diasOffset: number) {
+    const base = new Date((String(s.session_date).slice(0, 10) || gestDate) + 'T12:00:00')
+    base.setDate(base.getDate() + diasOffset)
+    const nueva = isoDate(base)
+    setBusyId(s.id)
+    try {
+      const r = await fetch('/api/admin/sesiones/' + s.id, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_date: nueva }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { showToast(d.error || 'No se pudo mover', 'error'); return }
+      showToast('Movida a ' + nueva, 'ok')
+      await Promise.all([cargarGest(), cargar()])
+    } catch { showToast('Error de red', 'error') }
+    finally { setBusyId(null) }
+  }
+
+  // Marcar/quitar urgente — PATCH urgente_manual; optimista
+  async function toggleUrgente(s: any) {
+    const nuevo = !s.urgente_manual
+    setGestSes(ss => ss.map(x => x.id === s.id ? { ...x, urgente_manual: nuevo } : x).sort(prioridad))
+    try {
+      const r = await fetch('/api/admin/sesiones/' + s.id, {
+        method: 'PATCH', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urgente_manual: nuevo }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { cargarGest(); showToast(d.error || 'No se pudo guardar', 'error'); return }
+      showToast(nuevo ? '🔥 Marcada urgente' : 'Urgente quitado', 'ok')
+    } catch { cargarGest(); showToast('Error de red', 'error') }
+  }
+
+  // Reordenar ↑↓ dentro del día — POST /reordenar; optimista por orden_manual
+  async function mover(s: any, dir: -1 | 1) {
+    const lista = gestSes
+    const idx = lista.findIndex(x => x.id === s.id)
+    const j = idx + dir
+    if (idx < 0 || j < 0 || j >= lista.length) return
+    const reordenada = lista.slice()
+    const tmp = reordenada[idx]; reordenada[idx] = reordenada[j]; reordenada[j] = tmp
+    const ids = reordenada.map(x => x.id)
+    const ordenById: Record<string, number> = {}
+    ids.forEach((id, i) => { ordenById[id] = i })
+    setGestSes(ss => ss.map(x => x.id in ordenById ? { ...x, orden_manual: ordenById[x.id] } : x).sort(prioridad))
+    try {
+      const r = await fetch('/api/admin/sesiones/reordenar', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_date: gestDate, orden: ids }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { cargarGest(); showToast(d.error || 'No se pudo reordenar', 'error'); return }
+    } catch { cargarGest(); showToast('Error de red', 'error') }
+  }
+
+  async function ordenAutomatico() {
+    setGestSes(ss => ss.map(x => ({ ...x, orden_manual: null })).sort(prioridad))
+    try {
+      const r = await fetch('/api/admin/sesiones/reordenar', {
+        method: 'POST', credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ session_date: gestDate, reset: true }),
+      })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { cargarGest(); showToast(d.error || 'No se pudo restaurar', 'error'); return }
+      showToast('Orden automático restaurado', 'ok')
+    } catch { cargarGest(); showToast('Error de red', 'error') }
+  }
+
+  // Tras editar en el modal: refrescar ambas vistas
+  function onSesionActualizada(s: any) {
+    if (s.session_date && s.session_date !== gestDate) showToast('Movida a ' + s.session_date, 'ok')
+    else showToast('Limpieza actualizada', 'ok')
+    Promise.all([cargarGest(), cargar()])
+  }
+  function onSesionEliminada() {
+    showToast('Limpieza eliminada', 'ok')
+    Promise.all([cargarGest(), cargar()])
   }
 
   const dias = Array.from({length: 7}, (_, i) => {
@@ -237,6 +354,12 @@ export default function AgendaPage() {
           <div style={{ display:'flex', alignItems:'center', gap:10, flexWrap:'wrap', marginBottom:12 }}>
             <h2 style={{ fontSize:16, fontWeight:800, color: C.text, margin:0 }}>Asignar limpiadora por día</h2>
             <div style={{ flex:1 }} />
+            {gestSes.some(s => s.orden_manual != null) && (
+              <button onClick={ordenAutomatico} title="Volver al orden automático (por prioridad)"
+                style={{ padding:'6px 12px', borderRadius:8, fontSize:12, fontWeight:700, cursor:'pointer', border:`1px solid ${C.border}`, background:'white', color: C.muted }}>
+                ↺ Orden automático
+              </button>
+            )}
             <button onClick={() => setGestDate(isoDate(new Date()))} style={pill(gestDate === isoDate(new Date()))}>Hoy</button>
             <button onClick={() => setGestDate(isoDate(new Date(Date.now() + 86400000)))} style={pill(gestDate === isoDate(new Date(Date.now() + 86400000)))}>Mañana</button>
             <input type="date" value={gestDate} onChange={e => setGestDate(e.target.value)}
@@ -270,12 +393,47 @@ export default function AgendaPage() {
                             ⚠️ Ventana ajustada
                           </span>
                         )}
+                        {s.urgente_manual && (
+                          <span style={{ fontSize:11, fontWeight:800, color:'#dc2626', background:'#fef2f2', border:'1px solid #fca5a5', borderRadius:20, padding:'1px 8px' }}>
+                            🔥 Urgente
+                          </span>
+                        )}
+                        {s.notas && (
+                          <span title={s.notas} style={{ fontSize:11, fontWeight:700, color:'#b45309', background:'#fffbeb', border:'1px solid #fcd34d', borderRadius:20, padding:'1px 8px' }}>
+                            📝 con notas
+                          </span>
+                        )}
                       </div>
                       <div style={{ fontSize:12, color: C.muted }}>
-                        {(s.hora_checkout || s.hora_inicio)?.slice(0,5) || 'sin hora'}
+                        {hhmm(s.hora_checkout || s.hora_inicio) || 'sin hora'}
                         {manual ? ' · manual' : ' · Smoobu'}
                         {completada ? ' · ✅ completada' : s.started_at ? ' · 🔄 en curso' : ''}
                       </div>
+
+                      {/* Fila de acciones (editar / reordenar / mover día / urgente) */}
+                      {!completada && (
+                        <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginTop:7 }}>
+                          {[
+                            { lbl:'✏️ Editar', on:() => setEditSesion(s), title:'Editar fecha, hora o detalles' },
+                            { lbl:'↑',         on:() => mover(s, -1),     title:'Subir en el orden' },
+                            { lbl:'↓',         on:() => mover(s, 1),      title:'Bajar en el orden' },
+                            { lbl:'⏰→Mañana', on:() => moverDia(s, 1),   title:'Mover al día siguiente' },
+                            { lbl:'←Día ant.', on:() => moverDia(s, -1),  title:'Mover al día anterior' },
+                          ].map(b => (
+                            <button key={b.lbl} onClick={b.on} disabled={busyId === s.id} title={b.title}
+                              style={{ padding:'4px 9px', borderRadius:8, border:`1px solid ${C.border}`, background:'white', color: C.text, fontFamily:'inherit', fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap' }}>
+                              {b.lbl}
+                            </button>
+                          ))}
+                          <button onClick={() => toggleUrgente(s)} disabled={busyId === s.id} title="Marcar/quitar urgente"
+                            style={{ padding:'4px 9px', borderRadius:8, fontFamily:'inherit', fontSize:11, fontWeight:700, cursor:'pointer', whiteSpace:'nowrap',
+                              border:`1px solid ${s.urgente_manual ? '#fca5a5' : C.border}`,
+                              background: s.urgente_manual ? '#fef2f2' : 'white',
+                              color: s.urgente_manual ? '#dc2626' : C.text }}>
+                            🔥 Urgente
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {completada ? (
@@ -306,10 +464,23 @@ export default function AgendaPage() {
           )}
 
           <p style={{ fontSize:11, color: C.muted, marginTop:10 }}>
-            Reasigna o quita la limpiadora aunque la limpieza sea de hoy (mientras no esté completada). «Eliminar» solo aparece en limpiezas manuales que no han empezado.
+            Reasigna o quita la limpiadora aunque la limpieza sea de hoy (mientras no esté completada). Con ✏️ Editar cambias fecha, hora, notas y datos; ↑↓ reordena dentro del día (↺ vuelve al orden automático); ⏰→Mañana / ←Día ant. la mueven de día; 🔥 Urgente la sube de prioridad. «Eliminar» solo aparece en limpiezas manuales que no han empezado.
           </p>
         </div>
       </div>
+
+      {/* Modal de edición de una limpieza existente (PATCH) */}
+      {editSesion && (
+        <NuevaLimpiezaModal
+          clientes={clientes}
+          limpiadoras={limp}
+          sesion={editSesion}
+          onCreada={() => {}}
+          onActualizada={(s) => { onSesionActualizada(s); setEditSesion(null) }}
+          onEliminada={() => { onSesionEliminada(); setEditSesion(null) }}
+          onClose={() => setEditSesion(null)}
+        />
+      )}
 
       {toast && (
         <div style={{
