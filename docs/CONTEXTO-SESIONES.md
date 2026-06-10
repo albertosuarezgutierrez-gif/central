@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod) — 10/06/2026**
+  Vanessa (Sique Brilla) probaba el chat con las limpiadoras y no lo encontraba en su panel. El chat
+  (`/admin/chat`) **ya existía y funcionaba**, pero solo era accesible desde la barra inferior del **móvil**;
+  en el **menú lateral del escritorio** (`NAV` en `app/dashboard/DashboardClient.tsx`) no había entrada de chat
+  y el único 💬 era «Asistente» (que es el **ayudante de IA**, `/admin/asistente`) → confusión.
+  - **Fix:** añadida entrada **«💬 Chat equipo» → `/admin/chat`** al menú lateral; el asistente de IA pasa a
+    **«🤖 Asistente IA»** para no chocar el icono 💬.
+  - `public/manual.html`: sección Chat con la ruta exacta (lateral en escritorio / barra inferior en móvil) +
+    aclaración Chat-equipo vs Asistente-IA + recordatorio de cómo lo ve la limpiadora en `/l`.
+  - Solo navegación + manual (5 inserciones / 3 borrados, 2 ficheros). Sin datos, API ni migraciones.
+  - **Mergeado a `main` (squash `86bd78a`) y desplegado a producción (`app.ialimp.es`).** Lo de «enviar el
+    enlace» y «editar» que Vanessa también probaba ya iba bien (no se tocó).
+
 - **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
   De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:
   - **Automático de verdad:** pipeline de crons en `vercel.json` — `07:30` `pricing/guard` (detector de reversión de
