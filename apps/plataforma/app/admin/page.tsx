@@ -27,6 +27,10 @@ export default function OperadorPanel() {
   const [ficha, setFicha] = useState<Ficha | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
   const [tab, setTab] = useState<'clientes' | 'estructura'>('clientes')
+  const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
+  const [showNuevo, setShowNuevo] = useState(false)
+  const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' })
+  const [nuevoErr, setNuevoErr] = useState('')
 
   const cargar = useCallback(async () => {
     setLoading(true); setError('')
@@ -61,10 +65,30 @@ export default function OperadorPanel() {
   }
 
   async function ver360(c: Cliente) {
-    setFicha(null); setBusy('f' + c.vertical + c.id)
+    setFicha(null); setModulos([]); setBusy('f' + c.vertical + c.id)
     const r = await fetch(`/api/admin/clientes/${c.vertical}/${encodeURIComponent(c.id)}`)
-    if (r.ok) { const d = await r.json(); setFicha(d.ficha) }
+    if (r.ok) {
+      const d = await r.json(); setFicha(d.ficha)
+      const m = await fetch(`/api/admin/clientes/${c.vertical}/${encodeURIComponent(c.id)}/modulos`).then(x => x.ok ? x.json() : { modulos: [] }).catch(() => ({ modulos: [] }))
+      setModulos(m.modulos || [])
+    }
     setBusy(null)
+  }
+
+  async function toggleModulo(m: { key: string; activo: boolean }) {
+    if (!ficha) return
+    const r = await fetch(`/api/admin/clientes/${ficha.vertical}/${encodeURIComponent(ficha.id)}/modulos`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ modulo: m.key, activo: !m.activo }),
+    })
+    if (r.ok) setModulos(ms => ms.map(x => x.key === m.key ? { ...x, activo: !x.activo } : x))
+  }
+
+  async function crear(e: React.FormEvent) {
+    e.preventDefault(); setNuevoErr('')
+    const r = await fetch('/api/admin/clientes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(nuevo) })
+    const d = await r.json()
+    if (d.ok) { setShowNuevo(false); setNuevo({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' }); cargar() }
+    else setNuevoErr(d.error || 'Error')
   }
 
   // ── LOGIN ──────────────────────────────────────────────────────────
@@ -96,7 +120,8 @@ export default function OperadorPanel() {
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>🎛️ Panel de control <span style={{ color: C.muted, fontWeight: 500, fontSize: 13 }}>· todas las verticales</span></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <button onClick={() => { setNuevoErr(''); setShowNuevo(true) }} style={{ background: C.accent, border: 'none', color: '#fff', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: FONT, fontWeight: 700, fontSize: 13 }}>➕ Nuevo cliente</button>
           <span style={{ fontSize: 13, color: C.muted }}>{operador}</span>
           <button onClick={logout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: FONT }}>Salir</button>
         </div>
@@ -177,7 +202,47 @@ export default function OperadorPanel() {
                 </div>
               ))}
             </div>
+
+            {modulos.length > 0 && (
+              <div style={{ marginTop: 18 }}>
+                <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Módulos contratados</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {modulos.map(m => (
+                    <label key={m.key} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, background: C.card2, borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>
+                      <span style={{ fontSize: 13 }}>{m.label}</span>
+                      <input type="checkbox" checked={m.activo} onChange={() => toggleModulo(m)} style={{ width: 16, height: 16, accentColor: C.accent, cursor: 'pointer' }} />
+                    </label>
+                  ))}
+                </div>
+                <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>Los cambios aplican en el próximo inicio de sesión del cliente.</div>
+              </div>
+            )}
           </div>
+        </div>
+      )}
+
+      {showNuevo && (
+        <div onClick={() => setShowNuevo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <form onClick={e => e.stopPropagation()} onSubmit={crear} style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: 24, width: '100%', maxWidth: 420 }}>
+            <div style={{ fontSize: 18, fontWeight: 800, marginBottom: 16 }}>➕ Nuevo cliente</div>
+            {nuevoErr && <div style={{ background: C.redBg, color: '#fca5a5', borderRadius: 8, padding: '8px 12px', marginBottom: 12, fontSize: 13 }}>{nuevoErr}</div>}
+            <Field label="Vertical">
+              <select value={nuevo.vertical} onChange={e => setNuevo(n => ({ ...n, vertical: e.target.value }))} style={inp}>
+                <option value="ialimp">Limpieza · ialimp</option>
+                <option value="iarest">Hostelería · ia-rest</option>
+              </select>
+            </Field>
+            <Field label="Nombre"><input value={nuevo.nombre} onChange={e => setNuevo(n => ({ ...n, nombre: e.target.value }))} required style={inp} /></Field>
+            {nuevo.vertical === 'ialimp' && <>
+              <Field label="Email del dueño"><input type="email" value={nuevo.email} onChange={e => setNuevo(n => ({ ...n, email: e.target.value }))} required style={inp} /></Field>
+              <Field label="Contraseña inicial"><input type="text" value={nuevo.password} onChange={e => setNuevo(n => ({ ...n, password: e.target.value }))} required minLength={8} style={inp} /></Field>
+            </>}
+            {nuevo.vertical === 'iarest' && <Field label="Ciudad"><input value={nuevo.ciudad} onChange={e => setNuevo(n => ({ ...n, ciudad: e.target.value }))} style={inp} /></Field>}
+            <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+              <button type="submit" style={{ flex: 1, padding: 11, background: C.accent, border: 'none', borderRadius: 10, color: '#fff', fontWeight: 800, cursor: 'pointer', fontFamily: FONT }}>Crear</button>
+              <button type="button" onClick={() => setShowNuevo(false)} style={{ padding: '11px 16px', background: 'transparent', border: `1px solid ${C.border}`, borderRadius: 10, color: C.muted, cursor: 'pointer', fontFamily: FONT }}>Cancelar</button>
+            </div>
+          </form>
         </div>
       )}
     </div>
@@ -263,4 +328,10 @@ function Estructura() {
 
 function card(accent?: string): React.CSSProperties {
   return { background: '#151b2e', border: `1px solid ${accent || '#2a3457'}`, borderRadius: 12, padding: '14px 16px' }
+}
+
+const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #2a3457', background: '#1c2540', color: '#e8ecf7', fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' }
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return <div style={{ marginBottom: 12 }}><label style={{ fontSize: 11, color: '#8b97b8', fontWeight: 700, display: 'block', marginBottom: 5 }}>{label}</label>{children}</div>
 }

@@ -3,7 +3,8 @@
 // lib/financiero.ts). Bloquear = empresas.activa (ya bloquea el login de ialimp).
 
 import { prisma } from '../db'
-import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica } from './types'
+import { hashPassword } from '../auth'
+import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica, NuevoCliente } from './types'
 
 interface Row {
   id: string
@@ -67,6 +68,20 @@ function aCliente(r: Row): ClienteSaaS {
 export const ialimpAdapter: VerticalAdapter = {
   vertical: 'ialimp',
   etiqueta: 'Limpieza (ialimp)',
+  puedeCrear: true,
+
+  async crear({ nombre, email, password }: NuevoCliente) {
+    if (!nombre || !email || !password) throw new Error('Nombre, email y contraseña obligatorios')
+    const dup = await prisma.$queryRaw<Array<{ id: string }>>`SELECT id FROM empresas WHERE lower(email) = lower(${email}) LIMIT 1`
+    if (dup.length) throw new Error('Ya existe una empresa con ese email')
+    const hash = await hashPassword(password)
+    const rows = await prisma.$queryRaw<Array<{ id: string }>>`
+      INSERT INTO empresas (nombre, email, password_hash, plan)
+      VALUES (${nombre}, ${email.toLowerCase()}, ${hash}, 'starter')
+      RETURNING id
+    `
+    return { id: rows[0].id }
+  },
 
   async listar() {
     try {

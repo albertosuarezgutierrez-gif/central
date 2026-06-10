@@ -45,6 +45,30 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ restaurantes })
 }
 
+// POST /api/operador/restaurantes { nombre, ciudad? } — alta de tenant desde el panel.
+export async function POST(req: NextRequest) {
+  if (!autorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+
+  const { nombre, ciudad } = await req.json().catch(() => ({}))
+  if (!nombre) return NextResponse.json({ error: 'nombre requerido' }, { status: 400 })
+
+  const slug = String(nombre).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40) || `rest-${Date.now()}`
+  const codigo = Math.random().toString(36).slice(2, 8).toUpperCase()
+
+  const supabase = createServerClient()
+  const { data: rest, error } = await supabase
+    .from('restaurantes')
+    .insert({ nombre, slug, codigo_acceso: codigo, plan: 'starter', ciudad: ciudad || 'Madrid' })
+    .select('id')
+    .single()
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Camarero admin por defecto (PIN 0000), igual que /api/super/restaurantes.
+  await supabase.from('personal').insert({ nombre: 'Admin', pin: '0000', rol: 'jefe_sala', local_id: rest.id, activo: true })
+
+  return NextResponse.json({ id: rest.id }, { status: 201 })
+}
+
 // PATCH /api/operador/restaurantes { id, activo } — bloquear/liberar un tenant.
 export async function PATCH(req: NextRequest) {
   if (!autorizado(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })

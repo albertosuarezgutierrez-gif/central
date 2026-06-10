@@ -23,10 +23,14 @@ export interface Cliente360 extends ClienteSaaS {
   modulos?: string[]          // módulos activos (F2)
 }
 
+export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string }
+
 export interface VerticalAdapter {
   vertical: Vertical
   etiqueta: string                                   // "Limpieza (ialimp)"…
+  puedeCrear: boolean                                // ¿se puede dar de alta desde el panel?
   listar(): Promise<ClienteSaaS[]>
   ficha(id: string): Promise<Cliente360 | null>
   setActivo(id: string, activo: boolean): Promise<boolean>   // bloquear/liberar
+  crear?(input: NuevoCliente): Promise<{ id: string }>       // alta de cliente
 }

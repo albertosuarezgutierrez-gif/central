@@ -22,6 +22,7 @@ const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', c
 export const sivraAdapter: VerticalAdapter = {
   vertical: 'sivra',
   etiqueta: 'Inmobiliario (sivra)',
+  puedeCrear: false,
 
   async listar() {
     try {

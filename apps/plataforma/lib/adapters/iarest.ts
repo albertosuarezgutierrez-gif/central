@@ -65,6 +65,16 @@ async function listarRaw(): Promise<RestaurantePort[]> {
 export const iarestAdapter: VerticalAdapter = {
   vertical: 'iarest',
   etiqueta: 'Hostelería (ia-rest)',
+  puedeCrear: true,
+
+  async crear({ nombre, ciudad }) {
+    if (!nombre) throw new Error('Nombre obligatorio')
+    const res = await port('/api/operador/restaurantes', { method: 'POST', body: JSON.stringify({ nombre, ciudad }) })
+    if (!res) throw new Error('ia-rest sin conectar (define IAREST_URL + OPERADOR_SHARED_SECRET)')
+    if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'No se pudo crear en ia-rest') }
+    const { id } = await res.json()
+    return { id }
+  },
 
   async listar() {
     if (!base() || !secret()) return [info('configura IAREST_URL + OPERADOR_SHARED_SECRET')]

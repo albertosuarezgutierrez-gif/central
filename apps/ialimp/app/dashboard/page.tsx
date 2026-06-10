@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getEmpresaId } from '@/lib/tenant'
+import { getModulosOff } from '@/lib/modulos-tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import DashboardClient from './DashboardClient'
@@ -7,6 +8,8 @@ import DashboardClient from './DashboardClient'
 export default async function DashboardPage() {
   const empresa_id = await getEmpresaId()
   if (!empresa_id) redirect('/login')
+
+  const modulosOff = await getModulosOff(empresa_id)
 
   const today = new Date().toISOString().split('T')[0]
 
@@ -49,6 +52,7 @@ export default async function DashboardPage() {
       clientes={clientes}
       limpiadoras={limpiadoras}
       today={today}
+      modulosOff={modulosOff}
     />
   )
 }
