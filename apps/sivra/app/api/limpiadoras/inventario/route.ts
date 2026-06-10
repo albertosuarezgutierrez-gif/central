@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 export async function GET(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const property_id = searchParams.get('property_id')
 
@@ -20,6 +22,7 @@ export async function GET(req: Request) {
 }
 
 export async function POST(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { inventario_id, session_id, limpiadora_id, cantidad_reportada, nota } = await req.json()
   await prisma.$queryRaw(Prisma.sql`
     INSERT INTO inventario_alertas (inventario_id, session_id, limpiadora_id, cantidad_reportada, nota)
