@@ -93,3 +93,36 @@ no estorba (se puede borrar luego con `DROP SCHEMA iarest CASCADE`).
 ## Estado
 Pendiente de arrancar. Bloqueante = **paso 6 (envs de Vercel, tu mano)**. El resto lo ejecuta el
 agente. Cuando quieras, hacemos pasos 1→4 y tú haces el 6.
+
+---
+
+## ✅ ESTADO REAL (actualizado 2026-06-10, ejecutado por dblink server-to-server)
+
+**HECHO — esquema migrado con paridad verificada** (BD compartida, schema `iarest`):
+- 215/215 tablas · 47/47 vistas · 121/121 funciones (las ~35 restantes eran internas de
+  pg_trgm/unaccent → extensiones instaladas en `extensions`) · 32/32 triggers ·
+  428/428 policies RLS · 428/428 FKs · 448 índices · 3 secuencias + ownership.
+- Auditoría de aislamiento: ninguna función con `search_path=public` (todas → `iarest, extensions`).
+- 6 buckets de Storage creados (chat-audio, cobros-imagenes, cobros-pdfs, cvs, iarest-app, logos).
+- **Código ia-rest listo:** `SB_OPTS`/`SB_SCHEMA` en `src/lib/supabase.ts` + 8 ficheros con
+  `createClient` propio. Con `NEXT_PUBLIC_SUPABASE_SCHEMA` sin definir → `public` (igual que hoy).
+  `next build` verde.
+- Tabla de trabajo `iarest._mig_ddl` se conserva hasta verificar el corte (luego DROP).
+
+**⚠️ BLOQUEANTE NUEVO DESCUBIERTO — Edge Functions:** el proyecto viejo tiene **43 Edge
+Functions ACTIVAS** (QR, VeriFactu sign, Stripe/MONEI webhooks, voz, crons). Solo 16 tienen
+fuente en el repo (`apps/ia-rest/supabase/functions/`); las otras 27 hay que recuperarlas del
+proyecto viejo (MCP `get_edge_function`) y redesplegarlas en el compartido, parcheadas para el
+schema `iarest`, y **Alberto debe re-introducir los secrets** (Stripe, MONEI, NIM, Telegram…)
+en el proyecto compartido (no son legibles por API). **NO cambiar las envs de Vercel hasta
+migrar las functions**, o la app llamará a funciones inexistentes.
+
+**ORDEN DEL CORTE (pendiente):**
+1. (Agente) Migrar las 43 Edge Functions al proyecto compartido (fetch→parchear schema→deploy).
+2. (Alberto) Re-introducir secrets de Edge Functions en el compartido.
+3. (Alberto) Supabase compartido → Settings → API → **Exposed schemas** → añadir `iarest`.
+4. (Alberto) Vercel proyecto ia-rest → cambiar `NEXT_PUBLIC_SUPABASE_URL`,
+   `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` (valores del compartido)
+   **+ añadir `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`** → Redeploy.
+5. (Juntos) Smoke test (login, leer, escribir) + plataforma lee iarest nativo + DROP `_mig_ddl`.
+6. (Alberto) Resetear la password de BD de ia-rest (quedó en el chat) y jubilar el proyecto viejo.

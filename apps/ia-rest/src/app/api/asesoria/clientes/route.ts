@@ -2,12 +2,14 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { sesionAceptable } from '@/lib/session-sign'
 import { createClient } from '@supabase/supabase-js'
+import { SB_OPTS } from '@/lib/supabase'
 import { trimestreActual, fechasPeriodo } from '@/lib/contabilidad'
 
 function serviceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    SB_OPTS
   )
 }
 

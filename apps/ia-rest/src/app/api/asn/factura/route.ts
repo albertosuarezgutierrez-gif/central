@@ -3,6 +3,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+import { SB_OPTS } from '@/lib/supabase'
 import { callAIVision, cleanJSON } from '@/lib/ai-client'
 
 const corsHeaders = {
@@ -13,7 +14,8 @@ const corsHeaders = {
 function serviceClient() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    SB_OPTS
   )
 }
 
