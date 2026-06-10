@@ -24,6 +24,18 @@
       "schedule": "15 7 * * *"
     },
     {
+      "path": "/api/pricing/guard",
+      "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/pricing/apply-auto",
+      "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/pricing/resumen-diario",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/pricing/experiments/check-results",
       "schedule": "0 8 * * *"
     },

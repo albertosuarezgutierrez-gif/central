@@ -16,6 +16,112 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
+  De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:
+  - **Automático de verdad:** pipeline de crons en `vercel.json` — `07:30` `pricing/guard` (detector de reversión de
+    PriceLabs + suelo de coste), `08:30` `pricing/apply-auto` (escribe el precio respetando pausa, guardia de confianza
+    y `apply_enabled`), `09:00` `pricing/resumen-diario` (email+push).
+  - **Salvaguardas ("no puede fallar"):** pausa global (`pricing_config.paused`, botón de pánico), guardia de confianza
+    (no escribe con <5 comps o mercado >7d), detector de reversión (alerta `precio_revertido`), `pricing/restore`
+    (deshacer), topes min/max del propietario como autoridad final.
+  - **Motor:** `lib/pricing-calendar.ts` (compartido con snapshot) → `eventFactor` (Semana Santa/Feria, +50% máx, flag
+    `events_enabled`) y `gap_discount_pct` (noche-hueco). Conversión huésped→base por `channel_markup`.
+  - **Panel ampliado:** medidor € extra vs PriceLabs (`pricing/resultados`), histórico (`pricing/historial`), restaurar,
+    pausa, botón de avisos push, toggles de eventos. Endpoints `pricing/settings` (GET estado+reco / PATCH).
+  - **Avisos:** `lib/pricing-notify.ts` (email `@iarest/core-email` + push). `lib/push.ts` (`@iarest/core-push`),
+    tabla **dedicada** `pricing_push_subs` (aislada de `push_subscriptions` compartida), suscripción
+    `/api/propietario/push-subscribe` + SW `public/sw.js`.
+  - **Seguridad:** `lib/cron-auth.ts` — crons de pricing/mercado exigen `CRON_SECRET` (o sesión admin); transición abierta
+    si no está definido. Fuente de mercado automática (Estrategia 2) `mercado/ingest-auto` gated por `MARKET_API_*`.
+  - **Migraciones BD (`wswbehlcuxqxyinousql`):** `pricing_settings`+`events_enabled`/`gap_discount_pct`, `pricing_config`,
+    `pricing_push_subs`. **Mergeado a `main` y desplegado a producción (`sybra.vercel.app`).**
+  - **⚠️ Pendiente de Alberto en Vercel (proyecto sivra):** definir `CRON_SECRET` (sin él el auto-apply diario NO corre —
+    de hecho más seguro: nada se escribe en Smoobu solo; el panel manual sí funciona) y `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/
+    `VAPID_PRIVATE_KEY` (avisos push). Activar `apply_enabled` por piso según quite PriceLabs. Doc: `apps/sivra/docs/pricing-automatico.md`.
+
+- **🔄 SIVRA pricing — fuente de mercado real (Booking+Trivago) + piloto Busto Reform (claude/tourist-apartments-auto-pricing) — 09/06/2026**
+  El "precio automático" (motor `rates/snapshot` + `pricing/detect-opportunities` + experimentos) ya estaba en prod, pero la
+  competencia salía de **scraping de Google (Serper) + IA**, dato aproximado. Mejora de la fuente:
+  - **Conectores evaluados** (MCP de Claude, NO llamables desde el cron de Vercel): el mejor para **apartamentos** es
+    **Booking** (`accommodations_search`) + **Trivago** (radius search) — precio real/noche, score, reseñas, barrio.
+    DirectBooker/Wyndham/lastminute/TripAdvisor son de hoteles → no sirven de comparable de pisos.
+  - **Estrategia 1 (coste 0, elegida para el piloto):** Claude actúa de recolector y vuelca comparables reales en
+    `market_rates`. Cargados 14 comps reales para `scenario='prop_busto_reform'`.
+  - **⚠️ CAPACIDAD IMPORTA — corregido:** Busto Reform es **1 dorm / 2 plazas** (`properties.maxGuests`). La 1ª carga se hizo
+    a 4 plazas (pisos más grandes/caros, ~190€) → MAL. Recargado a **2 plazas**: Booking avg **168€** (p50 168, rango 140–220) ·
+    Trivago **166€** → mercado real ≈ **166–168€/noche**. Capacidades: Busto Reform 2 · Duplex Center 4 · Luxury Busto 5 ·
+    House Sevillana 12. **Cada piso necesita comps a SU ocupación** (pendiente para los otros 3). Matiz: el filtro por nº de
+    dormitorios no está en los conectores; se usa la ocupación (nº huéspedes) como proxy.
+  - **Nuevo endpoint `POST /api/mercado/ingest`** (protegido por `CRON_SECRET` si está): la "tubería" para meter comps reales
+    sin Serper; upsert idempotente con la misma clave que el cron. Es también el hook para una futura API de pago (Estrategia 2).
+  - **🎯 OBJETIVO DE NEGOCIO: esto se va a VENDER como producto (automatización de pricing para pisos turísticos) → "no puede
+    fallar".** Implica que el estado actual (piloto, semi-manual) NO es todavía product-grade. Checklist para hacerlo vendible:
+    1. **Autonomía real (Estrategia 2):** hoy la fuente de mercado depende de que Claude la recolecte en sesión (Estrategia 1).
+       Un producto necesita una **API real** (Booking/Expedia partner o RapidAPI) llamada por el cron, sin humano en el bucle.
+    2. **Comps por capacidad para los 4 pisos:** sólo Busto Reform (2 pax) está corregido. Faltan Duplex (4), Luxury (5),
+       House (12). Comparar contra la ocupación correcta es **crítico** (un fallo aquí = precio mal puesto = cliente perdido).
+    3. **Reconciliar la fórmula del motor:** 3 números no cuadran para Busto Reform → `OUR_PRICES.normal` 80€ vs base 175€ del
+       `snapshot` vs mercado real ~168€. Hasta resolver esto, el "precio recomendado" no es de fiar.
+    4. **Cerrar el bucle a Smoobu:** hoy `detect-opportunities` sólo manda email; un producto debe **escribir el precio** en el
+       canal (Smoobu API) con tope de seguridad y aprobación opcional.
+    5. **Robustez/observabilidad:** reintentos, alertas si una fuente falla, validación de outliers (precio absurdo no se aplica),
+       y log/auditoría de cada cambio de precio (para defender el resultado ante el cliente).
+  - **Hecho esta sesión:** evaluación de conectores, fuente real Booking+Trivago, endpoint `/api/mercado/ingest`, comps
+    a-capacidad cargados para los **4 pisos** (Busto 2pax p50 168€ · Duplex 4pax 180€ · Luxury 5pax 228€ · House 12pax 650€),
+    y **`GET /api/pricing/recommend`** = motor anclado al mercado (idea #1, sólo recomienda, no aplica). Doc de producto
+    `apps/sivra/docs/pricing-automatico.md` con las 4 ideas. PR **#108** (draft, CI verde). Branch
+    `claude/tourist-apartments-auto-pricing-jq0v4z`.
+  - **Producto vendible (decisión de Alberto):** será un **SaaS de pago** para propietarios; el pricing es **100% adaptable por
+    piso** y **sólo activo si contratan**. Implementado: tabla **`pricing_settings`** por piso (`enabled`, `target_pctl`,
+    `floor/ceil_pctl`, `position_factor`, `quality_k`, `own_score`, `min/max_price`); los 4 pisos propios sembrados `enabled=true`.
+    `/api/pricing/recommend` reescrito para leer estos ajustes + ajuste por calidad (reseñas) + hook de demanda.
+  - **Modelo afinado (09/06):** **demanda** ✅ real desde ocupación propia (`rate_snapshots`, ±8%). **2ª fuente** Trivago en
+    Duplex. **Calidad** ✅ `own_score` real (Busto 6,9 · Duplex 7,6 · Luxury 7,2 · House 8,4, dados por Alberto desde Booking)
+    — están BAJO la mediana del mercado (8,7–8,8) → la calidad **baja** el precio. **Salida final verificada (mercado×demanda×
+    calidad):** Busto **161€** · Duplex **175€** · Luxury **219€** · House **614€**.
+  - **ÚNICO paso que NO ejecuto sin OK explícito de Alberto:** escribir precios reales en Smoobu (irreversible / de cara al
+    exterior). Todo lo demás del modelo está aplicado y verificado.
+  - **🧪 PILOTO EN MARCHA (09/06):** validación en **Busto Reform**. Baseline en `apps/sivra/docs/pricing-automatico.md §7`
+    (ocupación 75%, reseñas 6,9, recomendado 161€). Recordatorio en Google Calendar de Alberto **16/06 10:00**.
+    **Acción de Alberto:** desconectar **PriceLabs** en Busto Reform (✅ HECHO 09/06, confirmado por captura) + aplicar el test.
+    **🚨 HALLAZGO:** PriceLabs tenía Busto Reform a **~70€/noche** (la mitad del mercado 168€). Salto a 161€ = +130% (brusco)
+    → recomendado subir por escalones (test ~120€ una semana) o ir al objetivo si Alberto lo ve. apply_enabled=true ya puesto.
+  - **✅ PUSH A SMOOBU CONSTRUIDO — `POST /api/pricing/apply`** (Alberto confirmó que sí se puede por la API de Smoobu).
+    Escribe el precio recomendado en Smoobu (corre en Vercel, que alcanza Smoobu; el dev NO). Protecciones: `dryRun=true` por
+    defecto, gate `apply_enabled` por piso, acotado a [suelo,techo] y `max_change_pct` (20%), auditoría `pricing_applied`,
+    `CRON_SECRET`. ⚠️ **Verificar el formato del POST `/api/rates` de Smoobu en un preview antes de `dryRun=false` en prod.**
+    El **16/06**: analizar piloto y decidir si se extiende a los otros 3 pisos.
+  - **📌 PARA RETOMAR (próxima sesión):** doc maestro = `apps/sivra/docs/pricing-automatico.md`. Endpoints: `/api/mercado/ingest`,
+    `/api/pricing/recommend`, `/api/pricing/apply`. **Estado que vive en BD Supabase `wswbehlcuxqxyinousql` (NO en git, pero
+    persiste):** tablas `pricing_settings` (own_score Busto 6,9/Duplex 7,6/Luxury 7,2/House 8,4; `apply_enabled=true` sólo en
+    Busto), `pricing_applied` (auditoría), comps en `market_rates` (scenario=`prop_*`). **Recordatorio Google Calendar 16/06 10:00.**
+    Suelo de coste `min_price=90` + techo del test `max_price=110` en Busto Reform → motor recomienda **110€**.
+    **⚠️ SMOOBU base ≠ precio huésped:** Smoobu fija un *precio base* y cada canal le suma margen (Booking +16%, Airbnb/Agoda/
+    HomeToGo +15%, Expedia +20%); el host neta ~la base. Nuestros `market_rates` son precios de huésped → **el motor debe escribir
+    base ≈ objetivo_huésped/(1+margen)** (PENDIENTE ajustar en `/api/pricing/apply`). `rate_snapshots.price_pricelabs` = base Smoobu.
+    **✅ TEST EJECUTADO POR EL SISTEMA (10/06 06:36 UTC):** `/api/pricing/apply` (tras arreglar 4 bugs: min/max ignorados,
+    sin conversión huésped→base con `channel_markup` 1.16, orden de topes, occ sin JOIN; + middleware no excluía las rutas
+    de pricing — los crons `detect-opportunities`/`check-results` llevaban redirigidos a /login sin ejecutarse). Escribió en
+    Smoobu: **10/06 65→110 · 23/06 102→110** (únicas fechas libres en 15 días). Verificación triple: re-dry-run "0 cambios",
+    snapshot fresco = 110, auditoría en `pricing_applied`. **Primer precio puesto 100% por el sistema.**
+    **✅ CONFIRMADO VISUALMENTE POR ALBERTO (10/06): "sale perfectamente" en su app Smoobu.** Bucle 100% cerrado:
+    sistema calculó → escribió → verificado por API/BD → visto por el dueño. Prueba de concepto del producto COMPLETA.
+    **⚠️ ANTES DE MERGEAR PR #108: definir `CRON_SECRET` en Vercel sivra** (no parece estar; en prod el middleware ya no
+    bloquea apply). **Vigilar PriceLabs** (el 23 estaba a 102 → algo lo tocó; si revierte a 65, quitar listing del todo).
+    El 16/06: "analiza el piloto de Busto Reform" (recordatorio en Calendar).
+
+- **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
+  Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
+  - **`core-ai/nim.ts`**: `nimVision` 6º param `signal?` → `opts: {temperature?, signal?}` (aditivo). Permite afinar temperatura
+    (OCR 0.05 / fotos 0.1; antes fija 0.1). Si `system` va vacío, NO envía mensaje de sistema (replica el patrón
+    single-user-message de los agentes ialimp). Conserva `nimChat` (multi-turno) de main.
+  - **Rutas migradas** (preservan modelo 90b-vision, temp y max_tokens exactos): `admin/ia/{analizar-foto(0.1/256),
+    comparar-foto(0.1/400),analizar-botes(0.05/600)}`, `admin/escanear/process(0.05/800)`,
+    `cron/procesar-documentos(0.05/800)`, `propietario/[token]/escanear(0.1/1200)`.
+  - **sivra** `aiExtractInvoice`: adapta su llamada a `{ signal: AbortSignal.timeout(30_000) }` (forma opts). **ia-rest** `callAIVision`
+    pasa 5 args → sin cambios. `upload-photo` solo llama a analizar/comparar server-to-server → no toca NVIDIA.
+  - PR en draft; CI en cola. **Pendiente:** validar preview ialimp (escáner docs + análisis fotos) antes de mergear.
+
 - **✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — 09/06/2026**
   (2 PRs en borrador, ramas dedicadas basadas en `main`; pendiente validar preview Vercel + merge)
   - **PR #111 `feat/vanessa-gestion-limpiezas`** (IALIMP):
