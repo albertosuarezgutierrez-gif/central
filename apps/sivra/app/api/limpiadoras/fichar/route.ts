@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 export async function POST(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { session_id, tipo } = await req.json()
   try {
     if (tipo === 'entrada') {

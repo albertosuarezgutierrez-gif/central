@@ -55,16 +55,22 @@ function ExpensesContent() {
 
   const fetchGastos = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams();
-    if (filterYear)  params.set('year',       filterYear);
-    if (filterMonth) params.set('month',      filterMonth);
-    if (filterProp)  params.set('propertyId', filterProp);
-    if (filterCat)   params.set('category',   filterCat);
-    const res  = await fetch('/api/expenses?' + params.toString());
-    const data = await res.json();
-    setGastos(data.gastos || []);
-    setTotalSum(data.total || 0);
-    setLoading(false);
+    try {
+      const params = new URLSearchParams();
+      if (filterYear)  params.set('year',       filterYear);
+      if (filterMonth) params.set('month',      filterMonth);
+      if (filterProp)  params.set('propertyId', filterProp);
+      if (filterCat)   params.set('category',   filterCat);
+      const res  = await fetch('/api/expenses?' + params.toString());
+      if (!res.ok) throw new Error(`Error ${res.status}`);
+      const data = await res.json();
+      setGastos(data.gastos || []);
+      setTotalSum(data.total || 0);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
+    }
   }, [filterYear, filterMonth, filterProp, filterCat]);
 
   useEffect(() => { fetchGastos(); }, [fetchGastos]);

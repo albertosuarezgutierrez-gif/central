@@ -12,6 +12,7 @@ const NAV = [
   { href: '/mensajes',    label: 'Mensajes',     icon: '✉' },
   { href: '/admin/limpiadoras', label: 'Limpiadoras', icon: '◈' },
   { href: '/pricing',     label: 'Pricing',      icon: '◎' },
+  { href: '/pricing-auto', label: 'Pricing Auto', icon: '⚙' },
   { href: '/mercado',     label: 'Mercado',      icon: '⊞' },
   { href: '/agente',      label: 'Agente IA',    icon: '✦' },
   { href: '/knowledge',   label: 'Knowledge',    icon: '◻' },

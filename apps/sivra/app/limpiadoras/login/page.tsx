@@ -77,6 +77,10 @@ export default function LimpiadoarasLogin() {
           </button>
         ))}
       </div>
+
+      <a href="/login" style={{ marginTop: 24, color: 'rgba(255,255,255,.6)', fontSize: 13, textDecoration: 'underline' }}>
+        ¿Eres administrador? Entrar aquí
+      </a>
     </div>
   )
 }

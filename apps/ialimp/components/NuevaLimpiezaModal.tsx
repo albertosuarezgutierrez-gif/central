@@ -1,5 +1,5 @@
 'use client'
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 
 const TIPOS_SERVICIO_DEFAULT = [
   { id: 'rotacion',      label: 'Rotación',      emoji: '🔄', icon: '🔄', desc: 'Entre huéspedes' },
@@ -14,11 +14,25 @@ interface Props {
   limpiadoras: any[]
   onCreada: (sesion: any) => void
   onClose: () => void
+  // ── Modo edición (opcional): si llega `sesion`, el modal edita en vez de crear ──
+  sesion?: any
+  onActualizada?: (sesion: any) => void
+  onEliminada?: (id: string) => void
 }
 
 type Paso = 1 | 2 | 3
 
-export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, onClose }: Props) {
+// hora_* puede venir como "HH:MM:SS", ISO o vacío → la dejamos en "HH:MM" para el <input type=time>
+const toHHMM = (v: any): string => {
+  if (!v) return ''
+  const s = String(v)
+  return (s.includes('T') ? s.split('T')[1] : s).slice(0, 5)
+}
+
+export default function NuevaLimpiezaModal({
+  clientes, limpiadoras, onCreada, onClose, sesion, onActualizada, onEliminada,
+}: Props) {
+  const editando = !!sesion
   const hoy = new Date().toISOString().split('T')[0]
 
   // ── Stepper state ──
@@ -43,50 +57,75 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
       }).catch(() => {})
   }, [])
 
-  const [paso, setPaso] = useState<Paso>(1)
+  // En edición se empieza directo en el paso de trabajo (cliente/propiedad ya fijos)
+  const [paso, setPaso] = useState<Paso>(editando ? 3 : 1)
 
   // ── Paso 1: Cliente ──
-  const [clienteId, setClienteId] = useState('')
+  const [clienteId, setClienteId] = useState(editando ? (sesion.cliente_id || '') : '')
   const [buscaCliente, setBuscaCliente] = useState('')
   const clientesFiltrados = clientes.filter(c =>
     !buscaCliente || c.nombre?.toLowerCase().includes(buscaCliente.toLowerCase()))
 
   // ── Paso 2: Propiedad ──
   const [propiedades, setPropiedades]       = useState<any[]>([])
-  const [propiedadId, setPropiedadId]       = useState('')
+  const [propiedadId, setPropiedadId]       = useState(editando ? (sesion.propiedad_id || '') : '')
   const [loadingProps, setLoadingProps]     = useState(false)
 
   // ── Paso 3: Trabajo ──
   const [form, setForm] = useState({
-    tipo_servicio:           'rotacion',
-    session_date:            hoy,
-    hora_inicio:             '',
-    limpiadora_id:           '',
-    hora_checkout:           '',
-    hora_checkin_siguiente:  '',
-    num_huespedes:           '',
-    notas:                   '',
+    tipo_servicio:           editando ? (sesion.tipo_servicio || 'rotacion') : 'rotacion',
+    session_date:            editando ? (toHHMM(sesion.session_date) ? sesion.session_date : (String(sesion.session_date||'').slice(0,10) || hoy)) : hoy,
+    hora_inicio:             editando ? toHHMM(sesion.hora_inicio) : '',
+    limpiadora_id:           editando ? (sesion.limpiadora_id || '') : '',
+    hora_checkout:           editando ? toHHMM(sesion.hora_checkout) : '',
+    hora_checkin_siguiente:  editando ? toHHMM(sesion.hora_checkin_siguiente) : '',
+    num_huespedes:           editando ? (sesion.num_huespedes != null ? String(sesion.num_huespedes) : '') : '',
+    notas:                   editando ? (sesion.notas || '') : '',
   })
   const [loading, setLoading] = useState(false)
   const [error, setError]     = useState('')
 
   const f = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  // Cargar propiedades cuando cambia el cliente
+  // Cargar propiedades cuando cambia el cliente (solo en modo crear)
   useEffect(() => {
+    if (editando) return
     if (!clienteId) { setPropiedades([]); setPropiedadId(''); return }
     setLoadingProps(true)
     fetch(`/api/admin/propiedades?cliente_id=${clienteId}`)
       .then(r => r.json())
       .then(d => { setPropiedades(d.propiedades || []); setPropiedadId('') })
       .finally(() => setLoadingProps(false))
-  }, [clienteId])
+  }, [clienteId, editando])
 
   // ── Submit final ──
   async function submit() {
     setLoading(true); setError('')
-    const propiedad = propiedades.find(p => p.id === propiedadId)
     try {
+      if (editando) {
+        const res = await fetch('/api/admin/sesiones/' + sesion.id, {
+          method: 'PATCH',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_date:           form.session_date,
+            hora_inicio:            form.hora_inicio || null,
+            limpiadora_id:          form.limpiadora_id || null,
+            tipo_servicio:          form.tipo_servicio,
+            hora_checkout:          form.hora_checkout || null,
+            hora_checkin_siguiente: form.hora_checkin_siguiente || null,
+            num_huespedes:          form.num_huespedes ? Number(form.num_huespedes) : null,
+            notas:                  form.notas || null,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) { setError(data.error || 'Error'); return }
+        onActualizada?.(data.sesion)
+        onClose()
+        return
+      }
+
+      const propiedad = propiedades.find(p => p.id === propiedadId)
       const res = await fetch('/api/admin/sesiones', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -112,9 +151,29 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
     finally  { setLoading(false) }
   }
 
+  async function eliminar() {
+    if (!confirm('¿Eliminar esta limpieza?')) return
+    setLoading(true); setError('')
+    try {
+      const res = await fetch('/api/admin/sesiones/' + sesion.id, { method: 'DELETE', credentials: 'include' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error || 'No se pudo eliminar'); return }
+      onEliminada?.(sesion.id)
+      onClose()
+    } catch { setError('Error de conexión') }
+    finally  { setLoading(false) }
+  }
+
   // ── Helpers stepper ──
-  const clienteNombre   = clientes.find(c => c.id === clienteId)?.nombre || ''
-  const propiedadNombre = propiedades.find(p => p.id === propiedadId)?.nombre || ''
+  const clienteNombre   = editando
+    ? (sesion.cliente_nombre || clientes.find(c => c.id === clienteId)?.nombre || '')
+    : (clientes.find(c => c.id === clienteId)?.nombre || '')
+  const propiedadNombre = editando
+    ? (sesion.property_name || sesion.propiedad_nombre || '')
+    : (propiedades.find(p => p.id === propiedadId)?.nombre || '')
+
+  // Solo se puede eliminar una limpieza manual que no haya empezado ni se haya completado
+  const puedeEliminar = editando && sesion.origen === 'manual' && !sesion.started_at && !sesion.completed_at
 
   const ventanaMin = (() => {
     if (!form.hora_checkout || !form.hora_checkin_siguiente) return null
@@ -123,7 +182,7 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
     return (hI * 60 + mI) - (hO * 60 + mO)
   })()
 
-  // ── Stepper indicator ──
+  // ── Stepper indicator (solo en modo crear) ──
   function Stepper() {
     const pasos = [
       { n: 1, label: 'Cliente',   done: !!clienteId },
@@ -165,19 +224,21 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
         {/* Header */}
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h2 className="font-bold text-gray-800 text-base">Nueva limpieza</h2>
-            <p className="text-xs text-gray-400 mt-0.5">Paso {paso} de 3</p>
+            <h2 className="font-bold text-gray-800 text-base">{editando ? 'Editar limpieza' : 'Nueva limpieza'}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">
+              {editando ? (sesion.property_name || 'Cambia fecha, hora o detalles') : `Paso ${paso} de 3`}
+            </p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">✕</button>
         </div>
 
-        {/* Stepper */}
-        <Stepper />
+        {/* Stepper (solo crear) */}
+        {!editando && <Stepper />}
 
         <div className="p-5 space-y-5">
 
           {/* ═══ PASO 1: CLIENTE ═══ */}
-          {paso === 1 && (
+          {!editando && paso === 1 && (
             <>
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -239,7 +300,7 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
           )}
 
           {/* ═══ PASO 2: PROPIEDAD ═══ */}
-          {paso === 2 && (
+          {!editando && paso === 2 && (
             <>
               <div className="flex items-center gap-2 p-3 rounded-xl bg-indigo-50 border border-indigo-100">
                 <span className="text-indigo-600 font-bold text-sm">👤</span>
@@ -414,7 +475,7 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                   Notas
-                  <span className="font-normal text-gray-400 ml-1">(lo que dijo por WhatsApp)</span>
+                  <span className="font-normal text-gray-400 ml-1">(la limpiadora las verá)</span>
                 </label>
                 <textarea value={form.notas} onChange={e => f('notas', e.target.value)}
                   placeholder="Ej: Cambiar sábanas cama grande, llave bajo felpudo, entrada 15h…"
@@ -425,18 +486,32 @@ export default function NuevaLimpiezaModal({ clientes, limpiadoras, onCreada, on
               {error && <p className="text-red-500 text-sm">{error}</p>}
 
               <div className="flex gap-3 pt-1">
-                <button type="button" onClick={() => setPaso(2)}
-                  className="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl text-sm font-medium">
-                  ← Atrás
-                </button>
+                {editando ? (
+                  <button type="button" onClick={onClose}
+                    className="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl text-sm font-medium">
+                    Cancelar
+                  </button>
+                ) : (
+                  <button type="button" onClick={() => setPaso(2)}
+                    className="flex-1 border border-gray-200 text-gray-600 py-3 rounded-xl text-sm font-medium">
+                    ← Atrás
+                  </button>
+                )}
                 <button type="button"
                   disabled={loading || !form.session_date}
                   onClick={submit}
                   className="flex-1 py-3 rounded-xl text-sm font-bold transition disabled:opacity-50"
                   style={{ background: 'var(--brand-primary)', color: 'white' }}>
-                  {loading ? 'Guardando…' : '✓ Crear limpieza'}
+                  {loading ? 'Guardando…' : editando ? '✓ Guardar cambios' : '✓ Crear limpieza'}
                 </button>
               </div>
+
+              {puedeEliminar && (
+                <button type="button" onClick={eliminar} disabled={loading}
+                  className="w-full text-sm font-semibold text-red-500 py-2 rounded-xl hover:bg-red-50 transition disabled:opacity-50">
+                  🗑️ Eliminar limpieza
+                </button>
+              )}
             </>
           )}
 

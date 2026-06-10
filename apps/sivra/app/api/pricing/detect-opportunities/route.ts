@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { gmailTransporter } from "@iarest/core-email"
+import { isCronAuthorized } from "@/lib/cron-auth"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -31,7 +32,10 @@ const OCC_THRESHOLD: Record<string, number> = {
 // Diferencia mínima para actuar (€)
 const DIFF_THRESHOLD = 40
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!(await isCronAuthorized(req, { allowSession: true }))) {
+    return NextResponse.json({ error: "no autorizado" }, { status: 401 })
+  }
   // 1. Oportunidades del snapshot de hoy (próximos 21 días, disponible, diff grande)
   const opportunities = await prisma.$queryRaw<{
     property_id: string

@@ -395,22 +395,52 @@ function ChecklistView({ session, onBack, onDone }:
 export default function LimpiadoarasPage() {
   const [sessions, setSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string|null>(null)
   const [selectedDate, setSelectedDate] = useState(isoDate(new Date()))
   const [activeSession, setActiveSession] = useState<Session|null>(null)
   const [weekOffset, setWeekOffset] = useState(0)
   const [fichando, setFichando] = useState<string|null>(null)
   const today = isoDate(new Date())
 
+  // Cierra sesión de limpiadora: borra la cookie en servidor y va al login correcto.
+  async function salir() {
+    try { await fetch('/api/limpiadoras/auth', { method: 'DELETE' }) } catch {}
+    window.location.href = '/limpiadoras/login'
+  }
+
   const load = useCallback(async () => {
-    setLoading(true)
-    const base = addDays(new Date(), weekOffset*7)
-    base.setDate(base.getDate()-base.getDay()+1)
-    const from = isoDate(base); const to = isoDate(addDays(base,20))
-    const r = await fetch(`/api/limpiadoras/sessions?from=${from}&to=${to}`)
-    const d = await r.json()
-    setSessions(d.sessions||[])
-    setLoading(false)
+    setLoading(true); setError(null)
+    try {
+      const base = addDays(new Date(), weekOffset*7)
+      base.setDate(base.getDate()-base.getDay()+1)
+      const from = isoDate(base); const to = isoDate(addDays(base,20))
+      const r = await fetch(`/api/limpiadoras/sessions?from=${from}&to=${to}`)
+      if (r.status === 401) {
+        // Sesión/cookie caducada: límpiala y manda al login (evita quedar atrapado).
+        await salir(); return
+      }
+      if (!r.ok) throw new Error(`Error ${r.status}`)
+      const d = await r.json()
+      setSessions(d.sessions||[])
+    } catch (e:any) {
+      setError(String(e?.message||e).slice(0,120))
+    } finally {
+      setLoading(false)
+    }
   }, [weekOffset])
+
+  // Valida el token al entrar: si es inválido/caducado, limpia la cookie y va al login.
+  useEffect(()=>{
+    let cancel = false
+    ;(async()=>{
+      try {
+        const r = await fetch('/api/limpiadoras/auth')
+        const d = await r.json().catch(()=>({}))
+        if (!cancel && !d.limpiadora) { await salir(); return }
+      } catch {}
+    })()
+    return ()=>{ cancel = true }
+  }, [])
 
   useEffect(()=>{ load() }, [load])
 
@@ -455,6 +485,7 @@ export default function LimpiadoarasPage() {
           <div style={{textAlign:'right'}}>
             <div style={{fontSize:10,opacity:.65}}>{new Date().toLocaleDateString('es-ES',{weekday:'short'})}</div>
             <div style={{fontSize:20,fontWeight:800}}>{new Date().toLocaleDateString('es-ES',{day:'numeric',month:'short'})}</div>
+            <button onClick={salir} style={{marginTop:6,background:'rgba(255,255,255,.15)',border:'none',color:'#fff',borderRadius:8,padding:'4px 10px',fontSize:11,fontWeight:700,cursor:'pointer'}}>Salir</button>
           </div>
         </div>
         <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:8,paddingBottom:16}}>
@@ -528,7 +559,14 @@ export default function LimpiadoarasPage() {
             {selectedDate===today&&<span style={{color:'#1B4332',marginLeft:8}}>· Hoy</span>}
           </div>
           {loading&&<div style={{textAlign:'center',padding:32,color:'#9ca3af'}}>Cargando...</div>}
-          {!loading&&daysSessions.length===0&&(
+          {!loading&&error&&(
+            <div style={{textAlign:'center',padding:24,color:'#b91c1c'}}>
+              <div style={{fontSize:13,marginBottom:12}}>No se pudieron cargar las limpiezas.<br/><span style={{fontSize:11,color:'#9ca3af'}}>{error}</span></div>
+              <button onClick={load} style={{background:'#2D6A4F',border:'none',color:'#fff',borderRadius:8,padding:'8px 18px',fontSize:13,fontWeight:700,cursor:'pointer',marginRight:8}}>Reintentar</button>
+              <button onClick={salir} style={{background:'none',border:'1px solid #e5e7eb',color:'#6b7280',borderRadius:8,padding:'8px 18px',fontSize:13,fontWeight:600,cursor:'pointer'}}>Salir</button>
+            </div>
+          )}
+          {!loading&&!error&&daysSessions.length===0&&(
             <div style={{background:'#fff',borderRadius:16,border:'1px solid #f3f4f6',padding:28,textAlign:'center',color:'#9ca3af',fontSize:14}}>Sin limpiezas este día 🎉</div>
           )}
           {daysSessions.map(s=>{
