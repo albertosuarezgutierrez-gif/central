@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
+import { eventFactor } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -84,7 +85,7 @@ export async function POST(req: NextRequest) {
   const recs = await prisma.$queryRaw<{
     property_id: string; recommended_guest: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
-    sample_n: number; market_age_days: number
+    sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -117,7 +118,9 @@ export async function POST(req: NextRequest) {
       COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
       s.max_change_pct::float8 AS max_change_pct,
       s.min_price, s.max_price,
-      mkt.sample_n, mkt.market_age_days
+      mkt.sample_n, mkt.market_age_days,
+      COALESCE(s.events_enabled, true) AS events_enabled,
+      COALESCE(s.gap_discount_pct, 0)::float8 AS gap_discount_pct
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -175,9 +178,19 @@ export async function POST(req: NextRequest) {
       const info = plRates[date]
       if (!info || !info.available) continue            // sólo fechas disponibles
       const old = info.price != null ? Math.round(info.price) : null
-      // Cadena de topes (en términos BASE): mercado → cambio máx. por aplicación →
-      // min/max del propietario (autoridad FINAL — incluye el suelo de coste).
+      // Cadena de topes (en términos BASE): mercado → evento/hueco → cambio máx. por
+      // aplicación → min/max del propietario (autoridad FINAL — incluye el suelo de coste).
       let target = clamp(baseTarget, floorBase, ceilBase)
+      // Premium por evento (Semana Santa/Feria/…): puede superar el techo del mercado normal.
+      if (r.events_enabled) target = Math.round(target * eventFactor(date))
+      // Descuento de hueco: noche suelta libre entre dos reservas (difícil de vender).
+      if (Number(r.gap_discount_pct) > 0) {
+        const prevD = fmt(new Date(new Date(date).getTime() - 86400000))
+        const nextD = fmt(new Date(new Date(date).getTime() + 86400000))
+        const prevBooked = plRates[prevD] && !plRates[prevD].available
+        const nextBooked = plRates[nextD] && !plRates[nextD].available
+        if (prevBooked && nextBooked) target = Math.round(target * (1 - Number(r.gap_discount_pct)))
+      }
       if (old != null) {
         const lo = Math.round(old * (1 - Number(r.max_change_pct)))
         const hi = Math.round(old * (1 + Number(r.max_change_pct)))

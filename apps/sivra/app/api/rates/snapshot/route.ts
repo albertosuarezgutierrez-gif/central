@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
+import { calcOurs } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -15,30 +16,6 @@ const PROPS = [
   { smoobuId: "352928", propId: "prop_duplex_center",   base: 195 },
   { smoobuId: "352943", propId: "prop_luxury_busto",    base: 225 },
 ]
-
-const EVENTS: Record<string, number> = {
-  "2026-03-29":2.20,"2026-03-30":2.30,"2026-03-31":2.40,"2026-04-01":2.50,
-  "2026-04-02":2.60,"2026-04-03":3.00,"2026-04-04":2.80,"2026-04-05":2.50,
-  "2026-04-18":2.75,"2026-04-20":2.50,"2026-04-21":2.80,"2026-04-22":3.00,
-  "2026-04-23":3.20,"2026-04-24":3.50,"2026-04-25":3.00,"2026-04-26":2.80,
-  "2026-05-04":1.30,"2026-05-05":1.30,"2026-05-06":1.30,"2026-05-07":1.30,
-  "2026-05-08":1.30,"2026-05-09":1.30,"2026-05-15":1.20,"2026-05-16":1.40,
-  "2026-05-22":1.40,"2026-05-23":1.50,"2026-05-24":1.50,"2026-05-25":1.40,
-  "2026-06-06":1.40,"2026-06-12":1.40,"2026-06-13":1.60,"2026-06-14":1.60,
-  "2026-06-19":1.60,"2026-06-20":1.60,"2026-06-21":1.30,"2026-06-26":1.40,
-  "2026-07-03":1.40,"2026-07-16":1.50,"2026-07-18":1.30,
-  "2026-11-16":1.40,"2026-11-17":1.40,"2026-11-18":1.40,"2026-11-19":1.40,
-  "2026-11-20":1.40,"2026-11-21":1.35,"2026-11-22":1.30,"2026-12-31":1.60,
-}
-const SEASONAL = [0.65,0.65,1.10,1.00,1.40,1.45,0.85,0.85,1.40,1.10,1.10,1.00]
-const DOW      = [0.95,0.88,0.88,0.90,0.95,1.12,1.18]
-
-function calcOurs(base: number, dateStr: string): number {
-  const d   = new Date(dateStr + "T00:00:00")
-  const mon = d.getMonth()
-  const dow = d.getDay() === 0 ? 6 : d.getDay() - 1
-  return Math.round(base * Math.max(EVENTS[dateStr] ?? 0, SEASONAL[mon]) * DOW[dow])
-}
 
 function fmtDate(d: Date): string {
   return d.toISOString().slice(0, 10)
