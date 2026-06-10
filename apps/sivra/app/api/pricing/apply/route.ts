@@ -62,7 +62,20 @@ export async function POST(req: NextRequest) {
   const sp = req.nextUrl.searchParams
   const onlyProp = sp.get("property")               // opcional: aplicar a un solo piso
   const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), 60)
-  const dryRun = sp.get("dryRun") !== "false"       // por defecto TRUE (no escribe)
+  let dryRun = sp.get("dryRun") !== "false"         // por defecto TRUE (no escribe)
+
+  // 🔴 Botón de pánico / pausa global: si está pausado, NUNCA escribe (degrada a dry-run).
+  let paused = false
+  try {
+    const cfg = await prisma.$queryRaw<{ paused: boolean }[]>(Prisma.sql`
+      SELECT paused FROM pricing_config WHERE id = 1 LIMIT 1`)
+    paused = cfg[0]?.paused === true
+  } catch { /* sin tabla aún: no pausado */ }
+  if (paused && !dryRun) dryRun = true              // fuerza simulación
+
+  // Guardia de confianza: no escribir con mercado escaso/viejo.
+  const MIN_SAMPLE = 5
+  const MAX_MARKET_AGE_DAYS = 7
 
   // Precio objetivo por piso (mercado × demanda × calidad), igual que /recommend, resuelto en SQL.
   // OJO: med/flo/cei son precios de HUÉSPED (los comparables llevan el margen del canal). La
@@ -71,6 +84,7 @@ export async function POST(req: NextRequest) {
   const recs = await prisma.$queryRaw<{
     property_id: string; recommended_guest: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
+    sample_n: number; market_age_days: number
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -81,7 +95,9 @@ export async function POST(req: NextRequest) {
         percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY m.price_night)::numeric med,
         percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY m.price_night)::numeric flo,
         percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY m.price_night)::numeric cei,
-        percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)::numeric mkt_score
+        percentile_cont(0.5) WITHIN GROUP (ORDER BY m.score)::numeric mkt_score,
+        COUNT(*)::int AS sample_n,
+        (CURRENT_DATE - MAX(l.sd))::int AS market_age_days
       FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
       JOIN pricing_settings s ON s.property_id = m.scenario
       WHERE m.price_night > 0
@@ -100,7 +116,8 @@ export async function POST(req: NextRequest) {
       ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
       COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
       s.max_change_pct::float8 AS max_change_pct,
-      s.min_price, s.max_price
+      s.min_price, s.max_price,
+      mkt.sample_n, mkt.market_age_days
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
     LEFT JOIN occ ON occ.scenario = mkt.scenario
@@ -121,6 +138,16 @@ export async function POST(req: NextRequest) {
   for (const r of recs) {
     const smoobuId = SMOOBU_ID[r.property_id]
     if (!smoobuId) { results.push({ property: r.property_id, error: "sin smoobuId" }); continue }
+
+    // 🛡️ Guardia de confianza: no escribir con mercado escaso o desactualizado.
+    if (!dryRun && (r.sample_n < MIN_SAMPLE || r.market_age_days > MAX_MARKET_AGE_DAYS)) {
+      results.push({
+        property: r.property_id, skipped: "datos_insuficientes",
+        sample_n: r.sample_n, market_age_days: r.market_age_days,
+        detail: `Necesita ≥${MIN_SAMPLE} comparables y mercado ≤${MAX_MARKET_AGE_DAYS}d`,
+      })
+      continue
+    }
 
     // 1) Precio/disponibilidad actuales en Smoobu (para tope de cambio + sólo fechas disponibles).
     let plRates: Record<string, { price: number | null; available: number }> = {}
@@ -196,5 +223,5 @@ export async function POST(req: NextRequest) {
     })
   }
 
-  return NextResponse.json({ ok: true, dryRun, days, properties: recs.length, results })
+  return NextResponse.json({ ok: true, dryRun, paused, days, properties: recs.length, results })
 }
