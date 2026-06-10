@@ -31,6 +31,7 @@ const NAV = [
   { href:'/admin/materiales',    icon:'📦', label:'Materiales'    },
   { href:'/admin/configuracion', icon:'⚙️', label:'Configuración' },
   { href:'/admin/contabilidad',  icon:'📊', label:'Contabilidad'  },
+  { href:'/admin/concursos',     icon:'🏛️', label:'Concursos'     },
   { href:'/admin/asistente',    icon:'🤖', label:'Asistente IA'  },
 ]
 

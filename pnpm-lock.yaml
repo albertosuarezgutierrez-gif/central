@@ -22,6 +22,9 @@ importers:
       '@iarest/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
       '@stripe/react-stripe-js':
         specifier: ^6.3.0
         version: 6.6.0(@stripe/stripe-js@9.7.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -128,6 +131,12 @@ importers:
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
+      '@iarest/module-concursos':
+        specifier: workspace:*
+        version: link:../../packages/module-concursos
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -155,6 +164,9 @@ importers:
       nodemailer:
         specifier: ^8.0.7
         version: 8.0.10
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.4
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -205,6 +217,55 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/plataforma:
+    dependencies:
+      '@iarest/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
+      jose:
+        specifier: ^5.9.3
+        version: 5.10.0
+      next:
+        specifier: ^15.5.18
+        version: 15.5.19(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/bcryptjs':
+        specifier: ^2.4.6
+        version: 2.4.6
+      '@types/node':
+        specifier: ^20
+        version: 20.19.42
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/sivra:
     dependencies:
       '@iarest/core-ai':
@@ -213,9 +274,15 @@ importers:
       '@iarest/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
+      '@iarest/core-push':
+        specifier: workspace:*
+        version: link:../../packages/core-push
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -320,6 +387,10 @@ importers:
         version: 3.6.4
 
   packages/core-storage: {}
+
+  packages/module-concursos: {}
+
+  packages/module-contabilidad: {}
 
 packages:
 
