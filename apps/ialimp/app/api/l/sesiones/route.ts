@@ -35,6 +35,9 @@ export async function GET(req: Request) {
         AND empresa_id    = ${auth.empresa_id}::uuid
         AND session_date  = ${date}::date
       ORDER BY
+        (orden_manual IS NULL),                        -- orden fijado por el admin manda
+        orden_manual ASC,                              -- ... en su secuencia
+        (urgente_manual IS TRUE) DESC,                 -- urgentes (marcadas a mano) arriba
         (alerta_ventana IS TRUE) DESC,                 -- ventana ajustada primero
         (hora_checkin_siguiente IS NOT NULL) DESC,     -- pisos con entrada de huésped arriba
         hora_checkin_siguiente::text ASC NULLS LAST,   -- el que entra antes, primero

@@ -159,6 +159,8 @@ const APP_CSS = `
 .l-chip.warn  { background: #fffbeb; color: #b45309; }
 .l-chip.pax   { background: #f1f5f9; color: #64748b; }
 .l-chip.entra { background: #fee2e2; color: #dc2626; }
+.l-chip.urge  { background: #fee2e2; color: #b91c1c; }
+.l-chip.nota  { background: #fffbeb; color: #92400e; }
 
 /* progreso inline */
 .l-prog { margin-top: 9px; }
@@ -201,7 +203,7 @@ function SesionCard({ s, onTap }: { s: any; onTap: () => void }) {
     ? Math.round(s.checklist_data.filter((i: any) => i.hecho).length / s.checklist_data.length * 100)
     : null
 
-  const prioridad = !hecho && !!s.hora_checkin_siguiente
+  const prioridad = !hecho && (!!s.hora_checkin_siguiente || !!s.urgente_manual)
   const cls = hecho ? 'ok' : prioridad ? `${enCurso ? 'go' : 'pend'} prio` : enCurso ? 'go' : 'pend'
   const icon = ({ rotacion:'🏠', particular:'🏡', comunidad:'🏢', oficina:'💼' } as any)[s.tipo_servicio] || '🏠'
 
@@ -212,6 +214,7 @@ function SesionCard({ s, onTap }: { s: any; onTap: () => void }) {
         <div className="l-card-title">{s.property_name}</div>
         {s.cliente_nombre && <div className="l-card-client">{s.cliente_nombre}</div>}
         <div className="l-chips">
+          {!hecho && s.urgente_manual && <span className="l-chip urge">🔥 Urgente</span>}
           {inicio && (
             <span className="l-chip time">
               🚪 {inicio}{limite ? ` → ${limite}` : ''}
@@ -220,6 +223,7 @@ function SesionCard({ s, onTap }: { s: any; onTap: () => void }) {
           {limite && !hecho && <span className="l-chip entra">🔴 Entra {limite}</span>}
           {s.alerta_ventana && <span className="l-chip warn">⚠️ Ventana ajustada</span>}
           {s.num_huespedes && <span className="l-chip pax">👥 {s.num_huespedes}</span>}
+          {s.notas && <span className="l-chip nota">📝 Indicaciones</span>}
         </div>
         {enCurso && pct !== null && (
           <div className="l-prog">
@@ -333,6 +337,23 @@ function SesionDetalle({ s, onBack, onUpdate, limpiadora }: { s: any; onBack: ()
           </div>
         )}
       </div>
+
+      {/* Indicaciones del admin (notas) + urgente — destacadas antes del checklist */}
+      {(sesion.urgente_manual || sesion.notas) && (
+        <div style={{ padding: '12px 16px 0' }}>
+          {sesion.urgente_manual && (
+            <div style={{ background: C.redBg, border: '1px solid #fecaca', borderRadius: 12, padding: '10px 14px', marginBottom: 10, fontWeight: 800, color: '#b91c1c', fontSize: 14 }}>
+              🔥 Limpieza urgente — hazla cuanto antes
+            </div>
+          )}
+          {sesion.notas && (
+            <div style={{ background: C.warnBg, border: '1px solid #fde68a', borderRadius: 12, padding: '12px 14px', marginBottom: 2 }}>
+              <div style={{ fontSize: 12, fontWeight: 800, color: '#92400e', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.04em' }}>📝 Indicaciones</div>
+              <div style={{ fontSize: 14, color: '#78350f', lineHeight: 1.45, whiteSpace: 'pre-wrap' }}>{sesion.notas}</div>
+            </div>
+          )}
+        </div>
+      )}
 
       {(sesion.instrucciones_acceso || sesion.codigo_acceso || (sesion.archivos_acceso?.length > 0)) && (
         <div style={{ padding: '0 16px 4px' }}>
