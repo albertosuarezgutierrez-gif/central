@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { auth } from "@/lib/auth"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -23,7 +24,8 @@ export const maxDuration = 60
 // ⚠️ VERIFICAR EN PREVIEW antes de poner dryRun=false en producción: el formato del POST
 //    a Smoobu (`/api/rates`) debe validarse contra la doc de Smoobu con una fecha de prueba.
 //
-// Protegido por CRON_SECRET (Bearer o ?secret=).
+// Protegido por CRON_SECRET (Bearer o ?secret=) PARA LOS CRONS, o por una sesión de
+// admin logueada (panel del propietario, que llama desde el navegador sin el secreto).
 
 const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE = "https://login.smoobu.com/api"
@@ -45,11 +47,14 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  // Autorización: vale el CRON_SECRET (crons) O una sesión de admin (panel del propietario).
   const secret = process.env.CRON_SECRET
-  if (secret) {
-    const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
-    const qs = req.nextUrl.searchParams.get("secret")
-    if (bearer !== secret && qs !== secret) {
+  const bearer = req.headers.get("authorization")?.replace(/^Bearer\s+/i, "")
+  const qs = req.nextUrl.searchParams.get("secret")
+  const secretOk = !!secret && (bearer === secret || qs === secret)
+  if (!secretOk) {
+    const session = await auth().catch(() => null)
+    if (!session?.user) {
       return NextResponse.json({ error: "no autorizado" }, { status: 401 })
     }
   }
