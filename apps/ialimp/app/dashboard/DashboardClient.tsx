@@ -26,11 +26,12 @@ const NAV = [
   { href:'/dashboard',           icon:'🏠', label:'Inicio'        },
   { href:'/admin/operaciones',   icon:'🗃️', label:'Operaciones'   },
   { href:'/admin/equipo',        icon:'👥', label:'Equipo'        },
+  { href:'/admin/chat',          icon:'💬', label:'Chat equipo'   },
   { href:'/admin/negocio',       icon:'💼', label:'Negocio'       },
   { href:'/admin/materiales',    icon:'📦', label:'Materiales'    },
   { href:'/admin/configuracion', icon:'⚙️', label:'Configuración' },
   { href:'/admin/contabilidad',  icon:'📊', label:'Contabilidad'  },
-  { href:'/admin/asistente',    icon:'💬', label:'Asistente'     },
+  { href:'/admin/asistente',    icon:'🤖', label:'Asistente IA'  },
 ]
 
 export default function DashboardClient({
