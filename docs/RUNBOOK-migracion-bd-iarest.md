@@ -109,13 +109,12 @@ agente. Cuando quieras, hacemos pasos 1→4 y tú haces el 6.
   `next build` verde.
 - Tabla de trabajo `iarest._mig_ddl` se conserva hasta verificar el corte (luego DROP).
 
-**⚠️ BLOQUEANTE NUEVO DESCUBIERTO — Edge Functions:** el proyecto viejo tiene **43 Edge
-Functions ACTIVAS** (QR, VeriFactu sign, Stripe/MONEI webhooks, voz, crons). Solo 16 tienen
-fuente en el repo (`apps/ia-rest/supabase/functions/`); las otras 27 hay que recuperarlas del
-proyecto viejo (MCP `get_edge_function`) y redesplegarlas en el compartido, parcheadas para el
-schema `iarest`, y **Alberto debe re-introducir los secrets** (Stripe, MONEI, NIM, Telegram…)
-en el proyecto compartido (no son legibles por API). **NO cambiar las envs de Vercel hasta
-migrar las functions**, o la app llamará a funciones inexistentes.
+**✅ Edge Functions — RESUELTO (43/43 migradas).** El proyecto viejo tenía **43 Edge Functions
+ACTIVAS** (QR, VeriFactu sign, Stripe/MONEI webhooks, voz, crons). Todas migradas al compartido,
+parcheadas a schema `iarest`, verify_jwt cuadrando con origen. Sigue pendiente que **Alberto
+re-introduzca los secrets** (Stripe, MONEI, NIM, Telegram…) en el proyecto compartido (no son
+legibles por API). **NO cambiar las envs de Vercel hasta meter secrets + exponer schema** (ver
+"CORTE FINAL" más abajo), o la app llamará a funciones sin credenciales.
 
 **ORDEN DEL CORTE (pendiente):**
 1. (Agente) Migrar las 43 Edge Functions al proyecto compartido (fetch→parchear schema→deploy).
@@ -127,20 +126,33 @@ migrar las functions**, o la app llamará a funciones inexistentes.
 5. (Juntos) Smoke test (login, leer, escribir) + plataforma lee iarest nativo + DROP `_mig_ddl`.
 6. (Alberto) Resetear la password de BD de ia-rest (quedó en el chat) y jubilar el proyecto viejo.
 
-### Estado Edge Functions (2026-06-10, 2ª pasada)
-- **Migradas y parcheadas a `iarest` (5/43):** nim-sentiment, contact-lead, cobro-monei, webhook-monei, alerta-ritmo-cron.
-- **BLOQUEADO (38/43):** el proyecto compartido está en el **tope de ~100 Edge Functions** del plan →
-  todo deploy devuelve `PaymentRequiredException` (incluso updates). **Acción de Alberto:** borrar en
-  el Dashboard (~40 funciones basura de sesiones antiguas: prefijos `income-`, `fix-`, `read-`,
-  `write-`, `updates-`, `test-`, `list-`, `check-`, `push-landing`, `landing-`, `deploy-landing`,
-  `debug-landing`, `insert-html`, `repair-chunks`, `mobile-commit`, `commit-dashboard-fix`,
-  `create-api-routes`, `create-landing-repo`, `add-domain-vercel`, `middleware-patch`,
-  `delete-conflicting-route`). **NO borrar:** `sync-smoobu` (cron vivo de sivra), `github-commit`,
-  `trigger-*`, `deploy-agente`, `deploy-dashboard`, `drive-*`, `upload-*`, `merge-landing-to-main`,
-  `add-smoobu-booking`, `import_csv`, `inject-ga4`, `push-route-ga4`, ni las 5 migradas.
-- **Tras liberar hueco:** relanzar los 2 agentes (14 del repo desde `/tmp/efns` si la sesión vive, o
-  re-parchear desde `apps/ia-rest/supabase/functions`; + 27 vía get_edge_function del proyecto viejo).
-- **verify_jwt:** el deploy por MCP fija `true`; el origen usa `false` en casi todas (webhooks
-  Stripe/MONEI, QR públicos, ASN... lo necesitan). **Checklist final de Alberto:** en el Dashboard del
-  compartido, poner "Verify JWT" en **OFF** en todas las migradas **salvo `monitor-health`,
-  `stripe-checkout`, `analizar-cv` y `lead-research`** (esas 4 van con `true`, como en origen).
+### Estado Edge Functions (2026-06-10, 3ª pasada) — ✅ COMPLETO 43/43
+- Alberto liberó hueco borrando las funciones basura (de ~100 → 44). Se reanudó el deploy y se
+  completaron **las 43/43** al proyecto compartido `wswbehlcuxqxyinousql`, todas ACTIVE, cada
+  `createClient` parcheado a `db: { schema: 'iarest' }`.
+- **verify_jwt ya correcto en el deploy** (el MCP acepta el flag): `true` SOLO en `monitor-health`,
+  `stripe-checkout`, `analizar-cv`, `lead-research`; `false` en las otras 39 (webhooks Stripe/MONEI,
+  QR públicos, crons, ASN…). `nim-sentiment` y `contact-lead` se redeployaron a `false` (v2) para
+  cuadrar con origen. → **No hace falta tocar ningún toggle de Verify JWT en el Dashboard.**
+- Desglose: 16 con fuente en repo (`apps/ia-rest/supabase/functions`, parcheadas en `/tmp/efns`) +
+  27 recuperadas del proyecto viejo `efncqyvhniaxsirhdxaa` vía `get_edge_function`.
+
+### ⏭️ CORTE FINAL — pasos pendientes SOLO de Alberto (en este orden)
+1. **Secrets de Edge Functions** en el proyecto compartido (Supabase → compartido → Edge Functions →
+   Manage secrets). Re-mete los que usan las funciones de ia-rest (no son legibles por API, hay que
+   volver a pegarlos). Nombres (NO valores): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
+   `MONEI_API_KEY`, `MONEI_WEBHOOK_SECRET`, `NVIDIA_API_KEY`, `TELEGRAM_BOT_TOKEN`,
+   `TELEGRAM_CHAT_ID`, `RESEND_API_KEY`, `CALLMEBOT_PHONE`, `CALLMEBOT_APIKEY`, `VERIFACTU_*`
+   (certificado/clave), `TWILIO_*`/SMS, `GOOGLE_*`/Drive, y cualquiera que ya tuvieras en el
+   proyecto viejo. (Compáralos con `efncqyvhniaxsirhdxaa` → Edge Functions → secrets.)
+2. **Exposed schemas:** Supabase compartido → **Settings → API → Exposed schemas** → añade `iarest`
+   (deja `public` también). Sin esto, PostgREST no sirve las tablas de `iarest`.
+3. **Vercel → proyecto `ia-rest` → Settings → Environment Variables** → cambia estas 3 a los valores
+   del proyecto **compartido** (Supabase compartido → Settings → API) **y añade la 4ª**:
+   - `NEXT_PUBLIC_SUPABASE_URL` → URL del compartido
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` → anon key del compartido
+   - `SUPABASE_SERVICE_ROLE_KEY` → service_role del compartido
+   - **AÑADIR** `NEXT_PUBLIC_SUPABASE_SCHEMA` = `iarest`
+   (Si hay `DATABASE_URL`/`DIRECT_URL`, cámbialas también.) Luego **Redeploy** de ia-rest.
+4. Avísame ("**corte hecho**") y hago el smoke test + cierro el puente de plataforma + DROP `_mig_ddl`.
+5. Después: resetear la password de BD de ia-rest (quedó en el chat) y jubilar el proyecto viejo.
