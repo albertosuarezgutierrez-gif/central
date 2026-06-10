@@ -139,14 +139,24 @@ legibles por API). **NO cambiar las envs de Vercel hasta meter secrets + exponer
 
 ### ⏭️ CORTE FINAL — pasos pendientes SOLO de Alberto (en este orden)
 1. **Secrets de Edge Functions** en el proyecto compartido (Supabase → compartido → Edge Functions →
-   Manage secrets). Re-mete los que usan las funciones de ia-rest (no son legibles por API, hay que
-   volver a pegarlos). Nombres (NO valores): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`,
-   `MONEI_API_KEY`, `MONEI_WEBHOOK_SECRET`, `NVIDIA_API_KEY`, `TELEGRAM_BOT_TOKEN`,
-   `TELEGRAM_CHAT_ID`, `RESEND_API_KEY`, `CALLMEBOT_PHONE`, `CALLMEBOT_APIKEY`, `VERIFACTU_*`
-   (certificado/clave), `TWILIO_*`/SMS, `GOOGLE_*`/Drive, y cualquiera que ya tuvieras en el
-   proyecto viejo. (Compáralos con `efncqyvhniaxsirhdxaa` → Edge Functions → secrets.)
+   Manage secrets). Re-mete los que usan las funciones de ia-rest (cifrados/no legibles por API ni
+   dashboard — hay que pegarlos del origen). **LISTA MAESTRA DEFINITIVA** (extraída de los
+   `Deno.env.get` de las 43 funciones; NO incluye `SUPABASE_URL/ANON_KEY/SERVICE_ROLE_KEY/DB_URL`,
+   que Supabase inyecta solo):
+   - **Stripe:** `STRIPE_SECRET_KEY`, `STRIPE_SECRET_KEY_TEST`, `STRIPE_WEBHOOK_SECRET`,
+     `STRIPE_WEBHOOK_SECRET_TEST`, `STRIPE_CLIENT_ID`, `STRIPE_READER_ID`, `STRIPE_MODE` (test/live),
+     `STRIPE_PRICE_BASE`, `STRIPE_PRICE_BASE_TEST`, `STRIPE_PRICE_EXTRA_15`, `STRIPE_PRICE_EXTRA_15_TEST`,
+     `STRIPE_PRICE_EXTRA_20`, `STRIPE_PRICE_EXTRA_20_TEST`.
+   - **MONEI (Bizum):** `MONEI_API_KEY`, `MONEI_WEBHOOK_SECRET`.
+   - **IA:** `ANTHROPIC_API_KEY`, `NVIDIA_API_KEY`, `OPENAI_API_KEY`, `GROQ_API_KEY`, `EAR_PROVIDER` (groq/openai).
+   - **Email/Notif:** `RESEND_API_KEY`, `TELEGRAM_BOT_TOKEN`, `TELEGRAM_TOKEN`, `TELEGRAM_CHAT_ID`,
+     `CALLMEBOT_APIKEY`, `CALLMEBOT_PHONE`.
+   - **Otros:** `VERIFACTU_PRODUCCION` (true/false), `TICKETMASTER_API_KEY`, `INTERNAL_API_SECRET`,
+     `IP_HASH_SALT`, `APP_URL`, `NEXT_PUBLIC_APP_URL`.
+   - **Atajo:** los que estén también como env var en **Vercel → ia-rest** se pueden revelar (botón ojo)
+     y copiar; el resto, de su dashboard de origen (Stripe, MONEI, Anthropic, NVIDIA, OpenAI, Groq, Resend).
 2. **Exposed schemas:** Supabase compartido → **Settings → API → Exposed schemas** → añade `iarest`
-   (deja `public` también). Sin esto, PostgREST no sirve las tablas de `iarest`.
+   (deja `public` también). ✅ HECHO (3/3 schemas activos).
 3. **Vercel → proyecto `ia-rest` → Settings → Environment Variables** → cambia estas 3 a los valores
    del proyecto **compartido** (Supabase compartido → Settings → API) **y añade la 4ª**:
    - `NEXT_PUBLIC_SUPABASE_URL` → URL del compartido
