@@ -203,3 +203,29 @@ Para el piloto: poner `apply_enabled=true` SÓLO en Busto Reform.
 **Cómo analizar el 16/06:** comparar ocupación/ingresos y reservas nuevas de Busto Reform vs esta baseline. Consulta base:
 `SELECT (1-AVG(available)) FROM rate_snapshots WHERE property_id='prop_busto_reform' AND rate_date>=CURRENT_DATE AND snapshot_date=(SELECT MAX(snapshot_date) FROM rate_snapshots)`
 y revisar `pricing_experiments`/`incomes`. Si funciona → extender a los otros 3 pisos + construir push a Smoobu.
+
+---
+
+## Panel del propietario — `/pricing-auto` (UI de configuración manual)
+
+Pantalla en la intranet (detrás del login admin) donde Alberto ve **sus 4 pisos** y configura
+**a mano** todos los parámetros de `pricing_settings`. Cada tarjeta de piso muestra:
+- **Contexto de mercado real**: p25/p50/p90 de comparables, nota media del mercado, factores ×calidad y ×demanda aplicados.
+- **Ocupación** propia (señal de demanda) y **precio base actual** en Smoobu.
+- **Recomendado**: precio base (lo que escribiría en Smoobu) y precio huésped (con margen de canal).
+
+Inputs editables: `target_pctl`, `floor_pctl`, `ceil_pctl`, `position_factor`, `quality_k`, `demand_k`,
+`demand_baseline`, `own_score`, `channel_markup`, `max_change_pct`, `min_price`, `max_price` + switches
+`enabled` (servicio contratado) y `apply_enabled` (permiso de escritura a Smoobu).
+
+Botones: **Guardar** (PATCH `/api/pricing/settings`), **Simular** (`/api/pricing/apply?dryRun=true`, calcula y audita
+sin escribir) y **Aplicar ahora** (`dryRun=false`, sólo habilitado si `apply_enabled`).
+
+**Endpoints nuevos:**
+- `GET /api/pricing/settings` — estado completo por piso (parámetros + mercado + ocupación + base actual + recomendado),
+  misma cadena de cálculo que `apply`.
+- `PATCH /api/pricing/settings` — valida por columna (rangos) y hace upsert; coherencia `min_price ≤ max_price`.
+
+**Seguridad:** `/api/pricing/apply` ahora acepta **sesión de admin** (NextAuth, vía `auth()`) además de `CRON_SECRET`,
+para que los botones del panel funcionen desde el navegador. El endpoint sigue requiriendo una de las dos cosas:
+sin `CRON_SECRET` válido **y** sin sesión → 401 (antes, sin `CRON_SECRET` definido quedaba abierto; ahora ya no).
