@@ -6,10 +6,12 @@ import { C, SE, SN, SM, SC } from '@/lib/colors'
 
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
+import { SB_OPTS } from '@/lib/supabase'
 
 const sb = () => createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SB_OPTS
 )
 
 
