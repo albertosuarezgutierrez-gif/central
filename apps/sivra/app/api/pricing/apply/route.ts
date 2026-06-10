@@ -38,6 +38,12 @@ const SMOOBU_ID: Record<string, number> = {
 const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 const fmt = (d: Date) => d.toISOString().slice(0, 10)
 
+// GET = mismo comportamiento que POST (patrón cron-GET del repo, como /api/rates/snapshot);
+// dryRun=true por defecto en ambos, así que un GET sin params nunca escribe.
+export async function GET(req: NextRequest) {
+  return POST(req)
+}
+
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET
   if (secret) {
