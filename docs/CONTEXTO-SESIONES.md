@@ -27,14 +27,21 @@
   - **Verificado con logs de Supabase:** antes del deploy los crons daban 404 (`alerta_reglas`, `comandas`,
     `qr_sesiones_cliente`, RPCs…); tras el deploy (18:45) **todo 200/204**. El preview del PR ya lo había
     confirmado (build → `web_restaurante`/`blog_borradores` 200).
-  - **El PR #110 (rama `claude/joaquin-jaen-expansion-4nyju5`) sigue abierto** con el resto del trabajo
-    (módulos `module-*`, plataforma, docs). OJO al mergearlo: ya incluye su propia versión del interruptor
-    (idéntica) — no debería dar conflicto, pero revisar el merge de los 9 ficheros.
-  - **PENDIENTE:** (yo) plataforma → leer `iarest` nativo del compartido (retirar puente service-role
-    `lib/iarest.ts` y las envs `IAREST_*`); DROP `iarest._mig_ddl` (pedir OK, es destructivo aunque temporal).
+  - **PR #110 TAMBIÉN MERGEADO a `main` (10/06):** todo el trabajo restante de la rama
+    `claude/joaquin-jaen-expansion-4nyju5` (HITO 3 financiero ia-rest en plataforma, `packages/module-*`
+    —crm/inventario/agenda/presupuestos/proveedores/portales/feedback/ocr/asn—, docs de diseño de
+    modularización y materiales/flota) queda en `main`. Conflictos de merge resueltos: `asn/route.ts`
+    (se mantiene la versión con `@iarest/module-asn` + `SB_OPTS`) y `CONTEXTO-SESIONES.md` (versión de la
+    rama, histórico completo). 80 ficheros, +2892/−162. Las 4 apps tenían previews verdes.
+  - **PENDIENTE:** (yo) plataforma → leer `iarest` nativo del compartido (ahora misma BD; retirar el puente
+    service-role `apps/plataforma/lib/iarest.ts` y las envs `IAREST_*`, leer `iarest.v_resumen_financiero_anual`
+    directo); DROP `iarest._mig_ddl` (pedir OK, destructivo aunque era andamiaje de la migración).
     (Alberto) resetear password BD del proyecto viejo (quedó en chat) y jubilar `efncqyvhniaxsirhdxaa`
     cuando lleve unos días estable. Rollback del corte = revertir las 3 envs de Vercel (el código en
     `main` con la variable sin definir se comporta como antes).
+  - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura ahora apuntan al
+    compartido `wswbehlcuxqxyinousql` + schema `iarest` (con nota de que todo cliente/Realtime/EF nuevo
+    debe fijar el schema `iarest`).
 
 - **🔵 Migración BD ia-rest → proyecto compartido (Fase A2) — rama `claude/joaquin-jaen-expansion-4nyju5` — 10/06/2026**
   Unificación de datos: ia-rest deja su proyecto Supabase separado (`efncqyvhniaxsirhdxaa`) y pasa al
