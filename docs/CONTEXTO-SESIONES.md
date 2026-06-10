@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ SIVRA en PRODUCCIÓN: pricing automático + 2 fixes de cuelgue (#108, #113, #115) — 10/06/2026 (tarde)**
+  Los 3 PRs **mergeados a `main` y desplegados** en `sybra.vercel.app` (dominio de prod del proyecto Vercel `sivra`;
+  alias: sybra/sivra-app/housesevillana). Resumen de la tarde:
+  - **#108** pricing automático completo (ver entrada de abajo).
+  - **🐛 #113 — cuelgue "Cargando…" en `/limpiadoras`:** Alberto entró en el móvil con sesión admin caducada + cookie
+    `limpiadora_token` zombi → el middleware lo mandaba a `/limpiadoras`, cuyo `load()` hacía `fetch().json()` **sin
+    try/catch** → si fallaba, `setLoading(false)` nunca corría → spinner eterno, sin logout ni botón atrás. Fix:
+    `app/limpiadoras/page.tsx` valida el token al montar (`GET /api/limpiadoras/auth`; si null → `DELETE` cookie +
+    redirect a login), try/catch/finally + estado error + botón "Reintentar", header con **"Salir"** y enlace
+    **"¿Eres administrador? Entrar"**. Nuevo helper `lib/limpiadora-auth.ts` (token válido O sesión admin) aplicado a los
+    endpoints `/api/limpiadoras/*` (sessions, fichar, complete, incidencias, inventario, early-checkin) → 401 si inválido.
+  - **🐛 #115 — mismo patrón en `/gastos`:** `fetchGastos` sin try/finally → blindado. Auditadas las demás páginas del
+    dashboard (income, inversion, updates, mensajes, seo, properties, calendario, knowledge, mercado): ya correctas.
+  - **🔑 Claves VAPID generadas** (para avisos push): se le pasaron a Alberto por chat para pegar en Vercel
+    (`NEXT_PUBLIC_VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY`). NO van en el repo.
+  - **⏳ PENDIENTE DE ALBERTO (en Vercel → proyecto sivra → Environment Variables, Production+Preview):**
+    1. `CRON_SECRET` (cadena larga al azar) → **activa el `apply-auto` diario**; sin él el cron no escribe (más seguro) y
+       el panel manual sigue funcionando con su sesión. 2. `NEXT_PUBLIC_VAPID_PUBLIC_KEY` + `VAPID_PRIVATE_KEY` (push).
+       Tras añadirlas: **Deployments → Redeploy**. 3. Desconectar **PriceLabs** en cada piso a automatizar + marcar
+       `apply_enabled` en `/pricing-auto`. (Opcional) `MARKET_API_URL`/`MARKET_API_KEY` para la fuente de mercado auto.
+  - **Acceso del propietario:** `https://sybra.vercel.app/login` con `ADMIN_EMAIL`/`ADMIN_PASSWORD` (los de siempre,
+    viven en Vercel) → menú **⚙ Pricing Auto**.
+
 - **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
   De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:
   - **Automático de verdad:** pipeline de crons en `vercel.json` — `07:30` `pricing/guard` (detector de reversión de
