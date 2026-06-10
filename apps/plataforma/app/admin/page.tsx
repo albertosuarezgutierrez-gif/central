@@ -2,6 +2,7 @@
 // Auth propia (cookie plataforma_admin); muestra login si no hay sesión de operador.
 'use client'
 import { useEffect, useState, useCallback } from 'react'
+import { VERTICALES, MODULOS, AGENTES } from '@/lib/estructura'
 
 const C = { bg: '#0b1020', card: '#151b2e', card2: '#1c2540', border: '#2a3457', text: '#e8ecf7', muted: '#8b97b8', accent: '#6366f1', ok: '#22c55e', okBg: '#0c2a18', red: '#ef4444', redBg: '#2a0c0c' }
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
@@ -25,6 +26,7 @@ export default function OperadorPanel() {
   const [form, setForm] = useState({ email: 'alberto.suarez.gutierrez@gmail.com', password: '' })
   const [ficha, setFicha] = useState<Ficha | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
+  const [tab, setTab] = useState<'clientes' | 'estructura'>('clientes')
 
   const cargar = useCallback(async () => {
     setLoading(true); setError('')
@@ -101,6 +103,18 @@ export default function OperadorPanel() {
       </div>
 
       <div style={{ padding: 28, maxWidth: 1100, margin: '0 auto' }}>
+        <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: `1px solid ${C.border}` }}>
+          {([['clientes', '👥 Clientes'], ['estructura', '🗺️ Estructura']] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setTab(k)}
+              style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === k ? C.accent : 'transparent'}`, color: tab === k ? C.text : C.muted, padding: '10px 6px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: FONT }}>
+              {label}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'estructura' && <Estructura />}
+
+        {tab === 'clientes' && <>
         <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
           <Kpi label="Clientes activos" valor={String(activos)} />
           <Kpi label="Verticales" valor="3" />
@@ -144,6 +158,7 @@ export default function OperadorPanel() {
             </div>
           )
         })}
+        </>}
       </div>
 
       {ficha && (
@@ -180,4 +195,72 @@ function Kpi({ label, valor }: { label: string; valor: string }) {
 
 function btn(bg: string, color: string): React.CSSProperties {
   return { background: bg, color, border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }
+}
+
+function Estructura() {
+  const cores = MODULOS.filter(m => m.tipo === 'core')
+  const mods = MODULOS.filter(m => m.tipo === 'module')
+  const sub = { fontSize: 14, fontWeight: 800, margin: '0 0 12px' } as React.CSSProperties
+  const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10, marginBottom: 28 } as React.CSSProperties
+
+  return (
+    <div>
+      <p style={{ color: C.muted, fontSize: 13, margin: '0 0 24px', maxWidth: 720 }}>
+        Mapa de la casa de marcas: la <strong style={{ color: C.text }}>matriz</strong> (común) + <strong style={{ color: C.text }}>verticales</strong> (apps por sector)
+        que enchufan <strong style={{ color: C.text }}>módulos compartidos</strong> (packages). Los <strong style={{ color: C.text }}>agentes</strong> son las piezas de IA.
+      </p>
+
+      <div style={sub}>🏢 Verticales <span style={{ color: C.muted, fontWeight: 500 }}>· {VERTICALES.length} apps</span></div>
+      <div style={grid}>
+        {VERTICALES.map(v => (
+          <div key={v.app} style={card()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <span style={{ fontWeight: 800 }}>{v.nombre}</span>
+              <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>{v.sector}</span>
+            </div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{v.desc}</div>
+            {v.url && <div style={{ fontSize: 11, color: C.muted, marginTop: 6, fontFamily: 'monospace' }}>{v.url}</div>}
+            <div style={{ fontSize: 10, color: C.muted, marginTop: 8, opacity: .6 }}>apps/{v.app}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={sub}>🧩 Núcleos compartidos <span style={{ color: C.muted, fontWeight: 500 }}>· core-* ({cores.length})</span></div>
+      <div style={grid}>
+        {cores.map(m => (
+          <div key={m.id} style={card()}>
+            <div style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 13 }}>{m.id}{m.deps && <span title="dep npm propia" style={{ color: C.accent }}> ●</span>}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{m.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={sub}>📦 Módulos de dominio <span style={{ color: C.muted, fontWeight: 500 }}>· module-* ({mods.length})</span></div>
+      <div style={grid}>
+        {mods.map(m => (
+          <div key={m.id} style={card(C.accent)}>
+            <div style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 13 }}>{m.id}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{m.desc}</div>
+          </div>
+        ))}
+      </div>
+
+      <div style={sub}>🤖 Agentes IA <span style={{ color: C.muted, fontWeight: 500 }}>· {AGENTES.length}</span></div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {AGENTES.map((a, i) => (
+          <div key={i} style={{ ...card(), display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontWeight: 700 }}>{a.nombre}</div>
+              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{a.desc}</div>
+            </div>
+            <span style={{ fontSize: 11, color: C.muted, background: C.card2, borderRadius: 6, padding: '3px 10px', whiteSpace: 'nowrap' }}>{a.ambito}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function card(accent?: string): React.CSSProperties {
+  return { background: '#151b2e', border: `1px solid ${accent || '#2a3457'}`, borderRadius: 12, padding: '14px 16px' }
 }
