@@ -152,6 +152,9 @@ importers:
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
+      '@iarest/module-concursos':
+        specifier: workspace:*
+        version: link:../../packages/module-concursos
       '@iarest/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
@@ -182,6 +185,9 @@ importers:
       nodemailer:
         specifier: ^8.0.7
         version: 8.0.10
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.4
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -292,6 +298,9 @@ importers:
       '@iarest/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
+      '@iarest/core-push':
+        specifier: workspace:*
+        version: link:../../packages/core-push
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
@@ -410,6 +419,8 @@ importers:
   packages/module-agenda: {}
 
   packages/module-asn: {}
+
+  packages/module-concursos: {}
 
   packages/module-contabilidad: {}
 

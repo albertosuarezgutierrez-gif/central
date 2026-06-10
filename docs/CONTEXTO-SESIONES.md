@@ -42,6 +42,52 @@
   - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura ahora apuntan al
     compartido `wswbehlcuxqxyinousql` + schema `iarest` (con nota de que todo cliente/Realtime/EF nuevo
     debe fijar el schema `iarest`).
+- **🏛️ NUEVO módulo `packages/module-concursos` — agente de concursos públicos (v1) — 10/06/2026**
+  Módulo enchufable (patrón `module-contabilidad`: lógica **pura** TS, sin BD, sin UI, sin secretos) para preparar
+  documentación de licitaciones (LCSP). **NO es una vertical**: cualquier app lo consume para que su cliente, de
+  **cualquier sector** (limpieza, catering, fontanería…), se presente a concursos. El LLM entra por un **puerto
+  inyectado `AiRunner`** → el módulo nunca importa `core-ai` ni lee `process.env`.
+  - **API del módulo:** `analizarPliego(runner, texto)` / `analizarConcurso(runner, texto, perfil, hoy)` →
+    `FichaConcurso` (objeto, presupuesto, plazos, solvencia, criterios con pesos/fórmula, documentos por sobre) +
+    derivados puros: `derivarChecklist`, `evaluarGoNoGo` (semáforo + banderas rojas), `calcularGarantias`,
+    `umbralBajaTemeraria` (RGLCAP art. 85), `calcularPuntuacionEconomica`. **28 tests** (`node --test`, 28/28 verde).
+  - **Integración de referencia en ialimp** (1er consumidor, validable de punta a punta): dep `workspace:*` +
+    `transpilePackages`; `lib/concursos.ts` (AiRunner con `aiComplete` + `extraerTextoPdf` con `pdf-parse`);
+    ruta `app/api/admin/concursos/analizar` (POST analiza PDF/texto y persiste, GET lista; scope `empresa_id`);
+    página `/admin/concursos` (subir pliego → ficha + semáforo Go/No-Go + checklist); enlace en el menú del dashboard;
+    migración `prisma/migrations/add_concursos.sql` (tabla `concursos`, jsonb ficha/checklist/go_no_go/garantias).
+  - **Verificado:** `✓ Compiled successfully` en `next build` de ialimp (transpilePackages resuelve el módulo; ruta y
+    página emitidas en `.next`). **Aislamiento OK** (grep: sin imports de `@iarest/*`/`process.env`/prisma en `src/`).
+    **PR #116 (borrador)** — CI Vercel en **verde** (ialimp, ia-rest, sivra, plataforma → Ready).
+  - **Roadmap (mismo módulo, fases F2–F9):** biblioteca de empresa, sobre administrativo/DEUC, memoria técnica que
+    puntúa, oferta económica + rentabilidad (cruce `module-contabilidad`), plazos/subsanación, presentación lista para
+    subir, RAG + radar PLACSP, OCR. Spec del v1: plan aprobado en sesión.
+  - **⚠️ Pendiente de Alberto:** aplicar `add_concursos.sql` en Supabase (BD compartida en vivo — no aplicado desde la
+    sesión a propósito); el v1 lee `NVIDIA_API_KEY` (ya configurada en ialimp). Manual `public/manual.html` y la doc
+    de regla de `apps/ialimp/CLAUDE.md` quedan como follow-up al promover la sección a producción.
+
+- **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
+  De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:
+  - **Automático de verdad:** pipeline de crons en `vercel.json` — `07:30` `pricing/guard` (detector de reversión de
+    PriceLabs + suelo de coste), `08:30` `pricing/apply-auto` (escribe el precio respetando pausa, guardia de confianza
+    y `apply_enabled`), `09:00` `pricing/resumen-diario` (email+push).
+  - **Salvaguardas ("no puede fallar"):** pausa global (`pricing_config.paused`, botón de pánico), guardia de confianza
+    (no escribe con <5 comps o mercado >7d), detector de reversión (alerta `precio_revertido`), `pricing/restore`
+    (deshacer), topes min/max del propietario como autoridad final.
+  - **Motor:** `lib/pricing-calendar.ts` (compartido con snapshot) → `eventFactor` (Semana Santa/Feria, +50% máx, flag
+    `events_enabled`) y `gap_discount_pct` (noche-hueco). Conversión huésped→base por `channel_markup`.
+  - **Panel ampliado:** medidor € extra vs PriceLabs (`pricing/resultados`), histórico (`pricing/historial`), restaurar,
+    pausa, botón de avisos push, toggles de eventos. Endpoints `pricing/settings` (GET estado+reco / PATCH).
+  - **Avisos:** `lib/pricing-notify.ts` (email `@iarest/core-email` + push). `lib/push.ts` (`@iarest/core-push`),
+    tabla **dedicada** `pricing_push_subs` (aislada de `push_subscriptions` compartida), suscripción
+    `/api/propietario/push-subscribe` + SW `public/sw.js`.
+  - **Seguridad:** `lib/cron-auth.ts` — crons de pricing/mercado exigen `CRON_SECRET` (o sesión admin); transición abierta
+    si no está definido. Fuente de mercado automática (Estrategia 2) `mercado/ingest-auto` gated por `MARKET_API_*`.
+  - **Migraciones BD (`wswbehlcuxqxyinousql`):** `pricing_settings`+`events_enabled`/`gap_discount_pct`, `pricing_config`,
+    `pricing_push_subs`. **Mergeado a `main` y desplegado a producción (`sybra.vercel.app`).**
+  - **⚠️ Pendiente de Alberto en Vercel (proyecto sivra):** definir `CRON_SECRET` (sin él el auto-apply diario NO corre —
+    de hecho más seguro: nada se escribe en Smoobu solo; el panel manual sí funciona) y `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/
+    `VAPID_PRIVATE_KEY` (avisos push). Activar `apply_enabled` por piso según quite PriceLabs. Doc: `apps/sivra/docs/pricing-automatico.md`.
 
 - **🔵 Migración BD ia-rest → proyecto compartido (Fase A2) — rama `claude/joaquin-jaen-expansion-4nyju5` — 10/06/2026**
   Unificación de datos: ia-rest deja su proyecto Supabase separado (`efncqyvhniaxsirhdxaa`) y pasa al
