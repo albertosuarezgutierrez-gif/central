@@ -229,3 +229,63 @@ sin escribir) y **Aplicar ahora** (`dryRun=false`, sólo habilitado si `apply_en
 **Seguridad:** `/api/pricing/apply` ahora acepta **sesión de admin** (NextAuth, vía `auth()`) además de `CRON_SECRET`,
 para que los botones del panel funcionen desde el navegador. El endpoint sigue requiriendo una de las dos cosas:
 sin `CRON_SECRET` válido **y** sin sesión → 401 (antes, sin `CRON_SECRET` definido quedaba abierto; ahora ya no).
+
+---
+
+## Producto completo: automatización, salvaguardas, panel y avisos (sesión 10/06)
+
+El módulo pasa de "recomendar + aplicar a mano" a **automático con red de seguridad**, y de pilotaje a
+**producto vendible**. Todo en el PR #108.
+
+### Pipeline diario (crons en `vercel.json`, hora Sevilla = UTC+1/2)
+1. `07:00` `rates/snapshot` — captura precios/disponibilidad de Smoobu.
+2. `07:15` `mercado/cron` — comparables (scraping IA; respaldo).
+3. `07:30` `pricing/guard` — **detector de reversión** (PriceLabs pisó nuestro precio) + suelo de coste → alertas + email/push.
+4. `08:00` `experiments/check-results`, `08:05` `detect-opportunities`.
+5. `08:30` `pricing/apply-auto` — **aplica el precio** (dryRun=false) a los pisos con `apply_enabled`,
+   respetando **pausa global**, **guardia de confianza** y los topes del propietario.
+6. `09:00` `pricing/resumen-diario` — email + push con cambios aplicados y alertas abiertas.
+
+### Salvaguardas ("no puede fallar")
+- **Pausa global** (`pricing_config.paused`): botón de pánico en el panel; el cron y «Aplicar» la respetan (degradan a simulación).
+- **Guardia de confianza** en `apply`: no escribe un piso con <5 comparables o mercado >7 días (`skipped: datos_insuficientes`).
+- **Detector de reversión** (`guard`): compara `pricing_applied` (último real) vs `rate_snapshots.price_pricelabs`; si difieren → alerta `precio_revertido` + aviso.
+- **Restaurar** (`/api/pricing/restore`): reescribe en Smoobu el `old_price` auditado (deshacer).
+- **Topes del propietario** (`min_price`/`max_price`) siguen siendo autoridad final.
+
+### Motor: eventos y huecos
+- `lib/pricing-calendar.ts` (compartido con snapshot): `eventFactor(date)` añade premium en Semana Santa/Feria
+  (acotado a +50%, sólo fechas con evento), flag `events_enabled` por piso.
+- `gap_discount_pct` por piso: descuenta noches sueltas libres entre dos reservas.
+
+### Panel del propietario `/pricing-auto`
+Medidor de **€ extra vs PriceLabs** (`/api/pricing/resultados`), botón de **pánico** (pausa), botón de
+**avisos push**, toggle de eventos, descuento de hueco, **Restaurar** e **Histórico** por piso (`/api/pricing/historial`).
+
+### Notificaciones (email + push)
+- `lib/pricing-notify.ts` → email (`@iarest/core-email`, Gmail) + push (`lib/push.ts` → `@iarest/core-push`).
+- Suscripción push: `/api/propietario/push-subscribe` (tabla **dedicada** `pricing_push_subs`, aislada de la
+  `push_subscriptions` compartida con ia-rest/ialimp). El SW `public/sw.js` ya maneja `push`.
+
+### Seguridad
+- `lib/cron-auth.ts`: todos los crons de pricing/mercado exigen `CRON_SECRET` (o sesión admin). Transición:
+  si `CRON_SECRET` no está definido, permiten (con aviso) — **definirlo en producción cierra el acceso**.
+
+### Fuente de mercado automática (Estrategia 2 — gated)
+`/api/mercado/ingest-auto`: llama a una API real (RapidAPI…) y upserta en `market_rates`. Inactivo hasta
+definir `MARKET_API_URL`/`MARKET_API_KEY`; adaptar `mapToComps` al proveedor. Respaldo: ingesta manual.
+
+### ⚙️ Variables de entorno que debe definir Alberto en Vercel (proyecto sivra)
+- **`CRON_SECRET`** (obligatoria antes de mergear a producción) — protege los endpoints de escritura.
+- **`NEXT_PUBLIC_VAPID_PUBLIC_KEY`** + **`VAPID_PRIVATE_KEY`** — para los avisos push (generar par con `web-push`).
+- (Opcional, Estrategia 2) `MARKET_API_URL`, `MARKET_API_KEY`, `MARKET_API_HOST`.
+- Ya existentes: `SMOOBU_API_KEY`, `GMAIL_USER`/`GMAIL_APP_PASSWORD`, `NEXTAUTH_URL`, `ADMIN_EMAIL`/`ADMIN_PASSWORD`.
+
+### Migraciones aplicadas (Supabase `wswbehlcuxqxyinousql`)
+- `pricing_settings`: +`events_enabled`, +`gap_discount_pct`.
+- `pricing_config` (singleton `paused`).
+- `pricing_push_subs` (suscripciones push del propietario).
+
+### Pendiente
+- Alberto: definir envs + mergear PR #108. Vigilar que PriceLabs no revierta (lo detecta `guard`).
+- Fase futura: onboarding SaaS multi-propietario (alta self-service de listings/costes/reseñas).
