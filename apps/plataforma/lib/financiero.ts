@@ -1,5 +1,4 @@
 import { prisma } from './db'
-import { iaRestDb } from './iarest'
 
 export type ResumenFinanciero = {
   ingresosYtd: number
@@ -72,21 +71,28 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
   }
 }
 
+// ia-rest vive ahora en la MISMA BD compartida, en el schema `iarest` (corte de BD
+// unificada). Se lee con la conexión Prisma normal (rol `postgres`, con USAGE sobre
+// el schema), schema-cualificando la vista. Ya no hay 2ª BD ni cliente service-role.
 export async function getResumenIaRest(localId: string | null, anio: number): Promise<ResumenFinanciero> {
   if (!localId) return { ...NULO, nota: 'sin local vinculado' }
   try {
-    const { data, error } = await iaRestDb()
-      .from('v_resumen_financiero_anual')
-      .select('ingresos_base, gastos_base, resultado')
-      .eq('local_id', localId)
-      .eq('anio', anio)
-      .maybeSingle()
-    if (error) throw error
-    const r = data as { ingresos_base: number; gastos_base: number; resultado: number } | null
+    const rows = await prisma.$queryRaw<Array<{
+      ingresos_base: unknown; gastos_base: unknown; resultado: unknown
+    }>>`
+      SELECT
+        COALESCE(SUM(ingresos_base), 0)::float AS ingresos_base,
+        COALESCE(SUM(gastos_base),   0)::float AS gastos_base,
+        COALESCE(SUM(resultado),     0)::float AS resultado
+      FROM iarest.v_resumen_financiero_anual
+      WHERE local_id = ${localId}::uuid
+        AND anio = ${anio}
+    `
+    const r = rows[0]
     return {
-      ingresosYtd:  Number(r?.ingresos_base ?? 0),
-      gastosYtd:    Number(r?.gastos_base ?? 0),
-      resultadoYtd: Number(r?.resultado ?? 0),
+      ingresosYtd:  Number(r.ingresos_base),
+      gastosYtd:    Number(r.gastos_base),
+      resultadoYtd: Number(r.resultado),
       disponible: true,
     }
   } catch {
