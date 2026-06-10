@@ -24,6 +24,9 @@ export async function GET(req: Request) {
         cs.origen,
         cs.tipo_servicio,
         cs.hora_inicio::text AS hora_inicio,
+        cs.orden_manual,
+        cs.urgente_manual,
+        cs.notas,
         l.nombre AS limpiadora_nombre
       FROM cleaning_sessions cs
       LEFT JOIN limpiadoras l ON l.id = cs.limpiadora_id
@@ -31,6 +34,9 @@ export async function GET(req: Request) {
         AND cs.session_date BETWEEN ${desde}::date AND ${hasta}::date
         ${limp_id ? Prisma.sql`AND cs.limpiadora_id = ${limp_id}::uuid` : Prisma.sql``}
       ORDER BY cs.session_date,
+        (cs.orden_manual IS NULL),
+        cs.orden_manual ASC,
+        (cs.urgente_manual IS TRUE) DESC,
         (cs.alerta_ventana IS TRUE) DESC,
         (cs.hora_checkin_siguiente IS NOT NULL) DESC,
         cs.hora_checkin_siguiente::text ASC NULLS LAST,

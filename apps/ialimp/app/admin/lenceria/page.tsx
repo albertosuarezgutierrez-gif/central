@@ -12,12 +12,14 @@ const ESTADOS = {
 }
 
 export default function LenceriaPage() {
-  const [items, setItems]       = useState<any[]>([])
-  const [loading, setLoading]   = useState(true)
-  const [showForm, setShowForm] = useState(false)
-  const [tiposLen, setTiposLen] = useState<any[]>([])
-  const [form, setForm]         = useState({ tipo: '', cantidad: '', propiedad_id: '' })
-  const [propiedades, setProps] = useState<any[]>([])
+  const [items, setItems]           = useState<any[]>([])
+  const [loading, setLoading]       = useState(true)
+  const [showForm, setShowForm]     = useState(false)
+  const [tiposLen, setTiposLen]     = useState<any[]>([])
+  const [form, setForm]             = useState({ tipo: '', cantidad: '', propiedad_id: '' })
+  const [propiedades, setProps]     = useState<any[]>([])
+  const [editItem, setEditItem]     = useState<any | null>(null)
+  const [saving, setSaving]         = useState(false)
 
   useEffect(() => { cargar(); cargarProps() }, [])
 
@@ -38,10 +40,39 @@ export default function LenceriaPage() {
     await fetch('/api/admin/lenceria/' + id, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ estado }) })
     setItems(is => is.map(i => i.id === id ? { ...i, estado } : i))
   }
-  async function añadir(e: React.FormEvent) {
-    e.preventDefault()
-    await fetch('/api/admin/lenceria', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) })
-    await cargar(); setShowForm(false)
+
+  function abrirEditar(item: any) {
+    setEditItem(item)
+    setForm({
+      tipo:         item.tipo          || '',
+      cantidad:     item.cantidad != null ? String(item.cantidad) : '',
+      propiedad_id: item.propiedad_id  || '',
+    })
+    setShowForm(true)
+  }
+
+  function cerrarForm() {
+    setShowForm(false)
+    setEditItem(null)
+    setForm(f => ({ ...f, cantidad: '', propiedad_id: '' }))
+  }
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault(); setSaving(true)
+    if (editItem) {
+      await fetch('/api/admin/lenceria', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: editItem.id, estado: editItem.estado, ...form })
+      })
+    } else {
+      await fetch('/api/admin/lenceria', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(form)
+      })
+    }
+    await cargar(); cerrarForm(); setSaving(false)
   }
 
   const getTipo = (id: string) => tiposLen.find(t => t.id === id) || { label: id, emoji: '📦' }
@@ -58,7 +89,7 @@ export default function LenceriaPage() {
             {items.length} juegos {enLavanderia > 0 ? `· ${enLavanderia} en lavandería` : ''} {sucios > 0 ? `· ${sucios} sucios` : ''}
           </p>
         </div>
-        <button onClick={() => setShowForm(true)} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer' }}>+ Añadir</button>
+        <button onClick={() => { setEditItem(null); setShowForm(true) }} style={{ background: 'rgba(255,255,255,0.15)', color: 'white', padding: '8px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600, border: 'none', cursor: 'pointer' }}>+ Añadir</button>
       </header>
 
       <div style={{ padding: '20px 24px' }}>
@@ -67,7 +98,7 @@ export default function LenceriaPage() {
           <div style={{ textAlign: 'center', padding: '48px 0', color: C.muted }}>
             <div style={{ fontSize: 40, marginBottom: 8 }}>🛏️</div>
             <div style={{ fontWeight: 700 }}>Sin lencería registrada</div>
-            <button onClick={() => setShowForm(true)} style={{ marginTop: 12, background: C.primary, color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Añadir primera partida</button>
+            <button onClick={() => { setEditItem(null); setShowForm(true) }} style={{ marginTop: 12, background: C.primary, color: 'white', border: 'none', borderRadius: 8, padding: '9px 18px', cursor: 'pointer', fontSize: 13, fontWeight: 700 }}>Añadir primera partida</button>
           </div>
         )}
         {Object.entries(ESTADOS).map(([estado, cfg]) => {
@@ -86,11 +117,15 @@ export default function LenceriaPage() {
                     <div key={item.id} style={{ background: 'white', borderRadius: 12, border: `1px solid ${C.border}`, padding: '14px 16px', borderLeft: `4px solid ${cfg.color}` }}>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
                         <span style={{ fontSize: 24 }}>{t.emoji || '📦'}</span>
-                        <div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontWeight: 700, fontSize: 13, color: C.text }}>{t.label}</div>
                           {item.propiedad_nombre && <div style={{ fontSize: 11, color: C.muted }}>{item.propiedad_nombre}</div>}
                         </div>
-                        <div style={{ marginLeft: 'auto', fontWeight: 800, fontSize: 20, color: cfg.color }}>{item.cantidad}</div>
+                        <div style={{ fontWeight: 800, fontSize: 20, color: cfg.color }}>{item.cantidad}</div>
+                        <button onClick={() => abrirEditar(item)} title="Editar"
+                          style={{ background: 'none', border: `1px solid ${C.border}`, borderRadius: 6, padding: '3px 7px', fontSize: 12, cursor: 'pointer', color: C.muted, flexShrink: 0 }}>
+                          ✏️
+                        </button>
                       </div>
                       {item.lavanderia_envio_at && <div style={{ fontSize: 11, color: '#7c3aed', marginBottom: 8 }}>📅 Enviada: {new Date(item.lavanderia_envio_at).toLocaleDateString('es-ES')}</div>}
                       <div style={{ display: 'flex', gap: 5, flexWrap: 'wrap' }}>
@@ -109,12 +144,12 @@ export default function LenceriaPage() {
 
       {showForm && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100, padding: 20 }}>
-          <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 400, padding: '24px' }}>
+          <div style={{ background: 'white', borderRadius: 16, width: '100%', maxWidth: 400, maxHeight: '90vh', overflowY: 'auto', padding: '24px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
-              <h3 style={{ fontWeight: 800, fontSize: 17, color: C.text }}>Añadir lencería</h3>
-              <button onClick={() => setShowForm(false)} style={{ background: 'none', border: 'none', fontSize: 22, color: C.muted, cursor: 'pointer' }}>✕</button>
+              <h3 style={{ fontWeight: 800, fontSize: 17, color: C.text }}>{editItem ? 'Editar lencería' : 'Añadir lencería'}</h3>
+              <button onClick={cerrarForm} style={{ background: 'none', border: 'none', fontSize: 22, color: C.muted, cursor: 'pointer' }}>✕</button>
             </div>
-            <form onSubmit={añadir} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ display: 'block', fontSize: 12, fontWeight: 700, color: C.muted, marginBottom: 5 }}>Tipo</label>
                 <select value={form.tipo} onChange={e => setForm(p => ({ ...p, tipo: e.target.value }))}
@@ -136,8 +171,10 @@ export default function LenceriaPage() {
                 </select>
               </div>
               <div style={{ display: 'flex', gap: 10 }}>
-                <button type="button" onClick={() => setShowForm(false)} style={{ flex: 1, padding: 11, background: 'white', border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
-                <button type="submit" style={{ flex: 2, padding: 11, background: C.primary, color: 'white', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>Añadir</button>
+                <button type="button" onClick={cerrarForm} style={{ flex: 1, padding: 11, background: 'white', border: `1px solid ${C.border}`, borderRadius: 10, fontSize: 13, cursor: 'pointer' }}>Cancelar</button>
+                <button type="submit" disabled={saving} style={{ flex: 2, padding: 11, background: C.primary, color: 'white', border: 'none', borderRadius: 10, fontSize: 13, fontWeight: 700, cursor: 'pointer', opacity: saving ? 0.5 : 1 }}>
+                  {saving ? 'Guardando...' : editItem ? 'Guardar cambios' : 'Añadir'}
+                </button>
               </div>
             </form>
           </div>
