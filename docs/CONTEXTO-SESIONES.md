@@ -33,15 +33,19 @@
     modularización y materiales/flota) queda en `main`. Conflictos de merge resueltos: `asn/route.ts`
     (se mantiene la versión con `@iarest/module-asn` + `SB_OPTS`) y `CONTEXTO-SESIONES.md` (versión de la
     rama, histórico completo). 80 ficheros, +2892/−162. Las 4 apps tenían previews verdes.
-  - **PENDIENTE:** (yo) plataforma → leer `iarest` nativo del compartido (ahora misma BD; retirar el puente
-    service-role `apps/plataforma/lib/iarest.ts` y las envs `IAREST_*`, leer `iarest.v_resumen_financiero_anual`
-    directo); DROP `iarest._mig_ddl` (pedir OK, destructivo aunque era andamiaje de la migración).
-    (Alberto) resetear password BD del proyecto viejo (quedó en chat) y jubilar `efncqyvhniaxsirhdxaa`
-    cuando lleve unos días estable. Rollback del corte = revertir las 3 envs de Vercel (el código en
-    `main` con la variable sin definir se comporta como antes).
-  - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura ahora apuntan al
-    compartido `wswbehlcuxqxyinousql` + schema `iarest` (con nota de que todo cliente/Realtime/EF nuevo
-    debe fijar el schema `iarest`).
+  - **✅ UNIFICACIÓN DE BD COMPLETA (PR #119, mergeado a main):** plataforma leía el financiero de ia-rest
+    del proyecto VIEJO por un puente service-role; ahora lee `iarest.v_resumen_financiero_anual` con la
+    **conexión Prisma normal** (rol `postgres`, con `USAGE` sobre `iarest`; verificado en vivo — `authenticator`
+    NO tiene acceso → aislamiento intacto). Eliminado `apps/plataforma/lib/iarest.ts` y la dependencia de
+    `IAREST_SUPABASE_*`. `next build` de plataforma verde. **Resultado: las 3 apps en UNA sola BD, sin ningún
+    puente externo — nada en el código apunta ya a `efncqyvhniaxsirhdxaa`.**
+  - **PENDIENTE (todo de Alberto, ya nada de unión por mi parte):** borrar de Vercel (plataforma) las envs
+    `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` (ya no se usan); resetear password BD del proyecto viejo
+    (quedó en chat) y **jubilar `efncqyvhniaxsirhdxaa`** cuando lo vea estable; aplicar `add_concursos.sql` (del #116).
+    Opcional/mío con tu OK: `DROP iarest._mig_ddl` (andamiaje de la migración, destructivo). Rollback del corte =
+    revertir las 3 envs de Vercel de ia-rest (el código en `main` sin `NEXT_PUBLIC_SUPABASE_SCHEMA` vuelve a `public`).
+  - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura apuntan al compartido
+    `wswbehlcuxqxyinousql` + schema `iarest` (con nota de fijar el schema en todo cliente/Realtime/EF nuevo).
 - **🏛️ NUEVO módulo `packages/module-concursos` — agente de concursos públicos (v1) — 10/06/2026**
   Módulo enchufable (patrón `module-contabilidad`: lógica **pura** TS, sin BD, sin UI, sin secretos) para preparar
   documentación de licitaciones (LCSP). **NO es una vertical**: cualquier app lo consume para que su cliente, de

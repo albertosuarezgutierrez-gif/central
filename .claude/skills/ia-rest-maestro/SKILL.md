@@ -1326,7 +1326,7 @@ SELECT cron.schedule(
   '*/5 * * * *',
   $$
     SELECT net.http_post(
-      url := 'https://efncqyvhniaxsirhdxaa.supabase.co/functions/v1/mi-funcion',
+      url := 'https://wswbehlcuxqxyinousql.supabase.co/functions/v1/mi-funcion',
       headers := '{"Authorization": "Bearer <SERVICE_ROLE_KEY>", "Content-Type": "application/json"}'::jsonb,
       body := '{}'::jsonb
     )
@@ -1544,7 +1544,7 @@ created_at, executed_at
 ### Termux (Android) — setup mínimo
 ```bash
 pkg install nodejs
-node bridge-local.js --token <bridge_token> --url https://efncqyvhniaxsirhdxaa.supabase.co/functions/v1/bridge-agent
+node bridge-local.js --token <bridge_token> --url https://wswbehlcuxqxyinousql.supabase.co/functions/v1/bridge-agent
 ```
 
 ### RPi Zero 2W — setup producción
