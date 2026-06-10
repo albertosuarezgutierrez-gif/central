@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORTE BD ia-rest → proyecto compartido EJECUTADO Y VERIFICADO EN PRODUCCIÓN (PR #117) — 10/06/2026**
+  El corte (Fase A2) está **hecho**: ia-rest producción consulta el schema `iarest` del compartido
+  (`wswbehlcuxqxyinousql`). La causa de que los redeploys no funcionaran NO era caché ni "Sensitive":
+  **el código que lee `NEXT_PUBLIC_SUPABASE_SCHEMA` vivía solo en la rama del PR #110 (sin mergear)**;
+  producción despliega desde `main`, que nunca miró la variable → todo iba a `public` → 404.
+  - **Fix quirúrgico (PR #117, mergeado a main):** extraído de la rama SOLO el interruptor de schema —
+    `lib/supabase.ts` (`SB_SCHEMA`/`SB_OPTS`) + los 9 ficheros con `createClient` (cobertura 100%, 10 call
+    sites), sin arrastrar `module-*` ni nada más. 9 ficheros, +35/−9, env-gated y reversible por envs.
+  - **Verificado con logs de Supabase:** antes del deploy los crons daban 404 (`alerta_reglas`, `comandas`,
+    `qr_sesiones_cliente`, RPCs…); tras el deploy (18:45) **todo 200/204**. El preview del PR ya lo había
+    confirmado (build → `web_restaurante`/`blog_borradores` 200).
+  - **El PR #110 (rama `claude/joaquin-jaen-expansion-4nyju5`) sigue abierto** con el resto del trabajo
+    (módulos `module-*`, plataforma, docs). OJO al mergearlo: ya incluye su propia versión del interruptor
+    (idéntica) — no debería dar conflicto, pero revisar el merge de los 9 ficheros.
+  - **PENDIENTE:** (yo) plataforma → leer `iarest` nativo del compartido (retirar puente service-role
+    `lib/iarest.ts` y las envs `IAREST_*`); DROP `iarest._mig_ddl` (pedir OK, es destructivo aunque temporal).
+    (Alberto) resetear password BD del proyecto viejo (quedó en chat) y jubilar `efncqyvhniaxsirhdxaa`
+    cuando lleve unos días estable. Rollback del corte = revertir las 3 envs de Vercel (el código en
+    `main` con la variable sin definir se comporta como antes).
+
 - **🔵 Migración BD ia-rest → proyecto compartido (Fase A2) — rama `claude/joaquin-jaen-expansion-4nyju5` — 10/06/2026**
   Unificación de datos: ia-rest deja su proyecto Supabase separado (`efncqyvhniaxsirhdxaa`) y pasa al
   **compartido `wswbehlcuxqxyinousql`** en un **schema propio `iarest`** (ialimp/sivra siguen en `public`).
