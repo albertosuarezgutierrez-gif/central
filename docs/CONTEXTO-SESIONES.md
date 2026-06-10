@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ CORTE BD ia-rest → proyecto compartido EJECUTADO Y VERIFICADO EN PRODUCCIÓN (PR #117) — 10/06/2026**
+  El corte (Fase A2) está **hecho**: ia-rest producción consulta el schema `iarest` del compartido
+  (`wswbehlcuxqxyinousql`). La causa de que los redeploys no funcionaran NO era caché ni "Sensitive":
+  **el código que lee `NEXT_PUBLIC_SUPABASE_SCHEMA` vivía solo en la rama del PR #110 (sin mergear)**;
+  producción despliega desde `main`, que nunca miró la variable → todo iba a `public` → 404.
+  - **Fix quirúrgico (PR #117, mergeado a main):** extraído de la rama SOLO el interruptor de schema —
+    `lib/supabase.ts` (`SB_SCHEMA`/`SB_OPTS`) + los 9 ficheros con `createClient` (cobertura 100%, 10 call
+    sites), sin arrastrar `module-*` ni nada más. 9 ficheros, +35/−9, env-gated y reversible por envs.
+  - **Verificado con logs de Supabase:** antes del deploy los crons daban 404 (`alerta_reglas`, `comandas`,
+    `qr_sesiones_cliente`, RPCs…); tras el deploy (18:45) **todo 200/204**. El preview del PR ya lo había
+    confirmado (build → `web_restaurante`/`blog_borradores` 200).
+  - **PR #110 TAMBIÉN MERGEADO a `main` (10/06):** todo el trabajo restante de la rama
+    `claude/joaquin-jaen-expansion-4nyju5` (HITO 3 financiero ia-rest en plataforma, `packages/module-*`
+    —crm/inventario/agenda/presupuestos/proveedores/portales/feedback/ocr/asn—, docs de diseño de
+    modularización y materiales/flota) queda en `main`. Conflictos de merge resueltos: `asn/route.ts`
+    (se mantiene la versión con `@iarest/module-asn` + `SB_OPTS`) y `CONTEXTO-SESIONES.md` (versión de la
+    rama, histórico completo). 80 ficheros, +2892/−162. Las 4 apps tenían previews verdes.
+  - **PENDIENTE:** (yo) plataforma → leer `iarest` nativo del compartido (ahora misma BD; retirar el puente
+    service-role `apps/plataforma/lib/iarest.ts` y las envs `IAREST_*`, leer `iarest.v_resumen_financiero_anual`
+    directo); DROP `iarest._mig_ddl` (pedir OK, destructivo aunque era andamiaje de la migración).
+    (Alberto) resetear password BD del proyecto viejo (quedó en chat) y jubilar `efncqyvhniaxsirhdxaa`
+    cuando lleve unos días estable. Rollback del corte = revertir las 3 envs de Vercel (el código en
+    `main` con la variable sin definir se comporta como antes).
+  - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura ahora apuntan al
+    compartido `wswbehlcuxqxyinousql` + schema `iarest` (con nota de que todo cliente/Realtime/EF nuevo
+    debe fijar el schema `iarest`).
 - **🏛️ NUEVO módulo `packages/module-concursos` — agente de concursos públicos (v1) — 10/06/2026**
   Módulo enchufable (patrón `module-contabilidad`: lógica **pura** TS, sin BD, sin UI, sin secretos) para preparar
   documentación de licitaciones (LCSP). **NO es una vertical**: cualquier app lo consume para que su cliente, de
@@ -63,76 +89,105 @@
     de hecho más seguro: nada se escribe en Smoobu solo; el panel manual sí funciona) y `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/
     `VAPID_PRIVATE_KEY` (avisos push). Activar `apply_enabled` por piso según quite PriceLabs. Doc: `apps/sivra/docs/pricing-automatico.md`.
 
-- **🔄 SIVRA pricing — fuente de mercado real (Booking+Trivago) + piloto Busto Reform (claude/tourist-apartments-auto-pricing) — 09/06/2026**
-  El "precio automático" (motor `rates/snapshot` + `pricing/detect-opportunities` + experimentos) ya estaba en prod, pero la
-  competencia salía de **scraping de Google (Serper) + IA**, dato aproximado. Mejora de la fuente:
-  - **Conectores evaluados** (MCP de Claude, NO llamables desde el cron de Vercel): el mejor para **apartamentos** es
-    **Booking** (`accommodations_search`) + **Trivago** (radius search) — precio real/noche, score, reseñas, barrio.
-    DirectBooker/Wyndham/lastminute/TripAdvisor son de hoteles → no sirven de comparable de pisos.
-  - **Estrategia 1 (coste 0, elegida para el piloto):** Claude actúa de recolector y vuelca comparables reales en
-    `market_rates`. Cargados 14 comps reales para `scenario='prop_busto_reform'`.
-  - **⚠️ CAPACIDAD IMPORTA — corregido:** Busto Reform es **1 dorm / 2 plazas** (`properties.maxGuests`). La 1ª carga se hizo
-    a 4 plazas (pisos más grandes/caros, ~190€) → MAL. Recargado a **2 plazas**: Booking avg **168€** (p50 168, rango 140–220) ·
-    Trivago **166€** → mercado real ≈ **166–168€/noche**. Capacidades: Busto Reform 2 · Duplex Center 4 · Luxury Busto 5 ·
-    House Sevillana 12. **Cada piso necesita comps a SU ocupación** (pendiente para los otros 3). Matiz: el filtro por nº de
-    dormitorios no está en los conectores; se usa la ocupación (nº huéspedes) como proxy.
-  - **Nuevo endpoint `POST /api/mercado/ingest`** (protegido por `CRON_SECRET` si está): la "tubería" para meter comps reales
-    sin Serper; upsert idempotente con la misma clave que el cron. Es también el hook para una futura API de pago (Estrategia 2).
-  - **🎯 OBJETIVO DE NEGOCIO: esto se va a VENDER como producto (automatización de pricing para pisos turísticos) → "no puede
-    fallar".** Implica que el estado actual (piloto, semi-manual) NO es todavía product-grade. Checklist para hacerlo vendible:
-    1. **Autonomía real (Estrategia 2):** hoy la fuente de mercado depende de que Claude la recolecte en sesión (Estrategia 1).
-       Un producto necesita una **API real** (Booking/Expedia partner o RapidAPI) llamada por el cron, sin humano en el bucle.
-    2. **Comps por capacidad para los 4 pisos:** sólo Busto Reform (2 pax) está corregido. Faltan Duplex (4), Luxury (5),
-       House (12). Comparar contra la ocupación correcta es **crítico** (un fallo aquí = precio mal puesto = cliente perdido).
-    3. **Reconciliar la fórmula del motor:** 3 números no cuadran para Busto Reform → `OUR_PRICES.normal` 80€ vs base 175€ del
-       `snapshot` vs mercado real ~168€. Hasta resolver esto, el "precio recomendado" no es de fiar.
-    4. **Cerrar el bucle a Smoobu:** hoy `detect-opportunities` sólo manda email; un producto debe **escribir el precio** en el
-       canal (Smoobu API) con tope de seguridad y aprobación opcional.
-    5. **Robustez/observabilidad:** reintentos, alertas si una fuente falla, validación de outliers (precio absurdo no se aplica),
-       y log/auditoría de cada cambio de precio (para defender el resultado ante el cliente).
-  - **Hecho esta sesión:** evaluación de conectores, fuente real Booking+Trivago, endpoint `/api/mercado/ingest`, comps
-    a-capacidad cargados para los **4 pisos** (Busto 2pax p50 168€ · Duplex 4pax 180€ · Luxury 5pax 228€ · House 12pax 650€),
-    y **`GET /api/pricing/recommend`** = motor anclado al mercado (idea #1, sólo recomienda, no aplica). Doc de producto
-    `apps/sivra/docs/pricing-automatico.md` con las 4 ideas. PR **#108** (draft, CI verde). Branch
-    `claude/tourist-apartments-auto-pricing-jq0v4z`.
-  - **Producto vendible (decisión de Alberto):** será un **SaaS de pago** para propietarios; el pricing es **100% adaptable por
-    piso** y **sólo activo si contratan**. Implementado: tabla **`pricing_settings`** por piso (`enabled`, `target_pctl`,
-    `floor/ceil_pctl`, `position_factor`, `quality_k`, `own_score`, `min/max_price`); los 4 pisos propios sembrados `enabled=true`.
-    `/api/pricing/recommend` reescrito para leer estos ajustes + ajuste por calidad (reseñas) + hook de demanda.
-  - **Modelo afinado (09/06):** **demanda** ✅ real desde ocupación propia (`rate_snapshots`, ±8%). **2ª fuente** Trivago en
-    Duplex. **Calidad** ✅ `own_score` real (Busto 6,9 · Duplex 7,6 · Luxury 7,2 · House 8,4, dados por Alberto desde Booking)
-    — están BAJO la mediana del mercado (8,7–8,8) → la calidad **baja** el precio. **Salida final verificada (mercado×demanda×
-    calidad):** Busto **161€** · Duplex **175€** · Luxury **219€** · House **614€**.
-  - **ÚNICO paso que NO ejecuto sin OK explícito de Alberto:** escribir precios reales en Smoobu (irreversible / de cara al
-    exterior). Todo lo demás del modelo está aplicado y verificado.
-  - **🧪 PILOTO EN MARCHA (09/06):** validación en **Busto Reform**. Baseline en `apps/sivra/docs/pricing-automatico.md §7`
-    (ocupación 75%, reseñas 6,9, recomendado 161€). Recordatorio en Google Calendar de Alberto **16/06 10:00**.
-    **Acción de Alberto:** desconectar **PriceLabs** en Busto Reform (✅ HECHO 09/06, confirmado por captura) + aplicar el test.
-    **🚨 HALLAZGO:** PriceLabs tenía Busto Reform a **~70€/noche** (la mitad del mercado 168€). Salto a 161€ = +130% (brusco)
-    → recomendado subir por escalones (test ~120€ una semana) o ir al objetivo si Alberto lo ve. apply_enabled=true ya puesto.
-  - **✅ PUSH A SMOOBU CONSTRUIDO — `POST /api/pricing/apply`** (Alberto confirmó que sí se puede por la API de Smoobu).
-    Escribe el precio recomendado en Smoobu (corre en Vercel, que alcanza Smoobu; el dev NO). Protecciones: `dryRun=true` por
-    defecto, gate `apply_enabled` por piso, acotado a [suelo,techo] y `max_change_pct` (20%), auditoría `pricing_applied`,
-    `CRON_SECRET`. ⚠️ **Verificar el formato del POST `/api/rates` de Smoobu en un preview antes de `dryRun=false` en prod.**
-    El **16/06**: analizar piloto y decidir si se extiende a los otros 3 pisos.
-  - **📌 PARA RETOMAR (próxima sesión):** doc maestro = `apps/sivra/docs/pricing-automatico.md`. Endpoints: `/api/mercado/ingest`,
-    `/api/pricing/recommend`, `/api/pricing/apply`. **Estado que vive en BD Supabase `wswbehlcuxqxyinousql` (NO en git, pero
-    persiste):** tablas `pricing_settings` (own_score Busto 6,9/Duplex 7,6/Luxury 7,2/House 8,4; `apply_enabled=true` sólo en
-    Busto), `pricing_applied` (auditoría), comps en `market_rates` (scenario=`prop_*`). **Recordatorio Google Calendar 16/06 10:00.**
-    Suelo de coste `min_price=90` + techo del test `max_price=110` en Busto Reform → motor recomienda **110€**.
-    **⚠️ SMOOBU base ≠ precio huésped:** Smoobu fija un *precio base* y cada canal le suma margen (Booking +16%, Airbnb/Agoda/
-    HomeToGo +15%, Expedia +20%); el host neta ~la base. Nuestros `market_rates` son precios de huésped → **el motor debe escribir
-    base ≈ objetivo_huésped/(1+margen)** (PENDIENTE ajustar en `/api/pricing/apply`). `rate_snapshots.price_pricelabs` = base Smoobu.
-    **✅ TEST EJECUTADO POR EL SISTEMA (10/06 06:36 UTC):** `/api/pricing/apply` (tras arreglar 4 bugs: min/max ignorados,
-    sin conversión huésped→base con `channel_markup` 1.16, orden de topes, occ sin JOIN; + middleware no excluía las rutas
-    de pricing — los crons `detect-opportunities`/`check-results` llevaban redirigidos a /login sin ejecutarse). Escribió en
-    Smoobu: **10/06 65→110 · 23/06 102→110** (únicas fechas libres en 15 días). Verificación triple: re-dry-run "0 cambios",
-    snapshot fresco = 110, auditoría en `pricing_applied`. **Primer precio puesto 100% por el sistema.**
-    **✅ CONFIRMADO VISUALMENTE POR ALBERTO (10/06): "sale perfectamente" en su app Smoobu.** Bucle 100% cerrado:
-    sistema calculó → escribió → verificado por API/BD → visto por el dueño. Prueba de concepto del producto COMPLETA.
-    **⚠️ ANTES DE MERGEAR PR #108: definir `CRON_SECRET` en Vercel sivra** (no parece estar; en prod el middleware ya no
-    bloquea apply). **Vigilar PriceLabs** (el 23 estaba a 102 → algo lo tocó; si revierte a 65, quitar listing del todo).
-    El 16/06: "analiza el piloto de Busto Reform" (recordatorio en Calendar).
+- **🔵 Migración BD ia-rest → proyecto compartido (Fase A2) — rama `claude/joaquin-jaen-expansion-4nyju5` — 10/06/2026**
+  Unificación de datos: ia-rest deja su proyecto Supabase separado (`efncqyvhniaxsirhdxaa`) y pasa al
+  **compartido `wswbehlcuxqxyinousql`** en un **schema propio `iarest`** (ialimp/sivra siguen en `public`).
+  Ejecutado por **dblink server-to-server** + ejecutor plpgsql (sin tooling local). Detalle y corte final en
+  `docs/RUNBOOK-migracion-bd-iarest.md`.
+  - **Esquema migrado y verificado (paridad):** 215 tablas + 47 vistas + 121 funcs + 428 policies + 32 triggers
+    + 428 FKs + 731 índices + 5 secuencias. **0 funciones con `search_path=public`** (aislamiento total vs
+    ialimp/sivra). Única tabla sin RLS aparte de la temporal: `instagram_estilos_usados` (paridad: en origen
+    tampoco tenía). Vistas/tablas clave (`restaurantes`, `leads`, `v_resumen_financiero_anual`) queryables
+    (0 filas = migración solo-esquema; datos demo desechables, la app arranca limpia).
+  - **Código ia-rest listo:** `SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts` (lee `NEXT_PUBLIC_SUPABASE_SCHEMA`,
+    default `public` = comportamiento actual) + 8 ficheros con `createClient` propio parcheados. `next build` verde.
+  - **Edge Functions: 43/43 migradas** al compartido, cada `createClient` a schema `iarest`, verify_jwt cuadrando
+    con origen (true solo en monitor-health, stripe-checkout, analizar-cv, lead-research). Se desbloqueó tras
+    Alberto borrar funciones basura (de ~100 → 44, tope del plan).
+  - **PENDIENTE (solo Alberto, en orden):** (1) re-meter secrets de Edge Functions en el compartido
+    (Stripe/MONEI/NVIDIA/Telegram/Resend/VeriFactu…); (2) Settings→API→Exposed schemas → añadir `iarest`;
+    (3) Vercel ia-rest → swap `NEXT_PUBLIC_SUPABASE_URL`/`ANON_KEY`/`SERVICE_ROLE_KEY` al compartido + añadir
+    `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest` → Redeploy. **Luego (yo):** smoke test, plataforma lee iarest nativo
+    (retirar puente service-role), DROP `iarest._mig_ddl`. **Después:** resetear password BD ia-rest (quedó en
+    chat) y jubilar proyecto viejo. Rollback = revertir las 3 envs de Vercel.
+
+- **✅ HITO 3 (financiero ia-rest en plataforma) + 📐 diseño de modularización — rama `claude/joaquin-jaen-expansion-4nyju5` — 09/06/2026**
+  Preparación de la reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas de eventos, alquiler de
+  materiales, transporte de camiones, tiendas de comida para llevar). Dos entregables:
+  - **HITO 3 (código):** plataforma ya consolida el financiero de ia-rest, que vive en BD **separada**
+    (`efncqyvhniaxsirhdxaa`). Nueva vista `v_resumen_financiero_anual` (migración `apps/ia-rest/supabase/migrations/
+    20260609_*`, **ya aplicada** vía MCP) que agrega `facturas_verifactu.base_imponible` (ingresos) y
+    `facturas_compra.importe_base` (gastos) por `local_id`+`anio`. Nuevo cliente service-role
+    `apps/plataforma/lib/iarest.ts` (`@supabase/supabase-js`) y `getResumenIaRest(localId, anio)` en `lib/financiero.ts`
+    (ya no es stub "BD separada"). UI `GestionSociedad.tsx` pide `refExt`=`local_id` para `app='ia-rest'`. `refExt` = UUID del local.
+    Typecheck verde. **PENDIENTE de Alberto:** añadir envs `IAREST_SUPABASE_URL` + `IAREST_SUPABASE_SERVICE_KEY` en Vercel (plataforma).
+  - **Diseño de modularización (doc):** `docs/DISENO-modularizacion-verticales.md` — sacar de ia-rest las capacidades
+    horizontales (CRM, agenda, inventario, presupuestos, proveedores, portales, feedback, ocr, asn) a `packages/module-*`
+    con patrón conector/adaptador + agregado genérico `Encargo`, registro de KPIs en plataforma, intercompany del holding,
+    y matriz de consumo por negocio (incl. plantilla "clínica estética"). **Sin extraer código aún** (siguiente ronda).
+  - **Diseño a fondo materiales/flota (hecho):** `docs/DISENO-modulos-materiales-flota.md` — extiende
+    `inventario_menaje*` (alquiler: tarifas, fianza, daños) y `vehiculos_grupo`+`evento_transporte` (flota:
+    ITV/seguro/mantenimiento, rutas multi-parada, asignación inteligente) hacia `module-*`, con doble
+    facturación interno(intercompany)/externo. **Pendiente:** extracción real de los `module-*` y construir las verticales.
+  - **`packages/module-crm` (hecho):** primer `module-*` real — tipos genéricos (`Oportunidad`, `ParentRef`
+    con `parentType` = costura del Encargo), puertos (`OportunidadRepository`, `OportunidadAdapter<T>`) y lógica
+    pura de pipeline (`resumenPipeline`, `valorPonderado`, probabilidad por estado). Agnóstico de BD.
+  - **Extracción CRM en ia-rest (HECHA, definitiva):** ia-rest consume `@iarest/module-crm`. Nuevo
+    `apps/ia-rest/src/lib/crm-eventos.ts` con `leadsEventoAdapter` (mapea `leads_evento` ↔ `Oportunidad`,
+    estado `presupuesto_enviado`↔`propuesta`, `evento_id`→`parent`). La ruta `api/owner/eventos/leads` delega
+    el cálculo de pipeline en `resumenPipeline` del módulo (contrato de respuesta preservado + nuevo `valor_ponderado`).
+    Verificado con `next build` real (Next 16) en verde. El CRM super-admin (`leads`) queda intacto (otro concern).
+  - **`packages/module-inventario` + extracción en ia-rest (HECHO, definitivo):** módulo genérico (`Articulo`,
+    `AsignacionActivo` con `parent/parentType`, helpers `disponibilidadTrasReserva/Devolucion`, `costeDanos`,
+    `resumenStock`). ia-rest: `apps/ia-rest/src/lib/inventario-menaje.ts` (`menajeArticuloAdapter` +
+    `menajeAsignacionAdapter` sobre `inventario_menaje`/`inventario_menaje_evento`); la ruta `api/owner/menaje`
+    delega la regla de disponibilidad en el módulo. Base del futuro **alquiler de materiales**. `next build` verde.
+  - **`packages/module-presupuestos` + extracción en ia-rest (HECHO, definitivo):** módulo genérico (líneas,
+    costes, descuento, `calcularMargen`, `esRentable`, `resumenPresupuesto`). ia-rest:
+    `apps/ia-rest/src/lib/presupuestos-evento.ts` (`presupuestoEventoAdapter` + `costesDeEvento`, mapea la
+    tarifa adulto/niño + costes a líneas genéricas); la ruta `api/owner/eventos/presupuestos` delega el cálculo
+    de margen/rentabilidad en el módulo. `next build` verde.
+  - **`packages/module-proveedores` + extracción en ia-rest (HECHO):** módulo genérico (`ProveedorServicio` con
+    `parent`, `calcularComision`, `totalComisiones`, `comisionesCobradas`). ia-rest:
+    `apps/ia-rest/src/lib/proveedores-evento.ts` (`proveedorServicioAdapter`, estado `comision_cobrada`↔`cobrada`);
+    ruta `api/owner/eventos/proveedores-asignaciones` delega comisión y sumas. `next build` verde.
+  - **`packages/module-feedback` + extracción en ia-rest (HECHO):** módulo genérico (`Feedback`, `Propina` con
+    `parent`/token, `resumenValoraciones`, `totalPropinas`, `propinasPagadas`). ia-rest:
+    `apps/ia-rest/src/lib/feedback-visita.ts` (`feedbackVisitaAdapter` + `propinaAdapter`); las rutas
+    `api/owner/feedback` y `api/owner/propinas` añaden un `resumen` agregado vía el módulo. `next build` verde.
+  - **`packages/module-asn` + extracción en ia-rest (HECHO):** módulo genérico (`ASN`, `LineaASN`,
+    `totalLineas`, `unidadesTotales`). ia-rest: `apps/ia-rest/src/lib/asn-pedido.ts` (`asnItemAdapter` sobre
+    `pedidos_proveedor.asn_items`); la ruta pública `api/asn` añade `total_albaran` vía el módulo. `next build` verde.
+  - **`packages/module-agenda` (HECHO, contrato):** módulo genérico de disponibilidad/reserva de recurso
+    (`Recurso`, `Reserva`, `Intervalo`, `haySolape`, `recursoDisponible`, `recursosDisponibles`). Es el motor
+    transversal de venues/flota/alquiler/citas. Sin extracción de ia-rest (los eventos son por fecha, no reserva
+    de recurso) → queda como contrato para las verticales nuevas. Typecheck verde.
+  - **✅ MODULARIZACIÓN COMPLETA: 7 `module-*`** (crm, inventario, presupuestos, proveedores, feedback, asn, agenda).
+    6 con extracción real en ia-rest verificada con `next build`; agenda como contrato. Costura común `parent/parentType`
+    (agregado Encargo). **Siguiente:** construir las verticales nuevas (alquiler de materiales, flota) componiendo estos módulos.
+  - **📋 Informe de unificación + decisión de BD (HECHO):** `docs/INFORME-unificacion-central.md` — foto del estado
+    (matriz de adopción de `core-*`/`module-*` por app, qué está unido vs duplicado), esquema de capas, y plan de 6 fases.
+    **DECISIÓN (Alberto): BD UNIFICADA** — un solo proyecto Supabase con **schemas por vertical** (`iarest/ialimp/sivra`)
+    + **schema de control** (cuentas/sociedades/negocios/usuarios/RBAC/módulos/billing). Como **ia-rest NO tiene clientes
+    activos**, su BD (`efncqyvhniaxsirhdxaa`) **se migra a la compartida AHORA** (no la última); el conector service-role
+    de HITO 3 queda como puente temporal + válvula para BD dedicada de un futuro cliente grande. **Arranque sugerido:**
+    Fase A2 (migrar ia-rest) + Fase A (identidad/RBAC sobre core-identity, migrar sivra de NextAuth) → dedupe → contabilidad.
+  - **Ejecución de la unificación — INCREMENTOS HECHOS (verificados con build/tsc):**
+    1. **Fase C·1** validadores fiscales NIF/CIF/IBAN → `core-fiscal` (subpath `/validacion` puro); ialimp re-export. `next build` ✅.
+    2. **Fase A** fábrica de tokens jose (`createSessionToken`/`verifySessionToken` + jti) en `core-identity`. tsc ✅.
+    3. **Fase A** plataforma adopta esa fábrica (`lib/auth.ts` delega, firmas idénticas). build ✅.
+    4. **Fase D** registro `ResumenProvider` en plataforma (`financiero.ts`, DataConnector SPI, sustituye `if app===`). tsc ✅.
+  - **PENDIENTE de la unificación (orden):** adoptar el contrato auth en ialimp (live) y **migrar sivra de NextAuth**;
+    Fase B (ia-rest adopta `module-contabilidad`); resto Fase C (supabase client ialimp [keys mezcladas anon/service],
+    `aiExtractInvoice`→core-ai, ia-rest→core-email); **Fase A2 EJECUTADA (2026-06-10): esquema de ia-rest MIGRADO al schema `iarest` de la BD compartida**
+    vía dblink server-to-server (215 tablas, 47 vistas, 121 funciones, 32 triggers, 428 policies, 428 FKs,
+    448 índices, buckets) con paridad verificada — ver `docs/RUNBOOK-migracion-bd-iarest.md` (ESTADO REAL).
+    Código ia-rest listo para el corte por envs (`SB_OPTS`/`NEXT_PUBLIC_SUPABASE_SCHEMA`). **CORTE PENDIENTE de:**
+    (1) migrar las **43 Edge Functions** del proyecto viejo al compartido (solo 16 con fuente en repo, resto vía
+    MCP get_edge_function) parcheadas a schema iarest; (2) Alberto re-introduce los secrets de functions;
+    (3) Alberto añade `iarest` a Exposed schemas; (4) Alberto cambia 3 envs Vercel + añade
+    `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest` + Redeploy; (5) smoke test + plataforma nativa + DROP `iarest._mig_ddl`
+    + resetear password BD ia-rest (quedó en chat). La app sigue 100% en la BD vieja hasta el corte (nada roto).
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:
@@ -146,51 +201,17 @@
     pasa 5 args → sin cambios. `upload-photo` solo llama a analizar/comparar server-to-server → no toca NVIDIA.
   - PR en draft; CI en cola. **Pendiente:** validar preview ialimp (escáner docs + análisis fotos) antes de mergear.
 
-- **✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — 09/06/2026**
-  (2 PRs en borrador, ramas dedicadas basadas en `main`; pendiente validar preview Vercel + merge)
-  - **PR #111 `feat/vanessa-gestion-limpiezas`** (IALIMP):
-    - `cleaning_sessions` + columnas `orden_manual` (int) y `urgente_manual` (bool) (migración `2026-06-09_orden_manual_sesiones.sql`, aplicada en Supabase). Vista `sesiones_limpiadora` ampliada con `notas`/`orden_manual`/`urgente_manual`.
-    - `PATCH /api/admin/sesiones/[id]` ampliado (session_date, hora_inicio [TEXT, sin cast], hora_checkout/checkin [::time], num_huespedes, notas, orden_manual, urgente_manual; recalcula ventana; push «⏰ Cambio de horario» si cambia fecha/hora de sesión asignada).
-    - `POST /api/admin/sesiones/reordenar` (orden manual por día; `reset:true` → auto).
-    - `NuevaLimpiezaModal` modo edición (prop `sesion` → PATCH; eliminar si `origen='manual'`). Botones ✏️/↑↓/⏰mover-día/🔥urgente/⧉duplicar + filtro ⚠️ sin asignar + aviso solapamiento en Inicio y Agenda.
-    - **App limpiadora `/l`**: `SesionCard` con chips 🔥 Urgente / 📝 Indicaciones (+ borde prioridad); `SesionDetalle` con bloque destacado de urgente + notas antes del checklist.
-    - Docs: `public/manual.html` (editar/ordenar/urgente/duplicar + app limpiadora con fotos/incidencias/chat), `docs/guia-limpiadoras.md` (WhatsApp), `docs/mejoras-vanessa.md` (admin), `apps/ialimp/CLAUDE.md`.
-  - **PR #112 `feat/patrones-reutilizables`**: modo edición (✏️ + PUT) en Stock y Lencería (ialimp), modo edición en `ProgramacionModal` (PATCH + eliminar), botones ↑/↓ para reordenar la carta del owner en ia-rest (swap `orden` + PUT).
-  - Nota operativa: el push HTTP del contenedor daba 503 → se subió todo vía `mcp__github__push_files`. El PR #109 (mezclaba ambos trabajos + arrastraba commits de plataforma) se **cerró** a favor de los 2 PRs limpios.
-
-- **🔄 PR en curso — Gestión de limpiezas para Vanessa (feat/vanessa-gestion-limpiezas) — 09/06/2026**
-  Vanessa (Sique Brilla, cliente piloto en producción) pidió 5 mejoras. Todo en rama `feat/vanessa-gestion-limpiezas`:
-  - **✅ Migración aplicada en Supabase (`wswbehlcuxqxyinousql`):**
-    - `cleaning_sessions.orden_manual` (int, nullable): orden manual por día; `NULL` = auto.
-    - `cleaning_sessions.urgente_manual` (bool, default false): prioridad manual.
-    - Índice `idx_cleaning_sessions_orden_manual` (por empresa/día).
-    - Vista `sesiones_limpiadora` recreada añadiendo `notas`, `orden_manual`, `urgente_manual`.
-  - **✅ Backend:**
-    - `PATCH /api/admin/sesiones/[id]` extendido: `hora_checkout`/`hora_checkin_siguiente` (cast `::time`), `num_huespedes`, `orden_manual`, `urgente_manual`, recálculo de `ventana_minutos`/`alerta_ventana`, push «⏰ Cambio de horario» si cambia fecha/hora con limpiadora asignada.
-    - `POST /api/admin/sesiones/reordenar` (NUEVO): ordena el día con `unnest WITH ORDINALITY`; `{reset:true}` → `orden_manual = NULL`.
-    - Orden actualizado en `/api/admin/agenda` y `/api/l/sesiones`: `orden_manual` lidera, luego `urgente_manual` → `alerta_ventana` → `hora_checkin_siguiente` → hora.
-  - **✅ `NuevaLimpiezaModal` modo edición:** prop `sesion?` → PATCH en vez de POST, salta pasos 1-2, precarga paso 3, muestra botón 🗑️ Eliminar solo si `origen=manual` + sin empezar. Nota label: "(la limpiadora las verá)".
-  - **✅ UI admin:**
-    - **Inicio (`DashboardClient.tsx`)**: botón ✏️ Editar por tarjeta, flechas ↑↓, atajo «→Mañana/←Hoy», 🔥 Urgente, badge sin asignar, filtro «Sin asignar», chips urgente/notas, aviso solapamiento, botón ↺ Orden automático, duplicar. Función `prioridad()` incluye `orden_manual`+`urgente_manual`.
-    - **Agenda (`app/admin/agenda/page.tsx`)**: igual que Inicio — ✏️ editar, ↑↓, mover día, 🔥 urgente, ↺ orden auto, modal de edición montado, limpiezas pre-cargadas desde `/api/admin/clientes`.
-  - **✅ App limpiadora (`/l/page.tsx`)**: muestra `notas` como bloque «📝 Indicaciones» destacado antes del checklist; badge 🔥 Urgente en la tarjeta y en el detalle.
-  - **✅ Documentación:**
-    - `docs/guia-limpiadoras.md` — guía WhatsApp de 7 pasos para limpiadoras (fotos, incidencias, chat).
-    - `docs/mejoras-vanessa.md` — manual para Vanessa con todas las funciones nuevas.
-    - `public/manual.html` — sección limpiadora ampliada (fotos/incidencias/chat) + sección nueva «Editar, mover, ordenar y priorizar limpiezas».
-    - `CLAUDE.md` actualizado: `orden_manual`/`urgente_manual`, `/reordenar`, modo edición PATCH, push horario, orden nuevo.
-  - **Gotcha recordada:** `hora_inicio` es TEXT → nunca `::time`. `hora_checkout`/`hora_checkin_siguiente` sí son TIME.
-  - **✅ Push realizado a GitHub** — rama `feat/vanessa-gestion-limpiezas` actualizada (09/06/2026).
-  - **Pendiente:** preview verde en Vercel + merge a `main`.
-
-- **🔄 PR #105 — Unificar módulos crypto y aiComplete (feat/unificar-modulos-crypto-ai) — 09/06/2026**
-  3 duplicaciones eliminadas entre `ialimp`, `sivra` y `plataforma`:
-  - **`packages/core-identity/src/crypto.ts`** (NUEVO): `genHex`, `genJti`, `sha256Hex` — Web Crypto puro, sin deps, edge-safe.
-    Adopción: `ialimp/lib/auth.ts`, `ialimp/lib/propietario-auth.ts`, `plataforma/lib/auth.ts`, 4 rutas de ialimp (hashPin).
-  - **`packages/core-ai/src/client.ts`** (NUEVO): `aiComplete(promptOrMessages, options)` — lee `NVIDIA_API_KEY` del entorno.
-    Adopción: `ialimp/lib/ai-client.ts` (3 líneas), `sivra/lib/ai-client.ts` (conserva `aiExtractInvoice` local).
-  - **ia-rest mailer NO migrado** (intencional): ia-rest usa Resend SDK; `core-email` usa nodemailer. Transportes distintos.
-  - PR en draft; CI en progreso al cierre de sesión.
+- **✅ PR #105 + #106 MERGEADOS A PRODUCCIÓN — 09/06/2026** (deploy ialimp `app.ialimp.es` READY, verificado en Vercel)
+  - **#105** (unificar crypto + aiComplete): `core-identity/crypto.ts` (`genHex/genJti/sha256Hex`) + `core-ai/client.ts`
+    (`aiComplete`). Adopción en ialimp (auth, propietario-auth, ai-client, enviar-acceso, 4 rutas hashPin), plataforma (auth),
+    sivra (ai-client). Fix CI: `NimChatMessage` se importa de `./nim`, no `./types`. Fix audit: `enviar-acceso` usa `sha256Hex`.
+  - **#106** (demo ia.rest): `GET /api/demo` + `POST /api/demo/seed` (protegido por env `DEMO_SEED_SECRET`) → crea "Bar Demo"
+    (slug `demo`, código `DEMO`, PINs 1234/2222/3333/4444, 8 mesas, 17 productos, turno activo). Idempotente.
+    **PENDIENTE de Alberto:** añadir env `DEMO_SEED_SECRET` en Vercel `ia-rest` y llamar al seed para testear.
+  - **Auditoría exhaustiva del monorepo** (7 módulos + 4 apps): estado SANO. Pendientes menores: 2 rutas sivra con
+    `crypto.subtle` inline (opcional), ia-rest financiero en plataforma (BD separada). **ia.rest mensajería** = tabla
+    `mensajes_turno` (chat camarero↔cocina, privado/grupo, audio), totalmente implementada.
+  - **Vanessa puede trabajar**: producción intacta y estable (los cambios solo mueven código, sin tocar BD/RLS/buckets).
 
 - **✅ BD plataforma desmembrada (estructura real) — 09/06/2026**
   Sociedades reales en `wswbehlcuxqxyinousql` (tabla `sociedades`):
@@ -303,10 +324,10 @@
     - **`core-push` cerrado en ia-rest (PR #98):** `lib/qr-notify.ts` (último `web-push` inline) migrado a
       `sendWebPush`; se eliminó la dep `web-push`/`@types/web-push` de ia-rest (el núcleo trae su copia).
   - **Núcleos compartidos hoy:** `core-ai`, `core-fiscal`, `core-push`, `core-storage`, `core-email`
-    (+ `core-identity` sin consumidores). Patrón para añadir uno: `packages/core-x` (mirror de `core-ai`) + `workspace:*` en
-    las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json` (pnpm la symlinkea).
+    (+ `core-identity` con consumidores: crypto en ialimp/plataforma, identidad en plataforma). Patrón para añadir uno:
+    `packages/core-x` (mirror de `core-ai`) + `workspace:*`/`file:` en las apps + `transpilePackages`. Si tiene dep npm, va en su `package.json`.
   - **Pendiente Fase 3 (opcional):** que ia-rest adopte `core-email` para su envío con Resend (hoy usa su
-    propio cliente); `core-security` (rate-limit en BD, 1 consumidor); adoptar `core-identity`.
+    propio cliente); `core-security` (rate-limit en BD, 1 consumidor).
   - **Limpieza HECHA por Alberto (09/06):** auto-delete head branches ✅ activado · Vercel `ia-rest-app`
     e `ialimp-fuentes` ✅ borrados · repos viejos `sivra`/`ialimp` ✅ ARCHIVADOS (read-only). Quedan por
     borrar 10 ramas mergeadas (comando `git push origin --delete …` desde su terminal).
@@ -319,3 +340,35 @@
   - **Pendiente clave:** **Marca de la matriz** → elegir nombre (Claude Design recomienda **"Encaje"**;
     dominios `encaje.ai`/`encaje.app` libres, `.com`/`.es` ocupados) → renombrar scope `@iarest/* → @<marca>/*`
     (rename mecánico, listo para ejecutar en cuanto se decida).
+
+- **ℹ️ NOTA OPERATIVA (sesión 09/06):** el **proxy git local da 503 en push** toda la sesión → los push se hacen
+  vía **MCP github** (`push_files`/`create_pull_request`), que sí funciona (API de GitHub directa). El repo GitHub
+  sigue llamándose `ia.rest` (redirige desde/hacia `central`); las llamadas MCP usan `repo: "ia.rest"`.
+
+- **✅ MATRIZ DEFINITIVA: `ia.rest` bajado a `apps/ia-rest`, LIVE en producción — 08/06/2026 (PR #90)**
+  - **Las 3 verticales viven bajo `apps/` y la raíz es la matriz.** `iarest.es` ya sirve desde
+    `apps/ia-rest` (deploy de producción **READY**, Next 16.2.6, `✓ Compiled`, alias `iarest.es`/
+    `www.iarest.es`). `sivra` y `ialimp` ya estaban en `apps/*`.
+  - **Cómo se resolvió que `apps/ia-rest` consuma `packages/*` sin pnpm** (patrón para futuras
+    verticales): `file:` deps (`@iarest/core-ai|core-fiscal` → `node_modules/@iarest/*` por symlink) +
+    `next.config` con `outputFileTracingRoot`/`turbopack.root` = raíz del monorepo + se quitaron los
+    `tsconfig paths` de `@iarest/*` (resuelven por node_modules). CI a `working-directory: apps/ia-rest`.
+    Detalle en `MATRIZ.md`.
+  - **Cutover sin downtime (orden CRÍTICO):** primero Root Directory del proyecto Vercel `ia-rest` →
+    `apps/ia-rest`, **después** merge. (Al revés: la raíz-matriz genera un build vacío de ~1s que
+    "tiene éxito" y **reemplazaría producción** → caída.) Red: Instant Rollback de Vercel.
+  - Verificado antes de mergear: build/tsc/lint/qa **locales** en verde + **CI de GitHub** verde
+    (ambos ya en `apps/ia-rest`).
+  - 🟡 **Limpieza pendiente (sin prisa):** proyectos Vercel `ia-rest-docs` y `repo` (catch-all del
+    root, `live:false`, solo dominios `*.vercel.app`) ahora fallan porque la raíz ya no es app →
+    **borrarlos** o ignorarlos (no afectan a producción). + archivar/borrar repos viejos `sivra`/
+    `ialimp`. + Fase 3 (adopción de `packages/core-*` por sivra/ialimp).
+
+- **🏛️ MATRIZ definida + corrección: `ia.rest` es una VERTICAL, no la matriz — 08/06/2026**
+  - Alberto corrige (acertadamente): en la casa de marcas, **`ia.rest` es una vertical más**, no la
+    matriz. La raíz hace de matriz; las 3 verticales son hermanas bajo `apps/`. Manifiesto nuevo:
+    **`MATRIZ.md`** (raíz) define estructura, verticales y regla.
+  - **Hallazgo técnico (cambia el riesgo del movimiento de ia.rest):** `ia.rest` **ya consume
+    `packages/*`** (`@iarest/core-ai`, `@iarest/core-fiscal` vía `tsconfig paths` +
+    `transpilePackages`, rutas relativas a la raíz). Por eso **bajar `ia.rest` a `apps/ia-rest` NO es
+    un `git mv` simple**: requiere montar **workspace** (pnpm/npm que abarque `apps/*`+`packages/*`)

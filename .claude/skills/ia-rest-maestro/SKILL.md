@@ -70,19 +70,28 @@ docs pesados de Drive.
 
 ## 2. SUPABASE — la base de datos y las Edge Functions desplegadas
 
+> ⚠️ **CORTE DE BD HECHO (10/06/2026, PR #117 + #110 en `main`, verificado en producción).**
+> ia-rest ya **NO** usa su proyecto separado. Vive en el **proyecto COMPARTIDO**
+> `wswbehlcuxqxyinousql` (con ialimp y sivra) en un **schema propio `iarest`**
+> (ialimp/sivra siguen en `public`). El viejo `efncqyvhniaxsirhdxaa` queda para
+> jubilar. El cliente lee el schema vía env `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`
+> (`SB_SCHEMA`/`SB_OPTS` en `src/lib/supabase.ts`; default `public` si no está).
+
 | Dato | Valor |
 |---|---|
-| Proyecto | efncqyvhniaxsirhdxaa |
+| Proyecto (actual) | **wswbehlcuxqxyinousql** (compartido) · schema **`iarest`** |
+| Proyecto (viejo, a jubilar) | efncqyvhniaxsirhdxaa |
 | Región | eu-west-1 |
 | Postgres | 17 |
 
-**Qué vive aquí (solo aquí):**
+**Qué vive aquí (en el schema `iarest` del compartido):**
 - Todas las tablas y datos de producción (ver listado de tablas en `CLAUDE.md`)
-- RLS policies, RPCs, vistas (`v_*`)
-- `pg_cron` job #6 (alerta-ritmo)
-- Edge Functions ya desplegadas (el código fuente está en el repo; aquí corre)
+- RLS policies, RPCs, vistas (`v_*`) — 0 funcs con `search_path=public` (aislado de ialimp/sivra)
+- Edge Functions ya desplegadas (43/43 migradas; el código fuente está en el repo; aquí corre)
 
-**Acceso:** Supabase CLI / dashboard. Secretos de EF con `supabase secrets set`.
+**Acceso:** MCP de Supabase / dashboard. **Toda consulta/cliente nuevo DEBE fijar el
+schema `iarest`** (en el código `createServerClient`/`SB_OPTS` ya lo hacen; en Realtime
+usar `schema: 'iarest'`, no `'public'`; en EFs el `createClient` va con `db: { schema: 'iarest' }`).
 Nunca volcar datos de BD al repo.
 
 ---
@@ -220,7 +229,7 @@ GOOGLE_SA_JSON                   # service account Drive — el .json NUNCA al r
 
 | Recurso | Valor |
 |---|---|
-| Supabase | efncqyvhniaxsirhdxaa (eu-west-1, Postgres 17) |
+| Supabase | **wswbehlcuxqxyinousql** (compartido, schema `iarest`, eu-west-1, PG17) · viejo efncqyvhniaxsirhdxaa a jubilar |
 | Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
 | Vercel app | prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
 | Vercel docs | prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |

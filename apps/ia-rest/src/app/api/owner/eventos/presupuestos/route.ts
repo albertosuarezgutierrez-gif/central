@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
+import { calcularMargen, totalCostes, esRentable, RENTABILIDAD_MINIMA_PCT_DEFAULT } from '@iarest/module-presupuestos'
+import { costesDeEvento } from '@/lib/presupuestos-evento'
 
 // GET /api/owner/eventos/presupuestos
 export async function GET(req: NextRequest) {
@@ -40,16 +42,10 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
 
-  // Calcular margen real
+  // Calcular margen real — delegado a @iarest/module-presupuestos (costes de catering
+  // mapeados a líneas genéricas vía el adaptador de evento).
   const total = body.total || 0
-  const costes = (body.food_cost_adulto || 0) * (body.adultos || 0)
-    + (body.food_cost_nino || 0) * (body.ninos || 0)
-    + (body.barra_coste || 0)
-    + (body.operativos_coste || 0)
-    + (body.transporte_coste || 0)
-    + (body.alquiler_espacio_coste || 0)
-
-  const margen_real_pct = total > 0 ? ((total - costes) / total * 100) : 0
+  const margen_real_pct = calcularMargen(total, totalCostes(costesDeEvento(body))).margenPct
 
   // Verificar aprobación descuento si necesario
   const { data: config } = await supabase
@@ -70,7 +66,7 @@ export async function POST(req: NextRequest) {
       ...body,
       local_id: restauranteId,
       margen_real_pct: Math.round(margen_real_pct * 100) / 100,
-      rentable: margen_real_pct >= (config?.rentabilidad_minima_pct || 25),
+      rentable: esRentable(margen_real_pct, config?.rentabilidad_minima_pct || RENTABILIDAD_MINIMA_PCT_DEFAULT),
       updated_at: new Date().toISOString()
     })
     .select()

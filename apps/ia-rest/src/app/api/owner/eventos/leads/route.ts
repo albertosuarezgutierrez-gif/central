@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
+import { resumenPipeline, type EstadoOportunidad } from '@iarest/module-crm'
+import { leadsEventoAdapter, estadoAGenerico, type LeadEventoRow } from '@/lib/crm-eventos'
 
 const ESTADOS = ['nuevo','contactado','presupuesto_enviado','negociacion','ganado','perdido']
 
@@ -40,17 +42,30 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Pipeline stats
+  // Pipeline stats — delegado a @iarest/module-crm vía el adaptador de eventos.
+  const oportunidades = (data ?? []).map(l =>
+    leadsEventoAdapter.toOportunidad(l as unknown as LeadEventoRow),
+  )
+  const resumen = resumenPipeline(oportunidades)
+
+  // Conteos por estado de DOMINIO (traducidos desde el genérico) para el panel.
   const pipeline = ESTADOS.reduce((acc, e) => {
-    acc[e] = data?.filter(l => l.estado === e).length ?? 0
+    acc[e] = resumen.porEstado[estadoAGenerico(e)]?.conteo ?? 0
     return acc
   }, {} as Record<string, number>)
 
-  const valor_pipeline = data
-    ?.filter(l => !['perdido'].includes(l.estado))
-    .reduce((s, l) => s + (l.presupuesto_cliente ?? 0), 0) ?? 0
+  // Valor en pipeline = suma de presupuestos excluyendo 'perdido' (semántica previa,
+  // ahora derivada del resumen del módulo). `valor_ponderado` es un extra (Σ valor × prob).
+  const valor_pipeline = (Object.keys(resumen.porEstado) as EstadoOportunidad[])
+    .filter(e => e !== 'perdido')
+    .reduce((s, e) => s + resumen.porEstado[e].valor, 0)
 
-  return NextResponse.json({ leads: data, pipeline, valor_pipeline })
+  return NextResponse.json({
+    leads: data,
+    pipeline,
+    valor_pipeline,
+    valor_ponderado: resumen.valorPonderado,
+  })
 }
 
 export async function POST(req: NextRequest) {
