@@ -1,8 +1,11 @@
 # 🎛️ Diseño — Panel único de control (god-panel del operador)
 
-> **Estado: DISEÑO, pendiente de aprobación.** Pedido por Alberto: un solo panel suyo
-> que controla **todo el programa** (todas las verticales, clientes y módulos), unificando
-> los superadmin sueltos de cada app. Regla de oro: diseño antes que código; no romper producción.
+> **Estado: F1 IMPLEMENTADA** (login + listado unificado de las 3 verticales + bloquear/liberar
+> + vista 360). Pedido por Alberto: un solo panel suyo que controla **todo el programa** (todas
+> las verticales, clientes y módulos), unificando los superadmin sueltos de cada app.
+> Regla de oro: diseño antes que código; no romper producción.
+> Ruta: `apps/plataforma/app/admin`. Falta: F2 módulos por cliente, F3 crear, F5 unificación.
+> **Envs Vercel a definir:** `OPERADOR_SHARED_SECRET` (mismo valor en proyectos `plataforma` e `ia-rest`).
 
 ## 1. Contexto y objetivo
 

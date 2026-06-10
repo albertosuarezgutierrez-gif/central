@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { COOKIE_NAME, verifySessionToken } from './lib/auth'
 
-const PUBLIC = ['/login', '/register', '/api/auth']
+// El área de OPERADOR (/admin) gestiona su propia auth (cookie plataforma_admin,
+// validada en los route handlers vía getAdmin) → se exime del gate de cuenta.
+const PUBLIC = ['/login', '/register', '/api/auth', '/admin', '/api/admin']
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
