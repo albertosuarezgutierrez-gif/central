@@ -72,12 +72,16 @@ export default function PricingAutoPage() {
   const [resultados, setResultados] = useState<Resultados | null>(null)
   const [hist, setHist] = useState<Record<string, HistRow[]>>({})
   const [pushMsg, setPushMsg] = useState("")
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const load = useCallback(async () => {
-    setLoading(true)
+    setLoading(true); setLoadError(null)
     try {
-      const [s, c, r] = await Promise.all([
-        fetch("/api/pricing/settings", { cache: "no-store" }).then(x => x.json()),
+      const sr = await fetch("/api/pricing/settings", { cache: "no-store" })
+      if (sr.status === 401) { window.location.href = "/login?callbackUrl=/pricing-auto"; return }
+      if (!sr.ok) throw new Error(`settings ${sr.status}`)
+      const s = await sr.json()
+      const [c, r] = await Promise.all([
         fetch("/api/pricing/config", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
         fetch("/api/pricing/resultados", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
       ])
@@ -89,6 +93,8 @@ export default function PricingAutoPage() {
       }
       setPaused(c?.paused === true)
       if (r?.ok) setResultados(r)
+    } catch (e: any) {
+      setLoadError(String(e?.message || e).slice(0, 120))
     } finally { setLoading(false) }
   }, [])
 
@@ -180,6 +186,13 @@ export default function PricingAutoPage() {
   }
 
   if (loading) return <div style={{ padding: 24, color: C.soft }}>Cargando pisos…</div>
+  if (loadError) return (
+    <div style={{ padding: 24, color: C.ink }}>
+      <p style={{ color: C.warn, fontWeight: 600 }}>No se pudo cargar el panel.</p>
+      <p style={{ fontSize: 12, color: C.soft }}>{loadError}</p>
+      <button onClick={load} style={{ ...btn(C.green, false), marginTop: 8 }}>Reintentar</button>
+    </div>
+  )
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1100, margin: "0 auto" }}>

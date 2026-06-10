@@ -1,8 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 export async function GET(req: Request) {
+  if (!(await isLimpiadoraAuthorized())) {
+    return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  }
   const { searchParams } = new URL(req.url)
   const date = searchParams.get('date')
   const from = searchParams.get('from')

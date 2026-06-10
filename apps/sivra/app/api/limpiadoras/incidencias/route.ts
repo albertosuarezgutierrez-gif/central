@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { isLimpiadoraAuthorized } from '@/lib/limpiadora-auth'
 
 async function sendPushToOwner(titulo: string, urgencia: string) {
   try {
@@ -31,6 +32,7 @@ async function sendPushToOwner(titulo: string, urgencia: string) {
 }
 
 export async function GET(req: NextRequest) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { searchParams } = new URL(req.url)
   const pid = searchParams.get('property_id')
   const estado = searchParams.get('estado') || 'abierta'
@@ -50,6 +52,7 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { property_id, session_id, limpiadora_id, titulo, descripcion, categoria, urgencia, photo_url } = await req.json()
 
   const row = await prisma.$queryRaw<any[]>(Prisma.sql`
@@ -68,6 +71,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
+  if (!(await isLimpiadoraAuthorized())) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const { id, estado, notas_admin } = await req.json()
   await prisma.$executeRaw(Prisma.sql`
     UPDATE incidencias SET estado=${estado}, notas_admin=${notas_admin||null},
