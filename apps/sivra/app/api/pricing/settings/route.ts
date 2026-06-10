@@ -33,6 +33,8 @@ const FIELDS: Record<string, (v: any) => any> = {
   max_price:       (v) => (v == null || v === "" ? null : Math.max(0, Math.round(Number(v)))),
   max_change_pct:  (v) => clamp(Number(v), 0.01, 1),
   channel_markup:  (v) => clamp(Number(v), 1, 2),
+  events_enabled:  (v) => Boolean(v),
+  gap_discount_pct:(v) => clamp(Number(v), 0, 0.5),
 }
 
 export async function GET() {
@@ -42,7 +44,7 @@ export async function GET() {
     enabled: boolean; apply_enabled: boolean; target_pctl: number; floor_pctl: number; ceil_pctl: number
     position_factor: number; quality_k: number; demand_k: number; demand_baseline: number
     own_score: number | null; min_price: number | null; max_price: number | null
-    max_change_pct: number; channel_markup: number
+    max_change_pct: number; channel_markup: number; events_enabled: boolean; gap_discount_pct: number
   }[]>(Prisma.sql`
     SELECT
       p.id AS property_id, p.name, p."maxGuests"::int AS max_guests,
@@ -57,7 +59,9 @@ export async function GET() {
       COALESCE(s.demand_baseline, 0.50)::float8 AS demand_baseline,
       s.own_score::float8 AS own_score, s.min_price, s.max_price,
       COALESCE(s.max_change_pct, 0.20)::float8  AS max_change_pct,
-      COALESCE(s.channel_markup, 1.16)::float8  AS channel_markup
+      COALESCE(s.channel_markup, 1.16)::float8  AS channel_markup,
+      COALESCE(s.events_enabled, true)          AS events_enabled,
+      COALESCE(s.gap_discount_pct, 0)::float8   AS gap_discount_pct
     FROM properties p
     LEFT JOIN pricing_settings s ON s.property_id = p.id
     WHERE p.id LIKE 'prop_%' AND p."maxGuests" IS NOT NULL
@@ -176,6 +180,7 @@ export async function GET() {
         demand_k: p.demand_k, demand_baseline: p.demand_baseline,
         own_score: p.own_score, min_price: p.min_price, max_price: p.max_price,
         max_change_pct: p.max_change_pct, channel_markup: p.channel_markup,
+        events_enabled: p.events_enabled, gap_discount_pct: p.gap_discount_pct,
       },
       market: market_ctx,
       occupancy: occupancy != null ? Number(occupancy.toFixed(2)) : null,
