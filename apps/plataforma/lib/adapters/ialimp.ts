@@ -18,35 +18,28 @@ interface Row {
   sesiones_mes: bigint
 }
 
+// Métricas por subconsulta (cada una es un COUNT indexado). NO usar LEFT JOIN +
+// COUNT(DISTINCT): cruza clientes×propiedades×sesiones×limpiadoras (millones de
+// filas) y dispara el statement-timeout → el panel mostraba 0 clientes.
 async function filas(empresaId?: string): Promise<Row[]> {
   if (empresaId) {
     return prisma.$queryRaw<Row[]>`
       SELECT e.id, e.nombre, e.email, e.activa, e.plan, e.created_at,
-        COUNT(DISTINCT l.id) FILTER (WHERE l.activa = true) AS limpiadoras,
-        COUNT(DISTINCT c.id)                                AS clientes,
-        COUNT(DISTINCT p.id) FILTER (WHERE p.activa = true) AS propiedades,
-        COUNT(DISTINCT cs.id) FILTER (WHERE cs.session_date >= date_trunc('month', CURRENT_DATE)) AS sesiones_mes
+        (SELECT COUNT(*) FROM limpiadoras l WHERE l.empresa_id = e.id AND l.activa = true) AS limpiadoras,
+        (SELECT COUNT(*) FROM clientes c WHERE c.empresa_id = e.id) AS clientes,
+        (SELECT COUNT(*) FROM propiedades p WHERE p.empresa_id = e.id AND p.activa = true) AS propiedades,
+        (SELECT COUNT(*) FROM cleaning_sessions cs WHERE cs.empresa_id = e.id AND cs.session_date >= date_trunc('month', CURRENT_DATE)) AS sesiones_mes
       FROM empresas e
-      LEFT JOIN limpiadoras l      ON l.empresa_id = e.id
-      LEFT JOIN clientes c         ON c.empresa_id = e.id
-      LEFT JOIN propiedades p      ON p.empresa_id = e.id
-      LEFT JOIN cleaning_sessions cs ON cs.empresa_id = e.id
       WHERE e.id = ${empresaId}::uuid
-      GROUP BY e.id
     `
   }
   return prisma.$queryRaw<Row[]>`
     SELECT e.id, e.nombre, e.email, e.activa, e.plan, e.created_at,
-      COUNT(DISTINCT l.id) FILTER (WHERE l.activa = true) AS limpiadoras,
-      COUNT(DISTINCT c.id)                                AS clientes,
-      COUNT(DISTINCT p.id) FILTER (WHERE p.activa = true) AS propiedades,
-      COUNT(DISTINCT cs.id) FILTER (WHERE cs.session_date >= date_trunc('month', CURRENT_DATE)) AS sesiones_mes
+      (SELECT COUNT(*) FROM limpiadoras l WHERE l.empresa_id = e.id AND l.activa = true) AS limpiadoras,
+      (SELECT COUNT(*) FROM clientes c WHERE c.empresa_id = e.id) AS clientes,
+      (SELECT COUNT(*) FROM propiedades p WHERE p.empresa_id = e.id AND p.activa = true) AS propiedades,
+      (SELECT COUNT(*) FROM cleaning_sessions cs WHERE cs.empresa_id = e.id AND cs.session_date >= date_trunc('month', CURRENT_DATE)) AS sesiones_mes
     FROM empresas e
-    LEFT JOIN limpiadoras l      ON l.empresa_id = e.id
-    LEFT JOIN clientes c         ON c.empresa_id = e.id
-    LEFT JOIN propiedades p      ON p.empresa_id = e.id
-    LEFT JOIN cleaning_sessions cs ON cs.empresa_id = e.id
-    GROUP BY e.id
     ORDER BY e.created_at DESC
   `
 }
