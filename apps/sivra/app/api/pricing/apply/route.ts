@@ -53,10 +53,13 @@ export async function POST(req: NextRequest) {
   const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), 60)
   const dryRun = sp.get("dryRun") !== "false"       // por defecto TRUE (no escribe)
 
-  // Precio recomendado por piso (mercado × demanda × calidad, acotado), igual que /recommend,
-  // resuelto en SQL para no duplicar lógica. Sólo pisos con apply_enabled=true.
+  // Precio objetivo por piso (mercado × demanda × calidad), igual que /recommend, resuelto en SQL.
+  // OJO: med/flo/cei son precios de HUÉSPED (los comparables llevan el margen del canal). La
+  // conversión a precio BASE de Smoobu y la cadena de topes se hacen abajo en JS.
+  // Sólo pisos con apply_enabled=true.
   const recs = await prisma.$queryRaw<{
-    property_id: string; recommended: number; floor: number; ceil: number; max_change_pct: number
+    property_id: string; recommended_guest: number; floor_guest: number; ceil_guest: number
+    channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
   }[]>(Prisma.sql`
     WITH latest AS (
       SELECT scenario, MAX(search_date) sd FROM market_rates
@@ -80,15 +83,16 @@ export async function POST(req: NextRequest) {
     )
     SELECT
       mkt.scenario AS property_id,
-      LEAST(GREATEST(
-        ROUND(mkt.med
-          * GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)
-          * GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90)),
-        ROUND(mkt.flo)), ROUND(mkt.cei))::int AS recommended,
-      ROUND(mkt.flo)::int AS floor, ROUND(mkt.cei)::int AS ceil,
-      s.max_change_pct::numeric AS max_change_pct
+      ROUND(mkt.med
+        * GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)
+        * GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90))::int AS recommended_guest,
+      ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
+      COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
+      s.max_change_pct::float8 AS max_change_pct,
+      s.min_price, s.max_price
     FROM mkt
     JOIN pricing_settings s ON s.property_id = mkt.scenario
+    LEFT JOIN occ ON occ.scenario = mkt.scenario
     WHERE s.apply_enabled = true
       AND (${onlyProp}::text IS NULL OR mkt.scenario = ${onlyProp})
   `)
@@ -118,6 +122,13 @@ export async function POST(req: NextRequest) {
       results.push({ property: r.property_id, error: `Smoobu GET ${String(e).slice(0, 80)}` }); continue
     }
 
+    // Conversión huésped → BASE de Smoobu: el canal suma su margen encima de la base,
+    // así que base = precio_huésped / markup. El mercado (flo/cei) también se pasa a base.
+    const markup = Number(r.channel_markup) > 1 ? Number(r.channel_markup) : 1.16
+    const baseTarget = Math.round(r.recommended_guest / markup)
+    const floorBase = Math.round(r.floor_guest / markup)
+    const ceilBase = Math.round(r.ceil_guest / markup)
+
     const ops: { dates: string[]; daily_price: number }[] = []
     const audit: { rate_date: string; old_price: number | null; new_price: number }[] = []
     const cur = new Date(today)
@@ -126,14 +137,16 @@ export async function POST(req: NextRequest) {
       const info = plRates[date]
       if (!info || !info.available) continue            // sólo fechas disponibles
       const old = info.price != null ? Math.round(info.price) : null
-      // Tope de cambio por aplicación: no mover más de max_change_pct respecto al precio actual.
-      let target = r.recommended
+      // Cadena de topes (en términos BASE): mercado → cambio máx. por aplicación →
+      // min/max del propietario (autoridad FINAL — incluye el suelo de coste).
+      let target = clamp(baseTarget, floorBase, ceilBase)
       if (old != null) {
         const lo = Math.round(old * (1 - Number(r.max_change_pct)))
         const hi = Math.round(old * (1 + Number(r.max_change_pct)))
         target = clamp(target, lo, hi)
       }
-      target = clamp(target, r.floor, r.ceil)            // y siempre dentro del mercado
+      if (r.min_price != null) target = Math.max(target, r.min_price)
+      if (r.max_price != null) target = Math.min(target, r.max_price)
       if (old != null && target === old) continue        // sin cambio
       ops.push({ dates: [date], daily_price: target })
       audit.push({ rate_date: date, old_price: old, new_price: target })
@@ -165,7 +178,9 @@ export async function POST(req: NextRequest) {
     }
 
     results.push({
-      property: r.property_id, recommended: r.recommended,
+      property: r.property_id,
+      recommended_guest: r.recommended_guest, base_target: baseTarget,
+      bounds: { floor_base: floorBase, ceil_base: ceilBase, min: r.min_price, max: r.max_price },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }
