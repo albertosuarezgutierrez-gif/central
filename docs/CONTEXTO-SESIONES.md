@@ -76,8 +76,14 @@
     **⚠️ SMOOBU base ≠ precio huésped:** Smoobu fija un *precio base* y cada canal le suma margen (Booking +16%, Airbnb/Agoda/
     HomeToGo +15%, Expedia +20%); el host neta ~la base. Nuestros `market_rates` son precios de huésped → **el motor debe escribir
     base ≈ objetivo_huésped/(1+margen)** (PENDIENTE ajustar en `/api/pricing/apply`). `rate_snapshots.price_pricelabs` = base Smoobu.
-    **TEST EN MARCHA:** Alberto pone *precio base* 65→**110** en una fecha (09/10 jun); **mañana tras 07:00** verificar en
-    `rate_snapshots` (si aparece 110 → subida OK). El 16/06: "analiza el piloto de Busto Reform".
+    **✅ TEST EJECUTADO POR EL SISTEMA (10/06 06:36 UTC):** `/api/pricing/apply` (tras arreglar 4 bugs: min/max ignorados,
+    sin conversión huésped→base con `channel_markup` 1.16, orden de topes, occ sin JOIN; + middleware no excluía las rutas
+    de pricing — los crons `detect-opportunities`/`check-results` llevaban redirigidos a /login sin ejecutarse). Escribió en
+    Smoobu: **10/06 65→110 · 23/06 102→110** (únicas fechas libres en 15 días). Verificación triple: re-dry-run "0 cambios",
+    snapshot fresco = 110, auditoría en `pricing_applied`. **Primer precio puesto 100% por el sistema.**
+    **⚠️ ANTES DE MERGEAR PR #108: definir `CRON_SECRET` en Vercel sivra** (no parece estar; en prod el middleware ya no
+    bloquea apply). **Vigilar PriceLabs** (el 23 estaba a 102 → algo lo tocó; si revierte a 65, quitar listing del todo).
+    El 16/06: "analiza el piloto de Busto Reform" (recordatorio en Calendar).
 
 - **🔄 PR #107 — ialimp consume `nimVision` de core-ai en 6 rutas IA (feat/ialimp-ia-core-ai) — 09/06/2026**
   Las 6 rutas de visión de ialimp dejaban de pasar por el módulo y llamaban a la API NVIDIA inline. Ahora delegan en `nimVision`:

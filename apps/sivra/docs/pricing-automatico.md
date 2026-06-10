@@ -161,6 +161,33 @@ del canal). Implicaciones:
 PriceLabs infravaloraba **los 4**, no sólo Busto. Oportunidad de revenue grande en toda la cartera. Plan: validar Busto primero;
 si funciona, extender con el ajuste de margen (base ≈ objetivo_huésped/(1+margen)). Recordar el **min-stay** (Duplex/House = 2).
 
+## 8. APLICACIÓN POR SISTEMA (10/06/2026) — el sistema escribe el 110, no Alberto
+
+Alberto pidió que la subida la hiciera el sistema (propuesta de valor del producto). Al preparar `/api/pricing/apply`
+se cazaron y arreglaron **4 bugs** (commits `2fa527b`, `0c50129`, `2fc0df3`):
+1. El SQL ignoraba `min_price`/`max_price` → habría escrito 150–161 en vez de 110.
+2. Sin conversión huésped→base (margen del canal) → habría inflado ~16% lo que ve el huésped.
+3. Orden de topes: el suelo de mercado machacaba `max_change_pct`. Nuevo orden: mercado(base) → max_change →
+   **min/max del propietario (autoridad final)**. Nueva columna `pricing_settings.channel_markup` (def. 1.16);
+   `max_change_pct=1.0` en Busto SÓLO durante el piloto (salto 65→110 aprobado).
+4. El SQL referenciaba `occ` sin JOIN (habría petado en runtime) + **middleware**: las rutas de pricing no estaban
+   excluidas del matcher → TODO `/api/pricing/*` redirigía a /login, incluidos los crons `detect-opportunities` y
+   `experiments/check-results` de vercel.json (llevaban sin ejecutarse de verdad). Excluidos los 4 + `mercado/ingest`.
+
+Matemática verificada contra BD: huésped 164 → base 141 → mercado base [129,162] → ±100% de 65 → 130 → [90,110] = **110** ✓.
+
+**✅ EJECUTADO Y VERIFICADO (10/06/2026 06:36 UTC):** el sistema escribió en Smoobu vía el preview:
+- **10/06: 65€ → 110€** · **23/06: 102€ → 110€** (las 2 únicas fechas disponibles en 15 días; el resto reservadas, intactas).
+- Verificación triple: re-dry-run = "0 cambios" (Smoobu devuelve 110) · snapshot fresco `rate_snapshots` 10/06 = **110** ·
+  auditoría completa en `pricing_applied` (filas dry-run + reales).
+- **Primer precio puesto 100% por el sistema.** El test del piloto está EN VIVO a 110€ base (~128€ huésped en Booking).
+
+**⚠️ ANTES DE MERGEAR A PRODUCCIÓN:** `CRON_SECRET` NO parece estar definido (el endpoint respondió sin auth). En preview
+lo protege la Deployment Protection de Vercel, pero en producción (`sybra.vercel.app`, pública) el middleware ya no bloquea
+`/api/pricing/apply` → **definir `CRON_SECRET` en Vercel sivra ANTES de mergear el PR #108**, o cualquiera podría dispararlo.
+**Vigilar también:** si mañana el 10/23 vuelven a 65/102, PriceLabs sigue interfiriendo (el 23 estaba a 102, señal de que
+algo lo tocó) → quitar el listing de PriceLabs del todo.
+
 **Acción de Alberto:** (1) **Desconectar/pausar PriceLabs en Busto Reform** — si no, sobrescribe nuestro precio en su
 próximo sync y el test no se lee limpio. (2) Aplicar el precio del test (recomendado 161€; decisión suya con su contexto,
 el motor *baja* respecto a la fórmula antigua porque las reseñas son bajas), **manualmente en Smoobu** o vía el endpoint
