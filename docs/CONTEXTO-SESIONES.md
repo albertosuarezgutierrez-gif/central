@@ -81,6 +81,8 @@
     de pricing — los crons `detect-opportunities`/`check-results` llevaban redirigidos a /login sin ejecutarse). Escribió en
     Smoobu: **10/06 65→110 · 23/06 102→110** (únicas fechas libres en 15 días). Verificación triple: re-dry-run "0 cambios",
     snapshot fresco = 110, auditoría en `pricing_applied`. **Primer precio puesto 100% por el sistema.**
+    **✅ CONFIRMADO VISUALMENTE POR ALBERTO (10/06): "sale perfectamente" en su app Smoobu.** Bucle 100% cerrado:
+    sistema calculó → escribió → verificado por API/BD → visto por el dueño. Prueba de concepto del producto COMPLETA.
     **⚠️ ANTES DE MERGEAR PR #108: definir `CRON_SECRET` en Vercel sivra** (no parece estar; en prod el middleware ya no
     bloquea apply). **Vigilar PriceLabs** (el 23 estaba a 102 → algo lo tocó; si revierte a 65, quitar listing del todo).
     El 16/06: "analiza el piloto de Busto Reform" (recordatorio en Calendar).
