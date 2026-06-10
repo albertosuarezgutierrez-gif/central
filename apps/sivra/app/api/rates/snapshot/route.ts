@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { isCronAuthorized } from "@/lib/cron-auth"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -44,6 +45,9 @@ function fmtDate(d: Date): string {
 }
 
 export async function GET(req: NextRequest) {
+  if (!(await isCronAuthorized(req))) {
+    return NextResponse.json({ error: "no autorizado" }, { status: 401 })
+  }
   const today        = new Date()
   const startDate    = fmtDate(today)
   const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 7)

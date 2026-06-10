@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server"
+import { NextRequest, NextResponse } from "next/server"
 import { aiComplete } from "@/lib/ai-client"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { isCronAuthorized } from "@/lib/cron-auth"
 
 const OUR_PRICES: Record<string, { label: string; normal: number; corpus: number }> = {
   prop_house_sevillana: { label: "House Sevillana", normal: 314, corpus: 570 },
@@ -134,7 +135,10 @@ async function generateAlerts(scenario: string) {
   return alerts
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!(await isCronAuthorized(req, { allowSession: true }))) {
+    return NextResponse.json({ error: "no autorizado" }, { status: 401 })
+  }
   const d = new Date()
   const daysUntilSat = (6 - d.getDay() + 7) % 7 || 7
   const sat = new Date(d); sat.setDate(d.getDate() + daysUntilSat)
