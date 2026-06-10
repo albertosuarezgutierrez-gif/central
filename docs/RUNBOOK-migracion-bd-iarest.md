@@ -126,3 +126,21 @@ migrar las functions**, o la app llamará a funciones inexistentes.
    **+ añadir `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`** → Redeploy.
 5. (Juntos) Smoke test (login, leer, escribir) + plataforma lee iarest nativo + DROP `_mig_ddl`.
 6. (Alberto) Resetear la password de BD de ia-rest (quedó en el chat) y jubilar el proyecto viejo.
+
+### Estado Edge Functions (2026-06-10, 2ª pasada)
+- **Migradas y parcheadas a `iarest` (5/43):** nim-sentiment, contact-lead, cobro-monei, webhook-monei, alerta-ritmo-cron.
+- **BLOQUEADO (38/43):** el proyecto compartido está en el **tope de ~100 Edge Functions** del plan →
+  todo deploy devuelve `PaymentRequiredException` (incluso updates). **Acción de Alberto:** borrar en
+  el Dashboard (~40 funciones basura de sesiones antiguas: prefijos `income-`, `fix-`, `read-`,
+  `write-`, `updates-`, `test-`, `list-`, `check-`, `push-landing`, `landing-`, `deploy-landing`,
+  `debug-landing`, `insert-html`, `repair-chunks`, `mobile-commit`, `commit-dashboard-fix`,
+  `create-api-routes`, `create-landing-repo`, `add-domain-vercel`, `middleware-patch`,
+  `delete-conflicting-route`). **NO borrar:** `sync-smoobu` (cron vivo de sivra), `github-commit`,
+  `trigger-*`, `deploy-agente`, `deploy-dashboard`, `drive-*`, `upload-*`, `merge-landing-to-main`,
+  `add-smoobu-booking`, `import_csv`, `inject-ga4`, `push-route-ga4`, ni las 5 migradas.
+- **Tras liberar hueco:** relanzar los 2 agentes (14 del repo desde `/tmp/efns` si la sesión vive, o
+  re-parchear desde `apps/ia-rest/supabase/functions`; + 27 vía get_edge_function del proyecto viejo).
+- **verify_jwt:** el deploy por MCP fija `true`; el origen usa `false` en casi todas (webhooks
+  Stripe/MONEI, QR públicos, ASN... lo necesitan). **Checklist final de Alberto:** en el Dashboard del
+  compartido, poner "Verify JWT" en **OFF** en todas las migradas **salvo `monitor-health`,
+  `stripe-checkout`, `analizar-cv` y `lead-research`** (esas 4 van con `true`, como en origen).
