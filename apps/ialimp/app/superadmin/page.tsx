@@ -131,6 +131,12 @@ export default function SuperadminPage() {
       <SuperHeader activo="inicio" />
 
       <div style={{ padding: '28px', maxWidth: 1000, margin: '0 auto' }}>
+        {/* Panel unificado (god-panel en plataforma) */}
+        <a href={process.env.NEXT_PUBLIC_OPERADOR_URL || '#'} target="_blank" rel="noreferrer"
+          style={{ display: 'block', textDecoration: 'none', background: '#eef2ff', border: '1px solid #c7d2fe', color: '#3730a3', borderRadius: 12, padding: '12px 16px', marginBottom: 20, fontSize: 13 }}>
+          🎛️ <strong>Nuevo · Panel de Operador unificado</strong> — gestiona clientes, bloqueos y módulos de <strong>todas las verticales</strong> (ialimp · ia-rest · sivra) desde plataforma. El mailing de captación y los consentimientos siguen gestionándose aquí.
+        </a>
+
         {/* KPIs */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 12, marginBottom: 28 }}>
           <StatCard label="Empresas" value={totalActivas} sub={`${totalEmpresas} total`} />
