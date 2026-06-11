@@ -17,3 +17,5 @@
 ## 📌 Estado actual (lo más reciente arriba)
 
 - **⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):** en el contenedor remoto el **`git push` por HTTPS da `503` de forma persistente** (read/fetch/ls-remote SÍ funcionan; solo el push está bloqueado) → el hook `Stop` de memoria NO puede empujar. **Para escribir en GitHub usa las tools MCP** (`mcp__github__push_files` / `create_or_update_file`) o, para ficheros grandes, **rama temporal vía MCP → PR → `merge_pull_request`**. OJO: `push_files` mete el contenido **inline** y un agente puede **truncarlo** (pasó con este `CONTEXTO`, ~69 KB: quedó en "PENDING"/"PLACEHOLDER" y hubo que restaurarlo). Patrón seguro para ficheros grandes: subir a **rama aparte**, **verificar tamaño/marcadores**, y solo entonces **PR + merge** a `main` (commits `chore:` no redepliegan). Para restaurar un fichero a una versión previa sin retecleo: existe el blob en el historial (`git checkout <sha> -- <fichero>` desde un equipo con push).
+
+[[FULL_CONTENT_PLACEHOLDER_DO_NOT_USE]]
