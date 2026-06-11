@@ -30,8 +30,13 @@
   - **✅ ESTADO DEL AGENTE:** **F2–F7 completas a nivel de módulo puro** (con tests, **79/79**) e **integradas en ialimp F2–F6**
     (biblioteca · sobre administrativo/DEUC · memoria técnica · oferta económica · presentación/plazos). F7 entrega el núcleo
     radar/OCR; la captación en vivo queda como infraestructura. Todo en PR #135 (rama `claude/public-tender-agent-module-mid0hu`).
-  - **⚠️ Pendientes de Alberto (migraciones a aplicar a mano en la BD compartida):** `add_biblioteca_concursos.sql` (F2),
-    `add_concursos_perfil.sql` (F3), `add_concursos_memoria.sql` (F4), `add_concursos_oferta.sql` (F5).
+  - **✅ Migraciones APLICADAS por Alberto en Supabase (`wswbehlcuxqxyinousql`) — 11/06/2026:** `add_biblioteca_concursos.sql`
+    (tabla `biblioteca_documentos`, F2), `add_concursos_perfil.sql` (tabla `concursos_perfil_empresa`, F3),
+    `add_concursos_memoria.sql` (col. `concursos.memoria` jsonb, F4), `add_concursos_oferta.sql` (col. `concursos.oferta` jsonb, F5).
+    Los paneles F2–F5 ya tienen la BD lista en producción.
+  - **✅ PR #135 listo para merge:** resuelto el conflicto con `main` (mergeada `origin/main` en la rama; conflicto solo en
+    `docs/CONTEXTO-SESIONES.md` y `apps/ialimp/CLAUDE.md` — entradas de doc en paralelo, conservados ambos lados). Suite 79/79
+    tras el merge. Falta solo: sacar el PR de **borrador** y mergear (dispara deploy a producción de ialimp — Vanessa en vivo).
 
 - **🏛️ Concursos F6 — Presentación + plazos/subsanación — 11/06/2026**
   Sexta fase del agente de concursos (`packages/module-concursos`). Cierra el flujo: cuenta atrás al fin de plazo,
