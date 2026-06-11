@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
 
 import { parsearAtomPlacsp, dedupeKey } from './concursos-radar.ts'
+import { matchesDeAtom } from './concursos-radar.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const xml = readFileSync(join(here, '__fixtures__', 'placsp-sample.atom.xml'), 'utf8')
@@ -38,4 +39,12 @@ test('dedupeKey: estable y determinista para el mismo anuncio', () => {
 test('parsearAtomPlacsp: XML vacío o sin entradas devuelve []', () => {
   assert.deepEqual(parsearAtomPlacsp('<feed></feed>'), [])
   assert.deepEqual(parsearAtomPlacsp(''), [])
+})
+
+test('matchesDeAtom: filtra por criterios y trae puntuación + dedupe_key', () => {
+  const m = matchesDeAtom(xml, { cpv: ['9091'], palabras_clave: ['limpieza'] })
+  assert.equal(m.length, 1)                 // solo la de limpieza
+  assert.equal(m[0].dedupe_key, '11111/2026')
+  assert.ok(m[0].puntuacion > 0)
+  assert.ok(m[0].motivos.length > 0)
 })

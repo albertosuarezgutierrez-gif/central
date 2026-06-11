@@ -2,6 +2,8 @@
 // y clave de deduplicación estable. Sin red ni BD: testeable con `node --test`.
 import { XMLParser } from 'fast-xml-parser'
 import type { AnuncioRadar } from '@iarest/module-concursos'
+import { filtrarRadar, coincideRadar } from '@iarest/module-concursos/radar'
+import type { CriteriosRadar } from '@iarest/module-concursos'
 
 /** Anuncio captado del radar + identificador estable del expediente. */
 export interface AnuncioPlacsp extends AnuncioRadar {
@@ -81,4 +83,26 @@ export function parsearAtomPlacsp(xml: string): AnuncioPlacsp[] {
 /** Clave de dedupe estable: expediente > atom_id > url > título. */
 export function dedupeKey(a: AnuncioPlacsp): string {
   return (a.expediente || a.atom_id || a.url || a.titulo || '').trim()
+}
+
+/** Un match listo para insertar (lo persiste el llamante con su Prisma). */
+export interface MatchRadar {
+  dedupe_key: string
+  anuncio: AnuncioPlacsp
+  puntuacion: number
+  motivos: string[]
+}
+
+/**
+ * Empareja los anuncios de un XML ATOM con los criterios de una empresa y
+ * devuelve los matches (con puntuación y motivos) listos para insertar.
+ * Puro: no toca BD ni red. La persistencia (dedupe) la hace el llamante.
+ */
+export function matchesDeAtom(xml: string, criterios: CriteriosRadar): MatchRadar[] {
+  const anuncios = parsearAtomPlacsp(xml)
+  const casan = filtrarRadar(anuncios, criterios) as AnuncioPlacsp[]
+  return casan.map(a => {
+    const r = coincideRadar(a, criterios)
+    return { dedupe_key: dedupeKey(a), anuncio: a, puntuacion: r.puntuacion, motivos: r.motivos }
+  })
 }
