@@ -129,6 +129,45 @@ está hecho?) y su disposición a co-diseñar.
 
 ---
 
+## PROPUESTA DE TRABAJO — construir Bloques H e I (en `apps/ia-rest`)
+
+> Todo en el monorepo `central` → `apps/ia-rest`. BD: Supabase compartido
+> `wswbehlcuxqxyinousql`, **schema `iarest`**. Reutiliza patrones del maestro
+> (sesión firmada, `createServerClient`, `useModulo`, storage de fotos, `callAI`).
+
+### Lo que YA existe (no se rehace)
+- `evento_checklist_item`, `personal_evento_asignacion`, `secciones_cocina`, `personal`,
+  `turnos` (servicio + fichaje), `fichajes`.
+- `comandas` / `comanda_items` / `mesas` → **fuente de la "carga real" del POS**.
+- `escandallos`, `stock_rendimientos`, Peso; storage de fotos (patrón `documentos_escaneados`);
+  `callAI()` (NIM→Haiku) para el planner de cocina.
+
+### Bloque H — Checklist operativo + carga (MVP)
+- **DB (`iarest`):** `checklist_plantillas` (seccion, tareas jsonb [{texto, frecuencia
+  apertura|turno|cierre, requiere_foto}]) · `checklist_ejecuciones` (plantilla_id, turno_id,
+  personal_id, tarea_idx, estado, foto_url, completed_at). RLS estándar + índice restaurante_id.
+- **API:** `/api/checklists/plantillas` (config owner) · `/api/checklists/turno` (tareas del turno
+  por sección) · `/api/checklists/marcar` (marca + sube foto) · `/api/checklists/informe`.
+- **Índice de carga:** función que por franja cuenta comandas + mesas abiertas + items → bajo/medio/alto.
+- **UI:** card "Checklist de turno" en `/edge` y `/jefe` (marcar con foto) · `/owner → Checklists`
+  (editor de plantillas + informe: tarea pendiente + carga baja = "sin excusa" en rojo). `useModulo('checklists')`.
+
+### Bloque I — Perfil del cocinero + productividad (MVP, respeta su sistema)
+- **DB (`iarest`):** `produccion_tareas` (fecha, evento_id?, seccion_cocina_id, elaboracion_nombre,
+  cantidad, tiempo_estimado_min, personal_id, orden, estado, tiempo_real_min, started_at, done_at) ·
+  `produccion_tiempos_estandar` (elaboracion_nombre, minutos_por_unidad).
+- **API:** `/api/produccion/planificar` (IA reparte y secuencia por cocinero con tiempo estimado) ·
+  `/api/produccion/perfil` (tareas del cocinero logueado) · `/api/produccion/tiempo` (inicio/fin →
+  tiempo real) · `/api/produccion/productividad` (real vs estándar por cocinero/partida).
+- **UI:** perfil del cocinero (su lista del día secuenciada + tiempos + botón empezar/terminar) ·
+  `/owner → Productividad cocina` (cuadro real vs estándar). `useModulo('produccion')`.
+- **Principio:** NO se importa su sistema; se parte de tareas (manual + IA). Si luego ella conecta el
+  suyo, alimenta `produccion_tareas`. = "conectar/co-diseñar, no reemplazar".
+
+### Verificación (antes de cada push)
+`npx tsc --noEmit` 0 errores + `next build` con deps (el `tsc` solo no reproduce el build de Vercel) →
+PR a `main` → preview Ready.
+
 ## Orden recomendado para mañana
 1. **Bloque A — Comercial & comisiones** (lo pide el comprador; net-new claro).
 2. **Bloque B — Material de eventos** (piloto limpio; diseño ya hecho).
