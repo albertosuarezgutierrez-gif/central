@@ -183,6 +183,13 @@ vertical (ialimp y sivra por BD; **ia-rest por puerto HTTP**).
 ---
 
 ## 8. Dónde vive cada cosa (para editar el mapa del panel)
-- Mapa del god-panel: `apps/plataforma/lib/estructura.ts` (arrays `VERTICALES`, `MODULOS`, `AGENTES`).
+- **Radiografía automática** (NUEVO): `scripts/auditar-estructura.mjs` audita el repo y
+  escribe `apps/plataforma/lib/estructura.generated.json` (qué packages usa cada app +
+  matriz de capacidades/áreas + diferencias entre verticales). Se regenera con
+  **`npm run auditar`** desde la raíz; un check de CI (`.github/workflows/auditoria.yml`)
+  avisa si quedó desfasado. La pestaña **Estructura** del god-panel lo pinta como matrices.
+  El catálogo de capacidades (qué áreas detectar y con qué globs) está en el propio script.
+- Mapa curado (descripciones legibles): `apps/plataforma/lib/estructura.ts` (arrays
+  `VERTICALES`, `MODULOS`, `AGENTES`) — complementa la radiografía con el "qué es" de cada pieza.
 - Catálogo gateable: `apps/plataforma/lib/modulos.ts`.
-- Este documento: `docs/ESTRUCTURA.md` (mantener al día junto al mapa).
+- Este documento: `docs/ESTRUCTURA.md` (la verdad viva es la radiografía; este doc da el relato).

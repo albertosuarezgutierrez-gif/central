@@ -33,6 +33,7 @@ async function port(path: string, init?: RequestInit): Promise<Response | null> 
       ...init,
       headers: { Authorization: `Bearer ${s}`, 'Content-Type': 'application/json', ...(init?.headers || {}) },
       cache: 'no-store',
+      signal: AbortSignal.timeout(8000), // no colgar la lista si ia-rest no responde
     })
   } catch {
     return null
@@ -57,7 +58,8 @@ function aCliente(r: RestaurantePort): ClienteSaaS {
 
 async function listarRaw(): Promise<RestaurantePort[]> {
   const res = await port('/api/operador/restaurantes')
-  if (!res || !res.ok) throw new Error('puerto no disponible')
+  if (!res) throw new Error('sin conexión (red/timeout/WAF)')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`) // 401 = secreto · 500 = BD de ia-rest
   const json = await res.json()
   return (json.restaurantes ?? []) as RestaurantePort[]
 }
@@ -80,8 +82,8 @@ export const iarestAdapter: VerticalAdapter = {
     if (!base() || !secret()) return [info('configura IAREST_URL + OPERADOR_SHARED_SECRET')]
     try {
       return (await listarRaw()).map(aCliente)
-    } catch {
-      return [info('puerto no responde')]
+    } catch (e: any) {
+      return [info(`puerto no responde (${e?.message || 'error'})`)]
     }
   },
 

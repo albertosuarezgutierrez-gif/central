@@ -4,6 +4,10 @@
   "private": true,
   "description": "Matriz de la casa de marcas (monorepo). La raíz NO es una vertical: las verticales viven en apps/* y los módulos compartidos en packages/*. Workspaces gestionados por pnpm (pnpm-workspace.yaml). Ver MATRIZ.md.",
   "packageManager": "pnpm@10.33.0",
+  "scripts": {
+    "auditar": "node scripts/auditar-estructura.mjs",
+    "auditar:check": "node scripts/auditar-estructura.mjs --check"
+  },
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client",
