@@ -5,6 +5,7 @@ import { getSession } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
 import { publicarEnInstagram } from '@/lib/instagram'
 import { tgAlertButtons } from '@/lib/telegram'
+import { notifyError } from '@/lib/notify'
 export async function GET(req: NextRequest) {
   const session = getSession(req)
   if (!session || session.rol !== 'super_admin') return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
@@ -24,10 +25,15 @@ export async function POST(req: NextRequest) {
   if (body.accion === 'publicar_borrador') {
     const { data: b } = await supabase.from('instagram_borradores').select('*').eq('id', body.borrador_id).single()
     if (!b) return NextResponse.json({ error: 'No encontrado' }, { status: 404 })
-    const postId = await publicarEnInstagram(b.image_url, b.caption)
-    await supabase.from('instagram_posts').insert({ post_id: postId, plantilla: b.plantilla, titulo: b.titulo, caption: b.caption, image_url: b.image_url, tema_elegido: b.tema_elegido, modulo_relacionado: b.modulo_relacionado, estado: 'publicado', tipo: 'imagen' })
-    await supabase.from('instagram_borradores').update({ estado: 'aprobado', aprobado_at: new Date().toISOString() }).eq('id', body.borrador_id)
-    return NextResponse.json({ ok: true, postId })
+    try {
+      const postId = await publicarEnInstagram(b.image_url, b.caption)
+      await supabase.from('instagram_posts').insert({ post_id: postId, plantilla: b.plantilla, titulo: b.titulo, caption: b.caption, image_url: b.image_url, tema_elegido: b.tema_elegido, modulo_relacionado: b.modulo_relacionado, estado: 'publicado', tipo: 'imagen' })
+      await supabase.from('instagram_borradores').update({ estado: 'aprobado', aprobado_at: new Date().toISOString() }).eq('id', body.borrador_id)
+      return NextResponse.json({ ok: true, postId })
+    } catch (err: any) {
+      notifyError({ tipo: 'instagram_publish', modulo: 'sistema', nivel: 'aviso', mensaje: `Fallo publicando post (panel /super): ${err?.message}`, detalle: { borradorId: body.borrador_id } })
+      return NextResponse.json({ error: `Error publicando en Instagram: ${err?.message}` }, { status: 502 })
+    }
   }
   if (body.accion === 'actualizar_caption') {
     await supabase.from('instagram_borradores').update({ caption: body.caption }).eq('id', body.borrador_id)
