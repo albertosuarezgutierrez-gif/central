@@ -287,3 +287,29 @@ export interface EvaluacionOferta {
   umbral_temeraria: number | null
   viable: boolean                // margen_euros >= 0 && !temeraria
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Presentación + plazos/subsanación (F6) — cierra el flujo del concurso.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Si cada sobre está listo (lo decide la app a partir de F3/F4/F5). */
+export interface SobresListos {
+  administrativo: boolean
+  tecnico: boolean
+  economico: boolean
+}
+
+/** Estado de la presentación: plazo + sobres requeridos. */
+export interface EstadoPresentacion {
+  dias_para_fin: number | null   // días naturales hasta fin_presentacion (null si no consta)
+  plazo_abierto: boolean         // aún se puede presentar (hoy <= fin)
+  urgente: boolean               // plazo abierto y quedan <= 3 días
+  listo: boolean                 // plazo abierto y todos los sobres REQUERIDOS listos
+  pendientes: string[]           // qué falta para poder presentar
+}
+
+/** Plazo de subsanación (art. 141 LCSP): días hábiles desde el requerimiento. */
+export interface PlazoSubsanacion {
+  fecha_limite: string           // ISO 'YYYY-MM-DD'
+  dias_habiles: number
+}
