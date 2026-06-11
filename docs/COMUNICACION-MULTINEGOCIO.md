@@ -35,11 +35,16 @@ Dos niveles (ambos en el diseño; implementación por fases):
 ## 3. Modelo de datos (BD compartida, schema de plataforma)
 Multi-tenant estricto: **todo scoped por `cuenta_id`**.
 
-- `comunicacion_nodos` — participantes de la red. Un nodo es el **dueño** (Cuenta), un
-  **Negocio**, o una **persona/rol dentro de un negocio** (decidido: direccionamiento por
-  persona/rol desde F0). `(id, cuenta_id, tipo['cuenta'|'negocio'|'persona'|'rol'], negocio_id
-  NULL, ref_persona NULL, rol NULL, nombre)`. Las personas/roles **no se duplican**: se
-  resuelven contra el **directorio** de cada vertical (ver §4.1).
+- `comunicacion_nodos` — destinatarios direccionables. Granularidad (decidida): **holding**
+  (todos), **negocio**, **grupo/sección**, **persona**. `(id, cuenta_id, tipo['cuenta'|'negocio'|
+  'grupo'|'persona'], negocio_id NULL, grupo_id NULL, ref_persona NULL, rol NULL, nombre)`. Las
+  personas **no se duplican**: se resuelven contra el **directorio** de cada vertical (§4.1).
+  Ej.: el dueño manda a *todo el holding*, a *un negocio*, a *"participantes del catering"* (grupo)
+  o a *un camarero concreto* (persona).
+- `comunicacion_grupos` — secciones/grupos de destinatarios. Pueden ser **estáticos** (lista de
+  personas/rol elegida por el dueño) o **dinámicos** (derivados de una vertical, p. ej. los
+  participantes de un evento/catering de ia-rest). `(id, cuenta_id, negocio_id NULL, nombre,
+  tipo['estatico'|'dinamico'], origen_ref NULL)`.
 - `comunicacion_categorias` — categorías de conversación **definidas por el dueño** (decidido:
   libres). `(id, cuenta_id, nombre, color, orden)`. Sustituye a una lista fija.
 - `comunicacion_reglas` — la matriz adaptativa: `(cuenta_id, origen_nodo_id, destino_nodo_id,
@@ -58,8 +63,10 @@ Multi-tenant estricto: **todo scoped por `cuenta_id`**.
 Como se decide a **persona/rol**, cada vertical debe exponer **quién trabaja en cada negocio**
 y con qué rol. Las personas viven en las tablas de cada app (ia-rest `personal`; ialimp
 `usuarios_empresa`/`limpiadoras`; sivra usuarios/limpiadoras). Se añade una capacidad al
-adaptador/puerto: `listarDirectorio(refExt) → [{ ref_persona, nombre, rol, email?, push? }]`.
-plataforma **no duplica** el padrón; lo lee bajo demanda (ia-rest por HTTP, ialimp/sivra por BD).
+adaptador/puerto: `listarDirectorio(refExt) → [{ ref_persona, nombre, rol, email?, push?,
+canales_pref? }]`. plataforma **no duplica** el padrón; lo lee bajo demanda (ia-rest por HTTP,
+ialimp/sivra por BD). Cada persona tiene su **preferencia de canal** (decidido: configurable
+100% — hay quien tiene app, quien solo email, quien ambos): in-app / email / push o combinación.
 
 ### 4.2 Bandejas y puertos
 - **Hub central** en plataforma: `/comunicacion` (dueño) + integrado en `/admin` (operador).
@@ -91,15 +98,14 @@ plataforma **no duplica** el padrón; lo lee bajo demanda (ia-rest por HTTP, ial
 - Alcance: **genérico/adaptativo** desde el modelo (un Negocio = `(app, refExt)`).
 - Ubicación: **hub en plataforma + dentro de cada app**, **100% configurable por el dueño**.
 - Categorías de conversación: **libres**, las define el dueño (`comunicacion_categorias`).
-- Direccionamiento: **por persona/rol** desde F0 → requiere **directorio por vertical** (§4.1).
+- Identidad de personas: **directorio por vertical** (§4.1), sin duplicar padrón.
+- Destinatario: granularidad **holding · negocio · grupo/sección · persona** (`comunicacion_grupos`).
+- Autorización: **el dueño es la autoridad** — controla quién puede comunicarse/encargar con quién.
+- Canales: **configurables 100% por persona** (in-app / email / push o combinación).
 
 ## 8. Abierto / a confirmar (seguimos afinando)
-- **Identidad de personas:** ¿reutilizamos los usuarios de cada vertical vía el directorio
-  (§4.1, recomendado, sin duplicar) o creamos un padrón de personas propio en plataforma?
-- **Roles:** ¿lista de roles por vertical (camarero/cocina/jefe en ia-rest; limpiadora/admin/
-  contable en ialimp…) o roles libres definidos por el dueño?
-- **Notificación a la persona:** ¿qué canal por defecto (in-app, email, push) y de dónde sale
-  el contacto de cada persona en cada vertical?
-- **Datos por defecto de las reglas:** ¿todo permitido y el dueño restringe, o todo cerrado y
-  el dueño abre?
+- **Roles:** ¿roles reales de cada vertical (camarero/cocina/jefe; limpiadora/admin/contable),
+  etiquetas libres del dueño, o **mixto** (ambos)? — pendiente de decidir.
+- **Grupos dinámicos:** ¿qué orígenes soporta F0 (p. ej. "participantes de un evento" de ia-rest)
+  o arrancamos solo con grupos estáticos y dejamos los dinámicos para F1/F2?
 - **Primer vertical** para la bandeja "dentro de la app" en F1 (sugerencia: ialimp).
