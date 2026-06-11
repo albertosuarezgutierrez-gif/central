@@ -1,0 +1,32 @@
+name: Auditoría de estructura
+
+# Verifica que la radiografía del repo (apps/plataforma/lib/estructura.generated.json)
+# está al día con el código. Si alguien cambia la estructura sin regenerarla, falla
+# pidiendo `npm run auditar`. El script es Node puro: no instala dependencias.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: auditoria-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  radiografia:
+    name: Radiografía al día
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Comprobar que la radiografía está al día
+        run: node scripts/auditar-estructura.mjs --check
