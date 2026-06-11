@@ -40,3 +40,28 @@ test('coincideRadar: sin criterios no casa (evita ruido)', () => {
   const r = coincideRadar(LIMPIEZA, {})
   assert.equal(r.coincide, false)
 })
+
+import { filtrarRadar, necesitaOcr } from '../src/radar.ts'
+
+test('filtrarRadar: devuelve solo los que casan, ordenados por puntuación', () => {
+  const anuncios: AnuncioRadar[] = [
+    { titulo: 'Obra de carretera', cpv: ['45200000'] },
+    { titulo: 'Limpieza de oficinas', objeto: 'limpieza', cpv: ['90910000'], presupuesto: 30000 },
+    { titulo: 'Limpieza y mantenimiento', objeto: 'limpieza integral', cpv: ['90910000'] },
+  ]
+  const crit: CriteriosRadar = { cpv: ['9091'], palabras_clave: ['limpieza'] }
+  const out = filtrarRadar(anuncios, crit)
+  assert.equal(out.length, 2)               // la obra se descarta
+  assert.ok(/Limpieza/.test(out[0].titulo)) // el de más puntos primero
+})
+
+test('necesitaOcr: texto demasiado corto sugiere PDF escaneado', () => {
+  assert.equal(necesitaOcr('   '), true)
+  assert.equal(necesitaOcr('x'.repeat(50)), true)
+  assert.equal(necesitaOcr('x'.repeat(500)), false)
+})
+
+test('necesitaOcr: umbral configurable', () => {
+  assert.equal(necesitaOcr('x'.repeat(120), 100), false)
+  assert.equal(necesitaOcr('x'.repeat(80), 100), true)
+})

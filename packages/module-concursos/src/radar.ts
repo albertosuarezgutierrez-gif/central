@@ -60,3 +60,23 @@ export function coincideRadar(anuncio: AnuncioRadar, criterios: CriteriosRadar):
   const coincide = puntuacion > 0 && presupuestoOk
   return { coincide, puntuacion: coincide ? Math.min(100, puntuacion) : 0, motivos }
 }
+
+/** Anuncios que casan, ordenados por relevancia descendente. */
+export function filtrarRadar(anuncios: AnuncioRadar[], criterios: CriteriosRadar): AnuncioRadar[] {
+  return anuncios
+    .map(a => ({ a, m: coincideRadar(a, criterios) }))
+    .filter(x => x.m.coincide)
+    .sort((x, y) => y.m.puntuacion - x.m.puntuacion)
+    .map(x => x.a)
+}
+
+/** Caracteres mínimos de texto útil; por debajo, el PDF probablemente es escaneado. */
+export const MIN_TEXTO_PLIEGO = 200
+
+/**
+ * Heurística: si el texto extraído del pliego es demasiado corto, el PDF está
+ * escaneado (imagen) y hay que pasarle OCR antes de analizarlo.
+ */
+export function necesitaOcr(texto: string, minChars = MIN_TEXTO_PLIEGO): boolean {
+  return (texto || '').trim().length < minChars
+}
