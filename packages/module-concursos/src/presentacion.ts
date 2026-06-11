@@ -70,3 +70,11 @@ export function estadoPresentacion(
   const listo = pendientes.length === 0
   return { dias_para_fin, plazo_abierto, urgente, listo, pendientes }
 }
+
+/**
+ * Plazo de subsanación de defectos del sobre administrativo (art. 141 LCSP):
+ * por defecto 3 días hábiles desde el requerimiento del órgano de contratación.
+ */
+export function plazoSubsanacion(fechaRequerimiento: string, diasHabiles = 3): PlazoSubsanacion {
+  return { fecha_limite: sumarDiasHabiles(fechaRequerimiento, diasHabiles), dias_habiles: diasHabiles }
+}

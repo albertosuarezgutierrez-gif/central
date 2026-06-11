@@ -83,3 +83,17 @@ test('estadoPresentacion: sin fecha de fin, dias null y plazo abierto', () => {
   assert.equal(e.dias_para_fin, null)
   assert.equal(e.plazo_abierto, true)
 })
+
+import { plazoSubsanacion } from '../src/presentacion.ts'
+
+test('plazoSubsanacion: 3 días hábiles por defecto (art. 141 LCSP)', () => {
+  const p = plazoSubsanacion('2026-06-11') // jueves
+  assert.equal(p.dias_habiles, 3)
+  assert.equal(p.fecha_limite, '2026-06-16') // vie 12, lun 15, mar 16
+})
+
+test('plazoSubsanacion: admite otro número de días hábiles', () => {
+  const p = plazoSubsanacion('2026-06-12', 1) // viernes + 1 hábil → lunes
+  assert.equal(p.fecha_limite, '2026-06-15')
+  assert.equal(p.dias_habiles, 1)
+})

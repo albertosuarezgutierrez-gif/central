@@ -33,6 +33,9 @@ export type {
   CoberturaMemoria,
   CosteEjecucion,
   EvaluacionOferta,
+  SobresListos,
+  EstadoPresentacion,
+  PlazoSubsanacion,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -90,3 +93,11 @@ export {
   precioMinimoRentable,
   evaluarOferta,
 } from './oferta'
+
+// Presentación + plazos/subsanación (puro)
+export {
+  diasEntre,
+  sumarDiasHabiles,
+  estadoPresentacion,
+  plazoSubsanacion,
+} from './presentacion'
