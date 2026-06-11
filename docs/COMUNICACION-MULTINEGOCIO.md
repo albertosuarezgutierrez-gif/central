@@ -35,12 +35,16 @@ Dos niveles (ambos en el diseño; implementación por fases):
 ## 3. Modelo de datos (BD compartida, schema de plataforma)
 Multi-tenant estricto: **todo scoped por `cuenta_id`**.
 
-- `comunicacion_nodos` — participantes de la red. Un nodo es el **dueño** (Cuenta) o un
-  **Negocio**. `(id, cuenta_id, tipo['cuenta'|'negocio'], negocio_id NULL, nombre)`.
+- `comunicacion_nodos` — participantes de la red. Un nodo es el **dueño** (Cuenta), un
+  **Negocio**, o una **persona/rol dentro de un negocio** (decidido: direccionamiento por
+  persona/rol desde F0). `(id, cuenta_id, tipo['cuenta'|'negocio'|'persona'|'rol'], negocio_id
+  NULL, ref_persona NULL, rol NULL, nombre)`. Las personas/roles **no se duplican**: se
+  resuelven contra el **directorio** de cada vertical (ver §4.1).
+- `comunicacion_categorias` — categorías de conversación **definidas por el dueño** (decidido:
+  libres). `(id, cuenta_id, nombre, color, orden)`. Sustituye a una lista fija.
 - `comunicacion_reglas` — la matriz adaptativa: `(cuenta_id, origen_nodo_id, destino_nodo_id,
-  puede_mensajear bool, puede_encargar bool, categorias text[])`. Default configurable por el dueño.
-- `conversaciones` — `(id, cuenta_id, tipo['directiva'|'aviso'|'pedido'], titulo, creado_por_nodo,
-  estado, created_at)`.
+  puede_mensajear bool, puede_encargar bool, categoria_ids uuid[])`. Default configurable por el dueño.
+- `conversaciones` — `(id, cuenta_id, categoria_id, titulo, creado_por_nodo, estado, created_at)`.
 - `conversacion_participantes` — `(conversacion_id, nodo_id, rol)`.
 - `mensajes` — `(id, conversacion_id, autor_nodo_id, cuerpo, adjuntos jsonb, leido_por jsonb,
   created_at)`.
@@ -49,6 +53,15 @@ Multi-tenant estricto: **todo scoped por `cuenta_id`**.
   Encargo real en la vertical destino vía su adaptador.
 
 ## 4. Entrega "en todos lados" (puertos por vertical)
+
+### 4.1 Directorio de personas/roles por vertical (para direccionar por persona)
+Como se decide a **persona/rol**, cada vertical debe exponer **quién trabaja en cada negocio**
+y con qué rol. Las personas viven en las tablas de cada app (ia-rest `personal`; ialimp
+`usuarios_empresa`/`limpiadoras`; sivra usuarios/limpiadoras). Se añade una capacidad al
+adaptador/puerto: `listarDirectorio(refExt) → [{ ref_persona, nombre, rol, email?, push? }]`.
+plataforma **no duplica** el padrón; lo lee bajo demanda (ia-rest por HTTP, ialimp/sivra por BD).
+
+### 4.2 Bandejas y puertos
 - **Hub central** en plataforma: `/comunicacion` (dueño) + integrado en `/admin` (operador).
 - **Puerto de comunicación por vertical** (mismo patrón que `OPERADOR_SHARED_SECRET`):
   - ia-rest → `GET/POST /api/operador/mensajes` (Bearer secret). Bandeja dentro de ia-rest.
@@ -77,9 +90,16 @@ Multi-tenant estricto: **todo scoped por `cuenta_id`**.
 - Profundidad: **A + B**, diseño completo, implementación por fases. (A primero.)
 - Alcance: **genérico/adaptativo** desde el modelo (un Negocio = `(app, refExt)`).
 - Ubicación: **hub en plataforma + dentro de cada app**, **100% configurable por el dueño**.
+- Categorías de conversación: **libres**, las define el dueño (`comunicacion_categorias`).
+- Direccionamiento: **por persona/rol** desde F0 → requiere **directorio por vertical** (§4.1).
 
-## 8. Abierto / a confirmar antes de F0
-- ¿Roles dentro de un negocio (que un empleado concreto reciba el mensaje) o basta a nivel de
-  negocio en F0?
-- ¿Categorías de conversación fijas (directiva/aviso/pedido) o libres definidas por el dueño?
-- ¿Primer vertical para sacar la bandeja "dentro de la app" en F1? (sugerencia: ialimp).
+## 8. Abierto / a confirmar (seguimos afinando)
+- **Identidad de personas:** ¿reutilizamos los usuarios de cada vertical vía el directorio
+  (§4.1, recomendado, sin duplicar) o creamos un padrón de personas propio en plataforma?
+- **Roles:** ¿lista de roles por vertical (camarero/cocina/jefe en ia-rest; limpiadora/admin/
+  contable en ialimp…) o roles libres definidos por el dueño?
+- **Notificación a la persona:** ¿qué canal por defecto (in-app, email, push) y de dónde sale
+  el contacto de cada persona en cada vertical?
+- **Datos por defecto de las reglas:** ¿todo permitido y el dueño restringe, o todo cerrado y
+  el dueño abre?
+- **Primer vertical** para la bandeja "dentro de la app" en F1 (sugerencia: ialimp).
