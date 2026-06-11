@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)**
+  Cierra la infraestructura de F7 sobre el núcleo puro ya en producción. Spec/plan:
+  `docs/superpowers/specs/2026-06-11-concursos-radar-ocr-infra-design.md` · `docs/superpowers/plans/2026-06-11-concursos-radar-ocr-infra.md`.
+  - **Parser ATOM PURO (`apps/ialimp/lib/concursos-radar.ts`, TDD `node --test` → 4/4):** `parsearAtomPlacsp` (CODICE de PLACSP, `fast-xml-parser` con `removeNSPrefix`, tolerante a campos ausentes → título/objeto/cpv/presupuesto/órgano/url/expediente), `dedupeKey` (expediente > atom_id > url) y `matchesDeAtom` (empareja con `filtrarRadar`/`coincideRadar` del módulo → puntuación + motivos + dedupe). Fixture en `lib/__fixtures__/placsp-sample.atom.xml`.
+  - **Adaptación del módulo (aditiva, 79/79 intacto):** subpath export `"./radar": "./src/radar.ts"` en `packages/module-concursos/package.json` para poder importar `filtrarRadar`/`coincideRadar` bajo `node --test` (el bare `index.ts` arrastra imports extensionless que el type-stripping de Node 22 rechaza). Los tipos siguen importándose del bare package.
+  - **Radar (app):** migraciones `add_concursos_radar_criterios.sql` (amplía `concursos_perfil_empresa` con `radar_activo`/`radar_cpv[]`/`radar_palabras_clave[]`/`radar_presupuesto_min·max`) y `add_concursos_radar_anuncios.sql` (tabla con `unique(empresa_id, dedupe_key)`). Endpoints `radar/criterios` (GET/PUT), `radar` (GET lista + `no_vistos`), `radar/visto` (POST), `radar/importar` (POST import manual de ATOM). Cron `/api/cron/concursos-radar` cada 6 h (`0 */6 * * *`, en `vercel.json`): descarga la sindicación ATOM paginada (`PLACSP_FEED_URL` configurable, default público, hasta 3 páginas siguiendo `rel="next"`), filtra por empresa con `radar_activo` e inserta matches nuevos (`ON CONFLICT DO NOTHING`). **Aviso in-app** (contador de no vistos) — NO web-push (las suscripciones push de ialimp son de limpiadoras).
+  - **OCR (app):** `lib/concursos-ocr.ts` — `rasterizarPdf` (pdfjs-dist legacy `legacy/build/pdf.mjs` + `@napi-rs/canvas`, hasta 12 págs) y `ocrPaginasPliego` (cada página → `nimVision`, modelo de visión que ialimp ya usa, sin claves nuevas). Integrado en `analizar/route.ts`: si `necesitaOcr(texto)` → OCR → reanaliza; respuesta añade `ocr_aplicado`. `next.config.ts`: `@napi-rs/canvas`/`pdfjs-dist` en `serverExternalPackages` (load-bearing).
+  - **UI (`/admin/concursos/page.tsx`):** panel **"📡 Radar de oportunidades"** (criterios CPV/palabras/presupuesto + toggle activo + lista de matches con puntuación/motivos/enlace/«visto» + badge de no vistos) y aviso **"📄 Documento escaneado — OCR"** en la ficha (prop `ocrAplicado`).
+  - **Verificación:** parser 4/4, módulo 79/79, `apps/ialimp npm run build → ✓ Compiled successfully` en cada tarea (aborta luego por `JWT_SECRET` ausente = env local).
+  - **⚠️ Pendiente de Alberto:** (1) aplicar las 2 migraciones en Supabase; (2) **validar la rasterización OCR en la preview de Vercel** (riesgo: pdfjs+napi-canvas en runtime serverless; fallback documentado = subir páginas como imágenes); (3) opcional: ajustar `PLACSP_FEED_URL` por CPV/región. El cron no necesita secreto (lo invoca Vercel cron).
+
 - **🏛️ Concursos F7 — Radar PLACSP + OCR (CIERRA el agente F2–F7) — 11/06/2026**
   Última fase del agente de concursos (`packages/module-concursos`). Plan:
   `docs/superpowers/plans/2026-06-11-concursos-f7-radar-ocr.md`.
