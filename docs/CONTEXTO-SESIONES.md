@@ -16,6 +16,49 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🗺️ Radiografía del repo + panel único + portal propietario — 11/06/2026 (PR #129 mergeado · PR #136 borrador)**
+
+  **Radiografía automática del monorepo (`scripts/auditar-estructura.mjs`):** script Node puro (sin deps),
+  escanea `apps/*` + `packages/*` y genera `apps/plataforma/lib/estructura.generated.json` commiteado.
+  Dos matrices: (1) **módulos** (`usado`/`declarado`/`no`) por imports reales en código; (2) **capacidades**
+  (22 áreas con patrones glob curados: tpv, kds, eventos, pricing, contabilidad, etc.) por rutas existentes.
+  Calcula gaps: módulos infrautilizados (declarados sin imports) y oportunidades de portar (capacidad presente
+  en ≥1 vertical, ausente en otra). `--check` mode para CI. `npm run auditar` en `package.json` raíz.
+  GitHub Actions `.github/workflows/auditoria.yml` regenera y auto-commitea (`[skip ci]`) cuando cambia estructura.
+
+  **God-panel `apps/plataforma` ampliado (PR #129):**
+  - Nueva pestaña **"🏠 Mis propiedades"** (`Propiedades()`) con dos sub-vistas: Portal (iframe del portal
+    propietario de ialimp sin login — magic token lookup por email) y Resumen (tarjetas por apartamento
+    con métricas e ingresos, datos de `propiedades`+`incomes`+`expenses` de BD compartida sivra).
+  - `apps/plataforma/lib/propiedades.ts` → `getPropiedades()` y `getPropietarioAccessToken(email)`.
+  - `apps/plataforma/app/api/admin/propiedades/route.ts` → endpoint protegido por `getAdmin()`, devuelve
+    `{propiedades, portalUrl, autologin}`.
+  - **Pestaña Estructura** renombrada (antes solo lista curada) → **Radiografía** real: `Radiografia()`
+    con `Matriz()` responsive, cabecera con KPIs, matriz de módulos ✅/◐/❌, matriz de capacidades ✅/❌ y
+    oportunidades de portar. Catálogo curado se mantiene debajo.
+  - `apps/plataforma/lib/estructura.ts` → importa `estructura.generated.json` con interfaz `Radiografia`,
+    re-exporta `RADIOGRAFIA`.
+  - `apps/plataforma/lib/adapters/iarest.ts` → `AbortSignal.timeout(8000)` para evitar hang; mensajes
+    de error mejorados: "puerto no responde (HTTP 401/500/sin conexión)".
+
+  **Login unificado:** sivra usa `ADMIN_EMAIL`/`ADMIN_PASSWORD` (NextAuth v5). Se instruyó a Alberto
+  poner en Vercel (sivra) el mismo email/contraseña del `superadmins` de la BD compartida → un único
+  usuario para god-panel + ialimp + sivra. ia-rest queda excluido (BD separada, fase 2).
+
+  **Fix ia-rest puerto no responde (HTTP 401):** `OPERADOR_SHARED_SECRET` estaba desincronizado entre
+  plataforma y ia-rest en Vercel. Alberto lo regeneró y sincronizó + marcó plataforma como Trusted Source.
+
+  **PR #136 (borrador, pendiente validación visual de Alberto):** portal propietario ialimp responsive
+  en escritorio. `PropietarioClient.tsx`: `maxWidth 480→1080`, listas de sesiones/reservas con
+  `grid auto-fill minmax(320px,1fr)`, formularios centrados `maxWidth:680-760`. Todos los builds
+  Vercel en Ready.
+
+  - **⚠️ Pendiente de Alberto:** (1) Validar preview de PR #136 en ialimp (portal propietario en escritorio)
+    y aprobar merge a `main`. (2) Securizar: el `access_token` del propietario fue pegado en el chat de
+    Claude (token de URL) — conviene rotarlo desde `ialimp > admin > clientes > [cliente] > Enviar acceso`.
+    El `OPERADOR_SHARED_SECRET` también fue expuesto en chat — ya rotado por Alberto pero verificar que
+    no quedó en ningún log. (3) ia-rest login unificado = fase 2 (requiere SSO o puerto dedicado).
+
 - **🗑️ Desactivar/reactivar cliente en ialimp (baja reversible, conserva histórico) — 11/06/2026**
   La UI ya tenía `c.activo` a medio cablear pero SIN backend. Completado: migración
   `add_cliente_desactivacion.sql` (auditoría `desactivado_*`; `clientes.activo` ya existía, aplicada en
