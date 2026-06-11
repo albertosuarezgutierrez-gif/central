@@ -1,6 +1,8 @@
 // → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @iarest/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { autocompletarChecklist, documentosFaltantes } from '@iarest/module-concursos';
+import type { Biblioteca } from '@iarest/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
@@ -20,12 +22,21 @@ export default function Concursos() {
   const [error, setError] = useState('');
   const [actual, setActual] = useState<any>(null);
   const [lista, setLista] = useState<any[]>([]);
+  const [biblioteca, setBiblioteca] = useState<Biblioteca>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargar = async () => {
     try { const r = await fetch('/api/admin/concursos/analizar').then(x=>x.json()); setLista(r.concursos||[]); } catch {}
   };
-  useEffect(()=>{ cargar(); }, []);
+  // Carga la biblioteca de empresa para autocompletar el checklist y avisar de lo que falta.
+  const cargarBiblioteca = async () => {
+    try {
+      const r = await fetch('/api/admin/concursos/biblioteca').then(x=>x.json());
+      const docs = (r.documentos||[]).map((d:any)=>({ tipo:d.tipo, nombre:d.nombre, vigencia_hasta:d.vigencia_hasta ?? undefined }));
+      setBiblioteca(docs);
+    } catch {}
+  };
+  useEffect(()=>{ cargar(); cargarBiblioteca(); }, []);
 
   const analizar = async (form: FormData | null, body?: any) => {
     setLoad(true); setError(''); setActual(null);
@@ -42,7 +53,10 @@ export default function Concursos() {
 
   return (
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
-      <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:760 }}>
+        <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
+        <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
+      </div>
       <p style={{ color:C.muted, margin:'0 0 16px', fontSize:14 }}>Sube el pliego (PDF) o pega su texto: el agente extrae la ficha, decide si te conviene presentarte y monta el checklist de documentos.</p>
 
       {/* Entrada */}
@@ -67,7 +81,7 @@ export default function Concursos() {
       </div>
 
       {/* Resultado */}
-      {actual && <FichaView c={actual} />}
+      {actual && <FichaView c={actual} biblioteca={biblioteca} />}
 
       {/* Histórico */}
       {lista.length>0 && (
@@ -87,8 +101,12 @@ export default function Concursos() {
   );
 }
 
-function FichaView({ c }:{ c:any }) {
-  const f = c.ficha || {}; const gng = c.go_no_go; const checklist:any[] = c.checklist || []; const gar = c.garantias || {};
+function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
+  const f = c.ficha || {}; const gng = c.go_no_go; const gar = c.garantias || {};
+  // Autocompleta el checklist con lo que ya hay en la biblioteca de empresa.
+  const checklist:any[] = autocompletarChecklist(c.checklist || [], biblioteca);
+  // Documentos del concurso que la biblioteca todavía no cubre.
+  const faltan = f.documentos ? documentosFaltantes(f, biblioteca) : [];
   const sem = gng ? SEMAFORO[gng.semaforo] : null;
   const porSobre = (s:string) => checklist.filter(i=>i.sobre===s);
 
@@ -143,13 +161,21 @@ function FichaView({ c }:{ c:any }) {
           <ul style={{ margin:0, paddingLeft:18, fontSize:14 }}>
             {porSobre(s).map((it:any,i:number)=>(
               <li key={i} style={{ marginBottom:3 }}>
-                {it.documento}{it.modelo && <span style={{ color:C.muted }}> ({it.modelo})</span>}
+                {it.hecho ? '✅ ' : '⬜ '}{it.documento}{it.modelo && <span style={{ color:C.muted }}> ({it.modelo})</span>}
                 {!it.obligatorio && <span style={{ color:C.muted }}> · opcional</span>}
               </li>
             ))}
           </ul>
         </div>
       ))}
+
+      {/* Aviso: documentos que faltan en la biblioteca de empresa */}
+      {faltan.length>0 && (
+        <div style={{ background:C.soft, color:C.indigo, borderRadius:10, padding:'8px 12px', fontSize:13, marginBottom:10 }}>
+          Te faltan <strong>{faltan.length}</strong> documento{faltan.length>1?'s':''} en tu biblioteca: {faltan.map((d:any)=>d.nombre).join(' · ')}.{' '}
+          <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, textDecoration:'underline' }}>Subirlos a Mi biblioteca</a>
+        </div>
+      )}
 
       {f.avisos?.length>0 && (
         <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:10, padding:'8px 12px', fontSize:13 }}>
