@@ -72,6 +72,22 @@
 - *A construir:* plantillas de checklist por sección + marcado (con foto) + motor que lee mesas/comandas
   del POS y genera el índice de carga + informe de cumplimiento por empleado/turno.
 
+### Bloque I — Parte de trabajo del cocinero + productividad IA (producción)  ·  *idea de Alberto*
+> El equivalente del Bloque H pero para **cocina/producción** (dominio de la responsable de cocina).
+> Mismo patrón que la limpiadora de `ialimp`: el trabajador entra a **su perfil** y ve su trabajo ya
+> **organizado y cronometrado** por el sistema. Conecta con los huecos de cocina **#5 (partes de trabajo
+> por partida)** y **#6 (cronometraje + productividad)**.
+- **Perfil del cocinero:** al entrar ve **su** trabajo del día/evento ya **organizado y secuenciado por
+  la IA** (qué elaboraciones, en qué orden, para su partida), con **tiempo estimado por tarea**.
+- **Anticipación:** el sistema planifica el trabajo por adelantado (como los partes 5 días antes que ya
+  hace ella) y lo reparte entre cocineros equilibrando carga.
+- **Productividad:** captura el **tiempo real** vs el **estándar** → cuadro de productividad por cocinero
+  (¿es rentable?, ¿hay que reasignar?, ¿justifica el rendimiento?).
+- **Encaje con la "vía conectar":** ella ya tiene partes por partida y cronometraje — aquí **co-diseñamos
+  con ella** la capa de *perfil individual + planificación IA + productividad*, NO la reemplazamos.
+- *A construir:* perfil/agenda del cocinero + motor de planificación y reparto (IA) + captura de tiempos
+  real vs estándar + informe de productividad. (Reaprovecha tiempos estándar del hueco #6.)
+
 ### Bloque F — Adyacentes (reutilización, casi sin construir)
 - Haciendas → `sivra`; limpieza con **cierre obligatorio por foto** → `ialimp`; **fontanería/obra**
   del cuñado (cuadro de mando con fotos, evolución de obra, avisos WhatsApp, localización) + cross-sell
