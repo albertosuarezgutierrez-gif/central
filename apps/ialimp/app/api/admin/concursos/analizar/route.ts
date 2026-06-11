@@ -2,8 +2,9 @@ import { NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { analizarConcurso, type PerfilEmpresa } from '@iarest/module-concursos'
+import { analizarConcurso, necesitaOcr, type PerfilEmpresa } from '@iarest/module-concursos'
 import { aiRunner, extraerTextoPdf } from '@/lib/concursos'
+import { ocrPaginasPliego } from '@/lib/concursos-ocr'
 
 export const maxDuration = 60 // la extracción IA puede tardar
 
@@ -33,6 +34,7 @@ export async function POST(req: Request) {
   // 1) Obtener el texto del pliego (de un PDF o pegado) y el perfil opcional.
   let texto = ''
   let perfil: PerfilEmpresa = {}
+  let buf: Buffer | null = null
   const ctype = req.headers.get('content-type') || ''
   try {
     if (ctype.includes('multipart/form-data')) {
@@ -40,7 +42,7 @@ export async function POST(req: Request) {
       const file = form.get('file')
       const pegado = form.get('texto')
       if (file && typeof file !== 'string') {
-        const buf = Buffer.from(await (file as File).arrayBuffer())
+        buf = Buffer.from(await (file as File).arrayBuffer())
         texto = await extraerTextoPdf(buf)
       } else if (typeof pegado === 'string') {
         texto = pegado
@@ -54,6 +56,13 @@ export async function POST(req: Request) {
     }
   } catch {
     return NextResponse.json({ error: 'No se pudo leer el pliego enviado' }, { status: 400 })
+  }
+
+  // 1b) Si el PDF no trae texto (escaneo), reusar la visión IA (OCR) sobre el mismo Buffer.
+  let ocr_aplicado = false
+  if (buf && necesitaOcr(texto)) {
+    const textoOcr = await ocrPaginasPliego(buf)
+    if (textoOcr) { texto = textoOcr; ocr_aplicado = true }
   }
 
   if (!texto.trim()) {
@@ -85,5 +94,5 @@ export async function POST(req: Request) {
     RETURNING id, titulo, expediente, estado, ficha, checklist, go_no_go, garantias, created_at
   `)
 
-  return NextResponse.json({ concurso: rows[0] })
+  return NextResponse.json({ concurso: rows[0], ocr_aplicado })
 }
