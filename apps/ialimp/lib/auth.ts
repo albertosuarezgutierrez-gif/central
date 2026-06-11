@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
-import { genJti } from '@iarest/core-identity'
+import { genJti } from '@central/core-identity'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET

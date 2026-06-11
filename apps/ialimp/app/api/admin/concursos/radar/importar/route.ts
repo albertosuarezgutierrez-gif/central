@@ -3,7 +3,7 @@ import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { matchesDeAtom } from '@/lib/concursos-radar'
-import type { CriteriosRadar } from '@iarest/module-concursos'
+import type { CriteriosRadar } from '@central/module-concursos'
 
 export const maxDuration = 60
 

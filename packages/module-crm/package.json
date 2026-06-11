@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/module-crm",
+  "name": "@central/module-crm",
   "version": "0.0.0",
   "private": true,
   "description": "Módulo CRM compartido (casa de marcas): pipeline comercial genérico (oportunidades/leads) agnóstico de vertical y de BD. Cada vertical normaliza sus filas de dominio (leads de eventos, solicitudes de alquiler, peticiones de porte, citas de clínica…) a Oportunidad mediante un OportunidadAdapter; la lógica de pipeline opera solo sobre los tipos genéricos. La 'costura' parent/parentType ancla la oportunidad a un Encargo de cualquier tipo.",

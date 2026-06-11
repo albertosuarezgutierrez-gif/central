@@ -1,9 +1,9 @@
 /**
  * ai-client.ts — Wrapper IA para SIVRA
- * `aiComplete` delega en @iarest/core-ai.
+ * `aiComplete` delega en @central/core-ai.
  * `aiExtractInvoice` es específico de SIVRA (extrae facturas) y se mantiene aquí.
  */
-import { aiComplete as _aiComplete, nimVision, type NimConfig } from '@iarest/core-ai'
+import { aiComplete as _aiComplete, nimVision, type NimConfig } from '@central/core-ai'
 
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
 

@@ -1,11 +1,11 @@
-import { cleanJSON, nimText, nimVision, geminiSearch } from '@iarest/core-ai'
-import type { ImageInput, NimConfig } from '@iarest/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch } from '@central/core-ai'
+import type { ImageInput, NimConfig } from '@central/core-ai'
 
 /**
  * ai-client.ts
  * Cliente IA centralizado: NVIDIA NIM (gratis) primero → Anthropic Claude (fallback)
  *
- * El cliente NIM canónico vive en el paquete compartido `@iarest/core-ai`
+ * El cliente NIM canónico vive en el paquete compartido `@central/core-ai`
  * (casa de marcas, identity-agnostic). Este módulo conserva la API pública del
  * proyecto (callAI/callAISearch/callAIVision/cleanJSON/ImageInput), la config de
  * entorno y el fallback a Claude — solo delega la llamada NIM en el paquete.
@@ -87,12 +87,12 @@ function nimConfig(): NimConfig {
   return { apiKey, textModel: TEXT_MODEL_NVIDIA, visionModel: VISION_MODEL_NVIDIA }
 }
 
-// ── NVIDIA: llamada texto (delega en @iarest/core-ai) ────────────────────────
+// ── NVIDIA: llamada texto (delega en @central/core-ai) ────────────────────────
 async function nvidiaText(system: string, user: string, maxTokens = 600): Promise<string> {
   return nimText(nimConfig(), system, user, maxTokens)
 }
 
-// ── NVIDIA: llamada visión (multi-imagen, delega en @iarest/core-ai) ─────────
+// ── NVIDIA: llamada visión (multi-imagen, delega en @central/core-ai) ─────────
 async function nvidiaVision(system: string, images: ImageInput[], userText: string, maxTokens = 2000): Promise<string> {
   return nimVision(nimConfig(), system, images, userText, maxTokens)
 }
@@ -204,7 +204,7 @@ export async function callAISearch(
 
   if (geminiKey) {
     try {
-      // Adaptador Gemini (búsqueda web) en el núcleo compartido @iarest/core-ai.
+      // Adaptador Gemini (búsqueda web) en el núcleo compartido @central/core-ai.
       return await geminiSearch({ apiKey: geminiKey }, system, user, { maxTokens, timeoutMs })
     } catch (e) {
       console.warn('[AI-CLIENT] Gemini Search falló, fallback callAI:', (e as Error).message)

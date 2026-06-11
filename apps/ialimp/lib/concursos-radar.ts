@@ -1,9 +1,9 @@
 // Parser PURO de la sindicación ATOM de PLACSP (CODICE) → anuncios normalizados,
 // y clave de deduplicación estable. Sin red ni BD: testeable con `node --test`.
 import { XMLParser } from 'fast-xml-parser'
-import type { AnuncioRadar } from '@iarest/module-concursos'
-import { filtrarRadar, coincideRadar } from '@iarest/module-concursos/radar'
-import type { CriteriosRadar } from '@iarest/module-concursos'
+import type { AnuncioRadar } from '@central/module-concursos'
+import { filtrarRadar, coincideRadar } from '@central/module-concursos/radar'
+import type { CriteriosRadar } from '@central/module-concursos'
 
 /** Anuncio captado del radar + identificador estable del expediente. */
 export interface AnuncioPlacsp extends AnuncioRadar {

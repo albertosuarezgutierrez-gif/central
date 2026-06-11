@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client'
 import { serialize } from '@/lib/serialize'
 import { requireEmpresaId, isOwner, isSuperadmin } from '@/lib/tenant'
 import { hashPassword } from '@/lib/auth'
-import { sha256Hex as hashPin } from '@iarest/core-identity'
+import { sha256Hex as hashPin } from '@central/core-identity'
 
 export async function GET() {
   try {

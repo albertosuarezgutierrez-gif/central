@@ -1,4 +1,4 @@
-// @iarest/module-proveedores — Proveedores genéricos de la casa de marcas.
+// @central/module-proveedores — Proveedores genéricos de la casa de marcas.
 // Catálogo + servicios asignados a un Encargo con comisiones. Cada vertical aporta su
 // adaptador. Ver docs/DISENO-modularizacion-verticales.md.
 

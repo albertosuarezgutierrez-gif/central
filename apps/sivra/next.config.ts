@@ -4,13 +4,13 @@ import createNextIntlPlugin from "next-intl/plugin";
 
 const withNextIntl = createNextIntlPlugin("./i18n/request.ts");
 
-// Casa de marcas: sivra (apps/sivra) consume @iarest/core-ai y @iarest/module-contabilidad desde ../../packages.
+// Casa de marcas: sivra (apps/sivra) consume @central/core-ai y @central/module-contabilidad desde ../../packages.
 // Declaramos la raíz del monorepo para que el tracing incluya packages/ fuera del app root.
 const monorepoRoot = path.join(__dirname, "..", "..");
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["nodemailer", "pdf-parse"],
-  transpilePackages: ["@iarest/core-ai", "@iarest/core-storage", "@iarest/core-email", "@iarest/module-contabilidad"],
+  transpilePackages: ["@central/core-ai", "@central/core-storage", "@central/core-email", "@central/module-contabilidad"],
   outputFileTracingRoot: monorepoRoot,
   // ESLint está configurado (.eslintrc.json) y disponible vía `npm run lint`,
   // pero no debe tumbar el build de producción por hallazgos preexistentes.

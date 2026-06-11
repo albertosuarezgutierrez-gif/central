@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/module-concursos",
+  "name": "@central/module-concursos",
   "version": "0.0.0",
   "private": true,
   "description": "Módulo de Concursos Públicos (casa de marcas): agente para preparar documentación de licitaciones (LCSP). Lógica pura — lee el pliego (vía un AiRunner inyectado), extrae la ficha del concurso (objeto, presupuesto, plazos, solvencia, criterios de valoración), deriva el checklist de documentos por sobre y calcula derivados (banderas rojas/Go-No-Go, umbral de baja temeraria, garantías). Agnóstico de BD y de proveedor IA — el LLM entra por el puerto AiRunner; no consulta ninguna BD ni lee process.env. Lo enchufa cualquier vertical (ialimp, catering, etc.) para cualquier sector.",

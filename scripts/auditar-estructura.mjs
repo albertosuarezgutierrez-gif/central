@@ -109,7 +109,7 @@ const packages = dirs(PKGS_DIR)
   .map(id => {
     const pj = readJSON(join(PKGS_DIR, id, 'package.json'))
     const tipo = id.startsWith('core-') ? 'core' : id.startsWith('module-') ? 'module' : 'otro'
-    return { id, tipo, npm: pj?.name || `@iarest/${id}` }
+    return { id, tipo, npm: pj?.name || `@central/${id}` }
   })
   .filter(p => p.tipo !== 'otro')
   .sort((a, b) => (a.tipo === b.tipo ? a.id.localeCompare(b.id) : a.tipo === 'core' ? -1 : 1))

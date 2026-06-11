@@ -1,9 +1,9 @@
-// Adapter de inventario para sivra → @iarest/module-inventario
+// Adapter de inventario para sivra → @central/module-inventario
 // SIVRA solo tiene un catálogo de productos de referencia (sin stock operativo,
 // sin consumos por sesión, sin kits). Solo se mapea Articulo; AsignacionActivo
 // no aplica en esta vertical actualmente.
-import type { Articulo, ArticuloAdapter } from '@iarest/module-inventario'
-export { resumenStock, valorStock } from '@iarest/module-inventario'
+import type { Articulo, ArticuloAdapter } from '@central/module-inventario'
+export { resumenStock, valorStock } from '@central/module-inventario'
 
 export interface ProductoRow {
   id: string

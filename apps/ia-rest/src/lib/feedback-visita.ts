@@ -1,11 +1,11 @@
-// Adaptadores de feedback/propinas de ia-rest hacia @iarest/module-feedback, para reutilizar
+// Adaptadores de feedback/propinas de ia-rest hacia @central/module-feedback, para reutilizar
 // la agregación (promedio de valoraciones, totales de propinas).
 import type {
   Feedback,
   FeedbackAdapter,
   Propina,
   PropinaAdapter,
-} from '@iarest/module-feedback'
+} from '@central/module-feedback'
 
 export interface FeedbackVisitaRow {
   id: string

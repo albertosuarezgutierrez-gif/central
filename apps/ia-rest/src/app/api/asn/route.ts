@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { SB_OPTS } from '@/lib/supabase'
-import { totalLineas } from '@iarest/module-asn'
+import { totalLineas } from '@central/module-asn'
 import { asnItemAdapter, type AsnItemRow } from '@/lib/asn-pedido'
 
 const corsHeaders = {
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
     tokens_usados: 0,
   })
 
-  // Total del albarán (si el proveedor informó precios) — vía @iarest/module-asn.
+  // Total del albarán (si el proveedor informó precios) — vía @central/module-asn.
   const total_albaran = totalLineas((asnItems as AsnItemRow[]).map(asnItemAdapter.toLinea))
 
   return NextResponse.json({

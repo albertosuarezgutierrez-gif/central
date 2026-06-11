@@ -1,8 +1,8 @@
 // Adaptador CRM de eventos: mapea filas de `leads_evento` (dominio de hostelería/eventos)
-// al modelo genérico `Oportunidad` de @iarest/module-crm, para reutilizar su lógica de
+// al modelo genérico `Oportunidad` de @central/module-crm, para reutilizar su lógica de
 // pipeline. La "costura" parent = { evento_id } permite que el mismo CRM sirva a otras
 // verticales (transporte, alquiler de materiales, clínica…) sin tocar el módulo.
-import type { EstadoOportunidad, Oportunidad, OportunidadAdapter } from '@iarest/module-crm'
+import type { EstadoOportunidad, Oportunidad, OportunidadAdapter } from '@central/module-crm'
 
 // Estados de dominio en ia-rest (columna `leads_evento.estado`).
 export type EstadoLeadEvento =

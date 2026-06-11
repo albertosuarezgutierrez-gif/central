@@ -6,8 +6,8 @@ import {
   documentosSobreAdministrativo,
   construirDeuc,
   construirDeclaracionResponsable,
-} from '@iarest/module-concursos'
-import type { Biblioteca, DatosIdentificacionEmpresa } from '@iarest/module-concursos'
+} from '@central/module-concursos'
+import type { Biblioteca, DatosIdentificacionEmpresa } from '@central/module-concursos'
 
 // Genera el Sobre 1 (administrativo) + DEUC + declaración responsable de un
 // concurso, cruzando su ficha con la biblioteca y el perfil de la empresa.

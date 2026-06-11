@@ -10,7 +10,7 @@
 
 import type { SupabaseClient } from '@supabase/supabase-js'
 import { sendWhatsApp, whatsappConfigurado } from './whatsapp'
-import { sendWebPush } from '@iarest/core-push'
+import { sendWebPush } from '@central/core-push'
 
 // Mismas claves VAPID que /api/push/send (fallback a las reales del proyecto).
 const VAPID_PUBLIC = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY

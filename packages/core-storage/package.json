@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/core-storage",
+  "name": "@central/core-storage",
   "version": "0.0.0",
   "private": true,
   "description": "Núcleo de Storage compartido (casa de marcas): firmado de objetos del Storage de Supabase vía REST (sin supabase-js) con anon key. Puro (fetch), identity-agnostic: el bucket, el path y la política los pone cada vertical.",

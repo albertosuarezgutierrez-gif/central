@@ -1,4 +1,4 @@
-// @iarest/module-presupuestos — Presupuestos genéricos de la casa de marcas.
+// @central/module-presupuestos — Presupuestos genéricos de la casa de marcas.
 // Líneas + costes + descuento + margen/rentabilidad. Cada vertical aporta su adaptador.
 // Ver docs/DISENO-modularizacion-verticales.md.
 

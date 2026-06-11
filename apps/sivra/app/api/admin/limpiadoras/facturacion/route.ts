@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { round2 } from '@iarest/module-contabilidad'
+import { round2 } from '@central/module-contabilidad'
 
 export async function GET(req: NextRequest) {
   const lid = new URL(req.url).searchParams.get('limpiadora_id')

@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/core-fiscal",
+  "name": "@central/core-fiscal",
   "version": "0.0.0",
   "private": true,
   "description": "Núcleo fiscal compartido (casa de marcas): IVA universal + primitivas España/AEAT VeriFactu (huella encadenada, QR). Adaptador por jurisdicción. Ver docs/HANDOFF-unificacion-casa-marcas.md (Fase 1).",

@@ -13,34 +13,34 @@ importers:
       '@anthropic-ai/sdk':
         specifier: ^0.92.0
         version: 0.92.0(zod@3.25.76)
-      '@iarest/core-ai':
+      '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
-      '@iarest/core-fiscal':
+      '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
-      '@iarest/core-push':
+      '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
-      '@iarest/module-asn':
+      '@central/module-asn':
         specifier: workspace:*
         version: link:../../packages/module-asn
-      '@iarest/module-contabilidad':
+      '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
-      '@iarest/module-crm':
+      '@central/module-crm':
         specifier: workspace:*
         version: link:../../packages/module-crm
-      '@iarest/module-feedback':
+      '@central/module-feedback':
         specifier: workspace:*
         version: link:../../packages/module-feedback
-      '@iarest/module-inventario':
+      '@central/module-inventario':
         specifier: workspace:*
         version: link:../../packages/module-inventario
-      '@iarest/module-presupuestos':
+      '@central/module-presupuestos':
         specifier: workspace:*
         version: link:../../packages/module-presupuestos
-      '@iarest/module-proveedores':
+      '@central/module-proveedores':
         specifier: workspace:*
         version: link:../../packages/module-proveedores
       '@stripe/react-stripe-js':
@@ -137,27 +137,36 @@ importers:
 
   apps/ialimp:
     dependencies:
-      '@iarest/core-ai':
+      '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
-      '@iarest/core-email':
+      '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
-      '@iarest/core-fiscal':
+      '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
-      '@iarest/core-push':
+      '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
-      '@iarest/core-storage':
+      '@central/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
-      '@iarest/module-concursos':
+      '@central/module-concursos':
         specifier: workspace:*
         version: link:../../packages/module-concursos
-      '@iarest/module-contabilidad':
+      '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
+      '@central/module-crm':
+        specifier: workspace:*
+        version: link:../../packages/module-crm
+      '@central/module-inventario':
+        specifier: workspace:*
+        version: link:../../packages/module-inventario
+      '@central/module-proveedores':
+        specifier: workspace:*
+        version: link:../../packages/module-proveedores
       '@napi-rs/canvas':
         specifier: ^1.0.0
         version: 1.0.0
@@ -249,10 +258,10 @@ importers:
 
   apps/plataforma:
     dependencies:
-      '@iarest/core-identity':
+      '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
-      '@iarest/module-contabilidad':
+      '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
       '@prisma/client':
@@ -301,21 +310,27 @@ importers:
 
   apps/sivra:
     dependencies:
-      '@iarest/core-ai':
+      '@central/core-ai':
         specifier: workspace:*
         version: link:../../packages/core-ai
-      '@iarest/core-email':
+      '@central/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
-      '@iarest/core-push':
+      '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
-      '@iarest/core-storage':
+      '@central/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
-      '@iarest/module-contabilidad':
+      '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
+      '@central/module-inventario':
+        specifier: workspace:*
+        version: link:../../packages/module-inventario
+      '@central/module-proveedores':
+        specifier: workspace:*
+        version: link:../../packages/module-proveedores
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
