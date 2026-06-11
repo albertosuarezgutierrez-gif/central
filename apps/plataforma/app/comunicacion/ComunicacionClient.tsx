@@ -43,7 +43,10 @@ export default function ComunicacionClient({ operador, negocios, categorias }: {
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>💬 Comunicación <span style={{ color: C.muted, fontWeight: 500, fontSize: 13 }}>· {operador}</span></div>
-        <button onClick={() => setShowNuevo(true)} style={{ background: C.accent, border: 'none', color: '#fff', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontFamily: FONT }}>✏️ Nuevo mensaje</button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <a href="/comunicacion/config" style={{ color: C.muted, fontSize: 13, textDecoration: 'none' }}>⚙️ Configurar</a>
+          <button onClick={() => setShowNuevo(true)} style={{ background: C.accent, border: 'none', color: '#fff', borderRadius: 8, padding: '8px 14px', cursor: 'pointer', fontWeight: 700, fontFamily: FONT }}>✏️ Nuevo mensaje</button>
+        </div>
       </div>
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
