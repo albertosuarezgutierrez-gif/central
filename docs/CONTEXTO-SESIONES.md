@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real — 11/06/2026**
+  Transcripción analizada y volcada en `docs/BRIEF-joaquin-jaen.md` (sección "POST-REUNIÓN"). Cambia el brief a
+  ciegas. Asistentes: **ella = responsable de todas las cocinas** (perfil técnico fuerte), **él = restaurante +
+  comercial**, Joaquín + otro hermano decisores.
+  - **Hallazgo nº1:** la cocina **NO es campo virgen** — la responsable lleva ~3 años con un sistema propio muy
+    serio (proveedores→artículos con ficha técnica/alérgenos→ingredientes→elaboraciones con procesos→etiquetas QR
+    trazabilidad/caducidad→escandallo dinámico→partes de trabajo por partida 5 días antes→báscula→cronometraje→
+    economato→merma). Más profundo que la cocina de ia-rest. **Es protectora ("es lo mío") y su objeción es el
+    factor humano.** → conectar/co-diseñar con ella, NO reemplazar. Mayor activo y mayor riesgo de adopción.
+  - **Apertura real a corto = comercial + logística (el hermano, el que quiere "probar ya").** Necesita CRM
+    comercial + **incentivos/ranking de comerciales** (bonos por margen/ticket/reseñas, contratos % escalable),
+    ERP facturación/contabilidad, y **logística de material de eventos = dpto. más atrasado** (inventario menaje,
+    previsión por evento, roturas post-boda, consumo estacional) → coincide con `DISENO-modulos-materiales-flota.md`.
+  - **Producto "wow" que quieren:** marketplace de catering + presupuestador self-service (cliente configura evento →
+    menú con margen → paga), multi-tarificador de eventos, bot de bodas, maridaje de vino por IA.
+  - **Plan revisado:** piloto por **Logística/Material** (bajo riesgo político, diseño ya hecho); demo de venta por
+    **marketplace de catering**; cocina = "conectamos con lo que ella ya construyó". Siguiente paso: presentación +
+    piloto 1 dpto.; contacto por WhatsApp de Alberto; ellos mandan resumen.
+  - **Faltan datos:** nº sociedades/CIFs + intercompany; stack exacto del sistema de cocina de ella; tamaño catálogo
+    de material + eventos/mes; estructura de comisiones de los comerciales.
+
 - **✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding — 11/06/2026**
   Sesión de preparación para reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas,
   alquiler de materiales, transporte, tiendas para llevar). Todo en `main` vía rama `claude/joaquin-jaen-expansion-4nyju5`.
