@@ -25,6 +25,14 @@ export interface Cliente360 extends ClienteSaaS {
 
 export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string }
 
+/** Una persona del directorio de un negocio (para dirigir comunicación por persona). */
+export interface PersonaDirectorio {
+  refPersona: string          // id de la persona en su vertical (con prefijo si hace falta)
+  nombre: string
+  rol: string | null
+  email?: string | null
+}
+
 export interface VerticalAdapter {
   vertical: Vertical
   etiqueta: string                                   // "Limpieza (ialimp)"…
@@ -33,4 +41,7 @@ export interface VerticalAdapter {
   ficha(id: string): Promise<Cliente360 | null>
   setActivo(id: string, activo: boolean): Promise<boolean>   // bloquear/liberar
   crear?(input: NuevoCliente): Promise<{ id: string }>       // alta de cliente
+  // Directorio de personas/roles de un negocio (refExt = tenant en su vertical).
+  // Para dirigir comunicación a personas concretas (F0.3). Opcional por vertical.
+  listarDirectorio?(refExt: string): Promise<PersonaDirectorio[]>
 }
