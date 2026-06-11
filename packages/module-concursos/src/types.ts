@@ -313,3 +313,34 @@ export interface PlazoSubsanacion {
   fecha_limite: string           // ISO 'YYYY-MM-DD'
   dias_habiles: number
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Radar PLACSP + OCR (F7) — el módulo empareja anuncios ya normalizados con los
+// criterios de la empresa y detecta pliegos escaneados. El sondeo en vivo y el
+// OCR son infraestructura de la app.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Un anuncio de licitación captado del radar (normalizado por la app). */
+export interface AnuncioRadar {
+  titulo: string
+  objeto?: string
+  cpv?: string[]            // códigos CPV del anuncio
+  presupuesto?: number      // € sin IVA si consta
+  organo?: string
+  url?: string
+}
+
+/** Qué busca la empresa en el radar. */
+export interface CriteriosRadar {
+  cpv?: string[]            // códigos/prefijos CPV de interés
+  palabras_clave?: string[] // términos a buscar en título/objeto
+  presupuesto_min?: number
+  presupuesto_max?: number
+}
+
+/** Resultado de evaluar un anuncio contra los criterios. */
+export interface CoincidenciaRadar {
+  coincide: boolean
+  puntuacion: number        // 0–100 (relevancia)
+  motivos: string[]         // por qué coincide
+}
