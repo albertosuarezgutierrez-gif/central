@@ -3,6 +3,7 @@
 'use client'
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import { VERTICALES, MODULOS, AGENTES, RADIOGRAFIA } from '@/lib/estructura'
+import type { Propiedad } from '@/lib/propiedades'
 
 const C = { bg: '#0b1020', card: '#151b2e', card2: '#1c2540', border: '#2a3457', text: '#e8ecf7', muted: '#8b97b8', accent: '#6366f1', ok: '#22c55e', okBg: '#0c2a18', red: '#ef4444', redBg: '#2a0c0c' }
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
@@ -26,7 +27,7 @@ export default function OperadorPanel() {
   const [form, setForm] = useState({ email: 'alberto.suarez.gutierrez@gmail.com', password: '' })
   const [ficha, setFicha] = useState<Ficha | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [tab, setTab] = useState<'clientes' | 'estructura'>('clientes')
+  const [tab, setTab] = useState<'propiedades' | 'clientes' | 'estructura'>('propiedades')
   const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
   const [showNuevo, setShowNuevo] = useState(false)
   const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' })
@@ -129,13 +130,15 @@ export default function OperadorPanel() {
 
       <div style={{ padding: 28, maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: `1px solid ${C.border}` }}>
-          {([['clientes', '👥 Clientes'], ['estructura', '🗺️ Estructura']] as const).map(([k, label]) => (
+          {([['propiedades', '🏠 Mis propiedades'], ['clientes', '🏢 Negocios'], ['estructura', '🗺️ Estructura']] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
               style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === k ? C.accent : 'transparent'}`, color: tab === k ? C.text : C.muted, padding: '10px 6px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: FONT }}>
               {label}
             </button>
           ))}
         </div>
+
+        {tab === 'propiedades' && <Propiedades />}
 
         {tab === 'estructura' && <Estructura />}
 
@@ -260,6 +263,74 @@ function Kpi({ label, valor }: { label: string; valor: string }) {
 
 function btn(bg: string, color: string): React.CSSProperties {
   return { background: bg, color, border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }
+}
+
+function Propiedades() {
+  const [props, setProps] = useState<Propiedad[] | null>(null)
+  const [err, setErr] = useState('')
+  useEffect(() => {
+    fetch('/api/admin/propiedades')
+      .then(r => r.json())
+      .then(d => setProps(d.propiedades || []))
+      .catch(() => setErr('No se pudieron cargar.'))
+  }, [])
+
+  if (err) return <div style={{ color: '#fca5a5' }}>{err}</div>
+  if (!props) return <div style={{ color: C.muted }}>Cargando propiedades…</div>
+
+  const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+  const totMes = props.reduce((s, p) => s + p.ingresosMes, 0)
+  const totGas = props.reduce((s, p) => s + p.gastosMes, 0)
+
+  return (
+    <div>
+      <p style={{ color: C.muted, fontSize: 13, margin: '0 0 20px', maxWidth: 720 }}>
+        Tus apartamentos turísticos (sivra) de un vistazo: ingresos, gastos y próxima reserva.
+      </p>
+      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
+        <Kpi label="Apartamentos" valor={String(props.length)} />
+        <Kpi label="Ingresos mes" valor={eur(totMes)} />
+        <Kpi label="Gastos mes" valor={eur(totGas)} />
+        <Kpi label="Resultado mes" valor={eur(totMes - totGas)} />
+      </div>
+      {props.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>Sin propiedades en `properties`.</div>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
+        {props.map(p => (
+          <div key={p.id} style={card()}>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>{p.nombre}</div>
+            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>📍 {p.ubicacion}</div>
+            <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
+              {[p.dormitorios != null && `${p.dormitorios} hab`, p.camas != null && `${p.camas} camas`, p.banos != null && `${p.banos} baños`, p.maxHuespedes != null && `${p.maxHuespedes} huésp.`].filter(Boolean).join(' · ') || '—'}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
+              <Mini label="Ingresos mes" valor={eur(p.ingresosMes)} />
+              <Mini label="Gastos mes" valor={eur(p.gastosMes)} />
+              <Mini label="Resultado" valor={eur(p.resultadoMes)} acento={p.resultadoMes >= 0 ? C.ok : '#fca5a5'} />
+              <Mini label="Ingresos año" valor={eur(p.ingresosAnio)} />
+            </div>
+            <div style={{ marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
+              <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Próxima reserva</div>
+              {p.proxima ? (
+                <div style={{ fontSize: 12 }}>
+                  <strong>{p.proxima.huesped || 'Huésped'}</strong>{p.proxima.portal && <span style={{ color: C.muted }}> · {p.proxima.portal}</span>}
+                  <div style={{ color: C.muted, marginTop: 2 }}>{p.proxima.entrada} → {p.proxima.salida}</div>
+                </div>
+              ) : <div style={{ fontSize: 12, color: C.muted }}>Sin reservas próximas.</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function Mini({ label, valor, acento }: { label: string; valor: string; acento?: string }) {
+  return (
+    <div style={{ background: C.card2, borderRadius: 8, padding: '8px 10px' }}>
+      <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase' }}>{label}</div>
+      <div style={{ fontWeight: 700, fontSize: 13, color: acento || C.text }}>{valor}</div>
+    </div>
+  )
 }
 
 function Estructura() {

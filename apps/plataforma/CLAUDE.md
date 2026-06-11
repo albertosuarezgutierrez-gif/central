@@ -59,6 +59,12 @@ Panel único de control de Alberto sobre **todas las verticales**. Diseño: `doc
   - `ialimp` y `sivra` → BD compartida directa (SQL raw, patrón de `lib/financiero.ts`).
   - `iarest` → por **puerto HTTP** (`${IAREST_URL}/api/operador/restaurantes`, Bearer `OPERADOR_SHARED_SECRET`),
     porque ia-rest está en otra BD. **No se fusiona nada.** El endpoint vive en `apps/ia-rest/src/app/api/operador/`.
+- **Pestañas:** 🏠 Mis propiedades · 🏢 Negocios · 🗺️ Estructura.
+  - **🏠 Mis propiedades** (`lib/propiedades.ts` + `/api/admin/propiedades`): los apartamentos
+    turísticos propios de Alberto (sivra). Lee SOLO la tabla `properties` (las propias con Smoobu)
+    + `incomes`/`expenses` de la BD compartida — **NO** la tabla `propiedades` (multi-tenant de
+    limpiadoras). Es el "acceso a mis propiedades" desde el panel único.
+  - **🗺️ Estructura**: radiografía automática del repo (ver `docs/ESTRUCTURA.md`).
 - **F1 (hecho):** login + listado unificado de clientes + **bloquear/liberar** (`empresas.activa` / `restaurantes.activo`) + **vista 360**.
 - **Pendiente (F2+):** módulos por cliente (`tenant_modulos` + gateo), crear cliente, retirar los superadmin sueltos.
 
