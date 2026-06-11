@@ -102,10 +102,14 @@ ialimp/sivra por BD). Cada persona tiene su **preferencia de canal** (decidido: 
 - Destinatario: granularidad **holding · negocio · grupo/sección · persona** (`comunicacion_grupos`).
 - Autorización: **el dueño es la autoridad** — controla quién puede comunicarse/encargar con quién.
 - Canales: **configurables 100% por persona** (in-app / email / push o combinación).
+- Roles: **mixto** — roles reales de cada vertical (vía directorio) **+** etiquetas libres del dueño.
+- Grupos: **dinámicos desde F0** (además de estáticos) — p. ej. "participantes del catering" de
+  un evento de ia-rest, resueltos vía el directorio/puerto de la vertical.
 
-## 8. Abierto / a confirmar (seguimos afinando)
-- **Roles:** ¿roles reales de cada vertical (camarero/cocina/jefe; limpiadora/admin/contable),
-  etiquetas libres del dueño, o **mixto** (ambos)? — pendiente de decidir.
-- **Grupos dinámicos:** ¿qué orígenes soporta F0 (p. ej. "participantes de un evento" de ia-rest)
-  o arrancamos solo con grupos estáticos y dejamos los dinámicos para F1/F2?
-- **Primer vertical** para la bandeja "dentro de la app" en F1 (sugerencia: ialimp).
+## 8. Diseño cerrado — listo para F0
+Todas las decisiones de modelo están tomadas (§7). F0 (núcleo en plataforma) incluye: tablas
+(`comunicacion_nodos/grupos/categorias/reglas/conversaciones/participantes/mensajes`), matriz de
+reglas controlada por el dueño, granularidad holding/negocio/grupo/persona con grupos estáticos
+y dinámicos, categorías libres, roles mixtos, y la capacidad `listarDirectorio` en el adaptador
+de cada vertical. Única decisión menor diferida: **primer vertical** para la bandeja "dentro de
+la app" en F1 (sugerencia: ialimp).
