@@ -1,4 +1,4 @@
-// @iarest/module-inventario — Inventario genérico de la casa de marcas.
+// @central/module-inventario — Inventario genérico de la casa de marcas.
 // Catálogo de artículos + asignación de activos a un Encargo (evento/porte/alquiler/cita)
 // vía parent/parentType. Cada vertical aporta su adaptador. Ver
 // docs/DISENO-modularizacion-verticales.md y docs/DISENO-modulos-materiales-flota.md.

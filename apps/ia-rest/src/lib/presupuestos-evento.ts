@@ -1,12 +1,12 @@
 // Adaptador de presupuestos de evento: mapea `presupuestos_evento` (tarificación de
 // catering: precio_adulto/_nino + costes desglosados) al modelo genérico de
-// @iarest/module-presupuestos (líneas + costes), para reutilizar su cálculo de margen.
+// @central/module-presupuestos (líneas + costes), para reutilizar su cálculo de margen.
 import type {
   CosteLinea,
   LineaPresupuesto,
   Presupuesto,
   PresupuestoAdapter,
-} from '@iarest/module-presupuestos'
+} from '@central/module-presupuestos'
 
 // Campos de tarificación/coste que produce el cliente (subconjunto del body / la fila).
 export interface TarifaEvento {

@@ -3,7 +3,7 @@ import {
   genJti,
   createSessionToken as createToken,
   verifySessionToken as verifyToken,
-} from '@iarest/core-identity'
+} from '@central/core-identity'
 
 export const COOKIE_NAME = 'plataforma_session'
 const COOKIE_OPTS = { httpOnly: true, secure: true, sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 * 30 } as const
@@ -19,7 +19,7 @@ export { genJti }
 export const hashPassword = (p: string) => bcrypt.hash(p, 12)
 export const verifyPassword = (p: string, hash: string) => bcrypt.compare(p, hash)
 
-// La firma/verificación JWT (HS256 + jti) ahora vive en @iarest/core-identity.
+// La firma/verificación JWT (HS256 + jti) ahora vive en @central/core-identity.
 // Se conservan estas firmas para no tocar a los consumidores de plataforma.
 export async function createSessionToken(cuentaId: string, email: string): Promise<{ token: string; jti: string }> {
   return createToken({ claims: { cuentaId, email }, secret: SECRET(), expiresIn: '30d' })

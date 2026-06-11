@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { tgAlertButtons } from '@/lib/telegram'
+import { notifyError } from '@/lib/notify'
 import { obtenerNoticias, elegirTemaConContexto, leerContextoDrive } from '@/lib/instagram-context'
 import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { pickMusicTrack } from '@/lib/instagram-music'
@@ -39,6 +40,17 @@ const POR_TONO: Record<Tono,Plantilla[]> = { claro:['pregunta','cita'],rojo:['ti
 // Formato del día: viernes (getUTCDay()===5) → reel; resto → imagen. 1 reel/semana fijo.
 function formatoDelDia(d: Date = new Date()): 'reel' | 'imagen' {
   return d.getUTCDay() === 5 ? 'reel' : 'imagen'
+}
+
+// NIM (NVIDIA) va lento a veces: reintenta la generación con IA antes de rendirse.
+// Sin prisa — hay margen de sobra en maxDuration (120s). Backoff 3s, 6s.
+async function conReintentos<T>(fn: () => Promise<T>, intentos = 3): Promise<T> {
+  let ultimoError: unknown
+  for (let i = 1; i <= intentos; i++) {
+    try { return await fn() }
+    catch (e) { ultimoError = e; if (i < intentos) await new Promise(r => setTimeout(r, i * 3000)) }
+  }
+  throw ultimoError
 }
 
 // Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente).
@@ -156,23 +168,27 @@ export async function GET(req: NextRequest) {
     const [noticiasRes, driveRes] = await Promise.allSettled([obtenerNoticias(), leerContextoDrive()])
     const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
-    const { tema, modulo, hashtags } = await elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx)
+    const { tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx))
     const estilo = await estiloDeLaSemana(supabase)
     const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
 
     // ── Rama REEL (viernes o ?formato=reel) con fallback elegante a imagen ──
     if (formato === 'reel') {
       try {
-        const reel = await generarReelContenido(tema, hashtags)
+        const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
         const puntos = [reel.p1, reel.p2, reel.p3].filter(Boolean)
         const audioPid = pickMusicTrack()
         const reelUrl = await generarReel({ titulo: reel.titulo, estilo, puntos, modulo, audioPid })
         // Warm-up + chequeo: calienta el MP4 y, si Cloudinary da error claro, cae a imagen.
         if (await warmAndCheckReel(reelUrl) === 'bad') throw new Error('Cloudinary no renderiza el reel (revisar transformación)')
-        const { data: bReel } = await supabase.from('instagram_borradores').insert({
+        const { data: bReel, error: errReel } = await supabase.from('instagram_borradores').insert({
           plantilla: 'reel', titulo: reel.titulo, caption: reel.caption, image_url: reelUrl,
           tema_elegido: tema, modulo_relacionado: modulo,
         }).select('id').single()
+        if (errReel) {
+          notifyError({ tipo: 'instagram_insert', modulo: 'cron', nivel: 'aviso', mensaje: `No se pudo guardar borrador Reel: ${errReel.message}`, detalle: { tema } })
+          await tgAlertButtons(`⚠️ <b>Reel generado pero NO se guardó</b>\n\n<code>${errReel.message.slice(0,150)}</code>`, 'aviso', [])
+        }
         if (bReel?.id) {
           await tgAlertButtons(
             `🎬 <b>Nuevo Reel listo</b>\n\n🎞️ <code>reel</code> · ${modulo||'—'}${audioPid?' · 🎵':' · 🔇'}\n\n<b>${reel.titulo?.slice(0,70)}</b>\n\n<i>${reel.caption?.slice(0,150)}...</i>\n\n<a href="${reelUrl}">👁️ Ver vídeo</a>`,
@@ -188,14 +204,19 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Flujo IMAGEN (lunes, fallback de reel, o ?formato=imagen) ──
-    const post = await generarPost(plantilla, tema, hashtags)
+    const post = await conReintentos(() => generarPost(plantilla, tema, hashtags))
     const imageUrl = buildUrl({ tipo: plantilla, estilo, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items, modulo })
 
-    const { data: borrador } = await supabase.from('instagram_borradores').insert({
+    const { data: borrador, error: errBorrador } = await supabase.from('instagram_borradores').insert({
       plantilla, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad,
       ctx: post.ctx, items: post.items, caption: post.caption, image_url: imageUrl,
       tema_elegido: tema, modulo_relacionado: modulo,
     }).select('id').single()
+
+    if (errBorrador) {
+      notifyError({ tipo: 'instagram_insert', modulo: 'cron', nivel: 'aviso', mensaje: `No se pudo guardar borrador: ${errBorrador.message}`, detalle: { tema, plantilla } })
+      await tgAlertButtons(`⚠️ <b>Post generado pero NO se guardó</b>\n\n<code>${errBorrador.message.slice(0,150)}</code>`, 'aviso', [])
+    }
 
     if (borrador?.id) {
       const tonoEmoji = TONO[plantilla]==='claro'?'⬜':TONO[plantilla]==='rojo'?'🟥':'⬛'

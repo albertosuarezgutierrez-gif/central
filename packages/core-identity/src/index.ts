@@ -1,4 +1,4 @@
-// @iarest/core-identity — contrato de identidad para la casa de marcas.
+// @central/core-identity — contrato de identidad para la casa de marcas.
 //
 // Puerto + tipos agnósticos del mecanismo de auth (Supabase, jose/JWT, NextAuth).
 // Los módulos de packages/* dependen de ESTE contrato, no del auth de cada app;

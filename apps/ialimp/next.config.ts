@@ -1,13 +1,13 @@
 import type { NextConfig } from "next"
 import path from "path"
 
-// Casa de marcas: ialimp (apps/ialimp) consume @iarest/core-ai y @iarest/module-contabilidad desde ../../packages.
+// Casa de marcas: ialimp (apps/ialimp) consume @central/core-ai y @central/module-contabilidad desde ../../packages.
 // Declaramos la raíz del monorepo para que el tracing incluya packages/ fuera del app root.
 const monorepoRoot = path.join(__dirname, "..", "..")
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["node-ical", "pdf-parse"],
-  transpilePackages: ["@iarest/core-ai", "@iarest/core-push", "@iarest/core-storage", "@iarest/core-email", "@iarest/module-contabilidad", "@iarest/module-concursos"],
+  serverExternalPackages: ["node-ical", "pdf-parse", "@napi-rs/canvas", "pdfjs-dist"],
+  transpilePackages: ["@central/core-ai", "@central/core-push", "@central/core-storage", "@central/core-email", "@central/module-contabilidad", "@central/module-concursos"],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true }

@@ -1,4 +1,4 @@
-// @iarest/module-feedback — Feedback genérico de la casa de marcas.
+// @central/module-feedback — Feedback genérico de la casa de marcas.
 // Reseñas/valoraciones y propinas (token o Encargo) + agregación. Cada vertical aporta su
 // adaptador. Ver docs/DISENO-modularizacion-verticales.md.
 

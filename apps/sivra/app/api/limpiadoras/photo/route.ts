@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { storageObjectPath, signStorageObject, publicStorageUrl } from '@iarest/core-storage'
+import { storageObjectPath, signStorageObject, publicStorageUrl } from '@central/core-storage'
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -9,7 +9,7 @@ const EXPIRES = 3600 // 1h
 // Proxy de lectura para el bucket privado `cleaning-photos`.
 // Recibe la URL/ruta guardada (?u=...), genera una signed URL fresca y redirige.
 // Las <img> de la zona limpiadoras apuntan aquí en vez de a una URL pública.
-// El firmado lo hace el núcleo compartido @iarest/core-storage.
+// El firmado lo hace el núcleo compartido @central/core-storage.
 export async function GET(req: NextRequest) {
   const u = req.nextUrl.searchParams.get('u')
   if (!u) return NextResponse.json({ error: 'Missing u' }, { status: 400 })

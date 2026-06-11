@@ -9,8 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@iarest/core-identity": "workspace:*",
-    "@iarest/module-contabilidad": "workspace:*",
+    "@central/core-identity": "workspace:*",
+    "@central/module-contabilidad": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^2.4.3",

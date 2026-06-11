@@ -1,6 +1,6 @@
 import { SignJWT, jwtVerify } from 'jose'
 import bcrypt from 'bcryptjs'
-import { genJti } from '@iarest/core-identity'
+import { genJti } from '@central/core-identity'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET
@@ -21,9 +21,9 @@ export { genJti }
 
 // ── Empresa dueña (cuenta master) ────────────────────────────────────
 // Devuelve { token, jti }: el jti hay que guardarlo en empresas.session_jti.
-export async function createSessionToken(empresa_id: string, email: string): Promise<{ token: string; jti: string }> {
+export async function createSessionToken(empresa_id: string, email: string, modulos_off: string[] = []): Promise<{ token: string; jti: string }> {
   const jti = genJti()
-  const token = await new SignJWT({ empresa_id, email, rol: 'owner' })
+  const token = await new SignJWT({ empresa_id, email, rol: 'owner', modulos_off })
     .setProtectedHeader({ alg: 'HS256' })
     .setJti(jti)
     .setIssuedAt()
@@ -36,10 +36,10 @@ export async function createSessionToken(empresa_id: string, email: string): Pro
 // Devuelve { token, jti }: guardar el jti en usuarios_empresa.session_jti.
 export async function createUsuarioToken(
   usuario_id: string, empresa_id: string, email: string,
-  rol: string, modulos: string[]
+  rol: string, modulos: string[], modulos_off: string[] = []
 ): Promise<{ token: string; jti: string }> {
   const jti = genJti()
-  const token = await new SignJWT({ usuario_id, empresa_id, email, rol, modulos, type: 'usuario' })
+  const token = await new SignJWT({ usuario_id, empresa_id, email, rol, modulos, modulos_off, type: 'usuario' })
     .setProtectedHeader({ alg: 'HS256' })
     .setJti(jti)
     .setIssuedAt()

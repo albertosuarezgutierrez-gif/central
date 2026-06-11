@@ -3,7 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { cookies } from 'next/headers'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
-import { sha256Hex as hashPin } from '@iarest/core-identity'
+import { sha256Hex as hashPin } from '@central/core-identity'
 // ────────────────────────────────────────────────────────────────────
 
 // Crea la sesión de la limpiadora y devuelve la respuesta con cookies.

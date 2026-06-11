@@ -3,6 +3,7 @@ import { serialize } from '@/lib/serialize'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
+import { oportunidadAdapter, resumenPipeline } from '@/lib/adapters/crm'
 
 export async function GET(req: Request) {
   try {
@@ -15,7 +16,9 @@ export async function GET(req: Request) {
       SELECT estado, COUNT(*)::int as n FROM leads
       WHERE empresa_id = ${empresa_id}::uuid GROUP BY estado
     `)
-    return NextResponse.json(serialize({ leads, stats }))
+    const oportunidades = leads.map(oportunidadAdapter.toOportunidad)
+    const pipeline = resumenPipeline(oportunidades)
+    return NextResponse.json(serialize({ leads, stats, pipeline }))
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

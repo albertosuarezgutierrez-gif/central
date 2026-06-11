@@ -13,11 +13,11 @@ import {
   generarQrData,
   parseFechaLocalAEAT,
   escapeXml,
-} from '@iarest/core-fiscal'
-import type { RegistroFactura } from '@iarest/core-fiscal'
+} from '@central/core-fiscal'
+import type { RegistroFactura } from '@central/core-fiscal'
 
 // Las primitivas PURAS (huella AEAT encadenada, QR, IVA, helpers) viven en el
-// núcleo compartido @iarest/core-fiscal (casa de marcas). Aquí se re-exportan
+// núcleo compartido @central/core-fiscal (casa de marcas). Aquí se re-exportan
 // para conservar la API pública de @/lib/verifactu, y se quedan los ADAPTADORES
 // específicos de ia.rest: construirFactura (now()/huso) y generarXmlLROE
 // (bloque SistemaInformatico con la identidad del sistema).

@@ -1,6 +1,8 @@
-// → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @iarest/module-concursos)
+// → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion } from '@central/module-concursos';
+import type { Biblioteca } from '@central/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
@@ -19,20 +21,30 @@ export default function Concursos() {
   const [load, setLoad] = useState(false);
   const [error, setError] = useState('');
   const [actual, setActual] = useState<any>(null);
+  const [ocrAplicado, setOcrAplicado] = useState(false);
   const [lista, setLista] = useState<any[]>([]);
+  const [biblioteca, setBiblioteca] = useState<Biblioteca>([]);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargar = async () => {
     try { const r = await fetch('/api/admin/concursos/analizar').then(x=>x.json()); setLista(r.concursos||[]); } catch {}
   };
-  useEffect(()=>{ cargar(); }, []);
+  // Carga la biblioteca de empresa para autocompletar el checklist y avisar de lo que falta.
+  const cargarBiblioteca = async () => {
+    try {
+      const r = await fetch('/api/admin/concursos/biblioteca').then(x=>x.json());
+      const docs = (r.documentos||[]).map((d:any)=>({ tipo:d.tipo, nombre:d.nombre, vigencia_hasta:d.vigencia_hasta ?? undefined }));
+      setBiblioteca(docs);
+    } catch {}
+  };
+  useEffect(()=>{ cargar(); cargarBiblioteca(); }, []);
 
   const analizar = async (form: FormData | null, body?: any) => {
-    setLoad(true); setError(''); setActual(null);
+    setLoad(true); setError(''); setActual(null); setOcrAplicado(false);
     try {
       const opt:any = form ? { method:'POST', body:form } : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
       const r = await fetch('/api/admin/concursos/analizar', opt).then(x=>x.json());
-      if (r.error) { setError(r.error); } else { setActual(r.concurso); cargar(); }
+      if (r.error) { setError(r.error); } else { setActual(r.concurso); setOcrAplicado(r.ocr_aplicado === true); cargar(); }
     } catch { setError('No se pudo analizar el pliego.'); }
     setLoad(false);
   };
@@ -42,8 +54,17 @@ export default function Concursos() {
 
   return (
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
-      <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:760 }}>
+        <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
+        <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
+          <a href="/admin/concursos/perfil" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>🏢 Perfil de empresa →</a>
+          <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
+        </div>
+      </div>
       <p style={{ color:C.muted, margin:'0 0 16px', fontSize:14 }}>Sube el pliego (PDF) o pega su texto: el agente extrae la ficha, decide si te conviene presentarte y monta el checklist de documentos.</p>
+
+      {/* Radar de oportunidades (F7) */}
+      <div style={{ maxWidth:760, width:'100%' }}><RadarPanel /></div>
 
       {/* Entrada */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, maxWidth:760, width:'100%', marginBottom:16 }}>
@@ -67,7 +88,7 @@ export default function Concursos() {
       </div>
 
       {/* Resultado */}
-      {actual && <FichaView c={actual} />}
+      {actual && <FichaView c={actual} biblioteca={biblioteca} ocrAplicado={ocrAplicado} />}
 
       {/* Histórico */}
       {lista.length>0 && (
@@ -75,7 +96,7 @@ export default function Concursos() {
           <h2 style={{ fontWeight:800, fontSize:18, margin:'0 0 8px' }}>Analizados</h2>
           <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
             {lista.map(c=>(
-              <button key={c.id} onClick={()=>setActual(c)} style={{ textAlign:'left', background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'10px 14px', fontFamily:FONT, cursor:'pointer', display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', flexWrap:'wrap' }}>
+              <button key={c.id} onClick={()=>{ setActual(c); setOcrAplicado(false); }} style={{ textAlign:'left', background:C.card, border:`1px solid ${C.border}`, borderRadius:12, padding:'10px 14px', fontFamily:FONT, cursor:'pointer', display:'flex', justifyContent:'space-between', gap:10, alignItems:'center', flexWrap:'wrap' }}>
                 <span style={{ fontWeight:700 }}>{c.titulo}</span>
                 <span style={{ fontSize:12, color:C.muted }}>{new Date(c.created_at).toLocaleDateString('es-ES')}</span>
               </button>
@@ -87,13 +108,50 @@ export default function Concursos() {
   );
 }
 
-function FichaView({ c }:{ c:any }) {
-  const f = c.ficha || {}; const gng = c.go_no_go; const checklist:any[] = c.checklist || []; const gar = c.garantias || {};
+function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca; ocrAplicado?:boolean }) {
+  const [sobre, setSobre] = useState<any>(null);
+  const cargarSobre = async () => {
+    try { const r = await fetch(`/api/admin/concursos/${c.id}/sobre-administrativo`).then(x=>x.json()); setSobre(r); } catch {}
+  };
+  const [memoria, setMemoria] = useState<any>(null);
+  const [genMem, setGenMem] = useState(false);
+  const generarMemoria = async () => {
+    setGenMem(true);
+    try {
+      const r = await fetch(`/api/admin/concursos/${c.id}/memoria`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ contexto: '' }) }).then(x=>x.json());
+      setMemoria(r);
+    } catch {}
+    setGenMem(false);
+  };
+  const [oferta, setOferta] = useState<any>({ directos:'', indirectos:'', margen_objetivo_pct:'', oferta:'' });
+  const num = (v:any) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  const coste = { directos:num(oferta.directos), indirectos:num(oferta.indirectos), margen_objetivo_pct:num(oferta.margen_objetivo_pct) };
+  const evalOferta = num(oferta.oferta) > 0 ? evaluarOferta(num(oferta.oferta), coste, c.ficha || {}) : null;
+  const minRent = precioMinimoRentable(coste);
+  const setO = (k:string) => (e:any) => setOferta({ ...oferta, [k]: e.target.value });
+  const guardarOferta = async () => {
+    try { await fetch(`/api/admin/concursos/${c.id}/oferta`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(coste) }); } catch {}
+  };
+  const [sobresListos, setSobresListos] = useState({ administrativo:false, tecnico:false, economico:false });
+  const hoyISO = new Date().toISOString().slice(0,10);
+  const estadoPres = estadoPresentacion(c.ficha || {}, hoyISO, sobresListos);
+  const subsanacion = plazoSubsanacion(hoyISO);
+  const toggleSobre = (k:string) => (e:any) => setSobresListos({ ...sobresListos, [k]: e.target.checked });
+  const f = c.ficha || {}; const gng = c.go_no_go; const gar = c.garantias || {};
+  // Autocompleta el checklist con lo que ya hay en la biblioteca de empresa.
+  const checklist:any[] = autocompletarChecklist(c.checklist || [], biblioteca);
+  // Documentos del concurso que la biblioteca todavía no cubre.
+  const faltan = f.documentos ? documentosFaltantes(f, biblioteca) : [];
   const sem = gng ? SEMAFORO[gng.semaforo] : null;
   const porSobre = (s:string) => checklist.filter(i=>i.sobre===s);
 
   return (
     <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, maxWidth:760, width:'100%', boxSizing:'border-box' }}>
+      {ocrAplicado && (
+        <div style={{ background:'#eff6ff', color:'#1e40af', borderRadius:8, padding:'6px 10px', fontSize:12, marginBottom:8 }}>
+          📄 Documento escaneado — texto extraído con OCR (visión IA).
+        </div>
+      )}
       <h2 style={{ fontWeight:900, fontSize:20, margin:'0 0 4px' }}>{f.objeto}</h2>
       <div style={{ color:C.muted, fontSize:13, marginBottom:12 }}>
         {f.organo_contratacion && <>{f.organo_contratacion} · </>}
@@ -143,13 +201,111 @@ function FichaView({ c }:{ c:any }) {
           <ul style={{ margin:0, paddingLeft:18, fontSize:14 }}>
             {porSobre(s).map((it:any,i:number)=>(
               <li key={i} style={{ marginBottom:3 }}>
-                {it.documento}{it.modelo && <span style={{ color:C.muted }}> ({it.modelo})</span>}
+                {it.hecho ? '✅ ' : '⬜ '}{it.documento}{it.modelo && <span style={{ color:C.muted }}> ({it.modelo})</span>}
                 {!it.obligatorio && <span style={{ color:C.muted }}> · opcional</span>}
               </li>
             ))}
           </ul>
         </div>
       ))}
+
+      {/* Aviso: documentos que faltan en la biblioteca de empresa */}
+      {faltan.length>0 && (
+        <div style={{ background:C.soft, color:C.indigo, borderRadius:10, padding:'8px 12px', fontSize:13, marginBottom:10 }}>
+          Te faltan <strong>{faltan.length}</strong> documento{faltan.length>1?'s':''} en tu biblioteca: {faltan.map((d:any)=>d.nombre).join(' · ')}.{' '}
+          <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, textDecoration:'underline' }}>Subirlos a Mi biblioteca</a>
+        </div>
+      )}
+
+      {/* Sobre administrativo + DEUC (F3) */}
+      <button onClick={cargarSobre} style={{ background:C.soft, color:C.indigo, border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>
+        📋 Generar sobre administrativo (DEUC)
+      </button>
+      {sobre && (
+        <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+          {sobre.perfil_completo===false && (
+            <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:8, padding:'6px 10px', fontSize:13, marginBottom:8 }}>
+              Completa el <a href="/admin/concursos/perfil" style={{ color:C.indigo, fontWeight:800 }}>perfil de empresa</a> para rellenar el DEUC.
+            </div>
+          )}
+          <strong style={{ fontSize:14 }}>Sobre administrativo</strong>
+          <ul style={{ margin:'6px 0', paddingLeft:18, fontSize:14 }}>
+            {sobre.sobre.map((it:any,i:number)=>(
+              <li key={i}>{it.cubiertoPor ? '✅ ' : '⬜ '}{it.documento}{!it.obligatorio && <span style={{ color:C.muted }}> · opcional</span>}</li>
+            ))}
+          </ul>
+          <div style={{ fontSize:13, color:C.muted }}>
+            DEUC: {sobre.deuc?.operador?.razon_social || '(sin empresa)'} · objeto «{sobre.deuc?.procedimiento?.objeto||'—'}». Declaración responsable: {sobre.declaracion?.declara?.length||0} afirmaciones.
+          </div>
+        </div>
+      )}
+
+      {/* Memoria técnica (F4) */}
+      <button onClick={generarMemoria} disabled={genMem} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer', opacity:genMem?0.6:1 }}>
+        {genMem ? '✍️ Redactando…' : '✍️ Generar memoria técnica'}
+      </button>
+      {memoria?.cobertura && (
+        <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+          <div style={{ fontSize:13, fontWeight:800, marginBottom:6 }}>
+            Cobertura técnica: {memoria.cobertura.puntos_cubiertos}/{memoria.cobertura.puntos_totales} puntos ({memoria.cobertura.pct}%)
+          </div>
+          <div style={{ height:8, background:C.soft, borderRadius:4, overflow:'hidden', marginBottom:10 }}>
+            <div style={{ width:`${memoria.cobertura.pct}%`, height:'100%', background:C.indigo }} />
+          </div>
+          {(memoria.memoria?.secciones ?? []).map((s:any,i:number)=>(
+            <details key={i} style={{ marginBottom:8 }}>
+              <summary style={{ fontWeight:800, fontSize:14, cursor:'pointer' }}>{s.criterio} · {s.puntos_max} pts</summary>
+              <p style={{ fontSize:13, whiteSpace:'pre-wrap', color:C.text, margin:'6px 0' }}>{s.contenido || '(vacío)'}</p>
+            </details>
+          ))}
+        </div>
+      )}
+
+      {/* Oferta económica (F5) */}
+      <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+        <strong style={{ fontSize:14 }}>Oferta económica</strong>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'8px 0' }}>
+          <input placeholder="Costes directos (€)" value={oferta.directos} onChange={setO('directos')} />
+          <input placeholder="Costes indirectos (€)" value={oferta.indirectos} onChange={setO('indirectos')} />
+          <input placeholder="Margen objetivo (%)" value={oferta.margen_objetivo_pct} onChange={setO('margen_objetivo_pct')} />
+          <input placeholder="Tu oferta (€)" value={oferta.oferta} onChange={setO('oferta')} />
+        </div>
+        <div style={{ fontSize:13, color:C.muted }}>Precio mínimo rentable: <strong>{minRent.toLocaleString('es-ES')} €</strong></div>
+        {evalOferta && (
+          <div style={{ fontSize:13, marginTop:6 }}>
+            Margen: <strong>{evalOferta.margen_euros.toLocaleString('es-ES')} € ({evalOferta.margen_pct}%)</strong> ·
+            Puntos económicos: <strong>{evalOferta.puntos_economicos}</strong>
+            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {evalOferta.umbral_temeraria?.toLocaleString('es-ES')} €)</span>}
+            {' '}<span style={{ color: evalOferta.viable ? '#15803d' : '#b91c1c', fontWeight:800 }}>{evalOferta.viable ? '✅ Viable' : '❌ No viable'}</span>
+          </div>
+        )}
+        <button onClick={guardarOferta} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>Guardar oferta</button>
+      </div>
+
+      {/* Presentación + plazos (F6) */}
+      <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+        <strong style={{ fontSize:14 }}>Presentación</strong>
+        <div style={{ fontSize:13, marginTop:6 }}>
+          {estadoPres.dias_para_fin === null
+            ? <span style={{ color:C.muted }}>Sin fecha de fin de plazo en la ficha.</span>
+            : estadoPres.plazo_abierto
+              ? <span style={{ color: estadoPres.urgente ? '#b91c1c' : C.text, fontWeight:800 }}>
+                  {estadoPres.urgente ? '🔴 ' : '🗓️ '}Quedan {estadoPres.dias_para_fin} día{estadoPres.dias_para_fin===1?'':'s'} para presentar
+                </span>
+              : <span style={{ color:'#b91c1c', fontWeight:800 }}>⛔ Plazo de presentación cerrado</span>}
+        </div>
+        <div style={{ display:'flex', gap:14, flexWrap:'wrap', margin:'8px 0', fontSize:13 }}>
+          <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.administrativo} onChange={toggleSobre('administrativo')} /> Administrativo</label>
+          <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.tecnico} onChange={toggleSobre('tecnico')} /> Técnico</label>
+          <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.economico} onChange={toggleSobre('economico')} /> Económico</label>
+        </div>
+        {estadoPres.listo
+          ? <div style={{ color:'#15803d', fontWeight:800, fontSize:13 }}>✅ Listo para presentar</div>
+          : <ul style={{ margin:'4px 0', paddingLeft:18, fontSize:13, color:'#b45309' }}>{estadoPres.pendientes.map((p:string,i:number)=>(<li key={i}>{p}</li>))}</ul>}
+        <div style={{ fontSize:12, color:C.muted, marginTop:6 }}>
+          Si te requieren subsanar hoy, el plazo (3 días hábiles, art. 141 LCSP) vencería el <strong>{subsanacion.fecha_limite}</strong>.
+        </div>
+      </div>
 
       {f.avisos?.length>0 && (
         <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:10, padding:'8px 12px', fontSize:13 }}>
@@ -165,6 +321,86 @@ function Dato({ k, v }:{ k:string; v:string }) {
     <div style={{ background:C.bg, borderRadius:10, padding:'8px 12px' }}>
       <div style={{ fontSize:11, color:C.muted, textTransform:'uppercase', letterSpacing:.3 }}>{k}</div>
       <div style={{ fontWeight:800, fontSize:15 }}>{v}</div>
+    </div>
+  );
+}
+
+// Radar de oportunidades (F7): criterios PLACSP + lista de matches con contador de no vistos.
+function RadarPanel() {
+  const [crit, setCrit] = useState<any>({ activo:false, cpv:[], palabras_clave:[], presupuesto_min:'', presupuesto_max:'' });
+  const [anuncios, setAnuncios] = useState<any[]>([]);
+  const [noVistos, setNoVistos] = useState(0);
+  const [cargando, setCargando] = useState(false);
+
+  const cargar = async () => {
+    const [c, a] = await Promise.all([
+      fetch('/api/admin/concursos/radar/criterios').then(r=>r.json()).catch(()=>null),
+      fetch('/api/admin/concursos/radar').then(r=>r.json()).catch(()=>null),
+    ]);
+    if (c?.criterios) setCrit({
+      activo: c.criterios.activo,
+      cpv: c.criterios.cpv ?? [],
+      palabras_clave: c.criterios.palabras_clave ?? [],
+      presupuesto_min: c.criterios.presupuesto_min ?? '',
+      presupuesto_max: c.criterios.presupuesto_max ?? '',
+    });
+    if (a) { setAnuncios(a.anuncios ?? []); setNoVistos(a.no_vistos ?? 0); }
+  };
+  useEffect(() => { cargar(); }, []);
+
+  const guardar = async () => {
+    setCargando(true);
+    await fetch('/api/admin/concursos/radar/criterios', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        activo: crit.activo,
+        cpv: typeof crit.cpv === 'string' ? crit.cpv.split(',').map((s:string)=>s.trim()).filter(Boolean) : crit.cpv,
+        palabras_clave: typeof crit.palabras_clave === 'string' ? crit.palabras_clave.split(',').map((s:string)=>s.trim()).filter(Boolean) : crit.palabras_clave,
+        presupuesto_min: crit.presupuesto_min, presupuesto_max: crit.presupuesto_max,
+      }),
+    });
+    setCargando(false); cargar();
+  };
+
+  const marcarVisto = async (id:string) => {
+    await fetch('/api/admin/concursos/radar/visto', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
+    cargar();
+  };
+
+  const cpvStr = Array.isArray(crit.cpv) ? crit.cpv.join(', ') : crit.cpv;
+  const kwStr = Array.isArray(crit.palabras_clave) ? crit.palabras_clave.join(', ') : crit.palabras_clave;
+
+  return (
+    <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
+      <strong style={{ fontSize:15 }}>📡 Radar de oportunidades{noVistos>0 && <span style={{ marginLeft:8, background:'#b91c1c', color:'#fff', borderRadius:999, padding:'1px 8px', fontSize:12 }}>{noVistos} nuevas</span>}</strong>
+      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'10px 0' }}>
+        <input placeholder="CPV de interés (coma)" value={cpvStr} onChange={e=>setCrit({...crit, cpv:e.target.value})} />
+        <input placeholder="Palabras clave (coma)" value={kwStr} onChange={e=>setCrit({...crit, palabras_clave:e.target.value})} />
+        <input placeholder="Presupuesto mín (€)" value={crit.presupuesto_min} onChange={e=>setCrit({...crit, presupuesto_min:e.target.value})} />
+        <input placeholder="Presupuesto máx (€)" value={crit.presupuesto_max} onChange={e=>setCrit({...crit, presupuesto_max:e.target.value})} />
+      </div>
+      <label style={{ display:'flex', gap:6, alignItems:'center', fontSize:13 }}>
+        <input type="checkbox" checked={!!crit.activo} onChange={e=>setCrit({...crit, activo:e.target.checked})} /> Radar activo (revisa PLACSP cada 6 h)
+      </label>
+      <button onClick={guardar} disabled={cargando} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>{cargando?'Guardando…':'Guardar criterios'}</button>
+
+      <div style={{ marginTop:12, display:'flex', flexDirection:'column', gap:8 }}>
+        {anuncios.length===0 && <span style={{ color:C.muted, fontSize:13 }}>Aún no hay licitaciones captadas.</span>}
+        {anuncios.map(a => (
+          <div key={a.id} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:10, opacity: a.visto?0.6:1 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
+              <strong style={{ fontSize:14 }}>{a.anuncio?.titulo}</strong>
+              <span style={{ fontSize:12, color:C.muted }}>{a.puntuacion} pts</span>
+            </div>
+            <div style={{ fontSize:12, color:C.muted }}>{a.anuncio?.organo}{a.anuncio?.presupuesto?` · ${Number(a.anuncio.presupuesto).toLocaleString('es-ES')} €`:''}</div>
+            <div style={{ fontSize:12, marginTop:4 }}>{(a.motivos||[]).join(' · ')}</div>
+            <div style={{ display:'flex', gap:10, marginTop:6 }}>
+              {a.anuncio?.url && <a href={a.anuncio.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
+              {!a.visto && <button onClick={()=>marcarVisto(a.id)} style={{ fontSize:12, background:'transparent', border:`1px solid ${C.border}`, borderRadius:6, padding:'2px 8px', cursor:'pointer' }}>Marcar visto</button>}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

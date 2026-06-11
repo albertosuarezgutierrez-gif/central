@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
-import { round2 } from '@iarest/module-contabilidad'
+import { round2 } from '@central/module-contabilidad'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30

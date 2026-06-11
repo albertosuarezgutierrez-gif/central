@@ -37,15 +37,15 @@
 
 La raíz **no puede ser a la vez** "la app de `ia.rest`" y "la matriz", así que `ia.rest` bajó a
 `apps/ia-rest` como las demás. **No fue un simple `git mv`** porque `ia.rest` **consume `packages/*`**
-(`@iarest/core-ai`, `@iarest/core-fiscal`). Lo que se hizo (referencia para futuras verticales que
+(`@central/core-ai`, `@central/core-fiscal`). Lo que se hizo (referencia para futuras verticales que
 consuman `packages/*`):
 
-1. **`file:` deps** en `apps/ia-rest/package.json` (`@iarest/core-ai: file:../../packages/core-ai`,
-   idem core-fiscal) → `npm install` crea `node_modules/@iarest/*` por symlink. **Self-contained, sin
+1. **`file:` deps** en `apps/ia-rest/package.json` (`@central/core-ai: file:../../packages/core-ai`,
+   idem core-fiscal) → `npm install` crea `node_modules/@central/*` por symlink. **Self-contained, sin
    pnpm/turbo** (Vercel instala aislado por Root Directory, igual que sivra/ialimp).
 2. **`next.config(.ts/.js)`**: `outputFileTracingRoot` + `turbopack.root` = raíz del monorepo
    (`path.join(__dirname,'..','..')`) → Turbopack/tracing resuelven `packages/` fuera de `apps/ia-rest`.
-3. Se **quitaron los `tsconfig paths` de `@iarest/*`** (resuelven por `node_modules`, que respeta el
+3. Se **quitaron los `tsconfig paths` de `@central/*`** (resuelven por `node_modules`, que respeta el
    export `./es` de core-fiscal). Se mantiene `@/* → ./src/*`.
 4. **CI** (`.github/workflows/ci.yml`, `qa.yml`): `defaults.run.working-directory: apps/ia-rest` +
    `cache-dependency-path: apps/ia-rest/package-lock.json`.

@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-revenue",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Módulo de Revenue Management (casa de marcas): análisis de demanda agnóstico de dominio. Recibe eventos de demanda (reservas/mesas/servicios) y capacidad por fecha, y devuelve ocupación por día de la semana, estacionalidad por mes, lead time, curva de pickup, pace interanual, mix de canal y KPIs (ADR/RevPAR/ocupación). Lógica PURA: sin BD, sin red, sin secretos. Lo enchufa cualquier vertical (sivra pisos, ia-rest cubiertos, ialimp servicios) con su propio adapter.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

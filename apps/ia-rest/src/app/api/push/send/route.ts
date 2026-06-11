@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getRestauranteId } from '@/lib/session'
-import { sendWebPush } from '@iarest/core-push'
+import { sendWebPush } from '@central/core-push'
 
 export const dynamic = 'force-dynamic'
 

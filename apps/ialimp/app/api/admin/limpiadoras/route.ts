@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
-import { sha256Hex as hashPin } from '@iarest/core-identity'
+import { sha256Hex as hashPin } from '@central/core-identity'
 
 // GET — listar limpiadoras de la empresa
 export async function GET() {

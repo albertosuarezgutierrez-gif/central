@@ -16,14 +16,19 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
   const [detalle, setDetalle]       = useState<any>(null)
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState('')
+  const [verInactivos, setVerInactivos] = useState(false)
+
+  const numActivos   = useMemo(() => clientes.filter(c => c.activo !== false).length, [clientes])
+  const numInactivos = useMemo(() => clientes.filter(c => c.activo === false).length, [clientes])
 
   const filtered = useMemo(() => clientes.filter(c => {
+    const matchEstado = verInactivos ? c.activo === false : c.activo !== false
     const matchSearch = !search ||
       c.nombre?.toLowerCase().includes(search.toLowerCase()) ||
       c.contacto_nombre?.toLowerCase().includes(search.toLowerCase()) ||
       c.direccion?.toLowerCase().includes(search.toLowerCase())
-    return matchSearch
-  }), [clientes, search])
+    return matchEstado && matchSearch
+  }), [clientes, search, verInactivos])
 
   function abrirNuevo() {
     setEditando(null)
@@ -103,19 +108,49 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
     }
   }
 
-  async function toggleActivo(c: any) {
-    if (c.activo) {
-      if (!confirm('¿Desactivar cliente ' + c.nombre + '?')) return
-      const res = await fetch('/api/admin/clientes/' + c.id, { method: 'DELETE' })
-      const data = await res.json()
-      if (!res.ok) { alert(data.error); return }
-    } else {
-      await fetch('/api/admin/clientes/' + c.id, {
-        method: 'PATCH', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ activo: true })
+  // ── Desactivar / reactivar ──────────────────────────────────────────────
+  const [desactivando, setDesactivando] = useState<any>(null)   // cliente en el modal
+  const [preview, setPreview]           = useState<any>(null)   // resumen de impacto
+  const [motivo, setMotivo]             = useState('')
+  const [procesando, setProcesando]     = useState(false)
+  const [reactivando, setReactivando]   = useState<string | null>(null)
+
+  async function abrirDesactivar(c: any) {
+    setDesactivando(c); setPreview(null); setMotivo(''); setError('')
+    try {
+      const res = await fetch('/api/admin/clientes/' + c.id + '/desactivar')
+      setPreview(res.ok ? await res.json() : {})
+    } catch { setPreview({}) }
+  }
+
+  async function confirmarDesactivar() {
+    if (!desactivando) return
+    setProcesando(true); setError('')
+    try {
+      const res = await fetch('/api/admin/clientes/' + desactivando.id + '/desactivar', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ motivo: motivo.trim() || undefined })
       })
-    }
-    setClientes(cs => cs.map(x => x.id === c.id ? { ...x, activo: !c.activo } : x))
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error || 'No se pudo desactivar'); return }
+      setClientes(cs => cs.map(x => x.id === desactivando.id
+        ? { ...x, activo: false, sesiones_hoy: 0, sesiones_pendientes: 0 } : x))
+      setDesactivando(null)
+    } catch {
+      setError('Error de red al desactivar')
+    } finally { setProcesando(false) }
+  }
+
+  async function reactivar(c: any) {
+    setReactivando(c.id)
+    try {
+      const res = await fetch('/api/admin/clientes/' + c.id + '/reactivar', { method: 'POST' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { alert(data.error || 'No se pudo reactivar'); return }
+      setClientes(cs => cs.map(x => x.id === c.id ? { ...x, activo: true } : x))
+    } catch {
+      alert('Error de red al reactivar')
+    } finally { setReactivando(null) }
   }
 
   return (
@@ -140,6 +175,18 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
           placeholder="Buscar por nombre, contacto, dirección…"
           className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
         />
+        <div className="flex gap-2 mt-3">
+          <button onClick={() => setVerInactivos(false)}
+            className={'text-xs font-medium px-3 py-1.5 rounded-full transition ' +
+              (!verInactivos ? 'bg-indigo-600 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50')}>
+            Activos ({numActivos})
+          </button>
+          <button onClick={() => setVerInactivos(true)}
+            className={'text-xs font-medium px-3 py-1.5 rounded-full transition ' +
+              (verInactivos ? 'bg-gray-700 text-white' : 'bg-white border border-gray-200 text-gray-500 hover:bg-gray-50')}>
+            Inactivos ({numInactivos})
+          </button>
+        </div>
       </div>
 
       {/* Lista */}
@@ -218,10 +265,17 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
                       className="flex-1 min-w-[110px] text-xs bg-indigo-600 text-white rounded-lg py-1.5 text-center hover:bg-indigo-700 transition">
                       🏠 Propiedades
                     </a>
-                    <button onClick={() => toggleActivo(c)}
-                      className="flex-shrink-0 text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-400 hover:bg-gray-50 transition">
-                      {c.activo ? '⊘' : '✓'}
-                    </button>
+                    {c.activo !== false ? (
+                      <button onClick={() => abrirDesactivar(c)} title="Desactivar cliente"
+                        className="flex-shrink-0 text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-400 hover:bg-red-50 hover:text-red-500 transition">
+                        ⊘ Desactivar
+                      </button>
+                    ) : (
+                      <button onClick={() => reactivar(c)} disabled={reactivando === c.id}
+                        className="flex-shrink-0 text-xs border border-green-200 bg-green-50 rounded-lg px-3 py-1.5 text-green-600 hover:bg-green-100 transition disabled:opacity-50">
+                        {reactivando === c.id ? '…' : '✓ Reactivar'}
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -301,6 +355,71 @@ export default function ClientesClient({ clientesIniciales }: { clientesIniciale
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal confirmar desactivación */}
+      {desactivando && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
+            <div className="p-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="font-bold text-gray-800 truncate pr-4">⊘ Desactivar {desactivando.nombre}</h2>
+              <button onClick={() => setDesactivando(null)} className="text-gray-400 hover:text-gray-600 text-xl flex-shrink-0">✕</button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-sm text-gray-600">
+                El cliente dejará de aparecer en los selectores y la agenda, pero <strong>se conserva
+                todo su histórico</strong> (facturas, chat, limpiezas hechas y pisos). Podrás reactivarlo cuando quieras.
+              </p>
+
+              {preview === null ? (
+                <div className="text-center text-gray-400 text-sm py-4">Calculando impacto…</div>
+              ) : (
+                <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">🧹 Limpiezas futuras que se cancelan</span>
+                    <span className="font-semibold text-gray-800">{preview.sesiones_futuras ?? 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">🧾 Facturas que se conservan</span>
+                    <span className="font-semibold text-gray-800">{preview.facturas_total ?? 0}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">🔑 Acceso del propietario al portal</span>
+                    <span className="font-semibold text-red-500">se corta</span>
+                  </div>
+                </div>
+              )}
+
+              {preview && Number(preview.facturas_pendientes) > 0 && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-sm text-amber-700">
+                  ⚠️ Este cliente tiene <strong>{preview.facturas_pendientes}</strong> factura(s) pendiente(s)
+                  de cobro por <strong>{Number(preview.importe_pendiente).toFixed(2)} €</strong>.
+                  Desactivarlo no las cobra ni las elimina, pero ya no saldrá en los listados activos.
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Motivo (opcional)</label>
+                <input value={motivo} onChange={e => setMotivo(e.target.value)}
+                  placeholder="Ej: dejó de trabajar con nosotros, duplicado…"
+                  className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" />
+              </div>
+
+              {error && <p className="text-red-500 text-sm">{error}</p>}
+
+              <div className="flex gap-3 pt-1">
+                <button type="button" onClick={() => setDesactivando(null)}
+                  className="flex-1 border border-gray-300 text-gray-600 py-2.5 rounded-xl text-sm font-medium">
+                  Cancelar
+                </button>
+                <button onClick={confirmarDesactivar} disabled={procesando}
+                  className="flex-1 bg-red-600 hover:bg-red-700 text-white py-2.5 rounded-xl text-sm font-semibold transition disabled:opacity-50">
+                  {procesando ? 'Desactivando…' : 'Desactivar cliente'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

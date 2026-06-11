@@ -1,7 +1,7 @@
 // Firmado de fotos del bucket cleaning-photos (privado) con la anon key.
 // La anon key tiene policy SELECT sobre el bucket -> NO hace falta service_role.
-// La primitiva de firmado vive en @iarest/core-storage; aquí queda fijo el bucket.
-import { storageObjectPath, signStorageObject } from '@iarest/core-storage'
+// La primitiva de firmado vive en @central/core-storage; aquí queda fijo el bucket.
+import { storageObjectPath, signStorageObject } from '@central/core-storage'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
