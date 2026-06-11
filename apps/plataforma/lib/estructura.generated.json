@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-11T08:22:14Z",
+  "generadoEn": "2026-06-11T10:18:21Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -230,7 +230,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 5
       }
     },
     "core-fiscal": {
@@ -258,7 +258,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "plataforma": {
         "estado": "usado",
@@ -628,7 +628,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 21
+        "evidencias": 20
       }
     },
     "mercado": {
