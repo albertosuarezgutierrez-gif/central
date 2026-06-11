@@ -42,7 +42,7 @@ const MODULO_MARKETPLACE = (): any => ({
   emoji: '💍',
   titulo: 'Presupuesto self-service del cliente',
   sub: 'El cliente configura su evento y reserva',
-  ruta: 'En desarrollo',
+  ruta: 'URL pública para el cliente',
   color: C.amber,
   desc: 'Una URL donde el cliente final monta su evento —50 adultos, 15 niños, 2 días—, elige menú con tu margen ya incorporado y reserva con paga y señal. El comercial recibe el lead ya cualificado y solo remata.',
   ejemplos: [

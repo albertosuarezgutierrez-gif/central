@@ -125,7 +125,7 @@ const config: ClienteConfig = {
       titulo: 'Presupuesto self-service del cliente',
       color: C.amber,
       sub: 'El cliente configura su evento y reserva',
-      ruta: 'En desarrollo',
+      ruta: 'URL pública para el cliente',
       desc: 'Una URL donde el cliente final monta su evento —aforo, días, menú con tu margen ya incorporado— y reserva con paga y señal. El comercial recibe el lead ya cualificado.',
       ejemplos: [
         'El cliente elige entre opciones de menú con tu margen objetivo',

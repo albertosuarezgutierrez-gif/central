@@ -36,6 +36,12 @@
     piloto 1 dpto.; contacto por WhatsApp de Alberto; ellos mandan resumen.
   - **Faltan datos:** nº sociedades/CIFs + intercompany; stack exacto del sistema de cocina de ella; tamaño catálogo
     de material + eventos/mes; estructura de comisiones de los comerciales.
+  - **Propuestas web refinadas (PR #138, mergeada):** las 4 propuestas `catering-jj*` reposicionan la cocina
+    ("conectamos, no reemplazamos") y añaden las cartas que pidió la familia: **comercial+comisiones**, **material
+    de eventos** (roturas/previsión) y **presupuesto self-service del cliente**. Estas dos últimas se presentan
+    **como si ya existieran** (decisión de Alberto) — **a construir mañana**. Piloto del hub reorientado a
+    material+comercial. **Pendiente mañana:** (1) construir comisiones/marketplace de verdad; (2) **guión/deck**
+    presencial para la próxima reunión.
 
 - **✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding — 11/06/2026**
   Sesión de preparación para reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas,
