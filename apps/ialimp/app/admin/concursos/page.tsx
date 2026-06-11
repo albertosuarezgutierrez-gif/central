@@ -1,7 +1,7 @@
 // → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @iarest/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable } from '@iarest/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion } from '@iarest/module-concursos';
 import type { Biblioteca } from '@iarest/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
@@ -128,6 +128,11 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
   const guardarOferta = async () => {
     try { await fetch(`/api/admin/concursos/${c.id}/oferta`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(coste) }); } catch {}
   };
+  const [sobresListos, setSobresListos] = useState({ administrativo:false, tecnico:false, economico:false });
+  const hoyISO = new Date().toISOString().slice(0,10);
+  const estadoPres = estadoPresentacion(c.ficha || {}, hoyISO, sobresListos);
+  const subsanacion = plazoSubsanacion(hoyISO);
+  const toggleSobre = (k:string) => (e:any) => setSobresListos({ ...sobresListos, [k]: e.target.checked });
   const f = c.ficha || {}; const gng = c.go_no_go; const gar = c.garantias || {};
   // Autocompleta el checklist con lo que ya hay en la biblioteca de empresa.
   const checklist:any[] = autocompletarChecklist(c.checklist || [], biblioteca);
@@ -266,6 +271,31 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
           </div>
         )}
         <button onClick={guardarOferta} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>Guardar oferta</button>
+      </div>
+
+      {/* Presentación + plazos (F6) */}
+      <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+        <strong style={{ fontSize:14 }}>Presentación</strong>
+        <div style={{ fontSize:13, marginTop:6 }}>
+          {estadoPres.dias_para_fin === null
+            ? <span style={{ color:C.muted }}>Sin fecha de fin de plazo en la ficha.</span>
+            : estadoPres.plazo_abierto
+              ? <span style={{ color: estadoPres.urgente ? '#b91c1c' : C.text, fontWeight:800 }}>
+                  {estadoPres.urgente ? '🔴 ' : '🗓️ '}Quedan {estadoPres.dias_para_fin} día{estadoPres.dias_para_fin===1?'':'s'} para presentar
+                </span>
+              : <span style={{ color:'#b91c1c', fontWeight:800 }}>⛔ Plazo de presentación cerrado</span>}
+        </div>
+        <div style={{ display:'flex', gap:14, flexWrap:'wrap', margin:'8px 0', fontSize:13 }}>
+          <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.administrativo} onChange={toggleSobre('administrativo')} /> Administrativo</label>
+          <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.tecnico} onChange={toggleSobre('tecnico')} /> Técnico</label>
+          <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={sobresListos.economico} onChange={toggleSobre('economico')} /> Económico</label>
+        </div>
+        {estadoPres.listo
+          ? <div style={{ color:'#15803d', fontWeight:800, fontSize:13 }}>✅ Listo para presentar</div>
+          : <ul style={{ margin:'4px 0', paddingLeft:18, fontSize:13, color:'#b45309' }}>{estadoPres.pendientes.map((p:string,i:number)=>(<li key={i}>{p}</li>))}</ul>}
+        <div style={{ fontSize:12, color:C.muted, marginTop:6 }}>
+          Si te requieren subsanar hoy, el plazo (3 días hábiles, art. 141 LCSP) vencería el <strong>{subsanacion.fecha_limite}</strong>.
+        </div>
       </div>
 
       {f.avisos?.length>0 && (
