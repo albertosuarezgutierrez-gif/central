@@ -71,28 +71,27 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
   }
 }
 
-// ia-rest vive ahora en la MISMA BD compartida, en el schema `iarest` (corte de BD
-// unificada). Se lee con la conexión Prisma normal (rol `postgres`, con USAGE sobre
-// el schema), schema-cualificando la vista. Ya no hay 2ª BD ni cliente service-role.
+// ia-rest vive en su PROPIA BD (proyecto Supabase aparte), no en la compartida: el
+// schema `iarest` de la BD unificada quedó como clon vacío del DDL. Por eso el resumen
+// se lee EN VIVO por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer
+// `OPERADOR_SHARED_SECRET`) — el MISMO patrón que el listado del god-panel
+// (`lib/adapters/iarest.ts`). Sin Prisma, sin 2ª conexión, sin migrar datos.
 export async function getResumenIaRest(localId: string | null, anio: number): Promise<ResumenFinanciero> {
   if (!localId) return { ...NULO, nota: 'sin local vinculado' }
+  const base = process.env.IAREST_URL?.replace(/\/$/, '')
+  const secret = process.env.OPERADOR_SHARED_SECRET
+  if (!base || !secret) return { ...NULO, nota: 'ia-rest sin conectar (IAREST_URL + OPERADOR_SHARED_SECRET)' }
   try {
-    const rows = await prisma.$queryRaw<Array<{
-      ingresos_base: unknown; gastos_base: unknown; resultado: unknown
-    }>>`
-      SELECT
-        COALESCE(SUM(ingresos_base), 0)::float AS ingresos_base,
-        COALESCE(SUM(gastos_base),   0)::float AS gastos_base,
-        COALESCE(SUM(resultado),     0)::float AS resultado
-      FROM iarest.v_resumen_financiero_anual
-      WHERE local_id = ${localId}::uuid
-        AND anio = ${anio}
-    `
-    const r = rows[0]
+    const res = await fetch(
+      `${base}/api/operador/financiero?local_id=${encodeURIComponent(localId)}&anio=${anio}`,
+      { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' },
+    )
+    if (!res.ok) return { ...NULO, nota: 'puerto ia-rest no disponible' }
+    const r = await res.json() as { ingresos_base?: number; gastos_base?: number; resultado?: number }
     return {
-      ingresosYtd:  Number(r.ingresos_base),
-      gastosYtd:    Number(r.gastos_base),
-      resultadoYtd: Number(r.resultado),
+      ingresosYtd:  Number(r.ingresos_base ?? 0),
+      gastosYtd:    Number(r.gastos_base ?? 0),
+      resultadoYtd: Number(r.resultado ?? 0),
       disponible: true,
     }
   } catch {
