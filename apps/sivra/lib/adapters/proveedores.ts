@@ -1,6 +1,6 @@
-// Adapter de proveedores para sivra → @iarest/module-proveedores
+// Adapter de proveedores para sivra → @central/module-proveedores
 // SIVRA es single-tenant: la tabla `proveedores` no tiene empresa_id.
-import type { Proveedor, ProveedorAdapter } from '@iarest/module-proveedores'
+import type { Proveedor, ProveedorAdapter } from '@central/module-proveedores'
 
 export interface ProveedorRow {
   id: string

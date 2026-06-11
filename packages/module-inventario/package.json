@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/module-inventario",
+  "name": "@central/module-inventario",
   "version": "0.0.0",
   "private": true,
   "description": "Módulo de Inventario compartido (casa de marcas): catálogo de artículos + asignación de activos a un Encargo (evento/porte/alquiler/cita) mediante parent/parentType. Agnóstico de vertical y de BD; cada vertical aporta un adaptador (ArticuloAdapter/AsignacionAdapter) sobre sus tablas. Base del alquiler de materiales y del almacén multi-negocio.",

@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
-import { calcularCuotaIva, calcularTotal } from '@iarest/module-contabilidad'
+import { calcularCuotaIva, calcularTotal } from '@central/module-contabilidad'
 
 // GET /api/admin/contabilidad/ingresos?year=2026
 // Lista los ingresos manuales de la empresa (otros ingresos no facturados).

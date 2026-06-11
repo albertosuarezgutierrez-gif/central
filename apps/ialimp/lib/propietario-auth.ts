@@ -5,7 +5,7 @@ import { cookies } from 'next/headers'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { genHex, sha256Hex } from '@iarest/core-identity'
+import { genHex, sha256Hex } from '@central/core-identity'
 
 const JWT_SECRET = new TextEncoder().encode(
   process.env.JWT_SECRET

@@ -1,6 +1,6 @@
 // Adaptador de los items de ASN de un pedido (campo `asn_items` de pedidos_proveedor)
-// hacia la LineaASN genérica de @iarest/module-asn, para reutilizar el cálculo de totales.
-import type { LineaASN, LineaASNAdapter } from '@iarest/module-asn'
+// hacia la LineaASN genérica de @central/module-asn, para reutilizar el cálculo de totales.
+import type { LineaASN, LineaASNAdapter } from '@central/module-asn'
 
 export interface AsnItemRow {
   articulo: string

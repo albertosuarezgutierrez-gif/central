@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/core-email",
+  "name": "@central/core-email",
   "version": "0.0.0",
   "private": true,
   "description": "Núcleo de email saliente compartido (casa de marcas): construcción del transporter de nodemailer desde variables de entorno (multi-proveedor Resend/SMTP/Gmail, o Gmail explícito) con timeouts de serverless. El from/to/html y el envío los pone cada vertical.",

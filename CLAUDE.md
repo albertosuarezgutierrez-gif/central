@@ -14,7 +14,8 @@
   BD compartida con sivra+ialimp. Ver `apps/plataforma/CLAUDE.md`.
 
 ## Módulos compartidos (`packages/*`, fuente TS pura, portables)
-- `@iarest/core-ai`, `@iarest/core-fiscal`, `@iarest/core-push`, `@iarest/core-storage`, `@iarest/core-email`, `@iarest/core-identity`.
+> **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
+- `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`.
   - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
     dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
     (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.
@@ -31,3 +32,10 @@ Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba). El ho
   repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
 - Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
   apps los consumen con `file:` deps (build aislado por Root Directory, sin pnpm/turbo).
+
+## ⏳ Principio: los cambios que ROMPEN se hacen AHORA (sin clientes)
+Renombrados de scope, reestructuras de BD, cortes de infraestructura y demás cambios de gran radio
+**se ejecutan mientras NO hay clientes en producción.** Con clientes vivos estos cambios pasan de ser
+"un PR mecánico" a ser un riesgo serio (downtime, migraciones de datos, ventanas de mantenimiento).
+Decisión de Alberto (11/06/2026), aplicada al rename `@iarest/*`→`@central/*`. Si un cambio así está
+pendiente y el árbol está limpio-ish, es mejor hacerlo ya que diferirlo.

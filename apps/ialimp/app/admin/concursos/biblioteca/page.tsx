@@ -1,5 +1,5 @@
 // → app/admin/concursos/biblioteca/page.tsx — Mi biblioteca de empresa (F2 del
-// módulo @iarest/module-concursos). El licitador sube sus documentos una vez y
+// módulo @central/module-concursos). El licitador sube sus documentos una vez y
 // cada concurso autocompleta su checklist. Imita layout/paleta del v1 de concursos.
 'use client';
 import { useEffect, useState } from 'react';

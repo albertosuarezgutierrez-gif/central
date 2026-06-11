@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/module-asn",
+  "name": "@central/module-asn",
   "version": "0.0.0",
   "private": true,
   "description": "Módulo ASN compartido (casa de marcas): aviso de envío / recepción de mercancía con líneas (producto, cantidad, precio, lote, caducidad) y totales. Modelo de logística estándar, agnóstico de vertical y de BD; cada vertical aporta su adaptador. Reutilizable por almacén, alquiler de materiales y transporte.",

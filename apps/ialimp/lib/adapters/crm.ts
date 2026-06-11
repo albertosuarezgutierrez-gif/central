@@ -1,4 +1,4 @@
-// Adapter de CRM/leads para ialimp → @iarest/module-crm
+// Adapter de CRM/leads para ialimp → @central/module-crm
 //
 // Mapea la tabla `leads` de ialimp (con sus 6 estados propios) a Oportunidad.
 // Estados: ialimp.propuesta_enviada → módulo.propuesta
@@ -9,8 +9,8 @@ import type {
   EstadoOportunidad,
   OportunidadAdapter,
   ResumenPipeline,
-} from '@iarest/module-crm'
-export { resumenPipeline, valorPonderado } from '@iarest/module-crm'
+} from '@central/module-crm'
+export { resumenPipeline, valorPonderado } from '@central/module-crm'
 export type { ResumenPipeline }
 
 type EstadoLead = 'nuevo' | 'contactado' | 'propuesta_enviada' | 'presupuestado' | 'ganado' | 'perdido'

@@ -1,5 +1,5 @@
 // → app/admin/concursos/perfil/page.tsx — Perfil de identificación de la empresa
-// (F3 del módulo @iarest/module-concursos). Estos datos rellenan el DEUC y la
+// (F3 del módulo @central/module-concursos). Estos datos rellenan el DEUC y la
 // declaración responsable de cada concurso. Imita layout/paleta del v1 y F2.
 'use client';
 import { useEffect, useState } from 'react';

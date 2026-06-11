@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireSession } from '@/lib/tenant'
-import { genHex } from '@iarest/core-identity'
+import { genHex } from '@central/core-identity'
 
 export const dynamic = 'force-dynamic'
 

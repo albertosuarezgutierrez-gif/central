@@ -1,12 +1,12 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { sendWebPush } from '@iarest/core-push'
+import { sendWebPush } from '@central/core-push'
 
 /**
  * Envía una notificación web-push a todas las suscripciones de una limpiadora.
  * No crítico: si faltan claves VAPID o no hay suscripciones, no hace nada.
  * Scope por empresa_id (frontera multi-tenant). El envío en sí lo hace el núcleo
- * compartido `@iarest/core-push`; aquí queda el scope, el payload y el borrado.
+ * compartido `@central/core-push`; aquí queda el scope, el payload y el borrado.
  */
 export async function sendPushToLimpiadora(
   empresa_id: string,

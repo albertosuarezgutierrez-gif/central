@@ -1,13 +1,13 @@
 // Adaptador de inventario de menaje: mapea las tablas de dominio de ia-rest
 // (`inventario_menaje` y `inventario_menaje_evento`) a los tipos genéricos de
-// @iarest/module-inventario. La asignación a evento usa la costura parent={evento},
+// @central/module-inventario. La asignación a evento usa la costura parent={evento},
 // reutilizable por otras verticales (alquiler de materiales, transporte…).
 import type {
   Articulo,
   AsignacionActivo,
   ArticuloAdapter,
   AsignacionAdapter,
-} from '@iarest/module-inventario'
+} from '@central/module-inventario'
 
 export interface MenajeRow {
   id: string

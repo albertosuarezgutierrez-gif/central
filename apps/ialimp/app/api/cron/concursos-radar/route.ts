@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { matchesDeAtom } from '@/lib/concursos-radar'
-import type { CriteriosRadar } from '@iarest/module-concursos'
+import type { CriteriosRadar } from '@central/module-concursos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60

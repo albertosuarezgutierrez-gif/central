@@ -1,4 +1,4 @@
-// Adapter de inventario para ialimp → @iarest/module-inventario
+// Adapter de inventario para ialimp → @central/module-inventario
 //
 // Mapea dos conceptos distintos:
 //   productos_stock → Articulo  (catálogo operativo con stock_actual)
@@ -13,8 +13,8 @@ import type {
   AsignacionActivo,
   AsignacionAdapter,
   ResumenStock,
-} from '@iarest/module-inventario'
-export { resumenStock, valorStock, disponibilidadTrasReserva } from '@iarest/module-inventario'
+} from '@central/module-inventario'
+export { resumenStock, valorStock, disponibilidadTrasReserva } from '@central/module-inventario'
 export type { ResumenStock }
 
 export interface ProductoStockRow {

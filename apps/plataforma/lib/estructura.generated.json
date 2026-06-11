@@ -11,77 +11,77 @@
     {
       "id": "core-ai",
       "tipo": "core",
-      "npm": "@iarest/core-ai"
+      "npm": "@central/core-ai"
     },
     {
       "id": "core-email",
       "tipo": "core",
-      "npm": "@iarest/core-email"
+      "npm": "@central/core-email"
     },
     {
       "id": "core-fiscal",
       "tipo": "core",
-      "npm": "@iarest/core-fiscal"
+      "npm": "@central/core-fiscal"
     },
     {
       "id": "core-identity",
       "tipo": "core",
-      "npm": "@iarest/core-identity"
+      "npm": "@central/core-identity"
     },
     {
       "id": "core-push",
       "tipo": "core",
-      "npm": "@iarest/core-push"
+      "npm": "@central/core-push"
     },
     {
       "id": "core-storage",
       "tipo": "core",
-      "npm": "@iarest/core-storage"
+      "npm": "@central/core-storage"
     },
     {
       "id": "module-agenda",
       "tipo": "module",
-      "npm": "@iarest/module-agenda"
+      "npm": "@central/module-agenda"
     },
     {
       "id": "module-asn",
       "tipo": "module",
-      "npm": "@iarest/module-asn"
+      "npm": "@central/module-asn"
     },
     {
       "id": "module-concursos",
       "tipo": "module",
-      "npm": "@iarest/module-concursos"
+      "npm": "@central/module-concursos"
     },
     {
       "id": "module-contabilidad",
       "tipo": "module",
-      "npm": "@iarest/module-contabilidad"
+      "npm": "@central/module-contabilidad"
     },
     {
       "id": "module-crm",
       "tipo": "module",
-      "npm": "@iarest/module-crm"
+      "npm": "@central/module-crm"
     },
     {
       "id": "module-feedback",
       "tipo": "module",
-      "npm": "@iarest/module-feedback"
+      "npm": "@central/module-feedback"
     },
     {
       "id": "module-inventario",
       "tipo": "module",
-      "npm": "@iarest/module-inventario"
+      "npm": "@central/module-inventario"
     },
     {
       "id": "module-presupuestos",
       "tipo": "module",
-      "npm": "@iarest/module-presupuestos"
+      "npm": "@central/module-presupuestos"
     },
     {
       "id": "module-proveedores",
       "tipo": "module",
-      "npm": "@iarest/module-proveedores"
+      "npm": "@central/module-proveedores"
     }
   ],
   "capacidades": [

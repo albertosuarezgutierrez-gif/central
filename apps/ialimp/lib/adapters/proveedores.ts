@@ -1,8 +1,8 @@
-// Adapter de proveedores para ialimp → @iarest/module-proveedores
+// Adapter de proveedores para ialimp → @central/module-proveedores
 // La tabla `proveedores` de ialimp es un catálogo puro (sin comisiones ni
 // servicios subcontratados). El adapter normaliza los campos a Proveedor y
 // permite usar la lógica pura del módulo en cualquier vertical.
-import type { Proveedor, ProveedorAdapter } from '@iarest/module-proveedores'
+import type { Proveedor, ProveedorAdapter } from '@central/module-proveedores'
 
 export interface ProveedorRow {
   id: string

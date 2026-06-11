@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import { calcularMargen, totalCostes, esRentable, RENTABILIDAD_MINIMA_PCT_DEFAULT } from '@iarest/module-presupuestos'
+import { calcularMargen, totalCostes, esRentable, RENTABILIDAD_MINIMA_PCT_DEFAULT } from '@central/module-presupuestos'
 import { costesDeEvento } from '@/lib/presupuestos-evento'
 
 // GET /api/owner/eventos/presupuestos
@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json()
 
-  // Calcular margen real — delegado a @iarest/module-presupuestos (costes de catering
+  // Calcular margen real — delegado a @central/module-presupuestos (costes de catering
   // mapeados a líneas genéricas vía el adaptador de evento).
   const total = body.total || 0
   const margen_real_pct = calcularMargen(total, totalCostes(costesDeEvento(body))).margenPct

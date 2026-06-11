@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { signCleaningPhoto } from '@/lib/cleaning-photos'
-import { nimVision } from '@iarest/core-ai'
+import { nimVision } from '@central/core-ai'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60

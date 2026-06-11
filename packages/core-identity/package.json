@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/core-identity",
+  "name": "@central/core-identity",
   "version": "0.0.0",
   "private": true,
   "description": "Contrato de identidad compartido (casa de marcas): tipos de sesión/inquilino y puerto IdentityProvider, agnóstico del auth de cada app (Supabase/jose/NextAuth). Ver docs/HANDOFF-unificacion-casa-marcas.md (Fase 1).",

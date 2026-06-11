@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { analizarConcurso, necesitaOcr, type PerfilEmpresa } from '@iarest/module-concursos'
+import { analizarConcurso, necesitaOcr, type PerfilEmpresa } from '@central/module-concursos'
 import { aiRunner, extraerTextoPdf } from '@/lib/concursos'
 import { ocrPaginasPliego } from '@/lib/concursos-ocr'
 
