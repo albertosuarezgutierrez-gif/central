@@ -123,6 +123,16 @@
     `/admin/concursos` autocompleta el checklist (✅/⬜) y avisa de documentos faltantes con enlace. `✓ Compiled successfully`.
   - **⚠️ Pendiente de Alberto:** aplicar `apps/ialimp/prisma/migrations/add_biblioteca_concursos.sql` en la BD compartida
     (no aplicado desde la sesión, como el resto de migraciones). Follow-up: `public/manual.html` al promover la sección.
+- **🗑️ Desactivar/reactivar cliente en ialimp (baja reversible, conserva histórico) — 11/06/2026**
+  La UI ya tenía `c.activo` a medio cablear pero SIN backend. Completado: migración
+  `add_cliente_desactivacion.sql` (auditoría `desactivado_*`; `clientes.activo` ya existía, aplicada en
+  Supabase). Rutas `POST /api/admin/clientes/[id]/desactivar` (GET=preview de impacto) y `/reactivar`.
+  Desactivar = `activo=false` + cancela limpiezas futuras no hechas + corta acceso del portal (rota
+  `session_jti`, **nunca a NULL**); conserva facturas, chat, limpiezas hechas y pisos. El cron `pms/sync`
+  excluye propiedades/conexiones de clientes inactivos (si no, recrearía las limpiezas). `GET
+  /api/admin/clientes` devuelve solo activos por defecto (`?incluir_inactivos=1` para todos) → limpia todos
+  los selectores. UI: filtro Activos/Inactivos + modal de confirmación con resumen + aviso de impagos +
+  motivo + botón Reactivar. Spec: `docs/superpowers/specs/2026-06-11-desactivar-cliente-design.md`.
 
 - **🎛️ God-panel (panel único de operador) F1–F5 en `apps/plataforma/admin` — 10/06/2026 (PR #118)**
   Panel de Alberto que gobierna TODAS las verticales desde un sitio, reutilizando la tabla `superadmins`
