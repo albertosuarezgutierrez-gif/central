@@ -55,7 +55,10 @@ export default function Concursos() {
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:760 }}>
         <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
-        <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
+        <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
+          <a href="/admin/concursos/perfil" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>🏢 Perfil de empresa →</a>
+          <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
+        </div>
       </div>
       <p style={{ color:C.muted, margin:'0 0 16px', fontSize:14 }}>Sube el pliego (PDF) o pega su texto: el agente extrae la ficha, decide si te conviene presentarte y monta el checklist de documentos.</p>
 
@@ -102,6 +105,10 @@ export default function Concursos() {
 }
 
 function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
+  const [sobre, setSobre] = useState<any>(null);
+  const cargarSobre = async () => {
+    try { const r = await fetch(`/api/admin/concursos/${c.id}/sobre-administrativo`).then(x=>x.json()); setSobre(r); } catch {}
+  };
   const f = c.ficha || {}; const gng = c.go_no_go; const gar = c.garantias || {};
   // Autocompleta el checklist con lo que ya hay en la biblioteca de empresa.
   const checklist:any[] = autocompletarChecklist(c.checklist || [], biblioteca);
@@ -174,6 +181,29 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
         <div style={{ background:C.soft, color:C.indigo, borderRadius:10, padding:'8px 12px', fontSize:13, marginBottom:10 }}>
           Te faltan <strong>{faltan.length}</strong> documento{faltan.length>1?'s':''} en tu biblioteca: {faltan.map((d:any)=>d.nombre).join(' · ')}.{' '}
           <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, textDecoration:'underline' }}>Subirlos a Mi biblioteca</a>
+        </div>
+      )}
+
+      {/* Sobre administrativo + DEUC (F3) */}
+      <button onClick={cargarSobre} style={{ background:C.soft, color:C.indigo, border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>
+        📋 Generar sobre administrativo (DEUC)
+      </button>
+      {sobre && (
+        <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+          {sobre.perfil_completo===false && (
+            <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:8, padding:'6px 10px', fontSize:13, marginBottom:8 }}>
+              Completa el <a href="/admin/concursos/perfil" style={{ color:C.indigo, fontWeight:800 }}>perfil de empresa</a> para rellenar el DEUC.
+            </div>
+          )}
+          <strong style={{ fontSize:14 }}>Sobre administrativo</strong>
+          <ul style={{ margin:'6px 0', paddingLeft:18, fontSize:14 }}>
+            {sobre.sobre.map((it:any,i:number)=>(
+              <li key={i}>{it.cubiertoPor ? '✅ ' : '⬜ '}{it.documento}{!it.obligatorio && <span style={{ color:C.muted }}> · opcional</span>}</li>
+            ))}
+          </ul>
+          <div style={{ fontSize:13, color:C.muted }}>
+            DEUC: {sobre.deuc?.operador?.razon_social || '(sin empresa)'} · objeto «{sobre.deuc?.procedimiento?.objeto||'—'}». Declaración responsable: {sobre.declaracion?.declara?.length||0} afirmaciones.
+          </div>
         </div>
       )}
 
