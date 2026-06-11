@@ -54,6 +54,15 @@ Al enviar mensaje, disparar **email** (`core-email`) y/o **push** (`core-push`) 
 `canales_pref` de cada persona (in-app ya lo cubre la bandeja). Best-effort, no bloqueante.
 **Verificable:** una persona con preferencia email recibe el correo; otra con push, el push.
 
+## Estado — F0 COMPLETO (2026-06-11)
+F0.1→F0.7 implementados y mergeados. Pendientes (no bloqueantes, para más adelante):
+- **Matriz de reglas (UI)**: el modelo y la validación existen (F0.2); falta la pantalla para
+  que el dueño edite reglas negocio↔negocio (por ahora el dueño puede con todos).
+- **Push** + **preferencia de canal por persona**: F0.7 avisa por email (Resend, best-effort);
+  push necesita un store de suscripciones a nivel de plataforma.
+- **Directorio de sivra** (single-tenant): `listarDirectorio` sin implementar aún.
+- Para que el email salga en producción: `RESEND_API_KEY` (+ `MAIL_FROM`) en el proyecto Vercel `plataforma`.
+
 ## Notas
 - Todo en `apps/plataforma` salvo el endpoint nuevo de ia-rest en F0.3 (aditivo, no toca el resto).
 - F0 **no** incluye Nivel B (pedidos internos) — eso es F2 del diseño.
