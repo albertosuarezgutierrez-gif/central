@@ -15,7 +15,9 @@
 │   ├── core-push      ← Web Push (envoltura pura sobre web-push; dep npm propia)
 │   ├── core-storage   ← signed URLs de Supabase Storage (puro, vía REST)
 │   ├── core-email     ← transporter de nodemailer (multi-proveedor; dep npm propia)
-│   └── core-identity  ← contrato de sesión/inquilino (puertos & adaptadores)
+│   ├── core-identity  ← contrato de sesión/inquilino (puertos & adaptadores)
+│   ├── module-contabilidad ← dominio: IVA/PyG/tesorería/rentabilidad (puro, agnóstico de BD)
+│   └── module-concursos    ← dominio: agente de concursos públicos/LCSP (lee pliego→ficha+checklist+Go-No-Go; LLM por puerto AiRunner)
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]

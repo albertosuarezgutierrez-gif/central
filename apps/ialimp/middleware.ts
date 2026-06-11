@@ -36,6 +36,8 @@ const MODULO_MAP: Record<string, string> = {
   '/admin/planes':      'configuracion',
   '/admin/cotizador':   'configuracion',
   '/admin/usuarios':    'configuracion',
+  '/admin/contabilidad': 'contabilidad',
+  '/admin/concursos':    'concursos',
 }
 
 export async function middleware(req: NextRequest) {
@@ -90,14 +92,24 @@ export async function middleware(req: NextRequest) {
   // Superadmin puede acceder a todo
   if (payload.rol === 'superadmin') return NextResponse.next()
 
-  // Owner puede acceder a todo de su empresa
-  if (payload.rol === 'owner') return NextResponse.next()
-
-  // Usuarios empresa — verificar módulo
   const moduloRequerido = Object.entries(MODULO_MAP).find(([path]) =>
     pathname.startsWith(path)
   )?.[1]
 
+  // Módulos apagados por el operador (god-panel) para la empresa: aplica a
+  // owner Y usuarios. Default [] → no bloquea a nadie hasta que se desactive algo.
+  const modulosOff: string[] = (payload as any).modulos_off || []
+  if (moduloRequerido && modulosOff.includes(moduloRequerido)) {
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Módulo no contratado' }, { status: 403 })
+    }
+    return NextResponse.redirect(new URL('/dashboard', req.url))
+  }
+
+  // Owner puede acceder a todo de su empresa (salvo lo apagado arriba)
+  if (payload.rol === 'owner') return NextResponse.next()
+
+  // Usuarios empresa — verificar módulo asignado a su usuario
   if (moduloRequerido) {
     const modulos: string[] = payload.modulos || []
     if (!modulos.includes(moduloRequerido)) {

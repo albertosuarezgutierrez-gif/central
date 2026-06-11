@@ -22,6 +22,27 @@ importers:
       '@iarest/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
+      '@iarest/module-asn':
+        specifier: workspace:*
+        version: link:../../packages/module-asn
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
+      '@iarest/module-crm':
+        specifier: workspace:*
+        version: link:../../packages/module-crm
+      '@iarest/module-feedback':
+        specifier: workspace:*
+        version: link:../../packages/module-feedback
+      '@iarest/module-inventario':
+        specifier: workspace:*
+        version: link:../../packages/module-inventario
+      '@iarest/module-presupuestos':
+        specifier: workspace:*
+        version: link:../../packages/module-presupuestos
+      '@iarest/module-proveedores':
+        specifier: workspace:*
+        version: link:../../packages/module-proveedores
       '@stripe/react-stripe-js':
         specifier: ^6.3.0
         version: 6.6.0(@stripe/stripe-js@9.7.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -122,12 +143,21 @@ importers:
       '@iarest/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
+      '@iarest/core-fiscal':
+        specifier: workspace:*
+        version: link:../../packages/core-fiscal
       '@iarest/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
+      '@iarest/module-concursos':
+        specifier: workspace:*
+        version: link:../../packages/module-concursos
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -155,6 +185,9 @@ importers:
       nodemailer:
         specifier: ^8.0.7
         version: 8.0.10
+      pdf-parse:
+        specifier: ^1.1.1
+        version: 1.1.4
       prisma:
         specifier: ^5.22.0
         version: 5.22.0
@@ -205,6 +238,58 @@ importers:
         specifier: ^5
         version: 5.9.3
 
+  apps/plataforma:
+    dependencies:
+      '@iarest/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
+      '@prisma/client':
+        specifier: ^5.22.0
+        version: 5.22.0(prisma@5.22.0)
+      '@supabase/supabase-js':
+        specifier: ^2.105.1
+        version: 2.108.0
+      bcryptjs:
+        specifier: ^2.4.3
+        version: 2.4.3
+      jose:
+        specifier: ^5.9.3
+        version: 5.10.0
+      next:
+        specifier: ^15.5.18
+        version: 15.5.19(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      prisma:
+        specifier: ^5.22.0
+        version: 5.22.0
+      react:
+        specifier: ^19.0.0
+        version: 19.2.4
+      react-dom:
+        specifier: ^19.0.0
+        version: 19.2.4(react@19.2.4)
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.76
+    devDependencies:
+      '@types/bcryptjs':
+        specifier: ^2.4.6
+        version: 2.4.6
+      '@types/node':
+        specifier: ^20
+        version: 20.19.42
+      '@types/react':
+        specifier: ^19
+        version: 19.2.17
+      '@types/react-dom':
+        specifier: ^19
+        version: 19.2.3(@types/react@19.2.17)
+      typescript:
+        specifier: ^5
+        version: 5.9.3
+
   apps/sivra:
     dependencies:
       '@iarest/core-ai':
@@ -213,9 +298,15 @@ importers:
       '@iarest/core-email':
         specifier: workspace:*
         version: link:../../packages/core-email
+      '@iarest/core-push':
+        specifier: workspace:*
+        version: link:../../packages/core-push
       '@iarest/core-storage':
         specifier: workspace:*
         version: link:../../packages/core-storage
+      '@iarest/module-contabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-contabilidad
       '@prisma/client':
         specifier: ^5.22.0
         version: 5.22.0(prisma@5.22.0)
@@ -307,7 +398,11 @@ importers:
 
   packages/core-fiscal: {}
 
-  packages/core-identity: {}
+  packages/core-identity:
+    dependencies:
+      jose:
+        specifier: ^5.9.3
+        version: 5.10.0
 
   packages/core-push:
     dependencies:
@@ -320,6 +415,24 @@ importers:
         version: 3.6.4
 
   packages/core-storage: {}
+
+  packages/module-agenda: {}
+
+  packages/module-asn: {}
+
+  packages/module-concursos: {}
+
+  packages/module-contabilidad: {}
+
+  packages/module-crm: {}
+
+  packages/module-feedback: {}
+
+  packages/module-inventario: {}
+
+  packages/module-presupuestos: {}
+
+  packages/module-proveedores: {}
 
 packages:
 

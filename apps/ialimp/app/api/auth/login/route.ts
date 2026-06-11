@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { verifyPassword, createSessionToken } from '@/lib/auth'
+import { getModulosOff } from '@/lib/modulos-tenant'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
 import { cookies } from 'next/headers'
 
@@ -30,7 +31,8 @@ export async function POST(req: Request) {
     if (!ok) return NextResponse.json({ error: 'Email o contraseña incorrectos' }, { status: 401 })
 
     await rateLimitClear(rlKey)
-    const { token, jti } = await createSessionToken(empresa.id, empresa.email)
+    const modulosOff = await getModulosOff(empresa.id)
+    const { token, jti } = await createSessionToken(empresa.id, empresa.email, modulosOff)
     await prisma.$executeRaw(Prisma.sql`UPDATE empresas SET session_jti = ${jti} WHERE id = ${empresa.id}::uuid`)
     const cookieStore = await cookies()
     cookieStore.set('ialimp_session', token, {

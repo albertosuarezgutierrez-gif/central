@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { verifyPassword, createUsuarioToken } from '@/lib/auth'
+import { getModulosOff } from '@/lib/modulos-tenant'
 import { rateLimitHit, rateLimitClear, clientIp } from '@/lib/rate-limit-db'
 import { cookies } from 'next/headers'
 
@@ -36,7 +37,8 @@ export async function POST(req: Request) {
     `)
 
     await rateLimitClear(rlKey)
-    const { token, jti } = await createUsuarioToken(u.id, u.empresa_id, u.email, u.rol, u.modulos || [])
+    const modulosOff = await getModulosOff(u.empresa_id)
+    const { token, jti } = await createUsuarioToken(u.id, u.empresa_id, u.email, u.rol, u.modulos || [], modulosOff)
     await prisma.$executeRaw(Prisma.sql`UPDATE usuarios_empresa SET session_jti = ${jti} WHERE id = ${u.id}::uuid`)
     const cookieStore = await cookies()
     cookieStore.set('ialimp_session', token, {

@@ -12,6 +12,16 @@ interface Props {
   clientes: any[]
   limpiadoras: any[]
   today: string
+  modulosOff?: string[]
+}
+
+// Módulo gateable por entrada de menú (el operador puede apagarlos desde el god-panel).
+const NAV_MODULO: Record<string, string> = {
+  '/admin/equipo': 'rrhh',
+  '/admin/negocio': 'clientes',
+  '/admin/materiales': 'stock',
+  '/admin/contabilidad': 'contabilidad',
+  '/admin/concursos': 'concursos',
 }
 
 const TIPO_COLOR: Record<string,string> = {
@@ -26,17 +36,20 @@ const NAV = [
   { href:'/dashboard',           icon:'🏠', label:'Inicio'        },
   { href:'/admin/operaciones',   icon:'🗃️', label:'Operaciones'   },
   { href:'/admin/equipo',        icon:'👥', label:'Equipo'        },
+  { href:'/admin/chat',          icon:'💬', label:'Chat equipo'   },
   { href:'/admin/negocio',       icon:'💼', label:'Negocio'       },
   { href:'/admin/materiales',    icon:'📦', label:'Materiales'    },
   { href:'/admin/configuracion', icon:'⚙️', label:'Configuración' },
   { href:'/admin/contabilidad',  icon:'📊', label:'Contabilidad'  },
-  { href:'/admin/asistente',    icon:'💬', label:'Asistente'     },
+  { href:'/admin/concursos',     icon:'🏛️', label:'Concursos'     },
+  { href:'/admin/asistente',    icon:'🤖', label:'Asistente IA'  },
 ]
 
 export default function DashboardClient({
-  empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today
+  empresa, sesionesIniciales, conexiones, clientes, limpiadoras, today, modulosOff = []
 }: Props) {
   const router = useRouter()
+  const nav = NAV.filter(i => { const m = NAV_MODULO[i.href]; return !m || !modulosOff.includes(m) })
   const [sesiones,    setSesiones]   = useState<any[]>(sesionesIniciales)
   const [tab,         setTab]        = useState<'hoy'|'pms'>('hoy')
   const [showNueva,   setShowNueva]  = useState(false)
@@ -386,7 +399,7 @@ export default function DashboardClient({
             Módulos
           </div>
         )}
-        {NAV.map(item => (
+        {nav.map(item => (
           <a key={item.href} href={item.href} style={{
             display:'flex', alignItems:'center',
             gap: collapsed ? 0 : 10,

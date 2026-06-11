@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
+import { calcularComision, totalComisiones, comisionesCobradas } from '@iarest/module-proveedores'
+import { proveedorServicioAdapter, type ProveedorAsignacionRow } from '@/lib/proveedores-evento'
 
 export async function GET(req: NextRequest) {
   const session = getSession(req)
@@ -13,9 +15,13 @@ export async function GET(req: NextRequest) {
     .select('*, proveedor:proveedores_evento(nombre, tipo, contacto_telefono, contacto_email, token_portal, portal_activo)')
     .eq('evento_id', evento_id).eq('local_id', restauranteId).order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  const totalComisiones = (data ?? []).reduce((a, p) => a + (p.comision_importe ?? 0), 0)
-  const cobradas = (data ?? []).filter(p => p.estado === 'comision_cobrada').reduce((a, p) => a + (p.comision_importe ?? 0), 0)
-  return NextResponse.json({ asignaciones: data, total_comisiones: totalComisiones, cobradas })
+  // Sumas de comisiones — delegadas a @iarest/module-proveedores vía el adaptador.
+  const servicios = (data ?? []).map(p => proveedorServicioAdapter.toServicio(p as unknown as ProveedorAsignacionRow))
+  return NextResponse.json({
+    asignaciones: data,
+    total_comisiones: totalComisiones(servicios),
+    cobradas: comisionesCobradas(servicios),
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -31,7 +37,7 @@ export async function POST(req: NextRequest) {
     comisionPct = prov?.comision_pct ?? 0
     ivaTipo = body.iva_tipo ?? prov?.iva_tipo ?? 21
   }
-  const comisionImporte = (body.importe ?? 0) * (comisionPct ?? 0) / 100
+  const comisionImporte = calcularComision(body.importe ?? 0, comisionPct ?? 0)
   const { data, error } = await supabase.from('proveedores_evento_asignaciones').insert({
     evento_id: body.evento_id, proveedor_id: body.proveedor_id, local_id: restauranteId,
     servicio_descripcion: body.servicio_descripcion, importe: body.importe ?? 0,

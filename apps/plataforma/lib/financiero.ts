@@ -71,8 +71,43 @@ export async function getResumenSivra(anio: number, propertyId?: string | null):
   }
 }
 
-export function getResumenIaRest(): ResumenFinanciero {
-  return { ...NULO, nota: 'BD separada' }
+// ia-rest vive en su PROPIA BD (proyecto Supabase aparte), no en la compartida: el
+// schema `iarest` de la BD unificada quedó como clon vacío del DDL. Por eso el resumen
+// se lee EN VIVO por el puerto HTTP de ia-rest (`/api/operador/financiero`, Bearer
+// `OPERADOR_SHARED_SECRET`) — el MISMO patrón que el listado del god-panel
+// (`lib/adapters/iarest.ts`). Sin Prisma, sin 2ª conexión, sin migrar datos.
+export async function getResumenIaRest(localId: string | null, anio: number): Promise<ResumenFinanciero> {
+  if (!localId) return { ...NULO, nota: 'sin local vinculado' }
+  const base = process.env.IAREST_URL?.replace(/\/$/, '')
+  const secret = process.env.OPERADOR_SHARED_SECRET
+  if (!base || !secret) return { ...NULO, nota: 'ia-rest sin conectar (IAREST_URL + OPERADOR_SHARED_SECRET)' }
+  try {
+    const res = await fetch(
+      `${base}/api/operador/financiero?local_id=${encodeURIComponent(localId)}&anio=${anio}`,
+      { headers: { Authorization: `Bearer ${secret}` }, cache: 'no-store' },
+    )
+    if (!res.ok) return { ...NULO, nota: 'puerto ia-rest no disponible' }
+    const r = await res.json() as { ingresos_base?: number; gastos_base?: number; resultado?: number }
+    return {
+      ingresosYtd:  Number(r.ingresos_base ?? 0),
+      gastosYtd:    Number(r.gastos_base ?? 0),
+      resultadoYtd: Number(r.resultado ?? 0),
+      disponible: true,
+    }
+  } catch {
+    return { ...NULO, nota: 'error al leer ia-rest' }
+  }
+}
+
+// Registro de proveedores de KPIs por vertical (DataConnector SPI). Añadir una
+// vertical nueva = añadir una entrada aquí, sin tocar el dispatcher. Cada proveedor
+// sabe de qué BD lee (Prisma compartida, o cliente service-role para BD separada).
+type ResumenProvider = (refExt: string | null, anio: number) => Promise<ResumenFinanciero>
+
+const PROVIDERS: Record<string, ResumenProvider> = {
+  ialimp: (refExt, anio) => (refExt ? getResumenIalimp(refExt, anio) : Promise.resolve(NULO)),
+  sivra: (refExt, anio) => getResumenSivra(anio, refExt),
+  'ia-rest': (refExt, anio) => (refExt ? getResumenIaRest(refExt, anio) : Promise.resolve(NULO)),
 }
 
 export async function getResumenNegocio(
@@ -80,10 +115,9 @@ export async function getResumenNegocio(
   refExt: string | null,
   anio: number,
 ): Promise<ResumenFinanciero> {
-  if (app === 'ialimp' && refExt) return getResumenIalimp(refExt, anio)
-  if (app === 'sivra') return getResumenSivra(anio, refExt)
-  if (app === 'ia-rest') return getResumenIaRest()
-  return NULO
+  const provider = app ? PROVIDERS[app] : undefined
+  if (!provider) return NULO
+  return provider(refExt, anio)
 }
 
 export function fmtEur(n: number): string {

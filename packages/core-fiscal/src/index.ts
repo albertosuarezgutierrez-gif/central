@@ -9,3 +9,7 @@ export { escapeXml } from './xml'
 // España / AEAT VeriFactu (también accesible vía '@iarest/core-fiscal/es')
 export { calcularHuella, generarQrData, parseFechaLocalAEAT } from './es/aeat'
 export type { RegistroFactura } from './es/aeat'
+
+// Validación documental (ES): NIF/NIE/CIF e IBAN
+export { validarNifCif, validarIban } from './validacion'
+export type { Validacion } from './validacion'
