@@ -8,17 +8,62 @@ import PropuestaBase, {
 
 const C = { red:'#D9442B', gold:'#C9A84C', green:'#3F7D44', teal:'#2B6A6E', amber:'#E8A33B' }
 
+const MODULO_COMERCIAL = (): any => ({
+  emoji: '🎯',
+  titulo: 'Comercial y comisiones',
+  sub: 'CRM de eventos + incentivos del equipo',
+  ruta: '',
+  color: C.red,
+  desc: 'Cada comercial con su pipeline de bodas y eventos. ia.rest calcula su comisión y su ranking automáticamente: bono por margen, por ticket más alto y por reseñas conseguidas — con el % escalable que marca su contrato.',
+  ejemplos: [
+    'Ranking del equipo en tiempo real: quién vende con más margen',
+    'Bono automático por ticket más caro y por reseñas del cliente',
+    'Contrato con % escalable: sube solo al alcanzar objetivos',
+  ],
+  roi: 'El equipo se autogestiona y ves quién aporta de verdad — sin cuadrar comisiones a mano.',
+})
+
+const MODULO_MATERIAL = (): any => ({
+  emoji: '🍽️',
+  titulo: 'Material de eventos',
+  sub: 'Menaje, roturas y previsión por evento',
+  ruta: '',
+  color: C.teal,
+  desc: 'Catálogo de mesas, sillas, vajilla y cristalería con stock real. Cada evento descuenta lo que sale; al cerrar la boda registras las roturas con foto y se liquidan solas. ia.rest aprende cuánto material necesita cada tipo de evento.',
+  ejemplos: [
+    'Previsión de material y bebida por aforo, temporada y temperatura',
+    'Inventario post-boda con parte de roturas y foto',
+    'Aviso si no llega el material para los eventos cerrados de la semana',
+  ],
+  roi: 'Saber qué tienes, qué se rompió y qué hace falta — sin recuento por vídeo ni listas de papel.',
+})
+
+const MODULO_MARKETPLACE = (): any => ({
+  emoji: '💍',
+  titulo: 'Presupuesto self-service del cliente',
+  sub: 'El cliente configura su evento y reserva',
+  ruta: 'En desarrollo',
+  color: C.amber,
+  desc: 'Una URL donde el cliente final monta su evento —50 adultos, 15 niños, 2 días—, elige menú con tu margen ya incorporado y reserva con paga y señal. El comercial recibe el lead ya cualificado y solo remata.',
+  ejemplos: [
+    'El cliente elige entre opciones de menú con tu margen objetivo',
+    'Multi-tarificador: el precio se ajusta solo al aforo y al tipo de evento',
+    'Cobro online con señal — el evento entra directo en la agenda',
+  ],
+  roi: 'Cualificas y cierras bodas fuera de horario. El comercial llega con el trabajo medio hecho.',
+})
+
 const MODULO_ESCANDALLOS_CATERING = (): any => ({
   icon: '📋',
-  titulo: 'Escandallos por evento',
+  titulo: 'Escandallos conectados',
   color: C.gold,
-  desc: 'Crea el escandallo de cada menú una vez. ia.rest multiplica automáticamente por el número de comensales y genera la lista de compra completa del evento al instante.',
+  desc: 'Vuestro sistema de cocina se queda como está: ia.rest se conecta a él. Cuando entra un evento, el escandallo de cada menú se multiplica por el aforo y alimenta el presupuesto y la lista de compra — sin volver a teclear lo que ya tenéis cargado.',
   ejemplos: [
-    'Boda 350 personas → lista de compra generada en 5 segundos',
-    'Cambio de aforo → todos los géneros se recalculan solos',
-    'Coste por comensal en tiempo real antes de dar presupuesto',
+    'El escandallo que ya hacéis, enlazado al presupuesto y a la compra',
+    'Cambio de aforo → géneros y coste por comensal recalculados solos',
+    'Coste real por comensal disponible antes de cerrar el precio',
   ],
-  roi: 'Elimina el Excel de escandallos. Cero errores de cálculo en eventos de 400+ personas.',
+  roi: 'Cero doble trabajo: lo de cocina no se reemplaza, se aprovecha en el resto del grupo.',
 })
 
 const MODULO_ALMACEN_CATERING = (): any => ({
@@ -81,10 +126,10 @@ const config: ClienteConfig = {
   ],
 
   citas: [
-    { cita: '', pain: 'Escandallo manual por aforo', detalle: 'Recalcular food cost cada vez que cambia el número de comensales consume horas que no generan valor.', modulo: 'Presupuestador automático', color: C.gold },
-    { cita: '', pain: 'Stock invisible post-evento', detalle: 'Sin registro en tiempo real, el inventario al día siguiente de una boda de 400 personas es siempre una sorpresa.', modulo: 'Almacén en tiempo real', color: C.teal },
-    { cita: '', pain: 'Pases sin coordinación digital', detalle: 'Coordinar cocina central y hacienda simultáneamente con papel multiplica los errores de servicio.', modulo: 'KDS por pases', color: C.green },
-    { cita: '', pain: 'El margen real se descubre después', detalle: 'Cada propuesta parte de cero: géneros, personal, transporte. Sin datos, el margen es siempre una estimación.', modulo: 'Margen calculado antes', color: C.red },
+    { cita: '', pain: 'Comisiones del equipo a mano', detalle: 'Calcular el bono de cada comercial por margen, ticket y reseñas, con su % escalable de contrato, consume horas y genera discusiones.', modulo: 'Comercial e incentivos', color: C.red },
+    { cita: '', pain: 'Material de eventos sin control', detalle: 'Recuento de copas por vídeo, listas de papel y roturas que se descubren tarde. Cuánto material hace falta para la semana es siempre una estimación.', modulo: 'Material y roturas', color: C.teal },
+    { cita: '', pain: 'Cada presupuesto, desde cero', detalle: 'El cliente quiere respuesta rápida; montar el menú con su margen y enviarlo lleva tiempo. El que responde antes se lleva la boda.', modulo: 'Presupuesto self-service', color: C.amber },
+    { cita: '', pain: 'La cocina, en una isla', detalle: 'El sistema de cocina ya funciona y es bueno — pero vive aparte del comercial, del material y de la contabilidad del grupo.', modulo: 'Conectamos, no reemplazamos', color: C.green },
   ],
 
   headline: 'Dos haciendas · Bodas hasta 550 · Eventos empresa · Cocina central',
@@ -129,45 +174,48 @@ const config: ClienteConfig = {
   },
 
   datosEstrategicos: [
-    { titulo: 'Escandallos automáticos', desc: 'Un menú guardado una vez. ia.rest multiplica por el aforo y genera la compra. Para 50 eventos al año, son semanas de trabajo recuperadas.' },
-    { titulo: 'Dos haciendas, un solo panel', desc: 'Stock centralizado. Sabes en todo momento qué hay en El Alba y en Trinidad sin llamadas ni WhatsApps.' },
-    { titulo: 'Presupuestador con margen real', desc: 'Calcula el coste exacto de cada evento antes de confirmarlo. Nunca más cerrar una boda que no es rentable.' },
+    { titulo: 'Tu cocina, conectada al grupo', desc: 'El sistema de cocina que ya tenéis no se toca: se conecta. Sus escandallos y costes alimentan el presupuesto, la compra y la contabilidad del holding — sin reescribir nada.' },
+    { titulo: 'Comercial que se autogestiona', desc: 'Cada comercial con su pipeline, su comisión y su ranking calculados solos. Bonos por margen, ticket y reseñas con el % escalable de cada contrato.' },
+    { titulo: 'Material y previsión por evento', desc: 'Catálogo de menaje con stock real, roturas con foto al cerrar la boda y previsión de cuánto material y bebida hace falta según aforo y temporada.' },
   ],
 
-  objecionPrincipal: '"Tenemos nuestros procesos montados. No sé si merece la pena cambiar."',
-  respuestaObjecion: 'No cambias nada de golpe. Empezamos solo con escandallos y almacén — lo que más te duele hoy. El resto lo vas añadiendo tú cuando quieras.',
+  objecionPrincipal: '"Tenemos nuestros procesos montados, sobre todo en cocina. No sé si merece la pena cambiar."',
+  respuestaObjecion: 'No tocamos lo que ya funciona: el sistema de cocina se queda y nos conectamos a él. Empezamos por donde menos duele —el material de eventos y el comercial— y el resto lo vais añadiendo vosotros cuando queráis.',
 
   fasePiloto: [
     {
       fase: 'Semana 1-2',
       color: C.gold,
       items: [
-        'Alta de tus menús y escandallos en ia.rest',
-        'Conectamos tus proveedores habituales',
-        'Primer evento con lista de compra automática',
+        'Catálogo de material de eventos con stock real',
+        'Alta del equipo comercial con sus contratos y comisiones',
+        'Primer evento con material descontado automáticamente',
       ],
     },
     {
       fase: 'Semana 3-4',
       color: C.teal,
       items: [
-        'OCR albarán activo en ambas haciendas',
-        'Stock centralizado El Alba + Trinidad',
-        'Presupuestador configurado con tus márgenes',
+        'Inventario post-boda con roturas por foto',
+        'Ranking y comisiones del equipo en tiempo real',
+        'Conexión con vuestro sistema de cocina (escandallos → presupuesto)',
       ],
     },
     {
       fase: 'Mes 2',
       color: C.green,
       items: [
-        'KDS por pases en primer evento real',
-        'Gestión de personal por evento activa',
-        'Primer informe de rentabilidad real vs presupuestada',
+        'Previsión de material y bebida por evento',
+        'Presupuesto self-service del cliente (piloto)',
+        'Financiero del catering consolidado en plataforma',
       ],
     },
   ],
 
   modulos: [
+    MODULO_COMERCIAL(),
+    MODULO_MATERIAL(),
+    MODULO_MARKETPLACE(),
     MODULO_ESCANDALLOS_CATERING(),
     MODULO_ALMACEN_CATERING(),
     MODULO_PRESUPUESTADOR(),
