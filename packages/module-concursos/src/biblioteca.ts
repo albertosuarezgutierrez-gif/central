@@ -50,3 +50,24 @@ export function tipoDeDocumento(nombre: string): TipoDocumentoBiblioteca | undef
   }
   return undefined
 }
+
+/** Conjunto de tipos presentes en la biblioteca (para lookup O(1)). */
+function tiposEnBiblioteca(biblioteca: Biblioteca): Set<TipoDocumentoBiblioteca> {
+  return new Set(biblioteca.map(d => d.tipo))
+}
+
+/**
+ * Devuelve una copia del checklist con `hecho=true` en los ítems cuyo documento
+ * esté cubierto por la biblioteca. Conservador: solo marca lo que reconoce.
+ */
+export function autocompletarChecklist(
+  checklist: ItemChecklist[],
+  biblioteca: Biblioteca,
+): ItemChecklist[] {
+  const tipos = tiposEnBiblioteca(biblioteca)
+  return checklist.map(item => {
+    const tipo = tipoDeDocumento(item.documento)
+    const cubierto = tipo !== undefined && tipos.has(tipo)
+    return cubierto ? { ...item, hecho: true } : { ...item }
+  })
+}
