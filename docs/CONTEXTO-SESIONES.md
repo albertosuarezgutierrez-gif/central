@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏛️ Concursos F4 — Memoria técnica que puntúa — 11/06/2026**
+  Cuarta fase del agente de concursos (`packages/module-concursos`). Genera la **memoria técnica** atacando los
+  **criterios de juicio de valor** de la ficha y estima cuántos puntos técnicos cubre. Plan:
+  `docs/superpowers/plans/2026-06-11-concursos-f4-memoria-tecnica.md`.
+  - **Módulo puro (`src/memoria.ts`, TDD, 8 tests nuevos → 53/53 verde):** `planificarMemoria` (deriva una
+    sección por criterio de juicio de valor, ordenadas por puntos desc), `construirPromptMemoria` (par
+    `{system, user}` por sección, lo pasa la app al LLM como `construirPromptPliego`) y `coberturaMemoria`
+    (estima puntos cubiertos: una sección "puntúa" si su contenido alcanza `MIN_CONTENIDO_CHARS`; lista las
+    `vacias`). Tipos `SeccionMemoria`/`SeccionMemoriaRellena`/`MemoriaTecnica`/`CoberturaMemoria` en `types.ts`;
+    re-exports en `index.ts`. Sigue puro (sin BD/IA/secretos).
+  - **Integración ialimp (referencia):** columna **`concursos.memoria`** jsonb (`prisma/migrations/add_concursos_memoria.sql`);
+    endpoint `app/api/admin/concursos/[id]/memoria` (GET devuelve memoria guardada + cobertura; POST planifica, redacta
+    cada sección con el LLM vía el **`aiRunner`** de `lib/concursos.ts` —que envuelve `aiComplete` de core-ai— y persiste),
+    con `requireEmpresaId` + Prisma `$queryRaw` con casts (patrón del v1); panel **"Memoria técnica"** en la ficha de
+    `/admin/concursos` (botón "✍️ Generar memoria técnica" + barra de cobertura + secciones en `<details>`).
+    `✓ Compiled successfully` (aborta después en "Collecting page data" por `JWT_SECRET` ausente del entorno local — env, no código).
+  - **⚠️ Pendiente de Alberto:** aplicar `apps/ialimp/prisma/migrations/add_concursos_memoria.sql` en la BD compartida.
+
 - **🏛️ Concursos F3 — Sobre administrativo + DEUC — 11/06/2026**
   Tercera fase del agente de concursos (`packages/module-concursos`). Genera el **Sobre 1 (administrativo)**
   de un concurso tirando de la biblioteca de empresa (lista de documentos exigidos con qué doc los cubre),
