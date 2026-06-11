@@ -38,3 +38,37 @@ test('documentosSobreAdministrativo: solo devuelve documentos del sobre administ
   assert.ok(items.some(i => /Escritura/i.test(i.documento)))
   assert.ok(!items.some(i => /Memoria técnica/i.test(i.documento)))
 })
+
+import { construirDeuc } from '../src/deuc.ts'
+import type { DatosIdentificacionEmpresa } from '../src/types.ts'
+
+const EMPRESA: DatosIdentificacionEmpresa = {
+  razon_social: 'Limpiezas Ejemplo SL', nif: 'B12345678', es_pyme: true,
+}
+
+test('construirDeuc: rellena procedimiento, operador y solvencia desde la ficha', () => {
+  const ficha = fichaBase({
+    objeto: 'Limpieza de un colegio', expediente: '2026/01', organo_contratacion: 'Ayto. de X',
+    solvencia: [
+      { ambito: 'economica', descripcion: 'Volumen anual ≥ 100.000 €' },
+      { ambito: 'tecnica', descripcion: 'Servicios similares en 3 años' },
+    ],
+  })
+  const deuc = construirDeuc(EMPRESA, ficha, '2026-06-11')
+  assert.equal(deuc.procedimiento.objeto, 'Limpieza de un colegio')
+  assert.equal(deuc.procedimiento.expediente, '2026/01')
+  assert.equal(deuc.procedimiento.organo, 'Ayto. de X')
+  assert.equal(deuc.operador.nif, 'B12345678')
+  assert.deepEqual(deuc.solvencia.economica, ['Volumen anual ≥ 100.000 €'])
+  assert.deepEqual(deuc.solvencia.tecnica, ['Servicios similares en 3 años'])
+})
+
+test('construirDeuc: motivos de exclusión y declaración final por defecto a favor', () => {
+  const deuc = construirDeuc(EMPRESA, fichaBase(), '2026-06-11')
+  assert.equal(deuc.motivos_exclusion.sin_condenas, true)
+  assert.equal(deuc.motivos_exclusion.al_corriente_impuestos, true)
+  assert.equal(deuc.motivos_exclusion.al_corriente_ss, true)
+  assert.equal(deuc.motivos_exclusion.sin_quiebra, true)
+  assert.equal(deuc.declaraciones_finales.veracidad, true)
+  assert.equal(deuc.declaraciones_finales.fecha, '2026-06-11')
+})

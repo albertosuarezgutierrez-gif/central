@@ -44,3 +44,34 @@ export function documentosSobreAdministrativo(
       return out
     })
 }
+
+/**
+ * Ensambla el DEUC por partes. Los motivos de exclusión y la veracidad se
+ * declaran a favor (el licitador afirma estar limpio y al corriente); la app
+ * permite editarlos antes de firmar. La solvencia sale de la ficha.
+ */
+export function construirDeuc(
+  empresa: DatosIdentificacionEmpresa,
+  ficha: FichaConcurso,
+  hoy?: string,
+): Deuc {
+  return {
+    procedimiento: {
+      objeto: ficha.objeto,
+      expediente: ficha.expediente,
+      organo: ficha.organo_contratacion,
+    },
+    operador: empresa,
+    motivos_exclusion: {
+      sin_condenas: true,
+      al_corriente_impuestos: true,
+      al_corriente_ss: true,
+      sin_quiebra: true,
+    },
+    solvencia: {
+      economica: ficha.solvencia.filter(s => s.ambito === 'economica').map(s => s.descripcion),
+      tecnica: ficha.solvencia.filter(s => s.ambito === 'tecnica').map(s => s.descripcion),
+    },
+    declaraciones_finales: { veracidad: true, fecha: hoy },
+  }
+}
