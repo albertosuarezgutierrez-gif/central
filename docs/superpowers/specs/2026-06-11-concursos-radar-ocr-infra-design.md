@@ -7,19 +7,21 @@
 ## Objetivo
 
 Que el agente de concursos:
-1. **Avise solo** de licitaciones de PLACSP que encajan con la empresa (radar en vivo por cron + web-push).
+1. **Avise solo** de licitaciones de PLACSP que encajan con la empresa (radar en vivo por cron; aviso in-app de no vistos).
 2. **Lea pliegos escaneados** (PDF imagen) reutilizando la visión IA que ya tiene ialimp (`nimVision`), sin Tesseract ni servicios/llaves nuevas.
 
-Reutiliza al máximo lo existente: módulo puro (`filtrarRadar`/`necesitaOcr`), web-push (`lib/push.ts`), visión IA (`nimVision` de core-ai), patrón de crons (`vercel.json` + auth) y el patrón multi-tenant de ialimp (`requireEmpresaId`, Prisma `$queryRaw` con casts).
+Reutiliza al máximo lo existente: módulo puro (`filtrarRadar`/`necesitaOcr`), visión IA (`nimVision` de core-ai), patrón de crons multi-tenant (`vercel.json` + bucle `SELECT id FROM empresas`, como `informes/cron`) y el patrón multi-tenant de ialimp (`requireEmpresaId`, Prisma `$queryRaw` con casts).
 
 ## Arquitectura
 
 Dos flujos nuevos en `apps/ialimp`, ambos apoyados en el módulo puro:
 
-- **Radar:** `cron → fetch ATOM PLACSP (paginado) → parsear a AnuncioRadar[] → filtrarRadar(criterios de cada empresa) → guardar matches nuevos (dedupe) → web-push a los admins de la empresa`.
+- **Radar:** `cron → fetch ATOM PLACSP (paginado) → parsear a AnuncioRadar[] → filtrarRadar(criterios de cada empresa) → guardar matches nuevos (dedupe)`. El **aviso es in-app**: la UI muestra el contador de matches **no vistos**.
 - **OCR:** dentro del análisis del pliego: si `necesitaOcr(textoExtraído)` → rasterizar páginas del PDF a imágenes → `nimVision` por página (transcripción literal) → texto → seguir el análisis normal con `analizarPliego`.
 
 El **parseo de ATOM** (XML → `AnuncioRadar[]`) y la **dedupe_key** se implementan como funciones **puras y testeables** en `apps/ialimp/lib/concursos-radar.ts` (sin red ni BD), con tests `node --test` contra un fixture XML recortado real.
+
+**Nota sobre el aviso:** en ialimp `push_subscriptions` es **solo de limpiadoras**, no de admins; avisar al admin por web-push exigiría infra de suscripción nueva (sobredimensionado). Por eso el aviso del radar es **in-app** (contador de no vistos + lista). El email al `empresas.email` (ya usado por `informes/generar`) queda como mejora futura trivial.
 
 ## Fuente del radar (decisión)
 
@@ -64,8 +66,8 @@ La `dedupe_key` se deriva del identificador estable del anuncio (id ATOM / nº e
 - `GET /api/admin/concursos/radar` — lista los matches de la empresa (orden por `created_at desc`); soporta `?no_vistos=1`.
 - `POST /api/admin/concursos/radar/visto` — marca un match como visto.
 - `POST /api/admin/concursos/radar/importar` — import manual: recibe un ATOM (texto/fichero), lo parsea, filtra y guarda como el cron pero solo para la empresa actual.
-- `GET /api/cron/concursos-radar` — el cron. Por cada empresa con `radar_activo`: arma `CriteriosRadar` desde sus columnas, hace fetch del ATOM (compartido entre empresas en la misma ejecución; se descarga una vez y se filtra N veces), `filtrarRadar`, inserta matches nuevos (`insert … on conflict (empresa_id, dedupe_key) do nothing`), y si hubo inserciones → `push` a los admins de la empresa con un resumen ("N nuevas licitaciones para ti"). Auth de cron siguiendo el patrón de la casa.
-- `vercel.json`: cron `/api/cron/concursos-radar` cada 6 h (`0 */6 * * *`). `maxDuration` holgado en la ruta.
+- `GET /api/cron/concursos-radar` — el cron. Descarga el ATOM una vez (paginado, con tope de páginas/tiempo) → `parsearAtomPlacsp`. Por cada empresa con `radar_activo`: arma `CriteriosRadar` desde sus columnas, `filtrarRadar`, inserta matches nuevos (`insert … on conflict (empresa_id, dedupe_key) do nothing`). Sin auth de cron (lo invoca Vercel cron, como `informes/cron`). `export const dynamic = 'force-dynamic'`, `maxDuration` holgado.
+- `vercel.json`: cron `/api/cron/concursos-radar` cada 6 h (`0 */6 * * *`).
 
 ## OCR — integración
 
@@ -108,7 +110,7 @@ if (necesitaOcr(texto)) {
 
 - Aplicar las 2 migraciones en Supabase (`concursos_perfil_empresa` ampliada + `concursos_radar_anuncios`).
 - (Opcional) Ajustar `PLACSP_FEED_URL` por CPV/región para reducir ruido. Sin tocar nada, usa el default público.
-- Confirmar que `CRON_SECRET` (o el mecanismo de auth de cron de la casa) está disponible para la nueva ruta de cron, como el resto.
+- El cron no necesita secreto (lo invoca Vercel cron, como `informes/cron`).
 
 ## Fuera de alcance (futuro)
 
