@@ -204,6 +204,11 @@
   /api/admin/clientes` devuelve solo activos por defecto (`?incluir_inactivos=1` para todos) → limpia todos
   los selectores. UI: filtro Activos/Inactivos + modal de confirmación con resumen + aviso de impagos +
   motivo + botón Reactivar. Spec: `docs/superpowers/specs/2026-06-11-desactivar-cliente-design.md`.
+  **✅ Probado en vivo contra producción** (cliente `[TEST] Pisos Sevilla Centro SL`, sin tocar datos
+  reales): desactivar deja `activo=false` + auditoría `desactivado_*` + `session_jti` rotado (corta sesión
+  del portal) + lo excluye del selector activo y del cron `pms/sync`; reactivar restaura todo y conserva los
+  2 pisos. Ciclo completo verificado y cliente dejado como estaba. Pendiente único: prueba de la UI/HTTP
+  autenticada como Vanessa (no se pudo ejercitar sin su sesión); la capa de datos está verificada.
 
 - **🎛️ God-panel (panel único de operador) F1–F5 en `apps/plataforma/admin` — 10/06/2026 (PR #118)**
   Panel de Alberto que gobierna TODAS las verticales desde un sitio, reutilizando la tabla `superadmins`
