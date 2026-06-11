@@ -20,6 +20,9 @@ export type {
   Semaforo,
   BanderaRoja,
   EvaluacionGoNoGo,
+  TipoDocumentoBiblioteca,
+  DocumentoBiblioteca,
+  Biblioteca,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -47,3 +50,11 @@ export {
   totalPuntos,
 } from './scoring'
 export type { GarantiasCalculadas, BajaTemeraria, FormulaEconomica } from './scoring'
+
+// Biblioteca de empresa (puro): autocompletado del checklist + caducidades
+export {
+  tipoDeDocumento,
+  autocompletarChecklist,
+  documentosFaltantes,
+  documentosCaducados,
+} from './biblioteca'
