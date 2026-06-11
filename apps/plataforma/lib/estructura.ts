@@ -11,7 +11,7 @@ export type EstadoModulo = 'usado' | 'declarado' | 'no'
 export interface CeldaModulo { estado: EstadoModulo; evidencias: number }
 export interface CeldaCapacidad { presente: boolean; evidencias: number }
 export interface PackageRadiografia { id: string; tipo: 'core' | 'module'; npm: string }
-export interface CapacidadRadiografia { id: string; grupo: string; label: string }
+export interface CapacidadRadiografia { id: string; grupo: string; label: string; modulo?: string }
 export interface Radiografia {
   generadoEn: string
   verticales: string[]
@@ -23,8 +23,9 @@ export interface Radiografia {
   gaps: {
     modulosInfrautilizados: { package: string; app: string }[]
     oportunidadesPortar: { capacidad: string; label: string; tiene: string[]; falta: string[] }[]
+    reimplementaciones: { capacidad: string; label: string; modulo: string; conModulo: string[]; duplicada: string[] }[]
   }
-  resumen: { verticales: number; packages: number; capacidades: number; modulosInfrautilizados: number; oportunidadesPortar: number }
+  resumen: { verticales: number; packages: number; capacidades: number; modulosInfrautilizados: number; oportunidadesPortar: number; reimplementaciones: number }
 }
 
 /** Radiografía del repo (auditoría automática). Generada por `npm run auditar`. */

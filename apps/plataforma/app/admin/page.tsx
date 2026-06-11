@@ -467,6 +467,7 @@ function Radiografia() {
         <Kpi label="Packages" valor={String(R.resumen.packages)} />
         <Kpi label="Capacidades" valor={String(R.resumen.capacidades)} />
         <Kpi label="Módulos sin usar" valor={String(R.resumen.modulosInfrautilizados)} />
+        <Kpi label="Reimplementaciones" valor={String(R.resumen.reimplementaciones)} />
       </div>
 
       <div style={sub}>🧩 Módulos por vertical <span style={{ color: C.muted, fontWeight: 500 }}>· quién usa cada package</span></div>
@@ -484,6 +485,23 @@ function Radiografia() {
       <div style={sub}>🗂️ Funciones / áreas por vertical <span style={{ color: C.muted, fontWeight: 500 }}>· detectado por rutas</span></div>
       <Matriz cols={R.verticales}
         secciones={grupos.map(g => ({ titulo: g.grupo, filas: g.caps.map(c => ({ label: c.label, cells: R.verticales.map(v => capCell(R.matrizCapacidades[c.id]?.[v])) })) }))} />
+
+      {R.gaps.reimplementaciones.length > 0 && (
+        <div style={{ marginTop: 24 }}>
+          <div style={sub}>♻️ Reimplementaciones <span style={{ color: C.muted, fontWeight: 500 }}>· la función existe pero NO usa el módulo compartido (lógica duplicada)</span></div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {R.gaps.reimplementaciones.map(r => (
+              <div key={r.capacidad} style={{ ...card('#7a2a2a'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '10px 14px' }}>
+                <span style={{ fontWeight: 700, fontSize: 13 }}>{r.label} <code style={{ background: C.card2, padding: '1px 5px', borderRadius: 4, fontSize: 11, color: C.muted }}>{r.modulo}</code></span>
+                <span style={{ fontSize: 12, color: C.muted }}>
+                  a mano en <strong style={{ color: '#fca5a5' }}>{r.duplicada.map(vlabel).join(', ')}</strong>
+                  {r.conModulo.length > 0 && <> · con módulo en <strong style={{ color: C.ok }}>{r.conModulo.map(vlabel).join(', ')}</strong></>}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {R.gaps.oportunidadesPortar.length > 0 && (
         <div style={{ marginTop: 24 }}>

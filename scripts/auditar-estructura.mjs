@@ -26,21 +26,24 @@ const MATRIZ = 'plataforma'
 
 // Catálogo curado de capacidades/áreas. El CÓDIGO marca ✅/❌; este catálogo define
 // QUÉ buscar (globs relativos a la raíz de cada app: ** = cualquier tramo, * = un tramo).
+// `modulo` (opcional): el package de dominio que DEBERÍA respaldar la capacidad. Si una
+// vertical tiene la capacidad pero NO usa ese módulo → reimplementación (lógica duplicada).
 const CAPACIDADES = [
   { id: 'tpv',                    grupo: 'Venta y operación', label: 'TPV / comanda',           match: ['**/api/caja/**', '**/api/turno/**', '**/api/comanda*/**', '**/api/mesa/**', '**/api/marchar/**'] },
   { id: 'kds',                    grupo: 'Venta y operación', label: 'KDS (cocina)',            match: ['**/api/kds/**', '**/api/cocina/**', '**/kds/**'] },
   { id: 'eventos-catering',       grupo: 'Venta y operación', label: 'Eventos / catering / BEO', match: ['**/api/eventos/**', '**/api/eventos-catering/**', '**/api/kds-evento/**', '**/api/propuesta/**'] },
   { id: 'reservas',              grupo: 'Venta y operación', label: 'Reservas',                match: ['**/api/reservas/**', '**/api/booking*/**', '**/propuesta/*/booking/**'] },
   { id: 'qr-portal',             grupo: 'Cliente',           label: 'QR / portal cliente',     match: ['**/api/edge/**', '**/api/qr/**', '**/api/portal/**', '**/qr/**', '**/portal/**'] },
-  { id: 'feedback',              grupo: 'Cliente',           label: 'Feedback / propinas',     match: ['**/api/feedback/**', '**/api/propinas/**', '**/feedback/**'] },
+  { id: 'feedback',              grupo: 'Cliente',           label: 'Feedback / propinas',     modulo: 'module-feedback', match: ['**/api/feedback/**', '**/api/propinas/**', '**/feedback/**'] },
   { id: 'limpiadoras',           grupo: 'Limpieza / inmob.', label: 'Equipo limpiadoras',      match: ['**/api/limpiadoras/**', '**/api/*/limpiadoras/**', '**/limpiadoras/**'] },
   { id: 'agenda-asignacion',     grupo: 'Limpieza / inmob.', label: 'Agenda / auto-asignación', match: ['**/api/*/agenda/**', '**/api/*/asignacion/**', '**/auto-assign/**', '**/api/*/auto-assign/**'] },
   { id: 'pricing',               grupo: 'Inmobiliario',      label: 'Pricing dinámico',        match: ['**/api/rates/**', '**/api/pricing/**', '**/api/pricing-alerts/**', '**/api/inversion/**', '**/pricing/**', '**/pricing-auto/**'] },
   { id: 'mercado',               grupo: 'Inmobiliario',      label: 'Mercado / ingest',        match: ['**/api/mercado/**', '**/api/updates/**', '**/api/smoobu/**', '**/mercado/**'] },
-  { id: 'crm-leads',             grupo: 'Negocio',           label: 'CRM / leads / cotizador', match: ['**/api/crm/**', '**/api/leads/**', '**/api/lead-saas/**', '**/api/cotizador/**', '**/cotizador/**', '**/crm/**'] },
+  { id: 'crm-leads',             grupo: 'Negocio',           label: 'CRM / leads / cotizador', modulo: 'module-crm', match: ['**/api/crm/**', '**/api/leads/**', '**/api/lead-saas/**', '**/api/cotizador/**', '**/cotizador/**', '**/crm/**'] },
   { id: 'marketing',             grupo: 'Negocio',           label: 'Marketing (blog/IG/SEO)', match: ['**/api/blog*/**', '**/api/instagram/**', '**/api/ig-*/**', '**/api/marketing/**', '**/api/seo*/**', '**/seo/**'] },
   { id: 'rrhh',                  grupo: 'Negocio',           label: 'RRHH / equipo',           match: ['**/api/rrhh/**', '**/api/*/nomina/**', '**/api/*/equipo/**', '**/equipo/**', '**/rrhh/**'] },
-  { id: 'almacen-stock',         grupo: 'Stock',             label: 'Almacén / stock / ASN',   match: ['**/api/asn/**', '**/api/almacen*/**', '**/api/*/productos/**', '**/api/*/reposiciones/**', '**/api/*/stock/**', '**/stock/**', '**/materiales/**', '**/lenceria/**'] },
+  { id: 'almacen-stock',         grupo: 'Stock',             label: 'Almacén / stock / ASN',   modulo: 'module-inventario', match: ['**/api/asn/**', '**/api/almacen*/**', '**/api/*/productos/**', '**/api/*/menaje/**', '**/api/*/reposiciones/**', '**/api/*/stock/**', '**/stock/**', '**/materiales/**', '**/lenceria/**'] },
+  { id: 'proveedores',           grupo: 'Stock',             label: 'Proveedores / compras',   modulo: 'module-proveedores', match: ['**/api/**/proveedores/**', '**/api/**/proveedores-*/**', '**/proveedores/**'] },
   { id: 'contabilidad',          grupo: 'Finanzas',          label: 'Contabilidad',            match: ['**/api/*/contabilidad/**', '**/api/contabilidad/**', '**/contabilidad/**'] },
   { id: 'facturacion-verifactu', grupo: 'Finanzas',          label: 'Facturación / VeriFactu', match: ['**/api/factura/**', '**/api/*/factura*/**', '**/api/*/facturacion/**', '**/facturas/**', '**/verifactu/**'] },
   { id: 'hardware-bridge',       grupo: 'Plataforma',        label: 'Hardware bridge',         match: ['**/api/bridge/**', '**/api/print/**', '**/api/cloudprnt/**', '**/api/cashdro/**', '**/bridge/**'] },
@@ -48,7 +51,7 @@ const CAPACIDADES = [
   { id: 'informes',             grupo: 'Plataforma',        label: 'Informes',                match: ['**/api/*/informes/**', '**/api/informes/**', '**/informes/**'] },
   { id: 'notificaciones',        grupo: 'Plataforma',        label: 'Notificaciones (push)',   match: ['**/api/push/**', '**/api/*/vapid*/**', '**/api/*/push/**'] },
   { id: 'asistente-ia',          grupo: 'Plataforma',        label: 'Asistente / copiloto IA', match: ['**/api/*/asistente/**', '**/api/asistente/**', '**/api/agente/**', '**/api/brain/**', '**/api/owner/**', '**/asistente/**', '**/agente/**'] },
-  { id: 'concursos',            grupo: 'Negocio',           label: 'Concursos públicos',      match: ['**/api/*/concursos/**', '**/api/concursos/**', '**/concursos/**'] },
+  { id: 'concursos',            grupo: 'Negocio',           label: 'Concursos públicos',      modulo: 'module-concursos', match: ['**/api/*/concursos/**', '**/api/concursos/**', '**/concursos/**'] },
 ]
 
 // ── helpers ───────────────────────────────────────────────────────────────────
@@ -157,21 +160,34 @@ for (const c of CAPACIDADES) {
   if (tiene.length && falta.length) oportunidadesPortar.push({ capacidad: c.id, label: c.label, tiene, falta })
 }
 
+// Reimplementaciones: la capacidad ESTÁ presente en la vertical, pero NO usa el módulo de
+// dominio que debería respaldarla → lógica duplicada a mano (deuda de portabilidad). Esto
+// NO lo ve "oportunidadesPortar" (que solo compara presencia/ausencia entre verticales):
+// una capacidad presente en todas, pero con módulo compartido solo en una, salía "en verde".
+const reimplementaciones = []
+for (const c of CAPACIDADES) {
+  if (!c.modulo || !matrizModulos[c.modulo]) continue
+  const duplicada = prod.filter(v => matrizCapacidades[c.id][v].presente && matrizModulos[c.modulo][v].estado !== 'usado')
+  const conModulo = prod.filter(v => matrizCapacidades[c.id][v].presente && matrizModulos[c.modulo][v].estado === 'usado')
+  if (duplicada.length) reimplementaciones.push({ capacidad: c.id, label: c.label, modulo: c.modulo, conModulo, duplicada })
+}
+
 const out = {
   generadoEn: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
   verticales,
   matriz: MATRIZ,
   packages,
-  capacidades: CAPACIDADES.map(({ id, grupo, label }) => ({ id, grupo, label })),
+  capacidades: CAPACIDADES.map(({ id, grupo, label, modulo }) => (modulo ? { id, grupo, label, modulo } : { id, grupo, label })),
   matrizModulos,
   matrizCapacidades,
-  gaps: { modulosInfrautilizados, oportunidadesPortar },
+  gaps: { modulosInfrautilizados, oportunidadesPortar, reimplementaciones },
   resumen: {
     verticales: verticales.length,
     packages: packages.length,
     capacidades: CAPACIDADES.length,
     modulosInfrautilizados: modulosInfrautilizados.length,
     oportunidadesPortar: oportunidadesPortar.length,
+    reimplementaciones: reimplementaciones.length,
   },
 }
 
@@ -201,5 +217,5 @@ if (process.argv.includes('--check')) {
     console.log(`✓ Radiografía escrita en ${relative(ROOT, OUT)}`)
   }
   console.log(`  ${out.resumen.verticales} verticales · ${out.resumen.packages} packages · ${out.resumen.capacidades} capacidades`)
-  console.log(`  ${out.resumen.modulosInfrautilizados} módulos infrautilizados · ${out.resumen.oportunidadesPortar} oportunidades de portar`)
+  console.log(`  ${out.resumen.modulosInfrautilizados} módulos infrautilizados · ${out.resumen.oportunidadesPortar} oportunidades de portar · ${out.resumen.reimplementaciones} reimplementaciones`)
 }
