@@ -1,0 +1,1131 @@
+{
+  "generadoEn": "2026-06-11T13:48:49Z",
+  "verticales": [
+    "ia-rest",
+    "ialimp",
+    "plataforma",
+    "sivra"
+  ],
+  "matriz": "plataforma",
+  "packages": [
+    {
+      "id": "core-ai",
+      "tipo": "core",
+      "npm": "@iarest/core-ai"
+    },
+    {
+      "id": "core-email",
+      "tipo": "core",
+      "npm": "@iarest/core-email"
+    },
+    {
+      "id": "core-fiscal",
+      "tipo": "core",
+      "npm": "@iarest/core-fiscal"
+    },
+    {
+      "id": "core-identity",
+      "tipo": "core",
+      "npm": "@iarest/core-identity"
+    },
+    {
+      "id": "core-push",
+      "tipo": "core",
+      "npm": "@iarest/core-push"
+    },
+    {
+      "id": "core-storage",
+      "tipo": "core",
+      "npm": "@iarest/core-storage"
+    },
+    {
+      "id": "module-agenda",
+      "tipo": "module",
+      "npm": "@iarest/module-agenda"
+    },
+    {
+      "id": "module-asn",
+      "tipo": "module",
+      "npm": "@iarest/module-asn"
+    },
+    {
+      "id": "module-concursos",
+      "tipo": "module",
+      "npm": "@iarest/module-concursos"
+    },
+    {
+      "id": "module-contabilidad",
+      "tipo": "module",
+      "npm": "@iarest/module-contabilidad"
+    },
+    {
+      "id": "module-crm",
+      "tipo": "module",
+      "npm": "@iarest/module-crm"
+    },
+    {
+      "id": "module-feedback",
+      "tipo": "module",
+      "npm": "@iarest/module-feedback"
+    },
+    {
+      "id": "module-inventario",
+      "tipo": "module",
+      "npm": "@iarest/module-inventario"
+    },
+    {
+      "id": "module-presupuestos",
+      "tipo": "module",
+      "npm": "@iarest/module-presupuestos"
+    },
+    {
+      "id": "module-proveedores",
+      "tipo": "module",
+      "npm": "@iarest/module-proveedores"
+    }
+  ],
+  "capacidades": [
+    {
+      "id": "tpv",
+      "grupo": "Venta y operación",
+      "label": "TPV / comanda"
+    },
+    {
+      "id": "kds",
+      "grupo": "Venta y operación",
+      "label": "KDS (cocina)"
+    },
+    {
+      "id": "eventos-catering",
+      "grupo": "Venta y operación",
+      "label": "Eventos / catering / BEO"
+    },
+    {
+      "id": "reservas",
+      "grupo": "Venta y operación",
+      "label": "Reservas"
+    },
+    {
+      "id": "qr-portal",
+      "grupo": "Cliente",
+      "label": "QR / portal cliente"
+    },
+    {
+      "id": "feedback",
+      "grupo": "Cliente",
+      "label": "Feedback / propinas",
+      "modulo": "module-feedback"
+    },
+    {
+      "id": "limpiadoras",
+      "grupo": "Limpieza / inmob.",
+      "label": "Equipo limpiadoras"
+    },
+    {
+      "id": "agenda-asignacion",
+      "grupo": "Limpieza / inmob.",
+      "label": "Agenda / auto-asignación"
+    },
+    {
+      "id": "pricing",
+      "grupo": "Inmobiliario",
+      "label": "Pricing dinámico"
+    },
+    {
+      "id": "mercado",
+      "grupo": "Inmobiliario",
+      "label": "Mercado / ingest"
+    },
+    {
+      "id": "crm-leads",
+      "grupo": "Negocio",
+      "label": "CRM / leads / cotizador",
+      "modulo": "module-crm"
+    },
+    {
+      "id": "marketing",
+      "grupo": "Negocio",
+      "label": "Marketing (blog/IG/SEO)"
+    },
+    {
+      "id": "rrhh",
+      "grupo": "Negocio",
+      "label": "RRHH / equipo"
+    },
+    {
+      "id": "almacen-stock",
+      "grupo": "Stock",
+      "label": "Almacén / stock / ASN",
+      "modulo": "module-inventario"
+    },
+    {
+      "id": "proveedores",
+      "grupo": "Stock",
+      "label": "Proveedores / compras",
+      "modulo": "module-proveedores"
+    },
+    {
+      "id": "contabilidad",
+      "grupo": "Finanzas",
+      "label": "Contabilidad"
+    },
+    {
+      "id": "facturacion-verifactu",
+      "grupo": "Finanzas",
+      "label": "Facturación / VeriFactu"
+    },
+    {
+      "id": "hardware-bridge",
+      "grupo": "Plataforma",
+      "label": "Hardware bridge"
+    },
+    {
+      "id": "escaner-ocr",
+      "grupo": "Plataforma",
+      "label": "Escáner / OCR"
+    },
+    {
+      "id": "informes",
+      "grupo": "Plataforma",
+      "label": "Informes"
+    },
+    {
+      "id": "notificaciones",
+      "grupo": "Plataforma",
+      "label": "Notificaciones (push)"
+    },
+    {
+      "id": "asistente-ia",
+      "grupo": "Plataforma",
+      "label": "Asistente / copiloto IA"
+    },
+    {
+      "id": "concursos",
+      "grupo": "Negocio",
+      "label": "Concursos públicos",
+      "modulo": "module-concursos"
+    }
+  ],
+  "matrizModulos": {
+    "core-ai": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 10
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "core-email": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 5
+      }
+    },
+    "core-fiscal": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-identity": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 8
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-push": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 1
+      }
+    },
+    "core-storage": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "module-agenda": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-asn": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-concursos": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 11
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-contabilidad": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "module-crm": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-feedback": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-inventario": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 1
+      }
+    },
+    "module-presupuestos": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-proveedores": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 1
+      }
+    }
+  },
+  "matrizCapacidades": {
+    "tpv": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 18
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "kds": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 11
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "eventos-catering": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 5
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "reservas": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "qr-portal": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 27
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "feedback": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 7
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "limpiadoras": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 4
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 31
+      }
+    },
+    "agenda-asignacion": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "pricing": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 20
+      }
+    },
+    "mercado": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 10
+      }
+    },
+    "crm-leads": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 4
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "marketing": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 5
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 3
+      }
+    },
+    "rrhh": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 10
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "almacen-stock": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 15
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 8
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "proveedores": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 7
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "contabilidad": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 16
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "facturacion-verifactu": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 9
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "hardware-bridge": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 15
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "escaner-ocr": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "informes": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "notificaciones": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "asistente-ia": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 153
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 3
+      }
+    },
+    "concursos": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 13
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    }
+  },
+  "gaps": {
+    "modulosInfrautilizados": [],
+    "oportunidadesPortar": [
+      {
+        "capacidad": "tpv",
+        "label": "TPV / comanda",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "kds",
+        "label": "KDS (cocina)",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "eventos-catering",
+        "label": "Eventos / catering / BEO",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "reservas",
+        "label": "Reservas",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "qr-portal",
+        "label": "QR / portal cliente",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "feedback",
+        "label": "Feedback / propinas",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "limpiadoras",
+        "label": "Equipo limpiadoras",
+        "tiene": [
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest"
+        ]
+      },
+      {
+        "capacidad": "agenda-asignacion",
+        "label": "Agenda / auto-asignación",
+        "tiene": [
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest"
+        ]
+      },
+      {
+        "capacidad": "pricing",
+        "label": "Pricing dinámico",
+        "tiene": [
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest",
+          "ialimp"
+        ]
+      },
+      {
+        "capacidad": "mercado",
+        "label": "Mercado / ingest",
+        "tiene": [
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest",
+          "ialimp"
+        ]
+      },
+      {
+        "capacidad": "crm-leads",
+        "label": "CRM / leads / cotizador",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "marketing",
+        "label": "Marketing (blog/IG/SEO)",
+        "tiene": [
+          "ia-rest",
+          "sivra"
+        ],
+        "falta": [
+          "ialimp"
+        ]
+      },
+      {
+        "capacidad": "rrhh",
+        "label": "RRHH / equipo",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "contabilidad",
+        "label": "Contabilidad",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "facturacion-verifactu",
+        "label": "Facturación / VeriFactu",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "hardware-bridge",
+        "label": "Hardware bridge",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "escaner-ocr",
+        "label": "Escáner / OCR",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "informes",
+        "label": "Informes",
+        "tiene": [
+          "ialimp"
+        ],
+        "falta": [
+          "ia-rest",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "notificaciones",
+        "label": "Notificaciones (push)",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "concursos",
+        "label": "Concursos públicos",
+        "tiene": [
+          "ialimp"
+        ],
+        "falta": [
+          "ia-rest",
+          "sivra"
+        ]
+      }
+    ],
+    "reimplementaciones": []
+  },
+  "resumen": {
+    "verticales": 4,
+    "packages": 15,
+    "capacidades": 23,
+    "modulosInfrautilizados": 0,
+    "oportunidadesPortar": 20,
+    "reimplementaciones": 0
+  }
+}

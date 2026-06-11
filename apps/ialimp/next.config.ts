@@ -6,7 +6,7 @@ import path from "path"
 const monorepoRoot = path.join(__dirname, "..", "..")
 
 const nextConfig: NextConfig = {
-  serverExternalPackages: ["node-ical", "pdf-parse"],
+  serverExternalPackages: ["node-ical", "pdf-parse", "@napi-rs/canvas", "pdfjs-dist"],
   transpilePackages: ["@iarest/core-ai", "@iarest/core-push", "@iarest/core-storage", "@iarest/core-email", "@iarest/module-contabilidad", "@iarest/module-concursos"],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },

@@ -3,6 +3,7 @@ import { serialize } from '@/lib/serialize'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
+import { articuloAdapter, resumenStock } from '@/lib/adapters/inventario'
 
 export async function GET(req: Request) {
   try {
@@ -15,7 +16,9 @@ export async function GET(req: Request) {
       WHERE s.empresa_id = ${empresa_id}::uuid AND s.activo = true
       ORDER BY s.categoria, s.nombre
     `)
-    return NextResponse.json(serialize({ productos }))
+    const articulos = productos.map(articuloAdapter.toArticulo)
+    const resumen = resumenStock(articulos)
+    return NextResponse.json(serialize({ productos, resumen }))
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }

@@ -54,6 +54,10 @@
     {
       "path": "/api/superadmin/mailing/cron",
       "schedule": "*/3 * * * *"
+    },
+    {
+      "path": "/api/cron/concursos-radar",
+      "schedule": "0 */6 * * *"
     }
   ]
 }

@@ -3,7 +3,7 @@
 // (`/api/operador/restaurantes`) con un secreto compartido. Sin fusionar BD.
 // Requiere envs en plataforma: IAREST_URL + OPERADOR_SHARED_SECRET.
 
-import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica } from './types'
+import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica, PersonaDirectorio } from './types'
 
 interface RestaurantePort {
   id: string
@@ -33,6 +33,7 @@ async function port(path: string, init?: RequestInit): Promise<Response | null> 
       ...init,
       headers: { Authorization: `Bearer ${s}`, 'Content-Type': 'application/json', ...(init?.headers || {}) },
       cache: 'no-store',
+      signal: AbortSignal.timeout(8000), // no colgar la lista si ia-rest no responde
     })
   } catch {
     return null
@@ -57,7 +58,8 @@ function aCliente(r: RestaurantePort): ClienteSaaS {
 
 async function listarRaw(): Promise<RestaurantePort[]> {
   const res = await port('/api/operador/restaurantes')
-  if (!res || !res.ok) throw new Error('puerto no disponible')
+  if (!res) throw new Error('sin conexión (red/timeout/WAF)')
+  if (!res.ok) throw new Error(`HTTP ${res.status}`) // 401 = secreto · 500 = BD de ia-rest
   const json = await res.json()
   return (json.restaurantes ?? []) as RestaurantePort[]
 }
@@ -80,8 +82,8 @@ export const iarestAdapter: VerticalAdapter = {
     if (!base() || !secret()) return [info('configura IAREST_URL + OPERADOR_SHARED_SECRET')]
     try {
       return (await listarRaw()).map(aCliente)
-    } catch {
-      return [info('puerto no responde')]
+    } catch (e: any) {
+      return [info(`puerto no responde (${e?.message || 'error'})`)]
     }
   },
 
@@ -106,5 +108,25 @@ export const iarestAdapter: VerticalAdapter = {
   async setActivo(id, activo) {
     const res = await port('/api/operador/restaurantes', { method: 'PATCH', body: JSON.stringify({ id, activo }) })
     return !!res && res.ok
+  },
+
+  // Directorio del restaurante (localId = refExt) por el puerto HTTP de ia-rest.
+  async listarDirectorio(localId) {
+    const res = await port(`/api/operador/directorio?local_id=${encodeURIComponent(localId)}`)
+    if (!res || !res.ok) return []
+    const json = await res.json().catch(() => ({}))
+    return (json.personas ?? []) as PersonaDirectorio[]
+  },
+
+  // Grupos dinámicos: 'evento:<id>' → participantes (personal) del evento/catering.
+  async resolverGrupo(origenRef) {
+    const sep = origenRef.indexOf(':')
+    const tipo = sep < 0 ? origenRef : origenRef.slice(0, sep)
+    const id = sep < 0 ? '' : origenRef.slice(sep + 1)
+    if (tipo !== 'evento' || !id) return []
+    const res = await port(`/api/operador/evento-personas?evento_id=${encodeURIComponent(id)}`)
+    if (!res || !res.ok) return []
+    const json = await res.json().catch(() => ({}))
+    return (json.personas ?? []) as PersonaDirectorio[]
   },
 }

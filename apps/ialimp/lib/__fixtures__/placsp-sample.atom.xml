@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom"
+      xmlns:cbc="urn:dgpe:names:draft:codice:schema:xsd:CommonBasicComponents-2"
+      xmlns:cac="urn:dgpe:names:draft:codice:schema:xsd:CommonAggregateComponents-2"
+      xmlns:cac-place-ext="urn:dgpe:names:draft:codice-place-ext:schema:xsd:CommonAggregateComponents-2">
+  <title>Licitaciones publicadas</title>
+  <link rel="next" href="https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3_page2.atom"/>
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacion/11111</id>
+    <title>Id licitación: 11111/2026; Órgano: Ayuntamiento de Avilés; Importe: 120000.00 EUR</title>
+    <updated>2026-06-10T09:00:00.000Z</updated>
+    <link href="https://contrataciondelestado.es/wps/poc?uri=deeplink:detalle_licitacion&amp;idEvl=AAA111"/>
+    <cac-place-ext:ContractFolderStatus>
+      <cbc:ContractFolderID>11111/2026</cbc:ContractFolderID>
+      <cac-place-ext:LocatedContractingParty>
+        <cac:Party><cac:PartyName><cbc:Name>Ayuntamiento de Avilés</cbc:Name></cac:PartyName></cac:Party>
+      </cac-place-ext:LocatedContractingParty>
+      <cac:ProcurementProject>
+        <cbc:Name>Servicio de limpieza de colegios públicos</cbc:Name>
+        <cbc:TypeCode>2</cbc:TypeCode>
+        <cac:BudgetAmount><cbc:TotalAmount currencyID="EUR">120000.00</cbc:TotalAmount></cac:BudgetAmount>
+        <cac:RequiredCommodityClassification><cbc:ItemClassificationCode>90910000</cbc:ItemClassificationCode></cac:RequiredCommodityClassification>
+      </cac:ProcurementProject>
+    </cac-place-ext:ContractFolderStatus>
+  </entry>
+  <entry>
+    <id>https://contrataciondelestado.es/sindicacion/licitacion/22222</id>
+    <title>Id licitación: 22222/2026; Órgano: Diputación de X; Obra</title>
+    <updated>2026-06-10T10:00:00.000Z</updated>
+    <link href="https://contrataciondelestado.es/wps/poc?uri=deeplink:detalle_licitacion&amp;idEvl=BBB222"/>
+    <cac-place-ext:ContractFolderStatus>
+      <cbc:ContractFolderID>22222/2026</cbc:ContractFolderID>
+      <cac-place-ext:LocatedContractingParty>
+        <cac:Party><cac:PartyName><cbc:Name>Diputación de X</cbc:Name></cac:PartyName></cac:Party>
+      </cac-place-ext:LocatedContractingParty>
+      <cac:ProcurementProject>
+        <cbc:Name>Obra de reforma de carretera</cbc:Name>
+        <cbc:TypeCode>3</cbc:TypeCode>
+        <cac:RequiredCommodityClassification><cbc:ItemClassificationCode>45233140</cbc:ItemClassificationCode></cac:RequiredCommodityClassification>
+      </cac:ProcurementProject>
+    </cac-place-ext:ContractFolderStatus>
+  </entry>
+</feed>

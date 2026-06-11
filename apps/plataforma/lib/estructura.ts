@@ -1,6 +1,35 @@
 // Mapa de la casa de marcas para el panel de operador (apartado "Estructura").
-// Curado a mano (la arquitectura no cambia a menudo); fuente: MATRIZ.md + CLAUDE.md
-// de cada app. Al añadir una vertical/módulo/agente nuevo, actualízalo aquí.
+// Dos fuentes:
+//  - CURADO a mano (abajo): descripciones legibles de verticales/módulos/agentes.
+//  - GENERADO por auditoría (estructura.generated.json): la radiografía real del repo
+//    (qué packages usa cada app + matriz de capacidades). Se regenera con `npm run auditar`
+//    en la raíz (scripts/auditar-estructura.mjs). NO editar el JSON a mano.
+
+import radiografiaJson from './estructura.generated.json'
+
+export type EstadoModulo = 'usado' | 'declarado' | 'no'
+export interface CeldaModulo { estado: EstadoModulo; evidencias: number }
+export interface CeldaCapacidad { presente: boolean; evidencias: number }
+export interface PackageRadiografia { id: string; tipo: 'core' | 'module'; npm: string }
+export interface CapacidadRadiografia { id: string; grupo: string; label: string; modulo?: string }
+export interface Radiografia {
+  generadoEn: string
+  verticales: string[]
+  matriz: string
+  packages: PackageRadiografia[]
+  capacidades: CapacidadRadiografia[]
+  matrizModulos: Record<string, Record<string, CeldaModulo>>
+  matrizCapacidades: Record<string, Record<string, CeldaCapacidad>>
+  gaps: {
+    modulosInfrautilizados: { package: string; app: string }[]
+    oportunidadesPortar: { capacidad: string; label: string; tiene: string[]; falta: string[] }[]
+    reimplementaciones: { capacidad: string; label: string; modulo: string; conModulo: string[]; duplicada: string[] }[]
+  }
+  resumen: { verticales: number; packages: number; capacidades: number; modulosInfrautilizados: number; oportunidadesPortar: number; reimplementaciones: number }
+}
+
+/** Radiografía del repo (auditoría automática). Generada por `npm run auditar`. */
+export const RADIOGRAFIA = radiografiaJson as Radiografia
 
 export interface VerticalInfo { app: string; nombre: string; sector: string; desc: string; url?: string }
 export interface ModuloInfo { id: string; tipo: 'core' | 'module'; desc: string; deps?: boolean }

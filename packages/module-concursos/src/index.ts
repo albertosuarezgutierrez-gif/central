@@ -20,6 +20,25 @@ export type {
   Semaforo,
   BanderaRoja,
   EvaluacionGoNoGo,
+  TipoDocumentoBiblioteca,
+  DocumentoBiblioteca,
+  Biblioteca,
+  DatosIdentificacionEmpresa,
+  ItemSobreAdministrativo,
+  Deuc,
+  DeclaracionResponsable,
+  SeccionMemoria,
+  SeccionMemoriaRellena,
+  MemoriaTecnica,
+  CoberturaMemoria,
+  CosteEjecucion,
+  EvaluacionOferta,
+  SobresListos,
+  EstadoPresentacion,
+  PlazoSubsanacion,
+  AnuncioRadar,
+  CriteriosRadar,
+  CoincidenciaRadar,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -47,3 +66,49 @@ export {
   totalPuntos,
 } from './scoring'
 export type { GarantiasCalculadas, BajaTemeraria, FormulaEconomica } from './scoring'
+
+// Biblioteca de empresa (puro): autocompletado del checklist + caducidades
+export {
+  tipoDeDocumento,
+  autocompletarChecklist,
+  documentosFaltantes,
+  documentosCaducados,
+} from './biblioteca'
+
+// Sobre administrativo + DEUC (puro): sobre 1 + DEUC + declaración responsable
+export {
+  documentosSobreAdministrativo,
+  construirDeuc,
+  construirDeclaracionResponsable,
+} from './deuc'
+
+// Memoria técnica (puro): plan de secciones + prompt + cobertura de puntos
+export {
+  planificarMemoria,
+  construirPromptMemoria,
+  coberturaMemoria,
+  MIN_CONTENIDO_CHARS,
+} from './memoria'
+
+// Oferta económica + rentabilidad (puro): coste, precio mínimo y evaluación
+export {
+  costeTotal,
+  precioMinimoRentable,
+  evaluarOferta,
+} from './oferta'
+
+// Presentación + plazos/subsanación (puro)
+export {
+  diasEntre,
+  sumarDiasHabiles,
+  estadoPresentacion,
+  plazoSubsanacion,
+} from './presentacion'
+
+// Radar PLACSP + OCR (puro): emparejado de anuncios y detección de OCR
+export {
+  coincideRadar,
+  filtrarRadar,
+  necesitaOcr,
+  MIN_TEXTO_PLIEGO,
+} from './radar'

@@ -162,6 +162,10 @@ vertical (ialimp y sivra por BD; **ia-rest por puerto HTTP**).
 3. **Catálogo de módulos contratables** (`lib/modulos.ts`, god-panel F2): solo `ialimp` tiene
    módulos; `ia-rest` y `sivra` están **vacíos**. Propuesta en §7. → *pendiente (no implementado).*
 4. **Documentación de apps:** `ia-rest` y `sivra` tienen CLAUDE.md muy escueto frente a su tamaño.
+5. **Reimplementaciones (lógica duplicada):** la radiografía ahora detecta capacidades presentes
+   en una vertical pero **sin usar el módulo compartido** que las respalda. Hoy: `proveedores` y
+   `almacen-stock` (ialimp+sivra a mano) y `crm-leads` (ialimp a mano) — solo ia-rest pasa por el
+   módulo. Ver `docs/AUDITORIA-proveedores-inventario.md`. → **detector añadido; portado pendiente.**
 
 ---
 
@@ -183,6 +187,14 @@ vertical (ialimp y sivra por BD; **ia-rest por puerto HTTP**).
 ---
 
 ## 8. Dónde vive cada cosa (para editar el mapa del panel)
-- Mapa del god-panel: `apps/plataforma/lib/estructura.ts` (arrays `VERTICALES`, `MODULOS`, `AGENTES`).
+- **Radiografía automática** (NUEVO): `scripts/auditar-estructura.mjs` audita el repo y
+  escribe `apps/plataforma/lib/estructura.generated.json` (qué packages usa cada app +
+  matriz de capacidades/áreas + diferencias entre verticales + **reimplementaciones**:
+  capacidad presente que no usa su módulo compartido). Se regenera con
+  **`npm run auditar`** desde la raíz; un check de CI (`.github/workflows/auditoria.yml`)
+  avisa si quedó desfasado. La pestaña **Estructura** del god-panel lo pinta como matrices.
+  El catálogo de capacidades (qué áreas detectar y con qué globs) está en el propio script.
+- Mapa curado (descripciones legibles): `apps/plataforma/lib/estructura.ts` (arrays
+  `VERTICALES`, `MODULOS`, `AGENTES`) — complementa la radiografía con el "qué es" de cada pieza.
 - Catálogo gateable: `apps/plataforma/lib/modulos.ts`.
-- Este documento: `docs/ESTRUCTURA.md` (mantener al día junto al mapa).
+- Este documento: `docs/ESTRUCTURA.md` (la verdad viva es la radiografía; este doc da el relato).
