@@ -30,3 +30,31 @@ export function planificarMemoria(ficha: FichaConcurso): SeccionMemoria[] {
         + `(reparte hasta ${c.puntos} puntos). Aporta medios, metodología, plazos y ejemplos; evita el relleno genérico.`,
     }))
 }
+
+const SYSTEM_MEMORIA = `Eres un consultor experto en redactar memorias técnicas para concursos públicos españoles (LCSP).
+Redactas la sección que responde a un criterio de adjudicación de "juicio de valor" para MAXIMIZAR la puntuación.
+
+Reglas:
+- Escribe en español, en prosa profesional y estructurada (puedes usar subtítulos y listas).
+- Sé concreto y verificable: medios, metodología, plazos, indicadores, ejemplos. Nada de relleno genérico.
+- No inventes datos de la empresa: usa solo el contexto aportado; si falta un dato, descríbelo como compromiso ("se asignará…").
+- No te salgas del criterio de esta sección. No incluyas precios.
+- Devuelve SOLO el texto de la sección (sin JSON, sin comentarios meta).`
+
+/**
+ * Prompt para redactar UNA sección de la memoria. La app pasa {system, user}
+ * al LLM por el puerto AiRunner y guarda la respuesta como `contenido`.
+ */
+export function construirPromptMemoria(
+  ficha: FichaConcurso,
+  seccion: SeccionMemoria,
+  contextoEmpresa?: string,
+): { system: string; user: string } {
+  const contexto = (contextoEmpresa || '').trim()
+  const user = `Objeto del contrato: ${ficha.objeto}
+Criterio a puntuar: «${seccion.criterio}» (hasta ${seccion.puntos_max} puntos).
+Qué debe demostrar: ${seccion.guia}
+${contexto ? `\nContexto de la empresa (úsalo, no lo contradigas):\n${contexto}\n` : ''}
+Redacta la sección de la memoria técnica para este criterio. Devuelve SOLO el texto.`
+  return { system: SYSTEM_MEMORIA, user }
+}
