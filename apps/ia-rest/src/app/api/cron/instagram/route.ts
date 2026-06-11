@@ -42,6 +42,17 @@ function formatoDelDia(d: Date = new Date()): 'reel' | 'imagen' {
   return d.getUTCDay() === 5 ? 'reel' : 'imagen'
 }
 
+// NIM (NVIDIA) va lento a veces: reintenta la generación con IA antes de rendirse.
+// Sin prisa — hay margen de sobra en maxDuration (120s). Backoff 3s, 6s.
+async function conReintentos<T>(fn: () => Promise<T>, intentos = 3): Promise<T> {
+  let ultimoError: unknown
+  for (let i = 1; i <= intentos; i++) {
+    try { return await fn() }
+    catch (e) { ultimoError = e; if (i < intentos) await new Promise(r => setTimeout(r, i * 3000)) }
+  }
+  throw ultimoError
+}
+
 // Contenido del reel: gancho + 3 puntos + caption (lo monta generarReel sobre slides+ambiente).
 async function generarReelContenido(tema: string, hashtags: string[]) {
   const prompt = `Eres el agente de Instagram de ia.rest (siempre "ia.rest", nunca "IA Rest").
@@ -157,14 +168,14 @@ export async function GET(req: NextRequest) {
     const [noticiasRes, driveRes] = await Promise.allSettled([obtenerNoticias(), leerContextoDrive()])
     const noticias = noticiasRes.status==='fulfilled' ? noticiasRes.value : []
     const driveCtx = driveRes.status==='fulfilled' ? driveRes.value : ''
-    const { tema, modulo, hashtags } = await elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx)
+    const { tema, modulo, hashtags } = await conReintentos(() => elegirTemaConContexto(plantilla, ultimo?.titulo||'', noticias, driveCtx))
     const estilo = await estiloDeLaSemana(supabase)
     const formato = tipoForzado ? 'imagen' : ((req.nextUrl.searchParams.get('formato') as 'reel'|'imagen'|null) || formatoDelDia())
 
     // ── Rama REEL (viernes o ?formato=reel) con fallback elegante a imagen ──
     if (formato === 'reel') {
       try {
-        const reel = await generarReelContenido(tema, hashtags)
+        const reel = await conReintentos(() => generarReelContenido(tema, hashtags))
         const puntos = [reel.p1, reel.p2, reel.p3].filter(Boolean)
         const audioPid = pickMusicTrack()
         const reelUrl = await generarReel({ titulo: reel.titulo, estilo, puntos, modulo, audioPid })
@@ -193,7 +204,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── Flujo IMAGEN (lunes, fallback de reel, o ?formato=imagen) ──
-    const post = await generarPost(plantilla, tema, hashtags)
+    const post = await conReintentos(() => generarPost(plantilla, tema, hashtags))
     const imageUrl = buildUrl({ tipo: plantilla, estilo, titulo: post.titulo, sub: post.sub, dato: post.dato, unidad: post.unidad, ctx: post.ctx, items: post.items, modulo })
 
     const { data: borrador, error: errBorrador } = await supabase.from('instagram_borradores').insert({

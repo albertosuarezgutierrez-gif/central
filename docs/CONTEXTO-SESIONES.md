@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📸 Auditoría agente Instagram (ia.rest) — "no sube nada" RESUELTO — 11/06/2026**
+  Síntoma de Alberto: la automatización de Instagram genera pero no publica nada desde el ~2-jun.
+  - **Causa raíz (confirmada en vivo):** el **corte de BD del 10-jun**. Producción pasó a leer el schema
+    nuevo `iarest`, pero los borradores y el historial quedaron **huérfanos en la BD vieja**
+    (`efncqyvhniaxsirhdxaa`, `public`). Al aprobar en Telegram, el webhook buscaba el borrador en la BD nueva,
+    no lo encontraba → respondía **"Ya procesado"** → no publicaba. **Token, webhook y código estaban OK.**
+  - **Diagnóstico end-to-end (sin egress desde el contenedor):** se hizo vía Supabase MCP + Edge Functions
+    temporales (`tg-send` confirmó que el token del bot vive como secret en EFs; `tg-webhookinfo` confirmó webhook
+    sano: URL correcta, 0 pending, 0 errores). Se publicó un **post real** (`18102380903021918`) creando un borrador
+    en la BD **nueva** y aprobándolo → confirma que toda la cadena funciona.
+  - **Resuelto:** (1) **migrados los 19 borradores pendientes** vieja→nueva (EF `ig-migrate`, service role) →
+    `iarest.instagram_borradores`: 19 pendientes + 1 aprobado. (2) Desde el viernes el cron generará ya en la BD
+    nueva (flujo normal). (3) **PR #142 MERGEADO a `main`**: arregla `obtenerMetricas` (pedía métricas inválidas/`impressions`
+    deprecada) y añade registro de fallos de publicación en `system_errors` (callback Telegram + `/super` + cron); fin de
+    fallos silenciosos.
+  - **⚠️ Hallazgo de fondo (pendiente):** el corte de BD a `iarest` **no estaba realmente migrado** para Instagram
+    (drafts/historial seguían en la vieja). Revisar que el resto de datos (comandas, etc.) estén realmente en la nueva
+    o que producción siga apuntando a la vieja — la tabla `comandas` del schema nuevo está vacía.
+  - **🧹 Limpieza manual pendiente (Alberto):** borrar del dashboard Supabase las EFs temporales (ya inertes, devuelven 410):
+    `ig-test-send` (en ambos proyectos), `tg-webhookinfo` (viejo) e `ig-migrate` (nuevo).
+  - **Decisión de producto de Alberto:** mantener el modelo **publicación automática previa autorización en Telegram**
+    (no autopublicar sin aprobar).
 - **📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)**
   Cierra la infraestructura de F7 sobre el núcleo puro ya en producción. Spec/plan:
   `docs/superpowers/specs/2026-06-11-concursos-radar-ocr-infra-design.md` · `docs/superpowers/plans/2026-06-11-concursos-radar-ocr-infra.md`.
