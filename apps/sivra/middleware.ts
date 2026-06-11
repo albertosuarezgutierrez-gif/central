@@ -74,6 +74,6 @@ export default auth(function middleware(req: NextRequest & { auth: any }) {
 export const config = {
   // Crons Vercel excluidos del matcher — NO pasan por el middleware
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|robots.txt|sitemap.xml|api/rates/snapshot|api/updates/sync|api/limpiadoras/auto-sessions|api/mensajes/auto-reply|api/mercado/cron|api/mercado/ingest|api/pricing/apply|api/pricing/apply-auto|api/pricing/guard|api/pricing/resumen-diario|api/pricing/detect-opportunities|api/pricing/experiments/check-results).*)',
+    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|robots.txt|sitemap.xml|api/rates/snapshot|api/updates/sync|api/limpiadoras/auto-sessions|api/mensajes/auto-reply|api/mercado/cron|api/mercado/ingest|api/pricing/apply|api/pricing/apply-auto|api/pricing/guard|api/pricing/resumen-diario|api/pricing/experiments/check-results).*)',
   ],
 }
