@@ -36,6 +36,9 @@ export type {
   SobresListos,
   EstadoPresentacion,
   PlazoSubsanacion,
+  AnuncioRadar,
+  CriteriosRadar,
+  CoincidenciaRadar,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -101,3 +104,11 @@ export {
   estadoPresentacion,
   plazoSubsanacion,
 } from './presentacion'
+
+// Radar PLACSP + OCR (puro): emparejado de anuncios y detección de OCR
+export {
+  coincideRadar,
+  filtrarRadar,
+  necesitaOcr,
+  MIN_TEXTO_PLIEGO,
+} from './radar'
