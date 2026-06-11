@@ -263,3 +263,27 @@ export interface CoberturaMemoria {
   pct: number                // 0–100, redondeado a entero
   vacias: string[]           // criterios cuya sección sigue vacía/insuficiente
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Oferta económica + rentabilidad (F5) — el módulo opera números; el coste lo
+// aporta la app (puede venir de contabilidad). Reutiliza scoring.ts.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Coste de ejecutar el contrato, en euros (lo estima la app/empresa). */
+export interface CosteEjecucion {
+  directos: number               // mano de obra, materiales, subcontratas…
+  indirectos?: number            // estructura, overheads
+  margen_objetivo_pct?: number   // beneficio deseado sobre el PRECIO (0–100)
+}
+
+/** Evaluación de una oferta concreta frente a coste, competencia y pliego. */
+export interface EvaluacionOferta {
+  oferta: number                 // importe ofertado (€, sin IVA)
+  coste_total: number            // directos + indirectos
+  margen_euros: number           // oferta − coste_total
+  margen_pct: number             // margen_euros / oferta * 100 (0 si oferta<=0)
+  puntos_economicos: number      // puntos del criterio económico (0 si no aplica)
+  temeraria: boolean             // por debajo del umbral de baja temeraria
+  umbral_temeraria: number | null
+  viable: boolean                // margen_euros >= 0 && !temeraria
+}
