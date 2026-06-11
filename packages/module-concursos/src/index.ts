@@ -23,6 +23,10 @@ export type {
   TipoDocumentoBiblioteca,
   DocumentoBiblioteca,
   Biblioteca,
+  DatosIdentificacionEmpresa,
+  ItemSobreAdministrativo,
+  Deuc,
+  DeclaracionResponsable,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -58,3 +62,10 @@ export {
   documentosFaltantes,
   documentosCaducados,
 } from './biblioteca'
+
+// Sobre administrativo + DEUC (puro): sobre 1 + DEUC + declaración responsable
+export {
+  documentosSobreAdministrativo,
+  construirDeuc,
+  construirDeclaracionResponsable,
+} from './deuc'
