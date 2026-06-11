@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚀 SIVRA pricing auto — producción activa + legacy eliminado — 11/06/2026**
+  Sesión de cierre: vars Vercel confirmadas por Alberto y motor diario activo.
+  - **✅ Vars Vercel configuradas por Alberto:** `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`,
+    `VAPID_PRIVATE_KEY` → motor diario `apply-auto` (08:30) y notificaciones push **activos en
+    producción** (`sybra.vercel.app`).
+  - **✅ Busto Reform:** `apply_enabled=true`, PriceLabs desconectado → el cron escribe precio
+    base en Smoobu cada mañana según mercado + parámetros del propietario.
+  - **✅ Legacy `detect-opportunities` eliminado:** el cron antiguo mandaba correos con precios
+    calculados por la fórmula vieja (base × SEASONAL × DOW, sin ancla de mercado ni topes del
+    propietario) → cifras absurdas (ej. Dúplex 368€ vs mercado real ~155€). Eliminados: cron en
+    `vercel.json`, endpoint `api/pricing/detect-opportunities`, exclusión del middleware.
+    El motor nuevo (`apply-auto` + `resumen-diario`) lo sustituye completamente.
+  - **⏳ Pendiente de Alberto:** desconectar PriceLabs de Dúplex Center, Luxury Busto y House
+    Sevillana, y activar `apply_enabled` en `sybra.vercel.app/pricing-auto` para cada uno.
+
 - **✅ SIVRA en PRODUCCIÓN: pricing automático + 2 fixes de cuelgue (#108, #113, #115) — 10/06/2026 (tarde)**
   Los 3 PRs **mergeados a `main` y desplegados** en `sybra.vercel.app` (dominio de prod del proyecto Vercel `sivra`;
   alias: sybra/sivra-app/housesevillana). Resumen de la tarde:
@@ -58,9 +73,9 @@
     si no está definido. Fuente de mercado automática (Estrategia 2) `mercado/ingest-auto` gated por `MARKET_API_*`.
   - **Migraciones BD (`wswbehlcuxqxyinousql`):** `pricing_settings`+`events_enabled`/`gap_discount_pct`, `pricing_config`,
     `pricing_push_subs`. **Mergeado a `main` y desplegado a producción (`sybra.vercel.app`).**
-  - **⚠️ Pendiente de Alberto en Vercel (proyecto sivra):** definir `CRON_SECRET` (sin él el auto-apply diario NO corre —
-    de hecho más seguro: nada se escribe en Smoobu solo; el panel manual sí funciona) y `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/
-    `VAPID_PRIVATE_KEY` (avisos push). Activar `apply_enabled` por piso según quite PriceLabs. Doc: `apps/sivra/docs/pricing-automatico.md`.
+  - **✅ Vars Vercel configuradas (11/06):** `CRON_SECRET`, `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` —
+    motor diario y push activos en producción. Pendiente: activar `apply_enabled` en los otros 3 pisos al
+    desconectar PriceLabs. Doc: `apps/sivra/docs/pricing-automatico.md`.
 
 - **🔄 SIVRA pricing — fuente de mercado real (Booking+Trivago) + piloto Busto Reform (claude/tourist-apartments-auto-pricing) — 09/06/2026**
   El "precio automático" (motor `rates/snapshot` + `pricing/detect-opportunities` + experimentos) ya estaba en prod, pero la
