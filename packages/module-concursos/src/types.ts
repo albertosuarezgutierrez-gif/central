@@ -233,3 +233,33 @@ export interface DeclaracionResponsable {
   declara: string[]               // afirmaciones que firma el representante
   fecha?: string
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Memoria técnica (F4) — ataca los criterios de juicio de valor y estima puntos.
+// El módulo planifica y construye el prompt; la app llama al LLM por sección.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Una sección de la memoria, ligada a un criterio de juicio de valor. */
+export interface SeccionMemoria {
+  criterio: string        // nombre del criterio de adjudicación
+  puntos_max: number      // puntos que reparte ese criterio
+  guia: string            // qué debe demostrar esta sección para puntuar
+}
+
+/** Sección con el texto ya redactado (por el LLM o a mano). */
+export interface SeccionMemoriaRellena extends SeccionMemoria {
+  contenido: string
+}
+
+/** Memoria técnica completa (todas las secciones redactadas). */
+export interface MemoriaTecnica {
+  secciones: SeccionMemoriaRellena[]
+}
+
+/** Estimación de cuántos puntos técnicos cubre la memoria redactada. */
+export interface CoberturaMemoria {
+  puntos_cubiertos: number   // suma de puntos de las secciones con contenido suficiente
+  puntos_totales: number     // suma de puntos de todos los criterios de juicio de valor
+  pct: number                // 0–100, redondeado a entero
+  vacias: string[]           // criterios cuya sección sigue vacía/insuficiente
+}
