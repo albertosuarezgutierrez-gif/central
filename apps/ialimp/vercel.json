@@ -58,6 +58,10 @@
     {
       "path": "/api/cron/concursos-radar",
       "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/concursos-ingesta",
+      "schedule": "30 */6 * * *"
     }
   ]
 }
