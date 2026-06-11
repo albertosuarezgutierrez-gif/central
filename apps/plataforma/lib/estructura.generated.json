@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-11T13:07:49Z",
+  "generadoEn": "2026-06-11T13:40:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -214,7 +214,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 9
+        "evidencias": 10
       },
       "plataforma": {
         "estado": "no",
@@ -358,7 +358,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 11
       },
       "plataforma": {
         "estado": "no",
@@ -393,8 +393,8 @@
         "evidencias": 2
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
@@ -429,16 +429,16 @@
         "evidencias": 2
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
       },
       "sivra": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-presupuestos": {
@@ -465,16 +465,16 @@
         "evidencias": 2
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
       },
       "sivra": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       }
     }
   },
@@ -882,7 +882,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 9
+        "evidencias": 13
       },
       "plataforma": {
         "presente": false,
@@ -1118,7 +1118,43 @@
         ]
       }
     ],
-    "reimplementaciones": []
+    "reimplementaciones": [
+      {
+        "capacidad": "crm-leads",
+        "label": "CRM / leads / cotizador",
+        "modulo": "module-crm",
+        "conModulo": [
+          "ia-rest"
+        ],
+        "duplicada": [
+          "ialimp"
+        ]
+      },
+      {
+        "capacidad": "almacen-stock",
+        "label": "Almacén / stock / ASN",
+        "modulo": "module-inventario",
+        "conModulo": [
+          "ia-rest"
+        ],
+        "duplicada": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "proveedores",
+        "label": "Proveedores / compras",
+        "modulo": "module-proveedores",
+        "conModulo": [
+          "ia-rest"
+        ],
+        "duplicada": [
+          "ialimp",
+          "sivra"
+        ]
+      }
+    ]
   },
   "resumen": {
     "verticales": 4,
@@ -1126,6 +1162,6 @@
     "capacidades": 23,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 20,
-    "reimplementaciones": 0
+    "reimplementaciones": 3
   }
 }
