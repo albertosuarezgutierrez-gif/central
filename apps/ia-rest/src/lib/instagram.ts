@@ -52,9 +52,15 @@ export async function publicarCarrusel(imageUrls: string[], caption: string): Pr
 }
 
 export async function obtenerMetricas(postId: string): Promise<{ likes: number; comentarios: number; alcance: number; impresiones: number }> {
-  const res = await (await fetch(`https://graph.instagram.com/v21.0/${postId}/insights?metric=like_count,comments_count,reach,impressions&access_token=${IG_TOKEN}`)).json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> }
-  const get = (n: string) => res.data?.find(d => d.name === n)?.values?.[0]?.value ?? 0
-  return { likes: get('like_count'), comentarios: get('comments_count'), alcance: get('reach'), impresiones: get('impressions') }
+  // like_count y comments_count son CAMPOS del media node (no métricas de insights).
+  const fields = await (await fetch(`https://graph.instagram.com/v21.0/${postId}?fields=like_count,comments_count&access_token=${IG_TOKEN}`)).json() as { like_count?: number; comments_count?: number }
+  // insights: 'reach' es la métrica vigente; 'impressions' fue deprecada para media (devuelve error si se pide).
+  let alcance = 0
+  try {
+    const ins = await (await fetch(`https://graph.instagram.com/v21.0/${postId}/insights?metric=reach&access_token=${IG_TOKEN}`)).json() as { data?: Array<{ name: string; values: Array<{ value: number }> }> }
+    alcance = ins.data?.find(d => d.name === 'reach')?.values?.[0]?.value ?? 0
+  } catch { /* insights puede no estar disponible para todos los formatos/edades de media */ }
+  return { likes: fields.like_count ?? 0, comentarios: fields.comments_count ?? 0, alcance, impresiones: 0 }
 }
 
 export async function renovarToken(): Promise<string> {

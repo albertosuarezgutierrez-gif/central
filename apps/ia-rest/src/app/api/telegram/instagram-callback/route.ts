@@ -6,6 +6,7 @@ import { createServerClient } from '@/lib/supabase'
 import { publicarEnInstagram, publicarReel } from '@/lib/instagram'
 import { generarReel, warmAndCheckReel } from '@/app/api/ig-reel/route'
 import { tgAnswerCallback, tgEditMessage, tgSendPhoto, tgAlertButtons } from '@/lib/telegram'
+import { notifyError } from '@/lib/notify'
 import { callAI, cleanJSON } from '@/lib/ai-client'
 import { obtenerNoticias, leerContextoDrive } from '@/lib/instagram-context'
 
@@ -96,6 +97,7 @@ export async function POST(req: NextRequest) {
       await supabase.from('instagram_borradores').update({ estado: 'publicado' }).eq('id', borradorId)
       await tgEditMessage(cb.message.message_id, `✅ Reel publicado`)
     } catch (e) {
+      notifyError({ tipo: 'instagram_publish_reel', modulo: 'sistema', nivel: 'aviso', mensaje: `Fallo publicando Reel: ${(e as Error).message}`, detalle: { borradorId } })
       await tgAlertButtons(`⚠️ Error publicando Reel: ${(e as Error).message}`, 'aviso', [])
     }
     return NextResponse.json({ ok: true })
@@ -120,6 +122,7 @@ export async function POST(req: NextRequest) {
       await tgAnswerCallback(cb.id, '✅ Publicado')
       await tgSendPhoto(b.image_url, `📱 <b>Story pendiente</b>\nMantén pulsada → Compartir como Story → Publicar`)
     } catch (err: any) {
+      notifyError({ tipo: 'instagram_publish', modulo: 'sistema', nivel: 'aviso', mensaje: `Fallo publicando post: ${err?.message}`, detalle: { borradorId } })
       await tgAnswerCallback(cb.id, `❌ ${err.message.slice(0,50)}`)
       await tgEditMessage(cb.message.message_id, `❌ Error: ${err.message.slice(0,100)}`)
     }
