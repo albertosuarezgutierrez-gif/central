@@ -31,6 +31,8 @@ export type {
   SeccionMemoriaRellena,
   MemoriaTecnica,
   CoberturaMemoria,
+  CosteEjecucion,
+  EvaluacionOferta,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -81,3 +83,10 @@ export {
   coberturaMemoria,
   MIN_CONTENIDO_CHARS,
 } from './memoria'
+
+// Oferta económica + rentabilidad (puro): coste, precio mínimo y evaluación
+export {
+  costeTotal,
+  precioMinimoRentable,
+  evaluarOferta,
+} from './oferta'
