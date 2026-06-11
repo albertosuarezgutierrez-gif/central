@@ -1,7 +1,7 @@
 // → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @iarest/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes } from '@iarest/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable } from '@iarest/module-concursos';
 import type { Biblioteca } from '@iarest/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
@@ -118,6 +118,15 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
       setMemoria(r);
     } catch {}
     setGenMem(false);
+  };
+  const [oferta, setOferta] = useState<any>({ directos:'', indirectos:'', margen_objetivo_pct:'', oferta:'' });
+  const num = (v:any) => { const n = parseFloat(v); return Number.isFinite(n) ? n : 0; };
+  const coste = { directos:num(oferta.directos), indirectos:num(oferta.indirectos), margen_objetivo_pct:num(oferta.margen_objetivo_pct) };
+  const evalOferta = num(oferta.oferta) > 0 ? evaluarOferta(num(oferta.oferta), coste, c.ficha || {}) : null;
+  const minRent = precioMinimoRentable(coste);
+  const setO = (k:string) => (e:any) => setOferta({ ...oferta, [k]: e.target.value });
+  const guardarOferta = async () => {
+    try { await fetch(`/api/admin/concursos/${c.id}/oferta`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(coste) }); } catch {}
   };
   const f = c.ficha || {}; const gng = c.go_no_go; const gar = c.garantias || {};
   // Autocompleta el checklist con lo que ya hay en la biblioteca de empresa.
@@ -237,6 +246,27 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
           ))}
         </div>
       )}
+
+      {/* Oferta económica (F5) */}
+      <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+        <strong style={{ fontSize:14 }}>Oferta económica</strong>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:8, margin:'8px 0' }}>
+          <input placeholder="Costes directos (€)" value={oferta.directos} onChange={setO('directos')} />
+          <input placeholder="Costes indirectos (€)" value={oferta.indirectos} onChange={setO('indirectos')} />
+          <input placeholder="Margen objetivo (%)" value={oferta.margen_objetivo_pct} onChange={setO('margen_objetivo_pct')} />
+          <input placeholder="Tu oferta (€)" value={oferta.oferta} onChange={setO('oferta')} />
+        </div>
+        <div style={{ fontSize:13, color:C.muted }}>Precio mínimo rentable: <strong>{minRent.toLocaleString('es-ES')} €</strong></div>
+        {evalOferta && (
+          <div style={{ fontSize:13, marginTop:6 }}>
+            Margen: <strong>{evalOferta.margen_euros.toLocaleString('es-ES')} € ({evalOferta.margen_pct}%)</strong> ·
+            Puntos económicos: <strong>{evalOferta.puntos_economicos}</strong>
+            {evalOferta.temeraria && <span style={{ color:'#b91c1c', fontWeight:800 }}> · ⚠️ Baja temeraria (umbral {evalOferta.umbral_temeraria?.toLocaleString('es-ES')} €)</span>}
+            {' '}<span style={{ color: evalOferta.viable ? '#15803d' : '#b91c1c', fontWeight:800 }}>{evalOferta.viable ? '✅ Viable' : '❌ No viable'}</span>
+          </div>
+        )}
+        <button onClick={guardarOferta} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer' }}>Guardar oferta</button>
+      </div>
 
       {f.avisos?.length>0 && (
         <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:10, padding:'8px 12px', fontSize:13 }}>
