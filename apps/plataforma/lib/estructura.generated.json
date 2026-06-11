@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-11T11:51:03Z",
+  "generadoEn": "2026-06-11T12:39:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -113,7 +113,8 @@
     {
       "id": "feedback",
       "grupo": "Cliente",
-      "label": "Feedback / propinas"
+      "label": "Feedback / propinas",
+      "modulo": "module-feedback"
     },
     {
       "id": "limpiadoras",
@@ -138,7 +139,8 @@
     {
       "id": "crm-leads",
       "grupo": "Negocio",
-      "label": "CRM / leads / cotizador"
+      "label": "CRM / leads / cotizador",
+      "modulo": "module-crm"
     },
     {
       "id": "marketing",
@@ -153,7 +155,14 @@
     {
       "id": "almacen-stock",
       "grupo": "Stock",
-      "label": "Almacén / stock / ASN"
+      "label": "Almacén / stock / ASN",
+      "modulo": "module-inventario"
+    },
+    {
+      "id": "proveedores",
+      "grupo": "Stock",
+      "label": "Proveedores / compras",
+      "modulo": "module-proveedores"
     },
     {
       "id": "contabilidad",
@@ -193,7 +202,8 @@
     {
       "id": "concursos",
       "grupo": "Negocio",
-      "label": "Concursos públicos"
+      "label": "Concursos públicos",
+      "modulo": "module-concursos"
     }
   ],
   "matrizModulos": {
@@ -706,11 +716,29 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 14
+        "evidencias": 15
       },
       "ialimp": {
         "presente": true,
         "evidencias": 8
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "proveedores": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 7
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 1
       },
       "plataforma": {
         "presente": false,
@@ -1089,13 +1117,51 @@
           "sivra"
         ]
       }
+    ],
+    "reimplementaciones": [
+      {
+        "capacidad": "crm-leads",
+        "label": "CRM / leads / cotizador",
+        "modulo": "module-crm",
+        "conModulo": [
+          "ia-rest"
+        ],
+        "duplicada": [
+          "ialimp"
+        ]
+      },
+      {
+        "capacidad": "almacen-stock",
+        "label": "Almacén / stock / ASN",
+        "modulo": "module-inventario",
+        "conModulo": [
+          "ia-rest"
+        ],
+        "duplicada": [
+          "ialimp",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "proveedores",
+        "label": "Proveedores / compras",
+        "modulo": "module-proveedores",
+        "conModulo": [
+          "ia-rest"
+        ],
+        "duplicada": [
+          "ialimp",
+          "sivra"
+        ]
+      }
     ]
   },
   "resumen": {
     "verticales": 4,
     "packages": 15,
-    "capacidades": 22,
+    "capacidades": 23,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 20
+    "oportunidadesPortar": 20,
+    "reimplementaciones": 3
   }
 }
