@@ -180,3 +180,56 @@ export interface DocumentoBiblioteca {
 }
 
 export type Biblioteca = DocumentoBiblioteca[]
+
+// ────────────────────────────────────────────────────────────────────────────
+// Sobre administrativo + DEUC (F3)
+// El módulo produce DATOS; la app los renderiza al formato oficial (PDF/XML).
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Datos de identificación de la empresa para el DEUC y la declaración responsable. */
+export interface DatosIdentificacionEmpresa {
+  razon_social: string
+  nif: string
+  domicilio?: string
+  representante?: string          // nombre del apoderado que firma
+  representante_dni?: string
+  email?: string
+  telefono?: string
+  es_pyme?: boolean               // Parte II del DEUC
+}
+
+/** Una entrada del Sobre 1: documento exigido + qué doc de la biblioteca lo cubre. */
+export interface ItemSobreAdministrativo {
+  documento: string
+  obligatorio: boolean
+  modelo?: string
+  cubiertoPor?: DocumentoBiblioteca   // undefined = aún no cubierto por la biblioteca
+}
+
+/** DEUC por partes (estructura de datos; la app la vuelca al formulario oficial). */
+export interface Deuc {
+  // Parte I — sobre el procedimiento de contratación
+  procedimiento: { objeto?: string; expediente?: string; organo?: string }
+  // Parte II — datos del operador económico
+  operador: DatosIdentificacionEmpresa
+  // Parte III — motivos de exclusión (el licitador declara NO estar incurso)
+  motivos_exclusion: {
+    sin_condenas: boolean
+    al_corriente_impuestos: boolean
+    al_corriente_ss: boolean
+    sin_quiebra: boolean
+  }
+  // Parte IV — criterios de selección (solvencia declarada, de la ficha)
+  solvencia: { economica: string[]; tecnica: string[] }
+  // Parte VI — declaraciones finales
+  declaraciones_finales: { veracidad: boolean; fecha?: string }
+}
+
+/** Declaración responsable (art. 140 LCSP) como datos. */
+export interface DeclaracionResponsable {
+  empresa: DatosIdentificacionEmpresa
+  objeto?: string
+  expediente?: string
+  declara: string[]               // afirmaciones que firma el representante
+  fecha?: string
+}
