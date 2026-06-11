@@ -155,6 +155,7 @@ export async function GET(req: Request) {
       FROM propiedades
       WHERE array_length(ical_urls, 1) > 0
         AND activa = true
+        AND (cliente_id IS NULL OR cliente_id IN (SELECT id FROM clientes WHERE activo = true))
         ${prop_id ? Prisma.sql`AND id = ${prop_id}::uuid` : Prisma.sql``}
     `)
 
@@ -171,6 +172,7 @@ export async function GET(req: Request) {
       SELECT id::text, empresa_id::text, cliente_id::text, smoobu_api_key
       FROM pms_connections
       WHERE activa = true AND smoobu_api_key IS NOT NULL
+        AND (cliente_id IS NULL OR cliente_id IN (SELECT id FROM clientes WHERE activo = true))
         ${prop_id ? Prisma.sql`` : Prisma.sql``}
     `)
 
