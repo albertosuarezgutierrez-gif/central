@@ -55,6 +55,23 @@
   en la feria).
 - Maridaje de vino por IA integrado al menú (existe módulo `vinos`).
 
+### Bloque H — Checklist operativo de personal + correlación con carga  ·  *idea de Alberto, net-new*
+> Reutiliza el patrón de **checklist con cierre por foto** de las limpiadoras (`ialimp`), pero para
+> el personal de hostelería, y lo cruza con la carga real del POS para convertirlo en una **herramienta
+> de accountability objetiva**.
+- **Plantillas de checklist por sección** (barra, sala, terraza, cocina) con tareas operativas:
+  *bajar/subir barreras, repasar copas, recargar neveras, reponer, montaje, cierre de caja…*
+- Tareas con **frecuencia** (apertura / por turno / cierre) y **responsable**; marcado por el empleado
+  (check + **foto opcional**, como el cierre por foto de `ialimp`).
+- **Cruce con carga de trabajo real:** el POS ya conoce **mesas abiertas + comandas pedidas** por franja
+  → calcula un **índice de actividad**. El informe enfrenta *tareas pendientes* vs *carga del tramo*.
+  - Tarea sin hacer en franja de **baja carga** → marcada como **"sin excusa" (reclamable)**.
+  - Tarea sin hacer en franja de **alta carga** → mostrada con contexto (había curro).
+- **Valor:** poder **reclamar al personal con datos** por qué no se hizo el trabajo cuando no había
+  carga — quita la excusa de "no me dio tiempo" y da objetividad a la gestión de turnos/rendimiento.
+- *A construir:* plantillas de checklist por sección + marcado (con foto) + motor que lee mesas/comandas
+  del POS y genera el índice de carga + informe de cumplimiento por empleado/turno.
+
 ### Bloque F — Adyacentes (reutilización, casi sin construir)
 - Haciendas → `sivra`; limpieza con **cierre obligatorio por foto** → `ialimp`; **fontanería/obra**
   del cuñado (cuadro de mando con fotos, evolución de obra, avisos WhatsApp, localización) + cross-sell
