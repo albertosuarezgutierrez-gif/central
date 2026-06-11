@@ -114,4 +114,24 @@ export const ialimpAdapter: VerticalAdapter = {
       return false
     }
   },
+
+  // Directorio del negocio (empresaId = refExt): usuarios de la empresa + limpiadoras.
+  async listarDirectorio(empresaId) {
+    try {
+      const [usuarios, limpis] = await Promise.all([
+        prisma.$queryRaw<Array<{ id: string; nombre: string | null; email: string | null; rol: string | null }>>`
+          SELECT id, nombre, email, rol FROM usuarios_empresa
+          WHERE empresa_id = ${empresaId}::uuid AND activo = true ORDER BY nombre`,
+        prisma.$queryRaw<Array<{ id: string; nombre: string }>>`
+          SELECT id, nombre FROM limpiadoras
+          WHERE empresa_id = ${empresaId}::uuid AND activa = true ORDER BY nombre`,
+      ])
+      return [
+        ...usuarios.map(u => ({ refPersona: `usuario:${u.id}`, nombre: u.nombre || u.email || 'Usuario', rol: u.rol ?? null, email: u.email ?? null })),
+        ...limpis.map(l => ({ refPersona: `limpiadora:${l.id}`, nombre: l.nombre, rol: 'limpiadora', email: null })),
+      ]
+    } catch {
+      return []
+    }
+  },
 }

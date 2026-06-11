@@ -3,7 +3,7 @@
 // (`/api/operador/restaurantes`) con un secreto compartido. Sin fusionar BD.
 // Requiere envs en plataforma: IAREST_URL + OPERADOR_SHARED_SECRET.
 
-import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica } from './types'
+import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica, PersonaDirectorio } from './types'
 
 interface RestaurantePort {
   id: string
@@ -106,5 +106,13 @@ export const iarestAdapter: VerticalAdapter = {
   async setActivo(id, activo) {
     const res = await port('/api/operador/restaurantes', { method: 'PATCH', body: JSON.stringify({ id, activo }) })
     return !!res && res.ok
+  },
+
+  // Directorio del restaurante (localId = refExt) por el puerto HTTP de ia-rest.
+  async listarDirectorio(localId) {
+    const res = await port(`/api/operador/directorio?local_id=${encodeURIComponent(localId)}`)
+    if (!res || !res.ok) return []
+    const json = await res.json().catch(() => ({}))
+    return (json.personas ?? []) as PersonaDirectorio[]
   },
 }
