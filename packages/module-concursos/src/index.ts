@@ -27,6 +27,10 @@ export type {
   ItemSobreAdministrativo,
   Deuc,
   DeclaracionResponsable,
+  SeccionMemoria,
+  SeccionMemoriaRellena,
+  MemoriaTecnica,
+  CoberturaMemoria,
 } from './types'
 
 // Agente (orquesta el LLM por el puerto)
@@ -69,3 +73,11 @@ export {
   construirDeuc,
   construirDeclaracionResponsable,
 } from './deuc'
+
+// Memoria técnica (puro): plan de secciones + prompt + cobertura de puntos
+export {
+  planificarMemoria,
+  construirPromptMemoria,
+  coberturaMemoria,
+  MIN_CONTENIDO_CHARS,
+} from './memoria'
