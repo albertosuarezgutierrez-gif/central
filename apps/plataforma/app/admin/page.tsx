@@ -267,11 +267,13 @@ function btn(bg: string, color: string): React.CSSProperties {
 
 function Propiedades() {
   const [props, setProps] = useState<Propiedad[] | null>(null)
+  const [portalUrl, setPortalUrl] = useState('')
   const [err, setErr] = useState('')
+  const [vista, setVista] = useState<'portal' | 'resumen'>('portal')
   useEffect(() => {
     fetch('/api/admin/propiedades')
       .then(r => r.json())
-      .then(d => setProps(d.propiedades || []))
+      .then(d => { setProps(d.propiedades || []); setPortalUrl(d.portalUrl || '') })
       .catch(() => setErr('No se pudieron cargar.'))
   }, [])
 
@@ -284,6 +286,30 @@ function Propiedades() {
 
   return (
     <div>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
+        <div style={{ display: 'flex', gap: 6 }}>
+          {([['portal', '🛠️ Portal'], ['resumen', '📊 Resumen']] as const).map(([k, label]) => (
+            <button key={k} onClick={() => setVista(k)}
+              style={{ background: vista === k ? C.accent : 'transparent', color: vista === k ? '#fff' : C.muted, border: `1px solid ${vista === k ? C.accent : C.border}`, borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
+              {label}
+            </button>
+          ))}
+        </div>
+        {portalUrl && <a href={portalUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.accent, textDecoration: 'none' }}>Abrir portal en pestaña nueva ↗</a>}
+      </div>
+
+      {vista === 'portal' && (
+        <div>
+          {portalUrl ? (
+            <iframe src={portalUrl} title="Portal del propietario" style={{ width: '100%', height: '78vh', border: `1px solid ${C.border}`, borderRadius: 12, background: '#fff' }} />
+          ) : <div style={{ color: C.muted }}>Portal no disponible.</div>}
+          <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
+            Es tu portal del propietario de ialimp. Si te pide login y no avanza dentro del recuadro, usa “Abrir portal en pestaña nueva” (algunos navegadores bloquean la sesión dentro de iframes).
+          </div>
+        </div>
+      )}
+
+      {vista === 'resumen' && <>
       <p style={{ color: C.muted, fontSize: 13, margin: '0 0 20px', maxWidth: 720 }}>
         Tus apartamentos turísticos (sivra) de un vistazo: ingresos, gastos y próxima reserva.
       </p>
@@ -320,6 +346,7 @@ function Propiedades() {
           </div>
         ))}
       </div>
+      </>}
     </div>
   )
 }

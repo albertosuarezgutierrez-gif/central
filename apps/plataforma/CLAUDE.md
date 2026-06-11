@@ -60,10 +60,15 @@ Panel único de control de Alberto sobre **todas las verticales**. Diseño: `doc
   - `iarest` → por **puerto HTTP** (`${IAREST_URL}/api/operador/restaurantes`, Bearer `OPERADOR_SHARED_SECRET`),
     porque ia-rest está en otra BD. **No se fusiona nada.** El endpoint vive en `apps/ia-rest/src/app/api/operador/`.
 - **Pestañas:** 🏠 Mis propiedades · 🏢 Negocios · 🗺️ Estructura.
-  - **🏠 Mis propiedades** (`lib/propiedades.ts` + `/api/admin/propiedades`): los apartamentos
-    turísticos propios de Alberto (sivra). Lee SOLO la tabla `properties` (las propias con Smoobu)
-    + `incomes`/`expenses` de la BD compartida — **NO** la tabla `propiedades` (multi-tenant de
-    limpiadoras). Es el "acceso a mis propiedades" desde el panel único.
+  - **🏠 Mis propiedades** (`lib/propiedades.ts` + `/api/admin/propiedades`): el "acceso a mis
+    propiedades" desde el panel único. Dos sub-vistas:
+    - **🛠️ Portal** (por defecto): **embebe en iframe el portal del propietario de ialimp**
+      (`${IALIMP_URL}/propietario`) — Alberto es propietario/cliente ahí (de Vanesa) → trabaja
+      desde el panel. Con fallback "abrir en pestaña nueva" (algunos navegadores bloquean cookies
+      de sesión dentro de iframes entre dominios). ialimp no manda `X-Frame-Options`/CSP → se deja embeber.
+    - **📊 Resumen**: tarjetas de los apartamentos turísticos propios (sivra), leyendo SOLO la
+      tabla `properties` (las propias con Smoobu) + `incomes`/`expenses` de la BD compartida —
+      **NO** la tabla `propiedades` (multi-tenant de limpiadoras).
   - **🗺️ Estructura**: radiografía automática del repo (ver `docs/ESTRUCTURA.md`).
 - **F1 (hecho):** login + listado unificado de clientes + **bloquear/liberar** (`empresas.activa` / `restaurantes.activo`) + **vista 360**.
 - **Pendiente (F2+):** módulos por cliente (`tenant_modulos` + gateo), crear cliente, retirar los superadmin sueltos.

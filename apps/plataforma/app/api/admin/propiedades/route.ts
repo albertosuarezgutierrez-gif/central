@@ -7,10 +7,13 @@ export async function GET() {
   const admin = await getAdmin()
   if (!admin) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
+  // Portal del propietario de ialimp (Alberto es propietario/cliente ahí) para embeber.
+  const portalUrl = (process.env.IALIMP_URL || 'https://app.ialimp.es').replace(/\/$/, '') + '/propietario'
+
   try {
     const propiedades = await getPropiedades()
-    return NextResponse.json({ propiedades })
+    return NextResponse.json({ propiedades, portalUrl })
   } catch {
-    return NextResponse.json({ propiedades: [], error: 'No se pudieron cargar' }, { status: 200 })
+    return NextResponse.json({ propiedades: [], portalUrl, error: 'No se pudieron cargar' }, { status: 200 })
   }
 }
