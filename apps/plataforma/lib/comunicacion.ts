@@ -4,6 +4,8 @@
 // como hace lib/financiero.ts (esas tablas no están en el modelo Prisma a propósito).
 // Diseño: docs/COMUNICACION-MULTINEGOCIO.md
 import { prisma } from './db'
+import { getAdapter } from './adapters'
+import type { PersonaDirectorio } from './adapters/types'
 
 // ── Tipos ────────────────────────────────────────────────────────────────
 export type Categoria = { id: string; nombre: string; color: string | null; orden: number }
@@ -191,4 +193,39 @@ export async function enviarMensaje(cuentaId: string, conversacionId: string, cu
     VALUES (${conversacionId}::uuid, ${autorNodoId}::uuid, ${cuerpo})
     RETURNING id, conversacion_id AS "conversacionId", autor_nodo_id AS "autorNodoId", cuerpo, created_at AS "createdAt"`
   return rows[0] as Mensaje
+}
+
+// ── Grupos dinámicos (F0.4) ──────────────────────────────────────────────
+/** Resuelve un grupo (estático o dinámico) a su lista de personas.
+ *  Estático → miembros guardados. Dinámico → `origen_ref` con forma '<app>:<resto>'
+ *  (p.ej. 'iarest:evento:<id>'), resuelto por el adaptador de esa vertical. */
+export async function resolverGrupo(cuentaId: string, grupoId: string): Promise<PersonaDirectorio[]> {
+  const g = await prisma.$queryRaw<Array<{ tipo: string; origenRef: string | null }>>`
+    SELECT tipo, origen_ref AS "origenRef" FROM public.comunicacion_grupos
+    WHERE id = ${grupoId}::uuid AND cuenta_id = ${cuentaId}::uuid LIMIT 1`
+  if (!g[0]) return []
+
+  if (g[0].tipo === 'estatico') {
+    const miembros = await prisma.$queryRaw<Array<{ refPersona: string | null; rol: string | null }>>`
+      SELECT ref_persona AS "refPersona", rol FROM public.comunicacion_grupo_miembros
+      WHERE grupo_id = ${grupoId}::uuid`
+    return miembros
+      .filter(m => m.refPersona)
+      .map(m => ({ refPersona: m.refPersona as string, nombre: m.refPersona as string, rol: m.rol ?? null }))
+  }
+
+  // Dinámico: 'app:resto' → adaptador.resolverGrupo(resto)
+  const origen = g[0].origenRef
+  if (!origen) return []
+  const sep = origen.indexOf(':')
+  if (sep < 0) return []
+  const app = origen.slice(0, sep)
+  const resto = origen.slice(sep + 1)
+  const adapter = getAdapter(app)
+  if (!adapter?.resolverGrupo) return []
+  try {
+    return await adapter.resolverGrupo(resto)
+  } catch {
+    return []
+  }
 }
