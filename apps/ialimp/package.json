@@ -13,6 +13,7 @@
     "@iarest/core-push": "workspace:*",
     "@iarest/core-storage": "workspace:*",
     "@iarest/core-email": "workspace:*",
+    "@iarest/core-fiscal": "workspace:*",
     "@iarest/module-contabilidad": "workspace:*",
     "@iarest/module-concursos": "workspace:*",
     "jimp": "^0.22.12",

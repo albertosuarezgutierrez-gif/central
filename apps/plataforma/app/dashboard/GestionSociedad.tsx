@@ -168,12 +168,12 @@ export function NuevoNegocioBtn({ sociedadId }: { sociedadId: string }) {
                 <option value="sivra">sivra</option>
               </select>
             </Field>
-            {(app === 'ialimp') && (
-              <Field label="ID empresa (refExt)">
+            {(app === 'ialimp' || app === 'ia-rest') && (
+              <Field label={app === 'ia-rest' ? 'ID local (refExt)' : 'ID empresa (refExt)'}>
                 <input
                   value={refExt}
                   onChange={e => setRefExt(e.target.value)}
-                  placeholder="UUID de empresa en ialimp"
+                  placeholder={app === 'ia-rest' ? 'UUID del local en ia-rest' : 'UUID de empresa en ialimp'}
                   style={inputStyle}
                 />
               </Field>
@@ -244,9 +244,9 @@ export function EditarNegocioBtn({ id, nombre: nombreActual, sector: sectorActua
                 <option value="sivra">sivra</option>
               </select>
             </Field>
-            {app === 'ialimp' && (
-              <Field label="ID empresa (refExt)">
-                <input value={refExt} onChange={e => setRefExt(e.target.value)} placeholder="UUID de empresa en ialimp" style={inputStyle} />
+            {(app === 'ialimp' || app === 'ia-rest') && (
+              <Field label={app === 'ia-rest' ? 'ID local (refExt)' : 'ID empresa (refExt)'}>
+                <input value={refExt} onChange={e => setRefExt(e.target.value)} placeholder={app === 'ia-rest' ? 'UUID del local en ia-rest' : 'UUID de empresa en ialimp'} style={inputStyle} />
               </Field>
             )}
             {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}

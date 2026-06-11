@@ -6,6 +6,7 @@ import { SE, SN, SM } from '@/lib/colors'
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '@/hooks/useAuth'
 import { createClient } from '@supabase/supabase-js'
+import { SB_OPTS } from '@/lib/supabase'
 
 const C = {
   bg: '#14110E', e1: '#1E1A16', e2: '#252018',
@@ -67,7 +68,8 @@ export default function BienvenidaPage() {
         // Cargar token bridge
         const sb = createClient(
           process.env.NEXT_PUBLIC_SUPABASE_URL!,
-          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+          process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    SB_OPTS
         )
         const { data: bt } = await sb
           .from('bridge_tokens')

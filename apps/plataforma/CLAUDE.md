@@ -24,6 +24,10 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 | `SIVRA_URL` | URL de sivra |
 | `OPERADOR_SHARED_SECRET` | Secreto compartido para el puerto del god-panel ↔ ia-rest (MISMO valor en el proyecto Vercel `ia-rest`). Sin él, el panel no ve los clientes de ia-rest (ialimp+sivra sí). |
 
+> `IAREST_SUPABASE_URL` / `IAREST_SUPABASE_SERVICE_KEY` **ya NO se usan** (eliminadas
+> al unificar la BD): ia-rest vive en la misma Supabase compartida, schema `iarest`,
+> y se lee con la conexión Prisma normal. Puedes borrarlas de Vercel.
+
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
@@ -33,7 +37,10 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Registro de cuenta por UI** (`/register` → `POST /api/auth/register`, auto-login).
 - [x] **CRUD sociedad/negocio por UI** (crear/editar/eliminar, scoped por `cuenta_id`).
 - [x] **Resumen financiero real** por negocio (HITO 3): ialimp (`v_contab_pyg`) + sivra (`incomes`/`expenses`).
-- [ ] ia-rest financiero (BD separada `efncqyvhniaxsirhdxaa`; sin clientes aún → muestra "📊 BD separada").
+- [x] **ia-rest financiero (HITO 3 + BD unificada)**: lee `iarest.v_resumen_financiero_anual` con la
+  **conexión Prisma normal** (`getResumenIaRest`, schema-cualificado) — ia-rest ya vive en la misma BD
+  compartida en el schema `iarest`. `refExt` = `local_id`. Ya no hay 2ª BD, ni cliente service-role
+  (`lib/iarest.ts` eliminado), ni envs `IAREST_SUPABASE_*`.
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
