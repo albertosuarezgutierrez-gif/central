@@ -175,9 +175,9 @@ const out = {
   },
 }
 
-// `generadoEn` se ignora en el modo --check (cambia en cada corrida).
+// `generadoEn` se ignora al comparar (cambia en cada corrida). Así el fichero solo
+// cambia cuando cambia la estructura real → sin churn ni auto-commits en bucle.
 const stable = o => JSON.stringify({ ...o, generadoEn: '' }, null, 2)
-const json = JSON.stringify(out, null, 2) + '\n'
 
 if (process.argv.includes('--check')) {
   const prev = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
@@ -187,8 +187,19 @@ if (process.argv.includes('--check')) {
   }
   console.log('✓ Radiografía al día.')
 } else {
-  writeFileSync(OUT, json)
-  console.log(`✓ Radiografía escrita en ${relative(ROOT, OUT)}`)
+  // Conserva el timestamp anterior si el contenido (sin él) no cambió.
+  const prevRaw = existsSync(OUT) ? readFileSync(OUT, 'utf8') : ''
+  let prev = null
+  try { prev = JSON.parse(prevRaw) } catch { /* fichero nuevo o corrupto */ }
+  if (prev && stable(prev) === stable(out)) out.generadoEn = prev.generadoEn
+
+  const json = JSON.stringify(out, null, 2) + '\n'
+  if (json === prevRaw) {
+    console.log('✓ Radiografía ya al día (sin cambios).')
+  } else {
+    writeFileSync(OUT, json)
+    console.log(`✓ Radiografía escrita en ${relative(ROOT, OUT)}`)
+  }
   console.log(`  ${out.resumen.verticales} verticales · ${out.resumen.packages} packages · ${out.resumen.capacidades} capacidades`)
   console.log(`  ${out.resumen.modulosInfrautilizados} módulos infrautilizados · ${out.resumen.oportunidadesPortar} oportunidades de portar`)
 }

@@ -1,18 +1,28 @@
 name: Auditoría de estructura
 
-# Verifica que la radiografía del repo (apps/plataforma/lib/estructura.generated.json)
-# está al día con el código. Si alguien cambia la estructura sin regenerarla, falla
-# pidiendo `npm run auditar`. El script es Node puro: no instala dependencias.
+# Mantiene la radiografía del repo (apps/plataforma/lib/estructura.generated.json)
+# SIEMPRE al día, sola: en cada push que toque la estructura, regenera el JSON y, si
+# cambió, lo commitea de vuelta. El script es Node puro (no instala dependencias).
+#
+# Sin bucles: el commit lo hace github-actions[bot] con GITHUB_TOKEN (sus pushes no
+# disparan workflows) y lleva [skip ci]; además el JSON conserva su timestamp si el
+# contenido real no cambió, así que un push que no toca la estructura no genera commit.
 
 on:
   push:
-    branches: [main, dev]
-  pull_request:
-    branches: [main]
+    branches: ['**']
+    paths:
+      - 'apps/**'
+      - 'packages/**'
+      - 'scripts/auditar-estructura.mjs'
+      - '.github/workflows/auditoria.yml'
+
+permissions:
+  contents: write
 
 concurrency:
   group: auditoria-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   radiografia:
@@ -22,11 +32,26 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
 
-      - name: Comprobar que la radiografía está al día
-        run: node scripts/auditar-estructura.mjs --check
+      - name: Regenerar radiografía
+        run: node scripts/auditar-estructura.mjs
+
+      - name: Commitear si cambió
+        run: |
+          if [ -n "$(git status --porcelain apps/plataforma/lib/estructura.generated.json)" ]; then
+            git config user.name 'github-actions[bot]'
+            git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+            git add apps/plataforma/lib/estructura.generated.json
+            git commit -m 'chore(auditoría): regenerar radiografía de estructura [skip ci]'
+            git push origin HEAD:${{ github.ref_name }}
+            echo "Radiografía actualizada y commiteada."
+          else
+            echo "Radiografía ya al día — sin cambios."
+          fi
