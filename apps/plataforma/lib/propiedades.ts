@@ -21,6 +21,25 @@ export interface Propiedad {
   proxima: Reserva | null
 }
 
+/**
+ * Token de acceso mágico del propietario en ialimp (columna `clientes.access_token`),
+ * buscado por el email del operador. Con él se entra al portal SIN login
+ * (`/propietario/<token>`). Devuelve null si no hay cliente con ese email.
+ */
+export async function getPropietarioAccessToken(email: string): Promise<string | null> {
+  if (!email) return null
+  try {
+    const rows = await prisma.$queryRaw<Array<{ access_token: string | null }>>`
+      SELECT access_token FROM clientes
+      WHERE lower(login_email) = lower(${email}) AND access_token IS NOT NULL AND notif_activa = true
+      LIMIT 1
+    `
+    return rows[0]?.access_token ?? null
+  } catch {
+    return null
+  }
+}
+
 export async function getPropiedades(): Promise<Propiedad[]> {
   const [props, incMes, incAnio, gasMes, proximas] = await Promise.all([
     prisma.$queryRaw<Array<{ id: string; name: string; location: string; bedrooms: number | null; beds: number | null; bathrooms: number | null; maxGuests: number | null }>>`

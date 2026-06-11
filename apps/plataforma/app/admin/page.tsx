@@ -268,12 +268,13 @@ function btn(bg: string, color: string): React.CSSProperties {
 function Propiedades() {
   const [props, setProps] = useState<Propiedad[] | null>(null)
   const [portalUrl, setPortalUrl] = useState('')
+  const [autologin, setAutologin] = useState(false)
   const [err, setErr] = useState('')
   const [vista, setVista] = useState<'portal' | 'resumen'>('portal')
   useEffect(() => {
     fetch('/api/admin/propiedades')
       .then(r => r.json())
-      .then(d => { setProps(d.propiedades || []); setPortalUrl(d.portalUrl || '') })
+      .then(d => { setProps(d.propiedades || []); setPortalUrl(d.portalUrl || ''); setAutologin(!!d.autologin) })
       .catch(() => setErr('No se pudieron cargar.'))
   }, [])
 
@@ -304,7 +305,9 @@ function Propiedades() {
             <iframe src={portalUrl} title="Portal del propietario" style={{ width: '100%', height: '78vh', border: `1px solid ${C.border}`, borderRadius: 12, background: '#fff' }} />
           ) : <div style={{ color: C.muted }}>Portal no disponible.</div>}
           <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
-            Es tu portal del propietario de ialimp. Si te pide login y no avanza dentro del recuadro, usa “Abrir portal en pestaña nueva” (algunos navegadores bloquean la sesión dentro de iframes).
+            {autologin
+              ? 'Tu portal del propietario de ialimp, abierto con tu enlace de acceso: entras directo, sin login. (La primera vez puede pedir aceptar el RGPD.)'
+              : 'Es tu portal del propietario de ialimp. No encontré tu acceso directo por email, así que pide login; si no avanza dentro del recuadro, usa “Abrir portal en pestaña nueva”.'}
           </div>
         </div>
       )}

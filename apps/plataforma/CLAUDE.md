@@ -62,10 +62,13 @@ Panel único de control de Alberto sobre **todas las verticales**. Diseño: `doc
 - **Pestañas:** 🏠 Mis propiedades · 🏢 Negocios · 🗺️ Estructura.
   - **🏠 Mis propiedades** (`lib/propiedades.ts` + `/api/admin/propiedades`): el "acceso a mis
     propiedades" desde el panel único. Dos sub-vistas:
-    - **🛠️ Portal** (por defecto): **embebe en iframe el portal del propietario de ialimp**
-      (`${IALIMP_URL}/propietario`) — Alberto es propietario/cliente ahí (de Vanesa) → trabaja
-      desde el panel. Con fallback "abrir en pestaña nueva" (algunos navegadores bloquean cookies
-      de sesión dentro de iframes entre dominios). ialimp no manda `X-Frame-Options`/CSP → se deja embeber.
+    - **🛠️ Portal** (por defecto): **embebe en iframe el portal del propietario de ialimp** → Alberto
+      trabaja desde el panel (es propietario/cliente de Vanesa ahí). **Acceso SIN login:** el endpoint
+      busca su token mágico (`clientes.access_token` en la BD compartida) por su email de operador y
+      embebe `${IALIMP_URL}/propietario/<token>` (entra directo, sin formulario y sin el problema de
+      cookies de terceros; la 1ª vez puede pedir aceptar RGPD). Si no hay token por email, cae a
+      `${IALIMP_URL}/propietario` (login) con fallback "abrir en pestaña nueva". ialimp no manda
+      `X-Frame-Options`/CSP → se deja embeber.
     - **📊 Resumen**: tarjetas de los apartamentos turísticos propios (sivra), leyendo SOLO la
       tabla `properties` (las propias con Smoobu) + `incomes`/`expenses` de la BD compartida —
       **NO** la tabla `propiedades` (multi-tenant de limpiadoras).
