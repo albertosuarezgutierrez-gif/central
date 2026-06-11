@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding — 11/06/2026**
+  Sesión de preparación para reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas,
+  alquiler de materiales, transporte, tiendas para llevar). Todo en `main` vía rama `claude/joaquin-jaen-expansion-4nyju5`.
+  - **`docs/BRIEF-joaquin-jaen.md`** — quién es, cómo caben sus 6 negocios (tabla), idea técnica (`Encargo`
+    + intercompany), estado real hoy (hecho vs diseñado), modelo comercial (módulos activables), preguntas
+    clave para cerrar, guion de presentación de ~8 slides.
+  - **`docs/DISENO-modulos-materiales-flota.md`** — diseño a fondo de las dos verticales nuevas (alquiler
+    de materiales + flota/transporte): modelo de datos, ciclo de vida, pantallas, reutilización de módulos,
+    fases sugeridas y qué demostrar a Joaquín.
+  - **Diagramas SVG + PNG** (`docs/diagrams/`):
+    - `joaquin-encargo.svg/.png` — cómo el agregado `Encargo` (parent_id+parent_type) une todos los
+      `module-*` (CRM, presupuestos, agenda, inventario, proveedores, portales, feedback, facturación).
+    - `joaquin-holding-intercompany.svg/.png` — el "gancho holding": cocina central → tiendas, flota →
+      catering, materiales → eventos facturados entre sociedades y consolidados eliminando intercompany en
+      `plataforma` (neto real del grupo).
+  - **`add_concursos.sql` APLICADA** en BD compartida `wswbehlcuxqxyinousql` (schema `public`): tabla
+    `concursos` con 12 columnas + 3 índices. Marca el pendiente de Alberto del #116 como cerrado.
+  - **INFORME unificación** (`docs/INFORME-unificacion-central.md`) planificado en plan mode: estado
+    real de adopción de packages/*, esquema de capas, plan priorizado Fases A–F. Pendiente ejecutar.
+  - **Pendiente (Alberto):** borrar envs `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` de Vercel
+    (plataforma); resetear password + jubilar BD `efncqyvhniaxsirhdxaa`; `DROP iarest._mig_ddl` (opcional).
+    Presentación Joaquín: ejecutar diagramas + ~8 slides.
+
 - **✅ CORTE BD ia-rest → proyecto compartido EJECUTADO Y VERIFICADO EN PRODUCCIÓN (PR #117) — 10/06/2026**
   El corte (Fase A2) está **hecho**: ia-rest producción consulta el schema `iarest` del compartido
   (`wswbehlcuxqxyinousql`). La causa de que los redeploys no funcionaran NO era caché ni "Sensitive":
@@ -41,9 +64,10 @@
     puente externo — nada en el código apunta ya a `efncqyvhniaxsirhdxaa`.**
   - **PENDIENTE (todo de Alberto, ya nada de unión por mi parte):** borrar de Vercel (plataforma) las envs
     `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` (ya no se usan); resetear password BD del proyecto viejo
-    (quedó en chat) y **jubilar `efncqyvhniaxsirhdxaa`** cuando lo vea estable; aplicar `add_concursos.sql` (del #116).
-    Opcional/mío con tu OK: `DROP iarest._mig_ddl` (andamiaje de la migración, destructivo). Rollback del corte =
-    revertir las 3 envs de Vercel de ia-rest (el código en `main` sin `NEXT_PUBLIC_SUPABASE_SCHEMA` vuelve a `public`).
+    (quedó en chat) y **jubilar `efncqyvhniaxsirhdxaa`** cuando lo vea estable. ~~`add_concursos.sql` (del #116)~~
+    → **✅ aplicada** (11/06). Opcional/mío con tu OK: `DROP iarest._mig_ddl` (andamiaje de la migración,
+    destructivo). Rollback del corte = revertir las 3 envs de Vercel de ia-rest (el código en `main` sin
+    `NEXT_PUBLIC_SUPABASE_SCHEMA` vuelve a `public`).
   - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura apuntan al compartido
     `wswbehlcuxqxyinousql` + schema `iarest` (con nota de fijar el schema en todo cliente/Realtime/EF nuevo).
 - **🏛️ NUEVO módulo `packages/module-concursos` — agente de concursos públicos (v1) — 10/06/2026**
@@ -66,9 +90,9 @@
   - **Roadmap (mismo módulo, fases F2–F9):** biblioteca de empresa, sobre administrativo/DEUC, memoria técnica que
     puntúa, oferta económica + rentabilidad (cruce `module-contabilidad`), plazos/subsanación, presentación lista para
     subir, RAG + radar PLACSP, OCR. Spec del v1: plan aprobado en sesión.
-  - **⚠️ Pendiente de Alberto:** aplicar `add_concursos.sql` en Supabase (BD compartida en vivo — no aplicado desde la
-    sesión a propósito); el v1 lee `NVIDIA_API_KEY` (ya configurada en ialimp). Manual `public/manual.html` y la doc
-    de regla de `apps/ialimp/CLAUDE.md` quedan como follow-up al promover la sección a producción.
+  - **Pendiente de Alberto:** ~~`add_concursos.sql`~~ → **✅ aplicada en BD compartida (11/06)**. El v1 lee
+    `NVIDIA_API_KEY` (ya configurada en ialimp). Manual `public/manual.html` y la doc de regla de
+    `apps/ialimp/CLAUDE.md` quedan como follow-up al promover la sección a producción.
 
 - **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
   De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:
