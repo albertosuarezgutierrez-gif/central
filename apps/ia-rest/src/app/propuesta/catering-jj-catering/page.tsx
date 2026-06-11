@@ -162,6 +162,20 @@ const config: ClienteConfig = {
       ],
       roi: 'El que responde antes con un presupuesto serio se lleva el evento.',
     },
+    {
+      emoji: '👨‍🍳',
+      titulo: 'Perfil del cocinero + productividad',
+      color: C.green,
+      sub: 'Trabajo organizado por IA y cronometrado',
+      ruta: 'Perfil de cada cocinero',
+      desc: 'Cada cocinero entra a su perfil y encuentra el trabajo del día ya organizado y secuenciado por la IA, con el tiempo estimado de cada elaboración. ia.rest compara el tiempo real con el estándar para medir la productividad de cada partida.',
+      ejemplos: [
+        'Trabajo del día repartido y secuenciado por partida, anticipado',
+        'Tiempo estimado por elaboración — planificado por adelantado',
+        'Productividad real vs estándar por cocinero, con datos',
+      ],
+      roi: 'Anticipas el trabajo y sabes —con datos, no con sensaciones— si cada partida es productiva.',
+    },
     MODULO_RRHH({ roi: 'Personal externo fichando por QR en cada servicio. El coste de personal por catering — exacto, no estimado.' }),
     MODULO_EVENTOS({
       ejemplos: [
