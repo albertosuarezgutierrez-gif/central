@@ -61,3 +61,37 @@ test('construirPromptMemoria: funciona sin contexto de empresa', () => {
   const { user } = construirPromptMemoria(fichaBase(), SECCION)
   assert.ok(user.includes('Plan de trabajo'))
 })
+
+import { coberturaMemoria } from '../src/memoria.ts'
+import type { SeccionMemoriaRellena } from '../src/types.ts'
+
+const FICHA_2CRIT = fichaBase({ criterios: [
+  { nombre: 'Plan de trabajo', puntos: 30, tipo: 'juicio_valor' },
+  { nombre: 'Mejoras', puntos: 10, tipo: 'juicio_valor' },
+] })
+
+test('coberturaMemoria: cuenta puntos de las secciones con contenido suficiente', () => {
+  const secciones: SeccionMemoriaRellena[] = [
+    { criterio: 'Plan de trabajo', puntos_max: 30, guia: '', contenido: 'x'.repeat(120) }, // cubierta
+    { criterio: 'Mejoras', puntos_max: 10, guia: '', contenido: 'corto' },                  // insuficiente
+  ]
+  const cob = coberturaMemoria(secciones, FICHA_2CRIT)
+  assert.equal(cob.puntos_totales, 40)
+  assert.equal(cob.puntos_cubiertos, 30)
+  assert.equal(cob.pct, 75)
+  assert.deepEqual(cob.vacias, ['Mejoras'])
+})
+
+test('coberturaMemoria: sin secciones → 0% y todos los criterios vacíos', () => {
+  const cob = coberturaMemoria([], FICHA_2CRIT)
+  assert.equal(cob.puntos_cubiertos, 0)
+  assert.equal(cob.puntos_totales, 40)
+  assert.equal(cob.pct, 0)
+  assert.deepEqual(cob.vacias.sort(), ['Mejoras', 'Plan de trabajo'])
+})
+
+test('coberturaMemoria: sin criterios de juicio de valor → 0 totales y pct 0', () => {
+  const cob = coberturaMemoria([], fichaBase({ criterios: [{ nombre: 'Precio', puntos: 100, tipo: 'automatico' }] }))
+  assert.equal(cob.puntos_totales, 0)
+  assert.equal(cob.pct, 0)
+})

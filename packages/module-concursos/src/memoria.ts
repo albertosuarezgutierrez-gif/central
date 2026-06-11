@@ -58,3 +58,34 @@ ${contexto ? `\nContexto de la empresa (úsalo, no lo contradigas):\n${contexto}
 Redacta la sección de la memoria técnica para este criterio. Devuelve SOLO el texto.`
   return { system: SYSTEM_MEMORIA, user }
 }
+
+/**
+ * Estima la cobertura de puntos de la memoria. Una sección "puntúa" si su
+ * contenido alcanza MIN_CONTENIDO_CHARS. Los criterios de juicio de valor sin
+ * sección suficiente se listan en `vacias`. `pct` se redondea a entero (0 si no
+ * hay puntos técnicos en juego).
+ */
+export function coberturaMemoria(
+  secciones: SeccionMemoriaRellena[],
+  ficha: FichaConcurso,
+): CoberturaMemoria {
+  const criteriosJV = ficha.criterios.filter(c => c.tipo === 'juicio_valor')
+  const puntos_totales = criteriosJV.reduce((s, c) => s + c.puntos, 0)
+
+  const suficiente = new Map<string, number>() // criterio → puntos, si está bien cubierto
+  for (const s of secciones) {
+    if ((s.contenido || '').trim().length >= MIN_CONTENIDO_CHARS) {
+      suficiente.set(s.criterio, s.puntos_max)
+    }
+  }
+
+  let puntos_cubiertos = 0
+  const vacias: string[] = []
+  for (const c of criteriosJV) {
+    if (suficiente.has(c.nombre)) puntos_cubiertos += c.puntos
+    else vacias.push(c.nombre)
+  }
+
+  const pct = puntos_totales > 0 ? Math.round((puntos_cubiertos / puntos_totales) * 100) : 0
+  return { puntos_cubiertos, puntos_totales, pct, vacias }
+}
