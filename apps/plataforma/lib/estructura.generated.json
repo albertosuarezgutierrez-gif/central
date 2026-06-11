@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-11T12:39:12Z",
+  "generadoEn": "2026-06-11T13:07:49Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -393,8 +393,8 @@
         "evidencias": 2
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "plataforma": {
         "estado": "no",
@@ -429,16 +429,16 @@
         "evidencias": 2
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
       },
       "sivra": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       }
     },
     "module-presupuestos": {
@@ -465,16 +465,16 @@
         "evidencias": 2
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "plataforma": {
         "estado": "no",
         "evidencias": 0
       },
       "sivra": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       }
     }
   },
@@ -1118,43 +1118,7 @@
         ]
       }
     ],
-    "reimplementaciones": [
-      {
-        "capacidad": "crm-leads",
-        "label": "CRM / leads / cotizador",
-        "modulo": "module-crm",
-        "conModulo": [
-          "ia-rest"
-        ],
-        "duplicada": [
-          "ialimp"
-        ]
-      },
-      {
-        "capacidad": "almacen-stock",
-        "label": "Almacén / stock / ASN",
-        "modulo": "module-inventario",
-        "conModulo": [
-          "ia-rest"
-        ],
-        "duplicada": [
-          "ialimp",
-          "sivra"
-        ]
-      },
-      {
-        "capacidad": "proveedores",
-        "label": "Proveedores / compras",
-        "modulo": "module-proveedores",
-        "conModulo": [
-          "ia-rest"
-        ],
-        "duplicada": [
-          "ialimp",
-          "sivra"
-        ]
-      }
-    ]
+    "reimplementaciones": []
   },
   "resumen": {
     "verticales": 4,
@@ -1162,6 +1126,6 @@
     "capacidades": 23,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 20,
-    "reimplementaciones": 3
+    "reimplementaciones": 0
   }
 }

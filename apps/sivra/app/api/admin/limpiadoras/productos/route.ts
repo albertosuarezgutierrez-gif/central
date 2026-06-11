@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { articuloAdapter, resumenStock } from '@/lib/adapters/inventario'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -13,7 +14,9 @@ export async function GET(req: NextRequest) {
     WHERE pr.activo = true ${cond}
     ORDER BY pr.categoria, pr.nombre
   `)
-  return NextResponse.json({ productos: rows })
+  const articulos = rows.map(articuloAdapter.toArticulo)
+  const resumen = resumenStock(articulos)
+  return NextResponse.json({ productos: rows, resumen })
 }
 
 export async function POST(req: NextRequest) {

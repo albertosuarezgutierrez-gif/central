@@ -18,6 +18,8 @@
     "@iarest/core-email": "workspace:*",
     "@iarest/core-push": "workspace:*",
     "@iarest/module-contabilidad": "workspace:*",
+    "@iarest/module-proveedores": "workspace:*",
+    "@iarest/module-inventario": "workspace:*",
     "@prisma/client": "^5.22.0",
     "prisma": "^5.22.0",
     "clsx": "^2.1.1",

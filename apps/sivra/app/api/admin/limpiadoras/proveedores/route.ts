@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { proveedorAdapter } from '@/lib/adapters/proveedores'
 
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url)
@@ -14,7 +15,8 @@ export async function GET(req: NextRequest) {
     ${cond}
     ORDER BY p.nombre
   `)
-  return NextResponse.json({ proveedores: rows })
+  const proveedores_canonicos = rows.map(proveedorAdapter.toProveedor)
+  return NextResponse.json({ proveedores: rows, proveedores_canonicos })
 }
 
 export async function POST(req: NextRequest) {
