@@ -150,3 +150,33 @@ export interface EvaluacionGoNoGo {
   banderas: BanderaRoja[]
   recomendacion: string
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Biblioteca de empresa (F2) — documentos/datos reutilizables del licitador.
+// Es lo que permite autocompletar el checklist de cada concurso.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Familia de documento del licitador (la app guarda el fichero aparte). */
+export type TipoDocumentoBiblioteca =
+  | 'escritura_constitucion'
+  | 'poderes'
+  | 'cif'
+  | 'certificado_aeat'          // estar al corriente con Hacienda
+  | 'certificado_ss'            // estar al corriente con la Seguridad Social
+  | 'cuentas_anuales'
+  | 'seguro_rc'                 // responsabilidad civil
+  | 'clasificacion_empresarial'
+  | 'certificado_iso'
+  | 'declaracion_responsable'
+  | 'deuc'
+  | 'otro'
+
+/** Un documento guardado en la biblioteca de la empresa. */
+export interface DocumentoBiblioteca {
+  tipo: TipoDocumentoBiblioteca
+  nombre: string
+  vigencia_hasta?: string                 // ISO 'YYYY-MM-DD' si caduca
+  datos?: Record<string, unknown>         // metadatos (p.ej. nº de póliza)
+}
+
+export type Biblioteca = DocumentoBiblioteca[]
