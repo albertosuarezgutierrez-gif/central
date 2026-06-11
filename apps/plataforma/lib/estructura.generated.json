@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-11T13:48:49Z",
+  "generadoEn": "2026-06-11T16:18:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -82,6 +82,11 @@
       "id": "module-proveedores",
       "tipo": "module",
       "npm": "@central/module-proveedores"
+    },
+    {
+      "id": "module-revenue",
+      "tipo": "module",
+      "npm": "@central/module-revenue"
     }
   ],
   "capacidades": [
@@ -475,6 +480,24 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 1
+      }
+    },
+    "module-revenue": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     }
   },
@@ -1122,7 +1145,7 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 15,
+    "packages": 16,
     "capacidades": 23,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 20,
