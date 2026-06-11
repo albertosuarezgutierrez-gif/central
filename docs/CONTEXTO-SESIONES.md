@@ -16,6 +16,5 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-__INSERT_BLOCK__
-
-__REST_OF_FILE__
+__BLOCK__
+__REST__
