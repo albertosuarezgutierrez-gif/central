@@ -88,3 +88,18 @@ export function documentosFaltantes(
     return !cubierto
   })
 }
+
+/**
+ * Documentos cuya vigencia termina antes de la fecha de corte. La fecha de corte
+ * es `limite` (p.ej. el fin de plazo de presentación) si se da; si no, `hoy`.
+ * Así se avisa de lo que caducará ANTES de poder presentar. Fechas ISO
+ * 'YYYY-MM-DD' (orden lexicográfico = orden cronológico).
+ */
+export function documentosCaducados(
+  biblioteca: Biblioteca,
+  hoy: string,
+  limite?: string,
+): DocumentoBiblioteca[] {
+  const corte = limite ?? hoy
+  return biblioteca.filter(d => d.vigencia_hasta !== undefined && d.vigencia_hasta < corte)
+}

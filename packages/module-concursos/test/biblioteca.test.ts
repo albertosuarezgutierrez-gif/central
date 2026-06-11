@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { tipoDeDocumento } from '../src/biblioteca.ts'
 import { autocompletarChecklist } from '../src/biblioteca.ts'
 import { documentosFaltantes } from '../src/biblioteca.ts'
+import { documentosCaducados } from '../src/biblioteca.ts'
 import type { Biblioteca, ItemChecklist } from '../src/types.ts'
 import type { FichaConcurso } from '../src/types.ts'
 
@@ -90,4 +91,25 @@ test('documentosFaltantes: devuelve lo no cubierto por la biblioteca', () => {
 test('documentosFaltantes: biblioteca vacía → faltan todos', () => {
   const faltan = documentosFaltantes(fichaConDocs(), [])
   assert.equal(faltan.length, 3)
+})
+
+const BIBLIO_VIG: Biblioteca = [
+  { tipo: 'certificado_aeat', nombre: 'AEAT', vigencia_hasta: '2026-05-01' }, // ya caducado
+  { tipo: 'certificado_ss', nombre: 'SS', vigencia_hasta: '2026-07-15' },     // vigente hoy, caduca antes del límite
+  { tipo: 'seguro_rc', nombre: 'RC' },                                        // sin vigencia → nunca caduca
+]
+
+test('documentosCaducados: con hoy detecta solo lo ya vencido', () => {
+  const out = documentosCaducados(BIBLIO_VIG, '2026-06-11')
+  assert.deepEqual(out.map(d => d.tipo), ['certificado_aeat'])
+})
+
+test('documentosCaducados: con límite (fin de plazo) detecta lo que vencerá antes', () => {
+  const out = documentosCaducados(BIBLIO_VIG, '2026-06-11', '2026-08-01')
+  assert.deepEqual(out.map(d => d.tipo), ['certificado_aeat', 'certificado_ss'])
+})
+
+test('documentosCaducados: documentos sin vigencia_hasta nunca se listan', () => {
+  const out = documentosCaducados([{ tipo: 'otro', nombre: 'x' }], '2026-06-11')
+  assert.equal(out.length, 0)
 })
