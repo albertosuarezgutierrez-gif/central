@@ -72,6 +72,19 @@
     `ig-test-send` (en ambos proyectos), `tg-webhookinfo` (viejo) e `ig-migrate` (nuevo).
   - **Decisión de producto de Alberto:** mantener el modelo **publicación automática previa autorización en Telegram**
     (no autopublicar sin aprobar).
+- **✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod) — 10/06/2026**
+  Vanessa (Sique Brilla) probaba el chat con las limpiadoras y no lo encontraba en su panel. El chat
+  (`/admin/chat`) **ya existía y funcionaba**, pero solo era accesible desde la barra inferior del **móvil**;
+  en el **menú lateral del escritorio** (`NAV` en `app/dashboard/DashboardClient.tsx`) no había entrada de chat
+  y el único 💬 era «Asistente» (que es el **ayudante de IA**, `/admin/asistente`) → confusión.
+  - **Fix:** añadida entrada **«💬 Chat equipo» → `/admin/chat`** al menú lateral; el asistente de IA pasa a
+    **«🤖 Asistente IA»** para no chocar el icono 💬. (NOTA: después la rama de Concursos añadió también
+    «🏛️ Concursos» al mismo `NAV`; conviven sin problema.)
+  - `public/manual.html`: sección Chat con la ruta exacta (lateral en escritorio / barra inferior en móvil) +
+    aclaración Chat-equipo vs Asistente-IA + recordatorio de cómo lo ve la limpiadora en `/l`.
+  - Solo navegación + manual. Sin datos, API ni migraciones. **Mergeado a `main` (squash `86bd78a`) y desplegado
+    a producción (`app.ialimp.es`).** Lo de «enviar el enlace» y «editar» que Vanessa también probaba ya iba bien.
+
 - **📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)**
   Cierra la infraestructura de F7 sobre el núcleo puro ya en producción. Spec/plan:
   `docs/superpowers/specs/2026-06-11-concursos-radar-ocr-infra-design.md` · `docs/superpowers/plans/2026-06-11-concursos-radar-ocr-infra.md`.
