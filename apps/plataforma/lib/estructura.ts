@@ -24,21 +24,56 @@ export const MODULOS: ModuloInfo[] = [
   { id: 'core-identity', tipo: 'core', desc: 'Contrato de sesión/inquilino (puertos & adaptadores).' },
   { id: 'module-contabilidad', tipo: 'module', desc: 'Dominio: IVA, PyG, tesorería, rentabilidad, recurrentes (lógica pura).' },
   { id: 'module-concursos', tipo: 'module', desc: 'Dominio: agente de concursos públicos / licitaciones LCSP (lógica pura).' },
+  { id: 'module-agenda', tipo: 'module', desc: 'Dominio: disponibilidad y reserva de un recurso (sala, vehículo, kit, persona) con solapes.' },
+  { id: 'module-crm', tipo: 'module', desc: 'Dominio: pipeline comercial genérico (oportunidades/leads) anclado a un Encargo.' },
+  { id: 'module-presupuestos', tipo: 'module', desc: 'Dominio: líneas, costes, descuentos y cálculo de margen/rentabilidad.' },
+  { id: 'module-proveedores', tipo: 'module', desc: 'Dominio: catálogo de proveedores + servicios con comisiones.' },
+  { id: 'module-inventario', tipo: 'module', desc: 'Dominio: catálogo de artículos + asignación de activos a un Encargo.' },
+  { id: 'module-asn', tipo: 'module', desc: 'Dominio: aviso de envío/recepción de mercancía con líneas (lote, caducidad).' },
+  { id: 'module-feedback', tipo: 'module', desc: 'Dominio: reseñas/valoraciones + propinas por Encargo o token público.' },
 ]
 
 /** Agentes IA por ámbito (transversal = vive en un módulo y lo usan varias verticales). */
 export const AGENTES: AgenteInfo[] = [
+  // Transversal
   { nombre: 'Agente de concursos públicos', ambito: 'transversal · module-concursos', desc: 'Lee el pliego → ficha + checklist por sobre + Go/No-Go + garantías + baja temeraria.' },
+
+  // ia-rest (hostelería)
+  { nombre: 'BRAIN (voz → comanda)', ambito: 'ia-rest', desc: 'ASR (Whisper) + NIM contextual → comanda estructurada, correcciones fuzzy, routeo a cocina.' },
+  { nombre: 'Asistente / copiloto (owner)', ambito: 'ia-rest', desc: 'Chat sobre datos del restaurante (ventas, stock, márgenes).' },
+  { nombre: 'Asistente de cocina (KDS)', ambito: 'ia-rest', desc: 'Chat operacional en la pantalla de cocina.' },
+  { nombre: 'Help chat contextual', ambito: 'ia-rest', desc: 'Ayuda según la página/turno/comanda activa.' },
+  { nombre: 'Recomendación de carta', ambito: 'ia-rest', desc: 'Cross-sell/upsell/producto del día (camarero y QR).' },
+  { nombre: 'Smart Scan (OCR multi-doc)', ambito: 'ia-rest', desc: 'Clasifica y extrae: albarán, factura, carta, etiqueta (GS1/EAN), CV.' },
+  { nombre: 'Scoring de eventos', ambito: 'ia-rest', desc: 'Post-evento: comanda + financiero + APPCC → nota + mejoras.' },
+  { nombre: 'Forecaster', ambito: 'ia-rest', desc: 'Predicción a 7 días + eventos del entorno (clima, ferias).' },
+  { nombre: 'Agente CRM (leads)', ambito: 'ia-rest', desc: 'Analiza eventos de lead (WhatsApp/IG/email) → estado + siguiente acción.' },
+  { nombre: 'Lead hunter', ambito: 'ia-rest', desc: 'Prospección con Apify + enriquecimiento NIM.' },
+  { nombre: 'Generador de Instagram', ambito: 'ia-rest', desc: '6 plantillas, 2×/semana, aprobación por Telegram.' },
+  { nombre: 'Generador de blog SEO', ambito: 'ia-rest', desc: 'Artículos SEO de hostelería.' },
+  { nombre: 'Traductor de carta', ambito: 'ia-rest', desc: 'Traducción automática de la carta a los idiomas del QR.' },
+  { nombre: 'Auto-healer', ambito: 'ia-rest', desc: 'Detecta patrones de incidencias (bridge, fichaje, comanda) y propone curas.' },
+  { nombre: 'QA runner', ambito: 'ia-rest', desc: 'Suites de test automatizadas sobre clientes.' },
+  { nombre: 'Agente arquitecto', ambito: 'ia-rest · operador', desc: 'Analiza la estructura del proyecto y propone refactors/ahorro de tokens.' },
+  { nombre: 'Agentes de operador', ambito: 'ia-rest · operador', desc: 'SEO, ventas, legal, competencia, contenido y onboarding (6 especializados).' },
+
+  // ialimp (limpieza)
   { nombre: 'Auto-asignación', ambito: 'ialimp', desc: 'Asigna limpiadoras por turnos, carga semanal y ventana de entrada.' },
-  { nombre: 'Cotizador IA', ambito: 'ialimp', desc: 'Genera presupuestos de limpieza.' },
-  { nombre: 'Escáner de documentos', ambito: 'ialimp', desc: 'Extrae datos de facturas/justificantes (visión) → contabilidad.' },
-  { nombre: 'Calidad de fotos', ambito: 'ialimp', desc: 'Evalúa fotos de limpieza (visión) y compara antes/después.' },
-  { nombre: 'Clasificador de quejas', ambito: 'ialimp', desc: 'Clasifica y prioriza incidencias de clientes.' },
+  { nombre: 'Cotizador IA', ambito: 'ialimp', desc: 'Argumentario + propuesta HTML para leads.' },
+  { nombre: 'Calidad de fotos', ambito: 'ialimp', desc: 'Visión: detecta incidencias en foto post-limpieza.' },
+  { nombre: 'Comparar fotos (referencia)', ambito: 'ialimp', desc: 'Visión: compara antes/después contra foto de referencia.' },
+  { nombre: 'Escáner de documentos (OCR)', ambito: 'ialimp', desc: 'Factura/albarán/ticket → clasifica + mapea PGC + propone apunte.' },
+  { nombre: 'Análisis de kits (visión)', ambito: 'ialimp', desc: 'Estima nivel de productos desde foto del kit.' },
+  { nombre: 'Clasificador de quejas', ambito: 'ialimp', desc: 'Categoriza, prioriza y genera expediente RRHH si hay patrón.' },
+  { nombre: 'Detección de patrones', ambito: 'ialimp', desc: 'Anomalías sobre quejas + carga + rendimiento.' },
   { nombre: 'Briefing diario', ambito: 'ialimp', desc: 'Resumen operativo del día (email + push).' },
-  { nombre: 'Selección de CVs (RRHH)', ambito: 'ialimp', desc: 'Analiza candidaturas de limpiadoras.' },
+  { nombre: 'Análisis RRHH', ambito: 'ialimp', desc: 'Desempeño por limpiadora (rating, quejas, asistencia).' },
+  { nombre: 'Asistente / copiloto', ambito: 'ialimp', desc: 'Consultas operativas (quién trabaja hoy, sin asignar, por cobrar…).' },
   { nombre: 'Mailing en frío', ambito: 'ialimp', desc: 'Captación: recolector Google/Apify/IA + drip de emails.' },
-  { nombre: 'BRAIN (voz)', ambito: 'ia-rest', desc: 'Cerebro de comandas por voz: transcripción + interpretación.' },
-  { nombre: 'Asistente / copiloto', ambito: 'ia-rest', desc: 'Consultas en lenguaje natural sobre el restaurante.' },
-  { nombre: 'Lead research', ambito: 'ia-rest', desc: 'Investigación de leads para captación.' },
+
+  // sivra (inmobiliario)
   { nombre: 'Pricing automático', ambito: 'sivra', desc: 'Motor de precios anclado al mercado, con salvaguardas.' },
+  { nombre: 'Chat financiero', ambito: 'sivra', desc: 'Consultas en lenguaje natural sobre propiedades/ingresos/gastos.' },
+  { nombre: 'Análisis de inversión', ambito: 'sivra', desc: 'Evalúa oportunidades de inversión en pisos.' },
+  { nombre: 'Escáner de facturas (visión)', ambito: 'sivra', desc: 'OCR de facturas de gasto → apuntes.' },
 ]
