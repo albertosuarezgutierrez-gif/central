@@ -874,7 +874,8 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
         {tab==='chat' && (
           <div style={{ margin:'-14px', height:'calc(100vh - 64px)' }}>
             <ChatSesionPropietario token={token} sesionId={null} miNombre={cliente.nombre}
-              titulo="Chat con la empresa" height="calc(100vh - 64px)" />
+              titulo="Chat con la empresa" height="calc(100vh - 64px)"
+              onClose={()=>setTab('hoy')} />
           </div>
         )}
       </div>
