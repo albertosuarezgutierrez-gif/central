@@ -5,7 +5,9 @@ import assert from 'node:assert/strict'
 
 import { tipoDeDocumento } from '../src/biblioteca.ts'
 import { autocompletarChecklist } from '../src/biblioteca.ts'
+import { documentosFaltantes } from '../src/biblioteca.ts'
 import type { Biblioteca, ItemChecklist } from '../src/types.ts'
+import type { FichaConcurso } from '../src/types.ts'
 
 test('tipoDeDocumento: reconoce AEAT y Seguridad Social', () => {
   assert.equal(tipoDeDocumento('Certificado de estar al corriente con la AEAT'), 'certificado_aeat')
@@ -62,4 +64,30 @@ test('autocompletarChecklist: biblioteca vacía deja todo igual', () => {
   ]
   const out = autocompletarChecklist(checklist, [])
   assert.equal(out[0].hecho, false)
+})
+
+function fichaConDocs(): FichaConcurso {
+  return {
+    objeto: 'x', tipo_contrato: 'servicios', procedimiento: 'abierto', lotes: 0,
+    plazos: {}, solvencia: [], garantias: {}, criterios: [],
+    documentos: [
+      { nombre: 'Certificado de estar al corriente con la AEAT', sobre: 'administrativo', obligatorio: true },
+      { nombre: 'Póliza de responsabilidad civil', sobre: 'administrativo', obligatorio: true },
+      { nombre: 'Memoria técnica', sobre: 'tecnico', obligatorio: true },
+    ],
+  }
+}
+
+test('documentosFaltantes: devuelve lo no cubierto por la biblioteca', () => {
+  const biblio: Biblioteca = [{ tipo: 'certificado_aeat', nombre: 'AEAT' }]
+  const faltan = documentosFaltantes(fichaConDocs(), biblio)
+  const nombres = faltan.map(d => d.nombre)
+  assert.ok(!nombres.includes('Certificado de estar al corriente con la AEAT')) // cubierto
+  assert.ok(nombres.includes('Póliza de responsabilidad civil'))               // no en biblioteca
+  assert.ok(nombres.includes('Memoria técnica'))                               // tipo no reconocido → falta
+})
+
+test('documentosFaltantes: biblioteca vacía → faltan todos', () => {
+  const faltan = documentosFaltantes(fichaConDocs(), [])
+  assert.equal(faltan.length, 3)
 })

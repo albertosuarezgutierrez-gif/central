@@ -71,3 +71,20 @@ export function autocompletarChecklist(
     return cubierto ? { ...item, hecho: true } : { ...item }
   })
 }
+
+/**
+ * Documentos requeridos por el concurso que la biblioteca NO cubre todavía.
+ * Un documento se considera cubierto solo si su tipo se reconoce y está en la
+ * biblioteca; los de tipo no reconocido siempre cuentan como faltantes.
+ */
+export function documentosFaltantes(
+  ficha: FichaConcurso,
+  biblioteca: Biblioteca,
+): DocumentoRequerido[] {
+  const tipos = tiposEnBiblioteca(biblioteca)
+  return ficha.documentos.filter(d => {
+    const tipo = tipoDeDocumento(d.nombre)
+    const cubierto = tipo !== undefined && tipos.has(tipo)
+    return !cubierto
+  })
+}
