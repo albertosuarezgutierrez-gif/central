@@ -72,3 +72,17 @@ test('construirDeuc: motivos de exclusión y declaración final por defecto a fa
   assert.equal(deuc.declaraciones_finales.veracidad, true)
   assert.equal(deuc.declaraciones_finales.fecha, '2026-06-11')
 })
+
+import { construirDeclaracionResponsable } from '../src/deuc.ts'
+
+test('construirDeclaracionResponsable: identidad + objeto + afirmaciones', () => {
+  const ficha = fichaBase({ objeto: 'Limpieza de un colegio', expediente: '2026/01' })
+  const dr = construirDeclaracionResponsable(EMPRESA, ficha, '2026-06-11')
+  assert.equal(dr.empresa.razon_social, 'Limpiezas Ejemplo SL')
+  assert.equal(dr.objeto, 'Limpieza de un colegio')
+  assert.equal(dr.expediente, '2026/01')
+  assert.equal(dr.fecha, '2026-06-11')
+  assert.ok(dr.declara.length >= 3)
+  assert.ok(dr.declara.some(a => /capacidad de obrar/i.test(a)))
+  assert.ok(dr.declara.some(a => /al corriente/i.test(a)))
+})
