@@ -109,6 +109,16 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
   const cargarSobre = async () => {
     try { const r = await fetch(`/api/admin/concursos/${c.id}/sobre-administrativo`).then(x=>x.json()); setSobre(r); } catch {}
   };
+  const [memoria, setMemoria] = useState<any>(null);
+  const [genMem, setGenMem] = useState(false);
+  const generarMemoria = async () => {
+    setGenMem(true);
+    try {
+      const r = await fetch(`/api/admin/concursos/${c.id}/memoria`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ contexto: '' }) }).then(x=>x.json());
+      setMemoria(r);
+    } catch {}
+    setGenMem(false);
+  };
   const f = c.ficha || {}; const gng = c.go_no_go; const gar = c.garantias || {};
   // Autocompleta el checklist con lo que ya hay en la biblioteca de empresa.
   const checklist:any[] = autocompletarChecklist(c.checklist || [], biblioteca);
@@ -204,6 +214,27 @@ function FichaView({ c, biblioteca }:{ c:any; biblioteca:Biblioteca }) {
           <div style={{ fontSize:13, color:C.muted }}>
             DEUC: {sobre.deuc?.operador?.razon_social || '(sin empresa)'} · objeto «{sobre.deuc?.procedimiento?.objeto||'—'}». Declaración responsable: {sobre.declaracion?.declara?.length||0} afirmaciones.
           </div>
+        </div>
+      )}
+
+      {/* Memoria técnica (F4) */}
+      <button onClick={generarMemoria} disabled={genMem} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, marginTop:8, cursor:'pointer', opacity:genMem?0.6:1 }}>
+        {genMem ? '✍️ Redactando…' : '✍️ Generar memoria técnica'}
+      </button>
+      {memoria?.cobertura && (
+        <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
+          <div style={{ fontSize:13, fontWeight:800, marginBottom:6 }}>
+            Cobertura técnica: {memoria.cobertura.puntos_cubiertos}/{memoria.cobertura.puntos_totales} puntos ({memoria.cobertura.pct}%)
+          </div>
+          <div style={{ height:8, background:C.soft, borderRadius:4, overflow:'hidden', marginBottom:10 }}>
+            <div style={{ width:`${memoria.cobertura.pct}%`, height:'100%', background:C.indigo }} />
+          </div>
+          {(memoria.memoria?.secciones ?? []).map((s:any,i:number)=>(
+            <details key={i} style={{ marginBottom:8 }}>
+              <summary style={{ fontWeight:800, fontSize:14, cursor:'pointer' }}>{s.criterio} · {s.puntos_max} pts</summary>
+              <p style={{ fontSize:13, whiteSpace:'pre-wrap', color:C.text, margin:'6px 0' }}>{s.contenido || '(vacío)'}</p>
+            </details>
+          ))}
         </div>
       )}
 
