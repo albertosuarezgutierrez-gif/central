@@ -38,6 +38,33 @@
     `ig-test-send` (en ambos proyectos), `tg-webhookinfo` (viejo) e `ig-migrate` (nuevo).
   - **Decisión de producto de Alberto:** mantener el modelo **publicación automática previa autorización en Telegram**
     (no autopublicar sin aprobar).
+- **📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)**
+  Cierra la infraestructura de F7 sobre el núcleo puro ya en producción. Spec/plan:
+  `docs/superpowers/specs/2026-06-11-concursos-radar-ocr-infra-design.md` · `docs/superpowers/plans/2026-06-11-concursos-radar-ocr-infra.md`.
+  - **Parser ATOM PURO (`apps/ialimp/lib/concursos-radar.ts`, TDD `node --test` → 4/4):** `parsearAtomPlacsp` (CODICE de PLACSP, `fast-xml-parser` con `removeNSPrefix`, tolerante a campos ausentes → título/objeto/cpv/presupuesto/órgano/url/expediente), `dedupeKey` (expediente > atom_id > url) y `matchesDeAtom` (empareja con `filtrarRadar`/`coincideRadar` del módulo → puntuación + motivos + dedupe). Fixture en `lib/__fixtures__/placsp-sample.atom.xml`.
+  - **Adaptación del módulo (aditiva, 79/79 intacto):** subpath export `"./radar": "./src/radar.ts"` en `packages/module-concursos/package.json` para poder importar `filtrarRadar`/`coincideRadar` bajo `node --test` (el bare `index.ts` arrastra imports extensionless que el type-stripping de Node 22 rechaza). Los tipos siguen importándose del bare package.
+  - **Radar (app):** migraciones `add_concursos_radar_criterios.sql` (amplía `concursos_perfil_empresa` con `radar_activo`/`radar_cpv[]`/`radar_palabras_clave[]`/`radar_presupuesto_min·max`) y `add_concursos_radar_anuncios.sql` (tabla con `unique(empresa_id, dedupe_key)`). Endpoints `radar/criterios` (GET/PUT), `radar` (GET lista + `no_vistos`), `radar/visto` (POST), `radar/importar` (POST import manual de ATOM). Cron `/api/cron/concursos-radar` cada 6 h (`0 */6 * * *`, en `vercel.json`): descarga la sindicación ATOM paginada (`PLACSP_FEED_URL` configurable, default público, hasta 3 páginas siguiendo `rel="next"`), filtra por empresa con `radar_activo` e inserta matches nuevos (`ON CONFLICT DO NOTHING`). **Aviso in-app** (contador de no vistos) — NO web-push (las suscripciones push de ialimp son de limpiadoras).
+  - **OCR (app):** `lib/concursos-ocr.ts` — `rasterizarPdf` (pdfjs-dist legacy `legacy/build/pdf.mjs` + `@napi-rs/canvas`, hasta 12 págs) y `ocrPaginasPliego` (cada página → `nimVision`, modelo de visión que ialimp ya usa, sin claves nuevas). Integrado en `analizar/route.ts`: si `necesitaOcr(texto)` → OCR → reanaliza; respuesta añade `ocr_aplicado`. `next.config.ts`: `@napi-rs/canvas`/`pdfjs-dist` en `serverExternalPackages` (load-bearing).
+  - **UI (`/admin/concursos/page.tsx`):** panel **"📡 Radar de oportunidades"** (criterios CPV/palabras/presupuesto + toggle activo + lista de matches con puntuación/motivos/enlace/«visto» + badge de no vistos) y aviso **"📄 Documento escaneado — OCR"** en la ficha (prop `ocrAplicado`).
+  - **Verificación:** parser 4/4, módulo 79/79, `apps/ialimp npm run build → ✓ Compiled successfully` en cada tarea (aborta luego por `JWT_SECRET` ausente = env local).
+  - **⚠️ Pendiente de Alberto:** (1) aplicar las 2 migraciones en Supabase; (2) **validar la rasterización OCR en la preview de Vercel** (riesgo: pdfjs+napi-canvas en runtime serverless; fallback documentado = subir páginas como imágenes); (3) opcional: ajustar `PLACSP_FEED_URL` por CPV/región. El cron no necesita secreto (lo invoca Vercel cron).
+- **🔌 Portar ialimp y sivra a módulos compartidos (proveedores, inventario, CRM) — 11/06/2026**
+  PR #143 mergeado. Cierra la deuda de reimplementación detectada en la auditoría de estructura (PR #141).
+  Patrón Ports & Adapters: cada vertical aporta su adapter que implementa la interfaz del módulo compartido.
+  Sin cambios de BD — solo adaptadores + reuso de funciones puras del módulo.
+  - **ialimp (multi-tenant):**
+    - `apps/ialimp/lib/adapters/proveedores.ts` → `ProveedorAdapter<ProveedorRow>` sobre `@iarest/module-proveedores`
+    - `apps/ialimp/lib/adapters/inventario.ts` → `ArticuloAdapter<ProductoStockRow>` + `AsignacionAdapter<StockConsumoRow>` sobre `@iarest/module-inventario`
+    - `apps/ialimp/lib/adapters/crm.ts` → `OportunidadAdapter<LeadRow>` con mapeo de estados (`propuesta_enviada→propuesta`, `presupuestado→negociacion`) sobre `@iarest/module-crm`
+    - `api/admin/proveedores` GET: añade `proveedores_canonicos`; `api/admin/stock` GET: añade `resumen`; `api/admin/leads` GET: añade `pipeline`
+    - `package.json`: deps `module-proveedores`, `module-inventario`, `module-crm` con `workspace:*`
+  - **sivra (single-tenant):**
+    - `apps/sivra/lib/adapters/proveedores.ts` → igual que ialimp pero sin `empresa_id`
+    - `apps/sivra/lib/adapters/inventario.ts` → catálogo de referencia (`cantidadTotal=0`, sin stock operativo)
+    - `api/admin/limpiadoras/proveedores` GET: añade `proveedores_canonicos`; `api/admin/limpiadoras/productos` GET: añade `resumen`
+    - `package.json`: deps `module-proveedores`, `module-inventario`
+  - **Radiografía:** 0 reimplementaciones (antes 3). `kits_limpiadoras` queda fuera del módulo a propósito (asignación permanente limpiadora ≠ AsignacionActivo por sesión).
+  - **✅ PR #143 MERGEADO a `main` — 11/06/2026.** Builds Vercel todos verdes (ialimp, sivra, plataforma, ia-rest).
 
 - **🏛️ Concursos F7 — Radar PLACSP + OCR (CIERRA el agente F2–F7) — 11/06/2026**
   Última fase del agente de concursos (`packages/module-concursos`). Plan:

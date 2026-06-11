@@ -3,6 +3,7 @@ import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { serialize } from '@/lib/serialize'
+import { proveedorAdapter } from '@/lib/adapters/proveedores'
 
 export async function GET(req: NextRequest) {
   try {
@@ -20,7 +21,8 @@ export async function GET(req: NextRequest) {
       WHERE p.empresa_id = ${empresa_id}::uuid ${cond}
       ORDER BY p.nombre
     `)
-    return NextResponse.json(serialize({ proveedores: rows }))
+    const proveedores_canonicos = rows.map(proveedorAdapter.toProveedor)
+    return NextResponse.json(serialize({ proveedores: rows, proveedores_canonicos }))
   } catch (e: any) {
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
