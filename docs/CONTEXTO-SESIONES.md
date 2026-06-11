@@ -16,6 +16,31 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🩻 Panel único de operador: radiografía + Mis propiedades + login unificado — 11/06/2026 (PR #129, mergeado)**
+  El god-panel (`apps/plataforma/admin`) pasa a ser el **panel único de Alberto** con 3 pestañas:
+  - **🗺️ Estructura = radiografía AUTOMÁTICA del repo.** `scripts/auditar-estructura.mjs` (Node puro,
+    `npm run auditar`) audita `apps/*`+`packages/*` y escribe `apps/plataforma/lib/estructura.generated.json`
+    (matriz de **módulos por vertical** usado/declarado/no por imports reales + matriz de **funciones/áreas**
+    por rutas + diferencias candidatas a portar). **Auto-actualización:** `.github/workflows/auditoria.yml`
+    regenera y commitea el JSON en cada push que toque la estructura (sin churn: conserva timestamp si el
+    contenido no cambia; commit de `github-actions[bot]` con `[skip ci]`). El catálogo de capacidades vive
+    en el propio script. Doc vivo: `docs/ESTRUCTURA.md`.
+  - **🏠 Mis propiedades.** Sub-vista **Portal**: embebe en iframe el **portal del propietario de ialimp
+    SIN login** — `lib/propiedades.ts` busca `clientes.access_token` por el email del operador y embebe
+    `${IALIMP_URL}/propietario/<token>` (sin cookies de terceros; ialimp no manda X-Frame-Options/CSP).
+    Sub-vista **Resumen**: tarjetas de los apartamentos propios (sivra), leyendo SOLO `properties`+`incomes`+
+    `expenses` (NO la tabla `propiedades` multi-tenant). Renombrada "Clientes"→"Negocios".
+  - **Puerto ia-rest:** el adaptador ahora muestra el motivo real (`HTTP 401/500`/`sin conexión`) + timeout 8s.
+    El "puerto no responde" era **HTTP 401**: Alberto **sincronizó `OPERADOR_SHARED_SECRET`** (mismo valor en
+    los proyectos Vercel `plataforma` e `ia-rest`, Production+Preview) y añadió plataforma como Trusted Source. ✅
+  - **🔐 Login unificado (vía envs, sin código):** Alberto puso en el proyecto Vercel `sivra`
+    `ADMIN_EMAIL`=`alberto.suarez.gutierrez@gmail.com` + `ADMIN_PASSWORD`=su contraseña de superadmin →
+    **mismas credenciales en god-panel + ialimp `/superadmin` + sivra**. (Se descartó el refactor edge/node de
+    la auth de sivra por riesgo en producción; el camino de envs es equivalente para el objetivo.)
+  - **Pendiente (fase 2):** ia-rest sigue con su login propio (otra BD `efncqyvhniaxsirhdxaa`) → unificar
+    requeriría SSO/puerto; queda para cuando se quiera. La "opción pura" (sivra validando contra la tabla
+    `superadmins` en vez de `ADMIN_PASSWORD`) también queda anotada por si se prefiere a futuro.
+
 - **🎛️ God-panel (panel único de operador) F1–F5 en `apps/plataforma/admin` — 10/06/2026 (PR #118)**
   Panel de Alberto que gobierna TODAS las verticales desde un sitio, reutilizando la tabla `superadmins`
   (mismo login que el `/superadmin` de ialimp; cookie `plataforma_admin`). Adaptadores por vertical
