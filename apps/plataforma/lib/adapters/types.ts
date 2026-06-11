@@ -44,4 +44,7 @@ export interface VerticalAdapter {
   // Directorio de personas/roles de un negocio (refExt = tenant en su vertical).
   // Para dirigir comunicación a personas concretas (F0.3). Opcional por vertical.
   listarDirectorio?(refExt: string): Promise<PersonaDirectorio[]>
+  // Resuelve un grupo dinámico a su lista de personas (F0.4). `origenRef` es la parte
+  // específica de la vertical, p.ej. 'evento:<id>' para "participantes del catering".
+  resolverGrupo?(origenRef: string): Promise<PersonaDirectorio[]>
 }

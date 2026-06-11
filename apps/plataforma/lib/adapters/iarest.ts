@@ -115,4 +115,16 @@ export const iarestAdapter: VerticalAdapter = {
     const json = await res.json().catch(() => ({}))
     return (json.personas ?? []) as PersonaDirectorio[]
   },
+
+  // Grupos dinámicos: 'evento:<id>' → participantes (personal) del evento/catering.
+  async resolverGrupo(origenRef) {
+    const sep = origenRef.indexOf(':')
+    const tipo = sep < 0 ? origenRef : origenRef.slice(0, sep)
+    const id = sep < 0 ? '' : origenRef.slice(sep + 1)
+    if (tipo !== 'evento' || !id) return []
+    const res = await port(`/api/operador/evento-personas?evento_id=${encodeURIComponent(id)}`)
+    if (!res || !res.ok) return []
+    const json = await res.json().catch(() => ({}))
+    return (json.personas ?? []) as PersonaDirectorio[]
+  },
 }
