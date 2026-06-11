@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireSession } from '@/lib/session'
 import { listarConversaciones, crearConversacion } from '@/lib/comunicacion'
+import { notificarConversacion } from '@/lib/notificaciones'
 import { z } from 'zod'
 
 export async function GET() {
@@ -37,6 +38,8 @@ export async function POST(req: NextRequest) {
       titulo: b.data.titulo ?? null,
       cuerpo: b.data.cuerpo,
     })
+    // Aviso por email a los destinatarios (best-effort, no bloquea ni rompe).
+    await notificarConversacion(s.id, b.data.destinatarios, b.data.titulo || 'Nuevo mensaje en el panel', b.data.cuerpo)
     return NextResponse.json(conv, { status: 201 })
   } catch (e: any) {
     return NextResponse.json({ error: e?.message || 'No se pudo crear' }, { status: 400 })
