@@ -86,3 +86,66 @@ Cocina central → tiendas con **ia-rest** (ya funciona) + **CRM de eventos** co
    riesgo, valor rápido.
 8. **Cierre** — Joaquín como design partner; pedir datos (sociedades, dolor nº1, volumen intercompany) y
    fijar fecha del piloto.
+
+---
+
+## ⭐ POST-REUNIÓN (11/06/2026) — inteligencia real y plan revisado
+
+> Reunión con Joaquín Jaén (dueño) + sus hermanos. Asistentes clave:
+> - **Ella = responsable de TODAS las cocinas** (perfil técnico fuerte, ya ha construido sistema propio).
+> - **Él = responsable de restaurante + comercial/ventas** (el comprador entusiasta: "vamos a probar").
+> - Alberto pitcheando; Joaquín y otro hermano de oyentes/decisores.
+
+### Lo que CAMBIA respecto al brief a ciegas
+1. **La cocina NO es campo virgen — es la joya, ya construida.** La responsable de cocina lleva **~3 años**
+   montando un sistema de producción/seguridad alimentaria/escandallo muy serio: `proveedores → artículos
+   con ficha técnica + alérgenos → ingredientes → elaboraciones con procesos (enfriamiento) → etiquetas QR
+   con trazabilidad/caducidad (sanidad/APPCC) → escandallo dinámico (recosteo semanal al cambiar precios) →
+   partes de trabajo por partida generados 5 días antes → báscula integrada → cronometraje de elaboraciones
+   (productividad) → economato con códigos → merma`. **Es más profundo que la cocina de ia-rest.**
+   → No le vendemos una cocina: **conectamos a la suya** (costes→contabilidad/plataforma, material→eventos) o
+   absorbemos su modelo en `module-cocina/inventario` **con ella como co-diseñadora**. Es protectora con su
+   departamento ("es lo mío") y su objeción nº1 es el **factor humano** (re-educar a la gente, adopción).
+   **Tratarla como socia técnica, no como prospecto.** Es a la vez el mayor activo y el mayor riesgo de adopción.
+
+2. **La apertura real a corto = COMERCIAL + LOGÍSTICA (el hermano).** Es el que quiere probar ya. Sus
+   necesidades encajan con módulos que ya tenemos o están diseñados:
+   - **CRM comercial + incentivos/ranking de comerciales** (4 comerciales; bonos por margen, ticket más caro,
+     más reseñas; contratos con % escalable y rescisión automática; martes = día de oficina/formación).
+     → `module-crm` + capa **comisiones/incentivos** (net-new, componible) + RBAC por comercial.
+   - **ERP comercial / facturación / contabilidad** consolidado → `plataforma` + `module-contabilidad` + `core-fiscal`.
+   - **Logística / material de eventos = el departamento más atrasado** (menos defendido políticamente →
+     **el piloto más limpio**): inventario de menaje (mesas/platos/copas), **previsión de material por evento**,
+     **inventario post-boda con roturas**, **consumo estacional** (temperatura, día/noche, temporada).
+     → Coincide casi literal con `docs/DISENO-modulos-materiales-flota.md` (`inventario_menaje` + `asignacion_activo`
+     + `parte_danos`). El ángulo **estacional/meteo** (previsión de bebida por temperatura) es enriquecimiento nuevo.
+
+3. **Producto estrella que quieren: marketplace de catering + presupuestador self-service.** Cliente final
+   configura su evento (50 adultos/15 niños/2 días) → opciones de menú con **margen ya incorporado** → elige →
+   paga (Stripe/banco). Más: **multi-tarificador de eventos** (estilo comparador de seguros de Alberto), **bot/agente
+   de bodas** (cualifica primera visita), **maridaje de vino por IA** (sugiere vino para el plato + rango de precio).
+   → La pieza "wow" de la demo.
+
+4. **Verticales adyacentes confirmadas:** haciendas (`sivra`) + limpieza con **cierre obligatorio por foto** (`ialimp`)
+   + **fontanería/obra** del cuñado (cuadro de mando con fotos, evolución de obra, avisos WhatsApp, localización en obra)
+   → cruza con `module-concursos` (licitaciones públicas, ya terminado) como cross-sell ya teed-up.
+
+5. **Tesis de modelo de negocio (Alberto):** regalar el ERP/contabilidad como gancho (igual que a los propietarios
+   de pisos turísticos) y monetizar la **capa transaccional/decisión** (pricing, seguros, take del marketplace,
+   módulos activables). Framing design-partner con Joaquín se mantiene.
+
+### Plan revisado (vs. el del brief)
+- **Piloto recomendado = Logística / Material de eventos.** Bajo riesgo político (es el dpto. más atrasado y menos
+  defendido), máxima madurez de diseño (ya hecho) y valida intercompany después. **NO** arrancar por cocina (joya
+  ya construida + responsable protectora).
+- **Demo para ganar la sala = marketplace/presupuestador de catering** (cliente configura evento → menú con margen →
+  paga). Es lo diferencial y visual.
+- **Posición explícita sobre cocina:** "conectamos con lo que [ella] ya ha construido, no lo reemplazamos."
+- **Siguiente acción acordada:** presentación/demo + piloto en un departamento. Contacto por WhatsApp de Alberto;
+  ellos mandan un resumen.
+
+### Datos que aún faltan (preguntar en el follow-up)
+- Nº de sociedades/CIFs y qué negocio cuelga de cada una; volumen real de operaciones intercompany.
+- Stack actual exacto del sistema de cocina de ella (para decidir integrar vs. absorber) y su disposición a co-diseñar.
+- Tamaño del catálogo de material (mesas/menaje) y nº de eventos/mes (dimensionar el piloto de logística).
+- Estructura de comisiones/bonos de los comerciales (para la capa de incentivos del CRM).
