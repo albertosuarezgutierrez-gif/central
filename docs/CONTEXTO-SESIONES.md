@@ -32,7 +32,17 @@
     registra rotura con foto). **Routing:** empleado con `materiales` aterriza en `/montaje`.
   - **Gating:** `materiales` añadido a `TODOS_MODULOS` y al checklist de "Acceso a gestión" del panel de personal.
   - **Verificado:** `next build` verde (exit 0) con `@central/*` linkados (pnpm install). Spec en
-    `docs/superpowers/specs/2026-06-12-modulo-materiales-design.md`.
+    `docs/superpowers/specs/2026-06-12-modulo-materiales-design.md`. PR **#163** (draft, CI verde).
+  - **⚠️ OJO con la BD (corregido):** la BD VIVA de ia-rest es el proyecto **`efncqyvhniaxsirhdxaa`,
+    schema `public`** (ahí están `restaurantes`/`personal`/`inventario_menaje`; demo `DEMO` + "Saboga
+    Catering"). El proyecto compartido `wswbehlcuxqxyinousql.iarest` está VACÍO (la migración A2 del plan
+    de unificación NO se ha ejecutado). Primero creé las tablas en el sitio equivocado; corregido →
+    tablas en `efncqyvhniaxsirhdxaa.public`. (Nota: las tablas `produccion_*`/`checklist_*` de la sesión
+    anterior podrían estar también en el proyecto equivocado — revisar si esas features fallan en prod.)
+  - **🧪 Cuenta DEMO sembrada para probar:** owner **Alberto PIN 1369** → `/owner` → tab **Materiales**
+    (5 materiales con stock, 4 asignaciones, 1 rotura) y `/montaje` (el owner ve todo). Montador
+    **PIN 4040** (rol gestor, acceso solo a `materiales`) → entra directo a `/montaje`. Módulos
+    `materiales/checklists/produccion` activados en el restaurante demo.
   - **Pendiente del bloque:** previsión IA (aforo/temporada/temperatura), código de barras/báscula, multi-almacén
     por hacienda con reparto. Crear bucket Storage `materiales` en Supabase (hay fallback a data-url mientras tanto).
 
