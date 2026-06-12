@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T11:54:02Z",
+  "generadoEn": "2026-06-12T12:49:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -739,7 +739,7 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 20
+        "evidencias": 21
       },
       "ialimp": {
         "presente": true,
@@ -1077,6 +1077,7 @@
       "/api/marketing/baja",
       "/api/materiales",
       "/api/materiales/asignacion",
+      "/api/materiales/categorias",
       "/api/materiales/dano",
       "/api/materiales/perfil",
       "/api/mensajes",
@@ -1682,6 +1683,7 @@
       "marketing_consentimientos",
       "materiales",
       "materiales_asignacion",
+      "materiales_categorias",
       "materiales_dano",
       "materiales_espacios",
       "materiales_transferencias",
@@ -2088,7 +2090,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 9,
-    "apis": 707,
+    "apis": 708,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
