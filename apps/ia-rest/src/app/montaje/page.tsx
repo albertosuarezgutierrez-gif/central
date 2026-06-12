@@ -31,6 +31,11 @@ export default function MontajePage() {
   const [busy, setBusy] = useState<string | null>(null)
   const [rotura, setRotura] = useState<Asignacion | null>(null)
 
+  const salir = () => {
+    try { localStorage.removeItem('ia_rest_session') } catch { /* noop */ }
+    window.location.href = '/login'
+  }
+
   const cargar = useCallback(async () => {
     const r = await fetch('/api/materiales/perfil', { headers: H() })
     if (r.ok) {
@@ -58,7 +63,17 @@ export default function MontajePage() {
   return (
     <div style={{ minHeight: '100vh', background: C.bg, fontFamily: SN, color: C.ink, padding: '16px 14px 60px' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
-        <h1 style={{ fontFamily: SE, fontSize: 26, margin: '4px 0 2px' }}>Mi material</h1>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12 }}>
+          <h1 style={{ fontFamily: SE, fontSize: 26, margin: '4px 0 2px' }}>Mi material</h1>
+          <button onClick={salir} style={{
+            fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8,
+            border: `1px solid ${C.rule}`, cursor: 'pointer', background: 'transparent', color: C.ink2,
+            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0, marginTop: 4,
+          }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+            Salir
+          </button>
+        </div>
         <p style={{ color: C.ink3, fontSize: 13, margin: '0 0 16px' }}>Material asignado. Confirma entrega/devolución y registra roturas con foto.</p>
 
         {loading ? <p style={{ color: C.ink3 }}>Cargando…</p>
