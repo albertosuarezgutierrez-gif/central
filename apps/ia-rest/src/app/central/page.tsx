@@ -40,7 +40,7 @@ function MiniBar({ g }: { g: GPoint[] }) {
 export default function CentralPage() {
   const [pin,setPin]         = useState('')
   const [authed,setAuthed]   = useState(false)
-  const [session,setSession] = useState<{cuenta_id:string;nombre:string}|null>(null)
+  const [session,setSession] = useState<{cuenta_id:string;nombre:string;rol?:string;_sig?:string}|null>(null)
   const [loading,setLoading] = useState(false)
   const [err,setErr]         = useState('')
   const [resumen,setResumen] = useState<Resumen|null>(null)
@@ -52,7 +52,9 @@ export default function CentralPage() {
 
   const sh = useCallback(() => ({
     'Content-Type':'application/json',
-    'x-ia-session': JSON.stringify({ cuenta_id: session?.cuenta_id, rol: 'gestor' }),
+    // Enviar el token de cuenta FIRMADO verbatim (incluye _sig). No reconstruir
+    // el objeto: cambiaría las claves y rompería la verificación de firma.
+    'x-ia-session': JSON.stringify(session),
   }), [session])
 
   const cargar = useCallback(async () => {
@@ -84,7 +86,10 @@ export default function CentralPage() {
       const r = await fetch('/api/auth/pin-cuenta', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({pin}) })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error ?? 'PIN incorrecto')
-      setSession({ cuenta_id: d.cuenta?.id, nombre: d.cuenta?.nombre ?? 'Central' })
+      // Guardar el token de cuenta FIRMADO (cuentaSession) tal cual lo devuelve
+      // pin-cuenta, para enviarlo con su _sig en cada request al portal.
+      if (!d.cuentaSession?._sig) throw new Error('Sesión de cuenta no válida')
+      setSession(d.cuentaSession)
       setAuthed(true)
     } catch(e) { setErr(String(e)) }
     finally { setLoading(false) }
