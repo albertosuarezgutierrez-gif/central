@@ -93,7 +93,7 @@ en `STRIPE_WEBHOOK_SECRET` (Supabase), la incidencia ya está resuelta.**
 ## Notas / mejoras sugeridas (no aplicadas)
 
 - El diseño del selector de modo es frágil: si `STRIPE_MODE` se olvida, defaultea
-  a `test` en silencio y rechaza todo lo live con 401 sin alerta. Convendria
+  a `test` en silencio y rechaza todo lo live con 401 sin alerta. Convendría
   loggear/alertar (tgAlert) cuando llegan firmas que no validan, o derivar el modo
   del propio entorno en vez de un secreto suelto.
 - La fuente de `webhook-stripe` no estaba en el repo (sólo desplegada). Se ha
