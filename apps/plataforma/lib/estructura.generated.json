@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T10:46:06Z",
+  "generadoEn": "2026-06-12T11:36:16Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -883,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 153
+        "evidencias": 156
       },
       "ialimp": {
         "presente": true,

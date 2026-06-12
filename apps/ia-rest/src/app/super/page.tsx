@@ -8,6 +8,7 @@ import SugerenciasPanel from '@/components/SugerenciasPanel'
 import SystemHealth from '@/components/SystemHealth'
 import AutoCurasPanel from '@/components/AutoCurasPanel'
 import AgentesIATab from '@/components/AgentesIATab'
+import AgenteArquitectoTab from '@/components/AgenteArquitectoTab'
 import InstagramTab from '@/components/InstagramTab'
 import ProveedoresTechTab from '@/components/ProveedoresTechTab'
 import IaTrainingPanel from '@/components/super/IaTrainingPanel'
@@ -122,7 +123,7 @@ export default function SuperPage() {
   const [filtroEstado, setFiltroEstado] = useState<'todos'|'activo'|'inactivo'|'trial'>('todos')
   const [saving, setSaving] = useState(false)
   const [err, setErr] = useState('')
-  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'suscripciones'|'soporte'|'agentes'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'|'prospeccion_apify'>('clientes')
+  const [tabSuper, setTabSuper] = useState<'clientes'|'sugerencias'|'ia_training'|'sistema'|'autocuras'|'cobro'|'suscripciones'|'soporte'|'agentes'|'arquitecto'|'instagram'|'crm'|'blog'|'proveedores'|'qa_agent'|'prospeccion_apify'>('clientes')
   const [tabCRM, setTabCRM] = useState<'leads'|'agente'|'prospeccion'>('leads')
   // Menús desplegables por dominio (crecimiento · soporte · sistema). Solo uno abierto a la vez.
   const [openMenu, setOpenMenu] = useState<string | null>(null)
@@ -485,6 +486,7 @@ export default function SuperPage() {
                 { id: 'autocuras',   label: 'Autocuras' },
                 { id: 'qa_agent',    label: 'QA Agent' },
                 { id: 'agentes',     label: 'Agentes' },
+                { id: 'arquitecto',  label: 'Arquitecto' },
                 { id: 'ia_training', label: 'IA Training' },
               ] },
             ] as any[]).map((g: any) => {
@@ -578,6 +580,10 @@ export default function SuperPage() {
         ) : tabSuper === 'agentes' ? (
           <div style={{ padding: '24px 0' }}>
             <AgentesIATab session={session} C={C} SE={SE} SN={SN} SM={SM} />
+          </div>
+        ) : tabSuper === 'arquitecto' ? (
+          <div style={{ padding: '24px 0' }}>
+            <AgenteArquitectoTab session={session} C={C} SE={SE} SN={SN} SM={SM} />
           </div>
         ) : tabSuper === 'instagram' ? (
           <div style={{ padding: '24px 0' }}>

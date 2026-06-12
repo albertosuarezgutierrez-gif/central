@@ -8,6 +8,7 @@ import PanelPasesEvento from '@/components/owner/PanelPasesEvento'
 import PanelScoring from '@/components/owner/PanelScoring'
 import PanelEscandallo from '@/components/owner/PanelEscandallo'
 import MantenimientoTab from '@/components/owner/MantenimientoTab'
+import AgenteModuloChat from '@/components/owner/AgenteModuloChat'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 type EventoTipo = 'boda' | 'comunion' | 'bautizo' | 'cumpleanos' | 'empresa' | 'otro'
@@ -839,6 +840,19 @@ export default function EventosTab({ restauranteId, sh }: EventosTabProps) {
         }}>
           + Nuevo evento
         </button>
+        <AgenteModuloChat
+          titulo="Eventos"
+          emoji="🎉"
+          apiRoute="/api/owner/agente-eventos"
+          sh={sh}
+          restauranteId={restauranteId}
+          sugerencias={[
+            '¿Qué eventos tengo esta semana?',
+            '¿Cómo creo un presupuesto de evento?',
+            '¿Qué es la barra libre por tiers?',
+            '¿Cómo genero el informe post-evento?',
+          ]}
+        />
       </div>
 
       {/* Formulario */}
