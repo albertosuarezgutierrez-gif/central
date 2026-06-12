@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔀 Merge de PR #180 desbloqueado — resolución de conflictos vía MCP — 12/06/2026**
+  PR #180 (`tsconfig.base.json` compartido) estaba bloqueado por 3 conflictos de merge. Resueltos:
+  - `docs/ARQUITECTURA.generated.md` → tomada la versión de `main` (auto-generado, más reciente).
+  - `apps/plataforma/lib/estructura.generated.json` → ídem (auto-generado).
+  - `docs/CONTEXTO-SESIONES.md` → fusionadas ambas entradas (SKILLS-ROUTER + Config de build).
+  Empujados vía `mcp__github__create_or_update_file` (requiere SHA exacto del fichero en la rama) y
+  `mcp__github__push_files`. **⚠️ GOTCHA confirmado**: tras cada commit de MCP cambian los SHAs de
+  todos los ficheros del árbol → re-fetch obligatorio antes de actualizar otro fichero con SHA.
+  Las 4 previews Vercel terminaron en **Ready** y el PR fue mergeado a `main`.
+
 - **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
   Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
   se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
