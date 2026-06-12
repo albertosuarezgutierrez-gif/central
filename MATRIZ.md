@@ -73,8 +73,15 @@ Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (l
     cualquier clave de servicio que sea la misma. Defínela una vez, vincúlala a los proyectos → al crear una
     vertical nueva hereda lo compartido sin reconfigurar. (Si un proyecto ya la tiene a nivel proyecto, esa
     gana sobre la compartida; para unificar, borra la local.)
-  - **Config de build/herramientas** (cuando se haga): `tsconfig.base.json` + config de lint/formato en la
-    raíz que cada app extienda; overrides de pnpm y workflows de CI ya viven en la raíz.
+  - **Config de build/herramientas**: **`tsconfig.base.json` en la raíz** (✅ hecho) con las opciones TS
+    comunes (`target`/`lib`/`strict`/`module`/`moduleResolution`/`jsx`/`plugins`…); cada app lo `extends`
+    (`"extends": "../../tsconfig.base.json"`) y **solo declara lo SUYO**: `paths` (`@/*`), su `include`/`exclude`,
+    y los overrides propios (ia-rest: `jsx:react-jsx`, `types:["node"]`, `lib` con `es2017`; ialimp:
+    `allowImportingTsExtensions`). Vercel clona el repo entero (los `file:` deps ya alcanzan `../../packages`),
+    así que el `extends` a `../../tsconfig.base.json` resuelve en build aunque el Root Directory sea `apps/<app>`.
+    Overrides de pnpm y workflows de CI ya viven en la raíz. **Lint aún SIN unificar** (deuda apuntada): hoy
+    conviven flat-config (ia-rest, `eslint-config-next` 16) y legacy `.eslintrc` (sivra, 15), y dos apps sin
+    eslint → subir un config de lint común exige antes alinear versiones y añadir deps a apps vivas, se hará aparte.
 - **Abajo (específico de cada vertical)** → en su proyecto Vercel / su carpeta:
   - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), la BD **propia** de ia-rest (`efncqyvhniaxsirhdxaa`),
     y los integradores de cada una (SMTP, Smoobu, Stripe, Apify…).

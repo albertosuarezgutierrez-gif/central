@@ -1,0 +1,23 @@
+{
+  "//": "Base TS compartida de la MATRIZ (casa de marcas). Cada vertical en apps/* la EXTIENDE",
+  "//2": "y solo declara lo SUYO (paths, jsx si difiere, include/exclude). Mismo principio que",
+  "//3": "packages/* vs apps/*: lo común sube a la raíz, lo propio se queda en cada marca.",
+  "//4": "Vercel clona el repo entero (los file: deps ya alcanzan ../../packages), así que el",
+  "//5": "extends '../../tsconfig.base.json' resuelve en build aunque Root Directory sea apps/<app>.",
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": ["dom", "dom.iterable", "esnext"],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "incremental": true,
+    "jsx": "preserve",
+    "plugins": [{ "name": "next" }]
+  }
+}
