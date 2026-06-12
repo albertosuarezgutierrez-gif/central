@@ -16,17 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🔒 SEGURIDAD BD compartida — 63 ERROR → 0 ERROR — PR #169 — 12/06/2026**
-  `mcp__Supabase__get_advisors` sobre `wswbehlcuxqxyinousql`: 500 advisories (63 ERROR) → 438 (0 ERROR).
-  Migración `20260612_security_definer_views_fix.sql` aplicada y mergeada:
-  - **62 vistas `SECURITY DEFINER`** corregidas con `ALTER VIEW … SET (security_invoker = on)`:
-    47 en schema `iarest` (ia-rest) + 15 en `public` (sivra/ialimp). Las vistas respetan la RLS del
-    llamante; `service_role` sigue bypasseando RLS → usos server-side no se rompen.
-  - **`iarest.instagram_estilos_usados`**: `ENABLE ROW LEVEL SECURITY` (tabla interna sin columna tenant;
-    sin política → solo service_role accede).
-  - CI: 10/10 checks verde (typecheck ×4 apps, tests, lint/build, Vercel ×4, radiografía). Mergeado.
-  - **Pendiente WARN (no urgente):** 24× `rls_policy_always_true` + 114× `function_search_path_mutable`.
-    Detalle en `docs/AUDITORIA-2026-06.md` sección A4.
+- **🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR — 12/06/2026**
+  3 migraciones aplicadas sobre `wswbehlcuxqxyinousql`. PR #169 mergeado. Detalle en `docs/AUDITORIA-2026-06.md` A4.
+  - ✅ 62 vistas `SECURITY DEFINER` → `security_invoker = on` (47 iarest + 15 public)
+  - ✅ `instagram_estilos_usados` → RLS habilitada
+  - ✅ 114 funciones `function_search_path_mutable` → `SET search_path='iarest'`
+  - ✅ 7 políticas `service_role_*` → `TO service_role` (qr slots/items/sesiones/valoraciones,
+    reglas_envio, voice_profiles, comanda_modificaciones)
+  - ℹ️ 17 `rls_policy_always_true` intencionales (bridge hardware, QR anon, super_admin) — sin acción
+  - ℹ️ 77 `anon/authenticated_security_definer_function_executable` intencionales (login_pin, resolve_restaurante)
+  - **No quedan pendientes de seguridad accionables en la BD.**
 
 - **🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164 — 12/06/2026**
   Auditoría completa tras el rename `@iarest/*`→`@central/*`, la migración de BD de ia-rest al Supabase

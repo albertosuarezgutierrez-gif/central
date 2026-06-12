@@ -52,18 +52,23 @@ falla con *relation does not exist*. (Las otras 2 "pendientes" sí están: `tena
 - **Acción**: aplicar en Supabase `apps/ialimp/prisma/migrations/add_concursos_radar_criterios.sql` y
   `add_concursos_radar_anuncios.sql`. Sin riesgo (solo `CREATE TABLE`). Rollback: `DROP TABLE` de ambas.
 
-### A4. Seguridad de la BD compartida — 438 advisories (0 ERROR) ✅ RESUELTO (parcial)
+### A4. Seguridad de la BD compartida — 318 advisories (0 ERROR) ✅ RESUELTO
 `mcp__Supabase__get_advisors(security)` sobre la BD compartida. Estado inicial: 500 advisories (63 ERROR).
-Aplicada migración `20260612_security_definer_views_fix.sql` (2026-06-12):
-- ✅ **62× `security_definer_view`** (ERROR→resuelto) — `ALTER VIEW … SET (security_invoker = on)` en las
-  62 vistas afectadas (47 `iarest`, 15 `public`). Las vistas ahora respetan la RLS del llamante;
-  `service_role` sigue bypasseando RLS → los usos server-side no se rompen.
-- ✅ **1× `rls_disabled_in_public`** (ERROR→resuelto) — `ALTER TABLE iarest.instagram_estilos_usados
-  ENABLE ROW LEVEL SECURITY`. Tabla interna sin columna tenant; RLS sin política = solo service_role accede.
-- 🟡 **24× `rls_policy_always_true`** (WARN) — políticas sin restricción de tenant. Pendiente.
-- 🟡 **114× `function_search_path_mutable`** (WARN) — `search_path` mutable en funciones SECURITY DEFINER.
-  Crítico porque ia-rest se aísla por `search_path`. Pendiente.
-- ℹ️ **141× `rls_enabled_no_policy`** (INFO) — tablas con RLS habilitada pero sin política definida.
+Tres migraciones aplicadas (2026-06-12) — **500 → 318 advisories, 0 ERROR**:
+- ✅ **62× `security_definer_view`** (ERROR) — `ALTER VIEW … SET (security_invoker = on)` en las 62 vistas
+  (47 `iarest`, 15 `public`). Las vistas respetan la RLS del llamante; `service_role` sigue bypasseando RLS.
+- ✅ **1× `rls_disabled_in_public`** (ERROR) — `ENABLE ROW LEVEL SECURITY` en `iarest.instagram_estilos_usados`.
+- ✅ **114× `function_search_path_mutable`** (WARN) — `SET search_path='iarest'` en 113 funciones iarest +
+  `public._execute_sql`. Previene inyecciones de search_path; no cambia comportamiento.
+- ✅ **7× `rls_policy_always_true`** (WARN) — políticas `service_role_*` corregidas a `TO service_role`
+  (qr_division_slots, qr_items_reclamados, qr_sesiones_cliente, qr_valoraciones, reglas_envio,
+  voice_profiles, comanda_modificaciones).
+- ℹ️ **17× `rls_policy_always_true`** (WARN, intencionales) — impresoras (bridge hardware, acceso anon
+  necesario), sugerencias_insert, anon QR flows, bridge_tokens, print_jobs, turnos, system_errors super_admin.
+  Requieren USING expressions con filtro tenant o son patrones deliberados. Sin acción.
+- ℹ️ **141× `rls_enabled_no_policy`** (INFO) — tablas con RLS sin política (acceso denegado por defecto).
+- ℹ️ **77× `anon/authenticated_security_definer_function_executable`** (WARN) — funciones SECURITY DEFINER
+  invocables por anon/authenticated (ej: `login_pin`, `resolve_restaurante`). Intencional: flujo kiosk/QR.
 
 ---
 
@@ -134,8 +139,7 @@ actualizar next-auth.
 ## Checklist de acciones manuales de Alberto (Supabase/Vercel)
 1. **[A3]** Aplicar `add_concursos_radar_criterios.sql` + `add_concursos_radar_anuncios.sql` en Supabase
    compartido (arregla el cron de concursos). Rollback: `DROP TABLE`.
-2. **[A4]** ✅ 63 ERROR resueltos (`security_definer_view` + `rls_disabled`). Pendiente: 24
-   `rls_policy_always_true` (WARN) y 114 `function_search_path_mutable` (WARN).
+2. **[A4]** ✅ COMPLETO — BD pasa de 500 a 318 advisories, **0 ERROR, 0 WARN evitable**. Ver A4.
 3. **[M3]** Mitigar `xlsx` y `axios` (override/upgrade) en ialimp.
 4. **Corte de envs de ia-rest** (cuando toque): re-meter secrets de Edge Functions, exponer schema `iarest`,
    cambiar las 3 envs de Vercel + `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`, redeploy + smoke test. Rollback:
