@@ -1,8 +1,8 @@
 // Panel de OPERADOR (god-panel) — un solo sitio para gobernar todas las verticales.
 // Auth propia (cookie plataforma_admin); muestra login si no hay sesión de operador.
 'use client'
-import { useEffect, useState, useCallback, Fragment } from 'react'
-import { VERTICALES, MODULOS, AGENTES, RADIOGRAFIA } from '@/lib/estructura'
+import { useEffect, useState, useCallback } from 'react'
+import MapaArquitectura from './MapaArquitectura'
 
 const C = { bg: '#0b1020', card: '#151b2e', card2: '#1c2540', border: '#2a3457', text: '#e8ecf7', muted: '#8b97b8', accent: '#6366f1', ok: '#22c55e', okBg: '#0c2a18', red: '#ef4444', redBg: '#2a0c0c' }
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
@@ -142,7 +142,7 @@ export default function OperadorPanel() {
           ))}
         </div>
 
-        {tab === 'estructura' && <Estructura />}
+        {tab === 'estructura' && <MapaArquitectura />}
 
         {tab === 'clientes' && <>
         <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -267,212 +267,8 @@ function btn(bg: string, color: string): React.CSSProperties {
   return { background: bg, color, border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }
 }
 
-function Estructura() {
-  const cores = MODULOS.filter(m => m.tipo === 'core')
-  const mods = MODULOS.filter(m => m.tipo === 'module')
-  const sub = { fontSize: 14, fontWeight: 800, margin: '0 0 12px' } as React.CSSProperties
-  const grid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10, marginBottom: 28 } as React.CSSProperties
-
-  return (
-    <div>
-      <p style={{ color: C.muted, fontSize: 13, margin: '0 0 24px', maxWidth: 720 }}>
-        Mapa de la casa de marcas: la <strong style={{ color: C.text }}>matriz</strong> (común) + <strong style={{ color: C.text }}>verticales</strong> (apps por sector)
-        que enchufan <strong style={{ color: C.text }}>módulos compartidos</strong> (packages). Los <strong style={{ color: C.text }}>agentes</strong> son las piezas de IA.
-      </p>
-
-      <Radiografia />
-
-      <div style={sub}>🏢 Verticales <span style={{ color: C.muted, fontWeight: 500 }}>· {VERTICALES.length} apps</span></div>
-      <div style={grid}>
-        {VERTICALES.map(v => (
-          <div key={v.app} style={card()}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <span style={{ fontWeight: 800 }}>{v.nombre}</span>
-              <span style={{ fontSize: 11, color: C.accent, fontWeight: 700 }}>{v.sector}</span>
-            </div>
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{v.desc}</div>
-            {v.url && <div style={{ fontSize: 11, color: C.muted, marginTop: 6, fontFamily: 'monospace' }}>{v.url}</div>}
-            <div style={{ fontSize: 10, color: C.muted, marginTop: 8, opacity: .6 }}>apps/{v.app}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={sub}>🧩 Núcleos compartidos <span style={{ color: C.muted, fontWeight: 500 }}>· core-* ({cores.length})</span></div>
-      <div style={grid}>
-        {cores.map(m => (
-          <div key={m.id} style={card()}>
-            <div style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 13 }}>{m.id}{m.deps && <span title="dep npm propia" style={{ color: C.accent }}> ●</span>}</div>
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{m.desc}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={sub}>📦 Módulos de dominio <span style={{ color: C.muted, fontWeight: 500 }}>· module-* ({mods.length})</span></div>
-      <div style={grid}>
-        {mods.map(m => (
-          <div key={m.id} style={card(C.accent)}>
-            <div style={{ fontWeight: 800, fontFamily: 'monospace', fontSize: 13 }}>{m.id}</div>
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 6 }}>{m.desc}</div>
-          </div>
-        ))}
-      </div>
-
-      <div style={sub}>🤖 Agentes IA <span style={{ color: C.muted, fontWeight: 500 }}>· {AGENTES.length}</span></div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {AGENTES.map((a, i) => (
-          <div key={i} style={{ ...card(), display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-            <div>
-              <div style={{ fontWeight: 700 }}>{a.nombre}</div>
-              <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>{a.desc}</div>
-            </div>
-            <span style={{ fontSize: 11, color: C.muted, background: C.card2, borderRadius: 6, padding: '3px 10px', whiteSpace: 'nowrap' }}>{a.ambito}</span>
-          </div>
-        ))}
-      </div>
-    </div>
-  )
-}
-
 function card(accent?: string): React.CSSProperties {
   return { background: '#151b2e', border: `1px solid ${accent || '#2a3457'}`, borderRadius: 12, padding: '14px 16px' }
-}
-
-// ── Radiografía (auditoría automática del repo) ────────────────────────────────
-const VLABEL: Record<string, string> = { 'ia-rest': 'ia.rest', ialimp: 'ialimp', sivra: 'SIVRA', plataforma: 'matriz' }
-const vlabel = (v: string) => VLABEL[v] || v
-
-function Radiografia() {
-  const R = RADIOGRAFIA
-  const fecha = R.generadoEn ? new Date(R.generadoEn).toLocaleString('es-ES', { dateStyle: 'medium', timeStyle: 'short' }) : '—'
-  const sub = { fontSize: 14, fontWeight: 800, margin: '0 0 12px' } as React.CSSProperties
-  const cores = R.packages.filter(p => p.tipo === 'core')
-  const mods = R.packages.filter(p => p.tipo === 'module')
-  // Agrupar capacidades por su `grupo` conservando el orden del catálogo.
-  const grupos: { grupo: string; caps: typeof R.capacidades }[] = []
-  for (const c of R.capacidades) {
-    let g = grupos.find(x => x.grupo === c.grupo)
-    if (!g) { g = { grupo: c.grupo, caps: [] }; grupos.push(g) }
-    g.caps.push(c)
-  }
-
-  return (
-    <div style={{ marginBottom: 32 }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8, marginBottom: 4 }}>
-        <div style={{ fontSize: 15, fontWeight: 800 }}>🩻 Radiografía del repo</div>
-        <div style={{ fontSize: 11, color: C.muted }}>Auditoría automática · última: {fecha}</div>
-      </div>
-      <p style={{ color: C.muted, fontSize: 12, margin: '0 0 14px', maxWidth: 720 }}>
-        Auditado contra el código real (no a mano): qué módulo y qué función está implementado en cada vertical.
-        Regenerar con <code style={{ background: C.card2, padding: '1px 5px', borderRadius: 4 }}>npm run auditar</code>.
-      </p>
-
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
-        <Kpi label="Verticales" valor={String(R.resumen.verticales)} />
-        <Kpi label="Packages" valor={String(R.resumen.packages)} />
-        <Kpi label="Capacidades" valor={String(R.resumen.capacidades)} />
-        <Kpi label="Módulos sin usar" valor={String(R.resumen.modulosInfrautilizados)} />
-        <Kpi label="Reimplementaciones" valor={String(R.resumen.reimplementaciones)} />
-      </div>
-
-      <div style={sub}>🧩 Módulos por vertical <span style={{ color: C.muted, fontWeight: 500 }}>· quién usa cada package</span></div>
-      <Matriz cols={R.verticales}
-        secciones={[
-          { titulo: 'Núcleos · core-*', filas: cores.map(p => ({ label: p.id, cells: R.verticales.map(v => moduloCell(R.matrizModulos[p.id]?.[v])) })) },
-          { titulo: 'Módulos de dominio · module-*', filas: mods.map(p => ({ label: p.id, cells: R.verticales.map(v => moduloCell(R.matrizModulos[p.id]?.[v])) })) },
-        ]} />
-      <div style={{ fontSize: 11, color: C.muted, margin: '6px 0 24px' }}>
-        <Chip c={C.ok} bg={C.okBg}>✓ usado</Chip> importado en código ·{' '}
-        <Chip c="#fbbf24" bg="#2a230c">◐ declarado</Chip> en package.json sin import ·{' '}
-        <span style={{ color: C.muted }}>· no presente</span>
-      </div>
-
-      <div style={sub}>🗂️ Funciones / áreas por vertical <span style={{ color: C.muted, fontWeight: 500 }}>· detectado por rutas</span></div>
-      <Matriz cols={R.verticales}
-        secciones={grupos.map(g => ({ titulo: g.grupo, filas: g.caps.map(c => ({ label: c.label, cells: R.verticales.map(v => capCell(R.matrizCapacidades[c.id]?.[v])) })) }))} />
-
-      {R.gaps.reimplementaciones.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <div style={sub}>♻️ Reimplementaciones <span style={{ color: C.muted, fontWeight: 500 }}>· la función existe pero NO usa el módulo compartido (lógica duplicada)</span></div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {R.gaps.reimplementaciones.map(r => (
-              <div key={r.capacidad} style={{ ...card('#7a2a2a'), display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '10px 14px' }}>
-                <span style={{ fontWeight: 700, fontSize: 13 }}>{r.label} <code style={{ background: C.card2, padding: '1px 5px', borderRadius: 4, fontSize: 11, color: C.muted }}>{r.modulo}</code></span>
-                <span style={{ fontSize: 12, color: C.muted }}>
-                  a mano en <strong style={{ color: '#fca5a5' }}>{r.duplicada.map(vlabel).join(', ')}</strong>
-                  {r.conModulo.length > 0 && <> · con módulo en <strong style={{ color: C.ok }}>{r.conModulo.map(vlabel).join(', ')}</strong></>}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {R.gaps.oportunidadesPortar.length > 0 && (
-        <div style={{ marginTop: 24 }}>
-          <div style={sub}>↔️ Diferencias entre verticales <span style={{ color: C.muted, fontWeight: 500 }}>· candidatas a portar</span></div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-            {R.gaps.oportunidadesPortar.map(o => (
-              <div key={o.capacidad} style={{ ...card(), display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '10px 14px' }}>
-                <span style={{ fontWeight: 700, fontSize: 13 }}>{o.label}</span>
-                <span style={{ fontSize: 12, color: C.muted }}>
-                  tiene <strong style={{ color: C.ok }}>{o.tiene.map(vlabel).join(', ')}</strong>
-                  {' · '}falta <strong style={{ color: '#fca5a5' }}>{o.falta.map(vlabel).join(', ')}</strong>
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      <div style={{ height: 1, background: C.border, margin: '28px 0 24px' }} />
-    </div>
-  )
-}
-
-function moduloCell(c?: { estado: 'usado' | 'declarado' | 'no'; evidencias: number }): React.ReactNode {
-  if (!c || c.estado === 'no') return <span style={{ color: C.muted, opacity: .4 }} title="no presente">·</span>
-  if (c.estado === 'declarado') return <span title="declarado en package.json, sin import" style={{ color: '#fbbf24' }}>◐</span>
-  return <span title={`${c.evidencias} fichero(s)`} style={{ color: C.ok }}>✓</span>
-}
-function capCell(c?: { presente: boolean; evidencias: number }): React.ReactNode {
-  if (!c || !c.presente) return <span style={{ color: C.muted, opacity: .4 }} title="no detectado">·</span>
-  return <span title={`${c.evidencias} ruta(s)`} style={{ color: C.ok }}>✓</span>
-}
-
-function Chip({ children, c, bg }: { children: React.ReactNode; c: string; bg: string }) {
-  return <span style={{ color: c, background: bg, borderRadius: 5, padding: '1px 6px', fontWeight: 700 }}>{children}</span>
-}
-
-type Fila = { label: string; cells: React.ReactNode[] }
-type Seccion = { titulo: string; filas: Fila[] }
-function Matriz({ cols, secciones }: { cols: string[]; secciones: Seccion[] }) {
-  const th: React.CSSProperties = { textAlign: 'center', padding: '7px 8px', fontSize: 11, color: C.muted, fontWeight: 700, whiteSpace: 'nowrap' }
-  const td: React.CSSProperties = { textAlign: 'center', padding: '6px 8px', fontSize: 14, borderTop: `1px solid ${C.border}` }
-  return (
-    <div style={{ overflowX: 'auto', border: `1px solid ${C.border}`, borderRadius: 12, background: C.card }}>
-      <table style={{ borderCollapse: 'collapse', width: '100%', minWidth: 360 }}>
-        <thead>
-          <tr>
-            <th style={{ ...th, textAlign: 'left', paddingLeft: 14 }}></th>
-            {cols.map(v => <th key={v} style={th}>{vlabel(v)}</th>)}
-          </tr>
-        </thead>
-        <tbody>
-          {secciones.map(s => (
-            <Fragment key={s.titulo}>
-              <tr><td colSpan={cols.length + 1} style={{ padding: '8px 14px 4px', fontSize: 10, fontWeight: 800, color: C.accent, textTransform: 'uppercase', letterSpacing: .4, borderTop: `1px solid ${C.border}` }}>{s.titulo}</td></tr>
-              {s.filas.map(f => (
-                <tr key={f.label}>
-                  <td style={{ ...td, textAlign: 'left', paddingLeft: 14, fontSize: 12.5, fontFamily: /^(core|module)-/.test(f.label) ? 'monospace' : 'inherit', color: C.text }}>{f.label}</td>
-                  {f.cells.map((cell, i) => <td key={i} style={td}>{cell}</td>)}
-                </tr>
-              ))}
-            </Fragment>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  )
 }
 
 const inp: React.CSSProperties = { width: '100%', padding: '10px 12px', borderRadius: 8, border: '1px solid #2a3457', background: '#1c2540', color: '#e8ecf7', fontSize: 14, fontFamily: FONT, boxSizing: 'border-box' }
