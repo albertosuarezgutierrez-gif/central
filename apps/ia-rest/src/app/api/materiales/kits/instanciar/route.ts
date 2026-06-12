@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     .eq('kit_id', kit_id)
   if (eItems || !items?.length) return NextResponse.json({ error: 'Kit sin items o no encontrado' }, { status: 404 })
 
-  const movimientos = []
+  const movimientos: { material_id: string; cantidad: number }[] = []
   for (const item of items) {
     const totalCant = item.cantidad * n
     const { data: mat } = await supabase

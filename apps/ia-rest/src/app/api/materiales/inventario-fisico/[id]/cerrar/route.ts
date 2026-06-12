@@ -27,7 +27,7 @@ export async function POST(
     .select('id, material_id, cantidad_sistema, cantidad_contada, ajuste_generado')
     .eq('inventario_id', inventarioId)
 
-  const ajustes = []
+  const ajustes: { material_id: string; delta: number; tipo: string }[] = []
   for (const linea of lineas ?? []) {
     if (linea.ajuste_generado) continue
     const delta = linea.cantidad_contada - linea.cantidad_sistema
