@@ -20,6 +20,7 @@ interface Material {
   garantia_hasta: string | null
   activo: boolean
 }
+interface Categoria { id: string; nombre: string }
 interface MaterialRef { nombre: string; categoria: string; coste_reposicion?: number }
 interface Asignacion {
   id: string
@@ -44,11 +45,8 @@ interface Dano {
   material: MaterialRef | null
 }
 
-const CATEGORIAS = ['mesa', 'silla', 'vajilla', 'cristaleria', 'manteleria', 'otro']
 const TIPOS = ['activo', 'consumible']
 const ESTADOS = ['operativo', 'deteriorado', 'en_reparacion', 'baja']
-const DESTINOS = ['evento', 'hacienda', 'cliente', 'obra', 'otro']
-const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n || 0)
 
 const ESTADO_BADGE: Record<string, { label: string; color: string }> = {
   operativo:    { label: 'operativo',    color: '#2E7D5E' },
@@ -56,6 +54,8 @@ const ESTADO_BADGE: Record<string, { label: string; color: string }> = {
   en_reparacion:{ label: 'en reparación',color: '#2B6A9E' },
   baja:         { label: 'baja',         color: '#6B7280' },
 }
+
+const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n || 0)
 
 function sesHeader(): string {
   if (typeof localStorage === 'undefined') return ''
@@ -102,19 +102,74 @@ function badge(color: string): React.CSSProperties {
   return { display: 'inline-block', fontSize: 10, fontWeight: 700, fontFamily: SM, padding: '2px 7px', borderRadius: 99, background: color + '22', color: color, border: `1px solid ${color}44` }
 }
 
+// ─── Gestión de categorías ───────────────────────────────────
+function GestionCategorias({ categorias, onUpdate }: { categorias: Categoria[]; onUpdate: () => void }) {
+  const [nueva, setNueva] = useState('')
+  const [open, setOpen] = useState(false)
+
+  const crear = async () => {
+    if (!nueva.trim()) return
+    const r = await fetch('/api/materiales/categorias', { method: 'POST', headers: H(), body: JSON.stringify({ nombre: nueva.trim() }) })
+    if (!r.ok) { const e = await r.json(); alert(e.error ?? 'Error'); return }
+    setNueva('')
+    onUpdate()
+  }
+  const eliminar = async (id: string, nombre: string) => {
+    if (!confirm(`¿Eliminar categoría "${nombre}"? Los materiales que la usen no se borran.`)) return
+    await fetch('/api/materiales/categorias', { method: 'DELETE', headers: H(), body: JSON.stringify({ id }) })
+    onUpdate()
+  }
+
+  return (
+    <div>
+      <button onClick={() => setOpen(!open)} style={{ ...btn('transparent'), color: C.ink3, border: `1px solid ${C.rule}`, fontSize: 12, padding: '5px 10px' }}>
+        {open ? '▲ Cerrar' : '⚙ Gestionar categorías'}
+      </button>
+      {open && (
+        <div style={{ ...card(), marginTop: 8 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Categorías</div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginBottom: 10 }}>
+            {categorias.map(c => (
+              <span key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 4, background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 6, padding: '4px 8px', fontSize: 12 }}>
+                {c.nombre}
+                <button onClick={() => eliminar(c.id, c.nombre)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: C.red, fontWeight: 700, fontSize: 13, lineHeight: 1, padding: '0 2px' }}>×</button>
+              </span>
+            ))}
+            {categorias.length === 0 && <span style={{ fontSize: 12, color: C.ink3 }}>Sin categorías. Añade la primera.</span>}
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <input style={{ ...input(), flex: 1 }} placeholder="Nueva categoría…" value={nueva} onChange={e => setNueva(e.target.value)} onKeyDown={e => e.key === 'Enter' && crear()} />
+            <button style={btn(C.green)} onClick={crear}>Añadir</button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Catálogo ───────────────────────────────────────────────
-const emptyForm = () => ({ nombre: '', categoria: 'vajilla', tipo: 'activo', estado: 'operativo', cantidad_total: '', stock_minimo: '', coste_reposicion: '', precio_compra: '', codigo: '', proveedor_nombre: '', proveedor_referencia: '', garantia_hasta: '' })
+const emptyForm = () => ({ nombre: '', categoria: '', tipo: 'activo', estado: 'operativo', cantidad_total: '', stock_minimo: '', coste_reposicion: '', precio_compra: '', codigo: '', proveedor_nombre: '', proveedor_referencia: '', garantia_hasta: '' })
 
 function Catalogo() {
   const [items, setItems] = useState<Material[]>([])
+  const [categorias, setCategorias] = useState<Categoria[]>([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
   const [form, setForm] = useState(emptyForm())
   const [expanded, setExpanded] = useState<string | null>(null)
 
+  const cargarCats = useCallback(async () => {
+    const r = await fetch('/api/materiales/categorias', { headers: H() })
+    if (r.ok) setCategorias((await r.json()).categorias ?? [])
+  }, [])
+
   const cargar = useCallback(async () => {
-    const r = await fetch('/api/materiales', { headers: H() })
-    if (r.ok) setItems((await r.json()).materiales ?? [])
+    const [rm, rc] = await Promise.all([
+      fetch('/api/materiales', { headers: H() }),
+      fetch('/api/materiales/categorias', { headers: H() }),
+    ])
+    if (rm.ok) setItems((await rm.json()).materiales ?? [])
+    if (rc.ok) setCategorias((await rc.json()).categorias ?? [])
     setLoading(false)
   }, [])
   useEffect(() => { cargar() }, [cargar])
@@ -124,7 +179,7 @@ function Catalogo() {
   const guardar = async () => {
     if (!form.nombre.trim()) return
     const payload = {
-      nombre: form.nombre.trim(), categoria: form.categoria, tipo: form.tipo, estado: form.estado,
+      nombre: form.nombre.trim(), categoria: form.categoria || 'otro', tipo: form.tipo, estado: form.estado,
       cantidad_total: Number(form.cantidad_total) || 0,
       stock_minimo: form.stock_minimo !== '' ? Number(form.stock_minimo) : null,
       coste_reposicion: Number(form.coste_reposicion) || 0,
@@ -174,12 +229,15 @@ function Catalogo() {
         </div>
       )}
 
+      <GestionCategorias categorias={categorias} onUpdate={cargarCats} />
+
       <div style={card()}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>{editId ? 'Editar material' : 'Nuevo material'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <input style={{ ...input(), gridColumn: '1 / 3' }} placeholder="Nombre (ej. Silla Chiavari)" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
           <select style={input()} value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
-            {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
+            <option value="">Categoría…</option>
+            {categorias.map(c => <option key={c.id} value={c.nombre}>{c.nombre}</option>)}
           </select>
           <select style={input()} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
             {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
@@ -260,7 +318,7 @@ function Asignaciones() {
   const [items, setItems] = useState<Asignacion[]>([])
   const [materiales, setMateriales] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
-  const [form, setForm] = useState({ material_id: '', cantidad: '', destino_tipo: 'evento', destino_nombre: '' })
+  const [form, setForm] = useState({ material_id: '', cantidad: '', destino_tipo: '', destino_nombre: '' })
 
   const cargar = useCallback(async () => {
     const [ra, rm] = await Promise.all([
@@ -277,10 +335,10 @@ function Asignaciones() {
     if (!form.material_id || !(Number(form.cantidad) > 0)) return
     const r = await fetch('/api/materiales/asignacion', {
       method: 'POST', headers: H(),
-      body: JSON.stringify({ material_id: form.material_id, cantidad: Number(form.cantidad), destino_tipo: form.destino_tipo, destino_nombre: form.destino_nombre.trim() || null, fecha_salida: new Date().toISOString().slice(0, 10) }),
+      body: JSON.stringify({ material_id: form.material_id, cantidad: Number(form.cantidad), destino_tipo: form.destino_tipo || 'otro', destino_nombre: form.destino_nombre.trim() || null, fecha_salida: new Date().toISOString().slice(0, 10) }),
     })
     if (!r.ok) { alert((await r.json()).error ?? 'Error'); return }
-    setForm({ material_id: '', cantidad: '', destino_tipo: 'evento', destino_nombre: '' })
+    setForm({ material_id: '', cantidad: '', destino_tipo: '', destino_nombre: '' })
     cargar()
   }
   const cambiarEstado = async (id: string, estado: string) => {
@@ -300,10 +358,8 @@ function Asignaciones() {
             {materiales.map(m => <option key={m.id} value={m.id}>{m.nombre} ({m.cantidad_disponible} disp.)</option>)}
           </select>
           <input style={input()} type="number" placeholder="Cantidad" value={form.cantidad} onChange={e => setForm({ ...form, cantidad: e.target.value })} />
-          <select style={input()} value={form.destino_tipo} onChange={e => setForm({ ...form, destino_tipo: e.target.value })}>
-            {DESTINOS.map(d => <option key={d} value={d}>{d}</option>)}
-          </select>
-          <input style={input()} placeholder="Destino (ej. Boda Pérez)" value={form.destino_nombre} onChange={e => setForm({ ...form, destino_nombre: e.target.value })} />
+          <input style={input()} placeholder="Tipo de destino (ej. evento, obra…)" value={form.destino_tipo} onChange={e => setForm({ ...form, destino_tipo: e.target.value })} />
+          <input style={input()} placeholder="Nombre destino (ej. Boda Pérez)" value={form.destino_nombre} onChange={e => setForm({ ...form, destino_nombre: e.target.value })} />
         </div>
         <button style={{ ...btn(C.red), marginTop: 10 }} onClick={asignar}>Asignar y descontar stock</button>
       </div>
