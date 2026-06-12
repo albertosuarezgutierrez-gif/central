@@ -37,10 +37,21 @@
   - **Fix CI:** dos rutas usaban `articuloAdapter.toArticulo` (ya inexistente) → cambiado a `toMaterial`
     (sivra y ialimp; detectado por Vercel CI, corregido en commit `ff16bd9`).
   - **`apps/plataforma/lib/estructura.ts`** actualizado: `module-inventario` → `module-materiales` con descripción del dominio.
-  - **PR #172 — todos los 4 proyectos Vercel en Ready (verde).** Pendiente de mergear a `main`.
+  - **✅ MERGEADO a `main`** (PR #172). Los 4 proyectos Vercel verdes.
   - **NOTA arquitectura:** el scope de `module-materiales` es *agnóstico de vertical y de BD* (port/adapter).
     Espacios (`Espacio`) son entidades de primera clase con `refTipo`/`refId` opcionales para enlazar entidades externas.
     Multi-tenancy a nivel `negocioId` (más fino que `empresaId`/`restauranteId`).
+
+- **🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR — 12/06/2026**
+  3 migraciones aplicadas sobre `wswbehlcuxqxyinousql`. PR #169 mergeado. Detalle en `docs/AUDITORIA-2026-06.md` A4.
+  - ✅ 62 vistas `SECURITY DEFINER` → `security_invoker = on` (47 iarest + 15 public)
+  - ✅ `instagram_estilos_usados` → RLS habilitada
+  - ✅ 114 funciones `function_search_path_mutable` → `SET search_path='iarest'`
+  - ✅ 7 políticas `service_role_*` → `TO service_role` (qr slots/items/sesiones/valoraciones,
+    reglas_envio, voice_profiles, comanda_modificaciones)
+  - ℹ️ 17 `rls_policy_always_true` intencionales (bridge hardware, QR anon, super_admin) — sin acción
+  - ℹ️ 77 `anon/authenticated_security_definer_function_executable` intencionales (login_pin, resolve_restaurante)
+  - **No quedan pendientes de seguridad accionables en la BD.**
 
 - **🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164 — 12/06/2026**
   Auditoría completa tras el rename `@iarest/*`→`@central/*`, la migración de BD de ia-rest al Supabase
@@ -73,9 +84,8 @@
       **no explotable**: ialimp solo ESCRIBE xlsx (export contab.), nunca parsea (las vulns son al LEER). Remediación
       oficial = tarball CDN de SheetJS (bloqueada en el entorno de build; no se arriesga el build del cliente vivo).
     - `workflow_dispatch` añadido a `ci.yml`/`tests.yml` (estaba mal indentado bajo `pull_request:`, corregido).
-  - **PENDIENTE de Alberto (no urgente):** revisar los **63 advisories ERROR de seguridad** de la BD compartida
-    (62 `security_definer_view`, `search_path` mutable en funciones `SECURITY DEFINER`) — lo más sensible por ser
-    BD multi-tenant. (xlsx queda como remediación opcional, documentada.)
+  - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
+    Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
 - **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
   - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
     (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
