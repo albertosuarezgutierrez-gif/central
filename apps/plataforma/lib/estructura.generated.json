@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T18:00:06Z",
+  "generadoEn": "2026-06-12T18:50:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -431,7 +431,7 @@
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "usado",
@@ -739,7 +739,7 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 36
+        "evidencias": 38
       },
       "ialimp": {
         "presente": true,
@@ -1082,6 +1082,8 @@
       "/api/materiales/clientes",
       "/api/materiales/dano",
       "/api/materiales/espacios",
+      "/api/materiales/import",
+      "/api/materiales/informe",
       "/api/materiales/inventario-fisico",
       "/api/materiales/inventario-fisico/[id]/cerrar",
       "/api/materiales/inventario-fisico/[id]/lineas",
@@ -1855,6 +1857,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📦 module-materiales Fase B — PR #189 mergeado",
+      "fecha": "12/06/2026"
+    },
+    {
       "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
       "fecha": "12/06/2026"
     },
@@ -1909,10 +1915,6 @@
     {
       "titulo": "✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — EN PRODUCCIÓN",
       "fecha": ""
-    },
-    {
-      "titulo": "💰 SIVRA pricing: piloto validado + 🏷️ rename scope @central + 🧠 module-revenue Fase 1 — 11/06/2026 (tarde)",
-      "fecha": "11/06/2026"
     }
   ],
   "saludRepo": {
@@ -2139,7 +2141,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 726,
+    "apis": 728,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0

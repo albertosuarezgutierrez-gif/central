@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📦 module-materiales Fase B — PR #189 mergeado — 12/06/2026**
+  Implementación completa de la Fase B del plan `module-materiales` (spec en `.claude/plans/polished-growing-stonebraker.md`):
+  - **8 APIs nuevas** en `apps/ia-rest/src/app/api/materiales/`:
+    - `clientes/` (GET/POST/PATCH/DELETE), `proveedores/` (GET/POST/PATCH/DELETE)
+    - `kits/` (GET/POST/PATCH/DELETE), `kits/[id]/items/` (GET/POST/DELETE), `kits/instanciar/` (POST — expande kit × N → movimientos salida con validación de stock)
+    - `mantenimiento/` (GET/POST/PATCH), `reservas/` (GET/POST/DELETE soft-cancel)
+    - `inventario-fisico/` (GET/POST), `inventario-fisico/[id]/lineas/` (GET/PATCH), `inventario-fisico/[id]/cerrar/` (POST — genera ajuste/rotura movements)
+  - **Migración SQL** `supabase/migrations/2026-06-12_materiales_fase_b.sql`: tablas `materiales_proveedores`, `materiales_clientes`, `materiales_kits`, `materiales_kits_items`, `materiales_inventario_fisico`, `materiales_inventario_fisico_lineas`, `materiales_mantenimiento`, `materiales_reservas` — todas con RLS `service_role_all`.
+  - **UI** `owner/materiales/page.tsx`: tabs Kits, Clientes, Proveedores, Mantenimiento, Reservas, Inventario Físico wizard añadidos.
+  - **Fixes CI** iterativos: Turbopack `await` en callback no-async, TS strict `never[]` → tipado explícito en `instanciar/route.ts` y `cerrar/route.ts`.
+  - **CI final**: 10/10 checks ✅, 4 Vercel ✅. Squash-mergeado a `main` (SHA `8174ffd`).
+  - **⚠️ PENDIENTE**: aplicar migración SQL `2026-06-12_materiales_fase_b.sql` en Supabase `efncqyvhniaxsirhdxaa` (ia-rest BD) via MCP `apply_migration`. Sin esto las rutas de Fase B devolverán 404/500 en producción.
+
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
   - **`tsconfig.base.json`** en la raíz; las 4 apps lo `extends` y solo declaran lo suyo

@@ -91,6 +91,8 @@ const TABS = [
   { id: 'clientes',       label: 'Clientes' },
   { id: 'proveedores',    label: 'Proveedores' },
   { id: 'historial',      label: 'Historial' },
+  { id: 'importar',       label: 'Importar' },
+  { id: 'informes',       label: 'Informes' },
 ] as const
 
 type TabId = typeof TABS[number]['id']
@@ -128,6 +130,8 @@ export default function OwnerMaterialesPage() {
         {tab === 'clientes'       && <ClientesTab />}
         {tab === 'proveedores'    && <ProveedoresTab />}
         {tab === 'historial'      && <Historial />}
+        {tab === 'importar'       && <ImportarTab />}
+        {tab === 'informes'       && <InformesTab />}
       </div>
     </div>
   )
@@ -1250,6 +1254,101 @@ function Historial() {
           <span style={{ fontFamily: SM, fontSize: 11, color: C.ink4, flexShrink: 0 }}>{mv.fecha}</span>
         </div>
       ))}
+    </div>
+  )
+}
+
+// ─── Importar CSV ─────────────────────────────────────────────────────────────
+function ImportarTab() {
+  const [file, setFile] = useState<File | null>(null)
+  const [resultado, setResultado] = useState<{ creados: number; errores: number; resultados: { nombre: string; accion: string; error?: string }[] } | null>(null)
+  const [cargando, setCargando] = useState(false)
+
+  const descargarPlantilla = () => {
+    window.open('/api/materiales/import', '_blank')
+  }
+
+  const importar = async () => {
+    if (!file) return
+    setCargando(true)
+    const fd = new FormData()
+    fd.append('file', file)
+    const r = await fetch('/api/materiales/import', { method: 'POST', headers: { 'x-ia-session': localStorage.getItem('ia_session') ?? '' }, body: fd })
+    const data = await r.json()
+    setResultado(data)
+    setCargando(false)
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>Importación masiva CSV</div>
+        <p style={{ fontSize: 12, color: C.ink3, margin: '0 0 12px' }}>
+          Sube un archivo CSV con los materiales a crear. Descarga la plantilla para ver las columnas esperadas.
+        </p>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <button style={btn(C.bg3)} onClick={descargarPlantilla}>⬇ Descargar plantilla</button>
+          <input type="file" accept=".csv,text/csv" onChange={e => setFile(e.target.files?.[0] ?? null)}
+            style={{ fontSize: 12, color: C.ink2 }} />
+          <button style={btn(C.green)} onClick={importar} disabled={!file || cargando}>
+            {cargando ? 'Importando…' : 'Importar'}
+          </button>
+        </div>
+      </div>
+
+      {resultado && (
+        <div style={card()}>
+          <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 8 }}>
+            Resultado: <span style={{ color: C.green }}>{resultado.creados} creados</span>
+            {resultado.errores > 0 && <span style={{ color: C.red, marginLeft: 8 }}>{resultado.errores} errores</span>}
+          </div>
+          {resultado.resultados.filter(r => r.accion === 'error').map((r, i) => (
+            <div key={i} style={{ fontFamily: SM, fontSize: 11, color: C.red }}>✗ {r.nombre}: {r.error}</div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Informes ─────────────────────────────────────────────────────────────────
+function InformesTab() {
+  const abrir = (tipo: string) => {
+    const session = localStorage.getItem('ia_session') ?? ''
+    window.open(`/api/materiales/informe?tipo=${tipo}&_s=${encodeURIComponent(session)}`, '_blank')
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={card()}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Informes imprimibles</div>
+        <p style={{ fontSize: 12, color: C.ink3, margin: '0 0 14px' }}>
+          Se abre en pestaña nueva como HTML. Usa el botón &quot;Imprimir / PDF&quot; o Ctrl+P para guardarlo como PDF.
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ ...card(), padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Valoración de inventario</div>
+              <div style={{ fontSize: 11, color: C.ink3 }}>Listado completo con cantidades y valor de stock disponible</div>
+            </div>
+            <button style={btn(C.green)} onClick={() => abrir('valoracion')}>Abrir informe</button>
+          </div>
+          <div style={{ ...card(), padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Activos por estado</div>
+              <div style={{ fontSize: 11, color: C.ink3 }}>Solo activos con estado y valor de compra</div>
+            </div>
+            <button style={btn(C.green)} onClick={() => abrir('activos')}>Abrir informe</button>
+          </div>
+          <div style={{ ...card(), padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, fontWeight: 600 }}>Historial de movimientos</div>
+              <div style={{ fontSize: 11, color: C.ink3 }}>Últimos 500 movimientos del ledger ordenados por fecha</div>
+            </div>
+            <button style={btn(C.green)} onClick={() => abrir('historial')}>Abrir informe</button>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
