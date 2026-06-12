@@ -1,5 +1,5 @@
 'use client'
-import { DARK_C as C, SE, SN, SM } from '@/lib/colors'
+import { C, SE, SN, SM } from '@/lib/colors'
 import { useEffect, useState, useCallback } from 'react'
 
 type Frecuencia = 'apertura' | 'turno' | 'cierre'

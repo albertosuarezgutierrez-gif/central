@@ -89,8 +89,13 @@ export default function MontajePage() {
                     </span>
                     <span style={{ fontSize: 11, fontWeight: 700, color: ESTADO_COLOR[a.estado] ?? C.ink3 }}>{a.estado}</span>
                   </div>
-                  <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginTop: 4 }}>
-                    {a.destino_tipo}{a.destino_nombre ? ` · ${a.destino_nombre}` : ''}{a.fecha_salida ? ` · ${a.fecha_salida}` : ''}
+                  <div style={{ marginTop: 4 }}>
+                    {a.destino_nombre
+                      ? <span style={{ fontSize: 13, fontWeight: 600, color: C.ink2 }}>{a.destino_nombre}</span>
+                      : null}
+                    <span style={{ fontFamily: SM, fontSize: 11, color: C.ink3 }}>
+                      {a.destino_nombre ? '  ·  ' : ''}{a.destino_tipo}{a.fecha_salida ? `  ·  ${a.fecha_salida}` : ''}
+                    </span>
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
                     {a.estado === 'reservado' && <button onClick={() => entregar(a.id)} style={btn('#2B6A9E')}>Recogido</button>}
