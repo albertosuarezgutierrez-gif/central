@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado — 12/06/2026**
+  Se crean 7 nuevos agentes y se mejoran 2 existentes en ia.rest:
+  - **U1** `agentes-ai/route.ts` reescrito con agentic loop de hasta 10 iteraciones (igual que `agentes-seo`). Los 5 agentes genéricos (Ventas, Legal, Competencia, Contenido, Onboarding) ahora tienen capacidad real de web_search iterativo.
+  - **U4** `AgenteArquitectoTab` añadido al menú `/super → Sistema` (antes inaccesible desde UI).
+  - **N2** Agente Compras (`/api/owner/agente-compras`) + `AgenteModuloChat` en `/owner → Almacén`.
+  - **N3** Edge Function `qr-assistant` (Deno) + botón 🤖 flotante en `/q/[token]` para clientes QR.
+  - **N4** GET en `/api/super/leads/agente` genera briefing del historial completo + botón "🤖 BRIEFING" en `CRMAgentTab`.
+  - **N6** Agente Eventos (`/api/owner/agente-eventos`) + `AgenteModuloChat` en `EventosTab`.
+  - **N7** `AsesoriaAgente` + `/api/asesoria/agente` — chat flotante para contables en `/asesoria`.
+  - **Componente reutilizable** `AgenteModuloChat` en `components/owner/` para módulos owner.
+  - Fix CI: `supabase.raw` inválido en `agente-compras/route.ts` → filtrado en JS.
+  - N1 (owner insights) ya existía como `OwnerCopiloto`. N5 (registro) no viable sin auth.
+  - ⚠️ Pendiente: desplegar Edge Function `qr-assistant` con `supabase functions deploy qr-assistant` (está en repo pero sin deploy).
+
 - **🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado — 12/06/2026**
   La pestaña "🏠 Mis propiedades" desaparece del panel de operador. En su lugar, botón en la cabecera
   "🏠 Mis propiedades ↗" que abre el portal del propietario de ialimp en pestaña nueva con auto-login

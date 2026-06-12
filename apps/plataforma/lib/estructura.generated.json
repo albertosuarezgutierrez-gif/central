@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T11:52:04Z",
+  "generadoEn": "2026-06-12T11:54:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -883,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 153
+        "evidencias": 156
       },
       "ialimp": {
         "presente": true,
@@ -942,6 +942,7 @@
       "/api/almacen-central/restaurante/[id]",
       "/api/almacen/recepcion",
       "/api/almacen/stock",
+      "/api/asesoria/agente",
       "/api/asesoria/cliente/[id]",
       "/api/asesoria/clientes",
       "/api/asesoria/login",
@@ -1091,6 +1092,8 @@
       "/api/operador/evento-personas",
       "/api/operador/financiero",
       "/api/operador/restaurantes",
+      "/api/owner/agente-compras",
+      "/api/owner/agente-eventos",
       "/api/owner/almacen/invitar-gestor",
       "/api/owner/almacen/prediccion",
       "/api/owner/analytics",
@@ -1801,6 +1804,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado",
+      "fecha": "12/06/2026"
+    },
+    {
       "titulo": "🗑️ plataforma/admin: quita pestaña \"Mis propiedades\", acceso directo a ialimp — PR #171 mergeado",
       "fecha": "12/06/2026"
     },
@@ -1855,10 +1862,6 @@
     {
       "titulo": "✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod)",
       "fecha": "10/06/2026"
-    },
-    {
-      "titulo": "📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)",
-      "fecha": "11/06/2026"
     }
   ],
   "saludRepo": {
@@ -2085,7 +2088,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 9,
-    "apis": 704,
+    "apis": 707,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0

@@ -7,6 +7,53 @@ import { callAI, cleanJSON } from '@/lib/ai-client'
 
 const ESTADOS_VALIDOS = ['nuevo', 'contactado', 'demo', 'cliente', 'descartado']
 
+// GET /api/super/leads/agente?lead_id=xxx — resumen IA del historial completo del lead
+export async function GET(req: NextRequest) {
+  const session = getSession(req)
+  if (!session || session.rol !== 'super_admin')
+    return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
+
+  const lead_id = req.nextUrl.searchParams.get('lead_id')
+  if (!lead_id) return NextResponse.json({ error: 'lead_id requerido' }, { status: 400 })
+
+  const supabase = createServerClient()
+
+  const [{ data: lead }, { data: comunicaciones }] = await Promise.all([
+    supabase.from('leads')
+      .select('id, nombre, restaurante, empresa, estado, puntuacion, ciudad, notas, created_at, siguiente_contacto_texto')
+      .eq('id', lead_id).single(),
+    supabase.from('leads_comunicacion')
+      .select('canal, resumen_ia, tipo_interaccion, created_at')
+      .eq('lead_id', lead_id)
+      .order('created_at', { ascending: true })
+      .limit(30),
+  ])
+
+  if (!lead) return NextResponse.json({ error: 'Lead no encontrado' }, { status: 404 })
+
+  const historialStr = (comunicaciones ?? []).map(c =>
+    `[${new Date(c.created_at).toLocaleDateString('es-ES')}] ${c.canal?.toUpperCase() ?? 'NOTA'}: ${c.resumen_ia ?? '(sin resumen)'}`
+  ).join('\n')
+
+  const system = `Eres el asistente CRM de ia.rest. Genera un briefing conciso del estado de un lead.
+Formato: párrafo de 2-3 frases de situación actual, luego "Próximo paso:" con acción concreta.
+Sin bulletpoints. Idioma español. Tono comercial directo.`
+
+  const prompt = `Lead: ${lead.nombre} · ${lead.restaurante ?? lead.empresa ?? ''} · ${lead.ciudad ?? ''}
+Estado: ${lead.estado} | Puntuación: ${lead.puntuacion ?? 0}/100 | Creado: ${new Date(lead.created_at).toLocaleDateString('es-ES')}
+${lead.notas ? 'Notas: ' + lead.notas : ''}
+
+Historial de ${comunicaciones?.length ?? 0} interacciones:
+${historialStr || '(Sin interacciones registradas)'}
+
+Siguiente acción guardada: ${lead.siguiente_contacto_texto ?? '(ninguna)'}
+
+Genera el briefing.`
+
+  const resumen = await callAI(system, prompt, 400)
+  return NextResponse.json({ ok: true, resumen: resumen?.trim() ?? 'Sin datos suficientes.' })
+}
+
 export async function POST(req: NextRequest) {
   const session = getSession(req)
   if (!session || session.rol !== 'super_admin') {
