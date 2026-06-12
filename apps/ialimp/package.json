@@ -18,7 +18,7 @@
     "@central/module-concursos": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
     "@central/module-proveedores": "workspace:*",
-    "@central/module-inventario": "workspace:*",
+    "@central/module-materiales": "workspace:*",
     "@central/module-crm": "workspace:*",
     "@napi-rs/canvas": "^1.0.0",
     "@prisma/client": "^5.22.0",

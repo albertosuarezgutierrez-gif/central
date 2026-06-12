@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T09:06:38Z",
+  "generadoEn": "2026-06-12T10:46:06Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -69,9 +69,9 @@
       "npm": "@central/module-feedback"
     },
     {
-      "id": "module-inventario",
+      "id": "module-materiales",
       "tipo": "module",
-      "npm": "@central/module-inventario"
+      "npm": "@central/module-materiales"
     },
     {
       "id": "module-presupuestos",
@@ -428,7 +428,7 @@
         "evidencias": 0
       }
     },
-    "module-inventario": {
+    "module-materiales": {
       "ia-rest": {
         "estado": "usado",
         "evidencias": 2

@@ -1,21 +1,20 @@
-// Adapter de inventario para ialimp → @central/module-inventario
+// Adapter de inventario para ialimp → @central/module-materiales
 //
-// Mapea dos conceptos distintos:
-//   productos_stock → Articulo  (catálogo operativo con stock_actual)
-//   stock_consumos  → AsignacionActivo  (consumo de producto en una sesión)
+// Mapea:
+//   productos_stock → Material  (catálogo operativo)
+//   stock_consumos  → AsignacionMaterial  (consumo en una sesión de limpieza)
 //
-// Nota: kits_limpiadoras (asignación permanente de producto a limpiadora) es un
-// concepto de dominio propio de ialimp — NO mapea a AsignacionActivo (que modela
-// una reserva temporal para un Encargo). kits queda fuera del módulo a propósito.
+// kits_limpiadoras (asignación permanente) NO mapea aquí — es dominio propio de ialimp.
 import type {
-  Articulo,
-  ArticuloAdapter,
-  AsignacionActivo,
-  AsignacionAdapter,
+  Material,
+  MaterialAdapter,
+  AsignacionMaterial,
+  AsignacionMaterialAdapter,
   ResumenStock,
-} from '@central/module-inventario'
-export { resumenStock, valorStock, disponibilidadTrasReserva } from '@central/module-inventario'
-export type { ResumenStock }
+  ResumenContable,
+} from '@central/module-materiales'
+export { resumenStock, resumenContable, valorStock, disponibilidadTrasReserva } from '@central/module-materiales'
+export type { ResumenStock, ResumenContable }
 
 export interface ProductoStockRow {
   id: string
@@ -42,61 +41,64 @@ export interface StockConsumoRow {
   created_at: string | null
 }
 
-export const articuloAdapter: ArticuloAdapter<ProductoStockRow> = {
-  toArticulo(row): Articulo {
+export const articuloAdapter: MaterialAdapter<ProductoStockRow> = {
+  toMaterial(row): Material {
     return {
       id: row.id,
+      negocioId: row.empresa_id,
       nombre: row.nombre,
       descripcion: null,
       categoria: row.categoria,
-      // ialimp no distingue unidades reservadas vs disponibles:
-      // se asume todo el stock como disponible (no hay reservas previas).
+      tipo: 'consumible',
+      estado: 'operativo',
+      // ialimp no distingue reservadas vs disponibles: todo el stock es disponible.
       cantidadTotal: row.stock_actual,
       cantidadDisponible: row.stock_actual,
-      costeUnitario: row.precio_unitario ?? null,
-      proveedorNombre: row.proveedor_nombre ?? null,
-      imagenUrl: null,
+      stockMinimo: row.stock_minimo,
+      precioCompra: row.precio_unitario ?? 0,
+      costeReposicion: row.precio_unitario ?? 0,
+      proveedor: row.proveedor_nombre ? { nombre: row.proveedor_nombre } : null,
       activo: row.activo,
       createdAt: row.created_at ?? null,
     }
   },
-  fromArticulo(a: Articulo): ProductoStockRow {
+  fromMaterial(m): ProductoStockRow {
     return {
-      id: a.id,
-      empresa_id: '',
-      nombre: a.nombre,
-      categoria: a.categoria,
-      stock_actual: a.cantidadTotal,
-      stock_minimo: 0,
-      precio_unitario: a.costeUnitario ?? null,
-      activo: a.activo,
-      created_at: a.createdAt ?? null,
+      id: m.id,
+      empresa_id: m.negocioId,
+      nombre: m.nombre,
+      categoria: m.categoria,
+      stock_actual: m.cantidadTotal,
+      stock_minimo: m.stockMinimo ?? 0,
+      precio_unitario: m.costeReposicion ?? null,
+      proveedor_nombre: m.proveedor?.nombre ?? null,
+      activo: m.activo,
+      created_at: m.createdAt ?? null,
     }
   },
 }
 
-export const asignacionAdapter: AsignacionAdapter<StockConsumoRow> = {
-  toAsignacion(row): AsignacionActivo {
+export const asignacionAdapter: AsignacionMaterialAdapter<StockConsumoRow> = {
+  toAsignacion(row): AsignacionMaterial {
     return {
       id: row.id,
-      articuloId: row.producto_id,
-      // Mapeamos session_id como parentId con parentType propio de ialimp.
+      materialId: row.producto_id,
+      // En ialimp el consumo es siempre definitivo (no se devuelven materiales).
       parent: { parentId: row.session_id, parentType: 'sesion_limpieza' },
       cantidadReservada: row.cantidad,
       cantidadDevuelta: null,
       cantidadDanada: null,
       costeDanos: null,
-      // En ialimp el consumo es siempre definitivo (no se devuelven materiales).
       estado: 'entregado',
       notas: null,
       createdAt: row.created_at ?? null,
     }
   },
-  fromAsignacion(a: AsignacionActivo): StockConsumoRow {
+  fromAsignacion(a): StockConsumoRow {
     return {
       id: a.id,
-      session_id: a.parent.parentId,
-      producto_id: a.articuloId,
+      session_id: a.parent?.parentId ?? '',
+      producto_id: a.materialId,
       cantidad: a.cantidadReservada,
       precio_unitario: null,
       created_at: a.createdAt ?? null,
