@@ -219,8 +219,28 @@ const SLIDES: Slide[] = [
           <Arrow label="piden lo suyo, por su cuenta" color={C.ink4} dashed />
           <Node color={C.ink4} title="Sus proveedores" sub="independiente" />
         </div>
+        {/* Banda servicios compartidos */}
+        <div style={{ marginBottom:10 }}>
+          <div style={{ fontFamily:SN, fontSize:11.5, fontWeight:700, letterSpacing:1.5, color:C.ink4, textTransform:'uppercase', textAlign:'center', marginBottom:8 }}>
+            Tanto catering como restaurantes comparten
+          </div>
+          <div style={{ display:'flex', gap:8, justifyContent:'center', flexWrap:'wrap' }}>
+            {[
+              { icon:'📒', label:'Contabilidad' },
+              { icon:'🧾', label:'Facturación' },
+              { icon:'👥', label:'RRHH y fichaje' },
+              { icon:'🎯', label:'CRM comercial' },
+              { icon:'📦', label:'Proveedores' },
+              { icon:'✅', label:'Checklists' },
+            ].map(({ icon, label }) => (
+              <div key={label} style={{ display:'flex', alignItems:'center', gap:5, padding:'6px 12px', background:C.bg2, border:`1px solid ${C.bg3}`, borderRadius:20, fontFamily:SN, fontSize:13, color:C.cream, whiteSpace:'nowrap' }}>
+                <span>{icon}</span><span>{label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
         {/* Banda plataforma */}
-        <div style={{ background:'#211C3A', border:`1px solid #3A3360`, borderRadius:14, padding:'18px 24px', textAlign:'center' }}>
+        <div style={{ background:'#211C3A', border:`1px solid #3A3360`, borderRadius:14, padding:'16px 24px', textAlign:'center' }}>
           <div style={{ fontFamily:SN, fontWeight:700, fontSize:17, color:'#fff', marginBottom:6 }}>PLATAFORMA · consolida el grupo — Cuenta → Sociedad → Negocio</div>
           <div style={{ fontFamily:SN, fontSize:14.5, color:'#B9B2D6', lineHeight:1.45 }}>
             Descuenta lo interno (cocina ↔ eventos) y muestra el <strong style={{ color:'#fff' }}>neto real del grupo</strong>.
