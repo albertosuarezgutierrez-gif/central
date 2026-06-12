@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
+  Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
+  se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
+  fuente de verdad, así no hay drift) en `.claude/skills/`:
+  - `central-maestro` — dispatcher de entrada del monorepo: orienta (CLAUDE.md/MATRIZ/CONTEXTO),
+    identifica la vertical y enruta al maestro correcto + recuerda reglas de matriz/packages/BD compartida.
+  - `sivra-maestro`, `ialimp-maestro`, `plataforma-maestro` — un router por vertical con gate
+    "antes de tocar nada", mapa de dónde vive cada cosa, infra (sin secretos) y landmines.
+  - `ia-rest-maestro` ya existía (doc gordo); los nuevos lo referencian, no lo tocan.
+  - Cada router obliga a leer objetivos/CLAUDE.md de la vertical y a comprobar la frontera multi-tenant
+    de la BD compartida antes de planificar. Se apoyan en el SessionStart hook (`using-superpowers`) ya activo.
+
 - **🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado — 12/06/2026**
   Se crean 7 nuevos agentes y se mejoran 2 existentes en ia.rest:
   - **U1** `agentes-ai/route.ts` reescrito con agentic loop de hasta 10 iteraciones (igual que `agentes-seo`). Los 5 agentes genéricos (Ventas, Legal, Competencia, Contenido, Onboarding) ahora tienen capacidad real de web_search iterativo.
