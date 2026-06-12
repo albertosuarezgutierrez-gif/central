@@ -15,10 +15,25 @@ export type {
   TransferenciaMaterial,
   ResumenStock,
   ResumenContable,
+  // Ledger
+  TipoMovimiento,
+  Movimiento,
+  UnidadMaterial,
+  Kit,
+  KitItem,
+  Proveedor,
+  ClienteMaterial,
+  InventarioFisico,
+  InventarioFisicoLinea,
+  Mantenimiento,
+  ReservaAnticipada,
+  // Adapters
   MaterialAdapter,
   EspacioAdapter,
   AsignacionMaterialAdapter,
   TransferenciaAdapter,
+  MovimientoAdapter,
+  UnidadMaterialAdapter,
 } from './types'
 
 export {
@@ -32,4 +47,12 @@ export {
   resumenContable,
   puedeTransferir,
   alertasStockMinimo,
+  // Ledger
+  stockActualDesdeLedger,
+  stockPorEspacio,
+  disponibilidadEnFecha,
+  expandirKit,
+  calcularDepreciacion,
+  alertasVencimiento,
+  ajusteInventario,
 } from './stock'

@@ -129,3 +129,163 @@ export interface TransferenciaAdapter<TDominio> {
   toTransferencia(fila: TDominio): TransferenciaMaterial
   fromTransferencia(t: TransferenciaMaterial): TDominio
 }
+
+// ── Ledger ────────────────────────────────────────────────────
+
+export type TipoMovimiento =
+  | 'entrada'        // compra/recepción → +total +disponible
+  | 'salida'         // asignación/consumo → -disponible
+  | 'devolucion'     // retorno al almacén → +disponible
+  | 'rotura'         // baja permanente → -total -disponible
+  | 'ajuste'         // corrección inventario físico positiva → +total +disponible
+  | 'transferencia'  // cambio de espacio → no afecta totales
+
+export interface Movimiento {
+  id: string
+  negocioId: string
+  materialId: string
+  unidadId?: string | null
+  tipo: TipoMovimiento
+  cantidad: number
+  espacioOrigenId?: string | null
+  espacioDestinoId?: string | null
+  parent?: ParentRef | null
+  clienteId?: string | null
+  notas?: string | null
+  realizadoPor?: string | null
+  fecha: string
+  createdAt?: string | null
+}
+
+// ── Activos serializados ──────────────────────────────────────
+
+export interface UnidadMaterial {
+  id: string
+  negocioId: string
+  materialId: string
+  codigoSerie?: string | null
+  codigoQr: string
+  estado: EstadoMaterial
+  espacioActualId?: string | null
+  fechaCompra?: string | null
+  garantiaHasta?: string | null
+  precioCompra?: number | null
+  vidaUtilAnios?: number | null
+  valorActual?: number | null
+  notas?: string | null
+  activo: boolean
+  createdAt?: string | null
+}
+
+// ── Kits ──────────────────────────────────────────────────────
+
+export interface Kit {
+  id: string
+  negocioId: string
+  nombre: string
+  descripcion?: string | null
+  activo: boolean
+  createdAt?: string | null
+}
+
+export interface KitItem {
+  id: string
+  kitId: string
+  materialId: string
+  cantidad: number
+}
+
+// ── Proveedores y Clientes (Fase B) ──────────────────────────
+
+export interface Proveedor {
+  id: string
+  negocioId: string
+  nombre: string
+  contacto?: string | null
+  telefono?: string | null
+  email?: string | null
+  nif?: string | null
+  plazoEntregaDias?: number | null
+  notas?: string | null
+  activo: boolean
+  createdAt?: string | null
+}
+
+export interface ClienteMaterial {
+  id: string
+  negocioId: string
+  nombre: string
+  empresa?: string | null
+  nif?: string | null
+  telefono?: string | null
+  email?: string | null
+  notas?: string | null
+  activo: boolean
+  createdAt?: string | null
+}
+
+// ── Inventario físico (Fase B) ────────────────────────────────
+
+export interface InventarioFisico {
+  id: string
+  negocioId: string
+  espacioId?: string | null
+  realizadoPor?: string | null
+  estado: 'borrador' | 'cerrado'
+  fecha: string
+  createdAt?: string | null
+}
+
+export interface InventarioFisicoLinea {
+  id: string
+  inventarioId: string
+  materialId: string
+  cantidadSistema: number
+  cantidadContada: number
+  diferencia: number
+  ajusteGenerado: boolean
+}
+
+// ── Mantenimiento (Fase B) ────────────────────────────────────
+
+export interface Mantenimiento {
+  id: string
+  negocioId: string
+  materialId: string
+  unidadId?: string | null
+  tipo: 'preventivo' | 'correctivo' | 'revision'
+  estado: 'pendiente' | 'en_curso' | 'completado'
+  fechaPrevista?: string | null
+  fechaRealizada?: string | null
+  coste?: number | null
+  notas?: string | null
+  createdAt?: string | null
+}
+
+// ── Reservas anticipadas (Fase B) ────────────────────────────
+
+export interface ReservaAnticipada {
+  id: string
+  negocioId: string
+  materialId: string
+  cantidad: number
+  fechaDesde: string
+  fechaHasta: string
+  parent?: ParentRef | null
+  clienteId?: string | null
+  estado: 'confirmada' | 'cancelada'
+  notas?: string | null
+  createdAt?: string | null
+}
+
+// ── Adapters nuevos ───────────────────────────────────────────
+
+export interface MovimientoAdapter<TDominio> {
+  toMovimiento(fila: TDominio): Movimiento
+  fromMovimiento(m: Movimiento): TDominio
+}
+
+export interface UnidadMaterialAdapter<TDominio> {
+  toUnidad(fila: TDominio): UnidadMaterial
+  fromUnidad(u: UnidadMaterial): TDominio
+}
