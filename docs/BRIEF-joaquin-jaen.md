@@ -4,7 +4,70 @@
 > Fuentes: `docs/DISENO-modularizacion-verticales.md`, `docs/DISENO-modulos-materiales-flota.md`,
 > `docs/CONTEXTO-SESIONES.md`. Diagramas en `docs/diagrams/joaquin-*.svg`.
 
-## Quién es
+---
+
+## ⭐ ESTRUCTURA REAL DEL GRUPO (corrección Alberto — 12/06/2026, MANDA sobre lo de abajo)
+
+> La sección "Quién es / Cómo caben sus 6 negocios" de más abajo era la **hipótesis a ciegas**
+> (pre-reunión). Tras la reunión y la revisión de Alberto, la estructura real es ésta. **Esto es lo
+> que vale; lo de abajo se conserva solo como registro de la hipótesis inicial.**
+
+### Cómo está montado de verdad
+- **Cocina central (la lleva la hermana)** — es la unidad de **producción**. **Produce para los eventos /
+  catering** (y abastece a las haciendas). Es su sistema de ~3 años, la joya: *conectamos, no reemplazamos.*
+- **Restaurantes — `Doble J` y `Las Dos Jotas`** — van **APARTE, independientes**. **Cada uno pide lo suyo
+  por su cuenta** (sus propios proveedores/compras); no dependen de la cocina central.
+- **Catering / eventos** — el negocio que mueve la cocina central; es donde encaja material, comercial y marketplace.
+- **Haciendas de eventos — `El Alba` y `Trinidad`** — una **en propiedad** y otra **en alquiler**. Cada
+  hacienda es su propia unidad operativa (montaje · pases · barra) con **su almacén** y sus eventos.
+- **Tiendas de comida para llevar — NO las tienen (aún).** Es futuro, no negocio actual → **fuera de la
+  propuesta/diagramas por ahora**.
+- **Flota/transporte y alquiler de materiales** — NO confirmados como negocio propio actual; eran supuestos
+  del brief a ciegas. Tratar como **verticales futuras**, no como realidad de JJ, hasta confirmar.
+
+### Control de almacenes / economato (lo nombró la reunión — añadir)
+- **Un almacén por hacienda** (El Alba + Trinidad) + el de la **cocina central** → control de stock
+  **centralizado pero por ubicación**: saber qué hay en cada sitio cuando hay eventos simultáneos.
+- **Recepción de mercancía**: hoy ia-rest tiene OCR de albarán; su cocina además tiene **economato con
+  códigos + recepción por código de barras** (escaneo de entrada, no solo OCR). Hueco a cubrir/conectar.
+- **Pedido automático al proveedor** cuando el stock baja del mínimo; **control de mermas** (comprado vs servido).
+- **Reparto de géneros entre haciendas** cuando hay dos eventos a la vez.
+
+### Control de cada hacienda (lo nombró la reunión — añadir)
+- Cada hacienda como **negocio/unidad**: su **calendario de eventos**, su **almacén/stock**, su **montaje**,
+  sus **pases de cocina (KDS)** y su **barra**.
+- Reutilización: **`sivra`** (inmueble + calendario + portal de la hacienda) **+ `ialimp`** (limpieza
+  turnaround entre eventos, con cierre por foto). *(Nota interna: esas marcas NO se nombran ante JJ.)*
+- **Previsión por hacienda y por evento** (aforo, temporada, temperatura) para material y bebida.
+
+### Lo demás que se nombró en la reunión (checklist para no olvidar nada)
+- **Comercial + comisiones:** 4 comerciales; bonos por **margen / ticket más alto / reseñas**; contratos con
+  **% escalable** (y rescisión si no se cumple); **ranking** en tiempo real; **martes = día de oficina/formación**; RBAC por comercial.
+- **Material de eventos (dpto. más atrasado = piloto limpio):** menaje (mesas/sillas/vajilla/cristalería),
+  **roturas post-boda con foto**, **previsión estacional** (consumo de bebida varía verano/invierno, día/noche).
+- **Marketplace / presupuestador self-service (el "wow"):** el cliente configura su evento (adultos/niños/días)
+  → menú con **margen ya incorporado** → **paga señal**; **multi-tarificador**, **bot de bodas**, **maridaje de vino por IA**.
+- **ERP / facturación / contabilidad** consolidado (regalar la contabilidad como gancho; monetizar la capa de decisión).
+- **Cocina (su sistema, 10 huecos vs ia-rest):** fichas técnicas/alérgenos, elaboraciones con procesos,
+  escandallo dinámico, **etiqueta QR de lote/caducidad**, **partes de trabajo por partida (5 días antes)**,
+  **cronometraje/productividad**, **báscula integrada**, **código de barras/economato**, **trazabilidad de lote (APPCC)**, aprovechamiento de sobras. → ver `PLAN-mejoras-joaquin.md`.
+- **KDS por pases** para eventos grandes (la cocina trabaja por tandas, no comanda a comanda).
+- **Restaurantes (POS, ya en producción, ampliar):** QR comanda (hecho), **fichaje por QR**, **pago por QR**, maridaje de vino.
+- **Checklist operativo de sala + productividad de cocina** (ideas de Alberto, ya construidas = Bloques H/I).
+- **Fontanería/obra del cuñado:** cuadro de mando con fotos, evolución de obra, avisos WhatsApp, localización
+  → cross-sell con el agente de **concursos** (licitaciones públicas, ya terminado).
+- **Objeción nº1 = factor humano** (re-educar a la gente). La hermana es protectora con su cocina ("es lo mío")
+  → tratarla como **socia técnica / co-diseñadora**, no como prospecto.
+
+### Datos que aún faltan (pedir en el follow-up)
+- Nº de **sociedades/CIFs** y qué cuelga de cada una; volumen de operaciones **intercompany** (cocina↔eventos).
+- **Stack exacto** del sistema de cocina de la hermana (¿API/exportación? → conectar vs co-diseñar).
+- **Tamaño del catálogo de material** y **nº de eventos/mes** (dimensionar el piloto de logística).
+- **Estructura de comisiones/bonos** de los comerciales.
+
+---
+
+## Quién es  *(hipótesis a ciegas — pre-reunión; superada por la sección de arriba)*
 Joaquín Jaén, dueño de un **holding** con varios negocios de sectores distintos:
 1. **Restaurante**
 2. **Catering / eventos**
