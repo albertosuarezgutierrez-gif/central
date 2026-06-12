@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-12T11:01:42Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-12T11:52:04Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -8,12 +8,12 @@
 
 ## Apps (verticales)
 ### ia-rest
-- **Módulos que usa:** core-ai, core-fiscal, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-inventario, module-presupuestos, module-proveedores
+- **Módulos que usa:** core-ai, core-fiscal, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-materiales, module-presupuestos, module-proveedores
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
-- **Tablas (59):** beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales, materiales_asignacion, materiales_dano, mensajes_turno…
+- **Tablas (61):** beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales, materiales_asignacion, materiales_dano, materiales_espacios…
 - **Rutas API:** 421
 ### ialimp
-- **Módulos que usa:** core-ai, core-email, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-inventario, module-proveedores
+- **Módulos que usa:** core-ai, core-email, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA, Concursos públicos
 - **Tablas (25):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, sociedades, stock_consumos, tenant_modulos
 - **Rutas API:** 181
@@ -23,7 +23,7 @@
 - **Tablas (8):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas
 - **Rutas API:** 23
 ### sivra
-- **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-inventario, module-proveedores
+- **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (0):** —
 - **Rutas API:** 79
@@ -65,7 +65,7 @@
 - **module-feedback** (module) → `@central/module-feedback`
   - Lo usan: ia-rest
   - Depende de: —
-- **module-inventario** (module) → `@central/module-inventario`
+- **module-materiales** (module) → `@central/module-materiales`
   - Lo usan: ia-rest, ialimp, sivra
   - Depende de: —
 - **module-presupuestos** (module) → `@central/module-presupuestos`
@@ -111,6 +111,8 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (12/06/2026) 🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado
+- (12/06/2026) 📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172
 - (12/06/2026) 🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR
 - (12/06/2026) 🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164
 - (12/06/2026) 🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado
@@ -119,6 +121,4 @@
 - (11/06/2026) ⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real
 - (11/06/2026) ✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding
 - ⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):
-- ✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — EN PRODUCCIÓN
-- (11/06/2026) 💰 SIVRA pricing: piloto validado + 🏷️ rename scope @central + 🧠 module-revenue Fase 1 — 11/06/2026 (tarde)
 

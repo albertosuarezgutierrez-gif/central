@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import { disponibilidadTrasReserva } from '@central/module-inventario'
+import { disponibilidadTrasReserva } from '@central/module-materiales'
 
 export async function GET(req: NextRequest) {
   const session = getSession(req)

@@ -15,7 +15,7 @@
     "@central/core-push": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
     "@central/module-crm": "workspace:*",
-    "@central/module-inventario": "workspace:*",
+    "@central/module-materiales": "workspace:*",
     "@central/module-presupuestos": "workspace:*",
     "@central/module-proveedores": "workspace:*",
     "@central/module-feedback": "workspace:*",
