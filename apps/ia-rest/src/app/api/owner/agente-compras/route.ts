@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
     supabase.from('stock_articulos')
       .select('nombre, stock_actual, stock_minimo, unidad_medida, proveedor_preferente_id')
       .eq('restaurante_id', restauranteId)
-      .filter('stock_actual', 'lte', supabase.raw ? 'stock_minimo' : 'stock_minimo')
-      .limit(20),
+      .order('stock_actual', { ascending: true })
+      .limit(50),
     supabase.from('stock_articulos')
       .select('id', { count: 'exact', head: true })
       .eq('restaurante_id', restauranteId),
@@ -41,9 +41,10 @@ export async function POST(req: NextRequest) {
       .single(),
   ])
 
-  const criticos = (stockCritico ?? []).map(a =>
-    `${a.nombre}: ${a.stock_actual}${a.unidad_medida ?? ''} (mín: ${a.stock_minimo})`
-  )
+  const criticos = (stockCritico ?? [])
+    .filter(a => a.stock_actual != null && a.stock_minimo != null && a.stock_actual <= a.stock_minimo)
+    .slice(0, 20)
+    .map(a => `${a.nombre}: ${a.stock_actual}${a.unidad_medida ?? ''} (mín: ${a.stock_minimo})`)
 
   const pedidosStr = (pedidosPendientes ?? []).map(p =>
     `Pedido ${p.estado} — ${(p.proveedor as any)?.nombre ?? 'Proveedor'} · ${p.total_estimado ? p.total_estimado + '€' : 'importe n/d'}`
