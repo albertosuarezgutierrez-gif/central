@@ -46,6 +46,26 @@ function Card({ icon, titulo, body, color }: { icon: string; titulo: string; bod
   )
 }
 
+function Node({ color, title, sub }: { color: string; title: string; sub?: string }) {
+  return (
+    <div style={{ background:C.bg2, border:`1.5px solid ${color}`, borderRadius:12, padding:'13px 18px', minWidth:158, textAlign:'center' }}>
+      <div style={{ fontFamily:SN, fontWeight:700, fontSize:16.5, color:C.cream }}>{title}</div>
+      {sub && <div style={{ fontFamily:SN, fontSize:12.5, color:C.ink3, marginTop:3 }}>{sub}</div>}
+    </div>
+  )
+}
+
+function Arrow({ label, color, dashed }: { label: string; color: string; dashed?: boolean }) {
+  return (
+    <div style={{ display:'flex', flexDirection:'column', alignItems:'center', minWidth:128, flex:'0 0 auto' }}>
+      <div style={{ fontFamily:SN, fontSize:12, color, marginBottom:5, fontWeight:600, textAlign:'center' }}>{label}</div>
+      <div style={{ width:'100%', borderTop:`2px ${dashed ? 'dashed' : 'solid'} ${color}`, position:'relative' }}>
+        <span style={{ position:'absolute', right:-3, top:-9, color, fontSize:13, lineHeight:1 }}>▶</span>
+      </div>
+    </div>
+  )
+}
+
 // ─── Contenido de la presentación ────────────────────────────
 const SLIDES: Slide[] = [
   // 1 · Portada
@@ -163,7 +183,7 @@ const SLIDES: Slide[] = [
   {
     kicker: 'Gestión con datos, no con sensaciones',
     titulo: 'El equipo, medido con objetividad',
-    sub: 'El mismo patrón que las limpiadoras de ialimp — pero para sala y para cocina.',
+    sub: 'El trabajador entra a su perfil, ve su trabajo ya organizado y lo cierra con foto — en sala y en cocina.',
     color: C.green,
     render: () => (
       <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:20 }}>
@@ -177,16 +197,35 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 8 · El gancho holding (intercompany)
+  // 8 · El gancho del grupo (consolidado real de JJ)
   {
     kicker: 'El gancho del grupo',
-    titulo: 'Intercompany, consolidado en un cuadro de mando',
-    sub: 'Cocina → tiendas · flota → catering · material → eventos. Facturado entre sociedades y neteado en el grupo.',
+    titulo: 'Todo el grupo en un solo cuadro de mando',
+    sub: 'La cocina central produce para los eventos; el restaurante va aparte y pide lo suyo. La plataforma lo consolida y descuenta lo interno para no inflar el grupo.',
     color: C.gold,
     render: () => (
-      <div style={{ width:'100%', maxWidth:1000, textAlign:'center' }}>
-        <img src="/diagrams/joaquin-holding-intercompany.svg" alt="Intercompany del holding"
-          style={{ width:'100%', maxWidth:880, background:C.paper, borderRadius:14, padding:18, border:`1px solid ${C.bg3}` }} />
+      <div style={{ width:'100%', maxWidth:1000 }}>
+        {/* Fila 1 — cocina central produce para eventos → cliente */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', marginBottom:18 }}>
+          <Node color={C.teal} title="Cocina central" sub="la hermana · produce" />
+          <Arrow label="produce · interno" color={C.gold} dashed />
+          <Node color={C.amber} title="Eventos · Catering" sub="Hda. El Alba / Trinidad" />
+          <Arrow label="factura · externo" color={C.green} />
+          <Node color={C.green} title="Cliente final" sub="boda / evento" />
+        </div>
+        {/* Fila 2 — restaurante independiente */}
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:12, flexWrap:'wrap', marginBottom:26 }}>
+          <Node color={C.red} title="Restaurantes" sub="Doble J · Las Dos Jotas" />
+          <Arrow label="piden lo suyo, por su cuenta" color={C.ink4} dashed />
+          <Node color={C.ink4} title="Sus proveedores" sub="independiente" />
+        </div>
+        {/* Banda plataforma */}
+        <div style={{ background:'#211C3A', border:`1px solid #3A3360`, borderRadius:14, padding:'18px 24px', textAlign:'center' }}>
+          <div style={{ fontFamily:SN, fontWeight:700, fontSize:17, color:'#fff', marginBottom:6 }}>PLATAFORMA · consolida el grupo — Cuenta → Sociedad → Negocio</div>
+          <div style={{ fontFamily:SN, fontSize:14.5, color:'#B9B2D6', lineHeight:1.45 }}>
+            Descuenta lo interno (cocina ↔ eventos) y muestra el <strong style={{ color:'#fff' }}>neto real del grupo</strong>.
+          </div>
+        </div>
       </div>
     ),
   },
@@ -199,7 +238,7 @@ const SLIDES: Slide[] = [
     render: () => (
       <div style={{ width:'100%', maxWidth:900 }}>
         <Bullet icon="📊" color={C.green} head="Financiero consolidado real"
-          body="La plataforma ya une el financiero de tres negocios vivos (hostelería, limpieza y pisos turísticos) en un solo cuadro de mando." />
+          body="La plataforma ya une el financiero de varios negocios reales de sectores distintos en un solo cuadro de mando — funcionando hoy, no en maqueta." />
         <Bullet icon="🧾" color={C.red} head="Facturación y VeriFactu"
           body="POS, comanda por QR y facturación legal ya en producción en iarest.es." />
         <Bullet icon="🏛️" color={C.teal} head="Agente de concursos públicos"
