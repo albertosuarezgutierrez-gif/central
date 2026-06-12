@@ -1703,6 +1703,7 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
     marcharEnVueloRef.current.add(comanda.id)
     const ses = localStorage.getItem('ia_rest_session') ?? ''
     try {
+      // qa-ignore: marchar manual (doble-tap) sobre comanda existente; no va encadenado tras /api/comanda
       await fetch('/api/marchar', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'x-ia-session': ses },

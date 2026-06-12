@@ -6,14 +6,11 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
+import { getSession } from '@/lib/session'
 
 export async function GET(req: NextRequest) {
-  const header = req.headers.get('x-ia-session')
-  if (!header) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
-
-  let session: { rol: string; cuenta_id?: string; local_id: string } | null = null
-  try { session = JSON.parse(header) } catch { return NextResponse.json({ error: 'Sesión inválida' }, { status: 401 }) }
-
+  // Sesión FIRMADA: el cuenta_id se deriva de aquí, nunca de un header crudo
+  const session = getSession(req)
   if (!session || (session.rol !== 'owner' && session.rol !== 'super_admin')) {
     return NextResponse.json({ error: 'No autorizado' }, { status: 403 })
   }

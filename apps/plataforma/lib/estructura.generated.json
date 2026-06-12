@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T12:50:07Z",
+  "generadoEn": "2026-06-12T13:06:18Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1331,6 +1331,7 @@
       "/api/super/stripe-operador",
       "/api/super/stripe-operador/cancelar",
       "/api/super/stripe-operador/checkout",
+      "/api/super/sugerencias",
       "/api/super/tg-notify",
       "/api/super/training",
       "/api/super/training-stats",
@@ -2093,7 +2094,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 9,
-    "apis": 710,
+    "apis": 711,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
