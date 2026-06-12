@@ -56,10 +56,12 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install
         run: pnpm install --no-frozen-lockfile
-      - name: Prisma generate (si la app usa Prisma)
+      # prisma y typescript son deps de cada APP (no de la raíz) → se ejecutan
+      # DESDE el dir de la app, igual que su build, para que pnpm los resuelva.
+      - name: Prisma generate + TypeScript check
+        working-directory: apps/${{ matrix.app }}
         run: |
-          if [ -f "apps/${{ matrix.app }}/prisma/schema.prisma" ]; then
-            pnpm exec prisma generate --schema="apps/${{ matrix.app }}/prisma/schema.prisma"
+          if [ -f "prisma/schema.prisma" ]; then
+            pnpm exec prisma generate
           fi
-      - name: TypeScript check
-        run: pnpm exec tsc --noEmit -p "apps/${{ matrix.app }}/tsconfig.json"
+          pnpm exec tsc --noEmit -p tsconfig.json
