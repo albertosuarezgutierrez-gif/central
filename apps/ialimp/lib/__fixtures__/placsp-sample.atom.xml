@@ -12,6 +12,7 @@
     <link href="https://contrataciondelestado.es/wps/poc?uri=deeplink:detalle_licitacion&amp;idEvl=AAA111"/>
     <cac-place-ext:ContractFolderStatus>
       <cbc:ContractFolderID>11111/2026</cbc:ContractFolderID>
+      <cbc:ContractFolderStatusCode>PUB</cbc:ContractFolderStatusCode>
       <cac-place-ext:LocatedContractingParty>
         <cac:Party><cac:PartyName><cbc:Name>Ayuntamiento de Avilés</cbc:Name></cac:PartyName></cac:Party>
       </cac-place-ext:LocatedContractingParty>
@@ -20,7 +21,11 @@
         <cbc:TypeCode>2</cbc:TypeCode>
         <cac:BudgetAmount><cbc:TotalAmount currencyID="EUR">120000.00</cbc:TotalAmount></cac:BudgetAmount>
         <cac:RequiredCommodityClassification><cbc:ItemClassificationCode>90910000</cbc:ItemClassificationCode></cac:RequiredCommodityClassification>
+        <cac:RealizedLocation><cac:Address><cbc:CountrySubentity>Asturias</cbc:CountrySubentity></cac:Address></cac:RealizedLocation>
       </cac:ProcurementProject>
+      <cac:TenderingProcess>
+        <cac:TenderSubmissionDeadlinePeriod><cbc:EndDate>2026-07-15</cbc:EndDate></cac:TenderSubmissionDeadlinePeriod>
+      </cac:TenderingProcess>
     </cac-place-ext:ContractFolderStatus>
   </entry>
   <entry>
