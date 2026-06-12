@@ -161,7 +161,7 @@
       "id": "almacen-stock",
       "grupo": "Stock",
       "label": "Almacén / stock / ASN",
-      "modulo": "module-inventario"
+      "modulo": "module-materiales"
     },
     {
       "id": "proveedores",

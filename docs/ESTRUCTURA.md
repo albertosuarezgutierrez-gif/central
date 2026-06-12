@@ -54,7 +54,7 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-crm` | Pipeline comercial genérico (oportunidades/leads) anclado a un Encargo. | ⏳ (ia-rest/ialimp tienen el suyo propio) |
 | `module-presupuestos` | Líneas, costes, descuentos y cálculo de margen/rentabilidad. | ⏳ |
 | `module-proveedores` | Catálogo de proveedores + servicios con comisiones. | ⏳ |
-| `module-inventario` | Catálogo de artículos + asignación de activos a un Encargo. | ⏳ |
+| `module-materiales` | Materiales físicos y consumibles: catálogo, espacios, transferencias, contabilidad de compra y roturas. | ✅ ia-rest, ialimp, sivra |
 | `module-asn` | Aviso de envío/recepción de mercancía con líneas (lote, caducidad). | ⏳ (ia-rest tiene ASN propio) |
 | `module-feedback` | Reseñas/valoraciones + propinas por Encargo o token público. | ⏳ |
 
