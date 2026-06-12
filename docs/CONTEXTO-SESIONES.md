@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ module-materiales COMPLETO — PRs #189 + #190 mergeados — 12/06/2026**
+  Todo el plan `module-materiales` (spec `.claude/plans/polished-growing-stonebraker.md`) está implementado y en producción:
+  - **Fase A** (PR anterior): ledger `materiales_movimientos`, espacios, transferencias, serializados, QR, alertas, KPIs dashboard.
+  - **Fase B** (PR #189): kits, inventario físico, mantenimiento, reservas, clientes, proveedores.
+  - **Import/Informe** (PR #190): `POST /api/materiales/import` (CSV masivo), `GET /api/materiales/import` (plantilla), `GET /api/materiales/informe?tipo=valoracion|activos|historial` (HTML imprimible). Tabs _Importar_ e _Informes_ en UI.
+  - **Migración SQL** `2026-06-12_materiales_fase_b.sql` aplicada en Supabase `efncqyvhniaxsirhdxaa` (8 tablas + RLS).
+  - **CI final PR #190**: 9/9 checks ✅, 4 Vercel ✅. Squash-mergeado a `main`.
+  - No quedan pendientes del plan `module-materiales`.
+
 - **📦 module-materiales Fase B — PR #189 mergeado — 12/06/2026**
   Implementación completa de la Fase B del plan `module-materiales` (spec en `.claude/plans/polished-growing-stonebraker.md`):
   - **8 APIs nuevas** en `apps/ia-rest/src/app/api/materiales/`:
