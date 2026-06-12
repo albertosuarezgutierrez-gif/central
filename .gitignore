@@ -10,3 +10,6 @@ scripts/setup-wizard/node_modules/
 # TypeScript incremental build cache (generado)
 tsconfig.tsbuildinfo
 *.tsbuildinfo
+
+# Worktrees efímeros de subagentes (Claude Code)
+.claude/worktrees/
