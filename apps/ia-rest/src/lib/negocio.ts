@@ -4,7 +4,7 @@
 // Pieza base de la plataforma de verticales (ver
 // docs/superpowers/specs/2026-06-07-plataforma-verticales-design.md).
 //
-// Principio: el NÚCLEO usa identificadores canónicos NEUTROS; la jerga de cada
+// Principio: el NÚcLEO usa identificadores canónicos NEUTROS; la jerga de cada
 // vertical vive SOLO aquí, en la capa de etiquetas (LABELS). Cambiar el tipo de
 // negocio de un local aplica su preset de módulos y su terminología, sin tocar
 // la lógica del núcleo.
@@ -17,10 +17,11 @@ export type TipoNegocio =
   | 'catering'
   | 'salon'
   | 'retail'
+  | 'citas'
   | 'mixto'
 
 export const TIPOS_NEGOCIO: TipoNegocio[] = [
-  'restaurante', 'catering', 'salon', 'retail', 'mixto',
+  'restaurante', 'catering', 'salon', 'retail', 'citas', 'mixto',
 ]
 
 export const TIPO_NEGOCIO_DEFAULT: TipoNegocio = 'restaurante'
@@ -65,6 +66,16 @@ export const PRESETS_NEGOCIO: Record<TipoNegocio, string[]> = {
   salon: [
     'eventos', // *
     'reservas', 'almacen', 'fichajes', 'rrhh', 'contabilidad', 'analytics',
+  ],
+  // Familia B — servicio agendado por cita (clínica/terapeuta, peluquería, fisio,
+  // asesoría…). La captura es el HUECO de agenda (reservas generalizado a recurso/
+  // profesional), no la mesa. Reutiliza cobro/factura/CRM/portal/recordatorios del
+  // núcleo + motor de eventos como "proyecto/servicio". El bot de calendario entra
+  // como un canal más que crea filas en `reservas` (igual que el canal TheFork).
+  citas: [
+    'reservas',
+    'storefront', // reserva/booking online de cara al cliente
+    'fichajes', 'rrhh', 'contabilidad', 'analytics',
   ],
   // Combinación de verticales en un mismo local
   mixto: [
@@ -123,6 +134,10 @@ export const LABELS: Record<TipoNegocio, VerticalLabels> = {
   salon: {
     local: 'Salón', venta: 'Evento', ventas: 'Eventos', linea: 'Concepto',
     personal: 'Coordinador', punto: 'Espacio', catalogo: 'Oferta', cliente: 'Cliente',
+  },
+  citas: {
+    local: 'Centro', venta: 'Cita', ventas: 'Citas', linea: 'Servicio',
+    personal: 'Profesional', punto: 'Agenda', catalogo: 'Servicios', cliente: 'Cliente',
   },
   mixto: { ...LABELS_BASE, local: 'Negocio' },
 }
