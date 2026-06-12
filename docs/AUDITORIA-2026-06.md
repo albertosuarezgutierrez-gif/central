@@ -81,11 +81,16 @@ sivra (core-push, module-proveedores, module-inventario). No rompe hoy (o no se 
 server-side), pero es deuda latente. **Acción**: reconciliar `transpilePackages` con las deps `@central/*`
 realmente importadas en cada `next.config`.
 
-### M3. Vulnerabilidades de dependencias — 32 (16 high) 🟡
-`pnpm audit`: destaca **`xlsx`** (high, prototype-pollution/ReDoS, *sin versión parcheada* en npm — usada en
-`apps/ialimp`) y **`axios`** (high/moderate, transitiva vía `node-ical` en ialimp). **Acción**: para `xlsx`,
-migrar a `xlsx` desde el CDN oficial de SheetJS o a `exceljs`; para `axios`, actualizar `node-ical` o fijar
-override `axios>=1.16`.
+### M3. Vulnerabilidades de dependencias — de 32 (16 high) → 6 (2 high) 🟡 PARCIALMENTE RESUELTO
+`pnpm audit` inicial: 32 vulns (16 high). Tras la auditoría:
+- ✅ **`axios`** (high/moderate, transitiva vía `node-ical` en ialimp) — **resuelto** con `pnpm.overrides`
+  `"axios": ">=1.16.0"` en el `package.json` raíz → resuelve a 1.17.0. Despeja todos los high de axios.
+- 🟡 **`xlsx`** (high, prototype-pollution/ReDoS, *sin versión parcheada en npm*) — **queda**, pero es de
+  **riesgo nulo en la práctica**: ialimp **solo ESCRIBE** xlsx (`apps/ialimp/app/api/admin/contabilidad/export/route.ts`:
+  `book_new`/`json_to_sheet`/`write`), **nunca parsea** ficheros (las vulnerabilidades se disparan al LEER xlsx
+  malicioso). **Remediación oficial** (cuando se quiera cerrar del todo): migrar al tarball parcheado de SheetJS
+  (`https://cdn.sheetjs.com/xlsx-0.20.x/...tgz`). NO aplicada aquí porque la CDN está bloqueada en el entorno de
+  build de la auditoría (403) y, con cliente en vivo, no se arriesga el build de ialimp por una vuln no explotable.
 
 ### M4. ialimp — 16 errores de tipos restantes ✅ SALDADO
 Resueltos los 16: null-safety en `lib/ical-sync.ts` (variable intermedia con guarda), inferencia circular en

@@ -12,6 +12,9 @@
     "test:packages": "pnpm -r --filter \"./packages/*\" run test"
   },
   "pnpm": {
+    "overrides": {
+      "axios": ">=1.16.0"
+    },
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
