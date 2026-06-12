@@ -132,6 +132,20 @@ const config: ClienteConfig = {
       ],
       roi: 'Decisiones de carta basadas en datos reales, no en sensaciones.',
     },
+    {
+      emoji: '✅',
+      titulo: 'Checklist operativo + carga',
+      color: C.green,
+      sub: 'Tareas por sección cruzadas con el trabajo real',
+      ruta: 'Barra · Sala · Terraza',
+      desc: 'Cada sección con su checklist de tareas —repasar copas, recargar neveras, bajar barreras, montaje, cierre—. El empleado las marca con foto, y ia.rest las cruza con las mesas y comandas reales del turno.',
+      ejemplos: [
+        'Checklist de apertura, turno y cierre por sección',
+        'Marcado con foto — como el cierre de las limpiadoras',
+        'Tarea sin hacer + sala vacía = aviso "sin excusa"; sala llena = contexto',
+      ],
+      roi: 'Reclamas el trabajo con datos: sabes si no se hizo por falta de tiempo o de ganas.',
+    },
     MODULO_RRHH({ roi: 'Gestión de personal unificada para los dos restaurantes. Turnos, fichajes y costes desde un panel.' }),
   ],
 }

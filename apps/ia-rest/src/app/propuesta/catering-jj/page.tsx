@@ -53,6 +53,36 @@ const MODULO_MARKETPLACE = (): any => ({
   roi: 'Cualificas y cierras bodas fuera de horario. El comercial llega con el trabajo medio hecho.',
 })
 
+const MODULO_CHECKLIST = (): any => ({
+  emoji: '✅',
+  titulo: 'Checklist operativo de personal',
+  sub: 'Tareas por sección cruzadas con la carga real',
+  ruta: 'Restaurante · Barra · Sala',
+  color: C.green,
+  desc: 'Cada sección con su checklist —repasar copas, recargar neveras, bajar barreras, montaje, cierre—. El empleado las marca con foto, y ia.rest las cruza con las mesas y comandas reales del turno para saber si hubo carga o no.',
+  ejemplos: [
+    'Checklist de apertura, turno y cierre por sección',
+    'Marcado con foto — como el cierre de las limpiadoras',
+    'Tarea sin hacer + sala vacía = "sin excusa"; sala llena = contexto',
+  ],
+  roi: 'Reclamas el trabajo con datos: sabes si no se hizo por falta de tiempo o de ganas.',
+})
+
+const MODULO_PRODUCTIVIDAD_COCINA = (): any => ({
+  emoji: '👨‍🍳',
+  titulo: 'Perfil del cocinero + productividad',
+  sub: 'Trabajo organizado por IA y cronometrado',
+  ruta: 'Perfil de cada cocinero',
+  color: C.teal,
+  desc: 'Cada cocinero entra a su perfil y encuentra el trabajo del día ya organizado y secuenciado por la IA, con el tiempo estimado de cada elaboración. ia.rest compara el tiempo real con el estándar para medir la productividad de cada partida.',
+  ejemplos: [
+    'Trabajo del día repartido y secuenciado por partida, anticipado',
+    'Tiempo estimado por elaboración — planificado por adelantado',
+    'Productividad real vs estándar por cocinero, con datos',
+  ],
+  roi: 'Anticipas el trabajo y sabes —con datos— si cada partida es productiva.',
+})
+
 const MODULO_ESCANDALLOS_CATERING = (): any => ({
   icon: '📋',
   titulo: 'Escandallos conectados',
@@ -216,6 +246,8 @@ const config: ClienteConfig = {
     MODULO_COMERCIAL(),
     MODULO_MATERIAL(),
     MODULO_MARKETPLACE(),
+    MODULO_CHECKLIST(),
+    MODULO_PRODUCTIVIDAD_COCINA(),
     MODULO_ESCANDALLOS_CATERING(),
     MODULO_ALMACEN_CATERING(),
     MODULO_PRESUPUESTADOR(),
