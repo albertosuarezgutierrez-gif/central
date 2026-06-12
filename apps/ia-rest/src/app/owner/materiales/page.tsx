@@ -667,7 +667,10 @@ function Kits() {
 
   const cargarItems = async (kitId: string) => {
     const r = await fetch(`/api/materiales/kits/${kitId}/items`, { headers: H() })
-    if (r.ok) setItems(prev => ({ ...prev, [kitId]: (await r.json()).items ?? [] }))
+    if (r.ok) {
+      const data = await r.json()
+      setItems(prev => ({ ...prev, [kitId]: data.items ?? [] }))
+    }
   }
 
   const toggleKit = (kitId: string) => {
