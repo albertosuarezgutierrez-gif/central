@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
+- **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — PR #187 mergeado (squash `9dfdc93`) — 12/06/2026**
   Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
   se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
   fuente de verdad, así no hay drift) en `.claude/skills/`:
