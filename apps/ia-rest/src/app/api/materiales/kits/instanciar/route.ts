@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     movimientos.push({ material_id: item.material_id, cantidad: totalCant })
   }
 
-  const insertados = []
+  const insertados: Record<string, unknown>[] = []
   for (const mv of movimientos) {
     const { data: mov } = await supabase.from('materiales_movimientos').insert({
       restaurante_id: rid,
