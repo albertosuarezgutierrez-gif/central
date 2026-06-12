@@ -1,0 +1,86 @@
+name: Tests & Typecheck
+
+# Casa de marcas: el CI histórico (ci.yml) solo cubría apps/ia-rest. Este workflow
+# añade (1) la suite de tests de los packages compartidos + el guardián de regresión,
+# y (2) el typecheck del RESTO de verticales (sivra, plataforma, ia-rest), que el
+# build de cada app NO valida (varias apps llevan `typescript.ignoreBuildErrors`).
+# Ver docs/AUDITORIA-2026-06.md.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Tests de los módulos compartidos + guardián anti-scope-viejo ─────────────
+  test:
+    name: Tests (packages + guardián)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'        # 22 = strip-types nativo para `node --test`
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Test (guardián + packages)
+        run: pnpm test
+
+  # ── Typecheck de las verticales LIMPIAS (bloqueante) ────────────────────────
+  # ialimp queda fuera a propósito: tiene deuda de tipos catalogada en la auditoría
+  # (re-incluir en la matriz cuando esos errores estén a 0).
+  typecheck:
+    name: Typecheck · ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [ia-rest, sivra, plataforma]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Prisma generate (si la app usa Prisma)
+        run: |
+          if [ -f "apps/${{ matrix.app }}/prisma/schema.prisma" ]; then
+            pnpm exec prisma generate --schema="apps/${{ matrix.app }}/prisma/schema.prisma"
+          fi
+      - name: TypeScript check
+        run: pnpm exec tsc --noEmit -p "apps/${{ matrix.app }}/tsconfig.json"
+
+  # ── Typecheck de ialimp (informativo, NO bloquea hasta saldar la deuda) ──────
+  typecheck-ialimp-info:
+    name: Typecheck · ialimp (informativo)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Prisma generate
+        run: pnpm exec prisma generate --schema="apps/ialimp/prisma/schema.prisma"
+      - name: TypeScript check (deuda conocida — ver auditoría)
+        run: pnpm exec tsc --noEmit -p "apps/ialimp/tsconfig.json"

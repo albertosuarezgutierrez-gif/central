@@ -1,0 +1,146 @@
+# Auditoría con contexto — monorepo `central` (junio 2026)
+
+> Auditoría **con contexto** (no genérica) tras la reestructuración: rename `@iarest/*`→`@central/*`,
+> migración de la BD de ia-rest al Supabase compartido, `file:`→`workspace:*`, modularización en `packages/*`.
+> Alcance: código + flujo + estructura + infra real (Supabase/Vercel) + tests. Fecha: 2026-06-12.
+> Método y repetición: skill `auditoria-central` (`.claude/skills/auditoria-central/SKILL.md`).
+
+## Resumen ejecutivo
+La reestructuración está **sana a nivel estructural** (0 referencias `@iarest/`, lockfile en sync,
+radiografía al día, builds verdes), pero el CI solo cubría `apps/ia-rest` y eso **ocultaba bugs reales
+en las demás verticales**: `apps/ialimp` tenía 26 errores de TypeScript que su build no ve (lleva
+`ignoreBuildErrors: true`). Esta auditoría **arregla los de bajo riesgo** (bug de IA repetido, package
+`core-identity` sin declarar), **añade red de tests** (core-fiscal + guardián de regresión) y **extiende
+el CI** a typecheck de las verticales. Quedan bloqueadores de **configuración manual** (2 migraciones SQL
+sin aplicar → un cron roto, y la seguridad RLS de la BD compartida) que requieren acción de Alberto.
+
+| Severidad | Nº | Estado |
+|-----------|----|--------|
+| 🔴 Alto   | 4  | 2 arreglados · 2 acción manual |
+| 🟡 Medio  | 6  | 1 arreglado · 5 documentados |
+| 🟢 Bajo   | 5  | documentados |
+
+---
+
+## 🔴 Hallazgos ALTO
+
+### A1. Bug de IA repetido — `aiComplete(prompt, número)` ✅ ARREGLADO
+`aiComplete(prompt, options)` espera un **objeto** `{ maxTokens?, timeoutMs?, ... }`, pero se llamaba con
+un **número suelto** → en runtime el valor se ignora y se usan los defaults.
+- `apps/ialimp/lib/google-leads.ts:162` — `aiComplete(prompt, 20000)`: el `maxTokens` real caía a **800**
+  → la extracción de leads se truncaba en silencio. Fix: `{ maxTokens: 20000 }`.
+- `apps/ialimp/lib/mailing.ts:76` — `aiComplete(prompt, 8000)`: el "timeout corto" que promete su propio
+  comentario era en realidad **30 s**. Fix: `{ timeoutMs: 8000 }`.
+- Detectable por tipos (`TS2559`); pasaba inadvertido por `ignoreBuildErrors` + CI solo en ia-rest.
+
+### A2. `@central/core-identity` usado sin declarar en ialimp ✅ ARREGLADO
+8 ficheros de auth de ialimp importan `genHex`/`sha256Hex`/`genJti` de `@central/core-identity`
+(`lib/auth.ts`, `lib/propietario-auth.ts`, `app/api/admin/{limpiadoras,usuarios,usuarios-empresa}/route.ts`,
+`app/api/admin/clientes/[id]/{desactivar,enviar-acceso}/route.ts`, `app/api/l/auth/route.ts`) pero el
+package **no estaba en `dependencies` ni en `transpilePackages`**. Como todos los `@central/*` exportan
+**TS crudo** (`main: ./src/index.ts`, sin build), un consumidor que no lo transpila falla en runtime.
+Fix: añadido a `apps/ialimp/package.json` y a `transpilePackages` de `apps/ialimp/next.config.ts` (de paso
+se completaron los demás `@central/*` declarados que faltaban: core-fiscal, module-crm/inventario/proveedores).
+Resultado: ialimp 26→16 errores de tipos.
+
+### A3. Migraciones del radar de concursos NO aplicadas → cron roto ⚠️ ACCIÓN MANUAL
+Verificado en la BD compartida (`wswbehlcuxqxyinousql`):
+`public.concursos_radar_criterios` y `public.concursos_radar_anuncios` **NO existen**. El cron
+`apps/ialimp/app/api/cron/concursos-radar/route.ts` (cada 6 h en `vercel.json`) consulta esas tablas →
+falla con *relation does not exist*. (Las otras 2 "pendientes" sí están: `tenant_modulos` y
+`cleaning_sessions.orden_manual` ✓.)
+- **Acción**: aplicar en Supabase `apps/ialimp/prisma/migrations/add_concursos_radar_criterios.sql` y
+  `add_concursos_radar_anuncios.sql`. Sin riesgo (solo `CREATE TABLE`). Rollback: `DROP TABLE` de ambas.
+
+### A4. Seguridad de la BD compartida — 499 advisories (63 ERROR) ⚠️ ACCIÓN MANUAL
+`mcp__Supabase__get_advisors(security)` sobre la BD compartida (266 tablas en `iarest`, 135 en `public`):
+- **62× `security_definer_view`** (ERROR) — vistas que ejecutan con permisos del creador (saltan la RLS del
+  consultante). En BD multi-tenant es la categoría más sensible.
+- **24× `rls_policy_always_true`** (WARN) — políticas que permiten acceso **sin restricción** (riesgo de
+  fuga entre tenants/verticales).
+- **114× `function_search_path_mutable`** — `search_path` mutable; **crítico** porque ia-rest se aísla
+  precisamente por `search_path`.
+- **139× `rls_enabled_no_policy`**, **1× `rls_disabled_in_public`** (`iarest.instagram_estilos_usados`).
+- Muchos probablemente **preexisten** a la migración (vienen del proyecto ia-rest original), pero cuentan en
+  el contexto de BD compartida. **Acción**: revisar por lotes (empezar por los 62 ERROR y los 24
+  `always_true`); fijar `search_path` en funciones `SECURITY DEFINER`. Ver enlaces de remediación en advisors.
+
+---
+
+## 🟡 Hallazgos MEDIO
+
+### M1. CI solo cubría ia-rest → no veía las otras 3 verticales ✅ MITIGADO
+`ci.yml` y `qa.yml` corren con `working-directory: apps/ia-rest`. Por eso A1/A2 no saltaron.
+Fix: nuevo `.github/workflows/tests.yml` — corre la suite de tests (packages + guardián) y el typecheck
+de las verticales **limpias** (ia-rest, sivra, plataforma, bloqueante) + ialimp informativo.
+
+### M2. `transpilePackages` incompleto respecto a deps en todas las apps 🟡
+Todos los `@central/*` exportan TS crudo → cada consumidor debe transpilarlos. Faltaban (además de A2):
+ia-rest (7: module-contabilidad/crm/inventario/presupuestos/proveedores/feedback/asn),
+sivra (core-push, module-proveedores, module-inventario). No rompe hoy (o no se importan, o Next los resuelve
+server-side), pero es deuda latente. **Acción**: reconciliar `transpilePackages` con las deps `@central/*`
+realmente importadas en cada `next.config`.
+
+### M3. Vulnerabilidades de dependencias — 32 (16 high) 🟡
+`pnpm audit`: destaca **`xlsx`** (high, prototype-pollution/ReDoS, *sin versión parcheada* en npm — usada en
+`apps/ialimp`) y **`axios`** (high/moderate, transitiva vía `node-ical` en ialimp). **Acción**: para `xlsx`,
+migrar a `xlsx` desde el CDN oficial de SheetJS o a `exceljs`; para `axios`, actualizar `node-ical` o fijar
+override `axios>=1.16`.
+
+### M4. ialimp — 16 errores de tipos restantes 🟡
+Tras A1/A2 quedan (en `apps/ialimp`): null-safety en `lib/ical-sync.ts:85` (`TS2532`/`TS18047`), tipos de
+pdfjs en `lib/concursos-ocr.ts` (`TS2353`/`TS2345`), `pdf-parse` sin tipos (`TS7016`), `implicit any` en
+`api/cron/concursos-radar` y `PropietarioClient`, y `cp`/`never` en `PropiedadesClient`. Riesgo bajo-medio;
+saldar para re-incluir ialimp en el typecheck bloqueante del CI.
+
+### M5. Imports `.ts` rompen el typecheck de packages con tests 🟡
+`packages/module-concursos/src/{deuc,oferta}.ts` importan con extensión `.ts` (lo exige `node --test`), lo
+que rompe `tsc` salvo `allowImportingTsExtensions`. **Acción**: añadir `allowImportingTsExtensions`+`noEmit`
+al `tsconfig` de los packages con tests, para poder typechequearlos en CI.
+
+### M6. Peer dependency `nodemailer` desajustada 🟡
+`next-auth 5 beta` pide `nodemailer@^7` pero el árbol resuelve `8.0.10`. Sin impacto observado; vigilar al
+actualizar next-auth.
+
+---
+
+## 🟢 Hallazgos BAJO
+
+- **B1. Anon key hardcodeada** en `apps/ia-rest/scripts/bridge-v6/bridge-v6.js:33` — JWT `anon` del proyecto
+  **viejo** `efncqyvhniaxsirhdxaa`. Las anon keys son semi-públicas (cliente, protegidas por RLS), pero apunta
+  al proyecto a jubilar; al cortar, regenerar/retirar.
+- **B2. Proyecto Supabase viejo de ia-rest sigue ACTIVE** (`efncqyvhniaxsirhdxaa`, *ACTIVE_HEALTHY*). El schema
+  nuevo `iarest` tiene 266 tablas (sano). Acción de Alberto: tras el corte de envs, reset de password + jubilar.
+- **B3. Doc drift**: `apps/ialimp/CLAUDE.md` aún cita `@iarest/module-concursos` (el código ya usa `@central/`).
+- **B4. `docs/CONTEXTO-SESIONES.md`** muy grande (>8000 líneas) — archivar sesiones antiguas a `docs/historial/`.
+- **B5. `module-agenda`** sin consumidores (solo contrato) — esperado hasta la vertical de alquiler; sin acción.
+
+---
+
+## Lo que se ha hecho en esta auditoría
+- **Arreglos** (bajo riesgo, verificados por typecheck): A1 (bug IA ×2), A2 (core-identity).
+- **Tests nuevos**: `packages/core-fiscal/test/fiscal.test.ts` (16 tests: IVA, NIF/CIF/IBAN, huella VeriFactu
+  con snapshot, QR, XML) + script `test`. Guardián `test/regression-scope.test.ts` (anti-`@iarest/`).
+  Orquestadores en la raíz: `pnpm test` / `test:packages` / `test:guardia`. **Suite: 104 tests, 0 fallos.**
+- **CI**: `.github/workflows/tests.yml` (tests + typecheck de verticales).
+- **Skill**: `.claude/skills/auditoria-central/SKILL.md` para repetir esta auditoría con contexto.
+
+## Checklist de acciones manuales de Alberto (Supabase/Vercel)
+1. **[A3]** Aplicar `add_concursos_radar_criterios.sql` + `add_concursos_radar_anuncios.sql` en Supabase
+   compartido (arregla el cron de concursos). Rollback: `DROP TABLE`.
+2. **[A4]** Revisar advisors de seguridad (62 `security_definer_view`, 24 `rls_policy_always_true`,
+   `search_path` de funciones `SECURITY DEFINER`). Empezar por los 63 ERROR.
+3. **[M3]** Mitigar `xlsx` y `axios` (override/upgrade) en ialimp.
+4. **Corte de envs de ia-rest** (cuando toque): re-meter secrets de Edge Functions, exponer schema `iarest`,
+   cambiar las 3 envs de Vercel + `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`, redeploy + smoke test. Rollback:
+   revertir las 3 envs. **[B2]** Después: reset password + jubilar `efncqyvhniaxsirhdxaa`.
+
+## Cómo verificar
+```bash
+pnpm install --frozen-lockfile          # lockfile en sync
+node scripts/auditar-estructura.mjs --check
+pnpm test                               # 104 tests (guardián + packages), 0 fallos
+# typecheck de una vertical (genera Prisma antes si aplica):
+pnpm exec prisma generate --schema=apps/ialimp/prisma/schema.prisma
+pnpm exec tsc --noEmit -p apps/ialimp/tsconfig.json
+```

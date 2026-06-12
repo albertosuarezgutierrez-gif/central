@@ -12,6 +12,7 @@
     "@central/core-ai": "workspace:*",
     "@central/core-email": "workspace:*",
     "@central/core-fiscal": "workspace:*",
+    "@central/core-identity": "workspace:*",
     "@central/core-push": "workspace:*",
     "@central/core-storage": "workspace:*",
     "@central/module-concursos": "workspace:*",

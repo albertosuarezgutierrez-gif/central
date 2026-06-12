@@ -7,7 +7,7 @@ const monorepoRoot = path.join(__dirname, "..", "..")
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["node-ical", "pdf-parse", "@napi-rs/canvas", "pdfjs-dist"],
-  transpilePackages: ["@central/core-ai", "@central/core-push", "@central/core-storage", "@central/core-email", "@central/module-contabilidad", "@central/module-concursos"],
+  transpilePackages: ["@central/core-ai", "@central/core-fiscal", "@central/core-identity", "@central/core-push", "@central/core-storage", "@central/core-email", "@central/module-contabilidad", "@central/module-concursos", "@central/module-crm", "@central/module-inventario", "@central/module-proveedores"],
   outputFileTracingRoot: monorepoRoot,
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true }

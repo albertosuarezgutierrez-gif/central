@@ -159,7 +159,7 @@ export async function analizarListadoWeb(url: string): Promise<{ leads: LeadWeb[
     `aparece, ponlo null. No inventes datos.\n\nEmails en enlaces mailto: ${mailtos || 'ninguno'}\n\n` +
     `CONTENIDO:\n${texto}`
   let out = ''
-  try { out = await aiComplete(prompt, 20000) } catch (e: any) { return { leads: [], error: 'IA: ' + String(e?.message || e).slice(0, 120) } }
+  try { out = await aiComplete(prompt, { maxTokens: 20000 }) } catch (e: any) { return { leads: [], error: 'IA: ' + String(e?.message || e).slice(0, 120) } }
 
   const a = out.indexOf('['), b = out.lastIndexOf(']')
   if (a < 0 || b < 0) return { leads: [], error: 'La IA no devolvió una lista' }

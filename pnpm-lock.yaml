@@ -146,6 +146,9 @@ importers:
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
+      '@central/core-identity':
+        specifier: workspace:*
+        version: link:../../packages/core-identity
       '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
@@ -457,6 +460,8 @@ importers:
   packages/module-presupuestos: {}
 
   packages/module-proveedores: {}
+
+  packages/module-revenue: {}
 
 packages:
 
