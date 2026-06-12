@@ -5,8 +5,7 @@ on:
     branches: [main, dev]
   pull_request:
     branches: [main]
-
-    workflow_dispatch:
+  workflow_dispatch:
 
 # Cancelar runs anteriores del mismo branch si llega uno nuevo
 concurrency:
