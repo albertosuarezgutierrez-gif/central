@@ -36,14 +36,20 @@
     (`efncqyvhniaxsirhdxaa`) sigue ACTIVE (jubilar tras el corte de envs).
   - **✅ Alberto aplicó las 2 migraciones del radar de concursos** (`radar_*` en `concursos_perfil_empresa` +
     tabla `concursos_radar_anuncios`) → cron `/api/cron/concursos-radar` ya no falla. Verificado en BD.
-  - **⚠️ OJO CI:** `ci.yml`/`qa.yml`/`tests.yml` se disparan en `push → main/dev` y `pull_request → main`. En una
-    rama feature el push NO los lanza y en PR abierto por automatización GitHub no los ejecuta sin aprobación →
-    en esta rama solo corrió `auditoria.yml` (verde, pero NO ejecuta tests). Se añadió `workflow_dispatch` a
-    `ci.yml`/`tests.yml` (estaba **mal indentado bajo `pull_request:`**, corregido a primer nivel de `on:`).
-    **Los 104 tests + typecheck están verdes en LOCAL; en CI se validarán al mergear a `main`** (o con Run workflow
-    una vez `tests.yml` esté en la rama por defecto).
-  - **Pendiente de Alberto:** revisar los 63 advisories ERROR de seguridad; mitigar vulnerabilidades `xlsx`
-    (high, sin parche) y `axios` (vía `node-ical`) en ialimp.
+  - **✅ MERGEADO a `main`** (PR #164) + **seguimiento PR #166**:
+    - **CI verde de verdad** (no solo local): `Tests & Typecheck` pasa en CI los 104 tests + typecheck de las
+      **4 apps**. **OJO/GOTCHA del CI:** `prisma generate` y `tsc` deben ejecutarse **desde el dir de cada app**
+      (`working-directory: apps/<app>`), NO desde la raíz — `prisma`/`typescript` son deps de cada app, no de la
+      raíz (si no: `ERR_PNPM ... Command "prisma" not found`). Los 3 schemas escriben al MISMO `@prisma/client`,
+      pero en CI cada app va en un job aparte (no colisionan). Este bug rompió `tests.yml` en main y se arregló en #166.
+    - **Vulnerabilidades (M3):** `axios` (high, vía `node-ical`) resuelto con `pnpm.overrides "axios": ">=1.16.0"`
+      en la raíz (→1.17.0); `pnpm audit` baja de 16 high a 1. **`xlsx`** queda (high, sin parche npm) pero es
+      **no explotable**: ialimp solo ESCRIBE xlsx (export contab.), nunca parsea (las vulns son al LEER). Remediación
+      oficial = tarball CDN de SheetJS (bloqueada en el entorno de build; no se arriesga el build del cliente vivo).
+    - `workflow_dispatch` añadido a `ci.yml`/`tests.yml` (estaba mal indentado bajo `pull_request:`, corregido).
+  - **PENDIENTE de Alberto (no urgente):** revisar los **63 advisories ERROR de seguridad** de la BD compartida
+    (62 `security_definer_view`, `search_path` mutable en funciones `SECURITY DEFINER`) — lo más sensible por ser
+    BD multi-tenant. (xlsx queda como remediación opcional, documentada.)
 - **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
   - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
     (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
