@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T13:48:58Z",
+  "generadoEn": "2026-06-12T13:35:27Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1830,7 +1830,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
+      "titulo": "🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`",
       "fecha": "12/06/2026"
     },
     {
