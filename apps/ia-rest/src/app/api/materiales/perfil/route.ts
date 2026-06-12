@@ -19,17 +19,15 @@ export async function GET(req: NextRequest) {
   }
 
   const supabase = createServerClient()
-  const personalId = session.camarero_id
 
-  // El montador ve las asignaciones a su nombre; si no hay personal_id (owner mirando),
-  // ve todas las activas del restaurante.
-  let q = supabase
+  // Todos los que tienen acceso al módulo ven todas las asignaciones activas del restaurante.
+  // (En equipos pequeños de catering el montador lleva todo el material del evento, no solo "el suyo".)
+  const q = supabase
     .from('materiales_asignacion')
     .select('id, material_id, destino_tipo, destino_nombre, cantidad, cantidad_devuelta, estado, fecha_salida, notas, material:materiales(nombre, categoria, coste_reposicion)')
     .eq('restaurante_id', rid)
     .neq('estado', 'devuelto')
     .order('created_at', { ascending: false })
-  if (personalId && !esOwner) q = q.eq('personal_id', personalId)
 
   const { data, error } = await q
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
