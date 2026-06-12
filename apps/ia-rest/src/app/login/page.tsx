@@ -46,6 +46,11 @@ function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modu
     window.location.href = '/contable'
     return
   }
+  // Empleado con acceso a materiales (sin rol de operativa propia) → portal de montaje
+  if (mods.includes('materiales')) {
+    window.location.href = '/montaje'
+    return
+  }
   // Rol desconocido: si tiene módulos → /portal, si no → /edge como fallback
   window.location.href = tieneModulos ? '/central' : '/edge'
 }
