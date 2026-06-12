@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ia.rest · Cobros con Stripe — cómo funciona</title>
+<style>
+  :root{
+    --dark:#14110E; --bg2:#1E1A15; --bg3:#2A221A; --paper:#F6F1E7;
+    --ink2:#D8CDB6; --ink3:#9C8E7E; --ink4:#6B5F52;
+    --red:#D9442B; --amber:#E8A33B; --green:#3F7D44; --rule:#2E2720;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--dark); color:var(--paper);
+    font-family:"Inter Tight",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    line-height:1.5;
+  }
+  .deck{scroll-snap-type:y mandatory; height:100vh; overflow-y:scroll}
+  .slide{
+    min-height:100vh; scroll-snap-align:start;
+    display:flex; flex-direction:column; justify-content:center;
+    padding:6vh 7vw; position:relative; border-bottom:1px solid var(--rule);
+  }
+  .tag{
+    display:inline-block; font-size:.72rem; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--red); font-weight:700; margin-bottom:1.1rem;
+  }
+  h1{font-family:Georgia,"Times New Roman",serif; font-size:clamp(2.2rem,6vw,4.4rem); line-height:1.05; font-weight:600; letter-spacing:-.02em}
+  h2{font-family:Georgia,"Times New Roman",serif; font-size:clamp(1.7rem,4vw,3rem); line-height:1.1; font-weight:600; margin-bottom:1.5rem; letter-spacing:-.01em}
+  h1 .accent,h2 .accent{color:var(--red)}
+  .lead{font-size:clamp(1.05rem,2.2vw,1.5rem); color:var(--ink2); max-width:60ch; margin-top:1.4rem}
+  .sub{color:var(--ink3); font-size:1rem; margin-top:2.5rem}
+  p{max-width:65ch}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:1.4rem; margin-top:1rem}
+  @media(max-width:760px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--bg2); border:1px solid var(--rule); border-radius:16px; padding:1.6rem 1.7rem}
+  .card.green{border-color:var(--green)}
+  .card.amber{border-color:var(--amber)}
+  .card.red{border-color:var(--red)}
+  .card h3{font-size:1.15rem; margin-bottom:.7rem; display:flex; align-items:center; gap:.5rem}
+  .card p{color:var(--ink2); font-size:1rem}
+  .big{font-size:clamp(1.8rem,4vw,2.6rem); font-weight:800; font-family:Georgia,serif}
+  .big.green{color:var(--green)} .big.amber{color:var(--amber)} .big.red{color:var(--red)}
+  table{width:100%; border-collapse:collapse; margin-top:1.5rem; font-size:clamp(.85rem,1.6vw,1.05rem)}
+  th,td{text-align:left; padding:.85rem 1rem; border-bottom:1px solid var(--rule)}
+  th{color:var(--ink3); font-weight:600; font-size:.78rem; letter-spacing:.08em; text-transform:uppercase}
+  td.who-rest{color:var(--amber); font-weight:600}
+  td.who-saboga{color:var(--red); font-weight:700}
+  td.who-pagador{color:var(--ink3)}
+  .num{font-weight:700; font-family:Georgia,serif; white-space:nowrap}
+  .flow{display:flex; flex-wrap:wrap; align-items:center; gap:.8rem; margin-top:2rem; font-size:1.05rem}
+  .step{background:var(--bg3); border:1px solid var(--rule); border-radius:12px; padding:.9rem 1.2rem}
+  .arrow{color:var(--red); font-size:1.5rem; font-weight:700}
+  .pill{display:inline-block; background:var(--bg3); border:1px solid var(--rule); border-radius:999px; padding:.3rem .9rem; font-size:.85rem; color:var(--ink2); margin:.2rem .2rem 0 0}
+  ul.clean{list-style:none; margin-top:1.4rem; display:grid; gap:.9rem}
+  ul.clean li{padding-left:1.8rem; position:relative; color:var(--ink2); font-size:1.05rem; max-width:62ch}
+  ul.clean li::before{content:"→"; position:absolute; left:0; color:var(--red); font-weight:700}
+  .check::before{content:"✓"!important; color:var(--green)!important}
+  .warn-box{background:rgba(217,68,43,.08); border:1px solid var(--red); border-radius:16px; padding:1.6rem 1.8rem; margin-top:1.6rem; max-width:70ch}
+  .warn-box .big{margin:.4rem 0}
+  .calc{font-family:"SF Mono",Menlo,monospace; font-size:1rem; color:var(--ink2); background:var(--bg3); padding:.4rem .7rem; border-radius:8px; display:inline-block; margin-top:.4rem}
+  .progress{position:fixed; top:0; left:0; height:4px; background:var(--red); width:0; z-index:50; transition:width .15s}
+  .pageno{position:fixed; bottom:1.4rem; right:1.8rem; color:var(--ink4); font-size:.85rem; z-index:50}
+  .hint{position:fixed; bottom:1.4rem; left:1.8rem; color:var(--ink4); font-size:.8rem; z-index:50}
+  .footer-brand{position:absolute; top:6vh; right:7vw; color:var(--ink4); font-size:.8rem; letter-spacing:.1em; text-transform:uppercase}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="pageno" id="pageno">01</div>
+<div class="hint">↓ / barra espaciadora para avanzar</div>
+
+<div class="deck" id="deck">
+
+  <!-- 1 — PORTADA -->
+  <section class="slide">
+    <span class="tag">ia.rest · Módulo de cobros</span>
+    <h1>Cobros con <span class="accent">Stripe</span><br>para catering</h1>
+    <p class="lead">Cómo funciona el portal de pagos de Saboga: cuándo llega el dinero, qué cobra Stripe y quién paga cada comisión.</p>
+    <p class="sub">Caso real: portal de menús de catering · pagos sueltos por evento</p>
+  </section>
+
+  <!-- 2 — EL EJEMPLO -->
+  <section class="slide">
+    <span class="tag">El ejemplo</span>
+    <h2>5 pagos sueltos de un mismo invitado</h2>
+    <p style="color:var(--ink2);font-size:1.05rem">Ana paga cada concepto por separado desde el link del portal. Cada línea es un cobro real y cerrado.</p>
+    <table>
+      <tr><th>Concepto</th><th style="text-align:right">Importe</th></tr>
+      <tr><td>Coffe Break Día 10 Tarde</td><td class="num" style="text-align:right;color:var(--green)">10,00 €</td></tr>
+      <tr><td>Coffe Break Día 11 Mañana</td><td class="num" style="text-align:right;color:var(--green)">10,00 €</td></tr>
+      <tr><td>Coffe Break Día 12 Mañana</td><td class="num" style="text-align:right;color:var(--green)">10,00 €</td></tr>
+      <tr><td>Menú 3 Día 12</td><td class="num" style="text-align:right;color:var(--green)">40,00 €</td></tr>
+      <tr><td>Coffe Break Día 12 Tarde</td><td class="num" style="text-align:right;color:var(--green)">10,00 €</td></tr>
+      <tr><td style="font-weight:700">TOTAL</td><td class="num" style="text-align:right;font-size:1.3rem">80,00 €</td></tr>
+    </table>
+  </section>
+
+  <!-- 3 — CÓMO ESTÁ MONTADO -->
+  <section class="slide">
+    <span class="tag">Arquitectura</span>
+    <h2>Stripe Connect · <span class="accent">destination charges</span></h2>
+    <div class="flow">
+      <span class="step">💳 Ana paga</span>
+      <span class="arrow">→</span>
+      <span class="step">Cuenta de <b>iarest</b><br><small style="color:var(--ink3)">procesa el cobro</small></span>
+      <span class="arrow">→</span>
+      <span class="step" style="border-color:var(--red)">Cuenta de <b>Saboga</b><br><small style="color:var(--ink3)">Connect Express</small></span>
+    </div>
+    <ul class="clean">
+      <li>Cada pago se procesa en la cuenta de iarest y se transfiere al instante a Saboga.</li>
+      <li>iarest retiene un <b>1% de comisión</b> (application fee) de cada cobro.</li>
+      <li>La cuenta de Saboga es de tipo <b>Express</b> (onboarding gestionado por Stripe).</li>
+    </ul>
+  </section>
+
+  <!-- 4 — CUÁNDO LLEGA EL DINERO -->
+  <section class="slide">
+    <span class="tag">La pregunta clave</span>
+    <h2>¿Cuándo recibe Saboga el dinero?<br>¿Cada compra o el total?</h2>
+    <div class="grid2">
+      <div class="card green">
+        <h3>💰 En el saldo Stripe</h3>
+        <p class="big green">Cada compra</p>
+        <p>Cada pago entra por separado al saldo de Saboga, al instante. En el panel verás 5 movimientos sueltos, no uno de 80€.</p>
+      </div>
+      <div class="card amber">
+        <h3>🏦 En el banco (payout)</h3>
+        <p class="big amber">El total agrupado</p>
+        <p>Stripe junta el saldo disponible y lo ingresa en <b>un solo apunte</b> según el calendario (diario automático).</p>
+      </div>
+    </div>
+    <p class="sub">⏱️ Cuenta nueva: el <b>primer payout</b> en España suele tardar ~7 días. Después, ritmo diario automático.</p>
+  </section>
+
+  <!-- 5 — TARIFAS STRIPE -->
+  <section class="slide">
+    <span class="tag">Lo que cobra Stripe</span>
+    <h2>No es solo el 1,5%</h2>
+    <p style="color:var(--ink2);font-size:1.05rem">El 1,5% es solo la parte porcentual. Siempre hay un <b>fijo de 0,25 € por transacción</b>.</p>
+    <table>
+      <tr><th>Tipo de tarjeta</th><th>Tarifa Stripe (España)</th></tr>
+      <tr><td>Europea (EEE)</td><td class="num">1,5% + 0,25 €</td></tr>
+      <tr><td>Reino Unido</td><td class="num">2,5% + 0,25 €</td></tr>
+      <tr><td>Internacional (fuera EEE)</td><td class="num">3,25% + 0,25 €</td></tr>
+      <tr><td>Conversión de divisa</td><td class="num">+2% adicional</td></tr>
+    </table>
+    <p class="sub">+ Connect Express: ~2 €/mes por cuenta activa y una tarifa pequeña por cada payout.</p>
+  </section>
+
+  <!-- 6 — EL FIJO PESA -->
+  <section class="slide">
+    <span class="tag">El detalle que se escapa</span>
+    <h2>En cobros pequeños, el <span class="accent">0,25 € fijo</span> pesa mucho</h2>
+    <div class="grid2">
+      <div class="card">
+        <h3>Coffee Break · 10 €</h3>
+        <span class="calc">1,5% + 0,25 € = 0,40 €</span>
+        <p class="big red" style="margin-top:.8rem">≈ 4% real</p>
+      </div>
+      <div class="card">
+        <h3>Menú · 40 €</h3>
+        <span class="calc">1,5% + 0,25 € = 0,85 €</span>
+        <p class="big amber" style="margin-top:.8rem">≈ 2,1% real</p>
+      </div>
+    </div>
+    <p class="sub">Cuantos más cobros pequeños sueltos, mayor es el coste efectivo. Conviene agrupar conceptos cuando se pueda.</p>
+  </section>
+
+  <!-- 7 — QUIÉN PAGA QUÉ -->
+  <section class="slide">
+    <span class="tag">Lo más importante</span>
+    <h2>Quién paga cada comisión</h2>
+    <p style="color:var(--ink2)">En destination charges, la tarifa de Stripe la asume <b>iarest</b>, no Saboga. A Saboga solo le descuentan el 1%.</p>
+    <table>
+      <tr><th>Concepto</th><th>Importe</th><th>Lo paga</th></tr>
+      <tr><td>Tarifa Stripe (tarjeta EEE)</td><td class="num">1,5% + 0,25 €</td><td class="who-rest">iarest</td></tr>
+      <tr><td>Tarjeta extranjera / divisa</td><td class="num">hasta 3,25% +0,25€ (+2%)</td><td class="who-rest">iarest</td></tr>
+      <tr><td>Comisión iarest (application fee)</td><td class="num">1% del base</td><td class="who-saboga">Saboga</td></tr>
+      <tr><td>Cuenta activa Connect Express</td><td class="num">~2 €/mes</td><td class="who-rest">iarest</td></tr>
+      <tr><td>Tarifa de payout al banco</td><td class="num">% + fijo pequeño</td><td class="who-rest">iarest</td></tr>
+      <tr><td>Repercutir comisión (opcional)</td><td class="num">+2,5% sobre precio</td><td class="who-pagador">el pagador</td></tr>
+    </table>
+    <p class="sub"><b>Saboga recibe</b> = importe del cobro − 1%. &nbsp;·&nbsp; <b>iarest recibe</b> = ese 1% − tarifa de Stripe.</p>
+  </section>
+
+  <!-- 8 — ALERTA RENTABILIDAD -->
+  <section class="slide">
+    <span class="tag">⚠️ A revisar</span>
+    <h2>El 1% no cubre el coste de Stripe<br>en cobros pequeños</h2>
+    <div class="warn-box">
+      <p style="color:var(--ink2)">En un Coffee Break de 10 €:</p>
+      <p class="big">iarest ingresa <span style="color:var(--green)">0,10 €</span> &nbsp;—&nbsp; pero Stripe le cobra <span style="color:var(--red)">0,40 €</span></p>
+      <p style="color:var(--ink2);margin-top:.6rem">→ iarest <b>pierde 0,30 €</b> en cada cobro pequeño con la configuración actual.</p>
+    </div>
+    <ul class="clean" style="margin-top:1.8rem">
+      <li>Opción A: subir la application fee (ej. 1,9% + fijo) para cubrir coste.</li>
+      <li>Opción B: activar "repercutir comisión" para que la asuma el pagador.</li>
+      <li>Opción C: fijar un importe mínimo o agrupar conceptos por evento.</li>
+    </ul>
+  </section>
+
+  <!-- 9 — RESUMEN -->
+  <section class="slide">
+    <span class="tag">En una frase</span>
+    <h2>Para tenerlo claro</h2>
+    <ul class="clean">
+      <li class="check">Cada compra se cobra al instante y por separado — no se espera al total.</li>
+      <li class="check">El dinero llega al <b>banco</b> agrupado, en un payout diario automático (1º a ~7 días).</li>
+      <li class="check">Stripe cobra <b>1,5% + 0,25 €</b> por tarjeta europea — el fijo es lo que se suele olvidar.</li>
+      <li class="check">Esa tarifa la paga <b>iarest</b>; a Saboga solo le quitan el <b>1%</b>.</li>
+      <li class="check">⚠️ Ese 1% no cubre el coste de Stripe en cobros pequeños — revisar pricing.</li>
+    </ul>
+    <p class="sub">ia.rest · módulo de cobros para hostelería · Stripe Connect (destination charges)</p>
+  </section>
+
+</div>
+
+<script>
+  const deck=document.getElementById('deck');
+  const prog=document.getElementById('progress');
+  const pageno=document.getElementById('pageno');
+  const slides=document.querySelectorAll('.slide');
+  function update(){
+    const max=deck.scrollHeight-deck.clientHeight;
+    prog.style.width=(deck.scrollTop/max*100)+'%';
+    const idx=Math.round(deck.scrollTop/deck.clientHeight)+1;
+    pageno.textContent=String(Math.min(idx,slides.length)).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
+  }
+  deck.addEventListener('scroll',update); update();
+  document.addEventListener('keydown',e=>{
+    const i=Math.round(deck.scrollTop/deck.clientHeight);
+    if(e.key==='ArrowDown'||e.key===' '||e.key==='PageDown'){e.preventDefault();slides[Math.min(i+1,slides.length-1)].scrollIntoView()}
+    if(e.key==='ArrowUp'||e.key==='PageUp'){e.preventDefault();slides[Math.max(i-1,0)].scrollIntoView()}
+  });
+</script>
+</body>
+</html>
