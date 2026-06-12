@@ -1,7 +1,7 @@
-// ia.rest · Service Worker v7
+// ia.rest · Service Worker v8
 // Estrategia: HTML siempre network, _next/static cache-first (immutable), push
 
-const STATIC_CACHE = 'iarest-static-v7'
+const STATIC_CACHE = 'iarest-static-v8'
 const OFFLINE_URL = '/offline.html'
 
 // Solo pre-cachear assets estáticos que no cambian entre deploys
@@ -78,7 +78,10 @@ self.addEventListener('fetch', e => {
   //    Solo fallback a offline si no hay red en absoluto
   e.respondWith(
     fetch(request, { cache: 'no-cache' })
-      .then(res => res)
+      // Una respuesta redirigida (p. ej. apex iarest.es → www.iarest.es) NO se puede
+      // devolver a una navegación: el navegador la rechaza con "This page couldn't load".
+      // Reemitimos la redirección para que el navegador la siga él mismo.
+      .then(res => res.redirected ? Response.redirect(res.url, 302) : res)
       .catch(async () => {
         const cached = await caches.match(request)
         if (cached) return cached
