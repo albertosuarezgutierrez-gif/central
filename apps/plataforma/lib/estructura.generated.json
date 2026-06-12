@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T17:10:02Z",
+  "generadoEn": "2026-06-12T18:00:06Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -739,7 +739,7 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 26
+        "evidencias": 36
       },
       "ialimp": {
         "presente": true,
@@ -757,7 +757,7 @@
     "proveedores": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 7
+        "evidencias": 8
       },
       "ialimp": {
         "presente": true,
@@ -1079,11 +1079,21 @@
       "/api/materiales/alertas",
       "/api/materiales/asignacion",
       "/api/materiales/categorias",
+      "/api/materiales/clientes",
       "/api/materiales/dano",
       "/api/materiales/espacios",
+      "/api/materiales/inventario-fisico",
+      "/api/materiales/inventario-fisico/[id]/cerrar",
+      "/api/materiales/inventario-fisico/[id]/lineas",
+      "/api/materiales/kits",
+      "/api/materiales/kits/[id]/items",
+      "/api/materiales/kits/instanciar",
+      "/api/materiales/mantenimiento",
       "/api/materiales/movimientos",
       "/api/materiales/perfil",
+      "/api/materiales/proveedores",
       "/api/materiales/qr/[id]",
+      "/api/materiales/reservas",
       "/api/materiales/unidades",
       "/api/mensajes",
       "/api/mensajes/activos",
@@ -1692,9 +1702,17 @@
       "materiales",
       "materiales_asignacion",
       "materiales_categorias",
+      "materiales_clientes",
       "materiales_dano",
       "materiales_espacios",
+      "materiales_inventario_fisico",
+      "materiales_inventario_fisico_lineas",
+      "materiales_kits",
+      "materiales_kits_items",
+      "materiales_mantenimiento",
       "materiales_movimientos",
+      "materiales_proveedores",
+      "materiales_reservas",
       "materiales_transferencias",
       "materiales_unidades",
       "mensajes_turno",
@@ -2121,7 +2139,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 716,
+    "apis": 726,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
