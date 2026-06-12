@@ -81,8 +81,8 @@ export function extractGuest(summary: string, desc: string): string | null {
   ]
   const s = (summary + ' ' + desc).trim()
   for (const p of patterns) {
-    const m = s.match(p)
-    if (m?.[1]?.trim().length > 2) return m[1].trim().slice(0, 60)
+    const cand = s.match(p)?.[1]?.trim()
+    if (cand && cand.length > 2) return cand.slice(0, 60)
   }
   return summary?.slice(0, 60) || null
 }

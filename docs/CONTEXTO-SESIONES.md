@@ -16,6 +16,34 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164 — 12/06/2026**
+  Auditoría completa tras el rename `@iarest/*`→`@central/*`, la migración de BD de ia-rest al Supabase
+  compartido y `file:`→`workspace:*`. Informe en **`docs/AUDITORIA-2026-06.md`**. Skill nuevo
+  **`.claude/skills/auditoria-central`** para repetirla.
+  - **Bugs reales encontrados y ARREGLADOS** (el CI solo cubría ia-rest y no los veía):
+    - `aiComplete(prompt, número)` en `apps/ialimp/lib/{google-leads,mailing}.ts` → debía ser objeto
+      `{maxTokens|timeoutMs}`; el número se ignoraba en runtime (leads truncados a 800 tok; "timeout 8s" era 30s).
+    - `@central/core-identity` usado en 8 ficheros de auth de ialimp **sin estar en deps ni transpilePackages**
+      (todos los `@central/*` exportan TS crudo) → añadido a `package.json` + `next.config.ts`.
+    - **16 errores de tipos de ialimp saldados** → las **4 apps a 0 errores** (`tsc --noEmit`).
+  - **Red de seguridad añadida:** tests de `@central/core-fiscal` (IVA, NIF/CIF/IBAN, huella VeriFactu con
+    snapshot), guardián `test/regression-scope.test.ts` (anti-`@iarest/`), orquestadores `pnpm test`/`test:packages`/
+    `test:guardia`. **Suite: 104 tests, 0 fallos.** CI nuevo `.github/workflows/tests.yml` (tests + typecheck de
+    las 4 apps; antes solo ia-rest).
+  - **Infra verificada por MCP:** BD compartida tiene **499 security advisories (63 ERROR)** — 62 `security_definer_view`,
+    24 `rls_policy_always_true`, 114 `function_search_path_mutable` (sensibles por ser BD multi-tenant; muchos
+    preexisten a la migración). Schema `iarest` sano (266 tablas). Proyecto Supabase viejo de ia-rest
+    (`efncqyvhniaxsirhdxaa`) sigue ACTIVE (jubilar tras el corte de envs).
+  - **✅ Alberto aplicó las 2 migraciones del radar de concursos** (`radar_*` en `concursos_perfil_empresa` +
+    tabla `concursos_radar_anuncios`) → cron `/api/cron/concursos-radar` ya no falla. Verificado en BD.
+  - **⚠️ OJO CI:** `ci.yml`/`qa.yml`/`tests.yml` se disparan en `push → main/dev` y `pull_request → main`. En una
+    rama feature el push NO los lanza y en PR abierto por automatización GitHub no los ejecuta sin aprobación →
+    en esta rama solo corrió `auditoria.yml` (verde, pero NO ejecuta tests). Se añadió `workflow_dispatch` a
+    `ci.yml`/`tests.yml` (estaba **mal indentado bajo `pull_request:`**, corregido a primer nivel de `on:`).
+    **Los 104 tests + typecheck están verdes en LOCAL; en CI se validarán al mergear a `main`** (o con Run workflow
+    una vez `tests.yml` esté en la rama por defecto).
+  - **Pendiente de Alberto:** revisar los 63 advisories ERROR de seguridad; mitigar vulnerabilidades `xlsx`
+    (high, sin parche) y `axios` (vía `node-ical`) en ialimp.
 - **📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO — 12/06/2026**
   - Módulo **independiente de eventos** (decisión Alberto: sirve para catering, haciendas y hasta alquiler puro),
     100% configurable por el dueño, con **acceso granular por empleado** vía `personal.modulos_gestion`.

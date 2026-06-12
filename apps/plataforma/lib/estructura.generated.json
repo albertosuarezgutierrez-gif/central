@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T06:01:48Z",
+  "generadoEn": "2026-06-12T09:06:38Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -255,7 +255,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -273,7 +273,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "plataforma": {
         "estado": "usado",
@@ -399,7 +399,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -435,7 +435,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -471,7 +471,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",

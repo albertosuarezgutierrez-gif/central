@@ -15,7 +15,7 @@ const TRANSCRIBE_USER =
 
 /** Rasteriza hasta `maxPaginas` páginas del PDF a PNG (base64). */
 export async function rasterizarPdf(buffer: Buffer, maxPaginas = 12): Promise<string[]> {
-  const doc = await getDocument({ data: new Uint8Array(buffer), useSystemFonts: true, isEvalSupported: false }).promise
+  const doc = await getDocument({ data: new Uint8Array(buffer), useSystemFonts: true, isEvalSupported: false } as any).promise
   const out: string[] = []
   const n = Math.min(doc.numPages, maxPaginas)
   for (let i = 1; i <= n; i++) {
@@ -23,7 +23,7 @@ export async function rasterizarPdf(buffer: Buffer, maxPaginas = 12): Promise<st
     const viewport = page.getViewport({ scale: 2 })
     const canvas = createCanvas(Math.ceil(viewport.width), Math.ceil(viewport.height))
     const ctx = canvas.getContext('2d')
-    await page.render({ canvasContext: ctx as any, viewport }).promise
+    await page.render({ canvasContext: ctx as any, viewport } as any).promise
     out.push(canvas.toBuffer('image/png').toString('base64'))
   }
   return out
