@@ -57,7 +57,7 @@ export const MODULOS: ModuloInfo[] = [
   { id: 'module-crm', tipo: 'module', desc: 'Dominio: pipeline comercial genérico (oportunidades/leads) anclado a un Encargo.' },
   { id: 'module-presupuestos', tipo: 'module', desc: 'Dominio: líneas, costes, descuentos y cálculo de margen/rentabilidad.' },
   { id: 'module-proveedores', tipo: 'module', desc: 'Dominio: catálogo de proveedores + servicios con comisiones.' },
-  { id: 'module-inventario', tipo: 'module', desc: 'Dominio: catálogo de artículos + asignación de activos a un Encargo.' },
+  { id: 'module-materiales', tipo: 'module', desc: 'Dominio: materiales físicos y consumibles. Alta de catálogo, espacios, transferencias entre espacios, contabilidad de compra y roturas.' },
   { id: 'module-asn', tipo: 'module', desc: 'Dominio: aviso de envío/recepción de mercancía con líneas (lote, caducidad).' },
   { id: 'module-feedback', tipo: 'module', desc: 'Dominio: reseñas/valoraciones + propinas por Encargo o token público.' },
 ]

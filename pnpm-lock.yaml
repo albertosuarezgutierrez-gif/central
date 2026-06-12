@@ -37,9 +37,9 @@ importers:
       '@central/module-feedback':
         specifier: workspace:*
         version: link:../../packages/module-feedback
-      '@central/module-inventario':
+      '@central/module-materiales':
         specifier: workspace:*
-        version: link:../../packages/module-inventario
+        version: link:../../packages/module-materiales
       '@central/module-presupuestos':
         specifier: workspace:*
         version: link:../../packages/module-presupuestos
@@ -167,9 +167,9 @@ importers:
       '@central/module-crm':
         specifier: workspace:*
         version: link:../../packages/module-crm
-      '@central/module-inventario':
+      '@central/module-materiales':
         specifier: workspace:*
-        version: link:../../packages/module-inventario
+        version: link:../../packages/module-materiales
       '@central/module-proveedores':
         specifier: workspace:*
         version: link:../../packages/module-proveedores
@@ -331,9 +331,9 @@ importers:
       '@central/module-contabilidad':
         specifier: workspace:*
         version: link:../../packages/module-contabilidad
-      '@central/module-inventario':
+      '@central/module-materiales':
         specifier: workspace:*
-        version: link:../../packages/module-inventario
+        version: link:../../packages/module-materiales
       '@central/module-proveedores':
         specifier: workspace:*
         version: link:../../packages/module-proveedores
@@ -458,7 +458,7 @@ importers:
 
   packages/module-feedback: {}
 
-  packages/module-inventario: {}
+  packages/module-materiales: {}
 
   packages/module-presupuestos: {}
 

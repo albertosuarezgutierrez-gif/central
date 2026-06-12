@@ -14,7 +14,7 @@ export async function GET(req: NextRequest) {
     WHERE pr.activo = true ${cond}
     ORDER BY pr.categoria, pr.nombre
   `)
-  const articulos = rows.map(articuloAdapter.toArticulo)
+  const articulos = rows.map(articuloAdapter.toMaterial)
   const resumen = resumenStock(articulos)
   return NextResponse.json({ productos: rows, resumen })
 }

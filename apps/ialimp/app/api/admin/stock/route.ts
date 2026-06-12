@@ -16,7 +16,7 @@ export async function GET(req: Request) {
       WHERE s.empresa_id = ${empresa_id}::uuid AND s.activo = true
       ORDER BY s.categoria, s.nombre
     `)
-    const articulos = productos.map(articuloAdapter.toArticulo)
+    const articulos = productos.map(articuloAdapter.toMaterial)
     const resumen = resumenStock(articulos)
     return NextResponse.json(serialize({ productos, resumen }))
   } catch (e: any) {

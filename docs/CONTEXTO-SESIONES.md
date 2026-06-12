@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172 — 12/06/2026**
+  - **Paquete nuevo:** `packages/module-materiales` (TS puro, sin deps runtime). Elimina `packages/module-inventario`.
+  - **Tipos nuevos:** `Material` (reemplaza `Articulo`), `Espacio`, `AsignacionMaterial`, `TransferenciaMaterial`,
+    `ResumenContable`; campos nuevos: `tipo` (consumible|activo), `estado` (operativo|deteriorado|en_reparacion|baja),
+    `stockMinimo`, `codigoInterno`, `garantiaHasta`, `documentos`, `precioCompra`.
+  - **Funciones puras nuevas:** `gastoCompras`, `resumenContable`, `puedeTransferir`, `alertasStockMinimo`
+    (además de las ya existentes: `round2`, `resumenStock`, `valorStock`, etc.).
+  - **Adapters actualizados en los 3 consumidores** (método renombrado `toArticulo`→`toMaterial`):
+    - `apps/ia-rest/src/lib/inventario-menaje.ts` (añadido `materialAdapter` para la tabla `materiales` con los nuevos campos)
+    - `apps/ialimp/lib/adapters/inventario.ts`
+    - `apps/sivra/lib/adapters/inventario.ts`
+  - **Rutas actualizadas:** `apps/ia-rest/.../menaje/route.ts`, `apps/ialimp/.../stock/route.ts`,
+    `apps/sivra/.../limpiadoras/productos/route.ts` — import cambiado a `@central/module-materiales`.
+  - **`package.json` + `next.config.ts`** de ia-rest, ialimp, sivra: dep actualizada de `module-inventario` → `module-materiales`.
+  - **SQL `apps/ia-rest/supabase/migrations/2026-06-12_materiales_v2.sql`** — aplicada al proyecto Supabase
+    `efncqyvhniaxsirhdxaa`: añade columnas nuevas a `materiales` + crea `materiales_espacios` y
+    `materiales_transferencias` con RLS (service_role).
+  - **15 tests** en `packages/module-materiales/test/materiales.test.ts` — todos pasan con `node --test`.
+  - **Fix CI:** dos rutas usaban `articuloAdapter.toArticulo` (ya inexistente) → cambiado a `toMaterial`
+    (sivra y ialimp; detectado por Vercel CI, corregido en commit `ff16bd9`).
+  - **`apps/plataforma/lib/estructura.ts`** actualizado: `module-inventario` → `module-materiales` con descripción del dominio.
+  - **✅ MERGEADO a `main`** (PR #172). Los 4 proyectos Vercel verdes.
+  - **NOTA arquitectura:** el scope de `module-materiales` es *agnóstico de vertical y de BD* (port/adapter).
+    Espacios (`Espacio`) son entidades de primera clase con `refTipo`/`refId` opcionales para enlazar entidades externas.
+    Multi-tenancy a nivel `negocioId` (más fino que `empresaId`/`restauranteId`).
+
 - **🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR — 12/06/2026**
   3 migraciones aplicadas sobre `wswbehlcuxqxyinousql`. PR #169 mergeado. Detalle en `docs/AUDITORIA-2026-06.md` A4.
   - ✅ 62 vistas `SECURITY DEFINER` → `security_invoker = on` (47 iarest + 15 public)

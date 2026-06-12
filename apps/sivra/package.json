@@ -19,7 +19,7 @@
     "@central/core-push": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
     "@central/module-proveedores": "workspace:*",
-    "@central/module-inventario": "workspace:*",
+    "@central/module-materiales": "workspace:*",
     "@prisma/client": "^5.22.0",
     "prisma": "^5.22.0",
     "clsx": "^2.1.1",
