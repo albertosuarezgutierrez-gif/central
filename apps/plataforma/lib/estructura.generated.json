@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T18:50:57Z",
+  "generadoEn": "2026-06-12T19:06:45Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1857,6 +1857,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ module-materiales COMPLETO — PRs #189 + #190 mergeados",
+      "fecha": "12/06/2026"
+    },
+    {
       "titulo": "📦 module-materiales Fase B — PR #189 mergeado",
       "fecha": "12/06/2026"
     },
@@ -1910,10 +1914,6 @@
     },
     {
       "titulo": "⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):",
-      "fecha": ""
-    },
-    {
-      "titulo": "✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — EN PRODUCCIÓN",
       "fecha": ""
     }
   ],
