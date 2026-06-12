@@ -7,10 +7,17 @@ interface Material {
   nombre: string
   descripcion: string | null
   categoria: string
+  tipo: string
+  estado: string
   cantidad_total: number
   cantidad_disponible: number
+  stock_minimo: number | null
   coste_reposicion: number
+  precio_compra: number | null
+  codigo: string | null
   proveedor_nombre: string | null
+  proveedor_referencia: string | null
+  garantia_hasta: string | null
   activo: boolean
 }
 interface MaterialRef { nombre: string; categoria: string; coste_reposicion?: number }
@@ -38,8 +45,17 @@ interface Dano {
 }
 
 const CATEGORIAS = ['mesa', 'silla', 'vajilla', 'cristaleria', 'manteleria', 'otro']
+const TIPOS = ['activo', 'consumible']
+const ESTADOS = ['operativo', 'deteriorado', 'en_reparacion', 'baja']
 const DESTINOS = ['evento', 'hacienda', 'cliente', 'obra', 'otro']
 const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n || 0)
+
+const ESTADO_BADGE: Record<string, { label: string; color: string }> = {
+  operativo:    { label: 'operativo',    color: '#2E7D5E' },
+  deteriorado:  { label: 'deteriorado',  color: '#B45309' },
+  en_reparacion:{ label: 'en reparación',color: '#2B6A9E' },
+  baja:         { label: 'baja',         color: '#6B7280' },
+}
 
 function sesHeader(): string {
   if (typeof localStorage === 'undefined') return ''
@@ -82,13 +98,19 @@ function input(): React.CSSProperties {
 function btn(color: string): React.CSSProperties {
   return { fontFamily: SN, fontSize: 13, fontWeight: 600, padding: '8px 14px', borderRadius: 8, border: 'none', cursor: 'pointer', background: color, color: C.paper }
 }
+function badge(color: string): React.CSSProperties {
+  return { display: 'inline-block', fontSize: 10, fontWeight: 700, fontFamily: SM, padding: '2px 7px', borderRadius: 99, background: color + '22', color: color, border: `1px solid ${color}44` }
+}
 
 // ─── Catálogo ───────────────────────────────────────────────
+const emptyForm = () => ({ nombre: '', categoria: 'vajilla', tipo: 'activo', estado: 'operativo', cantidad_total: '', stock_minimo: '', coste_reposicion: '', precio_compra: '', codigo: '', proveedor_nombre: '', proveedor_referencia: '', garantia_hasta: '' })
+
 function Catalogo() {
   const [items, setItems] = useState<Material[]>([])
   const [loading, setLoading] = useState(true)
   const [editId, setEditId] = useState<string | null>(null)
-  const [form, setForm] = useState({ nombre: '', categoria: 'vajilla', cantidad_total: '', coste_reposicion: '', proveedor_nombre: '' })
+  const [form, setForm] = useState(emptyForm())
+  const [expanded, setExpanded] = useState<string | null>(null)
 
   const cargar = useCallback(async () => {
     const r = await fetch('/api/materiales', { headers: H() })
@@ -97,15 +119,20 @@ function Catalogo() {
   }, [])
   useEffect(() => { cargar() }, [cargar])
 
-  const reset = () => { setEditId(null); setForm({ nombre: '', categoria: 'vajilla', cantidad_total: '', coste_reposicion: '', proveedor_nombre: '' }) }
+  const reset = () => { setEditId(null); setForm(emptyForm()) }
 
   const guardar = async () => {
     if (!form.nombre.trim()) return
     const payload = {
-      nombre: form.nombre.trim(), categoria: form.categoria,
+      nombre: form.nombre.trim(), categoria: form.categoria, tipo: form.tipo, estado: form.estado,
       cantidad_total: Number(form.cantidad_total) || 0,
+      stock_minimo: form.stock_minimo !== '' ? Number(form.stock_minimo) : null,
       coste_reposicion: Number(form.coste_reposicion) || 0,
+      precio_compra: form.precio_compra !== '' ? Number(form.precio_compra) : null,
+      codigo: form.codigo.trim() || null,
       proveedor_nombre: form.proveedor_nombre.trim() || null,
+      proveedor_referencia: form.proveedor_referencia.trim() || null,
+      garantia_hasta: form.garantia_hasta || null,
     }
     if (editId) {
       await fetch('/api/materiales', { method: 'PATCH', headers: H(), body: JSON.stringify({ id: editId, ...payload }) })
@@ -117,7 +144,14 @@ function Catalogo() {
 
   const editar = (m: Material) => {
     setEditId(m.id)
-    setForm({ nombre: m.nombre, categoria: m.categoria, cantidad_total: String(m.cantidad_total), coste_reposicion: String(m.coste_reposicion ?? ''), proveedor_nombre: m.proveedor_nombre ?? '' })
+    setForm({
+      nombre: m.nombre, categoria: m.categoria, tipo: m.tipo ?? 'activo', estado: m.estado ?? 'operativo',
+      cantidad_total: String(m.cantidad_total), stock_minimo: m.stock_minimo != null ? String(m.stock_minimo) : '',
+      coste_reposicion: String(m.coste_reposicion ?? ''), precio_compra: m.precio_compra != null ? String(m.precio_compra) : '',
+      codigo: m.codigo ?? '', proveedor_nombre: m.proveedor_nombre ?? '',
+      proveedor_referencia: m.proveedor_referencia ?? '', garantia_hasta: m.garantia_hasta ?? '',
+    })
+    setExpanded(null)
   }
   const borrar = async (id: string) => {
     if (!confirm('¿Dar de baja este material?')) return
@@ -125,18 +159,42 @@ function Catalogo() {
     cargar()
   }
 
+  const alertas = items.filter(m => m.stock_minimo != null && m.cantidad_disponible <= m.stock_minimo)
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {alertas.length > 0 && (
+        <div style={{ background: '#7C2D1233', border: '1px solid #7C2D1266', borderRadius: 10, padding: '10px 14px' }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: C.red, marginBottom: 6 }}>⚠ Stock bajo mínimo</div>
+          {alertas.map(m => (
+            <div key={m.id} style={{ fontSize: 12, color: C.ink2, fontFamily: SM }}>
+              {m.nombre} — {m.cantidad_disponible} disponibles (mín. {m.stock_minimo})
+            </div>
+          ))}
+        </div>
+      )}
+
       <div style={card()}>
         <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>{editId ? 'Editar material' : 'Nuevo material'}</div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-          <input style={input()} placeholder="Nombre (ej. Silla Chiavari)" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
+          <input style={{ ...input(), gridColumn: '1 / 3' }} placeholder="Nombre (ej. Silla Chiavari)" value={form.nombre} onChange={e => setForm({ ...form, nombre: e.target.value })} />
           <select style={input()} value={form.categoria} onChange={e => setForm({ ...form, categoria: e.target.value })}>
             {CATEGORIAS.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
+          <select style={input()} value={form.tipo} onChange={e => setForm({ ...form, tipo: e.target.value })}>
+            {TIPOS.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select style={input()} value={form.estado} onChange={e => setForm({ ...form, estado: e.target.value })}>
+            {ESTADOS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <input style={input()} placeholder="Código (ej. SLA-001)" value={form.codigo} onChange={e => setForm({ ...form, codigo: e.target.value })} />
           <input style={input()} type="number" placeholder="Unidades totales" value={form.cantidad_total} onChange={e => setForm({ ...form, cantidad_total: e.target.value })} />
+          <input style={input()} type="number" placeholder="Stock mínimo (alerta)" value={form.stock_minimo} onChange={e => setForm({ ...form, stock_minimo: e.target.value })} />
+          <input style={input()} type="number" step="0.01" placeholder="Precio compra (€/ud)" value={form.precio_compra} onChange={e => setForm({ ...form, precio_compra: e.target.value })} />
           <input style={input()} type="number" step="0.01" placeholder="Coste reposición (€/ud)" value={form.coste_reposicion} onChange={e => setForm({ ...form, coste_reposicion: e.target.value })} />
-          <input style={{ ...input(), gridColumn: '1 / 3' }} placeholder="Proveedor (opcional)" value={form.proveedor_nombre} onChange={e => setForm({ ...form, proveedor_nombre: e.target.value })} />
+          <input style={input()} placeholder="Proveedor (nombre)" value={form.proveedor_nombre} onChange={e => setForm({ ...form, proveedor_nombre: e.target.value })} />
+          <input style={input()} placeholder="Ref. proveedor" value={form.proveedor_referencia} onChange={e => setForm({ ...form, proveedor_referencia: e.target.value })} />
+          <input style={input()} type="date" placeholder="Garantía hasta" value={form.garantia_hasta} onChange={e => setForm({ ...form, garantia_hasta: e.target.value })} />
         </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
           <button style={btn(C.green)} onClick={guardar}>{editId ? 'Guardar' : 'Añadir'}</button>
@@ -150,20 +208,44 @@ function Catalogo() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {items.map(m => {
             const fuera = m.cantidad_total - m.cantidad_disponible
+            const bajominimo = m.stock_minimo != null && m.cantidad_disponible <= m.stock_minimo
+            const estadoBadge = ESTADO_BADGE[m.estado] ?? { label: m.estado, color: C.ink3 }
+            const isOpen = expanded === m.id
             return (
-              <div key={m.id} style={{ ...card(), display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 14, fontWeight: 600 }}>{m.nombre}</div>
-                  <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginTop: 2 }}>
-                    {m.categoria} · {eur(m.coste_reposicion)}/ud{m.proveedor_nombre ? ` · ${m.proveedor_nombre}` : ''}
+              <div key={m.id} style={{ ...card(), cursor: 'pointer' }} onClick={() => setExpanded(isOpen ? null : m.id)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: 14, fontWeight: 600 }}>{m.nombre}</span>
+                      <span style={badge(estadoBadge.color)}>{estadoBadge.label}</span>
+                      {m.tipo === 'consumible' && <span style={badge(C.ink3)}>consumible</span>}
+                      {m.codigo && <span style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>{m.codigo}</span>}
+                      {bajominimo && <span style={badge(C.red)}>⚠ stock bajo</span>}
+                    </div>
+                    <div style={{ fontFamily: SM, fontSize: 11, color: C.ink3, marginTop: 2 }}>
+                      {m.categoria} · {eur(m.coste_reposicion)}/ud{m.proveedor_nombre ? ` · ${m.proveedor_nombre}` : ''}
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: 16, fontWeight: 700, color: bajominimo ? C.red : m.cantidad_disponible > 0 ? C.green : C.red }}>
+                      {m.cantidad_disponible}<span style={{ color: C.ink3, fontWeight: 400, fontSize: 12 }}> / {m.cantidad_total}</span>
+                    </div>
+                    {m.stock_minimo != null && <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>mín. {m.stock_minimo}</div>}
+                    <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>{fuera > 0 ? `${fuera} fuera` : 'todo disp.'}</div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }} onClick={e => e.stopPropagation()}>
+                    <button style={btn(C.bg3)} onClick={() => editar(m)}>Editar</button>
+                    <button style={{ ...btn('transparent'), color: C.red, border: `1px solid ${C.red}44`, padding: '6px 10px' }} onClick={() => borrar(m.id)}>Baja</button>
                   </div>
                 </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: 16, fontWeight: 700, color: m.cantidad_disponible > 0 ? C.green : C.red }}>{m.cantidad_disponible}<span style={{ color: C.ink3, fontWeight: 400, fontSize: 12 }}> / {m.cantidad_total}</span></div>
-                  <div style={{ fontFamily: SM, fontSize: 10, color: C.ink4 }}>{fuera > 0 ? `${fuera} fuera` : 'todo disponible'}</div>
-                </div>
-                <button style={{ ...btn(C.bg3), color: C.ink2, border: `1px solid ${C.rule}` }} onClick={() => editar(m)}>Editar</button>
-                <button style={{ ...btn('transparent'), color: C.red, border: `1px solid ${C.red}44` }} onClick={() => borrar(m.id)}>Baja</button>
+                {isOpen && (
+                  <div style={{ marginTop: 10, paddingTop: 10, borderTop: `1px solid ${C.rule}`, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '4px 14px', fontFamily: SM, fontSize: 12, color: C.ink2 }}>
+                    {m.precio_compra != null && <span>Precio compra: <b>{eur(m.precio_compra)}</b></span>}
+                    {m.proveedor_referencia && <span>Ref. prov.: <b>{m.proveedor_referencia}</b></span>}
+                    {m.garantia_hasta && <span>Garantía hasta: <b>{new Date(m.garantia_hasta).toLocaleDateString('es-ES')}</b></span>}
+                    {m.descripcion && <span style={{ gridColumn: '1 / 3', color: C.ink3 }}>{m.descripcion}</span>}
+                  </div>
+                )}
               </div>
             )
           })}

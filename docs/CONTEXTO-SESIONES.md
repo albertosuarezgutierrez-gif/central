@@ -21,6 +21,7 @@
   "🏠 Mis propiedades ↗" que abre el portal del propietario de ialimp en pestaña nueva con auto-login
   (token mágico vía `/api/admin/propiedades`). Tab por defecto pasa a ser "Negocios".
 
+
 - **📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172 — 12/06/2026**
   - **Paquete nuevo:** `packages/module-materiales` (TS puro, sin deps runtime). Elimina `packages/module-inventario`.
   - **Tipos nuevos:** `Material` (reemplaza `Articulo`), `Espacio`, `AsignacionMaterial`, `TransferenciaMaterial`,
