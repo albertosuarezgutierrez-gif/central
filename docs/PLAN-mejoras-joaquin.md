@@ -88,6 +88,17 @@
 - *A construir:* perfil/agenda del cocinero + motor de planificación y reparto (IA) + captura de tiempos
   real vs estándar + informe de productividad. (Reaprovecha tiempos estándar del hueco #6.)
 
+### Bloque A.2 — Extensión de comisiones (idea pendiente — ya hay base en ia-rest)
+> ⚠️ YA EXISTE en ia-rest: `CRMEventosTab` (pipeline leads), `ComisionesEventoTab` (% fijo o
+> importe fijo por evento, resumen pagado/pendiente), `LeadsEventosTab`. Tablas: `leads_eventos`,
+> campos `comision_pct/importe/cobrada_at` en `eventos`.
+> Lo que FALTA para JJ:
+- **Bonos multi-criterio:** bono por **margen real**, bono por **ticket más alto**, bono por **reseñas**.
+- **% escalable/escalonado:** la comisión sube sola al alcanzar objetivos del contrato.
+- **Ranking del equipo en tiempo real.**
+- **Vista RBAC por comercial** (cada uno ve su pipeline y sus comisiones, no las del resto).
+- *A construir:* extender `ComisionesEventoTab` con reglas multi-criterio + ranking + rol `comercial_eventos`.
+
 ### Bloque F — Adyacentes (reutilización, casi sin construir)
 - Haciendas → `sivra`; limpieza con **cierre obligatorio por foto** → `ialimp`; **fontanería/obra**
   del cuñado (cuadro de mando con fotos, evolución de obra, avisos WhatsApp, localización) + cross-sell
