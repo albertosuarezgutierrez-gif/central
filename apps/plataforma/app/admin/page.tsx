@@ -3,7 +3,6 @@
 'use client'
 import { useEffect, useState, useCallback, Fragment } from 'react'
 import { VERTICALES, MODULOS, AGENTES, RADIOGRAFIA } from '@/lib/estructura'
-import type { Propiedad } from '@/lib/propiedades'
 
 const C = { bg: '#0b1020', card: '#151b2e', card2: '#1c2540', border: '#2a3457', text: '#e8ecf7', muted: '#8b97b8', accent: '#6366f1', ok: '#22c55e', okBg: '#0c2a18', red: '#ef4444', redBg: '#2a0c0c' }
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
@@ -27,7 +26,8 @@ export default function OperadorPanel() {
   const [form, setForm] = useState({ email: 'alberto.suarez.gutierrez@gmail.com', password: '' })
   const [ficha, setFicha] = useState<Ficha | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [tab, setTab] = useState<'propiedades' | 'clientes' | 'estructura'>('propiedades')
+  const [tab, setTab] = useState<'clientes' | 'estructura'>('clientes')
+  const [ialimp, setIalimp] = useState('')
   const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
   const [showNuevo, setShowNuevo] = useState(false)
   const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' })
@@ -44,7 +44,10 @@ export default function OperadorPanel() {
     setLoading(false)
   }, [])
 
-  useEffect(() => { cargar() }, [cargar])
+  useEffect(() => {
+    cargar()
+    fetch('/api/admin/propiedades').then(r => r.json()).then(d => setIalimp(d.portalUrl || '')).catch(() => {})
+  }, [cargar])
 
   async function login(e: React.FormEvent) {
     e.preventDefault(); setError('')
@@ -122,6 +125,7 @@ export default function OperadorPanel() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap', gap: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>🎛️ Panel de control <span style={{ color: C.muted, fontWeight: 500, fontSize: 13 }}>· todas las verticales</span></div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          {ialimp && <a href={ialimp} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 700, padding: '6px 12px', border: `1px solid ${C.border}`, borderRadius: 8 }}>🏠 Mis propiedades ↗</a>}
           <button onClick={() => { setNuevoErr(''); setShowNuevo(true) }} style={{ background: C.accent, border: 'none', color: '#fff', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: FONT, fontWeight: 700, fontSize: 13 }}>➕ Nuevo cliente</button>
           <span style={{ fontSize: 13, color: C.muted }}>{operador}</span>
           <button onClick={logout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: FONT }}>Salir</button>
@@ -130,15 +134,13 @@ export default function OperadorPanel() {
 
       <div style={{ padding: 28, maxWidth: 1100, margin: '0 auto' }}>
         <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: `1px solid ${C.border}` }}>
-          {([['propiedades', '🏠 Mis propiedades'], ['clientes', '🏢 Negocios'], ['estructura', '🗺️ Estructura']] as const).map(([k, label]) => (
+          {([['clientes', '🏢 Negocios'], ['estructura', '🗺️ Estructura']] as const).map(([k, label]) => (
             <button key={k} onClick={() => setTab(k)}
               style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === k ? C.accent : 'transparent'}`, color: tab === k ? C.text : C.muted, padding: '10px 6px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: FONT }}>
               {label}
             </button>
           ))}
         </div>
-
-        {tab === 'propiedades' && <Propiedades />}
 
         {tab === 'estructura' && <Estructura />}
 
@@ -263,104 +265,6 @@ function Kpi({ label, valor }: { label: string; valor: string }) {
 
 function btn(bg: string, color: string): React.CSSProperties {
   return { background: bg, color, border: 'none', borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }
-}
-
-function Propiedades() {
-  const [props, setProps] = useState<Propiedad[] | null>(null)
-  const [portalUrl, setPortalUrl] = useState('')
-  const [autologin, setAutologin] = useState(false)
-  const [err, setErr] = useState('')
-  const [vista, setVista] = useState<'portal' | 'resumen'>('portal')
-  useEffect(() => {
-    fetch('/api/admin/propiedades')
-      .then(r => r.json())
-      .then(d => { setProps(d.propiedades || []); setPortalUrl(d.portalUrl || ''); setAutologin(!!d.autologin) })
-      .catch(() => setErr('No se pudieron cargar.'))
-  }, [])
-
-  if (err) return <div style={{ color: '#fca5a5' }}>{err}</div>
-  if (!props) return <div style={{ color: C.muted }}>Cargando propiedades…</div>
-
-  const eur = (n: number) => new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
-  const totMes = props.reduce((s, p) => s + p.ingresosMes, 0)
-  const totGas = props.reduce((s, p) => s + p.gastosMes, 0)
-
-  return (
-    <div>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginBottom: 16 }}>
-        <div style={{ display: 'flex', gap: 6 }}>
-          {([['portal', '🛠️ Portal'], ['resumen', '📊 Resumen']] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setVista(k)}
-              style={{ background: vista === k ? C.accent : 'transparent', color: vista === k ? '#fff' : C.muted, border: `1px solid ${vista === k ? C.accent : C.border}`, borderRadius: 8, padding: '6px 14px', fontWeight: 700, fontSize: 13, cursor: 'pointer', fontFamily: FONT }}>
-              {label}
-            </button>
-          ))}
-        </div>
-        {portalUrl && <a href={portalUrl} target="_blank" rel="noreferrer" style={{ fontSize: 12, color: C.accent, textDecoration: 'none' }}>Abrir portal en pestaña nueva ↗</a>}
-      </div>
-
-      {vista === 'portal' && (
-        <div>
-          {portalUrl ? (
-            <iframe src={portalUrl} title="Portal del propietario" style={{ width: '100%', height: '78vh', border: `1px solid ${C.border}`, borderRadius: 12, background: '#fff' }} />
-          ) : <div style={{ color: C.muted }}>Portal no disponible.</div>}
-          <div style={{ fontSize: 11, color: C.muted, marginTop: 8 }}>
-            {autologin
-              ? 'Tu portal del propietario de ialimp, abierto con tu enlace de acceso: entras directo, sin login. (La primera vez puede pedir aceptar el RGPD.)'
-              : 'Es tu portal del propietario de ialimp. No encontré tu acceso directo por email, así que pide login; si no avanza dentro del recuadro, usa “Abrir portal en pestaña nueva”.'}
-          </div>
-        </div>
-      )}
-
-      {vista === 'resumen' && <>
-      <p style={{ color: C.muted, fontSize: 13, margin: '0 0 20px', maxWidth: 720 }}>
-        Tus apartamentos turísticos (sivra) de un vistazo: ingresos, gastos y próxima reserva.
-      </p>
-      <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
-        <Kpi label="Apartamentos" valor={String(props.length)} />
-        <Kpi label="Ingresos mes" valor={eur(totMes)} />
-        <Kpi label="Gastos mes" valor={eur(totGas)} />
-        <Kpi label="Resultado mes" valor={eur(totMes - totGas)} />
-      </div>
-      {props.length === 0 && <div style={{ color: C.muted, fontSize: 13 }}>Sin propiedades en `properties`.</div>}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(280px,1fr))', gap: 12 }}>
-        {props.map(p => (
-          <div key={p.id} style={card()}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>{p.nombre}</div>
-            <div style={{ fontSize: 12, color: C.muted, marginTop: 2 }}>📍 {p.ubicacion}</div>
-            <div style={{ fontSize: 11, color: C.muted, marginTop: 6 }}>
-              {[p.dormitorios != null && `${p.dormitorios} hab`, p.camas != null && `${p.camas} camas`, p.banos != null && `${p.banos} baños`, p.maxHuespedes != null && `${p.maxHuespedes} huésp.`].filter(Boolean).join(' · ') || '—'}
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 12 }}>
-              <Mini label="Ingresos mes" valor={eur(p.ingresosMes)} />
-              <Mini label="Gastos mes" valor={eur(p.gastosMes)} />
-              <Mini label="Resultado" valor={eur(p.resultadoMes)} acento={p.resultadoMes >= 0 ? C.ok : '#fca5a5'} />
-              <Mini label="Ingresos año" valor={eur(p.ingresosAnio)} />
-            </div>
-            <div style={{ marginTop: 12, borderTop: `1px solid ${C.border}`, paddingTop: 10 }}>
-              <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase', fontWeight: 700, marginBottom: 4 }}>Próxima reserva</div>
-              {p.proxima ? (
-                <div style={{ fontSize: 12 }}>
-                  <strong>{p.proxima.huesped || 'Huésped'}</strong>{p.proxima.portal && <span style={{ color: C.muted }}> · {p.proxima.portal}</span>}
-                  <div style={{ color: C.muted, marginTop: 2 }}>{p.proxima.entrada} → {p.proxima.salida}</div>
-                </div>
-              ) : <div style={{ fontSize: 12, color: C.muted }}>Sin reservas próximas.</div>}
-            </div>
-          </div>
-        ))}
-      </div>
-      </>}
-    </div>
-  )
-}
-
-function Mini({ label, valor, acento }: { label: string; valor: string; acento?: string }) {
-  return (
-    <div style={{ background: C.card2, borderRadius: 8, padding: '8px 10px' }}>
-      <div style={{ fontSize: 10, color: C.muted, textTransform: 'uppercase' }}>{label}</div>
-      <div style={{ fontWeight: 700, fontSize: 13, color: acento || C.text }}>{valor}</div>
-    </div>
-  )
 }
 
 function Estructura() {
