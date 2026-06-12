@@ -84,7 +84,12 @@ export const AGENTES: AgenteInfo[] = [
   { nombre: 'Auto-healer', ambito: 'ia-rest', desc: 'Detecta patrones de incidencias (bridge, fichaje, comanda) y propone curas.' },
   { nombre: 'QA runner', ambito: 'ia-rest', desc: 'Suites de test automatizadas sobre clientes.' },
   { nombre: 'Agente arquitecto', ambito: 'ia-rest · operador', desc: 'Analiza la estructura del proyecto y propone refactors/ahorro de tokens.' },
-  { nombre: 'Agentes de operador', ambito: 'ia-rest · operador', desc: 'SEO, ventas, legal, competencia, contenido y onboarding (6 especializados).' },
+  { nombre: 'Agentes de operador', ambito: 'ia-rest · operador', desc: 'SEO, ventas, legal, competencia, contenido y onboarding (6 especializados, loop agentic hasta 10 iter + web_search).' },
+  { nombre: 'Asistente de compras / stock', ambito: 'ia-rest · owner', desc: 'Chat en Almacén con datos reales de stock bajo mínimos y pedidos pendientes.' },
+  { nombre: 'Asistente de eventos', ambito: 'ia-rest · owner', desc: 'Chat en el módulo de Eventos con contexto de próximos eventos, presupuestos y espacios.' },
+  { nombre: 'Asistente QR (cliente en mesa)', ambito: 'ia-rest · qr', desc: 'Botón flotante en la carta QR del cliente: preguntas sobre alérgenos, recomendaciones y precios (Edge Function Deno).' },
+  { nombre: 'Briefing de lead (CRM)', ambito: 'ia-rest · operador', desc: 'Genera un briefing del historial completo de un lead: situación + próximo paso recomendado.' },
+  { nombre: 'Asistente contable', ambito: 'ia-rest · asesoría', desc: 'Chat flotante para contables externos en /asesoria: consultas sobre IVA, asientos y liquidaciones.' },
 
   // ialimp (limpieza)
   { nombre: 'Auto-asignación', ambito: 'ialimp', desc: 'Asigna limpiadoras por turnos, carga semanal y ventana de entrada.' },
