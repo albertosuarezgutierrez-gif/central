@@ -34,6 +34,13 @@ function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modu
     gestor: '/central',  // Rol backoffice puro — solo portal de gestión
   }
   const tieneModulos = (camarero.modulos_gestion ?? []).length > 0
+  // Especialización: empleado cuyo único acceso es 'materiales' → portal de montaje
+  // (gana a la ruta del rol base, p. ej. un 'gestor' montador no va a /central).
+  const modsTop = camarero.modulos_gestion ?? []
+  if (modsTop.length === 1 && modsTop[0] === 'materiales' && camarero.rol !== 'owner' && camarero.rol !== 'super_admin') {
+    window.location.href = '/montaje'
+    return
+  }
   const rutaDirecta = dest[camarero.rol]
   // Si tiene ruta directa → ir ahí (para gestor = /portal)
   if (rutaDirecta) {

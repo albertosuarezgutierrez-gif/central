@@ -1,11 +1,13 @@
 -- ============================================================
 -- Bloque B — Módulo de Materiales (independiente de eventos)
--- Schema: iarest. Multi-tenant por restaurante_id. RLS ON + service_role.
--- Genérico: sirve para catering/eventos, haciendas, alquiler puro, obra…
+-- BD viva de ia-rest: proyecto efncqyvhniaxsirhdxaa, schema public
+-- (donde viven restaurantes/personal/inventario_menaje). Multi-tenant por
+-- restaurante_id, self-consistente con las rutas /api/materiales/*.
+-- Genérico: catering/eventos, haciendas, alquiler puro, obra…
 -- ============================================================
 
 -- ── Catálogo de materiales (activos físicos) ─────────────────
-CREATE TABLE IF NOT EXISTS iarest.materiales (
+CREATE TABLE IF NOT EXISTS materiales (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   restaurante_id      uuid NOT NULL,
   nombre              text NOT NULL,
@@ -20,13 +22,13 @@ CREATE TABLE IF NOT EXISTS iarest.materiales (
   created_at          timestamptz DEFAULT now(),
   updated_at          timestamptz DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_materiales_restaurante ON iarest.materiales (restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_materiales_restaurante ON materiales (restaurante_id);
 
 -- ── Asignación / salida hacia un destino genérico ────────────
-CREATE TABLE IF NOT EXISTS iarest.materiales_asignacion (
+CREATE TABLE IF NOT EXISTS materiales_asignacion (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   restaurante_id      uuid NOT NULL,
-  material_id         uuid NOT NULL REFERENCES iarest.materiales(id) ON DELETE CASCADE,
+  material_id         uuid NOT NULL REFERENCES materiales(id) ON DELETE CASCADE,
   destino_tipo        text NOT NULL DEFAULT 'evento',  -- evento|hacienda|cliente|obra|otro
   destino_ref         uuid,                            -- id opcional del evento/hacienda… (sin FK dura)
   destino_nombre      text,                            -- etiqueta legible ("Boda Pérez", "Hacienda El Alba")
@@ -40,16 +42,16 @@ CREATE TABLE IF NOT EXISTS iarest.materiales_asignacion (
   created_at          timestamptz DEFAULT now(),
   updated_at          timestamptz DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_mat_asig_restaurante ON iarest.materiales_asignacion (restaurante_id);
-CREATE INDEX IF NOT EXISTS idx_mat_asig_personal    ON iarest.materiales_asignacion (restaurante_id, personal_id);
-CREATE INDEX IF NOT EXISTS idx_mat_asig_material    ON iarest.materiales_asignacion (material_id);
+CREATE INDEX IF NOT EXISTS idx_mat_asig_restaurante ON materiales_asignacion (restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_mat_asig_personal    ON materiales_asignacion (restaurante_id, personal_id);
+CREATE INDEX IF NOT EXISTS idx_mat_asig_material    ON materiales_asignacion (material_id);
 
 -- ── Partes de rotura / falta (con foto) ──────────────────────
-CREATE TABLE IF NOT EXISTS iarest.materiales_dano (
+CREATE TABLE IF NOT EXISTS materiales_dano (
   id                  uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   restaurante_id      uuid NOT NULL,
-  material_id         uuid NOT NULL REFERENCES iarest.materiales(id) ON DELETE CASCADE,
-  asignacion_id       uuid REFERENCES iarest.materiales_asignacion(id) ON DELETE SET NULL,
+  material_id         uuid NOT NULL REFERENCES materiales(id) ON DELETE CASCADE,
+  asignacion_id       uuid REFERENCES materiales_asignacion(id) ON DELETE SET NULL,
   cantidad            int  NOT NULL DEFAULT 1,
   motivo              text,                            -- rotura|falta|deterioro
   foto_url            text,
@@ -57,22 +59,22 @@ CREATE TABLE IF NOT EXISTS iarest.materiales_dano (
   personal_id         uuid,
   created_at          timestamptz DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_mat_dano_restaurante ON iarest.materiales_dano (restaurante_id);
-CREATE INDEX IF NOT EXISTS idx_mat_dano_asignacion  ON iarest.materiales_dano (asignacion_id);
+CREATE INDEX IF NOT EXISTS idx_mat_dano_restaurante ON materiales_dano (restaurante_id);
+CREATE INDEX IF NOT EXISTS idx_mat_dano_asignacion  ON materiales_dano (asignacion_id);
 
--- ── RLS ──────────────────────────────────────────────────────
-ALTER TABLE iarest.materiales            ENABLE ROW LEVEL SECURITY;
-ALTER TABLE iarest.materiales_asignacion ENABLE ROW LEVEL SECURITY;
-ALTER TABLE iarest.materiales_dano       ENABLE ROW LEVEL SECURITY;
+-- ── RLS (las API routes usan service role) ───────────────────
+ALTER TABLE materiales            ENABLE ROW LEVEL SECURITY;
+ALTER TABLE materiales_asignacion ENABLE ROW LEVEL SECURITY;
+ALTER TABLE materiales_dano       ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS service_role_all ON iarest.materiales;
-CREATE POLICY service_role_all ON iarest.materiales
+DROP POLICY IF EXISTS service_role_all ON materiales;
+CREATE POLICY service_role_all ON materiales
   USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
-DROP POLICY IF EXISTS service_role_all ON iarest.materiales_asignacion;
-CREATE POLICY service_role_all ON iarest.materiales_asignacion
+DROP POLICY IF EXISTS service_role_all ON materiales_asignacion;
+CREATE POLICY service_role_all ON materiales_asignacion
   USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
 
-DROP POLICY IF EXISTS service_role_all ON iarest.materiales_dano;
-CREATE POLICY service_role_all ON iarest.materiales_dano
+DROP POLICY IF EXISTS service_role_all ON materiales_dano;
+CREATE POLICY service_role_all ON materiales_dano
   USING (auth.role() = 'service_role') WITH CHECK (auth.role() = 'service_role');
