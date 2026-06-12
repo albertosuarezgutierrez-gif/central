@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-12T12:49:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-12T12:50:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 16 packages · 23 capacidades · 9 skills · 708 rutas API.
+**Resumen:** 4 apps · 16 packages · 23 capacidades · 9 skills · 710 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -15,8 +15,8 @@
 ### ialimp
 - **Módulos que usa:** core-ai, core-email, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA, Concursos públicos
-- **Tablas (25):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, sociedades, stock_consumos, tenant_modulos
-- **Rutas API:** 181
+- **Tablas (26):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, sociedades, stock_consumos, tenant_modulos
+- **Rutas API:** 183
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
 - **Capacidades:** —
