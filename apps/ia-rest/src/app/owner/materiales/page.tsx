@@ -1,5 +1,5 @@
 'use client'
-import { C, SE, SN, SM } from '@/lib/colors'
+import { DARK_C as C, SE, SN, SM } from '@/lib/colors'
 import { useEffect, useState, useCallback } from 'react'
 
 interface Material {
@@ -102,7 +102,7 @@ function badge(color: string): React.CSSProperties {
   return { display: 'inline-block', fontSize: 10, fontWeight: 700, fontFamily: SM, padding: '2px 7px', borderRadius: 99, background: color + '22', color: color, border: `1px solid ${color}44` }
 }
 
-// ─── Gestión de categorías ───────────────────────────────────
+// ─── Gestión de categorías ────────────────────────────────────────────
 function GestionCategorias({ categorias, onUpdate }: { categorias: Categoria[]; onUpdate: () => void }) {
   const [nueva, setNueva] = useState('')
   const [open, setOpen] = useState(false)
@@ -147,7 +147,7 @@ function GestionCategorias({ categorias, onUpdate }: { categorias: Categoria[]; 
   )
 }
 
-// ─── Catálogo ───────────────────────────────────────────────
+// ─── Catálogo ─────────────────────────────────────────────────────────
 const emptyForm = () => ({ nombre: '', categoria: '', tipo: 'activo', estado: 'operativo', cantidad_total: '', stock_minimo: '', coste_reposicion: '', precio_compra: '', codigo: '', proveedor_nombre: '', proveedor_referencia: '', garantia_hasta: '' })
 
 function Catalogo() {
@@ -313,7 +313,7 @@ function Catalogo() {
   )
 }
 
-// ─── Asignaciones ───────────────────────────────────────────
+// ─── Asignaciones ─────────────────────────────────────────────────────────
 function Asignaciones() {
   const [items, setItems] = useState<Asignacion[]>([])
   const [materiales, setMateriales] = useState<Material[]>([])
@@ -387,7 +387,7 @@ function Asignaciones() {
   )
 }
 
-// ─── Roturas ────────────────────────────────────────────────
+// ─── Roturas ───────────────────────────────────────────────────────────
 function Roturas() {
   const [items, setItems] = useState<Dano[]>([])
   const [loading, setLoading] = useState(true)
