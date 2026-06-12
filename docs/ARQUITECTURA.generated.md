@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-12T13:48:58Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-12T13:35:27Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -115,7 +115,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (12/06/2026) 🧱 Config de build compartida en la MATRIZ — PR #180
+- (12/06/2026) 🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`
 - (12/06/2026) 🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado
 - (12/06/2026) 🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado
 - (12/06/2026) 📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172
@@ -125,4 +125,3 @@
 - (12/06/2026) 📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO
 - (12/06/2026) 🎤 DECK presencial JJ + estructura real corregida
 - (11/06/2026) ⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real
-
