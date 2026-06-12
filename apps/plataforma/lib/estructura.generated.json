@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T13:06:18Z",
+  "generadoEn": "2026-06-12T13:41:18Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1773,8 +1773,23 @@
       "description": "\"You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.\""
     },
     {
+      "id": "central-maestro",
+      "name": "central-maestro",
+      "description": ">"
+    },
+    {
       "id": "ia-rest-maestro",
       "name": "ia-rest-maestro",
+      "description": ">"
+    },
+    {
+      "id": "ialimp-maestro",
+      "name": "ialimp-maestro",
+      "description": ">"
+    },
+    {
+      "id": "plataforma-maestro",
+      "name": "plataforma-maestro",
       "description": ">"
     },
     {
@@ -1786,6 +1801,11 @@
       "id": "requesting-code-review",
       "name": "requesting-code-review",
       "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements"
+    },
+    {
+      "id": "sivra-maestro",
+      "name": "sivra-maestro",
+      "description": ">"
     },
     {
       "id": "systematic-debugging",
@@ -1809,6 +1829,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — PR #187 mergeado (squash `9dfdc93`)",
+      "fecha": "12/06/2026"
+    },
     {
       "titulo": "🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado",
       "fecha": "12/06/2026"
@@ -1864,10 +1888,6 @@
     {
       "titulo": "📸 Auditoría agente Instagram (ia.rest) — \"no sube nada\" RESUELTO",
       "fecha": "11/06/2026"
-    },
-    {
-      "titulo": "✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod)",
-      "fecha": "10/06/2026"
     }
   ],
   "saludRepo": {
@@ -2093,7 +2113,7 @@
     "verticales": 4,
     "packages": 16,
     "capacidades": 23,
-    "skills": 9,
+    "skills": 13,
     "apis": 711,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
