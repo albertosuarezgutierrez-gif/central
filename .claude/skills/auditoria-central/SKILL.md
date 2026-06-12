@@ -39,6 +39,10 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
   Los 3 schemas escriben al MISMO `@prisma/client` → genera el de cada app justo antes de chequearla.
 - `tsc --noEmit -p apps/<app>/tsconfig.json` en las 4 apps. **OJO**: ialimp y plataforma llevan
   `typescript.ignoreBuildErrors: true` → el build verde NO garantiza tipos sanos; el typecheck sí.
+- **GOTCHA del CI (rompió `tests.yml` en main):** `prisma generate` y `tsc` deben correr **desde el dir de
+  cada app** (`working-directory: apps/<app>` + `pnpm exec prisma generate` / `tsc -p tsconfig.json`), NO desde
+  la raíz — `prisma`/`typescript` son deps de cada app, no de la raíz (`pnpm exec` desde la raíz → `Command
+  "prisma" not found`). En local invoca el binario por su ruta en `.pnpm` o entra al dir de la app.
 - Patrón de bug recurrente: llamar a `aiComplete(prompt, 8000)` (número) en vez de
   `aiComplete(prompt, { maxTokens|timeoutMs: 8000 })` (objeto) → el valor se ignora en runtime.
 
@@ -57,6 +61,11 @@ plantilla. Arregla en el acto solo bugs de bajo riesgo; lo de gran radio se cons
 ### 5. Deps y código muerto
 - `pnpm audit` (vulnerabilidades). Deps declaradas-sin-usar / usadas-sin-declarar. Packages sin
   consumidores. Drift de esquema: `mcp__Supabase__generate_typescript_types` vs los tipos commiteados.
+- **Vulns transitivas** (p.ej. `axios` vía `node-ical`): arréglalas con `pnpm.overrides` en el `package.json`
+  RAÍZ (`"overrides": { "axios": ">=1.16.0" }`), no tocando cada app. Verifica que el override no rompe el build.
+- **Antes de "arreglar" una vuln, mira si es explotable:** `xlsx` (sin parche en npm) es high, pero ialimp
+  **solo ESCRIBE** xlsx (export), nunca parsea → no explotable; la remediación (tarball CDN de SheetJS) puede
+  romper el build de un cliente vivo si la CDN no es alcanzable. Documenta en vez de arriesgar.
 
 ### 6. Infra real (MCP, solo lectura)
 - Supabase: `list_projects`, `list_migrations` (¿migraciones del repo aplicadas?), `list_tables`
