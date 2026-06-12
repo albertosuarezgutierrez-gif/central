@@ -7614,6 +7614,16 @@ const GRUPOS = [
     ]
   },
   {
+    // Checklists: pantalla standalone (editor de plantillas + informe). Enlace directo.
+    id: 'checklists', label: 'Checklists', icon: ICONS.check, modulo: 'checklists', href: '/owner/checklists',
+    tabs: [],
+  },
+  {
+    // Productividad: cuadro de productividad de cocina (standalone). Enlace directo.
+    id: 'productividad', label: 'Productividad', icon: ICONS.chart, modulo: 'produccion', href: '/owner/productividad',
+    tabs: [],
+  },
+  {
     // Auditoría: separado del resto porque es legal/fiscal — consulta periódica o ante incidencias
     id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle, modulo: null,
     tabs: [
@@ -8465,6 +8475,21 @@ export default function OwnerPage() {
             // Bloquear si modulosActivos está restringido y el grupo requiere módulo no activo
             const bloqueado = modulosActivos !== null && (g as any).modulo && !modulosActivos.includes((g as any).modulo)
             if (bloqueado) return null // ocultar grupos bloqueados directamente
+            // Grupos con href = pantalla standalone: enlace directo (no tab interno)
+            const href = (g as any).href as string | undefined
+            if (href) {
+              return (
+                <a key={g.id} href={href}
+                  style={{ flexShrink:0, display:'flex', alignItems:'center', gap:5,
+                    padding:'8px 12px', borderRadius:6, border:'none', cursor:'pointer',
+                    background: C.paper2, color: C.ink3, textDecoration:'none',
+                    fontFamily:SN, fontSize:13, fontWeight:600,
+                    transition:'all .15s', whiteSpace:'nowrap' }}>
+                  <Icon d={g.icon} size={14}/>
+                  <span className="owner-tab-lbl">{g.label}</span>
+                </a>
+              )
+            }
             return (
               <button key={g.id}
                 onClick={() => setTab(g.tabs[0].id)}
