@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await sb
       .from('contract_acceptances')
       .select('accepted_at, contract_version, ip_address')
-      .eq('local_id', restaurante_id)
+      .eq('restaurante_id', restaurante_id)
       .order('accepted_at', { ascending: false })
       .limit(1)
       .single()

@@ -7,7 +7,6 @@ export interface ApiSession {
   nombre: string
   rol: string
   restaurante_id: string
-  local_id?: string          // canónico (rename expand-contract); derivado de restaurante_id tras verificar firma
   restaurante_nombre: string
   cuenta_id?: string
   camarero_id?: string
@@ -38,15 +37,11 @@ export function getSession(req: NextRequest): ApiSession | null {
   // Si trae firma: tiene que ser válida SIEMPRE. Una firma presente pero
   // incorrecta = manipulación → se rechaza aunque no estemos en enforce.
   if (parsed._sig) {
-    if (!verificarSesion(parsed)) return null
-  } else if (ENFORCE) {
-    // Sin firma: solo se tolera durante la migración (ENFORCE=false).
-    return null
+    return verificarSesion(parsed) ? parsed : null
   }
 
-  // Canónico derivado tras verificar la firma (NO altera el payload firmado).
-  if (parsed.restaurante_id && !parsed.local_id) parsed.local_id = parsed.restaurante_id
-  return parsed
+  // Sin firma: solo se tolera durante la migración (ENFORCE=false).
+  return ENFORCE ? null : parsed
 }
 
 /**
@@ -91,12 +86,4 @@ export function getRestauranteId(req: NextRequest): string {
   const s = getSession(req)
   if (s?.restaurante_id) return s.restaurante_id
   return '00000000-0000-0000-0000-000000000001'
-}
-
-// ── Canónico (rename expand-contract restaurante_id → local_id) ──────────────
-// El código NUEVO debe usar getLocalId(). Durante la migración envuelve a
-// getRestauranteId() (misma fuente: sesión firmada / header). Cuando todo el
-// código use local_id y la sesión migre su clave, esto pasará a ser la fuente.
-export function getLocalId(req: NextRequest): string {
-  return getRestauranteId(req)
 }
