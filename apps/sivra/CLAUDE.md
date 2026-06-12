@@ -39,8 +39,10 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 - **Sitio público `[locale]` vestigial:** `app/[locale]/page.tsx` redirige a `/dashboard` y el
   middleware manda a `/login` a los anónimos. Las páginas de marketing (`/la-casa`, etc.) se
   eliminaron por dar 404. `sitemap.ts`/`robots.ts` sí se sirven públicos (excluidos del middleware).
-- **ESLint** está configurado (`.eslintrc.json`) pero hay errores preexistentes; el build NO falla
-  por ellos gracias a `eslint.ignoreDuringBuilds` en `next.config.ts`. `npm run lint` los muestra.
+- **ESLint** = **flat-config compartido de la matriz**: `eslint.config.mjs` importa `eslint.config.base.mjs`
+  de la raíz (`eslint-config-next ^16.2.6`); el legacy `.eslintrc.json` se eliminó. Hay warnings preexistentes
+  (código legado a `warn`); el build NO falla por ellos gracias a `eslint.ignoreDuringBuilds` en `next.config.ts`.
+  `npm run lint` (= `eslint`) los muestra. Ver MATRIZ.md ("Lint compartido").
 
 ## Comandos
 - Dev: `npm run dev` · Build: `npm run build` · Lint: `npm run lint`

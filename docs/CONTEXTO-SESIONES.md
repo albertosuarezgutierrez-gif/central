@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
+  "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
+  - **`tsconfig.base.json`** en la raíz; las 4 apps lo `extends` y solo declaran lo suyo
+    (paths, include/exclude, overrides). Equivalencia probada (showConfig + deep-equal).
+  - **`eslint.config.base.mjs`** en la raíz (solo DATOS: ignores + ruleset legado a `warn`,
+    sin imports de paquetes → no depende del node_modules de la raíz). Las 4 apps pasan a
+    **flat-config con `eslint-config-next ^16.2.6`** y `lint: eslint`; sivra migra desde
+    `.eslintrc.json`, ialimp/plataforma estrenan eslint. Verificado **0 errores** en las 4;
+    ia-rest queda **idéntico** (0 err / 1164 warn, mismo desglose → no rompe su build/CI).
+  - **Estabilización del PR**: se puso la rama al día con `main` (estaba ~11 commits atrás →
+    fallos "merge conflict marker" en typecheck ia-rest), se anotaron tipos en
+    `ialimp .../concursos-ingesta` (TS7022 latente, preexistente).
+  - **⚠️ Seguridad**: un commit concurrente había revertido en `mis-restaurantes/route.ts` la
+    corrección IDOR/suplantación de sesión de `main` (volvía a parsear la cabecera cruda
+    `x-ia-session`). Al fusionar `main` se **restauró la versión firmada/segura** (`getSession`).
+    Documentado en el PR para que no se vuelva a revertir.
+
 - **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
   Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
   se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
