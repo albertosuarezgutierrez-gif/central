@@ -358,6 +358,9 @@ export default function JefeSalaPage() {
             </button>
           ))}
           <div style={{flex:1}}/>
+          <a href="/checklist" style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:C.bone,border:`1px solid ${C.rule}`,borderRadius:6,color:C.ink,textDecoration:'none',fontSize:12,fontWeight:600,marginBottom:4}}>
+            <NavIcon path="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>Checklist
+          </a>
           <a href="/kds" target="_blank" style={{display:'flex',alignItems:'center',gap:8,padding:'8px 10px',background:'#1A1714',borderRadius:9999,color:'#F6F1E7',textDecoration:'none',fontSize:12,fontWeight:600,marginBottom:4}}>
             <NavIcon path="M2 3h20v14H2zM8 21h8M12 17v4"/>KDS
           </a>

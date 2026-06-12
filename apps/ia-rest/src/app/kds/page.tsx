@@ -544,6 +544,11 @@ function KDSInner() {
               </div>
             )}
           </button>
+          {/* 👨‍🍳 Mi trabajo (perfil del cocinero) */}
+          <a href="/cocinero" title="Mi trabajo del día"
+            style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background:'transparent', border:`1px solid ${K.rule}`, borderRadius:6, color:K.fg3, flexShrink:0, fontSize:14, textDecoration:'none' }}>
+            👨‍🍳
+          </a>
           <button onClick={() => setChuleteAbierto(v => !v)} title="Chuleta Voz"
             style={{ cursor:'pointer', width:30, height:30, display:'flex', alignItems:'center', justifyContent:'center', background: chuleteAbierto ? K.amb : 'transparent', border:`1px solid ${chuleteAbierto ? K.amb : K.rule}`, borderRadius:6, color: chuleteAbierto ? '#fff' : K.fg3, flexShrink:0 }}>
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>

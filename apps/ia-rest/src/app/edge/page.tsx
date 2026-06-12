@@ -2031,6 +2031,13 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
               borderRadius:16,cursor:'pointer',color:vinoOpen?'#fff':C.ink3,flexShrink:0}}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 22h8M12 11v11M9 3.5A6 6 0 0 0 6 9c0 3.3 2.7 6 6 6s6-2.7 6-6a6 6 0 0 0-3-5.2"/><path d="M9 3h6"/></svg>
           </button>
+          {/* ✅ Checklist de tareas — marcar tareas del turno (con foto) */}
+          <a href="/checklist" title="Checklist de tareas"
+            style={{width:30,height:30,display:'flex',alignItems:'center',justifyContent:'center',
+              background:C.bg2,border:`1px solid ${C.rule}`,borderRadius:16,cursor:'pointer',
+              color:C.ink3,flexShrink:0,textDecoration:'none'}}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+          </a>
           {/* 📷 Escáner IA — botón fijo en header */}
           <SmartScanFAB session={session} inline shape="pill" />
           <HelpChat />
