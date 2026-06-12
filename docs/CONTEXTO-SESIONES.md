@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔒 SEGURIDAD BD compartida — 63 ERROR → 0 ERROR — PR #169 — 12/06/2026**
+  `mcp__Supabase__get_advisors` sobre `wswbehlcuxqxyinousql`: 500 advisories (63 ERROR) → 438 (0 ERROR).
+  Migración `20260612_security_definer_views_fix.sql` aplicada y mergeada:
+  - **62 vistas `SECURITY DEFINER`** corregidas con `ALTER VIEW … SET (security_invoker = on)`:
+    47 en schema `iarest` (ia-rest) + 15 en `public` (sivra/ialimp). Las vistas respetan la RLS del
+    llamante; `service_role` sigue bypasseando RLS → usos server-side no se rompen.
+  - **`iarest.instagram_estilos_usados`**: `ENABLE ROW LEVEL SECURITY` (tabla interna sin columna tenant;
+    sin política → solo service_role accede).
+  - CI: 10/10 checks verde (typecheck ×4 apps, tests, lint/build, Vercel ×4, radiografía). Mergeado.
+  - **Pendiente WARN (no urgente):** 24× `rls_policy_always_true` + 114× `function_search_path_mutable`.
+    Detalle en `docs/AUDITORIA-2026-06.md` sección A4.
+
 - **🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164 — 12/06/2026**
   Auditoría completa tras el rename `@iarest/*`→`@central/*`, la migración de BD de ia-rest al Supabase
   compartido y `file:`→`workspace:*`. Informe en **`docs/AUDITORIA-2026-06.md`**. Skill nuevo
@@ -47,9 +59,8 @@
       **no explotable**: ialimp solo ESCRIBE xlsx (export contab.), nunca parsea (las vulns son al LEER). Remediación
       oficial = tarball CDN de SheetJS (bloqueada en el entorno de build; no se arriesga el build del cliente vivo).
     - `workflow_dispatch` añadido a `ci.yml`/`tests.yml` (estaba mal indentado bajo `pull_request:`, corregido).
-  - **PENDIENTE de Alberto (no urgente):** revisar los **63 advisories ERROR de seguridad** de la BD compartida
-    (62 `security_definer_view`, `search_path` mutable en funciones `SECURITY DEFINER`) — lo más sensible por ser
-    BD multi-tenant. (xlsx queda como remediación opcional, documentada.)
+  - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
+    Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
 - **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
   - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
     (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
