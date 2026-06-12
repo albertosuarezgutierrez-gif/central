@@ -444,7 +444,7 @@ function Seccion({ titulo, items, defaultOpen=true, children }: any) {
   if (items===0) return null
   return (
     <div>
-      <button onClick={()=>setOpen(o=>!o)}
+      <button onClick={()=>setOpen((o: boolean)=>!o)}
         style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0 8px', background:'transparent', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
         <span style={{ fontSize:13, fontWeight:800, color:C.muted, textTransform:'uppercase', letterSpacing:'0.05em' }}>
           {titulo} <span style={{ fontWeight:500, marginLeft:4 }}>({items})</span>

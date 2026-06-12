@@ -577,7 +577,7 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
                 {(form.via || form.numero) && (
                   <div className="bg-white rounded-lg px-3 py-2 border border-indigo-200 text-xs text-indigo-700">
                     📍 {[form.via, form.numero && `nº ${form.numero}`, form.piso, form.puerta].filter(Boolean).join(', ')}
-                    {form.municipio && <span className="text-gray-400"> · {form.cp || form.codigo_postal} {form.municipio}</span>}
+                    {form.municipio && <span className="text-gray-400"> · {form.codigo_postal} {form.municipio}</span>}
                   </div>
                 )}
 
@@ -777,7 +777,7 @@ export default function PropiedadesClient({ cliente, propiedadesIniciales, conex
                   <div key={idx} className="flex gap-2 mb-2 items-center">
                     <input
                       value={url}
-                      onChange={e => { const nv = [...form.ical_urls]; nv[idx] = e.target.value; f('ical_urls', nv) }}
+                      onChange={e => { const nv: string[] = [...(form.ical_urls || [])]; nv[idx] = e.target.value; f('ical_urls', nv) }}
                       placeholder="https://ical.booking.com/v1/export?t=..."
                       className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:border-indigo-400 font-mono bg-gray-50"
                     />

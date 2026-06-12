@@ -35,9 +35,8 @@ jobs:
       - name: Test (guardián + packages)
         run: pnpm test
 
-  # ── Typecheck de las verticales LIMPIAS (bloqueante) ────────────────────────
-  # ialimp queda fuera a propósito: tiene deuda de tipos catalogada en la auditoría
-  # (re-incluir en la matriz cuando esos errores estén a 0).
+  # ── Typecheck de TODAS las verticales (bloqueante) ──────────────────────────
+  # Las 4 apps están a 0 errores de tipos tras la auditoría (ver docs/AUDITORIA-2026-06.md).
   typecheck:
     name: Typecheck · ${{ matrix.app }}
     runs-on: ubuntu-latest
@@ -45,7 +44,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app: [ia-rest, sivra, plataforma]
+        app: [ia-rest, ialimp, sivra, plataforma]
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -63,24 +62,3 @@ jobs:
           fi
       - name: TypeScript check
         run: pnpm exec tsc --noEmit -p "apps/${{ matrix.app }}/tsconfig.json"
-
-  # ── Typecheck de ialimp (informativo, NO bloquea hasta saldar la deuda) ──────
-  typecheck-ialimp-info:
-    name: Typecheck · ialimp (informativo)
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    continue-on-error: true
-    steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
-      - name: Install
-        run: pnpm install --no-frozen-lockfile
-      - name: Prisma generate
-        run: pnpm exec prisma generate --schema="apps/ialimp/prisma/schema.prisma"
-      - name: TypeScript check (deuda conocida — ver auditoría)
-        run: pnpm exec tsc --noEmit -p "apps/ialimp/tsconfig.json"

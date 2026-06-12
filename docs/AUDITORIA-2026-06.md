@@ -87,11 +87,12 @@ realmente importadas en cada `next.config`.
 migrar a `xlsx` desde el CDN oficial de SheetJS o a `exceljs`; para `axios`, actualizar `node-ical` o fijar
 override `axios>=1.16`.
 
-### M4. ialimp — 16 errores de tipos restantes 🟡
-Tras A1/A2 quedan (en `apps/ialimp`): null-safety en `lib/ical-sync.ts:85` (`TS2532`/`TS18047`), tipos de
-pdfjs en `lib/concursos-ocr.ts` (`TS2353`/`TS2345`), `pdf-parse` sin tipos (`TS7016`), `implicit any` en
-`api/cron/concursos-radar` y `PropietarioClient`, y `cp`/`never` en `PropiedadesClient`. Riesgo bajo-medio;
-saldar para re-incluir ialimp en el typecheck bloqueante del CI.
+### M4. ialimp — 16 errores de tipos restantes ✅ SALDADO
+Resueltos los 16: null-safety en `lib/ical-sync.ts` (variable intermedia con guarda), inferencia circular en
+`api/cron/concursos-radar` (anotados `res`/`xml`/`m`), `implicit any` en `PropietarioClient`, `cp` inexistente
+y `ical_urls: never[]` en `PropiedadesClient`, tipos de pdfjs en `lib/concursos-ocr.ts` (cast acotado),
+`pdf-parse` sin tipos (`types/pdf-parse.d.ts`), y los imports `.ts` (`allowImportingTsExtensions` en el
+tsconfig de ialimp). **Las 4 apps quedan a 0 errores de tipos** → ialimp entra en el typecheck bloqueante del CI.
 
 ### M5. Imports `.ts` rompen el typecheck de packages con tests 🟡
 `packages/module-concursos/src/{deuc,oferta}.ts` importan con extensión `.ts` (lo exige `node --test`), lo
