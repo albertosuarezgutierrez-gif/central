@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T14:47:23Z",
+  "generadoEn": "2026-06-12T17:09:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -431,7 +431,7 @@
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -577,7 +577,7 @@
     "qr-portal": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 27
+        "evidencias": 28
       },
       "ialimp": {
         "presente": false,
@@ -739,7 +739,7 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 21
+        "evidencias": 26
       },
       "ialimp": {
         "presente": true,
@@ -1076,10 +1076,15 @@
       "/api/marchar",
       "/api/marketing/baja",
       "/api/materiales",
+      "/api/materiales/alertas",
       "/api/materiales/asignacion",
       "/api/materiales/categorias",
       "/api/materiales/dano",
+      "/api/materiales/espacios",
+      "/api/materiales/movimientos",
       "/api/materiales/perfil",
+      "/api/materiales/qr/[id]",
+      "/api/materiales/unidades",
       "/api/mensajes",
       "/api/mensajes/activos",
       "/api/mensajes/audio",
@@ -1689,7 +1694,9 @@
       "materiales_categorias",
       "materiales_dano",
       "materiales_espacios",
+      "materiales_movimientos",
       "materiales_transferencias",
+      "materiales_unidades",
       "mensajes_turno",
       "mesas",
       "metodos_pago",
@@ -2114,7 +2121,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 711,
+    "apis": 716,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
