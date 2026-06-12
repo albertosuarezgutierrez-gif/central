@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T13:06:18Z",
+  "generadoEn": "2026-06-12T13:38:11Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1810,6 +1810,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
+      "fecha": "12/06/2026"
+    },
+    {
       "titulo": "🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado",
       "fecha": "12/06/2026"
     },
@@ -1864,10 +1868,6 @@
     {
       "titulo": "📸 Auditoría agente Instagram (ia.rest) — \"no sube nada\" RESUELTO",
       "fecha": "11/06/2026"
-    },
-    {
-      "titulo": "✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod)",
-      "fecha": "10/06/2026"
     }
   ],
   "saludRepo": {
