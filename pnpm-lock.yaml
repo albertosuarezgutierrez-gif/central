@@ -264,6 +264,9 @@ importers:
 
   apps/plataforma:
     dependencies:
+      '@central/core-ai':
+        specifier: workspace:*
+        version: link:../../packages/core-ai
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity

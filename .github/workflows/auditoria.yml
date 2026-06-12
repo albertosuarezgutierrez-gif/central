@@ -14,6 +14,8 @@ on:
     paths:
       - 'apps/**'
       - 'packages/**'
+      - '.claude/skills/**'
+      - 'docs/CONTEXTO-SESIONES.md'
       - 'scripts/auditar-estructura.mjs'
       - '.github/workflows/auditoria.yml'
 
@@ -45,13 +47,14 @@ jobs:
 
       - name: Commitear si cambió
         run: |
-          if [ -n "$(git status --porcelain apps/plataforma/lib/estructura.generated.json)" ]; then
+          FILES="apps/plataforma/lib/estructura.generated.json docs/ARQUITECTURA.generated.md"
+          if [ -n "$(git status --porcelain $FILES)" ]; then
             git config user.name 'github-actions[bot]'
             git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-            git add apps/plataforma/lib/estructura.generated.json
+            git add $FILES
             git commit -m 'chore(auditoría): regenerar radiografía de estructura [skip ci]'
             git push origin HEAD:${{ github.ref_name }}
-            echo "Radiografía actualizada y commiteada."
+            echo "Radiografía (JSON + markdown) actualizada y commiteada."
           else
             echo "Radiografía ya al día — sin cambios."
           fi
