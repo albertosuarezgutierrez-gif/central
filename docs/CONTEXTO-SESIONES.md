@@ -44,6 +44,17 @@
     una vez `tests.yml` esté en la rama por defecto).
   - **Pendiente de Alberto:** revisar los 63 advisories ERROR de seguridad; mitigar vulnerabilidades `xlsx`
     (high, sin parche) y `axios` (vía `node-ical`) en ialimp.
+- **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
+  - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
+    (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
+    nadie podía entrar. Diagnóstico: `GET /api/owner/modulos?restaurante_id=...001` devolvía el fallback genérico.
+  - **Reparado (probado):** copiado restaurante demo (...001) + 7 personal a `wswbehlcuxqxyinousql.iarest`,
+    creada+sembrada `materiales`. Verificado (search_path=iarest): `resolve_restaurante('DEMO')` ok, `login_pin`
+    1369 y 4040 → success; endpoint de prod ya devuelve la config del demo. Añadido botón Salir en /montaje.
+  - **⚠️ PENDIENTE GRANDE:** Saboga y demás datos reales **siguen solo en `efncqyvhniaxsirhdxaa.public`**;
+    producción no los ve. Falta migración real de datos (Fase A2 completa) o revertir el env a la BD vieja.
+  - **⚠️ Fragilidad:** las RPCs de `iarest` referencian tablas sin prefijo; dependen del search_path de PostgREST.
+
 - **📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO — 12/06/2026**
   - Módulo **independiente de eventos** (decisión Alberto: sirve para catering, haciendas y hasta alquiler puro),
     100% configurable por el dueño, con **acceso granular por empleado** vía `personal.modulos_gestion`.
