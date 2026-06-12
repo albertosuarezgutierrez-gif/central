@@ -16,7 +16,7 @@ sin aplicar → un cron roto, y la seguridad RLS de la BD compartida) que requie
 
 | Severidad | Nº | Estado |
 |-----------|----|--------|
-| 🔴 Alto   | 4  | 2 arreglados · 2 acción manual |
+| 🔴 Alto   | 4  | 3 arreglados · 1 acción manual |
 | 🟡 Medio  | 6  | 1 arreglado · 5 documentados |
 | 🟢 Bajo   | 5  | documentados |
 
@@ -52,18 +52,18 @@ falla con *relation does not exist*. (Las otras 2 "pendientes" sí están: `tena
 - **Acción**: aplicar en Supabase `apps/ialimp/prisma/migrations/add_concursos_radar_criterios.sql` y
   `add_concursos_radar_anuncios.sql`. Sin riesgo (solo `CREATE TABLE`). Rollback: `DROP TABLE` de ambas.
 
-### A4. Seguridad de la BD compartida — 499 advisories (63 ERROR) ⚠️ ACCIÓN MANUAL
-`mcp__Supabase__get_advisors(security)` sobre la BD compartida (266 tablas en `iarest`, 135 en `public`):
-- **62× `security_definer_view`** (ERROR) — vistas que ejecutan con permisos del creador (saltan la RLS del
-  consultante). En BD multi-tenant es la categoría más sensible.
-- **24× `rls_policy_always_true`** (WARN) — políticas que permiten acceso **sin restricción** (riesgo de
-  fuga entre tenants/verticales).
-- **114× `function_search_path_mutable`** — `search_path` mutable; **crítico** porque ia-rest se aísla
-  precisamente por `search_path`.
-- **139× `rls_enabled_no_policy`**, **1× `rls_disabled_in_public`** (`iarest.instagram_estilos_usados`).
-- Muchos probablemente **preexisten** a la migración (vienen del proyecto ia-rest original), pero cuentan en
-  el contexto de BD compartida. **Acción**: revisar por lotes (empezar por los 62 ERROR y los 24
-  `always_true`); fijar `search_path` en funciones `SECURITY DEFINER`. Ver enlaces de remediación en advisors.
+### A4. Seguridad de la BD compartida — 438 advisories (0 ERROR) ✅ RESUELTO (parcial)
+`mcp__Supabase__get_advisors(security)` sobre la BD compartida. Estado inicial: 500 advisories (63 ERROR).
+Aplicada migración `20260612_security_definer_views_fix.sql` (2026-06-12):
+- ✅ **62× `security_definer_view`** (ERROR→resuelto) — `ALTER VIEW … SET (security_invoker = on)` en las
+  62 vistas afectadas (47 `iarest`, 15 `public`). Las vistas ahora respetan la RLS del llamante;
+  `service_role` sigue bypasseando RLS → los usos server-side no se rompen.
+- ✅ **1× `rls_disabled_in_public`** (ERROR→resuelto) — `ALTER TABLE iarest.instagram_estilos_usados
+  ENABLE ROW LEVEL SECURITY`. Tabla interna sin columna tenant; RLS sin política = solo service_role accede.
+- 🟡 **24× `rls_policy_always_true`** (WARN) — políticas sin restricción de tenant. Pendiente.
+- 🟡 **114× `function_search_path_mutable`** (WARN) — `search_path` mutable en funciones SECURITY DEFINER.
+  Crítico porque ia-rest se aísla por `search_path`. Pendiente.
+- ℹ️ **141× `rls_enabled_no_policy`** (INFO) — tablas con RLS habilitada pero sin política definida.
 
 ---
 
@@ -134,8 +134,8 @@ actualizar next-auth.
 ## Checklist de acciones manuales de Alberto (Supabase/Vercel)
 1. **[A3]** Aplicar `add_concursos_radar_criterios.sql` + `add_concursos_radar_anuncios.sql` en Supabase
    compartido (arregla el cron de concursos). Rollback: `DROP TABLE`.
-2. **[A4]** Revisar advisors de seguridad (62 `security_definer_view`, 24 `rls_policy_always_true`,
-   `search_path` de funciones `SECURITY DEFINER`). Empezar por los 63 ERROR.
+2. **[A4]** ✅ 63 ERROR resueltos (`security_definer_view` + `rls_disabled`). Pendiente: 24
+   `rls_policy_always_true` (WARN) y 114 `function_search_path_mutable` (WARN).
 3. **[M3]** Mitigar `xlsx` y `axios` (override/upgrade) en ialimp.
 4. **Corte de envs de ia-rest** (cuando toque): re-meter secrets de Edge Functions, exponer schema `iarest`,
    cambiar las 3 envs de Vercel + `NEXT_PUBLIC_SUPABASE_SCHEMA=iarest`, redeploy + smoke test. Rollback:
