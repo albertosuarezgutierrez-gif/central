@@ -36,7 +36,7 @@
     piloto 1 dpto.; contacto por WhatsApp de Alberto; ellos mandan resumen.
   - **Faltan datos:** nº sociedades/CIFs + intercompany; stack exacto del sistema de cocina de ella; tamaño catálogo
     de material + eventos/mes; estructura de comisiones de los comerciales.
-  - **✅ Bloques H e I CONSTRUIDOS (PR #154, en preview):** en `apps/ia-rest`.
+  - **✅ Bloques H e I CONSTRUIDOS y MERGEADOS a `main` (PR #154):** en `apps/ia-rest`.
     - **H — Checklist operativo:** tablas `iarest.checklist_plantillas/ejecuciones`; rutas `/api/checklists/*`
       (plantillas, turno con **índice de carga** leyendo `comandas`, marcar con foto, informe con flag
       "sin excusa"); pantallas `/checklist` (empleado) y `/owner/checklists` (editor + informe). Bucket
@@ -46,7 +46,11 @@
       empezar/terminar, productividad, cocineros); pantallas `/cocinero` y `/owner/productividad`.
     - Módulos nuevos `checklists` y `produccion` en `TODOS_MODULOS`. Migraciones aplicadas en BD
       compartida (schema `iarest`). MVP **manual + IA** (no toca el sistema de cocina de ella).
-    - **Pendiente:** mergear #154 a main; cargar tiempos estándar reales; conectar su sistema de cocina.
+    - **Cómo verlo (demo):** entrar por `/login` (owner PIN 1369 → `/owner/checklists` y `/owner/productividad`;
+      camarero 7672 → `/checklist`; cocina 3297 → `/cocinero`). Las rutas aún **no tienen botón en los menús**
+      (creadas como pantallas standalone para no tocar las páginas grandes).
+    - **Pendiente:** enganchar accesos en los menús (`/owner`, camarero, cocina); cargar tiempos estándar reales;
+      conectar el sistema de cocina de ella; **guión/deck** presencial para la próxima reunión.
   - **Propuestas web refinadas (PR #138, mergeada):** las 4 propuestas `catering-jj*` reposicionan la cocina
     ("conectamos, no reemplazamos") y añaden las cartas que pidió la familia: **comercial+comisiones**, **material
     de eventos** (roturas/previsión) y **presupuesto self-service del cliente**. Estas dos últimas se presentan
