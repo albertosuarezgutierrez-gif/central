@@ -12,7 +12,7 @@ const PRECACHE_STATIC = [
   '/icon-512.png',
 ]
 
-// ── INSTALL ──────────────────────────────────────────────────
+// ── INSTALL ────────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(STATIC_CACHE)
@@ -21,7 +21,7 @@ self.addEventListener('install', e => {
   )
 })
 
-// ── ACTIVATE: limpiar caches viejos ──────────────────────────
+// ── ACTIVATE: limpiar caches viejos ────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -32,7 +32,7 @@ self.addEventListener('activate', e => {
   )
 })
 
-// ── FETCH ────────────────────────────────────────────────────
+// ── FETCH ────────────────────────────────────────────
 self.addEventListener('fetch', e => {
   const { request } = e
   if (request.method !== 'GET') return
@@ -93,12 +93,12 @@ self.addEventListener('fetch', e => {
   )
 })
 
-// ── MESSAGE: forzar activación desde useServiceWorkerUpdate ─
+// ── MESSAGE: forzar activación desde useServiceWorkerUpdate ─‐
 self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
-// ── PUSH ─────────────────────────────────────────────────────
+// ── PUSH ───────────────────────────────────────────────
 self.addEventListener('push', e => {
   if (!e.data) return
   let payload
@@ -119,7 +119,7 @@ self.addEventListener('push', e => {
   )
 })
 
-// ── NOTIFICATION CLICK ────────────────────────────────────────
+// ── NOTIFICATION CLICK ────────────────────────────────
 self.addEventListener('notificationclick', e => {
   e.notification.close()
   const url = e.notification.data?.url || '/edge'
