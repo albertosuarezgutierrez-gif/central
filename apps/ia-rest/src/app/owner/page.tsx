@@ -221,6 +221,7 @@ const ICONS = {
   phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.77 3.19 2 2 0 0 1 3.74 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6.59 6.59l.97-1.04a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z',
   qr: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
   globe: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
+  box: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -651,6 +652,7 @@ function CamarerosTab() {
                 { key: 'escaner',       label: 'Escáner IA',    desc: 'Escaneo e importación de albaranes y facturas de proveedor.' },
                 { key: 'analytics',     label: 'Analytics',     desc: 'Métricas de ventas, tiempos y rendimiento del servicio.' },
                 { key: 'asistente',     label: 'Asistente IA',  desc: 'Chat con IA para resolver dudas de gestión y tareas del día.' },
+                { key: 'materiales',    label: 'Materiales',    desc: 'Menaje y activos: material asignado, entrega/devolución y partes de rotura con foto. Para montadores de eventos.' },
               ] as { key: string; label: string; desc: string }[]).map(m => (
                 <label key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 9 }}>
                   <input type="checkbox"
@@ -7621,6 +7623,11 @@ const GRUPOS = [
   {
     // Productividad: cuadro de productividad de cocina (standalone). Enlace directo.
     id: 'productividad', label: 'Productividad', icon: ICONS.chart, modulo: 'produccion', href: '/owner/productividad',
+    tabs: [],
+  },
+  {
+    // Materiales: catálogo + asignaciones + roturas (standalone). Enlace directo.
+    id: 'materiales', label: 'Materiales', icon: ICONS.box, modulo: 'materiales', href: '/owner/materiales',
     tabs: [],
   },
   {
