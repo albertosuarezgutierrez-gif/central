@@ -2,7 +2,7 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { createHmac } from 'node:crypto'
 
-// ─── Selector de secretos (robusto: live + test a la vez) ────────────────────
+// ─── Selector de secretos (robusto: live + test a la vez) ────────────────────────
 // Antes dependía de STRIPE_MODE: si el flag no estaba en "live", validaba los
 // eventos LIVE con el secreto de TEST → firma inválida → 401 (eventos perdidos).
 // Ahora probamos TODOS los secretos configurados. Cada evento se valida contra
@@ -10,7 +10,7 @@ import { createHmac } from 'node:crypto'
 // fail-closed: si hay ≥1 secreto y ninguno valida, se rechaza con 401.
 //   Pon el signing secret del endpoint live en: Supabase → Edge Functions →
 //   Secrets → STRIPE_WEBHOOK_SECRET (y el de test en STRIPE_WEBHOOK_SECRET_TEST).
-// ─────────────────────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────────────────────
 function getWebhookSecrets(): string[] {
   return [
     Deno.env.get("STRIPE_WEBHOOK_SECRET") ?? "",
