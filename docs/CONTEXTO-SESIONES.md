@@ -48,13 +48,12 @@
   **Fix ia-rest puerto no responde (HTTP 401):** `OPERADOR_SHARED_SECRET` estaba desincronizado entre
   plataforma y ia-rest en Vercel. Alberto lo regeneró y sincronizó + marcó plataforma como Trusted Source.
 
-  **PR #136 (borrador, pendiente validación visual de Alberto):** portal propietario ialimp responsive
-  en escritorio. `PropietarioClient.tsx`: `maxWidth 480→1080`, listas de sesiones/reservas con
-  `grid auto-fill minmax(320px,1fr)`, formularios centrados `maxWidth:680-760`. Todos los builds
-  Vercel en Ready.
+  **PR #136 (MERGEADO a `main`):** portal propietario ialimp responsive en escritorio.
+  `PropietarioClient.tsx`: `maxWidth 480→1080`, listas de sesiones/reservas con
+  `grid auto-fill minmax(320px,1fr)`, formularios centrados `maxWidth:680-760`. En producción
+  (`app.ialimp.es`) → el enlace mágico del propietario ya se ve ancho en escritorio.
 
-  - **⚠️ Pendiente de Alberto:** (1) Validar preview de PR #136 en ialimp (portal propietario en escritorio)
-    y aprobar merge a `main`. (2) Securizar: el `access_token` del propietario fue pegado en el chat de
+  - **⚠️ Pendiente de Alberto:** (1) Securizar: el `access_token` del propietario fue pegado en el chat de
     Claude (token de URL) — conviene rotarlo desde `ialimp > admin > clientes > [cliente] > Enviar acceso`.
     El `OPERADOR_SHARED_SECRET` también fue expuesto en chat — ya rotado por Alberto pero verificar que
     no quedó en ningún log. (3) ia-rest login unificado = fase 2 (requiere SSO o puerto dedicado).
