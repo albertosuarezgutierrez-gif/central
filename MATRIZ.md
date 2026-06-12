@@ -64,6 +64,22 @@ Toda **vertical nueva** entra como `apps/<app>` con su propio `package.json`/`ve
 proyecto Vercel con Root Directory `apps/<app>`. Los **módulos compartidos** viven en `packages/*`
 (portables, sin acoplarse a ninguna vertical). La **matriz** (raíz) no contiene lógica de producto.
 
+### Lo COMPARTIDO sube a la matriz; lo de cada marca se queda en su marca
+Mismo principio que los `packages/*` (núcleos compartidos) frente a `apps/*` (lo propio), aplicado a
+**configuración y secretos**:
+- **Arriba (común a todas las verticales)** → no se duplica:
+  - **Secretos/keys idénticos** = **Shared Environment Variables a nivel de equipo de Vercel** (no en cada
+    proyecto): `NVIDIA_API_KEY` (todas usan `core-ai`), `OPERADOR_SHARED_SECRET` (plataforma ↔ ia-rest), y
+    cualquier clave de servicio que sea la misma. Defínela una vez, vincúlala a los proyectos → al crear una
+    vertical nueva hereda lo compartido sin reconfigurar. (Si un proyecto ya la tiene a nivel proyecto, esa
+    gana sobre la compartida; para unificar, borra la local.)
+  - **Config de build/herramientas** (cuando se haga): `tsconfig.base.json` + config de lint/formato en la
+    raíz que cada app extienda; overrides de pnpm y workflows de CI ya viven en la raíz.
+- **Abajo (específico de cada vertical)** → en su proyecto Vercel / su carpeta:
+  - secretos de sesión/JWT, dominios (`NEXTAUTH_URL`…), la BD **propia** de ia-rest (`efncqyvhniaxsirhdxaa`),
+    y los integradores de cada una (SMTP, Smoobu, Stripe, Apify…).
+
+
 ## Ver también
 - **`docs/ARQUITECTURA-casa-marcas.md`** — mapa-norte de módulos: las **especialidades** encienden
   **módulos** (capacidades de negocio + de plataforma) sobre **núcleos técnicos** (`packages/*`).

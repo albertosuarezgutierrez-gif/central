@@ -143,6 +143,7 @@ export const CHECKLIST_NUEVA_VERTICAL: string[] = [
   'Proyecto Vercel con Root Directory = apps/<app> e install `npm install --legacy-peer-deps`.',
   'Declarar los @central/* que consuma en dependencies (workspace:*) Y en transpilePackages del next.config (exportan TS crudo).',
   'NUNCA poner apps/ en el .vercelignore de la raíz (borraría la carpeta del build por-app).',
+  'Heredar los secretos comunes (NVIDIA_API_KEY, OPERADOR_SHARED_SECRET…) de las Shared Environment Variables del equipo de Vercel; solo poner en el proyecto lo específico de la vertical (JWT, dominios, integradores).',
   'Si comparte la BD: scope multi-tenant por empresa_id / schema en TODA query.',
   'Añadir su CLAUDE.md/AGENTS.md y actualizar MATRIZ.md.',
 ]
