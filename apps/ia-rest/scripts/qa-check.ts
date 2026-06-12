@@ -135,7 +135,7 @@ const RULES: Rule[] = [
         "Usar estado: 'nueva' | 'en_curso' | 'lista' | 'cerrada'",
         lines,
         filePath,
-        /estado\s*:\s*['"](?:pendiente|abierta)['"]/,
+        /estado\s*:\s*['"](pendiente|abierta)['"]/ ,
         /\/\//
       )
     },

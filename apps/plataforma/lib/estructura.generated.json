@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T13:38:11Z",
+  "generadoEn": "2026-06-12T13:35:27Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1773,8 +1773,23 @@
       "description": "\"You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.\""
     },
     {
+      "id": "central-maestro",
+      "name": "central-maestro",
+      "description": ">"
+    },
+    {
       "id": "ia-rest-maestro",
       "name": "ia-rest-maestro",
+      "description": ">"
+    },
+    {
+      "id": "ialimp-maestro",
+      "name": "ialimp-maestro",
+      "description": ">"
+    },
+    {
+      "id": "plataforma-maestro",
+      "name": "plataforma-maestro",
       "description": ">"
     },
     {
@@ -1786,6 +1801,11 @@
       "id": "requesting-code-review",
       "name": "requesting-code-review",
       "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements"
+    },
+    {
+      "id": "sivra-maestro",
+      "name": "sivra-maestro",
+      "description": ">"
     },
     {
       "id": "systematic-debugging",
@@ -1810,7 +1830,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
+      "titulo": "🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`",
       "fecha": "12/06/2026"
     },
     {
@@ -2093,7 +2113,7 @@
     "verticales": 4,
     "packages": 16,
     "capacidades": 23,
-    "skills": 9,
+    "skills": 13,
     "apis": 711,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,

@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
+  Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
+  se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
+  fuente de verdad, así no hay drift) en `.claude/skills/`:
+  - `central-maestro` — dispatcher de entrada del monorepo: orienta (CLAUDE.md/MATRIZ/CONTEXTO),
+    identifica la vertical y enruta al maestro correcto + recuerda reglas de matriz/packages/BD compartida.
+  - `sivra-maestro`, `ialimp-maestro`, `plataforma-maestro` — un router por vertical con gate
+    "antes de tocar nada", mapa de dónde vive cada cosa, infra (sin secretos) y landmines.
+  - `ia-rest-maestro` ya existía (doc gordo); los nuevos lo referencian, no lo tocan.
+  - Cada router obliga a leer objetivos/CLAUDE.md de la vertical y a comprobar la frontera multi-tenant
+    de la BD compartida antes de planificar. Se apoyan en el SessionStart hook (`using-superpowers`) ya activo.
+
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
   - **`tsconfig.base.json`** en la raíz; las 4 apps lo `extends` y solo declaran lo suyo
