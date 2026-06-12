@@ -3,6 +3,7 @@
 // Portal para asesorías y contables — gestión contable de múltiples restaurantes
 
 import { useState, useEffect, useCallback } from 'react'
+import AsesoriaAgente from '@/components/asesoria/AsesoriaAgente'
 
 const C = {
   bg: '#14110E', bg2: '#1E1A15', bg3: '#2A221A',
@@ -184,6 +185,7 @@ export default function AsesoriaPage() {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{session.nombre}</div>
+          <AsesoriaAgente sh={sh} />
           <button onClick={cerrarSesion}
             style={{ fontFamily: SN, fontSize: 11, padding: '4px 10px', background: 'none', border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink4, cursor: 'pointer' }}>
             Salir

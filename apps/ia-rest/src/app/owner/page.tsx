@@ -29,6 +29,7 @@ import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
 import PagosProveedorTab from '@/components/owner/PagosProveedorTab'
 import ContabilidadTab from '@/components/owner/ContabilidadTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
+import AgenteModuloChat from '@/components/owner/AgenteModuloChat'
 import ModulosTab from '@/components/owner/ModulosTab'
 import NuevaEntradaPesoModal from '@/components/owner/NuevaEntradaPesoModal'
 import MiWebTab from '@/components/owner/MiWebTab'
@@ -9104,6 +9105,19 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
           <button onClick={() => setModalPeso(true)} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 14px', background:'#3F7D44', color:'#fff', border:'1px solid #2d5c31', borderRadius:8, cursor:'pointer' }}>
             ⚖ Por peso
           </button>
+          <AgenteModuloChat
+            titulo="Compras & Stock"
+            emoji="🛒"
+            apiRoute="/api/owner/agente-compras"
+            sh={sh}
+            restauranteId={restauranteId}
+            sugerencias={[
+              '¿Qué artículos están bajo mínimos?',
+              '¿Tengo pedidos pendientes?',
+              '¿Cómo creo un pedido a proveedor?',
+              '¿Cómo recibo mercancía con OCR?',
+            ]}
+          />
         </div>
       </div>
 

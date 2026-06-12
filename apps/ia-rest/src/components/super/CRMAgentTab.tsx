@@ -54,6 +54,8 @@ export default function CRMAgentTab() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'saving' | 'applied' | 'error'>('idle')
   const [errorMsg, setErrorMsg] = useState('')
   const [historial, setHistorial] = useState<{ tipo: string; texto: string; fecha: string }[]>([])
+  const [briefing, setBriefing] = useState<string | null>(null)
+  const [loadingBriefing, setLoadingBriefing] = useState(false)
 
   const lead = leads.find(l => l.id === selectedId)
 
@@ -73,7 +75,20 @@ export default function CRMAgentTab() {
     } else {
       setHistorial([])
     }
+    setBriefing(null)
   }, [lead])
+
+  const generarBriefing = async () => {
+    if (!selectedId) return
+    setLoadingBriefing(true)
+    setBriefing(null)
+    try {
+      const res = await fetch(`/api/super/leads/agente?lead_id=${selectedId}`, { headers: sh() })
+      const data = await res.json()
+      setBriefing(data.resumen ?? data.error ?? 'Sin respuesta.')
+    } catch { setBriefing('Error al generar el briefing.') }
+    finally { setLoadingBriefing(false) }
+  }
 
   const analizar = async () => {
     if (!texto.trim() || !selectedId) return
@@ -160,7 +175,23 @@ export default function CRMAgentTab() {
                   → {lead.siguiente_contacto_texto}
                 </span>
               )}
+              <button onClick={generarBriefing} disabled={loadingBriefing} style={{
+                marginLeft: 'auto', padding: '3px 10px', borderRadius: 5, border: `1px solid ${C.rule}`,
+                background: loadingBriefing ? C.bg3 : C.red + '18',
+                color: loadingBriefing ? C.ink4 : C.red,
+                fontFamily: SM, fontSize: 11, cursor: loadingBriefing ? 'default' : 'pointer',
+                letterSpacing: '.06em',
+              }}>
+                {loadingBriefing ? '...' : '🤖 BRIEFING'}
+              </button>
             </div>
+
+            {briefing && (
+              <div style={{ marginTop: 12, padding: '10px 12px', background: C.bg3, borderRadius: 8, border: `1px solid ${C.red}30` }}>
+                <div style={{ fontFamily: SM, fontSize: 10, color: C.red, letterSpacing: '.08em', marginBottom: 6 }}>BRIEFING IA</div>
+                <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, lineHeight: 1.6 }}>{briefing}</div>
+              </div>
+            )}
 
             {/* Historial reciente */}
             {historial.length > 0 && (
