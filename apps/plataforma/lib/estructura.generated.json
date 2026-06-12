@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-12T07:48:49Z",
+  "generadoEn": "2026-06-12T09:06:38Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -630,8 +630,8 @@
     },
     "agenda-asignacion": {
       "ia-rest": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "ialimp": {
         "presente": true,
@@ -739,7 +739,7 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 15
+        "evidencias": 20
       },
       "ialimp": {
         "presente": true,
@@ -998,17 +998,6 @@
         ]
       },
       {
-        "capacidad": "agenda-asignacion",
-        "label": "Agenda / auto-asignación",
-        "tiene": [
-          "ialimp",
-          "sivra"
-        ],
-        "falta": [
-          "ia-rest"
-        ]
-      },
-      {
         "capacidad": "pricing",
         "label": "Pricing dinámico",
         "tiene": [
@@ -1148,7 +1137,7 @@
     "packages": 16,
     "capacidades": 23,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 20,
+    "oportunidadesPortar": 19,
     "reimplementaciones": 0
   }
 }

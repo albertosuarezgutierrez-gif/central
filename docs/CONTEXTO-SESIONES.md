@@ -44,6 +44,35 @@
     una vez `tests.yml` esté en la rama por defecto).
   - **Pendiente de Alberto:** revisar los 63 advisories ERROR de seguridad; mitigar vulnerabilidades `xlsx`
     (high, sin parche) y `axios` (vía `node-ical`) en ialimp.
+- **📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO — 12/06/2026**
+  - Módulo **independiente de eventos** (decisión Alberto: sirve para catering, haciendas y hasta alquiler puro),
+    100% configurable por el dueño, con **acceso granular por empleado** vía `personal.modulos_gestion`.
+  - **Por qué tablas nuevas (no reutilizar `inventario_menaje_evento`):** la vieja tiene FK dura a `eventos` →
+    acopla. Las nuevas viven en schema `iarest`, patrón `produccion_*` (`restaurante_id`, RLS service_role).
+    La asignación apunta a un **destino genérico** (`destino_tipo` = evento|hacienda|cliente|obra), sin FK.
+  - **DB (migración `2026-06-12_materiales.sql`, aplicada a `wswbehlcuxqxyinousql`):** `iarest.materiales`
+    (catálogo + stock), `iarest.materiales_asignacion` (salida/devolución), `iarest.materiales_dano` (rotura+foto+coste).
+  - **API:** `/api/materiales` (catálogo CRUD) · `/api/materiales/asignacion` (asignar descuenta stock / devolver
+    repone sanas) · `/api/materiales/dano` (rotura con foto, da baja del total, coste = ud×reposición) ·
+    `/api/materiales/perfil` (asignaciones del empleado logueado, gated por `modulos_gestion`).
+  - **UI dueño:** `/owner/materiales` (3 tabs: Catálogo · Asignaciones · Roturas) + entrada `materiales` en `GRUPOS`
+    e icono `box`. **UI empleado:** `/montaje` (patrón `/cocinero`: ve su material, marca recogido/devuelto,
+    registra rotura con foto). **Routing:** empleado con `materiales` aterriza en `/montaje`.
+  - **Gating:** `materiales` añadido a `TODOS_MODULOS` y al checklist de "Acceso a gestión" del panel de personal.
+  - **Verificado:** `next build` verde (exit 0) con `@central/*` linkados (pnpm install). Spec en
+    `docs/superpowers/specs/2026-06-12-modulo-materiales-design.md`. PR **#163** (draft, CI verde).
+  - **⚠️ OJO con la BD (corregido):** la BD VIVA de ia-rest es el proyecto **`efncqyvhniaxsirhdxaa`,
+    schema `public`** (ahí están `restaurantes`/`personal`/`inventario_menaje`; demo `DEMO` + "Saboga
+    Catering"). El proyecto compartido `wswbehlcuxqxyinousql.iarest` está VACÍO (la migración A2 del plan
+    de unificación NO se ha ejecutado). Primero creé las tablas en el sitio equivocado; corregido →
+    tablas en `efncqyvhniaxsirhdxaa.public`. (Nota: las tablas `produccion_*`/`checklist_*` de la sesión
+    anterior podrían estar también en el proyecto equivocado — revisar si esas features fallan en prod.)
+  - **🧪 Cuenta DEMO sembrada para probar:** owner **Alberto PIN 1369** → `/owner` → tab **Materiales**
+    (5 materiales con stock, 4 asignaciones, 1 rotura) y `/montaje` (el owner ve todo). Montador
+    **PIN 4040** (rol gestor, acceso solo a `materiales`) → entra directo a `/montaje`. Módulos
+    `materiales/checklists/produccion` activados en el restaurante demo.
+  - **Pendiente del bloque:** previsión IA (aforo/temporada/temperatura), código de barras/báscula, multi-almacén
+    por hacienda con reparto. Crear bucket Storage `materiales` en Supabase (hay fallback a data-url mientras tanto).
 
 - **🎤 DECK presencial JJ + estructura real corregida — 12/06/2026**
   - **Deck presencial** construido en `apps/ia-rest`: ruta pública **`/propuesta/catering-jj-deck`** (en prod:
