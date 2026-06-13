@@ -41,3 +41,12 @@ VALUES
   ('gutierrez alcala maria:derecha','GUTIERREZ ALCALA, MARIA',NULL,'prop_luxury_busto','ALQUILER',21,19,309.38,300,320,'mensual',2,true),
   ('gutierrez alcala maria:izquierda','GUTIERREZ ALCALA, MARIA',NULL,'prop_busto_reform','ALQUILER',21,19,259.16,250,270,'mensual',2,true)
 ON CONFLICT (fingerprint) DO NOTHING;
+
+-- seed: gastos PERSONALES recurrentes (no pisos) → prop_personal, entran directos
+INSERT INTO public.gastos_reglas
+  (fingerprint, proveedor, nif_proveedor, propiedad, categoria, iva_porcentaje, irpf_porcentaje, importe_esperado, importe_min, importe_max, periodicidad, vistas, activa)
+VALUES
+  ('A85677342','CODEOSCOPIC S.A.','A85677342','prop_personal','OTRO',21,0,769.56,720,820,'variable',2,true),
+  ('A81864498','TIREA / CIMA','A81864498','prop_personal','OTRO',21,0,181.50,165,200,'puntual',2,true),
+  ('asisa','ASISA',NULL,'prop_personal','SEGURO',0,0,211.60,195,230,'mensual',2,true)
+ON CONFLICT (fingerprint) DO NOTHING;

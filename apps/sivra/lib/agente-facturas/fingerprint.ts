@@ -18,7 +18,10 @@ export function normalizaProveedor(s: string): string {
 }
 
 export function normalizaNif(s?: string | null): string {
-  return (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  let v = (s || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
+  // CIF/NIF español a veces con prefijo de país "ES" (p.ej. "ES A-81864498").
+  if (v.length === 11 && v.startsWith('ES')) v = v.slice(2)
+  return v
 }
 
 // Palabras clave que distinguen un mismo proveedor entre varias propiedades

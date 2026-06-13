@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { fingerprint, normalizaProveedor } from '../apps/sivra/lib/agente-facturas/fingerprint.ts'
+import { fingerprint, normalizaProveedor, normalizaNif } from '../apps/sivra/lib/agente-facturas/fingerprint.ts'
 import { evaluar, type Regla } from '../apps/sivra/lib/agente-facturas/reglas.ts'
 import { conciliar, mapeaPropiedadAlquiler } from '../apps/sivra/lib/agente-facturas/conciliar.ts'
 import { esPresupuesto } from '../apps/sivra/lib/agente-facturas/clasificar.ts'
@@ -24,6 +24,12 @@ test('fingerprint estable ante mayúsculas/acentos/espacios (vía NIF)', () => {
 test('normalizaProveedor quita acentos y formas jurídicas', () => {
   assert.equal(normalizaProveedor('Endesa Energía, S.A.'), 'endesa energia')
   assert.equal(normalizaProveedor('ENDESA ENERGIA SA'), 'endesa energia')
+})
+
+test('normalizaNif quita el prefijo de país ES del CIF', () => {
+  assert.equal(normalizaNif('ES A-81864498'), 'A81864498')
+  assert.equal(normalizaNif('A85677342'), 'A85677342')
+  assert.equal(normalizaNif('A-81864498'), 'A81864498')
 })
 
 // ── reglas / confianza ────────────────────────────────────────────────────────
