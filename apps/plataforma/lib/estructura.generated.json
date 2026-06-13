@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T18:54:30Z",
+  "generadoEn": "2026-06-13T21:49:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1682,6 +1682,7 @@
   },
   "tablasPorVertical": {
     "ia-rest": [
+      "arqueos_caja_empleado",
       "beo_eventos",
       "camareros",
       "clientes_fiscales",
