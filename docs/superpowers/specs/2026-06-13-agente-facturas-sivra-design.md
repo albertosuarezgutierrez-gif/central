@@ -200,7 +200,8 @@ refuerza regla), **Corregir y aprobar**, **Descartar** (borra). Botón **"Aproba
   el camino específico que ya existe (`app/api/expenses/parse-booking/route.ts`) en vez de la
   extracción genérica → más fiable para el mayor proveedor.
 - 📅 **Resumen mensual por Telegram:** "Junio: 12 gastos · 1.430€ · 2 en bandeja · falta la luz de
-  Luxury". Un vistazo y sabes que cuadra sin entrar a la app.
+  Luxury" **+ desglose de rentabilidad por piso** (ingresos − gastos por piso y neto total). Un
+  vistazo y sabes que cuadra sin entrar a la app. Cron día 1 → resume el mes anterior (cierre).
 
 ## 14bis. Mitigaciones de arranque (importantes)
 

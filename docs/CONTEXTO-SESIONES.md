@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst` — 13/06/2026**
+  Agente diario que lee **Gmail (IMAP) + carpeta de Drive**, archiva facturas y las imputa en
+  `gastos` de sivra, con **aprendizaje de recurrentes** y **modo mixto** (lo claro entra solo,
+  lo dudoso a bandeja). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-facturas-sivra*`.
+  - **Migración aplicada** a Supabase `wswbehlcuxqxyinousql` (`agente_facturas_2026_06_13`, aditiva):
+    `gastos` += `irpf_porcentaje/origen/fingerprint/motivo_revision` (irpf/confianza/revisado YA existían);
+    tablas nuevas `gastos_reglas` (memoria) y `agente_log` (auditoría); **seed** de los 2 alquileres
+    de Bustos Tavera 22 (Bajo Dcha→Luxury Busto, Bajo Izq→Busto Reform, ALQUILER, IVA 21% / IRPF 19%).
+  - **Bandeja = `gastos.revisado=false`** (no se creó tabla aparte). GET de gastos excluye `revisado=false`.
+  - **Código** (`apps/sivra`): `lib/agente-facturas/*` (fingerprint, reglas/confianza, conciliar IVA/IRPF,
+    extraer, gmail IMAP, drive list/get/archive, imputar, anomalías, avisos, procesar, resumen-mensual);
+    `lib/telegram.ts` (portado de ia-rest). Endpoints: `/api/expenses/agent/{scan,backfill,resumen-mensual}`,
+    `/api/expenses/pendientes(/[id])`. UI: `/expenses/pendientes` + badge en `/expenses`; desplegable
+    += **ALQUILER** y **Personal (no pisos)**. `scripts/drive-upload.gs` ampliado (list/get/archive).
+  - **Resumen mensual por Telegram** (cron día 1, mes anterior) con **desglose de rentabilidad por piso**
+    (ingresos − gastos; `properties.id` = `gastos.propiedad` = `prop_*`). Cron diario `scan` 06:00.
+  - **Verificado**: 11 tests `node:test` (incl. los 2 recibos reales) ✅, `tsc --noEmit` ✅,
+    `next build` ✅, query de rentabilidad probada contra BD real.
+  - **⚠️ PENDIENTE de despliegue (no testeable sin credenciales):** en el Vercel de **sivra** añadir
+    `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, apuntar `DRIVE_SCRIPT_URL` a la carpeta real y poner su
+    `ROOT_FOLDER_ID` en `drive-upload.gs`; (opcional) `GMAIL_FACTURAS_LABEL` + regla de Gmail.
+    Lanzar el **backfill primero en dry-run** (`/api/expenses/agent/backfill?secret=...`) y luego `&commit=1`.
+    Deps nuevas: `imapflow`, `mailparser`, `@types/mailparser`.
+
 - **📦 module-materiales Fase B — PR #189 mergeado — 12/06/2026**
   Implementación completa de la Fase B del plan `module-materiales` (spec en `.claude/plans/polished-growing-stonebraker.md`):
   - **8 APIs nuevas** en `apps/ia-rest/src/app/api/materiales/`:
