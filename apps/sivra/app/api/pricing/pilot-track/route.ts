@@ -11,7 +11,7 @@ export const maxDuration = 60
 // GET /api/pricing/pilot-track  (cron diario ~09:15)
 //
 // Agente de seguimiento del piloto de precio dinámico. Por cada piso con pilot_enabled=true:
-//   - Mide ocupación/noches libres a 60d, días sin reserva NUEVA, € extra vs PriceLabs, ritmo (pace),
+//   - Mide ocupación/noches libres a 90d, días sin reserva NUEVA, € extra vs PriceLabs, ritmo (pace),
 //     y mediana del mercado (precio huésped).
 //   - Decide un veredicto (lib/pilot-track) con anti-falso-positivo y diagnóstico (caros / sin demanda).
 //   - Solo PROPONE bajadas (no escribe precio en Smoobu); persiste histórico y avisa al propietario.
@@ -51,7 +51,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, nota: "ningún piso con pilot_enabled", pisos: [] })
   }
 
-  // Stats de la ventana de 60d (último snapshot por piso). window_nights = cobertura real con dato
+  // Stats de la ventana de 90d (último snapshot por piso). window_nights = cobertura real con dato
   // (puede ser < 60 si el snapshot aún no se amplió); occupancy solo sobre filas con `available`.
   const win = await prisma.$queryRaw<{
     property_id: string; window_nights: number; free_nights: number; occupancy_60: number | null
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
       ROUND(1 - AVG(rs.available) FILTER (WHERE rs.available IS NOT NULL)::numeric, 2) AS occupancy_60
     FROM rate_snapshots rs
     JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
-    WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60
+    WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 90
     GROUP BY rs.property_id`)
 
   // Noches REALMENTE reservadas en la ventana (cruce con incomes), para distinguir
