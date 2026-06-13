@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
   const today        = new Date()
   const startDate    = fmtDate(today)
-  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 60)
+  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 90)
   const endDate      = fmtDate(endDay)
   const snapshotDate = startDate
 
@@ -45,15 +45,21 @@ export async function GET(req: NextRequest) {
       const plRates: Record<string, { price: number; available: number; min_length_of_stay: number }> =
         (await res.json()).data?.[prop.smoobuId] ?? {}
 
-      // Iterar la ventana (60 días) y hacer upsert individual
+      // Construir las filas de la ventana (90 días) y hacer UN solo upsert multi-fila por piso
+      // (con 90 días, 1 INSERT por día serían ~360 round-trips → riesgo de timeout del cron).
+      const rows: Prisma.Sql[] = []
       const cur = new Date(today)
       while (cur <= endDay) {
         const dateStr = fmtDate(cur)
         const pl      = plRates[dateStr]
+        rows.push(Prisma.sql`(${prop.propId}, ${dateStr}::date, ${snapshotDate}::date, ${pl?.price != null ? Math.round(pl.price) : null}::integer, ${calcOurs(prop.base, dateStr)}::integer, ${pl?.available != null ? (pl.available ? 1 : 0) : null}::smallint, ${pl?.min_length_of_stay ?? null}::smallint)`)
+        cur.setDate(cur.getDate() + 1)
+      }
+      if (rows.length) {
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO rate_snapshots
             (property_id, rate_date, snapshot_date, price_pricelabs, price_ours, available, min_stay)
-          VALUES (${prop.propId}, ${dateStr}::date, ${snapshotDate}::date, ${pl?.price != null ? Math.round(pl.price) : null}::integer, ${calcOurs(prop.base, dateStr)}::integer, ${pl?.available != null ? (pl.available ? 1 : 0) : null}::smallint, ${pl?.min_length_of_stay ?? null}::smallint)
+          VALUES ${Prisma.join(rows)}
           ON CONFLICT (property_id, rate_date, snapshot_date)
           DO UPDATE SET
             price_pricelabs = EXCLUDED.price_pricelabs,
@@ -62,8 +68,7 @@ export async function GET(req: NextRequest) {
             min_stay        = EXCLUDED.min_stay,
             updated_at      = NOW()
         `)
-        upserted++
-        cur.setDate(cur.getDate() + 1)
+        upserted += rows.length
       }
     } catch (e) {
       errors.push(`${prop.propId}: ${String(e).slice(0, 100)}`)
