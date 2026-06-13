@@ -33,5 +33,13 @@ export async function GET(req: NextRequest) {
   const filas = (data ?? []) as FilaArqueoEmpleado[]
   const resumen = resumirDescuadresEmpleado(filas)
 
-  return NextResponse.json({ ok: true, desde, hasta, resumen, detalle: data ?? [] })
+  // Umbrales individuales (tolerancia por empleado) para mostrarlos/editarlos en la UI.
+  const { data: cfg } = await supabase
+    .from('config_contabilidad').select('umbral_descuadre, umbrales_empleado').eq('local_id', rid).maybeSingle()
+
+  return NextResponse.json({
+    ok: true, desde, hasta, resumen, detalle: data ?? [],
+    umbral_global: Number(cfg?.umbral_descuadre ?? 5),
+    umbrales_empleado: (cfg?.umbrales_empleado as Record<string, number> | null) ?? {},
+  })
 }

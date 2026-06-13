@@ -169,8 +169,14 @@ export async function POST(req: NextRequest) {
   // 4b. Motivo obligatorio: si un empleado supera el umbral debe llevar justificación
   // (en notas_por_empleado[camarero_id|'general'] o, como respaldo, en las notas globales).
   const umbral = Number(cfgData?.umbral_descuadre ?? 5)
+  // Tolerancia por empleado: umbral individual con fallback al global.
+  const umbralesEmpleado: Record<string, number> = (cfgData?.umbrales_empleado as Record<string, number> | null) ?? {}
+  const umbralDe = (cid: string | null) => {
+    const v = cid != null ? Number(umbralesEmpleado[cid]) : NaN
+    return Number.isFinite(v) ? v : umbral
+  }
   const pendientes = cuadre_por_empleado
-    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbral)
+    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbralDe(e.camarero_id))
     .filter(e => {
       const k = e.camarero_id ?? 'general'
       return !(notasPorEmpleado[k]?.trim()) && !(notas?.trim())
@@ -214,7 +220,7 @@ export async function POST(req: NextRequest) {
 
   // 5c. Alertas: empleados que superan el umbral de descuadre → push al owner/gestor.
   const alertas = cuadre_por_empleado
-    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbral)
+    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbralDe(e.camarero_id))
     .map(e => ({ camarero_id: e.camarero_id, camarero_nombre: e.camarero_nombre, diferencia_caja: e.cuadre.diferencia_caja, recurrente: false }))
 
   if (alertas.length) {

@@ -567,6 +567,8 @@ function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
   const [hasta, setHasta] = useState(hoy.toISOString().split('T')[0])
   const [resumen, setResumen] = useState<ResumenEmp[]>([])
   const [detalle, setDetalle] = useState<FilaEmp[]>([])
+  const [umbrales, setUmbrales] = useState<Record<string, number>>({})
+  const [umbralGlobal, setUmbralGlobal] = useState(5)
   const [loading, setLoading] = useState(false)
   const [cargado, setCargado] = useState(false)
 
@@ -575,10 +577,21 @@ function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
     try {
       const r = await fetch(`/api/owner/contabilidad/arqueos-empleado?desde=${desde}&hasta=${hasta}`, { headers: sh() })
       const d = await r.json()
-      if (d.ok) { setResumen(d.resumen ?? []); setDetalle(d.detalle ?? []) }
+      if (d.ok) {
+        setResumen(d.resumen ?? []); setDetalle(d.detalle ?? [])
+        setUmbrales(d.umbrales_empleado ?? {}); setUmbralGlobal(d.umbral_global ?? 5)
+      }
       setCargado(true)
     } finally { setLoading(false) }
   }, [desde, hasta, sh])
+
+  const guardarUmbral = async (camareroId: string, valor: string) => {
+    setUmbrales(prev => { const n = { ...prev }; if (valor.trim() === '') delete n[camareroId]; else n[camareroId] = Number(valor); return n })
+    await fetch('/api/owner/contabilidad/umbral-empleado', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ camarero_id: camareroId, umbral: valor.trim() === '' ? null : Number(valor) }),
+    })
+  }
 
   useEffect(() => { cargar() }, [cargar])
 
@@ -620,8 +633,8 @@ function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {/* Cabecera */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .6fr 1fr .8fr .8fr 1.2fr', gap: 6, padding: '0 8px' }}>
-            {['Empleado', 'Cierres', 'Acumulado', 'Media', 'Peor', 'Tendencia'].map(h => (
+          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr .5fr .9fr .7fr .7fr .7fr 1fr', gap: 6, padding: '0 8px' }}>
+            {['Empleado', 'Cierres', 'Acumulado', 'Media', 'Peor', `Umbral (${fmt(umbralGlobal)})`, 'Tendencia'].map(h => (
               <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
             ))}
           </div>
@@ -629,7 +642,7 @@ function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
             const serie = detalle.filter(f => f.camarero_id === r.camarero_id && f.conteo_realizado)
             const maxAbs = Math.max(1, ...serie.map(s => Math.abs(s.diferencia_caja)))
             return (
-              <div key={r.camarero_id ?? 'general'} style={{ display: 'grid', gridTemplateColumns: '1.4fr .6fr 1fr .8fr .8fr 1.2fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '8px' }}>
+              <div key={r.camarero_id ?? 'general'} style={{ display: 'grid', gridTemplateColumns: '1.3fr .5fr .9fr .7fr .7fr .7fr 1fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '8px' }}>
                 <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
                   {r.camarero_nombre ?? 'Caja general'}
                   {r.patron_recurrente && (
@@ -640,6 +653,13 @@ function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
                 <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: col(r.descuadre_total) }}>{fmt(r.descuadre_total)}</div>
                 <div style={{ fontFamily: SN, fontSize: 12, color: col(r.descuadre_medio) }}>{fmt(r.descuadre_medio)}</div>
                 <div style={{ fontFamily: SN, fontSize: 12, color: col(r.peor_descuadre) }}>{fmt(r.peor_descuadre)}</div>
+                <div>
+                  {r.camarero_id ? (
+                    <input type="number" inputMode="decimal" defaultValue={umbrales[r.camarero_id] ?? ''} placeholder={String(umbralGlobal)}
+                      onBlur={e => guardarUmbral(r.camarero_id!, e.target.value)}
+                      style={{ width: 56, fontFamily: SN, fontSize: 11, padding: '3px 5px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none' }} />
+                  ) : <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>—</span>}
+                </div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 26 }}>
                   {serie.slice(-14).map((s, i) => (
                     <div key={i} title={`${s.fecha}: ${fmt(s.diferencia_caja)}`}
