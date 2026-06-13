@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T22:03:53Z",
+  "generadoEn": "2026-06-13T22:10:59Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -775,7 +775,7 @@
     "contabilidad": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 8
+        "evidencias": 9
       },
       "ialimp": {
         "presente": true,
@@ -883,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 158
+        "evidencias": 159
       },
       "ialimp": {
         "presente": true,
@@ -1139,6 +1139,7 @@
       "/api/owner/contabilidad/invitar",
       "/api/owner/contabilidad/iva",
       "/api/owner/contabilidad/resumen",
+      "/api/owner/contabilidad/tesoreria",
       "/api/owner/contrato",
       "/api/owner/copiloto",
       "/api/owner/dashboard",
@@ -1730,6 +1731,7 @@
       "mensajes_turno",
       "mesas",
       "metodos_pago",
+      "movimientos_tesoreria",
       "pedidos_online",
       "pin_attempts",
       "productos_86",
@@ -2151,7 +2153,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 737,
+    "apis": 738,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
