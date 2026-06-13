@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T22:16:00Z",
+  "generadoEn": "2026-06-13T22:19:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -377,7 +377,7 @@
     "module-contabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -1106,6 +1106,7 @@
       "/api/monitor/alert",
       "/api/onboarding/complete",
       "/api/onboarding/extract-carta",
+      "/api/operador/descuadres-empleado",
       "/api/operador/directorio",
       "/api/operador/evento-personas",
       "/api/operador/financiero",
@@ -1574,6 +1575,7 @@
       "/api/admin/clientes",
       "/api/admin/clientes/[vertical]/[id]",
       "/api/admin/clientes/[vertical]/[id]/modulos",
+      "/api/admin/descuadres-iarest",
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
       "/api/admin/login",
@@ -2154,7 +2156,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 739,
+    "apis": 741,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
