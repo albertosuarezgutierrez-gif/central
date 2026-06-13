@@ -453,6 +453,92 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
 
       {/* Auditoría: histórico de descuadres por empleado */}
       <HistoricoEmpleadoPanel sh={sh} />
+
+      {/* Tesorería: caja fuerte / banco */}
+      <TesoreriaPanel sh={sh} showToast={showToast} />
+    </div>
+  )
+}
+
+// ── Tesorería (caja fuerte ↔ banco) ───────────────────────────────────────────
+interface MovTes { id: string; tipo: string; importe: number; referencia: string | null; fecha: string; notas: string | null }
+const TES_LABEL: Record<string, string> = {
+  ingreso_caja_fuerte: 'Cajón → caja fuerte',
+  retirada_banco: 'Caja fuerte → banco',
+  entrada_banco: 'Entrada banco',
+  ajuste: 'Ajuste',
+}
+
+function TesoreriaPanel({ sh, showToast }: { sh: () => Record<string, string>; showToast: (m: string) => void }) {
+  const hoy = new Date()
+  const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
+  const [desde, setDesde] = useState(primero)
+  const [hasta, setHasta] = useState(hoy.toISOString().split('T')[0])
+  const [saldo, setSaldo] = useState(0)
+  const [movs, setMovs] = useState<MovTes[]>([])
+  const [tipo, setTipo] = useState('ingreso_caja_fuerte')
+  const [importe, setImporte] = useState('')
+  const [ref, setRef] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const cargar = useCallback(async () => {
+    const r = await fetch(`/api/owner/contabilidad/tesoreria?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+    const d = await r.json()
+    if (d.ok) { setSaldo(d.saldo_caja_fuerte); setMovs(d.movimientos ?? []) }
+  }, [desde, hasta, sh])
+  useEffect(() => { cargar() }, [cargar])
+
+  const crear = async () => {
+    if (!importe.trim()) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/owner/contabilidad/tesoreria', {
+        method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, importe: Number(importe), referencia: ref }),
+      })
+      const d = await r.json()
+      if (d.ok) { showToast('✅ Movimiento de tesorería registrado'); setImporte(''); setRef(''); cargar() }
+      else showToast('Error: ' + d.error)
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tesorería · caja fuerte / banco</div>
+        <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink }}>Caja fuerte: {fmt(saldo)}</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+        <select value={tipo} onChange={e => setTipo(e.target.value)} style={inp}>
+          {Object.entries(TES_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <input type="number" inputMode="decimal" value={importe} onChange={e => setImporte(e.target.value)} placeholder="Importe €" style={{ ...inp, width: 110 }} />
+        <input type="text" value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia / remesa" style={{ ...inp, width: 160 }} />
+        <button onClick={crear} disabled={loading} style={{ ...btn, opacity: loading ? .6 : 1 }}>{loading ? '…' : 'Registrar'}</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+        <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={inp} />
+        <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>→</span>
+        <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={inp} />
+        <button onClick={cargar} style={btn}>Ver</button>
+      </div>
+
+      {!movs.length ? (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Sin movimientos de tesorería en el rango.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {movs.map(m => (
+            <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 0.8fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '6px 8px' }}>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>{m.fecha}</div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink }}>{TES_LABEL[m.tipo] ?? m.tipo}</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3 }}>{m.referencia ?? ''}</div>
+              <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, textAlign: 'right' }}>{fmt(m.importe)}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
