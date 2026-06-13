@@ -1,93 +1,123 @@
 /**
- * ROI Intranet — Google Apps Script
- * Web App para subir facturas/recibos a Google Drive desde Vercel
+ * ROI Intranet — Google Apps Script (Drive)
+ * Web App para subir, listar, leer y archivar facturas en Google Drive.
  *
  * SETUP:
- * 1. Abre script.google.com → Nuevo proyecto → pega este código
- * 2. Edita FOLDER_ID con el ID de tu carpeta "Facturas Bercell" en Drive
+ * 1. script.google.com → Nuevo proyecto → pega este código
+ * 2. Edita ROOT_FOLDER_ID con el ID de tu carpeta de facturas en Drive
  * 3. Implementar → Nueva implementación → Web app
  *    - Ejecutar como: Yo (tu cuenta Google)
  *    - Acceso: Cualquier persona (Anyone)
- * 4. Copia la URL de implementación → Vercel env: DRIVE_SCRIPT_URL=<url>
+ * 4. Copia la URL → Vercel env (sivra): DRIVE_SCRIPT_URL=<url>
+ *
+ * API (POST JSON con campo "action"):
+ *  - upload  { fileBase64|base64Data, fileName, mimeType, fecha? } → { ok, fileId, url, carpeta, nombre }
+ *  - list    {}                                       → { ok, files:[{id,nombre,mime}] }  (PDFs en RAÍZ, sin archivar)
+ *  - get     { fileId }                               → { ok, fileBase64, mimeType, nombre }
+ *  - archive { fileId, fecha }                        → { ok, carpeta }  (mueve a AÑO/MES)
  */
 
 // ── CONFIGURACIÓN ──────────────────────────────────────────────────────────────
-const ROOT_FOLDER_ID = "REEMPLAZA_CON_ID_CARPETA_DRIVE"; // p.ej: "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms"
-const SUBFOLDER_BY_YEAR = true;   // Crea subcarpetas por año: 2026/, 2025/...
-const SUBFOLDER_BY_MONTH = true;  // Crea subcarpetas por mes: 01-Enero/, etc.
+const ROOT_FOLDER_ID = "REEMPLAZA_CON_ID_CARPETA_DRIVE";
+const SUBFOLDER_BY_YEAR = true;
+const SUBFOLDER_BY_MONTH = true;
 
 const MONTH_NAMES = [
   "01-Enero","02-Febrero","03-Marzo","04-Abril","05-Mayo","06-Junio",
   "07-Julio","08-Agosto","09-Septiembre","10-Octubre","11-Noviembre","12-Diciembre"
 ];
 
-// ── HANDLER PRINCIPAL ──────────────────────────────────────────────────────────
-function doPost(e) {
-  try {
-    // CORS preflight
-    const output = ContentService.createTextOutput();
-    output.setMimeType(ContentService.MimeType.JSON);
-
-    const data = JSON.parse(e.postData.contents);
-    const { fileBase64, fileName, mimeType, fecha } = data;
-
-    if (!fileBase64 || !fileName) {
-      output.setContent(JSON.stringify({ ok: false, error: "Faltan campos: fileBase64 o fileName" }));
-      return output;
-    }
-
-    // Determinar carpeta destino
-    const rootFolder = DriveApp.getFolderById(ROOT_FOLDER_ID);
-    let targetFolder = rootFolder;
-
-    if (fecha) {
-      const d = new Date(fecha);
-      const year = d.getFullYear().toString();
-      const monthIdx = d.getMonth(); // 0-based
-
-      if (SUBFOLDER_BY_YEAR) {
-        targetFolder = getOrCreateSubfolder(targetFolder, year);
-      }
-      if (SUBFOLDER_BY_MONTH) {
-        targetFolder = getOrCreateSubfolder(targetFolder, MONTH_NAMES[monthIdx]);
-      }
-    }
-
-    // Crear archivo en Drive
-    const bytes = Utilities.base64Decode(fileBase64);
-    const blob = Utilities.newBlob(bytes, mimeType || "application/pdf", fileName);
-    const file = targetFolder.createFile(blob);
-
-    // Hacer el archivo accesible con link
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-    output.setContent(JSON.stringify({
-      ok: true,
-      fileId: file.getId(),
-      url: file.getUrl(),
-      carpeta: targetFolder.getName(),
-      nombre: file.getName(),
-    }));
-    return output;
-
-  } catch (err) {
-    const output = ContentService.createTextOutput();
-    output.setMimeType(ContentService.MimeType.JSON);
-    output.setContent(JSON.stringify({ ok: false, error: err.toString() }));
-    return output;
-  }
-}
-
-// Permite testear desde el navegador
-function doGet(e) {
+function json_(obj) {
   const output = ContentService.createTextOutput();
   output.setMimeType(ContentService.MimeType.JSON);
-  output.setContent(JSON.stringify({ ok: true, status: "ROI Drive Upload Script activo" }));
+  output.setContent(JSON.stringify(obj));
   return output;
 }
 
-// ── HELPERS ────────────────────────────────────────────────────────────────────
-function getOrCreateSubfolder(parent, name) {
+function doPost(e) {
+  try {
+    const data = JSON.parse(e.postData.contents);
+    const action = data.action || "upload";
+    if (action === "upload")  return doUpload_(data);
+    if (action === "list")    return doList_();
+    if (action === "get")     return doGet_(data);
+    if (action === "archive") return doArchive_(data);
+    return json_({ ok: false, error: "acción desconocida: " + action });
+  } catch (err) {
+    return json_({ ok: false, error: err.toString() });
+  }
+}
+
+function doGet(e) {
+  return json_({ ok: true, status: "ROI Drive Script activo" });
+}
+
+// ── UPLOAD ──────────────────────────────────────────────────────────────────────
+function doUpload_(data) {
+  const fileBase64 = data.fileBase64 || data.base64Data;
+  const { fileName, mimeType, fecha } = data;
+  if (!fileBase64 || !fileName) return json_({ ok: false, error: "Faltan campos: fileBase64 o fileName" });
+
+  const targetFolder = carpetaDestino_(fecha);
+  const bytes = Utilities.base64Decode(fileBase64);
+  const blob = Utilities.newBlob(bytes, mimeType || "application/pdf", fileName);
+  const file = targetFolder.createFile(blob);
+  file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+  return json_({ ok: true, fileId: file.getId(), url: file.getUrl(), carpeta: targetFolder.getName(), nombre: file.getName() });
+}
+
+// ── LIST (PDFs en la raíz, aún sin archivar por año/mes) ─────────────────────────
+function doList_() {
+  const root = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  const it = root.getFiles();
+  const files = [];
+  while (it.hasNext()) {
+    const f = it.next();
+    const mime = f.getMimeType();
+    if (mime === "application/pdf" || mime.indexOf("image/") === 0) {
+      files.push({ id: f.getId(), nombre: f.getName(), mime: mime });
+    }
+  }
+  return json_({ ok: true, files: files });
+}
+
+// ── GET (contenido en base64) ────────────────────────────────────────────────────
+function doGet_(data) {
+  if (!data.fileId) return json_({ ok: false, error: "Falta fileId" });
+  const file = DriveApp.getFileById(data.fileId);
+  const blob = file.getBlob();
+  return json_({
+    ok: true,
+    fileBase64: Utilities.base64Encode(blob.getBytes()),
+    mimeType: blob.getContentType(),
+    nombre: file.getName(),
+  });
+}
+
+// ── ARCHIVE (mover a AÑO/MES) ────────────────────────────────────────────────────
+function doArchive_(data) {
+  if (!data.fileId) return json_({ ok: false, error: "Falta fileId" });
+  const file = DriveApp.getFileById(data.fileId);
+  const target = carpetaDestino_(data.fecha || new Date().toISOString());
+  file.moveTo(target);
+  return json_({ ok: true, carpeta: target.getName() });
+}
+
+// ── HELPERS ──────────────────────────────────────────────────────────────────────
+function carpetaDestino_(fecha) {
+  let target = DriveApp.getFolderById(ROOT_FOLDER_ID);
+  if (fecha) {
+    const d = new Date(fecha);
+    if (!isNaN(d.getTime())) {
+      if (SUBFOLDER_BY_YEAR)  target = getOrCreateSubfolder_(target, d.getFullYear().toString());
+      if (SUBFOLDER_BY_MONTH) target = getOrCreateSubfolder_(target, MONTH_NAMES[d.getMonth()]);
+    }
+  }
+  return target;
+}
+
+function getOrCreateSubfolder_(parent, name) {
   const existing = parent.getFoldersByName(name);
   if (existing.hasNext()) return existing.next();
   return parent.createFolder(name);

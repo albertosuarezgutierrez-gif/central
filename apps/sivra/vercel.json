@@ -54,6 +54,10 @@
     {
       "path": "/api/limpiadoras/alerta-ventana",
       "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/expenses/agent/scan",
+      "schedule": "0 6 * * *"
     }
   ]
 }

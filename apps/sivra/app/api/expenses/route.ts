@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Prisma } from '@prisma/client';
+import { fingerprint } from '@/lib/agente-facturas/fingerprint';
 
 export const dynamic = 'force-dynamic';
 
@@ -12,7 +13,8 @@ export async function GET(req: NextRequest) {
     const propertyId = searchParams.get('propertyId');
     const category   = searchParams.get('category');
 
-    const conditions: Prisma.Sql[] = [Prisma.sql`1=1`]
+    // Excluye los gastos en bandeja (revisado=false). Los legacy (revisado NULL) sí cuentan.
+    const conditions: Prisma.Sql[] = [Prisma.sql`(revisado IS DISTINCT FROM false)`]
     if (year)       conditions.push(Prisma.sql`EXTRACT(YEAR  FROM fecha) = ${parseInt(year)}`)
     if (month)      conditions.push(Prisma.sql`EXTRACT(MONTH FROM fecha) = ${parseInt(month)}`)
     if (propertyId) conditions.push(Prisma.sql`propiedad = ${propertyId}`)
@@ -21,7 +23,7 @@ export async function GET(req: NextRequest) {
 
     const gastos = await prisma.$queryRaw<any[]>(Prisma.sql`
       SELECT id, fecha, proveedor, concepto, categoria, propiedad,
-        base_imponible, iva, iva_porcentaje, total, notas,
+        base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total, notas,
         drive_url, carpeta_drive, drive_file_name, numero_factura, created_at
       FROM gastos
       ${where}
@@ -49,8 +51,11 @@ export async function POST(req: NextRequest) {
     const base_imponible = formData.get('base_imponible') ? parseFloat(formData.get('base_imponible') as string) : null;
     const iva            = formData.get('iva')            ? parseFloat(formData.get('iva')            as string) : null;
     const iva_porcentaje = formData.get('iva_porcentaje') ? parseFloat(formData.get('iva_porcentaje') as string) : null;
+    const irpf           = formData.get('irpf')           ? parseFloat(formData.get('irpf')           as string) : null;
+    const irpf_porcentaje = formData.get('irpf_porcentaje') ? parseFloat(formData.get('irpf_porcentaje') as string) : null;
     const numero_factura = (formData.get('numero_factura') as string) || null;
     const nif_proveedor  = (formData.get('nif_proveedor')  as string) || null;
+    const fp = fingerprint({ nif_proveedor, proveedor, concepto });
 
     if (!fecha || !total) return NextResponse.json({ error: 'Fecha y total obligatorios' }, { status: 400 });
 
@@ -84,14 +89,16 @@ export async function POST(req: NextRequest) {
     await prisma.$executeRaw(Prisma.sql`
       INSERT INTO gastos
         (fecha, proveedor, concepto, categoria, propiedad,
-         base_imponible, iva, iva_porcentaje, total, notas,
-         drive_url, carpeta_drive, drive_file_name, numero_factura, nif_proveedor)
+         base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total, notas,
+         drive_url, carpeta_drive, drive_file_name, numero_factura, nif_proveedor,
+         fingerprint, origen, revisado)
       VALUES
         (${fecha}::date, ${proveedor}, ${concepto}, ${categoria}, ${propiedad},
-         ${base_imponible}, ${iva}, ${iva_porcentaje}, ${total}, ${notas},
-         ${driveUrl}, ${carpetaDrive}, ${driveFileName}, ${numero_factura}, ${nif_proveedor})
+         ${base_imponible}, ${iva}, ${iva_porcentaje}, ${irpf}, ${irpf_porcentaje}, ${total}, ${notas},
+         ${driveUrl}, ${carpetaDrive}, ${driveFileName}, ${numero_factura}, ${nif_proveedor},
+         ${fp}, 'manual', true)
     `)
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, ok: true });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 });
   }
