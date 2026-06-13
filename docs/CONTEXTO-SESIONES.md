@@ -32,10 +32,17 @@
     columnas `confirmado_por/at`).
   - **Verificado**: 23/23 tests, `tsc` limpio, eslint sin errores (solo warnings). Migración aplicada y
     comprobada por MCP.
-  - **PENDIENTE (Bloque B + cabos de A)**: UI empleado-facing de firma y conteo ciego en el POS;
-    **Bloque B** (conciliación tarjeta, tesorería/caja fuerte, abastecimiento de cambio, tolerancia por
-    empleado, consolidado multi-local en `apps/plataforma`). Ver plan aprobado del épico. Tras esto:
-    roadmap #2 control horario.
+  - **Bloque B completado (fases 5-9)**: F5 conciliación de tarjeta (`arqueos_caja.tarjeta_liquidada/
+    diferencia_tarjeta`); F6 tesorería (`movimientos_tesoreria` + endpoint GET/POST + panel saldo caja
+    fuerte); F7 abastecimiento de cambio (`config_contabilidad.min_monedas` + aviso en cierre); F8
+    tolerancia por empleado (`config_contabilidad.umbrales_empleado` + endpoint `umbral-empleado` +
+    columna editable en histórico; `umbralDe()` en validación/alertas); F9 consolidado multi-local:
+    endpoint operador `GET /api/operador/descuadres-empleado` en ia-rest + `apps/plataforma`
+    (`lib/descuadres.ts` + `GET /api/admin/descuadres-iarest`, vía puerto HTTP con OPERADOR_SHARED_SECRET).
+    Migraciones aplicadas por MCP. ia-rest `tsc` limpio (los errores `tsc` de plataforma son preexistentes,
+    no gatean su build).
+  - **PENDIENTE (cabos)**: UI empleado-facing de firma/conteo ciego en el POS (`/edge`); página visual
+    del consolidado en el god-panel de plataforma (el data path ya está). Tras esto: roadmap #2 control horario.
 
 - **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
   A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
