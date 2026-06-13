@@ -80,16 +80,36 @@ export async function POST(req: NextRequest) {
   // conteo físico (desglose manual de la UI o el último arqueo/cierre del día).
   const { data: movsCaja } = await supabase
     .from('movimientos_caja')
-    .select('tipo, importe, desglose_monedas, camarero_id, camarero_nombre, created_at')
+    .select('tipo, importe, desglose_monedas, camarero_id, camarero_nombre, turno_id, created_at')
     .eq('local_id', rid)
     .gte('created_at', `${fecha}T00:00:00`)
     .lt('created_at',  `${fecha}T23:59:59`)
     .order('created_at', { ascending: true })
 
-  const movs = (movsCaja ?? []) as MovimientoCaja[]
+  const movs = (movsCaja ?? []) as (MovimientoCaja & { turno_id?: string | null })[]
+
+  // Cruce con turno: los movimientos sin camarero asignado se atribuyen al titular
+  // de su turno (para que no caigan en "Caja general" en el cuadre por empleado).
+  const turnoIds = [...new Set(movs.filter(m => !m.camarero_id && m.turno_id).map(m => m.turno_id!))]
+  if (turnoIds.length) {
+    const { data: turnos } = await supabase.from('turnos').select('id, camarero_id').in('id', turnoIds)
+    const turnoCam = new Map((turnos ?? []).map(t => [t.id, t.camarero_id as string | null]))
+    const camIds = [...new Set((turnos ?? []).map(t => t.camarero_id).filter(Boolean) as string[])]
+    const { data: cams } = camIds.length
+      ? await supabase.from('camareros').select('id, nombre').in('id', camIds)
+      : { data: [] as { id: string; nombre: string }[] }
+    const camNombre = new Map((cams ?? []).map(c => [c.id, c.nombre as string]))
+    for (const m of movs) {
+      if (!m.camarero_id && m.turno_id) {
+        const cid = turnoCam.get(m.turno_id)
+        if (cid) { m.camarero_id = cid; m.camarero_nombre = camNombre.get(cid) ?? m.camarero_nombre ?? null }
+      }
+    }
+  }
+
   // Modo caja única: cuadre global (se persiste en arqueos_caja).
   const cuadre = calcularCuadreCaja(movs, { fondoFinalManual, desgloseManual })
-  // Modo caja por empleado: desglose informativo (cada uno cuenta su cajón en movimientos_caja).
+  // Modo caja por empleado: cuadre individual (se persiste en arqueos_caja_empleado).
   const cuadre_por_empleado = calcularCuadrePorEmpleado(movs)
 
   // 4. Cargar config contable
@@ -145,6 +165,28 @@ export async function POST(req: NextRequest) {
     .upsert({ ...arqueoInput, estado: 'borrador', cerrado_por: session.id, notas }, { onConflict: 'local_id,fecha' })
     .select('id').single()
   if (arqueoErr) return NextResponse.json({ error: arqueoErr.message }, { status: 500 })
+
+  // 5b. Persistir el cuadre POR EMPLEADO (auditoría individual).
+  // delete-then-insert por arqueo_id → idempotente al recerrar el mismo día.
+  await supabase.from('arqueos_caja_empleado').delete().eq('arqueo_id', arqueo.id)
+  if (cuadre_por_empleado.length) {
+    await supabase.from('arqueos_caja_empleado').insert(
+      cuadre_por_empleado.map(e => ({
+        arqueo_id: arqueo.id,
+        local_id: rid,
+        fecha,
+        camarero_id: e.camarero_id,
+        camarero_nombre: e.camarero_nombre,
+        fondo_inicial:   e.cuadre.fondo_inicial,
+        cobros_efectivo: e.cuadre.cobros_efectivo,
+        salidas_caja:    e.cuadre.salidas_caja,
+        saldo_teorico:   e.cuadre.saldo_teorico,
+        fondo_final:     e.cuadre.fondo_final,
+        diferencia_caja: e.cuadre.diferencia_caja,
+        conteo_realizado: e.cuadre.conteo_realizado,
+      })),
+    )
+  }
 
   // 6. Generar asiento contable
   const numAsiento = (await supabase.rpc('siguiente_num_asiento', { p_restaurante_id: rid })).data as number ?? 1
