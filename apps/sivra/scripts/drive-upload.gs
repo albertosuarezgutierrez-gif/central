@@ -18,13 +18,15 @@
  */
 
 // ── CONFIGURACIÓN ──────────────────────────────────────────────────────────────
-const ROOT_FOLDER_ID = "REEMPLAZA_CON_ID_CARPETA_DRIVE";
-const SUBFOLDER_BY_YEAR = true;
-const SUBFOLDER_BY_MONTH = true;
+// Carpeta "ALBERTO 2026 PERSONAL (SEGUROS)" de Drive (ya es del año 2026, con
+// subcarpetas por mes en MAYÚSCULAS: ENERO, FEBRERO… → se respeta esa estructura).
+const ROOT_FOLDER_ID = "1pyW0_QNOCYuD_0az13sP7MpDyhhNVXt7";
+const SUBFOLDER_BY_YEAR = false;  // la carpeta raíz ya es la del año
+const SUBFOLDER_BY_MONTH = true;  // archiva en ENERO/FEBRERO/… como ya las tienes
 
 const MONTH_NAMES = [
-  "01-Enero","02-Febrero","03-Marzo","04-Abril","05-Mayo","06-Junio",
-  "07-Julio","08-Agosto","09-Septiembre","10-Octubre","11-Noviembre","12-Diciembre"
+  "ENERO","FEBRERO","MARZO","ABRIL","MAYO","JUNIO",
+  "JULIO","AGOSTO","SEPTIEMBRE","OCTUBRE","NOVIEMBRE","DICIEMBRE"
 ];
 
 function json_(obj) {
