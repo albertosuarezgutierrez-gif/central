@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
-import { eventFactor } from "@/lib/pricing-calendar"
+import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams
   const onlyProp = sp.get("property")               // opcional: aplicar a un solo piso
-  const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), 60)
+  const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), PRICING_HORIZON_DAYS)
   let dryRun = sp.get("dryRun") !== "false"         // por defecto TRUE (no escribe)
 
   // 🔴 Botón de pánico / pausa global: si está pausado, NUNCA escribe (degrada a dry-run).

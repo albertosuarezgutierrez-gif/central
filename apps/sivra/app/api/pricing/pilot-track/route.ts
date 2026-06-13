@@ -5,6 +5,7 @@ import { isCronAuthorized } from "@/lib/cron-auth"
 import { notifyOwner } from "@/lib/pricing-notify"
 import { evaluatePilot, type PilotVerdict } from "@/lib/pilot-track"
 import { computeRecommendation, recommendedBaseFromEngine, percentile } from "@/lib/pricing-engine"
+import { EVENTS_LAST_DATE } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
     GROUP BY rs.property_id`)
 
   // Chivato de horizonte: hasta qué día hay disponibilidad real (available=1) en el último snapshot.
-  // Acotado al horizonte del snapshot (90d), así que un piso abierto >90d dará ~90 (sin falsa alarma).
+  // Acotado al horizonte del snapshot (PRICING_HORIZON_DAYS); un piso abierto hasta ahí dará ~ese tope.
   const horizon = await prisma.$queryRaw<{ property_id: string; open_horizon_days: number | null }[]>(Prisma.sql`
     WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
     SELECT rs.property_id,
@@ -172,6 +173,10 @@ export async function GET(req: NextRequest) {
   const mktAge = ageDays(fresh[0]?.mkt ?? null)
   if (snapAge == null || snapAge >= 1) watchdog.push(`Snapshot viejo (${snapAge ?? "nunca"}d) — ¿corrió rates/snapshot?`)
   if (mktAge == null || mktAge > 7) watchdog.push(`Mercado viejo (${mktAge ?? "nunca"}d) — refresca market_rates (ingest).`)
+  // El calendario de eventos (Semana Santa/Feria/…) se carga a mano. Avisa con antelación si se
+  // está agotando, para que NO caduque en silencio (fechas de la próxima temporada sin premium).
+  const evAheadDays = Math.round((+new Date(EVENTS_LAST_DATE + "T00:00:00") - +today) / 86400000)
+  if (evAheadDays < 90) watchdog.push(`Eventos cargados solo hasta ${EVENTS_LAST_DATE} (${evAheadDays}d) — añade el próximo periodo en lib/pricing-calendar.`)
 
   const byId = <T extends { property_id: string }>(arr: T[]) =>
     Object.fromEntries(arr.map((r) => [r.property_id, r]))

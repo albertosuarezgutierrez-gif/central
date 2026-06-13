@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { calcOurs } from "@/lib/pricing-calendar"
+import { calcOurs, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
   const today        = new Date()
   const startDate    = fmtDate(today)
-  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 90)
+  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + PRICING_HORIZON_DAYS)
   const endDate      = fmtDate(endDay)
   const snapshotDate = startDate
 
@@ -45,8 +45,8 @@ export async function GET(req: NextRequest) {
       const plRates: Record<string, { price: number; available: number; min_length_of_stay: number }> =
         (await res.json()).data?.[prop.smoobuId] ?? {}
 
-      // Construir las filas de la ventana (90 días) y hacer UN solo upsert multi-fila por piso
-      // (con 90 días, 1 INSERT por día serían ~360 round-trips → riesgo de timeout del cron).
+      // Construir las filas de la ventana (PRICING_HORIZON_DAYS) y hacer UN solo upsert multi-fila
+      // por piso (1 INSERT por día serían cientos de round-trips → riesgo de timeout del cron).
       const rows: Prisma.Sql[] = []
       const cur = new Date(today)
       while (cur <= endDay) {

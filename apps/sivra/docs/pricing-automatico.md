@@ -258,6 +258,21 @@ El módulo pasa de "recomendar + aplicar a mano" a **automático con red de segu
   (acotado a +50%, sólo fechas con evento), flag `events_enabled` por piso.
 - `gap_discount_pct` por piso: descuenta noches sueltas libres entre dos reservas.
 
+### Horizonte de pricing (365 días)
+- `PRICING_HORIZON_DAYS = 365` (`lib/pricing-calendar.ts`) — fuente única del horizonte. Lo usan
+  `rates/snapshot` (captura) y `apply`/`apply-auto` (tarificación). Antes: snapshot 90d y apply solo 14-60d
+  → las fechas lejanas (reservas de larga antelación, sobre todo extranjeros, y eventos de la próxima
+  temporada) ni se tarificaban. **El agente sigue juzgando la ventana cercana (90d)**: ampliar el horizonte
+  no diluye su veredicto de demanda.
+- **Eventos cargados a mano** en `EVENTS`. Añadido 2027 (Semana Santa/Feria, **estimado — confirmar fechas
+  oficiales**). `EVENTS_LAST_DATE` + watchdog en `pilot-track`: si el último evento queda a <90d, avisa por
+  email/push para que el calendario **no caduque en silencio** cada año.
+- **A 365d el mercado real (comps) es escaso**: esas fechas se tarifican sobre todo con estacionalidad +
+  eventos y se **afinan solas a diario** según entran comps más cerca de la fecha. Suelo `min_price` y pasos
+  graduales acotan el riesgo. (Pendiente, PR aparte: que el scraper de mercado traiga comps de check-in lejanos.)
+- **Alcance: solo Busto Reform escribe** (`apply_enabled=true`); el `WHERE s.apply_enabled = true` del `apply`
+  garantiza que los pisos en PriceLabs no se tocan. El snapshot sí captura los 4 (lectura) para comparar.
+
 ### Panel del propietario `/pricing-auto`
 Medidor de **€ extra vs PriceLabs** (`/api/pricing/resultados`), botón de **pánico** (pausa), botón de
 **avisos push**, toggle de eventos, descuento de hueco, **Restaurar** e **Histórico** por piso (`/api/pricing/historial`).
