@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T10:03:32Z",
+  "generadoEn": "2026-06-13T15:28:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1612,8 +1612,13 @@
       "/api/dashboard",
       "/api/dashboard/forecast",
       "/api/expenses",
+      "/api/expenses/agent/backfill",
+      "/api/expenses/agent/resumen-mensual",
+      "/api/expenses/agent/scan",
       "/api/expenses/parse-booking",
       "/api/expenses/parse-invoice",
+      "/api/expenses/pendientes",
+      "/api/expenses/pendientes/[id]",
       "/api/import-csv",
       "/api/import-smoobu-bulk",
       "/api/incomes",
@@ -1859,6 +1864,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`",
+      "fecha": "13/06/2026"
+    },
+    {
       "titulo": "📦 module-materiales Fase B — PR #189 mergeado",
       "fecha": "12/06/2026"
     },
@@ -1912,10 +1921,6 @@
     },
     {
       "titulo": "⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):",
-      "fecha": ""
-    },
-    {
-      "titulo": "✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — EN PRODUCCIÓN",
       "fecha": ""
     }
   ],
@@ -2143,7 +2148,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 730,
+    "apis": 735,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0

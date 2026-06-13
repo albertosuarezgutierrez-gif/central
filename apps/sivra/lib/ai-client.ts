@@ -47,10 +47,15 @@ Analiza el texto o imagen de la factura y devuelve SOLO JSON sin markdown:
   "base_imponible": 0.00,
   "iva_porcentaje": 21,
   "iva": 0.00,
+  "irpf_porcentaje": 0,
+  "irpf": 0.00,
   "total": 0.00,
-  "categoria": "LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO"
+  "categoria": "ALQUILER|LIMPIEZA|MANTENIMIENTO|SUMINISTROS|COMUNIDAD|SEGURO|IMPUESTOS|PLATAFORMAS|MOBILIARIO|REFORMAS|OTRO"
 }
 Reglas: fecha formato YYYY-MM-DD. Números decimales con punto. categoria según el tipo de gasto.
+Si es un recibo o adeudo de ALQUILER de local/vivienda con retención de IRPF, rellena "irpf" con el
+importe RETENIDO en positivo (p.ej. 57.63) e "irpf_porcentaje" (p.ej. 19); normalmente
+total = base_imponible + iva - irpf. Si no hay retención, irpf=0 e irpf_porcentaje=0.
 Si no encuentras un campo, pon null. Solo JSON, sin texto adicional.`
 
 /**
