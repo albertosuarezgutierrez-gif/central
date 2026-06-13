@@ -40,6 +40,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/pricing/pilot-track",
+      "schedule": "15 9 * * *"
+    },
+    {
       "path": "/api/limpiadoras/auto-assign",
       "schedule": "30 5 * * *"
     },
