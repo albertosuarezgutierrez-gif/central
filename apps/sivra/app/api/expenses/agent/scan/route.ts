@@ -4,6 +4,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { listarCandidatos, marcarProcesado } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
+import { esPresupuesto } from '@/lib/agente-facturas/clasificar'
 import { procesarFactura, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
 import { avisaBandeja, avisaSinAdjunto, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
@@ -14,13 +15,14 @@ export const maxDuration = 60
 export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
 
-  const stats = { auto: 0, bandeja: 0, duplicados: 0, errores: 0 }
+  const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, errores: 0 }
   const pendientes: PendienteAviso[] = []
   const sinAdjunto: { from: string; subject: string }[] = []
 
   const acumula = (r: ProcesarResult, proveedorFallback?: string) => {
     if (r.decision === 'auto') stats.auto++
     else if (r.decision === 'duplicado') stats.duplicados++
+    else if (r.decision === 'omitido') stats.omitidos++
     else if (r.decision === 'error') stats.errores++
     else { stats.bandeja++; pendientes.push({ proveedor: r.proveedor || proveedorFallback || null, total: r.total, motivo: r.motivo }) }
   }
@@ -35,10 +37,11 @@ export async function GET(req: NextRequest) {
       let imputadoAlguno = false
       for (const adj of c.adjuntos) {
         try {
-          const { data } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
+          const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
           const fecha = data.fecha || c.fecha
-          const drive = await subir(adj.buffer, adj.nombre, adj.mime, fecha).catch(() => null)
-          const r = await procesarFactura({ ...data, fecha }, { fuente: 'agente-email', drive: drive || undefined })
+          const presup = esPresupuesto(texto || '', adj.nombre)
+          const drive = presup ? null : await subir(adj.buffer, adj.nombre, adj.mime, fecha).catch(() => null)
+          const r = await procesarFactura({ ...data, fecha }, { fuente: 'agente-email', drive: drive || undefined, esPresupuesto: presup })
           acumula(r, c.from)
           if (r.decision !== 'error') imputadoAlguno = true
         } catch (e) {
@@ -58,11 +61,13 @@ export async function GET(req: NextRequest) {
     for (const f of files) {
       try {
         const { buffer, mimeType, nombre } = await getContenido(f.id)
-        const { data } = await extraerDesdeBuffer(buffer, mimeType, nombre)
+        const { data, texto } = await extraerDesdeBuffer(buffer, mimeType, nombre)
         const fecha = data.fecha || new Date().toISOString().slice(0, 10)
-        const carpeta = await archivar(f.id, fecha).catch(() => null)
+        const presup = esPresupuesto(texto || '', nombre)
+        // La carpeta es "ALBERTO 2026 PERSONAL" → lo no-pisos va a "Personal".
+        const carpeta = presup ? null : await archivar(f.id, fecha).catch(() => null)
         const url = `https://drive.google.com/file/d/${f.id}/view`
-        const r = await procesarFactura({ ...data, fecha }, { fuente: 'agente-drive', drive: { url, carpeta, nombre } })
+        const r = await procesarFactura({ ...data, fecha }, { fuente: 'agente-drive', drive: { url, carpeta, nombre }, propiedadPorDefecto: 'prop_personal', esPresupuesto: presup })
         acumula(r)
       } catch (e) {
         stats.errores++

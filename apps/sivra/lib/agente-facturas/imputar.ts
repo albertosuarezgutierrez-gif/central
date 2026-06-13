@@ -54,10 +54,14 @@ export async function existeDuplicado(d: {
   fecha: string
   total: number
 }): Promise<boolean> {
+  // Dedup por nº de factura exacto, o por misma huella + mismo importe dentro de
+  // ±7 días (pilla "presupuesto+factura" del mismo gasto, sin chocar con los
+  // recurrentes mensuales, que distan ~30 días).
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT 1 FROM gastos WHERE
       (${d.numero_factura}::text IS NOT NULL AND numero_factura = ${d.numero_factura})
-      OR (fingerprint = ${d.fingerprint} AND fecha = ${d.fecha}::date
+      OR (${d.fingerprint} <> '' AND fingerprint = ${d.fingerprint}
+          AND fecha BETWEEN ${d.fecha}::date - 7 AND ${d.fecha}::date + 7
           AND abs(coalesce(total,0) - ${d.total}) < 0.01)
     LIMIT 1
   `)

@@ -60,8 +60,10 @@ export async function calcularResumen(year: number, month: number): Promise<Resu
 
   const pisos: PisoRentabilidad[] = props.map((p) => {
     const ing = ingMap.get(p.id) ?? 0
-    const gas = gasMap.get(p.id) ?? 0
-    return { propiedad: p.id, nombre: p.name, ingresos: ing, gastos: gas, neto: +(ing - gas).toFixed(2) }
+    // Los gastos antiguos guardan la propiedad por NOMBRE ("Luxury Busto") y los
+    // nuevos por ID ("prop_luxury_busto") → se suman ambas claves.
+    const gas = (gasMap.get(p.id) ?? 0) + (gasMap.get(p.name) ?? 0)
+    return { propiedad: p.id, nombre: p.name, ingresos: ing, gastos: +gas.toFixed(2), neto: +(ing - gas).toFixed(2) }
   })
 
   const totalIngresos = +pisos.reduce((a, p) => a + p.ingresos, 0).toFixed(2)

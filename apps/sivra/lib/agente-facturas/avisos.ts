@@ -45,14 +45,16 @@ export interface ResumenStats {
   auto: number
   bandeja: number
   duplicados: number
+  omitidos?: number
   errores: number
   alquileres?: number
 }
 
 export async function resumen(s: ResumenStats): Promise<void> {
+  const omit = s.omitidos ? ` · ${s.omitidos} presupuestos omitidos` : ''
   const extra = s.alquileres != null ? ` · alquileres ${s.alquileres}` : ''
   await tgAlert(
-    `✅ Agente (${s.fuente}): ${s.auto} imputadas · ${s.bandeja} a bandeja · ${s.duplicados} duplicadas · ${s.errores} errores${extra}`,
+    `✅ Agente (${s.fuente}): ${s.auto} imputadas · ${s.bandeja} a bandeja · ${s.duplicados} duplicadas${omit} · ${s.errores} errores${extra}`,
     'resuelto',
   )
 }

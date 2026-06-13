@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { fingerprint, normalizaProveedor } from '../apps/sivra/lib/agente-facturas/fingerprint.ts'
 import { evaluar, type Regla } from '../apps/sivra/lib/agente-facturas/reglas.ts'
 import { conciliar, mapeaPropiedadAlquiler } from '../apps/sivra/lib/agente-facturas/conciliar.ts'
+import { esPresupuesto } from '../apps/sivra/lib/agente-facturas/clasificar.ts'
 
 // ── fingerprint ──────────────────────────────────────────────────────────────
 test('fingerprint alquiler distingue piso por dirección', () => {
@@ -72,4 +73,14 @@ test('mapea Bajo Derecha→Luxury, Bajo Izquierda→Busto Reform', () => {
   assert.equal(mapeaPropiedadAlquiler('BAJO Derecha BUSTOS TAVERA 22'), 'prop_luxury_busto')
   assert.equal(mapeaPropiedadAlquiler('BAJO izquierda BUSTOS TAVERA 22'), 'prop_busto_reform')
   assert.equal(mapeaPropiedadAlquiler('otra cosa'), null)
+})
+
+// ── presupuesto vs factura (anti-duplicidad) ──────────────────────────────────
+test('detecta presupuesto/cotización y no lo confunde con factura', () => {
+  // EST-006724.pdf — Codeoscopic PRESUPUESTO
+  assert.equal(esPresupuesto('PRESUPUESTO # EST-006724 ... Fecha de la cotización', 'EST-006724.pdf'), true)
+  // 26-07210.pdf — Codeoscopic FACTURA (mismo importe, NO es presupuesto)
+  assert.equal(esPresupuesto('FACTURA N.º de factura 26-07210 ...', '26-07210.pdf'), false)
+  // factura que menciona "según presupuesto" sigue siendo factura
+  assert.equal(esPresupuesto('FACTURA por servicios según presupuesto previo', 'fra.pdf'), false)
 })

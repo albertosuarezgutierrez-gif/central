@@ -12,7 +12,7 @@ export interface DriveRef {
   nombre?: string | null
 }
 
-export type Decision = 'auto' | 'bandeja' | 'duplicado' | 'error'
+export type Decision = 'auto' | 'bandeja' | 'duplicado' | 'error' | 'omitido'
 
 export interface ProcesarResult {
   decision: Decision
@@ -25,11 +25,18 @@ export interface ProcesarResult {
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
   const fp = fingerprint({ nif_proveedor: data.nif_proveedor, proveedor, concepto: data.concepto })
+
+  // Presupuesto/cotización: no es un gasto → se omite (no se inserta para que no
+  // tape a la factura real del mismo importe).
+  if (ctx.esPresupuesto) {
+    await log({ fuente: ctx.fuente, fingerprint: fp, decision: 'omitido', motivo: 'Presupuesto/cotización, no factura', payload: { total } })
+    return { decision: 'omitido', fingerprint: fp, total, proveedor, motivo: 'Presupuesto/cotización' }
+  }
 
   if (!data.fecha || !(total > 0)) {
     const motivo = 'No se pudo leer fecha/total de la factura'
@@ -46,8 +53,9 @@ export async function procesarFactura(
   const regla = await getRegla(fp)
   const veredicto = evaluar(data, regla)
 
-  // Propiedad: regla > mapeo de alquiler por concepto > nada.
-  const propiedad = veredicto.propiedad || mapeaPropiedadAlquiler(data.concepto || '') || null
+  // Propiedad: regla > mapeo de alquiler por concepto > por defecto del origen
+  // (p.ej. la carpeta "Personal" → prop_personal) > nada.
+  const propiedad = veredicto.propiedad || mapeaPropiedadAlquiler(data.concepto || '') || ctx.propiedadPorDefecto || null
   const categoria = data.categoria || veredicto.categoria || 'OTRO'
 
   // Conciliación de importes: si no cuadra, no auto-imputar.

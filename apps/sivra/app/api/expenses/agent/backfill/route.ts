@@ -5,6 +5,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { listarCandidatos } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
+import { esPresupuesto } from '@/lib/agente-facturas/clasificar'
 import { procesarFactura, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { existeDuplicado, insertarGasto, type DatosGasto } from '@/lib/agente-facturas/imputar'
 
@@ -46,12 +47,13 @@ export async function GET(req: NextRequest) {
   }
 
   // ── 2) Barrido de Gmail/Drive del año (modo mixto) ───────────────────────────
-  const stats = { auto: 0, bandeja: 0, duplicados: 0, errores: 0 }
+  const stats = { auto: 0, bandeja: 0, duplicados: 0, omitidos: 0, errores: 0 }
   let emailCandidatos = 0
   let driveCandidatos = 0
   const acumula = (r: ProcesarResult) => {
     if (r.decision === 'auto') stats.auto++
     else if (r.decision === 'duplicado') stats.duplicados++
+    else if (r.decision === 'omitido') stats.omitidos++
     else if (r.decision === 'error') stats.errores++
     else stats.bandeja++
   }
@@ -63,8 +65,8 @@ export async function GET(req: NextRequest) {
       for (const c of correos) {
         for (const adj of c.adjuntos) {
           try {
-            const { data } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
-            acumula(await procesarFactura({ ...data, fecha: data.fecha || c.fecha }, { fuente: 'backfill' }))
+            const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
+            acumula(await procesarFactura({ ...data, fecha: data.fecha || c.fecha }, { fuente: 'backfill', esPresupuesto: esPresupuesto(texto || '', adj.nombre) }))
           } catch { stats.errores++ }
         }
       }
@@ -78,10 +80,11 @@ export async function GET(req: NextRequest) {
       for (const f of files) {
         try {
           const { buffer, mimeType, nombre } = await getContenido(f.id)
-          const { data } = await extraerDesdeBuffer(buffer, mimeType, nombre)
+          const { data, texto } = await extraerDesdeBuffer(buffer, mimeType, nombre)
           const fecha = data.fecha || `${year}-01-01`
-          const carpeta = await archivar(f.id, fecha).catch(() => null)
-          acumula(await procesarFactura({ ...data, fecha }, { fuente: 'backfill', drive: { url: `https://drive.google.com/file/d/${f.id}/view`, carpeta, nombre } }))
+          const presup = esPresupuesto(texto || '', nombre)
+          const carpeta = presup ? null : await archivar(f.id, fecha).catch(() => null)
+          acumula(await procesarFactura({ ...data, fecha }, { fuente: 'backfill', drive: { url: `https://drive.google.com/file/d/${f.id}/view`, carpeta, nombre }, propiedadPorDefecto: 'prop_personal', esPresupuesto: presup }))
         } catch { stats.errores++ }
       }
     }
