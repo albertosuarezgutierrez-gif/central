@@ -49,6 +49,10 @@
       "schedule": "0 7 * * 1"
     },
     {
+      "path": "/api/cron/instagram-ideas",
+      "schedule": "30 7 * * 1"
+    },
+    {
       "path": "/api/cron/blog-seo",
       "schedule": "0 8 * * 1"
     },
