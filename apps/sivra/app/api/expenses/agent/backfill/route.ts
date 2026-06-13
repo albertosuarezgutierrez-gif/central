@@ -5,8 +5,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { listarCandidatos } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
-import { esPresupuesto } from '@/lib/agente-facturas/clasificar'
-import { procesarFactura, type ProcesarResult } from '@/lib/agente-facturas/procesar'
+import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { existeDuplicado, insertarGasto, type DatosGasto } from '@/lib/agente-facturas/imputar'
 
 export const dynamic = 'force-dynamic'
@@ -66,7 +65,10 @@ export async function GET(req: NextRequest) {
         for (const adj of c.adjuntos) {
           try {
             const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
-            acumula(await procesarFactura({ ...data, fecha: data.fecha || c.fecha }, { fuente: 'backfill', esPresupuesto: esPresupuesto(texto || '', adj.nombre) }))
+            const doc = clasificarDocumento(data, texto || '', adj.nombre)
+            acumula(await procesarFactura({ ...doc.factura, fecha: doc.factura.fecha || c.fecha }, {
+              fuente: 'backfill', esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+            }))
           } catch { stats.errores++ }
         }
       }
@@ -81,10 +83,14 @@ export async function GET(req: NextRequest) {
         try {
           const { buffer, mimeType, nombre } = await getContenido(f.id)
           const { data, texto } = await extraerDesdeBuffer(buffer, mimeType, nombre)
-          const fecha = data.fecha || `${year}-01-01`
-          const presup = esPresupuesto(texto || '', nombre)
-          const carpeta = presup ? null : await archivar(f.id, fecha).catch(() => null)
-          acumula(await procesarFactura({ ...data, fecha }, { fuente: 'backfill', drive: { url: `https://drive.google.com/file/d/${f.id}/view`, carpeta, nombre }, propiedadPorDefecto: 'prop_personal', esPresupuesto: presup }))
+          const doc = clasificarDocumento(data, texto || '', nombre)
+          const fecha = doc.factura.fecha || `${year}-01-01`
+          const carpeta = doc.archivar ? await archivar(f.id, fecha).catch(() => null) : null
+          acumula(await procesarFactura({ ...doc.factura, fecha }, {
+            fuente: 'backfill', drive: { url: `https://drive.google.com/file/d/${f.id}/view`, carpeta, nombre },
+            propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
+            esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+          }))
         } catch { stats.errores++ }
       }
     }

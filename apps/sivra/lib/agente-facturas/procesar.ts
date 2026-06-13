@@ -4,7 +4,30 @@ import { fingerprint } from './fingerprint'
 import { evaluar } from './reglas'
 import { conciliar, mapeaPropiedadAlquiler } from './conciliar'
 import { getRegla, existeDuplicado, insertarGasto, reforzarRegla, log, type DatosGasto } from './imputar'
+import { esBooking, parseBooking, bookingFingerprint } from './booking'
+import { esPresupuesto } from './clasificar'
 import type { FacturaExtraida } from './extraer'
+
+// Decide cómo tratar un documento ya extraído: Booking (por establecimiento),
+// presupuesto (se omite) o factura genérica. Centraliza la lógica para scan/backfill.
+export interface DocClasificado {
+  factura: FacturaExtraida
+  fingerprintOverride?: string
+  esPresupuesto: boolean
+  archivar: boolean // si conviene subir/archivar el PDF (los presupuestos no)
+  esBooking: boolean
+}
+
+export function clasificarDocumento(data: FacturaExtraida, texto: string, etiqueta = ''): DocClasificado {
+  if (esBooking(texto, etiqueta)) {
+    const { establishmentId, factura } = parseBooking(texto)
+    if (factura.total) {
+      return { factura, fingerprintOverride: bookingFingerprint(establishmentId), esPresupuesto: false, archivar: true, esBooking: true }
+    }
+  }
+  const presup = esPresupuesto(texto, etiqueta)
+  return { factura: data, esPresupuesto: presup, archivar: !presup, esBooking: false }
+}
 
 export interface DriveRef {
   url?: string | null
@@ -25,11 +48,12 @@ export interface ProcesarResult {
 
 export async function procesarFactura(
   data: FacturaExtraida,
-  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean },
+  ctx: { fuente: string; drive?: DriveRef; propiedadPorDefecto?: string | null; esPresupuesto?: boolean; fingerprintOverride?: string },
 ): Promise<ProcesarResult> {
   const total = Number(data.total ?? 0)
   const proveedor = data.proveedor ?? null
-  const fp = fingerprint({ nif_proveedor: data.nif_proveedor, proveedor, concepto: data.concepto })
+  // Huella: la del override (p.ej. Booking por establecimiento) o la calculada.
+  const fp = ctx.fingerprintOverride || fingerprint({ nif_proveedor: data.nif_proveedor, proveedor, concepto: data.concepto })
 
   // Presupuesto/cotización: no es un gasto → se omite (no se inserta para que no
   // tape a la factura real del mismo importe).

@@ -4,8 +4,7 @@ import { isCronAuthorized } from '@/lib/cron-auth'
 import { listarCandidatos, marcarProcesado } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar, subir } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
-import { esPresupuesto } from '@/lib/agente-facturas/clasificar'
-import { procesarFactura, type ProcesarResult } from '@/lib/agente-facturas/procesar'
+import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
 import { recurrentesQueFaltan } from '@/lib/agente-facturas/anomalias'
 import { avisaBandeja, avisaSinAdjunto, avisaRecurrentesQueFaltan, resumen, type PendienteAviso } from '@/lib/agente-facturas/avisos'
 
@@ -38,10 +37,13 @@ export async function GET(req: NextRequest) {
       for (const adj of c.adjuntos) {
         try {
           const { data, texto } = await extraerDesdeBuffer(adj.buffer, adj.mime, adj.nombre)
-          const fecha = data.fecha || c.fecha
-          const presup = esPresupuesto(texto || '', adj.nombre)
-          const drive = presup ? null : await subir(adj.buffer, adj.nombre, adj.mime, fecha).catch(() => null)
-          const r = await procesarFactura({ ...data, fecha }, { fuente: 'agente-email', drive: drive || undefined, esPresupuesto: presup })
+          const doc = clasificarDocumento(data, texto || '', adj.nombre)
+          const fecha = doc.factura.fecha || c.fecha
+          const drive = doc.archivar ? await subir(adj.buffer, adj.nombre, adj.mime, fecha).catch(() => null) : null
+          const r = await procesarFactura({ ...doc.factura, fecha }, {
+            fuente: 'agente-email', drive: drive || undefined,
+            esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+          })
           acumula(r, c.from)
           if (r.decision !== 'error') imputadoAlguno = true
         } catch (e) {
@@ -62,12 +64,17 @@ export async function GET(req: NextRequest) {
       try {
         const { buffer, mimeType, nombre } = await getContenido(f.id)
         const { data, texto } = await extraerDesdeBuffer(buffer, mimeType, nombre)
-        const fecha = data.fecha || new Date().toISOString().slice(0, 10)
-        const presup = esPresupuesto(texto || '', nombre)
-        // La carpeta es "ALBERTO 2026 PERSONAL" → lo no-pisos va a "Personal".
-        const carpeta = presup ? null : await archivar(f.id, fecha).catch(() => null)
+        const doc = clasificarDocumento(data, texto || '', nombre)
+        const fecha = doc.factura.fecha || new Date().toISOString().slice(0, 10)
+        const carpeta = doc.archivar ? await archivar(f.id, fecha).catch(() => null) : null
         const url = `https://drive.google.com/file/d/${f.id}/view`
-        const r = await procesarFactura({ ...data, fecha }, { fuente: 'agente-drive', drive: { url, carpeta, nombre }, propiedadPorDefecto: 'prop_personal', esPresupuesto: presup })
+        // La carpeta es "ALBERTO 2026 PERSONAL" → lo no-pisos va a "Personal";
+        // Booking es de un piso, así que NO se fuerza a Personal.
+        const r = await procesarFactura({ ...doc.factura, fecha }, {
+          fuente: 'agente-drive', drive: { url, carpeta, nombre },
+          propiedadPorDefecto: doc.esBooking ? undefined : 'prop_personal',
+          esPresupuesto: doc.esPresupuesto, fingerprintOverride: doc.fingerprintOverride,
+        })
         acumula(r)
       } catch (e) {
         stats.errores++
