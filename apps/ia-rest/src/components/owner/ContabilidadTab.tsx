@@ -389,9 +389,120 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
           )}
         </div>
       )}
+
+      {/* Auditoría: histórico de descuadres por empleado */}
+      <HistoricoEmpleadoPanel sh={sh} />
     </div>
   )
 }
+
+// ── Histórico / auditoría de descuadres por empleado ─────────────────────────
+interface ResumenEmp {
+  camarero_id: string | null; camarero_nombre: string | null
+  num_cierres: number; descuadre_total: number; descuadre_medio: number
+  peor_descuadre: number; racha_negativa: number; patron_recurrente: boolean
+}
+interface FilaEmp {
+  camarero_id: string | null; camarero_nombre: string | null
+  fecha: string; diferencia_caja: number; conteo_realizado: boolean; notas?: string | null
+}
+
+function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
+  const hoy = new Date()
+  const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
+  const [desde, setDesde] = useState(primero)
+  const [hasta, setHasta] = useState(hoy.toISOString().split('T')[0])
+  const [resumen, setResumen] = useState<ResumenEmp[]>([])
+  const [detalle, setDetalle] = useState<FilaEmp[]>([])
+  const [loading, setLoading] = useState(false)
+  const [cargado, setCargado] = useState(false)
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch(`/api/owner/contabilidad/arqueos-empleado?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+      const d = await r.json()
+      if (d.ok) { setResumen(d.resumen ?? []); setDetalle(d.detalle ?? []) }
+      setCargado(true)
+    } finally { setLoading(false) }
+  }, [desde, hasta, sh])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const col = (v: number) => Math.abs(v) < 0.005 ? '#3F7D44' : v > 0 ? C.amber : (C.verm ?? '#D9442B')
+
+  const exportarCSV = () => {
+    const cab = ['Empleado', 'Cierres', 'Descuadre acumulado', 'Media', 'Peor', 'Racha negativa', 'Merma recurrente']
+    const filas = resumen.map(r => [
+      r.camarero_nombre ?? 'Caja general', r.num_cierres, r.descuadre_total, r.descuadre_medio,
+      r.peor_descuadre, r.racha_negativa, r.patron_recurrente ? 'SÍ' : 'no',
+    ])
+    const det = detalle.map(f => [f.camarero_nombre ?? 'Caja general', f.fecha, f.diferencia_caja, f.conteo_realizado ? 'sí' : 'no', (f.notas ?? '').replace(/[\n;]/g, ' ')])
+    const csv = [
+      `Descuadres por empleado ${desde} a ${hasta}`, '',
+      cab.join(';'), ...filas.map(f => f.join(';')),
+      '', 'Detalle;Fecha;Descuadre;Conteo;Notas', ...det.map(f => f.join(';')),
+    ].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = `descuadres_empleado_${desde}_${hasta}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Histórico de descuadres por empleado</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={inp} />
+          <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>→</span>
+          <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={inp} />
+          <button onClick={cargar} disabled={loading} style={{ ...btn, opacity: loading ? .6 : 1 }}>{loading ? '…' : 'Ver'}</button>
+          <button onClick={exportarCSV} disabled={!resumen.length} style={{ ...btn, opacity: resumen.length ? 1 : .4 }}>CSV</button>
+        </div>
+      </div>
+
+      {!resumen.length ? (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{cargado ? 'Sin cierres por empleado en este rango.' : 'Cargando…'}</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Cabecera */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.4fr .6fr 1fr .8fr .8fr 1.2fr', gap: 6, padding: '0 8px' }}>
+            {['Empleado', 'Cierres', 'Acumulado', 'Media', 'Peor', 'Tendencia'].map(h => (
+              <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
+            ))}
+          </div>
+          {resumen.map(r => {
+            const serie = detalle.filter(f => f.camarero_id === r.camarero_id && f.conteo_realizado)
+            const maxAbs = Math.max(1, ...serie.map(s => Math.abs(s.diferencia_caja)))
+            return (
+              <div key={r.camarero_id ?? 'general'} style={{ display: 'grid', gridTemplateColumns: '1.4fr .6fr 1fr .8fr .8fr 1.2fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '8px' }}>
+                <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {r.camarero_nombre ?? 'Caja general'}
+                  {r.patron_recurrente && (
+                    <span title={`${r.racha_negativa} cierres seguidos en negativo`} style={{ fontFamily: SM, fontSize: 8, color: C.paper, background: (C.verm ?? '#D9442B'), borderRadius: 6, padding: '1px 5px', textTransform: 'uppercase' }}>merma</span>
+                  )}
+                </div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{r.num_cierres}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: col(r.descuadre_total) }}>{fmt(r.descuadre_total)}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: col(r.descuadre_medio) }}>{fmt(r.descuadre_medio)}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: col(r.peor_descuadre) }}>{fmt(r.peor_descuadre)}</div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 26 }}>
+                  {serie.slice(-14).map((s, i) => (
+                    <div key={i} title={`${s.fecha}: ${fmt(s.diferencia_caja)}`}
+                      style={{ width: 5, height: `${Math.max(2, Math.abs(s.diferencia_caja) / maxAbs * 24)}px`, background: col(s.diferencia_caja), borderRadius: 1 }} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+const inp: React.CSSProperties = { fontFamily: SN, fontSize: 12, padding: '5px 8px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none' }
+const btn: React.CSSProperties = { fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '5px 12px', background: C.ink, color: C.paper, border: 'none', borderRadius: 6, cursor: 'pointer' }
 
 // ── IVA 303 ───────────────────────────────────────────────────────────────────
 function IvaTab({ sh, showToast }: { sh: () => Record<string, string>; showToast: (m: string) => void }) {

@@ -4,7 +4,10 @@
 // descuadre. Sirve a cualquier vertical que lleve caja (ia.rest hoy; ialimp/sivra
 // si la necesitan). No consulta ninguna BD: recibe los movimientos ya normalizados.
 
-import type { MovimientoCaja, CuadreCaja, CuadreEmpleado } from './types'
+import type {
+  MovimientoCaja, CuadreCaja, CuadreEmpleado,
+  FilaArqueoEmpleado, ResumenDescuadreEmpleado, PuntoSerieDescuadre,
+} from './types'
 
 // Redondeo a 2 decimales. Local (no se importa de ./iva) para que este módulo sea
 // una "hoja" autónoma y el runner `node --test` (type-stripping) pueda cargarlo
@@ -146,4 +149,81 @@ export function calcularCuadrePorEmpleado(
       cuadre: calcularCuadreCaja(g.movs),
     }))
     .sort((a, b) => (a.camarero_nombre ?? '').localeCompare(b.camarero_nombre ?? ''))
+}
+
+/** Epsilon para tratar diferencias ínfimas como "cuadrado" (evita falsos negativos por flotantes). */
+const EPS_DESCUADRE = 0.005
+
+/**
+ * Serie temporal de descuadre de UN empleado, ordenada por fecha asc.
+ * Solo incluye cierres con conteo físico (los demás no tienen descuadre real).
+ */
+export function serieDescuadreEmpleado(filas: FilaArqueoEmpleado[]): PuntoSerieDescuadre[] {
+  return filas
+    .filter(f => f.conteo_realizado)
+    .map(f => ({ fecha: f.fecha, diferencia_caja: round2(Number(f.diferencia_caja) || 0) }))
+    .sort((a, b) => a.fecha.localeCompare(b.fecha))
+}
+
+/**
+ * Racha de descuadres NEGATIVOS más recientes consecutivos de un empleado.
+ * Recorre las filas (con conteo) de más reciente a más antigua y cuenta cuántas
+ * seguidas tienen `diferencia_caja < -EPS`. Una racha ≥ `minCierres` es señal de
+ * merma sistemática (no un mal día suelto).
+ */
+export function detectarPatronRecurrente(
+  filas: FilaArqueoEmpleado[],
+  opts: { minCierres?: number } = {},
+): { racha: number; recurrente: boolean } {
+  const minCierres = opts.minCierres ?? 3
+  const serie = serieDescuadreEmpleado(filas) // asc por fecha
+  let racha = 0
+  for (let i = serie.length - 1; i >= 0; i--) {
+    if (serie[i].diferencia_caja < -EPS_DESCUADRE) racha++
+    else break
+  }
+  return { racha, recurrente: racha >= minCierres }
+}
+
+/**
+ * Resumen agregado del descuadre POR EMPLEADO sobre un histórico de arqueos.
+ * Agrupa por `camarero_id`, calcula totales/medias sobre los cierres CON conteo,
+ * el peor descuadre (mayor |valor|, con signo) y la racha negativa reciente.
+ */
+export function resumirDescuadresEmpleado(
+  filas: FilaArqueoEmpleado[],
+  opts: { minCierresPatron?: number } = {},
+): ResumenDescuadreEmpleado[] {
+  const grupos = new Map<string, { nombre: string | null; filas: FilaArqueoEmpleado[] }>()
+  for (const f of filas) {
+    const key = f.camarero_id ?? '__general__'
+    let g = grupos.get(key)
+    if (!g) { g = { nombre: f.camarero_id ? f.camarero_nombre ?? null : null, filas: [] }; grupos.set(key, g) }
+    if (!g.nombre && f.camarero_nombre) g.nombre = f.camarero_nombre
+    g.filas.push(f)
+  }
+
+  return Array.from(grupos.entries())
+    .map(([key, g]) => {
+      const conConteo = g.filas.filter(f => f.conteo_realizado)
+      const num_cierres = conConteo.length
+      const descuadre_total = round2(conConteo.reduce((s, f) => s + (Number(f.diferencia_caja) || 0), 0))
+      const descuadre_medio = num_cierres > 0 ? round2(descuadre_total / num_cierres) : 0
+      const peor_descuadre = conConteo.reduce(
+        (peor, f) => (Math.abs(Number(f.diferencia_caja) || 0) > Math.abs(peor) ? round2(Number(f.diferencia_caja) || 0) : peor),
+        0,
+      )
+      const { racha, recurrente } = detectarPatronRecurrente(g.filas, { minCierres: opts.minCierresPatron })
+      return {
+        camarero_id: key === '__general__' ? null : key,
+        camarero_nombre: key === '__general__' ? null : g.nombre,
+        num_cierres,
+        descuadre_total,
+        descuadre_medio,
+        peor_descuadre,
+        racha_negativa: racha,
+        patron_recurrente: recurrente,
+      }
+    })
+    .sort((a, b) => Math.abs(b.descuadre_total) - Math.abs(a.descuadre_total))
 }

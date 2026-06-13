@@ -6,8 +6,11 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { calcularCuadreCaja, calcularCuadrePorEmpleado, totalDesglose, DENOMINACIONES_EUR } from '../src/caja.ts'
-import type { MovimientoCaja } from '../src/types.ts'
+import {
+  calcularCuadreCaja, calcularCuadrePorEmpleado, totalDesglose, DENOMINACIONES_EUR,
+  resumirDescuadresEmpleado, detectarPatronRecurrente, serieDescuadreEmpleado,
+} from '../src/caja.ts'
+import type { MovimientoCaja, FilaArqueoEmpleado } from '../src/types.ts'
 
 // ── totalDesglose ─────────────────────────────────────────────────────────────
 test('totalDesglose: suma billetes y monedas mixtos', () => {
@@ -160,4 +163,52 @@ test('calcularCuadrePorEmpleado: movimientos sin empleado → grupo "Caja genera
 
 test('calcularCuadrePorEmpleado: sin movimientos → array vacío', () => {
   assert.deepEqual(calcularCuadrePorEmpleado([]), [])
+})
+
+// ── Auditoría histórica por empleado ──────────────────────────────────────────
+const F = (camarero_id: string | null, fecha: string, dif: number, conteo = true): FilaArqueoEmpleado => ({
+  camarero_id, camarero_nombre: camarero_id ? `Emp ${camarero_id}` : null, fecha, diferencia_caja: dif, conteo_realizado: conteo,
+})
+
+test('serieDescuadreEmpleado: ordena por fecha asc y excluye sin conteo', () => {
+  const filas = [F('a', '2026-06-03', -2), F('a', '2026-06-01', 1), F('a', '2026-06-02', 0, false)]
+  assert.deepEqual(serieDescuadreEmpleado(filas), [
+    { fecha: '2026-06-01', diferencia_caja: 1 },
+    { fecha: '2026-06-03', diferencia_caja: -2 },
+  ])
+})
+
+test('detectarPatronRecurrente: 3 negativos seguidos al final → recurrente', () => {
+  const filas = [F('a', '2026-06-01', 5), F('a', '2026-06-02', -1), F('a', '2026-06-03', -2), F('a', '2026-06-04', -3)]
+  assert.deepEqual(detectarPatronRecurrente(filas), { racha: 3, recurrente: true })
+})
+
+test('detectarPatronRecurrente: racha rota por un positivo reciente', () => {
+  const filas = [F('a', '2026-06-01', -1), F('a', '2026-06-02', -2), F('a', '2026-06-03', 4)]
+  assert.deepEqual(detectarPatronRecurrente(filas), { racha: 0, recurrente: false })
+})
+
+test('resumirDescuadresEmpleado: totales, media, peor y patrón', () => {
+  const filas = [
+    F('a', '2026-06-01', -2), F('a', '2026-06-02', -3), F('a', '2026-06-03', -10),
+    F('b', '2026-06-01', 1),  F('b', '2026-06-02', 0, false),
+  ]
+  const res = resumirDescuadresEmpleado(filas)
+  const a = res.find(r => r.camarero_id === 'a')!
+  assert.equal(a.num_cierres, 3)
+  assert.equal(a.descuadre_total, -15)
+  assert.equal(a.descuadre_medio, -5)
+  assert.equal(a.peor_descuadre, -10)
+  assert.equal(a.racha_negativa, 3)
+  assert.equal(a.patron_recurrente, true)
+  const b = res.find(r => r.camarero_id === 'b')!
+  assert.equal(b.num_cierres, 1) // la fila sin conteo no cuenta
+  assert.equal(b.descuadre_total, 1)
+  assert.equal(b.patron_recurrente, false)
+  // Orden: por |descuadre_total| desc → 'a' (15) antes que 'b' (1)
+  assert.equal(res[0].camarero_id, 'a')
+})
+
+test('resumirDescuadresEmpleado: sin filas → array vacío', () => {
+  assert.deepEqual(resumirDescuadresEmpleado([]), [])
 })

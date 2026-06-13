@@ -113,3 +113,30 @@ export interface CuadreEmpleado {
   camarero_nombre: string | null
   cuadre: CuadreCaja
 }
+
+/** Fila histórica de un arqueo por empleado (tal como se persiste en BD). */
+export interface FilaArqueoEmpleado {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  fecha: string // 'YYYY-MM-DD'
+  diferencia_caja: number
+  conteo_realizado: boolean
+}
+
+/** Resumen agregado del descuadre de un empleado en un rango de fechas. */
+export interface ResumenDescuadreEmpleado {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  num_cierres: number // cierres con conteo físico realizado
+  descuadre_total: number // suma de diferencias (con signo)
+  descuadre_medio: number // media por cierre con conteo
+  peor_descuadre: number // el de mayor valor absoluto (con signo)
+  racha_negativa: number // nº de cierres más recientes consecutivos en negativo
+  patron_recurrente: boolean // racha_negativa ≥ umbral → posible merma sistemática
+}
+
+/** Punto de la serie temporal de descuadre (para la tendencia). */
+export interface PuntoSerieDescuadre {
+  fecha: string // 'YYYY-MM-DD'
+  diferencia_caja: number
+}
