@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
+  Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
+  - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
+    Supabase MCP a proyecto ia-rest `efncqyvhniaxsirhdxaa`) + columnas `config_contabilidad.umbral_descuadre`
+    y `.conteo_ciego`. `cierre-diario` persiste `cuadre_por_empleado` (delete-then-insert) y **cruza con
+    turno** (movimientos sin camarero → titular del turno vía `turnos`+`camareros`).
+  - **Fase 2** — Puras `resumirDescuadresEmpleado`/`detectarPatronRecurrente`/`serieDescuadreEmpleado`
+    (+tests, 23 total) · `GET /api/owner/contabilidad/arqueos-empleado` · UI panel "Histórico por
+    empleado" (tabla acumulado/media/peor + sparkline + CSV + badge merma recurrente).
+  - **Fase 3** — `lib/push.ts` (`enviarPushARoles`) · alertas por umbral + patrón recurrente → push a
+    owner/gestor · UI marca en rojo los que superan umbral.
+  - **Fase 4** — Motivo obligatorio por empleado (400 con `pendientes` + UI de reintento) · conteo ciego
+    (config + "revelar" en UI) · firma del empleado (`PATCH .../arqueos-empleado/[id]/confirmar` +
+    columnas `confirmado_por/at`).
+  - **Verificado**: 23/23 tests, `tsc` limpio, eslint sin errores (solo warnings). Migración aplicada y
+    comprobada por MCP.
+  - **PENDIENTE (Bloque B + cabos de A)**: UI empleado-facing de firma y conteo ciego en el POS;
+    **Bloque B** (conciliación tarjeta, tesorería/caja fuerte, abastecimiento de cambio, tolerancia por
+    empleado, consolidado multi-local en `apps/plataforma`). Ver plan aprobado del épico. Tras esto:
+    roadmap #2 control horario.
+
 - **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
   A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
   se decide reforzar ia-rest donde ellos pegan fuerte: **gestión de efectivo**. Al verificar contra

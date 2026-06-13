@@ -237,10 +237,15 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
     cuadre?: CuadreCaja
     cuadre_por_empleado?: CuadreEmpleado[]
     umbral_descuadre?: number
+    conteo_ciego?: boolean
     alertas?: { camarero_id: string | null; camarero_nombre: string | null; diferencia_caja: number; recurrente: boolean }[]
   } | null>(null)
 
   // Total contado en vivo desde el desglose físico.
+  const [pendientesMotivo, setPendientesMotivo] = useState<{ camarero_id: string | null; camarero_nombre: string }[]>([])
+  const [notasEmpleado, setNotasEmpleado] = useState<Record<string, string>>({})
+  const [revelado, setRevelado] = useState(false)
+
   const fondoContado = DENOMINACIONES_EUR.reduce((s, d) => s + d * (desglose[String(d)] || 0), 0)
   const setDenom = (d: number, n: string) =>
     setDesglose(prev => ({ ...prev, [String(d)]: Math.max(0, parseInt(n || '0', 10) || 0) }))
@@ -251,12 +256,20 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
       const body: Record<string, unknown> = { fecha }
       if (conArqueo) body.desglose_monedas = desglose
       if (notas.trim()) body.notas = notas.trim()
+      if (Object.keys(notasEmpleado).length) body.notas_por_empleado = notasEmpleado
       const r = await fetch('/api/owner/contabilidad/cierre-diario', {
         method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
       })
       const d = await r.json()
-      if (!d.ok) { showToast('Error: ' + d.error); return }
+      if (!d.ok) {
+        if (d.pendientes?.length) {
+          setPendientesMotivo(d.pendientes)
+          showToast('⚠️ Indica el motivo del descuadre de cada empleado y reintenta.')
+        } else { showToast('Error: ' + d.error) }
+        return
+      }
+      setPendientesMotivo([]); setRevelado(false)
       setResult(d)
       const dif = d.cuadre?.conteo_realizado ? d.cuadre.diferencia_caja : null
       showToast(
@@ -315,6 +328,29 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
         </div>
       )}
 
+      {/* Motivo obligatorio: empleados que superan el umbral sin justificación */}
+      {pendientesMotivo.length > 0 && (
+        <div style={{ background: C.bone, border: `1px solid ${(C.verm ?? '#D9442B')}88`, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ fontFamily: SM, fontSize: 10, color: (C.verm ?? '#D9442B'), textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Motivo del descuadre obligatorio</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {pendientesMotivo.map(p => {
+              const k = p.camarero_id ?? 'general'
+              return (
+                <div key={k}>
+                  <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 3 }}>{p.camarero_nombre}</div>
+                  <input type="text" value={notasEmpleado[k] ?? ''} placeholder="Motivo / incidencia…"
+                    onChange={e => setNotasEmpleado(prev => ({ ...prev, [k]: e.target.value }))}
+                    style={{ width: '100%', fontFamily: SN, fontSize: 13, padding: '8px 10px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              )
+            })}
+          </div>
+          <button onClick={cerrar} disabled={loading} style={{ marginTop: 10, fontFamily: SN, fontSize: 13, fontWeight: 700, padding: '8px 16px', background: C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            Reintentar cierre
+          </button>
+        </div>
+      )}
+
       {result && (
         <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px', marginBottom: (c?.conteo_realizado || (result.cuadre_por_empleado?.length ?? 0) > 0) ? 12 : 0 }}>
           <div style={{ fontFamily: SM, fontSize: 11, color: '#4ADE80', marginBottom: 10 }}>Asiento nº {result.num_asiento} generado</div>
@@ -355,12 +391,19 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
 
           {vista === 'global' && (
             c?.conteo_realizado ? (
+              result.conteo_ciego && !revelado ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Conteo ciego activo: el descuadre se revela tras contar.</div>
+                  <button onClick={() => setRevelado(true)} style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '5px 12px', background: C.ink, color: C.paper, border: 'none', borderRadius: 6, cursor: 'pointer' }}>Revelar cuadre</button>
+                </div>
+              ) : (
               <>
                 <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: difColor, marginBottom: 10 }}>
                   {Math.abs(c.diferencia_caja) < 0.005 ? 'Caja cuadrada ✓' : `${c.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(c.diferencia_caja))}`}
                 </div>
                 <CuadreDetalle cc={c} />
               </>
+              )
             ) : (
               <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Marca “Hacer arqueo” y cuenta el cajón para ver el descuadre global.</div>
             )

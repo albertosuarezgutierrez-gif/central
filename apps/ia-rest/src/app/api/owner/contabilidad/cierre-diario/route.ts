@@ -27,6 +27,8 @@ export async function POST(req: NextRequest) {
   const desgloseManual: Record<string, number> | null = body.desglose_monedas ?? null
   const fondoFinalManual: number | null = body.fondo_final ?? null
   const notas: string | null = body.notas ?? null
+  // Motivo por empleado (clave = camarero_id; 'general' para la caja sin asignar).
+  const notasPorEmpleado: Record<string, string> = body.notas_por_empleado ?? {}
 
   // 1. Comprobar si ya existe arqueo para esa fecha
   const { data: arqueoExistente } = await supabase
@@ -160,6 +162,22 @@ export async function POST(req: NextRequest) {
     ticket_medio: num_tickets > 0 ? Math.round((base_10 + iva_10 + base_21 + iva_21) / num_tickets * 100) / 100 : 0,
   }
 
+  // 4b. Motivo obligatorio: si un empleado supera el umbral debe llevar justificación
+  // (en notas_por_empleado[camarero_id|'general'] o, como respaldo, en las notas globales).
+  const umbral = Number(cfgData?.umbral_descuadre ?? 5)
+  const pendientes = cuadre_por_empleado
+    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbral)
+    .filter(e => {
+      const k = e.camarero_id ?? 'general'
+      return !(notasPorEmpleado[k]?.trim()) && !(notas?.trim())
+    })
+    .map(e => ({ camarero_id: e.camarero_id, camarero_nombre: e.camarero_nombre ?? 'Caja general' }))
+  if (pendientes.length) {
+    return NextResponse.json(
+      { error: 'Falta el motivo del descuadre para algún empleado.', pendientes }, { status: 400 },
+    )
+  }
+
   // 5. Upsert arqueo
   const { data: arqueo, error: arqueoErr } = await supabase
     .from('arqueos_caja')
@@ -185,12 +203,12 @@ export async function POST(req: NextRequest) {
         fondo_final:     e.cuadre.fondo_final,
         diferencia_caja: e.cuadre.diferencia_caja,
         conteo_realizado: e.cuadre.conteo_realizado,
+        notas: notasPorEmpleado[e.camarero_id ?? 'general']?.trim() || null,
       })),
     )
   }
 
   // 5c. Alertas: empleados que superan el umbral de descuadre → push al owner/gestor.
-  const umbral = Number(cfgData?.umbral_descuadre ?? 5)
   const alertas = cuadre_por_empleado
     .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbral)
     .map(e => ({ camarero_id: e.camarero_id, camarero_nombre: e.camarero_nombre, diferencia_caja: e.cuadre.diferencia_caja, recurrente: false }))
@@ -265,6 +283,7 @@ export async function POST(req: NextRequest) {
     cuadre,
     cuadre_por_empleado,
     umbral_descuadre: umbral,
+    conteo_ciego: !!cfgData?.conteo_ciego,
     alertas,
   })
 }
