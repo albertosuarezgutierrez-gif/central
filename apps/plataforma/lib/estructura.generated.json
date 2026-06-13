@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T21:54:36Z",
+  "generadoEn": "2026-06-13T21:58:06Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -287,7 +287,7 @@
     "core-push": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
