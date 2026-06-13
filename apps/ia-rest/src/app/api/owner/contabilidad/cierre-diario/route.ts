@@ -6,7 +6,8 @@ import {
   generarAsientoCierreDiario, periodoStr, trimestreActual,
   PGC_DEFECTO, type ConfigContabilidad,
 } from '@/lib/contabilidad'
-import { calcularCuadreCaja, calcularCuadrePorEmpleado, type MovimientoCaja } from '@central/module-contabilidad'
+import { calcularCuadreCaja, calcularCuadrePorEmpleado, resumirDescuadresEmpleado, type MovimientoCaja, type FilaArqueoEmpleado } from '@central/module-contabilidad'
+import { enviarPushARoles } from '@/lib/push'
 
 /**
  * POST /api/owner/contabilidad/cierre-diario
@@ -188,6 +189,40 @@ export async function POST(req: NextRequest) {
     )
   }
 
+  // 5c. Alertas: empleados que superan el umbral de descuadre → push al owner/gestor.
+  const umbral = Number(cfgData?.umbral_descuadre ?? 5)
+  const alertas = cuadre_por_empleado
+    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbral)
+    .map(e => ({ camarero_id: e.camarero_id, camarero_nombre: e.camarero_nombre, diferencia_caja: e.cuadre.diferencia_caja, recurrente: false }))
+
+  if (alertas.length) {
+    // Patrón recurrente: mirar el histórico reciente (60 días) de esos empleados.
+    const ids = alertas.map(a => a.camarero_id).filter(Boolean) as string[]
+    if (ids.length) {
+      const desde60 = new Date(Date.now() - 60 * 864e5).toISOString().split('T')[0]
+      const { data: hist } = await supabase
+        .from('arqueos_caja_empleado')
+        .select('camarero_id, camarero_nombre, fecha, diferencia_caja, conteo_realizado')
+        .eq('local_id', rid).in('camarero_id', ids).gte('fecha', desde60)
+        .order('fecha', { ascending: true })
+      const recurrentes = new Set(
+        resumirDescuadresEmpleado((hist ?? []) as FilaArqueoEmpleado[])
+          .filter(r => r.patron_recurrente).map(r => r.camarero_id),
+      )
+      for (const a of alertas) if (recurrentes.has(a.camarero_id)) a.recurrente = true
+    }
+
+    const lineas = alertas.map(a =>
+      `${a.camarero_nombre ?? 'Caja general'}: ${a.diferencia_caja > 0 ? '+' : ''}${a.diferencia_caja.toFixed(2)}€${a.recurrente ? ' ⚠️recurrente' : ''}`,
+    )
+    await enviarPushARoles({
+      supabase, localId: rid, roles: ['owner', 'gestor'],
+      title: `⚠️ Descuadre de caja (${fecha})`,
+      body: lineas.join(' · '),
+      data: { tipo: 'descuadre_caja', fecha },
+    })
+  }
+
   // 6. Generar asiento contable
   const numAsiento = (await supabase.rpc('siguiente_num_asiento', { p_restaurante_id: rid })).data as number ?? 1
   const { concepto, tipo, lineas } = generarAsientoCierreDiario(arqueoInput, cfg, numAsiento)
@@ -229,5 +264,7 @@ export async function POST(req: NextRequest) {
     },
     cuadre,
     cuadre_por_empleado,
+    umbral_descuadre: umbral,
+    alertas,
   })
 }

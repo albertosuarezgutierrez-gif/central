@@ -236,6 +236,8 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
     num_asiento: number
     cuadre?: CuadreCaja
     cuadre_por_empleado?: CuadreEmpleado[]
+    umbral_descuadre?: number
+    alertas?: { camarero_id: string | null; camarero_nombre: string | null; diferencia_caja: number; recurrente: boolean }[]
   } | null>(null)
 
   // Total contado en vivo desde el desglose físico.
@@ -370,10 +372,14 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
                 {result.cuadre_por_empleado!.map(e => {
                   const ec = e.cuadre
                   const ecol = Math.abs(ec.diferencia_caja) < 0.005 ? '#3F7D44' : ec.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
+                  const alerta = result.alertas?.find(x => x.camarero_id === e.camarero_id)
                   return (
-                    <div key={e.camarero_id ?? 'general'} style={{ background: C.paper2, borderRadius: 8, padding: '10px 12px' }}>
+                    <div key={e.camarero_id ?? 'general'} style={{ background: C.paper2, borderRadius: 8, padding: '10px 12px', border: alerta ? `1px solid ${(C.verm ?? '#D9442B')}88` : '1px solid transparent' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
-                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.ink }}>{e.camarero_nombre ?? 'Caja general'}</div>
+                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {e.camarero_nombre ?? 'Caja general'}
+                          {alerta && <span style={{ fontFamily: SM, fontSize: 8, color: C.paper, background: (C.verm ?? '#D9442B'), borderRadius: 6, padding: '1px 5px', textTransform: 'uppercase' }}>{alerta.recurrente ? 'merma recurrente' : 'supera umbral'}</span>}
+                        </div>
                         <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: ecol }}>
                           {!ec.conteo_realizado ? 'Sin conteo' : Math.abs(ec.diferencia_caja) < 0.005 ? 'Cuadrada ✓' : `${ec.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(ec.diferencia_caja))}`}
                         </div>
