@@ -238,8 +238,11 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
     cuadre_por_empleado?: CuadreEmpleado[]
     umbral_descuadre?: number
     conteo_ciego?: boolean
+    tarjeta_liquidada?: number | null
+    diferencia_tarjeta?: number | null
     alertas?: { camarero_id: string | null; camarero_nombre: string | null; diferencia_caja: number; recurrente: boolean }[]
   } | null>(null)
+  const [tarjetaLiq, setTarjetaLiq] = useState('')
 
   // Total contado en vivo desde el desglose físico.
   const [pendientesMotivo, setPendientesMotivo] = useState<{ camarero_id: string | null; camarero_nombre: string }[]>([])
@@ -257,6 +260,7 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
       if (conArqueo) body.desglose_monedas = desglose
       if (notas.trim()) body.notas = notas.trim()
       if (Object.keys(notasEmpleado).length) body.notas_por_empleado = notasEmpleado
+      if (tarjetaLiq.trim()) body.tarjeta_liquidada = Number(tarjetaLiq)
       const r = await fetch('/api/owner/contabilidad/cierre-diario', {
         method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
         body: JSON.stringify(body)
@@ -296,6 +300,9 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
             <input type="checkbox" checked={conArqueo} onChange={e => setConArqueo(e.target.checked)} style={{ accentColor: C.ink }} />
             Hacer arqueo de caja (contar el cajón)
           </label>
+          <input type="number" inputMode="decimal" value={tarjetaLiq} onChange={e => setTarjetaLiq(e.target.value)} placeholder="Liquidado tarjeta (banco) €"
+            title="Conciliación de tarjeta: importe liquidado por el datáfono/banco"
+            style={{ width: 190, fontFamily: SN, fontSize: 13, padding: '8px 12px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none' }} />
           <button onClick={cerrar} disabled={loading}
             style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, padding: '8px 20px', background: loading ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: loading ? 'default' : 'pointer' }}>
             {loading ? 'Generando…' : '🔒 Generar cierre del día'}
@@ -369,6 +376,11 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
               </div>
             ))}
           </div>
+          {result.diferencia_tarjeta != null && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #3F7D4433', fontFamily: SN, fontSize: 12, color: Math.abs(result.diferencia_tarjeta) < 0.005 ? '#4ADE80' : C.amber }}>
+              Conciliación tarjeta: liquidado {fmt(result.tarjeta_liquidada ?? 0)} · {Math.abs(result.diferencia_tarjeta) < 0.005 ? 'cuadra ✓' : `descuadre ${fmt(result.diferencia_tarjeta)}`}
+            </div>
+          )}
         </div>
       )}
 

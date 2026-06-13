@@ -29,6 +29,8 @@ export async function POST(req: NextRequest) {
   const notas: string | null = body.notas ?? null
   // Motivo por empleado (clave = camarero_id; 'general' para la caja sin asignar).
   const notasPorEmpleado: Record<string, string> = body.notas_por_empleado ?? {}
+  // Conciliación de tarjeta: importe liquidado por el datáfono/banco (opcional).
+  const tarjetaLiquidada: number | null = body.tarjeta_liquidada != null ? Number(body.tarjeta_liquidada) : null
 
   // 1. Comprobar si ya existe arqueo para esa fecha
   const { data: arqueoExistente } = await supabase
@@ -158,6 +160,8 @@ export async function POST(req: NextRequest) {
     salidas_caja:  cuadre.salidas_caja,
     fondo_final:   cuadre.fondo_final,
     diferencia_caja: cuadre.diferencia_caja,
+    tarjeta_liquidada: tarjetaLiquidada,
+    diferencia_tarjeta: tarjetaLiquidada != null ? Math.round((tarjetaLiquidada - tarjeta) * 100) / 100 : null,
     num_comandas: num_tickets, num_tickets,
     ticket_medio: num_tickets > 0 ? Math.round((base_10 + iva_10 + base_21 + iva_21) / num_tickets * 100) / 100 : 0,
   }
@@ -241,6 +245,17 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // 5d. Alerta de conciliación de tarjeta (sistema vs liquidado por banco).
+  const difTarjeta = tarjetaLiquidada != null ? Math.round((tarjetaLiquidada - tarjeta) * 100) / 100 : null
+  if (difTarjeta != null && Math.abs(difTarjeta) > umbral) {
+    await enviarPushARoles({
+      supabase, localId: rid, roles: ['owner', 'gestor'],
+      title: `⚠️ Descuadre de tarjeta (${fecha})`,
+      body: `Sistema ${tarjeta.toFixed(2)}€ vs liquidado ${tarjetaLiquidada!.toFixed(2)}€ (${difTarjeta > 0 ? '+' : ''}${difTarjeta.toFixed(2)}€)`,
+      data: { tipo: 'descuadre_tarjeta', fecha },
+    })
+  }
+
   // 6. Generar asiento contable
   const numAsiento = (await supabase.rpc('siguiente_num_asiento', { p_restaurante_id: rid })).data as number ?? 1
   const { concepto, tipo, lineas } = generarAsientoCierreDiario(arqueoInput, cfg, numAsiento)
@@ -284,6 +299,8 @@ export async function POST(req: NextRequest) {
     cuadre_por_empleado,
     umbral_descuadre: umbral,
     conteo_ciego: !!cfgData?.conteo_ciego,
+    tarjeta_liquidada: tarjetaLiquidada,
+    diferencia_tarjeta: difTarjeta,
     alertas,
   })
 }
