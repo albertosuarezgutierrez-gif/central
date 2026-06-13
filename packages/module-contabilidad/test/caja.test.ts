@@ -6,7 +6,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 
-import { calcularCuadreCaja, totalDesglose, DENOMINACIONES_EUR } from '../src/caja.ts'
+import { calcularCuadreCaja, calcularCuadrePorEmpleado, totalDesglose, DENOMINACIONES_EUR } from '../src/caja.ts'
 import type { MovimientoCaja } from '../src/types.ts'
 
 // ── totalDesglose ─────────────────────────────────────────────────────────────
@@ -124,4 +124,40 @@ test('calcularCuadreCaja: sin movimientos → todo a cero', () => {
     diferencia_caja: 0,
     conteo_realizado: false,
   })
+})
+
+// ── calcularCuadrePorEmpleado ─────────────────────────────────────────────────
+test('calcularCuadrePorEmpleado: agrupa por camarero y cuadra cada uno', () => {
+  const movs: MovimientoCaja[] = [
+    { tipo: 'apertura', importe: 50, camarero_id: 'a', camarero_nombre: 'Ana' },
+    { tipo: 'cobro_efectivo', importe: 30, camarero_id: 'a', camarero_nombre: 'Ana' },
+    { tipo: 'cierre', importe: 0, camarero_id: 'a', camarero_nombre: 'Ana', desglose_monedas: { '50': 1, '20': 1, '10': 1 } }, // 80
+    { tipo: 'apertura', importe: 40, camarero_id: 'b', camarero_nombre: 'Beto' },
+    { tipo: 'cobro_efectivo', importe: 20, camarero_id: 'b', camarero_nombre: 'Beto' },
+    { tipo: 'cierre', importe: 0, camarero_id: 'b', camarero_nombre: 'Beto', desglose_monedas: { '50': 1 } }, // 50 → falta 10
+  ]
+  const res = calcularCuadrePorEmpleado(movs)
+  assert.equal(res.length, 2)
+  const ana = res.find(r => r.camarero_id === 'a')!
+  const beto = res.find(r => r.camarero_id === 'b')!
+  assert.equal(ana.cuadre.saldo_teorico, 80)
+  assert.equal(ana.cuadre.diferencia_caja, 0)
+  assert.equal(beto.cuadre.saldo_teorico, 60)
+  assert.equal(beto.cuadre.fondo_final, 50)
+  assert.equal(beto.cuadre.diferencia_caja, -10)
+})
+
+test('calcularCuadrePorEmpleado: movimientos sin empleado → grupo "Caja general"', () => {
+  const movs: MovimientoCaja[] = [
+    { tipo: 'apertura', importe: 100 },
+    { tipo: 'cobro_efectivo', importe: 25, camarero_id: 'a', camarero_nombre: 'Ana' },
+  ]
+  const res = calcularCuadrePorEmpleado(movs)
+  const general = res.find(r => r.camarero_id === null)
+  assert.ok(general, 'debe existir grupo general')
+  assert.equal(general!.cuadre.saldo_teorico, 100)
+})
+
+test('calcularCuadrePorEmpleado: sin movimientos → array vacío', () => {
+  assert.deepEqual(calcularCuadrePorEmpleado([]), [])
 })

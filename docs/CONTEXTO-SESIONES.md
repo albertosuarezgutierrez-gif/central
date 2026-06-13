@@ -23,13 +23,15 @@
   (`fondo_inicial/salidas_caja/fondo_final/diferencia_caja`) pero **el `cierre-diario` los hardcodeaba a 0**
   y nunca leía `movimientos_caja`. Se **completa** (sin tabla ni endpoints nuevos, cero duplicación):
   - **Lógica pura** en `@central/module-contabilidad` (`src/caja.ts`): `calcularCuadreCaja`,
-    `totalDesglose`, `DENOMINACIONES_EUR` + tipos `MovimientoCaja`/`CuadreCaja`. Saldo teórico = Σ
-    movimientos del cajón; conteo físico = desglose manual o último arqueo/cierre; descuadre = real − teórico.
-    **15 tests `node:test`** (el paquete no tenía script `test`; añadido).
+    `totalDesglose`, `DENOMINACIONES_EUR`, `calcularCuadrePorEmpleado` + tipos
+    `MovimientoCaja`/`CuadreCaja`/`CuadreEmpleado`. Saldo teórico = Σ movimientos del cajón; conteo
+    físico = desglose manual o último arqueo/cierre; descuadre = real − teórico. **18 tests `node:test`**
+    (el paquete no tenía script `test`; añadido).
   - **`apps/ia-rest/.../contabilidad/cierre-diario/route.ts`**: lee `movimientos_caja` del día y
-    persiste el cuadre real + `cerrado_por`/`notas`; devuelve `cuadre` en la respuesta.
+    persiste el cuadre global real + `cerrado_por`/`notas`; devuelve `cuadre` y `cuadre_por_empleado`.
   - **UI** `ContabilidadTab.tsx` (sub-tab Cierre): checkbox "Hacer arqueo", conteo por denominación
-    en vivo, notas, y tarjeta de cuadre (teórico vs contado vs descuadre con color).
+    en vivo, notas, y tarjeta de cuadre **configurable (toggle Caja única / Por empleado)** — por
+    empleado agrupa los arqueos de cada camarero desde `movimientos_caja` (sin migración).
   - **Verificado**: 15/15 tests ✅, `tsc --noEmit` ia-rest ✅, eslint archivos tocados 0 errores ✅.
     Sin migración (columnas ya existían). **Roadmap restante** (PRs aparte): completar control horario
     (plantilla/ausencias/informe jornada legal), alta Kit Digital (admin), Tier 2 (pago unificado, carta digital).

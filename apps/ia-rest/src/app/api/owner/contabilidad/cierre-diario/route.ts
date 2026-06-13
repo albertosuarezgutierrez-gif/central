@@ -6,7 +6,7 @@ import {
   generarAsientoCierreDiario, periodoStr, trimestreActual,
   PGC_DEFECTO, type ConfigContabilidad,
 } from '@/lib/contabilidad'
-import { calcularCuadreCaja, type MovimientoCaja } from '@central/module-contabilidad'
+import { calcularCuadreCaja, calcularCuadrePorEmpleado, type MovimientoCaja } from '@central/module-contabilidad'
 
 /**
  * POST /api/owner/contabilidad/cierre-diario
@@ -80,16 +80,17 @@ export async function POST(req: NextRequest) {
   // conteo físico (desglose manual de la UI o el último arqueo/cierre del día).
   const { data: movsCaja } = await supabase
     .from('movimientos_caja')
-    .select('tipo, importe, desglose_monedas, created_at')
+    .select('tipo, importe, desglose_monedas, camarero_id, camarero_nombre, created_at')
     .eq('local_id', rid)
     .gte('created_at', `${fecha}T00:00:00`)
     .lt('created_at',  `${fecha}T23:59:59`)
     .order('created_at', { ascending: true })
 
-  const cuadre = calcularCuadreCaja((movsCaja ?? []) as MovimientoCaja[], {
-    fondoFinalManual,
-    desgloseManual,
-  })
+  const movs = (movsCaja ?? []) as MovimientoCaja[]
+  // Modo caja única: cuadre global (se persiste en arqueos_caja).
+  const cuadre = calcularCuadreCaja(movs, { fondoFinalManual, desgloseManual })
+  // Modo caja por empleado: desglose informativo (cada uno cuenta su cajón en movimientos_caja).
+  const cuadre_por_empleado = calcularCuadrePorEmpleado(movs)
 
   // 4. Cargar config contable
   const { data: cfgData } = await supabase
@@ -185,5 +186,6 @@ export async function POST(req: NextRequest) {
       num_tickets,
     },
     cuadre,
+    cuadre_por_empleado,
   })
 }

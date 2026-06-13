@@ -35,6 +35,30 @@ interface CuadreCaja {
   fondo_inicial: number; cobros_efectivo: number; salidas_caja: number
   saldo_teorico: number; fondo_final: number; diferencia_caja: number; conteo_realizado: boolean
 }
+interface CuadreEmpleado { camarero_id: string | null; camarero_nombre: string | null; cuadre: CuadreCaja }
+
+// Rejilla de detalle de un cuadre (reutilizada en vista global y por empleado).
+function CuadreDetalle({ cc }: { cc: CuadreCaja }) {
+  const difColor = Math.abs(cc.diferencia_caja) < 0.005 ? '#3F7D44' : cc.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
+  const filas: [string, string, string][] = [
+    ['Fondo inicial', fmt(cc.fondo_inicial), C.ink],
+    ['Cobros efectivo', fmt(cc.cobros_efectivo), C.ink],
+    ['Salidas (retiros/gastos)', fmt(cc.salidas_caja), C.ink],
+    ['Saldo teórico', fmt(cc.saldo_teorico), C.ink],
+    ['Contado (físico)', cc.conteo_realizado ? fmt(cc.fondo_final) : '—', C.ink],
+    ['Descuadre', cc.conteo_realizado ? fmt(cc.diferencia_caja) : '—', difColor],
+  ]
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
+      {filas.map(([l, v, col]) => (
+        <div key={l} style={{ background: C.paper2, borderRadius: 8, padding: '8px 10px' }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginBottom: 2 }}>{l}</div>
+          <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: col }}>{v}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
 
 export default function ContabilidadTab({ sh }: { sh: () => Record<string, string> }) {
   const [sub, setSub] = useState<SubTab>('resumen')
@@ -206,10 +230,12 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
   const [conArqueo, setConArqueo] = useState(false)
   const [desglose, setDesglose]   = useState<Record<string, number>>({})
   const [notas, setNotas]         = useState('')
+  const [vista, setVista]         = useState<'global' | 'empleado'>('global')
   const [result, setResult]   = useState<{
     resumen: { total_ventas: number; base_10: number; iva_10: number; base_21: number; iva_21: number; efectivo: number; tarjeta: number; bizum: number; num_tickets: number }
     num_asiento: number
     cuadre?: CuadreCaja
+    cuadre_por_empleado?: CuadreEmpleado[]
   } | null>(null)
 
   // Total contado en vivo desde el desglose físico.
@@ -288,7 +314,7 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
       )}
 
       {result && (
-        <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px', marginBottom: c?.conteo_realizado ? 12 : 0 }}>
+        <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px', marginBottom: (c?.conteo_realizado || (result.cuadre_por_empleado?.length ?? 0) > 0) ? 12 : 0 }}>
           <div style={{ fontFamily: SM, fontSize: 11, color: '#4ADE80', marginBottom: 10 }}>Asiento nº {result.num_asiento} generado</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {[
@@ -308,30 +334,59 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
         </div>
       )}
 
-      {/* Cuadre de caja */}
-      {c?.conteo_realizado && (
+      {/* Cuadre de caja — vista configurable: caja única o por empleado */}
+      {result && (c?.conteo_realizado || (result.cuadre_por_empleado?.length ?? 0) > 0) && (
         <div style={{ background: C.bone, border: `1px solid ${difColor}55`, borderRadius: 10, padding: '14px 16px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
             <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Cuadre de caja</div>
-            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: difColor }}>
-              {Math.abs(c.diferencia_caja) < 0.005 ? 'Caja cuadrada ✓' : `${c.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(c.diferencia_caja))}`}
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['global', 'empleado'] as const).map(v => (
+                <button key={v} onClick={() => setVista(v)} style={{
+                  fontFamily: SN, fontSize: 11, padding: '4px 10px', borderRadius: 14,
+                  background: vista === v ? C.ink : 'transparent', color: vista === v ? C.paper : C.ink3,
+                  border: `1px solid ${vista === v ? C.ink : C.rule}`, cursor: 'pointer' }}>
+                  {v === 'global' ? 'Caja única' : 'Por empleado'}
+                </button>
+              ))}
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
-            {[
-              ['Fondo inicial', fmt(c.fondo_inicial), C.ink],
-              ['Cobros efectivo', fmt(c.cobros_efectivo), C.ink],
-              ['Salidas (retiros/gastos)', fmt(c.salidas_caja), C.ink],
-              ['Saldo teórico', fmt(c.saldo_teorico), C.ink],
-              ['Contado (físico)', fmt(c.fondo_final), C.ink],
-              ['Descuadre', fmt(c.diferencia_caja), difColor],
-            ].map(([l, v, col]) => (
-              <div key={l as string} style={{ background: C.paper2, borderRadius: 8, padding: '8px 10px' }}>
-                <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginBottom: 2 }}>{l}</div>
-                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: col as string }}>{v}</div>
+
+          {vista === 'global' && (
+            c?.conteo_realizado ? (
+              <>
+                <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: difColor, marginBottom: 10 }}>
+                  {Math.abs(c.diferencia_caja) < 0.005 ? 'Caja cuadrada ✓' : `${c.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(c.diferencia_caja))}`}
+                </div>
+                <CuadreDetalle cc={c} />
+              </>
+            ) : (
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Marca “Hacer arqueo” y cuenta el cajón para ver el descuadre global.</div>
+            )
+          )}
+
+          {vista === 'empleado' && (
+            (result.cuadre_por_empleado?.length ?? 0) > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {result.cuadre_por_empleado!.map(e => {
+                  const ec = e.cuadre
+                  const ecol = Math.abs(ec.diferencia_caja) < 0.005 ? '#3F7D44' : ec.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
+                  return (
+                    <div key={e.camarero_id ?? 'general'} style={{ background: C.paper2, borderRadius: 8, padding: '10px 12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.ink }}>{e.camarero_nombre ?? 'Caja general'}</div>
+                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: ecol }}>
+                          {!ec.conteo_realizado ? 'Sin conteo' : Math.abs(ec.diferencia_caja) < 0.005 ? 'Cuadrada ✓' : `${ec.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(ec.diferencia_caja))}`}
+                        </div>
+                      </div>
+                      <CuadreDetalle cc={ec} />
+                    </div>
+                  )
+                })}
               </div>
-            ))}
-          </div>
+            ) : (
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>No hay movimientos de caja por empleado este día.</div>
+            )
+          )}
         </div>
       )}
     </div>

@@ -91,6 +91,9 @@ export interface MovimientoCaja {
   tipo: string // 'apertura' | 'cobro_efectivo' | 'cambio' | 'retiro' | 'gasto' | 'arqueo' | 'cierre' | …
   importe: number
   desglose_monedas?: Record<string, number> | null
+  // Atribución al empleado (para el cuadre por empleado). Opcional: null = caja general.
+  camarero_id?: string | null
+  camarero_nombre?: string | null
 }
 
 /** Resultado del cuadre de caja de un turno/día. */
@@ -102,4 +105,11 @@ export interface CuadreCaja {
   fondo_final: number // conteo físico real
   diferencia_caja: number // fondo_final − saldo_teorico (+ sobra, − falta)
   conteo_realizado: boolean // false si no hubo conteo físico
+}
+
+/** Cuadre atribuido a un empleado (modo "caja por empleado"). */
+export interface CuadreEmpleado {
+  camarero_id: string | null // null = caja general (sin empleado asignado)
+  camarero_nombre: string | null
+  cuadre: CuadreCaja
 }

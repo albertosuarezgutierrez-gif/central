@@ -4,7 +4,7 @@
 // descuadre. Sirve a cualquier vertical que lleve caja (ia.rest hoy; ialimp/sivra
 // si la necesitan). No consulta ninguna BD: recibe los movimientos ya normalizados.
 
-import type { MovimientoCaja, CuadreCaja } from './types'
+import type { MovimientoCaja, CuadreCaja, CuadreEmpleado } from './types'
 
 // Redondeo a 2 decimales. Local (no se importa de ./iva) para que este módulo sea
 // una "hoja" autónoma y el runner `node --test` (type-stripping) pueda cargarlo
@@ -113,4 +113,37 @@ export function calcularCuadreCaja(
     diferencia_caja,
     conteo_realizado,
   }
+}
+
+/**
+ * Cuadre desglosado POR EMPLEADO: agrupa los movimientos por `camarero_id` y
+ * calcula un cuadre independiente para cada uno (cada empleado cuenta su propio
+ * cajón → su arqueo/cierre con desglose vive en sus movimientos). Los movimientos
+ * sin empleado asignado (`camarero_id` nulo) se agrupan como "Caja general".
+ *
+ * Modo "caja por empleado": el conteo físico de cada empleado sale de sus propios
+ * arqueos/cierres (no se pasa override manual por empleado).
+ */
+export function calcularCuadrePorEmpleado(
+  movimientos: MovimientoCaja[],
+): CuadreEmpleado[] {
+  const grupos = new Map<string, { nombre: string | null; movs: MovimientoCaja[] }>()
+  for (const m of movimientos) {
+    const key = m.camarero_id ?? '__general__'
+    let g = grupos.get(key)
+    if (!g) {
+      g = { nombre: m.camarero_id ? m.camarero_nombre ?? null : null, movs: [] }
+      grupos.set(key, g)
+    }
+    if (!g.nombre && m.camarero_nombre) g.nombre = m.camarero_nombre
+    g.movs.push(m)
+  }
+
+  return Array.from(grupos.entries())
+    .map(([key, g]) => ({
+      camarero_id: key === '__general__' ? null : key,
+      camarero_nombre: key === '__general__' ? null : g.nombre,
+      cuadre: calcularCuadreCaja(g.movs),
+    }))
+    .sort((a, b) => (a.camarero_nombre ?? '').localeCompare(b.camarero_nombre ?? ''))
 }

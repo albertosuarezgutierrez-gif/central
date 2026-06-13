@@ -10,6 +10,7 @@ export type {
   PlantillaRecurrente,
   MovimientoCaja,
   CuadreCaja,
+  CuadreEmpleado,
 } from './types'
 
 // IVA
@@ -22,7 +23,7 @@ export { calcularPyG } from './pyg'
 export { calcularTesoreria } from './tesoreria'
 
 // Cuadre / arqueo de caja
-export { calcularCuadreCaja, totalDesglose, DENOMINACIONES_EUR } from './caja'
+export { calcularCuadreCaja, calcularCuadrePorEmpleado, totalDesglose, DENOMINACIONES_EUR } from './caja'
 export type { OpcionesCuadre } from './caja'
 
 // Rentabilidad por entidad
