@@ -256,6 +256,19 @@ export async function POST(req: NextRequest) {
     })
   }
 
+  // 5e. Abastecimiento de cambio: avisar si el conteo final baja de los mínimos por denominación.
+  const minMonedas: Record<string, number> = (cfgData?.min_monedas as Record<string, number> | null) ?? {}
+  const ctrlMovs = movs.filter(m => (m.tipo === 'arqueo' || m.tipo === 'cierre') && m.desglose_monedas)
+  const desgloseFinal: Record<string, number> = desgloseManual
+    ?? (ctrlMovs.length ? (ctrlMovs[ctrlMovs.length - 1].desglose_monedas as Record<string, number>) : {})
+  const aviso_cambio = Object.entries(minMonedas)
+    .map(([denom, min]) => {
+      const tiene = Number(desgloseFinal[denom] ?? 0)
+      const m = Number(min) || 0
+      return tiene < m ? { denom, faltan: m - tiene } : null
+    })
+    .filter((x): x is { denom: string; faltan: number } => x != null)
+
   // 6. Generar asiento contable
   const numAsiento = (await supabase.rpc('siguiente_num_asiento', { p_restaurante_id: rid })).data as number ?? 1
   const { concepto, tipo, lineas } = generarAsientoCierreDiario(arqueoInput, cfg, numAsiento)
@@ -301,6 +314,7 @@ export async function POST(req: NextRequest) {
     conteo_ciego: !!cfgData?.conteo_ciego,
     tarjeta_liquidada: tarjetaLiquidada,
     diferencia_tarjeta: difTarjeta,
+    aviso_cambio,
     alertas,
   })
 }

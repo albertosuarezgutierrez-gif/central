@@ -240,6 +240,7 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
     conteo_ciego?: boolean
     tarjeta_liquidada?: number | null
     diferencia_tarjeta?: number | null
+    aviso_cambio?: { denom: string; faltan: number }[]
     alertas?: { camarero_id: string | null; camarero_nombre: string | null; diferencia_caja: number; recurrente: boolean }[]
   } | null>(null)
   const [tarjetaLiq, setTarjetaLiq] = useState('')
@@ -379,6 +380,11 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
           {result.diferencia_tarjeta != null && (
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #3F7D4433', fontFamily: SN, fontSize: 12, color: Math.abs(result.diferencia_tarjeta) < 0.005 ? '#4ADE80' : C.amber }}>
               Conciliación tarjeta: liquidado {fmt(result.tarjeta_liquidada ?? 0)} · {Math.abs(result.diferencia_tarjeta) < 0.005 ? 'cuadra ✓' : `descuadre ${fmt(result.diferencia_tarjeta)}`}
+            </div>
+          )}
+          {!!result.aviso_cambio?.length && (
+            <div style={{ marginTop: 8, fontFamily: SN, fontSize: 12, color: C.amber }}>
+              ⚠️ Falta cambio: {result.aviso_cambio.map(a => `${fmtDenom(Number(a.denom))} ×${a.faltan}`).join(' · ')}
             </div>
           )}
         </div>
