@@ -31,6 +31,7 @@ type Row = {
   free_nights_60: number; booked_nights_60: number; occupancy_60: number | null
   days_since_booking: number; current_base: number | null; extra_eur: number
   pace_vs_last_year: number | null; market_p50_guest: number | null
+  open_horizon_days: number | null
 }
 
 export async function GET(req: NextRequest) {
@@ -73,11 +74,22 @@ export async function GET(req: NextRequest) {
     SELECT rs.property_id, COUNT(*)::int AS booked_nights
     FROM rate_snapshots rs
     JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
-    WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60
+    WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 90
       AND EXISTS (
         SELECT 1 FROM incomes i
         WHERE i."propertyId" = rs.property_id
           AND i."checkIn"::date <= rs.rate_date AND i."checkOut"::date > rs.rate_date)
+    GROUP BY rs.property_id`)
+
+  // Chivato de horizonte: hasta qué día hay disponibilidad real (available=1) en el último snapshot.
+  // Acotado al horizonte del snapshot (90d), así que un piso abierto >90d dará ~90 (sin falsa alarma).
+  const horizon = await prisma.$queryRaw<{ property_id: string; open_horizon_days: number | null }[]>(Prisma.sql`
+    WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
+    SELECT rs.property_id,
+      (MAX(rs.rate_date) FILTER (WHERE rs.available = 1) - CURRENT_DATE)::int AS open_horizon_days
+    FROM rate_snapshots rs
+    JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
+    WHERE rs.rate_date >= CURRENT_DATE
     GROUP BY rs.property_id`)
 
   // Precio base actual: el de la fecha futura más próxima del último snapshot.
@@ -140,7 +152,7 @@ export async function GET(req: NextRequest) {
 
   const byId = <T extends { property_id: string }>(arr: T[]) =>
     Object.fromEntries(arr.map((r) => [r.property_id, r]))
-  const W = byId(win), BK = byId(bk), B = byId(base), S = byId(since), M = byId(market), E = byId(extra), P = byId(pace)
+  const W = byId(win), BK = byId(bk), B = byId(base), S = byId(since), M = byId(market), E = byId(extra), P = byId(pace), H = byId(horizon)
 
   const pisos: Row[] = []
   for (const s of settings) {
@@ -157,6 +169,14 @@ export async function GET(req: NextRequest) {
     const extraEur = E[id]?.extra_eur != null ? Number(E[id].extra_eur) : 0
     const recent = Number(P[id]?.recent ?? 0), lastYear = Number(P[id]?.last_year ?? 0)
     const paceVsLastYear = lastYear > 0 ? Math.round((recent / lastYear) * 100) / 100 : null
+    const openHorizonDays = H[id]?.open_horizon_days != null ? Number(H[id].open_horizon_days) : null
+
+    // Chivato: si el calendario abierto se queda corto, avisar (no escribe en Smoobu, solo informa).
+    // Solo cuando el snapshot ya cubre ≥60 días (si no, el horizonte está limitado por la captura,
+    // no por Smoobu → evita falsa alarma mientras el snapshot a 90d aún no ha corrido).
+    if (openHorizonDays != null && windowNights >= 60 && openHorizonDays < 60) {
+      watchdog.push(`${PROP_NAMES[id] ?? id}: calendario abierto solo ${openHorizonDays}d — revisa disponibilidad/restricciones en Smoobu.`)
+    }
 
     const verdict = evaluatePilot({
       windowNights, freeNights, bookedNights, daysSinceBooking,
@@ -169,23 +189,24 @@ export async function GET(req: NextRequest) {
       free_nights_60: freeNights, booked_nights_60: bookedNights, occupancy_60: occupancy60,
       days_since_booking: daysSinceBooking, current_base: currentBase,
       extra_eur: extraEur, pace_vs_last_year: paceVsLastYear, market_p50_guest: marketP50Guest,
+      open_horizon_days: openHorizonDays,
     })
 
     if (!dryRun) {
       await prisma.$executeRaw(Prisma.sql`
         INSERT INTO pricing_pilot_tracking
           (tracked_on, property_id, verdict, free_nights_60, booked_nights_60, occupancy_60,
-           days_since_booking, current_base, extra_eur, pace_vs_last_year, market_p50_guest, diagnosis, proposal)
+           days_since_booking, current_base, extra_eur, pace_vs_last_year, market_p50_guest, diagnosis, proposal, open_horizon_days)
         VALUES (CURRENT_DATE, ${id}, ${verdict.verdict}, ${freeNights}, ${bookedNights},
            ${occupancy60}, ${daysSinceBooking}, ${currentBase}, ${extraEur},
-           ${paceVsLastYear}, ${marketP50Guest}, ${verdict.diagnosis}, ${verdict.proposal})
+           ${paceVsLastYear}, ${marketP50Guest}, ${verdict.diagnosis}, ${verdict.proposal}, ${openHorizonDays})
         ON CONFLICT (tracked_on, property_id) DO UPDATE SET
           verdict = EXCLUDED.verdict, free_nights_60 = EXCLUDED.free_nights_60,
           booked_nights_60 = EXCLUDED.booked_nights_60, occupancy_60 = EXCLUDED.occupancy_60,
           days_since_booking = EXCLUDED.days_since_booking, current_base = EXCLUDED.current_base,
           extra_eur = EXCLUDED.extra_eur, pace_vs_last_year = EXCLUDED.pace_vs_last_year,
           market_p50_guest = EXCLUDED.market_p50_guest, diagnosis = EXCLUDED.diagnosis,
-          proposal = EXCLUDED.proposal`)
+          proposal = EXCLUDED.proposal, open_horizon_days = EXCLUDED.open_horizon_days`)
     }
   }
 
