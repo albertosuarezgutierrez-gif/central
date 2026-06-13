@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T22:10:59Z",
+  "generadoEn": "2026-06-13T22:16:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -775,7 +775,7 @@
     "contabilidad": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 9
+        "evidencias": 10
       },
       "ialimp": {
         "presente": true,
@@ -883,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 159
+        "evidencias": 160
       },
       "ialimp": {
         "presente": true,
@@ -1140,6 +1140,7 @@
       "/api/owner/contabilidad/iva",
       "/api/owner/contabilidad/resumen",
       "/api/owner/contabilidad/tesoreria",
+      "/api/owner/contabilidad/umbral-empleado",
       "/api/owner/contrato",
       "/api/owner/copiloto",
       "/api/owner/dashboard",
@@ -2153,7 +2154,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 738,
+    "apis": 739,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
