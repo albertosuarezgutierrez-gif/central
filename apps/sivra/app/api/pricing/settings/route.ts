@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
+import { clamp, percentile, computeRecommendation, recommendedBaseFromEngine } from "@/lib/pricing-engine"
 
 export const dynamic = "force-dynamic"
 
@@ -14,8 +15,6 @@ export const dynamic = "force-dynamic"
 // PATCH valida y guarda los parámetros que el propietario edita manualmente.
 //
 // Detrás del middleware (login admin), así que la sesión ya está validada.
-
-const clamp = (x: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, x))
 
 // Columnas editables y cómo se validan/normalizan antes de guardar.
 const FIELDS: Record<string, (v: any) => any> = {
@@ -109,14 +108,6 @@ export async function GET() {
   const baseByScenario: Record<string, number | null> = {}
   for (const b of baseNow) baseByScenario[b.scenario] = b.base_actual
 
-  function percentile(sorted: number[], q: number): number {
-    if (sorted.length === 0) return NaN
-    if (sorted.length === 1) return sorted[0]
-    const idx = clamp(q, 0, 1) * (sorted.length - 1)
-    const lo = Math.floor(idx), hi = Math.ceil(idx)
-    return lo === hi ? sorted[lo] : sorted[lo] + (sorted[hi] - sorted[lo]) * (idx - lo)
-  }
-
   const properties = props.map((p) => {
     const g = byScenario[p.property_id]
     const occupancy = occByScenario[p.property_id]
@@ -129,43 +120,31 @@ export async function GET() {
 
     if (g && g.prices.length > 0) {
       const prices = [...g.prices].sort((a, b) => a - b)
-      const scores = [...g.scores].sort((a, b) => a - b)
-      const target = percentile(prices, p.target_pctl)
-      const floor = percentile(prices, p.floor_pctl)
-      const ceil = percentile(prices, p.ceil_pctl)
-      const mktScore = scores.length ? percentile(scores, 0.5) : null
-
-      const qualityFactor = (p.own_score != null && mktScore != null)
-        ? clamp(1 + (Number(p.own_score) - mktScore) * Number(p.quality_k), 0.90, 1.10) : 1.0
-      const demandFactor = (occupancy != null && Number.isFinite(occupancy))
-        ? clamp(1 + (occupancy - Number(p.demand_baseline)) * Number(p.demand_k), 0.92, 1.10) : 1.0
-
-      let guest = Math.round(target * Number(p.position_factor) * qualityFactor * demandFactor)
-      guest = clamp(guest, Math.round(floor), Math.round(ceil))
-
-      // huésped → base de Smoobu, luego cadena de topes del propietario (autoridad final).
-      let base = Math.round(guest / markup)
-      const floorBase = Math.round(floor / markup), ceilBase = Math.round(ceil / markup)
-      base = clamp(base, floorBase, ceilBase)
-      if (baseActual != null) {
-        base = clamp(base, Math.round(baseActual * (1 - Number(p.max_change_pct))),
-          Math.round(baseActual * (1 + Number(p.max_change_pct))))
-      }
-      if (p.min_price != null) base = Math.max(base, p.min_price)
-      if (p.max_price != null) base = Math.min(base, p.max_price)
-
-      recommended_guest = guest
-      recommended_base = base
-      market_ctx = {
-        p25: Math.round(percentile(prices, 0.25)),
-        p50: Math.round(percentile(prices, 0.50)),
-        p90: Math.round(percentile(prices, 0.90)),
-        floor: Math.round(floor),
-        ceil: Math.round(ceil),
-        market_score_median: mktScore != null ? Number(mktScore.toFixed(1)) : null,
-        quality_factor: Number(qualityFactor.toFixed(3)),
-        demand_factor: Number(demandFactor.toFixed(3)),
-        sample: prices.length,
+      // Motor compartido (lib/pricing-engine) → mismo recomendado que recommend y el agente.
+      const eng = computeRecommendation(
+        { target_pctl: p.target_pctl, floor_pctl: p.floor_pctl, ceil_pctl: p.ceil_pctl,
+          position_factor: p.position_factor, quality_k: p.quality_k, demand_k: p.demand_k,
+          demand_baseline: p.demand_baseline, own_score: p.own_score },
+        g.prices, g.scores, occupancy ?? null,
+      )
+      recommended_guest = eng.guest
+      // huésped → base de Smoobu + cadena de topes del propietario (autoridad final).
+      recommended_base = recommendedBaseFromEngine(eng, {
+        markup, max_change_pct: Number(p.max_change_pct),
+        min_price: p.min_price, max_price: p.max_price, baseActual,
+      })
+      if (eng.basis) {
+        market_ctx = {
+          p25: Math.round(percentile(prices, 0.25)),
+          p50: eng.basis.median,
+          p90: Math.round(percentile(prices, 0.90)),
+          floor: eng.basis.floor,
+          ceil: eng.basis.ceil,
+          market_score_median: eng.basis.market_score_median,
+          quality_factor: eng.basis.quality_factor,
+          demand_factor: eng.basis.demand_factor,
+          sample: eng.basis.sample,
+        }
       }
     }
 

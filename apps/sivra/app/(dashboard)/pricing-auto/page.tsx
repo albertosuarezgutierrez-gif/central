@@ -36,6 +36,7 @@ type PilotRow = {
   days_since_booking: number | null; free_nights_60: number | null; occupancy_60: number | null
   current_base: number | null; market_p50_guest: number | null; extra_eur: number | null
   diagnosis: string | null; proposal: string | null; open_horizon_days: number | null
+  recommended_base: number | null
 }
 
 const NUM_FIELDS: { key: keyof Settings; label: string; step: number; hint: string }[] = [
@@ -260,6 +261,7 @@ export default function PricingAutoPage() {
                     Sin reserva: <b style={{ color: C.ink }}>{p.days_since_booking ?? "?"}d</b> ·
                     Libres 60d: <b style={{ color: C.ink }}>{p.free_nights_60 ?? "?"}</b> ·
                     Base: <b style={{ color: C.ink }}>{p.current_base ?? "?"}€</b> ·
+                    Recomendado: <b style={{ color: C.green }}>{p.recommended_base ?? "?"}€</b> ·
                     Mercado: <b style={{ color: C.ink }}>{p.market_p50_guest ?? "?"}€</b> ·
                     Calendario: <b style={{ color: p.open_horizon_days != null && p.open_horizon_days < 60 ? C.warn : C.ink }}>{p.open_horizon_days ?? "?"}d</b>
                   </div>

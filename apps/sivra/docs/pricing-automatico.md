@@ -289,3 +289,16 @@ definir `MARKET_API_URL`/`MARKET_API_KEY`; adaptar `mapToComps` al proveedor. Re
 ### Pendiente
 - Alberto: definir envs + mergear PR #108. Vigilar que PriceLabs no revierta (lo detecta `guard`).
 - Fase futura: onboarding SaaS multi-propietario (alta self-service de listings/costes/reseñas).
+
+## Fuente única del precio recomendado — `lib/pricing-engine.ts`
+El cálculo del "precio para sustituir a PriceLabs" (percentil de mercado × posición × calidad × demanda,
+acotado a floor/ceil) vive en **`lib/pricing-engine.ts`** (`computeRecommendation`). Lo consumen los
+**tres**: `recommend` (estudio), `settings` (panel) y `pilot-track` (propuesta del agente) → todos dan el
+**mismo número**. El agente solo propone con **guardia de confianza** (≥5 comparables y mercado ≤7d).
+- `recommendedBaseFromEngine` aplica la cadena de topes del propietario en **base** (huésped→base por
+  `channel_markup`, floor/ceil, `max_change_pct` vs base actual, `min_price`/`max_price`).
+- **⚠️ A decidir aparte (no arreglado):** `recommend` aplica `min_price`/`max_price` (que son € de **base**)
+  sobre el precio a nivel **huésped** — posible inconsistencia de unidades. `settings`/agente sí lo aplican
+  en base. Mantener vigilado; arreglar en PR propio si se confirma que descuadra.
+- **Pendiente (fuera de alcance de este cambio):** alinear también `apply` al mismo motor (hoy replica la
+  fórmula con su cadena de topes para el push en vivo).
