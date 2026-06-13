@@ -51,18 +51,33 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ ok: true, nota: "ningún piso con pilot_enabled", pisos: [] })
   }
 
-  // Stats de la ventana de 60d (último snapshot por piso).
+  // Stats de la ventana de 60d (último snapshot por piso). window_nights = cobertura real con dato
+  // (puede ser < 60 si el snapshot aún no se amplió); occupancy solo sobre filas con `available`.
   const win = await prisma.$queryRaw<{
-    property_id: string; free_nights_60: number; booked_nights_60: number; occupancy_60: number
+    property_id: string; window_nights: number; free_nights: number; occupancy_60: number | null
   }[]>(Prisma.sql`
     WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
     SELECT rs.property_id,
-      SUM((rs.available = 1)::int)::int AS free_nights_60,
-      SUM((rs.available = 0)::int)::int AS booked_nights_60,
-      ROUND(1 - AVG(rs.available)::numeric, 2) AS occupancy_60
+      COUNT(*) FILTER (WHERE rs.available IS NOT NULL)::int AS window_nights,
+      SUM((rs.available = 1)::int)::int AS free_nights,
+      ROUND(1 - AVG(rs.available) FILTER (WHERE rs.available IS NOT NULL)::numeric, 2) AS occupancy_60
     FROM rate_snapshots rs
     JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
     WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60
+    GROUP BY rs.property_id`)
+
+  // Noches REALMENTE reservadas en la ventana (cruce con incomes), para distinguir
+  // "reservado" de "bloqueado" (available=0 incluye ambos).
+  const bk = await prisma.$queryRaw<{ property_id: string; booked_nights: number }[]>(Prisma.sql`
+    WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
+    SELECT rs.property_id, COUNT(*)::int AS booked_nights
+    FROM rate_snapshots rs
+    JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
+    WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60
+      AND EXISTS (
+        SELECT 1 FROM incomes i
+        WHERE i."propertyId" = rs.property_id
+          AND i."checkIn"::date <= rs.rate_date AND i."checkOut"::date > rs.rate_date)
     GROUP BY rs.property_id`)
 
   // Precio base actual: el de la fecha futura más próxima del último snapshot.
@@ -125,13 +140,15 @@ export async function GET(req: NextRequest) {
 
   const byId = <T extends { property_id: string }>(arr: T[]) =>
     Object.fromEntries(arr.map((r) => [r.property_id, r]))
-  const W = byId(win), B = byId(base), S = byId(since), M = byId(market), E = byId(extra), P = byId(pace)
+  const W = byId(win), BK = byId(bk), B = byId(base), S = byId(since), M = byId(market), E = byId(extra), P = byId(pace)
 
   const pisos: Row[] = []
   for (const s of settings) {
     const id = s.property_id
-    const freeNights60 = Number(W[id]?.free_nights_60 ?? 0)
-    const bookedNights60 = Number(W[id]?.booked_nights_60 ?? 0)
+    const windowNights = Number(W[id]?.window_nights ?? 0)
+    const freeNights = Number(W[id]?.free_nights ?? 0)
+    const bookedNights = Number(BK[id]?.booked_nights ?? 0)
+    const occupancy60 = W[id]?.occupancy_60 != null ? Number(W[id].occupancy_60) : null
     const daysSinceBooking = Number(S[id]?.days_since_booking ?? 999)
     const currentBase = B[id]?.current_base != null ? Number(B[id].current_base) : null
     const marketP50Guest = M[id]?.market_p50_guest != null ? Number(M[id].market_p50_guest) : null
@@ -142,15 +159,14 @@ export async function GET(req: NextRequest) {
     const paceVsLastYear = lastYear > 0 ? Math.round((recent / lastYear) * 100) / 100 : null
 
     const verdict = evaluatePilot({
-      freeNights60, bookedNights60, daysSinceBooking,
+      windowNights, freeNights, bookedNights, daysSinceBooking,
       threshold: Number(s.pilot_no_booking_days ?? 7),
       currentBase, marketP50Guest, channelMarkup, minPrice,
     })
 
     pisos.push({
       property_id: id, verdict,
-      free_nights_60: freeNights60, booked_nights_60: bookedNights60,
-      occupancy_60: W[id]?.occupancy_60 != null ? Number(W[id].occupancy_60) : null,
+      free_nights_60: freeNights, booked_nights_60: bookedNights, occupancy_60: occupancy60,
       days_since_booking: daysSinceBooking, current_base: currentBase,
       extra_eur: extraEur, pace_vs_last_year: paceVsLastYear, market_p50_guest: marketP50Guest,
     })
@@ -160,8 +176,8 @@ export async function GET(req: NextRequest) {
         INSERT INTO pricing_pilot_tracking
           (tracked_on, property_id, verdict, free_nights_60, booked_nights_60, occupancy_60,
            days_since_booking, current_base, extra_eur, pace_vs_last_year, market_p50_guest, diagnosis, proposal)
-        VALUES (CURRENT_DATE, ${id}, ${verdict.verdict}, ${freeNights60}, ${bookedNights60},
-           ${W[id]?.occupancy_60 ?? null}, ${daysSinceBooking}, ${currentBase}, ${extraEur},
+        VALUES (CURRENT_DATE, ${id}, ${verdict.verdict}, ${freeNights}, ${bookedNights},
+           ${occupancy60}, ${daysSinceBooking}, ${currentBase}, ${extraEur},
            ${paceVsLastYear}, ${marketP50Guest}, ${verdict.diagnosis}, ${verdict.proposal})
         ON CONFLICT (tracked_on, property_id) DO UPDATE SET
           verdict = EXCLUDED.verdict, free_nights_60 = EXCLUDED.free_nights_60,
