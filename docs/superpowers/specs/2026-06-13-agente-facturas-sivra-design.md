@@ -58,33 +58,36 @@ Cron diario nuevo en sivra: **`GET /api/expenses/agent/scan`** (protegido con `C
   ├─ lib/agente-facturas/drive.ts      → lista/lee/archiva en Drive (vía drive-upload.gs)
   ├─ lib/agente-facturas/extraer.ts    → envuelve aiExtractInvoice (IVA + IRPF)
   ├─ lib/agente-facturas/reglas.ts     → match contra gastos_reglas + confianza
-  ├─ lib/agente-facturas/imputar.ts    → inserta en gastos | gastos_pendientes (dedup)
+  ├─ lib/agente-facturas/imputar.ts    → inserta en gastos (revisado=true auto | false bandeja, dedup)
   ├─ lib/agente-facturas/anomalias.ts  → duplicados, cambios de importe, recurrentes que faltan
   └─ lib/agente-facturas/avisos.ts     → Telegram + email
 ```
 
 Endpoints de apoyo:
-- `POST /api/expenses/pendientes/[id]/aprobar` — mueve un pendiente a `gastos` (y refuerza la regla).
-- `POST /api/expenses/pendientes/[id]/descartar`.
+- `POST /api/expenses/pendientes/[id]/aprobar` — marca `revisado=true` (y refuerza la regla).
+- `POST /api/expenses/pendientes/[id]/descartar` — borra la fila pendiente.
 - `GET  /api/expenses/agent/backfill` — backfill 2026 (idempotente; reutiliza el mismo pipeline).
 
 Cada unidad tiene un propósito único, interfaz clara y se puede probar aislada.
 
 ## 5. Modelo de datos (cambios en Supabase — DB COMPARTIDA, ver §15)
 
-Todos los cambios son **aditivos** (columnas nullable + tablas nuevas) → no rompen `ialimp`.
+> **Hallazgo (2026-06-13):** la tabla `gastos` real **YA tiene** `irpf`, `confianza` (numeric),
+> `revisado` (boolean), `raw_extraction` (jsonb), `modelo_extraccion`, `subcategoria`, `procesado_en`,
+> `drive_file_id`, `updated_at`. Por tanto **no** se crea `gastos_pendientes`: la **bandeja de
+> revisión es `gastos` con `revisado = false`**. Cambios mínimos y aditivos → no rompen `ialimp`.
 
-**`gastos` — columnas nuevas (nullable):**
-- `irpf` numeric — importe de retención de IRPF.
-- `irpf_porcentaje` numeric — % de retención (p.ej. 19).
+**`gastos` — columnas nuevas (nullable, aditivas):**
+- `irpf_porcentaje` numeric — % de retención (el importe `irpf` ya existe).
 - `origen` text — `'manual' | 'agente-email' | 'agente-drive' | 'backfill'` (trazabilidad).
 - `fingerprint` text — huella de dedup/recurrencia (ver §9).
+- `motivo_revision` text — por qué quedó pendiente (para mostrar en la bandeja).
 
-**`gastos_pendientes` (tabla nueva)** — bandeja de revisión. Mismas columnas que `gastos` +
-`confianza` (0–1), `motivo_revision` text, `drive_url`, `email_uid`, `created_at`. Al aprobar, se
-inserta en `gastos` y se borra de aquí.
+**Semántica de `revisado`:** `true` = confirmado/contabiliza · `false` = **pendiente** (en bandeja,
+NO cuenta en totales) · `null` = gasto legacy (cuenta, como hasta ahora). El agente pone `true` a lo
+auto-imputado de alta confianza y `false` a lo dudoso. El GET de gastos excluye `revisado = false`.
 
-**`gastos_reglas` (tabla nueva)** — memoria del agente. `fingerprint` (PK lógica), `proveedor`,
+**`gastos_reglas` (tabla nueva)** — memoria del agente. `fingerprint` (unique), `proveedor`,
 `nif_proveedor`, `propiedad`, `categoria`, `iva_porcentaje`, `irpf_porcentaje`, `importe_esperado`,
 `importe_min`/`importe_max` (banda tolerada), `periodicidad` (`mensual|trimestral|...`), `vistas`
 (nº de veces confirmada), `ultima_fecha`, `activa` bool.
@@ -168,9 +171,9 @@ banda + todos los campos fiscales presentes + no es duplicado/anomalía. En cual
 
 ## 12. Bandeja de revisión (UI)
 
-Nueva página **`/expenses/pendientes`**: lista de `gastos_pendientes` con PDF embebido + datos
-extraídos editables + `confianza` + `motivo_revision`. Acciones: **Aprobar** (→ `gastos` + refuerza
-regla), **Corregir y aprobar**, **Descartar**. Botón **"Aprobar todo"** para el backfill.
+Nueva página **`/expenses/pendientes`**: lista de gastos con `revisado=false` (PDF enlazado + datos
+extraídos editables + `confianza` + `motivo_revision`). Acciones: **Aprobar** (`revisado=true` +
+refuerza regla), **Corregir y aprobar**, **Descartar** (borra). Botón **"Aprobar todo"** para el backfill.
 
 ## 13. Notificaciones
 
@@ -193,6 +196,21 @@ regla), **Corregir y aprobar**, **Descartar**. Botón **"Aprobar todo"** para el
 - 📤 **Exportar a CSV/Excel** filtrado (para el gestor).
 - 🏦 **Cuadre con el banco:** cruce de lo imputado contra lo realmente cobrado. **Sin integración
   bancaria en vivo** → vía subida de extracto (CSV) del banco; se cruza por importe/fecha.
+- 🔁 **Reaprovechar `parse-booking`:** las facturas de Booking que lleguen por email se enrutan por
+  el camino específico que ya existe (`app/api/expenses/parse-booking/route.ts`) en vez de la
+  extracción genérica → más fiable para el mayor proveedor.
+- 📅 **Resumen mensual por Telegram:** "Junio: 12 gastos · 1.430€ · 2 en bandeja · falta la luz de
+  Luxury". Un vistazo y sabes que cuadra sin entrar a la app.
+
+## 14bis. Mitigaciones de arranque (importantes)
+
+- **Arranque conservador:** el **primer mes** todo va a la bandeja aunque parezca claro; el modo
+  automático se activa solo cuando hay reglas con historial confirmado por Alberto. Evita colar
+  importes erróneos en contabilidad.
+- **Backfill manual y por lotes:** el backfill 2026 se lanza **a mano, por meses, y primero en
+  dry-run** (cuenta y muestra, no escribe). No se cuelga del cron diario (riesgo de timeout Vercel).
+- **Acotar lectura de Gmail:** el app password lee todo el buzón; por defecto se procesa **solo la
+  etiqueta** que controla Alberto (regla de Gmail) además de los candidatos por adjunto/keyword.
 
 ## 15. Avisos / landmines (no romper)
 
