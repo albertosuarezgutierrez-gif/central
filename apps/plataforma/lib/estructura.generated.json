@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T21:58:06Z",
+  "generadoEn": "2026-06-13T22:03:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -775,7 +775,7 @@
     "contabilidad": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 7
+        "evidencias": 8
       },
       "ialimp": {
         "presente": true,
@@ -883,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 157
+        "evidencias": 158
       },
       "ialimp": {
         "presente": true,
@@ -1132,6 +1132,7 @@
       "/api/owner/config/servicio",
       "/api/owner/consumo",
       "/api/owner/contabilidad/arqueos-empleado",
+      "/api/owner/contabilidad/arqueos-empleado/[id]/confirmar",
       "/api/owner/contabilidad/cierre-diario",
       "/api/owner/contabilidad/config",
       "/api/owner/contabilidad/exportar",
@@ -1866,6 +1867,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
+      "fecha": "13/06/2026"
+    },
+    {
       "titulo": "💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`",
       "fecha": "13/06/2026"
     },
@@ -1919,10 +1924,6 @@
     },
     {
       "titulo": "⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real",
-      "fecha": "11/06/2026"
-    },
-    {
-      "titulo": "✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding",
       "fecha": "11/06/2026"
     }
   ],
@@ -2150,7 +2151,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 736,
+    "apis": 737,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
