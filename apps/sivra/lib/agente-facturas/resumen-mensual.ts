@@ -32,10 +32,10 @@ export async function calcularResumen(year: number, month: number): Promise<Resu
   const [gtot] = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT count(*)::int AS n, coalesce(sum(total),0)::float AS s
     FROM gastos
-    WHERE (revisado IS DISTINCT FROM false)
+    WHERE NOT (revisado = false AND origen IS NOT NULL)
       AND EXTRACT(YEAR FROM fecha) = ${year} AND EXTRACT(MONTH FROM fecha) = ${month}
   `)
-  const [band] = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT count(*)::int AS n FROM gastos WHERE revisado = false`)
+  const [band] = await prisma.$queryRaw<any[]>(Prisma.sql`SELECT count(*)::int AS n FROM gastos WHERE revisado = false AND origen IS NOT NULL`)
 
   // Ingresos por piso (mes).
   const ingresos = await prisma.$queryRaw<any[]>(Prisma.sql`
@@ -48,7 +48,7 @@ export async function calcularResumen(year: number, month: number): Promise<Resu
   const gastosPorPiso = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT propiedad, coalesce(sum(total),0)::float AS s
     FROM gastos
-    WHERE (revisado IS DISTINCT FROM false)
+    WHERE NOT (revisado = false AND origen IS NOT NULL)
       AND EXTRACT(YEAR FROM fecha) = ${year} AND EXTRACT(MONTH FROM fecha) = ${month}
     GROUP BY propiedad
   `)

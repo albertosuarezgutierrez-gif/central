@@ -13,8 +13,9 @@ export async function GET(req: NextRequest) {
     const propertyId = searchParams.get('propertyId');
     const category   = searchParams.get('category');
 
-    // Excluye los gastos en bandeja (revisado=false). Los legacy (revisado NULL) sí cuentan.
-    const conditions: Prisma.Sql[] = [Prisma.sql`(revisado IS DISTINCT FROM false)`]
+    // Excluye SOLO los gastos en bandeja del agente (revisado=false con origen).
+    // Los legacy/manual (origen NULL) cuentan siempre, aunque tengan revisado=false.
+    const conditions: Prisma.Sql[] = [Prisma.sql`NOT (revisado = false AND origen IS NOT NULL)`]
     if (year)       conditions.push(Prisma.sql`EXTRACT(YEAR  FROM fecha) = ${parseInt(year)}`)
     if (month)      conditions.push(Prisma.sql`EXTRACT(MONTH FROM fecha) = ${parseInt(month)}`)
     if (propertyId) conditions.push(Prisma.sql`propiedad = ${propertyId}`)

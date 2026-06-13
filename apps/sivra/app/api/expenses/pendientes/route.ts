@@ -12,7 +12,7 @@ export async function GET() {
         base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total,
         drive_url, carpeta_drive, drive_file_name, confianza, motivo_revision, origen, created_at
       FROM gastos
-      WHERE revisado = false
+      WHERE revisado = false AND origen IS NOT NULL
       ORDER BY created_at DESC
       LIMIT 500
     `)

@@ -7,3 +7,10 @@ UPDATE public.gastos g
    SET propiedad = p.id, updated_at = now()
   FROM public.properties p
  WHERE g.propiedad = p.name;
+
+-- Los 36 gastos legacy tenían revisado=false (sin ser bandeja del agente). El
+-- filtro nuevo de la pantalla los ocultaba → se confirman (cuentan en totales).
+-- La bandeja del agente se distingue por origen IS NOT NULL (ver route.ts).
+UPDATE public.gastos
+   SET revisado = true, updated_at = now()
+ WHERE revisado = false AND origen IS NULL;
