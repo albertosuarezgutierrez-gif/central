@@ -4,6 +4,7 @@ import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
 import { notifyOwner } from "@/lib/pricing-notify"
 import { evaluatePilot, type PilotVerdict } from "@/lib/pilot-track"
+import { computeRecommendation, recommendedBaseFromEngine, percentile } from "@/lib/pricing-engine"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -31,7 +32,7 @@ type Row = {
   free_nights_60: number; booked_nights_60: number; occupancy_60: number | null
   days_since_booking: number; current_base: number | null; extra_eur: number
   pace_vs_last_year: number | null; market_p50_guest: number | null
-  open_horizon_days: number | null
+  open_horizon_days: number | null; recommended_base: number | null
 }
 
 export async function GET(req: NextRequest) {
@@ -40,12 +41,26 @@ export async function GET(req: NextRequest) {
   }
   const dryRun = ["1", "true"].includes(req.nextUrl.searchParams.get("dryRun") ?? "")
 
-  // Pisos con piloto activo + sus perillas.
+  // Pisos con piloto activo + sus perillas + parámetros del MOTOR (mismos defaults que recommend),
+  // para calcular la propuesta con la fuente única (lib/pricing-engine) en vez de una fórmula aparte.
   const settings = await prisma.$queryRaw<{
     property_id: string; pilot_no_booking_days: number
-    channel_markup: number | null; min_price: number | null
+    channel_markup: number; min_price: number | null; max_price: number | null; max_change_pct: number
+    target_pctl: number; floor_pctl: number; ceil_pctl: number; position_factor: number
+    quality_k: number; demand_k: number; demand_baseline: number; own_score: number | null
   }[]>(Prisma.sql`
-    SELECT property_id, pilot_no_booking_days, channel_markup, min_price
+    SELECT property_id, pilot_no_booking_days,
+      COALESCE(channel_markup, 1.16)::float8  AS channel_markup,
+      min_price, max_price,
+      COALESCE(max_change_pct, 0.20)::float8  AS max_change_pct,
+      COALESCE(target_pctl, 0.50)::float8     AS target_pctl,
+      COALESCE(floor_pctl, 0.25)::float8      AS floor_pctl,
+      COALESCE(ceil_pctl, 0.90)::float8       AS ceil_pctl,
+      COALESCE(position_factor, 1.0)::float8  AS position_factor,
+      COALESCE(quality_k, 0.04)::float8       AS quality_k,
+      COALESCE(demand_k, 0.16)::float8        AS demand_k,
+      COALESCE(demand_baseline, 0.50)::float8 AS demand_baseline,
+      own_score::float8 AS own_score
     FROM pricing_settings WHERE pilot_enabled = true`)
 
   if (settings.length === 0) {
@@ -106,13 +121,21 @@ export async function GET(req: NextRequest) {
     SELECT "propertyId" AS property_id, (CURRENT_DATE - MAX("createdAt"::date))::int AS days_since_booking
     FROM incomes GROUP BY "propertyId"`)
 
-  // Mediana del mercado (precio HUÉSPED), última captura por scenario.
-  const market = await prisma.$queryRaw<{ property_id: string; market_p50_guest: number | null }[]>(Prisma.sql`
-    SELECT scenario AS property_id,
-      ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night))::int AS market_p50_guest
-    FROM market_rates mr
-    WHERE search_date = (SELECT MAX(search_date) FROM market_rates m2 WHERE m2.scenario = mr.scenario)
-    GROUP BY scenario`)
+  // Mercado por piso (array de comparables de la última captura) — alimenta el MOTOR compartido.
+  const marketRows = await prisma.$queryRaw<{ property_id: string; price: number; score: number | null }[]>(Prisma.sql`
+    WITH latest AS (
+      SELECT scenario, MAX(search_date) AS sd FROM market_rates
+      WHERE scenario LIKE 'prop_%' AND price_night > 0 GROUP BY scenario
+    )
+    SELECT m.scenario AS property_id, m.price_night::float8 AS price, m.score::float8 AS score
+    FROM market_rates m JOIN latest l ON l.scenario = m.scenario AND l.sd = m.search_date
+    WHERE m.price_night > 0`)
+  const marketByPiso: Record<string, { prices: number[]; scores: number[] }> = {}
+  for (const r of marketRows) {
+    const g = (marketByPiso[r.property_id] ??= { prices: [], scores: [] })
+    g.prices.push(Number(r.price))
+    if (r.score != null) g.scores.push(Number(r.score))
+  }
 
   // € extra vs PriceLabs (misma lógica que /api/pricing/resultados, por piso).
   const extra = await prisma.$queryRaw<{ property_id: string; extra_eur: number | null }[]>(Prisma.sql`
@@ -152,7 +175,7 @@ export async function GET(req: NextRequest) {
 
   const byId = <T extends { property_id: string }>(arr: T[]) =>
     Object.fromEntries(arr.map((r) => [r.property_id, r]))
-  const W = byId(win), BK = byId(bk), B = byId(base), S = byId(since), M = byId(market), E = byId(extra), P = byId(pace), H = byId(horizon)
+  const W = byId(win), BK = byId(bk), B = byId(base), S = byId(since), E = byId(extra), P = byId(pace), H = byId(horizon)
 
   const pisos: Row[] = []
   for (const s of settings) {
@@ -163,13 +186,28 @@ export async function GET(req: NextRequest) {
     const occupancy60 = W[id]?.occupancy_60 != null ? Number(W[id].occupancy_60) : null
     const daysSinceBooking = Number(S[id]?.days_since_booking ?? 999)
     const currentBase = B[id]?.current_base != null ? Number(B[id].current_base) : null
-    const marketP50Guest = M[id]?.market_p50_guest != null ? Number(M[id].market_p50_guest) : null
-    const channelMarkup = s.channel_markup != null ? Number(s.channel_markup) : 1.16
+    const channelMarkup = Number(s.channel_markup)
     const minPrice = s.min_price != null ? Number(s.min_price) : null
     const extraEur = E[id]?.extra_eur != null ? Number(E[id].extra_eur) : 0
     const recent = Number(P[id]?.recent ?? 0), lastYear = Number(P[id]?.last_year ?? 0)
     const paceVsLastYear = lastYear > 0 ? Math.round((recent / lastYear) * 100) / 100 : null
     const openHorizonDays = H[id]?.open_horizon_days != null ? Number(H[id].open_horizon_days) : null
+
+    // Precio recomendado por el MOTOR compartido (lib/pricing-engine) — misma fuente que recommend/panel.
+    const mkt = marketByPiso[id] ?? { prices: [], scores: [] }
+    const marketP50Guest = mkt.prices.length ? Math.round(percentile([...mkt.prices].sort((a, b) => a - b), 0.5)) : null
+    const eng = computeRecommendation(
+      { target_pctl: Number(s.target_pctl), floor_pctl: Number(s.floor_pctl), ceil_pctl: Number(s.ceil_pctl),
+        position_factor: Number(s.position_factor), quality_k: Number(s.quality_k), demand_k: Number(s.demand_k),
+        demand_baseline: Number(s.demand_baseline), own_score: s.own_score != null ? Number(s.own_score) : null },
+      mkt.prices, mkt.scores, occupancy60,
+    )
+    const recommendedBase = recommendedBaseFromEngine(eng, {
+      markup: channelMarkup, max_change_pct: Number(s.max_change_pct),
+      min_price: minPrice, max_price: s.max_price != null ? Number(s.max_price) : null, baseActual: currentBase,
+    })
+    // Guardia de confianza: solo proponemos con mercado sólido (≥5 comps) y fresco (≤7d).
+    const recommendationConfident = eng.confidence === "alta" && mktAge != null && mktAge <= 7
 
     // Chivato: si el calendario abierto se queda corto, avisar (no escribe en Smoobu, solo informa).
     // Solo cuando el snapshot ya cubre ≥60 días (si no, el horizonte está limitado por la captura,
@@ -182,6 +220,7 @@ export async function GET(req: NextRequest) {
       windowNights, freeNights, bookedNights, daysSinceBooking,
       threshold: Number(s.pilot_no_booking_days ?? 7),
       currentBase, marketP50Guest, channelMarkup, minPrice,
+      recommendedBase, recommendationConfident,
     })
 
     pisos.push({
@@ -189,24 +228,25 @@ export async function GET(req: NextRequest) {
       free_nights_60: freeNights, booked_nights_60: bookedNights, occupancy_60: occupancy60,
       days_since_booking: daysSinceBooking, current_base: currentBase,
       extra_eur: extraEur, pace_vs_last_year: paceVsLastYear, market_p50_guest: marketP50Guest,
-      open_horizon_days: openHorizonDays,
+      open_horizon_days: openHorizonDays, recommended_base: recommendedBase,
     })
 
     if (!dryRun) {
       await prisma.$executeRaw(Prisma.sql`
         INSERT INTO pricing_pilot_tracking
           (tracked_on, property_id, verdict, free_nights_60, booked_nights_60, occupancy_60,
-           days_since_booking, current_base, extra_eur, pace_vs_last_year, market_p50_guest, diagnosis, proposal, open_horizon_days)
+           days_since_booking, current_base, extra_eur, pace_vs_last_year, market_p50_guest, diagnosis, proposal, open_horizon_days, recommended_base)
         VALUES (CURRENT_DATE, ${id}, ${verdict.verdict}, ${freeNights}, ${bookedNights},
            ${occupancy60}, ${daysSinceBooking}, ${currentBase}, ${extraEur},
-           ${paceVsLastYear}, ${marketP50Guest}, ${verdict.diagnosis}, ${verdict.proposal}, ${openHorizonDays})
+           ${paceVsLastYear}, ${marketP50Guest}, ${verdict.diagnosis}, ${verdict.proposal}, ${openHorizonDays}, ${recommendedBase})
         ON CONFLICT (tracked_on, property_id) DO UPDATE SET
           verdict = EXCLUDED.verdict, free_nights_60 = EXCLUDED.free_nights_60,
           booked_nights_60 = EXCLUDED.booked_nights_60, occupancy_60 = EXCLUDED.occupancy_60,
           days_since_booking = EXCLUDED.days_since_booking, current_base = EXCLUDED.current_base,
           extra_eur = EXCLUDED.extra_eur, pace_vs_last_year = EXCLUDED.pace_vs_last_year,
           market_p50_guest = EXCLUDED.market_p50_guest, diagnosis = EXCLUDED.diagnosis,
-          proposal = EXCLUDED.proposal, open_horizon_days = EXCLUDED.open_horizon_days`)
+          proposal = EXCLUDED.proposal, open_horizon_days = EXCLUDED.open_horizon_days,
+          recommended_base = EXCLUDED.recommended_base`)
     }
   }
 

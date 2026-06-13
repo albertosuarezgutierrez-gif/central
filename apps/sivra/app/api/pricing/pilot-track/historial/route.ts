@@ -14,9 +14,11 @@ export async function GET() {
     occupancy_60: number | null; current_base: number | null
     market_p50_guest: number | null; extra_eur: number | null
     diagnosis: string | null; proposal: string | null; open_horizon_days: number | null
+    recommended_base: number | null
   }[]>(Prisma.sql`
     SELECT property_id, tracked_on::text, verdict, days_since_booking, free_nights_60,
-           occupancy_60, current_base, market_p50_guest, extra_eur, diagnosis, proposal, open_horizon_days
+           occupancy_60, current_base, market_p50_guest, extra_eur, diagnosis, proposal, open_horizon_days,
+           recommended_base
     FROM pricing_pilot_tracking
     ORDER BY property_id, tracked_on DESC`)
 

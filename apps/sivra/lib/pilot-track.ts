@@ -7,10 +7,12 @@ export type PilotInput = {
   bookedNights: number       // noches REALMENTE reservadas (cruce con incomes), no solo available=0
   daysSinceBooking: number   // días desde la última reserva NUEVA creada
   threshold: number          // pilot_no_booking_days (def. 7)
-  currentBase: number | null // precio base actual en Smoobu (price_pricelabs)
-  marketP50Guest: number | null // mediana del mercado (precio HUÉSPED)
+  currentBase: number | null // precio base actual en Smoobu
+  marketP50Guest: number | null // mediana del mercado (precio HUÉSPED) — para el diagnóstico
   channelMarkup: number      // base → huésped (def. 1.16)
   minPrice: number | null    // suelo de coste (nunca bajar de aquí)
+  recommendedBase: number | null   // precio base recomendado por el MOTOR (lib/pricing-engine)
+  recommendationConfident: boolean // mercado sólido (≥5 comps) y fresco (≤7d)
 }
 
 export type PilotVerdict = {
@@ -29,7 +31,7 @@ export function evaluatePilot(i: PilotInput): PilotVerdict {
   if (i.windowNights < MIN_WINDOW_NIGHTS) {
     return {
       verdict: "amarillo",
-      diagnosis: `Datos insuficientes: la ventana solo cubre ${i.windowNights} noche(s). Espera al snapshot a 60d.`,
+      diagnosis: `Datos insuficientes: la ventana solo cubre ${i.windowNights} noche(s). Espera al snapshot a 90d.`,
       proposal: null,
       proposedBase: null,
     }
@@ -56,17 +58,16 @@ export function evaluatePilot(i: PilotInput): PilotVerdict {
           guestPrice ?? "?"
         }€ ≤ mercado). Probable demanda baja general en esas fechas.`
 
-    // Propuesta (#6, solo PROPONE): bajar hacia el mercado, nunca por debajo del suelo de coste.
-    let proposedBase: number | null = null
-    if (overMarket && i.marketP50Guest != null) {
-      const target = Math.round(i.marketP50Guest / i.channelMarkup)
-      proposedBase = i.minPrice != null ? Math.max(target, i.minPrice) : target
-    }
+    // Propuesta (#6, solo PROPONE): usa el precio del MOTOR compartido (recommend), NO una fórmula
+    // aparte. Solo si el mercado es de confianza y el recomendado baja respecto al actual.
+    const proposedBase =
+      i.recommendationConfident && i.recommendedBase != null && i.currentBase != null &&
+      i.recommendedBase < i.currentBase
+        ? i.recommendedBase
+        : null
     const proposal =
-      proposedBase != null && i.currentBase != null && proposedBase < i.currentBase
-        ? `Bajar base ${i.currentBase}€ → ${proposedBase}€ (huésped ~${Math.round(
-            proposedBase * i.channelMarkup,
-          )}€).`
+      proposedBase != null && i.currentBase != null
+        ? `Bajar base ${i.currentBase}€ → ${proposedBase}€ (huésped ~${Math.round(proposedBase * i.channelMarkup)}€).`
         : null
 
     return { verdict: "rojo", diagnosis, proposal, proposedBase }
