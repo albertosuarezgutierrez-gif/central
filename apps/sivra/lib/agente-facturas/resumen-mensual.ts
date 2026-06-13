@@ -2,7 +2,7 @@
 // y desglose de rentabilidad por piso (ingresos − gastos).
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { recurrentesQueFaltan, type ReglaFaltante } from './anomalias'
+import { recurrentesQueFaltan, luzPorPisoQueFalta, type ReglaFaltante } from './anomalias'
 
 const MESES = ['', 'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
@@ -21,6 +21,7 @@ export interface ResumenMensual {
   gastosSum: number
   bandejaCount: number
   faltan: ReglaFaltante[]
+  luzFalta: { propiedad: string; nombre: string }[]
   pisos: PisoRentabilidad[]
   totalIngresos: number
   totalGastos: number
@@ -75,6 +76,7 @@ export async function calcularResumen(year: number, month: number): Promise<Resu
     gastosSum: Number(gtot?.s ?? 0),
     bandejaCount: Number(band?.n ?? 0),
     faltan: await recurrentesQueFaltan(year, month),
+    luzFalta: await luzPorPisoQueFalta(year, month),
     pisos,
     totalIngresos,
     totalGastos,
@@ -90,9 +92,12 @@ export function construirMensaje(r: ResumenMensual): string {
   const linFaltan = r.faltan.length
     ? `⏳ Falta: ${r.faltan.slice(0, 4).map((f) => f.proveedor || f.fingerprint).join(', ')}`
     : ''
+  const linLuz = r.luzFalta.length
+    ? `💡 Sin luz registrada: ${r.luzFalta.map((p) => p.nombre).join(', ')}`
+    : ''
   const pisos = r.pisos
     .map((p) => `• ${p.nombre}: <b>${p.neto >= 0 ? '+' : ''}${eur(p.neto)}</b> (ingr ${eur(p.ingresos)} − gastos ${eur(p.gastos)})`)
     .join('\n')
   const total = `Neto pisos: <b>${r.totalNeto >= 0 ? '+' : ''}${eur(r.totalNeto)}</b> (ingr ${eur(r.totalIngresos)} − gastos ${eur(r.totalGastos)})`
-  return [cab, linGastos, linFaltan, '', '<b>Rentabilidad por piso</b>', pisos, total].filter(Boolean).join('\n')
+  return [cab, linGastos, linFaltan, linLuz, '', '<b>Rentabilidad por piso</b>', pisos, total].filter(Boolean).join('\n')
 }
