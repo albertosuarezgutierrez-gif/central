@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T15:28:00Z",
+  "generadoEn": "2026-06-13T18:54:30Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -377,7 +377,7 @@
     "module-contabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -1864,6 +1864,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`",
+      "fecha": "13/06/2026"
+    },
+    {
       "titulo": "🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`",
       "fecha": "13/06/2026"
     },
@@ -1918,10 +1922,6 @@
     {
       "titulo": "✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding",
       "fecha": "11/06/2026"
-    },
-    {
-      "titulo": "⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):",
-      "fecha": ""
     }
   ],
   "saludRepo": {
