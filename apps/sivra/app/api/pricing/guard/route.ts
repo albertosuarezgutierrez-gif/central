@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
         property_id, rate_date, new_price
       FROM pricing_applied
       WHERE dry_run = false
-      ORDER BY property_id, rate_date, created_at DESC
+      ORDER BY property_id, rate_date, applied_at DESC
     ),
     snap AS (
       SELECT property_id, rate_date, price_pricelabs
@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
     WITH last_applied AS (
       SELECT DISTINCT ON (property_id, rate_date) property_id, rate_date, new_price
       FROM pricing_applied WHERE dry_run = false
-      ORDER BY property_id, rate_date, created_at DESC
+      ORDER BY property_id, rate_date, applied_at DESC
     )
     SELECT la.property_id, COUNT(*)::int AS dias, s.min_price
     FROM last_applied la

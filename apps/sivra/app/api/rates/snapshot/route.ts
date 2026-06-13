@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
   const today        = new Date()
   const startDate    = fmtDate(today)
-  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 7)
+  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 60)
   const endDate      = fmtDate(endDay)
   const snapshotDate = startDate
 
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
       const plRates: Record<string, { price: number; available: number; min_length_of_stay: number }> =
         (await res.json()).data?.[prop.smoobuId] ?? {}
 
-      // Iterar los 21 días y hacer upsert individual (Hobby 10s limit)
+      // Iterar la ventana (60 días) y hacer upsert individual
       const cur = new Date(today)
       while (cur <= endDay) {
         const dateStr = fmtDate(cur)

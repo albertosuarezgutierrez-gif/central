@@ -1,0 +1,206 @@
+import { NextRequest, NextResponse } from "next/server"
+import { prisma } from "@/lib/prisma"
+import { Prisma } from "@prisma/client"
+import { isCronAuthorized } from "@/lib/cron-auth"
+import { notifyOwner } from "@/lib/pricing-notify"
+import { evaluatePilot, type PilotVerdict } from "@/lib/pilot-track"
+
+export const dynamic = "force-dynamic"
+export const maxDuration = 60
+
+// GET /api/pricing/pilot-track  (cron diario ~09:15)
+//
+// Agente de seguimiento del piloto de precio dinámico. Por cada piso con pilot_enabled=true:
+//   - Mide ocupación/noches libres a 60d, días sin reserva NUEVA, € extra vs PriceLabs, ritmo (pace),
+//     y mediana del mercado (precio huésped).
+//   - Decide un veredicto (lib/pilot-track) con anti-falso-positivo y diagnóstico (caros / sin demanda).
+//   - Solo PROPONE bajadas (no escribe precio en Smoobu); persiste histórico y avisa al propietario.
+//   - Watchdog: avisa si el snapshot o el mercado están viejos ("el agente que vigila al agente").
+//
+// ?dryRun=1 → calcula y responde, pero NO persiste ni notifica (para verificar).
+
+const PROP_NAMES: Record<string, string> = {
+  prop_house_sevillana: "House Sevillana",
+  prop_duplex_center: "Duplex Center",
+  prop_luxury_busto: "Luxury Busto",
+  prop_busto_reform: "Busto Reform",
+}
+
+type Row = {
+  property_id: string; verdict: PilotVerdict
+  free_nights_60: number; booked_nights_60: number; occupancy_60: number | null
+  days_since_booking: number; current_base: number | null; extra_eur: number
+  pace_vs_last_year: number | null; market_p50_guest: number | null
+}
+
+export async function GET(req: NextRequest) {
+  if (!(await isCronAuthorized(req, { allowSession: true }))) {
+    return NextResponse.json({ error: "no autorizado" }, { status: 401 })
+  }
+  const dryRun = ["1", "true"].includes(req.nextUrl.searchParams.get("dryRun") ?? "")
+
+  // Pisos con piloto activo + sus perillas.
+  const settings = await prisma.$queryRaw<{
+    property_id: string; pilot_no_booking_days: number
+    channel_markup: number | null; min_price: number | null
+  }[]>(Prisma.sql`
+    SELECT property_id, pilot_no_booking_days, channel_markup, min_price
+    FROM pricing_settings WHERE pilot_enabled = true`)
+
+  if (settings.length === 0) {
+    return NextResponse.json({ ok: true, nota: "ningún piso con pilot_enabled", pisos: [] })
+  }
+
+  // Stats de la ventana de 60d (último snapshot por piso).
+  const win = await prisma.$queryRaw<{
+    property_id: string; free_nights_60: number; booked_nights_60: number; occupancy_60: number
+  }[]>(Prisma.sql`
+    WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
+    SELECT rs.property_id,
+      SUM((rs.available = 1)::int)::int AS free_nights_60,
+      SUM((rs.available = 0)::int)::int AS booked_nights_60,
+      ROUND(1 - AVG(rs.available)::numeric, 2) AS occupancy_60
+    FROM rate_snapshots rs
+    JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
+    WHERE rs.rate_date BETWEEN CURRENT_DATE AND CURRENT_DATE + 60
+    GROUP BY rs.property_id`)
+
+  // Precio base actual: el de la fecha futura más próxima del último snapshot.
+  const base = await prisma.$queryRaw<{ property_id: string; current_base: number | null }[]>(Prisma.sql`
+    WITH latest AS (SELECT property_id, MAX(snapshot_date) sd FROM rate_snapshots GROUP BY property_id)
+    SELECT DISTINCT ON (rs.property_id) rs.property_id, rs.price_pricelabs AS current_base
+    FROM rate_snapshots rs
+    JOIN latest l ON l.property_id = rs.property_id AND l.sd = rs.snapshot_date
+    WHERE rs.rate_date >= CURRENT_DATE AND rs.price_pricelabs IS NOT NULL
+    ORDER BY rs.property_id, rs.rate_date`)
+
+  // Días desde la última reserva NUEVA creada.
+  const since = await prisma.$queryRaw<{ property_id: string; days_since_booking: number | null }[]>(Prisma.sql`
+    SELECT "propertyId" AS property_id, (CURRENT_DATE - MAX("createdAt"::date))::int AS days_since_booking
+    FROM incomes GROUP BY "propertyId"`)
+
+  // Mediana del mercado (precio HUÉSPED), última captura por scenario.
+  const market = await prisma.$queryRaw<{ property_id: string; market_p50_guest: number | null }[]>(Prisma.sql`
+    SELECT scenario AS property_id,
+      ROUND(percentile_cont(0.5) WITHIN GROUP (ORDER BY price_night))::int AS market_p50_guest
+    FROM market_rates mr
+    WHERE search_date = (SELECT MAX(search_date) FROM market_rates m2 WHERE m2.scenario = mr.scenario)
+    GROUP BY scenario`)
+
+  // € extra vs PriceLabs (misma lógica que /api/pricing/resultados, por piso).
+  const extra = await prisma.$queryRaw<{ property_id: string; extra_eur: number | null }[]>(Prisma.sql`
+    WITH applied AS (
+      SELECT DISTINCT ON (property_id, rate_date) property_id, rate_date, old_price, new_price
+      FROM pricing_applied WHERE dry_run = false AND old_price IS NOT NULL
+      ORDER BY property_id, rate_date, applied_at DESC
+    ),
+    booked AS (
+      SELECT DISTINCT ON (property_id, rate_date) property_id, rate_date, was_booked
+      FROM rate_snapshots WHERE was_booked IS NOT NULL
+      ORDER BY property_id, rate_date, snapshot_date DESC
+    )
+    SELECT a.property_id,
+      SUM(GREATEST(a.new_price - a.old_price, 0)) FILTER (WHERE b.was_booked)::int AS extra_eur
+    FROM applied a LEFT JOIN booked b USING (property_id, rate_date)
+    GROUP BY a.property_id`)
+
+  // Ritmo de reservas: creadas últimos 30d vs misma ventana hace un año.
+  const pace = await prisma.$queryRaw<{ property_id: string; recent: number; last_year: number }[]>(Prisma.sql`
+    SELECT "propertyId" AS property_id,
+      COUNT(*) FILTER (WHERE "createdAt" >= CURRENT_DATE - 30)::int AS recent,
+      COUNT(*) FILTER (WHERE "createdAt" >= CURRENT_DATE - 395 AND "createdAt" < CURRENT_DATE - 365)::int AS last_year
+    FROM incomes GROUP BY "propertyId"`)
+
+  // Watchdog del pipeline (#2).
+  const fresh = await prisma.$queryRaw<{ snap: Date | null; mkt: Date | null }[]>(Prisma.sql`
+    SELECT (SELECT MAX(snapshot_date) FROM rate_snapshots) AS snap,
+           (SELECT MAX(search_date) FROM market_rates) AS mkt`)
+  const watchdog: string[] = []
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const ageDays = (d: Date | null) => (d ? Math.round((+today - +new Date(d)) / 86400000) : null)
+  const snapAge = ageDays(fresh[0]?.snap ?? null)
+  const mktAge = ageDays(fresh[0]?.mkt ?? null)
+  if (snapAge == null || snapAge >= 1) watchdog.push(`Snapshot viejo (${snapAge ?? "nunca"}d) — ¿corrió rates/snapshot?`)
+  if (mktAge == null || mktAge > 7) watchdog.push(`Mercado viejo (${mktAge ?? "nunca"}d) — refresca market_rates (ingest).`)
+
+  const byId = <T extends { property_id: string }>(arr: T[]) =>
+    Object.fromEntries(arr.map((r) => [r.property_id, r]))
+  const W = byId(win), B = byId(base), S = byId(since), M = byId(market), E = byId(extra), P = byId(pace)
+
+  const pisos: Row[] = []
+  for (const s of settings) {
+    const id = s.property_id
+    const freeNights60 = Number(W[id]?.free_nights_60 ?? 0)
+    const bookedNights60 = Number(W[id]?.booked_nights_60 ?? 0)
+    const daysSinceBooking = Number(S[id]?.days_since_booking ?? 999)
+    const currentBase = B[id]?.current_base != null ? Number(B[id].current_base) : null
+    const marketP50Guest = M[id]?.market_p50_guest != null ? Number(M[id].market_p50_guest) : null
+    const channelMarkup = s.channel_markup != null ? Number(s.channel_markup) : 1.16
+    const minPrice = s.min_price != null ? Number(s.min_price) : null
+    const extraEur = E[id]?.extra_eur != null ? Number(E[id].extra_eur) : 0
+    const recent = Number(P[id]?.recent ?? 0), lastYear = Number(P[id]?.last_year ?? 0)
+    const paceVsLastYear = lastYear > 0 ? Math.round((recent / lastYear) * 100) / 100 : null
+
+    const verdict = evaluatePilot({
+      freeNights60, bookedNights60, daysSinceBooking,
+      threshold: Number(s.pilot_no_booking_days ?? 7),
+      currentBase, marketP50Guest, channelMarkup, minPrice,
+    })
+
+    pisos.push({
+      property_id: id, verdict,
+      free_nights_60: freeNights60, booked_nights_60: bookedNights60,
+      occupancy_60: W[id]?.occupancy_60 != null ? Number(W[id].occupancy_60) : null,
+      days_since_booking: daysSinceBooking, current_base: currentBase,
+      extra_eur: extraEur, pace_vs_last_year: paceVsLastYear, market_p50_guest: marketP50Guest,
+    })
+
+    if (!dryRun) {
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO pricing_pilot_tracking
+          (tracked_on, property_id, verdict, free_nights_60, booked_nights_60, occupancy_60,
+           days_since_booking, current_base, extra_eur, pace_vs_last_year, market_p50_guest, diagnosis, proposal)
+        VALUES (CURRENT_DATE, ${id}, ${verdict.verdict}, ${freeNights60}, ${bookedNights60},
+           ${W[id]?.occupancy_60 ?? null}, ${daysSinceBooking}, ${currentBase}, ${extraEur},
+           ${paceVsLastYear}, ${marketP50Guest}, ${verdict.diagnosis}, ${verdict.proposal})
+        ON CONFLICT (tracked_on, property_id) DO UPDATE SET
+          verdict = EXCLUDED.verdict, free_nights_60 = EXCLUDED.free_nights_60,
+          booked_nights_60 = EXCLUDED.booked_nights_60, occupancy_60 = EXCLUDED.occupancy_60,
+          days_since_booking = EXCLUDED.days_since_booking, current_base = EXCLUDED.current_base,
+          extra_eur = EXCLUDED.extra_eur, pace_vs_last_year = EXCLUDED.pace_vs_last_year,
+          market_p50_guest = EXCLUDED.market_p50_guest, diagnosis = EXCLUDED.diagnosis,
+          proposal = EXCLUDED.proposal`)
+    }
+  }
+
+  // Aviso al propietario si hay 🔴 o watchdog.
+  const rojos = pisos.filter((p) => p.verdict.verdict === "rojo")
+  if (!dryRun && (rojos.length > 0 || watchdog.length > 0)) {
+    const filas = rojos.map((p) =>
+      `<tr><td style="padding:6px 8px;border:1px solid #e5e7eb">${PROP_NAMES[p.property_id] ?? p.property_id}</td>
+       <td style="padding:6px 8px;border:1px solid #e5e7eb">${p.verdict.diagnosis}</td>
+       <td style="padding:6px 8px;border:1px solid #e5e7eb;color:#1e40af">${p.verdict.proposal ?? "—"}</td></tr>`).join("")
+    const wd = watchdog.length ? `<p style="color:#b45309">⚙️ ${watchdog.join(" · ")}</p>` : ""
+    await notifyOwner({
+      subject: `🔴 SIVRA Pricing: seguimiento del piloto (${rojos.length} alerta${rojos.length === 1 ? "" : "s"})`,
+      html: `<div style="font-family:sans-serif;max-width:640px;margin:0 auto">
+        <h2 style="color:#b91c1c">Seguimiento del piloto</h2>${wd}
+        ${rojos.length ? `<table style="width:100%;border-collapse:collapse;font-size:13px">
+          <tr style="background:#f9fafb"><th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb">Piso</th>
+          <th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb">Diagnóstico</th>
+          <th style="padding:6px 8px;text-align:left;border:1px solid #e5e7eb">Propuesta</th></tr>${filas}</table>
+          <p style="color:#6b7280;font-size:12px">El agente solo propone; aplicar la bajada es decisión tuya en /pricing-auto.</p>` : ""}
+      </div>`,
+      push: {
+        title: rojos.length ? "🔴 Piloto: revisar precio" : "⚙️ Pipeline de pricing",
+        body: rojos.length ? `${rojos.length} piso(s) sin reservas. Revisa SIVRA.` : watchdog.join(" · "),
+        url: "/pricing-auto",
+      },
+    })
+  }
+
+  return NextResponse.json({ ok: true, dryRun, watchdog, pisos })
+}
+
+// El panel dispara el agente con POST ("Ejecutar ahora"); misma lógica que el cron (GET).
+export const POST = GET
