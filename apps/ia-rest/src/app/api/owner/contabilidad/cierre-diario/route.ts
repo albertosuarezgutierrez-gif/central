@@ -6,6 +6,7 @@ import {
   generarAsientoCierreDiario, periodoStr, trimestreActual,
   PGC_DEFECTO, type ConfigContabilidad,
 } from '@/lib/contabilidad'
+import { calcularCuadreCaja, type MovimientoCaja } from '@central/module-contabilidad'
 
 /**
  * POST /api/owner/contabilidad/cierre-diario
@@ -20,6 +21,11 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const fecha: string = body.fecha ?? new Date().toISOString().split('T')[0]
+  // Conteo físico opcional del arqueo (desde la UI). Si no llega, el cuadre se
+  // calcula con el último arqueo/cierre registrado en movimientos_caja.
+  const desgloseManual: Record<string, number> | null = body.desglose_monedas ?? null
+  const fondoFinalManual: number | null = body.fondo_final ?? null
+  const notas: string | null = body.notas ?? null
 
   // 1. Comprobar si ya existe arqueo para esa fecha
   const { data: arqueoExistente } = await supabase
@@ -69,6 +75,22 @@ export async function POST(req: NextRequest) {
   const propinas_efectivo = (propinasData ?? []).filter(p => p.canal === 'efectivo').reduce((s, p) => s + Number(p.importe), 0)
   const propinas_tarjeta  = (propinasData ?? []).filter(p => p.canal !== 'efectivo').reduce((s, p) => s + Number(p.importe), 0)
 
+  // 3b. Cuadre de caja: reconstruir el saldo teórico del cajón desde el libro de
+  // movimientos (apertura, cobros efectivo, retiros, gastos) y compararlo con el
+  // conteo físico (desglose manual de la UI o el último arqueo/cierre del día).
+  const { data: movsCaja } = await supabase
+    .from('movimientos_caja')
+    .select('tipo, importe, desglose_monedas, created_at')
+    .eq('local_id', rid)
+    .gte('created_at', `${fecha}T00:00:00`)
+    .lt('created_at',  `${fecha}T23:59:59`)
+    .order('created_at', { ascending: true })
+
+  const cuadre = calcularCuadreCaja((movsCaja ?? []) as MovimientoCaja[], {
+    fondoFinalManual,
+    desgloseManual,
+  })
+
   // 4. Cargar config contable
   const { data: cfgData } = await supabase
     .from('config_contabilidad')
@@ -108,7 +130,10 @@ export async function POST(req: NextRequest) {
     qr: 0, otros: 0,
     propinas_efectivo: Math.round(propinas_efectivo * 100) / 100,
     propinas_tarjeta:  Math.round(propinas_tarjeta  * 100) / 100,
-    salidas_caja: 0, fondo_inicial: 0, fondo_final: 0, diferencia_caja: 0,
+    fondo_inicial: cuadre.fondo_inicial,
+    salidas_caja:  cuadre.salidas_caja,
+    fondo_final:   cuadre.fondo_final,
+    diferencia_caja: cuadre.diferencia_caja,
     num_comandas: num_tickets, num_tickets,
     ticket_medio: num_tickets > 0 ? Math.round((base_10 + iva_10 + base_21 + iva_21) / num_tickets * 100) / 100 : 0,
   }
@@ -116,7 +141,7 @@ export async function POST(req: NextRequest) {
   // 5. Upsert arqueo
   const { data: arqueo, error: arqueoErr } = await supabase
     .from('arqueos_caja')
-    .upsert({ ...arqueoInput, estado: 'borrador' }, { onConflict: 'local_id,fecha' })
+    .upsert({ ...arqueoInput, estado: 'borrador', cerrado_por: session.id, notas }, { onConflict: 'local_id,fecha' })
     .select('id').single()
   if (arqueoErr) return NextResponse.json({ error: arqueoErr.message }, { status: 500 })
 
@@ -159,5 +184,6 @@ export async function POST(req: NextRequest) {
       efectivo, tarjeta, bizum,
       num_tickets,
     },
+    cuadre,
   })
 }

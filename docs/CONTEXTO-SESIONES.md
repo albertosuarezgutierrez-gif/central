@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
+  A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
+  se decide reforzar ia-rest donde ellos pegan fuerte: **gestión de efectivo**. Al verificar contra
+  código + BD se descubre que **`arqueos_caja` ya existía** con los campos del cuadre
+  (`fondo_inicial/salidas_caja/fondo_final/diferencia_caja`) pero **el `cierre-diario` los hardcodeaba a 0**
+  y nunca leía `movimientos_caja`. Se **completa** (sin tabla ni endpoints nuevos, cero duplicación):
+  - **Lógica pura** en `@central/module-contabilidad` (`src/caja.ts`): `calcularCuadreCaja`,
+    `totalDesglose`, `DENOMINACIONES_EUR` + tipos `MovimientoCaja`/`CuadreCaja`. Saldo teórico = Σ
+    movimientos del cajón; conteo físico = desglose manual o último arqueo/cierre; descuadre = real − teórico.
+    **15 tests `node:test`** (el paquete no tenía script `test`; añadido).
+  - **`apps/ia-rest/.../contabilidad/cierre-diario/route.ts`**: lee `movimientos_caja` del día y
+    persiste el cuadre real + `cerrado_por`/`notas`; devuelve `cuadre` en la respuesta.
+  - **UI** `ContabilidadTab.tsx` (sub-tab Cierre): checkbox "Hacer arqueo", conteo por denominación
+    en vivo, notas, y tarjeta de cuadre (teórico vs contado vs descuadre con color).
+  - **Verificado**: 15/15 tests ✅, `tsc --noEmit` ia-rest ✅, eslint archivos tocados 0 errores ✅.
+    Sin migración (columnas ya existían). **Roadmap restante** (PRs aparte): completar control horario
+    (plantilla/ausencias/informe jornada legal), alta Kit Digital (admin), Tier 2 (pago unificado, carta digital).
+
 - **🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst` — 13/06/2026**
   Agente diario que lee **Gmail (IMAP) + carpeta de Drive**, archiva facturas y las imputa en
   `gastos` de sivra, con **aprendizaje de recurrentes** y **modo mixto** (lo claro entra solo,

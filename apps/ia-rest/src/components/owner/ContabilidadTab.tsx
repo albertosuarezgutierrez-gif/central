@@ -26,6 +26,16 @@ const SUBTABS: { id: SubTab; label: string }[] = [
 const fmt = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 const fmtPct = (n: number) => n.toFixed(1) + '%'
 
+// Denominaciones de euro para el arqueo físico (clave del desglose = valor en euros).
+const DENOMINACIONES_EUR = [500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
+const fmtDenom = (d: number) =>
+  (Number.isInteger(d) ? String(d) : d.toLocaleString('es', { minimumFractionDigits: 2 })) + ' €'
+
+interface CuadreCaja {
+  fondo_inicial: number; cobros_efectivo: number; salidas_caja: number
+  saldo_teorico: number; fondo_final: number; diferencia_caja: number; conteo_realizado: boolean
+}
+
 export default function ContabilidadTab({ sh }: { sh: () => Record<string, string> }) {
   const [sub, setSub] = useState<SubTab>('resumen')
   const [toast, setToast] = useState('')
@@ -193,24 +203,44 @@ function ResumenTab({ sh, showToast }: { sh: () => Record<string, string>; showT
 function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showToast: (m: string) => void }) {
   const [fecha, setFecha]     = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
+  const [conArqueo, setConArqueo] = useState(false)
+  const [desglose, setDesglose]   = useState<Record<string, number>>({})
+  const [notas, setNotas]         = useState('')
   const [result, setResult]   = useState<{
     resumen: { total_ventas: number; base_10: number; iva_10: number; base_21: number; iva_21: number; efectivo: number; tarjeta: number; bizum: number; num_tickets: number }
     num_asiento: number
+    cuadre?: CuadreCaja
   } | null>(null)
+
+  // Total contado en vivo desde el desglose físico.
+  const fondoContado = DENOMINACIONES_EUR.reduce((s, d) => s + d * (desglose[String(d)] || 0), 0)
+  const setDenom = (d: number, n: string) =>
+    setDesglose(prev => ({ ...prev, [String(d)]: Math.max(0, parseInt(n || '0', 10) || 0) }))
 
   const cerrar = async () => {
     setLoading(true)
     try {
+      const body: Record<string, unknown> = { fecha }
+      if (conArqueo) body.desglose_monedas = desglose
+      if (notas.trim()) body.notas = notas.trim()
       const r = await fetch('/api/owner/contabilidad/cierre-diario', {
         method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fecha })
+        body: JSON.stringify(body)
       })
       const d = await r.json()
       if (!d.ok) { showToast('Error: ' + d.error); return }
       setResult(d)
-      showToast(`✅ Cierre generado — Asiento nº ${d.num_asiento}`)
+      const dif = d.cuadre?.conteo_realizado ? d.cuadre.diferencia_caja : null
+      showToast(
+        dif == null ? `✅ Cierre generado — Asiento nº ${d.num_asiento}`
+        : Math.abs(dif) < 0.005 ? `✅ Cierre + caja cuadrada — Asiento nº ${d.num_asiento}`
+        : `⚠️ Cierre con descuadre de ${fmt(dif)} — Asiento nº ${d.num_asiento}`
+      )
     } finally { setLoading(false) }
   }
+
+  const c = result?.cuadre
+  const difColor = !c ? C.ink : Math.abs(c.diferencia_caja) < 0.005 ? '#4ADE80' : c.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
 
   return (
     <div>
@@ -218,9 +248,13 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
         <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, marginBottom: 12 }}>
           Genera el asiento contable del día calculando automáticamente las ventas desde los tickets y facturas simplificadas emitidas.
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
             style={{ fontFamily: SN, fontSize: 13, padding: '8px 12px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none' }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: SN, fontSize: 12, color: C.ink3, cursor: 'pointer' }}>
+            <input type="checkbox" checked={conArqueo} onChange={e => setConArqueo(e.target.checked)} style={{ accentColor: C.ink }} />
+            Hacer arqueo de caja (contar el cajón)
+          </label>
           <button onClick={cerrar} disabled={loading}
             style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, padding: '8px 20px', background: loading ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: loading ? 'default' : 'pointer' }}>
             {loading ? 'Generando…' : '🔒 Generar cierre del día'}
@@ -228,8 +262,33 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
         </div>
       </div>
 
+      {/* Arqueo físico: conteo por denominación */}
+      {conArqueo && (
+        <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Conteo físico del cajón</div>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink }}>Contado: {fmt(fondoContado)}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+            {DENOMINACIONES_EUR.map(d => (
+              <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 6, background: C.paper2, borderRadius: 8, padding: '5px 8px' }}>
+                <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3, minWidth: 52 }}>{fmtDenom(d)}</span>
+                <input type="number" min={0} inputMode="numeric" value={desglose[String(d)] || ''} placeholder="0"
+                  onChange={e => setDenom(d, e.target.value)}
+                  style={{ width: '100%', fontFamily: SN, fontSize: 13, padding: '5px 6px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>Notas (motivo del descuadre, incidencias…)</div>
+            <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Opcional"
+              style={{ width: '100%', fontFamily: SN, fontSize: 13, padding: '8px 10px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+        </div>
+      )}
+
       {result && (
-        <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px' }}>
+        <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px', marginBottom: c?.conteo_realizado ? 12 : 0 }}>
           <div style={{ fontFamily: SM, fontSize: 11, color: '#4ADE80', marginBottom: 10 }}>Asiento nº {result.num_asiento} generado</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {[
@@ -243,6 +302,33 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
               <div key={l}>
                 <div style={{ fontFamily: SM, fontSize: 9, color: '#4ADE8077', marginBottom: 2 }}>{l}</div>
                 <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 600, color: '#4ADE80' }}>{v}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Cuadre de caja */}
+      {c?.conteo_realizado && (
+        <div style={{ background: C.bone, border: `1px solid ${difColor}55`, borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Cuadre de caja</div>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: difColor }}>
+              {Math.abs(c.diferencia_caja) < 0.005 ? 'Caja cuadrada ✓' : `${c.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(c.diferencia_caja))}`}
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
+            {[
+              ['Fondo inicial', fmt(c.fondo_inicial), C.ink],
+              ['Cobros efectivo', fmt(c.cobros_efectivo), C.ink],
+              ['Salidas (retiros/gastos)', fmt(c.salidas_caja), C.ink],
+              ['Saldo teórico', fmt(c.saldo_teorico), C.ink],
+              ['Contado (físico)', fmt(c.fondo_final), C.ink],
+              ['Descuadre', fmt(c.diferencia_caja), difColor],
+            ].map(([l, v, col]) => (
+              <div key={l as string} style={{ background: C.paper2, borderRadius: 8, padding: '8px 10px' }}>
+                <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginBottom: 2 }}>{l}</div>
+                <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: col as string }}>{v}</div>
               </div>
             ))}
           </div>

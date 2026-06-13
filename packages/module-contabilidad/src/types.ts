@@ -77,3 +77,29 @@ export interface PlantillaRecurrente {
   fecha_inicio: Date
   fecha_fin?: Date
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Cuadre de caja (tesorería operativa)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Movimiento del libro de caja (PORT — cada vertical normaliza sus filas de
+ * `movimientos_caja` a este tipo). `importe` lleva el signo ya aplicado
+ * (salidas negativas), igual que se almacena en BD.
+ */
+export interface MovimientoCaja {
+  tipo: string // 'apertura' | 'cobro_efectivo' | 'cambio' | 'retiro' | 'gasto' | 'arqueo' | 'cierre' | …
+  importe: number
+  desglose_monedas?: Record<string, number> | null
+}
+
+/** Resultado del cuadre de caja de un turno/día. */
+export interface CuadreCaja {
+  fondo_inicial: number // fondo de apertura
+  cobros_efectivo: number // cobros en efectivo registrados
+  salidas_caja: number // retiros + gastos pagados del cajón (positivo)
+  saldo_teorico: number // lo que debería haber en el cajón según el sistema
+  fondo_final: number // conteo físico real
+  diferencia_caja: number // fondo_final − saldo_teorico (+ sobra, − falta)
+  conteo_realizado: boolean // false si no hubo conteo físico
+}
