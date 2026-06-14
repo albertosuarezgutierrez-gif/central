@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📈 IG ia.rest — Crecimiento Fase 1 (PR #215, draft) — 14/06/2026**
+  Alberto: "no gano seguidores". Diagnóstico honesto: cuenta B2B de nicho + nueva + contenido repetitivo;
+  el agente solo publica, no optimiza alcance; y para un SaaS importan **leads**, no seguidores. Plan por fases
+  (alcance por código + guía no-code). **Fase 1 entregada:**
+  - **Diversidad de temas:** `elegirTemaConContexto` (`src/lib/instagram-context.ts`) recibe temas/módulos de
+    los últimos 5 posts y rota entre los 14 módulos (antes solo veía el último título → repetía "comandas").
+  - **Reels x2/sem:** `formatoDelDia` genera reel también el miércoles (con fallback a imagen ya existente).
+  - **Horarios:** crons `vercel.json` movidos a `0 16 * * 3` y `0 22 * * 5` (valle tarde / tras servicio).
+  - **CTA de seguir** en prompts de caption (imagen y reel).
+  - **`docs/instagram-growth.md`:** guía no-code (perfil, constancia, interacción manual, colaboraciones,
+    Meta Ads, LinkedIn/TikTok, medir leads). NO se hará bot de seguir/comentar (viola normas IG).
+  - **Fases siguientes (plan):** Stories auto, carruseles, UTM+blog→carrusel+lead magnet, actualidad/testimonios,
+    cross-post FB, newsjacking, formato serializado, auto-respuesta a comentarios.
+  - **Pendiente Alberto:** borrar las 4 EFs de prueba de la auditoría previa (ig-test-send x2, tg-webhookinfo, ig-migrate).
+
 - **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
   Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:
   - **PR #208 (mergeado)** — auditoría del dashboard a partir de un pantallazo real:
