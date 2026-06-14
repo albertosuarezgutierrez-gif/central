@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T21:06:37Z",
+  "generadoEn": "2026-06-14T21:08:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239",
       "fecha": "14/06/2026"
     },
@@ -1987,10 +1991,6 @@
     },
     {
       "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
-      "fecha": "13/06/2026"
-    },
-    {
-      "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
       "fecha": "13/06/2026"
     }
   ],
