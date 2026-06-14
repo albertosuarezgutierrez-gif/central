@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest` — 14/06/2026**
+  4ª de la tanda "automatizar agentes" (la #3 impagos-sivra se SALTÓ: sivra no tiene cuentas por cobrar,
+  sus "facturas" son gasto/proveedores y pago a limpiadoras). Cron diario `/api/cron/reposicion-stock`
+  (08:15) que lee `materiales` (Supabase propia de ia-rest), detecta `cantidad_disponible < stock_minimo`
+  (activos, con `stock_minimo` no nulo) y avisa por **Telegram** (`tgAlert(..., 'aviso')`) con líneas
+  ordenadas por faltante + proveedor + coste estimado de reposición.
+  - **Código** (`apps/ia-rest/src`): `lib/reposicion-stock.ts` (puro: `faltante`/`costeReposicion`/
+    `formatAvisoStock`) + `lib/reposicion-stock.test.ts` (3/3 ✅); `app/api/cron/reposicion-stock/route.ts`
+    (auth Bearer `CRON_SECRET`, `createServerClient`); cron en `vercel.json`. **Sin migración** (usa
+    `materiales.stock_minimo`, ya existente). ia-rest = BD propia `efncqyvhniaxsirhdxaa`.
+  - **OJO**: ia-rest **sí valida tipos en build** (no `ignoreBuildErrors`) → cuidado con type-guards.
+  - **Verificado**: `node --test` 3/3 ✅, `next build` (161/161 páginas, ruta como función, type-check OK) ✅.
+  - **⚠️ PENDIENTE despliegue**: requiere `materiales.stock_minimo` aplicado en la BD de ia-rest (migración
+    materiales v2) y `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (ya existen para el resto de alertas).
+  - **Roadmap restante**: NPS post-servicio (ialimp) · scoring limpiadoras (ialimp) · orquestador concursos.
+
 - **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
   Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
   - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
