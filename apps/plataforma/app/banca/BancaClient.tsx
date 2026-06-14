@@ -160,7 +160,7 @@ export function SubirFacturaBtn() {
   )
 }
 
-// Conexión automática del banco vía Open Banking (PSD2/GoCardless): elige banco +
+// Conexión automática del banco vía Open Banking (PSD2/Enable Banking): elige banco +
 // sociedad, crea el consentimiento y redirige al banco para autorizar.
 export function ConectarBancoBtn({ sociedades }: { sociedades: SociedadOpt[] }) {
   const [open, setOpen] = useState(false)
@@ -205,7 +205,7 @@ export function ConectarBancoBtn({ sociedades }: { sociedades: SociedadOpt[] }) 
             <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Conectar banco automáticamente</h3>
             <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Open Banking (PSD2): autorizas en tu banco y los saldos/movimientos entran solos.</p>
             {estado === 'cargando' && <p style={{ fontSize: '14px', color: 'var(--muted)' }}>Cargando bancos…</p>}
-            {estado === 'no-config' && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Falta configurar GoCardless (envs <code>GOCARDLESS_SECRET_ID</code> y <code>GOCARDLESS_SECRET_KEY</code> en Vercel). Mientras tanto, importa el Excel/Norma 43.</p>}
+            {estado === 'no-config' && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Falta configurar Enable Banking (envs <code>ENABLEBANKING_APP_ID</code> y <code>ENABLEBANKING_PRIVATE_KEY</code> en Vercel). Mientras tanto, importa el Excel/Norma 43.</p>}
             {estado === 'error' && <p style={{ fontSize: '13px', color: '#dc2626' }}>{err}</p>}
             {estado === 'ok' && (
               <form onSubmit={conectar} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

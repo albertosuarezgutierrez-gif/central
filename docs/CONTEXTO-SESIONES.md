@@ -28,15 +28,24 @@
   - **Importador Excel multi-banco** (`lib/extracto-xls.ts`, SheetJS): detección de columnas robusta a
     **Kutxa** y **BBVA** (fecha valor vs fecha, concepto en 2 columnas, saldo "Disponible", orden asc/desc).
   - **PR #216 (MERGED, `a9adf00`)** — F4: **OCR de facturas** (`nimVision`) + casado con el movimiento.
-  - **PR #217 (DRAFT)** — F6: **conexión automática PSD2** vía **GoCardless Bank Account Data** (`lib/gocardless.ts`
-    + `lib/psd2.ts` + endpoints `psd2/instituciones|conectar|callback` + cron `psd2-sync`). Inerte hasta
-    poner `GOCARDLESS_SECRET_ID/KEY` en el Vercel de plataforma (degrada limpio). **Pendiente revisar/mergear**.
+  - **PR #217 (MERGED, `26d89b7`)** — F6: **conexión automática PSD2**, primera versión sobre **GoCardless
+    Bank Account Data** (`lib/gocardless.ts` + `lib/psd2.ts` + endpoints `psd2/instituciones|conectar|callback`
+    + cron `psd2-sync`).
+  - **F6-bis — switch a Enable Banking (DRAFT, rama `claude/banca-psd2-enablebanking`)**: los registros de
+    GoCardless están **cerrados** (Alberto no pudo darse de alta), así que se reescribió la capa de proveedor a
+    **Enable Banking** (tier gratuito que admite altas). Auth distinta: **JWT RS256** firmado con la clave
+    privada de la app (no hay endpoint de token); flujo `aspsps → POST /auth → POST /sessions → accounts`.
+    Nuevo `lib/enablebanking.ts` (reemplaza `lib/gocardless.ts`, borrado); `lib/psd2.ts` y los endpoints usan
+    sesiones (el `session_id` se guarda en `conexiones_banco.requisition_id`, `proveedor='enablebanking'`). Sin
+    migración nueva. Inerte hasta poner `ENABLEBANKING_APP_ID` y `ENABLEBANKING_PRIVATE_KEY` en el Vercel de
+    plataforma (degrada limpio). **Mapeo de campos a verificar con credenciales reales** (este entorno no las tiene).
   - **Datos reales de Alberto YA cargados** en su cuenta (sociedad "Alberto Suárez Gutiérrez", NIF):
     **Kutxa** (244 mov, 21.161,96 €, apartamentos) + **BBVA** (40 mov, 20.034,98 €, seguros + Dúplex Center) =
     **41.196,94 €** consolidados. Los movimientos cargados por SQL NO están categorizados/conciliados: usar
     los botones 🤖 Re-analizar IA y 🔗 Conciliar en `/banca` (necesitan `NVIDIA_API_KEY`).
-  - **Pendiente (mejoras)**: F4 → guardar el justificante (imagen) y soportar PDF; F6 → mergear tras
-    configurar GoCardless. Lógica pura testeada con `node --test` (norma43, tesorería).
+  - **Pendiente (mejoras)**: F4 → guardar el justificante (imagen) y soportar PDF; F6 → dar de alta una app
+    en Enable Banking, poner `ENABLEBANKING_APP_ID/PRIVATE_KEY` en Vercel, verificar el mapeo de campos con un
+    banco real y mergear. Lógica pura testeada con `node --test` (norma43, tesorería).
 
 - **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
   Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:
