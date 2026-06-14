@@ -22,13 +22,30 @@ export function disponible(): boolean {
 
 let jwtCache: { token: string; exp: number } | null = null
 
+// Normaliza la clave privada pegada en una env var de Vercel a un PEM válido. Tolera los
+// estropicios típicos del copia-pega: comillas envolventes, saltos escapados (\n / \r\n),
+// y —el más habitual— que los saltos de línea se hayan perdido y quede TODO en una línea
+// (Vercel/algún editor los colapsa a espacios) → OpenSSL 3 lanza "DECODER unsupported".
+// En ese caso reconstruimos el bloque PEM: cabecera/pie + cuerpo base64 partido a 64.
+function normalizarPem(raw: string): string {
+  let s = raw.trim()
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1)
+  s = s.replace(/\\r/g, '').replace(/\\n/g, '\n').trim()
+  if (s.includes('\n')) return s
+  // Una sola línea: extraer "-----BEGIN X-----", cuerpo, "-----END X-----" y re-formatear.
+  const m = s.match(/-----BEGIN ([A-Z0-9 ]+?)-----\s*([\s\S]*?)\s*-----END \1-----/)
+  if (!m) return s
+  const label = m[1].trim()
+  const body = (m[2].replace(/\s+/g, '').match(/.{1,64}/g) ?? []).join('\n')
+  return `-----BEGIN ${label}-----\n${body}\n-----END ${label}-----\n`
+}
+
 // Firma un JWT RS256 con la clave privada de la app. createPrivateKey acepta tanto
-// PKCS#1 ("BEGIN RSA PRIVATE KEY") como PKCS#8 ("BEGIN PRIVATE KEY"). El env puede venir
-// con saltos de línea escapados (\n) si se pegó en una sola línea en Vercel.
+// PKCS#1 ("BEGIN RSA PRIVATE KEY") como PKCS#8 ("BEGIN PRIVATE KEY").
 async function jwt(): Promise<string> {
   if (jwtCache && jwtCache.exp > Date.now() + 60_000) return jwtCache.token
   const appId = process.env.ENABLEBANKING_APP_ID
-  const pem = (process.env.ENABLEBANKING_PRIVATE_KEY || '').replace(/\\n/g, '\n')
+  const pem = normalizarPem(process.env.ENABLEBANKING_PRIVATE_KEY || '')
   if (!appId || !pem) throw new Error('Enable Banking sin configurar')
   const key = createPrivateKey(pem)
   const iat = Math.floor(Date.now() / 1000)
