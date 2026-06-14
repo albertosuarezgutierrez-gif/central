@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T16:34:17Z",
+  "generadoEn": "2026-06-14T18:12:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1932,6 +1932,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)",
       "fecha": "14/06/2026"
     },
@@ -1985,10 +1989,6 @@
     },
     {
       "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`",
       "fecha": "12/06/2026"
     }
   ],
