@@ -136,6 +136,7 @@ export type MovimientoBancario = {
   conceptoNormalizado: string | null
   categoria: string | null
   contraparte: string | null
+  conciliado: boolean
 }
 
 // Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta).
@@ -147,7 +148,7 @@ export async function listarMovimientos(
   const rows = cuentaBancariaId
     ? await prisma.$queryRaw<MovRow[]>`
         SELECT mb.id, mb.cuenta_bancaria_id, mb.fecha_operacion, mb.importe, mb.concepto,
-               mb.concepto_normalizado, mb.categoria, mb.contraparte
+               mb.concepto_normalizado, mb.categoria, mb.contraparte, mb.conciliado
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.cuenta_bancaria_id = ${cuentaBancariaId}::uuid
@@ -156,7 +157,7 @@ export async function listarMovimientos(
       `
     : await prisma.$queryRaw<MovRow[]>`
         SELECT mb.id, mb.cuenta_bancaria_id, mb.fecha_operacion, mb.importe, mb.concepto,
-               mb.concepto_normalizado, mb.categoria, mb.contraparte
+               mb.concepto_normalizado, mb.categoria, mb.contraparte, mb.conciliado
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid
@@ -173,10 +174,12 @@ export async function listarMovimientos(
     conceptoNormalizado: r.concepto_normalizado,
     categoria: r.categoria,
     contraparte: r.contraparte,
+    conciliado: r.conciliado,
   }))
 }
 
 type MovRow = {
   id: string; cuenta_bancaria_id: string; fecha_operacion: Date | null; importe: unknown
-  concepto: string | null; concepto_normalizado: string | null; categoria: string | null; contraparte: string | null
+  concepto: string | null; concepto_normalizado: string | null; categoria: string | null
+  contraparte: string | null; conciliado: boolean
 }

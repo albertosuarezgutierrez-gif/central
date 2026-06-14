@@ -90,6 +90,30 @@ export function ReanalizarBtn() {
   )
 }
 
+// Botón para cruzar banco ↔ facturas/ingresos registrados (sivra + ialimp).
+export function ConciliarBtn() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  async function run() {
+    setLoading(true); setMsg('')
+    const res = await fetch('/api/banca/conciliar', { method: 'POST' })
+    setLoading(false)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg('Error'); return }
+    setMsg(data.conciliados > 0 ? `${data.conciliados} conciliados` : 'Sin coincidencias nuevas')
+    router.refresh()
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <button onClick={run} disabled={loading} style={ghost}>{loading ? 'Conciliando…' : '🔗 Conciliar facturas'}</button>
+      {msg && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{msg}</span>}
+    </span>
+  )
+}
+
 const ghost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const btn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }

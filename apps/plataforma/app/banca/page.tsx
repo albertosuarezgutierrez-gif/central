@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientos, fmtEur } from '@/lib/banca'
-import { ImportarExtractoBtn, ReanalizarBtn } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -47,6 +47,7 @@ export default async function BancaPage() {
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             {movimientos.length > 0 && <ReanalizarBtn />}
+            {movimientos.length > 0 && <ConciliarBtn />}
             <ImportarExtractoBtn sociedades={sociedades} />
           </div>
         </div>
@@ -81,7 +82,13 @@ export default async function BancaPage() {
         {/* Movimientos */}
         {movimientos.length > 0 && (
           <section>
-            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>Últimos movimientos</h2>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+              <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Últimos movimientos</h2>
+              {(() => {
+                const conc = movimientos.filter(m => m.conciliado).length
+                return <span style={{ fontSize: '12px', color: 'var(--muted)' }}>🔗 {conc}/{movimientos.length} conciliados con factura</span>
+              })()}
+            </div>
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               {movimientos.map((m, i) => (
                 <div key={m.id} style={{
@@ -94,6 +101,9 @@ export default async function BancaPage() {
                       {m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento'}
                     </div>
                     {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{CAT_LABEL[m.categoria] || m.categoria}</div>}
+                  </div>
+                  <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
+                    {m.conciliado ? '🔗' : ''}
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
                     {fmtEur(m.importe)}
