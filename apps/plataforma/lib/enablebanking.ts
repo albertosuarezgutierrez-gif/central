@@ -149,9 +149,46 @@ export async function crearSesion(code: string): Promise<Sesion> {
 }
 
 // Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids).
+// Enable Banking devuelve `accounts` como lista de objetos cuenta (con `uid`) o de uids
+// string según el endpoint; aceptamos varias formas para no perder ninguna cuenta.
 export async function getSesion(sessionId: string): Promise<Sesion> {
-  const j = await api<{ accounts: Array<string | { uid: string }> }>(`/sessions/${sessionId}`)
-  return { session_id: sessionId, accounts: (j.accounts ?? []).map(a => typeof a === 'string' ? a : a.uid) }
+  const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
+  return { session_id: sessionId, accounts: extraerUids(j) }
+}
+
+// Extrae los uid de cuenta de una respuesta de sesión, tolerando las variantes de la API:
+// accounts: [uid] | [{uid}] | [{account:{uid}}]; o accounts_data: [{uid}]; o accounts: [{id}].
+function extraerUids(j: Record<string, unknown>): string[] {
+  const fuentes = [j.accounts, (j as Record<string, unknown>).accounts_data].filter(Array.isArray) as unknown[][]
+  const uids: string[] = []
+  for (const arr of fuentes) {
+    for (const a of arr) {
+      if (typeof a === 'string') { uids.push(a); continue }
+      if (a && typeof a === 'object') {
+        const o = a as Record<string, unknown>
+        const uid = o.uid ?? o.id ?? (o.account as Record<string, unknown> | undefined)?.uid
+        if (typeof uid === 'string') uids.push(uid)
+      }
+    }
+  }
+  return [...new Set(uids)]
+}
+
+// Inspección estructural de una sesión (solo para depurar; datos sandbox). Devuelve las
+// claves de la respuesta y la forma de `accounts`, sin valores sensibles de producción.
+export async function inspeccionarSesion(sessionId: string): Promise<Record<string, unknown>> {
+  const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
+  const acc = j.accounts
+  const primer = Array.isArray(acc) ? acc[0] : undefined
+  return {
+    claves: Object.keys(j),
+    accountsTipo: Array.isArray(acc) ? 'array' : typeof acc,
+    accountsLen: Array.isArray(acc) ? acc.length : null,
+    primerTipo: typeof primer,
+    primerClaves: primer && typeof primer === 'object' ? Object.keys(primer as object) : primer,
+    uidsExtraidos: extraerUids(j).length,
+    status: j.status ?? null,
+  }
 }
 
 export type CuentaDetalle = { iban?: string; nombre?: string; divisa?: string }
