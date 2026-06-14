@@ -3,9 +3,17 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientos, fmtEur } from '@/lib/banca'
-import { ImportarExtractoBtn } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
+
+// Etiqueta visible por categoría IA (Fase 2).
+const CAT_LABEL: Record<string, string> = {
+  nomina: '👤 Nómina', proveedor: '📦 Proveedor', impuestos: '🏛️ Impuestos',
+  suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
+  cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
+  prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
+}
 
 export default async function BancaPage() {
   const session = await getSession()
@@ -37,7 +45,10 @@ export default async function BancaPage() {
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
             <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
           </div>
-          <ImportarExtractoBtn sociedades={sociedades} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+            {movimientos.length > 0 && <ReanalizarBtn />}
+            <ImportarExtractoBtn sociedades={sociedades} />
+          </div>
         </div>
 
         {/* Cuentas por sociedad */}
@@ -82,7 +93,7 @@ export default async function BancaPage() {
                     <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                       {m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento'}
                     </div>
-                    {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{m.categoria}</div>}
+                    {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{CAT_LABEL[m.categoria] || m.categoria}</div>}
                   </div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
                     {fmtEur(m.importe)}

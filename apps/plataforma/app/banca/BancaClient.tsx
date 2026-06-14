@@ -66,6 +66,31 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
   )
 }
 
+// Botón para (re)lanzar la categorización IA de los movimientos pendientes.
+export function ReanalizarBtn() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+
+  async function run() {
+    setLoading(true); setMsg('')
+    const res = await fetch('/api/banca/analizar', { method: 'POST' })
+    setLoading(false)
+    const data = await res.json().catch(() => ({}))
+    if (!res.ok) { setMsg('Error'); return }
+    setMsg(data.categorizados > 0 ? `${data.categorizados} categorizados` : 'Nada pendiente / IA no disponible')
+    router.refresh()
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <button onClick={run} disabled={loading} style={ghost}>{loading ? 'Analizando…' : '🤖 Re-analizar IA'}</button>
+      {msg && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{msg}</span>}
+    </span>
+  )
+}
+
+const ghost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const btn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }
 const modal: React.CSSProperties = { background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '420px', boxShadow: 'var(--shadow)' }

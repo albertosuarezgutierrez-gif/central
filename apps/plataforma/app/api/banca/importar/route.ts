@@ -3,6 +3,7 @@ import { requireSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { parseNorma43 } from '@/lib/norma43'
 import { importarExtracto } from '@/lib/banca'
+import { analizarMovimientos } from '@/lib/categorizar'
 
 export const dynamic = 'force-dynamic'
 
@@ -38,5 +39,10 @@ export async function POST(req: NextRequest) {
   }
 
   const resultado = await importarExtracto(session.id, sociedadId, extractos)
-  return NextResponse.json({ ok: true, ...resultado })
+
+  // Capa IA (F2): categoriza los recién importados. Degrada limpio sin NVIDIA_API_KEY
+  // o si la IA falla — el import ya está guardado, esto solo enriquece.
+  const { categorizados } = await analizarMovimientos(session.id).catch(() => ({ categorizados: 0 }))
+
+  return NextResponse.json({ ok: true, ...resultado, categorizados })
 }
