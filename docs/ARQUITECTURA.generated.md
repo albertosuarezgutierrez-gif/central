@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T07:11:35Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T07:39:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -115,6 +115,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/06/2026) 💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209
 - (13/06/2026) 🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`
 - (13/06/2026) 🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)
 - (13/06/2026) 💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`
@@ -124,5 +125,4 @@
 - (12/06/2026) 🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`
 - (12/06/2026) 🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado
 - (12/06/2026) 🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado
-- (12/06/2026) 📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172
 

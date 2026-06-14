@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T07:11:35Z",
+  "generadoEn": "2026-06-14T07:39:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1882,6 +1882,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
       "fecha": "13/06/2026"
     },
@@ -1935,10 +1939,6 @@
     },
     {
       "titulo": "📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🎤 DECK presencial JJ + estructura real corregida",
       "fecha": "12/06/2026"
     }
   ],
