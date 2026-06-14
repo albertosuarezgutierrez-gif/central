@@ -24,11 +24,12 @@ const CARD_SM = { ...CARD, borderRadius: '16px', padding: '16px' }
 type Data = {
   filters: { year: number; month: number | null; propertyId: string; portal: string }
   properties: { id: string; name: string; location: string }[]
-  kpis: { ingresos:number; ingresosPrev:number; ingresosDelta:number; reservas:number; reservasPrev:number; reservasDelta:number; noches:number; adr:number; gastos:number; gastosPrev:number; gastosCount:number; gastosDelta:number; beneficio:number; margen:number }
+  kpis: { ingresos:number; ingresosPrev:number; ingresosDelta:number|null; reservas:number; reservasPrev:number; reservasDelta:number|null; noches:number; adr:number; gastos:number; gastosPrev:number; gastosCount:number; gastosDelta:number|null; beneficio:number; margen:number }
   monthly: any[]; byProperty: any[]; byPortal: any[]; expByCategory: any[]; expByProperty: any[]; recent: any[]; recentExpenses: any[]
 }
 
-function Delta({ v, suffix = "%" }: { v: number; suffix?: string }) {
+function Delta({ v, suffix = "%" }: { v: number | null; suffix?: string }) {
+  if (v === null || !isFinite(v)) return <span style={{ fontSize: 11, fontWeight: 500, color: '#6b7184', letterSpacing: '-0.01em' }}>nuevo</span>
   const up = v >= 0
   return (
     <span style={{ fontSize: 11, fontWeight: 500, color: up ? '#22c55e' : '#ef4444', letterSpacing: '-0.01em' }}>
@@ -37,7 +38,7 @@ function Delta({ v, suffix = "%" }: { v: number; suffix?: string }) {
   )
 }
 
-function KpiCard({ label, value, prev, delta, accent }: { label: string; value: string; prev?: string; delta?: number; accent?: boolean }) {
+function KpiCard({ label, value, prev, delta, accent }: { label: string; value: string; prev?: string; delta?: number | null; accent?: boolean }) {
   return (
     <div style={{
       ...CARD,
@@ -55,6 +56,18 @@ function KpiCard({ label, value, prev, delta, accent }: { label: string; value: 
   )
 }
 
+
+function TodayRow({ r }: { r: any }) {
+  const piso = r.propertyName || r.propertyId || 'Piso sin asignar'
+  return (
+    <div style={{ marginBottom: 6 }}>
+      <div style={{ fontSize: 12, color: '#1b2540', fontWeight: 500 }}>{r.guestName || 'Huésped'}</div>
+      <div style={{ fontSize: 11, color: '#6b7184', display: 'flex', alignItems: 'center', gap: 4 }}>
+        <span aria-hidden>🏠</span>{piso}
+      </div>
+    </div>
+  )
+}
 
 function ForecastWidget({ data }: { data: any }) {
   if (!data) return null
@@ -177,19 +190,19 @@ export default function DashboardPage() {
           {todayOut.length > 0 && (
             <div style={{ ...CARD_SM, borderLeft: '3px solid #ef4444' }}>
               <div style={{ fontSize: 10, color: '#6b7184', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Salidas hoy</div>
-              {todayOut.map((r,i)=><div key={i} style={{ fontSize: 12, color: '#1b2540', fontWeight: 500 }}>{r.guestName || 'Huésped'}</div>)}
+              {todayOut.map((r,i)=><TodayRow key={i} r={r} />)}
             </div>
           )}
           {todayIn.length > 0 && (
             <div style={{ ...CARD_SM, borderLeft: '3px solid #22c55e' }}>
               <div style={{ fontSize: 10, color: '#6b7184', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Entradas hoy</div>
-              {todayIn.map((r,i)=><div key={i} style={{ fontSize: 12, color: '#1b2540', fontWeight: 500 }}>{r.guestName || 'Huésped'}</div>)}
+              {todayIn.map((r,i)=><TodayRow key={i} r={r} />)}
             </div>
           )}
           {tomorrowIn.length > 0 && (
             <div style={{ ...CARD_SM, borderLeft: '3px solid #d0f100' }}>
               <div style={{ fontSize: 10, color: '#6b7184', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6 }}>Entradas mañana</div>
-              {tomorrowIn.map((r,i)=><div key={i} style={{ fontSize: 12, color: '#1b2540', fontWeight: 500 }}>{r.guestName || 'Huésped'}</div>)}
+              {tomorrowIn.map((r,i)=><TodayRow key={i} r={r} />)}
             </div>
           )}
         </div>
@@ -230,8 +243,8 @@ export default function DashboardPage() {
                   formatter={(v: number) => [fmtEUR(v)]}
                   labelFormatter={(l: any) => MONTHS[+l-1]}
                 />
-                <Bar dataKey="y0" fill="#d0f100" radius={[4,4,0,0]} name={String(year)} />
-                <Bar dataKey="y1" fill="rgba(0,39,80,0.12)" radius={[4,4,0,0]} name={String(year-1)} />
+                <Bar dataKey={String(year)} fill="#d0f100" radius={[4,4,0,0]} name={String(year)} />
+                <Bar dataKey={String(year-1)} fill="rgba(0,39,80,0.12)" radius={[4,4,0,0]} name={String(year-1)} />
               </BarChart>
             </ResponsiveContainer>
             <div style={{ display: 'flex', gap: 16, marginTop: 8 }}>

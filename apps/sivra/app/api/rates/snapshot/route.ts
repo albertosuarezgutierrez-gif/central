@@ -7,7 +7,7 @@ import { calcOurs, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? "vqOXOSDtA7p80Fp~.ezOXPn_zPYq99gC"
+const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE       = "https://login.smoobu.com/api"
 
 const PROPS = [

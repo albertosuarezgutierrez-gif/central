@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T05:41:31Z",
+  "generadoEn": "2026-06-14T07:06:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -67,11 +67,6 @@
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
-    },
-    {
-      "id": "module-horario",
-      "tipo": "module",
-      "npm": "@central/module-horario"
     },
     {
       "id": "module-materiales",
@@ -433,24 +428,6 @@
         "evidencias": 0
       }
     },
-    "module-horario": {
-      "ia-rest": {
-        "estado": "usado",
-        "evidencias": 2
-      },
-      "ialimp": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "plataforma": {
-        "estado": "no",
-        "evidencias": 0
-      },
-      "sivra": {
-        "estado": "no",
-        "evidencias": 0
-      }
-    },
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
@@ -726,7 +703,7 @@
     "marketing": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 12
       },
       "ialimp": {
         "presente": false,
@@ -906,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 164
+        "evidencias": 160
       },
       "ialimp": {
         "presente": true,
@@ -953,7 +930,6 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-feedback": [],
-    "module-horario": [],
     "module-materiales": [],
     "module-presupuestos": [],
     "module-proveedores": [],
@@ -1057,6 +1033,7 @@
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
       "/api/cron/reservas-noshow",
+      "/api/cron/seo-agent",
       "/api/cuenta-nominal",
       "/api/demo",
       "/api/demo/seed",
@@ -1236,10 +1213,6 @@
       "/api/owner/forecaster",
       "/api/owner/formatos",
       "/api/owner/fuera-carta/stock",
-      "/api/owner/horario",
-      "/api/owner/horario/autocierre",
-      "/api/owner/horario/config",
-      "/api/owner/horario/coste",
       "/api/owner/impresoras",
       "/api/owner/logo",
       "/api/owner/manual-voz",
@@ -1377,6 +1350,7 @@
       "/api/super/restaurantes/[id]/config",
       "/api/super/restaurantes/[id]/cuenta",
       "/api/super/restaurantes/[id]/impersonate",
+      "/api/super/seo-revert",
       "/api/super/soporte",
       "/api/super/stripe-operador",
       "/api/super/stripe-operador/cancelar",
@@ -1536,6 +1510,7 @@
       "/api/cotizador",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/impagos",
       "/api/cron/procesar-documentos",
       "/api/dashboard",
       "/api/empresas/register",
@@ -1620,6 +1595,7 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sociedades",
@@ -1723,7 +1699,6 @@
       "cobro_config",
       "comanda_items",
       "comandas",
-      "config_horario",
       "config_tienda",
       "contract_acceptances",
       "documentos_escaneados",
@@ -1781,6 +1756,10 @@
       "reservas",
       "resumen_cobros_mensual",
       "running_zonas",
+      "seo_articulos",
+      "seo_cambios",
+      "seo_content_blocks",
+      "seo_overrides",
       "soporte_mensajes",
       "soporte_tickets",
       "storefront_config",
@@ -1816,6 +1795,7 @@
       "protocolo_fotos",
       "protocolo_items",
       "protocolos",
+      "recordatorios_impagos",
       "sociedades",
       "stock_consumos",
       "tenant_modulos"
@@ -1901,8 +1881,20 @@
   ],
   "novedades": [
     {
-      "titulo": "⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)",
+      "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
       "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
+      "fecha": "13/06/2026"
     },
     {
       "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
@@ -1946,18 +1938,6 @@
     },
     {
       "titulo": "🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🎤 DECK presencial JJ + estructura real corregida",
       "fecha": "12/06/2026"
     }
   ],
@@ -2182,7 +2162,7 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 17,
+    "packages": 16,
     "capacidades": 23,
     "skills": 13,
     "apis": 745,

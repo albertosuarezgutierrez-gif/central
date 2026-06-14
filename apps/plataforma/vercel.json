@@ -1,5 +1,11 @@
 {
   "buildCommand": "prisma generate && next build",
   "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile",
-  "framework": "nextjs"
+  "framework": "nextjs",
+  "crons": [
+    {
+      "path": "/api/cron/briefing",
+      "schedule": "0 8 * * 1"
+    }
+  ]
 }
