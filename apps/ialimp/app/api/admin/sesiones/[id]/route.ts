@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { requireEmpresaId } from '@/lib/tenant'
+import { requireEmpresaId, apiError } from '@/lib/tenant'
 import { sendPushToLimpiadora } from '@/lib/push'
 
 // PATCH — editar sesión: asignar / reasignar / DESASIGNAR limpiadora y otros campos.
@@ -132,7 +132,7 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
 
     return NextResponse.json({ ok: true, sesion: result[0] })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -164,6 +164,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ id: s
     `)
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
