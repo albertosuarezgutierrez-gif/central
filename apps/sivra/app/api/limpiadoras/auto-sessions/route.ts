@@ -5,7 +5,7 @@ import { Prisma } from '@prisma/client'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY || 'vqOXOSDtA7p80Fp~.ezOXPn_zPYq99gC'
+const SMOOBU_KEY = process.env.SMOOBU_API_KEY || ''
 const PROP_MAP: Record<string, string> = {
   '352007': 'prop_house_sevillana',
   '352418': 'prop_busto_reform',

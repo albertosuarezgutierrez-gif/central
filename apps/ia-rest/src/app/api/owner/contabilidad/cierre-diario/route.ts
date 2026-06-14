@@ -6,6 +6,8 @@ import {
   generarAsientoCierreDiario, periodoStr, trimestreActual,
   PGC_DEFECTO, type ConfigContabilidad,
 } from '@/lib/contabilidad'
+import { calcularCuadreCaja, calcularCuadrePorEmpleado, resumirDescuadresEmpleado, type MovimientoCaja, type FilaArqueoEmpleado } from '@central/module-contabilidad'
+import { enviarPushARoles } from '@/lib/push'
 
 /**
  * POST /api/owner/contabilidad/cierre-diario
@@ -20,6 +22,15 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json().catch(() => ({}))
   const fecha: string = body.fecha ?? new Date().toISOString().split('T')[0]
+  // Conteo físico opcional del arqueo (desde la UI). Si no llega, el cuadre se
+  // calcula con el último arqueo/cierre registrado en movimientos_caja.
+  const desgloseManual: Record<string, number> | null = body.desglose_monedas ?? null
+  const fondoFinalManual: number | null = body.fondo_final ?? null
+  const notas: string | null = body.notas ?? null
+  // Motivo por empleado (clave = camarero_id; 'general' para la caja sin asignar).
+  const notasPorEmpleado: Record<string, string> = body.notas_por_empleado ?? {}
+  // Conciliación de tarjeta: importe liquidado por el datáfono/banco (opcional).
+  const tarjetaLiquidada: number | null = body.tarjeta_liquidada != null ? Number(body.tarjeta_liquidada) : null
 
   // 1. Comprobar si ya existe arqueo para esa fecha
   const { data: arqueoExistente } = await supabase
@@ -69,6 +80,43 @@ export async function POST(req: NextRequest) {
   const propinas_efectivo = (propinasData ?? []).filter(p => p.canal === 'efectivo').reduce((s, p) => s + Number(p.importe), 0)
   const propinas_tarjeta  = (propinasData ?? []).filter(p => p.canal !== 'efectivo').reduce((s, p) => s + Number(p.importe), 0)
 
+  // 3b. Cuadre de caja: reconstruir el saldo teórico del cajón desde el libro de
+  // movimientos (apertura, cobros efectivo, retiros, gastos) y compararlo con el
+  // conteo físico (desglose manual de la UI o el último arqueo/cierre del día).
+  const { data: movsCaja } = await supabase
+    .from('movimientos_caja')
+    .select('tipo, importe, desglose_monedas, camarero_id, camarero_nombre, turno_id, created_at')
+    .eq('local_id', rid)
+    .gte('created_at', `${fecha}T00:00:00`)
+    .lt('created_at',  `${fecha}T23:59:59`)
+    .order('created_at', { ascending: true })
+
+  const movs = (movsCaja ?? []) as (MovimientoCaja & { turno_id?: string | null })[]
+
+  // Cruce con turno: los movimientos sin camarero asignado se atribuyen al titular
+  // de su turno (para que no caigan en "Caja general" en el cuadre por empleado).
+  const turnoIds = [...new Set(movs.filter(m => !m.camarero_id && m.turno_id).map(m => m.turno_id!))]
+  if (turnoIds.length) {
+    const { data: turnos } = await supabase.from('turnos').select('id, camarero_id').in('id', turnoIds)
+    const turnoCam = new Map((turnos ?? []).map(t => [t.id, t.camarero_id as string | null]))
+    const camIds = [...new Set((turnos ?? []).map(t => t.camarero_id).filter(Boolean) as string[])]
+    const { data: cams } = camIds.length
+      ? await supabase.from('camareros').select('id, nombre').in('id', camIds)
+      : { data: [] as { id: string; nombre: string }[] }
+    const camNombre = new Map((cams ?? []).map(c => [c.id, c.nombre as string]))
+    for (const m of movs) {
+      if (!m.camarero_id && m.turno_id) {
+        const cid = turnoCam.get(m.turno_id)
+        if (cid) { m.camarero_id = cid; m.camarero_nombre = camNombre.get(cid) ?? m.camarero_nombre ?? null }
+      }
+    }
+  }
+
+  // Modo caja única: cuadre global (se persiste en arqueos_caja).
+  const cuadre = calcularCuadreCaja(movs, { fondoFinalManual, desgloseManual })
+  // Modo caja por empleado: cuadre individual (se persiste en arqueos_caja_empleado).
+  const cuadre_por_empleado = calcularCuadrePorEmpleado(movs)
+
   // 4. Cargar config contable
   const { data: cfgData } = await supabase
     .from('config_contabilidad')
@@ -108,17 +156,124 @@ export async function POST(req: NextRequest) {
     qr: 0, otros: 0,
     propinas_efectivo: Math.round(propinas_efectivo * 100) / 100,
     propinas_tarjeta:  Math.round(propinas_tarjeta  * 100) / 100,
-    salidas_caja: 0, fondo_inicial: 0, fondo_final: 0, diferencia_caja: 0,
+    fondo_inicial: cuadre.fondo_inicial,
+    salidas_caja:  cuadre.salidas_caja,
+    fondo_final:   cuadre.fondo_final,
+    diferencia_caja: cuadre.diferencia_caja,
+    tarjeta_liquidada: tarjetaLiquidada,
+    diferencia_tarjeta: tarjetaLiquidada != null ? Math.round((tarjetaLiquidada - tarjeta) * 100) / 100 : null,
     num_comandas: num_tickets, num_tickets,
     ticket_medio: num_tickets > 0 ? Math.round((base_10 + iva_10 + base_21 + iva_21) / num_tickets * 100) / 100 : 0,
+  }
+
+  // 4b. Motivo obligatorio: si un empleado supera el umbral debe llevar justificación
+  // (en notas_por_empleado[camarero_id|'general'] o, como respaldo, en las notas globales).
+  const umbral = Number(cfgData?.umbral_descuadre ?? 5)
+  // Tolerancia por empleado: umbral individual con fallback al global.
+  const umbralesEmpleado: Record<string, number> = (cfgData?.umbrales_empleado as Record<string, number> | null) ?? {}
+  const umbralDe = (cid: string | null) => {
+    const v = cid != null ? Number(umbralesEmpleado[cid]) : NaN
+    return Number.isFinite(v) ? v : umbral
+  }
+  const pendientes = cuadre_por_empleado
+    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbralDe(e.camarero_id))
+    .filter(e => {
+      const k = e.camarero_id ?? 'general'
+      return !(notasPorEmpleado[k]?.trim()) && !(notas?.trim())
+    })
+    .map(e => ({ camarero_id: e.camarero_id, camarero_nombre: e.camarero_nombre ?? 'Caja general' }))
+  if (pendientes.length) {
+    return NextResponse.json(
+      { error: 'Falta el motivo del descuadre para algún empleado.', pendientes }, { status: 400 },
+    )
   }
 
   // 5. Upsert arqueo
   const { data: arqueo, error: arqueoErr } = await supabase
     .from('arqueos_caja')
-    .upsert({ ...arqueoInput, estado: 'borrador' }, { onConflict: 'local_id,fecha' })
+    .upsert({ ...arqueoInput, estado: 'borrador', cerrado_por: session.id, notas }, { onConflict: 'local_id,fecha' })
     .select('id').single()
   if (arqueoErr) return NextResponse.json({ error: arqueoErr.message }, { status: 500 })
+
+  // 5b. Persistir el cuadre POR EMPLEADO (auditoría individual).
+  // delete-then-insert por arqueo_id → idempotente al recerrar el mismo día.
+  await supabase.from('arqueos_caja_empleado').delete().eq('arqueo_id', arqueo.id)
+  if (cuadre_por_empleado.length) {
+    await supabase.from('arqueos_caja_empleado').insert(
+      cuadre_por_empleado.map(e => ({
+        arqueo_id: arqueo.id,
+        local_id: rid,
+        fecha,
+        camarero_id: e.camarero_id,
+        camarero_nombre: e.camarero_nombre,
+        fondo_inicial:   e.cuadre.fondo_inicial,
+        cobros_efectivo: e.cuadre.cobros_efectivo,
+        salidas_caja:    e.cuadre.salidas_caja,
+        saldo_teorico:   e.cuadre.saldo_teorico,
+        fondo_final:     e.cuadre.fondo_final,
+        diferencia_caja: e.cuadre.diferencia_caja,
+        conteo_realizado: e.cuadre.conteo_realizado,
+        notas: notasPorEmpleado[e.camarero_id ?? 'general']?.trim() || null,
+      })),
+    )
+  }
+
+  // 5c. Alertas: empleados que superan el umbral de descuadre → push al owner/gestor.
+  const alertas = cuadre_por_empleado
+    .filter(e => e.cuadre.conteo_realizado && Math.abs(e.cuadre.diferencia_caja) > umbralDe(e.camarero_id))
+    .map(e => ({ camarero_id: e.camarero_id, camarero_nombre: e.camarero_nombre, diferencia_caja: e.cuadre.diferencia_caja, recurrente: false }))
+
+  if (alertas.length) {
+    // Patrón recurrente: mirar el histórico reciente (60 días) de esos empleados.
+    const ids = alertas.map(a => a.camarero_id).filter(Boolean) as string[]
+    if (ids.length) {
+      const desde60 = new Date(Date.now() - 60 * 864e5).toISOString().split('T')[0]
+      const { data: hist } = await supabase
+        .from('arqueos_caja_empleado')
+        .select('camarero_id, camarero_nombre, fecha, diferencia_caja, conteo_realizado')
+        .eq('local_id', rid).in('camarero_id', ids).gte('fecha', desde60)
+        .order('fecha', { ascending: true })
+      const recurrentes = new Set(
+        resumirDescuadresEmpleado((hist ?? []) as FilaArqueoEmpleado[])
+          .filter(r => r.patron_recurrente).map(r => r.camarero_id),
+      )
+      for (const a of alertas) if (recurrentes.has(a.camarero_id)) a.recurrente = true
+    }
+
+    const lineas = alertas.map(a =>
+      `${a.camarero_nombre ?? 'Caja general'}: ${a.diferencia_caja > 0 ? '+' : ''}${a.diferencia_caja.toFixed(2)}€${a.recurrente ? ' ⚠️recurrente' : ''}`,
+    )
+    await enviarPushARoles({
+      supabase, localId: rid, roles: ['owner', 'gestor'],
+      title: `⚠️ Descuadre de caja (${fecha})`,
+      body: lineas.join(' · '),
+      data: { tipo: 'descuadre_caja', fecha },
+    })
+  }
+
+  // 5d. Alerta de conciliación de tarjeta (sistema vs liquidado por banco).
+  const difTarjeta = tarjetaLiquidada != null ? Math.round((tarjetaLiquidada - tarjeta) * 100) / 100 : null
+  if (difTarjeta != null && Math.abs(difTarjeta) > umbral) {
+    await enviarPushARoles({
+      supabase, localId: rid, roles: ['owner', 'gestor'],
+      title: `⚠️ Descuadre de tarjeta (${fecha})`,
+      body: `Sistema ${tarjeta.toFixed(2)}€ vs liquidado ${tarjetaLiquidada!.toFixed(2)}€ (${difTarjeta > 0 ? '+' : ''}${difTarjeta.toFixed(2)}€)`,
+      data: { tipo: 'descuadre_tarjeta', fecha },
+    })
+  }
+
+  // 5e. Abastecimiento de cambio: avisar si el conteo final baja de los mínimos por denominación.
+  const minMonedas: Record<string, number> = (cfgData?.min_monedas as Record<string, number> | null) ?? {}
+  const ctrlMovs = movs.filter(m => (m.tipo === 'arqueo' || m.tipo === 'cierre') && m.desglose_monedas)
+  const desgloseFinal: Record<string, number> = desgloseManual
+    ?? (ctrlMovs.length ? (ctrlMovs[ctrlMovs.length - 1].desglose_monedas as Record<string, number>) : {})
+  const aviso_cambio = Object.entries(minMonedas)
+    .map(([denom, min]) => {
+      const tiene = Number(desgloseFinal[denom] ?? 0)
+      const m = Number(min) || 0
+      return tiene < m ? { denom, faltan: m - tiene } : null
+    })
+    .filter((x): x is { denom: string; faltan: number } => x != null)
 
   // 6. Generar asiento contable
   const numAsiento = (await supabase.rpc('siguiente_num_asiento', { p_restaurante_id: rid })).data as number ?? 1
@@ -159,5 +314,13 @@ export async function POST(req: NextRequest) {
       efectivo, tarjeta, bizum,
       num_tickets,
     },
+    cuadre,
+    cuadre_por_empleado,
+    umbral_descuadre: umbral,
+    conteo_ciego: !!cfgData?.conteo_ciego,
+    tarjeta_liquidada: tarjetaLiquidada,
+    diferencia_tarjeta: difTarjeta,
+    aviso_cambio,
+    alertas,
   })
 }
