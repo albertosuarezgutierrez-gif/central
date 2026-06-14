@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T07:22:24Z",
+  "generadoEn": "2026-06-14T08:51:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1040,6 +1040,7 @@
       "/api/cron/cobro-inactividad",
       "/api/cron/cobros-eventos",
       "/api/cron/completar-locales",
+      "/api/cron/crm-envio-auto",
       "/api/cron/crm-followup-sevilla",
       "/api/cron/crm-lead-hunter-sevilla",
       "/api/cron/crm-recordatorio-dia2",
@@ -1656,6 +1657,8 @@
       "/api/expenses/agent/backfill",
       "/api/expenses/agent/resumen-mensual",
       "/api/expenses/agent/scan",
+      "/api/expenses/fijos",
+      "/api/expenses/fijos/generar",
       "/api/expenses/parse-booking",
       "/api/expenses/parse-invoice",
       "/api/expenses/pendientes",
@@ -1843,7 +1846,9 @@
       "comunicacion_nodos",
       "comunicacion_reglas"
     ],
-    "sivra": []
+    "sivra": [
+      "gastos_fijos"
+    ]
   },
   "skills": [
     {
@@ -1914,6 +1919,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)",
       "fecha": "14/06/2026"
     },
@@ -1967,10 +1976,6 @@
     },
     {
       "titulo": "🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🗑️ plataforma/admin: quita pestaña \"Mis propiedades\", acceso directo a ialimp — PR #171 mergeado",
       "fecha": "12/06/2026"
     }
   ],
@@ -2198,7 +2203,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 752,
+    "apis": 755,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
