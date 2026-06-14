@@ -9,7 +9,13 @@ export type {
   PuntoSerieJornada,
   CostePersonalLinea,
   CostePersonal,
+  TurnoPrevisto,
+  DesviacionCuadrante,
+  ComparativaCuadrante,
 } from './types'
+
+// Cuadrante / plantilla (previsto vs real)
+export { compararPrevistoReal } from './cuadrante'
 
 // Jornada legal (RD 8/2019): registro, descansos, horas extra, coste de personal
 export {

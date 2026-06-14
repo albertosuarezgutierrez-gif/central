@@ -56,6 +56,30 @@ export interface ResumenHorasExtra {
 
 export interface PuntoSerieJornada { fecha: string; horas: number }
 
+// Cuadrante / plantilla: turnos previstos y su comparación con lo fichado real.
+export interface TurnoPrevisto {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  fecha: string            // 'YYYY-MM-DD'
+  hora_inicio: string      // 'HH:MM'
+  hora_fin: string         // 'HH:MM'
+  tipo: string
+}
+export interface DesviacionCuadrante {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  fecha: string
+  horas_previstas: number
+  horas_reales: number
+  desviacion: number       // reales - previstas
+  estado: 'ok' | 'no_show' | 'exceso' | 'defecto' | 'sin_planificar'
+}
+export interface ComparativaCuadrante {
+  lineas: DesviacionCuadrante[]
+  horas_previstas_total: number
+  horas_reales_total: number
+}
+
 // Coste de personal: coste/hora por empleado × horas, con % sobre ventas y ventas/hora.
 export interface CostePersonalLinea {
   camarero_id: string | null

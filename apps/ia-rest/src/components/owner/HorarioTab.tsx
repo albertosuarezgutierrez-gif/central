@@ -24,6 +24,16 @@ interface CosteLinea { camarero_id: string | null; camarero_nombre: string | nul
 interface Coste { lineas: CosteLinea[]; horas_total: number; coste_total: number; ventas: number; pct_sobre_ventas: number | null; ventas_por_hora: number | null }
 const eur = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 
+interface Desv { camarero_id: string | null; camarero_nombre: string | null; fecha: string; horas_previstas: number; horas_reales: number; desviacion: number; estado: string }
+interface Comparativa { lineas: Desv[]; horas_previstas_total: number; horas_reales_total: number }
+const ESTADO_CUADRANTE: Record<string, { label: string; color: string }> = {
+  ok: { label: 'OK', color: '#3F7D44' },
+  no_show: { label: 'No fichó', color: C.verm ?? '#D9442B' },
+  exceso: { label: 'Exceso', color: C.amber },
+  defecto: { label: 'Defecto', color: C.amber },
+  sin_planificar: { label: 'Sin planificar', color: C.ink4 },
+}
+
 export default function HorarioTab({ sh }: { sh: () => Record<string, string> }) {
   const hoy = new Date()
   const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
@@ -34,6 +44,11 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
   const [descansos, setDescansos] = useState<Descanso[]>([])
   const [extras, setExtras] = useState<Extra[]>([])
   const [coste, setCoste] = useState<Coste | null>(null)
+  const [cuadrante, setCuadrante] = useState<Comparativa | null>(null)
+  const [cuEmp, setCuEmp] = useState('')
+  const [cuFecha, setCuFecha] = useState(hoy.toISOString().split('T')[0])
+  const [cuIni, setCuIni] = useState('09:00')
+  const [cuFin, setCuFin] = useState('17:00')
   const [loading, setLoading] = useState(false)
   const [verConfig, setVerConfig] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -44,9 +59,22 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
       const r = await fetch(`/api/owner/horario?desde=${desde}&hasta=${hasta}`, { headers: sh() })
       const d = await r.json()
       if (d.ok) { setResumen(d.resumen ?? []); setDetalle(d.detalle ?? {}); setDescansos(d.descansos ?? []); setExtras(d.extras ?? []); setCoste(d.coste ?? null) }
+      const rc = await fetch(`/api/owner/horario/cuadrante?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+      const dc = await rc.json()
+      if (dc.ok) setCuadrante(dc.comparativa)
     } finally { setLoading(false) }
   }, [desde, hasta, sh])
   useEffect(() => { cargar() }, [cargar])
+
+  const addPrevisto = async () => {
+    if (!cuEmp) { setAviso('Elige empleado para planificar'); setTimeout(() => setAviso(''), 3000); return }
+    const nombre = resumen.find(r => r.camarero_id === cuEmp)?.camarero_nombre ?? null
+    await fetch('/api/owner/horario/cuadrante', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ camarero_id: cuEmp, camarero_nombre: nombre, fecha: cuFecha, hora_inicio: cuIni, hora_fin: cuFin }),
+    })
+    cargar()
+  }
 
   const guardarCoste = async (camareroId: string, valor: string) => {
     await fetch('/api/owner/horario/coste', {
@@ -183,6 +211,49 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
           ))}
         </Bloque>
       )}
+
+      {/* Cuadrante: previsto vs real */}
+      <Bloque titulo="Cuadrante · previsto vs real" color={C.ink3}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center', marginBottom: 10 }}>
+          <select value={cuEmp} onChange={e => setCuEmp(e.target.value)} style={inp}>
+            <option value="">Empleado…</option>
+            {resumen.filter(r => r.camarero_id).map(r => (
+              <option key={r.camarero_id!} value={r.camarero_id!}>{r.camarero_nombre ?? r.camarero_id}</option>
+            ))}
+          </select>
+          <input type="date" value={cuFecha} onChange={e => setCuFecha(e.target.value)} style={inp} />
+          <input type="time" value={cuIni} onChange={e => setCuIni(e.target.value)} style={inp} />
+          <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>→</span>
+          <input type="time" value={cuFin} onChange={e => setCuFin(e.target.value)} style={inp} />
+          <button onClick={addPrevisto} style={btn}>Planificar</button>
+        </div>
+        {cuadrante && (
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 10 }}>
+            <Kpi label="Previstas" valor={h(cuadrante.horas_previstas_total)} />
+            <Kpi label="Reales" valor={h(cuadrante.horas_reales_total)} />
+            <Kpi label="Desviación" valor={h(cuadrante.horas_reales_total - cuadrante.horas_previstas_total)} color={Math.abs(cuadrante.horas_reales_total - cuadrante.horas_previstas_total) < 0.5 ? '#3F7D44' : C.amber} />
+          </div>
+        )}
+        {!cuadrante?.lineas.length ? (
+          <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Sin planificación ni fichajes en el rango.</div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+            {cuadrante.lineas.map((l, i) => {
+              const est = ESTADO_CUADRANTE[l.estado] ?? { label: l.estado, color: C.ink3 }
+              return (
+                <div key={i} style={{ display: 'grid', gridTemplateColumns: '90px 1.3fr .7fr .7fr .7fr 1fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '5px 8px' }}>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>{l.fecha}</div>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink }}>{l.camarero_nombre ?? 'Sin asignar'}</div>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3 }}>{h(l.horas_previstas)}</div>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3 }}>{h(l.horas_reales)}</div>
+                  <div style={{ fontFamily: SN, fontSize: 11, color: est.color }}>{l.desviacion > 0 ? '+' : ''}{h(l.desviacion)}</div>
+                  <div style={{ fontFamily: SM, fontSize: 9, color: est.color, textTransform: 'uppercase', letterSpacing: '.04em' }}>{est.label}</div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </Bloque>
     </div>
   )
 }
