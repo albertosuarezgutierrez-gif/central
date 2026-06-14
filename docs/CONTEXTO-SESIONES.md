@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED) — 14/06/2026**
+  Alberto preguntó si el "agente arquitecto" podría revisar 1×/día las conversaciones y actualizar la memoria/skills.
+  **Matiz clave aclarado:** las conversaciones NO persisten (entorno efímero) → no se pueden "releer". El equivalente
+  útil que SÍ funciona: auditar lo que persiste (código+infra+docs) y reconciliar con ello la memoria/skills.
+  - Nuevo **`.claude/commands/auditoria-diaria.md`**: slash-command (y prompt para un **trigger programado**) que
+    encuadra por `git log` desde la última auditoría (sin commits → no abre PR), corre la skill `auditoria-central`
+    completa, genera `docs/AUDITORIA-<mes>.md`, reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `apps/*/CLAUDE.md`
+    con la realidad (si discrepan, manda el código), arregla solo bugs de bajo riesgo y entrega un **PR draft** con el
+    informe. Complementa (no sustituye) al hook `Stop` `persist-memoria.sh`.
+  - **Pendiente de Alberto (acción manual):** crear el trigger programado 1×/día en Claude Code web (triggers /
+    scheduled sessions) sobre `central` con prompt `/auditoria-diaria`. El cron NO se configura desde el repo.
+
 - **📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED) — 14/06/2026**
   Alberto reportó (con captura del móvil en `flame.vercel.app`) que el panel de control no era usable en móvil:
   la barra lateral fija de 200px (`<nav>` con pestañas Negocios/ia-rest/Sivra/Estructura) se comía el ancho y
