@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T08:50:37Z",
+  "generadoEn": "2026-06-14T08:55:36Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -228,7 +228,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "sivra": {
         "estado": "usado",
@@ -1618,6 +1618,7 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
+      "/api/banca/analizar",
       "/api/banca/importar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
@@ -2205,7 +2206,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 755,
+    "apis": 756,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
