@@ -16,7 +16,7 @@ ia.rest funciona como PWA (Progressive Web App) — se abre en el navegador y se
 |---|---|
 | **App principal (TPV)** | https://www.iarest.es |
 | **Documentación** | https://ia-rest-docs.vercel.app |
-| **Login directo DEMO** | https://www.iarest.es/login?t=62d3124f5185d326ba0e5632 |
+| **Login directo DEMO** | https://www.iarest.es/login?t=<EN_GESTOR_DE_SECRETOS> |
 | **APK Android** | https://www.iarest.es/app (auto-update via version.json) |
 
 ### 1.2 Cuenta de prueba DEMO
@@ -295,7 +295,7 @@ Abre 3 pestañas y sigue este flujo para probar el 100% del sistema:
 
 > 🖥️ **Setup inicial — 3 pestañas**  
 > Pestaña 1: Camarero (PIN 7672) · Pestaña 2: Cocina (PIN 3297) · Pestaña 3: Owner (PIN 1369)  
-> Todas en https://www.iarest.es/login?t=62d3124f5185d326ba0e5632
+> Todas en https://www.iarest.es/login?t=<EN_GESTOR_DE_SECRETOS>
 
 **PASO 1 — Primera comanda por voz**
 - Pestaña camarero → PTT → di: *"dos cañas y unas patatas bravas a la S01"*

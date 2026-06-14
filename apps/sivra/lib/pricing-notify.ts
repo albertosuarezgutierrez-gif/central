@@ -1,4 +1,4 @@
-import { gmailTransporter } from "@iarest/core-email"
+import { gmailTransporter } from "@central/core-email"
 import { sendOwnerPush } from "@/lib/push"
 
 // Notifica al propietario por EMAIL + PUSH. "Best effort": nunca lanza.

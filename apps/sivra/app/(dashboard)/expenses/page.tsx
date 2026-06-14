@@ -2,16 +2,18 @@
 import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
-const CATEGORIAS = ['LIMPIEZA','MANTENIMIENTO','SUMINISTROS','COMUNIDAD','SEGURO','IMPUESTOS','PLATAFORMAS','MOBILIARIO','REFORMAS','OTRO'];
+const CATEGORIAS = ['ALQUILER','LIMPIEZA','MANTENIMIENTO','SUMINISTROS','COMUNIDAD','SEGURO','IMPUESTOS','PLATAFORMAS','MOBILIARIO','REFORMAS','OTRO'];
 const PROPS = [
   { id: 'prop_busto_reform',      name: 'Busto Reform' },
   { id: 'prop_duplex_center',     name: 'Duplex Center' },
   { id: 'prop_house_sevillana',   name: 'House Sevillana' },
   { id: 'prop_luxury_busto',      name: 'Luxury Busto' },
   { id: 'prop_multi_apartamentos',name: 'Gastos compartidos' },
+  { id: 'prop_personal',          name: 'Personal (no pisos)' },
 ];
 const PROP_NAMES: Record<string,string> = Object.fromEntries(PROPS.map(p => [p.id, p.name]));
 const CAT_COLORS: Record<string,string> = {
+  ALQUILER: 'bg-teal-100 text-teal-800',
   LIMPIEZA: 'bg-blue-100 text-blue-800', MANTENIMIENTO: 'bg-orange-100 text-orange-800',
   SUMINISTROS: 'bg-yellow-100 text-yellow-800', COMUNIDAD: 'bg-purple-100 text-purple-800',
   SEGURO: 'bg-green-100 text-green-800', IMPUESTOS: 'bg-red-100 text-red-800',
@@ -50,6 +52,7 @@ function ExpensesContent() {
   const [filterMonth, setFilterMonth] = useState('');
   const [filterProp,  setFilterProp]  = useState('');
   const [filterCat,   setFilterCat]   = useState('');
+  const [pendCount,   setPendCount]   = useState(0);
   const fileRef = useRef<HTMLInputElement>(null);
   const [form, setForm] = useState(emptyForm());
 
@@ -74,6 +77,9 @@ function ExpensesContent() {
   }, [filterYear, filterMonth, filterProp, filterCat]);
 
   useEffect(() => { fetchGastos(); }, [fetchGastos]);
+  useEffect(() => {
+    fetch('/api/expenses/pendientes').then(r => r.json()).then(d => setPendCount(d.count || 0)).catch(() => {});
+  }, []);
   useEffect(() => {
     if (searchParams.get('new') === '1') { setShowModal(true); router.replace('/expenses'); }
   }, [searchParams, router]);
@@ -167,9 +173,14 @@ function ExpensesContent() {
           <h1 className="text-2xl font-bold text-[#1A2535]">Gastos</h1>
           {!loading && <p className="text-sm text-[#6B7F96]">{gastos.length} registros &bull; Total: <span className="font-semibold text-red-600">{totalSum.toFixed(2)} €</span></p>}
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-[4px] text-sm font-medium flex items-center gap-1">
-          <span className="text-lg leading-none">+</span> Añadir gasto
-        </button>
+        <div className="flex items-center gap-2">
+          <a href="/expenses/pendientes" className={'px-3 py-2 rounded-[4px] text-sm font-medium border ' + (pendCount > 0 ? 'bg-amber-50 border-amber-300 text-amber-800' : 'border-gray-200 text-[#6B7F96]')}>
+            🔔 Bandeja{pendCount > 0 ? ` (${pendCount})` : ''}
+          </a>
+          <button onClick={() => setShowModal(true)} className="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-[4px] text-sm font-medium flex items-center gap-1">
+            <span className="text-lg leading-none">+</span> Añadir gasto
+          </button>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">

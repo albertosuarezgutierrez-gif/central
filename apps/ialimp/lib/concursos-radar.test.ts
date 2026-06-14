@@ -22,10 +22,15 @@ test('parsearAtomPlacsp: extrae los anuncios con sus campos', () => {
   assert.match(limpieza.organo ?? '', /Avilés/)
   assert.match(limpieza.url ?? '', /idEvl=AAA111/)
   assert.equal(limpieza.expediente, '11111/2026')
+  assert.equal(limpieza.estado, 'PUB')
+  assert.equal(limpieza.provincia, 'Asturias')
+  assert.equal(limpieza.tipo_contrato, '2')
+  assert.equal(limpieza.fin_presentacion, '2026-07-15')
 
   const obra = anuncios[1]
   assert.equal(obra.presupuesto, undefined) // sin BudgetAmount
   assert.deepEqual(obra.cpv, ['45233140'])
+  assert.equal(obra.fin_presentacion, undefined) // sin TenderingProcess
 })
 
 test('dedupeKey: estable y determinista para el mismo anuncio', () => {

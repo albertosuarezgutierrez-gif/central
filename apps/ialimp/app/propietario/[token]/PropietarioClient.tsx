@@ -444,7 +444,7 @@ function Seccion({ titulo, items, defaultOpen=true, children }: any) {
   if (items===0) return null
   return (
     <div>
-      <button onClick={()=>setOpen(o=>!o)}
+      <button onClick={()=>setOpen((o: boolean)=>!o)}
         style={{ width:'100%', display:'flex', alignItems:'center', justifyContent:'space-between', padding:'10px 0 8px', background:'transparent', border:'none', cursor:'pointer', fontFamily:'inherit' }}>
         <span style={{ fontSize:13, fontWeight:800, color:C.muted, textTransform:'uppercase', letterSpacing:'0.05em' }}>
           {titulo} <span style={{ fontWeight:500, marginLeft:4 }}>({items})</span>
@@ -654,7 +654,7 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
   }
 
   return (
-    <div style={{ fontFamily:"'Nunito',-apple-system,sans-serif", background:C.bg, minHeight:'100vh', maxWidth:480, margin:'0 auto' }}>
+    <div style={{ fontFamily:"'Nunito',-apple-system,sans-serif", background:C.bg, minHeight:'100vh', maxWidth:1080, margin:'0 auto' }}>
       <style>{`*{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{display:none}`}</style>
 
       {/* ── Header ── */}
@@ -760,7 +760,7 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
 
         {/* TAB HOY */}
         {tab==='hoy' && (
-          <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+          <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(320px,1fr))', gap:12, alignItems:'start' }}>
             {propiedades.length===0 && (
               <div style={{ textAlign:'center', padding:'48px 0', color:C.muted }}>
                 <div style={{ fontSize:40, marginBottom:10 }}>🏠</div>
@@ -810,17 +810,17 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
                 {reservasFiltradas.length>0 && (
                   <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
                     <Seccion titulo="🔜 Próximas" items={proximas.length} defaultOpen={true}>
-                      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:10, marginBottom:16, alignItems:'start' }}>
                         {proximas.map(s=><SesionCard key={s.id} s={s} {...cardProps} />)}
                       </div>
                     </Seccion>
                     <Seccion titulo="📅 Hoy" items={deHoy.length} defaultOpen={true}>
-                      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:10, marginBottom:16, alignItems:'start' }}>
                         {deHoy.map(s=><SesionCard key={s.id} s={s} {...cardProps} />)}
                       </div>
                     </Seccion>
                     <Seccion titulo="🕐 Recientes" items={recientes.length} defaultOpen={false}>
-                      <div style={{ display:'flex', flexDirection:'column', gap:10, marginBottom:16 }}>
+                      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(300px,1fr))', gap:10, marginBottom:16, alignItems:'start' }}>
                         {recientes.map(s=><SesionCard key={s.id} s={s} compact {...cardProps} />)}
                       </div>
                     </Seccion>
@@ -832,15 +832,15 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
         )}
 
         {tab==='calendario' && (
-          <CalendarioIcal token={token} />
+          <div style={{ maxWidth:680, margin:'0 auto' }}><CalendarioIcal token={token} /></div>
         )}
 
         {tab==='finanzas' && (
-          <ContabilidadTab token={token} />
+          <div style={{ maxWidth:760, margin:'0 auto' }}><ContabilidadTab token={token} /></div>
         )}
 
         {tab==='docs' && (
-          <div>
+          <div style={{ maxWidth:760, margin:'0 auto' }}>
             {/* Escáner de facturas con IA → genera apunte contable */}
             <p style={{ fontSize:13, color:C.muted, marginBottom:14, lineHeight:1.5 }}>Fotografía o sube facturas. La IA los analiza y genera el apunte contable.</p>
             <EscanerDocumento token={token} onGuardado={()=>{}} />
@@ -861,7 +861,7 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
         )}
 
         {tab==='acceso' && (
-          <div>
+          <div style={{ maxWidth:760, margin:'0 auto' }}>
             <p style={{ fontSize:13, color:C.muted, marginBottom:14, lineHeight:1.5 }}>Instrucciones de acceso para cada piso.</p>
             {propiedades.map((p:any) => (
               <AccesoPropiedad key={p.id} propiedadId={p.id} propiedadNombre={p.nombre} token={token}
@@ -874,7 +874,8 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
         {tab==='chat' && (
           <div style={{ margin:'-14px', height:'calc(100vh - 64px)' }}>
             <ChatSesionPropietario token={token} sesionId={null} miNombre={cliente.nombre}
-              titulo="Chat con la empresa" height="calc(100vh - 64px)" />
+              titulo="Chat con la empresa" height="calc(100vh - 64px)"
+              onClose={()=>setTab('hoy')} />
           </div>
         )}
       </div>

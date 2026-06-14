@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-11T13:48:49Z",
+  "generadoEn": "2026-06-14T08:51:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -11,77 +11,87 @@
     {
       "id": "core-ai",
       "tipo": "core",
-      "npm": "@iarest/core-ai"
+      "npm": "@central/core-ai"
     },
     {
       "id": "core-email",
       "tipo": "core",
-      "npm": "@iarest/core-email"
+      "npm": "@central/core-email"
     },
     {
       "id": "core-fiscal",
       "tipo": "core",
-      "npm": "@iarest/core-fiscal"
+      "npm": "@central/core-fiscal"
     },
     {
       "id": "core-identity",
       "tipo": "core",
-      "npm": "@iarest/core-identity"
+      "npm": "@central/core-identity"
     },
     {
       "id": "core-push",
       "tipo": "core",
-      "npm": "@iarest/core-push"
+      "npm": "@central/core-push"
     },
     {
       "id": "core-storage",
       "tipo": "core",
-      "npm": "@iarest/core-storage"
+      "npm": "@central/core-storage"
     },
     {
       "id": "module-agenda",
       "tipo": "module",
-      "npm": "@iarest/module-agenda"
+      "npm": "@central/module-agenda"
     },
     {
       "id": "module-asn",
       "tipo": "module",
-      "npm": "@iarest/module-asn"
+      "npm": "@central/module-asn"
     },
     {
       "id": "module-concursos",
       "tipo": "module",
-      "npm": "@iarest/module-concursos"
+      "npm": "@central/module-concursos"
     },
     {
       "id": "module-contabilidad",
       "tipo": "module",
-      "npm": "@iarest/module-contabilidad"
+      "npm": "@central/module-contabilidad"
     },
     {
       "id": "module-crm",
       "tipo": "module",
-      "npm": "@iarest/module-crm"
+      "npm": "@central/module-crm"
     },
     {
       "id": "module-feedback",
       "tipo": "module",
-      "npm": "@iarest/module-feedback"
+      "npm": "@central/module-feedback"
     },
     {
-      "id": "module-inventario",
+      "id": "module-horario",
       "tipo": "module",
-      "npm": "@iarest/module-inventario"
+      "npm": "@central/module-horario"
+    },
+    {
+      "id": "module-materiales",
+      "tipo": "module",
+      "npm": "@central/module-materiales"
     },
     {
       "id": "module-presupuestos",
       "tipo": "module",
-      "npm": "@iarest/module-presupuestos"
+      "npm": "@central/module-presupuestos"
     },
     {
       "id": "module-proveedores",
       "tipo": "module",
-      "npm": "@iarest/module-proveedores"
+      "npm": "@central/module-proveedores"
+    },
+    {
+      "id": "module-revenue",
+      "tipo": "module",
+      "npm": "@central/module-revenue"
     }
   ],
   "capacidades": [
@@ -156,7 +166,7 @@
       "id": "almacen-stock",
       "grupo": "Stock",
       "label": "Almacén / stock / ASN",
-      "modulo": "module-inventario"
+      "modulo": "module-materiales"
     },
     {
       "id": "proveedores",
@@ -217,8 +227,8 @@
         "evidencias": 10
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "usado",
@@ -250,7 +260,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -268,7 +278,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 9
       },
       "plataforma": {
         "estado": "usado",
@@ -282,7 +292,7 @@
     "core-push": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -372,7 +382,7 @@
     "module-contabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -394,7 +404,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -423,14 +433,32 @@
         "evidencias": 0
       }
     },
-    "module-inventario": {
+    "module-horario": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-materiales": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -466,7 +494,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -475,6 +503,24 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 1
+      }
+    },
+    "module-revenue": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     }
   },
@@ -554,7 +600,7 @@
     "qr-portal": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 27
+        "evidencias": 28
       },
       "ialimp": {
         "presente": false,
@@ -594,7 +640,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "plataforma": {
         "presente": false,
@@ -607,8 +653,8 @@
     },
     "agenda-asignacion": {
       "ia-rest": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "ialimp": {
         "presente": true,
@@ -638,7 +684,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 20
+        "evidencias": 22
       }
     },
     "mercado": {
@@ -680,7 +726,7 @@
     "marketing": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 12
       },
       "ialimp": {
         "presente": false,
@@ -716,7 +762,7 @@
     "almacen-stock": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 15
+        "evidencias": 38
       },
       "ialimp": {
         "presente": true,
@@ -734,7 +780,7 @@
     "proveedores": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 7
+        "evidencias": 8
       },
       "ialimp": {
         "presente": true,
@@ -752,7 +798,7 @@
     "contabilidad": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 6
+        "evidencias": 10
       },
       "ialimp": {
         "presente": true,
@@ -860,7 +906,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 153
+        "evidencias": 165
       },
       "ialimp": {
         "presente": true,
@@ -882,7 +928,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 13
+        "evidencias": 14
       },
       "plataforma": {
         "presente": false,
@@ -893,6 +939,1049 @@
         "evidencias": 0
       }
     }
+  },
+  "depsModulos": {
+    "core-ai": [],
+    "core-email": [],
+    "core-fiscal": [],
+    "core-identity": [],
+    "core-push": [],
+    "core-storage": [],
+    "module-agenda": [],
+    "module-asn": [],
+    "module-concursos": [],
+    "module-contabilidad": [],
+    "module-crm": [],
+    "module-feedback": [],
+    "module-horario": [],
+    "module-materiales": [],
+    "module-presupuestos": [],
+    "module-proveedores": [],
+    "module-revenue": []
+  },
+  "apisPorVertical": {
+    "ia-rest": [
+      "/api/almacen-central/grupo",
+      "/api/almacen-central/login",
+      "/api/almacen-central/restaurante/[id]",
+      "/api/almacen/recepcion",
+      "/api/almacen/stock",
+      "/api/asesoria/agente",
+      "/api/asesoria/cliente/[id]",
+      "/api/asesoria/clientes",
+      "/api/asesoria/login",
+      "/api/asn",
+      "/api/asn/factura",
+      "/api/asn/ocr",
+      "/api/audit/resumen",
+      "/api/auth",
+      "/api/auth/eventos-wp",
+      "/api/auth/pin-cuenta",
+      "/api/auth/seleccionar-restaurante",
+      "/api/auth/super-login",
+      "/api/auth/super-pin",
+      "/api/auth/super-shield",
+      "/api/auth/voz",
+      "/api/auth/voz-seleccion",
+      "/api/backup/drive",
+      "/api/backup/drive-auth",
+      "/api/backup/drive-auth/callback",
+      "/api/brain/conversar",
+      "/api/bridge/cashlogy",
+      "/api/bridge/cashlogy/result",
+      "/api/bridge/info",
+      "/api/bridge/printers",
+      "/api/bridge/register-printer",
+      "/api/bridge/scan",
+      "/api/bridge/secciones",
+      "/api/bridge/setup-regla",
+      "/api/bridge/token-for-session",
+      "/api/bridge/update-ip",
+      "/api/bridge/verify",
+      "/api/bridge/version",
+      "/api/caja",
+      "/api/carta/[code]",
+      "/api/cashdro",
+      "/api/central/config",
+      "/api/central/stock",
+      "/api/central/transferencias",
+      "/api/checklists/informe",
+      "/api/checklists/marcar",
+      "/api/checklists/plantillas",
+      "/api/checklists/turno",
+      "/api/clientes-fiscales",
+      "/api/cloudprnt/[deviceId]",
+      "/api/cobros/[slug]",
+      "/api/cobros/[slug]/checkout",
+      "/api/cocina/validar-pin",
+      "/api/comanda",
+      "/api/comanda/[id]/audit",
+      "/api/comanda/[id]/camarero",
+      "/api/comanda/[id]/cancelar",
+      "/api/comanda/[id]/confirmar",
+      "/api/comanda/[id]/item",
+      "/api/comanda/[id]/item/[itemId]",
+      "/api/comanda/[id]/mesa",
+      "/api/comanda/[id]/nombre",
+      "/api/comanda/[id]/pax",
+      "/api/comanda/[id]/pedir-cuenta",
+      "/api/comanda/[id]/ticket-alias",
+      "/api/comandas/activas",
+      "/api/contrato/aceptar",
+      "/api/contrato/firmar",
+      "/api/contrato/publico",
+      "/api/crm/formulario-demo",
+      "/api/cron/alertas",
+      "/api/cron/alias-ia",
+      "/api/cron/backfill-leads-sevilla",
+      "/api/cron/blog-seo",
+      "/api/cron/briefing-semanal",
+      "/api/cron/cobro-descuento",
+      "/api/cron/cobro-inactividad",
+      "/api/cron/cobros-eventos",
+      "/api/cron/completar-locales",
+      "/api/cron/crm-envio-auto",
+      "/api/cron/crm-followup-sevilla",
+      "/api/cron/crm-lead-hunter-sevilla",
+      "/api/cron/crm-recordatorio-dia2",
+      "/api/cron/crm-recordatorios",
+      "/api/cron/crm-whatsapp-sevilla",
+      "/api/cron/eventos-entorno",
+      "/api/cron/feedback-visita",
+      "/api/cron/instagram",
+      "/api/cron/instagram-ideas",
+      "/api/cron/instagram-metricas",
+      "/api/cron/instagram-refresh",
+      "/api/cron/lead-onboarding",
+      "/api/cron/mantenimiento-espacios",
+      "/api/cron/pipeline-comercial",
+      "/api/cron/prospeccion-apify",
+      "/api/cron/prospeccion-leads",
+      "/api/cron/reposicion-stock",
+      "/api/cron/reservas-noshow",
+      "/api/cron/seo-agent",
+      "/api/cuenta-nominal",
+      "/api/demo",
+      "/api/demo/seed",
+      "/api/edge/mis-cuentas",
+      "/api/estado",
+      "/api/evento/briefing/[token]",
+      "/api/evento/briefing/[token]/completar",
+      "/api/evento/checkin/[token]",
+      "/api/evento/valoracion/[token]",
+      "/api/eventos",
+      "/api/eventos-catering/lead",
+      "/api/eventos-wp",
+      "/api/eventos-wp/disponibilidad",
+      "/api/eventos-wp/reservar",
+      "/api/eventos/costes",
+      "/api/factura/anular",
+      "/api/factura/cerrar",
+      "/api/factura/cliente",
+      "/api/factura/cliente/lista",
+      "/api/factura/enviar-aeat",
+      "/api/factura/lista",
+      "/api/factura/pago-parcial",
+      "/api/feedback/[token]",
+      "/api/health",
+      "/api/help/chat",
+      "/api/ig-img",
+      "/api/ig-lab-img",
+      "/api/ig-reel",
+      "/api/instagram/callback",
+      "/api/kds-evento/[evento_id]",
+      "/api/kds/asistente",
+      "/api/kds/elaboraciones",
+      "/api/kds/elaboraciones/[id]",
+      "/api/kds/pesar-item",
+      "/api/kds/validate-token",
+      "/api/kds/voz",
+      "/api/leads/landing",
+      "/api/leads/track-click",
+      "/api/leads/unsubscribe",
+      "/api/login/token",
+      "/api/marchar",
+      "/api/marketing/baja",
+      "/api/materiales",
+      "/api/materiales/alertas",
+      "/api/materiales/asignacion",
+      "/api/materiales/categorias",
+      "/api/materiales/clientes",
+      "/api/materiales/dano",
+      "/api/materiales/espacios",
+      "/api/materiales/import",
+      "/api/materiales/informe",
+      "/api/materiales/inventario-fisico",
+      "/api/materiales/inventario-fisico/[id]/cerrar",
+      "/api/materiales/inventario-fisico/[id]/lineas",
+      "/api/materiales/kits",
+      "/api/materiales/kits/[id]/items",
+      "/api/materiales/kits/instanciar",
+      "/api/materiales/mantenimiento",
+      "/api/materiales/movimientos",
+      "/api/materiales/perfil",
+      "/api/materiales/proveedores",
+      "/api/materiales/qr/[id]",
+      "/api/materiales/reservas",
+      "/api/materiales/unidades",
+      "/api/mensajes",
+      "/api/mensajes/activos",
+      "/api/mensajes/audio",
+      "/api/mesa/[id]/comanda",
+      "/api/mesa/asignar-rapida",
+      "/api/metodos-pago",
+      "/api/monitor/alert",
+      "/api/onboarding/complete",
+      "/api/onboarding/extract-carta",
+      "/api/operador/descuadres-empleado",
+      "/api/operador/directorio",
+      "/api/operador/evento-personas",
+      "/api/operador/financiero",
+      "/api/operador/restaurantes",
+      "/api/owner/agente-compras",
+      "/api/owner/agente-eventos",
+      "/api/owner/almacen/invitar-gestor",
+      "/api/owner/almacen/prediccion",
+      "/api/owner/analytics",
+      "/api/owner/billing",
+      "/api/owner/bridge-tokens",
+      "/api/owner/camareros",
+      "/api/owner/carta",
+      "/api/owner/carta/analisis",
+      "/api/owner/carta/generar-descripcion",
+      "/api/owner/cobro-config",
+      "/api/owner/cobros",
+      "/api/owner/cobros/[id]",
+      "/api/owner/cobros/[id]/items",
+      "/api/owner/cobros/stripe-onboarding",
+      "/api/owner/cobros/upload-imagen",
+      "/api/owner/cobros/upload-pdf",
+      "/api/owner/config-cobro",
+      "/api/owner/config/servicio",
+      "/api/owner/consumo",
+      "/api/owner/contabilidad/arqueos-empleado",
+      "/api/owner/contabilidad/arqueos-empleado/[id]/confirmar",
+      "/api/owner/contabilidad/cierre-diario",
+      "/api/owner/contabilidad/config",
+      "/api/owner/contabilidad/exportar",
+      "/api/owner/contabilidad/invitar",
+      "/api/owner/contabilidad/iva",
+      "/api/owner/contabilidad/resumen",
+      "/api/owner/contabilidad/tesoreria",
+      "/api/owner/contabilidad/umbral-empleado",
+      "/api/owner/contrato",
+      "/api/owner/copiloto",
+      "/api/owner/dashboard",
+      "/api/owner/diagnostico",
+      "/api/owner/ean-lookup",
+      "/api/owner/elaboraciones",
+      "/api/owner/escandallos",
+      "/api/owner/escandallos/analizar",
+      "/api/owner/escandallos/sugerir",
+      "/api/owner/espacios/[id]/mantenimiento",
+      "/api/owner/etiquetas",
+      "/api/owner/eventos",
+      "/api/owner/eventos/[id]/cerrar",
+      "/api/owner/eventos/[id]/galeria",
+      "/api/owner/eventos/[id]/informe",
+      "/api/owner/eventos/[id]/stock-check",
+      "/api/owner/eventos/[id]/valoracion-enviar",
+      "/api/owner/eventos/agenda",
+      "/api/owner/eventos/appcc",
+      "/api/owner/eventos/barra-tiers",
+      "/api/owner/eventos/barra-tiers/[id]",
+      "/api/owner/eventos/beo",
+      "/api/owner/eventos/briefings",
+      "/api/owner/eventos/briefings/[id]",
+      "/api/owner/eventos/briefings/[id]/convertir",
+      "/api/owner/eventos/cerrar",
+      "/api/owner/eventos/checklist",
+      "/api/owner/eventos/clonar",
+      "/api/owner/eventos/comisiones",
+      "/api/owner/eventos/conceptos-gasto",
+      "/api/owner/eventos/config",
+      "/api/owner/eventos/contratos",
+      "/api/owner/eventos/costes",
+      "/api/owner/eventos/disponibilidad",
+      "/api/owner/eventos/escandallo",
+      "/api/owner/eventos/espacios",
+      "/api/owner/eventos/franjas",
+      "/api/owner/eventos/galeria",
+      "/api/owner/eventos/historico-precios",
+      "/api/owner/eventos/leads",
+      "/api/owner/eventos/menus",
+      "/api/owner/eventos/menus/[id]/bloques",
+      "/api/owner/eventos/menus/[id]/calcular",
+      "/api/owner/eventos/menus/aplicar",
+      "/api/owner/eventos/menus/bebidas",
+      "/api/owner/eventos/pases",
+      "/api/owner/eventos/personal",
+      "/api/owner/eventos/personal-asignacion",
+      "/api/owner/eventos/plantillas",
+      "/api/owner/eventos/portal",
+      "/api/owner/eventos/presupuesto",
+      "/api/owner/eventos/presupuestos",
+      "/api/owner/eventos/presupuestos/[id]",
+      "/api/owner/eventos/produccion",
+      "/api/owner/eventos/proveedores-asignaciones",
+      "/api/owner/eventos/proveedores-externos",
+      "/api/owner/eventos/referidos",
+      "/api/owner/eventos/rentabilidad",
+      "/api/owner/eventos/scoring-nim",
+      "/api/owner/eventos/sobrantes",
+      "/api/owner/eventos/tareas",
+      "/api/owner/eventos/transporte",
+      "/api/owner/eventos/valoraciones",
+      "/api/owner/eventos/vehiculos",
+      "/api/owner/facturas-compra",
+      "/api/owner/feedback",
+      "/api/owner/feedback/config",
+      "/api/owner/forecaster",
+      "/api/owner/formatos",
+      "/api/owner/fuera-carta/stock",
+      "/api/owner/horario",
+      "/api/owner/horario/autocierre",
+      "/api/owner/horario/config",
+      "/api/owner/horario/coste",
+      "/api/owner/horario/cuadrante",
+      "/api/owner/impresoras",
+      "/api/owner/logo",
+      "/api/owner/manual-voz",
+      "/api/owner/menaje",
+      "/api/owner/mensajes-auditoria",
+      "/api/owner/mesas",
+      "/api/owner/metodos-pago",
+      "/api/owner/mis-restaurantes",
+      "/api/owner/modulos",
+      "/api/owner/notif-config",
+      "/api/owner/pagos",
+      "/api/owner/pagos/sepa",
+      "/api/owner/pedidos/sugerir",
+      "/api/owner/perfiles-acceso",
+      "/api/owner/personal",
+      "/api/owner/portal-stripe",
+      "/api/owner/print-jobs",
+      "/api/owner/propinas",
+      "/api/owner/propinas/config",
+      "/api/owner/proveedores",
+      "/api/owner/proveedores/asn-token",
+      "/api/owner/proveedores/informe",
+      "/api/owner/proveedores/stripe-onboard",
+      "/api/owner/recepciones",
+      "/api/owner/recepciones/confirmar",
+      "/api/owner/recepciones/historial-precios",
+      "/api/owner/recomendaciones",
+      "/api/owner/reglas-envio",
+      "/api/owner/reservas",
+      "/api/owner/restaurante",
+      "/api/owner/running-zonas",
+      "/api/owner/scanner",
+      "/api/owner/scanner/permiso",
+      "/api/owner/secciones",
+      "/api/owner/soporte",
+      "/api/owner/stock",
+      "/api/owner/stock/fefo",
+      "/api/owner/stock/ocr",
+      "/api/owner/stock/pedido",
+      "/api/owner/storefront",
+      "/api/owner/supervisor",
+      "/api/owner/turno",
+      "/api/owner/turnos/analisis",
+      "/api/owner/valoraciones/sentiment",
+      "/api/owner/vinos-stats",
+      "/api/owner/web",
+      "/api/owner/web/analytics",
+      "/api/owner/web/foto-sugerida",
+      "/api/owner/web/generar-descripcion",
+      "/api/owner/web/qr",
+      "/api/owner/web/traducir-carta",
+      "/api/owner/web/upload-logo",
+      "/api/owner/web/upload-portada",
+      "/api/owner/wine-enrich",
+      "/api/owner/zonas",
+      "/api/portal",
+      "/api/portal-proveedor/[token]",
+      "/api/portal/stock-central",
+      "/api/portal/transferencias",
+      "/api/print",
+      "/api/produccion/cocineros",
+      "/api/produccion/perfil",
+      "/api/produccion/planificar",
+      "/api/produccion/productividad",
+      "/api/produccion/tiempo",
+      "/api/propinas/[token]",
+      "/api/propinas/[token]/pagar",
+      "/api/propinas/webhook",
+      "/api/propuesta/[slug]/booking",
+      "/api/push/send",
+      "/api/push/subscribe",
+      "/api/qr/avisar",
+      "/api/qr/carta-i18n",
+      "/api/qr/cobrar-preauth",
+      "/api/qr/connect/callback",
+      "/api/qr/connect/link",
+      "/api/qr/connect/status",
+      "/api/qr/estado",
+      "/api/qr/marketing-consent",
+      "/api/qr/preauth",
+      "/api/qr/recomendar",
+      "/api/qr/sesiones-preauth",
+      "/api/qr/webhook",
+      "/api/recomendaciones",
+      "/api/rrhh/candidatos",
+      "/api/rrhh/candidatos/[id]",
+      "/api/scanner/clasificar",
+      "/api/scanner/permiso-check",
+      "/api/storefront/carta",
+      "/api/storefront/estado",
+      "/api/storefront/pedido",
+      "/api/storefront/pedido-operador",
+      "/api/storefront/webhook-pago",
+      "/api/sugerencias",
+      "/api/super/agente-arquitecto",
+      "/api/super/agentes-ai",
+      "/api/super/agentes-seo",
+      "/api/super/agentes/research",
+      "/api/super/agentes/research/enviar",
+      "/api/super/blog",
+      "/api/super/blog-publicar",
+      "/api/super/cobro-config-comision",
+      "/api/super/cobro-resumen",
+      "/api/super/cuentas",
+      "/api/super/cuentas/[id]/restaurantes",
+      "/api/super/ga4-stats",
+      "/api/super/google-oauth",
+      "/api/super/google-oauth-callback",
+      "/api/super/instagram",
+      "/api/super/instagram-catering",
+      "/api/super/instagram-eventos",
+      "/api/super/instagram/seed-music",
+      "/api/super/instagram/seed-reel-assets",
+      "/api/super/instagram/story-reminder",
+      "/api/super/instagram/test-carousel",
+      "/api/super/lead-hunter",
+      "/api/super/lead-hunter-franquicia",
+      "/api/super/lead-hunter-sevilla",
+      "/api/super/leads",
+      "/api/super/leads-landing",
+      "/api/super/leads/[id]",
+      "/api/super/leads/[id]/actualizar-landing",
+      "/api/super/leads/[id]/briefing",
+      "/api/super/leads/[id]/comunicaciones",
+      "/api/super/leads/[id]/contactos",
+      "/api/super/leads/[id]/locales",
+      "/api/super/leads/[id]/locales/buscar",
+      "/api/super/leads/agente",
+      "/api/super/prospeccion-apify",
+      "/api/super/proveedores-tech",
+      "/api/super/qa-agent",
+      "/api/super/qa-agent/cron",
+      "/api/super/reenviar-pendientes",
+      "/api/super/restaurantes",
+      "/api/super/restaurantes/[id]/config",
+      "/api/super/restaurantes/[id]/cuenta",
+      "/api/super/restaurantes/[id]/impersonate",
+      "/api/super/seo-revert",
+      "/api/super/soporte",
+      "/api/super/stripe-operador",
+      "/api/super/stripe-operador/cancelar",
+      "/api/super/stripe-operador/checkout",
+      "/api/super/sugerencias",
+      "/api/super/tg-notify",
+      "/api/super/training",
+      "/api/super/training-stats",
+      "/api/telegram/briefing-callback",
+      "/api/telegram/instagram-callback",
+      "/api/telegram/setup-webhook",
+      "/api/telegram/webhook",
+      "/api/thefork/close",
+      "/api/thefork/webhook",
+      "/api/tienda/buscar",
+      "/api/tienda/config",
+      "/api/tienda/venta",
+      "/api/track/[token]",
+      "/api/traducciones",
+      "/api/traducciones/auto",
+      "/api/transcribe",
+      "/api/transcribe/cocina",
+      "/api/turno",
+      "/api/turnos/activo",
+      "/api/turnos/fichar",
+      "/api/turnos/historial",
+      "/api/vinos/recomendar",
+      "/api/vinos/reconocer",
+      "/api/voice-profile/enroll",
+      "/api/voice-profile/reset",
+      "/api/voice-profile/status",
+      "/api/vox",
+      "/api/webhook/deploy-aprendizaje",
+      "/api/webhook/stripe-connect",
+      "/api/webhook/stripe-operador",
+      "/api/webhooks/vercel-deploy"
+    ],
+    "ialimp": [
+      "/api/admin/agenda",
+      "/api/admin/alertas",
+      "/api/admin/alertas-gastos",
+      "/api/admin/asignacion",
+      "/api/admin/asistente",
+      "/api/admin/ausencias",
+      "/api/admin/auto-assign",
+      "/api/admin/catalogo-tarifas",
+      "/api/admin/catalogos",
+      "/api/admin/chat",
+      "/api/admin/chat/hilos",
+      "/api/admin/chat/hilos/[hilo_id]",
+      "/api/admin/chat/sesiones",
+      "/api/admin/checklist",
+      "/api/admin/clientes",
+      "/api/admin/clientes/[id]",
+      "/api/admin/clientes/[id]/config",
+      "/api/admin/clientes/[id]/contactos",
+      "/api/admin/clientes/[id]/contactos/[contactoId]",
+      "/api/admin/clientes/[id]/desactivar",
+      "/api/admin/clientes/[id]/enviar-acceso",
+      "/api/admin/clientes/[id]/reactivar",
+      "/api/admin/concursos/[id]/memoria",
+      "/api/admin/concursos/[id]/oferta",
+      "/api/admin/concursos/[id]/sobre-administrativo",
+      "/api/admin/concursos/analizar",
+      "/api/admin/concursos/biblioteca",
+      "/api/admin/concursos/perfil",
+      "/api/admin/concursos/radar",
+      "/api/admin/concursos/radar/buscar",
+      "/api/admin/concursos/radar/criterios",
+      "/api/admin/concursos/radar/importar",
+      "/api/admin/concursos/radar/visto",
+      "/api/admin/consumos",
+      "/api/admin/contabilidad/adjunto",
+      "/api/admin/contabilidad/apuntes",
+      "/api/admin/contabilidad/apuntes/[id]",
+      "/api/admin/contabilidad/export",
+      "/api/admin/contabilidad/generar-recurrentes",
+      "/api/admin/contabilidad/ingresos",
+      "/api/admin/contabilidad/ingresos/[id]",
+      "/api/admin/contabilidad/iva",
+      "/api/admin/contabilidad/marcar",
+      "/api/admin/contabilidad/recurrentes",
+      "/api/admin/contabilidad/recurrentes/[id]",
+      "/api/admin/contabilidad/rentabilidad",
+      "/api/admin/contabilidad/resultado",
+      "/api/admin/contabilidad/tesoreria",
+      "/api/admin/cotizador-config",
+      "/api/admin/disponibilidad",
+      "/api/admin/empresa/branding",
+      "/api/admin/escanear",
+      "/api/admin/escanear/[id]",
+      "/api/admin/escanear/process",
+      "/api/admin/facturacion",
+      "/api/admin/facturas",
+      "/api/admin/facturas-clientes",
+      "/api/admin/facturas-clientes/[id]",
+      "/api/admin/fotos-cleanup",
+      "/api/admin/historial",
+      "/api/admin/ia/agente-cotizador",
+      "/api/admin/ia/analizar-botes",
+      "/api/admin/ia/analizar-foto",
+      "/api/admin/ia/briefing",
+      "/api/admin/ia/clasificar-queja",
+      "/api/admin/ia/comparar-foto",
+      "/api/admin/ia/patrones",
+      "/api/admin/informe",
+      "/api/admin/informes/cron",
+      "/api/admin/informes/generar",
+      "/api/admin/items",
+      "/api/admin/kits",
+      "/api/admin/leads",
+      "/api/admin/lenceria",
+      "/api/admin/lenceria/[id]",
+      "/api/admin/limpiadoras",
+      "/api/admin/limpiadoras/[id]/acceso",
+      "/api/admin/limpiadoras/[id]/propiedades",
+      "/api/admin/limpiadoras/ranking",
+      "/api/admin/limpiadoras/usuarios",
+      "/api/admin/migrate-chat",
+      "/api/admin/migrate-chat-destinatario",
+      "/api/admin/migrate-contabilidad",
+      "/api/admin/nomina",
+      "/api/admin/operaciones",
+      "/api/admin/partes-trabajo",
+      "/api/admin/partes-trabajo/desde-sesiones",
+      "/api/admin/prevision-semanal",
+      "/api/admin/productos",
+      "/api/admin/programaciones",
+      "/api/admin/programaciones/[id]",
+      "/api/admin/programaciones/generar",
+      "/api/admin/propiedades",
+      "/api/admin/propiedades/[id]",
+      "/api/admin/protocolos",
+      "/api/admin/proveedores",
+      "/api/admin/push-notify",
+      "/api/admin/quejas",
+      "/api/admin/quejas/[id]",
+      "/api/admin/reposiciones",
+      "/api/admin/rrhh/analisis",
+      "/api/admin/rrhh/expedientes",
+      "/api/admin/rrhh/horario",
+      "/api/admin/sesiones",
+      "/api/admin/sesiones/[id]",
+      "/api/admin/sesiones/[id]/completar",
+      "/api/admin/sesiones/reordenar",
+      "/api/admin/sse",
+      "/api/admin/stock",
+      "/api/admin/tarifas",
+      "/api/admin/test-email",
+      "/api/admin/usuarios",
+      "/api/admin/usuarios-empresa",
+      "/api/admin/vapid-keys",
+      "/api/auth/login",
+      "/api/auth/login-usuario",
+      "/api/auth/logout",
+      "/api/auth/register",
+      "/api/catastro/municipio",
+      "/api/cotizador",
+      "/api/cron/concursos-ingesta",
+      "/api/cron/concursos-radar",
+      "/api/cron/impagos",
+      "/api/cron/procesar-documentos",
+      "/api/dashboard",
+      "/api/empresas/register",
+      "/api/l/auth",
+      "/api/l/auto-sessions",
+      "/api/l/chat",
+      "/api/l/complete",
+      "/api/l/consumo",
+      "/api/l/early-checkin",
+      "/api/l/fichar",
+      "/api/l/incidencias",
+      "/api/l/inventario",
+      "/api/l/notas",
+      "/api/l/photo",
+      "/api/l/protocolo-refs",
+      "/api/l/push-subscribe",
+      "/api/l/sesiones",
+      "/api/l/sesiones/[id]",
+      "/api/l/sessions",
+      "/api/l/upload-photo",
+      "/api/lead-saas",
+      "/api/leads",
+      "/api/m/baja/[token]",
+      "/api/m/c/[token]",
+      "/api/m/o/[token]",
+      "/api/m/webhook/resend",
+      "/api/pms/connect",
+      "/api/pms/sync",
+      "/api/propietario/[token]/acceso",
+      "/api/propietario/[token]/chat",
+      "/api/propietario/[token]/consentimiento",
+      "/api/propietario/[token]/contabilidad",
+      "/api/propietario/[token]/documentos",
+      "/api/propietario/[token]/documentos-piso",
+      "/api/propietario/[token]/escanear",
+      "/api/propietario/[token]/factura/[id]",
+      "/api/propietario/[token]/firmar",
+      "/api/propietario/[token]/gastos",
+      "/api/propietario/[token]/gastos/[id]",
+      "/api/propietario/[token]/ical",
+      "/api/propietario/[token]/queja",
+      "/api/propietario/[token]/sesion/[sesionId]",
+      "/api/propietario/[token]/sesiones",
+      "/api/propietario/auth/login",
+      "/api/propietario/auth/logout",
+      "/api/propietario/auth/recuperar",
+      "/api/propietario/auth/set-password",
+      "/api/stripe/checkout",
+      "/api/stripe/webhook",
+      "/api/superadmin/consentimientos",
+      "/api/superadmin/empresas",
+      "/api/superadmin/login",
+      "/api/superadmin/mailing/analizar-web",
+      "/api/superadmin/mailing/apify",
+      "/api/superadmin/mailing/buscar-emails",
+      "/api/superadmin/mailing/buscar-google",
+      "/api/superadmin/mailing/campanas",
+      "/api/superadmin/mailing/campanas/[id]",
+      "/api/superadmin/mailing/campanas/[id]/generar-ia",
+      "/api/superadmin/mailing/cron",
+      "/api/superadmin/mailing/prospectos",
+      "/api/superadmin/mailing/prospectos/[id]"
+    ],
+    "plataforma": [
+      "/api/admin/clientes",
+      "/api/admin/clientes/[vertical]/[id]",
+      "/api/admin/clientes/[vertical]/[id]/modulos",
+      "/api/admin/descuadres-iarest",
+      "/api/admin/estructura/chat",
+      "/api/admin/estructura/clientes",
+      "/api/admin/login",
+      "/api/admin/logout",
+      "/api/admin/propiedades",
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/auth/register",
+      "/api/comunicacion/categorias",
+      "/api/comunicacion/conversaciones",
+      "/api/comunicacion/conversaciones/[id]",
+      "/api/comunicacion/conversaciones/[id]/mensajes",
+      "/api/comunicacion/directorio",
+      "/api/comunicacion/grupos",
+      "/api/comunicacion/grupos/[id]/personas",
+      "/api/comunicacion/reglas",
+      "/api/cron/briefing",
+      "/api/negocios",
+      "/api/negocios/[id]",
+      "/api/sociedades",
+      "/api/sociedades/[id]"
+    ],
+    "sivra": [
+      "/api/admin/limpiadoras/asignacion",
+      "/api/admin/limpiadoras/ausencias",
+      "/api/admin/limpiadoras/checklist",
+      "/api/admin/limpiadoras/disponibilidad",
+      "/api/admin/limpiadoras/facturacion",
+      "/api/admin/limpiadoras/historial",
+      "/api/admin/limpiadoras/informe",
+      "/api/admin/limpiadoras/items",
+      "/api/admin/limpiadoras/lenceria",
+      "/api/admin/limpiadoras/productos",
+      "/api/admin/limpiadoras/proveedores",
+      "/api/admin/limpiadoras/tarifas",
+      "/api/admin/limpiadoras/usuarios",
+      "/api/agente",
+      "/api/agente/chat",
+      "/api/auth",
+      "/api/auth/[...nextauth]",
+      "/api/dashboard",
+      "/api/dashboard/forecast",
+      "/api/expenses",
+      "/api/expenses/agent/backfill",
+      "/api/expenses/agent/resumen-mensual",
+      "/api/expenses/agent/scan",
+      "/api/expenses/fijos",
+      "/api/expenses/fijos/generar",
+      "/api/expenses/parse-booking",
+      "/api/expenses/parse-invoice",
+      "/api/expenses/pendientes",
+      "/api/expenses/pendientes/[id]",
+      "/api/import-csv",
+      "/api/import-smoobu-bulk",
+      "/api/incomes",
+      "/api/incomes/today",
+      "/api/inversion",
+      "/api/inversion/analyze",
+      "/api/limpiadoras/alerta-ventana",
+      "/api/limpiadoras/alertas",
+      "/api/limpiadoras/auth",
+      "/api/limpiadoras/auto-assign",
+      "/api/limpiadoras/auto-sessions",
+      "/api/limpiadoras/complete",
+      "/api/limpiadoras/early-checkin",
+      "/api/limpiadoras/fichar",
+      "/api/limpiadoras/incidencias",
+      "/api/limpiadoras/inventario",
+      "/api/limpiadoras/notas",
+      "/api/limpiadoras/photo",
+      "/api/limpiadoras/sessions",
+      "/api/limpiadoras/upload-photo",
+      "/api/mensajes",
+      "/api/mensajes/[bookingId]",
+      "/api/mensajes/[bookingId]/email",
+      "/api/mensajes/auto-reply",
+      "/api/mensajes/knowledge",
+      "/api/mensajes/reply",
+      "/api/mercado/cron",
+      "/api/mercado/ingest",
+      "/api/mercado/ingest-auto",
+      "/api/mercado/search",
+      "/api/mercado/stats",
+      "/api/pitch",
+      "/api/pricing-alerts",
+      "/api/pricing/apply",
+      "/api/pricing/apply-auto",
+      "/api/pricing/config",
+      "/api/pricing/experiments",
+      "/api/pricing/experiments/check-results",
+      "/api/pricing/guard",
+      "/api/pricing/historial",
+      "/api/pricing/pilot-track",
+      "/api/pricing/pilot-track/historial",
+      "/api/pricing/recommend",
+      "/api/pricing/restore",
+      "/api/pricing/resultados",
+      "/api/pricing/resumen-diario",
+      "/api/pricing/settings",
+      "/api/pricing/stats",
+      "/api/properties",
+      "/api/propietario/push-subscribe",
+      "/api/rates",
+      "/api/rates/snapshot",
+      "/api/resumen-semanal",
+      "/api/seo-proposals",
+      "/api/seo-refresh",
+      "/api/smoobu/huespedes-repetidos",
+      "/api/smoobu/import",
+      "/api/updates",
+      "/api/updates/sync"
+    ]
+  },
+  "tablasPorVertical": {
+    "ia-rest": [
+      "arqueos_caja_empleado",
+      "beo_eventos",
+      "camareros",
+      "clientes_fiscales",
+      "cobro_config",
+      "comanda_items",
+      "comandas",
+      "config_horario",
+      "config_tienda",
+      "contract_acceptances",
+      "documentos_escaneados",
+      "facturas_cliente",
+      "feedback_visita",
+      "formularios_demo_recibidos",
+      "iarest.checklist_ejecuciones",
+      "iarest.checklist_plantillas",
+      "iarest.produccion_tareas",
+      "iarest.produccion_tiempos_estandar",
+      "incidencias_sistema",
+      "inventario_menaje",
+      "inventario_menaje_evento",
+      "leads",
+      "leads_eventos",
+      "leads_unsubscribes",
+      "leads_web_tracking",
+      "manual_voz_novedades",
+      "marchar_log",
+      "marketing_consentimientos",
+      "materiales",
+      "materiales_asignacion",
+      "materiales_categorias",
+      "materiales_clientes",
+      "materiales_dano",
+      "materiales_espacios",
+      "materiales_inventario_fisico",
+      "materiales_inventario_fisico_lineas",
+      "materiales_kits",
+      "materiales_kits_items",
+      "materiales_mantenimiento",
+      "materiales_movimientos",
+      "materiales_proveedores",
+      "materiales_reservas",
+      "materiales_transferencias",
+      "materiales_unidades",
+      "mensajes_turno",
+      "mesas",
+      "metodos_pago",
+      "movimientos_tesoreria",
+      "pedidos_online",
+      "pin_attempts",
+      "productos_86",
+      "propinas",
+      "prospeccion_apify_runs",
+      "proveedores_evento",
+      "proveedores_evento_asignaciones",
+      "qr_avisos_suscripciones",
+      "qr_division_slots",
+      "qr_items_reclamados",
+      "qr_sesiones_cliente",
+      "qr_valoraciones",
+      "recomendaciones_carta",
+      "reglas_envio",
+      "reservas",
+      "resumen_cobros_mensual",
+      "running_zonas",
+      "seo_articulos",
+      "seo_cambios",
+      "seo_content_blocks",
+      "seo_overrides",
+      "soporte_mensajes",
+      "soporte_tickets",
+      "storefront_config",
+      "sugerencias",
+      "system_errors",
+      "ticket_aliases",
+      "transcripciones",
+      "turnos",
+      "turnos_previstos",
+      "vinos_catalogo",
+      "voice_profiles"
+    ],
+    "ialimp": [
+      "apuntes_recurrentes",
+      "auth_rate_limit",
+      "biblioteca_documentos",
+      "catalogo_tarifas",
+      "cliente_auth_tokens",
+      "cliente_consentimientos",
+      "concursos",
+      "concursos_licitaciones",
+      "concursos_perfil_empresa",
+      "concursos_radar_anuncios",
+      "cuentas",
+      "documentos_contables",
+      "ingresos_manuales",
+      "mailing_campanas",
+      "mailing_envios",
+      "mailing_eventos",
+      "mailing_pasos",
+      "mailing_prospectos",
+      "negocios",
+      "partes_trabajo",
+      "protocolo_fotos",
+      "protocolo_items",
+      "protocolos",
+      "recordatorios_impagos",
+      "sociedades",
+      "stock_consumos",
+      "tenant_modulos"
+    ],
+    "plataforma": [
+      "comunicacion_categorias",
+      "comunicacion_conversacion_participantes",
+      "comunicacion_conversaciones",
+      "comunicacion_grupo_miembros",
+      "comunicacion_grupos",
+      "comunicacion_mensajes",
+      "comunicacion_nodos",
+      "comunicacion_reglas"
+    ],
+    "sivra": [
+      "gastos_fijos"
+    ]
+  },
+  "skills": [
+    {
+      "id": "auditoria-central",
+      "name": "auditoria-central",
+      "description": "Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte \"¿se ha roto algo?\", \"haz una auditoría\", \"revisa que todo está bien\" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP)."
+    },
+    {
+      "id": "brainstorming",
+      "name": "brainstorming",
+      "description": "\"You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.\""
+    },
+    {
+      "id": "central-maestro",
+      "name": "central-maestro",
+      "description": ">"
+    },
+    {
+      "id": "ia-rest-maestro",
+      "name": "ia-rest-maestro",
+      "description": ">"
+    },
+    {
+      "id": "ialimp-maestro",
+      "name": "ialimp-maestro",
+      "description": ">"
+    },
+    {
+      "id": "plataforma-maestro",
+      "name": "plataforma-maestro",
+      "description": ">"
+    },
+    {
+      "id": "receiving-code-review",
+      "name": "receiving-code-review",
+      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation"
+    },
+    {
+      "id": "requesting-code-review",
+      "name": "requesting-code-review",
+      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements"
+    },
+    {
+      "id": "sivra-maestro",
+      "name": "sivra-maestro",
+      "description": ">"
+    },
+    {
+      "id": "systematic-debugging",
+      "name": "systematic-debugging",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
+    },
+    {
+      "id": "using-superpowers",
+      "name": "using-superpowers",
+      "description": "Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions"
+    },
+    {
+      "id": "verification-before-completion",
+      "name": "verification-before-completion",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
+    },
+    {
+      "id": "writing-plans",
+      "name": "writing-plans",
+      "description": "Use when you have a spec or requirements for a multi-step task, before touching code"
+    }
+  ],
+  "novedades": [
+    {
+      "titulo": "💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "📦 module-materiales Fase B — PR #189 mergeado",
+      "fecha": "12/06/2026"
+    },
+    {
+      "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
+      "fecha": "12/06/2026"
+    },
+    {
+      "titulo": "🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`",
+      "fecha": "12/06/2026"
+    },
+    {
+      "titulo": "🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado",
+      "fecha": "12/06/2026"
+    }
+  ],
+  "saludRepo": {
+    "packagesSinDescripcion": [],
+    "appsSinClaudeMd": []
   },
   "gaps": {
     "modulosInfrautilizados": [],
@@ -966,17 +2055,6 @@
       {
         "capacidad": "limpiadoras",
         "label": "Equipo limpiadoras",
-        "tiene": [
-          "ialimp",
-          "sivra"
-        ],
-        "falta": [
-          "ia-rest"
-        ]
-      },
-      {
-        "capacidad": "agenda-asignacion",
-        "label": "Agenda / auto-asignación",
         "tiene": [
           "ialimp",
           "sivra"
@@ -1122,10 +2200,12 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 15,
+    "packages": 17,
     "capacidades": 23,
+    "skills": 13,
+    "apis": 755,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 20,
+    "oportunidadesPortar": 19,
     "reimplementaciones": 0
   }
 }

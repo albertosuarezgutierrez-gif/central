@@ -258,6 +258,21 @@ El módulo pasa de "recomendar + aplicar a mano" a **automático con red de segu
   (acotado a +50%, sólo fechas con evento), flag `events_enabled` por piso.
 - `gap_discount_pct` por piso: descuenta noches sueltas libres entre dos reservas.
 
+### Horizonte de pricing (365 días)
+- `PRICING_HORIZON_DAYS = 365` (`lib/pricing-calendar.ts`) — fuente única del horizonte. Lo usan
+  `rates/snapshot` (captura) y `apply`/`apply-auto` (tarificación). Antes: snapshot 90d y apply solo 14-60d
+  → las fechas lejanas (reservas de larga antelación, sobre todo extranjeros, y eventos de la próxima
+  temporada) ni se tarificaban. **El agente sigue juzgando la ventana cercana (90d)**: ampliar el horizonte
+  no diluye su veredicto de demanda.
+- **Eventos cargados a mano** en `EVENTS`. Añadido 2027 (Semana Santa/Feria, **estimado — confirmar fechas
+  oficiales**). `EVENTS_LAST_DATE` + watchdog en `pilot-track`: si el último evento queda a <90d, avisa por
+  email/push para que el calendario **no caduque en silencio** cada año.
+- **A 365d el mercado real (comps) es escaso**: esas fechas se tarifican sobre todo con estacionalidad +
+  eventos y se **afinan solas a diario** según entran comps más cerca de la fecha. Suelo `min_price` y pasos
+  graduales acotan el riesgo. (Pendiente, PR aparte: que el scraper de mercado traiga comps de check-in lejanos.)
+- **Alcance: solo Busto Reform escribe** (`apply_enabled=true`); el `WHERE s.apply_enabled = true` del `apply`
+  garantiza que los pisos en PriceLabs no se tocan. El snapshot sí captura los 4 (lectura) para comparar.
+
 ### Panel del propietario `/pricing-auto`
 Medidor de **€ extra vs PriceLabs** (`/api/pricing/resultados`), botón de **pánico** (pausa), botón de
 **avisos push**, toggle de eventos, descuento de hueco, **Restaurar** e **Histórico** por piso (`/api/pricing/historial`).
@@ -289,3 +304,16 @@ definir `MARKET_API_URL`/`MARKET_API_KEY`; adaptar `mapToComps` al proveedor. Re
 ### Pendiente
 - Alberto: definir envs + mergear PR #108. Vigilar que PriceLabs no revierta (lo detecta `guard`).
 - Fase futura: onboarding SaaS multi-propietario (alta self-service de listings/costes/reseñas).
+
+## Fuente única del precio recomendado — `lib/pricing-engine.ts`
+El cálculo del "precio para sustituir a PriceLabs" (percentil de mercado × posición × calidad × demanda,
+acotado a floor/ceil) vive en **`lib/pricing-engine.ts`** (`computeRecommendation`). Lo consumen los
+**tres**: `recommend` (estudio), `settings` (panel) y `pilot-track` (propuesta del agente) → todos dan el
+**mismo número**. El agente solo propone con **guardia de confianza** (≥5 comparables y mercado ≤7d).
+- `recommendedBaseFromEngine` aplica la cadena de topes del propietario en **base** (huésped→base por
+  `channel_markup`, floor/ceil, `max_change_pct` vs base actual, `min_price`/`max_price`).
+- **⚠️ A decidir aparte (no arreglado):** `recommend` aplica `min_price`/`max_price` (que son € de **base**)
+  sobre el precio a nivel **huésped** — posible inconsistencia de unidades. `settings`/agente sí lo aplican
+  en base. Mantener vigilado; arreglar en PR propio si se confirma que descuadra.
+- **Pendiente (fuera de alcance de este cambio):** alinear también `apply` al mismo motor (hoy replica la
+  fórmula con su cadena de topes para el push en vivo).

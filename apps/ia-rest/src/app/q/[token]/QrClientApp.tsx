@@ -101,6 +101,27 @@ export default function QrClientApp({ token }: { token: string }) {
 
   const [idioma, setIdioma] = useState<CodigoIdioma>('es')
 
+  // ── Asistente IA de carta (chat flotante) ──
+  const [iaOpen, setIaOpen] = useState(false)
+  const [iaMsgs, setIaMsgs] = useState<{ role: 'user' | 'assistant'; content: string }[]>([])
+  const [iaInput, setIaInput] = useState('')
+  const [iaLoading, setIaLoading] = useState(false)
+
+  const iaEnviar = async (texto?: string) => {
+    const pregunta = (texto ?? iaInput).trim()
+    if (!pregunta || iaLoading || !sesionId) return
+    setIaInput('')
+    const nuevos = [...iaMsgs, { role: 'user' as const, content: pregunta }]
+    setIaMsgs(nuevos)
+    setIaLoading(true)
+    try {
+      const res = await callEF('qr-assistant', { sesion_id: sesionId, pregunta, historial: iaMsgs.slice(-4) })
+      setIaMsgs(prev => [...prev, { role: 'assistant', content: res.respuesta ?? 'Lo siento, inténtalo de nuevo.' }])
+    } catch {
+      setIaMsgs(prev => [...prev, { role: 'assistant', content: 'Error de conexión. Pregunta al camarero.' }])
+    } finally { setIaLoading(false) }
+  }
+
   // ── Maître IA (recomendador de carta) ──
   const [maitreActivo, setMaitreActivo] = useState(false)
   const [maitreConfig, setMaitreConfig] = useState<{ nombre_asistente: string; permitir_antojo_texto: boolean; mostrar_precios: boolean }>({ nombre_asistente: 'Maître IA', permitir_antojo_texto: true, mostrar_precios: true })
@@ -1217,6 +1238,93 @@ export default function QrClientApp({ token }: { token: string }) {
           onAddIds={addRecomendados}
           onClose={() => setMaitreOpen(false)}
         />
+      )}
+
+      {/* ── ASISTENTE IA DE CARTA (flotante) — visible en menú y espera ── */}
+      {sesionId && (screen === 'menu' || screen === 'cooking') && (
+        <>
+          {!iaOpen && (
+            <button
+              onClick={() => setIaOpen(true)}
+              style={{
+                position: 'fixed', bottom: 80, right: 16, zIndex: 50,
+                width: 44, height: 44, borderRadius: '50%',
+                background: C.vermilion, border: 'none', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontSize: 20, boxShadow: '0 4px 16px rgba(0,0,0,.5)',
+              }}
+              title="Pregunta sobre la carta"
+            >🤖</button>
+          )}
+
+          {iaOpen && (
+            <div style={{
+              position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 50,
+              height: '60vh', background: C.bg2,
+              borderTop: `1px solid ${C.rule}`,
+              borderRadius: '16px 16px 0 0',
+              display: 'flex', flexDirection: 'column',
+              boxShadow: '0 -8px 32px rgba(0,0,0,.6)',
+            }}>
+              <div style={{
+                padding: '12px 16px', borderBottom: `1px solid ${C.rule}`,
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 16 }}>🤖</span>
+                  <span style={{ fontSize: 13, fontWeight: 600, color: C.cream }}>Asistente de carta</span>
+                </div>
+                <button onClick={() => setIaOpen(false)} style={{
+                  background: 'none', border: 'none', color: C.creamDim, fontSize: 20, cursor: 'pointer',
+                }}>×</button>
+              </div>
+
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {iaMsgs.length === 0 && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <div style={{ fontSize: 12, color: C.creamDim, marginBottom: 4 }}>Pregúntame sobre la carta:</div>
+                    {['¿Qué platos son sin gluten?', '¿Qué recomiendas de entrante?', '¿Hay opciones vegetarianas?'].map(s => (
+                      <button key={s} onClick={() => iaEnviar(s)} style={{
+                        background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 8,
+                        color: C.creamMid, fontSize: 13, padding: '9px 12px', cursor: 'pointer', textAlign: 'left',
+                      }}>{s}</button>
+                    ))}
+                  </div>
+                )}
+                {iaMsgs.map((m, i) => (
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: m.role === 'user' ? 'flex-end' : 'flex-start' }}>
+                    <div style={{
+                      maxWidth: '85%', padding: '9px 13px',
+                      borderRadius: m.role === 'user' ? '10px 10px 2px 10px' : '10px 10px 10px 2px',
+                      background: m.role === 'user' ? C.vermilion + '25' : C.bg3,
+                      border: `1px solid ${m.role === 'user' ? C.vermilion + '40' : C.rule}`,
+                      color: C.cream, fontSize: 13, lineHeight: 1.55,
+                    }}>{m.content}</div>
+                  </div>
+                ))}
+                {iaLoading && <div style={{ fontSize: 12, color: C.creamDim }}>buscando en la carta...</div>}
+              </div>
+
+              <div style={{ padding: '10px 12px', borderTop: `1px solid ${C.rule}`, display: 'flex', gap: 8 }}>
+                <input
+                  value={iaInput}
+                  onChange={e => setIaInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') iaEnviar() }}
+                  placeholder="¿Qué quieres saber de la carta?"
+                  style={{
+                    flex: 1, background: C.bg3, border: `1px solid ${C.rule}`, borderRadius: 8,
+                    color: C.cream, fontSize: 13, padding: '9px 12px', outline: 'none',
+                  }}
+                />
+                <button onClick={() => iaEnviar()} disabled={!iaInput.trim() || iaLoading} style={{
+                  background: !iaInput.trim() || iaLoading ? C.rule : C.vermilion,
+                  border: 'none', borderRadius: 8, color: '#fff', width: 38,
+                  cursor: !iaInput.trim() || iaLoading ? 'default' : 'pointer', fontSize: 16,
+                }}>↑</button>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

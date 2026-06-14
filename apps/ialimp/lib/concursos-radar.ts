@@ -1,14 +1,18 @@
 // Parser PURO de la sindicación ATOM de PLACSP (CODICE) → anuncios normalizados,
 // y clave de deduplicación estable. Sin red ni BD: testeable con `node --test`.
 import { XMLParser } from 'fast-xml-parser'
-import type { AnuncioRadar } from '@iarest/module-concursos'
-import { filtrarRadar, coincideRadar } from '@iarest/module-concursos/radar'
-import type { CriteriosRadar } from '@iarest/module-concursos'
+import type { AnuncioRadar } from '@central/module-concursos'
+import { filtrarRadar, coincideRadar } from '@central/module-concursos/radar'
+import type { CriteriosRadar } from '@central/module-concursos'
 
 /** Anuncio captado del radar + identificador estable del expediente. */
 export interface AnuncioPlacsp extends AnuncioRadar {
   expediente?: string   // ContractFolderID (id estable del expediente)
   atom_id?: string      // <id> del entry (fallback de dedupe)
+  estado?: string          // ContractFolderStatusCode (PUB, EV, RES, ADJ...)
+  provincia?: string       // lugar de ejecución (CountrySubentity)
+  tipo_contrato?: string   // TypeCode CODICE
+  fin_presentacion?: string // ISO 'YYYY-MM-DD' (fin de presentación de ofertas)
 }
 
 const parser = new XMLParser({
@@ -66,6 +70,11 @@ export function parsearAtomPlacsp(xml: string): AnuncioPlacsp[] {
       ? Number(presupRaw)
       : undefined
 
+    const estado = texto(cfs?.ContractFolderStatusCode)
+    const provincia = texto(pp?.RealizedLocation?.Address?.CountrySubentity)
+    const tipo_contrato = texto(pp?.TypeCode)
+    const fin_presentacion = texto(cfs?.TenderingProcess?.TenderSubmissionDeadlinePeriod?.EndDate)
+
     out.push({
       titulo,
       objeto: titulo,
@@ -75,6 +84,10 @@ export function parsearAtomPlacsp(xml: string): AnuncioPlacsp[] {
       url: hrefDe(e?.link),
       expediente: texto(cfs?.ContractFolderID),
       atom_id: texto(e?.id),
+      estado,
+      provincia,
+      tipo_contrato,
+      fin_presentacion,
     })
   }
   return out

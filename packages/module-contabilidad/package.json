@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/module-contabilidad",
+  "name": "@central/module-contabilidad",
   "version": "0.0.0",
   "private": true,
   "description": "Módulo de Contabilidad compartido (casa de marcas): lógica pura para IVA trimestral, PyG/resultado, tesorería, rentabilidad y recurrentes. Agnóstico de BD — recibe apuntes normalizados por el puerto (Apunte[]); no consulta ninguna BD directamente. Sirve a ia.rest, sivra e ialimp por igual.",
@@ -8,6 +8,9 @@
   "types": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
   },
   "sideEffects": false,
   "license": "UNLICENSED"

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
-import { gmailTransporter } from "@iarest/core-email"
+import { gmailTransporter } from "@central/core-email"
 
 export const dynamic = "force-dynamic"
 

@@ -18,7 +18,7 @@ export async function GET() {
         property_id, rate_date, old_price, new_price
       FROM pricing_applied
       WHERE dry_run = false AND old_price IS NOT NULL
-      ORDER BY property_id, rate_date, created_at DESC
+      ORDER BY property_id, rate_date, applied_at DESC
     ),
     booked AS (
       SELECT DISTINCT ON (property_id, rate_date)

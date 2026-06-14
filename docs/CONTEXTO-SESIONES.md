@@ -16,6 +16,522 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
+  Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:
+  - **PR #208 (mergeado)** — auditoría del dashboard a partir de un pantallazo real:
+    - 🔴 Gráfico "Evolución mensual" salía **vacío**: el `<BarChart>` leía `dataKey="y0"/"y1"` pero la API
+      emite series por año (`[year]`/`[year-1]`). Fix: `dataKey={String(year)}`.
+    - 🟡 Delta `↑0.0%` engañoso sin periodo previo → ahora muestra **"nuevo"** (`delta()` devuelve `null`).
+    - 🟢 Entradas/Salidas/Entradas mañana ahora indican el **piso** (🏠 nombre), usando `propertyName` que
+      `/api/incomes/today` ya devolvía. Detalle en `docs/AUDITORIA-2026-06.md` (addendum 14/06).
+  - **PR #209** — **gastos fijos mensuales 100% automáticos** (alquileres, comunidad dúplex, etc.):
+    - Tabla nueva **`gastos_fijos`** (RLS como `gastos`, índice único por `fingerprint`). DDL en
+      `apps/sivra/sql/gastos_fijos.sql` (migraciones `create_gastos_fijos`, `gastos_fijos_fingerprint_sync`).
+    - **Automático de punta a punta**: el cron `/api/expenses/fijos/generar` (`vercel.json` `"0 6 1 * *"`)
+      llama `sincronizarReglasFijas()` → importa a `gastos_fijos` las **reglas mensuales que el agente de
+      facturas ya aprendió** (`gastos_reglas`, periodicidad mensual) casando por fingerprint, sin pisar
+      ediciones manuales; luego imputa el mes con **dedup POR MES**.
+    - **"La factura real manda"**: `insertarGasto()` borra el placeholder `origen='fijo'` del mismo mes al
+      imputar la factura real → **cero duplicados** (`lib/agente-facturas/imputar.ts`).
+    - Página **`/gastos-fijos`** (nuevo ítem sidebar): CRUD + "Generar mes actual ahora". Alquileres de
+      Bustos Tavera **migrados** del backfill manual (día 8) a este sistema (día 1).
+    - **Backfill 2026 (ene→jun) ya ejecutado en BD**: junio poblado con 5 fijos (877,22 €); meses con
+      factura real se respetaron. Helpers en `lib/agente-facturas/gastos-fijos.ts`.
+    - Verificado: `tsc --noEmit -p apps/sivra/tsconfig.json` ✅ 0 errores; 4 deploys Vercel verdes.
+
+- **⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)**
+  PR #199 (auditoría de caja) **MERGEADO a main** (squash, `c54175c`). Épico nuevo por fases, principio
+  **100% configurable** (`config_horario`: límites + toggles por local, defaults legales). Módulo puro nuevo
+  **`@central/module-horario`** (`packages/`, plantilla de `module-contabilidad`, tests `node --test`).
+  - **Fase 1 (verde)** — Registro de jornada legal RD 8/2019: `resumenJornada`/`detalleJornada`/
+    `chequearDescansos`/`horasExtra` + `config_horario` (migración MCP) + `GET /api/owner/horario` +
+    `GET/POST /api/owner/horario/config` + tab "Jornada" (grupo Auditoría, `owner/page.tsx`) con CSV,
+    sparkline y panel de configuración. Reusa la base de fichaje existente (`turnos`, `fichar_entrada/salida`).
+  - **Fase 2 (verde)** — Anti-fraude: validación de IP del centro en `turnos/fichar` (gated `validar_ip_local`
+    + `ips_local`) + `POST /api/owner/horario/autocierre` (cierra colgados > `autocierre_horas`) + botón en el tab.
+  - **Fase 3 (pusheada)** — Coste de personal: `costePersonal` (módulo) + `config_horario.costes_empleado`
+    (mapa; camareros es VISTA, por eso va aquí) + bloque coste en el GET (cruza ventas de `facturas_verifactu`)
+    + `POST /api/owner/horario/coste` + KPIs/coste-hora editable en el tab. Flag `coste_personal`.
+  - **PENDIENTE del épico**: Fase 2b (fichaje por QR + recordatorios push), Fase 4 (cuadrante/plantilla
+    previsto vs real), Fase 5 (ausencias/vacaciones), Fase 6 (consolidado multi-local en plataforma +
+    festivos + export gestoría), y firma del empleado + informe PDF oficial (RD 8/2019). Migraciones MCP en
+    proyecto ia-rest `efncqyvhniaxsirhdxaa`.
+- **📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest` — 14/06/2026**
+  4ª de la tanda "automatizar agentes" (la #3 impagos-sivra se SALTÓ: sivra no tiene cuentas por cobrar,
+  sus "facturas" son gasto/proveedores y pago a limpiadoras). Cron diario `/api/cron/reposicion-stock`
+  (08:15) que lee `materiales` (Supabase propia de ia-rest), detecta `cantidad_disponible < stock_minimo`
+  (activos, con `stock_minimo` no nulo) y avisa por **Telegram** (`tgAlert(..., 'aviso')`) con líneas
+  ordenadas por faltante + proveedor + coste estimado de reposición.
+  - **Código** (`apps/ia-rest/src`): `lib/reposicion-stock.ts` (puro: `faltante`/`costeReposicion`/
+    `formatAvisoStock`) + `lib/reposicion-stock.test.ts` (3/3 ✅); `app/api/cron/reposicion-stock/route.ts`
+    (auth Bearer `CRON_SECRET`, `createServerClient`); cron en `vercel.json`. **Sin migración** (usa
+    `materiales.stock_minimo`, ya existente). ia-rest = BD propia `efncqyvhniaxsirhdxaa`.
+  - **OJO**: ia-rest **sí valida tipos en build** (no `ignoreBuildErrors`) → cuidado con type-guards.
+  - **Verificado**: `node --test` 3/3 ✅, `next build` (161/161 páginas, ruta como función, type-check OK) ✅.
+  - **⚠️ PENDIENTE despliegue**: requiere `materiales.stock_minimo` aplicado en la BD de ia-rest (migración
+    materiales v2) y `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (ya existen para el resto de alertas).
+  - **Roadmap restante**: NPS post-servicio (ialimp) · scoring limpiadoras (ialimp) · orquestador concursos.
+- **⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207) — 14/06/2026**
+  6ª de la tanda "automatizar agentes". Endpoint `GET /api/admin/limpiadoras/ranking` que puntúa y
+  ordena a las limpiadoras de la empresa sobre la **vista existente `rendimiento_limpiadoras`** (sin
+  migraciones). Score 0-100 = calidad (`rating_medio`/5, 55%) + fiabilidad (1 − quejas/sesiones, 45%).
+  - **Anclado a datos reales**: `sesiones_completadas` viene 0 → **excluida**; `rating_medio` suele ser
+    null → **no penaliza a 0** (score = fiabilidad, `sin_valoraciones: true`); `confianza` por volumen.
+  - **Código** (`apps/ialimp`): `lib/scoring-limpiadoras.ts` (puro: `puntuarLimpiadora`/`rankingLimpiadoras`)
+    + `lib/scoring-limpiadoras.test.ts` (5/5 ✅); `app/api/admin/limpiadoras/ranking/route.ts`
+    (Prisma `$queryRaw`, auth `requireEmpresaId()` de `@/lib/tenant`). **OJO bigint**: las columnas
+    `bigint`/`numeric` de la vista llegan como BigInt/Decimal → se coaccionan a `Number` (si no, rompe
+    `JSON.stringify` y la aritmética).
+  - **Verificado**: `node --test` 5/5 ✅; `next build` (161/161 páginas, ruta `ƒ` registrada) ✅.
+  - **Nota**: ialimp usa **Prisma** (no supabase-js), auth JWT propio (cookie `ialimp_session`), ignora
+    errores TS en build. Ya había consumidores de la vista (`/api/admin/rrhh/analisis`); este es el ranking.
+  - **Tanda previa (otras ramas/PR)**: briefing #203 · impagos-ialimp #204 · ~~impagos-sivra~~ (N/A) ·
+    reposición-stock-iarest #206. **Roadmap restante**: NPS post-servicio (ialimp) · orquestador concursos.
+- **💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp` — 14/06/2026**
+  2ª de la tanda "automatizar agentes" (PR por PR). Cron diario `/api/cron/impagos` (08:30) que detecta
+  facturas a clientes **vencidas y no cobradas** y manda recordatorios **escalonados +3/+10/+21 días** al
+  cliente, sin repetir escalón, **+ resumen diario a la empresa** (`empresas.email`).
+  - **Migración aplicada** (Supabase compartida `wswbehlcuxqxyinousql`): tabla `recordatorios_impagos`
+    (aditiva, RLS on sin policies como el resto; único `(factura_id, escalon)`). Fichero en
+    `apps/ialimp/prisma/migrations/2026-06-14_recordatorios_impagos.sql`.
+  - **Código**: `lib/impagos.ts` (puro: `escalonAEnviar`/`textoRecordatorio`/`resumenEmpresaTexto`) +
+    `lib/impagos.test.ts` (5/5 ✅); endpoint `app/api/cron/impagos/route.ts` (reutiliza
+    `emailFacturacionCliente` + `getTransporter`/`MAIL_FROM`); cron en `vercel.json`.
+  - Filtro: `estado IN ('emitida','vencida') AND fecha_vencimiento<hoy AND fecha_cobro IS NULL AND pagada_online_at IS NULL`.
+  - `facturas_clientes` hoy **vacía** (Sique Brilla aún no factura por aquí) → 0 envíos hasta que emita.
+  - **Verificado**: `node --test` 5/5 ✅, `next build` (161/161 páginas, ruta `/api/cron/impagos` como función) ✅.
+  - **⚠️ PENDIENTE despliegue**: `CRON_SECRET` ya existe; el envío real necesita el SMTP ya configurado (IONOS).
+    NO mergear a `main` sin preview verde (cliente Vanessa EN VIVO).
+  - **Roadmap restante**: impagos **sivra** → reposición stock (ia-rest) → NPS (ialimp) → scoring limpiadoras →
+    orquestador concursos. Diferidas (APIs externas): reputación, VeriFactu.
+- **📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma` — 14/06/2026**
+  1ª de la tanda "automatizar agentes" (auditoría previa: ver entrada de instagram-ideas). `plataforma`
+  no tenía **ningún cron**; ahora un cron semanal (lunes 08:00) consolida ingresos/gastos/resultado YTD
+  de **todos los negocios de cada cuenta** y envía un email al dueño.
+  - **Lógica pura** `apps/plataforma/lib/briefing.ts` (`agregarBriefing` + `formatBriefingTexto`, € inline
+    para no arrastrar `financiero→db→prisma`) con tests `node --test` (`lib/briefing.test.ts`, 3/3 ✅).
+  - **Endpoint** `app/api/cron/briefing/route.ts` (GET, auth `CRON_SECRET` o `?secret=`): reutiliza
+    `getResumenNegocio` de `lib/financiero.ts` (ialimp+sivra BD, ia-rest puerto HTTP) y `enviarAvisoEmail`
+    de `lib/notificaciones.ts` (Resend, no-op sin `RESEND_API_KEY`).
+  - **Cron** en `vercel.json` (`0 8 * * 1`) + `/api/cron` añadido a `PUBLIC` del `middleware.ts`.
+  - **Verificado**: `node --test` 3/3 ✅, `tsc --noEmit` (código de prod limpio) ✅, `next build` ✅.
+  - **⚠️ PENDIENTE despliegue**: en el Vercel de plataforma definir `CRON_SECRET` y `RESEND_API_KEY`+`MAIL_FROM`.
+  - **Roadmap restante** (PR por PR): impagos (ialimp/sivra) → reposición stock (ia-rest) → NPS (ialimp)
+    → scoring limpiadoras (ialimp) → orquestador concursos (ialimp). Diferidas (APIs externas): reputación
+    Google/Booking, reintentos VeriFactu. Plan: `docs/superpowers/plans/2026-06-14-briefing-consolidado-plataforma.md`.
+- **⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3` — 13/06/2026**
+  Auditoría de "agentes sin tarea programada": crucé todos los endpoints `cron`/`agent` de las 4 apps
+  contra los `crons` de cada `vercel.json`. Resultado: la mayoría OK; los `agente-*` interactivos
+  (asesoria, owner/compras+eventos, super/arquitecto+ai+seo, leads, sivra agente/chat, ialimp
+  cotizador, expenses backfill) **no llevan cron a propósito** (bajo demanda). **Único huérfano real:**
+  `apps/ia-rest/src/app/api/cron/instagram-ideas/route.ts` estaba diseñado como cron (auth `CRON_SECRET`,
+  cabecera "lunes, antes de blog-seo") pero **faltaba en `vercel.json`** → nunca se disparaba solo.
+  **Fix:** añadido `{ "path": "/api/cron/instagram-ideas", "schedule": "30 7 * * 1" }` (lunes 07:30,
+  antes de blog-seo 08:00). No requiere exclusión de middleware (matcher solo cubre `/api/super/*`).
+- **🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x` — 13/06/2026**
+  Cron `/api/cron/seo-agent` (**martes y viernes 07:00 UTC**) que lee **GSC+GA4** y, de forma
+  **autónoma**, adapta el SEO de **iarest.es**: titles/metas, JSON-LD, bloques de contenido y
+  artículos nuevos. Principio rector: **los cambios son DATOS, no código** (nunca commitea ni rompe
+  el build). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-seo-autonomo-iarest*`.
+  - **Migración aplicada** a Supabase **`efncqyvhniaxsirhdxaa`** (proyecto ia-rest), **schema `public`**
+    (¡no `iarest`! — ahí vive `blog_borradores`, que es donde apunta `createServerClient`). Tablas
+    nuevas con **RLS habilitado**: `seo_overrides` (title/meta/canonical/og/jsonld por ruta),
+    `seo_content_blocks` (bloques por ruta+posición), `seo_articulos` (artículos en BD), `seo_cambios`
+    (snapshot antes/después + auditoría).
+  - **Red de seguridad**: kill switch `SEO_AGENT_ENABLED` (si != 'true', el cron sale sin tocar nada),
+    allowlist de rutas (`/restaurantes`, `/restaurantes/*`), máx. `SEO_MAX_CAMBIOS` (def. 5)/pasada,
+    anti-oscilación 7 días, umbral `SEO_MIN_IMPR` (def. 30) en el prompt, informe Telegram y reversión
+    vía `/api/super/seo-revert`.
+  - **Código** (`apps/ia-rest`): `src/lib/seo/{types,guardrails,gsc-ga4,store,targets}.ts`,
+    `src/components/seo/SeoBlocks.tsx`, ruta dinámica `src/app/blog/[slug]/page.tsx`, endpoints
+    `api/cron/seo-agent` y `api/super/seo-revert`. Páginas `/restaurantes` y `/restaurantes/[ciudad]`
+    leen override en `generateMetadata` + slot `<SeoBlocks>`. GSC/GA4 extraídos de `agentes-seo` al
+    módulo compartido `gsc-ga4.ts`.
+  - **Superficie editable Fase 1**: solo páginas server (`/restaurantes`, `[ciudad]`) + artículos
+    nuevos. `/` y `/espacios` son client-components (`next/head`) → fuera del override por ahora.
+  - **Verificado**: test puro `scripts/seo/test-guardrails.ts` (14 checks) ✅, `next build` ✅,
+    `npm run qa` sin problemas ✅, 4 tablas confirmadas en BD.
+  - **⚠️ PENDIENTE de despliegue**: en el Vercel de ia-rest, dejar `SEO_AGENT_ENABLED` sin poner/`false`
+    hasta querer activarlo; al activar (`=true`), revisar el primer informe Telegram y `/super → SEO`
+    antes de confiar. Opcional: `SEO_MAX_CAMBIOS`, `SEO_MIN_IMPR`.
+  - **Fase 0/2 (ialimp.es) pendiente**: ialimp **no tiene GSC/GA4 conectado** (cero OAuth/analytics en
+    `apps/ialimp`) y su landing es **HTML estático**; requiere conectar analíticas antes de extender el
+    agente (y extraer la lógica a `@central/core-seo`).
+
+- **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
+  Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
+  - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
+    Supabase MCP a proyecto ia-rest `efncqyvhniaxsirhdxaa`) + columnas `config_contabilidad.umbral_descuadre`
+    y `.conteo_ciego`. `cierre-diario` persiste `cuadre_por_empleado` (delete-then-insert) y **cruza con
+    turno** (movimientos sin camarero → titular del turno vía `turnos`+`camareros`).
+  - **Fase 2** — Puras `resumirDescuadresEmpleado`/`detectarPatronRecurrente`/`serieDescuadreEmpleado`
+    (+tests, 23 total) · `GET /api/owner/contabilidad/arqueos-empleado` · UI panel "Histórico por
+    empleado" (tabla acumulado/media/peor + sparkline + CSV + badge merma recurrente).
+  - **Fase 3** — `lib/push.ts` (`enviarPushARoles`) · alertas por umbral + patrón recurrente → push a
+    owner/gestor · UI marca en rojo los que superan umbral.
+  - **Fase 4** — Motivo obligatorio por empleado (400 con `pendientes` + UI de reintento) · conteo ciego
+    (config + "revelar" en UI) · firma del empleado (`PATCH .../arqueos-empleado/[id]/confirmar` +
+    columnas `confirmado_por/at`).
+  - **Verificado**: 23/23 tests, `tsc` limpio, eslint sin errores (solo warnings). Migración aplicada y
+    comprobada por MCP.
+  - **Bloque B completado (fases 5-9)**: F5 conciliación de tarjeta (`arqueos_caja.tarjeta_liquidada/
+    diferencia_tarjeta`); F6 tesorería (`movimientos_tesoreria` + endpoint GET/POST + panel saldo caja
+    fuerte); F7 abastecimiento de cambio (`config_contabilidad.min_monedas` + aviso en cierre); F8
+    tolerancia por empleado (`config_contabilidad.umbrales_empleado` + endpoint `umbral-empleado` +
+    columna editable en histórico; `umbralDe()` en validación/alertas); F9 consolidado multi-local:
+    endpoint operador `GET /api/operador/descuadres-empleado` en ia-rest + `apps/plataforma`
+    (`lib/descuadres.ts` + `GET /api/admin/descuadres-iarest`, vía puerto HTTP con OPERADOR_SHARED_SECRET).
+    Migraciones aplicadas por MCP. ia-rest `tsc` limpio (los errores `tsc` de plataforma son preexistentes,
+    no gatean su build).
+  - **PENDIENTE (cabos)**: UI empleado-facing de firma/conteo ciego en el POS (`/edge`); página visual
+    del consolidado en el god-panel de plataforma (el data path ya está). Tras esto: roadmap #2 control horario.
+
+- **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
+  A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
+  se decide reforzar ia-rest donde ellos pegan fuerte: **gestión de efectivo**. Al verificar contra
+  código + BD se descubre que **`arqueos_caja` ya existía** con los campos del cuadre
+  (`fondo_inicial/salidas_caja/fondo_final/diferencia_caja`) pero **el `cierre-diario` los hardcodeaba a 0**
+  y nunca leía `movimientos_caja`. Se **completa** (sin tabla ni endpoints nuevos, cero duplicación):
+  - **Lógica pura** en `@central/module-contabilidad` (`src/caja.ts`): `calcularCuadreCaja`,
+    `totalDesglose`, `DENOMINACIONES_EUR`, `calcularCuadrePorEmpleado` + tipos
+    `MovimientoCaja`/`CuadreCaja`/`CuadreEmpleado`. Saldo teórico = Σ movimientos del cajón; conteo
+    físico = desglose manual o último arqueo/cierre; descuadre = real − teórico. **18 tests `node:test`**
+    (el paquete no tenía script `test`; añadido).
+  - **`apps/ia-rest/.../contabilidad/cierre-diario/route.ts`**: lee `movimientos_caja` del día y
+    persiste el cuadre global real + `cerrado_por`/`notas`; devuelve `cuadre` y `cuadre_por_empleado`.
+  - **UI** `ContabilidadTab.tsx` (sub-tab Cierre): checkbox "Hacer arqueo", conteo por denominación
+    en vivo, notas, y tarjeta de cuadre **configurable (toggle Caja única / Por empleado)** — por
+    empleado agrupa los arqueos de cada camarero desde `movimientos_caja` (sin migración).
+  - **Verificado**: 15/15 tests ✅, `tsc --noEmit` ia-rest ✅, eslint archivos tocados 0 errores ✅.
+    Sin migración (columnas ya existían). **Roadmap restante** (PRs aparte): completar control horario
+    (plantilla/ausencias/informe jornada legal), alta Kit Digital (admin), Tier 2 (pago unificado, carta digital).
+
+- **🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst` — 13/06/2026**
+  Agente diario que lee **Gmail (IMAP) + carpeta de Drive**, archiva facturas y las imputa en
+  `gastos` de sivra, con **aprendizaje de recurrentes** y **modo mixto** (lo claro entra solo,
+  lo dudoso a bandeja). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-facturas-sivra*`.
+  - **Migración aplicada** a Supabase `wswbehlcuxqxyinousql` (`agente_facturas_2026_06_13`, aditiva):
+    `gastos` += `irpf_porcentaje/origen/fingerprint/motivo_revision` (irpf/confianza/revisado YA existían);
+    tablas nuevas `gastos_reglas` (memoria) y `agente_log` (auditoría); **seed** de los 2 alquileres
+    de Bustos Tavera 22 (Bajo Dcha→Luxury Busto, Bajo Izq→Busto Reform, ALQUILER, IVA 21% / IRPF 19%).
+  - **Bandeja = `gastos.revisado=false`** (no se creó tabla aparte). GET de gastos excluye `revisado=false`.
+  - **Código** (`apps/sivra`): `lib/agente-facturas/*` (fingerprint, reglas/confianza, conciliar IVA/IRPF,
+    extraer, gmail IMAP, drive list/get/archive, imputar, anomalías, avisos, procesar, resumen-mensual);
+    `lib/telegram.ts` (portado de ia-rest). Endpoints: `/api/expenses/agent/{scan,backfill,resumen-mensual}`,
+    `/api/expenses/pendientes(/[id])`. UI: `/expenses/pendientes` + badge en `/expenses`; desplegable
+    += **ALQUILER** y **Personal (no pisos)**. `scripts/drive-upload.gs` ampliado (list/get/archive).
+  - **Resumen mensual por Telegram** (cron día 1, mes anterior) con **desglose de rentabilidad por piso**
+    (ingresos − gastos; `properties.id` = `gastos.propiedad` = `prop_*`). Cron diario `scan` 06:00.
+  - **Verificado**: 11 tests `node:test` (incl. los 2 recibos reales) ✅, `tsc --noEmit` ✅,
+    `next build` ✅, query de rentabilidad probada contra BD real.
+  - **⚠️ PENDIENTE de despliegue (no testeable sin credenciales):** en el Vercel de **sivra** añadir
+    `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID`, apuntar `DRIVE_SCRIPT_URL` a la carpeta real y poner su
+    `ROOT_FOLDER_ID` en `drive-upload.gs`; (opcional) `GMAIL_FACTURAS_LABEL` + regla de Gmail.
+    Lanzar el **backfill primero en dry-run** (`/api/expenses/agent/backfill?secret=...`) y luego `&commit=1`.
+    Deps nuevas: `imapflow`, `mailparser`, `@types/mailparser`.
+
+- **📦 module-materiales Fase B — PR #189 mergeado — 12/06/2026**
+  Implementación completa de la Fase B del plan `module-materiales` (spec en `.claude/plans/polished-growing-stonebraker.md`):
+  - **8 APIs nuevas** en `apps/ia-rest/src/app/api/materiales/`:
+    - `clientes/` (GET/POST/PATCH/DELETE), `proveedores/` (GET/POST/PATCH/DELETE)
+    - `kits/` (GET/POST/PATCH/DELETE), `kits/[id]/items/` (GET/POST/DELETE), `kits/instanciar/` (POST — expande kit × N → movimientos salida con validación de stock)
+    - `mantenimiento/` (GET/POST/PATCH), `reservas/` (GET/POST/DELETE soft-cancel)
+    - `inventario-fisico/` (GET/POST), `inventario-fisico/[id]/lineas/` (GET/PATCH), `inventario-fisico/[id]/cerrar/` (POST — genera ajuste/rotura movements)
+  - **Migración SQL** `supabase/migrations/2026-06-12_materiales_fase_b.sql`: tablas `materiales_proveedores`, `materiales_clientes`, `materiales_kits`, `materiales_kits_items`, `materiales_inventario_fisico`, `materiales_inventario_fisico_lineas`, `materiales_mantenimiento`, `materiales_reservas` — todas con RLS `service_role_all`.
+  - **UI** `owner/materiales/page.tsx`: tabs Kits, Clientes, Proveedores, Mantenimiento, Reservas, Inventario Físico wizard añadidos.
+  - **Fixes CI** iterativos: Turbopack `await` en callback no-async, TS strict `never[]` → tipado explícito en `instanciar/route.ts` y `cerrar/route.ts`.
+  - **CI final**: 10/10 checks ✅, 4 Vercel ✅. Squash-mergeado a `main` (SHA `8174ffd`).
+  - **⚠️ PENDIENTE**: aplicar migración SQL `2026-06-12_materiales_fase_b.sql` en Supabase `efncqyvhniaxsirhdxaa` (ia-rest BD) via MCP `apply_migration`. Sin esto las rutas de Fase B devolverán 404/500 en producción.
+
+- **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
+  "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
+  - **`tsconfig.base.json`** en la raíz; las 4 apps lo `extends` y solo declaran lo suyo
+    (paths, include/exclude, overrides). Equivalencia probada (showConfig + deep-equal).
+  - **`eslint.config.base.mjs`** en la raíz (solo DATOS: ignores + ruleset legado a `warn`,
+    sin imports de paquetes → no depende del node_modules de la raíz). Las 4 apps pasan a
+    **flat-config con `eslint-config-next ^16.2.6`** y `lint: eslint`; sivra migra desde
+    `.eslintrc.json`, ialimp/plataforma estrenan eslint. Verificado **0 errores** en las 4;
+    ia-rest queda **idéntico** (0 err / 1164 warn, mismo desglose → no rompe su build/CI).
+  - **Estabilización del PR**: se puso la rama al día con `main` (estaba ~11 commits atrás →
+    fallos "merge conflict marker" en typecheck ia-rest), se anotaron tipos en
+    `ialimp .../concursos-ingesta` (TS7022 latente, preexistente).
+  - **⚠️ Seguridad**: un commit concurrente había revertido en `mis-restaurantes/route.ts` la
+    corrección IDOR/suplantación de sesión de `main` (volvía a parsear la cabecera cruda
+    `x-ia-session`). Al fusionar `main` se **restauró la versión firmada/segura** (`getSession`).
+    Documentado en el PR para que no se vuelva a revertir.
+
+- **🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b` — 12/06/2026**
+  Para resolver "el proyecto es muy amplio, se pide contexto de objetivos antes de tocar nada":
+  se añaden 4 skills-router **finos** (estilo `auditoria-central`, NO copian docs → apuntan a la
+  fuente de verdad, así no hay drift) en `.claude/skills/`:
+  - `central-maestro` — dispatcher de entrada del monorepo: orienta (CLAUDE.md/MATRIZ/CONTEXTO),
+    identifica la vertical y enruta al maestro correcto + recuerda reglas de matriz/packages/BD compartida.
+  - `sivra-maestro`, `ialimp-maestro`, `plataforma-maestro` — un router por vertical con gate
+    "antes de tocar nada", mapa de dónde vive cada cosa, infra (sin secretos) y landmines.
+  - `ia-rest-maestro` ya existía (doc gordo); los nuevos lo referencian, no lo tocan.
+  - Cada router obliga a leer objetivos/CLAUDE.md de la vertical y a comprobar la frontera multi-tenant
+    de la BD compartida antes de planificar. Se apoyan en el SessionStart hook (`using-superpowers`) ya activo.
+
+- **🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado — 12/06/2026**
+  Se crean 7 nuevos agentes y se mejoran 2 existentes en ia.rest:
+  - **U1** `agentes-ai/route.ts` reescrito con agentic loop de hasta 10 iteraciones (igual que `agentes-seo`). Los 5 agentes genéricos (Ventas, Legal, Competencia, Contenido, Onboarding) ahora tienen capacidad real de web_search iterativo.
+  - **U4** `AgenteArquitectoTab` añadido al menú `/super → Sistema` (antes inaccesible desde UI).
+  - **N2** Agente Compras (`/api/owner/agente-compras`) + `AgenteModuloChat` en `/owner → Almacén`.
+  - **N3** Edge Function `qr-assistant` (Deno) + botón 🤖 flotante en `/q/[token]` para clientes QR.
+  - **N4** GET en `/api/super/leads/agente` genera briefing del historial completo + botón "🤖 BRIEFING" en `CRMAgentTab`.
+  - **N6** Agente Eventos (`/api/owner/agente-eventos`) + `AgenteModuloChat` en `EventosTab`.
+  - **N7** `AsesoriaAgente` + `/api/asesoria/agente` — chat flotante para contables en `/asesoria`.
+  - **Componente reutilizable** `AgenteModuloChat` en `components/owner/` para módulos owner.
+  - Fix CI: `supabase.raw` inválido en `agente-compras/route.ts` → filtrado en JS.
+  - N1 (owner insights) ya existía como `OwnerCopiloto`. N5 (registro) no viable sin auth.
+  - ⚠️ Pendiente: desplegar Edge Function `qr-assistant` con `supabase functions deploy qr-assistant` (está en repo pero sin deploy).
+
+- **🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado — 12/06/2026**
+  La pestaña "🏠 Mis propiedades" desaparece del panel de operador. En su lugar, botón en la cabecera
+  "🏠 Mis propiedades ↗" que abre el portal del propietario de ialimp en pestaña nueva con auto-login
+  (token mágico vía `/api/admin/propiedades`). Tab por defecto pasa a ser "Negocios".
+
+
+- **📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172 — 12/06/2026**
+  - **Paquete nuevo:** `packages/module-materiales` (TS puro, sin deps runtime). Elimina `packages/module-inventario`.
+  - **Tipos nuevos:** `Material` (reemplaza `Articulo`), `Espacio`, `AsignacionMaterial`, `TransferenciaMaterial`,
+    `ResumenContable`; campos nuevos: `tipo` (consumible|activo), `estado` (operativo|deteriorado|en_reparacion|baja),
+    `stockMinimo`, `codigoInterno`, `garantiaHasta`, `documentos`, `precioCompra`.
+  - **Funciones puras nuevas:** `gastoCompras`, `resumenContable`, `puedeTransferir`, `alertasStockMinimo`
+    (además de las ya existentes: `round2`, `resumenStock`, `valorStock`, etc.).
+  - **Adapters actualizados en los 3 consumidores** (método renombrado `toArticulo`→`toMaterial`):
+    - `apps/ia-rest/src/lib/inventario-menaje.ts` (añadido `materialAdapter` para la tabla `materiales` con los nuevos campos)
+    - `apps/ialimp/lib/adapters/inventario.ts`
+    - `apps/sivra/lib/adapters/inventario.ts`
+  - **Rutas actualizadas:** `apps/ia-rest/.../menaje/route.ts`, `apps/ialimp/.../stock/route.ts`,
+    `apps/sivra/.../limpiadoras/productos/route.ts` — import cambiado a `@central/module-materiales`.
+  - **`package.json` + `next.config.ts`** de ia-rest, ialimp, sivra: dep actualizada de `module-inventario` → `module-materiales`.
+  - **SQL `apps/ia-rest/supabase/migrations/2026-06-12_materiales_v2.sql`** — aplicada al proyecto Supabase
+    `efncqyvhniaxsirhdxaa`: añade columnas nuevas a `materiales` + crea `materiales_espacios` y
+    `materiales_transferencias` con RLS (service_role).
+  - **15 tests** en `packages/module-materiales/test/materiales.test.ts` — todos pasan con `node --test`.
+  - **Fix CI:** dos rutas usaban `articuloAdapter.toArticulo` (ya inexistente) → cambiado a `toMaterial`
+    (sivra y ialimp; detectado por Vercel CI, corregido en commit `ff16bd9`).
+  - **`apps/plataforma/lib/estructura.ts`** actualizado: `module-inventario` → `module-materiales` con descripción del dominio.
+  - **✅ MERGEADO a `main`** (PR #172). Los 4 proyectos Vercel verdes.
+  - **NOTA arquitectura:** el scope de `module-materiales` es *agnóstico de vertical y de BD* (port/adapter).
+    Espacios (`Espacio`) son entidades de primera clase con `refTipo`/`refId` opcionales para enlazar entidades externas.
+    Multi-tenancy a nivel `negocioId` (más fino que `empresaId`/`restauranteId`).
+
+- **🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR — 12/06/2026**
+  3 migraciones aplicadas sobre `wswbehlcuxqxyinousql`. PR #169 mergeado. Detalle en `docs/AUDITORIA-2026-06.md` A4.
+  - ✅ 62 vistas `SECURITY DEFINER` → `security_invoker = on` (47 iarest + 15 public)
+  - ✅ `instagram_estilos_usados` → RLS habilitada
+  - ✅ 114 funciones `function_search_path_mutable` → `SET search_path='iarest'`
+  - ✅ 7 políticas `service_role_*` → `TO service_role` (qr slots/items/sesiones/valoraciones,
+    reglas_envio, voice_profiles, comanda_modificaciones)
+  - ℹ️ 17 `rls_policy_always_true` intencionales (bridge hardware, QR anon, super_admin) — sin acción
+  - ℹ️ 77 `anon/authenticated_security_definer_function_executable` intencionales (login_pin, resolve_restaurante)
+  - **No quedan pendientes de seguridad accionables en la BD.**
+
+- **🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164 — 12/06/2026**
+  Auditoría completa tras el rename `@iarest/*`→`@central/*`, la migración de BD de ia-rest al Supabase
+  compartido y `file:`→`workspace:*`. Informe en **`docs/AUDITORIA-2026-06.md`**. Skill nuevo
+  **`.claude/skills/auditoria-central`** para repetirla.
+  - **Bugs reales encontrados y ARREGLADOS** (el CI solo cubría ia-rest y no los veía):
+    - `aiComplete(prompt, número)` en `apps/ialimp/lib/{google-leads,mailing}.ts` → debía ser objeto
+      `{maxTokens|timeoutMs}`; el número se ignoraba en runtime (leads truncados a 800 tok; "timeout 8s" era 30s).
+    - `@central/core-identity` usado en 8 ficheros de auth de ialimp **sin estar en deps ni transpilePackages**
+      (todos los `@central/*` exportan TS crudo) → añadido a `package.json` + `next.config.ts`.
+    - **16 errores de tipos de ialimp saldados** → las **4 apps a 0 errores** (`tsc --noEmit`).
+  - **Red de seguridad añadida:** tests de `@central/core-fiscal` (IVA, NIF/CIF/IBAN, huella VeriFactu con
+    snapshot), guardián `test/regression-scope.test.ts` (anti-`@iarest/`), orquestadores `pnpm test`/`test:packages`/
+    `test:guardia`. **Suite: 104 tests, 0 fallos.** CI nuevo `.github/workflows/tests.yml` (tests + typecheck de
+    las 4 apps; antes solo ia-rest).
+  - **Infra verificada por MCP:** BD compartida tiene **499 security advisories (63 ERROR)** — 62 `security_definer_view`,
+    24 `rls_policy_always_true`, 114 `function_search_path_mutable` (sensibles por ser BD multi-tenant; muchos
+    preexisten a la migración). Schema `iarest` sano (266 tablas). Proyecto Supabase viejo de ia-rest
+    (`efncqyvhniaxsirhdxaa`) sigue ACTIVE (jubilar tras el corte de envs).
+  - **✅ Alberto aplicó las 2 migraciones del radar de concursos** (`radar_*` en `concursos_perfil_empresa` +
+    tabla `concursos_radar_anuncios`) → cron `/api/cron/concursos-radar` ya no falla. Verificado en BD.
+  - **✅ MERGEADO a `main`** (PR #164) + **seguimiento PR #166**:
+    - **CI verde de verdad** (no solo local): `Tests & Typecheck` pasa en CI los 104 tests + typecheck de las
+      **4 apps**. **OJO/GOTCHA del CI:** `prisma generate` y `tsc` deben ejecutarse **desde el dir de cada app**
+      (`working-directory: apps/<app>`), NO desde la raíz — `prisma`/`typescript` son deps de cada app, no de la
+      raíz (si no: `ERR_PNPM ... Command "prisma" not found`). Los 3 schemas escriben al MISMO `@prisma/client`,
+      pero en CI cada app va en un job aparte (no colisionan). Este bug rompió `tests.yml` en main y se arregló en #166.
+    - **Vulnerabilidades (M3):** `axios` (high, vía `node-ical`) resuelto con `pnpm.overrides "axios": ">=1.16.0"`
+      en la raíz (→1.17.0); `pnpm audit` baja de 16 high a 1. **`xlsx`** queda (high, sin parche npm) pero es
+      **no explotable**: ialimp solo ESCRIBE xlsx (export contab.), nunca parsea (las vulns son al LEER). Remediación
+      oficial = tarball CDN de SheetJS (bloqueada en el entorno de build; no se arriesga el build del cliente vivo).
+    - `workflow_dispatch` añadido a `ci.yml`/`tests.yml` (estaba mal indentado bajo `pull_request:`, corregido).
+  - **✅ RESUELTO (sesión 12/06/2026):** los **63 advisories ERROR** de la BD compartida → 0 ERROR.
+    Ver entrada nueva arriba. (xlsx queda como remediación opcional, documentada.)
+- **🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado — 12/06/2026**
+  - **`www.iarest.es` lee `wswbehlcuxqxyinousql` schema `iarest`** (BD unificada), NO `efncqyvhniaxsirhdxaa.public`
+    (BD vieja con todos los datos). La unificada tenía estructura+RPCs pero **0 restaurantes / 0 personal** →
+    nadie podía entrar. Diagnóstico: `GET /api/owner/modulos?restaurante_id=...001` devolvía el fallback genérico.
+  - **Reparado (probado):** copiado restaurante demo (...001) + 7 personal a `wswbehlcuxqxyinousql.iarest`,
+    creada+sembrada `materiales`. Verificado (search_path=iarest): `resolve_restaurante('DEMO')` ok, `login_pin`
+    1369 y 4040 → success; endpoint de prod ya devuelve la config del demo. Añadido botón Salir en /montaje.
+  - **⚠️ PENDIENTE GRANDE:** Saboga y demás datos reales **siguen solo en `efncqyvhniaxsirhdxaa.public`**;
+    producción no los ve. Falta migración real de datos (Fase A2 completa) o revertir el env a la BD vieja.
+  - **⚠️ Fragilidad:** las RPCs de `iarest` referencian tablas sin prefijo; dependen del search_path de PostgREST.
+
+- **📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO — 12/06/2026**
+  - Módulo **independiente de eventos** (decisión Alberto: sirve para catering, haciendas y hasta alquiler puro),
+    100% configurable por el dueño, con **acceso granular por empleado** vía `personal.modulos_gestion`.
+  - **Por qué tablas nuevas (no reutilizar `inventario_menaje_evento`):** la vieja tiene FK dura a `eventos` →
+    acopla. Las nuevas viven en schema `iarest`, patrón `produccion_*` (`restaurante_id`, RLS service_role).
+    La asignación apunta a un **destino genérico** (`destino_tipo` = evento|hacienda|cliente|obra), sin FK.
+  - **DB (migración `2026-06-12_materiales.sql`, aplicada a `wswbehlcuxqxyinousql`):** `iarest.materiales`
+    (catálogo + stock), `iarest.materiales_asignacion` (salida/devolución), `iarest.materiales_dano` (rotura+foto+coste).
+  - **API:** `/api/materiales` (catálogo CRUD) · `/api/materiales/asignacion` (asignar descuenta stock / devolver
+    repone sanas) · `/api/materiales/dano` (rotura con foto, da baja del total, coste = ud×reposición) ·
+    `/api/materiales/perfil` (asignaciones del empleado logueado, gated por `modulos_gestion`).
+  - **UI dueño:** `/owner/materiales` (3 tabs: Catálogo · Asignaciones · Roturas) + entrada `materiales` en `GRUPOS`
+    e icono `box`. **UI empleado:** `/montaje` (patrón `/cocinero`: ve su material, marca recogido/devuelto,
+    registra rotura con foto). **Routing:** empleado con `materiales` aterriza en `/montaje`.
+  - **Gating:** `materiales` añadido a `TODOS_MODULOS` y al checklist de "Acceso a gestión" del panel de personal.
+  - **Verificado:** `next build` verde (exit 0) con `@central/*` linkados (pnpm install). Spec en
+    `docs/superpowers/specs/2026-06-12-modulo-materiales-design.md`. PR **#163** (draft, CI verde).
+  - **⚠️ OJO con la BD (corregido):** la BD VIVA de ia-rest es el proyecto **`efncqyvhniaxsirhdxaa`,
+    schema `public`** (ahí están `restaurantes`/`personal`/`inventario_menaje`; demo `DEMO` + "Saboga
+    Catering"). El proyecto compartido `wswbehlcuxqxyinousql.iarest` está VACÍO (la migración A2 del plan
+    de unificación NO se ha ejecutado). Primero creé las tablas en el sitio equivocado; corregido →
+    tablas en `efncqyvhniaxsirhdxaa.public`. (Nota: las tablas `produccion_*`/`checklist_*` de la sesión
+    anterior podrían estar también en el proyecto equivocado — revisar si esas features fallan en prod.)
+  - **🧪 Cuenta DEMO sembrada para probar:** owner **Alberto PIN 1369** → `/owner` → tab **Materiales**
+    (5 materiales con stock, 4 asignaciones, 1 rotura) y `/montaje` (el owner ve todo). Montador
+    **PIN 4040** (rol gestor, acceso solo a `materiales`) → entra directo a `/montaje`. Módulos
+    `materiales/checklists/produccion` activados en el restaurante demo.
+  - **Pendiente del bloque:** previsión IA (aforo/temporada/temperatura), código de barras/báscula, multi-almacén
+    por hacienda con reparto. Crear bucket Storage `materiales` en Supabase (hay fallback a data-url mientras tanto).
+
+- **🎤 DECK presencial JJ + estructura real corregida — 12/06/2026**
+  - **Deck presencial** construido en `apps/ia-rest`: ruta pública **`/propuesta/catering-jj-deck`** (en prod:
+    `https://iarest.es/propuesta/catering-jj-deck`). 11 slides full-screen (nav teclado/clic), paleta de
+    `PropuestaBase`, diagrama del grupo **inline** (componentes `Node`/`Arrow`, sin SVG). PRs **#156** (deck) y
+    **#157** (corrección) mergeados a `main`.
+  - **⚠️ Corrección de estructura real de JJ (manda sobre el brief a ciegas)** — volcada en
+    `docs/BRIEF-joaquin-jaen.md` (nueva sección "⭐ ESTRUCTURA REAL DEL GRUPO" arriba del todo):
+    - **Cocina central (la hermana)** = producción → **produce para eventos/catering** y abastece haciendas.
+    - **Restaurantes `Doble J` y `Las Dos Jotas`** = **independientes, cada uno pide lo suyo** (no dependen de cocina central).
+    - **Haciendas `El Alba` (propiedad) + `Trinidad` (alquiler)** = cada una su unidad (montaje/pases/barra) **con su almacén**.
+    - **NO tienen tiendas para llevar (aún)** · **flota/alquiler-materiales NO confirmados** (eran supuestos del brief a ciegas).
+    - Añadido al brief: **control de almacenes/economato** (almacén por hacienda + cocina central, código de barras,
+      pedido al mínimo, mermas, reparto entre haciendas) y **control de cada hacienda** (calendario/stock/montaje/KDS/barra).
+    - **No nombrar marcas internas ante JJ** (ialimp/sivra/"limpieza"/"pisos") — en el deck se quitó `ialimp` del slide
+      de equipo y se anonimizaron las otras en "ya funciona".
+  - **🔧 En curso (subagente):** enganchar los **accesos de H/I en los menús** (`/owner/checklists`,
+    `/owner/productividad`, `/checklist` camarero, `/cocinero`) — PR aparte, pendiente de revisar/mergear.
+  - **Pendiente:** comisiones/marketplace "de verdad"; tiempos estándar reales de cocina; conectar sistema de cocina de ella.
+
+- **⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real — 11/06/2026**
+  Transcripción analizada y volcada en `docs/BRIEF-joaquin-jaen.md` (sección "POST-REUNIÓN"). Cambia el brief a
+  ciegas. Asistentes: **ella = responsable de todas las cocinas** (perfil técnico fuerte), **él = restaurante +
+  comercial**, Joaquín + otro hermano decisores.
+  - **Hallazgo nº1:** la cocina **NO es campo virgen** — la responsable lleva ~3 años con un sistema propio muy
+    serio (proveedores→artículos con ficha técnica/alérgenos→ingredientes→elaboraciones con procesos→etiquetas QR
+    trazabilidad/caducidad→escandallo dinámico→partes de trabajo por partida 5 días antes→báscula→cronometraje→
+    economato→merma). Más profundo que la cocina de ia-rest. **Es protectora ("es lo mío") y su objeción es el
+    factor humano.** → conectar/co-diseñar con ella, NO reemplazar. Mayor activo y mayor riesgo de adopción.
+  - **Apertura real a corto = comercial + logística (el hermano, el que quiere "probar ya").** Necesita CRM
+    comercial + **incentivos/ranking de comerciales** (bonos por margen/ticket/reseñas, contratos % escalable),
+    ERP facturación/contabilidad, y **logística de material de eventos = dpto. más atrasado** (inventario menaje,
+    previsión por evento, roturas post-boda, consumo estacional) → coincide con `DISENO-modulos-materiales-flota.md`.
+  - **Producto "wow" que quieren:** marketplace de catering + presupuestador self-service (cliente configura evento →
+    menú con margen → paga), multi-tarificador de eventos, bot de bodas, maridaje de vino por IA.
+  - **Plan revisado:** piloto por **Logística/Material** (bajo riesgo político, diseño ya hecho); demo de venta por
+    **marketplace de catering**; cocina = "conectamos con lo que ella ya construyó". Siguiente paso: presentación +
+    piloto 1 dpto.; contacto por WhatsApp de Alberto; ellos mandan resumen.
+  - **Faltan datos:** nº sociedades/CIFs + intercompany; stack exacto del sistema de cocina de ella; tamaño catálogo
+    de material + eventos/mes; estructura de comisiones de los comerciales.
+  - **✅ Bloques H e I CONSTRUIDOS y MERGEADOS a `main` (PR #154):** en `apps/ia-rest`.
+    - **H — Checklist operativo:** tablas `iarest.checklist_plantillas/ejecuciones`; rutas `/api/checklists/*`
+      (plantillas, turno con **índice de carga** leyendo `comandas`, marcar con foto, informe con flag
+      "sin excusa"); pantallas `/checklist` (empleado) y `/owner/checklists` (editor + informe). Bucket
+      Storage `checklists` (público) creado.
+    - **I — Perfil del cocinero + productividad:** tablas `iarest.produccion_tareas/tiempos_estandar`;
+      rutas `/api/produccion/*` (planificar con `callAI` + fallback round-robin, perfil, tiempo
+      empezar/terminar, productividad, cocineros); pantallas `/cocinero` y `/owner/productividad`.
+    - Módulos nuevos `checklists` y `produccion` en `TODOS_MODULOS`. Migraciones aplicadas en BD
+      compartida (schema `iarest`). MVP **manual + IA** (no toca el sistema de cocina de ella).
+    - **Cómo verlo (demo):** entrar por `/login` (owner PIN 1369 → `/owner/checklists` y `/owner/productividad`;
+      camarero 7672 → `/checklist`; cocina 3297 → `/cocinero`). Las rutas aún **no tienen botón en los menús**
+      (creadas como pantallas standalone para no tocar las páginas grandes).
+    - **Pendiente:** enganchar accesos en los menús (`/owner`, camarero, cocina); cargar tiempos estándar reales;
+      conectar el sistema de cocina de ella; **guión/deck** presencial para la próxima reunión.
+  - **Propuestas web refinadas (PR #138, mergeada):** las 4 propuestas `catering-jj*` reposicionan la cocina
+    ("conectamos, no reemplazamos") y añaden las cartas que pidió la familia: **comercial+comisiones**, **material
+    de eventos** (roturas/previsión) y **presupuesto self-service del cliente**. Estas dos últimas se presentan
+    **como si ya existieran** (decisión de Alberto) — **a construir mañana**. Piloto del hub reorientado a
+    material+comercial. **Pendiente mañana:** (1) construir comisiones/marketplace de verdad; (2) **guión/deck**
+    presencial para la próxima reunión.
+
+- **✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding — 11/06/2026**
+  Sesión de preparación para reunión con **Joaquín Jaén** (holding: restaurante, catering, haciendas,
+  alquiler de materiales, transporte, tiendas para llevar). Todo en `main` vía rama `claude/joaquin-jaen-expansion-4nyju5`.
+  - **`docs/BRIEF-joaquin-jaen.md`** — quién es, cómo caben sus 6 negocios (tabla), idea técnica (`Encargo`
+    + intercompany), estado real hoy (hecho vs diseñado), modelo comercial (módulos activables), preguntas
+    clave para cerrar, guion de presentación de ~8 slides.
+  - **`docs/DISENO-modulos-materiales-flota.md`** — diseño a fondo de las dos verticales nuevas (alquiler
+    de materiales + flota/transporte): modelo de datos, ciclo de vida, pantallas, reutilización de módulos,
+    fases sugeridas y qué demostrar a Joaquín.
+  - **Diagramas SVG + PNG** (`docs/diagrams/`):
+    - `joaquin-encargo.svg/.png` — cómo el agregado `Encargo` (parent_id+parent_type) une todos los
+      `module-*` (CRM, presupuestos, agenda, inventario, proveedores, portales, feedback, facturación).
+    - `joaquin-holding-intercompany.svg/.png` — el "gancho holding": cocina central → tiendas, flota →
+      catering, materiales → eventos facturados entre sociedades y consolidados eliminando intercompany en
+      `plataforma` (neto real del grupo).
+  - **`add_concursos.sql` APLICADA** en BD compartida `wswbehlcuxqxyinousql` (schema `public`): tabla
+    `concursos` con 12 columnas + 3 índices. Marca el pendiente de Alberto del #116 como cerrado.
+  - **INFORME unificación** (`docs/INFORME-unificacion-central.md`) planificado en plan mode: estado
+    real de adopción de packages/*, esquema de capas, plan priorizado Fases A–F. Pendiente ejecutar.
+  - **Pendiente (Alberto):** borrar envs `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` de Vercel
+    (plataforma); resetear password + jubilar BD `efncqyvhniaxsirhdxaa`; `DROP iarest._mig_ddl` (opcional).
+    Presentación Joaquín: ejecutar diagramas + ~8 slides.
+
+- **⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):** en el contenedor remoto el **`git push` por HTTPS da `503` de forma persistente** (read/fetch/ls-remote SÍ funcionan; solo el push está bloqueado) → el hook `Stop` de memoria NO puede empujar. **Para escribir en GitHub usa las tools MCP** (`mcp__github__push_files` / `create_or_update_file`) o, para ficheros grandes, **rama temporal vía MCP → PR → `merge_pull_request`**. OJO: `push_files` mete el contenido **inline** y un agente puede **truncarlo** (pasó con este `CONTEXTO`, ~69 KB: quedó en "PENDING"/"PLACEHOLDER" y hubo que restaurarlo). Patrón seguro para ficheros grandes: subir a **rama aparte**, **verificar tamaño/marcadores**, y solo entonces **PR + merge** a `main` (commits `chore:` no redepliegan). Para restaurar un fichero a una versión previa sin retecleo: existe el blob en el historial (`git checkout <sha> -- <fichero>` desde un equipo con push).
+
+- **✅ Gestión de limpiezas para Vanessa + patrones de edición reutilizables — EN PRODUCCIÓN** (backfill 11/06; trabajo del 09/06 que se había perdido de esta memoria al hacer squash-merge)
+  (PR #111 → commit `3e3cc646` · PR #112 → commit `abe64527` · deploys de producción `ialimp` e `ia-rest` verificados READY. El PR #109, que mezclaba ambos trabajos y arrastraba commits de plataforma, se cerró a favor de 2 PRs limpios.)
+  - **IALIMP (gestión de sesiones):** columnas `orden_manual` (int) y `urgente_manual` (bool) en `cleaning_sessions` (migración `2026-06-09_orden_manual_sesiones.sql`, aplicada en Supabase). Vista `sesiones_limpiadora` ampliada con `notas`/`orden_manual`/`urgente_manual`.
+    - `PATCH /api/admin/sesiones/[id]` ampliado (session_date, hora_inicio [TEXT, sin cast], hora_checkout/checkin [::time], num_huespedes, notas, orden_manual, urgente_manual; recalcula ventana; push «⏰ Cambio de horario» si cambia fecha/hora de sesión asignada). Nuevo `POST /api/admin/sesiones/reordenar` (orden manual por día; `reset:true` → auto).
+    - UI en Inicio y Agenda: ✏️ editar (`NuevaLimpiezaModal` modo edición = PATCH + eliminar), ↑↓ reordenar, ⏰ mover día, 🔥 urgente, ⧉ duplicar, filtro ⚠️ sin asignar, aviso de solapamiento. App limpiadora `/l`: chips 🔥/📝 + bloque destacado de notas/urgente antes del checklist.
+    - Docs: `public/manual.html`, `docs/guia-limpiadoras.md` (WhatsApp), `docs/mejoras-vanessa.md` (admin), `apps/ialimp/CLAUDE.md` (sección orden_manual/editar).
+  - **Patrones reutilizables (PR #112):** modo edición (✏️ + PUT) en Stock y Lencería (ialimp); `ProgramacionModal` modo edición (PATCH + eliminar); botones ↑/↓ para reordenar la carta del owner en ia-rest (swap `orden` + PUT).
+  - Nota operativa: el push HTTP del contenedor daba 503 → todo se subió vía `mcp__github__push_files`; los PRs se mergearon con squash.
+
+- **💰 SIVRA pricing: piloto validado + 🏷️ rename scope @central + 🧠 module-revenue Fase 1 — 11/06/2026 (tarde)**
+  Sesión larga. Cuatro hitos:
+  1. **Piloto Busto Reform VALIDADO de punta a punta:** se subió el techo `max_price` 110→**125€** base
+     (`pricing_settings`), se ejecutó `apply` en vivo desde el panel (Alberto pulsó "Aplicar") y el **23/06
+     pasó a 125€ en Smoobu, confirmado por Alberto en el calendario**. Mercado huésped p50 168€; el motor quiere
+     ~144€ base pero el techo del propietario manda (125). El piso está reservado del 11 al 18 → el motor solo
+     toca fechas libres (correcto).
+  2. **🐛 BUG CRÍTICO de la automatización encontrado y reparado:** los crons de pricing daban **401/«CRON_SECRET
+     no definido»** porque el despliegue que los corría era ANTERIOR a que Alberto metiera la env. Diagnosticado
+     con los **logs de runtime de Vercel** (MCP de Vercel, ya conectado): `apply-auto` 08:30 → 401; `guard` ahora
+     → 401 limpio (sin el aviso) = `CRON_SECRET` YA activo en el deploy post-merge. **El cron de mañana 08:30
+     correrá de verdad por primera vez.** (El acceso de Vercel NO pasa el login NextAuth → mis llamadas a
+     `/api/pricing/apply` dan 401; el disparo manual lo hace Alberto con su sesión, o con el secreto.)
+  3. **🏷️ RENAME de scope `@iarest/*` → `@central/*` en TODO el monorepo (PR #147, MERGEADO):** 15 paquetes,
+     deps de las 4 apps, todos los imports, `transpilePackages`, `scripts/auditar-estructura.mjs` y `pnpm-lock.yaml`
+     regenerado. Verificado con las **4 previews de Vercel en verde**. **Principio anotado en `CLAUDE.md`:** los
+     cambios que rompen (renames, reestructuras de BD) **se hacen AHORA, sin clientes** — con clientes ya no.
+     ⚠️ Los PRs abiertos que aún importan `@iarest/*` (#137, #138, #136…) necesitarán rebase a `@central/*`.
+  4. **🧠 `@central/module-revenue` Fase 1 (PR #148, MERGEADO):** paquete **puro y multisector** (patrón
+     `module-concursos`: TS puro, sin BD/red/secretos) de análisis de demanda. Entradas `DemandEvent`/`CapacitySlot`;
+     funciones `occupancyByDow`, `seasonalityByMonth`, `leadTimeStats`, `pickupCurve`, `paceVsBaseline`, `channelMix`,
+     `revenueKpis`, todas con guardia de muestra. **9/9 tests `node --test`** + `tsc` limpio. El mismo cerebro
+     servirá a ia-rest (cubiertos) e ialimp (servicios) con su adapter. Spec:
+     `docs/superpowers/specs/2026-06-11-revenue-module-design.md`; plan: `docs/superpowers/plans/2026-06-11-module-revenue-fase1.md`.
+  - **Diseño aprobado (spec completa, 3 fases):** análisis + **auto-ajuste dentro de límites + freno**, configurable
+    y supervisable **por dueño/piso** (override manual gana, topes min/max = autoridad final). Extras aprobados:
+    **backtest "¿qué habrías ganado?"**, modo por palanca (supervisado/auto), "explica por qué", presets.
+  - **PENDIENTE (siguiente sesión):** **Fase 1b** = cablear SIVRA (adapters `incomes`→`DemandEvent[]`,
+    `rate_snapshots`→`CapacitySlot[]`; endpoint + panel `/revenue` + digest semanal) → aquí Alberto valida la
+    hipótesis "domingos fuertes" con sus datos. Luego **Fase 2** y **Fase 3** (ritmo/antelación, min-stay vía API
+    Smoobu, alarma de "dinero perdido"). Datos ya disponibles: `incomes` = **1.745 reservas reales** (6 años, canal,
+    createdAt, checkIn/out) — no hace falta ingestar nada nuevo.
+  - **Pendiente menor de Alberto:** activar `apply_enabled` en Dúplex/Luxury/House al desconectar PriceLabs.
+
 - **📸 Auditoría agente Instagram (ia.rest) — "no sube nada" RESUELTO — 11/06/2026**
   Síntoma de Alberto: la automatización de Instagram genera pero no publica nada desde el ~2-jun.
   - **Causa raíz (confirmada en vivo):** el **corte de BD del 10-jun**. Producción pasó a leer el schema
@@ -38,6 +554,19 @@
     `ig-test-send` (en ambos proyectos), `tg-webhookinfo` (viejo) e `ig-migrate` (nuevo).
   - **Decisión de producto de Alberto:** mantener el modelo **publicación automática previa autorización en Telegram**
     (no autopublicar sin aprobar).
+- **✅ IALIMP — chat del equipo visible en el menú lateral (PR #114, mergeado a prod) — 10/06/2026**
+  Vanessa (Sique Brilla) probaba el chat con las limpiadoras y no lo encontraba en su panel. El chat
+  (`/admin/chat`) **ya existía y funcionaba**, pero solo era accesible desde la barra inferior del **móvil**;
+  en el **menú lateral del escritorio** (`NAV` en `app/dashboard/DashboardClient.tsx`) no había entrada de chat
+  y el único 💬 era «Asistente» (que es el **ayudante de IA**, `/admin/asistente`) → confusión.
+  - **Fix:** añadida entrada **«💬 Chat equipo» → `/admin/chat`** al menú lateral; el asistente de IA pasa a
+    **«🤖 Asistente IA»** para no chocar el icono 💬. (NOTA: después la rama de Concursos añadió también
+    «🏛️ Concursos» al mismo `NAV`; conviven sin problema.)
+  - `public/manual.html`: sección Chat con la ruta exacta (lateral en escritorio / barra inferior en móvil) +
+    aclaración Chat-equipo vs Asistente-IA + recordatorio de cómo lo ve la limpiadora en `/l`.
+  - Solo navegación + manual. Sin datos, API ni migraciones. **Mergeado a `main` (squash `86bd78a`) y desplegado
+    a producción (`app.ialimp.es`).** Lo de «enviar el enlace» y «editar» que Vanessa también probaba ya iba bien.
+
 - **📡 Concursos — Infra F7: Radar PLACSP en vivo + OCR de pliegos — 11/06/2026 (rama `claude/concursos-radar-ocr-infra`)**
   Cierra la infraestructura de F7 sobre el núcleo puro ya en producción. Spec/plan:
   `docs/superpowers/specs/2026-06-11-concursos-radar-ocr-infra-design.md` · `docs/superpowers/plans/2026-06-11-concursos-radar-ocr-infra.md`.
@@ -226,6 +755,11 @@
   /api/admin/clientes` devuelve solo activos por defecto (`?incluir_inactivos=1` para todos) → limpia todos
   los selectores. UI: filtro Activos/Inactivos + modal de confirmación con resumen + aviso de impagos +
   motivo + botón Reactivar. Spec: `docs/superpowers/specs/2026-06-11-desactivar-cliente-design.md`.
+  **✅ Probado en vivo contra producción** (cliente `[TEST] Pisos Sevilla Centro SL`, sin tocar datos
+  reales): desactivar deja `activo=false` + auditoría `desactivado_*` + `session_jti` rotado (corta sesión
+  del portal) + lo excluye del selector activo y del cron `pms/sync`; reactivar restaura todo y conserva los
+  2 pisos. Ciclo completo verificado y cliente dejado como estaba. Pendiente único: prueba de la UI/HTTP
+  autenticada como Vanessa (no se pudo ejercitar sin su sesión); la capa de datos está verificada.
 
 - **🎛️ God-panel (panel único de operador) F1–F5 en `apps/plataforma/admin` — 10/06/2026 (PR #118)**
   Panel de Alberto que gobierna TODAS las verticales desde un sitio, reutilizando la tabla `superadmins`
@@ -264,9 +798,10 @@
     puente externo — nada en el código apunta ya a `efncqyvhniaxsirhdxaa`.**
   - **PENDIENTE (todo de Alberto, ya nada de unión por mi parte):** borrar de Vercel (plataforma) las envs
     `IAREST_SUPABASE_URL`/`IAREST_SUPABASE_SERVICE_KEY` (ya no se usan); resetear password BD del proyecto viejo
-    (quedó en chat) y **jubilar `efncqyvhniaxsirhdxaa`** cuando lo vea estable; aplicar `add_concursos.sql` (del #116).
-    Opcional/mío con tu OK: `DROP iarest._mig_ddl` (andamiaje de la migración, destructivo). Rollback del corte =
-    revertir las 3 envs de Vercel de ia-rest (el código en `main` sin `NEXT_PUBLIC_SUPABASE_SCHEMA` vuelve a `public`).
+    (quedó en chat) y **jubilar `efncqyvhniaxsirhdxaa`** cuando lo vea estable. ~~`add_concursos.sql` (del #116)~~
+    → **✅ aplicada** (11/06). Opcional/mío con tu OK: `DROP iarest._mig_ddl` (andamiaje de la migración,
+    destructivo). Rollback del corte = revertir las 3 envs de Vercel de ia-rest (el código en `main` sin
+    `NEXT_PUBLIC_SUPABASE_SCHEMA` vuelve a `public`).
   - **Skill `ia-rest-maestro` actualizada:** sección Supabase y tabla de infraestructura apuntan al compartido
     `wswbehlcuxqxyinousql` + schema `iarest` (con nota de fijar el schema en todo cliente/Realtime/EF nuevo).
 - **🏛️ NUEVO módulo `packages/module-concursos` — agente de concursos públicos (v1) — 10/06/2026**
@@ -289,9 +824,9 @@
   - **Roadmap (mismo módulo, fases F2–F9):** biblioteca de empresa, sobre administrativo/DEUC, memoria técnica que
     puntúa, oferta económica + rentabilidad (cruce `module-contabilidad`), plazos/subsanación, presentación lista para
     subir, RAG + radar PLACSP, OCR. Spec del v1: plan aprobado en sesión.
-  - **⚠️ Pendiente de Alberto:** aplicar `add_concursos.sql` en Supabase (BD compartida en vivo — no aplicado desde la
-    sesión a propósito); el v1 lee `NVIDIA_API_KEY` (ya configurada en ialimp). Manual `public/manual.html` y la doc
-    de regla de `apps/ialimp/CLAUDE.md` quedan como follow-up al promover la sección a producción.
+  - **Pendiente de Alberto:** ~~`add_concursos.sql`~~ → **✅ aplicada en BD compartida (11/06)**. El v1 lee
+    `NVIDIA_API_KEY` (ya configurada en ialimp). Manual `public/manual.html` y la doc de regla de
+    `apps/ialimp/CLAUDE.md` quedan como follow-up al promover la sección a producción.
 
 - **✅ SIVRA pricing automático — PRODUCTO COMPLETO mergeado a producción (PR #108) — 10/06/2026**
   De piloto a producto vendible en una sesión. Sobre el motor anclado al mercado + panel `/pricing-auto`:

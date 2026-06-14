@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import { resumenPipeline, type EstadoOportunidad } from '@iarest/module-crm'
+import { resumenPipeline, type EstadoOportunidad } from '@central/module-crm'
 import { leadsEventoAdapter, estadoAGenerico, type LeadEventoRow } from '@/lib/crm-eventos'
 
 const ESTADOS = ['nuevo','contactado','presupuesto_enviado','negociacion','ganado','perdido']
@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
   const { data, error } = await query
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Pipeline stats — delegado a @iarest/module-crm vía el adaptador de eventos.
+  // Pipeline stats — delegado a @central/module-crm vía el adaptador de eventos.
   const oportunidades = (data ?? []).map(l =>
     leadsEventoAdapter.toOportunidad(l as unknown as LeadEventoRow),
   )

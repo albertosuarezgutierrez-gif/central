@@ -6,9 +6,15 @@
   "packageManager": "pnpm@10.33.0",
   "scripts": {
     "auditar": "node scripts/auditar-estructura.mjs",
-    "auditar:check": "node scripts/auditar-estructura.mjs --check"
+    "auditar:check": "node scripts/auditar-estructura.mjs --check",
+    "test": "node --test test/*.test.ts && pnpm -r run test",
+    "test:guardia": "node --test test/*.test.ts",
+    "test:packages": "pnpm -r --filter \"./packages/*\" run test"
   },
   "pnpm": {
+    "overrides": {
+      "axios": ">=1.16.0"
+    },
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",

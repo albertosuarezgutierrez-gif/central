@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { matchesDeAtom } from '@/lib/concursos-radar'
-import type { CriteriosRadar } from '@iarest/module-concursos'
+import type { CriteriosRadar } from '@central/module-concursos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -16,11 +16,11 @@ async function descargarAtom(): Promise<string> {
   let url: string | null = FEED_URL
   const partes: string[] = []
   for (let i = 0; i < MAX_PAGINAS && url; i++) {
-    const res = await fetch(url, { headers: { 'User-Agent': 'ialimp-radar/1.0' }, cache: 'no-store' })
+    const res: Response = await fetch(url, { headers: { 'User-Agent': 'ialimp-radar/1.0' }, cache: 'no-store' })
     if (!res.ok) break
-    const xml = await res.text()
+    const xml: string = await res.text()
     partes.push(xml)
-    const m = xml.match(/<link[^>]+rel=["']next["'][^>]+href=["']([^"']+)["']/i)
+    const m: RegExpMatchArray | null = xml.match(/<link[^>]+rel=["']next["'][^>]+href=["']([^"']+)["']/i)
     url = m ? m[1] : null
   }
   return partes.join('\n')

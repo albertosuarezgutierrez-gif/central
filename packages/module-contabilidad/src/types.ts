@@ -77,3 +77,66 @@ export interface PlantillaRecurrente {
   fecha_inicio: Date
   fecha_fin?: Date
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// Cuadre de caja (tesorería operativa)
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Movimiento del libro de caja (PORT — cada vertical normaliza sus filas de
+ * `movimientos_caja` a este tipo). `importe` lleva el signo ya aplicado
+ * (salidas negativas), igual que se almacena en BD.
+ */
+export interface MovimientoCaja {
+  tipo: string // 'apertura' | 'cobro_efectivo' | 'cambio' | 'retiro' | 'gasto' | 'arqueo' | 'cierre' | …
+  importe: number
+  desglose_monedas?: Record<string, number> | null
+  // Atribución al empleado (para el cuadre por empleado). Opcional: null = caja general.
+  camarero_id?: string | null
+  camarero_nombre?: string | null
+}
+
+/** Resultado del cuadre de caja de un turno/día. */
+export interface CuadreCaja {
+  fondo_inicial: number // fondo de apertura
+  cobros_efectivo: number // cobros en efectivo registrados
+  salidas_caja: number // retiros + gastos pagados del cajón (positivo)
+  saldo_teorico: number // lo que debería haber en el cajón según el sistema
+  fondo_final: number // conteo físico real
+  diferencia_caja: number // fondo_final − saldo_teorico (+ sobra, − falta)
+  conteo_realizado: boolean // false si no hubo conteo físico
+}
+
+/** Cuadre atribuido a un empleado (modo "caja por empleado"). */
+export interface CuadreEmpleado {
+  camarero_id: string | null // null = caja general (sin empleado asignado)
+  camarero_nombre: string | null
+  cuadre: CuadreCaja
+}
+
+/** Fila histórica de un arqueo por empleado (tal como se persiste en BD). */
+export interface FilaArqueoEmpleado {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  fecha: string // 'YYYY-MM-DD'
+  diferencia_caja: number
+  conteo_realizado: boolean
+}
+
+/** Resumen agregado del descuadre de un empleado en un rango de fechas. */
+export interface ResumenDescuadreEmpleado {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  num_cierres: number // cierres con conteo físico realizado
+  descuadre_total: number // suma de diferencias (con signo)
+  descuadre_medio: number // media por cierre con conteo
+  peor_descuadre: number // el de mayor valor absoluto (con signo)
+  racha_negativa: number // nº de cierres más recientes consecutivos en negativo
+  patron_recurrente: boolean // racha_negativa ≥ umbral → posible merma sistemática
+}
+
+/** Punto de la serie temporal de descuadre (para la tendencia). */
+export interface PuntoSerieDescuadre {
+  fecha: string // 'YYYY-MM-DD'
+  diferencia_caja: number
+}

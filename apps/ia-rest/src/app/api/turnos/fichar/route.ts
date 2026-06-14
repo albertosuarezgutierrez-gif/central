@@ -21,6 +21,15 @@ export async function POST(req: NextRequest) {
   const supabase = createServerClient()
   const ip = getIP(req)
 
+  // Anti-fraude: validación de IP del centro (config_horario.validar_ip_local).
+  // Si está activo y hay whitelist, solo se ficha entrada desde la red del local.
+  const { data: cfgIp } = await supabase
+    .from('config_horario').select('validar_ip_local, ips_local')
+    .eq('local_id', session.restaurante_id).maybeSingle()
+  if (cfgIp?.validar_ip_local && Array.isArray(cfgIp.ips_local) && cfgIp.ips_local.length && !cfgIp.ips_local.includes(ip)) {
+    return NextResponse.json({ error: 'Fichaje no permitido desde esta red. Conéctate al wifi del local.' }, { status: 403 })
+  }
+
   const { data, error } = await supabase.rpc('fichar_entrada', {
     p_camarero_id:    session.id,
     p_restaurante_id: session.restaurante_id,

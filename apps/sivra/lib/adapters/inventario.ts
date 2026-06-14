@@ -1,9 +1,8 @@
-// Adapter de inventario para sivra → @iarest/module-inventario
-// SIVRA solo tiene un catálogo de productos de referencia (sin stock operativo,
-// sin consumos por sesión, sin kits). Solo se mapea Articulo; AsignacionActivo
-// no aplica en esta vertical actualmente.
-import type { Articulo, ArticuloAdapter } from '@iarest/module-inventario'
-export { resumenStock, valorStock } from '@iarest/module-inventario'
+// Adapter de inventario para sivra → @central/module-materiales
+// SIVRA tiene un catálogo de productos de referencia (sin stock operativo en tiempo real).
+// Solo se mapea Material; AsignacionMaterial no aplica actualmente.
+import type { Material, MaterialAdapter } from '@central/module-materiales'
+export { resumenStock, valorStock } from '@central/module-materiales'
 
 export interface ProductoRow {
   id: string
@@ -19,37 +18,37 @@ export interface ProductoRow {
   activo: boolean
 }
 
-export const articuloAdapter: ArticuloAdapter<ProductoRow> = {
-  toArticulo(row): Articulo {
+export const articuloAdapter: MaterialAdapter<ProductoRow> = {
+  toMaterial(row): Material {
     return {
       id: row.id,
+      negocioId: '',
       nombre: row.nombre,
       descripcion: row.notas ?? null,
       categoria: row.categoria,
-      // SIVRA no gestiona stock operativo: las cantidades se modelan como 0
-      // (catálogo de referencia, no inventario en tiempo real).
+      tipo: 'consumible',
+      estado: 'operativo',
       cantidadTotal: 0,
       cantidadDisponible: 0,
-      costeUnitario: row.precio_unitario ?? null,
-      proveedorNombre: null,
-      imagenUrl: null,
+      precioCompra: row.precio_unitario ?? 0,
+      costeReposicion: row.precio_unitario ?? 0,
+      codigo: row.referencia,
       activo: row.activo,
-      createdAt: null,
     }
   },
-  fromArticulo(a: Articulo): ProductoRow {
+  fromMaterial(m): ProductoRow {
     return {
-      id: a.id,
-      nombre: a.nombre,
-      referencia: null,
-      categoria: a.categoria,
+      id: m.id,
+      nombre: m.nombre,
+      referencia: m.codigo ?? null,
+      categoria: m.categoria,
       subcategoria: null,
       unidad: 'unidad',
-      precio_unitario: a.costeUnitario ?? null,
+      precio_unitario: m.costeReposicion ?? null,
       iva_porcentaje: 21,
       proveedor_id: null,
-      notas: a.descripcion ?? null,
-      activo: a.activo,
+      notas: m.descripcion ?? null,
+      activo: m.activo,
     }
   },
 }

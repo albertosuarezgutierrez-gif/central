@@ -1,5 +1,5 @@
 {
-  "name": "@iarest/core-push",
+  "name": "@central/core-push",
   "version": "0.0.0",
   "private": true,
   "description": "Núcleo de Web Push compartido (casa de marcas): envoltura pura e identity-agnostic sobre web-push (configurar VAPID + enviar + detectar suscripción muerta). Sin BD ni estado de inquilino: el scope/payload/borrado los pone cada vertical. Primer núcleo con dependencia npm propia (web-push) habilitado por pnpm workspaces.",

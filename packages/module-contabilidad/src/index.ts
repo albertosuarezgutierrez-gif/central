@@ -8,6 +8,12 @@ export type {
   ResumenTesoreria,
   RentabilidadEntidad,
   PlantillaRecurrente,
+  MovimientoCaja,
+  CuadreCaja,
+  CuadreEmpleado,
+  FilaArqueoEmpleado,
+  ResumenDescuadreEmpleado,
+  PuntoSerieDescuadre,
 } from './types'
 
 // IVA
@@ -18,6 +24,13 @@ export { calcularPyG } from './pyg'
 
 // Tesorería
 export { calcularTesoreria } from './tesoreria'
+
+// Cuadre / arqueo de caja
+export {
+  calcularCuadreCaja, calcularCuadrePorEmpleado, totalDesglose, DENOMINACIONES_EUR,
+  resumirDescuadresEmpleado, detectarPatronRecurrente, serieDescuadreEmpleado,
+} from './caja'
+export type { OpcionesCuadre } from './caja'
 
 // Rentabilidad por entidad
 export { calcularRentabilidad } from './rentabilidad'

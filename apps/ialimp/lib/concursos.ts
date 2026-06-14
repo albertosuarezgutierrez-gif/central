@@ -1,10 +1,10 @@
-// Adaptador de ialimp para el módulo @iarest/module-concursos.
+// Adaptador de ialimp para el módulo @central/module-concursos.
 // El módulo es puro: aquí inyectamos (a) el AiRunner respaldado por core-ai y
 // (b) la extracción de texto del PDF del pliego. Los secretos (NVIDIA_API_KEY)
 // viven en la app, nunca en el módulo.
 
-import type { AiRunner } from '@iarest/module-concursos'
-import { aiComplete } from '@iarest/core-ai'
+import type { AiRunner } from '@central/module-concursos'
+import { aiComplete } from '@central/core-ai'
 
 /**
  * Puerto del LLM para el módulo de concursos: envía system+user al proveedor

@@ -1,11 +1,11 @@
 // Adaptador de proveedores de evento: mapea `proveedores_evento_asignaciones` al modelo
-// genérico de @iarest/module-proveedores (ProveedorServicio), reutilizando el cálculo de
+// genérico de @central/module-proveedores (ProveedorServicio), reutilizando el cálculo de
 // comisiones. La asignación cuelga del Encargo vía parent={evento}.
 import type {
   EstadoProveedorServicio,
   ProveedorServicio,
   ProveedorServicioAdapter,
-} from '@iarest/module-proveedores'
+} from '@central/module-proveedores'
 
 // Mapeo de estado dominio -> genérico (el dominio usa 'comision_cobrada').
 const A_GENERICO: Record<string, EstadoProveedorServicio> = {

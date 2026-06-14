@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
-import { calcOurs } from "@/lib/pricing-calendar"
+import { calcOurs, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? "vqOXOSDtA7p80Fp~.ezOXPn_zPYq99gC"
+const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE       = "https://login.smoobu.com/api"
 
 const PROPS = [
@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
   }
   const today        = new Date()
   const startDate    = fmtDate(today)
-  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + 7)
+  const endDay       = new Date(today); endDay.setDate(endDay.getDate() + PRICING_HORIZON_DAYS)
   const endDate      = fmtDate(endDay)
   const snapshotDate = startDate
 
@@ -45,15 +45,21 @@ export async function GET(req: NextRequest) {
       const plRates: Record<string, { price: number; available: number; min_length_of_stay: number }> =
         (await res.json()).data?.[prop.smoobuId] ?? {}
 
-      // Iterar los 21 días y hacer upsert individual (Hobby 10s limit)
+      // Construir las filas de la ventana (PRICING_HORIZON_DAYS) y hacer UN solo upsert multi-fila
+      // por piso (1 INSERT por día serían cientos de round-trips → riesgo de timeout del cron).
+      const rows: Prisma.Sql[] = []
       const cur = new Date(today)
       while (cur <= endDay) {
         const dateStr = fmtDate(cur)
         const pl      = plRates[dateStr]
+        rows.push(Prisma.sql`(${prop.propId}, ${dateStr}::date, ${snapshotDate}::date, ${pl?.price != null ? Math.round(pl.price) : null}::integer, ${calcOurs(prop.base, dateStr)}::integer, ${pl?.available != null ? (pl.available ? 1 : 0) : null}::smallint, ${pl?.min_length_of_stay ?? null}::smallint)`)
+        cur.setDate(cur.getDate() + 1)
+      }
+      if (rows.length) {
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO rate_snapshots
             (property_id, rate_date, snapshot_date, price_pricelabs, price_ours, available, min_stay)
-          VALUES (${prop.propId}, ${dateStr}::date, ${snapshotDate}::date, ${pl?.price != null ? Math.round(pl.price) : null}::integer, ${calcOurs(prop.base, dateStr)}::integer, ${pl?.available != null ? (pl.available ? 1 : 0) : null}::smallint, ${pl?.min_length_of_stay ?? null}::smallint)
+          VALUES ${Prisma.join(rows)}
           ON CONFLICT (property_id, rate_date, snapshot_date)
           DO UPDATE SET
             price_pricelabs = EXCLUDED.price_pricelabs,
@@ -62,8 +68,7 @@ export async function GET(req: NextRequest) {
             min_stay        = EXCLUDED.min_stay,
             updated_at      = NOW()
         `)
-        upserted++
-        cur.setDate(cur.getDate() + 1)
+        upserted += rows.length
       }
     } catch (e) {
       errors.push(`${prop.propId}: ${String(e).slice(0, 100)}`)

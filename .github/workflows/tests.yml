@@ -1,0 +1,67 @@
+name: Tests & Typecheck
+
+# Casa de marcas: el CI histórico (ci.yml) solo cubría apps/ia-rest. Este workflow
+# añade (1) la suite de tests de los packages compartidos + el guardián de regresión,
+# y (2) el typecheck del RESTO de verticales (sivra, plataforma, ia-rest), que el
+# build de cada app NO valida (varias apps llevan `typescript.ignoreBuildErrors`).
+# Ver docs/AUDITORIA-2026-06.md.
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: tests-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ── Tests de los módulos compartidos + guardián anti-scope-viejo ─────────────
+  test:
+    name: Tests (packages + guardián)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'        # 22 = strip-types nativo para `node --test`
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      - name: Test (guardián + packages)
+        run: pnpm test
+
+  # ── Typecheck de TODAS las verticales (bloqueante) ──────────────────────────
+  # Las 4 apps están a 0 errores de tipos tras la auditoría (ver docs/AUDITORIA-2026-06.md).
+  typecheck:
+    name: Typecheck · ${{ matrix.app }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        app: [ia-rest, ialimp, sivra, plataforma]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install
+        run: pnpm install --no-frozen-lockfile
+      # prisma y typescript son deps de cada APP (no de la raíz) → se ejecutan
+      # DESDE el dir de la app, igual que su build, para que pnpm los resuelva.
+      - name: Prisma generate + TypeScript check
+        working-directory: apps/${{ matrix.app }}
+        run: |
+          if [ -f "prisma/schema.prisma" ]; then
+            pnpm exec prisma generate
+          fi
+          pnpm exec tsc --noEmit -p tsconfig.json

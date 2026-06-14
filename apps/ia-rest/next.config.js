@@ -2,7 +2,7 @@ const path = require('path')
 
 // Casa de marcas: ia-rest vive en apps/ia-rest; los packages compartidos están en
 // ../../packages. Declaramos la raíz del monorepo para que Turbopack/tracing resuelvan
-// los @iarest/* (consumidos vía `file:` deps → node_modules/@iarest/*) fuera de apps/ia-rest.
+// los @central/* (consumidos vía `file:` deps → node_modules/@central/*) fuera de apps/ia-rest.
 const monorepoRoot = path.join(__dirname, '..', '..')
 
 /** @type {import('next').NextConfig} */
@@ -12,7 +12,7 @@ const nextConfig = {
   // SUPABASE_SERVICE_ROLE_KEY: solo server-side, configurada en Vercel (nunca hardcodear aquí)
 
   // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
-  transpilePackages: ['@iarest/core-ai', '@iarest/core-fiscal', '@iarest/core-push'],
+  transpilePackages: ['@central/core-ai', '@central/core-fiscal', '@central/core-push'],
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
 }

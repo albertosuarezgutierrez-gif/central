@@ -135,7 +135,7 @@ const RULES: Rule[] = [
         "Usar estado: 'nueva' | 'en_curso' | 'lista' | 'cerrada'",
         lines,
         filePath,
-        /estado\s*:\s*['"](?:pendiente|abierta)['"]/,
+        /estado\s*:\s*['"](pendiente|abierta)['"]/ ,
         /\/\//
       )
     },
@@ -206,13 +206,14 @@ const RULES: Rule[] = [
   // Colors: ink sobre fondo oscuro
   {
     id: 'no-ink-on-dark-background',
-    description: 'C.ink usado como color de texto sobre fondo C.dark/C.bg (usar C.dkFg)',
+    description: 'C.ink (texto oscuro de tema claro) usado sobre superficie oscura C.dark* (usar C.dkFg)',
     severity: 'warn',
     check(content, lines, filePath) {
       const results: Violation[] = []
       lines.forEach((line, i) => {
-        // Patrón: background: C.dark... + color: C.ink en la misma línea
-        if (/background\s*:\s*C\.(?:dark|bg\d?)/.test(line) && /color\s*:\s*C\.ink(?!\d)/.test(line)) {
+        // Solo superficies REALMENTE oscuras de la paleta canónica (C.dark, C.dark1/2...).
+        // C.bg/bg1/bg2/bg3 son claras (cream) → ink oscuro encima es correcto, no se marca.
+        if (/background\s*:\s*C\.dark/.test(line) && /color\s*:\s*C\.ink(?!\d)/.test(line)) {
           results.push({
             rule: 'no-ink-on-dark-background',
             file: filePath,

@@ -31,6 +31,13 @@ type Resultados = {
   por_piso: { property_id: string; noches_aplicadas: number; noches_reservadas: number; extra_eur: number | null; pendientes: number }[]
 }
 type HistRow = { property_id: string; rate_date: string; old_price: number | null; new_price: number; dry_run: boolean; created_at: string }
+type PilotRow = {
+  property_id: string; tracked_on: string; verdict: "verde" | "amarillo" | "rojo"
+  days_since_booking: number | null; free_nights_60: number | null; occupancy_60: number | null
+  current_base: number | null; market_p50_guest: number | null; extra_eur: number | null
+  diagnosis: string | null; proposal: string | null; open_horizon_days: number | null
+  recommended_base: number | null
+}
 
 const NUM_FIELDS: { key: keyof Settings; label: string; step: number; hint: string }[] = [
   { key: "target_pctl",     label: "Percentil objetivo", step: 0.05, hint: "0–1 · dónde te posicionas (0.5 = mediana)" },
@@ -73,6 +80,8 @@ export default function PricingAutoPage() {
   const [hist, setHist] = useState<Record<string, HistRow[]>>({})
   const [pushMsg, setPushMsg] = useState("")
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [pilot, setPilot] = useState<Record<string, PilotRow>>({})
+  const [pilotBusy, setPilotBusy] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true); setLoadError(null)
@@ -81,10 +90,12 @@ export default function PricingAutoPage() {
       if (sr.status === 401) { window.location.href = "/login?callbackUrl=/pricing-auto"; return }
       if (!sr.ok) throw new Error(`settings ${sr.status}`)
       const s = await sr.json()
-      const [c, r] = await Promise.all([
+      const [c, r, pt] = await Promise.all([
         fetch("/api/pricing/config", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
         fetch("/api/pricing/resultados", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
+        fetch("/api/pricing/pilot-track/historial", { cache: "no-store" }).then(x => x.json()).catch(() => ({})),
       ])
+      if (pt?.ok) setPilot(pt.ultimo ?? {})
       if (s.ok) {
         setProps(s.properties)
         const d: Record<string, Settings> = {}
@@ -164,6 +175,14 @@ export default function PricingAutoPage() {
     if (j?.ok) setHist(h => ({ ...h, [id]: j.historial }))
   }
 
+  const runPilot = async () => {
+    setPilotBusy(true)
+    try {
+      await fetch("/api/pricing/pilot-track", { method: "POST" }).catch(() => null)
+      await load()
+    } finally { setPilotBusy(false) }
+  }
+
   const enablePush = async () => {
     setPushMsg("…")
     try {
@@ -219,6 +238,41 @@ export default function PricingAutoPage() {
         <button onClick={enablePush} style={{ ...btn("#475569", false), padding: "12px 18px" }}>🔔 Avisos en este móvil</button>
         {pushMsg && <span style={{ fontSize: 12, color: pushMsg.startsWith("✓") ? C.ok : C.warn }}>{pushMsg}</span>}
       </div>
+
+      {/* Seguimiento del piloto (agente) */}
+      {Object.keys(pilot).length > 0 && (
+        <div style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "14px 16px", marginBottom: 16 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>🛰️ Seguimiento del piloto</div>
+            <button onClick={runPilot} disabled={pilotBusy} style={{ ...btn(C.green, pilotBusy), padding: "6px 12px", fontSize: 12 }}>
+              {pilotBusy ? "…" : "Ejecutar ahora"}
+            </button>
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {Object.values(pilot).map((p) => {
+              const color = p.verdict === "rojo" ? C.warn : p.verdict === "amarillo" ? "#B45309" : C.ok
+              const dot = p.verdict === "rojo" ? "🔴" : p.verdict === "amarillo" ? "🟡" : "🟢"
+              const name = props.find(x => x.property_id === p.property_id)?.name ?? p.property_id
+              return (
+                <div key={p.property_id} style={{ flex: "1 1 280px", border: `1px solid ${C.line}`, borderLeft: `3px solid ${color}`, borderRadius: 8, padding: "10px 12px" }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: C.ink }}>{dot} {name}</div>
+                  <div style={{ fontSize: 12, color: C.soft, margin: "4px 0" }}>{p.diagnosis}</div>
+                  <div style={{ fontSize: 11, color: C.soft }}>
+                    Sin reserva: <b style={{ color: C.ink }}>{p.days_since_booking ?? "?"}d</b> ·
+                    Libres 60d: <b style={{ color: C.ink }}>{p.free_nights_60 ?? "?"}</b> ·
+                    Base: <b style={{ color: C.ink }}>{p.current_base ?? "?"}€</b> ·
+                    Recomendado: <b style={{ color: C.green }}>{p.recommended_base ?? "?"}€</b> ·
+                    Mercado: <b style={{ color: C.ink }}>{p.market_p50_guest ?? "?"}€</b> ·
+                    Calendario: <b style={{ color: p.open_horizon_days != null && p.open_horizon_days < 60 ? C.warn : C.ink }}>{p.open_horizon_days ?? "?"}d</b>
+                  </div>
+                  {p.proposal && <div style={{ fontSize: 12, color: "#1e40af", marginTop: 4 }}>💡 {p.proposal}</div>}
+                  <div style={{ fontSize: 10, color: C.soft, marginTop: 4 }}>act. {p.tracked_on}</div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
       {paused && (
         <div style={{ background: "#FEF3C7", border: "1px solid #FCD34D", borderRadius: 8, padding: "8px 12px", marginBottom: 14, fontSize: 13, color: "#92400E", fontWeight: 600 }}>
           ⏸ Motor PAUSADO — no se escribirá ningún precio en Smoobu (ni el cron ni «Aplicar»).

@@ -73,8 +73,8 @@ const config: ClienteConfig = {
     { titulo: 'Personal de evento con fichaje real', desc: 'Extras y fijos fichando por QR. Sabes exactamente cuántas horas trabajó cada persona en cada celebración — el coste de personal deja de ser una estimación.' },
   ],
 
-  objecionPrincipal: '"Para eventos ya tenemos nuestra forma de trabajar."',
-  respuestaObjecion: 'Lo entiendo. Empezamos solo con el stock centralizado — lo que más duele hoy. El KDS y el personal lo añades cuando quieras, sin tocar nada de lo que ya funciona.',
+  objecionPrincipal: '"Para eventos ya tenemos nuestra forma de trabajar, y la cocina funciona."',
+  respuestaObjecion: 'Lo que funciona se queda: la cocina no se toca, nos conectamos a ella. Empezamos por el material de eventos —roturas, previsión, inventario post-boda— que es lo que hoy se lleva por vídeo y papel. El resto lo añadís cuando queráis.',
 
   fasePiloto: [
     {
@@ -107,6 +107,20 @@ const config: ClienteConfig = {
   ],
 
   modulos: [
+    {
+      emoji: '🪑',
+      titulo: 'Material de eventos',
+      color: C.red,
+      sub: 'Menaje, roturas y previsión por boda',
+      ruta: '',
+      desc: 'Catálogo de mesas, sillas, vajilla y cristalería con stock real en las tres haciendas. Cada evento descuenta lo que sale; al cerrar la boda registras las roturas con foto y se liquidan solas.',
+      ejemplos: [
+        'Previsión de material y bebida por aforo, temporada y temperatura',
+        'Inventario post-boda con parte de roturas y foto — sin recuento por vídeo',
+        'Aviso si no llega el material para los eventos cerrados de la semana',
+      ],
+      roi: 'Saber qué tienes, qué se rompió y qué hace falta — el dato, no la intuición.',
+    },
     {
       emoji: '🍽️',
       titulo: 'KDS por pases',

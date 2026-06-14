@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import { calcularComision, totalComisiones, comisionesCobradas } from '@iarest/module-proveedores'
+import { calcularComision, totalComisiones, comisionesCobradas } from '@central/module-proveedores'
 import { proveedorServicioAdapter, type ProveedorAsignacionRow } from '@/lib/proveedores-evento'
 
 export async function GET(req: NextRequest) {
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     .select('*, proveedor:proveedores_evento(nombre, tipo, contacto_telefono, contacto_email, token_portal, portal_activo)')
     .eq('evento_id', evento_id).eq('local_id', restauranteId).order('created_at')
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  // Sumas de comisiones — delegadas a @iarest/module-proveedores vía el adaptador.
+  // Sumas de comisiones — delegadas a @central/module-proveedores vía el adaptador.
   const servicios = (data ?? []).map(p => proveedorServicioAdapter.toServicio(p as unknown as ProveedorAsignacionRow))
   return NextResponse.json({
     asignaciones: data,

@@ -1,7 +1,7 @@
-// ia.rest · Service Worker v7
+// ia.rest · Service Worker v8
 // Estrategia: HTML siempre network, _next/static cache-first (immutable), push
 
-const STATIC_CACHE = 'iarest-static-v7'
+const STATIC_CACHE = 'iarest-static-v8'
 const OFFLINE_URL = '/offline.html'
 
 // Solo pre-cachear assets estáticos que no cambian entre deploys
@@ -12,7 +12,7 @@ const PRECACHE_STATIC = [
   '/icon-512.png',
 ]
 
-// ── INSTALL ──────────────────────────────────────────────────
+// ── INSTALL ────────────────────────────────────────────
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(STATIC_CACHE)
@@ -21,7 +21,7 @@ self.addEventListener('install', e => {
   )
 })
 
-// ── ACTIVATE: limpiar caches viejos ──────────────────────────
+// ── ACTIVATE: limpiar caches viejos ────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
@@ -32,7 +32,7 @@ self.addEventListener('activate', e => {
   )
 })
 
-// ── FETCH ────────────────────────────────────────────────────
+// ── FETCH ────────────────────────────────────────────
 self.addEventListener('fetch', e => {
   const { request } = e
   if (request.method !== 'GET') return
@@ -78,7 +78,10 @@ self.addEventListener('fetch', e => {
   //    Solo fallback a offline si no hay red en absoluto
   e.respondWith(
     fetch(request, { cache: 'no-cache' })
-      .then(res => res)
+      // Una respuesta redirigida (p. ej. apex iarest.es → www.iarest.es) NO se puede
+      // devolver a una navegación: el navegador la rechaza con "This page couldn't load".
+      // Reemitimos la redirección para que el navegador la siga él mismo.
+      .then(res => res.redirected ? Response.redirect(res.url, 302) : res)
       .catch(async () => {
         const cached = await caches.match(request)
         if (cached) return cached
@@ -90,12 +93,12 @@ self.addEventListener('fetch', e => {
   )
 })
 
-// ── MESSAGE: forzar activación desde useServiceWorkerUpdate ─
+// ── MESSAGE: forzar activación desde useServiceWorkerUpdate ─‐
 self.addEventListener('message', e => {
   if (e.data?.type === 'SKIP_WAITING') self.skipWaiting()
 })
 
-// ── PUSH ─────────────────────────────────────────────────────
+// ── PUSH ───────────────────────────────────────────────
 self.addEventListener('push', e => {
   if (!e.data) return
   let payload
@@ -116,7 +119,7 @@ self.addEventListener('push', e => {
   )
 })
 
-// ── NOTIFICATION CLICK ────────────────────────────────────────
+// ── NOTIFICATION CLICK ────────────────────────────────
 self.addEventListener('notificationclick', e => {
   e.notification.close()
   const url = e.notification.data?.url || '/edge'

@@ -2,10 +2,10 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
-import { eventFactor } from "@/lib/pricing-calendar"
+import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300
 
 // POST /api/pricing/apply
 //
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
 
   const sp = req.nextUrl.searchParams
   const onlyProp = sp.get("property")               // opcional: aplicar a un solo piso
-  const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), 60)
+  const days = Math.min(Math.max(Number(sp.get("days") ?? 14), 1), PRICING_HORIZON_DAYS)
   let dryRun = sp.get("dryRun") !== "false"         // por defecto TRUE (no escribe)
 
   // 🔴 Botón de pánico / pausa global: si está pausado, NUNCA escribe (degrada a dry-run).
@@ -220,11 +220,15 @@ export async function POST(req: NextRequest) {
     }
 
     // 3) Auditoría (registra lo aplicado o lo que se habría aplicado en dry-run).
-    for (const a of audit) {
+    //    UN solo INSERT multi-fila, no uno por fecha: a 365d son cientos de filas y los
+    //    round-trips en serie agotaban el maxDuration (timeout 504). Mismo patrón que el snapshot.
+    if (audit.length > 0) {
       try {
+        const auditRows = audit.map(a =>
+          Prisma.sql`(${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun})`)
         await prisma.$executeRaw(Prisma.sql`
           INSERT INTO pricing_applied (property_id, rate_date, old_price, new_price, dry_run)
-          VALUES (${r.property_id}, ${a.rate_date}::date, ${a.old_price}::int, ${a.new_price}::int, ${dryRun})`)
+          VALUES ${Prisma.join(auditRows)}`)
       } catch { /* no crítico */ }
     }
 

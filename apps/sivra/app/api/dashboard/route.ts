@@ -140,7 +140,8 @@ export async function GET(req: NextRequest) {
     const gastosCount = parseInt(gk.gastoscount   || "0")
     const beneficio   = ingresos - gastos
     const margen      = ingresos > 0 ? Math.round((beneficio / ingresos) * 100) : 0
-    const delta = (a: number, b: number) => b === 0 ? 0 : Math.round(((a - b) / b) * 100)
+    // Sin base de comparación (periodo previo a 0): si ahora hay valor es "nuevo" (null → UI "nuevo"), no 0%.
+    const delta = (a: number, b: number): number | null => b === 0 ? (a > 0 ? null : 0) : Math.round(((a - b) / b) * 100)
     const adr = noches > 0 ? Math.round(ingresos / noches) : 0
 
     return NextResponse.json({

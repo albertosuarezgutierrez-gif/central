@@ -1,8 +1,8 @@
-// → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @iarest/module-concursos)
+// → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion } from '@iarest/module-concursos';
-import type { Biblioteca } from '@iarest/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion } from '@central/module-concursos';
+import type { Biblioteca } from '@central/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
@@ -65,6 +65,9 @@ export default function Concursos() {
 
       {/* Radar de oportunidades (F7) */}
       <div style={{ maxWidth:760, width:'100%' }}><RadarPanel /></div>
+
+      {/* Buscador de pliegos */}
+      <div style={{ maxWidth:760, width:'100%' }}><BuscadorPanel /></div>
 
       {/* Entrada */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, maxWidth:760, width:'100%', marginBottom:16 }}>
@@ -400,6 +403,85 @@ function RadarPanel() {
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function BuscadorPanel() {
+  const [f, setF] = useState<any>({ q:'', cpv:'', provincia:'', presupuesto_min:'', presupuesto_max:'', en_plazo:true, orden:'relevancia' });
+  const [res, setRes] = useState<any[]>([]);
+  const [total, setTotal] = useState(0);
+  const [cargando, setCargando] = useState(false);
+  const [hecha, setHecha] = useState(false);
+
+  const buscar = async () => {
+    setCargando(true);
+    const p = new URLSearchParams();
+    if (f.q) p.set('q', f.q);
+    if (f.cpv) p.set('cpv', f.cpv);
+    if (f.provincia) p.set('provincia', f.provincia);
+    if (f.presupuesto_min) p.set('presupuesto_min', f.presupuesto_min);
+    if (f.presupuesto_max) p.set('presupuesto_max', f.presupuesto_max);
+    p.set('en_plazo', f.en_plazo ? '1' : '0');
+    p.set('orden', f.orden);
+    const r = await fetch('/api/admin/concursos/radar/buscar?' + p.toString()).then(r=>r.json()).catch(()=>null);
+    setRes(r?.resultados ?? []); setTotal(r?.total ?? 0); setHecha(true); setCargando(false);
+  };
+
+  const guardarComoAlerta = async () => {
+    await fetch('/api/admin/concursos/radar/criterios', {
+      method:'PUT', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({
+        activo: true,
+        cpv: f.cpv ? f.cpv.split(',').map((s:string)=>s.trim()).filter(Boolean) : [],
+        palabras_clave: f.q ? f.q.split(/\s+/).filter(Boolean) : [],
+        presupuesto_min: f.presupuesto_min || null, presupuesto_max: f.presupuesto_max || null,
+      }),
+    });
+    alert('Búsqueda guardada como alerta del radar ✅');
+  };
+
+  const dias = (iso:string) => { if(!iso) return null; const d=Math.ceil((new Date(iso).getTime()-Date.now())/86400000); return d; };
+
+  return (
+    <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
+      <strong style={{ fontSize:15 }}>🔎 Buscar concursos</strong>
+      <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8, margin:'10px 0' }}>
+        <input placeholder="Buscar por texto (objeto)…" value={f.q} onChange={e=>setF({...f,q:e.target.value})} onKeyDown={e=>{ if(e.key==='Enter') buscar(); }} />
+        <input placeholder="CPV (coma, por prefijo)" value={f.cpv} onChange={e=>setF({...f,cpv:e.target.value})} />
+        <input placeholder="Provincia" value={f.provincia} onChange={e=>setF({...f,provincia:e.target.value})} />
+        <div style={{ display:'flex', gap:6 }}>
+          <input placeholder="€ mín" value={f.presupuesto_min} onChange={e=>setF({...f,presupuesto_min:e.target.value})} style={{ width:'50%' }} />
+          <input placeholder="€ máx" value={f.presupuesto_max} onChange={e=>setF({...f,presupuesto_max:e.target.value})} style={{ width:'50%' }} />
+        </div>
+      </div>
+      <div style={{ display:'flex', gap:14, alignItems:'center', flexWrap:'wrap', fontSize:13 }}>
+        <label style={{ display:'flex', gap:6, alignItems:'center' }}><input type="checkbox" checked={f.en_plazo} onChange={e=>setF({...f,en_plazo:e.target.checked})} /> Solo en plazo</label>
+        <label style={{ display:'flex', gap:6, alignItems:'center' }}>Orden:
+          <select value={f.orden} onChange={e=>setF({...f,orden:e.target.value})}>
+            <option value="relevancia">Relevancia</option>
+            <option value="cierre">Cierran antes</option>
+            <option value="presupuesto">Mayor presupuesto</option>
+          </select>
+        </label>
+        <button onClick={buscar} disabled={cargando} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, cursor:'pointer' }}>{cargando?'Buscando…':'Buscar'}</button>
+        {hecha && <button onClick={guardarComoAlerta} style={{ background:'transparent', border:`1px solid ${C.border}`, borderRadius:8, padding:'8px 12px', fontSize:13, cursor:'pointer' }}>🔔 Guardar como alerta</button>}
+      </div>
+
+      {hecha && <div style={{ fontSize:12, color:C.muted, marginTop:10 }}>{total} resultado{total===1?'':'s'}</div>}
+      <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:8 }}>
+        {res.map(a => { const d = dias(a.fin_presentacion); return (
+          <div key={a.id} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:10 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
+              <strong style={{ fontSize:14 }}>{a.titulo}</strong>
+              {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700 }}>{d<0?'cerrado':`${d} d`}</span>}
+            </div>
+            <div style={{ fontSize:12, color:C.muted }}>{a.organo}{a.provincia?` · ${a.provincia}`:''}{a.presupuesto?` · ${Number(a.presupuesto).toLocaleString('es-ES')} €`:''}</div>
+            <div style={{ fontSize:12, marginTop:4 }}>{(a.cpv||[]).slice(0,4).join(' · ')}</div>
+            {a.url && <a href={a.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
+          </div>
+        ); })}
       </div>
     </div>
   );

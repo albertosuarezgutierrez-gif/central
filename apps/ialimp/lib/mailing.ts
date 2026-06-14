@@ -73,7 +73,7 @@ export async function aiOpener(p: ProspectoLite): Promise<string> {
     `No saludes ("Hola"), no inventes datos concretos; solo la frase de apertura.`
   try {
     // Timeout corto: si la IA tarda, no bloquea el envío → usa el gancho de reserva.
-    const out = (await aiComplete(prompt, 8000)).trim().replace(/^["'\s]+|["'\s]+$/g, '')
+    const out = (await aiComplete(prompt, { timeoutMs: 8000 })).trim().replace(/^["'\s]+|["'\s]+$/g, '')
     return out.split('\n')[0].slice(0, 240)
   } catch {
     return `Imagino que en ${p.empresa_nombre} cuadrar quién limpia cada piso se lleva más horas de las que te gustaría.`

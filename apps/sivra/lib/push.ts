@@ -1,4 +1,4 @@
-import { sendWebPush } from "@iarest/core-push"
+import { sendWebPush } from "@central/core-push"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 

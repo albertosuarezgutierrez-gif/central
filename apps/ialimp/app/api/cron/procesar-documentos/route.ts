@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { nimVision } from '@iarest/core-ai'
+import { nimVision } from '@central/core-ai'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
 const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'

@@ -6,11 +6,12 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "eslint"
   },
   "dependencies": {
-    "@iarest/core-identity": "workspace:*",
-    "@iarest/module-contabilidad": "workspace:*",
+    "@central/core-ai": "workspace:*",
+    "@central/core-identity": "workspace:*",
+    "@central/module-contabilidad": "workspace:*",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.105.1",
     "bcryptjs": "^2.4.3",
@@ -26,6 +27,8 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
     "typescript": "^5"
   }
 }

@@ -4,6 +4,11 @@
 > curado a mano). Sirve para no perder contexto entre sesiones y para alimentar la pestaña
 > **Estructura** del god-panel (`apps/plataforma/lib/estructura.ts`).
 > Última auditoría: 2026-06-11.
+>
+> **🗺️ Mapa vivo interactivo:** panel `/admin` → pestaña **Estructura** (`apps/plataforma/app/admin/MapaArquitectura.tsx`):
+> diagrama apps↔módulos, buscador, drill-down por nodo (tablas, APIs, dependencias, clientes en vivo,
+> conectar módulos), chat IA, salud, glosario y novedades. **Para sesiones nuevas de Claude** (sin abrir la app):
+> lee **`docs/ARQUITECTURA.generated.md`** — el mismo mapa en markdown, regenerado en cada push.
 
 ## 0. Resumen de un vistazo
 - **Verticales (apps/*):** 4 — `plataforma` (matriz), `ia-rest`, `ialimp`, `sivra`.
@@ -54,7 +59,7 @@ para crecer a verticales nuevas (alquiler de materiales, transporte, clínica/ci
 | `module-crm` | Pipeline comercial genérico (oportunidades/leads) anclado a un Encargo. | ⏳ (ia-rest/ialimp tienen el suyo propio) |
 | `module-presupuestos` | Líneas, costes, descuentos y cálculo de margen/rentabilidad. | ⏳ |
 | `module-proveedores` | Catálogo de proveedores + servicios con comisiones. | ⏳ |
-| `module-inventario` | Catálogo de artículos + asignación de activos a un Encargo. | ⏳ |
+| `module-materiales` | Materiales físicos y consumibles: catálogo, espacios, transferencias, contabilidad de compra y roturas. | ✅ ia-rest, ialimp, sivra |
 | `module-asn` | Aviso de envío/recepción de mercancía con líneas (lote, caducidad). | ⏳ (ia-rest tiene ASN propio) |
 | `module-feedback` | Reseñas/valoraciones + propinas por Encargo o token público. | ⏳ |
 

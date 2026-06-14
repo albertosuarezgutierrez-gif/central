@@ -72,8 +72,8 @@ const config: ClienteConfig = {
     { titulo: 'Personal externo con coste real', desc: 'Extras fichando por QR en el servicio. Al cerrar el evento, el coste de personal es exacto — no estimado.' },
   ],
 
-  objecionPrincipal: '"El catering tiene mucha variabilidad. No sé si un sistema encaja."',
-  respuestaObjecion: 'La variabilidad es exactamente el problema que resuelve. Empezamos solo con el presupuestador — el que más tiempo te ahorra — y ves si encaja con tu forma de trabajar.',
+  objecionPrincipal: '"La cocina central ya tiene su sistema, y el catering tiene mucha variabilidad."',
+  respuestaObjecion: 'El sistema de cocina no se toca: nos conectamos a él. Empezamos por el comercial y el presupuesto self-service del cliente, que es lo que más eventos cierra, y la variabilidad —que es justo lo que un sistema ordena— la vas viendo encajar.',
 
   fasePiloto: [
     {
@@ -107,18 +107,46 @@ const config: ClienteConfig = {
 
   modulos: [
     {
+      emoji: '🎯',
+      titulo: 'Comercial y comisiones',
+      color: C.red,
+      sub: 'CRM de eventos + incentivos del equipo',
+      ruta: '',
+      desc: 'Cada comercial con su pipeline de eventos. ia.rest calcula su comisión y su ranking automáticamente: bono por margen, por ticket más alto y por reseñas, con el % escalable de su contrato.',
+      ejemplos: [
+        'Ranking del equipo en tiempo real: quién vende con más margen',
+        'Bono automático por ticket más caro y por reseñas del cliente',
+        'Contrato con % escalable: sube solo al alcanzar objetivos',
+      ],
+      roi: 'El equipo se autogestiona y ves quién aporta — sin cuadrar comisiones a mano.',
+    },
+    {
+      emoji: '💍',
+      titulo: 'Presupuesto self-service del cliente',
+      color: C.amber,
+      sub: 'El cliente configura su evento y reserva',
+      ruta: 'URL pública para el cliente',
+      desc: 'Una URL donde el cliente final monta su evento —aforo, días, menú con tu margen ya incorporado— y reserva con paga y señal. El comercial recibe el lead ya cualificado.',
+      ejemplos: [
+        'El cliente elige entre opciones de menú con tu margen objetivo',
+        'Multi-tarificador: el precio se ajusta solo al aforo y al tipo de evento',
+        'Cobro online con señal — el evento entra directo en la agenda',
+      ],
+      roi: 'Cualificas y cierras eventos fuera de horario. El comercial llega con el trabajo medio hecho.',
+    },
+    {
       emoji: '📋',
-      titulo: 'Escandallos por evento',
+      titulo: 'Escandallos conectados',
       color: C.gold,
       sub: '',
       ruta: '',
-      desc: 'Crea el escandallo de cada menú una vez. ia.rest multiplica automáticamente por el aforo y genera la lista de compra completa del servicio al instante.',
+      desc: 'Tu sistema de cocina se queda como está: ia.rest se conecta a él. El escandallo de cada menú se multiplica por el aforo y alimenta el presupuesto y la lista de compra — sin reescribir lo que ya tienes cargado.',
       ejemplos: [
-        'Menú degustación 200 personas → lista de compra en 5 segundos',
+        'El escandallo que ya haces, enlazado al presupuesto y a la compra',
         'Cambio de aforo → todos los géneros se recalculan solos',
         'Coste por comensal en tiempo real antes de dar precio',
       ],
-      roi: 'Para 50 servicios al año, el presupuestador recupera semanas de trabajo.',
+      roi: 'Cero doble trabajo: lo de cocina no se reemplaza, se aprovecha en presupuesto y compra.',
     },
     {
       emoji: '💶',
@@ -133,6 +161,20 @@ const config: ClienteConfig = {
         'PDF de presupuesto con tu marca listo para enviar',
       ],
       roi: 'El que responde antes con un presupuesto serio se lleva el evento.',
+    },
+    {
+      emoji: '👨‍🍳',
+      titulo: 'Perfil del cocinero + productividad',
+      color: C.green,
+      sub: 'Trabajo organizado por IA y cronometrado',
+      ruta: 'Perfil de cada cocinero',
+      desc: 'Cada cocinero entra a su perfil y encuentra el trabajo del día ya organizado y secuenciado por la IA, con el tiempo estimado de cada elaboración. ia.rest compara el tiempo real con el estándar para medir la productividad de cada partida.',
+      ejemplos: [
+        'Trabajo del día repartido y secuenciado por partida, anticipado',
+        'Tiempo estimado por elaboración — planificado por adelantado',
+        'Productividad real vs estándar por cocinero, con datos',
+      ],
+      roi: 'Anticipas el trabajo y sabes —con datos, no con sensaciones— si cada partida es productiva.',
     },
     MODULO_RRHH({ roi: 'Personal externo fichando por QR en cada servicio. El coste de personal por catering — exacto, no estimado.' }),
     MODULO_EVENTOS({

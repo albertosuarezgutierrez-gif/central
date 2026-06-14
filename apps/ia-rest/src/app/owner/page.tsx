@@ -28,7 +28,9 @@ import EtiquetasTab from '@/components/owner/EtiquetasTab'
 import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
 import PagosProveedorTab from '@/components/owner/PagosProveedorTab'
 import ContabilidadTab from '@/components/owner/ContabilidadTab'
+import HorarioTab from '@/components/owner/HorarioTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
+import AgenteModuloChat from '@/components/owner/AgenteModuloChat'
 import ModulosTab from '@/components/owner/ModulosTab'
 import NuevaEntradaPesoModal from '@/components/owner/NuevaEntradaPesoModal'
 import MiWebTab from '@/components/owner/MiWebTab'
@@ -221,6 +223,7 @@ const ICONS = {
   phone: 'M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.77 3.19 2 2 0 0 1 3.74 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.5a16 16 0 0 0 6.59 6.59l.97-1.04a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z',
   qr: 'M3 7V5a2 2 0 0 1 2-2h2M17 3h2a2 2 0 0 1 2 2v2M21 17v2a2 2 0 0 1-2 2h-2M7 21H5a2 2 0 0 1-2-2v-2',
   globe: 'M12 2a10 10 0 1 0 0 20A10 10 0 0 0 12 2zM2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z',
+  box: 'M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.27 6.96L12 12.01l8.73-5.05M12 22.08V12',
 }
 
 const ZONA_LABEL: Record<string, string> = { salon: 'Salón', terraza: 'Terraza', barra: 'Barra' }
@@ -651,6 +654,7 @@ function CamarerosTab() {
                 { key: 'escaner',       label: 'Escáner IA',    desc: 'Escaneo e importación de albaranes y facturas de proveedor.' },
                 { key: 'analytics',     label: 'Analytics',     desc: 'Métricas de ventas, tiempos y rendimiento del servicio.' },
                 { key: 'asistente',     label: 'Asistente IA',  desc: 'Chat con IA para resolver dudas de gestión y tareas del día.' },
+                { key: 'materiales',    label: 'Materiales',    desc: 'Menaje y activos: material asignado, entrega/devolución y partes de rotura con foto. Para montadores de eventos.' },
               ] as { key: string; label: string; desc: string }[]).map(m => (
                 <label key={m.key} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', marginBottom: 9 }}>
                   <input type="checkbox"
@@ -7614,6 +7618,21 @@ const GRUPOS = [
     ]
   },
   {
+    // Checklists: pantalla standalone (editor de plantillas + informe). Enlace directo.
+    id: 'checklists', label: 'Checklists', icon: ICONS.check, modulo: 'checklists', href: '/owner/checklists',
+    tabs: [],
+  },
+  {
+    // Productividad: cuadro de productividad de cocina (standalone). Enlace directo.
+    id: 'productividad', label: 'Productividad', icon: ICONS.chart, modulo: 'produccion', href: '/owner/productividad',
+    tabs: [],
+  },
+  {
+    // Materiales: catálogo + asignaciones + roturas (standalone). Enlace directo.
+    id: 'materiales', label: 'Materiales', icon: ICONS.box, modulo: 'materiales', href: '/owner/materiales',
+    tabs: [],
+  },
+  {
     // Auditoría: separado del resto porque es legal/fiscal — consulta periódica o ante incidencias
     id: 'auditoria', label: 'Auditoría', icon: ICONS.alertTriangle, modulo: null,
     tabs: [
@@ -7623,6 +7642,7 @@ const GRUPOS = [
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
       { id: 'mensajes',       label: 'Mensajes',       icon: ICONS.users         }, // auditoría de chat entre roles
       { id: 'fichajes',       label: 'Fichajes',       icon: ICONS.clock         }, // registro jornada RD-ley 8/2019
+      { id: 'horario',        label: 'Jornada',        icon: ICONS.clock         }, // informe legal de jornada + config
     ]
   },
 ]
@@ -8465,6 +8485,21 @@ export default function OwnerPage() {
             // Bloquear si modulosActivos está restringido y el grupo requiere módulo no activo
             const bloqueado = modulosActivos !== null && (g as any).modulo && !modulosActivos.includes((g as any).modulo)
             if (bloqueado) return null // ocultar grupos bloqueados directamente
+            // Grupos con href = pantalla standalone: enlace directo (no tab interno)
+            const href = (g as any).href as string | undefined
+            if (href) {
+              return (
+                <a key={g.id} href={href}
+                  style={{ flexShrink:0, display:'flex', alignItems:'center', gap:5,
+                    padding:'8px 12px', borderRadius:6, border:'none', cursor:'pointer',
+                    background: C.paper2, color: C.ink3, textDecoration:'none',
+                    fontFamily:SN, fontSize:13, fontWeight:600,
+                    transition:'all .15s', whiteSpace:'nowrap' }}>
+                  <Icon d={g.icon} size={14}/>
+                  <span className="owner-tab-lbl">{g.label}</span>
+                </a>
+              )
+            }
             return (
               <button key={g.id}
                 onClick={() => setTab(g.tabs[0].id)}
@@ -8528,6 +8563,7 @@ export default function OwnerPage() {
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'pagos'          && <PagosProveedorTab sh={sh} />}
             {tab === 'contabilidad'   && <ContabilidadTab sh={sh} />}
+            {tab === 'horario'        && <HorarioTab sh={sh} />}
             {tab === 'escandallos'    && <EscandallosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'etiquetas'      && <EtiquetasTab sh={sh} />}
             {tab === 'turno'          && <TurnoTab/>}
@@ -9072,6 +9108,19 @@ function AlmacenTab({ sh, restauranteId }: { sh: () => Record<string,string>; re
           <button onClick={() => setModalPeso(true)} style={{ fontFamily:SN, fontSize:13, fontWeight:600, padding:'8px 14px', background:'#3F7D44', color:'#fff', border:'1px solid #2d5c31', borderRadius:8, cursor:'pointer' }}>
             ⚖ Por peso
           </button>
+          <AgenteModuloChat
+            titulo="Compras & Stock"
+            emoji="🛒"
+            apiRoute="/api/owner/agente-compras"
+            sh={sh}
+            restauranteId={restauranteId}
+            sugerencias={[
+              '¿Qué artículos están bajo mínimos?',
+              '¿Tengo pedidos pendientes?',
+              '¿Cómo creo un pedido a proveedor?',
+              '¿Cómo recibo mercancía con OCR?',
+            ]}
+          />
         </div>
       </div>
 

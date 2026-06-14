@@ -3,8 +3,8 @@ import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { aiRunner } from '@/lib/concursos'
-import { planificarMemoria, construirPromptMemoria, coberturaMemoria } from '@iarest/module-concursos'
-import type { SeccionMemoriaRellena } from '@iarest/module-concursos'
+import { planificarMemoria, construirPromptMemoria, coberturaMemoria } from '@central/module-concursos'
+import type { SeccionMemoriaRellena } from '@central/module-concursos'
 
 export const maxDuration = 60
 
