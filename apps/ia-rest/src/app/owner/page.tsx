@@ -28,6 +28,7 @@ import EtiquetasTab from '@/components/owner/EtiquetasTab'
 import ProveedorFichaModal from '@/components/owner/ProveedorFichaModal'
 import PagosProveedorTab from '@/components/owner/PagosProveedorTab'
 import ContabilidadTab from '@/components/owner/ContabilidadTab'
+import HorarioTab from '@/components/owner/HorarioTab'
 import OwnerCopiloto from '@/components/owner/OwnerCopiloto'
 import AgenteModuloChat from '@/components/owner/AgenteModuloChat'
 import ModulosTab from '@/components/owner/ModulosTab'
@@ -7641,6 +7642,7 @@ const GRUPOS = [
       { id: 'modificaciones', label: 'Modificaciones', icon: ICONS.alertTriangle }, // ante incidencias / revisión
       { id: 'mensajes',       label: 'Mensajes',       icon: ICONS.users         }, // auditoría de chat entre roles
       { id: 'fichajes',       label: 'Fichajes',       icon: ICONS.clock         }, // registro jornada RD-ley 8/2019
+      { id: 'horario',        label: 'Jornada',        icon: ICONS.clock         }, // informe legal de jornada + config
     ]
   },
 ]
@@ -8561,6 +8563,7 @@ export default function OwnerPage() {
             {tab === 'proveedores'    && <ProveedoresTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'pagos'          && <PagosProveedorTab sh={sh} />}
             {tab === 'contabilidad'   && <ContabilidadTab sh={sh} />}
+            {tab === 'horario'        && <HorarioTab sh={sh} />}
             {tab === 'escandallos'    && <EscandallosTab sh={sh} restauranteId={session.restaurante_id} />}
             {tab === 'etiquetas'      && <EtiquetasTab sh={sh} />}
             {tab === 'turno'          && <TurnoTab/>}
