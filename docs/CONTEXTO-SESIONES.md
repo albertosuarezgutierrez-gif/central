@@ -16,6 +16,35 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED) — 14/06/2026**
+  Sesión a raíz de un problema EN VIVO de Vanessa (Sique Brilla): al subir limpiezas le salía **"No autenticado"**
+  y, al elegir cliente en *Nueva limpieza*, *"Este cliente no tiene propiedades creadas"* (FALSO: AITANA ORTIZ
+  MOGOLLON tiene 7 pisos, verificado en Supabase). Diagnóstico: su sesión era rechazada (sesión única: un 2º login
+  desde el móvil rotaba el `session_jti` y **expulsaba** al portátil), y las rutas `/api/admin/*` devolvían el
+  fallo de auth como **500 `{error:'No autenticado'}`** que el modal se tragaba mostrando "sin pisos".
+  - **PR #231 (MERGED)** — `lib/tenant.ts`: clase `AuthError` (401) + helper `apiError(e)` (401 si AuthError, 500
+    si no); rutas `propiedades`/`sesiones`/`sesiones[id]` lo usan. `NuevaLimpiezaModal` distingue 401 (sesión
+    cerrada → aviso + `/login`), error de carga (mensaje + reintentar) y "sin pisos" real.
+  - **PR #233 (MERGED)** — **2º login = BLOQUEO con aviso, NO expulsión** (decisión de Alberto: mantener 1
+    dispositivo). Migración **`2026-06-14_sesion_activa.sql`** (flag `sesion_activa` en `empresas` y
+    `usuarios_empresa`, APLICADA en Supabase). `/api/auth/login` y `login-usuario`: si `sesion_activa` y no
+    `forzar` → **409 `{sesion_abierta:true}`**; `/login` muestra «Ya hay una sesión abierta» + botón **«Entrar
+    aquí y cerrar la otra»** (reintenta con `forzar:true`, rota jti y expulsa al otro). `/api/auth/logout` pone
+    `sesion_activa=false` (sin tocar jti, para no resucitar tokens por la regla de gracia). Sin lockout: el forzar
+    siempre entra. El propietario (`clientes`) sigue con expulsión por jti.
+  - **PR #234 (MERGED)** — respondiendo a Vanessa («¿dónde salen incidencias, el OK de la limpieza y el chat?»):
+    (1) **Pantalla de Incidencias** `/admin/incidencias` (menú **⚠️ Incidencias**) + `GET/PUT /api/admin/incidencias`
+    (tabla `incidencias` sin `empresa_id`, se acota por `property_id IN (sesiones de la empresa)`; urgentes primero;
+    marcar resuelta/reabrir con nota; foto por proxy `photoSrc`). Antes solo llegaba el push, no había vista.
+    (2) **Revisar limpieza HECHA**: `GET /api/admin/sesiones/[id]/completions` (lee `session_completions`) + botón
+    **«📷 Ver limpieza»** en Inicio → modal con fotos + checklist + horas de entrada/salida.
+    (3) **Guard de sesión global** `components/SessionGuard.tsx` (en `app/layout.tsx`): parchea `window.fetch`,
+    si una respuesta de `/api/admin/*` es sesión cerrada (401 o cuerpo "No autenticado") redirige a `/login` en
+    toda la app. (4) Carga rápida: ya cubierto por «Duplicar» + programaciones recurrentes (solo se documentó).
+  - Las 3 PRs con **preview de ialimp verde** antes de mergear (cliente en vivo). `CLAUDE.md` y `public/manual.html`
+    actualizados (menú Incidencias, "Ver limpieza", aviso de sesión única). **Chat con el equipo** ya existía:
+    menú **💬 Chat equipo** (`/admin/chat`). **OK de limpieza** = estado «✓ Hecha» en Inicio + filtro «Hechas».
+
 - **🧹 IALIMP: "Agenda" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`) — 14/06/2026**
   Vanessa (Sique Brilla) no encontraba dónde ver/repartir las limpiezas **por limpiadora**. La pantalla
   `/admin/agenda` (cuadrante semanal con una fila por limpiadora + panel "Asignar limpiadora por día") **ya
