@@ -29,7 +29,7 @@ function pgcDe(cat: string): string {
 }
 
 export type MovParaCategorizar = { id: string; concepto: string | null; contraparte: string | null; importe: number }
-export type Categorizacion = { id: string; categoria: Categoria; conceptoNormalizado: string; categoriaPgc: string }
+export type Categorizacion = { id: string; categoria: Categoria; conceptoNormalizado: string; categoriaPgc: string; requiereRevision: boolean }
 
 // Clasifica un lote en una sola llamada IA. Devuelve [] si no hay IA o falla.
 export async function categorizarLote(movs: MovParaCategorizar[]): Promise<Categorizacion[]> {
@@ -40,25 +40,32 @@ export async function categorizarLote(movs: MovParaCategorizar[]): Promise<Categ
   ).join('\n')
 
   const system = `Eres un contable español. Clasificas movimientos bancarios.
-Para cada uno devuelve su categoría (UNA de: ${CATEGORIAS.join(', ')}) y un "concepto" legible
-y breve (máx 60 chars, en español, sin códigos crípticos). Un CARGO suele ser proveedor, nómina,
+Para cada uno devuelve su categoría (UNA de: ${CATEGORIAS.join(', ')}), un "concepto" legible
+y breve (máx 60 chars, en español, sin códigos crípticos) y "revisar": true SOLO si NO estás
+seguro de la categoría (caso dudoso o ambiguo). Un CARGO suele ser proveedor, nómina,
 impuestos, suministros, alquiler, comisión, tarjeta, préstamo o seguro; un ABONO suele ser
-cobro_cliente o transferencia. Responde SOLO un array JSON: [{"i":0,"categoria":"...","concepto":"..."}].`
+cobro_cliente o transferencia. Responde SOLO un array JSON:
+[{"i":0,"categoria":"...","concepto":"...","revisar":false}].`
 
   try {
-    const raw = await aiComplete(lista, { system, maxTokens: 1200, temperature: 0.1, timeoutMs: 20_000 })
-    const parsed = JSON.parse(cleanJSON(raw)) as Array<{ i: number; categoria: string; concepto: string }>
+    const raw = await aiComplete(lista, { system, maxTokens: 1400, temperature: 0.1, timeoutMs: 20_000 })
+    const parsed = JSON.parse(cleanJSON(raw)) as Array<{ i: number; categoria: string; concepto: string; revisar?: boolean }>
     if (!Array.isArray(parsed)) return []
     const out: Categorizacion[] = []
     for (const p of parsed) {
       const mov = movs[p.i]
       if (!mov) continue
-      const categoria = ((CATEGORIAS as readonly string[]).includes(p.categoria) ? p.categoria : 'otros') as Categoria
+      const valida = (CATEGORIAS as readonly string[]).includes(p.categoria)
+      const categoria = (valida ? p.categoria : 'otros') as Categoria
+      // Pedir revisión cuando la IA lo marca, cuando devolvió algo fuera de la taxonomía,
+      // o cuando cayó en 'otros' (cajón de "no lo tengo claro").
+      const requiereRevision = p.revisar === true || !valida || categoria === 'otros'
       out.push({
         id: mov.id,
         categoria,
         conceptoNormalizado: (p.concepto || mov.concepto || '').slice(0, 80),
         categoriaPgc: pgcDe(categoria),
+        requiereRevision,
       })
     }
     return out
@@ -91,11 +98,42 @@ export async function analizarMovimientos(cuentaId: string, limite = 60): Promis
     const res = await prisma.$executeRaw`
       UPDATE movimientos_bancarios
       SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
-          categoria_pgc = ${c.categoriaPgc}, analizado_at = now()
+          categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision}, analizado_at = now()
       WHERE id = ${c.id}::uuid
         AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
     `
     n += Number(res)
   }
   return { categorizados: n }
+}
+
+// Asignación MANUAL de categoría por el dueño (resuelve un "por revisar"). Valida la
+// categoría, deriva la cuenta PGC y quita la marca de revisión. Scoped por cuenta_id.
+export async function asignarCategoria(cuentaId: string, movimientoId: string, categoria: string): Promise<boolean> {
+  if (!(CATEGORIAS as readonly string[]).includes(categoria)) return false
+  const res = await prisma.$executeRaw`
+    UPDATE movimientos_bancarios
+    SET categoria = ${categoria}, categoria_pgc = ${pgcDe(categoria)},
+        requiere_revision = false, analizado_at = now()
+    WHERE id = ${movimientoId}::uuid
+      AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
+  `
+  return Number(res) > 0
+}
+
+// Categoriza los movimientos pendientes de TODAS las cuentas que tengan alguno sin analizar
+// (lo usa el cron diario tras sincronizar los bancos). Devuelve el total categorizado.
+export async function categorizarPendientesTodas(): Promise<{ cuentas: number; categorizados: number }> {
+  const cuentas = await prisma.$queryRaw<Array<{ cuenta_id: string }>>`
+    SELECT DISTINCT cb.cuenta_id
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE mb.analizado_at IS NULL
+  `
+  let categorizados = 0
+  for (const c of cuentas) {
+    const r = await analizarMovimientos(c.cuenta_id, 120).catch(() => ({ categorizados: 0 }))
+    categorizados += r.categorizados
+  }
+  return { cuentas: cuentas.length, categorizados }
 }

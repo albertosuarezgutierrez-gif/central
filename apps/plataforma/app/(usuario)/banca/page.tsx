@@ -1,9 +1,9 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientos, fmtEur } from '@/lib/banca'
+import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, fmtEur } from '@/lib/banca'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -19,11 +19,12 @@ export default async function BancaPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const [sociedades, saldo, movimientos, tesoreria] = await Promise.all([
+  const [sociedades, saldo, movimientos, tesoreria, porRevisar] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientos(session.id, undefined, 100),
     getTesoreria(session.id),
+    listarPorRevisar(session.id),
   ])
 
   return (
@@ -93,6 +94,19 @@ export default async function BancaPage() {
               ))}
             </div>
           </section>
+        )}
+
+        {/* Por revisar (IA dudó) — el dueño asigna categoría */}
+        {porRevisar.length > 0 && (
+          <RevisarBandeja
+            movimientos={porRevisar.map(m => ({
+              id: m.id,
+              fecha: m.fechaOperacion,
+              concepto: m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento',
+              importe: m.importe,
+            }))}
+            categorias={Object.entries(CAT_LABEL).map(([value, label]) => ({ value, label }))}
+          />
         )}
 
         {/* Movimientos */}

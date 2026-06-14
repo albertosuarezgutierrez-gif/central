@@ -241,3 +241,52 @@ const lbl: React.CSSProperties = { display: 'flex', flexDirection: 'column', gap
 const input: React.CSSProperties = { border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 10px', fontSize: '14px', background: 'var(--bg)', color: 'var(--text)' }
 const cancel: React.CSSProperties = { background: 'transparent', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', cursor: 'pointer', color: 'var(--text)' }
 const submitBtn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
+
+// Bandeja "Por revisar": la IA dudó de la categoría; el dueño la asigna con un desplegable.
+export function RevisarBandeja({ movimientos, categorias }: {
+  movimientos: Array<{ id: string; fecha: string | null; concepto: string; importe: number }>
+  categorias: Array<{ value: string; label: string }>
+}) {
+  const router = useRouter()
+  const [pendientes, setPendientes] = useState(movimientos)
+  const [guardando, setGuardando] = useState<string | null>(null)
+
+  async function asignar(id: string, categoria: string) {
+    if (!categoria) return
+    setGuardando(id)
+    const res = await fetch('/api/banca/revisar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ movimientoId: id, categoria }),
+    })
+    setGuardando(null)
+    if (res.ok) {
+      setPendientes(p => p.filter(m => m.id !== id))
+      router.refresh()
+    }
+  }
+
+  if (pendientes.length === 0) return null
+  return (
+    <section style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Por revisar ({pendientes.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la categoría de estos movimientos. Asígnasela tú con un clic.</p>
+      <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        {pendientes.map((m, i) => (
+          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+            <select defaultValue="" disabled={guardando === m.id} onChange={e => asignar(m.id, e.target.value)} style={{ ...input, flexShrink: 0, width: '152px' }}>
+              <option value="" disabled>{guardando === m.id ? 'Guardando…' : 'Categoría…'}</option>
+              {categorias.map(c => <option key={c.value} value={c.value}>{c.label}</option>)}
+            </select>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function eur(n: number): string {
+  return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
+}
