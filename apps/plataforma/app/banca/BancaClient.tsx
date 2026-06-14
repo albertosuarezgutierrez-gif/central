@@ -160,6 +160,79 @@ export function SubirFacturaBtn() {
   )
 }
 
+// Conexión automática del banco vía Open Banking (PSD2/GoCardless): elige banco +
+// sociedad, crea el consentimiento y redirige al banco para autorizar.
+export function ConectarBancoBtn({ sociedades }: { sociedades: SociedadOpt[] }) {
+  const [open, setOpen] = useState(false)
+  const [insts, setInsts] = useState<Array<{ id: string; name: string }>>([])
+  const [estado, setEstado] = useState<'cargando' | 'ok' | 'no-config' | 'error'>('cargando')
+  const [sociedadId, setSociedadId] = useState(sociedades[0]?.id ?? '')
+  const [instId, setInstId] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [err, setErr] = useState('')
+
+  async function abrir() {
+    setOpen(true); setEstado('cargando'); setErr('')
+    const res = await fetch('/api/banca/psd2/instituciones?country=ES')
+    const data = await res.json().catch(() => ({}))
+    if (data.disponible === false) { setEstado('no-config'); return }
+    if (!res.ok) { setEstado('error'); setErr(data.error || 'Error'); return }
+    setInsts(data.instituciones || []); setInstId(data.instituciones?.[0]?.id ?? ''); setEstado('ok')
+  }
+
+  async function conectar(e: React.FormEvent) {
+    e.preventDefault()
+    if (!instId || !sociedadId) return
+    setLoading(true); setErr('')
+    const inst = insts.find(i => i.id === instId)
+    const res = await fetch('/api/banca/psd2/conectar', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sociedadId, institutionId: instId, institutionNombre: inst?.name }),
+    })
+    const data = await res.json().catch(() => ({}))
+    setLoading(false)
+    if (!res.ok || !data.link) { setErr(data.error || 'No se pudo crear el consentimiento'); return }
+    window.location.href = data.link   // redirige al banco para autorizar
+  }
+
+  if (sociedades.length === 0) return null
+  return (
+    <>
+      <button onClick={abrir} style={ghost}>🏦 Conectar banco (auto)</button>
+      {open && (
+        <div style={overlay} onClick={() => setOpen(false)}>
+          <div style={modal} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Conectar banco automáticamente</h3>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Open Banking (PSD2): autorizas en tu banco y los saldos/movimientos entran solos.</p>
+            {estado === 'cargando' && <p style={{ fontSize: '14px', color: 'var(--muted)' }}>Cargando bancos…</p>}
+            {estado === 'no-config' && <p style={{ fontSize: '13px', color: 'var(--muted)' }}>Falta configurar GoCardless (envs <code>GOCARDLESS_SECRET_ID</code> y <code>GOCARDLESS_SECRET_KEY</code> en Vercel). Mientras tanto, importa el Excel/Norma 43.</p>}
+            {estado === 'error' && <p style={{ fontSize: '13px', color: '#dc2626' }}>{err}</p>}
+            {estado === 'ok' && (
+              <form onSubmit={conectar} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <label style={lbl}>Sociedad
+                  <select value={sociedadId} onChange={e => setSociedadId(e.target.value)} style={input}>
+                    {sociedades.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
+                  </select>
+                </label>
+                <label style={lbl}>Banco
+                  <select value={instId} onChange={e => setInstId(e.target.value)} style={input}>
+                    {insts.map(i => <option key={i.id} value={i.id}>{i.name}</option>)}
+                  </select>
+                </label>
+                {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
+                <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                  <button type="button" onClick={() => setOpen(false)} style={cancel}>Cerrar</button>
+                  <button type="submit" disabled={loading} style={submitBtn}>{loading ? 'Conectando…' : 'Ir a mi banco →'}</button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
+    </>
+  )
+}
+
 const ghost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const btn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }
