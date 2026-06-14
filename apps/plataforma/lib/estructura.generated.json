@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T19:08:30Z",
+  "generadoEn": "2026-06-14T20:24:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
       "fecha": "14/06/2026"
     },
@@ -1988,10 +1992,6 @@
     {
       "titulo": "🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`",
       "fecha": "13/06/2026"
-    },
-    {
-      "titulo": "📦 module-materiales Fase B — PR #189 mergeado",
-      "fecha": "12/06/2026"
     }
   ],
   "saludRepo": {
