@@ -209,7 +209,7 @@ export async function inspeccionarMovimientos(accountUid: string): Promise<Recor
       error: (r as { error?: string }).error,
     }
   }
-  const dateFrom = new Date(Date.now() - 730 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  const dateFrom = new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   const sinFecha = await api<Record<string, unknown>>(`/accounts/${accountUid}/transactions`).catch(e => ({ error: String(e) }))
   const conFecha = await api<Record<string, unknown>>(`/accounts/${accountUid}/transactions?date_from=${dateFrom}`).catch(e => ({ error: String(e) }))
   return { sinFecha: resumen(sinFecha), conFecha: resumen(conFecha) }
@@ -257,7 +257,7 @@ export async function getMovimientos(accountUid: string): Promise<MovEB[]> {
   // Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve
   // vacío. Pedimos ~2 años hacia atrás (el consentimiento PSD2 suele permitir 90d de histórico,
   // el banco recorta a lo que tenga disponible).
-  const dateFrom = new Date(Date.now() - 730 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  const dateFrom = new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   let cont: string | undefined
   let guard = 0
   do {
