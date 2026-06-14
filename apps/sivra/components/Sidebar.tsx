@@ -7,6 +7,7 @@ const NAV = [
   { href: '/dashboard',   label: 'Dashboard',    icon: '⊞' },
   { href: '/income',      label: 'Ingresos',     icon: '€' },
   { href: '/expenses',    label: 'Gastos',       icon: '↙' },
+  { href: '/gastos-fijos', label: 'Gastos fijos', icon: '↻' },
   { href: '/properties',  label: 'Propiedades',  icon: '⌂' },
   { href: '/calendario',  label: 'Calendario',   icon: '◫' },
   { href: '/mensajes',    label: 'Mensajes',     icon: '✉' },

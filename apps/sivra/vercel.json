@@ -62,6 +62,10 @@
     {
       "path": "/api/expenses/agent/resumen-mensual",
       "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/expenses/fijos/generar",
+      "schedule": "0 6 1 * *"
     }
   ]
 }
