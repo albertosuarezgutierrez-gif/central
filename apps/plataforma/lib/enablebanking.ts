@@ -40,6 +40,28 @@ function normalizarPem(raw: string): string {
   return `-----BEGIN ${label}-----\n${body}\n-----END ${label}-----\n`
 }
 
+// Diagnóstico SIN secretos: estructura de la clave configurada (cabecera, longitud, si
+// decodifica). No revela el cuerpo de la clave — solo la etiqueta PEM (constante pública),
+// longitudes y el mensaje de error de OpenSSL. Sirve para depurar el pegado de la env var.
+export function diagnosticarClave(): {
+  configurada: boolean; longitud: number; tieneSaltosReales: boolean; tieneEscapados: boolean
+  cabecera: string | null; etiqueta: string | null; decodifica: boolean; error?: string
+} {
+  const raw = process.env.ENABLEBANKING_PRIVATE_KEY || ''
+  if (!raw) return { configurada: false, longitud: 0, tieneSaltosReales: false, tieneEscapados: false, cabecera: null, etiqueta: null, decodifica: false }
+  const norm = normalizarPem(raw)
+  const cabecera = norm.match(/-----BEGIN [A-Z0-9 ]+-----/)?.[0] ?? null
+  const etiqueta = norm.match(/-----BEGIN ([A-Z0-9 ]+)-----/)?.[1]?.trim() ?? null
+  let decodifica = false
+  let error: string | undefined
+  try { createPrivateKey(norm); decodifica = true } catch (e) { error = e instanceof Error ? e.message : String(e) }
+  return {
+    configurada: true, longitud: raw.length,
+    tieneSaltosReales: raw.includes('\n'), tieneEscapados: raw.includes('\\n'),
+    cabecera, etiqueta, decodifica, error,
+  }
+}
+
 // Firma un JWT RS256 con la clave privada de la app. createPrivateKey acepta tanto
 // PKCS#1 ("BEGIN RSA PRIVATE KEY") como PKCS#8 ("BEGIN PRIVATE KEY").
 async function jwt(): Promise<string> {

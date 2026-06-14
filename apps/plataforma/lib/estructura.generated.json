@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T10:51:42Z",
+  "generadoEn": "2026-06-14T16:34:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1636,6 +1636,7 @@
       "/api/comunicacion/reglas",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/psd2-diag",
       "/api/cron/psd2-sync",
       "/api/negocios",
       "/api/negocios/[id]",
@@ -2215,7 +2216,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 764,
+    "apis": 765,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
