@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T06:01:01Z",
+  "generadoEn": "2026-06-14T07:03:40Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1594,6 +1594,7 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sociedades",
@@ -1878,6 +1879,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
       "fecha": "13/06/2026"
     },
@@ -1931,10 +1936,6 @@
     },
     {
       "titulo": "📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🎤 DECK presencial JJ + estructura real corregida",
       "fecha": "12/06/2026"
     }
   ],
@@ -2162,7 +2163,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 743,
+    "apis": 744,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
