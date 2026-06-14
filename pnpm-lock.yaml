@@ -37,6 +37,9 @@ importers:
       '@central/module-feedback':
         specifier: workspace:*
         version: link:../../packages/module-feedback
+      '@central/module-horario':
+        specifier: workspace:*
+        version: link:../../packages/module-horario
       '@central/module-materiales':
         specifier: workspace:*
         version: link:../../packages/module-materiales
@@ -481,6 +484,8 @@ importers:
   packages/module-crm: {}
 
   packages/module-feedback: {}
+
+  packages/module-horario: {}
 
   packages/module-materiales: {}
 

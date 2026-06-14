@@ -39,6 +39,95 @@
       factura real se respetaron. Helpers en `lib/agente-facturas/gastos-fijos.ts`.
     - Verificado: `tsc --noEmit -p apps/sivra/tsconfig.json` ✅ 0 errores; 4 deploys Vercel verdes.
 
+- **⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)**
+  PR #199 (auditoría de caja) **MERGEADO a main** (squash, `c54175c`). Épico nuevo por fases, principio
+  **100% configurable** (`config_horario`: límites + toggles por local, defaults legales). Módulo puro nuevo
+  **`@central/module-horario`** (`packages/`, plantilla de `module-contabilidad`, tests `node --test`).
+  - **Fase 1 (verde)** — Registro de jornada legal RD 8/2019: `resumenJornada`/`detalleJornada`/
+    `chequearDescansos`/`horasExtra` + `config_horario` (migración MCP) + `GET /api/owner/horario` +
+    `GET/POST /api/owner/horario/config` + tab "Jornada" (grupo Auditoría, `owner/page.tsx`) con CSV,
+    sparkline y panel de configuración. Reusa la base de fichaje existente (`turnos`, `fichar_entrada/salida`).
+  - **Fase 2 (verde)** — Anti-fraude: validación de IP del centro en `turnos/fichar` (gated `validar_ip_local`
+    + `ips_local`) + `POST /api/owner/horario/autocierre` (cierra colgados > `autocierre_horas`) + botón en el tab.
+  - **Fase 3 (pusheada)** — Coste de personal: `costePersonal` (módulo) + `config_horario.costes_empleado`
+    (mapa; camareros es VISTA, por eso va aquí) + bloque coste en el GET (cruza ventas de `facturas_verifactu`)
+    + `POST /api/owner/horario/coste` + KPIs/coste-hora editable en el tab. Flag `coste_personal`.
+  - **PENDIENTE del épico**: Fase 2b (fichaje por QR + recordatorios push), Fase 4 (cuadrante/plantilla
+    previsto vs real), Fase 5 (ausencias/vacaciones), Fase 6 (consolidado multi-local en plataforma +
+    festivos + export gestoría), y firma del empleado + informe PDF oficial (RD 8/2019). Migraciones MCP en
+    proyecto ia-rest `efncqyvhniaxsirhdxaa`.
+- **📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest` — 14/06/2026**
+  4ª de la tanda "automatizar agentes" (la #3 impagos-sivra se SALTÓ: sivra no tiene cuentas por cobrar,
+  sus "facturas" son gasto/proveedores y pago a limpiadoras). Cron diario `/api/cron/reposicion-stock`
+  (08:15) que lee `materiales` (Supabase propia de ia-rest), detecta `cantidad_disponible < stock_minimo`
+  (activos, con `stock_minimo` no nulo) y avisa por **Telegram** (`tgAlert(..., 'aviso')`) con líneas
+  ordenadas por faltante + proveedor + coste estimado de reposición.
+  - **Código** (`apps/ia-rest/src`): `lib/reposicion-stock.ts` (puro: `faltante`/`costeReposicion`/
+    `formatAvisoStock`) + `lib/reposicion-stock.test.ts` (3/3 ✅); `app/api/cron/reposicion-stock/route.ts`
+    (auth Bearer `CRON_SECRET`, `createServerClient`); cron en `vercel.json`. **Sin migración** (usa
+    `materiales.stock_minimo`, ya existente). ia-rest = BD propia `efncqyvhniaxsirhdxaa`.
+  - **OJO**: ia-rest **sí valida tipos en build** (no `ignoreBuildErrors`) → cuidado con type-guards.
+  - **Verificado**: `node --test` 3/3 ✅, `next build` (161/161 páginas, ruta como función, type-check OK) ✅.
+  - **⚠️ PENDIENTE despliegue**: requiere `materiales.stock_minimo` aplicado en la BD de ia-rest (migración
+    materiales v2) y `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` (ya existen para el resto de alertas).
+  - **Roadmap restante**: NPS post-servicio (ialimp) · scoring limpiadoras (ialimp) · orquestador concursos.
+- **⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207) — 14/06/2026**
+  6ª de la tanda "automatizar agentes". Endpoint `GET /api/admin/limpiadoras/ranking` que puntúa y
+  ordena a las limpiadoras de la empresa sobre la **vista existente `rendimiento_limpiadoras`** (sin
+  migraciones). Score 0-100 = calidad (`rating_medio`/5, 55%) + fiabilidad (1 − quejas/sesiones, 45%).
+  - **Anclado a datos reales**: `sesiones_completadas` viene 0 → **excluida**; `rating_medio` suele ser
+    null → **no penaliza a 0** (score = fiabilidad, `sin_valoraciones: true`); `confianza` por volumen.
+  - **Código** (`apps/ialimp`): `lib/scoring-limpiadoras.ts` (puro: `puntuarLimpiadora`/`rankingLimpiadoras`)
+    + `lib/scoring-limpiadoras.test.ts` (5/5 ✅); `app/api/admin/limpiadoras/ranking/route.ts`
+    (Prisma `$queryRaw`, auth `requireEmpresaId()` de `@/lib/tenant`). **OJO bigint**: las columnas
+    `bigint`/`numeric` de la vista llegan como BigInt/Decimal → se coaccionan a `Number` (si no, rompe
+    `JSON.stringify` y la aritmética).
+  - **Verificado**: `node --test` 5/5 ✅; `next build` (161/161 páginas, ruta `ƒ` registrada) ✅.
+  - **Nota**: ialimp usa **Prisma** (no supabase-js), auth JWT propio (cookie `ialimp_session`), ignora
+    errores TS en build. Ya había consumidores de la vista (`/api/admin/rrhh/analisis`); este es el ranking.
+  - **Tanda previa (otras ramas/PR)**: briefing #203 · impagos-ialimp #204 · ~~impagos-sivra~~ (N/A) ·
+    reposición-stock-iarest #206. **Roadmap restante**: NPS post-servicio (ialimp) · orquestador concursos.
+- **💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp` — 14/06/2026**
+  2ª de la tanda "automatizar agentes" (PR por PR). Cron diario `/api/cron/impagos` (08:30) que detecta
+  facturas a clientes **vencidas y no cobradas** y manda recordatorios **escalonados +3/+10/+21 días** al
+  cliente, sin repetir escalón, **+ resumen diario a la empresa** (`empresas.email`).
+  - **Migración aplicada** (Supabase compartida `wswbehlcuxqxyinousql`): tabla `recordatorios_impagos`
+    (aditiva, RLS on sin policies como el resto; único `(factura_id, escalon)`). Fichero en
+    `apps/ialimp/prisma/migrations/2026-06-14_recordatorios_impagos.sql`.
+  - **Código**: `lib/impagos.ts` (puro: `escalonAEnviar`/`textoRecordatorio`/`resumenEmpresaTexto`) +
+    `lib/impagos.test.ts` (5/5 ✅); endpoint `app/api/cron/impagos/route.ts` (reutiliza
+    `emailFacturacionCliente` + `getTransporter`/`MAIL_FROM`); cron en `vercel.json`.
+  - Filtro: `estado IN ('emitida','vencida') AND fecha_vencimiento<hoy AND fecha_cobro IS NULL AND pagada_online_at IS NULL`.
+  - `facturas_clientes` hoy **vacía** (Sique Brilla aún no factura por aquí) → 0 envíos hasta que emita.
+  - **Verificado**: `node --test` 5/5 ✅, `next build` (161/161 páginas, ruta `/api/cron/impagos` como función) ✅.
+  - **⚠️ PENDIENTE despliegue**: `CRON_SECRET` ya existe; el envío real necesita el SMTP ya configurado (IONOS).
+    NO mergear a `main` sin preview verde (cliente Vanessa EN VIVO).
+  - **Roadmap restante**: impagos **sivra** → reposición stock (ia-rest) → NPS (ialimp) → scoring limpiadoras →
+    orquestador concursos. Diferidas (APIs externas): reputación, VeriFactu.
+- **📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma` — 14/06/2026**
+  1ª de la tanda "automatizar agentes" (auditoría previa: ver entrada de instagram-ideas). `plataforma`
+  no tenía **ningún cron**; ahora un cron semanal (lunes 08:00) consolida ingresos/gastos/resultado YTD
+  de **todos los negocios de cada cuenta** y envía un email al dueño.
+  - **Lógica pura** `apps/plataforma/lib/briefing.ts` (`agregarBriefing` + `formatBriefingTexto`, € inline
+    para no arrastrar `financiero→db→prisma`) con tests `node --test` (`lib/briefing.test.ts`, 3/3 ✅).
+  - **Endpoint** `app/api/cron/briefing/route.ts` (GET, auth `CRON_SECRET` o `?secret=`): reutiliza
+    `getResumenNegocio` de `lib/financiero.ts` (ialimp+sivra BD, ia-rest puerto HTTP) y `enviarAvisoEmail`
+    de `lib/notificaciones.ts` (Resend, no-op sin `RESEND_API_KEY`).
+  - **Cron** en `vercel.json` (`0 8 * * 1`) + `/api/cron` añadido a `PUBLIC` del `middleware.ts`.
+  - **Verificado**: `node --test` 3/3 ✅, `tsc --noEmit` (código de prod limpio) ✅, `next build` ✅.
+  - **⚠️ PENDIENTE despliegue**: en el Vercel de plataforma definir `CRON_SECRET` y `RESEND_API_KEY`+`MAIL_FROM`.
+  - **Roadmap restante** (PR por PR): impagos (ialimp/sivra) → reposición stock (ia-rest) → NPS (ialimp)
+    → scoring limpiadoras (ialimp) → orquestador concursos (ialimp). Diferidas (APIs externas): reputación
+    Google/Booking, reintentos VeriFactu. Plan: `docs/superpowers/plans/2026-06-14-briefing-consolidado-plataforma.md`.
+- **⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3` — 13/06/2026**
+  Auditoría de "agentes sin tarea programada": crucé todos los endpoints `cron`/`agent` de las 4 apps
+  contra los `crons` de cada `vercel.json`. Resultado: la mayoría OK; los `agente-*` interactivos
+  (asesoria, owner/compras+eventos, super/arquitecto+ai+seo, leads, sivra agente/chat, ialimp
+  cotizador, expenses backfill) **no llevan cron a propósito** (bajo demanda). **Único huérfano real:**
+  `apps/ia-rest/src/app/api/cron/instagram-ideas/route.ts` estaba diseñado como cron (auth `CRON_SECRET`,
+  cabecera "lunes, antes de blog-seo") pero **faltaba en `vercel.json`** → nunca se disparaba solo.
+  **Fix:** añadido `{ "path": "/api/cron/instagram-ideas", "schedule": "30 7 * * 1" }` (lunes 07:30,
+  antes de blog-seo 08:00). No requiere exclusión de middleware (matcher solo cubre `/api/super/*`).
 - **🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x` — 13/06/2026**
   Cron `/api/cron/seo-agent` (**martes y viernes 07:00 UTC**) que lee **GSC+GA4** y, de forma
   **autónoma**, adapta el SEO de **iarest.es**: titles/metas, JSON-LD, bloques de contenido y

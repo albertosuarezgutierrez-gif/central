@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? "vqOXOSDtA7p80Fp~.ezOXPn_zPYq99gC"
+const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE = "https://login.smoobu.com/api"
 
 // GET /api/rates?propertyId=352007&startDate=2026-05-01&endDate=2026-05-31
