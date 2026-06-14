@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T22:19:22Z",
+  "generadoEn": "2026-06-14T06:34:54Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -617,7 +617,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "plataforma": {
         "presente": false,
@@ -1465,6 +1465,7 @@
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
       "/api/admin/limpiadoras/[id]/propiedades",
+      "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
       "/api/admin/migrate-chat",
       "/api/admin/migrate-chat-destinatario",
@@ -1872,6 +1873,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
       "fecha": "13/06/2026"
     },
@@ -1926,10 +1931,6 @@
     {
       "titulo": "🎤 DECK presencial JJ + estructura real corregida",
       "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real",
-      "fecha": "11/06/2026"
     }
   ],
   "saludRepo": {
@@ -2156,7 +2157,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 741,
+    "apis": 742,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
