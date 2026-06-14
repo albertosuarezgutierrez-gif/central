@@ -46,6 +46,54 @@
     `apps/ialimp`) y su landing es **HTML estático**; requiere conectar analíticas antes de extender el
     agente (y extraer la lógica a `@central/core-seo`).
 
+- **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
+  Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
+  - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
+    Supabase MCP a proyecto ia-rest `efncqyvhniaxsirhdxaa`) + columnas `config_contabilidad.umbral_descuadre`
+    y `.conteo_ciego`. `cierre-diario` persiste `cuadre_por_empleado` (delete-then-insert) y **cruza con
+    turno** (movimientos sin camarero → titular del turno vía `turnos`+`camareros`).
+  - **Fase 2** — Puras `resumirDescuadresEmpleado`/`detectarPatronRecurrente`/`serieDescuadreEmpleado`
+    (+tests, 23 total) · `GET /api/owner/contabilidad/arqueos-empleado` · UI panel "Histórico por
+    empleado" (tabla acumulado/media/peor + sparkline + CSV + badge merma recurrente).
+  - **Fase 3** — `lib/push.ts` (`enviarPushARoles`) · alertas por umbral + patrón recurrente → push a
+    owner/gestor · UI marca en rojo los que superan umbral.
+  - **Fase 4** — Motivo obligatorio por empleado (400 con `pendientes` + UI de reintento) · conteo ciego
+    (config + "revelar" en UI) · firma del empleado (`PATCH .../arqueos-empleado/[id]/confirmar` +
+    columnas `confirmado_por/at`).
+  - **Verificado**: 23/23 tests, `tsc` limpio, eslint sin errores (solo warnings). Migración aplicada y
+    comprobada por MCP.
+  - **Bloque B completado (fases 5-9)**: F5 conciliación de tarjeta (`arqueos_caja.tarjeta_liquidada/
+    diferencia_tarjeta`); F6 tesorería (`movimientos_tesoreria` + endpoint GET/POST + panel saldo caja
+    fuerte); F7 abastecimiento de cambio (`config_contabilidad.min_monedas` + aviso en cierre); F8
+    tolerancia por empleado (`config_contabilidad.umbrales_empleado` + endpoint `umbral-empleado` +
+    columna editable en histórico; `umbralDe()` en validación/alertas); F9 consolidado multi-local:
+    endpoint operador `GET /api/operador/descuadres-empleado` en ia-rest + `apps/plataforma`
+    (`lib/descuadres.ts` + `GET /api/admin/descuadres-iarest`, vía puerto HTTP con OPERADOR_SHARED_SECRET).
+    Migraciones aplicadas por MCP. ia-rest `tsc` limpio (los errores `tsc` de plataforma son preexistentes,
+    no gatean su build).
+  - **PENDIENTE (cabos)**: UI empleado-facing de firma/conteo ciego en el POS (`/edge`); página visual
+    del consolidado en el god-panel de plataforma (el data path ya está). Tras esto: roadmap #2 control horario.
+
+- **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
+  A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
+  se decide reforzar ia-rest donde ellos pegan fuerte: **gestión de efectivo**. Al verificar contra
+  código + BD se descubre que **`arqueos_caja` ya existía** con los campos del cuadre
+  (`fondo_inicial/salidas_caja/fondo_final/diferencia_caja`) pero **el `cierre-diario` los hardcodeaba a 0**
+  y nunca leía `movimientos_caja`. Se **completa** (sin tabla ni endpoints nuevos, cero duplicación):
+  - **Lógica pura** en `@central/module-contabilidad` (`src/caja.ts`): `calcularCuadreCaja`,
+    `totalDesglose`, `DENOMINACIONES_EUR`, `calcularCuadrePorEmpleado` + tipos
+    `MovimientoCaja`/`CuadreCaja`/`CuadreEmpleado`. Saldo teórico = Σ movimientos del cajón; conteo
+    físico = desglose manual o último arqueo/cierre; descuadre = real − teórico. **18 tests `node:test`**
+    (el paquete no tenía script `test`; añadido).
+  - **`apps/ia-rest/.../contabilidad/cierre-diario/route.ts`**: lee `movimientos_caja` del día y
+    persiste el cuadre global real + `cerrado_por`/`notas`; devuelve `cuadre` y `cuadre_por_empleado`.
+  - **UI** `ContabilidadTab.tsx` (sub-tab Cierre): checkbox "Hacer arqueo", conteo por denominación
+    en vivo, notas, y tarjeta de cuadre **configurable (toggle Caja única / Por empleado)** — por
+    empleado agrupa los arqueos de cada camarero desde `movimientos_caja` (sin migración).
+  - **Verificado**: 15/15 tests ✅, `tsc --noEmit` ia-rest ✅, eslint archivos tocados 0 errores ✅.
+    Sin migración (columnas ya existían). **Roadmap restante** (PRs aparte): completar control horario
+    (plantilla/ausencias/informe jornada legal), alta Kit Digital (admin), Tier 2 (pago unificado, carta digital).
+
 - **🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst` — 13/06/2026**
   Agente diario que lee **Gmail (IMAP) + carpeta de Drive**, archiva facturas y las imputa en
   `gastos` de sivra, con **aprendizaje de recurrentes** y **modo mixto** (lo claro entra solo,
