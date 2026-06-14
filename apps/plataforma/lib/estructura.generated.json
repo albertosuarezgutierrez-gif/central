@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T10:47:58Z",
+  "generadoEn": "2026-06-14T10:51:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1931,6 +1931,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209",
       "fecha": "14/06/2026"
     },
@@ -1984,10 +1988,6 @@
     },
     {
       "titulo": "🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado",
       "fecha": "12/06/2026"
     }
   ],
