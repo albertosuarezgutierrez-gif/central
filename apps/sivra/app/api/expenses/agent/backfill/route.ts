@@ -6,16 +6,10 @@ import { listarCandidatos } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
-import { existeDuplicado, insertarGasto, type DatosGasto } from '@/lib/agente-facturas/imputar'
+import { generarGastosFijos, sincronizarReglasFijas } from '@/lib/agente-facturas/gastos-fijos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
-
-// Recibos de alquiler de Bustos Tavera 22 (importe fijo en 2026).
-const ALQUILERES = [
-  { fingerprint: 'gutierrez alcala maria:derecha', propiedad: 'prop_luxury_busto', concepto: 'Alquiler Bajo Derecha Bustos Tavera 22', base_imponible: 303.31, iva: 63.70, irpf: 57.63, total: 309.38 },
-  { fingerprint: 'gutierrez alcala maria:izquierda', propiedad: 'prop_busto_reform', concepto: 'Alquiler Bajo Izquierda Bustos Tavera 22', base_imponible: 254.08, iva: 53.36, irpf: 48.28, total: 259.16 },
-]
 
 export async function GET(req: NextRequest) {
   if (!(await isCronAuthorized(req))) return NextResponse.json({ error: 'no autorizado' }, { status: 401 })
@@ -23,26 +17,16 @@ export async function GET(req: NextRequest) {
   const year = parseInt(req.nextUrl.searchParams.get('year') || String(new Date().getFullYear()))
   const hastaMes = year === new Date().getFullYear() ? new Date().getMonth() + 1 : 12
 
+  // ── 1) Gastos fijos (alquileres, comunidades…) ene→hoy ───────────────────────
+  // Las plantillas viven en `gastos_fijos` (ver /gastos-fijos). Aquí solo se
+  // backfillean los meses pasados del año; el día 1 de cada mes el cron los crea solo.
   const alquileres = { creados: 0, existentes: 0, detalle: [] as string[] }
-
-  // ── 1) Alquileres faltantes ene→hoy ──────────────────────────────────────────
+  if (!dryRun) await sincronizarReglasFijas()
   for (let m = 1; m <= hastaMes; m++) {
-    const fecha = `${year}-${String(m).padStart(2, '0')}-08`
-    for (const a of ALQUILERES) {
-      const existe = await existeDuplicado({ fingerprint: a.fingerprint, numero_factura: null, fecha, total: a.total })
-      if (existe) { alquileres.existentes++; continue }
-      alquileres.detalle.push(`${fecha} · ${a.propiedad} · ${a.total}€`)
-      if (!dryRun) {
-        const datos: DatosGasto = {
-          fecha, proveedor: 'GUTIERREZ ALCALA, MARIA', nif_proveedor: null, numero_factura: null,
-          concepto: a.concepto, categoria: 'ALQUILER', propiedad: a.propiedad,
-          base_imponible: a.base_imponible, iva: a.iva, iva_porcentaje: 21, irpf: a.irpf, irpf_porcentaje: 19,
-          total: a.total, fingerprint: a.fingerprint, raw_extraction: { origen: 'backfill-alquiler' },
-        }
-        await insertarGasto(datos, { revisado: true, origen: 'backfill', confianza: 0.95 })
-      }
-      alquileres.creados++
-    }
+    const r = await generarGastosFijos(year, m, { commit: !dryRun, sincronizar: false })
+    alquileres.creados += r.creados
+    alquileres.existentes += r.existentes
+    alquileres.detalle.push(...r.detalle)
   }
 
   // ── 2) Barrido de Gmail/Drive del año (modo mixto) ───────────────────────────

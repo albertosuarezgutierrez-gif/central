@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
+  Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:
+  - **PR #208 (mergeado)** — auditoría del dashboard a partir de un pantallazo real:
+    - 🔴 Gráfico "Evolución mensual" salía **vacío**: el `<BarChart>` leía `dataKey="y0"/"y1"` pero la API
+      emite series por año (`[year]`/`[year-1]`). Fix: `dataKey={String(year)}`.
+    - 🟡 Delta `↑0.0%` engañoso sin periodo previo → ahora muestra **"nuevo"** (`delta()` devuelve `null`).
+    - 🟢 Entradas/Salidas/Entradas mañana ahora indican el **piso** (🏠 nombre), usando `propertyName` que
+      `/api/incomes/today` ya devolvía. Detalle en `docs/AUDITORIA-2026-06.md` (addendum 14/06).
+  - **PR #209** — **gastos fijos mensuales 100% automáticos** (alquileres, comunidad dúplex, etc.):
+    - Tabla nueva **`gastos_fijos`** (RLS como `gastos`, índice único por `fingerprint`). DDL en
+      `apps/sivra/sql/gastos_fijos.sql` (migraciones `create_gastos_fijos`, `gastos_fijos_fingerprint_sync`).
+    - **Automático de punta a punta**: el cron `/api/expenses/fijos/generar` (`vercel.json` `"0 6 1 * *"`)
+      llama `sincronizarReglasFijas()` → importa a `gastos_fijos` las **reglas mensuales que el agente de
+      facturas ya aprendió** (`gastos_reglas`, periodicidad mensual) casando por fingerprint, sin pisar
+      ediciones manuales; luego imputa el mes con **dedup POR MES**.
+    - **"La factura real manda"**: `insertarGasto()` borra el placeholder `origen='fijo'` del mismo mes al
+      imputar la factura real → **cero duplicados** (`lib/agente-facturas/imputar.ts`).
+    - Página **`/gastos-fijos`** (nuevo ítem sidebar): CRUD + "Generar mes actual ahora". Alquileres de
+      Bustos Tavera **migrados** del backfill manual (día 8) a este sistema (día 1).
+    - **Backfill 2026 (ene→jun) ya ejecutado en BD**: junio poblado con 5 fijos (877,22 €); meses con
+      factura real se respetaron. Helpers en `lib/agente-facturas/gastos-fijos.ts`.
+    - Verificado: `tsc --noEmit -p apps/sivra/tsconfig.json` ✅ 0 errores; 4 deploys Vercel verdes.
+
 - **⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)**
   PR #199 (auditoría de caja) **MERGEADO a main** (squash, `c54175c`). Épico nuevo por fases, principio
   **100% configurable** (`config_horario`: límites + toggles por local, defaults legales). Módulo puro nuevo
