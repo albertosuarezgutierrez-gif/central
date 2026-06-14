@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T21:00:35Z",
+  "generadoEn": "2026-06-14T21:06:37Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1628,6 +1628,7 @@
       "/api/banca/psd2/callback",
       "/api/banca/psd2/conectar",
       "/api/banca/psd2/instituciones",
+      "/api/banca/revisar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -2217,7 +2218,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 766,
+    "apis": 767,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
