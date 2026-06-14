@@ -12,7 +12,7 @@
 // → por cuenta: /details (IBAN) + /balances + /transactions.
 
 import { SignJWT } from 'jose'
-import { createPrivateKey, type KeyObject } from 'node:crypto'
+import { createPrivateKey, createPublicKey, createHash, type KeyObject } from 'node:crypto'
 
 const BASE = process.env.ENABLEBANKING_BASE_URL?.replace(/\/$/, '') || 'https://api.enablebanking.com'
 
@@ -69,7 +69,15 @@ export function diagnosticarClave(): Record<string, unknown> {
   if (!raw) return { configurada: false }
   let decodifica = false
   let error: string | undefined
-  try { cargarClavePrivada(raw); decodifica = true } catch (e) { error = e instanceof Error ? e.message : String(e) }
+  let huellaPublica: string | undefined
+  try {
+    const k = cargarClavePrivada(raw)
+    decodifica = true
+    // Huella SHA-256 de la clave PÚBLICA (SPKI DER) derivada de la privada. No es secreto:
+    // sirve para comparar con la huella del certificado registrado en Enable Banking.
+    const pub = createPublicKey(k).export({ type: 'spki', format: 'der' })
+    huellaPublica = createHash('sha256').update(pub).digest('hex')
+  } catch (e) { error = e instanceof Error ? e.message : String(e) }
   return {
     configurada: true,
     longitud: raw.length,
@@ -77,7 +85,9 @@ export function diagnosticarClave(): Record<string, unknown> {
     tieneSaltosReales: raw.includes('\n'),
     incluyeBEGIN: raw.includes('BEGIN'),
     incluyePRIVATE: raw.includes('PRIVATE'),
+    appId: (process.env.ENABLEBANKING_APP_ID || '').slice(0, 8),
     decodifica,
+    huellaPublica,
     error,
   }
 }
