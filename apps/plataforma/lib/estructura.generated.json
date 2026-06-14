@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T07:06:02Z",
+  "generadoEn": "2026-06-14T07:06:47Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -617,7 +617,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "plataforma": {
         "presente": false,
@@ -1467,6 +1467,7 @@
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
       "/api/admin/limpiadoras/[id]/propiedades",
+      "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
       "/api/admin/migrate-chat",
       "/api/admin/migrate-chat-destinatario",
@@ -1881,6 +1882,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
       "fecha": "14/06/2026"
     },
@@ -1934,10 +1939,6 @@
     },
     {
       "titulo": "🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164",
       "fecha": "12/06/2026"
     }
   ],
@@ -2165,7 +2166,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 745,
+    "apis": 746,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
