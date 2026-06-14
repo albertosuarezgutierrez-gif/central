@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T10:32:03Z",
+  "generadoEn": "2026-06-14T10:47:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1623,6 +1623,9 @@
       "/api/banca/conciliar",
       "/api/banca/factura",
       "/api/banca/importar",
+      "/api/banca/psd2/callback",
+      "/api/banca/psd2/conectar",
+      "/api/banca/psd2/instituciones",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -1633,6 +1636,7 @@
       "/api/comunicacion/reglas",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/psd2-sync",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sociedades",
@@ -1850,6 +1854,7 @@
       "comunicacion_mensajes",
       "comunicacion_nodos",
       "comunicacion_reglas",
+      "conexiones_banco",
       "cuentas_bancarias",
       "movimientos_bancarios"
     ],
@@ -2210,7 +2215,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 760,
+    "apis": 764,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
