@@ -31,6 +31,83 @@
   - **Roadmap restante** (PR por PR): impagos (ialimp/sivra) → reposición stock (ia-rest) → NPS (ialimp)
     → scoring limpiadoras (ialimp) → orquestador concursos (ialimp). Diferidas (APIs externas): reputación
     Google/Booking, reintentos VeriFactu. Plan: `docs/superpowers/plans/2026-06-14-briefing-consolidado-plataforma.md`.
+- **🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x` — 13/06/2026**
+  Cron `/api/cron/seo-agent` (**martes y viernes 07:00 UTC**) que lee **GSC+GA4** y, de forma
+  **autónoma**, adapta el SEO de **iarest.es**: titles/metas, JSON-LD, bloques de contenido y
+  artículos nuevos. Principio rector: **los cambios son DATOS, no código** (nunca commitea ni rompe
+  el build). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-seo-autonomo-iarest*`.
+  - **Migración aplicada** a Supabase **`efncqyvhniaxsirhdxaa`** (proyecto ia-rest), **schema `public`**
+    (¡no `iarest`! — ahí vive `blog_borradores`, que es donde apunta `createServerClient`). Tablas
+    nuevas con **RLS habilitado**: `seo_overrides` (title/meta/canonical/og/jsonld por ruta),
+    `seo_content_blocks` (bloques por ruta+posición), `seo_articulos` (artículos en BD), `seo_cambios`
+    (snapshot antes/después + auditoría).
+  - **Red de seguridad**: kill switch `SEO_AGENT_ENABLED` (si != 'true', el cron sale sin tocar nada),
+    allowlist de rutas (`/restaurantes`, `/restaurantes/*`), máx. `SEO_MAX_CAMBIOS` (def. 5)/pasada,
+    anti-oscilación 7 días, umbral `SEO_MIN_IMPR` (def. 30) en el prompt, informe Telegram y reversión
+    vía `/api/super/seo-revert`.
+  - **Código** (`apps/ia-rest`): `src/lib/seo/{types,guardrails,gsc-ga4,store,targets}.ts`,
+    `src/components/seo/SeoBlocks.tsx`, ruta dinámica `src/app/blog/[slug]/page.tsx`, endpoints
+    `api/cron/seo-agent` y `api/super/seo-revert`. Páginas `/restaurantes` y `/restaurantes/[ciudad]`
+    leen override en `generateMetadata` + slot `<SeoBlocks>`. GSC/GA4 extraídos de `agentes-seo` al
+    módulo compartido `gsc-ga4.ts`.
+  - **Superficie editable Fase 1**: solo páginas server (`/restaurantes`, `[ciudad]`) + artículos
+    nuevos. `/` y `/espacios` son client-components (`next/head`) → fuera del override por ahora.
+  - **Verificado**: test puro `scripts/seo/test-guardrails.ts` (14 checks) ✅, `next build` ✅,
+    `npm run qa` sin problemas ✅, 4 tablas confirmadas en BD.
+  - **⚠️ PENDIENTE de despliegue**: en el Vercel de ia-rest, dejar `SEO_AGENT_ENABLED` sin poner/`false`
+    hasta querer activarlo; al activar (`=true`), revisar el primer informe Telegram y `/super → SEO`
+    antes de confiar. Opcional: `SEO_MAX_CAMBIOS`, `SEO_MIN_IMPR`.
+  - **Fase 0/2 (ialimp.es) pendiente**: ialimp **no tiene GSC/GA4 conectado** (cero OAuth/analytics en
+    `apps/ialimp`) y su landing es **HTML estático**; requiere conectar analíticas antes de extender el
+    agente (y extraer la lógica a `@central/core-seo`).
+
+- **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
+  Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
+  - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
+    Supabase MCP a proyecto ia-rest `efncqyvhniaxsirhdxaa`) + columnas `config_contabilidad.umbral_descuadre`
+    y `.conteo_ciego`. `cierre-diario` persiste `cuadre_por_empleado` (delete-then-insert) y **cruza con
+    turno** (movimientos sin camarero → titular del turno vía `turnos`+`camareros`).
+  - **Fase 2** — Puras `resumirDescuadresEmpleado`/`detectarPatronRecurrente`/`serieDescuadreEmpleado`
+    (+tests, 23 total) · `GET /api/owner/contabilidad/arqueos-empleado` · UI panel "Histórico por
+    empleado" (tabla acumulado/media/peor + sparkline + CSV + badge merma recurrente).
+  - **Fase 3** — `lib/push.ts` (`enviarPushARoles`) · alertas por umbral + patrón recurrente → push a
+    owner/gestor · UI marca en rojo los que superan umbral.
+  - **Fase 4** — Motivo obligatorio por empleado (400 con `pendientes` + UI de reintento) · conteo ciego
+    (config + "revelar" en UI) · firma del empleado (`PATCH .../arqueos-empleado/[id]/confirmar` +
+    columnas `confirmado_por/at`).
+  - **Verificado**: 23/23 tests, `tsc` limpio, eslint sin errores (solo warnings). Migración aplicada y
+    comprobada por MCP.
+  - **Bloque B completado (fases 5-9)**: F5 conciliación de tarjeta (`arqueos_caja.tarjeta_liquidada/
+    diferencia_tarjeta`); F6 tesorería (`movimientos_tesoreria` + endpoint GET/POST + panel saldo caja
+    fuerte); F7 abastecimiento de cambio (`config_contabilidad.min_monedas` + aviso en cierre); F8
+    tolerancia por empleado (`config_contabilidad.umbrales_empleado` + endpoint `umbral-empleado` +
+    columna editable en histórico; `umbralDe()` en validación/alertas); F9 consolidado multi-local:
+    endpoint operador `GET /api/operador/descuadres-empleado` en ia-rest + `apps/plataforma`
+    (`lib/descuadres.ts` + `GET /api/admin/descuadres-iarest`, vía puerto HTTP con OPERADOR_SHARED_SECRET).
+    Migraciones aplicadas por MCP. ia-rest `tsc` limpio (los errores `tsc` de plataforma son preexistentes,
+    no gatean su build).
+  - **PENDIENTE (cabos)**: UI empleado-facing de firma/conteo ciego en el POS (`/edge`); página visual
+    del consolidado en el god-panel de plataforma (el data path ya está). Tras esto: roadmap #2 control horario.
+
+- **💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026**
+  A raíz de un estudio competitivo de **Logista Strator** (TPV/retail de Logista; NO es logística),
+  se decide reforzar ia-rest donde ellos pegan fuerte: **gestión de efectivo**. Al verificar contra
+  código + BD se descubre que **`arqueos_caja` ya existía** con los campos del cuadre
+  (`fondo_inicial/salidas_caja/fondo_final/diferencia_caja`) pero **el `cierre-diario` los hardcodeaba a 0**
+  y nunca leía `movimientos_caja`. Se **completa** (sin tabla ni endpoints nuevos, cero duplicación):
+  - **Lógica pura** en `@central/module-contabilidad` (`src/caja.ts`): `calcularCuadreCaja`,
+    `totalDesglose`, `DENOMINACIONES_EUR`, `calcularCuadrePorEmpleado` + tipos
+    `MovimientoCaja`/`CuadreCaja`/`CuadreEmpleado`. Saldo teórico = Σ movimientos del cajón; conteo
+    físico = desglose manual o último arqueo/cierre; descuadre = real − teórico. **18 tests `node:test`**
+    (el paquete no tenía script `test`; añadido).
+  - **`apps/ia-rest/.../contabilidad/cierre-diario/route.ts`**: lee `movimientos_caja` del día y
+    persiste el cuadre global real + `cerrado_por`/`notas`; devuelve `cuadre` y `cuadre_por_empleado`.
+  - **UI** `ContabilidadTab.tsx` (sub-tab Cierre): checkbox "Hacer arqueo", conteo por denominación
+    en vivo, notas, y tarjeta de cuadre **configurable (toggle Caja única / Por empleado)** — por
+    empleado agrupa los arqueos de cada camarero desde `movimientos_caja` (sin migración).
+  - **Verificado**: 15/15 tests ✅, `tsc --noEmit` ia-rest ✅, eslint archivos tocados 0 errores ✅.
+    Sin migración (columnas ya existían). **Roadmap restante** (PRs aparte): completar control horario
+    (plantilla/ausencias/informe jornada legal), alta Kit Digital (admin), Tier 2 (pago unificado, carta digital).
 
 - **🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst` — 13/06/2026**
   Agente diario que lee **Gmail (IMAP) + carpeta de Drive**, archiva facturas y las imputa en

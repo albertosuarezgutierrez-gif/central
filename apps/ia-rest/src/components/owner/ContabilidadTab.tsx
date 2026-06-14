@@ -26,6 +26,40 @@ const SUBTABS: { id: SubTab; label: string }[] = [
 const fmt = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 const fmtPct = (n: number) => n.toFixed(1) + '%'
 
+// Denominaciones de euro para el arqueo físico (clave del desglose = valor en euros).
+const DENOMINACIONES_EUR = [500, 200, 100, 50, 20, 10, 5, 2, 1, 0.5, 0.2, 0.1, 0.05, 0.02, 0.01]
+const fmtDenom = (d: number) =>
+  (Number.isInteger(d) ? String(d) : d.toLocaleString('es', { minimumFractionDigits: 2 })) + ' €'
+
+interface CuadreCaja {
+  fondo_inicial: number; cobros_efectivo: number; salidas_caja: number
+  saldo_teorico: number; fondo_final: number; diferencia_caja: number; conteo_realizado: boolean
+}
+interface CuadreEmpleado { camarero_id: string | null; camarero_nombre: string | null; cuadre: CuadreCaja }
+
+// Rejilla de detalle de un cuadre (reutilizada en vista global y por empleado).
+function CuadreDetalle({ cc }: { cc: CuadreCaja }) {
+  const difColor = Math.abs(cc.diferencia_caja) < 0.005 ? '#3F7D44' : cc.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
+  const filas: [string, string, string][] = [
+    ['Fondo inicial', fmt(cc.fondo_inicial), C.ink],
+    ['Cobros efectivo', fmt(cc.cobros_efectivo), C.ink],
+    ['Salidas (retiros/gastos)', fmt(cc.salidas_caja), C.ink],
+    ['Saldo teórico', fmt(cc.saldo_teorico), C.ink],
+    ['Contado (físico)', cc.conteo_realizado ? fmt(cc.fondo_final) : '—', C.ink],
+    ['Descuadre', cc.conteo_realizado ? fmt(cc.diferencia_caja) : '—', difColor],
+  ]
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 8 }}>
+      {filas.map(([l, v, col]) => (
+        <div key={l} style={{ background: C.paper2, borderRadius: 8, padding: '8px 10px' }}>
+          <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, marginBottom: 2 }}>{l}</div>
+          <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: col }}>{v}</div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 export default function ContabilidadTab({ sh }: { sh: () => Record<string, string> }) {
   const [sub, setSub] = useState<SubTab>('resumen')
   const [toast, setToast] = useState('')
@@ -193,24 +227,66 @@ function ResumenTab({ sh, showToast }: { sh: () => Record<string, string>; showT
 function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showToast: (m: string) => void }) {
   const [fecha, setFecha]     = useState(new Date().toISOString().split('T')[0])
   const [loading, setLoading] = useState(false)
+  const [conArqueo, setConArqueo] = useState(false)
+  const [desglose, setDesglose]   = useState<Record<string, number>>({})
+  const [notas, setNotas]         = useState('')
+  const [vista, setVista]         = useState<'global' | 'empleado'>('global')
   const [result, setResult]   = useState<{
     resumen: { total_ventas: number; base_10: number; iva_10: number; base_21: number; iva_21: number; efectivo: number; tarjeta: number; bizum: number; num_tickets: number }
     num_asiento: number
+    cuadre?: CuadreCaja
+    cuadre_por_empleado?: CuadreEmpleado[]
+    umbral_descuadre?: number
+    conteo_ciego?: boolean
+    tarjeta_liquidada?: number | null
+    diferencia_tarjeta?: number | null
+    aviso_cambio?: { denom: string; faltan: number }[]
+    alertas?: { camarero_id: string | null; camarero_nombre: string | null; diferencia_caja: number; recurrente: boolean }[]
   } | null>(null)
+  const [tarjetaLiq, setTarjetaLiq] = useState('')
+
+  // Total contado en vivo desde el desglose físico.
+  const [pendientesMotivo, setPendientesMotivo] = useState<{ camarero_id: string | null; camarero_nombre: string }[]>([])
+  const [notasEmpleado, setNotasEmpleado] = useState<Record<string, string>>({})
+  const [revelado, setRevelado] = useState(false)
+
+  const fondoContado = DENOMINACIONES_EUR.reduce((s, d) => s + d * (desglose[String(d)] || 0), 0)
+  const setDenom = (d: number, n: string) =>
+    setDesglose(prev => ({ ...prev, [String(d)]: Math.max(0, parseInt(n || '0', 10) || 0) }))
 
   const cerrar = async () => {
     setLoading(true)
     try {
+      const body: Record<string, unknown> = { fecha }
+      if (conArqueo) body.desglose_monedas = desglose
+      if (notas.trim()) body.notas = notas.trim()
+      if (Object.keys(notasEmpleado).length) body.notas_por_empleado = notasEmpleado
+      if (tarjetaLiq.trim()) body.tarjeta_liquidada = Number(tarjetaLiq)
       const r = await fetch('/api/owner/contabilidad/cierre-diario', {
         method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ fecha })
+        body: JSON.stringify(body)
       })
       const d = await r.json()
-      if (!d.ok) { showToast('Error: ' + d.error); return }
+      if (!d.ok) {
+        if (d.pendientes?.length) {
+          setPendientesMotivo(d.pendientes)
+          showToast('⚠️ Indica el motivo del descuadre de cada empleado y reintenta.')
+        } else { showToast('Error: ' + d.error) }
+        return
+      }
+      setPendientesMotivo([]); setRevelado(false)
       setResult(d)
-      showToast(`✅ Cierre generado — Asiento nº ${d.num_asiento}`)
+      const dif = d.cuadre?.conteo_realizado ? d.cuadre.diferencia_caja : null
+      showToast(
+        dif == null ? `✅ Cierre generado — Asiento nº ${d.num_asiento}`
+        : Math.abs(dif) < 0.005 ? `✅ Cierre + caja cuadrada — Asiento nº ${d.num_asiento}`
+        : `⚠️ Cierre con descuadre de ${fmt(dif)} — Asiento nº ${d.num_asiento}`
+      )
     } finally { setLoading(false) }
   }
+
+  const c = result?.cuadre
+  const difColor = !c ? C.ink : Math.abs(c.diferencia_caja) < 0.005 ? '#4ADE80' : c.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
 
   return (
     <div>
@@ -218,9 +294,16 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
         <div style={{ fontFamily: SN, fontSize: 13, color: C.ink, marginBottom: 12 }}>
           Genera el asiento contable del día calculando automáticamente las ventas desde los tickets y facturas simplificadas emitidas.
         </div>
-        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
           <input type="date" value={fecha} onChange={e => setFecha(e.target.value)}
             style={{ fontFamily: SN, fontSize: 13, padding: '8px 12px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none' }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontFamily: SN, fontSize: 12, color: C.ink3, cursor: 'pointer' }}>
+            <input type="checkbox" checked={conArqueo} onChange={e => setConArqueo(e.target.checked)} style={{ accentColor: C.ink }} />
+            Hacer arqueo de caja (contar el cajón)
+          </label>
+          <input type="number" inputMode="decimal" value={tarjetaLiq} onChange={e => setTarjetaLiq(e.target.value)} placeholder="Liquidado tarjeta (banco) €"
+            title="Conciliación de tarjeta: importe liquidado por el datáfono/banco"
+            style={{ width: 190, fontFamily: SN, fontSize: 13, padding: '8px 12px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none' }} />
           <button onClick={cerrar} disabled={loading}
             style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, padding: '8px 20px', background: loading ? C.rule : C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: loading ? 'default' : 'pointer' }}>
             {loading ? 'Generando…' : '🔒 Generar cierre del día'}
@@ -228,8 +311,56 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
         </div>
       </div>
 
+      {/* Arqueo físico: conteo por denominación */}
+      {conArqueo && (
+        <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Conteo físico del cajón</div>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink }}>Contado: {fmt(fondoContado)}</div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: 8 }}>
+            {DENOMINACIONES_EUR.map(d => (
+              <div key={d} style={{ display: 'flex', alignItems: 'center', gap: 6, background: C.paper2, borderRadius: 8, padding: '5px 8px' }}>
+                <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3, minWidth: 52 }}>{fmtDenom(d)}</span>
+                <input type="number" min={0} inputMode="numeric" value={desglose[String(d)] || ''} placeholder="0"
+                  onChange={e => setDenom(d, e.target.value)}
+                  style={{ width: '100%', fontFamily: SN, fontSize: 13, padding: '5px 6px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+            ))}
+          </div>
+          <div style={{ marginTop: 10 }}>
+            <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.07em', marginBottom: 4 }}>Notas (motivo del descuadre, incidencias…)</div>
+            <input type="text" value={notas} onChange={e => setNotas(e.target.value)} placeholder="Opcional"
+              style={{ width: '100%', fontFamily: SN, fontSize: 13, padding: '8px 10px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none', boxSizing: 'border-box' }} />
+          </div>
+        </div>
+      )}
+
+      {/* Motivo obligatorio: empleados que superan el umbral sin justificación */}
+      {pendientesMotivo.length > 0 && (
+        <div style={{ background: C.bone, border: `1px solid ${(C.verm ?? '#D9442B')}88`, borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ fontFamily: SM, fontSize: 10, color: (C.verm ?? '#D9442B'), textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Motivo del descuadre obligatorio</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {pendientesMotivo.map(p => {
+              const k = p.camarero_id ?? 'general'
+              return (
+                <div key={k}>
+                  <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, marginBottom: 3 }}>{p.camarero_nombre}</div>
+                  <input type="text" value={notasEmpleado[k] ?? ''} placeholder="Motivo / incidencia…"
+                    onChange={e => setNotasEmpleado(prev => ({ ...prev, [k]: e.target.value }))}
+                    style={{ width: '100%', fontFamily: SN, fontSize: 13, padding: '8px 10px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 8, color: C.ink, outline: 'none', boxSizing: 'border-box' }} />
+                </div>
+              )
+            })}
+          </div>
+          <button onClick={cerrar} disabled={loading} style={{ marginTop: 10, fontFamily: SN, fontSize: 13, fontWeight: 700, padding: '8px 16px', background: C.ink, color: C.paper, border: 'none', borderRadius: 8, cursor: 'pointer' }}>
+            Reintentar cierre
+          </button>
+        </div>
+      )}
+
       {result && (
-        <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px' }}>
+        <div style={{ background: '#0A2614', border: '1px solid #3F7D4444', borderRadius: 10, padding: '14px 16px', marginBottom: (c?.conteo_realizado || (result.cuadre_por_empleado?.length ?? 0) > 0) ? 12 : 0 }}>
           <div style={{ fontFamily: SM, fontSize: 11, color: '#4ADE80', marginBottom: 10 }}>Asiento nº {result.num_asiento} generado</div>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
             {[
@@ -246,11 +377,305 @@ function CierreTab({ sh, showToast }: { sh: () => Record<string, string>; showTo
               </div>
             ))}
           </div>
+          {result.diferencia_tarjeta != null && (
+            <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #3F7D4433', fontFamily: SN, fontSize: 12, color: Math.abs(result.diferencia_tarjeta) < 0.005 ? '#4ADE80' : C.amber }}>
+              Conciliación tarjeta: liquidado {fmt(result.tarjeta_liquidada ?? 0)} · {Math.abs(result.diferencia_tarjeta) < 0.005 ? 'cuadra ✓' : `descuadre ${fmt(result.diferencia_tarjeta)}`}
+            </div>
+          )}
+          {!!result.aviso_cambio?.length && (
+            <div style={{ marginTop: 8, fontFamily: SN, fontSize: 12, color: C.amber }}>
+              ⚠️ Falta cambio: {result.aviso_cambio.map(a => `${fmtDenom(Number(a.denom))} ×${a.faltan}`).join(' · ')}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Cuadre de caja — vista configurable: caja única o por empleado */}
+      {result && (c?.conteo_realizado || (result.cuadre_por_empleado?.length ?? 0) > 0) && (
+        <div style={{ background: C.bone, border: `1px solid ${difColor}55`, borderRadius: 10, padding: '14px 16px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 8 }}>
+            <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Cuadre de caja</div>
+            <div style={{ display: 'flex', gap: 4 }}>
+              {(['global', 'empleado'] as const).map(v => (
+                <button key={v} onClick={() => setVista(v)} style={{
+                  fontFamily: SN, fontSize: 11, padding: '4px 10px', borderRadius: 14,
+                  background: vista === v ? C.ink : 'transparent', color: vista === v ? C.paper : C.ink3,
+                  border: `1px solid ${vista === v ? C.ink : C.rule}`, cursor: 'pointer' }}>
+                  {v === 'global' ? 'Caja única' : 'Por empleado'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {vista === 'global' && (
+            c?.conteo_realizado ? (
+              result.conteo_ciego && !revelado ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Conteo ciego activo: el descuadre se revela tras contar.</div>
+                  <button onClick={() => setRevelado(true)} style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '5px 12px', background: C.ink, color: C.paper, border: 'none', borderRadius: 6, cursor: 'pointer' }}>Revelar cuadre</button>
+                </div>
+              ) : (
+              <>
+                <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 20, color: difColor, marginBottom: 10 }}>
+                  {Math.abs(c.diferencia_caja) < 0.005 ? 'Caja cuadrada ✓' : `${c.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(c.diferencia_caja))}`}
+                </div>
+                <CuadreDetalle cc={c} />
+              </>
+              )
+            ) : (
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Marca “Hacer arqueo” y cuenta el cajón para ver el descuadre global.</div>
+            )
+          )}
+
+          {vista === 'empleado' && (
+            (result.cuadre_por_empleado?.length ?? 0) > 0 ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                {result.cuadre_por_empleado!.map(e => {
+                  const ec = e.cuadre
+                  const ecol = Math.abs(ec.diferencia_caja) < 0.005 ? '#3F7D44' : ec.diferencia_caja > 0 ? C.amber : (C.verm ?? '#D9442B')
+                  const alerta = result.alertas?.find(x => x.camarero_id === e.camarero_id)
+                  return (
+                    <div key={e.camarero_id ?? 'general'} style={{ background: C.paper2, borderRadius: 8, padding: '10px 12px', border: alerta ? `1px solid ${(C.verm ?? '#D9442B')}88` : '1px solid transparent' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 8 }}>
+                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
+                          {e.camarero_nombre ?? 'Caja general'}
+                          {alerta && <span style={{ fontFamily: SM, fontSize: 8, color: C.paper, background: (C.verm ?? '#D9442B'), borderRadius: 6, padding: '1px 5px', textTransform: 'uppercase' }}>{alerta.recurrente ? 'merma recurrente' : 'supera umbral'}</span>}
+                        </div>
+                        <div style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: ecol }}>
+                          {!ec.conteo_realizado ? 'Sin conteo' : Math.abs(ec.diferencia_caja) < 0.005 ? 'Cuadrada ✓' : `${ec.diferencia_caja > 0 ? 'Sobra' : 'Falta'} ${fmt(Math.abs(ec.diferencia_caja))}`}
+                        </div>
+                      </div>
+                      <CuadreDetalle cc={ec} />
+                    </div>
+                  )
+                })}
+              </div>
+            ) : (
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>No hay movimientos de caja por empleado este día.</div>
+            )
+          )}
+        </div>
+      )}
+
+      {/* Auditoría: histórico de descuadres por empleado */}
+      <HistoricoEmpleadoPanel sh={sh} />
+
+      {/* Tesorería: caja fuerte / banco */}
+      <TesoreriaPanel sh={sh} showToast={showToast} />
+    </div>
+  )
+}
+
+// ── Tesorería (caja fuerte ↔ banco) ───────────────────────────────────────────
+interface MovTes { id: string; tipo: string; importe: number; referencia: string | null; fecha: string; notas: string | null }
+const TES_LABEL: Record<string, string> = {
+  ingreso_caja_fuerte: 'Cajón → caja fuerte',
+  retirada_banco: 'Caja fuerte → banco',
+  entrada_banco: 'Entrada banco',
+  ajuste: 'Ajuste',
+}
+
+function TesoreriaPanel({ sh, showToast }: { sh: () => Record<string, string>; showToast: (m: string) => void }) {
+  const hoy = new Date()
+  const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
+  const [desde, setDesde] = useState(primero)
+  const [hasta, setHasta] = useState(hoy.toISOString().split('T')[0])
+  const [saldo, setSaldo] = useState(0)
+  const [movs, setMovs] = useState<MovTes[]>([])
+  const [tipo, setTipo] = useState('ingreso_caja_fuerte')
+  const [importe, setImporte] = useState('')
+  const [ref, setRef] = useState('')
+  const [loading, setLoading] = useState(false)
+
+  const cargar = useCallback(async () => {
+    const r = await fetch(`/api/owner/contabilidad/tesoreria?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+    const d = await r.json()
+    if (d.ok) { setSaldo(d.saldo_caja_fuerte); setMovs(d.movimientos ?? []) }
+  }, [desde, hasta, sh])
+  useEffect(() => { cargar() }, [cargar])
+
+  const crear = async () => {
+    if (!importe.trim()) return
+    setLoading(true)
+    try {
+      const r = await fetch('/api/owner/contabilidad/tesoreria', {
+        method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tipo, importe: Number(importe), referencia: ref }),
+      })
+      const d = await r.json()
+      if (d.ok) { showToast('✅ Movimiento de tesorería registrado'); setImporte(''); setRef(''); cargar() }
+      else showToast('Error: ' + d.error)
+    } finally { setLoading(false) }
+  }
+
+  return (
+    <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Tesorería · caja fuerte / banco</div>
+        <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ink }}>Caja fuerte: {fmt(saldo)}</div>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }}>
+        <select value={tipo} onChange={e => setTipo(e.target.value)} style={inp}>
+          {Object.entries(TES_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+        </select>
+        <input type="number" inputMode="decimal" value={importe} onChange={e => setImporte(e.target.value)} placeholder="Importe €" style={{ ...inp, width: 110 }} />
+        <input type="text" value={ref} onChange={e => setRef(e.target.value)} placeholder="Referencia / remesa" style={{ ...inp, width: 160 }} />
+        <button onClick={crear} disabled={loading} style={{ ...btn, opacity: loading ? .6 : 1 }}>{loading ? '…' : 'Registrar'}</button>
+      </div>
+
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', marginBottom: 8 }}>
+        <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={inp} />
+        <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>→</span>
+        <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={inp} />
+        <button onClick={cargar} style={btn}>Ver</button>
+      </div>
+
+      {!movs.length ? (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Sin movimientos de tesorería en el rango.</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {movs.map(m => (
+            <div key={m.id} style={{ display: 'grid', gridTemplateColumns: '90px 1.4fr 1fr 0.8fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '6px 8px' }}>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>{m.fecha}</div>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink }}>{TES_LABEL[m.tipo] ?? m.tipo}</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3 }}>{m.referencia ?? ''}</div>
+              <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, textAlign: 'right' }}>{fmt(m.importe)}</div>
+            </div>
+          ))}
         </div>
       )}
     </div>
   )
 }
+
+// ── Histórico / auditoría de descuadres por empleado ─────────────────────────
+interface ResumenEmp {
+  camarero_id: string | null; camarero_nombre: string | null
+  num_cierres: number; descuadre_total: number; descuadre_medio: number
+  peor_descuadre: number; racha_negativa: number; patron_recurrente: boolean
+}
+interface FilaEmp {
+  camarero_id: string | null; camarero_nombre: string | null
+  fecha: string; diferencia_caja: number; conteo_realizado: boolean; notas?: string | null
+}
+
+function HistoricoEmpleadoPanel({ sh }: { sh: () => Record<string, string> }) {
+  const hoy = new Date()
+  const primero = new Date(hoy.getFullYear(), hoy.getMonth(), 1).toISOString().split('T')[0]
+  const [desde, setDesde] = useState(primero)
+  const [hasta, setHasta] = useState(hoy.toISOString().split('T')[0])
+  const [resumen, setResumen] = useState<ResumenEmp[]>([])
+  const [detalle, setDetalle] = useState<FilaEmp[]>([])
+  const [umbrales, setUmbrales] = useState<Record<string, number>>({})
+  const [umbralGlobal, setUmbralGlobal] = useState(5)
+  const [loading, setLoading] = useState(false)
+  const [cargado, setCargado] = useState(false)
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try {
+      const r = await fetch(`/api/owner/contabilidad/arqueos-empleado?desde=${desde}&hasta=${hasta}`, { headers: sh() })
+      const d = await r.json()
+      if (d.ok) {
+        setResumen(d.resumen ?? []); setDetalle(d.detalle ?? [])
+        setUmbrales(d.umbrales_empleado ?? {}); setUmbralGlobal(d.umbral_global ?? 5)
+      }
+      setCargado(true)
+    } finally { setLoading(false) }
+  }, [desde, hasta, sh])
+
+  const guardarUmbral = async (camareroId: string, valor: string) => {
+    setUmbrales(prev => { const n = { ...prev }; if (valor.trim() === '') delete n[camareroId]; else n[camareroId] = Number(valor); return n })
+    await fetch('/api/owner/contabilidad/umbral-empleado', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ camarero_id: camareroId, umbral: valor.trim() === '' ? null : Number(valor) }),
+    })
+  }
+
+  useEffect(() => { cargar() }, [cargar])
+
+  const col = (v: number) => Math.abs(v) < 0.005 ? '#3F7D44' : v > 0 ? C.amber : (C.verm ?? '#D9442B')
+
+  const exportarCSV = () => {
+    const cab = ['Empleado', 'Cierres', 'Descuadre acumulado', 'Media', 'Peor', 'Racha negativa', 'Merma recurrente']
+    const filas = resumen.map(r => [
+      r.camarero_nombre ?? 'Caja general', r.num_cierres, r.descuadre_total, r.descuadre_medio,
+      r.peor_descuadre, r.racha_negativa, r.patron_recurrente ? 'SÍ' : 'no',
+    ])
+    const det = detalle.map(f => [f.camarero_nombre ?? 'Caja general', f.fecha, f.diferencia_caja, f.conteo_realizado ? 'sí' : 'no', (f.notas ?? '').replace(/[\n;]/g, ' ')])
+    const csv = [
+      `Descuadres por empleado ${desde} a ${hasta}`, '',
+      cab.join(';'), ...filas.map(f => f.join(';')),
+      '', 'Detalle;Fecha;Descuadre;Conteo;Notas', ...det.map(f => f.join(';')),
+    ].join('\n')
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const a = document.createElement('a')
+    a.href = url; a.download = `descuadres_empleado_${desde}_${hasta}.csv`; a.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <div style={{ background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 10, padding: '14px 16px', marginTop: 16 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+        <div style={{ fontFamily: SM, fontSize: 10, color: C.ink3, textTransform: 'uppercase', letterSpacing: '.05em' }}>Histórico de descuadres por empleado</div>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
+          <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={inp} />
+          <span style={{ fontFamily: SN, fontSize: 12, color: C.ink4 }}>→</span>
+          <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={inp} />
+          <button onClick={cargar} disabled={loading} style={{ ...btn, opacity: loading ? .6 : 1 }}>{loading ? '…' : 'Ver'}</button>
+          <button onClick={exportarCSV} disabled={!resumen.length} style={{ ...btn, opacity: resumen.length ? 1 : .4 }}>CSV</button>
+        </div>
+      </div>
+
+      {!resumen.length ? (
+        <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{cargado ? 'Sin cierres por empleado en este rango.' : 'Cargando…'}</div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {/* Cabecera */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1.3fr .5fr .9fr .7fr .7fr .7fr 1fr', gap: 6, padding: '0 8px' }}>
+            {['Empleado', 'Cierres', 'Acumulado', 'Media', 'Peor', `Umbral (${fmt(umbralGlobal)})`, 'Tendencia'].map(h => (
+              <div key={h} style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.05em' }}>{h}</div>
+            ))}
+          </div>
+          {resumen.map(r => {
+            const serie = detalle.filter(f => f.camarero_id === r.camarero_id && f.conteo_realizado)
+            const maxAbs = Math.max(1, ...serie.map(s => Math.abs(s.diferencia_caja)))
+            return (
+              <div key={r.camarero_id ?? 'general'} style={{ display: 'grid', gridTemplateColumns: '1.3fr .5fr .9fr .7fr .7fr .7fr 1fr', gap: 6, alignItems: 'center', background: C.paper2, borderRadius: 8, padding: '8px' }}>
+                <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, display: 'flex', alignItems: 'center', gap: 6 }}>
+                  {r.camarero_nombre ?? 'Caja general'}
+                  {r.patron_recurrente && (
+                    <span title={`${r.racha_negativa} cierres seguidos en negativo`} style={{ fontFamily: SM, fontSize: 8, color: C.paper, background: (C.verm ?? '#D9442B'), borderRadius: 6, padding: '1px 5px', textTransform: 'uppercase' }}>merma</span>
+                  )}
+                </div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{r.num_cierres}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: col(r.descuadre_total) }}>{fmt(r.descuadre_total)}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: col(r.descuadre_medio) }}>{fmt(r.descuadre_medio)}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: col(r.peor_descuadre) }}>{fmt(r.peor_descuadre)}</div>
+                <div>
+                  {r.camarero_id ? (
+                    <input type="number" inputMode="decimal" defaultValue={umbrales[r.camarero_id] ?? ''} placeholder={String(umbralGlobal)}
+                      onBlur={e => guardarUmbral(r.camarero_id!, e.target.value)}
+                      style={{ width: 56, fontFamily: SN, fontSize: 11, padding: '3px 5px', background: C.bone, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none' }} />
+                  ) : <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>—</span>}
+                </div>
+                <div style={{ display: 'flex', alignItems: 'flex-end', gap: 2, height: 26 }}>
+                  {serie.slice(-14).map((s, i) => (
+                    <div key={i} title={`${s.fecha}: ${fmt(s.diferencia_caja)}`}
+                      style={{ width: 5, height: `${Math.max(2, Math.abs(s.diferencia_caja) / maxAbs * 24)}px`, background: col(s.diferencia_caja), borderRadius: 1 }} />
+                  ))}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+const inp: React.CSSProperties = { fontFamily: SN, fontSize: 12, padding: '5px 8px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none' }
+const btn: React.CSSProperties = { fontFamily: SN, fontSize: 12, fontWeight: 700, padding: '5px 12px', background: C.ink, color: C.paper, border: 'none', borderRadius: 6, cursor: 'pointer' }
 
 // ── IVA 303 ───────────────────────────────────────────────────────────────────
 function IvaTab({ sh, showToast }: { sh: () => Record<string, string>; showToast: (m: string) => void }) {

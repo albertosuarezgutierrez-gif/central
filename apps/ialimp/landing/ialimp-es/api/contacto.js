@@ -14,6 +14,10 @@
 const AVISO_TO = 'alberto.suarez.gutierrez@gmail.com';
 const MAIL_FROM = 'IALIMP <hola@ialimp.es>';
 
+// Endpoint público de la app que registra el lead en el CRM de captación
+// (mailing_prospectos). Configurable por si cambia el dominio.
+const LEAD_SAAS_URL = process.env.LEAD_SAAS_URL || 'https://app.ialimp.es/api/lead-saas';
+
 // Escapa el contenido del usuario antes de incrustarlo en el HTML del email.
 function esc(s) {
   return String(s || '')
@@ -67,6 +71,23 @@ async function enviarSmtp({ subject, html, text, replyTo }) {
   }
 }
 
+// Registra el lead en el CRM de captación de IALIMP (mailing_prospectos) reutilizando
+// el endpoint público /api/lead-saas de la app. Best-effort: NUNCA rompe el formulario
+// (su propio try/catch); el aviso por email sigue siendo la vía garantizada.
+async function registrarEnCrm({ nombre, email, telefono, mensaje }) {
+  try {
+    await fetch(LEAD_SAAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      // La landing no pide "empresa"; usamos el nombre como empresa_nombre (campo
+      // obligatorio en mailing_prospectos). Alberto puede afinarlo en el panel.
+      body: JSON.stringify({ empresa: nombre, nombre, email, telefono, mensaje }),
+    });
+  } catch (e) {
+    console.error('contacto: no se pudo registrar el lead en el CRM', e && e.message);
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') {
     res.setHeader('Allow', 'POST');
@@ -97,6 +118,9 @@ module.exports = async function handler(req, res) {
   if (!EMAIL_RE.test(email)) {
     return res.status(400).json({ ok: false, error: 'Email no válido.' });
   }
+
+  // Registra el lead en el CRM de captación (no crítico, no bloquea el aviso por email).
+  await registrarEnCrm({ nombre, email, telefono, mensaje });
 
   const fecha = new Date().toLocaleString('es-ES', { timeZone: 'Europe/Madrid' });
   const html = `
