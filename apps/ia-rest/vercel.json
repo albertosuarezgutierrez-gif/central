@@ -49,6 +49,10 @@
       "schedule": "0 7 * * 1"
     },
     {
+      "path": "/api/cron/instagram-ideas",
+      "schedule": "30 7 * * 1"
+    },
+    {
       "path": "/api/cron/blog-seo",
       "schedule": "0 8 * * 1"
     },
@@ -139,6 +143,14 @@
     {
       "path": "/api/cron/reposicion-stock",
       "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/cron/seo-agent",
+      "schedule": "0 7 * * 2"
+    },
+    {
+      "path": "/api/cron/seo-agent",
+      "schedule": "0 7 * * 5"
     }
   ]
 }
