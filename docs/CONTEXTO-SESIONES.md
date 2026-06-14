@@ -16,6 +16,36 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x` — 13/06/2026**
+  Cron `/api/cron/seo-agent` (**martes y viernes 07:00 UTC**) que lee **GSC+GA4** y, de forma
+  **autónoma**, adapta el SEO de **iarest.es**: titles/metas, JSON-LD, bloques de contenido y
+  artículos nuevos. Principio rector: **los cambios son DATOS, no código** (nunca commitea ni rompe
+  el build). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-seo-autonomo-iarest*`.
+  - **Migración aplicada** a Supabase **`efncqyvhniaxsirhdxaa`** (proyecto ia-rest), **schema `public`**
+    (¡no `iarest`! — ahí vive `blog_borradores`, que es donde apunta `createServerClient`). Tablas
+    nuevas con **RLS habilitado**: `seo_overrides` (title/meta/canonical/og/jsonld por ruta),
+    `seo_content_blocks` (bloques por ruta+posición), `seo_articulos` (artículos en BD), `seo_cambios`
+    (snapshot antes/después + auditoría).
+  - **Red de seguridad**: kill switch `SEO_AGENT_ENABLED` (si != 'true', el cron sale sin tocar nada),
+    allowlist de rutas (`/restaurantes`, `/restaurantes/*`), máx. `SEO_MAX_CAMBIOS` (def. 5)/pasada,
+    anti-oscilación 7 días, umbral `SEO_MIN_IMPR` (def. 30) en el prompt, informe Telegram y reversión
+    vía `/api/super/seo-revert`.
+  - **Código** (`apps/ia-rest`): `src/lib/seo/{types,guardrails,gsc-ga4,store,targets}.ts`,
+    `src/components/seo/SeoBlocks.tsx`, ruta dinámica `src/app/blog/[slug]/page.tsx`, endpoints
+    `api/cron/seo-agent` y `api/super/seo-revert`. Páginas `/restaurantes` y `/restaurantes/[ciudad]`
+    leen override en `generateMetadata` + slot `<SeoBlocks>`. GSC/GA4 extraídos de `agentes-seo` al
+    módulo compartido `gsc-ga4.ts`.
+  - **Superficie editable Fase 1**: solo páginas server (`/restaurantes`, `[ciudad]`) + artículos
+    nuevos. `/` y `/espacios` son client-components (`next/head`) → fuera del override por ahora.
+  - **Verificado**: test puro `scripts/seo/test-guardrails.ts` (14 checks) ✅, `next build` ✅,
+    `npm run qa` sin problemas ✅, 4 tablas confirmadas en BD.
+  - **⚠️ PENDIENTE de despliegue**: en el Vercel de ia-rest, dejar `SEO_AGENT_ENABLED` sin poner/`false`
+    hasta querer activarlo; al activar (`=true`), revisar el primer informe Telegram y `/super → SEO`
+    antes de confiar. Opcional: `SEO_MAX_CAMBIOS`, `SEO_MIN_IMPR`.
+  - **Fase 0/2 (ialimp.es) pendiente**: ialimp **no tiene GSC/GA4 conectado** (cero OAuth/analytics en
+    `apps/ialimp`) y su landing es **HTML estático**; requiere conectar analíticas antes de extender el
+    agente (y extraer la lógica a `@central/core-seo`).
+
 - **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
   Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
   - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
