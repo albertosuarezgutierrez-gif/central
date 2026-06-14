@@ -2,6 +2,7 @@
 // (mismo patrón que lib/financiero.ts), siempre scopeado por cuenta_id. La lógica de
 // parseo del extracto vive en lib/norma43.ts (pura, testeable).
 
+import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { dedupeHash, type ExtractoN43 } from './norma43'
 import { fmtEur } from './financiero'
@@ -138,6 +139,25 @@ export type MovimientoBancario = {
   categoria: string | null
   contraparte: string | null
   conciliado: boolean
+  requiereRevision: boolean
+}
+
+const SELECT_MOV = Prisma.sql`mb.id, mb.cuenta_bancaria_id, mb.fecha_operacion, mb.importe, mb.concepto,
+  mb.concepto_normalizado, mb.categoria, mb.contraparte, mb.conciliado, mb.requiere_revision`
+
+function mapMov(r: MovRow): MovimientoBancario {
+  return {
+    id: r.id,
+    cuentaBancariaId: r.cuenta_bancaria_id,
+    fechaOperacion: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    importe: Number(r.importe),
+    concepto: r.concepto,
+    conceptoNormalizado: r.concepto_normalizado,
+    categoria: r.categoria,
+    contraparte: r.contraparte,
+    conciliado: r.conciliado,
+    requiereRevision: r.requiere_revision,
+  }
 }
 
 // Últimos movimientos de una cuenta (todas sus cuentas bancarias, o una concreta).
@@ -148,8 +168,7 @@ export async function listarMovimientos(
 ): Promise<MovimientoBancario[]> {
   const rows = cuentaBancariaId
     ? await prisma.$queryRaw<MovRow[]>`
-        SELECT mb.id, mb.cuenta_bancaria_id, mb.fecha_operacion, mb.importe, mb.concepto,
-               mb.concepto_normalizado, mb.categoria, mb.contraparte, mb.conciliado
+        SELECT ${SELECT_MOV}
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.cuenta_bancaria_id = ${cuentaBancariaId}::uuid
@@ -157,30 +176,31 @@ export async function listarMovimientos(
         LIMIT ${limite}
       `
     : await prisma.$queryRaw<MovRow[]>`
-        SELECT mb.id, mb.cuenta_bancaria_id, mb.fecha_operacion, mb.importe, mb.concepto,
-               mb.concepto_normalizado, mb.categoria, mb.contraparte, mb.conciliado
+        SELECT ${SELECT_MOV}
         FROM movimientos_bancarios mb
         JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
         WHERE cb.cuenta_id = ${cuentaId}::uuid
         ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
         LIMIT ${limite}
       `
+  return rows.map(mapMov)
+}
 
-  return rows.map(r => ({
-    id: r.id,
-    cuentaBancariaId: r.cuenta_bancaria_id,
-    fechaOperacion: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
-    importe: Number(r.importe),
-    concepto: r.concepto,
-    conceptoNormalizado: r.concepto_normalizado,
-    categoria: r.categoria,
-    contraparte: r.contraparte,
-    conciliado: r.conciliado,
-  }))
+// Movimientos que la IA marcó "por revisar" (categoría dudosa): el dueño les pone categoría.
+export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<MovimientoBancario[]> {
+  const rows = await prisma.$queryRaw<MovRow[]>`
+    SELECT ${SELECT_MOV}
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    LIMIT ${limite}
+  `
+  return rows.map(mapMov)
 }
 
 type MovRow = {
   id: string; cuenta_bancaria_id: string; fecha_operacion: Date | null; importe: unknown
   concepto: string | null; concepto_normalizado: string | null; categoria: string | null
-  contraparte: string | null; conciliado: boolean
+  contraparte: string | null; conciliado: boolean; requiere_revision: boolean
 }
