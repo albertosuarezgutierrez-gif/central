@@ -4,7 +4,7 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientos, fmtEur } from '@/lib/banca'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -50,6 +50,7 @@ export default async function BancaPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
             {movimientos.length > 0 && <ReanalizarBtn />}
             {movimientos.length > 0 && <ConciliarBtn />}
+            {movimientos.length > 0 && <SubirFacturaBtn />}
             <ImportarExtractoBtn sociedades={sociedades} />
           </div>
         </div>

@@ -127,6 +127,39 @@ export function ConciliarBtn() {
   )
 }
 
+// Sube una FOTO/imagen de factura → OCR (IA) → intenta casarla con un movimiento.
+export function SubirFacturaBtn() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(false)
+  const [msg, setMsg] = useState('')
+  const [err, setErr] = useState('')
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  async function onPick(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setLoading(true); setErr(''); setMsg('')
+    const fd = new FormData(); fd.set('file', file)
+    const res = await fetch('/api/banca/factura', { method: 'POST', body: fd })
+    setLoading(false)
+    const data = await res.json().catch(() => ({}))
+    if (fileRef.current) fileRef.current.value = ''
+    if (!res.ok) { setErr(data.error || 'Error'); return }
+    const f = data.factura
+    setMsg(`${f.emisor} · ${f.importe}€ · ${f.fecha}` + (data.conciliado ? ' → ✅ conciliada con un movimiento' : ' → sin movimiento que casar'))
+    if (data.conciliado) router.refresh()
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <button onClick={() => fileRef.current?.click()} disabled={loading} style={ghost}>{loading ? 'Leyendo…' : '📄 Subir factura (OCR)'}</button>
+      <input ref={fileRef} type="file" accept="image/*" onChange={onPick} style={{ display: 'none' }} />
+      {msg && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{msg}</span>}
+      {err && <span style={{ fontSize: '12px', color: '#dc2626' }}>{err}</span>}
+    </span>
+  )
+}
+
 const ghost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const btn: React.CSSProperties = { background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: '8px', padding: '8px 14px', fontSize: '14px', fontWeight: 600, cursor: 'pointer' }
 const overlay: React.CSSProperties = { position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 50, padding: '16px' }
