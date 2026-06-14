@@ -33,7 +33,7 @@ export async function sincronizarSesion(
       getMovimientos(accountUid).catch(() => [] as MovEB[]),
     ])
     const iban = detalle?.iban || accountUid
-    const banco = detalle?.nombre || 'Banco (PSD2)'
+    const banco = ses.aspsp || detalle?.nombre || 'Banco (PSD2)'
     const mascara = iban.length >= 4 ? `****${iban.slice(-4)}` : iban
 
     const filas = await prisma.$queryRaw<Array<{ id: string }>>`

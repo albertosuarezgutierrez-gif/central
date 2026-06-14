@@ -139,13 +139,13 @@ export function iniciarAuth(aspspName: string, country: string, redirect: string
 }
 
 // Canjea el `code` del callback por una sesión autenticada con la lista de cuentas (uids).
-export type Sesion = { session_id: string; accounts: string[] }
+export type Sesion = { session_id: string; accounts: string[]; aspsp?: string }
 export async function crearSesion(code: string): Promise<Sesion> {
-  const j = await api<{ session_id: string; accounts: Array<string | { uid: string }> }>('/sessions', {
+  const j = await api<Record<string, unknown>>('/sessions', {
     method: 'POST',
     body: JSON.stringify({ code }),
   })
-  return { session_id: j.session_id, accounts: (j.accounts ?? []).map(a => typeof a === 'string' ? a : a.uid) }
+  return { session_id: String(j.session_id ?? ''), accounts: extraerUids(j), aspsp: nombreAspsp(j) }
 }
 
 // Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids).
@@ -153,7 +153,12 @@ export async function crearSesion(code: string): Promise<Sesion> {
 // string según el endpoint; aceptamos varias formas para no perder ninguna cuenta.
 export async function getSesion(sessionId: string): Promise<Sesion> {
   const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
-  return { session_id: sessionId, accounts: extraerUids(j) }
+  return { session_id: sessionId, accounts: extraerUids(j), aspsp: nombreAspsp(j) }
+}
+
+function nombreAspsp(j: Record<string, unknown>): string | undefined {
+  const a = j.aspsp as Record<string, unknown> | undefined
+  return typeof a?.name === 'string' ? a.name : undefined
 }
 
 // Extrae los uid de cuenta de una respuesta de sesión, tolerando las variantes de la API:
@@ -189,6 +194,25 @@ export async function inspeccionarSesion(sessionId: string): Promise<Record<stri
     uidsExtraidos: extraerUids(j).length,
     status: j.status ?? null,
   }
+}
+
+// Inspección estructural de las transacciones de una cuenta (depuración sandbox): compara
+// la respuesta con y sin date_from para ver si es un problema de rango o de parseo.
+export async function inspeccionarMovimientos(accountUid: string): Promise<Record<string, unknown>> {
+  const resumen = (r: Record<string, unknown> | { error: string }) => {
+    const t = (r as Record<string, unknown>).transactions
+    const primer = Array.isArray(t) ? t[0] : undefined
+    return {
+      claves: r && typeof r === 'object' ? Object.keys(r) : typeof r,
+      txLen: Array.isArray(t) ? t.length : null,
+      primerClaves: primer && typeof primer === 'object' ? Object.keys(primer as object) : null,
+      error: (r as { error?: string }).error,
+    }
+  }
+  const dateFrom = new Date(Date.now() - 730 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  const sinFecha = await api<Record<string, unknown>>(`/accounts/${accountUid}/transactions`).catch(e => ({ error: String(e) }))
+  const conFecha = await api<Record<string, unknown>>(`/accounts/${accountUid}/transactions?date_from=${dateFrom}`).catch(e => ({ error: String(e) }))
+  return { sinFecha: resumen(sinFecha), conFecha: resumen(conFecha) }
 }
 
 export type CuentaDetalle = { iban?: string; nombre?: string; divisa?: string }
@@ -230,11 +254,16 @@ type Transacciones = { transactions: MovRaw[]; continuation_key?: string }
 
 export async function getMovimientos(accountUid: string): Promise<MovEB[]> {
   const out: MovEB[] = []
+  // Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve
+  // vacío. Pedimos ~2 años hacia atrás (el consentimiento PSD2 suele permitir 90d de histórico,
+  // el banco recorta a lo que tenga disponible).
+  const dateFrom = new Date(Date.now() - 730 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   let cont: string | undefined
   let guard = 0
   do {
-    const qs = cont ? `?continuation_key=${encodeURIComponent(cont)}` : ''
-    const j: Transacciones = await api<Transacciones>(`/accounts/${accountUid}/transactions${qs}`)
+    const p = new URLSearchParams({ date_from: dateFrom })
+    if (cont) p.set('continuation_key', cont)
+    const j: Transacciones = await api<Transacciones>(`/accounts/${accountUid}/transactions?${p.toString()}`)
     for (const m of j.transactions ?? []) {
       const abs = Math.abs(Number(m.transaction_amount.amount))
       if (!Number.isFinite(abs)) continue
