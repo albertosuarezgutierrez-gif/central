@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T10:22:34Z",
+  "generadoEn": "2026-06-14T10:32:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -228,7 +228,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "sivra": {
         "estado": "usado",
@@ -823,8 +823,8 @@
         "evidencias": 6
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "sivra": {
         "presente": false,
@@ -1621,6 +1621,7 @@
       "/api/auth/register",
       "/api/banca/analizar",
       "/api/banca/conciliar",
+      "/api/banca/factura",
       "/api/banca/importar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
@@ -2209,7 +2210,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 759,
+    "apis": 760,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
