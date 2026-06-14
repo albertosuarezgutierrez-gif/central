@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 IALIMP: "Agenda" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`) — 14/06/2026**
+  Vanessa (Sique Brilla) no encontraba dónde ver/repartir las limpiezas **por limpiadora**. La pantalla
+  `/admin/agenda` (cuadrante semanal con una fila por limpiadora + panel "Asignar limpiadora por día") **ya
+  existía y estaba completa, pero estaba huérfana**: no figuraba en el `NAV` de `app/dashboard/DashboardClient.tsx`,
+  así que solo se abría tecleando la URL. Fix mínimo: entrada `📅 Agenda` en `NAV` (tras Operaciones) + mapeo
+  `'/admin/agenda':'agenda'` en `NAV_MODULO` (respeta el permiso de módulo `agenda` ya existente). Manual
+  (`public/manual.html`) actualizado con la tarjeta Agenda. Sin tocar BD/queries/multi-tenant. 4 previews verdes
+  → mergeado a `main` (en producción `app.ialimp.es`).
+
 - **🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6) — 14/06/2026**
   Épico nuevo en `apps/plataforma`: importar el banco, ver saldo/movimientos consolidados de todas las
   sociedades, categorizar con IA, conciliar con facturas, prever tesorería y conectar el banco por PSD2.
