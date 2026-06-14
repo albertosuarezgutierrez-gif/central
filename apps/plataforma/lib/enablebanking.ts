@@ -43,22 +43,32 @@ function normalizarPem(raw: string): string {
 // Diagnóstico SIN secretos: estructura de la clave configurada (cabecera, longitud, si
 // decodifica). No revela el cuerpo de la clave — solo la etiqueta PEM (constante pública),
 // longitudes y el mensaje de error de OpenSSL. Sirve para depurar el pegado de la env var.
-export function diagnosticarClave(): {
-  configurada: boolean; longitud: number; tieneSaltosReales: boolean; tieneEscapados: boolean
-  cabecera: string | null; etiqueta: string | null; decodifica: boolean; error?: string
-} {
+export function diagnosticarClave(): Record<string, unknown> {
   const raw = process.env.ENABLEBANKING_PRIVATE_KEY || ''
-  if (!raw) return { configurada: false, longitud: 0, tieneSaltosReales: false, tieneEscapados: false, cabecera: null, etiqueta: null, decodifica: false }
+  if (!raw) return { configurada: false }
   const norm = normalizarPem(raw)
   const cabecera = norm.match(/-----BEGIN [A-Z0-9 ]+-----/)?.[0] ?? null
-  const etiqueta = norm.match(/-----BEGIN ([A-Z0-9 ]+)-----/)?.[1]?.trim() ?? null
+  // La 1ª línea solo se revela si parece una cabecera (constante pública); si es cuerpo
+  // base64, devolvemos su longitud, nunca el contenido (sería parte del secreto).
+  const primeraLineaRaw = raw.split(/\r?\n/)[0] ?? ''
+  const primeraLinea = /BEGIN|-----/.test(primeraLineaRaw) ? primeraLineaRaw : `<${primeraLineaRaw.length} chars base64?>`
   let decodifica = false
   let error: string | undefined
   try { createPrivateKey(norm); decodifica = true } catch (e) { error = e instanceof Error ? e.message : String(e) }
   return {
-    configurada: true, longitud: raw.length,
-    tieneSaltosReales: raw.includes('\n'), tieneEscapados: raw.includes('\\n'),
-    cabecera, etiqueta, decodifica, error,
+    configurada: true,
+    longitud: raw.length,
+    lineas: raw.split(/\r?\n/).length,
+    tieneSaltosReales: raw.includes('\n'),
+    tieneEscapados: raw.includes('\\n'),
+    incluyeBEGIN: raw.includes('BEGIN'),
+    incluyeEND: raw.includes('END'),
+    incluyePRIVATE: raw.includes('PRIVATE'),
+    incluyeGuiones5: raw.includes('-----'),
+    primeraLinea,
+    cabecera,
+    decodifica,
+    error,
   }
 }
 
