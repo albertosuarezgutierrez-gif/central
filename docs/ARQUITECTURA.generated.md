@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T07:22:24Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T07:39:45Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 17 packages · 23 capacidades · 13 skills · 752 rutas API.
+**Resumen:** 4 apps · 17 packages · 23 capacidades · 13 skills · 754 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -25,8 +25,8 @@
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
-- **Tablas (0):** —
-- **Rutas API:** 86
+- **Tablas (1):** gastos_fijos
+- **Rutas API:** 88
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -118,6 +118,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/06/2026) 💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209
 - (14/06/2026) ⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)
 - (14/06/2026) 📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`
 - (14/06/2026) ⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)
@@ -127,5 +128,4 @@
 - (13/06/2026) 🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`
 - (13/06/2026) 🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)
 - (13/06/2026) 💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`
-- (13/06/2026) 🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`
 
