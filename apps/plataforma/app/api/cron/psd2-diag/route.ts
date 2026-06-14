@@ -3,7 +3,8 @@
 // (devuelve el nº de bancos, no datos sensibles). Bajo /api/cron (público en middleware)
 // para poder verificar sin sesión. Se retira cuando la conexión PSD2 quede validada.
 import { NextRequest, NextResponse } from 'next/server'
-import { diagnosticarClave, listarAspsps, inspeccionarSesion, disponible } from '@/lib/enablebanking'
+import { diagnosticarClave, listarAspsps, inspeccionarSesion, inspeccionarMovimientos, disponible } from '@/lib/enablebanking'
+import { sincronizarTodas } from '@/lib/psd2'
 
 export const dynamic = 'force-dynamic'
 
@@ -13,6 +14,15 @@ export async function GET(req: NextRequest) {
   if (sesion && disponible()) {
     try { return NextResponse.json({ ...diag, sesion: await inspeccionarSesion(sesion) }) }
     catch (e) { return NextResponse.json({ ...diag, sesion: { error: e instanceof Error ? e.message : String(e) } }) }
+  }
+  const movs = req.nextUrl.searchParams.get('movs')
+  if (movs && disponible()) {
+    try { return NextResponse.json({ ...diag, movs: await inspeccionarMovimientos(movs) }) }
+    catch (e) { return NextResponse.json({ ...diag, movs: { error: e instanceof Error ? e.message : String(e) } }) }
+  }
+  if (req.nextUrl.searchParams.get('resync') === '1' && disponible()) {
+    try { return NextResponse.json({ ...diag, resync: await sincronizarTodas() }) }
+    catch (e) { return NextResponse.json({ ...diag, resync: { error: e instanceof Error ? e.message : String(e) } }) }
   }
   if (req.nextUrl.searchParams.get('probar') === '1' && disponible()) {
     try {
