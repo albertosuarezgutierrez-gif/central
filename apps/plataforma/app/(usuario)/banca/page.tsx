@@ -1,5 +1,4 @@
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientos, fmtEur } from '@/lib/banca'
@@ -28,20 +27,7 @@ export default async function BancaPage() {
   ])
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      <header style={{
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '0 24px', height: '56px', display: 'flex', alignItems: 'center',
-        justifyContent: 'space-between', position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
-          <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '15px' }}>ia</span>
-          <span>plataforma · banca</span>
-        </div>
-        <Link href="/dashboard" style={{ fontSize: '14px', color: 'var(--muted)', textDecoration: 'none' }}>← Dashboard</Link>
-      </header>
-
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
@@ -144,6 +130,5 @@ export default async function BancaPage() {
           </section>
         )}
       </main>
-    </div>
   )
 }
