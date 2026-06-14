@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { listarGastosFijos } from '@/lib/agente-facturas/gastos-fijos'
+import { fingerprint } from '@/lib/agente-facturas/fingerprint'
 
 export const dynamic = 'force-dynamic'
 
@@ -29,19 +30,24 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Concepto e importe total son obligatorios' }, { status: 400 })
     }
     const dia = Math.min(Math.max(parseInt(b.dia_mes) || 1, 1), 28)
+    const fp = fingerprint({ nif_proveedor: b.nif_proveedor, proveedor: b.proveedor, concepto: b.concepto }) || null
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
       INSERT INTO gastos_fijos
         (concepto, proveedor, nif_proveedor, categoria, propiedad,
          base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total,
-         dia_mes, activo, notas)
+         dia_mes, activo, notas, fingerprint, origen)
       VALUES
         (${b.concepto}, ${b.proveedor || null}, ${b.nif_proveedor || null},
          ${b.categoria || 'OTRO'}, ${b.propiedad || null},
          ${n(b.base_imponible)}, ${n(b.iva)}, ${n(b.iva_porcentaje)},
          ${n(b.irpf)}, ${n(b.irpf_porcentaje)}, ${n(b.total)},
-         ${dia}, ${b.activo !== false}, ${b.notas || null})
+         ${dia}, ${b.activo !== false}, ${b.notas || null}, ${fp}, 'manual')
+      ON CONFLICT (fingerprint) WHERE fingerprint IS NOT NULL DO NOTHING
       RETURNING id
     `)
+    if (rows.length === 0) {
+      return NextResponse.json({ error: 'Ya existe un gasto fijo para ese proveedor/concepto' }, { status: 409 })
+    }
     return NextResponse.json({ ok: true, id: rows[0]?.id })
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 500 })
@@ -53,6 +59,7 @@ export async function PUT(req: NextRequest) {
     const b = await req.json()
     if (!b.id) return NextResponse.json({ error: 'ID requerido' }, { status: 400 })
     const dia = Math.min(Math.max(parseInt(b.dia_mes) || 1, 1), 28)
+    const fp = fingerprint({ nif_proveedor: b.nif_proveedor, proveedor: b.proveedor, concepto: b.concepto }) || null
     await prisma.$executeRaw(Prisma.sql`
       UPDATE gastos_fijos SET
         concepto = ${b.concepto},
@@ -69,6 +76,7 @@ export async function PUT(req: NextRequest) {
         dia_mes = ${dia},
         activo = ${b.activo !== false},
         notas = ${b.notas || null},
+        fingerprint = ${fp},
         updated_at = now()
       WHERE id = ${b.id}::uuid
     `)

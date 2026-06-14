@@ -72,6 +72,16 @@ export async function insertarGasto(
   d: DatosGasto,
   meta: { revisado: boolean; origen: string; confianza: number; motivo_revision?: string | null },
 ): Promise<string> {
+  // La factura real manda: si llega un gasto real (no 'fijo') con la misma huella,
+  // elimina el placeholder estimado de gastos fijos (origen='fijo') del mismo mes,
+  // para que no se cuente dos veces el alquiler/comunidad/etc.
+  if (meta.origen !== 'fijo' && d.fingerprint) {
+    await prisma.$executeRaw(Prisma.sql`
+      DELETE FROM gastos
+      WHERE origen = 'fijo' AND fingerprint = ${d.fingerprint}
+        AND date_trunc('month', fecha) = date_trunc('month', ${d.fecha}::date)
+    `).catch(() => {})
+  }
   const raw = d.raw_extraction != null ? JSON.stringify(d.raw_extraction) : null
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     INSERT INTO gastos

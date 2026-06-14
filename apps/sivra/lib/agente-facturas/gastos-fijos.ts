@@ -1,11 +1,18 @@
 // Gastos fijos mensuales (alquileres, comunidades, seguros…): plantillas con
 // importe conocido que se imputan automáticamente el día configurado de cada mes.
-// Se apoya en el mismo dedup/inserción que el agente de facturas para no duplicar
-// si la factura real del proveedor acaba llegando (misma huella).
+//
+// Es AUTOMÁTICO de punta a punta:
+//   1) sincronizarReglasFijas() trae a `gastos_fijos` las reglas recurrentes que el
+//      agente de facturas ya aprendió (gastos_reglas, periodicidad mensual), sin pisar
+//      las que edites a mano (casadas por fingerprint).
+//   2) generarGastosFijos() las imputa en `gastos` el día 1, con dedup POR MES: no crea
+//      si ya hay un gasto con esa huella ese mes (lo creó una ejecución previa o la
+//      factura real del proveedor).
+//   3) Si la factura real llega después, insertarGasto() borra el placeholder 'fijo' del
+//      mismo mes (la factura real manda) → cero duplicados.
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { fingerprint } from './fingerprint'
-import { existeDuplicado, insertarGasto, type DatosGasto } from './imputar'
+import { fingerprint as huella } from './fingerprint'
 
 export interface GastoFijo {
   id: string
@@ -23,6 +30,7 @@ export interface GastoFijo {
   dia_mes: number
   activo: boolean
   notas: string | null
+  fingerprint: string | null
 }
 
 function num(v: unknown): number | null {
@@ -48,6 +56,7 @@ function mapRow(r: any): GastoFijo {
     dia_mes: Number(r.dia_mes ?? 1),
     activo: r.activo !== false,
     notas: r.notas ?? null,
+    fingerprint: r.fingerprint ?? null,
   }
 }
 
@@ -56,15 +65,54 @@ export async function listarGastosFijos(soloActivos = false): Promise<GastoFijo[
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
     SELECT id, concepto, proveedor, nif_proveedor, categoria, propiedad,
            base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total,
-           dia_mes, activo, notas
+           dia_mes, activo, notas, fingerprint
     FROM gastos_fijos ${cond}
     ORDER BY activo DESC, propiedad NULLS LAST, concepto
   `)
   return rows.map(mapRow)
 }
 
-// Día efectivo: si la plantilla pide un día que no existe ese mes (p.ej. 31 en
-// febrero), se ajusta al último día del mes.
+// La huella de un gasto fijo: la guardada (casa con regla/factura), o la derivada
+// de proveedor+concepto (misma que produce el agente de facturas).
+export function huellaFijo(f: Pick<GastoFijo, 'fingerprint' | 'proveedor' | 'nif_proveedor' | 'concepto'>): string {
+  return f.fingerprint || huella({ nif_proveedor: f.nif_proveedor, proveedor: f.proveedor, concepto: f.concepto })
+}
+
+// Importa a `gastos_fijos` las reglas mensuales aprendidas que aún no estén (por
+// huella). No actualiza las existentes → respeta tus ediciones manuales.
+export async function sincronizarReglasFijas(): Promise<number> {
+  const rows = await prisma.$queryRaw<{ n: bigint }[]>(Prisma.sql`
+    WITH ins AS (
+      INSERT INTO gastos_fijos
+        (concepto, proveedor, categoria, propiedad, iva_porcentaje, irpf_porcentaje,
+         total, dia_mes, activo, fingerprint, origen)
+      SELECT
+        COALESCE(NULLIF(r.proveedor,''),'Gasto fijo'), r.proveedor, COALESCE(r.categoria,'OTRO'),
+        r.propiedad, r.iva_porcentaje, r.irpf_porcentaje, r.importe_esperado, 1, true, r.fingerprint, 'regla'
+      FROM gastos_reglas r
+      WHERE r.activa = true AND r.periodicidad = 'mensual'
+        AND r.fingerprint IS NOT NULL AND r.importe_esperado IS NOT NULL
+        AND NOT EXISTS (SELECT 1 FROM gastos_fijos f WHERE f.fingerprint = r.fingerprint)
+      RETURNING 1
+    )
+    SELECT count(*)::bigint AS n FROM ins
+  `)
+  return Number(rows[0]?.n ?? 0)
+}
+
+// ¿Ya hay un gasto con esta huella en (year, month)? (factura real o ejecución previa)
+async function existeEnMes(fingerprint: string, year: number, month: number): Promise<boolean> {
+  if (!fingerprint) return false
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT 1 FROM gastos
+    WHERE fingerprint = ${fingerprint}
+      AND EXTRACT(YEAR FROM fecha) = ${year} AND EXTRACT(MONTH FROM fecha) = ${month}
+    LIMIT 1
+  `)
+  return rows.length > 0
+}
+
+// Día efectivo: si la plantilla pide un día que no existe ese mes, se ajusta al último.
 function fechaDelMes(year: number, month: number, dia: number): string {
   const ultimo = new Date(year, month, 0).getDate()
   const d = Math.min(Math.max(dia || 1, 1), ultimo)
@@ -74,49 +122,42 @@ function fechaDelMes(year: number, month: number, dia: number): string {
 export interface ResultadoGeneracion {
   year: number
   month: number
+  sincronizados: number
   creados: number
   existentes: number
   detalle: string[]
 }
 
-// Imputa los gastos fijos activos para (year, month). Idempotente: usa el dedup
-// del agente (misma huella + importe ±7 días) para no duplicar si ya existe el
-// gasto (creado por una ejecución previa o por la factura real del proveedor).
+// Imputa los gastos fijos activos para (year, month). Idempotente por mes.
 export async function generarGastosFijos(
   year: number,
   month: number,
-  opts: { commit: boolean } = { commit: true },
+  opts: { commit?: boolean; sincronizar?: boolean } = {},
 ): Promise<ResultadoGeneracion> {
+  const commit = opts.commit !== false
+  const sincronizados = opts.sincronizar !== false && commit ? await sincronizarReglasFijas() : 0
+
   const fijos = await listarGastosFijos(true)
-  const res: ResultadoGeneracion = { year, month, creados: 0, existentes: 0, detalle: [] }
+  const res: ResultadoGeneracion = { year, month, sincronizados, creados: 0, existentes: 0, detalle: [] }
 
   for (const f of fijos) {
+    const fp = huellaFijo(f)
+    if (await existeEnMes(fp, year, month)) { res.existentes++; continue }
+
     const fecha = fechaDelMes(year, month, f.dia_mes)
-    const fp = fingerprint({ nif_proveedor: f.nif_proveedor, proveedor: f.proveedor, concepto: f.concepto })
-
-    const existe = await existeDuplicado({ fingerprint: fp, numero_factura: null, fecha, total: f.total })
-    if (existe) { res.existentes++; continue }
-
     res.detalle.push(`${fecha} · ${f.propiedad ?? '—'} · ${f.concepto} · ${f.total}€`)
-    if (opts.commit) {
-      const datos: DatosGasto = {
-        fecha,
-        proveedor: f.proveedor,
-        nif_proveedor: f.nif_proveedor,
-        numero_factura: null,
-        concepto: f.concepto,
-        categoria: f.categoria,
-        propiedad: f.propiedad,
-        base_imponible: f.base_imponible,
-        iva: f.iva,
-        iva_porcentaje: f.iva_porcentaje,
-        irpf: f.irpf,
-        irpf_porcentaje: f.irpf_porcentaje,
-        total: f.total,
-        fingerprint: fp,
-        raw_extraction: { origen: 'gasto-fijo', gasto_fijo_id: f.id },
-      }
-      await insertarGasto(datos, { revisado: true, origen: 'fijo', confianza: 1 })
+    if (commit) {
+      const raw = JSON.stringify({ origen: 'gasto-fijo', gasto_fijo_id: f.id })
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO gastos
+          (fecha, proveedor, nif_proveedor, concepto, categoria, propiedad,
+           base_imponible, iva, iva_porcentaje, irpf, irpf_porcentaje, total,
+           fingerprint, origen, revisado, confianza, raw_extraction)
+        VALUES
+          (${fecha}::date, ${f.proveedor}, ${f.nif_proveedor}, ${f.concepto}, ${f.categoria}, ${f.propiedad},
+           ${f.base_imponible}, ${f.iva}, ${f.iva_porcentaje}, ${f.irpf}, ${f.irpf_porcentaje}, ${f.total},
+           ${fp}, 'fijo', true, 1, ${raw}::jsonb)
+      `)
     }
     res.creados++
   }

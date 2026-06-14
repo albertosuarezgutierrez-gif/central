@@ -6,7 +6,7 @@ import { listarCandidatos } from '@/lib/agente-facturas/gmail'
 import { listNuevos, getContenido, archivar } from '@/lib/agente-facturas/drive'
 import { extraerDesdeBuffer } from '@/lib/agente-facturas/extraer'
 import { procesarFactura, clasificarDocumento, type ProcesarResult } from '@/lib/agente-facturas/procesar'
-import { generarGastosFijos } from '@/lib/agente-facturas/gastos-fijos'
+import { generarGastosFijos, sincronizarReglasFijas } from '@/lib/agente-facturas/gastos-fijos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
@@ -21,8 +21,9 @@ export async function GET(req: NextRequest) {
   // Las plantillas viven en `gastos_fijos` (ver /gastos-fijos). Aquí solo se
   // backfillean los meses pasados del año; el día 1 de cada mes el cron los crea solo.
   const alquileres = { creados: 0, existentes: 0, detalle: [] as string[] }
+  if (!dryRun) await sincronizarReglasFijas()
   for (let m = 1; m <= hastaMes; m++) {
-    const r = await generarGastosFijos(year, m, { commit: !dryRun })
+    const r = await generarGastosFijos(year, m, { commit: !dryRun, sincronizar: false })
     alquileres.creados += r.creados
     alquileres.existentes += r.existentes
     alquileres.detalle.push(...r.detalle)

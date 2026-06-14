@@ -19,6 +19,7 @@ export async function GET(req: NextRequest) {
   const commit = sp.get('dryRun') !== '1'
 
   try {
+    // Sincroniza reglas aprendidas → gastos_fijos y luego imputa el mes.
     const res = await generarGastosFijos(year, month, { commit })
     return NextResponse.json({ ok: true, dryRun: !commit, ...res })
   } catch (e) {

@@ -25,10 +25,22 @@ CREATE TABLE IF NOT EXISTS public.gastos_fijos (
   dia_mes         integer NOT NULL DEFAULT 1,
   activo          boolean NOT NULL DEFAULT true,
   notas           text,
+  fingerprint     text,            -- casa con gastos_reglas y con la factura real
+  origen          text,            -- 'seed' | 'regla' | 'manual'
   created_at      timestamptz DEFAULT now(),
   updated_at      timestamptz DEFAULT now()
 );
 
 ALTER TABLE public.gastos_fijos ENABLE ROW LEVEL SECURITY;
+
+-- Una sola plantilla por huella (evita importar dos veces la misma regla).
+CREATE UNIQUE INDEX IF NOT EXISTS gastos_fijos_fingerprint_uidx
+  ON public.gastos_fijos (fingerprint) WHERE fingerprint IS NOT NULL;
+
+-- Sincronización (la hace también el cron vía sincronizarReglasFijas):
+-- importa las reglas mensuales aprendidas que aún no estén, casando por fingerprint.
+--   INSERT INTO public.gastos_fijos (...) SELECT ... FROM public.gastos_reglas r
+--   WHERE r.activa AND r.periodicidad='mensual' AND r.fingerprint IS NOT NULL
+--     AND NOT EXISTS (SELECT 1 FROM public.gastos_fijos f WHERE f.fingerprint = r.fingerprint);
 
 -- Rollback: DROP TABLE public.gastos_fijos;

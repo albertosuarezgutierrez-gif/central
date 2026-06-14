@@ -104,7 +104,8 @@ export default function GastosFijosPage() {
       const r = await fetch('/api/expenses/fijos/generar', { cache: 'no-store' })
       const d = await r.json()
       if (!r.ok) throw new Error(d.error || 'Error')
-      setGenResult(`✓ ${d.creados} creado(s), ${d.existentes} ya existían (mes ${d.month}/${d.year}).`)
+      const sync = d.sincronizados ? `${d.sincronizados} regla(s) importada(s), ` : ''
+      setGenResult(`✓ ${sync}${d.creados} creado(s), ${d.existentes} ya existían (mes ${d.month}/${d.year}).`)
     } catch (e: any) { setGenResult(`Error: ${e.message}`) }
   }
 
@@ -121,7 +122,9 @@ export default function GastosFijosPage() {
       </div>
       <p className="text-sm text-[#6b7184] mb-6">
         Gastos recurrentes de importe conocido (alquileres, comunidades, seguros…). Se imputan
-        automáticamente cada mes el día indicado. Total mensual activo: <b>{fmtEUR(totalMensual)}</b>.
+        <b> automáticamente el día 1 de cada mes</b> (cron) e incorporan solos los recurrentes que el
+        agente de facturas va aprendiendo. Si llega la factura real del proveedor, sustituye al
+        estimado (sin duplicados). Total mensual activo: <b>{fmtEUR(totalMensual)}</b>.
       </p>
       {genResult && <div className="mb-4 text-sm rounded-lg bg-[#f0fdf4] text-[#166534] px-3 py-2">{genResult}</div>}
 
