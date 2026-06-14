@@ -15,6 +15,7 @@ export async function importarExtracto(
   cuentaId: string,
   sociedadId: string,
   extractos: ExtractoN43[],
+  origen = 'norma43',
 ): Promise<{ insertados: number; duplicados: number; cuentas: number }> {
   let insertados = 0
   let duplicados = 0
@@ -53,11 +54,11 @@ export async function importarExtracto(
 
       const res = await prisma.$executeRaw`
         INSERT INTO movimientos_bancarios
-          (cuenta_bancaria_id, fecha_operacion, fecha_valor, importe, concepto, contraparte, referencia, origen, dedupe_hash)
+          (cuenta_bancaria_id, fecha_operacion, fecha_valor, importe, saldo_posterior, concepto, contraparte, referencia, origen, dedupe_hash)
         VALUES (
           ${cuentaBancariaId}::uuid, ${m.fechaOperacion || null}::date, ${m.fechaValor || null}::date,
-          ${m.importe}, ${m.concepto || null}, ${m.contraparte || null}, ${m.referencia || null},
-          'norma43', ${hash}
+          ${m.importe}, ${m.saldoPosterior ?? null}, ${m.concepto || null}, ${m.contraparte || null}, ${m.referencia || null},
+          ${origen}, ${hash}
         )
         ON CONFLICT (cuenta_bancaria_id, dedupe_hash) DO NOTHING
       `

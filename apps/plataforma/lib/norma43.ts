@@ -20,6 +20,7 @@ export type MovimientoN43 = {
   concepto: string         // texto libre concatenado de los registros 23
   contraparte: string      // primera línea de concepto (suele ser el nombre)
   referencia: string       // nº documento + referencias
+  saldoPosterior?: number  // saldo tras el apunte (Excel lo trae; N43 no)
 }
 
 export type ExtractoN43 = {
@@ -126,6 +127,7 @@ export function parseNorma43(contenido: string): ExtractoN43[] {
 // Hash estable de un movimiento para deduplicar reimportaciones del mismo extracto.
 // El importador añade un ordinal si dos movimientos comparten hash base.
 export function dedupeHash(m: MovimientoN43): string {
-  const base = [m.fechaOperacion, m.fechaValor, m.importe.toFixed(2), m.conceptoComun, m.concepto, m.referencia].join('|')
+  const saldo = m.saldoPosterior != null ? m.saldoPosterior.toFixed(2) : ''
+  const base = [m.fechaOperacion, m.fechaValor, m.importe.toFixed(2), m.conceptoComun, m.concepto, m.referencia, saldo].join('|')
   return createHash('sha1').update(base).digest('hex')
 }

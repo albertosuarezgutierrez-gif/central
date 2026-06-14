@@ -9,6 +9,8 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
   const router = useRouter()
   const [open, setOpen] = useState(false)
   const [sociedadId, setSociedadId] = useState(sociedades[0]?.id ?? '')
+  const [iban, setIban] = useState('')
+  const [banco, setBanco] = useState('')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState('')
   const [err, setErr] = useState('')
@@ -17,13 +19,15 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
   async function submit(e: React.FormEvent) {
     e.preventDefault()
     const file = fileRef.current?.files?.[0]
-    if (!file) { setErr('Selecciona un fichero .n43'); return }
+    if (!file) { setErr('Selecciona un fichero (.xls, .xlsx o .n43)'); return }
     if (!sociedadId) { setErr('Selecciona una sociedad'); return }
     setLoading(true); setErr(''); setMsg('')
 
     const fd = new FormData()
     fd.set('sociedadId', sociedadId)
     fd.set('file', file)
+    if (iban) fd.set('iban', iban)
+    if (banco) fd.set('banco', banco)
     const res = await fetch('/api/banca/importar', { method: 'POST', body: fd })
     setLoading(false)
     const data = await res.json().catch(() => ({}))
@@ -38,20 +42,29 @@ export function ImportarExtractoBtn({ sociedades }: { sociedades: SociedadOpt[] 
 
   return (
     <>
-      <button onClick={() => { setOpen(true); setMsg(''); setErr('') }} style={btn}>⬆️ Importar extracto (.n43)</button>
+      <button onClick={() => { setOpen(true); setMsg(''); setErr('') }} style={btn}>⬆️ Importar extracto</button>
       {open && (
         <div style={overlay} onClick={() => setOpen(false)}>
           <div style={modal} onClick={e => e.stopPropagation()}>
-            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>Importar extracto Norma 43</h3>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Importar extracto bancario</h3>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Excel del banco (.xls/.xlsx — Kutxa, BBVA…) o fichero Norma 43 (.n43).</p>
             <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <label style={lbl}>Sociedad
                 <select value={sociedadId} onChange={e => setSociedadId(e.target.value)} style={input}>
                   {sociedades.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                 </select>
               </label>
-              <label style={lbl}>Fichero .n43
-                <input ref={fileRef} type="file" accept=".n43,.txt,text/plain" style={{ fontSize: '14px' }} />
+              <label style={lbl}>Fichero (.xls, .xlsx o .n43)
+                <input ref={fileRef} type="file" accept=".n43,.xls,.xlsx,.txt,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/plain" style={{ fontSize: '14px' }} />
               </label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <label style={{ ...lbl, flex: 1 }}>Banco (opcional)
+                  <input value={banco} onChange={e => setBanco(e.target.value)} placeholder="Kutxa" style={input} />
+                </label>
+                <label style={{ ...lbl, flex: 1.4 }}>IBAN/alias (opcional)
+                  <input value={iban} onChange={e => setIban(e.target.value)} placeholder="ES…" style={input} />
+                </label>
+              </div>
               {err && <p style={{ color: '#dc2626', fontSize: '13px' }}>{err}</p>}
               {msg && <p style={{ color: '#16a34a', fontSize: '13px' }}>{msg}</p>}
               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
