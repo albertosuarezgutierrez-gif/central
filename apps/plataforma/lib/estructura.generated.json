@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T06:34:54Z",
+  "generadoEn": "2026-06-14T07:06:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -617,7 +617,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 4
       },
       "plataforma": {
         "presente": false,
@@ -703,7 +703,7 @@
     "marketing": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 12
       },
       "ialimp": {
         "presente": false,
@@ -1033,6 +1033,7 @@
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
       "/api/cron/reservas-noshow",
+      "/api/cron/seo-agent",
       "/api/cuenta-nominal",
       "/api/demo",
       "/api/demo/seed",
@@ -1349,6 +1350,7 @@
       "/api/super/restaurantes/[id]/config",
       "/api/super/restaurantes/[id]/cuenta",
       "/api/super/restaurantes/[id]/impersonate",
+      "/api/super/seo-revert",
       "/api/super/soporte",
       "/api/super/stripe-operador",
       "/api/super/stripe-operador/cancelar",
@@ -1465,7 +1467,6 @@
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
       "/api/admin/limpiadoras/[id]/propiedades",
-      "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
       "/api/admin/migrate-chat",
       "/api/admin/migrate-chat-destinatario",
@@ -1509,6 +1510,7 @@
       "/api/cotizador",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
+      "/api/cron/impagos",
       "/api/cron/procesar-documentos",
       "/api/dashboard",
       "/api/empresas/register",
@@ -1593,6 +1595,7 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sociedades",
@@ -1753,6 +1756,10 @@
       "reservas",
       "resumen_cobros_mensual",
       "running_zonas",
+      "seo_articulos",
+      "seo_cambios",
+      "seo_content_blocks",
+      "seo_overrides",
       "soporte_mensajes",
       "soporte_tickets",
       "storefront_config",
@@ -1788,6 +1795,7 @@
       "protocolo_fotos",
       "protocolo_items",
       "protocolos",
+      "recordatorios_impagos",
       "sociedades",
       "stock_consumos",
       "tenant_modulos"
@@ -1873,8 +1881,20 @@
   ],
   "novedades": [
     {
-      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
       "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`",
+      "fecha": "13/06/2026"
+    },
+    {
+      "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
+      "fecha": "13/06/2026"
     },
     {
       "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
@@ -1918,18 +1938,6 @@
     },
     {
       "titulo": "🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🎤 DECK presencial JJ + estructura real corregida",
       "fecha": "12/06/2026"
     }
   ],
@@ -2157,7 +2165,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 742,
+    "apis": 745,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0

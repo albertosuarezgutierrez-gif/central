@@ -5,18 +5,24 @@
 import { createServerClient } from '@/lib/supabase'
 import Link from 'next/link'
 import type { Metadata } from 'next'
+import { getOverride } from '@/lib/seo/store'
+import { SEO_DEFAULTS } from '@/lib/seo/targets'
+import SeoBlocks from '@/components/seo/SeoBlocks'
 
 export const revalidate = 3600
 
-export const metadata: Metadata = {
-  title: 'Directorio de Restaurantes — ia.rest',
-  description: 'Descubre restaurantes con carta digital, reserva directa y sin comisiones. Encuentra tu mesa en los mejores restaurantes de España.',
-  openGraph: {
-    title: 'Directorio de Restaurantes — ia.rest',
-    description: 'Los mejores restaurantes de España con reserva directa y carta digital.',
-    type: 'website',
-  },
-  alternates: { canonical: 'https://www.iarest.es/restaurantes' },
+export async function generateMetadata(): Promise<Metadata> {
+  const def = SEO_DEFAULTS['/restaurantes']
+  const ov = await getOverride('/restaurantes')
+  const title = ov?.title ?? def.title
+  const description = ov?.description ?? def.description
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: 'website', ...(ov?.og ?? {}) },
+    alternates: { canonical: ov?.canonical ?? 'https://www.iarest.es/restaurantes' },
+    ...(ov?.jsonld ? { other: { 'script:ld+json': JSON.stringify(ov.jsonld) } } : {}),
+  }
 }
 
 async function getRestaurantes() {
@@ -215,6 +221,9 @@ export default async function DirectorioPage() {
             </Link>
           </div>
         </div>
+
+        {/* Bloques SEO editables por el agente */}
+        <SeoBlocks ruta="/restaurantes" />
 
         <footer style={{ background: '#14110E', padding: '20px 24px', textAlign: 'center' }}>
           <p style={{ fontSize: 12, color: '#3A2A1A' }}>
