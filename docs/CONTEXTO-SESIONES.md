@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239 — 14/06/2026**
+  Alberto reportó que el **portal del propietario** (`/propietario/[token]` y `/propietario` por email+contraseña,
+  ambos `PropietarioClient.tsx`) se veía en PC como una columna móvil estrecha centrada (`maxWidth:1080`), con las
+  tarjetas amontonadas a la izquierda. Arreglo solo en `PropietarioClient.tsx`:
+  - **Escritorio (≥1024px):** barra lateral de navegación **fija** a la izquierda (248px: logo, propietario, los
+    `MENU_ITEMS`, cerrar sesión); el contenido ocupa el ancho disponible (tope 1280px centrado) y las rejillas
+    `auto-fill` reparten 3-4 columnas. Se oculta el botón hamburguesa (`.prop-hamburger`).
+  - **Móvil (<1024px, sin cambios):** header con hamburguesa + drawer, una columna fluida.
+  - **Excepción consciente a la regla "no media queries"** de `apps/ialimp/CLAUDE.md`: una sidebar solo-PC necesita
+    un breakpoint, así que se usa **una única media query** dentro del bloque `<style>` que el componente ya inyectaba,
+    **acotada solo al portal** (clases `.prop-root`/`.prop-deskbar`/`.prop-hamburger`/`.prop-content`). No se toca el
+    resto de la app. Build local no viable en el contenedor (deps `workspace:*` del monorepo no resuelven con npm
+    aislado) → validado con **typecheck ialimp + preview de ialimp verdes** antes de mergear (cliente en vivo).
+
 - **🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED) — 14/06/2026**
   Sesión a raíz de un problema EN VIVO de Vanessa (Sique Brilla): al subir limpiezas le salía **"No autenticado"**
   y, al elegir cliente en *Nueva limpieza*, *"Este cliente no tiene propiedades creadas"* (FALSO: AITANA ORTIZ
