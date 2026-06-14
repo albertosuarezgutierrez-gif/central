@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6) — 14/06/2026**
+  Épico nuevo en `apps/plataforma`: importar el banco, ver saldo/movimientos consolidados de todas las
+  sociedades, categorizar con IA, conciliar con facturas, prever tesorería y conectar el banco por PSD2.
+  Tablas nuevas en la **BD compartida** (RLS, aditivas, scoped por `cuenta_id`): `cuentas_bancarias`,
+  `movimientos_bancarios` (con `dedupe_hash` único), `conexiones_banco`. Aplicadas por Supabase MCP.
+  - **PR #211 (MERGED, `a3103bd`)** — F1 (importar **Norma 43** + **Excel multi-banco**, KPI "Saldo del
+    grupo", página `/banca`, dedupe) · F2 (auto-categorización IA con `@central/core-ai`, NIM gratis) ·
+    F3 (conciliación banco↔`incomes`/`expenses` de sivra y `v_contab_ingresos`/`v_contab_gastos` de ialimp) ·
+    F5 (previsión 30/60/90d + cron alerta) · fix CI `allowImportingTsExtensions` al `tsconfig.base`.
+  - **Importador Excel multi-banco** (`lib/extracto-xls.ts`, SheetJS): detección de columnas robusta a
+    **Kutxa** y **BBVA** (fecha valor vs fecha, concepto en 2 columnas, saldo "Disponible", orden asc/desc).
+  - **PR #216 (MERGED, `a9adf00`)** — F4: **OCR de facturas** (`nimVision`) + casado con el movimiento.
+  - **PR #217 (DRAFT)** — F6: **conexión automática PSD2** vía **GoCardless Bank Account Data** (`lib/gocardless.ts`
+    + `lib/psd2.ts` + endpoints `psd2/instituciones|conectar|callback` + cron `psd2-sync`). Inerte hasta
+    poner `GOCARDLESS_SECRET_ID/KEY` en el Vercel de plataforma (degrada limpio). **Pendiente revisar/mergear**.
+  - **Datos reales de Alberto YA cargados** en su cuenta (sociedad "Alberto Suárez Gutiérrez", NIF):
+    **Kutxa** (244 mov, 21.161,96 €, apartamentos) + **BBVA** (40 mov, 20.034,98 €, seguros + Dúplex Center) =
+    **41.196,94 €** consolidados. Los movimientos cargados por SQL NO están categorizados/conciliados: usar
+    los botones 🤖 Re-analizar IA y 🔗 Conciliar en `/banca` (necesitan `NVIDIA_API_KEY`).
+  - **Pendiente (mejoras)**: F4 → guardar el justificante (imagen) y soportar PDF; F6 → mergear tras
+    configurar GoCardless. Lógica pura testeada con `node --test` (norma43, tesorería).
+
 - **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
   Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:
   - **PR #208 (mergeado)** — auditoría del dashboard a partir de un pantallazo real:
