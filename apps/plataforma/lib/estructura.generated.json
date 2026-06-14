@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T07:03:40Z",
+  "generadoEn": "2026-06-13T22:00:36Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -287,7 +287,7 @@
     "core-push": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "usado",
@@ -377,7 +377,7 @@
     "module-contabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 2
       },
       "ialimp": {
         "estado": "usado",
@@ -703,7 +703,7 @@
     "marketing": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 12
+        "evidencias": 5
       },
       "ialimp": {
         "presente": false,
@@ -775,7 +775,7 @@
     "contabilidad": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 10
+        "evidencias": 6
       },
       "ialimp": {
         "presente": true,
@@ -883,7 +883,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 160
+        "evidencias": 156
       },
       "ialimp": {
         "presente": true,
@@ -1033,7 +1033,6 @@
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
       "/api/cron/reservas-noshow",
-      "/api/cron/seo-agent",
       "/api/cuenta-nominal",
       "/api/demo",
       "/api/demo/seed",
@@ -1107,7 +1106,6 @@
       "/api/monitor/alert",
       "/api/onboarding/complete",
       "/api/onboarding/extract-carta",
-      "/api/operador/descuadres-empleado",
       "/api/operador/directorio",
       "/api/operador/evento-personas",
       "/api/operador/financiero",
@@ -1133,16 +1131,12 @@
       "/api/owner/config-cobro",
       "/api/owner/config/servicio",
       "/api/owner/consumo",
-      "/api/owner/contabilidad/arqueos-empleado",
-      "/api/owner/contabilidad/arqueos-empleado/[id]/confirmar",
       "/api/owner/contabilidad/cierre-diario",
       "/api/owner/contabilidad/config",
       "/api/owner/contabilidad/exportar",
       "/api/owner/contabilidad/invitar",
       "/api/owner/contabilidad/iva",
       "/api/owner/contabilidad/resumen",
-      "/api/owner/contabilidad/tesoreria",
-      "/api/owner/contabilidad/umbral-empleado",
       "/api/owner/contrato",
       "/api/owner/copiloto",
       "/api/owner/dashboard",
@@ -1350,7 +1344,6 @@
       "/api/super/restaurantes/[id]/config",
       "/api/super/restaurantes/[id]/cuenta",
       "/api/super/restaurantes/[id]/impersonate",
-      "/api/super/seo-revert",
       "/api/super/soporte",
       "/api/super/stripe-operador",
       "/api/super/stripe-operador/cancelar",
@@ -1577,7 +1570,6 @@
       "/api/admin/clientes",
       "/api/admin/clientes/[vertical]/[id]",
       "/api/admin/clientes/[vertical]/[id]/modulos",
-      "/api/admin/descuadres-iarest",
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
       "/api/admin/login",
@@ -1594,7 +1586,6 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
-      "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sociedades",
@@ -1691,7 +1682,6 @@
   },
   "tablasPorVertical": {
     "ia-rest": [
-      "arqueos_caja_empleado",
       "beo_eventos",
       "camareros",
       "clientes_fiscales",
@@ -1737,7 +1727,6 @@
       "mensajes_turno",
       "mesas",
       "metodos_pago",
-      "movimientos_tesoreria",
       "pedidos_online",
       "pin_attempts",
       "productos_86",
@@ -1755,10 +1744,6 @@
       "reservas",
       "resumen_cobros_mensual",
       "running_zonas",
-      "seo_articulos",
-      "seo_cambios",
-      "seo_content_blocks",
-      "seo_overrides",
       "soporte_mensajes",
       "soporte_tickets",
       "storefront_config",
@@ -1879,19 +1864,7 @@
   ],
   "novedades": [
     {
-      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
-      "fecha": "13/06/2026"
-    },
-    {
-      "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
-      "fecha": "13/06/2026"
-    },
-    {
-      "titulo": "💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`",
+      "titulo": "⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`",
       "fecha": "13/06/2026"
     },
     {
@@ -1937,6 +1910,18 @@
     {
       "titulo": "📦 MÓDULO DE MATERIALES (Bloque B) CONSTRUIDO",
       "fecha": "12/06/2026"
+    },
+    {
+      "titulo": "🎤 DECK presencial JJ + estructura real corregida",
+      "fecha": "12/06/2026"
+    },
+    {
+      "titulo": "⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real",
+      "fecha": "11/06/2026"
+    },
+    {
+      "titulo": "✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding",
+      "fecha": "11/06/2026"
     }
   ],
   "saludRepo": {
@@ -2163,7 +2148,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 744,
+    "apis": 735,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
