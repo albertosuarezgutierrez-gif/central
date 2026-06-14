@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T08:51:55Z",
+  "generadoEn": "2026-06-14T10:22:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -228,7 +228,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "sivra": {
         "estado": "usado",
@@ -1619,6 +1619,9 @@
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
+      "/api/banca/analizar",
+      "/api/banca/conciliar",
+      "/api/banca/importar",
       "/api/comunicacion/categorias",
       "/api/comunicacion/conversaciones",
       "/api/comunicacion/conversaciones/[id]",
@@ -1627,6 +1630,7 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
@@ -1844,7 +1848,9 @@
       "comunicacion_grupos",
       "comunicacion_mensajes",
       "comunicacion_nodos",
-      "comunicacion_reglas"
+      "comunicacion_reglas",
+      "cuentas_bancarias",
+      "movimientos_bancarios"
     ],
     "sivra": [
       "gastos_fijos"
@@ -2203,7 +2209,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 755,
+    "apis": 759,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
