@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-13T15:28:00Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T05:03:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 16 packages · 23 capacidades · 13 skills · 735 rutas API.
+**Resumen:** 4 apps · 16 packages · 23 capacidades · 13 skills · 736 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
 - **Capacidades:** —
 - **Tablas (8):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas
-- **Rutas API:** 23
+- **Rutas API:** 24
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -115,6 +115,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/06/2026) 📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`
 - (13/06/2026) 🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`
 - (12/06/2026) 📦 module-materiales Fase B — PR #189 mergeado
 - (12/06/2026) 🧱 Config de build compartida en la MATRIZ — PR #180
@@ -124,5 +125,4 @@
 - (12/06/2026) 📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172
 - (12/06/2026) 🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR
 - (12/06/2026) 🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164
-- (12/06/2026) 🚨 PRODUCCIÓN ia-rest lee la BD UNIFICADA VACÍA (Fase A2 a medias) — demo reparado
 

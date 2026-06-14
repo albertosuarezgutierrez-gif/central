@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T15:28:00Z",
+  "generadoEn": "2026-06-14T05:03:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1586,6 +1586,7 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sociedades",
@@ -1864,6 +1865,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`",
       "fecha": "13/06/2026"
     },
@@ -1918,10 +1923,6 @@
     {
       "titulo": "✅ BRIEF JOAQUÍN JAÉN + diagramas — preparación presentación holding",
       "fecha": "11/06/2026"
-    },
-    {
-      "titulo": "⚙️ GOTCHA del entorno cloud (descubierto 11/06, importante para futuras sesiones):",
-      "fecha": ""
     }
   ],
   "saludRepo": {
@@ -2148,7 +2149,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 735,
+    "apis": 736,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
