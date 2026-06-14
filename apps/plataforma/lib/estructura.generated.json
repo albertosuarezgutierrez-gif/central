@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T18:12:43Z",
+  "generadoEn": "2026-06-14T19:03:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1487,6 +1487,7 @@
       "/api/admin/ia/clasificar-queja",
       "/api/admin/ia/comparar-foto",
       "/api/admin/ia/patrones",
+      "/api/admin/incidencias",
       "/api/admin/informe",
       "/api/admin/informes/cron",
       "/api/admin/informes/generar",
@@ -1526,6 +1527,7 @@
       "/api/admin/sesiones",
       "/api/admin/sesiones/[id]",
       "/api/admin/sesiones/[id]/completar",
+      "/api/admin/sesiones/[id]/completions",
       "/api/admin/sesiones/reordenar",
       "/api/admin/sse",
       "/api/admin/stock",
@@ -2216,7 +2218,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 765,
+    "apis": 767,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
