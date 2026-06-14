@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)**
+  Entró la **1ª reserva de Busto Reform** (Emilio J. Martín, 25-28 mar 2027 = **Semana Santa**, vendida al base
+  previo de Smoobu ~307-319€/noche; **NO** a precio de nuestro motor — `pricing_applied` vacío para esas fechas).
+  Al verificar, se destapó un fallo serio: ahora que `apply` corre los **365 días** sin timeout (fix #213), el cron
+  `apply-auto` (08:30) **capaba a `max_price`=125€** todas las fechas de evento. La guardia de confianza es **por
+  piso, no por fecha** (Busto: 14 comps, 5d → pasa), y el motor usa **un único percentil de mercado** (~168€, de
+  fechas normales) para todo el año, rematando con el techo del piloto **al final de la cadena**. Impacto medido:
+  **172 fechas disponibles >125€** (Semana Santa + **Feria de Abril 2027** a 366€) → ~**9.788€ base** en riesgo.
+  - **Acción inmediata (hecha):** `UPDATE pricing_config SET paused=true WHERE id=1` → el cron degrada a
+    simulación (`dryRun` forzado), **no escribe en Smoobu**. Verificado que `apply` lo lee. Reserva intacta
+    (reservada ≠ `available`). **Contrapartida:** también se congela el pricing al alza de fechas normales.
+  - **PENDIENTE (fix de producto, PR aparte):** techo **event-aware** (`max_price × eventFactor` o "nunca bajar
+    una fecha de evento por debajo de su base actual") + comps **por fecha/temporada** (no un percentil único) +
+    guardia de confianza por fecha. Reactivar la pausa SOLO tras el fix. Detalle en `pricing-automatico.md` §9.
+
 - **🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6) — 14/06/2026**
   Épico nuevo en `apps/plataforma`: importar el banco, ver saldo/movimientos consolidados de todas las
   sociedades, categorizar con IA, conciliar con facturas, prever tesorería y conectar el banco por PSD2.
