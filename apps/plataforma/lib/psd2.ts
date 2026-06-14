@@ -1,34 +1,39 @@
 // Orquestación PSD2 (Fase 6): tras el consentimiento, vuelca las cuentas y movimientos
-// de GoCardless en las MISMAS tablas que la importación manual (cuentas_bancarias /
-// movimientos_bancarios), con dedupe por el transactionId del banco. Scoped por cuenta_id.
+// de Enable Banking en las MISMAS tablas que la importación manual (cuentas_bancarias /
+// movimientos_bancarios), con dedupe por el entry_reference del banco. Scoped por cuenta_id.
+//
+// El identificador persistido en conexiones_banco.requisition_id es:
+//   - al crear el consentimiento: el authorization_id devuelto por POST /auth (estado pendiente);
+//   - tras el callback: el session_id devuelto por POST /sessions (estado vinculada), que es
+//     lo que el re-sync diario reutiliza para releer cuentas/movimientos.
 
 import { createHash } from 'node:crypto'
 import { prisma } from './db'
-import { getRequisition, getDetalleCuenta, getSaldo, getMovimientos } from './gocardless'
+import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
 
-function hashMov(accountId: string, m: { transactionId?: string; bookingDate?: string; transactionAmount: { amount: string } }): string {
-  // El banco da un transactionId estable → dedupe perfecto. Fallback a fecha+importe.
-  const base = m.transactionId || `${accountId}|${m.bookingDate ?? ''}|${m.transactionAmount.amount}`
+function hashMov(accountUid: string, m: MovEB): string {
+  // El banco da un entry_reference estable → dedupe perfecto. Fallback a fecha+importe.
+  const base = m.entryReference || `${accountUid}|${m.bookingDate ?? ''}|${m.importe}`
   return createHash('sha1').update(base).digest('hex')
 }
 
-// Sincroniza todas las cuentas de una requisition vinculada. Idempotente (upsert + dedupe).
-export async function sincronizarRequisition(
+// Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe).
+export async function sincronizarSesion(
   cuentaId: string,
   sociedadId: string,
-  requisitionId: string,
+  sessionId: string,
 ): Promise<{ cuentas: number; insertados: number; duplicados: number }> {
-  const req = await getRequisition(requisitionId)
+  const ses = await getSesion(sessionId)
   let cuentas = 0, insertados = 0, duplicados = 0
 
-  for (const accountId of req.accounts ?? []) {
+  for (const accountUid of ses.accounts ?? []) {
     const [detalle, saldo, movs] = await Promise.all([
-      getDetalleCuenta(accountId).catch(() => null),
-      getSaldo(accountId).catch(() => null),
-      getMovimientos(accountId).catch(() => [] as Awaited<ReturnType<typeof getMovimientos>>),
+      getDetalleCuenta(accountUid).catch(() => null),
+      getSaldo(accountUid).catch(() => null),
+      getMovimientos(accountUid).catch(() => [] as MovEB[]),
     ])
-    const iban = detalle?.account.iban || accountId
-    const banco = detalle?.account.name || 'Banco (PSD2)'
+    const iban = detalle?.iban || accountUid
+    const banco = detalle?.nombre || 'Banco (PSD2)'
     const mascara = iban.length >= 4 ? `****${iban.slice(-4)}` : iban
 
     const filas = await prisma.$queryRaw<Array<{ id: string }>>`
@@ -45,16 +50,14 @@ export async function sincronizarRequisition(
     cuentas += 1
 
     for (const m of movs) {
-      const importe = Number(m.transactionAmount.amount)
-      if (!Number.isFinite(importe)) continue
-      const concepto = (m.remittanceInformationUnstructured || m.creditorName || m.debtorName || '').trim()
+      if (!Number.isFinite(m.importe)) continue
       const res = await prisma.$executeRaw`
         INSERT INTO movimientos_bancarios
           (cuenta_bancaria_id, fecha_operacion, fecha_valor, importe, concepto, contraparte, referencia, origen, dedupe_hash)
         VALUES (
           ${cbId}::uuid, ${m.bookingDate || null}::date, ${m.valueDate || m.bookingDate || null}::date,
-          ${importe}, ${concepto || null}, ${(m.creditorName || m.debtorName || '').trim() || null},
-          ${m.transactionId || null}, 'psd2', ${hashMov(accountId, m)}
+          ${m.importe}, ${m.concepto || null}, ${m.contraparte || null},
+          ${m.entryReference || null}, 'psd2', ${hashMov(accountUid, m)}
         )
         ON CONFLICT (cuenta_bancaria_id, dedupe_hash) DO NOTHING
       `
@@ -64,7 +67,7 @@ export async function sincronizarRequisition(
 
   await prisma.$executeRaw`
     UPDATE conexiones_banco SET estado = 'vinculada', ultimo_sync = now()
-    WHERE requisition_id = ${requisitionId} AND cuenta_id = ${cuentaId}::uuid
+    WHERE requisition_id = ${sessionId} AND cuenta_id = ${cuentaId}::uuid
   `
   return { cuentas, insertados, duplicados }
 }
@@ -76,7 +79,7 @@ export async function sincronizarTodas(): Promise<{ conexiones: number; insertad
   `
   let insertados = 0
   for (const c of conns) {
-    const r = await sincronizarRequisition(c.cuenta_id, c.sociedad_id, c.requisition_id).catch(() => null)
+    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id).catch(() => null)
     if (r) insertados += r.insertados
   }
   return { conexiones: conns.length, insertados }
