@@ -19,6 +19,7 @@
     "@central/module-presupuestos": "workspace:*",
     "@central/module-proveedores": "workspace:*",
     "@central/module-feedback": "workspace:*",
+    "@central/module-horario": "workspace:*",
     "@central/module-asn": "workspace:*",
     "@anthropic-ai/sdk": "^0.92.0",
     "@stripe/react-stripe-js": "^6.3.0",
