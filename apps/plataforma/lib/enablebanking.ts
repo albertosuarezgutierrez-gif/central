@@ -12,7 +12,7 @@
 // → por cuenta: /details (IBAN) + /balances + /transactions.
 
 import { SignJWT } from 'jose'
-import { createPrivateKey, createPublicKey, createHash, type KeyObject } from 'node:crypto'
+import { createPrivateKey, type KeyObject } from 'node:crypto'
 
 const BASE = process.env.ENABLEBANKING_BASE_URL?.replace(/\/$/, '') || 'https://api.enablebanking.com'
 
@@ -59,37 +59,6 @@ function cargarClavePrivada(raw: string): KeyObject {
   // (3) Último intento: envolver el cuerpo como PKCS#8 PEM y dejar que OpenSSL lo intente.
   const pem = `-----BEGIN PRIVATE KEY-----\n${(compact.match(/.{1,64}/g) ?? []).join('\n')}\n-----END PRIVATE KEY-----\n`
   return createPrivateKey(pem)
-}
-
-// Diagnóstico SIN secretos: estructura de la clave configurada (longitud, si trae cabecera,
-// si decodifica). No revela el cuerpo de la clave — solo etiquetas/constantes públicas,
-// longitudes y el mensaje de error. Sirve para depurar el pegado de la env var.
-export function diagnosticarClave(): Record<string, unknown> {
-  const raw = process.env.ENABLEBANKING_PRIVATE_KEY || ''
-  if (!raw) return { configurada: false }
-  let decodifica = false
-  let error: string | undefined
-  let huellaPublica: string | undefined
-  try {
-    const k = cargarClavePrivada(raw)
-    decodifica = true
-    // Huella SHA-256 de la clave PÚBLICA (SPKI DER) derivada de la privada. No es secreto:
-    // sirve para comparar con la huella del certificado registrado en Enable Banking.
-    const pub = createPublicKey(k).export({ type: 'spki', format: 'der' })
-    huellaPublica = createHash('sha256').update(pub).digest('hex')
-  } catch (e) { error = e instanceof Error ? e.message : String(e) }
-  return {
-    configurada: true,
-    longitud: raw.length,
-    lineas: raw.split(/\r?\n/).length,
-    tieneSaltosReales: raw.includes('\n'),
-    incluyeBEGIN: raw.includes('BEGIN'),
-    incluyePRIVATE: raw.includes('PRIVATE'),
-    appId: (process.env.ENABLEBANKING_APP_ID || '').slice(0, 8),
-    decodifica,
-    huellaPublica,
-    error,
-  }
 }
 
 // Firma un JWT RS256 con la clave privada de la app. createPrivateKey acepta tanto
@@ -187,42 +156,6 @@ function extraerUids(j: Record<string, unknown>): string[] {
     }
   }
   return [...new Set(uids)]
-}
-
-// Inspección estructural de una sesión (solo para depurar; datos sandbox). Devuelve las
-// claves de la respuesta y la forma de `accounts`, sin valores sensibles de producción.
-export async function inspeccionarSesion(sessionId: string): Promise<Record<string, unknown>> {
-  const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
-  const acc = j.accounts
-  const primer = Array.isArray(acc) ? acc[0] : undefined
-  return {
-    claves: Object.keys(j),
-    accountsTipo: Array.isArray(acc) ? 'array' : typeof acc,
-    accountsLen: Array.isArray(acc) ? acc.length : null,
-    primerTipo: typeof primer,
-    primerClaves: primer && typeof primer === 'object' ? Object.keys(primer as object) : primer,
-    uidsExtraidos: extraerUids(j).length,
-    status: j.status ?? null,
-  }
-}
-
-// Inspección estructural de las transacciones de una cuenta (depuración sandbox): compara
-// la respuesta con y sin date_from para ver si es un problema de rango o de parseo.
-export async function inspeccionarMovimientos(accountUid: string): Promise<Record<string, unknown>> {
-  const resumen = (r: Record<string, unknown> | { error: string }) => {
-    const t = (r as Record<string, unknown>).transactions
-    const primer = Array.isArray(t) ? t[0] : undefined
-    return {
-      claves: r && typeof r === 'object' ? Object.keys(r) : typeof r,
-      txLen: Array.isArray(t) ? t.length : null,
-      primerClaves: primer && typeof primer === 'object' ? Object.keys(primer as object) : null,
-      error: (r as { error?: string }).error,
-    }
-  }
-  const dateFrom = new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
-  const sinFecha = await api<Record<string, unknown>>(`/accounts/${accountUid}/transactions`).catch(e => ({ error: String(e) }))
-  const conFecha = await api<Record<string, unknown>>(`/accounts/${accountUid}/transactions?date_from=${dateFrom}`).catch(e => ({ error: String(e) }))
-  return { sinFecha: resumen(sinFecha), conFecha: resumen(conFecha) }
 }
 
 export type CuentaDetalle = { iban?: string; nombre?: string; divisa?: string }
