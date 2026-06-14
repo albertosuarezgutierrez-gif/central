@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T07:06:02Z",
+  "generadoEn": "2026-06-14T07:07:46Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -617,7 +617,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "plataforma": {
         "presente": false,
@@ -1032,6 +1032,7 @@
       "/api/cron/pipeline-comercial",
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
+      "/api/cron/reposicion-stock",
       "/api/cron/reservas-noshow",
       "/api/cron/seo-agent",
       "/api/cuenta-nominal",
@@ -1467,6 +1468,7 @@
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
       "/api/admin/limpiadoras/[id]/propiedades",
+      "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
       "/api/admin/migrate-chat",
       "/api/admin/migrate-chat-destinatario",
@@ -1881,6 +1883,14 @@
   ],
   "novedades": [
     {
+      "titulo": "📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
       "fecha": "14/06/2026"
     },
@@ -1930,14 +1940,6 @@
     },
     {
       "titulo": "📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164",
       "fecha": "12/06/2026"
     }
   ],
@@ -2165,7 +2167,7 @@
     "packages": 16,
     "capacidades": 23,
     "skills": 13,
-    "apis": 745,
+    "apis": 747,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0

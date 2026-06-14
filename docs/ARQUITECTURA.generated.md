@@ -1,22 +1,22 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T07:06:02Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T07:07:46Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 16 packages · 23 capacidades · 13 skills · 745 rutas API.
+**Resumen:** 4 apps · 16 packages · 23 capacidades · 13 skills · 747 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
 - **Módulos que usa:** core-ai, core-fiscal, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-materiales, module-presupuestos, module-proveedores
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (78):** arqueos_caja_empleado, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales, materiales_asignacion, materiales_categorias…
-- **Rutas API:** 450
+- **Rutas API:** 451
 ### ialimp
 - **Módulos que usa:** core-ai, core-email, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA, Concursos públicos
 - **Tablas (27):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos, tenant_modulos
-- **Rutas API:** 184
+- **Rutas API:** 185
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
 - **Capacidades:** —
@@ -115,6 +115,8 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/06/2026) 📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`
+- (14/06/2026) ⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)
 - (14/06/2026) 💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`
 - (14/06/2026) 📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`
 - (13/06/2026) ⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`
@@ -123,6 +125,4 @@
 - (13/06/2026) 💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`
 - (13/06/2026) 🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`
 - (12/06/2026) 📦 module-materiales Fase B — PR #189 mergeado
-- (12/06/2026) 🧱 Config de build compartida en la MATRIZ — PR #180
-- (12/06/2026) 🧭 SKILLS-ROUTER DE CONTEXTO POR VERTICAL — rama `claude/project-scope-agent-validation-ip9f8b`
 
