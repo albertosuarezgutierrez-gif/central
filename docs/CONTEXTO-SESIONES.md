@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED) — 14/06/2026**
+  Alberto reportó (con captura del móvil en `flame.vercel.app`) que el panel de control no era usable en móvil:
+  la barra lateral fija de 200px (`<nav>` con pestañas Negocios/ia-rest/Sivra/Estructura) se comía el ancho y
+  dejaba los KPIs y las tarjetas de clientes en una columna estrujada. Pidió "hamburguesa plegable".
+  - **Cambio (solo `apps/plataforma/app/admin/page.tsx`, presentación pura, sin tocar datos/auth/queries):**
+    detección de viewport con `window.matchMedia('(max-width: 768px)')` (estados `isMobile` + `menuOpen`,
+    coherente con el patrón del fichero: inline styles, sin Tailwind). En **móvil** el `<nav>` pasa a **drawer
+    fijo** (`position:fixed`, `transform: translateX(-100%/0)`, transición .25s) que se abre con un botón
+    **hamburguesa ☰** en la cabecera; backdrop semitransparente que cierra al tocar fuera; se cierra solo al
+    elegir pestaña o pulsar ✕; el nombre del operador se mueve dentro del drawer y "Nuevo cliente" se compacta a
+    ➕. En **escritorio** comportamiento idéntico al anterior (barra fija 200px).
+  - CI: los 4 deploys de Vercel (plataforma, ialimp, sivra, ia-rest) **Ready**. Mergeado en squash.
+
 - **🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED) — 14/06/2026**
   Sesión a raíz de un problema EN VIVO de Vanessa (Sique Brilla): al subir limpiezas le salía **"No autenticado"**
   y, al elegir cliente en *Nueva limpieza*, *"Este cliente no tiene propiedades creadas"* (FALSO: AITANA ORTIZ
