@@ -3,8 +3,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 import {
-  resumenJornada, detalleJornada, chequearDescansos, horasExtra,
-  LIMITES_DEFECTO, type TurnoFichaje, type LimitesJornada,
+  resumenJornada, detalleJornada, chequearDescansos, horasExtra, costePersonal,
+  LIMITES_DEFECTO, type TurnoFichaje, type LimitesJornada, type CostePersonal,
 } from '@central/module-horario'
 
 /**
@@ -38,6 +38,8 @@ export async function GET(req: NextRequest) {
   }
   const avisosDescanso = cfg?.avisos_descanso ?? true
   const avisoExtra = cfg?.aviso_horas_extra ?? true
+  const costeActivo = cfg?.coste_personal ?? false
+  const costesEmpleado: Record<string, number> = (cfg?.costes_empleado as Record<string, number> | null) ?? {}
 
   // Turnos cerrados del rango.
   let q = supabase
@@ -63,11 +65,26 @@ export async function GET(req: NextRequest) {
     tipo: t.tipo ?? 'normal',
   }))
 
+  // Coste de personal (config_horario.coste_personal): cruza horas × coste/hora con las
+  // ventas del rango (facturas emitidas) → % sobre ventas + ventas/hora.
+  let coste: CostePersonal | null = null
+  if (costeActivo) {
+    const { data: facturas } = await supabase
+      .from('facturas_verifactu')
+      .select('importe_total')
+      .eq('local_id', rid).eq('estado', 'emitida')
+      .gte('fecha', `${desde}T00:00:00`).lte('fecha', `${hasta}T23:59:59`)
+    const ventas = (facturas ?? []).reduce((s, f) => s + Number(f.importe_total || 0), 0)
+    coste = costePersonal(turnos, costesEmpleado, ventas)
+  }
+
   return NextResponse.json({
     ok: true, desde, hasta, limites,
     resumen: resumenJornada(turnos, limites),
     detalle: detalleJornada(turnos),
     descansos: avisosDescanso ? chequearDescansos(turnos, limites) : [],
     extras: avisoExtra ? horasExtra(turnos, limites) : [],
+    coste,
+    costes_empleado: costesEmpleado,
   })
 }

@@ -1,7 +1,7 @@
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import {
-  resumenJornada, detalleJornada, chequearDescansos, horasExtra, isoWeek,
+  resumenJornada, detalleJornada, chequearDescansos, horasExtra, costePersonal, isoWeek,
 } from '../src/jornada.ts'
 import type { TurnoFichaje } from '../src/types.ts'
 
@@ -75,6 +75,25 @@ test('chequearDescansos: >=12h no se marca', () => {
     { camarero_id: 'a', camarero_nombre: 'Ana', fecha: '2026-06-21', entrada_at: '2026-06-21T08:00:00Z', salida_at: '2026-06-21T16:00:00Z', horas_totales: 8, tipo: 'normal' }, // gap 16h
   ]
   assert.equal(chequearDescansos(turnos).length, 0)
+})
+
+test('costePersonal: coste por empleado, total, % sobre ventas y ventas/hora', () => {
+  const turnos: TurnoFichaje[] = [
+    turno({ camarero_id: 'a', camarero_nombre: 'Ana', fecha: '2026-06-15', horas_totales: 10 }),
+    turno({ camarero_id: 'b', camarero_nombre: 'Beto', fecha: '2026-06-15', horas_totales: 5 }),
+  ]
+  const c = costePersonal(turnos, { a: 12, b: 10 }, 1000)
+  assert.equal(c.horas_total, 15)
+  assert.equal(c.coste_total, 170)            // 10*12 + 5*10
+  assert.equal(c.ventas, 1000)
+  assert.equal(c.pct_sobre_ventas, 17)        // 170/1000
+  assert.ok(Math.abs(c.ventas_por_hora! - 66.67) < 0.01) // 1000/15
+  assert.equal(c.lineas[0].camarero_id, 'a')  // mayor coste primero
+  // sin ventas → ratios null
+  const c0 = costePersonal(turnos, { a: 12 })
+  assert.equal(c0.pct_sobre_ventas, null) // sin ventas no hay %
+  assert.equal(c0.ventas_por_hora, 0)     // ventas 0 / horas → 0
+  assert.equal(c0.lineas.find(l => l.camarero_id === 'b')!.coste, 0) // sin coste_hora → 0
 })
 
 test('horasExtra: suma turnos tipo extra y detecta tope anual', () => {

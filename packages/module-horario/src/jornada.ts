@@ -1,6 +1,7 @@
 import type {
   TurnoFichaje, LimitesJornada, ResumenJornadaEmpleado, ExcesoJornada,
   AvisoDescanso, ResumenHorasExtra, PuntoSerieJornada,
+  CostePersonal, CostePersonalLinea,
 } from './types'
 
 export const LIMITES_DEFECTO: LimitesJornada = {
@@ -134,6 +135,38 @@ export function chequearDescansos(
     }
   }
   return avisos
+}
+
+// Coste de personal: horas × coste/hora por empleado, total, % sobre ventas y ventas/hora.
+// `costes` es el mapa { camarero_id: coste_hora }. `ventas` (opcional) para los ratios.
+export function costePersonal(
+  turnos: TurnoFichaje[],
+  costes: Record<string, number>,
+  ventas = 0,
+): CostePersonal {
+  const lineas: CostePersonalLinea[] = []
+  let horas_total = 0
+  let coste_total = 0
+  for (const [k, arr] of agrupar(turnos)) {
+    const horas = arr.reduce((s, t) => s + horasTurno(t), 0)
+    const ch = Number(costes[k] ?? 0) || 0
+    const coste = round2(horas * ch)
+    horas_total += horas
+    coste_total += coste
+    lineas.push({
+      camarero_id: arr[0].camarero_id,
+      camarero_nombre: arr[0].camarero_nombre,
+      horas: round2(horas), coste_hora: ch, coste,
+    })
+  }
+  horas_total = round2(horas_total)
+  coste_total = round2(coste_total)
+  return {
+    lineas: lineas.sort((a, b) => b.coste - a.coste),
+    horas_total, coste_total, ventas: round2(ventas),
+    pct_sobre_ventas: ventas > 0 ? round2((coste_total / ventas) * 100) : null,
+    ventas_por_hora: horas_total > 0 ? round2(ventas / horas_total) : null,
+  }
 }
 
 // Horas extra (turnos tipo 'extra') por empleado + control del tope anual.

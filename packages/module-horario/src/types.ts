@@ -55,3 +55,20 @@ export interface ResumenHorasExtra {
 }
 
 export interface PuntoSerieJornada { fecha: string; horas: number }
+
+// Coste de personal: coste/hora por empleado × horas, con % sobre ventas y ventas/hora.
+export interface CostePersonalLinea {
+  camarero_id: string | null
+  camarero_nombre: string | null
+  horas: number
+  coste_hora: number
+  coste: number
+}
+export interface CostePersonal {
+  lineas: CostePersonalLinea[]
+  horas_total: number
+  coste_total: number
+  ventas: number
+  pct_sobre_ventas: number | null
+  ventas_por_hora: number | null
+}

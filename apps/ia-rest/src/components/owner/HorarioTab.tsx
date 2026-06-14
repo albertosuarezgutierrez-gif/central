@@ -20,6 +20,9 @@ interface ResumenEmp {
 interface Descanso { camarero_id: string | null; camarero_nombre: string | null; tipo: string; fecha: string; horas: number; minimo: number }
 interface Extra { camarero_id: string | null; camarero_nombre: string | null; horas_extra: number; tope_anual: number; supera_tope: boolean }
 interface Punto { fecha: string; horas: number }
+interface CosteLinea { camarero_id: string | null; camarero_nombre: string | null; horas: number; coste_hora: number; coste: number }
+interface Coste { lineas: CosteLinea[]; horas_total: number; coste_total: number; ventas: number; pct_sobre_ventas: number | null; ventas_por_hora: number | null }
+const eur = (n: number) => n.toLocaleString('es', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' €'
 
 export default function HorarioTab({ sh }: { sh: () => Record<string, string> }) {
   const hoy = new Date()
@@ -30,6 +33,7 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
   const [detalle, setDetalle] = useState<Record<string, Punto[]>>({})
   const [descansos, setDescansos] = useState<Descanso[]>([])
   const [extras, setExtras] = useState<Extra[]>([])
+  const [coste, setCoste] = useState<Coste | null>(null)
   const [loading, setLoading] = useState(false)
   const [verConfig, setVerConfig] = useState(false)
   const [aviso, setAviso] = useState('')
@@ -39,10 +43,18 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
     try {
       const r = await fetch(`/api/owner/horario?desde=${desde}&hasta=${hasta}`, { headers: sh() })
       const d = await r.json()
-      if (d.ok) { setResumen(d.resumen ?? []); setDetalle(d.detalle ?? {}); setDescansos(d.descansos ?? []); setExtras(d.extras ?? []) }
+      if (d.ok) { setResumen(d.resumen ?? []); setDetalle(d.detalle ?? {}); setDescansos(d.descansos ?? []); setExtras(d.extras ?? []); setCoste(d.coste ?? null) }
     } finally { setLoading(false) }
   }, [desde, hasta, sh])
   useEffect(() => { cargar() }, [cargar])
+
+  const guardarCoste = async (camareroId: string, valor: string) => {
+    await fetch('/api/owner/horario/coste', {
+      method: 'POST', headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ camarero_id: camareroId, coste_hora: valor.trim() === '' ? null : Number(valor) }),
+    })
+    cargar()
+  }
 
   const autocerrar = async () => {
     setAviso('')
@@ -144,6 +156,42 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
           ))}
         </Bloque>
       )}
+
+      {/* Coste de personal (si está activado en config) */}
+      {coste && (
+        <Bloque titulo="Coste de personal" color={C.ink3}>
+          <div style={{ display: 'flex', gap: 18, flexWrap: 'wrap', marginBottom: 10 }}>
+            <Kpi label="Coste total" valor={eur(coste.coste_total)} />
+            <Kpi label="Ventas" valor={eur(coste.ventas)} />
+            <Kpi label="% sobre ventas" valor={coste.pct_sobre_ventas != null ? coste.pct_sobre_ventas.toFixed(1) + '%' : '—'} color={coste.pct_sobre_ventas != null && coste.pct_sobre_ventas > 35 ? C.amber : C.ink} />
+            <Kpi label="Ventas / hora" valor={coste.ventas_por_hora != null ? eur(coste.ventas_por_hora) : '—'} />
+          </div>
+          {coste.lineas.map(l => (
+            <div key={l.camarero_id ?? 'sin'} style={{ display: 'grid', gridTemplateColumns: '1.4fr .8fr 1fr 1fr', gap: 6, alignItems: 'center', padding: '4px 0' }}>
+              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink }}>{l.camarero_nombre ?? 'Sin asignar'}</div>
+              <div style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>{h(l.horas)}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                {l.camarero_id ? (
+                  <input type="number" inputMode="decimal" defaultValue={l.coste_hora || ''} placeholder="€/h"
+                    onBlur={e => guardarCoste(l.camarero_id!, e.target.value)}
+                    style={{ width: 60, fontFamily: SN, fontSize: 11, padding: '3px 5px', background: C.paper2, border: `1px solid ${C.rule}`, borderRadius: 6, color: C.ink, outline: 'none' }} />
+                ) : <span style={{ fontFamily: SN, fontSize: 11, color: C.ink4 }}>—</span>}
+                <span style={{ fontFamily: SN, fontSize: 10, color: C.ink4 }}>€/h</span>
+              </div>
+              <div style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink, textAlign: 'right' }}>{eur(l.coste)}</div>
+            </div>
+          ))}
+        </Bloque>
+      )}
+    </div>
+  )
+}
+
+function Kpi({ label, valor, color }: { label: string; valor: string; color?: string }) {
+  return (
+    <div>
+      <div style={{ fontFamily: SM, fontSize: 9, color: C.ink4, textTransform: 'uppercase', letterSpacing: '.05em' }}>{label}</div>
+      <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: color ?? C.ink }}>{valor}</div>
     </div>
   )
 }

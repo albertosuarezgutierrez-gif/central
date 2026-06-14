@@ -7,9 +7,11 @@ export type {
   AvisoDescanso,
   ResumenHorasExtra,
   PuntoSerieJornada,
+  CostePersonalLinea,
+  CostePersonal,
 } from './types'
 
-// Jornada legal (RD 8/2019): registro, descansos, horas extra
+// Jornada legal (RD 8/2019): registro, descansos, horas extra, coste de personal
 export {
   LIMITES_DEFECTO,
   isoWeek,
@@ -17,4 +19,5 @@ export {
   detalleJornada,
   chequearDescansos,
   horasExtra,
+  costePersonal,
 } from './jornada'
