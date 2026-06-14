@@ -32,6 +32,7 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
   const [extras, setExtras] = useState<Extra[]>([])
   const [loading, setLoading] = useState(false)
   const [verConfig, setVerConfig] = useState(false)
+  const [aviso, setAviso] = useState('')
 
   const cargar = useCallback(async () => {
     setLoading(true)
@@ -42,6 +43,15 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
     } finally { setLoading(false) }
   }, [desde, hasta, sh])
   useEffect(() => { cargar() }, [cargar])
+
+  const autocerrar = async () => {
+    setAviso('')
+    const r = await fetch('/api/owner/horario/autocierre', { method: 'POST', headers: sh() })
+    const d = await r.json()
+    if (d.ok) { setAviso(d.cerrados ? `Autocerrados ${d.cerrados} turno(s) colgados (> ${d.limite_horas}h)` : 'No había turnos colgados'); cargar() }
+    else setAviso('Error: ' + (d.error ?? 'no se pudo'))
+    setTimeout(() => setAviso(''), 4000)
+  }
 
   const exportarCSV = () => {
     const filas = [['Empleado', 'Días', 'Horas totales', 'Media/día', 'Excesos']]
@@ -70,8 +80,10 @@ export default function HorarioTab({ sh }: { sh: () => Record<string, string> })
         <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={inp} />
         <button onClick={cargar} style={btn}>{loading ? '…' : 'Ver'}</button>
         <button onClick={exportarCSV} style={btn} disabled={!resumen.length}>Exportar CSV</button>
+        <button onClick={autocerrar} style={btn} title="Cierra turnos olvidados abiertos más del límite configurado">Autocerrar colgados</button>
         <button onClick={() => setVerConfig(v => !v)} style={{ ...btn, marginLeft: 'auto' }}>⚙️ Configuración</button>
       </div>
+      {aviso && <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginBottom: 10 }}>{aviso}</div>}
 
       {verConfig && <ConfigHorario sh={sh} />}
 
