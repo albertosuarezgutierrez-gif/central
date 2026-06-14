@@ -3,7 +3,7 @@ import { POST as applyPost } from "../apply/route"
 import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
-export const maxDuration = 60
+export const maxDuration = 300
 
 // GET /api/pricing/apply-auto  (cron diario)
 // Aplicación automática: invoca /api/pricing/apply con dryRun=false reenviando la cabecera de

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T09:47:47Z",
+  "generadoEn": "2026-06-14T10:22:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1040,6 +1040,7 @@
       "/api/cron/cobro-inactividad",
       "/api/cron/cobros-eventos",
       "/api/cron/completar-locales",
+      "/api/cron/crm-envio-auto",
       "/api/cron/crm-followup-sevilla",
       "/api/cron/crm-lead-hunter-sevilla",
       "/api/cron/crm-recordatorio-dia2",
@@ -2208,7 +2209,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 758,
+    "apis": 759,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
