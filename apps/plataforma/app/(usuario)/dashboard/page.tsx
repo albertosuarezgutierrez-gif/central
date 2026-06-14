@@ -4,7 +4,6 @@ import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
 import { getSaldoConsolidado } from '@/lib/banca'
-import LogoutButton from './LogoutButton'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
 const SECTOR_LABEL: Record<string, string> = {
@@ -57,25 +56,7 @@ export default async function DashboardPage() {
   }))
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Header */}
-      <header style={{
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '0 24px', height: '56px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
-          <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '15px' }}>ia</span>
-          <span>plataforma</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ fontSize: '14px', color: 'var(--muted)' }}>{session.email}</span>
-          <LogoutButton />
-        </div>
-      </header>
-
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
         {/* KPI bar consolidado */}
         {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
           <div style={{
@@ -162,7 +143,6 @@ export default async function DashboardPage() {
           </section>
         ))}
       </main>
-    </div>
   )
 }
 
