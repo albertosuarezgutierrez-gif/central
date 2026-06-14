@@ -16,6 +16,37 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria — 14/06/2026**
+  La consolidación bancaria pasó de "código inerte" a **funcionando con datos reales de Alberto**. Larga sesión.
+  - **Enable Banking en producción (restricted mode = GRATIS para cuentas propias)**: tras descartar GoCardless
+    (altas cerradas), el conector PSD2 corre sobre **Enable Banking**. El **tier gratuito "restricted/linked accounts"
+    permite conectar TUS PROPIAS cuentas sin contrato ni pago** (solo el modo comercial para cuentas de terceros es de
+    pago). Auth = **JWT RS256** firmado con la clave privada de la app (kid=APP_ID, aud=api.enablebanking.com).
+    Variables en Vercel (proyecto plataforma): `ENABLEBANKING_APP_ID` + `ENABLEBANKING_PRIVATE_KEY`.
+  - **Conectadas y sincronizando a diario**: **Kutxabank** (IBAN real, 257 mov incl. histórico Q1 del Excel fusionado)
+    y **BBVA** (73 mov). Saldo del grupo real **41.186,94 €**. App Enable Banking activa: `ff26f315-…`.
+  - **Trampas resueltas (todas reales, documentadas para la próxima)**:
+    1. `DECODER routines::unsupported` → la clave se pegó **sin cabecera PEM** (solo cuerpo base64). `cargarClavePrivada()`
+       en `lib/enablebanking.ts` ahora tolera: PEM normal, en una línea, con comillas, `\n` escapados, **cuerpo base64
+       suelto (DER pkcs8/pkcs1/sec1)** y PEM re-codificado en base64.
+    2. `Wrong signature` → la clave privada en Vercel **no era la pareja** del certificado registrado (Enable Banking NO
+       tiene botón de regenerar; el cert se fija al **crear** la app). Solución: **crear app nueva** y usar App ID + clave
+       privada **de esa misma creación atómica**. Verificado por **huella SHA-256 de la clave pública** derivada.
+       OJO Vercel: una env var nueva **solo entra en despliegues creados DESPUÉS de guardarla** (hizo falta Redeploy real).
+    3. Transacciones vacías → el endpoint **exige `date_from`** y **PSD2 limita a ~90 días** (>90d → 422
+       `WRONG_TRANSACTIONS_PERIOD`). Se piden 89 días.
+    4. Timeout 504 al conectar Kutxa → el callback insertaba mov **uno a uno**. Ahora **inserción en bloque**
+       (`Prisma.join`) + `maxDuration=300` en callback y cron. Idempotente (dedupe por `entry_reference`).
+  - **Endpoints/lib**: `lib/enablebanking.ts` (cliente JWT), `lib/psd2.ts` (sincroniza por `session_id` guardado en
+    `conexiones_banco.requisition_id`), `psd2/{instituciones,conectar,callback}` + cron `psd2-sync`. (Hubo un endpoint
+    temporal `/api/cron/psd2-diag` para depurar la clave **sin exponer secretos** — ya retirado.)
+  - **Auto-categorización IA diaria + "Por revisar" (PR #242)**: el cron `psd2-sync`, tras sincronizar, **categoriza con
+    IA** los movimientos nuevos; cuando **duda marca `requiere_revision=true`** (columna nueva) y en `/banca` sale la
+    bandeja **🔎 Por revisar** donde el dueño asigna categoría (`POST /api/banca/revisar`). Degrada sin `NVIDIA_API_KEY`.
+  - **PENDIENTE de Alberto**: (a) **`NVIDIA_API_KEY`** (gratis, NVIDIA NIM) en el Vercel de plataforma para que la
+    categorización IA etiquete de verdad; (b) **rotar la clave privada** de Enable Banking (se compartió un `.pem` en el
+    chat durante la depuración — riesgo bajo en restricted mode/solo-lectura de cuentas propias, pero conviene rotarla).
+
 - **🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239 — 14/06/2026**
   Alberto reportó que el **portal del propietario** (`/propietario/[token]` y `/propietario` por email+contraseña,
   ambos `PropietarioClient.tsx`) se veía en PC como una columna móvil estrecha centrada (`maxWidth:1080`), con las
