@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T05:40:30Z",
+  "generadoEn": "2026-06-14T05:41:31Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1901,6 +1901,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)",
       "fecha": "13/06/2026"
     },
@@ -1955,10 +1959,6 @@
     {
       "titulo": "🎤 DECK presencial JJ + estructura real corregida",
       "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "⭐ REUNIÓN con Joaquín Jaén (dueño) + hermanos CELEBRADA — inteligencia real",
-      "fecha": "11/06/2026"
     }
   ],
   "saludRepo": {

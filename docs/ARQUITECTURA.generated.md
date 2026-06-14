@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T05:40:30Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T05:41:31Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -118,6 +118,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (14/06/2026) ⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)
 - (13/06/2026) 🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)
 - (13/06/2026) 💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`
 - (13/06/2026) 🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`
@@ -127,5 +128,4 @@
 - (12/06/2026) 🤖 NUEVOS AGENTES IA + mejoras — PR #175 mergeado
 - (12/06/2026) 🗑️ plataforma/admin: quita pestaña "Mis propiedades", acceso directo a ialimp — PR #171 mergeado
 - (12/06/2026) 📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172
-- (12/06/2026) 🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR
 
