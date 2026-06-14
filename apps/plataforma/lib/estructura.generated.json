@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-13T22:19:22Z",
+  "generadoEn": "2026-06-14T05:31:08Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -67,6 +67,11 @@
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
+    },
+    {
+      "id": "module-horario",
+      "tipo": "module",
+      "npm": "@central/module-horario"
     },
     {
       "id": "module-materiales",
@@ -414,6 +419,24 @@
       "ia-rest": {
         "estado": "usado",
         "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-horario": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "ialimp": {
         "estado": "no",
@@ -883,7 +906,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 160
+        "evidencias": 162
       },
       "ialimp": {
         "presente": true,
@@ -930,6 +953,7 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-feedback": [],
+    "module-horario": [],
     "module-materiales": [],
     "module-presupuestos": [],
     "module-proveedores": [],
@@ -1212,6 +1236,8 @@
       "/api/owner/forecaster",
       "/api/owner/formatos",
       "/api/owner/fuera-carta/stock",
+      "/api/owner/horario",
+      "/api/owner/horario/config",
       "/api/owner/impresoras",
       "/api/owner/logo",
       "/api/owner/manual-voz",
@@ -1695,6 +1721,7 @@
       "cobro_config",
       "comanda_items",
       "comandas",
+      "config_horario",
       "config_tienda",
       "contract_acceptances",
       "documentos_escaneados",
@@ -2153,10 +2180,10 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 16,
+    "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 741,
+    "apis": 743,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
