@@ -8,25 +8,36 @@ export default function LoginPage() {
   const [password, setPassword] = useState('')
   const [error,    setError]    = useState('')
   const [loading,  setLoading]  = useState(false)
+  const [sesionAbierta, setSesionAbierta] = useState(false)   // 409: ya hay sesión en otro dispositivo
   const router = useRouter()
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
+  // forzar = true → "Entrar aquí y cerrar la otra" (cierra la sesión del otro dispositivo).
+  async function login(forzar = false) {
     setLoading(true); setError('')
     try {
       const res  = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, forzar }),
       })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || 'Error al iniciar sesión'); return }
+      if (res.status === 409 && data.sesion_abierta) {
+        setSesionAbierta(true)
+        setError('')
+        return
+      }
+      if (!res.ok) { setSesionAbierta(false); setError(data.error || 'Error al iniciar sesión'); return }
       router.push('/dashboard')
     } catch {
       setError('Error de conexión')
     } finally {
       setLoading(false)
     }
+  }
+
+  function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    login(false)
   }
 
   return (
@@ -180,9 +191,44 @@ export default function LoginPage() {
                 required
               />
               {error && <div className="login-error">⚠ {error}</div>}
-              <button className="login-btn" type="submit" disabled={loading}>
-                {loading ? 'Accediendo...' : 'Acceder al panel →'}
-              </button>
+
+              {sesionAbierta ? (
+                <div style={{
+                  background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 12,
+                  padding: '14px 16px', marginBottom: 14,
+                }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#92400e', marginBottom: 4 }}>
+                    Ya hay una sesión abierta
+                  </div>
+                  <div style={{ fontSize: 13, color: '#78350f', marginBottom: 12, lineHeight: 1.45 }}>
+                    Esta cuenta está abierta en otro dispositivo (solo se permite una a la vez).
+                    Si entras aquí, se cerrará la otra sesión.
+                  </div>
+                  <button
+                    type="button"
+                    className="login-btn"
+                    style={{ marginTop: 0, background: '#b45309', boxShadow: '0 4px 20px rgba(180,83,9,.3)' }}
+                    disabled={loading}
+                    onClick={() => login(true)}
+                  >
+                    {loading ? 'Entrando…' : 'Entrar aquí y cerrar la otra'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSesionAbierta(false); setPassword('') }}
+                    style={{
+                      width: '100%', marginTop: 8, background: 'transparent', border: 'none',
+                      color: '#92400e', fontFamily: 'inherit', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+                    }}
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              ) : (
+                <button className="login-btn" type="submit" disabled={loading}>
+                  {loading ? 'Accediendo...' : 'Acceder al panel →'}
+                </button>
+              )}
             </form>
             <div className="login-footer">
               ¿Sin cuenta?{' '}
