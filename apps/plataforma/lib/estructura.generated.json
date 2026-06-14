@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T09:19:04Z",
+  "generadoEn": "2026-06-14T09:47:47Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1629,6 +1629,7 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/negocios",
       "/api/negocios/[id]",
@@ -2207,7 +2208,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 757,
+    "apis": 758,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
