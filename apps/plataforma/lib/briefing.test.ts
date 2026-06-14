@@ -31,7 +31,7 @@ test('formatBriefingTexto: asunto con nombre y año, cuerpo con líneas y total'
   assert.match(cuerpo, /Sique Brilla/)
   assert.match(cuerpo, /Busto Reform/)
   // negocio no disponible aparece con su nota, no con cifras
-  assert.match(cuerpo, /Bar Pepe.*sin local vinculado/s)
+  assert.match(cuerpo, /Bar Pepe.*sin local vinculado/)
   // total consolidado presente
   assert.match(cuerpo, /TOTAL/)
 })
