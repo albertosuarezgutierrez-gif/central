@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getSaldoConsolidado, listarMovimientos, fmtEur } from '@/lib/banca'
+import { getTesoreria } from '@/lib/tesoreria'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
@@ -19,10 +20,11 @@ export default async function BancaPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const [sociedades, saldo, movimientos] = await Promise.all([
+  const [sociedades, saldo, movimientos, tesoreria] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientos(session.id, undefined, 100),
+    getTesoreria(session.id),
   ])
 
   return (
@@ -73,6 +75,32 @@ export default async function BancaPage() {
                     {c.saldoActual == null ? '—' : fmtEur(c.saldoActual)}
                   </div>
                   {c.saldoFecha && <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>a {c.saldoFecha}</div>}
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Previsión de tesorería (F5) */}
+        {tesoreria.recurrentes.length > 0 && (
+          <section style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Previsión de tesorería</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px', marginBottom: '16px' }}>
+              {tesoreria.proyecciones.map(p => (
+                <div key={p.dias} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600 }}>Saldo proyectado · {p.dias} días</div>
+                  <div style={{ fontSize: '22px', fontWeight: 800, marginTop: '6px', color: p.proyectado >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(p.proyectado)}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '4px' }}>+{fmtEur(p.entradas)} entran · −{fmtEur(p.salidas)} salen</div>
+                </div>
+              ))}
+            </div>
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+              <div style={{ padding: '10px 16px', fontSize: '12px', color: 'var(--muted)', fontWeight: 600, borderBottom: '1px solid var(--border)' }}>Movimientos recurrentes detectados</div>
+              {tesoreria.recurrentes.slice(0, 8).map((r, i) => (
+                <div key={r.clave + i} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+                  <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.concepto}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>cada ~{r.intervaloDias}d · ×{r.ocurrencias}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: r.importeMedio >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{fmtEur(r.importeMedio)}</div>
                 </div>
               ))}
             </div>
