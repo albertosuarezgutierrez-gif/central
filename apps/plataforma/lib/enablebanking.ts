@@ -12,7 +12,7 @@
 // → por cuenta: /details (IBAN) + /balances + /transactions.
 
 import { SignJWT } from 'jose'
-import { createPrivateKey } from 'node:crypto'
+import { createPrivateKey, type KeyObject } from 'node:crypto'
 
 const BASE = process.env.ENABLEBANKING_BASE_URL?.replace(/\/$/, '') || 'https://api.enablebanking.com'
 
@@ -22,51 +22,61 @@ export function disponible(): boolean {
 
 let jwtCache: { token: string; exp: number } | null = null
 
-// Normaliza la clave privada pegada en una env var de Vercel a un PEM válido. Tolera los
-// estropicios típicos del copia-pega: comillas envolventes, saltos escapados (\n / \r\n),
-// y —el más habitual— que los saltos de línea se hayan perdido y quede TODO en una línea
-// (Vercel/algún editor los colapsa a espacios) → OpenSSL 3 lanza "DECODER unsupported".
-// En ese caso reconstruimos el bloque PEM: cabecera/pie + cuerpo base64 partido a 64.
-function normalizarPem(raw: string): string {
+// Carga la clave privada desde el valor pegado en la env var de Vercel, tolerando los
+// estropicios típicos del copia-pega y devolviendo un KeyObject listo para firmar:
+//  - comillas envolventes y saltos escapados (\n / \r\n);
+//  - PEM en una sola línea (se reconstruye cabecera/pie + cuerpo base64 a 64);
+//  - SIN cabecera PEM: cuerpo base64 suelto → se trata como DER (pkcs8/pkcs1/sec1), o como
+//    un PEM re-codificado en base64. Este último es el caso real de Enable Banking cuando
+//    se pega solo el cuerpo de la clave sin las líneas -----BEGIN/END-----.
+function cargarClavePrivada(raw: string): KeyObject {
   let s = raw.trim()
   if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1)
   s = s.replace(/\\r/g, '').replace(/\\n/g, '\n').trim()
-  if (s.includes('\n')) return s
-  // Una sola línea: extraer "-----BEGIN X-----", cuerpo, "-----END X-----" y re-formatear.
-  const m = s.match(/-----BEGIN ([A-Z0-9 ]+?)-----\s*([\s\S]*?)\s*-----END \1-----/)
-  if (!m) return s
-  const label = m[1].trim()
-  const body = (m[2].replace(/\s+/g, '').match(/.{1,64}/g) ?? []).join('\n')
-  return `-----BEGIN ${label}-----\n${body}\n-----END ${label}-----\n`
+
+  // Caso A: trae armadura PEM (-----BEGIN ... -----).
+  if (s.includes('-----BEGIN')) {
+    if (!s.includes('\n')) {
+      const m = s.match(/-----BEGIN ([A-Z0-9 ]+?)-----\s*([\s\S]*?)\s*-----END \1-----/)
+      if (m) {
+        const body = (m[2].replace(/\s+/g, '').match(/.{1,64}/g) ?? []).join('\n')
+        s = `-----BEGIN ${m[1].trim()}-----\n${body}\n-----END ${m[1].trim()}-----\n`
+      }
+    }
+    return createPrivateKey(s)
+  }
+
+  // Caso B: sin armadura → cuerpo base64 suelto.
+  const compact = s.replace(/\s+/g, '')
+  const der = Buffer.from(compact, 'base64')
+  // (1) ¿es base64 de un PEM completo? Al decodificar aparecerían las líneas -----BEGIN-----.
+  const comoTexto = der.toString('utf8')
+  if (comoTexto.includes('-----BEGIN')) return createPrivateKey(comoTexto)
+  // (2) DER crudo: probar los tres formatos habituales.
+  for (const type of ['pkcs8', 'pkcs1', 'sec1'] as const) {
+    try { return createPrivateKey({ key: der, format: 'der', type }) } catch { /* siguiente */ }
+  }
+  // (3) Último intento: envolver el cuerpo como PKCS#8 PEM y dejar que OpenSSL lo intente.
+  const pem = `-----BEGIN PRIVATE KEY-----\n${(compact.match(/.{1,64}/g) ?? []).join('\n')}\n-----END PRIVATE KEY-----\n`
+  return createPrivateKey(pem)
 }
 
-// Diagnóstico SIN secretos: estructura de la clave configurada (cabecera, longitud, si
-// decodifica). No revela el cuerpo de la clave — solo la etiqueta PEM (constante pública),
-// longitudes y el mensaje de error de OpenSSL. Sirve para depurar el pegado de la env var.
+// Diagnóstico SIN secretos: estructura de la clave configurada (longitud, si trae cabecera,
+// si decodifica). No revela el cuerpo de la clave — solo etiquetas/constantes públicas,
+// longitudes y el mensaje de error. Sirve para depurar el pegado de la env var.
 export function diagnosticarClave(): Record<string, unknown> {
   const raw = process.env.ENABLEBANKING_PRIVATE_KEY || ''
   if (!raw) return { configurada: false }
-  const norm = normalizarPem(raw)
-  const cabecera = norm.match(/-----BEGIN [A-Z0-9 ]+-----/)?.[0] ?? null
-  // La 1ª línea solo se revela si parece una cabecera (constante pública); si es cuerpo
-  // base64, devolvemos su longitud, nunca el contenido (sería parte del secreto).
-  const primeraLineaRaw = raw.split(/\r?\n/)[0] ?? ''
-  const primeraLinea = /BEGIN|-----/.test(primeraLineaRaw) ? primeraLineaRaw : `<${primeraLineaRaw.length} chars base64?>`
   let decodifica = false
   let error: string | undefined
-  try { createPrivateKey(norm); decodifica = true } catch (e) { error = e instanceof Error ? e.message : String(e) }
+  try { cargarClavePrivada(raw); decodifica = true } catch (e) { error = e instanceof Error ? e.message : String(e) }
   return {
     configurada: true,
     longitud: raw.length,
     lineas: raw.split(/\r?\n/).length,
     tieneSaltosReales: raw.includes('\n'),
-    tieneEscapados: raw.includes('\\n'),
     incluyeBEGIN: raw.includes('BEGIN'),
-    incluyeEND: raw.includes('END'),
     incluyePRIVATE: raw.includes('PRIVATE'),
-    incluyeGuiones5: raw.includes('-----'),
-    primeraLinea,
-    cabecera,
     decodifica,
     error,
   }
@@ -77,9 +87,9 @@ export function diagnosticarClave(): Record<string, unknown> {
 async function jwt(): Promise<string> {
   if (jwtCache && jwtCache.exp > Date.now() + 60_000) return jwtCache.token
   const appId = process.env.ENABLEBANKING_APP_ID
-  const pem = normalizarPem(process.env.ENABLEBANKING_PRIVATE_KEY || '')
-  if (!appId || !pem) throw new Error('Enable Banking sin configurar')
-  const key = createPrivateKey(pem)
+  const raw = process.env.ENABLEBANKING_PRIVATE_KEY || ''
+  if (!appId || !raw) throw new Error('Enable Banking sin configurar')
+  const key = cargarClavePrivada(raw)
   const iat = Math.floor(Date.now() / 1000)
   const exp = iat + 3600
   const token = await new SignJWT({})
