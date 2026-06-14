@@ -5,6 +5,8 @@ import { createServerClient } from '@/lib/supabase'
 import Link from 'next/link'
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
+import { getOverride } from '@/lib/seo/store'
+import SeoBlocks from '@/components/seo/SeoBlocks'
 
 export const revalidate = 3600
 
@@ -41,14 +43,21 @@ async function getRestaurantesCiudad(ciudadSlug: string) {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { ciudad } = await params
   const nombreCiudad = deslugify(ciudad)
+  const rutaActual = `/restaurantes/${ciudad}`
+  const ov = await getOverride(rutaActual)
+  const title = ov?.title ?? `Restaurantes en ${nombreCiudad} — ia.rest`
+  const description = ov?.description ?? `Descubre los mejores restaurantes en ${nombreCiudad} con carta digital y reserva directa sin comisiones. Reserva tu mesa online.`
   return {
-    title: `Restaurantes en ${nombreCiudad} — ia.rest`,
-    description: `Descubre los mejores restaurantes en ${nombreCiudad} con carta digital y reserva directa sin comisiones. Reserva tu mesa online.`,
+    title,
+    description,
     openGraph: {
-      title: `Restaurantes en ${nombreCiudad}`,
-      description: `Los mejores restaurantes de ${nombreCiudad} con reserva directa.`,
+      title: ov?.title ?? `Restaurantes en ${nombreCiudad}`,
+      description: ov?.description ?? `Los mejores restaurantes de ${nombreCiudad} con reserva directa.`,
+      type: 'website',
+      ...(ov?.og ?? {}),
     },
-    alternates: { canonical: `https://www.iarest.es/restaurantes/${ciudad}` },
+    alternates: { canonical: ov?.canonical ?? `https://www.iarest.es${rutaActual}` },
+    ...(ov?.jsonld ? { other: { 'script:ld+json': JSON.stringify(ov.jsonld) } } : {}),
   }
 }
 
@@ -198,6 +207,8 @@ export default async function CiudadPage({ params }: Props) {
             </Link>
           </div>
         </div>
+
+        <SeoBlocks ruta={`/restaurantes/${ciudad}`} />
 
         <footer style={{ background: '#14110E', padding: '18px 24px', textAlign: 'center' }}>
           <p style={{ fontSize: 12, color: '#3A2A1A' }}>

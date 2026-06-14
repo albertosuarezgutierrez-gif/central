@@ -33,6 +33,59 @@
     NO mergear a `main` sin preview verde (cliente Vanessa EN VIVO).
   - **Roadmap restante**: impagos **sivra** → reposición stock (ia-rest) → NPS (ialimp) → scoring limpiadoras →
     orquestador concursos. Diferidas (APIs externas): reputación, VeriFactu.
+- **📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma` — 14/06/2026**
+  1ª de la tanda "automatizar agentes" (auditoría previa: ver entrada de instagram-ideas). `plataforma`
+  no tenía **ningún cron**; ahora un cron semanal (lunes 08:00) consolida ingresos/gastos/resultado YTD
+  de **todos los negocios de cada cuenta** y envía un email al dueño.
+  - **Lógica pura** `apps/plataforma/lib/briefing.ts` (`agregarBriefing` + `formatBriefingTexto`, € inline
+    para no arrastrar `financiero→db→prisma`) con tests `node --test` (`lib/briefing.test.ts`, 3/3 ✅).
+  - **Endpoint** `app/api/cron/briefing/route.ts` (GET, auth `CRON_SECRET` o `?secret=`): reutiliza
+    `getResumenNegocio` de `lib/financiero.ts` (ialimp+sivra BD, ia-rest puerto HTTP) y `enviarAvisoEmail`
+    de `lib/notificaciones.ts` (Resend, no-op sin `RESEND_API_KEY`).
+  - **Cron** en `vercel.json` (`0 8 * * 1`) + `/api/cron` añadido a `PUBLIC` del `middleware.ts`.
+  - **Verificado**: `node --test` 3/3 ✅, `tsc --noEmit` (código de prod limpio) ✅, `next build` ✅.
+  - **⚠️ PENDIENTE despliegue**: en el Vercel de plataforma definir `CRON_SECRET` y `RESEND_API_KEY`+`MAIL_FROM`.
+  - **Roadmap restante** (PR por PR): impagos (ialimp/sivra) → reposición stock (ia-rest) → NPS (ialimp)
+    → scoring limpiadoras (ialimp) → orquestador concursos (ialimp). Diferidas (APIs externas): reputación
+    Google/Booking, reintentos VeriFactu. Plan: `docs/superpowers/plans/2026-06-14-briefing-consolidado-plataforma.md`.
+- **⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3` — 13/06/2026**
+  Auditoría de "agentes sin tarea programada": crucé todos los endpoints `cron`/`agent` de las 4 apps
+  contra los `crons` de cada `vercel.json`. Resultado: la mayoría OK; los `agente-*` interactivos
+  (asesoria, owner/compras+eventos, super/arquitecto+ai+seo, leads, sivra agente/chat, ialimp
+  cotizador, expenses backfill) **no llevan cron a propósito** (bajo demanda). **Único huérfano real:**
+  `apps/ia-rest/src/app/api/cron/instagram-ideas/route.ts` estaba diseñado como cron (auth `CRON_SECRET`,
+  cabecera "lunes, antes de blog-seo") pero **faltaba en `vercel.json`** → nunca se disparaba solo.
+  **Fix:** añadido `{ "path": "/api/cron/instagram-ideas", "schedule": "30 7 * * 1" }` (lunes 07:30,
+  antes de blog-seo 08:00). No requiere exclusión de middleware (matcher solo cubre `/api/super/*`).
+- **🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x` — 13/06/2026**
+  Cron `/api/cron/seo-agent` (**martes y viernes 07:00 UTC**) que lee **GSC+GA4** y, de forma
+  **autónoma**, adapta el SEO de **iarest.es**: titles/metas, JSON-LD, bloques de contenido y
+  artículos nuevos. Principio rector: **los cambios son DATOS, no código** (nunca commitea ni rompe
+  el build). Spec/plan en `docs/superpowers/{specs,plans}/2026-06-13-agente-seo-autonomo-iarest*`.
+  - **Migración aplicada** a Supabase **`efncqyvhniaxsirhdxaa`** (proyecto ia-rest), **schema `public`**
+    (¡no `iarest`! — ahí vive `blog_borradores`, que es donde apunta `createServerClient`). Tablas
+    nuevas con **RLS habilitado**: `seo_overrides` (title/meta/canonical/og/jsonld por ruta),
+    `seo_content_blocks` (bloques por ruta+posición), `seo_articulos` (artículos en BD), `seo_cambios`
+    (snapshot antes/después + auditoría).
+  - **Red de seguridad**: kill switch `SEO_AGENT_ENABLED` (si != 'true', el cron sale sin tocar nada),
+    allowlist de rutas (`/restaurantes`, `/restaurantes/*`), máx. `SEO_MAX_CAMBIOS` (def. 5)/pasada,
+    anti-oscilación 7 días, umbral `SEO_MIN_IMPR` (def. 30) en el prompt, informe Telegram y reversión
+    vía `/api/super/seo-revert`.
+  - **Código** (`apps/ia-rest`): `src/lib/seo/{types,guardrails,gsc-ga4,store,targets}.ts`,
+    `src/components/seo/SeoBlocks.tsx`, ruta dinámica `src/app/blog/[slug]/page.tsx`, endpoints
+    `api/cron/seo-agent` y `api/super/seo-revert`. Páginas `/restaurantes` y `/restaurantes/[ciudad]`
+    leen override en `generateMetadata` + slot `<SeoBlocks>`. GSC/GA4 extraídos de `agentes-seo` al
+    módulo compartido `gsc-ga4.ts`.
+  - **Superficie editable Fase 1**: solo páginas server (`/restaurantes`, `[ciudad]`) + artículos
+    nuevos. `/` y `/espacios` son client-components (`next/head`) → fuera del override por ahora.
+  - **Verificado**: test puro `scripts/seo/test-guardrails.ts` (14 checks) ✅, `next build` ✅,
+    `npm run qa` sin problemas ✅, 4 tablas confirmadas en BD.
+  - **⚠️ PENDIENTE de despliegue**: en el Vercel de ia-rest, dejar `SEO_AGENT_ENABLED` sin poner/`false`
+    hasta querer activarlo; al activar (`=true`), revisar el primer informe Telegram y `/super → SEO`
+    antes de confiar. Opcional: `SEO_MAX_CAMBIOS`, `SEO_MIN_IMPR`.
+  - **Fase 0/2 (ialimp.es) pendiente**: ialimp **no tiene GSC/GA4 conectado** (cero OAuth/analytics en
+    `apps/ialimp`) y su landing es **HTML estático**; requiere conectar analíticas antes de extender el
+    agente (y extraer la lógica a `@central/core-seo`).
 
 - **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
   Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:

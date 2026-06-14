@@ -128,6 +128,33 @@ actualizar next-auth.
 
 ---
 
+## Addendum 2026-06-14 — Dashboard de SIVRA (datos correctos + entradas/salidas)
+
+Revisión a partir del dashboard real (`sybra.vercel.app`, Junio 2026). Hallazgos y arreglos
+(todos de bajo riesgo, verificados con `tsc --noEmit -p apps/sivra/tsconfig.json`, 0 errores):
+
+### 🔴 D1. Gráfico "Evolución mensual" vacío — `dataKey` no coincide ✅ ARREGLADO
+`apps/sivra/app/api/dashboard/route.ts:156-162` emite las series con claves dinámicas
+`[year]`/`[year-1]`/`[year-2]` (p.ej. `2026`,`2025`,`2024`), pero el `<BarChart>` leía
+`dataKey="y0"`/`"y1"` (`apps/sivra/app/(dashboard)/dashboard/page.tsx:233-234`) → claves
+inexistentes → **las barras no se pintaban**. Fix: `dataKey={String(year)}` / `dataKey={String(year-1)}`.
+
+### 🟡 D2. Delta engañoso "↑0.0%" cuando no hay periodo previo ✅ ARREGLADO
+Con `ingresosPrev = €0` (no hay dato del año anterior) la UI mostraba `vs €0 ↑0.0%`, que sugiere
+"sin crecimiento" cuando en realidad **no hay base de comparación**. `delta()` ahora devuelve `null`
+en ese caso (`route.ts`) y `<Delta>` renderiza **"nuevo"** en vez de un 0,0% falso
+(`page.tsx`; tipos `number|null`). Cuando ambos periodos son 0 sigue mostrando 0,0% (correcto).
+
+### 🟢 D3. Entradas/Salidas no indicaban el piso ✅ AÑADIDO (petición de Alberto)
+Las tarjetas "Salidas hoy / Entradas hoy / Entradas mañana" solo mostraban el nombre del huésped.
+El endpoint `/api/incomes/today` **ya devolvía `propertyName`** (JOIN con `properties`), solo faltaba
+pintarlo. Nuevo componente `TodayRow` muestra huésped + **🏠 nombre del piso** (fallback
+`propertyId` → "Piso sin asignar"). `apps/sivra/app/(dashboard)/dashboard/page.tsx`.
+
+> Nota: los importes (€5,3k ingresos/beneficio en el pantallazo) son coherentes: `beneficio = ingresos − gastos`
+> y en Jun-2026 no hay gastos cargados → beneficio = ingresos. El KPI **Gastos** es global (no filtra por
+> piso/portal); es limitación conocida, no un bug.
+
 ## Lo que se ha hecho en esta auditoría
 - **Arreglos** (bajo riesgo, verificados por typecheck): A1 (bug IA ×2), A2 (core-identity).
 - **Tests nuevos**: `packages/core-fiscal/test/fiscal.test.ts` (16 tests: IVA, NIF/CIF/IBAN, huella VeriFactu
