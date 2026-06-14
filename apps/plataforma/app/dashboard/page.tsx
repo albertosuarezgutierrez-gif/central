@@ -1,7 +1,9 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
+import { getSaldoConsolidado } from '@/lib/banca'
 import LogoutButton from './LogoutButton'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
@@ -28,6 +30,9 @@ export default async function DashboardPage() {
     include: { negocios: { orderBy: { createdAt: 'asc' } } },
     orderBy: { createdAt: 'asc' },
   })
+
+  // Saldo bancario consolidado (todas las cuentas de todas las sociedades).
+  const saldo = await getSaldoConsolidado(session.id)
 
   // Fetch financial summaries in parallel for all negocios
   const negociosConFinanciero = await Promise.all(
@@ -72,12 +77,12 @@ export default async function DashboardPage() {
 
       <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
         {/* KPI bar consolidado */}
-        {totalNegocios > 0 && (
+        {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
           <div style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 'var(--radius)', padding: '20px 24px',
             display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '32px',
-            boxShadow: 'var(--shadow)',
+            boxShadow: 'var(--shadow)', alignItems: 'center',
           }}>
             <KPI label={`Ingresos ${anio}`} value={fmtEur(totalIngresos)} color="var(--primary)" />
             <KPI
@@ -86,6 +91,13 @@ export default async function DashboardPage() {
               color={totalResultado >= 0 ? '#16a34a' : '#dc2626'}
             />
             <KPI label="Negocios" value={String(totalNegocios)} color="var(--muted)" />
+            <Link href="/banca" style={{ textDecoration: 'none', marginLeft: 'auto' }}>
+              <KPI
+                label="🏦 Saldo del grupo ↗"
+                value={saldo.cuentas.length > 0 ? fmtEur(saldo.total) : 'Conectar banco'}
+                color={saldo.cuentas.length > 0 ? (saldo.total >= 0 ? '#16a34a' : '#dc2626') : 'var(--primary)'}
+              />
+            </Link>
           </div>
         )}
 
