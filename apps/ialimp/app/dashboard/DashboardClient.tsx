@@ -17,6 +17,7 @@ interface Props {
 
 // Módulo gateable por entrada de menú (el operador puede apagarlos desde el god-panel).
 const NAV_MODULO: Record<string, string> = {
+  '/admin/agenda': 'agenda',
   '/admin/equipo': 'rrhh',
   '/admin/negocio': 'clientes',
   '/admin/materiales': 'stock',
@@ -35,6 +36,7 @@ const TIPO_ICON: Record<string,string> = {
 const NAV = [
   { href:'/dashboard',           icon:'🏠', label:'Inicio'        },
   { href:'/admin/operaciones',   icon:'🗃️', label:'Operaciones'   },
+  { href:'/admin/agenda',        icon:'📅', label:'Agenda'        },
   { href:'/admin/equipo',        icon:'👥', label:'Equipo'        },
   { href:'/admin/chat',          icon:'💬', label:'Chat equipo'   },
   { href:'/admin/negocio',       icon:'💼', label:'Negocio'       },
