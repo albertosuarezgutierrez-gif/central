@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207) — 14/06/2026**
+  6ª de la tanda "automatizar agentes". Endpoint `GET /api/admin/limpiadoras/ranking` que puntúa y
+  ordena a las limpiadoras de la empresa sobre la **vista existente `rendimiento_limpiadoras`** (sin
+  migraciones). Score 0-100 = calidad (`rating_medio`/5, 55%) + fiabilidad (1 − quejas/sesiones, 45%).
+  - **Anclado a datos reales**: `sesiones_completadas` viene 0 → **excluida**; `rating_medio` suele ser
+    null → **no penaliza a 0** (score = fiabilidad, `sin_valoraciones: true`); `confianza` por volumen.
+  - **Código** (`apps/ialimp`): `lib/scoring-limpiadoras.ts` (puro: `puntuarLimpiadora`/`rankingLimpiadoras`)
+    + `lib/scoring-limpiadoras.test.ts` (5/5 ✅); `app/api/admin/limpiadoras/ranking/route.ts`
+    (Prisma `$queryRaw`, auth `requireEmpresaId()` de `@/lib/tenant`). **OJO bigint**: las columnas
+    `bigint`/`numeric` de la vista llegan como BigInt/Decimal → se coaccionan a `Number` (si no, rompe
+    `JSON.stringify` y la aritmética).
+  - **Verificado**: `node --test` 5/5 ✅; `next build` (161/161 páginas, ruta `ƒ` registrada) ✅.
+  - **Nota**: ialimp usa **Prisma** (no supabase-js), auth JWT propio (cookie `ialimp_session`), ignora
+    errores TS en build. Ya había consumidores de la vista (`/api/admin/rrhh/analisis`); este es el ranking.
+  - **Tanda previa (otras ramas/PR)**: briefing #203 · impagos-ialimp #204 · ~~impagos-sivra~~ (N/A) ·
+    reposición-stock-iarest #206. **Roadmap restante**: NPS post-servicio (ialimp) · orquestador concursos.
+
 - **🔎 Auditoría de caja POR EMPLEADO en ia-rest — branch `claude/logistastrator-analysis-q78y60` — 13/06/2026 (PR #199)**
   Épico por fases sobre el cuadre de caja. **Bloque A completado (fases 1-4)**:
   - **Fase 1** — Migración `arqueos_caja_empleado` (aditiva, RLS espejo de `arqueos_caja`; aplicada vía
