@@ -1,4 +1,5 @@
 import { cookies } from 'next/headers'
+import { NextResponse } from 'next/server'
 import { jwtVerify } from 'jose'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
@@ -29,6 +30,20 @@ async function sessionJtiOk(p: any): Promise<boolean> {
   } catch {
     return true
   }
+}
+
+// Error de autenticación: sesión ausente / caducada / cerrada por entrar en otro
+// dispositivo (sesión única). Las rutas lo mapean a 401 con `apiError(e)` para
+// que el front lo distinga de un 500 real y avise "vuelve a iniciar sesión".
+export class AuthError extends Error {
+  status = 401
+  constructor(message = 'No autenticado') { super(message); this.name = 'AuthError' }
+}
+
+// Respuesta de error estándar para rutas API: 401 si es AuthError, 500 si no.
+export function apiError(e: any) {
+  const status = e instanceof AuthError ? 401 : 500
+  return NextResponse.json({ error: e?.message || 'Error' }, { status })
 }
 
 export interface SessionPayload {
@@ -64,13 +79,13 @@ export async function getEmpresaId(): Promise<string | null> {
 
 export async function requireEmpresaId(): Promise<string> {
   const id = await getEmpresaId()
-  if (!id) throw new Error('No autenticado')
+  if (!id) throw new AuthError('No autenticado')
   return id
 }
 
 export async function requireSession(): Promise<SessionPayload> {
   const s = await getSession()
-  if (!s) throw new Error('No autenticado')
+  if (!s) throw new AuthError('No autenticado')
   return s
 }
 
