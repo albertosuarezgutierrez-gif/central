@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T07:06:02Z",
+  "generadoEn": "2026-06-14T07:22:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -67,6 +67,11 @@
       "id": "module-feedback",
       "tipo": "module",
       "npm": "@central/module-feedback"
+    },
+    {
+      "id": "module-horario",
+      "tipo": "module",
+      "npm": "@central/module-horario"
     },
     {
       "id": "module-materiales",
@@ -428,6 +433,24 @@
         "evidencias": 0
       }
     },
+    "module-horario": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
@@ -617,7 +640,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "plataforma": {
         "presente": false,
@@ -883,7 +906,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 160
+        "evidencias": 165
       },
       "ialimp": {
         "presente": true,
@@ -930,6 +953,7 @@
     "module-contabilidad": [],
     "module-crm": [],
     "module-feedback": [],
+    "module-horario": [],
     "module-materiales": [],
     "module-presupuestos": [],
     "module-proveedores": [],
@@ -1032,6 +1056,7 @@
       "/api/cron/pipeline-comercial",
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
+      "/api/cron/reposicion-stock",
       "/api/cron/reservas-noshow",
       "/api/cron/seo-agent",
       "/api/cuenta-nominal",
@@ -1213,6 +1238,11 @@
       "/api/owner/forecaster",
       "/api/owner/formatos",
       "/api/owner/fuera-carta/stock",
+      "/api/owner/horario",
+      "/api/owner/horario/autocierre",
+      "/api/owner/horario/config",
+      "/api/owner/horario/coste",
+      "/api/owner/horario/cuadrante",
       "/api/owner/impresoras",
       "/api/owner/logo",
       "/api/owner/manual-voz",
@@ -1467,6 +1497,7 @@
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
       "/api/admin/limpiadoras/[id]/propiedades",
+      "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
       "/api/admin/migrate-chat",
       "/api/admin/migrate-chat-destinatario",
@@ -1699,6 +1730,7 @@
       "cobro_config",
       "comanda_items",
       "comandas",
+      "config_horario",
       "config_tienda",
       "contract_acceptances",
       "documentos_escaneados",
@@ -1768,6 +1800,7 @@
       "ticket_aliases",
       "transcripciones",
       "turnos",
+      "turnos_previstos",
       "vinos_catalogo",
       "voice_profiles"
     ],
@@ -1881,6 +1914,18 @@
   ],
   "novedades": [
     {
+      "titulo": "⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
       "fecha": "14/06/2026"
     },
@@ -1926,18 +1971,6 @@
     },
     {
       "titulo": "🗑️ plataforma/admin: quita pestaña \"Mis propiedades\", acceso directo a ialimp — PR #171 mergeado",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "📦 REFACTOR `@central/module-inventario` → `@central/module-materiales` — PR #172",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🔒 SEGURIDAD BD compartida — COMPLETO — 500 → 318 advisories, 0 ERROR",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA CON CONTEXTO del monorepo (post-reestructuración) — PR #164",
       "fecha": "12/06/2026"
     }
   ],
@@ -2162,10 +2195,10 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 16,
+    "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 745,
+    "apis": 752,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
