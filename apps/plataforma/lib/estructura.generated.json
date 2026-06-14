@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T20:24:43Z",
+  "generadoEn": "2026-06-14T20:21:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,7 +1934,11 @@
   ],
   "novedades": [
     {
-      "titulo": "🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239",
+      "titulo": "🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)",
       "fecha": "14/06/2026"
     },
     {
@@ -1987,10 +1991,6 @@
     },
     {
       "titulo": "💶 Cuadre de caja en ia-rest — branch `claude/logistastrator-analysis-q78y60`",
-      "fecha": "13/06/2026"
-    },
-    {
-      "titulo": "🧾 Agente de facturas de SIVRA — branch `claude/invoice-processing-agent-7fwjst`",
       "fecha": "13/06/2026"
     }
   ],

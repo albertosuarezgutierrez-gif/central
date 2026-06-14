@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T20:24:43Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-14T20:21:12Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -118,7 +118,8 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (14/06/2026) 🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239
+- (14/06/2026) 🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)
+- (14/06/2026) 📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)
 - (14/06/2026) 🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)
 - (14/06/2026) 🧹 IALIMP: "Agenda" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)
 - (14/06/2026) 🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)
@@ -127,5 +128,4 @@
 - (14/06/2026) 📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`
 - (14/06/2026) ⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)
 - (14/06/2026) 💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`
-- (14/06/2026) 📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`
 
