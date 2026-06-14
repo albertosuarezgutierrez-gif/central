@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T19:03:58Z",
+  "generadoEn": "2026-06-14T19:08:30Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
       "fecha": "14/06/2026"
     },
@@ -1987,10 +1991,6 @@
     },
     {
       "titulo": "📦 module-materiales Fase B — PR #189 mergeado",
-      "fecha": "12/06/2026"
-    },
-    {
-      "titulo": "🧱 Config de build compartida en la MATRIZ — PR #180",
       "fecha": "12/06/2026"
     }
   ],
