@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T05:31:08Z",
+  "generadoEn": "2026-06-14T05:35:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -906,7 +906,7 @@
     "asistente-ia": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 162
+        "evidencias": 163
       },
       "ialimp": {
         "presente": true,
@@ -1237,6 +1237,7 @@
       "/api/owner/formatos",
       "/api/owner/fuera-carta/stock",
       "/api/owner/horario",
+      "/api/owner/horario/autocierre",
       "/api/owner/horario/config",
       "/api/owner/impresoras",
       "/api/owner/logo",
@@ -2183,7 +2184,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 743,
+    "apis": 744,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
