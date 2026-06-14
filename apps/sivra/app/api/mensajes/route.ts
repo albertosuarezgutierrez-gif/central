@@ -1,11 +1,10 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { getSmoobuKey } from '@/lib/smoobu'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
-
-const API_KEY = process.env.SMOOBU_API_KEY || ''
 
 const PROP_NAME: Record<number, string> = {
   352007: 'House Sevillana',
@@ -74,6 +73,7 @@ function classifyMessage(text: string, subject = ''): Classification {
 
 export async function GET() {
   try {
+    const API_KEY = await getSmoobuKey()
     if (!API_KEY) throw new Error('SMOOBU_API_KEY not set')
 
     const res = await fetch('https://login.smoobu.com/api/threads?pageSize=100&page=1', {

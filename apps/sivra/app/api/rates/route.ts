@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
+import { getSmoobuKey } from "@/lib/smoobu"
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE = "https://login.smoobu.com/api"
 
 // GET /api/rates?propertyId=352007&startDate=2026-05-01&endDate=2026-05-31
@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   if (!propertyId || !startDate || !endDate)
     return NextResponse.json({ error: "Missing params" }, { status: 400 })
 
+  const SMOOBU_KEY = await getSmoobuKey()
   const res = await fetch(
     `${BASE}/rates?apartments[]=${propertyId}&start_date=${startDate}&end_date=${endDate}`,
     { headers: { "Api-Key": SMOOBU_KEY, "Cache-Control": "no-cache" }, next: { revalidate: 0 } }
@@ -35,6 +36,7 @@ export async function POST(req: NextRequest) {
   if (!propertyId || !operations?.length)
     return NextResponse.json({ error: "Missing params" }, { status: 400 })
 
+  const SMOOBU_KEY = await getSmoobuKey()
   const res = await fetch(`${BASE}/rates`, {
     method: "POST",
     headers: { "Api-Key": SMOOBU_KEY, "Content-Type": "application/json" },

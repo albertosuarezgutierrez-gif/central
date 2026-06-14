@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { getSmoobuKey } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -28,7 +29,6 @@ export const maxDuration = 300
 // Protegido por CRON_SECRET (Bearer o ?secret=) PARA LOS CRONS, o por una sesión de
 // admin logueada (panel del propietario, que llama desde el navegador sin el secreto).
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE = "https://login.smoobu.com/api"
 
 const SMOOBU_ID: Record<string, number> = {
@@ -73,6 +73,9 @@ export async function POST(req: NextRequest) {
     paused = cfg[0]?.paused === true
   } catch { /* sin tabla aún: no pausado */ }
   if (paused && !dryRun) dryRun = true              // fuerza simulación
+
+  // Fuente única de la API key de Smoobu (BD pms_connections, env como respaldo).
+  const SMOOBU_KEY = await getSmoobuKey()
 
   // Guardia de confianza: no escribir con mercado escaso/viejo.
   const MIN_SAMPLE = 5
