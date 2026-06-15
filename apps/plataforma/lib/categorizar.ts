@@ -78,6 +78,29 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
   }
 }
 
+// "Destino"/negocio del movimiento (a quién pertenece): pisos turísticos, Dúplex, seguros,
+// traspaso entre cuentas propias o personal. Se decide por reglas (banco + palabras clave).
+export type Destino = 'turistico_pisos' | 'turistico_duplex' | 'seguros' | 'traspaso_interno' | 'personal'
+export const DESTINO_LABEL: Record<Destino, string> = {
+  turistico_pisos: '🏖️ Pisos turísticos',
+  turistico_duplex: '🏠 Dúplex Center',
+  seguros: '🛡️ Seguros (correduría)',
+  traspaso_interno: '🔁 Traspaso interno',
+  personal: '👨‍👩‍👧 Personal',
+}
+const RE_TITULAR = /SUAREZ.*GUTIERREZ|GUTIERREZ.*SUAREZ|ALBERTO SUAREZ/i
+const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUTUA|LINEA DIRECTA|SANITAS|ADESLAS|SEGURCAIXA|DKV|ASISA|CATALANA OCCIDENTE|OCCIDENT|LIBERTY|HELVETIA|PLUS ULTRA|SANTALUCIA|OCASO|PELAYO|VERTI|GENESIS|FENIX|DIVINA PASTORA|FIATC|SEGUROS BILBAO|NATIONALE|VIDACAIXA|ANTARES|ARAG|ASEFA|PREVENTIVA|SURNE|QUALITAS|SEGURO|SEGUROS)\b/i
+const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI)\b/i
+
+export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null): Destino {
+  const t = `${concepto ?? ''} ${contraparte ?? ''}`
+  const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')   // BBVA = Dúplex + seguros; Kutxa = resto pisos + personal
+  if (RE_TITULAR.test(t)) return 'traspaso_interno'             // transferencias a/desde uno mismo
+  if (RE_SEGUROS.test(t)) return 'seguros'
+  if (RE_PISOS.test(t)) return esBBVA ? 'turistico_duplex' : 'turistico_pisos'
+  return esBBVA ? 'turistico_duplex' : 'personal'
+}
+
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
 // Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
 // que no encaje devuelve null → va a la IA. Orden: de lo más específico a lo más genérico.
@@ -104,20 +127,23 @@ function categorizarPorReglas(concepto: string | null, contraparte: string | nul
 // en sub-lotes pequeños (así apenas toca el cupo gratuito de NIM). Idempotente (analizado_at).
 const TAM_LOTE_IA = 25
 
-async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion): Promise<number> {
+async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion, destino: Destino): Promise<number> {
   const res = await prisma.$executeRaw`
     UPDATE movimientos_bancarios
     SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
-        categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision}, analizado_at = now()
+        categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision},
+        destino = ${destino}, analizado_at = now()
     WHERE id = ${id}::uuid
       AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
   `
   return Number(res)
 }
 
+type MovPend = { id: string; concepto: string | null; contraparte: string | null; importe: unknown; banco: string | null }
+
 export async function analizarMovimientos(cuentaId: string, limite = 400): Promise<{ categorizados: number }> {
-  const pendientes = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; contraparte: string | null; importe: unknown }>>`
-    SELECT mb.id, mb.concepto, mb.contraparte, mb.importe
+  const pendientes = await prisma.$queryRaw<MovPend[]>`
+    SELECT mb.id, mb.concepto, mb.contraparte, mb.importe, cb.banco
     FROM movimientos_bancarios mb
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.analizado_at IS NULL
@@ -126,8 +152,10 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   `
   if (pendientes.length === 0) return { categorizados: 0 }
 
+  // El destino (negocio) se decide siempre por reglas; lo guardamos junto a la categoría.
+  const destinoDe = new Map(pendientes.map(p => [p.id, clasificarDestino(p.banco, p.concepto, p.contraparte)]))
   let n = 0
-  const paraIA: typeof pendientes = []
+  const paraIA: MovPend[] = []
 
   // 1) Reglas deterministas — sin IA, al instante.
   for (const p of pendientes) {
@@ -137,7 +165,7 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
         id: p.id, categoria: cat,
         conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
         categoriaPgc: pgcDe(cat), requiereRevision: false,
-      })
+      }, destinoDe.get(p.id) ?? 'personal')
     } else {
       paraIA.push(p)
     }
@@ -149,7 +177,7 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
     const cats = await categorizarLote(
       trozo.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
     )
-    for (const c of cats) n += await guardarCategoria(cuentaId, c.id, c)
+    for (const c of cats) n += await guardarCategoria(cuentaId, c.id, c, destinoDe.get(c.id) ?? 'personal')
   }
   return { categorizados: n }
 }
