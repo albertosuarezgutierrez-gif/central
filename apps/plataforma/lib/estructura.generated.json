@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T09:06:37Z",
+  "generadoEn": "2026-06-15T09:41:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -575,8 +575,8 @@
         "evidencias": 0
       },
       "sivra": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       }
     },
     "reservas": {
@@ -1665,6 +1665,7 @@
       "/api/auth/[...nextauth]",
       "/api/dashboard",
       "/api/dashboard/forecast",
+      "/api/eventos/sync",
       "/api/expenses",
       "/api/expenses/agent/backfill",
       "/api/expenses/agent/resumen-mensual",
@@ -2028,11 +2029,11 @@
         "capacidad": "eventos-catering",
         "label": "Eventos / catering / BEO",
         "tiene": [
-          "ia-rest"
+          "ia-rest",
+          "sivra"
         ],
         "falta": [
-          "ialimp",
-          "sivra"
+          "ialimp"
         ]
       },
       {
@@ -2219,7 +2220,7 @@
     "packages": 17,
     "capacidades": 23,
     "skills": 13,
-    "apis": 767,
+    "apis": 768,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
