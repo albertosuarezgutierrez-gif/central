@@ -2,8 +2,22 @@
 // Alberto (sivra). Lee SOLO la tabla `properties` (las 5 propias con Smoobu) + sus
 // `incomes`/`gastos` en la BD compartida — NO la tabla `propiedades` (multi-tenant
 // de limpiadoras). Mismo patrón seguro que lib/adapters/sivra.ts.
+//
+// 🧾 Separación de cuentas (ver apps/sivra/docs/contabilidad.md):
+//   - EXPLOTACIÓN TURÍSTICA (cuenta Kutxa): los 3 apartamentos turísticos
+//     (Socorro/House Sevillana + Busto Reform + Luxury Busto) + sus gastos
+//     compartidos (prop_multi_apartamentos). SIN gastos personales.
+//   - BBVA: Duplex Center + seguros → unidad APARTE, no se mezcla con los 3.
+//   - Personal (prop_personal): fuera de la P&L de pisos.
 
 import { prisma } from './db'
+
+// Agrupación contable por cuenta bancaria. No mezclar (regla de Alberto, 15/06/2026).
+export const PROP_TURISTICOS = ['prop_house_sevillana', 'prop_busto_reform', 'prop_luxury_busto'] as const
+export const PROP_BBVA       = ['prop_duplex_center'] as const
+export const PROP_COMPARTIDOS = ['prop_multi_apartamentos'] as const
+
+export type Periodo = { year: number; month: number | null } // month: 1-12 o null = año completo
 
 export interface Reserva { huesped: string | null; entrada: string | null; salida: string | null; portal: string | null }
 export interface Propiedad {
@@ -71,22 +85,31 @@ export async function getPropietarioAccessToken(email: string): Promise<string |
   }
 }
 
-export async function getPropiedades(): Promise<Propiedad[]> {
+export async function getPropiedades(periodo?: Periodo): Promise<Propiedad[]> {
+  const hoy = new Date()
+  const year  = periodo?.year ?? hoy.getFullYear()
+  const month = periodo?.month ?? null
+  // Rango del periodo seleccionado (mes concreto o año completo) y del año completo.
+  const periodStart = month ? new Date(year, month - 1, 1) : new Date(year, 0, 1)
+  const periodEnd   = month ? new Date(year, month, 1)     : new Date(year + 1, 0, 1)
+  const yearStart   = new Date(year, 0, 1)
+  const yearEnd     = new Date(year + 1, 0, 1)
+
   const [props, incMes, incAnio, gasMes, proximas, ocupData] = await Promise.all([
     prisma.$queryRaw<Array<{ id: string; name: string; location: string; bedrooms: number | null; beds: number | null; bathrooms: number | null; maxGuests: number | null }>>`
       SELECT id, name, location, bedrooms, beds, bathrooms, "maxGuests" FROM properties ORDER BY name
     `,
     prisma.$queryRaw<Array<{ pid: string; t: number }>>`
       SELECT "propertyId" AS pid, COALESCE(SUM(amount),0)::float AS t
-      FROM incomes WHERE date >= date_trunc('month', CURRENT_DATE) GROUP BY "propertyId"
+      FROM incomes WHERE date >= ${periodStart} AND date < ${periodEnd} GROUP BY "propertyId"
     `,
     prisma.$queryRaw<Array<{ pid: string; t: number }>>`
       SELECT "propertyId" AS pid, COALESCE(SUM(amount),0)::float AS t
-      FROM incomes WHERE date >= date_trunc('year', CURRENT_DATE) GROUP BY "propertyId"
+      FROM incomes WHERE date >= ${yearStart} AND date < ${yearEnd} GROUP BY "propertyId"
     `,
     prisma.$queryRaw<Array<{ pid: string; t: number }>>`
       SELECT propiedad AS pid, COALESCE(SUM(total),0)::float AS t
-      FROM gastos WHERE EXTRACT(YEAR FROM fecha) = EXTRACT(YEAR FROM CURRENT_DATE) GROUP BY propiedad
+      FROM gastos WHERE fecha >= ${periodStart} AND fecha < ${periodEnd} GROUP BY propiedad
     `,
     prisma.$queryRaw<Array<{ pid: string; guestName: string | null; checkIn: Date | null; checkOut: Date | null; portal: string | null }>>`
       SELECT DISTINCT ON ("propertyId") "propertyId" AS pid, "guestName", "checkIn", "checkOut", portal::text AS portal
@@ -100,7 +123,7 @@ export async function getPropiedades(): Promise<Propiedad[]> {
         COALESCE(SUM(amount)/NULLIF(SUM(nights),0),0)::float AS adr,
         (MODE() WITHIN GROUP (ORDER BY portal::text)) AS top_portal
       FROM incomes
-      WHERE date >= date_trunc('month', CURRENT_DATE)
+      WHERE date >= ${periodStart} AND date < ${periodEnd}
       GROUP BY "propertyId"
     `,
   ])
@@ -112,9 +135,12 @@ export async function getPropiedades(): Promise<Propiedad[]> {
   const mOcup = new Map(ocupData.map(r => [r.pid, r]))
   const iso = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : null)
 
-  // días del mes en curso
-  const hoy = new Date()
-  const diasMes = new Date(hoy.getFullYear(), hoy.getMonth() + 1, 0).getDate()
+  // días del periodo (mes concreto, o el año hasta hoy si es el año en curso, o el año completo)
+  const diasMes = month
+    ? new Date(year, month, 0).getDate()
+    : (year === hoy.getFullYear()
+        ? Math.max(1, Math.round((hoy.getTime() - yearStart.getTime()) / 86400000))
+        : 365)
 
   return props.map(p => {
     const ingresosMes = mMes.get(p.id) ?? 0
@@ -144,6 +170,53 @@ export async function getPropiedades(): Promise<Propiedad[]> {
 }
 
 const iso = (d: Date | null) => (d ? new Date(d).toISOString().slice(0, 10) : '')
+
+export interface MesResumen { mes: number; ingresos: number; gastos: number }
+export interface ResumenAnual {
+  year: number
+  turisticos: MesResumen[]   // 12 meses — explotación turística (Kutxa, sin personal)
+  bbva: MesResumen[]         // 12 meses — Duplex + seguros (BBVA)
+}
+
+/**
+ * Resumen mensual del año (12 meses) para el gráfico, RESPETANDO la separación de
+ * cuentas: turísticos (3 pisos + gastos compartidos, cuenta Kutxa) por un lado y
+ * Duplex+seguros (BBVA) por otro. Los gastos personales (`prop_personal`) quedan fuera.
+ */
+export async function getResumenAnual(year: number): Promise<ResumenAnual> {
+  const yearStart = new Date(year, 0, 1)
+  const yearEnd   = new Date(year + 1, 0, 1)
+  const turIds = [...PROP_TURISTICOS]
+  const gasTurIds = [...PROP_TURISTICOS, ...PROP_COMPARTIDOS]
+  const bbvaIds = [...PROP_BBVA]
+
+  const [incTur, gasTur, incBbva, gasBbva] = await Promise.all([
+    prisma.$queryRaw<Array<{ m: number; t: number }>>`
+      SELECT EXTRACT(MONTH FROM date)::int AS m, COALESCE(SUM(amount),0)::float AS t
+      FROM incomes WHERE date >= ${yearStart} AND date < ${yearEnd} AND "propertyId" = ANY(${turIds})
+      GROUP BY 1`,
+    prisma.$queryRaw<Array<{ m: number; t: number }>>`
+      SELECT EXTRACT(MONTH FROM fecha)::int AS m, COALESCE(SUM(total),0)::float AS t
+      FROM gastos WHERE fecha >= ${yearStart} AND fecha < ${yearEnd} AND propiedad = ANY(${gasTurIds})
+      GROUP BY 1`,
+    prisma.$queryRaw<Array<{ m: number; t: number }>>`
+      SELECT EXTRACT(MONTH FROM date)::int AS m, COALESCE(SUM(amount),0)::float AS t
+      FROM incomes WHERE date >= ${yearStart} AND date < ${yearEnd} AND "propertyId" = ANY(${bbvaIds})
+      GROUP BY 1`,
+    prisma.$queryRaw<Array<{ m: number; t: number }>>`
+      SELECT EXTRACT(MONTH FROM fecha)::int AS m, COALESCE(SUM(total),0)::float AS t
+      FROM gastos WHERE fecha >= ${yearStart} AND fecha < ${yearEnd} AND propiedad = ANY(${bbvaIds})
+      GROUP BY 1`,
+  ])
+
+  const serie = (inc: Array<{ m: number; t: number }>, gas: Array<{ m: number; t: number }>): MesResumen[] => {
+    const mi = new Map(inc.map(r => [Number(r.m), Number(r.t)]))
+    const mg = new Map(gas.map(r => [Number(r.m), Number(r.t)]))
+    return Array.from({ length: 12 }, (_, i) => ({ mes: i + 1, ingresos: mi.get(i + 1) ?? 0, gastos: mg.get(i + 1) ?? 0 }))
+  }
+
+  return { year, turisticos: serie(incTur, gasTur), bbva: serie(incBbva, gasBbva) }
+}
 
 export async function getApartamentoDetalle(id: string): Promise<PropiedadDetalle | null> {
   const [
