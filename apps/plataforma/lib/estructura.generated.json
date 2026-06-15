@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T07:17:23Z",
+  "generadoEn": "2026-06-15T08:02:29Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)",
       "fecha": "15/06/2026"
     },
@@ -1988,10 +1992,6 @@
     {
       "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
       "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`",
-      "fecha": "13/06/2026"
     }
   ],
   "saludRepo": {

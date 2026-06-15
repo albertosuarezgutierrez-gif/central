@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital — 15/06/2026**
+  Alberto comparte `receiptmaker.ai` (generador de recibos por IA → PDF/imagen con logo,
+  colores, tipografías; familia receiptmaker.io/.org, muchas orientadas a recibos "fake/demo").
+  Análisis con contexto del código real (`apps/ia-rest/src/lib/courier.ts`):
+
+  - **Trampa clave:** ia.rest NO imprime PDF/imagen. Imprime **ESC/POS térmico** (80mm,
+    48 chars monoespaciados, codepage PC437, **monocromo, sin tipografías**). El output de
+    receiptmaker **no es replicable en térmica** → sirve como *inspiración de layout/jerarquía*,
+    NO como solución técnica.
+  - **Lo que ve el cliente hoy:** `generarEscPosCuenta()` (ticket de cuenta) + QR AEAT VeriFactu
+    (`generarTicketCuenta()`). La comanda de cocina (`generarEscPos`) es interna.
+
+  - **Dos frentes de "modernizar" (decisión pendiente de Alberto):**
+    1. **Ticket térmico** — margen acotado: añadir **logo raster** (ESC/POS `GS v 0`, bitmap
+       monocromo), mejor jerarquía/espaciado, aprovechar mejor el QR. Pulido, no revolución.
+    2. **E-recibo digital** — *aquí brilla la inspiración de receiptmaker*: e-ticket **HTML**
+       con logo/colores/tipografía reales, enviado por **email (Resend, ya existe)** o accesible
+       por **QR impreso** ("ve tu recibo / pide factura aquí"). Encaja con infra existente
+       (sesiones QR `qr_sesiones_cliente`, `verifactu`, email). **Recomendación:** este es el
+       movimiento diferenciador, no pelear contra la térmica.
+
+  - **Estado:** solo análisis guardado. Rama de trabajo abierta `claude/modern-ticket-design-r4ngkz`
+    por si se decide implementar (con brainstorming antes de tocar código).
+
 - **🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED) — 15/06/2026**
   Dos zonas separadas (usuario `/dashboard` + god-panel `/admin`) unificadas en una sola pantalla con sidebar único, tema claro y un solo login.
 
