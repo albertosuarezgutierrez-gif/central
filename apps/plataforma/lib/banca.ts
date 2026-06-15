@@ -6,6 +6,9 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { dedupeHash, type ExtractoN43 } from './norma43'
 import { fmtEur } from './financiero'
+import { agruparDuplicados, DUP_UMBRAL_BANNER, type DupGrupo, type DupPar } from './duplicados'
+
+export type { DupGrupo, DupMovimiento } from './duplicados'
 
 export { fmtEur }
 
@@ -353,37 +356,115 @@ export type Alertas = {
   duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
 }
 export async function getAlertas(cuentaId: string): Promise<Alertas> {
-  const [rev, dups] = await Promise.all([
+  const [rev, grupos] = await Promise.all([
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true`,
-    prisma.$queryRaw<Array<{ id: string; concepto: string | null; contraparte: string | null; importe: number; fecha_operacion: Date | null }>>`
-      SELECT DISTINCT ON (a.id) a.id,
-             coalesce(a.concepto_normalizado, a.concepto, a.contraparte) AS concepto,
-             a.contraparte, a.importe::float AS importe, a.fecha_operacion
-      FROM movimientos_bancarios a
-      JOIN movimientos_bancarios b
-        ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id <> a.id
-       AND b.importe = a.importe
-       AND coalesce(b.contraparte, b.concepto) = coalesce(a.contraparte, a.concepto)
-       AND abs(b.fecha_operacion - a.fecha_operacion) <= 4
-      JOIN cuentas_bancarias cb ON cb.id = a.cuenta_bancaria_id
-      WHERE cb.cuenta_id = ${cuentaId}::uuid AND a.importe < 0
-        AND a.fecha_operacion >= current_date - 60
-      ORDER BY a.id, a.fecha_operacion DESC
-      LIMIT 6`,
+    getDuplicadosSospechosos(cuentaId),
   ])
+  const visibles = grupos.filter(g => g.superaUmbral)
   return {
     porRevisar: Number(rev[0]?.n ?? 0),
-    duplicados: dups.length,
-    duplicadosDetalle: dups.slice(0, 3).map(d => ({
-      concepto: d.concepto || 'Movimiento',
-      importe: Number(d.importe),
-      fecha: d.fecha_operacion ? d.fecha_operacion.toISOString().slice(0, 10) : null,
+    duplicados: visibles.length,
+    duplicadosDetalle: visibles.slice(0, 3).map(g => ({
+      concepto: g.movimientos[0]?.concepto || 'Movimiento',
+      importe: g.importe,
+      fecha: g.movimientos[0]?.fecha ?? null,
     })),
   }
+}
+
+type DupRow = {
+  id: string; otro_id: string
+  concepto: string | null; otro_concepto: string | null
+  importe: number
+  fecha_operacion: Date | null; otro_fecha: Date | null
+  conciliado: boolean; otro_conciliado: boolean
+  contraparte_key: string | null
+}
+
+// Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en
+// ±4 días, últimos 60 días, AMBOS sin resolver (duplicado_estado IS NULL). Excluye pares donde
+// los dos están conciliados a facturas DISTINTAS (gastos legítimos, no duplicado). La
+// clasificación/agrupación es pura (lib/duplicados.ts).
+export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGrupo[]> {
+  const rows = await prisma.$queryRaw<DupRow[]>`
+    SELECT a.id, b.id AS otro_id,
+           coalesce(a.concepto_normalizado, a.concepto, a.contraparte) AS concepto,
+           coalesce(b.concepto_normalizado, b.concepto, b.contraparte) AS otro_concepto,
+           a.importe::float AS importe,
+           a.fecha_operacion, b.fecha_operacion AS otro_fecha,
+           a.conciliado, b.conciliado AS otro_conciliado,
+           coalesce(a.contraparte, a.concepto) AS contraparte_key
+    FROM movimientos_bancarios a
+    JOIN movimientos_bancarios b
+      ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
+     AND b.importe = a.importe
+     AND coalesce(b.contraparte, b.concepto) = coalesce(a.contraparte, a.concepto)
+     AND abs(b.fecha_operacion - a.fecha_operacion) <= 4
+    JOIN cuentas_bancarias cb ON cb.id = a.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND a.importe < 0
+      AND a.duplicado_estado IS NULL AND b.duplicado_estado IS NULL
+      AND a.fecha_operacion >= current_date - 60
+      AND NOT (a.conciliado AND b.conciliado
+               AND a.factura_ref IS NOT NULL AND b.factura_ref IS NOT NULL
+               AND a.factura_ref <> b.factura_ref)
+    ORDER BY a.fecha_operacion DESC NULLS LAST
+  `
+  const toIso = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+  const pares: DupPar[] = rows.map(r => ({
+    id: r.id, otroId: r.otro_id,
+    concepto: r.concepto || '', otroConcepto: r.otro_concepto || '',
+    importe: r.importe,
+    fecha: toIso(r.fecha_operacion), otroFecha: toIso(r.otro_fecha),
+    conciliado: r.conciliado, otroConciliado: r.otro_conciliado,
+    contraparteKey: r.contraparte_key || '',
+  }))
+  return agruparDuplicados(pares, DUP_UMBRAL_BANNER)
+}
+
+// Resueltos recientes (para el plegable "ya resueltos" con opción de reactivar).
+export type DupResuelto = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+export async function getDuplicadosResueltos(cuentaId: string, limite = 40): Promise<DupResuelto[]> {
+  const rows = await prisma.$queryRaw<Array<{ id: string; fecha_operacion: Date | null; concepto: string | null; contraparte: string | null; importe: number; duplicado_estado: string }>>`
+    SELECT mb.id, mb.fecha_operacion,
+           coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS concepto,
+           mb.contraparte, mb.importe::float AS importe, mb.duplicado_estado
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.duplicado_estado IN ('ignorado', 'confirmado')
+    ORDER BY mb.fecha_operacion DESC NULLS LAST, mb.created_at DESC
+    LIMIT ${limite}
+  `
+  return rows.map(r => ({
+    id: r.id,
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    concepto: r.concepto || r.contraparte || 'Movimiento',
+    importe: Number(r.importe),
+    estado: r.duplicado_estado as 'ignorado' | 'confirmado',
+  }))
+}
+
+// Marca (o desmarca) movimientos como duplicado resuelto. Scoped por cuenta_id vía join: solo
+// toca movimientos de cuentas bancarias de la sesión. estado=null → deshacer (vuelve a NULL).
+export async function resolverDuplicados(
+  cuentaId: string,
+  ids: string[],
+  estado: 'ignorado' | 'confirmado' | null,
+): Promise<number> {
+  if (ids.length === 0) return 0
+  const res = await prisma.$executeRaw`
+    UPDATE movimientos_bancarios mb
+    SET duplicado_estado = ${estado}
+    FROM cuentas_bancarias cb
+    WHERE cb.id = mb.cuenta_bancaria_id
+      AND cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.id = ANY(${ids}::uuid[])
+  `
+  return Number(res)
 }
 
 export type ResumenDestino = { destino: string; movs: number; ingresos: number; gastos: number }
