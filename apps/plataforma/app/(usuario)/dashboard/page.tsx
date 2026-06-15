@@ -313,14 +313,15 @@ function AlertasBanner({ alertas }: { alertas: Alertas }) {
         </Link>
       )}
       {alertas.duplicados > 0 && (
-        <div style={{ fontSize: '13px', color: 'var(--text)' }}>
+        <Link href="/banca#duplicados" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
           ⚠️ <strong>{alertas.duplicados}</strong> {alertas.duplicados === 1 ? 'posible cargo duplicado' : 'posibles cargos duplicados'}
           {alertas.duplicadosDetalle.length > 0 && (
             <span style={{ color: 'var(--muted)' }}>
               {' '}— {alertas.duplicadosDetalle.map(d => `${d.concepto} (${fmtEur(d.importe)})`).join(', ')}
             </span>
           )}
-        </div>
+          {' '}→
+        </Link>
       )}
     </div>
   )
