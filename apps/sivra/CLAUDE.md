@@ -55,6 +55,14 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 `NEXT_PUBLIC_SUPABASE_URL`/`NEXT_PUBLIC_SUPABASE_ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`.
 En local, NextAuth v5 necesita además `AUTH_TRUST_HOST=true`.
 
+> **🔑 Smoobu key — fuente única (14/06/2026):** la API key de Smoobu se lee ahora de la **BD**
+> (`pms_connections.smoobu_api_key`, la fila de Alberto, tabla propiedad de ialimp) vía
+> `lib/smoobu.ts → getSmoobuKey()`, con `process.env.SMOOBU_API_KEY` SOLO como respaldo si la BD
+> no responde. Así se **rota en un único sitio** (la conexión de ialimp) sin redeploy. Las 12 rutas
+> que hablaban con Smoobu (pricing apply/restore, rates, rates/snapshot, mensajes/*, updates/sync,
+> limpiadoras/auto-sessions, alerta-ventana) usan el helper. Opcional: `SMOOBU_PMS_CONNECTION_ID`
+> fija la fila por id (default = la de Alberto) para no coger otra cuando ialimp multi-tenant crezca.
+
 ## Seguridad de la base de datos
 Ver `docs/auditoria-seguridad.md`. **Aplicado y mantenido** (seguro para ambas apps): revocado
 `_execute_sql`/`rls_auto_enable` de anon, `search_path` fijado en funciones, y fix de

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { getSmoobuKey } from '@/lib/smoobu'
 
 export const dynamic   = 'force-dynamic'
 export const maxDuration = 60
 
-const SMOOBU_KEY  = process.env.SMOOBU_API_KEY  || ''
 const GMAIL_USER  = process.env.GMAIL_USER       || ''
 const GMAIL_PASS  = process.env.GMAIL_APP_PASSWORD || ''
 const OWNER_EMAIL = GMAIL_USER
@@ -87,6 +87,7 @@ async function markProcessed(msgId: string, type: string) {
 
 // ── MAIN ──────────────────────────────────────────────────────────────────────
 export async function GET() {
+  const SMOOBU_KEY = await getSmoobuKey()
   if (!SMOOBU_KEY) {
     return NextResponse.json({ error: 'Missing SMOOBU_API_KEY' }, { status: 500 })
   }

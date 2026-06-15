@@ -31,6 +31,46 @@
   - **Fase 2 pendiente:** descargar PDF · pedir factura con NIF desde el móvil · email · marca avanzada
     por restaurante (logo/color en `restaurantes` — hoy no existen esos campos).
 
+- **🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED) — 15/06/2026**
+  Ficha enriquecida en `/apartamentos` y nueva página `/apartamentos/[id]` con analítica completa por piso.
+
+  - **`lib/propiedades.ts`**: `getPropiedades()` enriquecida con ocupación %, ADR y top portal del mes (10 queries paralelas). Nueva función `getApartamentoDetalle(id)` con KPIs mes/año/YoY, próximas reservas, últimas 20, mix de portales, histórico 12 meses, gastos por categoría (tabla `gastos`, no `expenses`) + gastos compartidos.
+
+  - **`/apartamentos`**: tarjetas con barra de ocupación visual (verde ≥70%, ámbar ≥40%, rojo), ADR y portal principal. Cada tarjeta es link a `/apartamentos/[id]`.
+
+  - **`/apartamentos/[id]`** (nuevo server component):
+    - 8 KPIs: ingresos mes (con YoY %), gastos mes, resultado, ocupación %, ADR, ingresos YTD, gastos YTD, resultado YTD
+    - Gap detector: detecta huecos entre reservas próximas y muestra `⚠️ Huecos libres: Xd (fecha → fecha)`
+    - Break-even: `Math.ceil(gastosFijos / 12 / adr)` noches/mes para cubrir costes fijos (ALQUILER+COMUNIDAD+SEGURO)
+    - Mix de portales con barras de % visuales
+    - Histórico mensual 12 meses (más reciente primero) con ocupación visual
+    - Gastos por categoría con iconos (incl. SEGURO 🛡️) + gastos compartidos como referencia
+    - Últimas 20 reservas con bruto/neto
+
+- **🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)**
+  La API key de Smoobu estaba duplicada: en `SMOOBU_API_KEY` (env de Vercel, que usaba TODO sivra) y en
+  `pms_connections.smoobu_api_key` (BD, lado ialimp/limpiezas). Misma key, dos sitios → riesgo de drift al rotar.
+  Unificado: nuevo `apps/sivra/lib/smoobu.ts` (`getSmoobuKey()`) lee la key de la **BD** (`pms_connections`, fila
+  de Alberto `c8c1fb07-…`, seleccionada por id porque la tabla es multi-tenant), con el env **solo como respaldo**.
+  Migradas las **12 rutas** que hablaban con Smoobu (pricing apply/restore, rates, rates/snapshot, mensajes/*,
+  updates/sync, limpiadoras auto-sessions y alerta-ventana). Ahora se **rota en un único sitio** (la conexión de
+  ialimp) sin redeploy. Verificado: la consulta del helper devuelve la key (32 chars, activa) y `tsc` limpio.
+
+- **🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)**
+  Entró la **1ª reserva de Busto Reform** (Emilio J. Martín, 25-28 mar 2027 = **Semana Santa**, vendida al base
+  previo de Smoobu ~307-319€/noche; **NO** a precio de nuestro motor — `pricing_applied` vacío para esas fechas).
+  Al verificar, se destapó un fallo serio: ahora que `apply` corre los **365 días** sin timeout (fix #213), el cron
+  `apply-auto` (08:30) **capaba a `max_price`=125€** todas las fechas de evento. La guardia de confianza es **por
+  piso, no por fecha** (Busto: 14 comps, 5d → pasa), y el motor usa **un único percentil de mercado** (~168€, de
+  fechas normales) para todo el año, rematando con el techo del piloto **al final de la cadena**. Impacto medido:
+  **172 fechas disponibles >125€** (Semana Santa + **Feria de Abril 2027** a 366€) → ~**9.788€ base** en riesgo.
+  - **Acción inmediata (hecha):** `UPDATE pricing_config SET paused=true WHERE id=1` → el cron degrada a
+    simulación (`dryRun` forzado), **no escribe en Smoobu**. Verificado que `apply` lo lee. Reserva intacta
+    (reservada ≠ `available`). **Contrapartida:** también se congela el pricing al alza de fechas normales.
+  - **PENDIENTE (fix de producto, PR aparte):** techo **event-aware** (`max_price × eventFactor` o "nunca bajar
+    una fecha de evento por debajo de su base actual") + comps **por fecha/temporada** (no un percentil único) +
+    guardia de confianza por fecha. Reactivar la pausa SOLO tras el fix. Detalle en `pricing-automatico.md` §9.
+
 - **🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital — 15/06/2026**
   Alberto comparte `receiptmaker.ai` (generador de recibos por IA → PDF/imagen con logo,
   colores, tipografías; familia receiptmaker.io/.org, muchas orientadas a recibos "fake/demo").

@@ -1,5 +1,10 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Generar un artículo de ~1800 palabras (max_tokens 4096, sin streaming) en NIM
+// llama-3.3-70b tarda ~70-100s. Con maxDuration=60 Vercel mataba la función antes
+// de terminar. Subimos a 300 (como el cron de briefing) para que quepan DOS intentos
+// de ~110s: si NIM va lento o falla en un run, el reintento lo absorbe en vez de
+// caer con "NIM falló: NVIDIA timeout".
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
@@ -88,6 +93,22 @@ async function elegirKeyword(keywords: any[], existentes: string[]): Promise<str
   return slug0
 }
 
+// Llamada a NIM con un reintento ante fallos transitorios (timeout/5xx de NVIDIA).
+// 2 intentos de 110s caben dentro de maxDuration=300. Si ambos fallan, propaga el
+// último error (el cron lo reporta por Telegram como hasta ahora).
+async function generarConReintento(system: string, prompt: string): Promise<string> {
+  let ultimoError: unknown
+  for (let intento = 1; intento <= 2; intento++) {
+    try {
+      return await callAI(system, prompt, 4096, 110_000)
+    } catch (e) {
+      ultimoError = e
+      console.warn(`[blog-seo] intento ${intento}/2 falló:`, (e as Error).message)
+    }
+  }
+  throw ultimoError
+}
+
 async function generarArticulo(keyword: string): Promise<{ titulo: string; slug: string; meta: string; tsx: string }> {
   const slug = keyword.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
 
@@ -121,10 +142,13 @@ RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
   "cta_texto": "texto del CTA final"
 }`
 
-  const raw = await callAI(
+  // timeoutMs explícito de 110s: el default de callAI (15s) es muy corto para una
+  // generación de 4096 tokens y provocaba "NIM falló: NVIDIA timeout". Reintentamos
+  // una vez si NIM va lento/falla en un run concreto — caben 2 intentos dentro de
+  // maxDuration=300, así una latencia puntual de NVIDIA no tumba el cron.
+  const raw = await generarConReintento(
     'Eres un experto en SEO y copywriting para hostelería española. Respondes SOLO con un JSON válido, sin markdown ni backticks.',
-    prompt,
-    4096
+    prompt
   )
 
   let parsed: any
