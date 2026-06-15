@@ -71,8 +71,14 @@
     (listar+marca leído / enviar, scoped por empresa), API `/api/admin/empleados/[id]/chat` (gestor) +
     `/api/e/chat` (empleado), y **`components/ChatPanel.tsx`** reutilizable (polling 5s) embebido en el
     expediente del gestor y en `/e`. `next build` verde. (Datos por `cuenta_id` en plataforma = unificación futura.)
-  - **PENDIENTE Fase 1:** notificaciones (push+email al subir doc / nuevo mensaje) + PWA, proyecto Vercel
-    `rrhh` (+ env vars) — necesitan infra de Alberto. **Fase 2:** firma (Firmafy). **Precio:** diferido.
+  - **📝 SOLICITUDES self-service IMPLEMENTADAS — 15/06:** flujo empleado→gestor (HR-específico, nativo en
+    rrhh, no paquete). Tabla `rrhh.solicitudes` **aplicada** (tipo vacaciones/permiso_retribuido/parte_medico/
+    baja/otro, estado solicitada→aprobada/rechazada). `lib/solicitudes.ts` (crear/listar/resolver + validación
+    de fechas/tipo). API: `/api/e/solicitudes` (empleado crea/ve), `/api/admin/solicitudes` (+`?pendientes=1`)
+    y `/[id]` PATCH (aprobar/rechazar). UI: bandeja `/admin/solicitudes` + bloque en el portal `/e`. `next
+    build` verde (16 páginas).
+  - **PENDIENTE Fase 1:** notificaciones (push+email al subir doc / nuevo mensaje / nueva solicitud) + PWA,
+    proyecto Vercel `rrhh` (+ env vars) — necesitan infra de Alberto. **Fase 2:** firma (Firmafy). **Precio:** diferido.
 
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
