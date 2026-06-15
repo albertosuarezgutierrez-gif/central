@@ -52,7 +52,16 @@ export async function sincronizarSesion(
 
     // Inserción EN BLOQUE (un solo INSERT por cuenta) — antes era uno a uno y con cuentas
     // grandes (p. ej. Kutxa) el callback superaba el timeout de la función serverless.
-    const validos = movs.filter(m => Number.isFinite(m.importe))
+    // Dedup EN MEMORIA por hash: el ON CONFLICT no deduplica filas repetidas dentro del
+    // MISMO INSERT, así que si el banco devuelve un movimiento dos veces lo quitamos aquí.
+    const vistos = new Set<string>()
+    const validos = movs.filter(m => {
+      if (!Number.isFinite(m.importe)) return false
+      const h = hashMov(accountUid, m)
+      if (vistos.has(h)) return false
+      vistos.add(h)
+      return true
+    })
     if (validos.length) {
       const filasMov = validos.map(m => Prisma.sql`(
         ${cbId}::uuid, ${m.bookingDate || null}::date, ${m.valueDate || m.bookingDate || null}::date,
