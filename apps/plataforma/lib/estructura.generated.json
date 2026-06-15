@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T14:32:17Z",
+  "generadoEn": "2026-06-15T14:35:49Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -48,6 +48,11 @@
       "id": "module-asn",
       "tipo": "module",
       "npm": "@central/module-asn"
+    },
+    {
+      "id": "module-chat",
+      "tipo": "module",
+      "npm": "@central/module-chat"
     },
     {
       "id": "module-concursos",
@@ -398,6 +403,28 @@
       "rrhh": {
         "estado": "no",
         "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-chat": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -1164,6 +1191,7 @@
     "core-storage": [],
     "module-agenda": [],
     "module-asn": [],
+    "module-chat": [],
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
@@ -1865,10 +1893,12 @@
     "rrhh": [
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/e/chat",
       "/api/e/expediente",
       "/api/e/login"
     ],
@@ -2094,6 +2124,7 @@
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresas",
+      "rrhh.mensajes",
       "rrhh.usuarios_rrhh"
     ],
     "sivra": [
@@ -2519,10 +2550,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 19,
+    "packages": 20,
     "capacidades": 23,
     "skills": 13,
-    "apis": 776,
+    "apis": 778,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

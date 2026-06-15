@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:32:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:35:49Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 19 packages · 23 capacidades · 13 skills · 776 rutas API.
+**Resumen:** 5 apps · 20 packages · 23 capacidades · 13 skills · 778 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -23,10 +23,10 @@
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 35
 ### rrhh
-- **Módulos que usa:** core-storage, module-documental
+- **Módulos que usa:** core-storage, module-chat, module-documental
 - **Capacidades:** —
-- **Tablas (4):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.usuarios_rrhh
-- **Rutas API:** 8
+- **Tablas (5):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.mensajes, rrhh.usuarios_rrhh
+- **Rutas API:** 10
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -57,6 +57,9 @@
   - Depende de: —
 - **module-asn** (module) → `@central/module-asn`
   - Lo usan: ia-rest
+  - Depende de: —
+- **module-chat** (module) → `@central/module-chat`
+  - Lo usan: rrhh
   - Depende de: —
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: ialimp
