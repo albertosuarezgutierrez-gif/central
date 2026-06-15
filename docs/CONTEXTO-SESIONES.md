@@ -37,12 +37,14 @@
     tests (`lib/empleados.ts` + `.test.ts`, **3/3 verde**), API empleados acotada por `empresa_id`
     (alta/lista/editar/baja), rutas login/logout, UI mínima (`/login`, `/admin/empleados`, `/e/[token]`).
     **`next build` verde** (10 rutas). `vitest` verde.
-  - **⛔ BLOQUEO BD (pendiente decisión de Alberto):** la BD propia de rrhh (aislamiento RGPD por datos de
-    salud) **no se pudo crear** — la org Supabase ha llegado al **límite de 2 proyectos gratis** (ya están
-    `wswbehlcuxqxyinousql` compartido + `efncqyvhniaxsirhdxaa` de ia-rest). Opciones: (a) **schema `rrhh` en
-    el proyecto compartido** con RLS estricta (gratis, menos aislamiento — mezcla datos de salud con las otras
-    verticales), o (b) **plan Supabase de pago** para proyecto dedicado. Migración `0001_cimiento.sql` lista,
-    **sin aplicar** hasta decidir. El código del cimiento NO depende de esto en build.
+  - **🗄️ BD RESUELTA (15/06, decisión Alberto = gratis):** no se pudo crear proyecto Supabase dedicado
+    (org al **límite de 2 proyectos gratis**: `wswbehlcuxqxyinousql` + `efncqyvhniaxsirhdxaa`). Se optó por
+    **schema `rrhh` en el proyecto COMPARTIDO** (`wswbehlcuxqxyinousql`), aislado del `public` de
+    ialimp/sivra/plataforma. **Migración `rrhh_0001_cimiento` APLICADA** (3 tablas `rrhh.empresas/
+    usuarios_rrhh/empleados`, RLS activado, verificadas). No afecta a las otras apps (schema y tablas
+    propias). La conexión de rrhh usará `DATABASE_URL` con `?schema=rrhh`. **Migrable a proyecto dedicado**
+    cuando se pase a plan de pago (mejor aislamiento RGPD de los datos de salud). Pendiente: cargar env
+    `DATABASE_URL`/`JWT_SECRET`/keys en el (futuro) proyecto Vercel `rrhh`.
   - **PENDIENTE Fase 1:** `module-documental` + expediente, `module-chat` (+ adopción ialimp con preview
     verde), notificaciones (push+email) + PWA, proyecto Vercel `rrhh`. **Precio a cliente:** diferido.
 
