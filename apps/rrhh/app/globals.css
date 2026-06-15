@@ -1,3 +1,56 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --paper: #F6F1E7;
+  --paper-2: #EFE8DA;
+  --card: #FCFAF4;
+  --ink: #1A1714;
+  --ink-2: #4A443C;
+  --ink-3: #857C6E;
+  --line: #E2D9C7;
+  --line-2: #D6CAB2;
+  --accent: #2B6A6E;
+  --accent-ink: #21565A;
+  --accent-soft: #DCEAEA;
+  --green: #3F7D44;
+  --vermilion: #D9442B;
+}
+
+@layer base {
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--font-sans), system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  h1, h2, h3 { font-family: var(--font-serif), Georgia, serif; }
+  code, .mono { font-family: var(--font-mono), monospace; }
+
+  /* Controles de formulario con el estilo de la casa */
+  input, select, textarea {
+    font: inherit;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--line-2);
+    border-radius: 10px;
+    padding: 9px 12px;
+  }
+  input::placeholder, textarea::placeholder { color: var(--ink-3); }
+  input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--accent-soft);
+    border-color: var(--accent);
+  }
+  button {
+    font: inherit;
+    cursor: pointer;
+    border: 0;
+    border-radius: 10px;
+    padding: 9px 14px;
+    background: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  button:hover { background: var(--accent-ink); }
+}

@@ -24,23 +24,27 @@ export default function ChatPanel({ endpoint, yo }: { endpoint: string; yo: 'ges
   }
 
   return (
-    <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, margin: '12px 0' }}>
-      <h2 style={{ fontSize: 15, margin: '0 0 8px' }}>💬 Chat</h2>
-      <div style={{ maxHeight: 260, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <section className="my-3 rounded-card border border-line bg-card p-4">
+      <h2 className="mb-2 text-base">Chat</h2>
+      <div className="flex max-h-[260px] flex-col gap-1.5 overflow-y-auto">
         {mensajes.map(m => {
           const mio = m.remitente === yo
           return (
-            <div key={m.id} style={{ alignSelf: mio ? 'flex-end' : 'flex-start', background: mio ? '#dcf8c6' : '#f1f1f1',
-              borderRadius: 8, padding: '6px 10px', maxWidth: '80%' }}>
+            <div
+              key={m.id}
+              className={`max-w-[80%] rounded-[13px] px-3 py-1.5 text-sm ${
+                mio ? 'self-end rounded-br-[4px] bg-accent text-white' : 'self-start rounded-bl-[4px] bg-paper-2 text-ink'
+              }`}
+            >
               {m.texto}
             </div>
           )
         })}
-        {mensajes.length === 0 && <p style={{ color: '#aaa' }}>Sin mensajes todavía</p>}
+        {mensajes.length === 0 && <p className="text-ink-3">Sin mensajes todavía</p>}
         <div ref={finRef} />
       </div>
-      <form onSubmit={enviar} style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-        <input value={texto} onChange={e => setTexto(e.target.value)} placeholder="Escribe un mensaje…" style={{ flex: 1 }} />
+      <form onSubmit={enviar} className="mt-2 flex gap-2">
+        <input value={texto} onChange={e => setTexto(e.target.value)} placeholder="Escribe un mensaje…" className="flex-1" />
         <button type="submit">Enviar</button>
       </form>
     </section>
