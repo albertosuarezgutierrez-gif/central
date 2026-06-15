@@ -18,7 +18,7 @@ export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
         <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
         <button type="submit">Añadir</button>
       </form>
-      <ul>{lista.map(e => <li key={e.id}>{e.nombre}{e.email && ` · ${e.email}`} <code>/e/{e.acceso_token}</code></li>)}</ul>
+      <ul>{lista.map(e => <li key={e.id}><a href={`/admin/empleados/${e.id}`}>{e.nombre}</a>{e.email && ` · ${e.email}`} <code>/e/{e.acceso_token}</code></li>)}</ul>
     </main>
   )
 }
