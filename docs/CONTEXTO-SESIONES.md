@@ -16,6 +16,84 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269**
+  Petición de Pilar (RR.HH. de Mariscos González, audio): intranet de empleados con expediente
+  documental por trabajador (carpetas: datos personales/contratos/nóminas/partes médicos/otros, subida
+  **bidireccional**), **firma electrónica avanzada** (eIDAS art. 26 — basta avanzada para nóminas/contratos
+  por art. 29 ET + STS 1023/2016; NO cualificada), chat y solicitudes (vacaciones/permisos/parte médico).
+  - **Spec:** `docs/superpowers/specs/2026-06-15-apps-rrhh-portal-empleado-design.md`. **Plan Fase 1:**
+    `docs/superpowers/plans/2026-06-15-rrhh-fase1-cimiento.md`.
+  - **Arquitectura definitiva (decisión 15/06):** se aprovecha que Sique Brilla (ialimp) está **inactivo**
+    para crear paquetes compartidos sin duplicar: **`core-firma`** (núcleo firma), **`module-chat`** (ialimp
+    lo adopta, rrhh lo consume; datos por `cuenta_id` en plataforma cuando haya cliente multi-producto) y
+    **`module-documental`** (motor de expedientes agnóstico de entidad sobre `core-storage`; rrhh lo estrena,
+    ialimp migra después JSONB→tablas). Chat NO como app/servicio propio (rompe la matriz).
+  - **Firma proveedor:** investigación comparada (Firmafy/Signaturit/DocuSign/Viafirma/Click&Sign/Tecalis).
+    Para el piloto → **Firmafy** (avanzada biométrica + 6 evidencias + custodia 10 años + Programa Partners)
+    o Click&Sign (pago por uso). Adaptador `self-hosted` (PAdES + RFC 3161) a futuro. Pendiente cotización partner.
+  - **IMPLEMENTADO (cimiento, probado):** scaffold `apps/rrhh` (Next 15, espejo de ialimp), Prisma schema
+    (`empresas`, `usuarios_rrhh`, `empleados`), auth JWT responsable (`lib/auth.ts`/`lib/tenant.ts`, sesión
+    única por jti) + acceso empleado por enlace mágico+PIN (`lib/empleado-auth.ts`), lógica de empleados con
+    tests (`lib/empleados.ts` + `.test.ts`, **3/3 verde**), API empleados acotada por `empresa_id`
+    (alta/lista/editar/baja), rutas login/logout, UI mínima (`/login`, `/admin/empleados`, `/e/[token]`).
+    **`next build` verde** (10 rutas). `vitest` verde.
+  - **🗄️ BD RESUELTA (15/06, decisión Alberto = gratis):** no se pudo crear proyecto Supabase dedicado
+    (org al **límite de 2 proyectos gratis**: `wswbehlcuxqxyinousql` + `efncqyvhniaxsirhdxaa`). Se optó por
+    **schema `rrhh` en el proyecto COMPARTIDO** (`wswbehlcuxqxyinousql`), aislado del `public` de
+    ialimp/sivra/plataforma. **Migración `rrhh_0001_cimiento` APLICADA** (3 tablas `rrhh.empresas/
+    usuarios_rrhh/empleados`, RLS activado, verificadas). No afecta a las otras apps (schema y tablas
+    propias). La conexión de rrhh usará `DATABASE_URL` con `?schema=rrhh`. **Migrable a proyecto dedicado**
+    cuando se pase a plan de pago (mejor aislamiento RGPD de los datos de salud). Pendiente: cargar env
+    `DATABASE_URL`/`JWT_SECRET`/keys en el (futuro) proyecto Vercel `rrhh`.
+  - **📁 `module-documental` IMPLEMENTADO + expediente en rrhh (15/06):** nuevo paquete
+    **`packages/@central/module-documental`** = motor de expedientes **AGNÓSTICO DE ENTIDAD** (puro, sin BD/
+    Storage): `tipos.ts` (OwnerRef opaco, Actor `gestor|titular`, ConfigCarpeta), `permisos.ts`
+    (puedeSubir/puedeVer/carpetasVisibles, indexarCarpetas), `documental.ts` (validarSubida +
+    construirPathStorage `<tipo>/<id>/<carpeta>/<uuid>.<ext>`). **Tests 8/8 verde.** Las categorías,
+    permisos y Storage los inyecta cada vertical (rrhh lo estrena; ialimp migrará después su JSONB).
+  - **rrhh consume el módulo** vía `file:` deps + `transpilePackages` (`@central/module-documental` +
+    `@central/core-storage`). `lib/carpetas.ts` (taxonomía empleado: datos_personales/contratos/nominas/
+    partes_medicos/otros + permisos por carpeta), `lib/storage.ts` (subir/borrar con service_role + URL
+    firmada vía core-storage), `lib/documental.ts` (listar/subir/borrar, scope empresa+empleado). API:
+    `/api/admin/empleados/[id]/documentos` (GET expediente con URLs firmadas, POST subir FormData) +
+    `[docId]` (DELETE). **Tabla `rrhh.documentos` APLICADA** + **bucket privado `rrhh-documentos` creado**.
+    `next build` verde.
+  - **🖥️ UI del expediente IMPLEMENTADA (ambos lados) — 15/06:** lado **gestor** `/admin/empleados/[id]`
+    (`ExpedienteClient.tsx`: carpetas con subir/descargar por URL firmada/borrar) + lado **empleado** `/e`
+    (`getSesionEmpleado` lee cookie, `ExpedienteEmpleado.tsx`: ve sus carpetas visibles y **sube solo donde
+    el módulo lo permite** — datos personales y partes médicos). API `/api/e/expediente` (GET/POST, actor
+    `titular`). `/e/[token]` redirige a `/e` tras login. **Flujo documental BIDIRECCIONAL completo.**
+    `next build` verde (16 rutas).
+  - **💬 `module-chat` IMPLEMENTADO + chat en rrhh — 15/06:** nuevo paquete `packages/@central/module-chat`
+    (motor puro de mensajería 1-a-1 gestor↔titular: tipos, `noLeidos`, `contraparte`, `ordenarCronologico`,
+    `validarTexto`; **tests 4/4 verde**). rrhh lo consume (`file:` + transpilePackages): tabla
+    `rrhh.mensajes` (un hilo implícito por empleado, leído por parte) **aplicada**, `lib/chat.ts`
+    (listar+marca leído / enviar, scoped por empresa), API `/api/admin/empleados/[id]/chat` (gestor) +
+    `/api/e/chat` (empleado), y **`components/ChatPanel.tsx`** reutilizable (polling 5s) embebido en el
+    expediente del gestor y en `/e`. `next build` verde. (Datos por `cuenta_id` en plataforma = unificación futura.)
+  - **📝 SOLICITUDES self-service IMPLEMENTADAS — 15/06:** flujo empleado→gestor (HR-específico, nativo en
+    rrhh, no paquete). Tabla `rrhh.solicitudes` **aplicada** (tipo vacaciones/permiso_retribuido/parte_medico/
+    baja/otro, estado solicitada→aprobada/rechazada). `lib/solicitudes.ts` (crear/listar/resolver + validación
+    de fechas/tipo). API: `/api/e/solicitudes` (empleado crea/ve), `/api/admin/solicitudes` (+`?pendientes=1`)
+    y `/[id]` PATCH (aprobar/rechazar). UI: bandeja `/admin/solicitudes` + bloque en el portal `/e`. `next
+    build` verde (16 páginas).
+  - **📧 NOTIFICACIONES EMAIL integradas (listas para claves) — 15/06:** `lib/notificar.ts`
+    (`avisarResponsables`) avisa por email a los `usuarios_rrhh` cuando el empleado **sube un documento,
+    crea una solicitud o escribe por el chat**. Usa `nodemailer` DIRECTO (no `core-email`: su bundle fallaba
+    por symlinks/webpack "Can't resolve nodemailer"). Best-effort/no-op si no hay SMTP → funciona al cargar
+    `SMTP_HOST/PORT/USER/PASSWORD`. **Trampa de build resuelta:** un comentario JSDoc con `SMTP_*` seguido de
+    `/` cerraba el bloque `/* */` (evitar `*` + `/` en comentarios). `next build` verde.
+  - **🔔 PWA + WEB PUSH integrados (listos para claves) — 15/06:** `public/{manifest.json,icon.svg,sw.js}`
+    + `RegisterSW` (PWA instalable; SW con handler `push`/`notificationclick`). Tabla
+    `rrhh.push_subscriptions` **aplicada**. `lib/push.ts` (`web-push` DIRECTO, no core-push, mismo motivo
+    que email) con `pushResponsables`/`pushEmpleado` (no-op sin VAPID, borra subs 410/404). Subscribe:
+    `/api/admin/push/subscribe` (gestor) + `/api/e/push/subscribe` (empleado). Botón `ActivarPush` en
+    `/admin/empleados` y `/e`. Push enganchado junto al email en las 3 acciones del empleado (doc/solicitud/
+    mensaje → responsables). `next build` verde. **VAPID generadas (entregadas a Alberto para el env), NO
+    commiteadas.**
+  - **PENDIENTE (necesita Alberto):** proyecto **Vercel `rrhh`** + env (`DATABASE_URL?schema=rrhh`,
+    `JWT_SECRET`, Supabase url/anon/service_role, opcional SMTP_*, VAPID público+privado). **Fase 2:** firma
+    (Firmafy, cotización partner). **Precio:** diferido. (Push y email ya funcionan al cargar sus claves.)
 - **🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)**
   Construido el menú completo de ideas sobre el modelo existente (`movimientos_bancarios`, `destino`,
   `categoria`), sin migraciones.

@@ -1,0 +1,12 @@
+{
+  "name": "@central/module-chat",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Motor de mensajería interna AGNÓSTICO (casa de marcas). Tipos y lógica pura de hilos/mensajes 1-a-1 entre dos partes (gestor ↔ titular): no-leídos, orden, último mensaje. Sin BD ni red — la persistencia y el transporte los pone cada vertical (rrhh hoy; ialimp/plataforma a futuro por cuenta_id).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}
