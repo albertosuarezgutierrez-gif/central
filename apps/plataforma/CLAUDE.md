@@ -49,6 +49,7 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **PWA:** `public/manifest.json` + `public/icon.svg`.
 - [x] **Command palette Cmd/Ctrl+K:** `CommandPalette.tsx`.
 - [x] **Strip "Hoy" en dashboard.**
+- [x] **Detalle apartamento (PR #255):** `lib/propiedades.ts` enriquecida (ocupación %, ADR, top portal) + nueva `getApartamentoDetalle(id)`. Ruta `/apartamentos/[id]` con 8 KPIs, gap detector, break-even, mix portales, histórico 12 meses, gastos por categoría (incl. SEGURO) + gastos compartidos + últimas 20 reservas.
 - [ ] **Pendiente:** convertir `/admin` a redirect → `/operador/clientes` (cuando Alberto confirme que funciona).
 
 ## Registrar una cuenta
