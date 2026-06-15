@@ -17,14 +17,28 @@ export const EVENTS: Record<string, number> = {
   "2026-06-19":1.60,"2026-06-20":1.60,"2026-06-21":1.30,"2026-06-26":1.40,
   "2026-07-03":1.40,"2026-07-16":1.50,"2026-07-18":1.30,
   "2026-11-16":1.40,"2026-11-17":1.40,"2026-11-18":1.40,"2026-11-19":1.40,
-  "2026-11-20":1.40,"2026-11-21":1.35,"2026-11-22":1.30,"2026-12-31":1.60,
-  // --- 2027 (ESTIMADO; confirmar fechas oficiales antes de la temporada) ---
+  "2026-11-20":1.40,"2026-11-21":1.35,"2026-11-22":1.30,
+  // --- Festivos nacionales / puentes recurrentes (Sevilla) — estimados por demanda observada ---
+  // Hispanidad (12-oct) + finde
+  "2026-10-09":1.35,"2026-10-10":1.40,"2026-10-11":1.40,"2026-10-12":1.45,
+  // Todos los Santos (1-nov)
+  "2026-10-30":1.35,"2026-10-31":1.45,"2026-11-01":1.45,
+  // Puente de la Constitución (6-dic) + Inmaculada (8-dic) — alta demanda real (eran 200-216€)
+  "2026-12-04":1.70,"2026-12-05":1.85,"2026-12-06":1.90,"2026-12-07":1.85,"2026-12-08":1.80,
+  // Navidad + Fin de Año + Reyes
+  "2026-12-24":1.35,"2026-12-25":1.40,"2026-12-26":1.40,"2026-12-31":1.60,
+  "2027-01-01":1.40,"2027-01-05":1.45,"2027-01-06":1.50,
+  // Maratón de Sevilla (~3er dom feb) + Puente de Andalucía (28-feb)
+  "2027-02-19":1.40,"2027-02-20":1.50,"2027-02-21":1.50,"2027-02-26":1.30,"2027-02-27":1.40,"2027-02-28":1.40,
+  // --- Semana Santa / Feria 2027 (ESTIMADO; confirmar fechas oficiales antes de la temporada) ---
   // Semana Santa 2027 (Domingo de Resurrección 28-mar): la Madrugá (25-26 mar) es el pico.
   "2027-03-21":2.20,"2027-03-22":2.30,"2027-03-23":2.40,"2027-03-24":2.50,
   "2027-03-25":3.00,"2027-03-26":3.20,"2027-03-27":2.80,"2027-03-28":2.50,
   // Feria de Abril 2027 (~2 semanas tras Semana Santa): estimada 18-25 abr.
   "2027-04-18":2.50,"2027-04-19":2.60,"2027-04-20":2.80,"2027-04-21":3.00,
   "2027-04-22":3.20,"2027-04-23":3.20,"2027-04-24":3.00,"2027-04-25":2.60,
+  // Puente de mayo 2027 (1-may sáb) + Cruces de Mayo
+  "2027-04-30":1.30,"2027-05-01":1.45,"2027-05-02":1.40,
 }
 
 // Horizonte de pricing: hasta cuántos días vista se captura (snapshot) y se tarifica (apply).
@@ -53,5 +67,5 @@ export function calcOurs(base: number, dateStr: string): number {
 export function eventFactor(dateStr: string): number {
   const e = EVENTS[dateStr]
   if (!e) return 1.0
-  return Math.max(1.0, Math.min(e, 3.0)) // hasta ×3 en eventos (antes capado a 1.5, estrangulaba Semana Santa/Feria)
+  return Math.max(1.0, Math.min(e, 2.5)) // hasta ×2.5 (antes capado a 1.5). Semana Santa/Feria ≈ base×2.5 ≈ 320€, en línea con el histórico
 }
