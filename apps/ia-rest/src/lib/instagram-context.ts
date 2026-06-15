@@ -42,14 +42,20 @@ export async function leerContextoDrive(): Promise<string> {
   return ''
 }
 
-export async function elegirTemaConContexto(plantilla: string, ultimoTema: string, noticias: Noticia[], contextoDrive: string): Promise<{ tema: string; modulo: string; hashtags: string[] }> {
-  const modulosTexto = IAREST_MODULOS.map(m => `- ${m.modulo}: ${m.desc}`).join('\n')
+export async function elegirTemaConContexto(plantilla: string, ultimoTema: string, noticias: Noticia[], contextoDrive: string, temasRecientes: string[] = [], modulosRecientes: string[] = []): Promise<{ tema: string; modulo: string; hashtags: string[] }> {
+  // Diversidad: prioriza módulos que NO se han usado en los últimos posts (rota entre los 14).
+  const modulosSinUsar = IAREST_MODULOS.filter(m => !modulosRecientes.includes(m.modulo))
+  const modulosPreferidos = modulosSinUsar.length ? modulosSinUsar : IAREST_MODULOS
+  const modulosTexto = modulosPreferidos.map(m => `- ${m.modulo}: ${m.desc}`).join('\n')
   const noticiasTexto = noticias.map(n => `- ${n.titulo}`).join('\n') || 'Sin noticias disponibles'
+  const recientesTexto = temasRecientes.length ? temasRecientes.map(t => `- ${t}`).join('\n') : '- (ninguno)'
   const prompt = `Estratega Instagram ia.rest. Elige tema para plantilla "${plantilla}".
-MÓDULOS: ${modulosTexto}
+MÓDULOS DISPONIBLES (elige uno que NO se haya usado recientemente):
+${modulosTexto}
 NOTICIAS: ${noticiasTexto}
-ÚLTIMO TEMA: "${ultimoTema}"
-NUNCA competidores por nombre.
+TEMAS RECIENTES (NO repitas ni parafrasees ninguno — busca un ángulo y módulo DISTINTO):
+${recientesTexto}
+REGLAS: NUNCA competidores por nombre. El tema debe ser claramente distinto de los recientes.
 SOLO JSON: {"tema":"...","modulo":"...","hashtags":["#tag1","#tag2"]}`
   // noFallback=true → NIM puro, NUNCA Anthropic (agente IG; evita "credit balance too low").
   // timeout amplio (25s) para que NIM no caiga al fallback por lentitud puntual.
