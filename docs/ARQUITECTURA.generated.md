@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T12:10:58Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:27:00Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 18 packages · 23 capacidades · 13 skills · 768 rutas API.
+**Resumen:** 4 apps · 18 packages · 23 capacidades · 13 skills · 769 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
 - **Capacidades:** Facturación / VeriFactu
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 35
+- **Rutas API:** 36
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -121,6 +121,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (15/06/2026) 🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)
 - (15/06/2026) 🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256
 - (15/06/2026) 🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)
 - (14/06/2026) 🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)
@@ -130,5 +131,4 @@
 - (14/06/2026) 🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria
 - (14/06/2026) 🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239
 - (14/06/2026) 🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)
-- (14/06/2026) 📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)
 
