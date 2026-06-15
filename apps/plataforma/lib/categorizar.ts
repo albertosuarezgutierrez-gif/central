@@ -48,7 +48,9 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 [{"i":0,"categoria":"...","concepto":"...","revisar":false}].`
 
   try {
-    const raw = await aiComplete(lista, { system, maxTokens: 1400, temperature: 0.1, timeoutMs: 20_000 })
+    // Modelo pequeño y RÁPIDO: categorizar es tarea simple y el 70B por defecto generaba
+    // 1400 tokens en >20s → abortaba siempre. El 8B responde en pocos segundos.
+    const raw = await aiComplete(lista, { system, model: 'meta/llama-3.1-8b-instruct', maxTokens: 1400, temperature: 0.1, timeoutMs: 45_000 })
     const parsed = JSON.parse(cleanJSON(raw)) as Array<{ i: number; categoria: string; concepto: string; revisar?: boolean }>
     if (!Array.isArray(parsed)) return []
     const out: Categorizacion[] = []
