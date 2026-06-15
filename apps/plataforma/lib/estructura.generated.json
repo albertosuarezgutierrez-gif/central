@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-14T21:08:24Z",
+  "generadoEn": "2026-06-15T07:17:23Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria",
       "fecha": "14/06/2026"
     },
@@ -1987,10 +1991,6 @@
     },
     {
       "titulo": "⏰ Cron huérfano arreglado: `instagram-ideas` (ia-rest) — branch `claude/agents-missing-schedules-u838j3`",
-      "fecha": "13/06/2026"
-    },
-    {
-      "titulo": "🔎 Agente SEO autónomo de ia.rest (Fase 1) — branch `claude/seo-agent-auto-activation-5ypj5x`",
       "fecha": "13/06/2026"
     }
   ],
