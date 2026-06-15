@@ -296,6 +296,104 @@ export function ExportarBtn() {
   return <a href="/api/banca/export" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>📥 Exportar (CSV)</a>
 }
 
+type DupMov = { id: string; fecha: string | null; concepto: string; importe: number; conciliado: boolean }
+type DupGrupoUI = { clave: string; confianza: 'alta' | 'baja'; importe: number; superaUmbral: boolean; movimientos: DupMov[] }
+type DupResueltoUI = { id: string; fecha: string | null; concepto: string; importe: number; estado: 'ignorado' | 'confirmado' }
+
+// Bandeja "Posibles cargos duplicados": pares sospechosos de cobro doble. El dueño los resuelve
+// con un clic ("Es normal" / "Es un cobro doble"); la decisión persiste. Plegable de "ya
+// resueltos" para reactivar lo que se ignoró por error.
+export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[]; resueltos: DupResueltoUI[] }) {
+  const router = useRouter()
+  const [pend, setPend] = useState(grupos)
+  const [res, setRes] = useState(resueltos)
+  const [busy, setBusy] = useState<string | null>(null)
+  const [verResueltos, setVerResueltos] = useState(false)
+
+  async function resolver(g: DupGrupoUI, estado: 'ignorado' | 'confirmado') {
+    setBusy(g.clave)
+    const ids = g.movimientos.map(m => m.id)
+    const r = await fetch('/api/banca/duplicados', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids, estado }),
+    })
+    setBusy(null)
+    if (r.ok) {
+      setPend(p => p.filter(x => x.clave !== g.clave))
+      setRes(prev => [...g.movimientos.map(m => ({ id: m.id, fecha: m.fecha, concepto: m.concepto, importe: m.importe, estado })), ...prev])
+      router.refresh()
+    }
+  }
+
+  async function reactivar(id: string) {
+    setBusy(id)
+    const r = await fetch('/api/banca/duplicados', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [id], estado: null }),
+    })
+    setBusy(null)
+    if (r.ok) { setRes(prev => prev.filter(x => x.id !== id)); router.refresh() }
+  }
+
+  if (pend.length === 0 && res.length === 0) return null
+  return (
+    <section id="duplicados" style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>⚠️ Posibles cargos duplicados ({pend.length})</h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>Mismo importe y comercio en pocos días. Revisa cada par y resuélvelo: no vuelve a salir.</p>
+
+      {pend.length > 0 && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          {pend.map(g => (
+            <div key={g.clave} style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', padding: '14px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                <span style={{ fontSize: '11px', fontWeight: 700, padding: '2px 8px', borderRadius: '999px', background: g.confianza === 'alta' ? '#fee2e2' : '#fef3c7', color: g.confianza === 'alta' ? '#b91c1c' : '#92400e' }}>
+                  {g.confianza === 'alta' ? 'Sospecha alta' : 'Sospecha baja'}
+                </span>
+                <span style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{eur(g.importe)}</span>
+              </div>
+              {g.movimientos.map(m => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '13px', padding: '3px 0' }}>
+                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}{m.conciliado ? ' 🔗' : ''}</span>
+                  <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                </div>
+              ))}
+              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
+                <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
+                <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {res.length > 0 && (
+        <div style={{ marginTop: '12px' }}>
+          <button onClick={() => setVerResueltos(v => !v)} style={{ ...dupGhost, fontSize: '12px' }}>
+            {verResueltos ? '▾' : '▸'} Ya resueltos ({res.length})
+          </button>
+          {verResueltos && (
+            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden', marginTop: '8px' }}>
+              {res.map((m, i) => (
+                <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)', fontSize: '13px' }}>
+                  <span style={{ color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</span>
+                  <span style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</span>
+                  <span style={{ fontSize: '11px', color: 'var(--muted)', flexShrink: 0 }}>{m.estado === 'confirmado' ? 'cobro doble' : 'normal'}</span>
+                  <span style={{ fontWeight: 700, color: '#dc2626', width: '80px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
+                  <button disabled={busy === m.id} onClick={() => reactivar(m.id)} style={{ ...dupGhost, fontSize: '12px', flexShrink: 0 }}>Reactivar</button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+    </section>
+  )
+}
+
+const dupGhost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
+const dupDanger: React.CSSProperties = { background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
+
 // Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
 // sobre los movimientos ya cargados; sin llamadas extra al servidor.
 type MovTabla = {
