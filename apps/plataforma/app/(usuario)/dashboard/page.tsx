@@ -13,18 +13,20 @@ async function getStripHoy(cuentaId: string) {
       SELECT "guestName" FROM incomes WHERE "checkIn"::date = ${hoy}::date ORDER BY "checkIn" LIMIT 10`,
     prisma.$queryRaw<Array<{ guestName: string | null }>>`
       SELECT "guestName" FROM incomes WHERE "checkOut"::date = ${hoy}::date ORDER BY "checkOut" LIMIT 10`,
-    prisma.$queryRaw<Array<{ importe: number }>>`
-      SELECT mb.importe::float AS importe
+    prisma.$queryRaw<Array<{ importe: number; descripcion: string | null }>>`
+      SELECT mb.importe::float AS importe,
+             coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS descripcion
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       JOIN sociedades s ON s.id = cb.sociedad_id
-      WHERE s.cuenta_id = ${cuentaId}::uuid AND mb.fecha_operacion::date = ${hoy}::date`,
+      WHERE s.cuenta_id = ${cuentaId}::uuid AND mb.fecha_operacion::date = ${hoy}::date
+      ORDER BY abs(mb.importe) DESC LIMIT 10`,
   ])
   const entradas = checkIns.length
   const salidas = checkOuts.length
   const ingresos = movsHoy.filter(m => m.importe > 0).reduce((s, m) => s + m.importe, 0)
   const gastos = movsHoy.filter(m => m.importe < 0).reduce((s, m) => s + Math.abs(m.importe), 0)
-  return { entradas, salidas, movimientos: movsHoy.length, ingresos, gastos }
+  return { entradas, salidas, movimientos: movsHoy.length, ingresos, gastos, movs: movsHoy }
 }
 
 const SECTOR_LABEL: Record<string, string> = {
@@ -116,8 +118,13 @@ export default async function DashboardPage() {
             <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Hoy</span>
             {stripHoy.entradas > 0 && <span>🏨 <strong>{stripHoy.entradas}</strong> {stripHoy.entradas === 1 ? 'entrada' : 'entradas'}</span>}
             {stripHoy.salidas > 0 && <span>🚪 <strong>{stripHoy.salidas}</strong> {stripHoy.salidas === 1 ? 'salida' : 'salidas'}</span>}
-            {stripHoy.movimientos > 0 && (
-              <span>🏦 <strong>{stripHoy.movimientos}</strong> {stripHoy.movimientos === 1 ? 'movimiento' : 'movimientos'} bancarios
+            {stripHoy.movimientos === 1 && (
+              <span>🏦 {stripHoy.movs[0].descripcion || 'Movimiento'}
+                <strong style={{ color: stripHoy.movs[0].importe >= 0 ? '#16a34a' : '#dc2626' }}> {fmtEur(stripHoy.movs[0].importe)}</strong>
+              </span>
+            )}
+            {stripHoy.movimientos > 1 && (
+              <span>🏦 <strong>{stripHoy.movimientos}</strong> movimientos: {stripHoy.movs.slice(0, 2).map(m => m.descripcion).filter(Boolean).join(', ')}{stripHoy.movimientos > 2 ? '…' : ''}
                 {stripHoy.ingresos > 0 && <span style={{ color: '#16a34a' }}> +{fmtEur(stripHoy.ingresos)}</span>}
                 {stripHoy.gastos > 0 && <span style={{ color: '#dc2626' }}> −{fmtEur(stripHoy.gastos)}</span>}
               </span>
