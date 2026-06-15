@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T14:28:09Z",
+  "generadoEn": "2026-06-15T14:32:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -485,7 +485,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 5
       },
       "sivra": {
         "estado": "no",
@@ -1869,6 +1869,7 @@
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/e/expediente",
       "/api/e/login"
     ],
     "sivra": [
@@ -2521,7 +2522,7 @@
     "packages": 19,
     "capacidades": 23,
     "skills": 13,
-    "apis": 775,
+    "apis": 776,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:28:09Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:32:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 19 packages · 23 capacidades · 13 skills · 775 rutas API.
+**Resumen:** 5 apps · 19 packages · 23 capacidades · 13 skills · 776 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-storage, module-documental
 - **Capacidades:** —
 - **Tablas (4):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.usuarios_rrhh
-- **Rutas API:** 7
+- **Rutas API:** 8
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
