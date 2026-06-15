@@ -78,12 +78,44 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
   }
 }
 
-// Analiza los movimientos sin categorizar de una cuenta (scoped por cuenta_id).
-// Idempotente: solo toca los que tienen analizado_at NULL. Procesa en sub-lotes pequeños
-// (cada llamada IA cabe holgada en el presupuesto de tokens). Devuelve cuántos categorizó.
+// Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
+// Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
+// que no encaje devuelve null → va a la IA. Orden: de lo más específico a lo más genérico.
+function categorizarPorReglas(concepto: string | null, contraparte: string | null, importe: number): Categoria | null {
+  const t = `${concepto ?? ''} ${contraparte ?? ''}`.toUpperCase()
+  const has = (...ks: string[]) => ks.some(k => t.includes(k))
+
+  if (has('SEGURO', 'GENERALI', 'MAPFRE', ' AXA', 'ALLIANZ', 'MUTUA', 'ZURICH', 'REALE', 'CASER', 'LINEA DIRECTA', 'PELAYO')) return 'seguro'
+  if (has('NOMINA', 'NÓMINA', 'PAGA EXTRA', 'SALARIO', 'PAGO DE NOMINA')) return 'nomina'
+  if (has('AEAT', 'AGENCIA TRIBUTARIA', 'HACIENDA', 'IMPUEST', 'IRPF', 'TRIBUTARI', 'RECAUDACION', 'RECAUDACIÓN', 'AYUNTAMIENTO', 'TGSS', 'SEGURIDAD SOCIAL', 'TESOR. GRAL', 'TESORERIA GENERAL', 'MODELO 3', 'TASA ')) return 'impuestos'
+  if (has('PRESTAMO', 'PRÉSTAMO', 'AMORTIZAC', 'CUOTA PREST', 'HIPOTECA', 'FINANCIAC', 'LEASING')) return 'prestamo'
+  if (has('COMISION', 'COMISIÓN', 'COMIS.', 'MANTENIMIENTO CUENTA', 'CUOTA TARJETA', 'GASTOS ADMIN')) return 'comision_bancaria'
+  if (has('ALQUILER', 'ARRENDAMIENT', 'RENTA MENSUAL')) return 'alquiler'
+  if (has('ENDESA', 'IBERDROLA', 'NATURGY', 'REPSOL', 'MOVISTAR', 'VODAFONE', 'ORANGE', 'FINETWORK', 'TELEFONICA', 'JAZZTEL', 'MASMOVIL', 'EMASESA', 'CANAL ISABEL', 'GAS NATURAL', 'SUMINISTRO', 'ELECTRIC', 'FACTURA DE AGUA', 'FACTURA LUZ', 'FACTURA GAS')) return 'suministros'
+  if (has('BIZUM')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
+  if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
+  if (has('TARJETA', 'TARJ.', 'COMPRA EN', 'PAGO EN ', 'PAGO TARJETA', 'COMERCIO')) return 'tarjeta'
+  if (has('RECIBO', 'ADEUDO', 'SEPA', 'DOMICILIAC', 'CUOTA ')) return 'proveedor'
+  return null
+}
+
+// Analiza los movimientos sin categorizar de una cuenta (scoped por cuenta_id). Primero
+// aplica REGLAS deterministas (instantáneo, sin IA) y solo manda a la IA lo que no encaja,
+// en sub-lotes pequeños (así apenas toca el cupo gratuito de NIM). Idempotente (analizado_at).
 const TAM_LOTE_IA = 25
 
-export async function analizarMovimientos(cuentaId: string, limite = 150): Promise<{ categorizados: number }> {
+async function guardarCategoria(cuentaId: string, id: string, c: Categorizacion): Promise<number> {
+  const res = await prisma.$executeRaw`
+    UPDATE movimientos_bancarios
+    SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
+        categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision}, analizado_at = now()
+    WHERE id = ${id}::uuid
+      AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
+  `
+  return Number(res)
+}
+
+export async function analizarMovimientos(cuentaId: string, limite = 400): Promise<{ categorizados: number }> {
   const pendientes = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; contraparte: string | null; importe: unknown }>>`
     SELECT mb.id, mb.concepto, mb.contraparte, mb.importe
     FROM movimientos_bancarios mb
@@ -94,25 +126,30 @@ export async function analizarMovimientos(cuentaId: string, limite = 150): Promi
   `
   if (pendientes.length === 0) return { categorizados: 0 }
 
-  // Trocear en sub-lotes y PERSISTIR lote a lote: cada respuesta IA cabe sin truncarse y,
-  // si la función se queda sin tiempo, lo ya categorizado queda guardado (idempotente:
-  // marca analizado_at, así un re-análisis o el cron continúa donde lo dejó).
   let n = 0
-  for (let i = 0; i < pendientes.length; i += TAM_LOTE_IA) {
-    const trozo = pendientes.slice(i, i + TAM_LOTE_IA)
+  const paraIA: typeof pendientes = []
+
+  // 1) Reglas deterministas — sin IA, al instante.
+  for (const p of pendientes) {
+    const cat = categorizarPorReglas(p.concepto, p.contraparte, Number(p.importe))
+    if (cat) {
+      n += await guardarCategoria(cuentaId, p.id, {
+        id: p.id, categoria: cat,
+        conceptoNormalizado: (p.concepto || p.contraparte || '').slice(0, 80),
+        categoriaPgc: pgcDe(cat), requiereRevision: false,
+      })
+    } else {
+      paraIA.push(p)
+    }
+  }
+
+  // 2) IA solo para lo ambiguo, en sub-lotes, persistiendo lote a lote.
+  for (let i = 0; i < paraIA.length; i += TAM_LOTE_IA) {
+    const trozo = paraIA.slice(i, i + TAM_LOTE_IA)
     const cats = await categorizarLote(
       trozo.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
     )
-    for (const c of cats) {
-      const res = await prisma.$executeRaw`
-        UPDATE movimientos_bancarios
-        SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
-            categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision}, analizado_at = now()
-        WHERE id = ${c.id}::uuid
-          AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
-      `
-      n += Number(res)
-    }
+    for (const c of cats) n += await guardarCategoria(cuentaId, c.id, c)
   }
   return { categorizados: n }
 }
