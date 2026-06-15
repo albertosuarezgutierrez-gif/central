@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iarrhh · presentación visual</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --paper:#F6F1E7; --paper-2:#EFE8DA; --card:#FCFAF4;
+    --ink:#1A1714; --ink-2:#4A443C; --ink-3:#857C6E;
+    --line:#E2D9C7; --line-2:#D6CAB2;
+    --accent:#2B6A6E; --accent-ink:#21565a; --accent-soft:#DCEAEA;
+    --vermilion:#D9442B; --green:#3F7D44;
+    --sans:'Inter Tight',system-ui,sans-serif;
+    --serif:'Newsreader',Georgia,serif;
+    --mono:'JetBrains Mono',monospace;
+    --radius:14px; --shadow:0 1px 2px rgba(26,23,20,.05),0 8px 24px rgba(26,23,20,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;line-height:1.45}
+  a{color:inherit}
+  .wrap{max-width:1120px;margin:0 auto;padding:40px 24px 80px}
+  .topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:8px}
+  .wordmark{display:inline-flex;align-items:baseline;gap:1px;font-family:var(--sans);font-weight:700;font-size:26px;letter-spacing:-.02em}
+  .wordmark .ia{font-weight:700}
+  .wordmark .dot{color:var(--accent);font-weight:700;padding:0 2px}
+  .wordmark .rrhh{font-weight:500;color:var(--ink-2)}
+  .lede{font-family:var(--serif);font-size:18px;color:var(--ink-2);max-width:60ch;margin:6px 0 30px}
+  .pill{font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent-ink);background:var(--accent-soft);border:1px solid #bcd6d6;padding:4px 9px;border-radius:999px}
+  h2.sec{font-family:var(--serif);font-weight:600;font-size:22px;margin:46px 0 4px;display:flex;align-items:center;gap:10px}
+  h2.sec .n{font-family:var(--mono);font-size:13px;color:var(--accent);border:1px solid var(--line-2);border-radius:8px;padding:2px 8px;background:var(--card)}
+  .sub{color:var(--ink-3);font-size:14px;margin:0 0 18px}
+
+  /* logo block */
+  .logos{display:flex;gap:18px;flex-wrap:wrap;align-items:center}
+  .icon{width:64px;height:64px;border-radius:16px;background:var(--accent);color:#fff;display:grid;place-items:center;font-family:var(--sans);font-weight:700;font-size:26px;letter-spacing:-.03em;box-shadow:var(--shadow)}
+  .icon.alt{background:var(--card);color:var(--accent);border:1.5px solid var(--accent)}
+  .swatches{display:flex;gap:10px;flex-wrap:wrap;margin-top:6px}
+  .sw{width:84px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--card);font-size:11px}
+  .sw .c{height:46px} .sw .l{padding:5px 7px;color:var(--ink-2);font-family:var(--mono)}
+
+  /* device frames */
+  .stage{display:grid;grid-template-columns:1fr;gap:26px}
+  .browser{border:1px solid var(--line-2);border-radius:var(--radius);overflow:hidden;box-shadow:var(--shadow);background:var(--card)}
+  .chrome{display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--paper-2);border-bottom:1px solid var(--line)}
+  .dots{display:flex;gap:6px} .dots i{width:10px;height:10px;border-radius:50%;display:block}
+  .dots i:nth-child(1){background:#E5897B} .dots i:nth-child(2){background:#E8C77A} .dots i:nth-child(3){background:#8FBE93}
+  .url{flex:1;background:var(--card);border:1px solid var(--line);border-radius:7px;padding:4px 10px;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+
+  /* admin layout */
+  .admin{display:grid;grid-template-columns:212px 1fr;min-height:430px}
+  .side{background:var(--paper-2);border-right:1px solid var(--line);padding:18px 14px;display:flex;flex-direction:column;gap:4px}
+  .side .wm{margin:2px 4px 18px}
+  .nav a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:10px;color:var(--ink-2);text-decoration:none;font-weight:500;font-size:14px}
+  .nav a.on{background:var(--accent);color:#fff}
+  .nav a.on .ic{opacity:1}
+  .nav .ic{width:18px;text-align:center;opacity:.7}
+  .side .foot{margin-top:auto;font-size:12px;color:var(--ink-3);padding:10px 8px;border-top:1px solid var(--line)}
+  .main{padding:24px 26px}
+  .crumb{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+  .crumb h1{font-family:var(--serif);font-weight:600;font-size:24px;margin:0}
+  .btn{font-family:var(--sans);font-weight:600;font-size:13px;border:0;border-radius:10px;padding:9px 14px;cursor:pointer}
+  .btn.acc{background:var(--accent);color:#fff}
+  .btn.ghost{background:var(--card);color:var(--ink-2);border:1px solid var(--line-2)}
+  .row-form{display:flex;gap:8px;margin-bottom:18px;flex-wrap:wrap}
+  .inp{font-family:var(--sans);font-size:14px;padding:9px 12px;border:1px solid var(--line-2);border-radius:10px;background:var(--card);color:var(--ink);min-width:160px}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+  th,td{text-align:left;padding:11px 14px;font-size:14px;border-bottom:1px solid var(--line)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-3);background:var(--paper-2)}
+  tr:last-child td{border-bottom:0}
+  td .tok{font-family:var(--mono);font-size:11px;color:var(--accent-ink);background:var(--accent-soft);padding:2px 7px;border-radius:6px}
+  .badge{font-size:11px;font-weight:600;padding:2px 9px;border-radius:999px}
+  .badge.ok{background:#E3F0E4;color:var(--green)} .badge.pend{background:#FBE6D9;color:var(--vermilion)}
+
+  /* phone */
+  .phones{display:flex;gap:28px;flex-wrap:wrap;justify-content:center}
+  .phone{width:300px;border:9px solid #2A2622;border-radius:34px;background:var(--paper);box-shadow:var(--shadow);overflow:hidden}
+  .phone .status{height:26px;background:var(--paper);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--ink-3);font-family:var(--mono)}
+  .phead{padding:14px 16px 8px;display:flex;align-items:center;justify-content:space-between}
+  .pbody{padding:0 14px 20px;display:flex;flex-direction:column;gap:12px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;box-shadow:0 1px 2px rgba(26,23,20,.04)}
+  .card h3{margin:0 0 10px;font-family:var(--serif);font-weight:600;font-size:16px}
+  .doc{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line);font-size:13px}
+  .doc:last-child{border-bottom:0}
+  .doc .fi{width:26px;height:26px;border-radius:7px;background:var(--accent-soft);color:var(--accent-ink);display:grid;place-items:center;font-size:12px}
+  .doc small{color:var(--ink-3);display:block}
+  .chat{display:flex;flex-direction:column;gap:8px}
+  .bub{max-width:78%;padding:8px 11px;border-radius:13px;font-size:13px;line-height:1.35}
+  .bub.them{background:var(--paper-2);align-self:flex-start;border-bottom-left-radius:4px}
+  .bub.me{background:var(--accent);color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+  .chatbar{display:flex;gap:8px;margin-top:4px}
+  .chatbar .inp{flex:1;min-width:0;padding:8px 11px}
+  .send{background:var(--accent);color:#fff;border:0;border-radius:10px;width:38px;display:grid;place-items:center;cursor:pointer}
+  .selrow{display:flex;gap:8px}
+  .selrow select,.selrow .file{flex:1;font-family:var(--sans);font-size:13px;padding:8px 10px;border:1px solid var(--line-2);border-radius:10px;background:var(--card)}
+
+  /* login */
+  .login{display:grid;place-items:center;min-height:430px;background:
+     radial-gradient(900px 420px at 50% -10%, var(--accent-soft), transparent 60%), var(--paper)}
+  .loginbox{width:340px;background:var(--card);border:1px solid var(--line);border-radius:18px;padding:28px;box-shadow:var(--shadow);text-align:center}
+  .loginbox .icon{margin:0 auto 14px}
+  .loginbox h1{font-family:var(--serif);font-weight:600;font-size:22px;margin:0 0 4px}
+  .loginbox p{color:var(--ink-3);font-size:13px;margin:0 0 20px}
+  .loginbox .inp{width:100%;margin-bottom:10px;text-align:left}
+  .loginbox .btn.acc{width:100%;padding:11px}
+  .note{font-size:12px;color:var(--ink-3);margin-top:30px;text-align:center;font-family:var(--mono)}
+  .legend{display:flex;gap:18px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--ink-2)}
+  .legend b{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <span class="wordmark"><span class="ia">ia</span><span class="dot">·</span><span class="rrhh">rrhh</span></span>
+    <span class="pill">Presentación de marca · mockup</span>
+  </div>
+  <p class="lede">Portal del Empleado vestido con la imagen de la casa (estilo ia-rest): papel cálido, tinta y un acento <b style="color:var(--accent)">teal</b>. Esto son maquetas — la app real ya funciona, solo la vestimos.</p>
+
+  <h2 class="sec"><span class="n">01</span> Identidad</h2>
+  <p class="sub">Logotipo tipográfico + monograma cuadrado. White-label: cada empresa puede sobrescribir el acento.</p>
+  <div class="logos">
+    <div class="icon">ia</div>
+    <div class="icon alt">ia</div>
+    <div>
+      <span class="wordmark"><span class="ia">ia</span><span class="dot">·</span><span class="rrhh">rrhh</span></span>
+      <div class="swatches">
+        <div class="sw"><div class="c" style="background:#F6F1E7"></div><div class="l">paper</div></div>
+        <div class="sw"><div class="c" style="background:#1A1714"></div><div class="l">ink</div></div>
+        <div class="sw"><div class="c" style="background:#2B6A6E"></div><div class="l">teal</div></div>
+        <div class="sw"><div class="c" style="background:#3F7D44"></div><div class="l">ok</div></div>
+        <div class="sw"><div class="c" style="background:#D9442B"></div><div class="l">alert</div></div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec"><span class="n">02</span> Acceso</h2>
+  <p class="sub">Pantalla de login compartida (responsable y empleado).</p>
+  <div class="browser">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="url">iarrhh.app/login</span></div>
+    <div class="login">
+      <div class="loginbox">
+        <div class="icon">ia</div>
+        <h1>Bienvenida</h1>
+        <p>Intranet de Mariscos González</p>
+        <input class="inp" value="pilar@mariscosgonzalez.com" />
+        <input class="inp" type="password" value="••••••••" />
+        <button class="btn acc">Entrar</button>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec"><span class="n">03</span> Panel del responsable</h2>
+  <p class="sub">Layout con sidebar fija — wordmark, navegación, notificaciones y salir. Contenido en cartas sobre papel.</p>
+  <div class="browser">
+    <div class="chrome"><span class="dots"><i></i><i></i><i></i></span><span class="url">iarrhh.app/admin/empleados</span></div>
+    <div class="admin">
+      <aside class="side">
+        <span class="wordmark wm" style="font-size:21px"><span class="ia">ia</span><span class="dot">·</span><span class="rrhh">rrhh</span></span>
+        <nav class="nav">
+          <a class="on" href="#"><span class="ic">◉</span> Empleados</a>
+          <a href="#"><span class="ic">✎</span> Solicitudes <span class="badge pend" style="margin-left:auto">3</span></a>
+          <a href="#"><span class="ic">🔔</span> Notificaciones</a>
+        </nav>
+        <div class="foot">Pilar · RRHH<br/>Cerrar sesión</div>
+      </aside>
+      <section class="main">
+        <div class="crumb">
+          <h1>Empleados</h1>
+          <button class="btn acc">+ Añadir empleado</button>
+        </div>
+        <div class="row-form">
+          <input class="inp" placeholder="Nombre" />
+          <input class="inp" placeholder="Email" />
+          <button class="btn ghost">Guardar</button>
+        </div>
+        <table>
+          <tr><th>Empleado</th><th>Puesto</th><th>Acceso</th><th>Estado</th></tr>
+          <tr><td>Laura Méndez</td><td>Cocina</td><td><span class="tok">/e/8fa2…</span></td><td><span class="badge ok">activo</span></td></tr>
+          <tr><td>Diego Romero</td><td>Sala</td><td><span class="tok">/e/1c70…</span></td><td><span class="badge ok">activo</span></td></tr>
+          <tr><td>Marta Gil</td><td>Pescadería</td><td><span class="tok">/e/b933…</span></td><td><span class="badge pend">pendiente</span></td></tr>
+        </table>
+      </section>
+    </div>
+  </div>
+
+  <h2 class="sec"><span class="n">04</span> Portal del empleado <span style="font-family:var(--sans);font-size:13px;font-weight:400;color:var(--ink-3)">· móvil primero</span></h2>
+  <p class="sub">Cartas apiladas: documentación, chat tipo WhatsApp, solicitudes y envío de documentos.</p>
+  <div class="phones">
+    <div class="phone">
+      <div class="status">9:41 · iarrhh</div>
+      <div class="phead">
+        <span class="wordmark" style="font-size:18px"><span class="ia">ia</span><span class="dot">·</span><span class="rrhh">rrhh</span></span>
+        <span class="badge ok">Laura</span>
+      </div>
+      <div class="pbody">
+        <div class="card">
+          <h3>Mi documentación</h3>
+          <div class="doc"><span class="fi">📄</span><div>Contrato indefinido<small>Contratos · 12 jun</small></div></div>
+          <div class="doc"><span class="fi">📄</span><div>Nómina mayo 2026<small>Nóminas · 31 may</small></div></div>
+          <div class="doc"><span class="fi">📄</span><div>Política LOPD<small>Datos personales · 2 may</small></div></div>
+        </div>
+        <div class="card">
+          <h3>Enviar un documento</h3>
+          <div class="selrow">
+            <select><option>Parte médico</option><option>Nóminas</option></select>
+          </div>
+          <div class="selrow" style="margin-top:8px">
+            <span class="file" style="color:var(--ink-3)">Elegir archivo…</span>
+            <button class="btn acc">Subir</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="phone">
+      <div class="status">9:41 · iarrhh</div>
+      <div class="phead">
+        <span class="wordmark" style="font-size:18px"><span class="ia">ia</span><span class="dot">·</span><span class="rrhh">rrhh</span></span>
+        <span class="badge ok">Chat</span>
+      </div>
+      <div class="pbody">
+        <div class="card">
+          <h3>Chat con RRHH</h3>
+          <div class="chat">
+            <div class="bub them">Hola Laura, te he subido la nómina de mayo 👍</div>
+            <div class="bub me">¡Gracias Pilar! ¿La firmo aquí?</div>
+            <div class="bub them">Sí, te llega un aviso para firmarla.</div>
+            <div class="bub me">Perfecto, ahora mismo.</div>
+          </div>
+          <div class="chatbar">
+            <input class="inp" placeholder="Escribe un mensaje…" />
+            <button class="send">➤</button>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Solicitudes</h3>
+          <div class="doc"><span class="fi">🌴</span><div>Vacaciones 1–7 ago<small>Pendiente</small></div><span class="badge pend" style="margin-left:auto">en revisión</span></div>
+          <div class="doc"><span class="fi">✓</span><div>Permiso retribuido<small>14 jun</small></div><span class="badge ok" style="margin-left:auto">aprobada</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <h2 class="sec"><span class="n">05</span> Qué se toca</h2>
+  <div class="legend">
+    <div><b style="color:var(--green)">SÍ</b> — globals.css (tokens+fuentes), layout admin con sidebar, wordmark/icono SVG, restyle de login, empleados, expediente, solicitudes, chat, push, iconos PWA.</div>
+    <div><b style="color:var(--vermilion)">NO</b> — rutas API, lib/*, prisma, auth/tenant, polling, ningún flujo de datos.</div>
+  </div>
+
+  <p class="note">iarrhh · mockup de marca — el contenido es ficticio. Aprueba y lo escribo en el spec.</p>
+</div>
+</body>
+</html>

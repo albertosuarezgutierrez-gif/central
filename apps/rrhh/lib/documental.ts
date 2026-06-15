@@ -1,0 +1,57 @@
+import { prisma } from '@/lib/prisma'
+import { Prisma } from '@prisma/client'
+import { validarSubida, construirPathStorage, carpetasVisibles, type Actor } from '@central/module-documental'
+import { CARPETAS, CARPETAS_IDX } from '@/lib/carpetas'
+import { subirObjeto, borrarObjeto, urlFirmada } from '@/lib/storage'
+
+/** Verifica que el empleado pertenece a la empresa (scope multi-tenant). Lanza si no. */
+async function exigeEmpleado(empresaId: string, empleadoId: string) {
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT id FROM rrhh.empleados WHERE id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid LIMIT 1`)
+  if (!rows[0]) throw new Error('Empleado no encontrado')
+}
+
+/** Lista el expediente de un empleado, agrupado por carpeta visible para `actor`, con URLs firmadas. */
+export async function listarExpediente(empresaId: string, empleadoId: string, actor: Actor) {
+  await exigeEmpleado(empresaId, empleadoId)
+  const visibles = new Set(carpetasVisibles(CARPETAS, actor).map(c => c.id))
+  const docs = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT id, carpeta, nombre, tipo, tamano, storage_path, subido_por, caducidad, creada_at
+    FROM rrhh.documentos WHERE empleado_id = ${empleadoId}::uuid ORDER BY creada_at DESC`)
+  const conUrl = await Promise.all(
+    docs.filter(d => visibles.has(d.carpeta)).map(async d => ({
+      id: d.id, carpeta: d.carpeta, nombre: d.nombre, tipo: d.tipo, tamano: d.tamano,
+      subido_por: d.subido_por, caducidad: d.caducidad, creada_at: d.creada_at,
+      url: await urlFirmada(d.storage_path),
+    }))
+  )
+  return conUrl
+}
+
+/** Sube un documento al expediente. `actor` decide permisos por carpeta (vía el módulo). */
+export async function subirDocumento(
+  empresaId: string, empleadoId: string, actor: Actor,
+  entrada: { carpeta: string; nombre: string; tipo?: string | null; tamano?: number | null; bytes: ArrayBuffer }
+) {
+  await exigeEmpleado(empresaId, empleadoId)
+  const v = validarSubida(CARPETAS_IDX, actor, entrada) // lanza si carpeta/permiso/nombre/tamaño no válidos
+  const uuid = crypto.randomUUID()
+  const path = construirPathStorage({ tipo: 'empleado', id: empleadoId }, v.carpeta, v.nombre, uuid)
+  await subirObjeto(path, entrada.bytes, v.tipo ?? 'application/octet-stream')
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    INSERT INTO rrhh.documentos (empresa_id, empleado_id, carpeta, nombre, tipo, tamano, storage_path, subido_por)
+    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${v.carpeta}, ${v.nombre}, ${v.tipo}, ${v.tamano}, ${path}, ${actor})
+    RETURNING id`)
+  return { id: rows[0].id, carpeta: v.carpeta, nombre: v.nombre }
+}
+
+/** Borra un documento (solo el gestor; scope por empresa). Quita el objeto del Storage. */
+export async function borrarDocumento(empresaId: string, empleadoId: string, docId: string) {
+  await exigeEmpleado(empresaId, empleadoId)
+  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+    SELECT storage_path FROM rrhh.documentos
+    WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid LIMIT 1`)
+  if (!rows[0]) throw new Error('Documento no encontrado')
+  await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE id = ${docId}::uuid`)
+  await borrarObjeto(rows[0].storage_path)
+}

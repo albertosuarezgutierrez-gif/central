@@ -17,6 +17,14 @@ export const CATEGORIAS = [
 ] as const
 export type Categoria = typeof CATEGORIAS[number]
 
+// Etiqueta visible (con emoji) por categoría. Compartida por /banca y el dashboard.
+export const CATEGORIA_LABEL: Record<Categoria, string> = {
+  nomina: '👤 Nómina', proveedor: '📦 Proveedor', impuestos: '🏛️ Impuestos',
+  suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
+  cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
+  prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
+}
+
 // Mapa categoría → cuenta PGC orientativa (Plan General Contable español).
 const PGC: Record<Categoria, string> = {
   nomina: '640', proveedor: '600', impuestos: '475', suministros: '628',

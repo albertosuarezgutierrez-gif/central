@@ -3,7 +3,8 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
-import { getSaldoConsolidado, getEvolucionMensual, type MesEvolucion } from '@/lib/banca'
+import { getSaldoConsolidado, getEvolucionMensual, getComparativaMensual, getGastosPorCategoria, getAlertas, type MesEvolucion, type ComparativaMes, type GastoCategoria, type Alertas } from '@/lib/banca'
+import { CATEGORIA_LABEL, type Categoria } from '@/lib/categorizar'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
 async function getStripHoy(cuentaId: string) {
@@ -64,11 +65,15 @@ export default async function DashboardPage() {
     [] as Awaited<ReturnType<typeof prisma.sociedad.findMany>>,
   )
 
-  // Saldo bancario consolidado + strip hoy + evolución mensual (cada uno tolerante a fallos)
-  const [saldo, stripHoy, evolucion] = await Promise.all([
+  // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
+  // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
+  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas] = await Promise.all([
     safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
     safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
+    safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
+    safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
+    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [] }),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -144,8 +149,19 @@ export default async function DashboardPage() {
           </div>
         )}
 
+        {/* Alertas accionables (por revisar, posibles duplicados) */}
+        <AlertasBanner alertas={alertas} />
+
+        {/* Comparativa este mes vs anterior */}
+        {(comparativa.actual.ingresos > 0 || comparativa.actual.gastos > 0 || comparativa.anterior.ingresos > 0 || comparativa.anterior.gastos > 0) && (
+          <Comparativa actual={comparativa.actual} anterior={comparativa.anterior} />
+        )}
+
         {/* Gráfico evolución mensual (ingresos vs gastos del banco) */}
         {evolucion.length > 0 && <GraficoMensual data={evolucion} />}
+
+        {/* En qué se va el dinero: desglose de gastos por categoría (año en curso) */}
+        {gastosCat.length > 0 && <GastosPorCategoria data={gastosCat} />}
 
         {/* Welcome */}
         <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -288,6 +304,94 @@ function GraficoMensual({ data }: { data: MesEvolucion[] }) {
             </div>
           )
         })}
+      </div>
+    </section>
+  )
+}
+
+// Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos
+// duplicados). Si no hay nada, no renderiza.
+function AlertasBanner({ alertas }: { alertas: Alertas }) {
+  if (alertas.porRevisar === 0 && alertas.duplicados === 0) return null
+  return (
+    <div style={{
+      background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
+      padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
+    }}>
+      {alertas.porRevisar > 0 && (
+        <Link href="/banca" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
+          🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'movimiento' : 'movimientos'} por revisar →
+        </Link>
+      )}
+      {alertas.duplicados > 0 && (
+        <div style={{ fontSize: '13px', color: 'var(--text)' }}>
+          ⚠️ <strong>{alertas.duplicados}</strong> {alertas.duplicados === 1 ? 'posible cargo duplicado' : 'posibles cargos duplicados'}
+          {alertas.duplicadosDetalle.length > 0 && (
+            <span style={{ color: 'var(--muted)' }}>
+              {' '}— {alertas.duplicadosDetalle.map(d => `${d.concepto} (${fmtEur(d.importe)})`).join(', ')}
+            </span>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// Comparativa del mes en curso vs el mes anterior, con la variación (delta).
+function Comparativa({ actual, anterior }: { actual: ComparativaMes; anterior: ComparativaMes }) {
+  const delta = (a: number, b: number) => (b === 0 ? (a === 0 ? 0 : 100) : ((a - b) / Math.abs(b)) * 100)
+  const filas: Array<{ label: string; a: number; b: number; buenoSiSube: boolean }> = [
+    { label: 'Ingresos', a: actual.ingresos, b: anterior.ingresos, buenoSiSube: true },
+    { label: 'Gastos', a: actual.gastos, b: anterior.gastos, buenoSiSube: false },
+    { label: 'Neto', a: actual.neto, b: anterior.neto, buenoSiSube: true },
+  ]
+  return (
+    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📅 Este mes vs. el anterior</h2>
+      <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+        {filas.map(f => {
+          const d = delta(f.a, f.b)
+          const sube = d >= 0
+          const bueno = f.buenoSiSube ? sube : !sube
+          const color = f.label === 'Neto' ? (f.a >= 0 ? '#16a34a' : '#dc2626') : 'var(--text)'
+          return (
+            <div key={f.label}>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500, marginBottom: '2px' }}>{f.label}</div>
+              <div style={{ fontSize: '20px', fontWeight: 800, color }}>{fmtEur(f.a)}</div>
+              <div style={{ fontSize: '12px', fontWeight: 600, color: d === 0 ? 'var(--muted)' : (bueno ? '#16a34a' : '#dc2626') }}>
+                {sube ? '▲' : '▼'} {Math.abs(Math.round(d))}% · antes {fmtEur(f.b)}
+              </div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
+// Desglose horizontal de gastos por categoría (año en curso). Barra proporcional al mayor.
+function GastosPorCategoria({ data }: { data: GastoCategoria[] }) {
+  const top = data.slice(0, 8)
+  const max = Math.max(1, ...top.map(d => d.total))
+  const totalAnio = data.reduce((s, d) => s + d.total, 0)
+  return (
+    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>💸 En qué se va el dinero</h2>
+        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Gastos {new Date().getFullYear()} · total {fmtEur(totalAnio)}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+        {top.map(d => (
+          <div key={d.categoria} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <div style={{ width: '140px', flexShrink: 0, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {CATEGORIA_LABEL[d.categoria as Categoria] ?? d.categoria}
+            </div>
+            <div style={{ flex: 1, background: 'var(--bg)', borderRadius: '6px', height: '20px', overflow: 'hidden' }}>
+              <div style={{ width: `${Math.round((d.total / max) * 100)}%`, height: '100%', background: 'var(--primary)', minWidth: '2px' }} />
+            </div>
+            <div style={{ width: '92px', flexShrink: 0, textAlign: 'right', fontSize: '13px', fontWeight: 700 }}>{fmtEur(d.total)}</div>
+          </div>
+        ))}
       </div>
     </section>
   )
