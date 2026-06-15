@@ -1,5 +1,8 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Generar un artículo de ~1800 palabras (max_tokens 4096, sin streaming) en NIM
+// llama-3.3-70b tarda ~70-100s. Con maxDuration=60 Vercel mataba la función antes
+// de terminar; subimos a 120 para dar margen real a la generación.
+export const maxDuration = 120
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
@@ -121,10 +124,14 @@ RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
   "cta_texto": "texto del CTA final"
 }`
 
+  // timeoutMs explícito de 110s: el default de callAI (15s) es muy corto para una
+  // generación de 4096 tokens y provocaba "NIM falló: NVIDIA timeout". Queda por
+  // debajo de maxDuration=120 para dejar margen al parseo + insert + Telegram.
   const raw = await callAI(
     'Eres un experto en SEO y copywriting para hostelería española. Respondes SOLO con un JSON válido, sin markdown ni backticks.',
     prompt,
-    4096
+    4096,
+    110_000
   )
 
   let parsed: any
