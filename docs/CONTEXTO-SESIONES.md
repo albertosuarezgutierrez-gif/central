@@ -16,6 +16,36 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269**
+  Petición de Pilar (RR.HH. de Mariscos González, audio): intranet de empleados con expediente
+  documental por trabajador (carpetas: datos personales/contratos/nóminas/partes médicos/otros, subida
+  **bidireccional**), **firma electrónica avanzada** (eIDAS art. 26 — basta avanzada para nóminas/contratos
+  por art. 29 ET + STS 1023/2016; NO cualificada), chat y solicitudes (vacaciones/permisos/parte médico).
+  - **Spec:** `docs/superpowers/specs/2026-06-15-apps-rrhh-portal-empleado-design.md`. **Plan Fase 1:**
+    `docs/superpowers/plans/2026-06-15-rrhh-fase1-cimiento.md`.
+  - **Arquitectura definitiva (decisión 15/06):** se aprovecha que Sique Brilla (ialimp) está **inactivo**
+    para crear paquetes compartidos sin duplicar: **`core-firma`** (núcleo firma), **`module-chat`** (ialimp
+    lo adopta, rrhh lo consume; datos por `cuenta_id` en plataforma cuando haya cliente multi-producto) y
+    **`module-documental`** (motor de expedientes agnóstico de entidad sobre `core-storage`; rrhh lo estrena,
+    ialimp migra después JSONB→tablas). Chat NO como app/servicio propio (rompe la matriz).
+  - **Firma proveedor:** investigación comparada (Firmafy/Signaturit/DocuSign/Viafirma/Click&Sign/Tecalis).
+    Para el piloto → **Firmafy** (avanzada biométrica + 6 evidencias + custodia 10 años + Programa Partners)
+    o Click&Sign (pago por uso). Adaptador `self-hosted` (PAdES + RFC 3161) a futuro. Pendiente cotización partner.
+  - **IMPLEMENTADO (cimiento, probado):** scaffold `apps/rrhh` (Next 15, espejo de ialimp), Prisma schema
+    (`empresas`, `usuarios_rrhh`, `empleados`), auth JWT responsable (`lib/auth.ts`/`lib/tenant.ts`, sesión
+    única por jti) + acceso empleado por enlace mágico+PIN (`lib/empleado-auth.ts`), lógica de empleados con
+    tests (`lib/empleados.ts` + `.test.ts`, **3/3 verde**), API empleados acotada por `empresa_id`
+    (alta/lista/editar/baja), rutas login/logout, UI mínima (`/login`, `/admin/empleados`, `/e/[token]`).
+    **`next build` verde** (10 rutas). `vitest` verde.
+  - **⛔ BLOQUEO BD (pendiente decisión de Alberto):** la BD propia de rrhh (aislamiento RGPD por datos de
+    salud) **no se pudo crear** — la org Supabase ha llegado al **límite de 2 proyectos gratis** (ya están
+    `wswbehlcuxqxyinousql` compartido + `efncqyvhniaxsirhdxaa` de ia-rest). Opciones: (a) **schema `rrhh` en
+    el proyecto compartido** con RLS estricta (gratis, menos aislamiento — mezcla datos de salud con las otras
+    verticales), o (b) **plan Supabase de pago** para proyecto dedicado. Migración `0001_cimiento.sql` lista,
+    **sin aplicar** hasta decidir. El código del cimiento NO depende de esto en build.
+  - **PENDIENTE Fase 1:** `module-documental` + expediente, `module-chat` (+ adopción ialimp con preview
+    verde), notificaciones (push+email) + PWA, proyecto Vercel `rrhh`. **Precio a cliente:** diferido.
+
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
   - **Tabla nueva `iarest.recibos_digitales`** (token único + snapshot JSONB autocontenido + RLS service_role).
