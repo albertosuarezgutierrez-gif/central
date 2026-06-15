@@ -46,25 +46,30 @@ export async function importarExtracto(
     cuentas += 1
 
     // Ordinal por hash base para distinguir movimientos idénticos del mismo extracto.
+    // Inserción EN BLOQUE (un solo INSERT por extracto) — antes era uno a uno y con ficheros
+    // grandes (p. ej. el extracto de la tarjeta, cientos de filas) el endpoint daba timeout.
     const vistos = new Map<string, number>()
-    for (const m of ex.movimientos) {
+    const filasMov = ex.movimientos.map(m => {
       const base = dedupeHash(m)
       const n = (vistos.get(base) ?? 0) + 1
       vistos.set(base, n)
       const hash = n > 1 ? `${base}-${n}` : base
-
-      const res = await prisma.$executeRaw`
+      return Prisma.sql`(
+        ${cuentaBancariaId}::uuid, ${m.fechaOperacion || null}::date, ${m.fechaValor || null}::date,
+        ${m.importe}, ${m.saldoPosterior ?? null}, ${m.concepto || null}, ${m.contraparte || null}, ${m.referencia || null},
+        ${origen}, ${hash}
+      )`
+    })
+    if (filasMov.length) {
+      const res = await prisma.$executeRaw(Prisma.sql`
         INSERT INTO movimientos_bancarios
           (cuenta_bancaria_id, fecha_operacion, fecha_valor, importe, saldo_posterior, concepto, contraparte, referencia, origen, dedupe_hash)
-        VALUES (
-          ${cuentaBancariaId}::uuid, ${m.fechaOperacion || null}::date, ${m.fechaValor || null}::date,
-          ${m.importe}, ${m.saldoPosterior ?? null}, ${m.concepto || null}, ${m.contraparte || null}, ${m.referencia || null},
-          ${origen}, ${hash}
-        )
+        VALUES ${Prisma.join(filasMov)}
         ON CONFLICT (cuenta_bancaria_id, dedupe_hash) DO NOTHING
-      `
-      if (res === 1) insertados += 1
-      else duplicados += 1
+      `)
+      const ins = Number(res)
+      insertados += ins
+      duplicados += filasMov.length - ins
     }
   }
 
