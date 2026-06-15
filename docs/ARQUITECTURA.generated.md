@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T09:00:42Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T09:06:37Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -119,13 +119,13 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (15/06/2026) 🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256
+- (15/06/2026) 🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)
+- (14/06/2026) 🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)
+- (14/06/2026) 🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)
 - (15/06/2026) 🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital
 - (15/06/2026) 🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)
 - (14/06/2026) 🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria
 - (14/06/2026) 🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239
 - (14/06/2026) 🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)
 - (14/06/2026) 📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)
-- (14/06/2026) 🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)
-- (14/06/2026) 🧹 IALIMP: "Agenda" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)
-- (14/06/2026) 🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)
 
