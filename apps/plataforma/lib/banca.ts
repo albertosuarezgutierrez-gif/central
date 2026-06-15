@@ -204,3 +204,20 @@ type MovRow = {
   concepto: string | null; concepto_normalizado: string | null; categoria: string | null
   contraparte: string | null; conciliado: boolean; requiere_revision: boolean
 }
+
+// Resumen por "destino"/negocio (pisos, dúplex, seguros, traspaso interno, personal).
+export type ResumenDestino = { destino: string; movs: number; ingresos: number; gastos: number }
+export async function getResumenPorDestino(cuentaId: string): Promise<ResumenDestino[]> {
+  const rows = await prisma.$queryRaw<Array<{ destino: string | null; movs: bigint; ingresos: unknown; gastos: unknown }>>`
+    SELECT coalesce(mb.destino, 'personal') AS destino,
+           count(*) AS movs,
+           coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+           coalesce(sum(mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+    GROUP BY coalesce(mb.destino, 'personal')
+    ORDER BY count(*) DESC
+  `
+  return rows.map(r => ({ destino: r.destino ?? 'personal', movs: Number(r.movs), ingresos: Number(r.ingresos), gastos: Number(r.gastos) }))
+}

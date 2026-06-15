@@ -1,7 +1,8 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, fmtEur } from '@/lib/banca'
+import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, fmtEur } from '@/lib/banca'
+import { DESTINO_LABEL } from '@/lib/categorizar'
 import { getTesoreria } from '@/lib/tesoreria'
 import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja } from './BancaClient'
 
@@ -19,12 +20,13 @@ export default async function BancaPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const [sociedades, saldo, movimientos, tesoreria, porRevisar] = await Promise.all([
+  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientos(session.id, undefined, 100),
     getTesoreria(session.id),
     listarPorRevisar(session.id),
+    getResumenPorDestino(session.id),
   ])
 
   return (
@@ -67,6 +69,29 @@ export default async function BancaPage() {
                 </div>
               ))}
             </div>
+          </section>
+        )}
+
+        {/* Por negocio / destino */}
+        {porDestino.length > 0 && (
+          <section style={{ marginBottom: '32px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>🏷️ Por negocio</h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+              {porDestino.map(d => (
+                <div key={d.destino} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
+                  <div style={{ fontSize: '13px', fontWeight: 700 }}>{DESTINO_LABEL[d.destino as keyof typeof DESTINO_LABEL] || d.destino}</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{d.movs} movimientos</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a' }}>+{fmtEur(d.ingresos)}</div>
+                  <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{fmtEur(d.gastos)}</div>
+                  <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '4px', borderTop: '1px solid var(--border)', paddingTop: '4px', color: (d.ingresos + d.gastos) >= 0 ? '#16a34a' : '#dc2626' }}>
+                    {fmtEur(d.ingresos + d.gastos)}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
+              🔁 Los traspasos internos no son ingresos/gastos reales. La tarjeta entrará detallada al subir su extracto.
+            </p>
           </section>
         )}
 
