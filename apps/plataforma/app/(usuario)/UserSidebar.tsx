@@ -1,5 +1,6 @@
 'use client'
 import Link from 'next/link'
+import { useEffect, useState } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 
 const NAV_NEGOCIO = [
@@ -19,10 +20,125 @@ const NAV_OPERADOR = [
 export default function UserSidebar({ email, nombre, isOperator }: { email: string; nombre: string; isOperator: boolean }) {
   const path = usePathname()
   const router = useRouter()
+  const [isMobile, setIsMobile] = useState(false)
+  const [open, setOpen] = useState(false)
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    setIsMobile(mq.matches)
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
 
   async function logout() {
     await fetch('/api/auth/logout', { method: 'POST' })
     router.push('/login')
+  }
+
+  function NavLinks() {
+    return (
+      <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
+        {NAV_NEGOCIO.map(({ href, icon, label }) => {
+          const active = path === href || (href !== '/dashboard' && path.startsWith(href))
+          return (
+            <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
+              fontWeight: active ? 700 : 400,
+              background: active ? 'var(--primary-light)' : 'transparent',
+              color: active ? 'var(--primary)' : 'var(--text)',
+              fontSize: '14px', textDecoration: 'none',
+            }}>
+              <span>{icon}</span><span>{label}</span>
+            </Link>
+          )
+        })}
+
+        {isOperator && (
+          <>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
+            {NAV_OPERADOR.map(({ href, icon, label }) => {
+              const active = path.startsWith(href)
+              return (
+                <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
+                  fontWeight: active ? 700 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
+                }}>
+                  <span>{icon}</span><span>{label}</span>
+                </Link>
+              )
+            })}
+          </>
+        )}
+      </div>
+    )
+  }
+
+  function Footer() {
+    return (
+      <div style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
+        <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
+        <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
+        <button onClick={logout} style={{
+          width: '100%', padding: '7px', fontSize: '13px',
+          border: '1px solid var(--border)', borderRadius: '6px',
+          color: 'var(--muted)', background: 'transparent', cursor: 'pointer',
+        }}>Salir</button>
+      </div>
+    )
+  }
+
+  if (isMobile) {
+    return (
+      <>
+        {/* Botón hamburguesa */}
+        <button
+          onClick={() => setOpen(true)}
+          aria-label="Abrir menú"
+          style={{
+            position: 'fixed', top: 12, left: 12, zIndex: 60,
+            background: 'var(--surface)', border: '1px solid var(--border)',
+            borderRadius: '8px', padding: '6px 10px', fontSize: '18px',
+            lineHeight: 1, cursor: 'pointer', color: 'var(--text)',
+          }}
+        >☰</button>
+
+        {/* Backdrop */}
+        {open && (
+          <div
+            onClick={() => setOpen(false)}
+            style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 40 }}
+          />
+        )}
+
+        {/* Drawer */}
+        <nav style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0, width: 260, maxWidth: '82vw',
+          background: 'var(--surface)', borderRight: '1px solid var(--border)',
+          display: 'flex', flexDirection: 'column', zIndex: 50,
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform .25s ease',
+          boxShadow: open ? '2px 0 24px rgba(0,0,0,.15)' : 'none',
+        }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800, fontSize: '16px' }}>
+              <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '13px' }}>ia</span>
+              <span>plataforma</span>
+            </div>
+            <button onClick={() => setOpen(false)} aria-label="Cerrar menú"
+              style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '22px', lineHeight: 1, cursor: 'pointer' }}>×</button>
+          </div>
+          <NavLinks />
+          <Footer />
+        </nav>
+      </>
+    )
   }
 
   return (
@@ -38,58 +154,8 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
           <span>plataforma</span>
         </div>
       </div>
-
-      <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
-        {NAV_NEGOCIO.map(({ href, icon, label }) => {
-          const active = path === href || (href !== '/dashboard' && path.startsWith(href))
-          return (
-            <Link key={href} href={href} style={{
-              display: 'flex', alignItems: 'center', gap: '10px',
-              padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
-              fontWeight: active ? 700 : 400,
-              background: active ? 'var(--primary-light)' : 'transparent',
-              color: active ? 'var(--primary)' : 'var(--text)',
-              fontSize: '14px', textDecoration: 'none',
-            }}>
-              <span>{icon}</span>
-              <span>{label}</span>
-            </Link>
-          )
-        })}
-
-        {isOperator && (
-          <>
-            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
-            {NAV_OPERADOR.map(({ href, icon, label }) => {
-              const active = path.startsWith(href)
-              return (
-                <Link key={href} href={href} style={{
-                  display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
-                  fontWeight: active ? 700 : 400,
-                  background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
-                  fontSize: '14px', textDecoration: 'none',
-                }}>
-                  <span>{icon}</span>
-                  <span>{label}</span>
-                </Link>
-              )
-            })}
-          </>
-        )}
-      </div>
-
-      <div style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
-        <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 600, marginBottom: '2px' }}>{nombre}</div>
-        <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{email}</div>
-        <button onClick={logout} style={{
-          width: '100%', padding: '7px', fontSize: '13px',
-          border: '1px solid var(--border)', borderRadius: '6px',
-          color: 'var(--muted)', background: 'transparent',
-        }}>Salir</button>
-      </div>
+      <NavLinks />
+      <Footer />
     </nav>
   )
 }
