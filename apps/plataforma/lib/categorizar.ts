@@ -97,6 +97,10 @@ const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|ENDESA|FINETWORK|EMASESA|IBERDR
 export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null): Destino {
   const txt = `${concepto ?? ''} ${contraparte ?? ''}`
   const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')
+  // Liquidación/pago de tarjeta (agregado de Kutxa "TARJ.CRDTO" o "PAGO RECIBO 4662…" en la
+  // propia tarjeta): es un movimiento entre cuenta y tarjeta, NO un gasto real → no duplicar,
+  // porque el gasto real ya está en el detalle de la tarjeta.
+  if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return 'traspaso_interno'
   // Traspaso interno SOLO si el RECEPTOR (contraparte) eres tú — no si solo apareces como
   // ordenante en el concepto de una transferencia a un tercero.
   if (RE_TITULAR.test(contraparte ?? '')) return 'traspaso_interno'
@@ -123,6 +127,7 @@ function categorizarPorReglas(concepto: string | null, contraparte: string | nul
   if (has('ENDESA', 'IBERDROLA', 'NATURGY', 'REPSOL', 'MOVISTAR', 'VODAFONE', 'ORANGE', 'FINETWORK', 'TELEFONICA', 'JAZZTEL', 'MASMOVIL', 'EMASESA', 'CANAL ISABEL', 'GAS NATURAL', 'SUMINISTRO', 'ELECTRIC', 'FACTURA DE AGUA', 'FACTURA LUZ', 'FACTURA GAS')) return 'suministros'
   if (has('BIZUM')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
   if (has('TRANSFERENCIA', 'TRASPASO', 'ABONO POR TRANSF', 'TRANSF ')) return importe >= 0 ? 'cobro_cliente' : 'transferencia'
+  if (has('PAGO RECIBO 466', 'TARJ.CRDTO', 'TARJ CRDTO')) return 'transferencia'   // liquidación de tarjeta
   if (has('TARJETA', 'TARJ.', 'COMPRA EN', 'PAGO EN ', 'PAGO TARJETA', 'COMERCIO')) return 'tarjeta'
   if (has('RECIBO', 'ADEUDO', 'SEPA', 'DOMICILIAC', 'CUOTA ')) return 'proveedor'
   return null
