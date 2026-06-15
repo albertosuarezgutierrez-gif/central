@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T20:03:05Z",
+  "generadoEn": "2026-06-15T20:25:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2209,6 +2209,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
       "fecha": "15/06/2026"
     },
@@ -2262,10 +2266,6 @@
     },
     {
       "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)",
       "fecha": "14/06/2026"
     }
   ],
