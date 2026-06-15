@@ -69,7 +69,9 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
       })
     }
     return out
-  } catch {
+  } catch (e) {
+    // Log temporal de diagnóstico (sin secretos): por qué no categorizó.
+    console.error('[categorizar] IA falló · hasKey=', !!process.env.NVIDIA_API_KEY, '· error=', e instanceof Error ? e.message : String(e))
     return []
   }
 }
