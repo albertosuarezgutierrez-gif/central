@@ -48,14 +48,10 @@ export default async function ApartamentosPage() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
         {propias.map(p => (
           <Link key={p.id} href={`/apartamentos/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-            <div style={{
+            <div className="apt-card" style={{
               background: 'var(--surface)', border: '1px solid var(--border)',
-              borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)',
-              transition: 'box-shadow .15s', cursor: 'pointer',
-            }}
-              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,.12)')}
-              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => (e.currentTarget.style.boxShadow = 'var(--shadow)')}
-            >
+              borderRadius: 'var(--radius)', padding: '20px', cursor: 'pointer',
+            }}>
               <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
                 <div style={{ fontWeight: 700, fontSize: '15px' }}>{p.nombre}</div>
                 <span style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Ver detalle →</span>
