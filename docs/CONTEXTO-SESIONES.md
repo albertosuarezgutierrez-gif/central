@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)**
+  Construido el menú completo de ideas sobre el modelo existente (`movimientos_bancarios`, `destino`,
+  `categoria`), sin migraciones.
+  - **Dashboard**: comparativa "este mes vs anterior" (`getComparativaMensual`), desglose de gastos por
+    categoría del año (`getGastosPorCategoria`, barras CSS), banner de alertas accionables
+    (`getAlertas`: nº por revisar + posibles cargos duplicados por mismo importe+contraparte en ±4 días).
+  - **/banca**: buscador + filtros cliente (texto/ingreso-gasto/categoría, `MovimientosTabla`), neto por
+    negocio últimos 6 meses (`getEvolucionPorDestino`, tabla), estimación fiscal orientativa por trimestre
+    (`lib/fiscal.ts` `getEstimacionFiscal`: IVA 21% + IRPF fraccionado 20%, con aviso de que la real la
+    hace el gestor), y **Exportar CSV** (`/api/banca/export`, sep `;` + coma decimal + BOM).
+  - `CATEGORIA_LABEL` movido a `lib/categorizar.ts` (compartido dashboard/banca). Verificado `tsc` + `next build`.
+  - **PENDIENTES (decisión de Alberto, NO urgente):**
+    1. **Clasificar proveedores de tarjeta que siguen en `personal`**: GALOS CMI (~911 €, 38×),
+       **Amazon (49 compras, −1.619 €, +446 € devuelto → neto −1.173 €; pico en dic = regalos, pinta personal)**,
+       JHS Sevilla (~138 €). El concepto bancario NO trae el producto → para Amazon hay que cruzar con
+       "Tus pedidos" de amazon.es. Esperando a que Alberto diga qué va a negocio (deducible) y qué a personal.
+    2. **Rotar la clave privada de Enable Banking** (se vio en chat durante el debug; higiene, opcional):
+       regenerar y reemplazar `ENABLEBANKING_PRIVATE_KEY` en el proyecto Vercel `plataforma`.
+
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
   - **Tabla nueva `iarest.recibos_digitales`** (token único + snapshot JSONB autocontenido + RLS service_role).
