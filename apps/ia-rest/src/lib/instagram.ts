@@ -110,3 +110,29 @@ export async function publicarReel(videoUrl: string, caption: string): Promise<s
   if (!pub.id) throw new Error(`Error publicando Reel: ${JSON.stringify(pub)}`)
   return pub.id
 }
+
+// Publica una Story (imagen o vídeo). Best-effort: el llamador la envuelve en try/catch
+// para que un fallo de Story NUNCA bloquee la publicación del post de feed.
+export async function publicarStory(mediaUrl: string, esVideo = false): Promise<string> {
+  if (!IG_TOKEN || !IG_USER_ID) throw new Error('INSTAGRAM vars no configuradas')
+  const body: Record<string, unknown> = { media_type: 'STORIES', access_token: IG_TOKEN }
+  if (esVideo) body.video_url = mediaUrl; else body.image_url = mediaUrl
+  const create = await (await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body),
+  })).json() as { id?: string }
+  if (!create.id) throw new Error(`Error contenedor Story: ${JSON.stringify(create)}`)
+  let intentos = 0, status = 'IN_PROGRESS'
+  while (status === 'IN_PROGRESS' && intentos < (esVideo ? 30 : 10)) {
+    await new Promise(r => setTimeout(r, esVideo ? 4000 : 2000))
+    const s = await (await fetch(`https://graph.instagram.com/v21.0/${create.id}?fields=status_code&access_token=${IG_TOKEN}`)).json() as { status_code?: string }
+    status = s.status_code || 'ERROR'
+    intentos++
+  }
+  if (status !== 'FINISHED') throw new Error(`Story no lista: ${status}`)
+  const pub = await (await fetch(`https://graph.instagram.com/v21.0/${IG_USER_ID}/media_publish`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ creation_id: create.id, access_token: IG_TOKEN }),
+  })).json() as { id?: string }
+  if (!pub.id) throw new Error(`Error publicando Story: ${JSON.stringify(pub)}`)
+  return pub.id
+}
