@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T13:50:52Z",
+  "generadoEn": "2026-06-15T13:54:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2060,9 +2060,9 @@
       "movimientos_bancarios"
     ],
     "rrhh": [
-      "empleados",
-      "empresas",
-      "usuarios_rrhh"
+      "rrhh.empleados",
+      "rrhh.empresas",
+      "rrhh.usuarios_rrhh"
     ],
     "sivra": [
       "gastos_fijos"
