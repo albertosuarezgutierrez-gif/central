@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T12:10:58Z",
+  "generadoEn": "2026-06-15T13:51:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1647,6 +1647,7 @@
       "/api/auth/register",
       "/api/banca/analizar",
       "/api/banca/conciliar",
+      "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
       "/api/banca/psd2/callback",
@@ -2244,7 +2245,7 @@
     "packages": 18,
     "capacidades": 23,
     "skills": 13,
-    "apis": 768,
+    "apis": 769,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 19,
     "reimplementaciones": 0
