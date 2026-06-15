@@ -129,6 +129,45 @@ Notificaciones: **Web Push** (`@central/core-push` + service worker portado de s
   alta de personas + acceso por enlace/PIN (`limpiadora-auth`), white-label por empresa (`branding`),
   service worker de push (de `sivra`/`ia-rest`), `FirmaPad.tsx` (canvas táctil) como base de la firma móvil.
 
+## 7.bis Relación con `ialimp` y no-duplicación
+
+`ialimp` ya tiene chat, documentos por categoría y ausencias para sus limpiadoras (cliente vivo:
+Sique Brilla / Vanessa). **No se toca ni se migra nada de ialimp**: son productos y **bases de datos
+distintas**, sin datos compartidos. Vanessa sigue 100% en ialimp.
+
+El riesgo real no es de datos, es **duplicar código**. Regla de la matriz: lo compartido sube a
+`packages/*`; lo propio se queda en su app. Estrategia:
+
+- **`packages/core-firma`** → paquete compartido **desde ya** (capacidad nueva, claramente reutilizable
+  por rrhh y, a futuro, por los contratos de evento de ia-rest).
+- **Chat / documental** → en el piloto, rrhh los construye **reusando el código de ialimp como
+  referencia** (no se extrae módulo todavía, para no operar sobre el cliente vivo de ialimp). La
+  unificación en módulos es **deuda técnica planificada post-piloto** (ver §7.ter).
+
+## 7.ter Chat: estrategia de unificación (cliente multi-producto)
+
+Objetivo a futuro: si un cliente contrata **varios productos** de la casa de marcas, debe tener **un
+único chat** (y un único login), no un chat por app. Esto **no** se resuelve con una app/servicio de chat
+independiente (eso introduciría microservicio + auth cross-servicio + otra BD + realtime propio, justo lo
+que la matriz evita). Se resuelve con un **módulo**:
+
+- **`packages/module-chat`** → el **código** (lógica + componentes), TS puro, consumido por cualquier
+  vertical.
+- **Datos** → cuando se unifique, las tablas de chat viven en la **BD compartida de plataforma, indexadas
+  por `cuenta_id`** (jerarquía Cuenta → Sociedad → Negocio), no en la BD aislada de rrhh. La capa de
+  **comunicación** (chat) se separa así del **almacén sensible** (expedientes/partes médicos, que
+  permanecen aislados en rrhh y nunca salen de su silo).
+
+Secuencia:
+1. **Piloto:** chat propio de rrhh (código reusado de ialimp).
+2. **Disparador de unificación:** primer cliente con **dos productos** → se extrae `module-chat` y se
+   promueve a la capa de plataforma (datos por `cuenta_id`).
+3. ialimp adopta `module-chat` después, con cuidado (cliente vivo).
+
+Una **app/servicio de chat propio** solo se justificaría si el chat escala a producto realtime masivo
+(presencia, multimedia, multi-dispositivo) usado por muchos clientes/productos. Decisión de escala, no de
+piloto.
+
 ## 8. Fases de entrega
 
 - **Fase 1 — Cimiento:** scaffold `apps/rrhh` + proyecto Supabase propio + auth (responsable + empleado
