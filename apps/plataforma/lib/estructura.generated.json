@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T20:39:41Z",
+  "generadoEn": "2026-06-15T20:42:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -244,7 +244,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "no",
@@ -1869,6 +1869,7 @@
       "/api/banca/analizar",
       "/api/banca/conciliar",
       "/api/banca/duplicados",
+      "/api/banca/duplicados/reclamacion",
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
@@ -2562,7 +2563,7 @@
     "packages": 20,
     "capacidades": 23,
     "skills": 13,
-    "apis": 785,
+    "apis": 786,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
