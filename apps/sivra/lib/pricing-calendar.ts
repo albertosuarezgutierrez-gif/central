@@ -48,9 +48,10 @@ export function calcOurs(base: number, dateStr: string): number {
 
 // Factor RELATIVO de evento para el motor anclado al mercado: sólo sube en fechas con evento
 // declarado (Semana Santa/Feria/…); el resto de estacionalidad/día ya la refleja el mercado.
-// Acotado para que no se dispare. Devuelve 1.0 si no hay evento ese día.
+// Honra el calendario (hasta ×3): NO hay techo de precio, el suelo lo pone min_price y la
+// velocidad de subida la limita max_change_pct (sube gradual cada día). Devuelve 1.0 sin evento.
 export function eventFactor(dateStr: string): number {
   const e = EVENTS[dateStr]
   if (!e) return 1.0
-  return Math.max(1.0, Math.min(e, 1.5)) // +50% máx. de premium por evento
+  return Math.max(1.0, Math.min(e, 3.0)) // hasta ×3 en eventos (antes capado a 1.5, estrangulaba Semana Santa/Feria)
 }
