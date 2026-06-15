@@ -1,9 +1,10 @@
 {
-  "generadoEn": "2026-06-15T14:28:24Z",
+  "generadoEn": "2026-06-15T19:24:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
     "plataforma",
+    "rrhh",
     "sivra"
   ],
   "matriz": "plataforma",
@@ -49,6 +50,11 @@
       "npm": "@central/module-asn"
     },
     {
+      "id": "module-chat",
+      "tipo": "module",
+      "npm": "@central/module-chat"
+    },
+    {
       "id": "module-concursos",
       "tipo": "module",
       "npm": "@central/module-concursos"
@@ -62,6 +68,11 @@
       "id": "module-crm",
       "tipo": "module",
       "npm": "@central/module-crm"
+    },
+    {
+      "id": "module-documental",
+      "tipo": "module",
+      "npm": "@central/module-documental"
     },
     {
       "id": "module-feedback",
@@ -235,6 +246,10 @@
         "estado": "usado",
         "evidencias": 4
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "usado",
         "evidencias": 2
@@ -250,6 +265,10 @@
         "evidencias": 2
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -271,6 +290,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "no",
         "evidencias": 0
@@ -289,6 +312,10 @@
         "estado": "usado",
         "evidencias": 2
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "no",
         "evidencias": 0
@@ -304,6 +331,10 @@
         "evidencias": 2
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -325,6 +356,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
       "sivra": {
         "estado": "usado",
         "evidencias": 2
@@ -340,6 +375,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -361,6 +400,32 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-chat": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
       "sivra": {
         "estado": "no",
         "evidencias": 0
@@ -376,6 +441,10 @@
         "evidencias": 11
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -397,6 +466,10 @@
         "estado": "usado",
         "evidencias": 1
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "usado",
         "evidencias": 2
@@ -415,6 +488,32 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-documental": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 5
+      },
       "sivra": {
         "estado": "no",
         "evidencias": 0
@@ -430,6 +529,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -451,6 +554,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "no",
         "evidencias": 0
@@ -466,6 +573,10 @@
         "evidencias": 2
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -487,6 +598,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "no",
         "evidencias": 0
@@ -502,6 +617,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -523,6 +642,10 @@
         "estado": "no",
         "evidencias": 0
       },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
       "sivra": {
         "estado": "usado",
         "evidencias": 1
@@ -538,6 +661,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
         "estado": "no",
         "evidencias": 0
       },
@@ -561,6 +688,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -576,6 +707,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -597,6 +732,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": true,
         "evidencias": 1
@@ -612,6 +751,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -633,6 +776,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -648,6 +795,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -669,6 +820,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": true,
         "evidencias": 31
@@ -684,6 +839,10 @@
         "evidencias": 3
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -705,6 +864,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": true,
         "evidencias": 22
@@ -720,6 +883,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -741,6 +908,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -756,6 +927,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -777,6 +952,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -792,6 +971,10 @@
         "evidencias": 8
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -813,6 +996,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": true,
         "evidencias": 1
@@ -828,6 +1015,10 @@
         "evidencias": 16
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -849,6 +1040,10 @@
         "presente": true,
         "evidencias": 1
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -864,6 +1059,10 @@
         "evidencias": 0
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -885,6 +1084,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -900,6 +1103,10 @@
         "evidencias": 3
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -921,6 +1128,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": true,
+        "evidencias": 2
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -936,6 +1147,10 @@
         "evidencias": 2
       },
       "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
         "presente": false,
         "evidencias": 0
       },
@@ -957,6 +1172,10 @@
         "presente": false,
         "evidencias": 0
       },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
       "sivra": {
         "presente": false,
         "evidencias": 0
@@ -972,9 +1191,11 @@
     "core-storage": [],
     "module-agenda": [],
     "module-asn": [],
+    "module-chat": [],
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
+    "module-documental": [],
     "module-feedback": [],
     "module-horario": [],
     "module-materiales": [],
@@ -1670,6 +1891,23 @@
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
+    "rrhh": [
+      "/api/admin/empleados",
+      "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/chat",
+      "/api/admin/empleados/[id]/documentos",
+      "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/push/subscribe",
+      "/api/admin/solicitudes",
+      "/api/admin/solicitudes/[id]",
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/e/chat",
+      "/api/e/expediente",
+      "/api/e/login",
+      "/api/e/push/subscribe",
+      "/api/e/solicitudes"
+    ],
     "sivra": [
       "/api/admin/limpiadoras/asignacion",
       "/api/admin/limpiadoras/ausencias",
@@ -1888,6 +2126,15 @@
       "cuentas_bancarias",
       "movimientos_bancarios"
     ],
+    "rrhh": [
+      "rrhh.documentos",
+      "rrhh.empleados",
+      "rrhh.empresas",
+      "rrhh.mensajes",
+      "rrhh.push_subscriptions",
+      "rrhh.solicitudes",
+      "rrhh.usuarios_rrhh"
+    ],
     "sivra": [
       "gastos_fijos"
     ]
@@ -1961,6 +2208,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)",
       "fecha": "15/06/2026"
     },
@@ -2015,15 +2266,13 @@
     {
       "titulo": "🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)",
       "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209",
-      "fecha": "14/06/2026"
     }
   ],
   "saludRepo": {
     "packagesSinDescripcion": [],
-    "appsSinClaudeMd": []
+    "appsSinClaudeMd": [
+      "rrhh"
+    ]
   },
   "gaps": {
     "modulosInfrautilizados": [],
@@ -2036,6 +2285,7 @@
         ],
         "falta": [
           "ialimp",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2047,6 +2297,7 @@
         ],
         "falta": [
           "ialimp",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2058,7 +2309,8 @@
           "sivra"
         ],
         "falta": [
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ]
       },
       {
@@ -2069,6 +2321,7 @@
         ],
         "falta": [
           "ialimp",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2080,6 +2333,7 @@
         ],
         "falta": [
           "ialimp",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2091,6 +2345,7 @@
         ],
         "falta": [
           "ialimp",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2102,7 +2357,20 @@
           "sivra"
         ],
         "falta": [
-          "ia-rest"
+          "ia-rest",
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "agenda-asignacion",
+        "label": "Agenda / auto-asignación",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
         ]
       },
       {
@@ -2113,7 +2381,8 @@
         ],
         "falta": [
           "ia-rest",
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ]
       },
       {
@@ -2124,7 +2393,8 @@
         ],
         "falta": [
           "ia-rest",
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ]
       },
       {
@@ -2135,6 +2405,7 @@
           "ialimp"
         ],
         "falta": [
+          "rrhh",
           "sivra"
         ]
       },
@@ -2146,7 +2417,8 @@
           "sivra"
         ],
         "falta": [
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ]
       },
       {
@@ -2157,7 +2429,32 @@
           "ialimp"
         ],
         "falta": [
+          "rrhh",
           "sivra"
+        ]
+      },
+      {
+        "capacidad": "almacen-stock",
+        "label": "Almacén / stock / ASN",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "proveedores",
+        "label": "Proveedores / compras",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
         ]
       },
       {
@@ -2168,6 +2465,7 @@
           "ialimp"
         ],
         "falta": [
+          "rrhh",
           "sivra"
         ]
       },
@@ -2179,6 +2477,7 @@
           "ialimp"
         ],
         "falta": [
+          "rrhh",
           "sivra"
         ]
       },
@@ -2190,6 +2489,7 @@
         ],
         "falta": [
           "ialimp",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2201,6 +2501,7 @@
           "ialimp"
         ],
         "falta": [
+          "rrhh",
           "sivra"
         ]
       },
@@ -2212,6 +2513,7 @@
         ],
         "falta": [
           "ia-rest",
+          "rrhh",
           "sivra"
         ]
       },
@@ -2220,10 +2522,23 @@
         "label": "Notificaciones (push)",
         "tiene": [
           "ia-rest",
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ],
         "falta": [
           "sivra"
+        ]
+      },
+      {
+        "capacidad": "asistente-ia",
+        "label": "Asistente / copiloto IA",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
         ]
       },
       {
@@ -2234,6 +2549,7 @@
         ],
         "falta": [
           "ia-rest",
+          "rrhh",
           "sivra"
         ]
       }
@@ -2241,13 +2557,13 @@
     "reimplementaciones": []
   },
   "resumen": {
-    "verticales": 4,
-    "packages": 18,
+    "verticales": 5,
+    "packages": 20,
     "capacidades": 23,
     "skills": 13,
-    "apis": 769,
+    "apis": 784,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 19,
+    "oportunidadesPortar": 23,
     "reimplementaciones": 0
   }
 }

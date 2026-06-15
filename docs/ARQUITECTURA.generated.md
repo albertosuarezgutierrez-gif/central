@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:28:24Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T19:24:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 18 packages · 23 capacidades · 13 skills · 769 rutas API.
+**Resumen:** 5 apps · 20 packages · 23 capacidades · 13 skills · 784 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -22,6 +22,11 @@
 - **Capacidades:** Facturación / VeriFactu
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 36
+### rrhh
+- **Módulos que usa:** core-storage, module-chat, module-documental
+- **Capacidades:** Notificaciones (push)
+- **Tablas (7):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 15
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -45,13 +50,16 @@
   - Lo usan: ia-rest, ialimp, sivra
   - Depende de: —
 - **core-storage** (core) → `@central/core-storage`
-  - Lo usan: ialimp, sivra
+  - Lo usan: ialimp, rrhh, sivra
   - Depende de: —
 - **module-agenda** (module) → `@central/module-agenda`
   - Lo usan: —
   - Depende de: —
 - **module-asn** (module) → `@central/module-asn`
   - Lo usan: ia-rest
+  - Depende de: —
+- **module-chat** (module) → `@central/module-chat`
+  - Lo usan: rrhh
   - Depende de: —
 - **module-concursos** (module) → `@central/module-concursos`
   - Lo usan: ialimp
@@ -61,6 +69,9 @@
   - Depende de: —
 - **module-crm** (module) → `@central/module-crm`
   - Lo usan: ia-rest, ialimp
+  - Depende de: —
+- **module-documental** (module) → `@central/module-documental`
+  - Lo usan: rrhh
   - Depende de: —
 - **module-feedback** (module) → `@central/module-feedback`
   - Lo usan: ia-rest
@@ -100,27 +111,32 @@
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en ialimp.
-- ⚠️ **Reservas**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest.
-- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp.
-- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Informes**: en ialimp; falta en ia-rest, sivra.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Eventos / catering / BEO**: en ia-rest, sivra; falta en ialimp, rrhh.
+- ⚠️ **Reservas**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest, rrhh.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp, rrhh.
+- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp, rrhh.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp, rrhh.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (15/06/2026) 🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269
 - (15/06/2026) 🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)
 - (15/06/2026) 🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256
 - (15/06/2026) 🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)
@@ -130,5 +146,4 @@
 - (15/06/2026) 🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)
 - (14/06/2026) 🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria
 - (14/06/2026) 🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239
-- (14/06/2026) 🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)
 
