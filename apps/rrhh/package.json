@@ -10,6 +10,8 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@central/core-storage": "file:../../packages/core-storage",
+    "@central/module-documental": "file:../../packages/module-documental",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.46.2",
     "bcryptjs": "^2.4.3",

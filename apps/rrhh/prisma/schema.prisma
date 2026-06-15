@@ -43,6 +43,26 @@ model empleados {
   pin_hash      String?
   creada_at     DateTime  @default(now()) @db.Timestamptz(6)
   empresa       empresas  @relation(fields: [empresa_id], references: [id])
+  documentos    documentos[]
 
+  @@index([empresa_id])
+}
+
+model documentos {
+  id           String    @id @default(uuid()) @db.Uuid
+  empresa_id   String    @db.Uuid
+  empleado_id  String    @db.Uuid
+  carpeta      String
+  nombre       String
+  tipo         String?
+  tamano       BigInt?
+  storage_path String
+  subido_por   String
+  caducidad    DateTime? @db.Date
+  estado_firma String    @default("no_requiere")
+  creada_at    DateTime  @default(now()) @db.Timestamptz(6)
+  empleado     empleados @relation(fields: [empleado_id], references: [id], onDelete: Cascade)
+
+  @@index([empleado_id])
   @@index([empresa_id])
 }

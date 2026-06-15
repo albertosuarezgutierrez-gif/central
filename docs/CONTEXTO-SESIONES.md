@@ -45,8 +45,21 @@
     propias). La conexión de rrhh usará `DATABASE_URL` con `?schema=rrhh`. **Migrable a proyecto dedicado**
     cuando se pase a plan de pago (mejor aislamiento RGPD de los datos de salud). Pendiente: cargar env
     `DATABASE_URL`/`JWT_SECRET`/keys en el (futuro) proyecto Vercel `rrhh`.
-  - **PENDIENTE Fase 1:** `module-documental` + expediente, `module-chat` (+ adopción ialimp con preview
-    verde), notificaciones (push+email) + PWA, proyecto Vercel `rrhh`. **Precio a cliente:** diferido.
+  - **📁 `module-documental` IMPLEMENTADO + expediente en rrhh (15/06):** nuevo paquete
+    **`packages/@central/module-documental`** = motor de expedientes **AGNÓSTICO DE ENTIDAD** (puro, sin BD/
+    Storage): `tipos.ts` (OwnerRef opaco, Actor `gestor|titular`, ConfigCarpeta), `permisos.ts`
+    (puedeSubir/puedeVer/carpetasVisibles, indexarCarpetas), `documental.ts` (validarSubida +
+    construirPathStorage `<tipo>/<id>/<carpeta>/<uuid>.<ext>`). **Tests 8/8 verde.** Las categorías,
+    permisos y Storage los inyecta cada vertical (rrhh lo estrena; ialimp migrará después su JSONB).
+  - **rrhh consume el módulo** vía `file:` deps + `transpilePackages` (`@central/module-documental` +
+    `@central/core-storage`). `lib/carpetas.ts` (taxonomía empleado: datos_personales/contratos/nominas/
+    partes_medicos/otros + permisos por carpeta), `lib/storage.ts` (subir/borrar con service_role + URL
+    firmada vía core-storage), `lib/documental.ts` (listar/subir/borrar, scope empresa+empleado). API:
+    `/api/admin/empleados/[id]/documentos` (GET expediente con URLs firmadas, POST subir FormData) +
+    `[docId]` (DELETE). **Tabla `rrhh.documentos` APLICADA** + **bucket privado `rrhh-documentos` creado**.
+    `next build` verde (12 rutas). Falta UI del expediente (la subida hoy es solo API) + lado empleado `/e`.
+  - **PENDIENTE Fase 1:** UI del expediente (`/admin/empleados/[id]`), `module-chat` (+ adopción ialimp con
+    preview verde), notificaciones (push+email) + PWA, proyecto Vercel `rrhh`. **Precio a cliente:** diferido.
 
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
