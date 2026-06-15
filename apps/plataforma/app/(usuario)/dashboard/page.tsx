@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
-import { getSaldoConsolidado } from '@/lib/banca'
+import { getSaldoConsolidado, getEvolucionMensual, type MesEvolucion } from '@/lib/banca'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
 async function getStripHoy(cuentaId: string) {
@@ -53,10 +53,11 @@ export default async function DashboardPage() {
     orderBy: { createdAt: 'asc' },
   })
 
-  // Saldo bancario consolidado + strip hoy
-  const [saldo, stripHoy] = await Promise.all([
+  // Saldo bancario consolidado + strip hoy + evolución mensual
+  const [saldo, stripHoy, evolucion] = await Promise.all([
     getSaldoConsolidado(session.id),
     getStripHoy(session.id),
+    getEvolucionMensual(session.id),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -131,6 +132,9 @@ export default async function DashboardPage() {
             )}
           </div>
         )}
+
+        {/* Gráfico evolución mensual (ingresos vs gastos del banco) */}
+        {evolucion.length > 0 && <GraficoMensual data={evolucion} />}
 
         {/* Welcome */}
         <div style={{ marginBottom: '28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
@@ -242,6 +246,39 @@ function NegocioCard({ neg, fin, url, anio }: {
         )}
       </div>
     </a>
+  )
+}
+
+// Gráfico de barras mensual (server-side, CSS puro): ingresos (verde) vs gastos (rojo).
+function GraficoMensual({ data }: { data: MesEvolucion[] }) {
+  const max = Math.max(1, ...data.map(d => Math.max(d.ingresos, d.gastos)))
+  const MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+  const etiqueta = (mes: string) => MESES[Number(mes.slice(5, 7)) - 1] || mes
+  return (
+    <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px', marginBottom: '16px' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>📊 Evolución mensual</h2>
+        <div style={{ fontSize: '12px', color: 'var(--muted)', display: 'flex', gap: '12px' }}>
+          <span><span style={{ color: '#16a34a' }}>■</span> Ingresos</span>
+          <span><span style={{ color: '#dc2626' }}>■</span> Gastos</span>
+        </div>
+      </div>
+      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '10px', height: '160px', overflowX: 'auto' }}>
+        {data.map(d => {
+          const neto = d.ingresos - d.gastos
+          return (
+            <div key={d.mes} style={{ flex: '1 0 36px', display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'flex-end', gap: '3px', width: '100%', justifyContent: 'center' }}>
+                <div title={`Ingresos ${fmtEur(d.ingresos)}`} style={{ width: '14px', height: `${Math.round((d.ingresos / max) * 100)}%`, minHeight: d.ingresos > 0 ? '2px' : 0, background: '#16a34a', borderRadius: '3px 3px 0 0' }} />
+                <div title={`Gastos ${fmtEur(d.gastos)}`} style={{ width: '14px', height: `${Math.round((d.gastos / max) * 100)}%`, minHeight: d.gastos > 0 ? '2px' : 0, background: '#dc2626', borderRadius: '3px 3px 0 0' }} />
+              </div>
+              <div style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '6px', fontWeight: 600 }}>{etiqueta(d.mes)}</div>
+              <div style={{ fontSize: '10px', fontWeight: 700, color: neto >= 0 ? '#16a34a' : '#dc2626' }}>{neto >= 0 ? '+' : ''}{Math.round(neto / 1000 * 10) / 10}k</div>
+            </div>
+          )
+        })}
+      </div>
+    </section>
   )
 }
 

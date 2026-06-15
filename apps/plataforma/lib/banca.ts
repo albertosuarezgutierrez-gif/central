@@ -211,6 +211,24 @@ type MovRow = {
 }
 
 // Resumen por "destino"/negocio (pisos, dúplex, seguros, traspaso interno, personal).
+// Evolución mensual (ingresos vs gastos) de los últimos N meses, desde los movimientos
+// bancarios, excluyendo traspasos internos (no son ingreso/gasto real). Para el gráfico.
+export type MesEvolucion = { mes: string; ingresos: number; gastos: number }
+export async function getEvolucionMensual(cuentaId: string, meses = 12): Promise<MesEvolucion[]> {
+  const rows = await prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown }>>`
+    SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+           coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+           coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}))
+    GROUP BY 1 ORDER BY 1
+  `
+  return rows.map(r => ({ mes: r.mes, ingresos: Number(r.ingresos), gastos: Number(r.gastos) }))
+}
+
 export type ResumenDestino = { destino: string; movs: number; ingresos: number; gastos: number }
 export async function getResumenPorDestino(cuentaId: string): Promise<ResumenDestino[]> {
   const rows = await prisma.$queryRaw<Array<{ destino: string | null; movs: bigint; ingresos: unknown; gastos: unknown }>>`
