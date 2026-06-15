@@ -9,6 +9,7 @@
 // ============================================================
 
 import { createServerClient } from '@/lib/supabase'
+import { crearReciboDigital, type ReciboSnapshot } from '@/lib/recibo'
 
 // ── Tipos internos ───────────────────────────────────────────
 
@@ -779,6 +780,8 @@ interface CuentaParams {
   metodo_pago?:         string | null
   entregado?:           number | null
   cambio?:              number | null
+  // E-recibo digital: URL a /recibo/[token] (si se generó). Imprime QR si está presente.
+  recibo_url?: string | null
   items: {
     nombre:          string
     cantidad:        number
@@ -792,6 +795,22 @@ interface CuentaParams {
  * Compatible con Epson TM / Sunmi NT311 / Star TSP143 (80mm, 48 chars).
  * Soporta dos estados: PENDIENTE DE COBRO y COBRADO (con método y cambio).
  */
+/** Bloque ESC/POS para imprimir un QR (modelo 2) con `data`. Compatible Epson TM / Star. */
+function escposQR(data: string): Buffer {
+  const GS = 0x1d
+  const bytes = Buffer.from(data, 'latin1')
+  const len = bytes.length + 3
+  const pL = len & 0xff
+  const pH = (len >> 8) & 0xff
+  return Buffer.concat([
+    Buffer.from([GS, 0x28, 0x6b, 0x04, 0x00, 0x31, 0x41, 0x32, 0x00]), // modelo 2
+    Buffer.from([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x43, 0x06]),       // módulo size 6
+    Buffer.from([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x45, 0x31]),       // corrección M
+    Buffer.from([GS, 0x28, 0x6b, pL, pH, 0x31, 0x50, 0x30]), bytes,    // guardar datos
+    Buffer.from([GS, 0x28, 0x6b, 0x03, 0x00, 0x31, 0x51, 0x30]),       // imprimir
+  ])
+}
+
 export function generarEscPosCuenta(p: CuentaParams): Buffer {
   const ESC = 0x1B, GS = 0x1D, LF = 0x0A
   // Trunca a 48 chars para no desbordar línea; usa latin1 para ESC/POS
@@ -922,6 +941,14 @@ export function generarEscPosCuenta(p: CuentaParams): Buffer {
   }
   bufs.push(b(LF))
 
+  // ── E-RECIBO DIGITAL (QR) ───────────────────────────────
+  if (p.recibo_url) {
+    bufs.push(b(ESC, 0x61, 0x01)) // center
+    bufs.push(t('Escanea para tu recibo digital'), b(LF))
+    bufs.push(escposQR(p.recibo_url))
+    bufs.push(b(LF))
+  }
+
   // ── BRANDING ia.rest ────────────────────────────────────
   bufs.push(t('- - - - - - - - - - - - - - - - - - - -'), b(LF))
   bufs.push(t('gestionado con ia.rest'), b(LF))
@@ -946,6 +973,36 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
   impresora_nombre: string
 } | null> {
   const supabase = createServerClient()
+
+  // ── E-recibo digital: snapshot + token (no bloquea impresión si falla) ──
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL ?? 'https://www.iarest.es'
+  const baseImp = p.total / 1.10
+  const snapshot: ReciboSnapshot = {
+    restaurante: {
+      nombre: p.restaurante_nombre,
+      razon_social: p.razon_social ?? null,
+      nif: p.nif_emisor ?? null,
+      direccion: p.restaurante_direccion ?? null,
+    },
+    mesa_label: p.mesa_label,
+    zona_nombre: p.zona_nombre ?? null,
+    fecha: new Date().toISOString(),
+    numero_ticket: p.numero_ticket,
+    items: p.items.map(it => ({
+      nombre: it.nombre, cantidad: it.cantidad, precio_unitario: it.precio_unitario,
+    })),
+    total: p.total,
+    iva: {
+      tipo: 10,
+      base: Math.round(baseImp * 100) / 100,
+      cuota: Math.round((p.total - baseImp) * 100) / 100,
+    },
+    aeat: null,
+  }
+  const reciboToken = await crearReciboDigital({
+    local_id: p.local_id, comanda_id: p.comanda_id, snapshot,
+  })
+  if (reciboToken) p.recibo_url = `${baseUrl}/recibo/${reciboToken}`
 
   // ── 1. Buscar reglas de flujo que apliquen a 'cuenta' ────
   const { data: reglasDB } = await supabase
@@ -1031,6 +1088,7 @@ export async function crearPrintJobCuenta(p: CuentaParams): Promise<{
       'TOTAL'.padEnd(32) + p.total.toFixed(2) + ' EUR',
       '========================================',
       '', '  Solicite factura al camarero',
+      ...(p.recibo_url ? ['', '  Recibo digital:', '  ' + p.recibo_url] : []),
       '', '     Gestion con ia.rest', '       www.iarest.es', '',
     ]
     print_data = Buffer.from(lines.join('\n'), 'utf8').toString('base64')
