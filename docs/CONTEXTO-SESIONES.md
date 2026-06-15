@@ -16,20 +16,253 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📈 IG ia.rest — Crecimiento Fase 1 (PR #215, draft) — 14/06/2026**
-  Alberto: "no gano seguidores". Diagnóstico honesto: cuenta B2B de nicho + nueva + contenido repetitivo;
-  el agente solo publica, no optimiza alcance; y para un SaaS importan **leads**, no seguidores. Plan por fases
-  (alcance por código + guía no-code). **Fase 1 entregada:**
-  - **Diversidad de temas:** `elegirTemaConContexto` (`src/lib/instagram-context.ts`) recibe temas/módulos de
-    los últimos 5 posts y rota entre los 14 módulos (antes solo veía el último título → repetía "comandas").
-  - **Reels x2/sem:** `formatoDelDia` genera reel también el miércoles (con fallback a imagen ya existente).
-  - **Horarios:** crons `vercel.json` movidos a `0 16 * * 3` y `0 22 * * 5` (valle tarde / tras servicio).
-  - **CTA de seguir** en prompts de caption (imagen y reel).
-  - **`docs/instagram-growth.md`:** guía no-code (perfil, constancia, interacción manual, colaboraciones,
-    Meta Ads, LinkedIn/TikTok, medir leads). NO se hará bot de seguir/comentar (viola normas IG).
-  - **Fases siguientes (plan):** Stories auto, carruseles, UTM+blog→carrusel+lead magnet, actualidad/testimonios,
-    cross-post FB, newsjacking, formato serializado, auto-respuesta a comentarios.
-  - **Pendiente Alberto:** borrar las 4 EFs de prueba de la auditoría previa (ig-test-send x2, tg-webhookinfo, ig-migrate).
+- **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
+  Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
+  - **Tabla nueva `iarest.recibos_digitales`** (token único + snapshot JSONB autocontenido + RLS service_role).
+    Migración aplicada en el proyecto compartido `wswbehlcuxqxyinousql`, schema `iarest`.
+  - **`src/lib/recibo.ts`**: tipo `ReciboSnapshot`, `generarTokenRecibo()` (16 bytes base64url),
+    `crearReciboDigital()` (insert, devuelve token; no bloquea impresión si falla).
+  - **`src/lib/courier.ts`**: en `crearPrintJobCuenta` se crea el recibo (snapshot + token) y se imprime
+    un **bloque QR ESC/POS** (`escposQR`, modelo 2) en el ticket de cuenta → `iarest.es/recibo/[token]`.
+    El fallback de texto plano imprime la URL. `aeat` queda `null` (la factura legal se emite en cobro, no al pedir cuenta).
+  - **Ruta pública `src/app/recibo/[token]/page.tsx` + `ReciboView.tsx`**: server component, token = secreto
+    (sin sesión), diseño mobile-first con tema `C` (avatar inicial + nombre + items + total + IVA + AEAT si hay).
+    `next build` OK, ruta `ƒ /recibo/[token]`.
+  - **Fase 2 pendiente:** descargar PDF · pedir factura con NIF desde el móvil · email · marca avanzada
+    por restaurante (logo/color en `restaurantes` — hoy no existen esos campos).
+
+- **🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED) — 15/06/2026**
+  Ficha enriquecida en `/apartamentos` y nueva página `/apartamentos/[id]` con analítica completa por piso.
+
+  - **`lib/propiedades.ts`**: `getPropiedades()` enriquecida con ocupación %, ADR y top portal del mes (10 queries paralelas). Nueva función `getApartamentoDetalle(id)` con KPIs mes/año/YoY, próximas reservas, últimas 20, mix de portales, histórico 12 meses, gastos por categoría (tabla `gastos`, no `expenses`) + gastos compartidos.
+
+  - **`/apartamentos`**: tarjetas con barra de ocupación visual (verde ≥70%, ámbar ≥40%, rojo), ADR y portal principal. Cada tarjeta es link a `/apartamentos/[id]`.
+
+  - **`/apartamentos/[id]`** (nuevo server component):
+    - 8 KPIs: ingresos mes (con YoY %), gastos mes, resultado, ocupación %, ADR, ingresos YTD, gastos YTD, resultado YTD
+    - Gap detector: detecta huecos entre reservas próximas y muestra `⚠️ Huecos libres: Xd (fecha → fecha)`
+    - Break-even: `Math.ceil(gastosFijos / 12 / adr)` noches/mes para cubrir costes fijos (ALQUILER+COMUNIDAD+SEGURO)
+    - Mix de portales con barras de % visuales
+    - Histórico mensual 12 meses (más reciente primero) con ocupación visual
+    - Gastos por categoría con iconos (incl. SEGURO 🛡️) + gastos compartidos como referencia
+    - Últimas 20 reservas con bruto/neto
+
+- **🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)**
+  La API key de Smoobu estaba duplicada: en `SMOOBU_API_KEY` (env de Vercel, que usaba TODO sivra) y en
+  `pms_connections.smoobu_api_key` (BD, lado ialimp/limpiezas). Misma key, dos sitios → riesgo de drift al rotar.
+  Unificado: nuevo `apps/sivra/lib/smoobu.ts` (`getSmoobuKey()`) lee la key de la **BD** (`pms_connections`, fila
+  de Alberto `c8c1fb07-…`, seleccionada por id porque la tabla es multi-tenant), con el env **solo como respaldo**.
+  Migradas las **12 rutas** que hablaban con Smoobu (pricing apply/restore, rates, rates/snapshot, mensajes/*,
+  updates/sync, limpiadoras auto-sessions y alerta-ventana). Ahora se **rota en un único sitio** (la conexión de
+  ialimp) sin redeploy. Verificado: la consulta del helper devuelve la key (32 chars, activa) y `tsc` limpio.
+
+- **🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)**
+  Entró la **1ª reserva de Busto Reform** (Emilio J. Martín, 25-28 mar 2027 = **Semana Santa**, vendida al base
+  previo de Smoobu ~307-319€/noche; **NO** a precio de nuestro motor — `pricing_applied` vacío para esas fechas).
+  Al verificar, se destapó un fallo serio: ahora que `apply` corre los **365 días** sin timeout (fix #213), el cron
+  `apply-auto` (08:30) **capaba a `max_price`=125€** todas las fechas de evento. La guardia de confianza es **por
+  piso, no por fecha** (Busto: 14 comps, 5d → pasa), y el motor usa **un único percentil de mercado** (~168€, de
+  fechas normales) para todo el año, rematando con el techo del piloto **al final de la cadena**. Impacto medido:
+  **172 fechas disponibles >125€** (Semana Santa + **Feria de Abril 2027** a 366€) → ~**9.788€ base** en riesgo.
+  - **Acción inmediata (hecha):** `UPDATE pricing_config SET paused=true WHERE id=1` → el cron degrada a
+    simulación (`dryRun` forzado), **no escribe en Smoobu**. Verificado que `apply` lo lee. Reserva intacta
+    (reservada ≠ `available`). **Contrapartida:** también se congela el pricing al alza de fechas normales.
+  - **PENDIENTE (fix de producto, PR aparte):** techo **event-aware** (`max_price × eventFactor` o "nunca bajar
+    una fecha de evento por debajo de su base actual") + comps **por fecha/temporada** (no un percentil único) +
+    guardia de confianza por fecha. Reactivar la pausa SOLO tras el fix. Detalle en `pricing-automatico.md` §9.
+
+- **🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital — 15/06/2026**
+  Alberto comparte `receiptmaker.ai` (generador de recibos por IA → PDF/imagen con logo,
+  colores, tipografías; familia receiptmaker.io/.org, muchas orientadas a recibos "fake/demo").
+  Análisis con contexto del código real (`apps/ia-rest/src/lib/courier.ts`):
+
+  - **Trampa clave:** ia.rest NO imprime PDF/imagen. Imprime **ESC/POS térmico** (80mm,
+    48 chars monoespaciados, codepage PC437, **monocromo, sin tipografías**). El output de
+    receiptmaker **no es replicable en térmica** → sirve como *inspiración de layout/jerarquía*,
+    NO como solución técnica.
+  - **Lo que ve el cliente hoy:** `generarEscPosCuenta()` (ticket de cuenta) + QR AEAT VeriFactu
+    (`generarTicketCuenta()`). La comanda de cocina (`generarEscPos`) es interna.
+
+  - **Dos frentes de "modernizar" (decisión pendiente de Alberto):**
+    1. **Ticket térmico** — margen acotado: añadir **logo raster** (ESC/POS `GS v 0`, bitmap
+       monocromo), mejor jerarquía/espaciado, aprovechar mejor el QR. Pulido, no revolución.
+    2. **E-recibo digital** — *aquí brilla la inspiración de receiptmaker*: e-ticket **HTML**
+       con logo/colores/tipografía reales, enviado por **email (Resend, ya existe)** o accesible
+       por **QR impreso** ("ve tu recibo / pide factura aquí"). Encaja con infra existente
+       (sesiones QR `qr_sesiones_cliente`, `verifactu`, email). **Recomendación:** este es el
+       movimiento diferenciador, no pelear contra la térmica.
+
+  - **Estado:** solo análisis guardado. Rama de trabajo abierta `claude/modern-ticket-design-r4ngkz`
+    por si se decide implementar (con brainstorming antes de tocar código).
+
+- **🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED) — 15/06/2026**
+  Dos zonas separadas (usuario `/dashboard` + god-panel `/admin`) unificadas en una sola pantalla con sidebar único, tema claro y un solo login.
+
+  - **Auth unificado:** `app/api/auth/login/route.ts` ahora emite ambas cookies (`plataforma_session` + `plataforma_admin`) cuando el email coincide con un superadmin activo. Nuevo helper `findActiveAdminByEmail(email)` en `lib/superadmin.ts` (solo lectura, sin bcrypt, sin escrituras). `logout` borra ambas cookies.
+
+  - **Sidebar único con dos grupos:**
+    - *Mi negocio* (siempre): Resumen · Banca · 🏨 Apartamentos · 🧹 Limpiezas · 💬 Comunicación
+    - *Operador* (solo si sesión de superadmin): 🏢 Clientes · 🍽️ ia-rest · 🗺️ Estructura
+
+  - **Nuevas páginas — Mi negocio:**
+    - `/apartamentos`: tarjetas de los 4 pisos sivra con KPIs del mes + próxima reserva (`getPropiedades()` de `lib/propiedades.ts`)
+    - `/limpiezas`: portal propietario ialimp embebido en iframe sin segundo login (`getPropietarioAccessToken`)
+
+  - **Nuevas páginas — Operador (tema claro, mismas APIs `/api/admin/*`):**
+    - `/operador/clientes`: lista por vertical, bloquear/liberar, modal 360, modal nuevo cliente (`ClientesClient.tsx`)
+    - `/operador/estructura`: `MapaArquitectura`
+    - `/operador/iarest`: placeholder + enlace directo
+
+  - **Corrección conciliación bancaria:** `candidatosSivra()` en `lib/conciliacion.ts` leía `expenses` (34 filas, congelada desde abril). Corregido a `gastos` (71 filas, tabla real del agente IA de sivra). Recupera ~37 gastos invisibles (€5.670). `gastos.propiedad` usa el mismo slug que `properties.id` = `negocio.refExt`.
+
+  - **PWA:** `public/manifest.json` + `public/icon.svg` + metadata en `app/layout.tsx`.
+
+  - **Command palette Cmd/Ctrl+K:** `CommandPalette.tsx` sin deps externas, overlay claro, filtro por texto, teclas ↑↓↵.
+
+  - **Strip "Hoy" en dashboard:** check-ins/check-outs del día + movimientos bancarios del día. Solo se muestra si hay actividad.
+
+  - **Limpieza BD:** sociedad "Sique Brilla SL" (y su negocio) eliminada de la cuenta de Alberto en plataforma (tablas `sociedades`/`negocios`). **NO toca ialimp** — la empresa de Vanessa sigue operativa.
+
+  - **`/admin` sigue vivo** como fallback. Siguiente paso: convertirlo a redirect cuando Alberto confirme que `/operador/clientes` funciona bien.
+
+- **🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria — 14/06/2026**
+  La consolidación bancaria pasó de "código inerte" a **funcionando con datos reales de Alberto**. Larga sesión.
+  - **Enable Banking en producción (restricted mode = GRATIS para cuentas propias)**: tras descartar GoCardless
+    (altas cerradas), el conector PSD2 corre sobre **Enable Banking**. El **tier gratuito "restricted/linked accounts"
+    permite conectar TUS PROPIAS cuentas sin contrato ni pago** (solo el modo comercial para cuentas de terceros es de
+    pago). Auth = **JWT RS256** firmado con la clave privada de la app (kid=APP_ID, aud=api.enablebanking.com).
+    Variables en Vercel (proyecto plataforma): `ENABLEBANKING_APP_ID` + `ENABLEBANKING_PRIVATE_KEY`.
+  - **Conectadas y sincronizando a diario**: **Kutxabank** (IBAN real, 257 mov incl. histórico Q1 del Excel fusionado)
+    y **BBVA** (73 mov). Saldo del grupo real **41.186,94 €**. App Enable Banking activa: `ff26f315-…`.
+  - **Trampas resueltas (todas reales, documentadas para la próxima)**:
+    1. `DECODER routines::unsupported` → la clave se pegó **sin cabecera PEM** (solo cuerpo base64). `cargarClavePrivada()`
+       en `lib/enablebanking.ts` ahora tolera: PEM normal, en una línea, con comillas, `\n` escapados, **cuerpo base64
+       suelto (DER pkcs8/pkcs1/sec1)** y PEM re-codificado en base64.
+    2. `Wrong signature` → la clave privada en Vercel **no era la pareja** del certificado registrado (Enable Banking NO
+       tiene botón de regenerar; el cert se fija al **crear** la app). Solución: **crear app nueva** y usar App ID + clave
+       privada **de esa misma creación atómica**. Verificado por **huella SHA-256 de la clave pública** derivada.
+       OJO Vercel: una env var nueva **solo entra en despliegues creados DESPUÉS de guardarla** (hizo falta Redeploy real).
+    3. Transacciones vacías → el endpoint **exige `date_from`** y **PSD2 limita a ~90 días** (>90d → 422
+       `WRONG_TRANSACTIONS_PERIOD`). Se piden 89 días.
+    4. Timeout 504 al conectar Kutxa → el callback insertaba mov **uno a uno**. Ahora **inserción en bloque**
+       (`Prisma.join`) + `maxDuration=300` en callback y cron. Idempotente (dedupe por `entry_reference`).
+  - **Endpoints/lib**: `lib/enablebanking.ts` (cliente JWT), `lib/psd2.ts` (sincroniza por `session_id` guardado en
+    `conexiones_banco.requisition_id`), `psd2/{instituciones,conectar,callback}` + cron `psd2-sync`. (Hubo un endpoint
+    temporal `/api/cron/psd2-diag` para depurar la clave **sin exponer secretos** — ya retirado.)
+  - **Auto-categorización IA diaria + "Por revisar" (PR #242)**: el cron `psd2-sync`, tras sincronizar, **categoriza con
+    IA** los movimientos nuevos; cuando **duda marca `requiere_revision=true`** (columna nueva) y en `/banca` sale la
+    bandeja **🔎 Por revisar** donde el dueño asigna categoría (`POST /api/banca/revisar`). Degrada sin `NVIDIA_API_KEY`.
+  - **PENDIENTE de Alberto**: (a) **`NVIDIA_API_KEY`** (gratis, NVIDIA NIM) en el Vercel de plataforma para que la
+    categorización IA etiquete de verdad; (b) **rotar la clave privada** de Enable Banking (se compartió un `.pem` en el
+    chat durante la depuración — riesgo bajo en restricted mode/solo-lectura de cuentas propias, pero conviene rotarla).
+
+- **🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239 — 14/06/2026**
+  Alberto reportó que el **portal del propietario** (`/propietario/[token]` y `/propietario` por email+contraseña,
+  ambos `PropietarioClient.tsx`) se veía en PC como una columna móvil estrecha centrada (`maxWidth:1080`), con las
+  tarjetas amontonadas a la izquierda. Arreglo solo en `PropietarioClient.tsx`:
+  - **Escritorio (≥1024px):** barra lateral de navegación **fija** a la izquierda (248px: logo, propietario, los
+    `MENU_ITEMS`, cerrar sesión); el contenido ocupa el ancho disponible (tope 1280px centrado) y las rejillas
+    `auto-fill` reparten 3-4 columnas. Se oculta el botón hamburguesa (`.prop-hamburger`).
+  - **Móvil (<1024px, sin cambios):** header con hamburguesa + drawer, una columna fluida.
+  - **Excepción consciente a la regla "no media queries"** de `apps/ialimp/CLAUDE.md`: una sidebar solo-PC necesita
+    un breakpoint, así que se usa **una única media query** dentro del bloque `<style>` que el componente ya inyectaba,
+    **acotada solo al portal** (clases `.prop-root`/`.prop-deskbar`/`.prop-hamburger`/`.prop-content`). No se toca el
+    resto de la app. Build local no viable en el contenedor (deps `workspace:*` del monorepo no resuelven con npm
+    aislado) → validado con **typecheck ialimp + preview de ialimp verdes** antes de mergear (cliente en vivo).
+
+- **🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED) — 14/06/2026**
+  Alberto preguntó si el "agente arquitecto" podría revisar 1×/día las conversaciones y actualizar la memoria/skills.
+  **Matiz clave aclarado:** las conversaciones NO persisten (entorno efímero) → no se pueden "releer". El equivalente
+  útil que SÍ funciona: auditar lo que persiste (código+infra+docs) y reconciliar con ello la memoria/skills.
+  - Nuevo **`.claude/commands/auditoria-diaria.md`**: slash-command (y prompt para un **trigger programado**) que
+    encuadra por `git log` desde la última auditoría (sin commits → no abre PR), corre la skill `auditoria-central`
+    completa, genera `docs/AUDITORIA-<mes>.md`, reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `apps/*/CLAUDE.md`
+    con la realidad (si discrepan, manda el código), arregla solo bugs de bajo riesgo y entrega un **PR draft** con el
+    informe. Complementa (no sustituye) al hook `Stop` `persist-memoria.sh`.
+  - **Pendiente de Alberto (acción manual):** crear el trigger programado 1×/día en Claude Code web (triggers /
+    scheduled sessions) sobre `central` con prompt `/auditoria-diaria`. El cron NO se configura desde el repo.
+
+- **📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED) — 14/06/2026**
+  Alberto reportó (con captura del móvil en `flame.vercel.app`) que el panel de control no era usable en móvil:
+  la barra lateral fija de 200px (`<nav>` con pestañas Negocios/ia-rest/Sivra/Estructura) se comía el ancho y
+  dejaba los KPIs y las tarjetas de clientes en una columna estrujada. Pidió "hamburguesa plegable".
+  - **Cambio (solo `apps/plataforma/app/admin/page.tsx`, presentación pura, sin tocar datos/auth/queries):**
+    detección de viewport con `window.matchMedia('(max-width: 768px)')` (estados `isMobile` + `menuOpen`,
+    coherente con el patrón del fichero: inline styles, sin Tailwind). En **móvil** el `<nav>` pasa a **drawer
+    fijo** (`position:fixed`, `transform: translateX(-100%/0)`, transición .25s) que se abre con un botón
+    **hamburguesa ☰** en la cabecera; backdrop semitransparente que cierra al tocar fuera; se cierra solo al
+    elegir pestaña o pulsar ✕; el nombre del operador se mueve dentro del drawer y "Nuevo cliente" se compacta a
+    ➕. En **escritorio** comportamiento idéntico al anterior (barra fija 200px).
+  - CI: los 4 deploys de Vercel (plataforma, ialimp, sivra, ia-rest) **Ready**. Mergeado en squash.
+
+- **🧹 IALIMP: arreglo "No autenticado" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED) — 14/06/2026**
+  Sesión a raíz de un problema EN VIVO de Vanessa (Sique Brilla): al subir limpiezas le salía **"No autenticado"**
+  y, al elegir cliente en *Nueva limpieza*, *"Este cliente no tiene propiedades creadas"* (FALSO: AITANA ORTIZ
+  MOGOLLON tiene 7 pisos, verificado en Supabase). Diagnóstico: su sesión era rechazada (sesión única: un 2º login
+  desde el móvil rotaba el `session_jti` y **expulsaba** al portátil), y las rutas `/api/admin/*` devolvían el
+  fallo de auth como **500 `{error:'No autenticado'}`** que el modal se tragaba mostrando "sin pisos".
+  - **PR #231 (MERGED)** — `lib/tenant.ts`: clase `AuthError` (401) + helper `apiError(e)` (401 si AuthError, 500
+    si no); rutas `propiedades`/`sesiones`/`sesiones[id]` lo usan. `NuevaLimpiezaModal` distingue 401 (sesión
+    cerrada → aviso + `/login`), error de carga (mensaje + reintentar) y "sin pisos" real.
+  - **PR #233 (MERGED)** — **2º login = BLOQUEO con aviso, NO expulsión** (decisión de Alberto: mantener 1
+    dispositivo). Migración **`2026-06-14_sesion_activa.sql`** (flag `sesion_activa` en `empresas` y
+    `usuarios_empresa`, APLICADA en Supabase). `/api/auth/login` y `login-usuario`: si `sesion_activa` y no
+    `forzar` → **409 `{sesion_abierta:true}`**; `/login` muestra «Ya hay una sesión abierta» + botón **«Entrar
+    aquí y cerrar la otra»** (reintenta con `forzar:true`, rota jti y expulsa al otro). `/api/auth/logout` pone
+    `sesion_activa=false` (sin tocar jti, para no resucitar tokens por la regla de gracia). Sin lockout: el forzar
+    siempre entra. El propietario (`clientes`) sigue con expulsión por jti.
+  - **PR #234 (MERGED)** — respondiendo a Vanessa («¿dónde salen incidencias, el OK de la limpieza y el chat?»):
+    (1) **Pantalla de Incidencias** `/admin/incidencias` (menú **⚠️ Incidencias**) + `GET/PUT /api/admin/incidencias`
+    (tabla `incidencias` sin `empresa_id`, se acota por `property_id IN (sesiones de la empresa)`; urgentes primero;
+    marcar resuelta/reabrir con nota; foto por proxy `photoSrc`). Antes solo llegaba el push, no había vista.
+    (2) **Revisar limpieza HECHA**: `GET /api/admin/sesiones/[id]/completions` (lee `session_completions`) + botón
+    **«📷 Ver limpieza»** en Inicio → modal con fotos + checklist + horas de entrada/salida.
+    (3) **Guard de sesión global** `components/SessionGuard.tsx` (en `app/layout.tsx`): parchea `window.fetch`,
+    si una respuesta de `/api/admin/*` es sesión cerrada (401 o cuerpo "No autenticado") redirige a `/login` en
+    toda la app. (4) Carga rápida: ya cubierto por «Duplicar» + programaciones recurrentes (solo se documentó).
+  - Las 3 PRs con **preview de ialimp verde** antes de mergear (cliente en vivo). `CLAUDE.md` y `public/manual.html`
+    actualizados (menú Incidencias, "Ver limpieza", aviso de sesión única). **Chat con el equipo** ya existía:
+    menú **💬 Chat equipo** (`/admin/chat`). **OK de limpieza** = estado «✓ Hecha» en Inicio + filtro «Hechas».
+
+- **🧹 IALIMP: "Agenda" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`) — 14/06/2026**
+  Vanessa (Sique Brilla) no encontraba dónde ver/repartir las limpiezas **por limpiadora**. La pantalla
+  `/admin/agenda` (cuadrante semanal con una fila por limpiadora + panel "Asignar limpiadora por día") **ya
+  existía y estaba completa, pero estaba huérfana**: no figuraba en el `NAV` de `app/dashboard/DashboardClient.tsx`,
+  así que solo se abría tecleando la URL. Fix mínimo: entrada `📅 Agenda` en `NAV` (tras Operaciones) + mapeo
+  `'/admin/agenda':'agenda'` en `NAV_MODULO` (respeta el permiso de módulo `agenda` ya existente). Manual
+  (`public/manual.html`) actualizado con la tarjeta Agenda. Sin tocar BD/queries/multi-tenant. 4 previews verdes
+  → mergeado a `main` (en producción `app.ialimp.es`).
+
+- **🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6) — 14/06/2026**
+  Épico nuevo en `apps/plataforma`: importar el banco, ver saldo/movimientos consolidados de todas las
+  sociedades, categorizar con IA, conciliar con facturas, prever tesorería y conectar el banco por PSD2.
+  Tablas nuevas en la **BD compartida** (RLS, aditivas, scoped por `cuenta_id`): `cuentas_bancarias`,
+  `movimientos_bancarios` (con `dedupe_hash` único), `conexiones_banco`. Aplicadas por Supabase MCP.
+  - **PR #211 (MERGED, `a3103bd`)** — F1 (importar **Norma 43** + **Excel multi-banco**, KPI "Saldo del
+    grupo", página `/banca`, dedupe) · F2 (auto-categorización IA con `@central/core-ai`, NIM gratis) ·
+    F3 (conciliación banco↔`incomes`/`expenses` de sivra y `v_contab_ingresos`/`v_contab_gastos` de ialimp) ·
+    F5 (previsión 30/60/90d + cron alerta) · fix CI `allowImportingTsExtensions` al `tsconfig.base`.
+  - **Importador Excel multi-banco** (`lib/extracto-xls.ts`, SheetJS): detección de columnas robusta a
+    **Kutxa** y **BBVA** (fecha valor vs fecha, concepto en 2 columnas, saldo "Disponible", orden asc/desc).
+  - **PR #216 (MERGED, `a9adf00`)** — F4: **OCR de facturas** (`nimVision`) + casado con el movimiento.
+  - **PR #217 (MERGED, `26d89b7`)** — F6: **conexión automática PSD2**, primera versión sobre **GoCardless
+    Bank Account Data** (`lib/gocardless.ts` + `lib/psd2.ts` + endpoints `psd2/instituciones|conectar|callback`
+    + cron `psd2-sync`).
+  - **F6-bis — switch a Enable Banking (DRAFT, rama `claude/banca-psd2-enablebanking`)**: los registros de
+    GoCardless están **cerrados** (Alberto no pudo darse de alta), así que se reescribió la capa de proveedor a
+    **Enable Banking** (tier gratuito que admite altas). Auth distinta: **JWT RS256** firmado con la clave
+    privada de la app (no hay endpoint de token); flujo `aspsps → POST /auth → POST /sessions → accounts`.
+    Nuevo `lib/enablebanking.ts` (reemplaza `lib/gocardless.ts`, borrado); `lib/psd2.ts` y los endpoints usan
+    sesiones (el `session_id` se guarda en `conexiones_banco.requisition_id`, `proveedor='enablebanking'`). Sin
+    migración nueva. Inerte hasta poner `ENABLEBANKING_APP_ID` y `ENABLEBANKING_PRIVATE_KEY` en el Vercel de
+    plataforma (degrada limpio). **Mapeo de campos a verificar con credenciales reales** (este entorno no las tiene).
+  - **Datos reales de Alberto YA cargados** en su cuenta (sociedad "Alberto Suárez Gutiérrez", NIF):
+    **Kutxa** (244 mov, 21.161,96 €, apartamentos) + **BBVA** (40 mov, 20.034,98 €, seguros + Dúplex Center) =
+    **41.196,94 €** consolidados. Los movimientos cargados por SQL NO están categorizados/conciliados: usar
+    los botones 🤖 Re-analizar IA y 🔗 Conciliar en `/banca` (necesitan `NVIDIA_API_KEY`).
+  - **Pendiente (mejoras)**: F4 → guardar el justificante (imagen) y soportar PDF; F6 → dar de alta una app
+    en Enable Banking, poner `ENABLEBANKING_APP_ID/PRIVATE_KEY` en Vercel, verificar el mapeo de campos con un
+    banco real y mergear. Lógica pura testeada con `node --test` (norma43, tesorería).
 
 - **💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209 — 14/06/2026**
   Sesión sobre la vertical **sivra** (intranet pisos). Dos entregas:

@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import NuevaLimpiezaModal from '@/components/NuevaLimpiezaModal'
 import AlertasBadge from '@/components/AlertasBadge'
+import { photoSrc } from '@/lib/photo'
 
 interface Props {
   empresa: any
@@ -17,6 +18,7 @@ interface Props {
 
 // Módulo gateable por entrada de menú (el operador puede apagarlos desde el god-panel).
 const NAV_MODULO: Record<string, string> = {
+  '/admin/agenda': 'agenda',
   '/admin/equipo': 'rrhh',
   '/admin/negocio': 'clientes',
   '/admin/materiales': 'stock',
@@ -32,9 +34,18 @@ const TIPO_ICON: Record<string,string> = {
   rotacion:'🔄', profunda:'🧽', comunidad:'🏢', obra:'🏗️', mantenimiento:'🔧',
 }
 
+// timestamptz (texto, p.ej. "2026-06-14 09:30:00+00") → "09:30"
+function fmtHoraCorta(t?: string | null): string {
+  if (!t) return ''
+  const d = new Date(String(t).replace(' ', 'T'))
+  return isNaN(d.getTime()) ? '' : d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' })
+}
+
 const NAV = [
   { href:'/dashboard',           icon:'🏠', label:'Inicio'        },
   { href:'/admin/operaciones',   icon:'🗃️', label:'Operaciones'   },
+  { href:'/admin/incidencias',   icon:'⚠️', label:'Incidencias'   },
+  { href:'/admin/agenda',        icon:'📅', label:'Agenda'        },
   { href:'/admin/equipo',        icon:'👥', label:'Equipo'        },
   { href:'/admin/chat',          icon:'💬', label:'Chat equipo'   },
   { href:'/admin/negocio',       icon:'💼', label:'Negocio'       },
@@ -69,10 +80,28 @@ export default function DashboardClient({
   const [toast,        setToast]        = useState<{msg:string;tipo:'ok'|'warn'|'error'}|null>(null)
   const [editSesion,   setEditSesion]   = useState<any|null>(null)
   const [soloSinAsignar, setSoloSinAsignar] = useState(false)
+  // Detalle de una limpieza HECHA: fotos + checklist que dejó la limpiadora
+  const [verDetalle,   setVerDetalle]   = useState<any|null>(null)   // sesión cuya limpieza se revisa
+  const [detalle,      setDetalle]      = useState<{sesion:any;completions:any[]}|null>(null)
+  const [loadingDet,   setLoadingDet]   = useState(false)
 
   function showToast(msg: string, tipo: 'ok'|'warn'|'error' = 'ok') {
     setToast({ msg, tipo })
     setTimeout(() => setToast(null), 3500)
+  }
+
+  // Abrir el detalle de una limpieza completada (lo que subió la limpiadora)
+  async function abrirDetalle(s: any) {
+    setVerDetalle(s); setDetalle(null); setLoadingDet(true)
+    try {
+      const res = await fetch('/api/admin/sesiones/' + s.id + '/completions')
+      if (res.status === 401) { window.location.href = '/login'; return }
+      const d = await res.json().catch(() => ({}))
+      if (!res.ok) { showToast(d.error || 'No se pudo cargar el detalle', 'error'); setVerDetalle(null); return }
+      setDetalle({ sesion: d.sesion || s, completions: d.completions || [] })
+    } catch {
+      showToast('Error de conexión', 'error'); setVerDetalle(null)
+    } finally { setLoadingDet(false) }
   }
 
   const pendientes  = sesiones.filter(s => !s.started_at)
@@ -1136,6 +1165,14 @@ export default function DashboardClient({
                               <button className="ses-act" onClick={() => duplicar(s)} title="Duplicar limpieza">⧉ Duplicar</button>
                             </div>
                           )}
+                          {/* Limpieza hecha: revisar fotos + checklist que dejó la limpiadora */}
+                          {s.completed_at && (
+                            <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginTop:9 }}>
+                              <button className="ses-act" onClick={() => abrirDetalle(s)} title="Ver fotos y checklist de la limpieza">
+                                📷 Ver limpieza
+                              </button>
+                            </div>
+                          )}
                         </div>
                         <div style={{ flexShrink:0, display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
                           <span className={statusCls(s)}>{statusLbl(s)}</span>
@@ -1237,6 +1274,72 @@ export default function DashboardClient({
           onEliminada={(id) => { onSesionEliminada(id); setEditSesion(null) }}
           onClose={() => setEditSesion(null)}
         />
+      )}
+
+      {/* Modal: detalle de una limpieza HECHA (fotos + checklist de la limpiadora) */}
+      {verDetalle && (
+        <div className="sheet-backdrop" onClick={() => { setVerDetalle(null); setDetalle(null) }}>
+          <div onClick={e => e.stopPropagation()}
+            style={{ background:'#fff', borderRadius:20, width:'100%', maxWidth:560, maxHeight:'90vh',
+              overflowY:'auto', margin:'auto', boxShadow:'0 10px 40px rgba(0,0,0,.2)' }}>
+            <div style={{ padding:'16px 18px', borderBottom:'1px solid #e2e8f0', display:'flex', justifyContent:'space-between', alignItems:'center', position:'sticky', top:0, background:'#fff', borderTopLeftRadius:20, borderTopRightRadius:20 }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ fontWeight:800, fontSize:15, color:'#0f172a' }}>📷 {verDetalle.property_name || '— Sin piso —'}</div>
+                <div style={{ fontSize:12, color:'#64748b' }}>
+                  {(detalle?.sesion?.limpiadora_nombre || verDetalle.limpiadora_nombre) ? '👤 ' + (detalle?.sesion?.limpiadora_nombre || verDetalle.limpiadora_nombre) + ' · ' : ''}
+                  Hecha
+                </div>
+              </div>
+              <button onClick={() => { setVerDetalle(null); setDetalle(null) }}
+                style={{ background:'none', border:'none', fontSize:22, color:'#94a3b8', cursor:'pointer', lineHeight:1 }}>✕</button>
+            </div>
+
+            <div style={{ padding:18 }}>
+              {loadingDet ? (
+                <div style={{ textAlign:'center', padding:'32px 0', color:'#94a3b8', fontSize:13 }}>Cargando…</div>
+              ) : !detalle ? null : (
+                <>
+                  {(detalle.sesion?.hora_llegada || detalle.sesion?.hora_salida) && (
+                    <div style={{ display:'flex', gap:8, flexWrap:'wrap', marginBottom:14, fontSize:12, color:'#475569' }}>
+                      {detalle.sesion?.hora_llegada && <span style={{ background:'#f0fdf4', color:'#16a34a', padding:'3px 9px', borderRadius:20 }}>🕐 Entró {fmtHoraCorta(detalle.sesion.hora_llegada)}</span>}
+                      {detalle.sesion?.hora_salida && <span style={{ background:'#eff6ff', color:'#2563eb', padding:'3px 9px', borderRadius:20 }}>🏁 Salió {fmtHoraCorta(detalle.sesion.hora_salida)}</span>}
+                    </div>
+                  )}
+                  {detalle.completions.length === 0 ? (
+                    <div style={{ textAlign:'center', padding:'24px 0', color:'#94a3b8', fontSize:13 }}>
+                      Esta limpieza se marcó como hecha pero no tiene checklist ni fotos registradas.
+                    </div>
+                  ) : (
+                    <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
+                      {detalle.completions.map((c, i) => {
+                        const fotos = [c.photo_url, c.photo_url_2, c.photo_url_3].filter(Boolean)
+                        return (
+                          <div key={i} style={{ border:'1px solid #e2e8f0', borderRadius:12, padding:12 }}>
+                            <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom: fotos.length || c.notes ? 8 : 0 }}>
+                              <span style={{ fontSize:15 }}>{c.checked ? '✅' : '⬜'}</span>
+                              <span style={{ fontSize:13, fontWeight:600, color:'#1e293b' }}>{c.item_description || 'Tarea'}</span>
+                            </div>
+                            {c.notes && <div style={{ fontSize:12, color:'#b45309', background:'#fffbeb', borderRadius:8, padding:'6px 9px', marginBottom: fotos.length ? 8 : 0 }}>📝 {c.notes}</div>}
+                            {fotos.length > 0 && (
+                              <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
+                                {fotos.map((u, j) => (
+                                  <a key={j} href={photoSrc(u as string)} target="_blank" rel="noreferrer">
+                                    <img src={photoSrc(u as string)} alt="foto limpieza"
+                                      style={{ width:96, height:96, objectFit:'cover', borderRadius:10, border:'1px solid #e2e8f0' }} />
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
       {/* Bottom-sheet: elegir limpiadora */}

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { getSmoobuKey } from '@/lib/smoobu'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY || ''
 const PROP_MAP: Record<string, string> = {
   '352007': 'prop_house_sevillana',
   '352418': 'prop_busto_reform',
@@ -21,6 +21,7 @@ export async function GET(req: Request) {
   today.setHours(0, 0, 0, 0)
 
   try {
+    const SMOOBU_KEY = await getSmoobuKey()
     const dateFrom = today.toISOString().split('T')[0]
     const dateTo = new Date(today.getTime() + days * 86400000).toISOString().split('T')[0]
 

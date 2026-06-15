@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { requireEmpresaId } from '@/lib/tenant'
+import { requireEmpresaId, apiError } from '@/lib/tenant'
 
 // GET — sesiones por fecha
 export async function GET(req: Request) {
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
 
     return NextResponse.json({ sesiones })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
 
@@ -106,6 +106,6 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, sesion: result[0] }, { status: 201 })
   } catch (e: any) {
-    return NextResponse.json({ error: e.message }, { status: 500 })
+    return apiError(e)
   }
 }
