@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T13:51:58Z",
+  "generadoEn": "2026-06-15T14:28:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1961,6 +1961,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256",
       "fecha": "15/06/2026"
     },
@@ -2014,10 +2018,6 @@
     },
     {
       "titulo": "💶 SIVRA: gastos fijos mensuales AUTOMÁTICOS + fix dashboard — PR #208 (merged) y #209",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "⏱️ Control horario en ia-rest (roadmap #2) — branch `claude/control-horario` — 14/06/2026 (PR #205, draft)",
       "fecha": "14/06/2026"
     }
   ],
