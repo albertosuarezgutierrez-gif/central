@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import ActivarPush from '@/components/ActivarPush'
 
 type E = { id: string; nombre: string; email: string | null; puesto: string | null; estado: string; acceso_token: string }
 
@@ -13,7 +14,7 @@ export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
   return (
     <main style={{ maxWidth: 720, margin: '32px auto', padding: 16 }}>
       <h1>Empleados</h1>
-      <p><a href="/admin/solicitudes">📝 Ver solicitudes</a></p>
+      <p><a href="/admin/solicitudes">📝 Ver solicitudes</a> · <ActivarPush endpoint="/api/admin/push/subscribe" /></p>
       <form onSubmit={alta} style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <input placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
         <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />

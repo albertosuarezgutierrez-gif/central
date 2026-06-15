@@ -5,6 +5,7 @@ import { ACTOR_TITULAR, CARPETAS } from '@/lib/carpetas'
 import { carpetasVisibles } from '@central/module-documental'
 import { listarExpediente, subirDocumento } from '@/lib/documental'
 import { avisarResponsables, nombreEmpleado } from '@/lib/notificar'
+import { pushResponsables } from '@/lib/push'
 
 export async function GET() {
   try {
@@ -26,6 +27,7 @@ export async function POST(req: Request) {
     })
     const nombre = await nombreEmpleado(empleado_id)
     await avisarResponsables(empresa_id, `Nuevo documento de ${nombre}`, `${nombre} ha subido "${doc.nombre}" a su expediente (${doc.carpeta}).`)
+    await pushResponsables(empresa_id, `Nuevo documento de ${nombre}`, `${doc.nombre} (${doc.carpeta})`)
     return NextResponse.json({ documento: doc }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })

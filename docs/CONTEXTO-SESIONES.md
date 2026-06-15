@@ -83,8 +83,17 @@
     por symlinks/webpack "Can't resolve nodemailer"). Best-effort/no-op si no hay SMTP → funciona al cargar
     `SMTP_HOST/PORT/USER/PASSWORD`. **Trampa de build resuelta:** un comentario JSDoc con `SMTP_*` seguido de
     `/` cerraba el bloque `/* */` (evitar `*` + `/` en comentarios). `next build` verde.
-  - **PENDIENTE Fase 1:** **push** (VAPID + service worker) + PWA, proyecto Vercel `rrhh` (+ env vars:
-    `DATABASE_URL?schema=rrhh`, `JWT_SECRET`, Supabase, SMTP) — infra de Alberto. **Fase 2:** firma (Firmafy). **Precio:** diferido.
+  - **🔔 PWA + WEB PUSH integrados (listos para claves) — 15/06:** `public/{manifest.json,icon.svg,sw.js}`
+    + `RegisterSW` (PWA instalable; SW con handler `push`/`notificationclick`). Tabla
+    `rrhh.push_subscriptions` **aplicada**. `lib/push.ts` (`web-push` DIRECTO, no core-push, mismo motivo
+    que email) con `pushResponsables`/`pushEmpleado` (no-op sin VAPID, borra subs 410/404). Subscribe:
+    `/api/admin/push/subscribe` (gestor) + `/api/e/push/subscribe` (empleado). Botón `ActivarPush` en
+    `/admin/empleados` y `/e`. Push enganchado junto al email en las 3 acciones del empleado (doc/solicitud/
+    mensaje → responsables). `next build` verde. **VAPID generadas (entregadas a Alberto para el env), NO
+    commiteadas.**
+  - **PENDIENTE (necesita Alberto):** proyecto **Vercel `rrhh`** + env (`DATABASE_URL?schema=rrhh`,
+    `JWT_SECRET`, Supabase url/anon/service_role, opcional SMTP_*, VAPID público+privado). **Fase 2:** firma
+    (Firmafy, cotización partner). **Precio:** diferido. (Push y email ya funcionan al cargar sus claves.)
 
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
