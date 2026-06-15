@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import Wordmark from '@/components/Wordmark'
 
 export default function Login() {
   const [email, setEmail] = useState(''); const [password, setPassword] = useState(''); const [err, setErr] = useState('')
@@ -9,14 +10,17 @@ export default function Login() {
     if (r.ok) location.href = '/admin/empleados'; else setErr((await r.json()).error ?? 'Error')
   }
   return (
-    <main style={{ maxWidth: 360, margin: '64px auto', padding: 16 }}>
-      <h1>RR.HH. · Acceso responsable</h1>
-      <form onSubmit={enviar} style={{ display: 'grid', gap: 8 }}>
-        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-        <input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} />
-        <button type="submit">Entrar</button>
-        {err && <p style={{ color: 'crimson' }}>{err}</p>}
-      </form>
+    <main className="grid min-h-screen place-items-center p-4">
+      <div className="w-full max-w-sm rounded-[18px] border border-line bg-card p-7 shadow-sm">
+        <Wordmark className="text-2xl" />
+        <h1 className="mt-3 text-xl">Acceso responsable</h1>
+        <form onSubmit={enviar} className="mt-5 grid gap-2.5">
+          <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
+          <input placeholder="Contraseña" type="password" value={password} onChange={e => setPassword(e.target.value)} />
+          <button type="submit" className="mt-1">Entrar</button>
+          {err && <p className="text-alert text-sm">{err}</p>}
+        </form>
+      </div>
     </main>
   )
 }

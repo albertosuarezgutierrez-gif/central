@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
+import AdminShell from '@/components/AdminShell'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; creada_at: string; url: string | null }
@@ -31,37 +32,39 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
   }
 
   return (
-    <main style={{ maxWidth: 760, margin: '32px auto', padding: 16 }}>
-      <a href="/admin/empleados">← Empleados</a>
-      <h1>Expediente · {empleado.nombre}</h1>
-      <p style={{ color: '#666' }}>{[empleado.puesto, empleado.email].filter(Boolean).join(' · ')}</p>
-      {error && <p style={{ color: 'crimson' }}>{error}</p>}
+    <AdminShell activo="empleados">
+      <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
+      <h1 className="mt-1 text-2xl">Expediente · {empleado.nombre}</h1>
+      <p className="text-ink-3 text-sm">{[empleado.puesto, empleado.email].filter(Boolean).join(' · ')}</p>
+      {error && <p className="text-alert text-sm">{error}</p>}
 
       <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
 
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)
         return (
-          <section key={c.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, margin: '12px 0' }}>
-            <h2 style={{ fontSize: 16, margin: '0 0 8px' }}>📁 {c.etiqueta} <span style={{ color: '#999' }}>({dc.length})</span></h2>
-            <ul style={{ margin: '0 0 8px', paddingLeft: 18 }}>
+          <section key={c.id} className="my-3 rounded-card border border-line bg-card p-4">
+            <h2 className="mb-2 text-base">{c.etiqueta} <span className="text-ink-3">({dc.length})</span></h2>
+            <ul className="mb-2 grid gap-1">
               {dc.map(d => (
-                <li key={d.id}>
-                  {d.url ? <a href={d.url} target="_blank" rel="noreferrer">{d.nombre}</a> : d.nombre}
-                  <span style={{ color: '#999', fontSize: 12 }}> · {d.subido_por}</span>
-                  <button onClick={() => borrar(d.id)} style={{ marginLeft: 8 }}>🗑️</button>
+                <li key={d.id} className="flex items-center gap-2 text-sm">
+                  {d.url
+                    ? <a href={d.url} target="_blank" rel="noreferrer" className="text-accent no-underline hover:underline">{d.nombre}</a>
+                    : <span>{d.nombre}</span>}
+                  <span className="text-ink-3 text-xs">· {d.subido_por}</span>
+                  <button onClick={() => borrar(d.id)} className="ml-auto bg-transparent px-2 py-0.5 text-alert hover:bg-paper-2">Borrar</button>
                 </li>
               ))}
-              {dc.length === 0 && <li style={{ color: '#aaa', listStyle: 'none' }}>Sin documentos</li>}
+              {dc.length === 0 && <li className="text-ink-3 text-sm">Sin documentos</li>}
             </ul>
-            <label style={{ fontSize: 13 }}>
-              {subiendo === c.id ? 'Subiendo…' : 'Subir documento: '}
+            <label className="text-ink-2 text-sm">
+              {subiendo === c.id ? 'Subiendo… ' : 'Subir documento: '}
               <input type="file" disabled={subiendo === c.id}
                 onChange={e => { const f = e.target.files?.[0]; if (f) subir(c.id, f); e.currentTarget.value = '' }} />
             </label>
           </section>
         )
       })}
-    </main>
+    </AdminShell>
   )
 }
