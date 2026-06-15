@@ -492,6 +492,8 @@ importers:
 
   packages/module-materiales: {}
 
+  packages/module-organizador-trabajo: {}
+
   packages/module-presupuestos: {}
 
   packages/module-proveedores: {}
