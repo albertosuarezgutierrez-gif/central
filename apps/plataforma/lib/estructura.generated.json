@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T08:41:57Z",
+  "generadoEn": "2026-06-15T08:44:13Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)",
       "fecha": "14/06/2026"
     },
@@ -1987,10 +1991,6 @@
     },
     {
       "titulo": "📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
       "fecha": "14/06/2026"
     }
   ],
