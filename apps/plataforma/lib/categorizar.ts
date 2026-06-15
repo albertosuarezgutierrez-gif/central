@@ -75,8 +75,11 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
 }
 
 // Analiza los movimientos sin categorizar de una cuenta (scoped por cuenta_id).
-// Idempotente: solo toca los que tienen analizado_at NULL. Devuelve cuántos categorizó.
-export async function analizarMovimientos(cuentaId: string, limite = 60): Promise<{ categorizados: number }> {
+// Idempotente: solo toca los que tienen analizado_at NULL. Procesa en sub-lotes pequeños
+// (cada llamada IA cabe holgada en el presupuesto de tokens). Devuelve cuántos categorizó.
+const TAM_LOTE_IA = 25
+
+export async function analizarMovimientos(cuentaId: string, limite = 150): Promise<{ categorizados: number }> {
   const pendientes = await prisma.$queryRaw<Array<{ id: string; concepto: string | null; contraparte: string | null; importe: unknown }>>`
     SELECT mb.id, mb.concepto, mb.contraparte, mb.importe
     FROM movimientos_bancarios mb
@@ -87,12 +90,18 @@ export async function analizarMovimientos(cuentaId: string, limite = 60): Promis
   `
   if (pendientes.length === 0) return { categorizados: 0 }
 
-  const cats = await categorizarLote(
-    pendientes.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
-  )
+  // Trocear en sub-lotes para que cada respuesta IA quepa sin truncarse.
+  const cats: Categorizacion[] = []
+  for (let i = 0; i < pendientes.length; i += TAM_LOTE_IA) {
+    const trozo = pendientes.slice(i, i + TAM_LOTE_IA)
+    const c = await categorizarLote(
+      trozo.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
+    )
+    for (const x of c) cats.push(x)
+  }
   if (cats.length === 0) return { categorizados: 0 }
 
-  // Persistencia: un UPDATE por movimiento (lote pequeño), scoped por cuenta vía la subconsulta.
+  // Persistencia: un UPDATE por movimiento, scoped por cuenta vía la subconsulta.
   let n = 0
   for (const c of cats) {
     const res = await prisma.$executeRaw`
@@ -132,7 +141,7 @@ export async function categorizarPendientesTodas(): Promise<{ cuentas: number; c
   `
   let categorizados = 0
   for (const c of cuentas) {
-    const r = await analizarMovimientos(c.cuenta_id, 120).catch(() => ({ categorizados: 0 }))
+    const r = await analizarMovimientos(c.cuenta_id, 300).catch(() => ({ categorizados: 0 }))
     categorizados += r.categorizados
   }
   return { cuentas: cuentas.length, categorizados }
