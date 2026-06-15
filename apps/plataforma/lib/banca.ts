@@ -223,7 +223,7 @@ export async function getEvolucionMensual(cuentaId: string, meses = 12): Promise
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(mb.destino, '') <> 'traspaso_interno'
-      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}))
+      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int))
     GROUP BY 1 ORDER BY 1
   `
   return rows.map(r => ({ mes: r.mes, ingresos: Number(r.ingresos), gastos: Number(r.gastos) }))
@@ -322,7 +322,7 @@ export async function getEvolucionPorDestino(cuentaId: string, meses = 6): Promi
     JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
     WHERE cb.cuenta_id = ${cuentaId}::uuid
       AND coalesce(mb.destino, '') <> 'traspaso_interno'
-      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}))
+      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}::int))
     GROUP BY 1, 2
   `
   // Eje de meses (los últimos N, en orden cronológico).
