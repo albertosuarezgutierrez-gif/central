@@ -56,14 +56,15 @@ export default async function DashboardPage() {
 
   const anio = new Date().getFullYear()
 
-  const sociedades = await safe(
-    prisma.sociedad.findMany({
-      where: { cuentaId: session.id },
-      include: { negocios: { orderBy: { createdAt: 'asc' } } },
-      orderBy: { createdAt: 'asc' },
-    }),
-    [] as Awaited<ReturnType<typeof prisma.sociedad.findMany>>,
-  )
+  // El tipo del fallback se infiere del propio query (Awaited<typeof query>) para que
+  // conserve el `include: { negocios }`; con ReturnType<typeof findMany> se perdía la
+  // relación y `soc.negocios` no existía en el tipo.
+  const sociedadesQuery = prisma.sociedad.findMany({
+    where: { cuentaId: session.id },
+    include: { negocios: { orderBy: { createdAt: 'asc' } } },
+    orderBy: { createdAt: 'asc' },
+  })
+  const sociedades = await safe(sociedadesQuery, [] as Awaited<typeof sociedadesQuery>)
 
   // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
   // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
