@@ -2,7 +2,7 @@
 // liste y gestione sus clientes/tenants. Así el panel no conoce la BD ni la API
 // concreta de cada vertical — solo el puerto.
 
-export type Vertical = 'ialimp' | 'sivra' | 'iarest'
+export type Vertical = 'ialimp' | 'sivra' | 'iarest' | 'rrhh'
 
 export interface Metrica { label: string; valor: string }
 
@@ -23,7 +23,7 @@ export interface Cliente360 extends ClienteSaaS {
   modulos?: string[]          // módulos activos (F2)
 }
 
-export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string }
+export interface NuevoCliente { nombre: string; email?: string; password?: string; ciudad?: string; responsableNombre?: string; color?: string }
 
 /** Una persona del directorio de un negocio (para dirigir comunicación por persona). */
 export interface PersonaDirectorio {
