@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { getPropiedades } from '@/lib/propiedades'
@@ -20,9 +21,11 @@ export default async function ApartamentosPage() {
   const totalMes = propias.reduce((s, p) => s + p.ingresosMes, 0)
   const totalAnio = propias.reduce((s, p) => s + p.ingresosAnio, 0)
   const gastosMes = propias.reduce((s, p) => s + p.gastosMes, 0)
+  const totalNoches = propias.reduce((s, p) => s + p.noches, 0)
+  const ocupMedia = propias.length > 0 ? Math.round(propias.reduce((s, p) => s + p.ocupacion, 0) / propias.length) : 0
 
   return (
-    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+    <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '28px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700 }}>🏨 Mis apartamentos</h1>
       </div>
@@ -37,54 +40,84 @@ export default async function ApartamentosPage() {
         <KPI label="Gastos este mes" value={fmtEur(gastosMes)} color="var(--muted)" />
         <KPI label="Resultado mes" value={fmtEur(totalMes - gastosMes)} color={totalMes - gastosMes >= 0 ? '#16a34a' : '#dc2626'} />
         <KPI label={`Ingresos ${new Date().getFullYear()}`} value={fmtEur(totalAnio)} color="var(--text)" />
+        <KPI label="Noches ocupadas" value={`${totalNoches} noches`} color="var(--text)" />
+        <KPI label="Ocupación media" value={`${ocupMedia}%`} color={ocupMedia >= 70 ? '#16a34a' : ocupMedia >= 40 ? '#d97706' : '#dc2626'} />
       </div>
 
       {/* Tarjetas por apartamento */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '16px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
         {propias.map(p => (
-          <div key={p.id} style={{
-            background: 'var(--surface)', border: '1px solid var(--border)',
-            borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)',
-          }}>
-            <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{p.nombre}</div>
-            <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '16px' }}>{p.ubicacion}</div>
+          <Link key={p.id} href={`/apartamentos/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)',
+              transition: 'box-shadow .15s', cursor: 'pointer',
+            }}
+              onMouseEnter={(e: React.MouseEvent<HTMLDivElement>) => (e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,.12)')}
+              onMouseLeave={(e: React.MouseEvent<HTMLDivElement>) => (e.currentTarget.style.boxShadow = 'var(--shadow)')}
+            >
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '4px' }}>
+                <div style={{ fontWeight: 700, fontSize: '15px' }}>{p.nombre}</div>
+                <span style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '2px' }}>Ver detalle →</span>
+              </div>
+              <div style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>{p.ubicacion}</div>
 
-            <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '14px' }}>
-              <FinStat label="Ingresos mes" value={fmtEur(p.ingresosMes)} />
-              <FinStat label="Gastos mes" value={fmtEur(p.gastosMes)} />
-              <FinStat
-                label="Resultado"
-                value={fmtEur(p.resultadoMes)}
-                color={p.resultadoMes >= 0 ? '#16a34a' : '#dc2626'}
-              />
-            </div>
+              {/* Financiero */}
+              <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                <FinStat label="Ingresos mes" value={fmtEur(p.ingresosMes)} />
+                <FinStat label="Gastos mes" value={fmtEur(p.gastosMes)} />
+                <FinStat label="Resultado" value={fmtEur(p.resultadoMes)} color={p.resultadoMes >= 0 ? '#16a34a' : '#dc2626'} />
+              </div>
 
-            {p.proxima ? (
-              <div style={{
-                borderTop: '1px solid var(--border)', paddingTop: '12px',
-                fontSize: '13px', color: 'var(--text)',
-              }}>
-                <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, marginBottom: '4px' }}>Próxima reserva</div>
-                <div style={{ fontWeight: 600 }}>{p.proxima.huesped || 'Huésped'}</div>
-                <div style={{ color: 'var(--muted)', fontSize: '12px' }}>
-                  {p.proxima.entrada} → {p.proxima.salida}
-                  {p.proxima.portal && ` · ${PORTAL_LABEL[p.proxima.portal] ?? p.proxima.portal}`}
+              {/* Ocupación + ADR */}
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: 'var(--muted)', marginBottom: '4px' }}>
+                  <span>Ocupación {p.ocupacion}% · {p.noches} noches</span>
+                  {p.adr > 0 && <span>ADR {fmtEur(p.adr)}/noche</span>}
+                </div>
+                <div style={{ height: '6px', borderRadius: '3px', background: 'var(--bg)', overflow: 'hidden' }}>
+                  <div style={{
+                    height: '100%', borderRadius: '3px',
+                    width: `${Math.min(p.ocupacion, 100)}%`,
+                    background: p.ocupacion >= 70 ? '#16a34a' : p.ocupacion >= 40 ? '#d97706' : '#dc2626',
+                    transition: 'width .3s',
+                  }} />
                 </div>
               </div>
-            ) : (
-              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '12px', fontSize: '12px', color: 'var(--muted)' }}>
-                Sin reservas próximas
-              </div>
-            )}
 
-            {p.dormitorios != null && (
-              <div style={{ marginTop: '12px', display: 'flex', gap: '12px', fontSize: '12px', color: 'var(--muted)' }}>
-                {p.dormitorios != null && <span>🛏 {p.dormitorios} hab.</span>}
-                {p.banos != null && <span>🚿 {p.banos} baños</span>}
-                {p.maxHuespedes != null && <span>👤 max {p.maxHuespedes}</span>}
-              </div>
-            )}
-          </div>
+              {/* Portal top */}
+              {p.topPortal && (
+                <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '10px' }}>
+                  📡 Principal: {PORTAL_LABEL[p.topPortal] ?? p.topPortal}
+                </div>
+              )}
+
+              {/* Próxima reserva */}
+              {p.proxima ? (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', fontSize: '13px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 600, marginBottom: '3px' }}>Próxima reserva</div>
+                  <div style={{ fontWeight: 600 }}>{p.proxima.huesped || 'Huésped'}</div>
+                  <div style={{ color: 'var(--muted)', fontSize: '12px' }}>
+                    {p.proxima.entrada} → {p.proxima.salida}
+                    {p.proxima.portal && ` · ${PORTAL_LABEL[p.proxima.portal] ?? p.proxima.portal}`}
+                  </div>
+                </div>
+              ) : (
+                <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', fontSize: '12px', color: 'var(--muted)' }}>
+                  Sin reservas próximas
+                </div>
+              )}
+
+              {/* Capacidad */}
+              {p.dormitorios != null && (
+                <div style={{ marginTop: '10px', display: 'flex', gap: '12px', fontSize: '11px', color: 'var(--muted)' }}>
+                  {p.dormitorios != null && <span>🛏 {p.dormitorios} hab.</span>}
+                  {p.banos != null && <span>🚿 {p.banos} baños</span>}
+                  {p.maxHuespedes != null && <span>👤 max {p.maxHuespedes}</span>}
+                </div>
+              )}
+            </div>
+          </Link>
         ))}
       </div>
     </main>
