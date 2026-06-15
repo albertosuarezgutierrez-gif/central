@@ -34,47 +34,33 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 ## Root Directory en Vercel
 `apps/plataforma` — install `npx --yes pnpm@10.33.0 install --no-frozen-lockfile`.
 
-## Estado (09/06/2026) — COMPLETO
+## Estado (15/06/2026) — PANEL UNIFICADO (PR #249 MERGED)
 - [x] Tablas `cuentas/sociedades/negocios` aplicadas en Supabase.
 - [x] Shell: login + dashboard con tarjetas por negocio.
 - [x] **Registro de cuenta por UI** (`/register` → `POST /api/auth/register`, auto-login).
 - [x] **CRUD sociedad/negocio por UI** (crear/editar/eliminar, scoped por `cuenta_id`).
-- [x] **Resumen financiero real** por negocio (HITO 3): ialimp (`v_contab_pyg`) + sivra (`incomes`/`expenses`).
-- [x] **ia-rest financiero (HITO 3)**: se lee **en vivo por el puerto HTTP** de ia-rest
-  (`${IAREST_URL}/api/operador/financiero?local_id=&anio=`, Bearer `OPERADOR_SHARED_SECRET`),
-  el MISMO patrón que el listado del god-panel (`getResumenIaRest` en `lib/financiero.ts`).
-  `refExt` = `local_id`. El endpoint sirve `v_resumen_financiero_anual` desde la BD propia de
-  ia-rest. NO se usa Prisma sobre `iarest.*` (ese schema está vacío). Sin migrar datos.
+- [x] **Resumen financiero real** por negocio (HITO 3): ialimp (`v_contab_pyg`) + sivra (`incomes`/`gastos`).
+- [x] **ia-rest financiero (HITO 3)**: se lee **en vivo por el puerto HTTP** de ia-rest.
+- [x] **Panel unificado (PR #249):** un solo shell `app/(usuario)/` con sidebar condicional:
+  - *Mi negocio* (siempre): Resumen · Banca · 🏨 Apartamentos (`/apartamentos`) · 🧹 Limpiezas (`/limpiezas`) · 💬 Comunicación
+  - *Operador* (solo superadmin): 🏢 Clientes (`/operador/clientes`) · 🍽️ ia-rest (`/operador/iarest`) · 🗺️ Estructura (`/operador/estructura`)
+- [x] **Auth unificado:** un login emite ambas cookies. `findActiveAdminByEmail()` en `lib/superadmin.ts`.
+- [x] **Conciliación corregida:** `candidatosSivra()` lee `gastos` (71 filas) en vez de `expenses` (34, congelada). Recupera €5.670.
+- [x] **PWA:** `public/manifest.json` + `public/icon.svg`.
+- [x] **Command palette Cmd/Ctrl+K:** `CommandPalette.tsx`.
+- [x] **Strip "Hoy" en dashboard.**
+- [ ] **Pendiente:** convertir `/admin` a redirect → `/operador/clientes` (cuando Alberto confirme que funciona).
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
 El alta manual por SQL ya no es necesaria.
 
-## Panel de OPERADOR (god-panel) — `/admin`
-Panel único de control de Alberto sobre **todas las verticales**. Diseño: `docs/DISEÑO-god-panel.md`.
-- **Auth propia** (`lib/superadmin.ts`, cookie `plataforma_admin`, 8h) validada contra la tabla
-  **`superadmins`** ya existente en la BD compartida → **el mismo login que el `/superadmin` de ialimp**.
-  El área `/admin` + `/api/admin` están en `PUBLIC` del middleware (se autoprotegen en los handlers vía `getAdmin`).
-- **Adaptadores por vertical** (`lib/adapters/*`, contrato `VerticalAdapter`):
-  - `ialimp` y `sivra` → BD compartida directa (SQL raw, patrón de `lib/financiero.ts`).
-  - `iarest` → por **puerto HTTP** (`${IAREST_URL}/api/operador/restaurantes`, Bearer `OPERADOR_SHARED_SECRET`),
-    porque ia-rest está en otra BD. **No se fusiona nada.** El endpoint vive en `apps/ia-rest/src/app/api/operador/`.
-- **Pestañas:** 🏠 Mis propiedades · 🏢 Negocios · 🗺️ Estructura.
-  - **🏠 Mis propiedades** (`lib/propiedades.ts` + `/api/admin/propiedades`): el "acceso a mis
-    propiedades" desde el panel único. Dos sub-vistas:
-    - **🛠️ Portal** (por defecto): **embebe en iframe el portal del propietario de ialimp** → Alberto
-      trabaja desde el panel (es propietario/cliente de Vanesa ahí). **Acceso SIN login:** el endpoint
-      busca su token mágico (`clientes.access_token` en la BD compartida) por su email de operador y
-      embebe `${IALIMP_URL}/propietario/<token>` (entra directo, sin formulario y sin el problema de
-      cookies de terceros; la 1ª vez puede pedir aceptar RGPD). Si no hay token por email, cae a
-      `${IALIMP_URL}/propietario` (login) con fallback "abrir en pestaña nueva". ialimp no manda
-      `X-Frame-Options`/CSP → se deja embeber.
-    - **📊 Resumen**: tarjetas de los apartamentos turísticos propios (sivra), leyendo SOLO la
-      tabla `properties` (las propias con Smoobu) + `incomes`/`expenses` de la BD compartida —
-      **NO** la tabla `propiedades` (multi-tenant de limpiadoras).
-  - **🗺️ Estructura**: radiografía automática del repo (ver `docs/ESTRUCTURA.md`).
-- **F1 (hecho):** login + listado unificado de clientes + **bloquear/liberar** (`empresas.activa` / `restaurantes.activo`) + **vista 360**.
-- **Pendiente (F2+):** módulos por cliente (`tenant_modulos` + gateo), crear cliente, retirar los superadmin sueltos.
+## Panel de OPERADOR — arquitectura post PR #249
+- **`/admin`** (god-panel oscuro original): sigue vivo como fallback, misma auth (`plataforma_admin`).
+- **`/operador/*`** (nuevo, tema claro): `ClientesClient.tsx`, `MapaArquitectura`, placeholder ia-rest. Mismas APIs `/api/admin/*` sin tocar.
+- **Auth:** `lib/superadmin.ts` + cookie `plataforma_admin` 8h. El login de `/login` (no `/admin/login`) ya emite ambas cookies si el email está en `superadmins`.
+- **Adaptadores:** `lib/adapters/*` — ialimp/sivra por BD compartida, ia-rest por HTTP Bearer.
+- **`lib/conciliacion.ts`:** `candidatosSivra()` lee tabla `gastos` (raw SQL). Ref: `sivra:gasto:<id>`.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

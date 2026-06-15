@@ -16,6 +16,36 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED) — 15/06/2026**
+  Dos zonas separadas (usuario `/dashboard` + god-panel `/admin`) unificadas en una sola pantalla con sidebar único, tema claro y un solo login.
+
+  - **Auth unificado:** `app/api/auth/login/route.ts` ahora emite ambas cookies (`plataforma_session` + `plataforma_admin`) cuando el email coincide con un superadmin activo. Nuevo helper `findActiveAdminByEmail(email)` en `lib/superadmin.ts` (solo lectura, sin bcrypt, sin escrituras). `logout` borra ambas cookies.
+
+  - **Sidebar único con dos grupos:**
+    - *Mi negocio* (siempre): Resumen · Banca · 🏨 Apartamentos · 🧹 Limpiezas · 💬 Comunicación
+    - *Operador* (solo si sesión de superadmin): 🏢 Clientes · 🍽️ ia-rest · 🗺️ Estructura
+
+  - **Nuevas páginas — Mi negocio:**
+    - `/apartamentos`: tarjetas de los 4 pisos sivra con KPIs del mes + próxima reserva (`getPropiedades()` de `lib/propiedades.ts`)
+    - `/limpiezas`: portal propietario ialimp embebido en iframe sin segundo login (`getPropietarioAccessToken`)
+
+  - **Nuevas páginas — Operador (tema claro, mismas APIs `/api/admin/*`):**
+    - `/operador/clientes`: lista por vertical, bloquear/liberar, modal 360, modal nuevo cliente (`ClientesClient.tsx`)
+    - `/operador/estructura`: `MapaArquitectura`
+    - `/operador/iarest`: placeholder + enlace directo
+
+  - **Corrección conciliación bancaria:** `candidatosSivra()` en `lib/conciliacion.ts` leía `expenses` (34 filas, congelada desde abril). Corregido a `gastos` (71 filas, tabla real del agente IA de sivra). Recupera ~37 gastos invisibles (€5.670). `gastos.propiedad` usa el mismo slug que `properties.id` = `negocio.refExt`.
+
+  - **PWA:** `public/manifest.json` + `public/icon.svg` + metadata en `app/layout.tsx`.
+
+  - **Command palette Cmd/Ctrl+K:** `CommandPalette.tsx` sin deps externas, overlay claro, filtro por texto, teclas ↑↓↵.
+
+  - **Strip "Hoy" en dashboard:** check-ins/check-outs del día + movimientos bancarios del día. Solo se muestra si hay actividad.
+
+  - **Limpieza BD:** sociedad "Sique Brilla SL" (y su negocio) eliminada de la cuenta de Alberto en plataforma (tablas `sociedades`/`negocios`). **NO toca ialimp** — la empresa de Vanessa sigue operativa.
+
+  - **`/admin` sigue vivo** como fallback. Siguiente paso: convertirlo a redirect cuando Alberto confirme que `/operador/clientes` funciona bien.
+
 - **🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria — 14/06/2026**
   La consolidación bancaria pasó de "código inerte" a **funcionando con datos reales de Alberto**. Larga sesión.
   - **Enable Banking en producción (restricted mode = GRATIS para cuentas propias)**: tras descartar GoCardless
