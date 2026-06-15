@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T08:02:29Z",
+  "generadoEn": "2026-06-15T09:00:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1756,6 +1756,7 @@
       "iarest.checklist_plantillas",
       "iarest.produccion_tareas",
       "iarest.produccion_tiempos_estandar",
+      "iarest.recibos_digitales",
       "incidencias_sistema",
       "inventario_menaje",
       "inventario_menaje_evento",
@@ -1934,6 +1935,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
       "fecha": "15/06/2026"
     },
@@ -1987,10 +1992,6 @@
     },
     {
       "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
       "fecha": "14/06/2026"
     }
   ],
