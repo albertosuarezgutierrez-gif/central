@@ -290,3 +290,76 @@ export function RevisarBandeja({ movimientos, categorias }: {
 function eur(n: number): string {
   return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR' }).format(n)
 }
+
+// Descarga el CSV de todos los movimientos para enviárselo al gestor.
+export function ExportarBtn() {
+  return <a href="/api/banca/export" style={{ ...ghost, textDecoration: 'none', display: 'inline-block' }}>📥 Exportar (CSV)</a>
+}
+
+// Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
+// sobre los movimientos ya cargados; sin llamadas extra al servidor.
+type MovTabla = {
+  id: string; fecha: string | null; concepto: string; categoria: string | null
+  importe: number; conciliado: boolean
+}
+export function MovimientosTabla({ movimientos, catLabel }: {
+  movimientos: MovTabla[]
+  catLabel: Record<string, string>
+}) {
+  const [q, setQ] = useState('')
+  const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
+  const [cat, setCat] = useState('todas')
+
+  const cats = Array.from(new Set(movimientos.map(m => m.categoria).filter(Boolean))) as string[]
+  const texto = q.trim().toLowerCase()
+  const filtrados = movimientos.filter(m => {
+    if (texto && !m.concepto.toLowerCase().includes(texto)) return false
+    if (signo === 'ingreso' && m.importe < 0) return false
+    if (signo === 'gasto' && m.importe >= 0) return false
+    if (cat !== 'todas' && m.categoria !== cat) return false
+    return true
+  })
+  const suma = filtrados.reduce((s, m) => s + m.importe, 0)
+  const conc = filtrados.filter(m => m.conciliado).length
+
+  return (
+    <section>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+        <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Movimientos</h2>
+        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
+          {filtrados.length}/{movimientos.length} · suma {eur(suma)} · 🔗 {conc} conciliados
+        </span>
+      </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Buscar concepto…"
+          style={{ ...input, flex: '1 1 200px', minWidth: '160px' }} />
+        <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
+          <option value="todos">Ingresos y gastos</option>
+          <option value="ingreso">Solo ingresos</option>
+          <option value="gasto">Solo gastos</option>
+        </select>
+        <select value={cat} onChange={e => setCat(e.target.value)} style={{ ...input, flexShrink: 0 }}>
+          <option value="todas">Todas las categorías</option>
+          {cats.map(c => <option key={c} value={c}>{catLabel[c] || c}</option>)}
+        </select>
+      </div>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        {filtrados.length === 0 ? (
+          <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos que coincidan.</div>
+        ) : filtrados.map((m, i) => (
+          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+            <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
+              {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{catLabel[m.categoria] || m.categoria}</div>}
+            </div>
+            <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
+              {m.conciliado ? '🔗' : ''}
+            </div>
+            <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
