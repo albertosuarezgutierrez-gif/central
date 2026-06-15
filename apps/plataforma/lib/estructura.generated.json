@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T20:23:19Z",
+  "generadoEn": "2026-06-15T20:44:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2210,6 +2210,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
       "fecha": "15/06/2026"
     },
@@ -2263,10 +2267,6 @@
     },
     {
       "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)",
       "fecha": "14/06/2026"
     }
   ],
