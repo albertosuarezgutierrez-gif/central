@@ -123,26 +123,45 @@ Notificaciones: **Web Push** (`@central/core-push` + service worker portado de s
 
 ## 7. Reutilización (no se reescribe)
 
-- `packages/@central/*`: `core-storage` (signed URLs), `core-push` (Web Push), `core-email`,
-  `core-identity` (sesión/inquilino). **Nuevo:** `core-firma`.
+- `packages/@central/*` existentes: `core-storage` (signed URLs), `core-push` (Web Push), `core-email`,
+  `core-identity` (sesión/inquilino).
+- **Paquetes nuevos:** `core-firma` (núcleo de firma), `module-chat` (chat; ialimp lo adopta, rrhh lo
+  consume) y `module-documental` (motor de expedientes sobre `core-storage`; rrhh lo estrena, ialimp migra
+  después).
 - Patrones a portar de `ialimp`: chat por hilos, componente de documentos por categoría + caducidad,
   alta de personas + acceso por enlace/PIN (`limpiadora-auth`), white-label por empresa (`branding`),
   service worker de push (de `sivra`/`ia-rest`), `FirmaPad.tsx` (canvas táctil) como base de la firma móvil.
 
 ## 7.bis Relación con `ialimp` y no-duplicación
 
-`ialimp` ya tiene chat, documentos por categoría y ausencias para sus limpiadoras (cliente vivo:
-Sique Brilla / Vanessa). **No se toca ni se migra nada de ialimp**: son productos y **bases de datos
-distintas**, sin datos compartidos. Vanessa sigue 100% en ialimp.
+`ialimp` ya tiene chat, documentos por categoría y ausencias para sus limpiadoras (cliente:
+Sique Brilla / Vanessa, **actualmente inactivo**). **Los datos de ialimp no se mueven** (siguen en su BD);
+lo que cambia es el **código**: ialimp **adopta los módulos compartidos** (swap de su chat a `module-chat`
+ahora; migración de su documental a `module-documental` después). Toda intervención sobre ialimp exige
+**preview en verde antes de `main`** (cliente con datos).
 
 El riesgo real no es de datos, es **duplicar código**. Regla de la matriz: lo compartido sube a
-`packages/*`; lo propio se queda en su app. Estrategia:
+`packages/*`; lo propio se queda en su app. **Decisión (15/06/2026):** Sique Brilla no está usando ialimp
+activamente ahora → se aprovecha la ventana para dejar la arquitectura **definitiva** (principio de la
+matriz: los cambios que rompen se hacen sin clientes activos). Estrategia:
 
 - **`packages/core-firma`** → paquete compartido **desde ya** (capacidad nueva, claramente reutilizable
   por rrhh y, a futuro, por los contratos de evento de ia-rest).
-- **Chat / documental** → en el piloto, rrhh los construye **reusando el código de ialimp como
-  referencia** (no se extrae módulo todavía, para no operar sobre el cliente vivo de ialimp). La
-  unificación en módulos es **deuda técnica planificada post-piloto** (ver §7.ter).
+- **Chat → `packages/module-chat` extraído AHORA** (definitivo): se saca el chat de ialimp a un módulo,
+  **ialimp lo adopta** y **rrhh lo consume desde el inicio**. Cero duplicación. Disciplina obligatoria:
+  **preview de ialimp en verde antes de `main`** (cliente con datos, aunque inactivo).
+- **Documental → `packages/module-documental` agnóstico de entidad** (definitivo). NO mete el dominio
+  dentro (eso sí sería abstracción prematura): es un **motor genérico de expedientes** que gestiona
+  carpetas de documentos categorizados colgando de un `owner_ref` opaco (tipo + id), con todo lo
+  específico **inyectado**: categorías, permisos por carpeta, política de Storage (bucket/path privado +
+  signed URL, como `core-storage`), y un **hook de firma opcional** (rrhh engancha `core-firma`; ialimp
+  no). Común: subida/descarga, metadata, caducidad con avisos, `subido_por`, auditoría.
+  - **rrhh lo consume desde el día 1** (greenfield, sin migración).
+  - **ialimp lo adopta en un paso POSTERIOR**: requiere migrar su `propiedades.documentos` (array JSONB)
+    a las tablas del módulo → más invasivo que el swap del chat. Se secuencia aparte (preview verde), NO
+    dentro de la Fase 1 de rrhh.
+  - **Datos NO se unifican** (a diferencia del chat): los expedientes de rrhh viven en su BD aislada
+    (RGPD), los de ialimp en la suya. Se comparte el **motor (código)**, no los datos.
 
 ## 7.ter Chat: estrategia de unificación (cliente multi-producto)
 
@@ -159,10 +178,10 @@ que la matriz evita). Se resuelve con un **módulo**:
   permanecen aislados en rrhh y nunca salen de su silo).
 
 Secuencia:
-1. **Piloto:** chat propio de rrhh (código reusado de ialimp).
-2. **Disparador de unificación:** primer cliente con **dos productos** → se extrae `module-chat` y se
-   promueve a la capa de plataforma (datos por `cuenta_id`).
-3. ialimp adopta `module-chat` después, con cuidado (cliente vivo).
+1. **Ahora (Fase 1):** se extrae `module-chat`; **ialimp lo adopta** (preview verde) y **rrhh lo consume**.
+   Datos por app de momento (ialimp en su BD; rrhh en la suya).
+2. **Disparador de unificación de DATOS:** primer cliente con **dos productos** → las tablas de chat se
+   promueven a la capa de plataforma (datos por `cuenta_id`). El código (`module-chat`) ya estará listo.
 
 Una **app/servicio de chat propio** solo se justificaría si el chat escala a producto realtime masivo
 (presencia, multimedia, multi-dispositivo) usado por muchos clientes/productos. Decisión de escala, no de
@@ -170,14 +189,16 @@ piloto.
 
 ## 8. Fases de entrega
 
-- **Fase 1 — Cimiento:** scaffold `apps/rrhh` + proyecto Supabase propio + auth (responsable + empleado
-  móvil) + empleados + expediente con carpetas + subida bidireccional con permisos por carpeta +
+- **Fase 1 — Cimiento + módulos compartidos:** scaffold `apps/rrhh` + proyecto Supabase propio + auth
+  (responsable + empleado móvil) + empleados + **`module-documental`** (expediente con carpetas + subida
+  bidireccional con permisos) + **`module-chat`** (rrhh lo consume; **ialimp lo adopta**, preview verde) +
   notificaciones (push + email) + PWA.
 - **Fase 2 — FIRMA (prioritaria):** `core-firma` (puerto) + adaptador **Firmafy** + flujo
   envío → notificación → firma en móvil + registro probatorio (`firmas`) + **sello de empresa**.
-- **Fase 3:** chat interno (portado de ialimp) + solicitudes self-service (vacaciones/permisos/parte médico
-  con aprobación).
-- **Fase 4 (futuro):** adaptador de firma **self-hosted** (PAdES + RFC 3161) + analítica/panel.
+- **Fase 3:** solicitudes self-service (vacaciones/permisos/parte médico con aprobación) + **adopción de
+  `module-documental` por ialimp** (migración JSONB→tablas, preview verde).
+- **Fase 4 (futuro):** adaptador de firma **self-hosted** (PAdES + RFC 3161) + unificación de chat por
+  `cuenta_id` en plataforma (al llegar el primer cliente multi-producto) + analítica/panel.
 
 ## 9. Fuera de alcance (YAGNI por ahora)
 
