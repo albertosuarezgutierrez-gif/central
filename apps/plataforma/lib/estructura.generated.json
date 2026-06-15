@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T08:02:29Z",
+  "generadoEn": "2026-06-15T08:41:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1934,6 +1934,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)",
+      "fecha": "14/06/2026"
+    },
+    {
       "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
       "fecha": "15/06/2026"
     },
@@ -1983,14 +1991,6 @@
     },
     {
       "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "📊 Briefing consolidado (plataforma) — branch `claude/briefing-consolidado-plataforma`",
       "fecha": "14/06/2026"
     }
   ],
