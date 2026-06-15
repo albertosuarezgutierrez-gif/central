@@ -77,8 +77,14 @@
     de fechas/tipo). API: `/api/e/solicitudes` (empleado crea/ve), `/api/admin/solicitudes` (+`?pendientes=1`)
     y `/[id]` PATCH (aprobar/rechazar). UI: bandeja `/admin/solicitudes` + bloque en el portal `/e`. `next
     build` verde (16 páginas).
-  - **PENDIENTE Fase 1:** notificaciones (push+email al subir doc / nuevo mensaje / nueva solicitud) + PWA,
-    proyecto Vercel `rrhh` (+ env vars) — necesitan infra de Alberto. **Fase 2:** firma (Firmafy). **Precio:** diferido.
+  - **📧 NOTIFICACIONES EMAIL integradas (listas para claves) — 15/06:** `lib/notificar.ts`
+    (`avisarResponsables`) avisa por email a los `usuarios_rrhh` cuando el empleado **sube un documento,
+    crea una solicitud o escribe por el chat**. Usa `nodemailer` DIRECTO (no `core-email`: su bundle fallaba
+    por symlinks/webpack "Can't resolve nodemailer"). Best-effort/no-op si no hay SMTP → funciona al cargar
+    `SMTP_HOST/PORT/USER/PASSWORD`. **Trampa de build resuelta:** un comentario JSDoc con `SMTP_*` seguido de
+    `/` cerraba el bloque `/* */` (evitar `*` + `/` en comentarios). `next build` verde.
+  - **PENDIENTE Fase 1:** **push** (VAPID + service worker) + PWA, proyecto Vercel `rrhh` (+ env vars:
+    `DATABASE_URL?schema=rrhh`, `JWT_SECRET`, Supabase, SMTP) — infra de Alberto. **Fase 2:** firma (Firmafy). **Precio:** diferido.
 
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).

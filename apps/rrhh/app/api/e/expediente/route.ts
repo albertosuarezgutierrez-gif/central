@@ -4,6 +4,7 @@ import { AuthError } from '@/lib/tenant'
 import { ACTOR_TITULAR, CARPETAS } from '@/lib/carpetas'
 import { carpetasVisibles } from '@central/module-documental'
 import { listarExpediente, subirDocumento } from '@/lib/documental'
+import { avisarResponsables, nombreEmpleado } from '@/lib/notificar'
 
 export async function GET() {
   try {
@@ -23,6 +24,8 @@ export async function POST(req: Request) {
     const doc = await subirDocumento(empresa_id, empleado_id, ACTOR_TITULAR, {
       carpeta, nombre: file.name, tipo: file.type, tamano: file.size, bytes: await file.arrayBuffer(),
     })
+    const nombre = await nombreEmpleado(empleado_id)
+    await avisarResponsables(empresa_id, `Nuevo documento de ${nombre}`, `${nombre} ha subido "${doc.nombre}" a su expediente (${doc.carpeta}).`)
     return NextResponse.json({ documento: doc }, { status: 201 })
   } catch (e) {
     if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 })
