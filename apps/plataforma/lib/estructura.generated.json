@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T09:41:12Z",
+  "generadoEn": "2026-06-15T12:10:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -77,6 +77,11 @@
       "id": "module-materiales",
       "tipo": "module",
       "npm": "@central/module-materiales"
+    },
+    {
+      "id": "module-organizador-trabajo",
+      "tipo": "module",
+      "npm": "@central/module-organizador-trabajo"
     },
     {
       "id": "module-presupuestos",
@@ -467,6 +472,24 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 1
+      }
+    },
+    "module-organizador-trabajo": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "module-presupuestos": {
@@ -955,6 +978,7 @@
     "module-feedback": [],
     "module-horario": [],
     "module-materiales": [],
+    "module-organizador-trabajo": [],
     "module-presupuestos": [],
     "module-proveedores": [],
     "module-revenue": []
@@ -2217,7 +2241,7 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 17,
+    "packages": 18,
     "capacidades": 23,
     "skills": 13,
     "apis": 768,
