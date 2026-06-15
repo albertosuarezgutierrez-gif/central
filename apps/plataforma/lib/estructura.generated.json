@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T13:54:55Z",
+  "generadoEn": "2026-06-15T14:28:09Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -63,6 +63,11 @@
       "id": "module-crm",
       "tipo": "module",
       "npm": "@central/module-crm"
+    },
+    {
+      "id": "module-documental",
+      "tipo": "module",
+      "npm": "@central/module-documental"
     },
     {
       "id": "module-feedback",
@@ -347,8 +352,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "usado",
@@ -459,6 +464,28 @@
       "rrhh": {
         "estado": "no",
         "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-documental": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 3
       },
       "sivra": {
         "estado": "no",
@@ -1140,6 +1167,7 @@
     "module-concursos": [],
     "module-contabilidad": [],
     "module-crm": [],
+    "module-documental": [],
     "module-feedback": [],
     "module-horario": [],
     "module-materiales": [],
@@ -1837,6 +1865,8 @@
     "rrhh": [
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/documentos",
+      "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/e/login"
@@ -2060,6 +2090,7 @@
       "movimientos_bancarios"
     ],
     "rrhh": [
+      "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresas",
       "rrhh.usuarios_rrhh"
@@ -2487,10 +2518,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 18,
+    "packages": 19,
     "capacidades": 23,
     "skills": 13,
-    "apis": 773,
+    "apis": 775,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
