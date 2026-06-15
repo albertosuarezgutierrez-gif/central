@@ -1,0 +1,26 @@
+name: gitleaks
+
+# Escaneo de secretos: bloquea cualquier PR/push que introduzca una credencial
+# en el código (la lección del incidente de la API key de Smoobu, jun-2026).
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks (árbol actual)
+        run: |
+          VER=8.21.2
+          curl -sSfL "https://github.com/gitleaks/gitleaks/releases/download/v${VER}/gitleaks_${VER}_linux_x64.tar.gz" | tar -xz gitleaks
+          # --no-git escanea los ficheros del árbol actual (no el historial), así
+          # detecta cualquier secreto nuevo sin fallar por fugas antiguas ya allowlisted.
+          ./gitleaks detect --no-git --source=. --config=.gitleaks.toml --redact --exit-code 1
