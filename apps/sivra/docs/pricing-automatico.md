@@ -348,3 +348,20 @@ sólo porque al estar reservada deja de ser `available` (línea 179) y el bucle 
 - **Comps por fecha/temporada:** percentil de mercado segmentado por ventana de `checkin_date`, no uno global.
 - **Guardia de confianza por FECHA:** no escribir una fecha concreta sin comps propios de su temporada
   (hoy la guardia es por piso → deja pasar 2027 con datos de 2026).
+
+## 10. 🎟️ Fase 2-A: auto-eventos vía Ticketmaster (15/06/2026)
+
+Para que **eventos sorpresa** (final de Copa del Rey, conciertos de estadio) suban el precio **solos**
+—sin tocar el calendario a mano— sivra replica el patrón de la Edge Function `eventos-entorno` de ia-rest:
+
+- **Cron** `/api/eventos/sync` (semanal, lun 04:00): consulta **Ticketmaster** para Sevilla
+  (`postalCode=41001`, radio 25km → capta Pizjuán/La Cartuja), próximos 365 días. Cada evento → `aforo`
+  → factor de impacto (1.08–1.60). Upsert en **`pricing_eventos_auto`** (fecha, nombre, aforo, factor).
+- **Motor** (`apply`): carga los eventos auto del horizonte y combina con el calendario manual:
+  `factor(fecha) = max(eventFactor(fecha), evento_auto[fecha])`. Tabla vacía ⇒ comportamiento idéntico.
+- **Gateado** por `TICKETMASTER_API_KEY` (env de Vercel de sivra; se reutiliza la de ia-rest). Sin la key,
+  el cron es no-op → desplegable y seguro; se activa al poner la variable.
+- **Cobertura:** TM = conciertos/deportes. LaLiga/ferias/festivos que TM no liste → 2ª iteración con
+  Claude web_search (como ia-rest), pendiente.
+- **Fase 2-B (pendiente):** mercado por `checkin_date` (scraper barriendo fechas futuras + percentil por
+  temporada con fallback al global) — para que también los precios NORMALES dejen de ser planos.

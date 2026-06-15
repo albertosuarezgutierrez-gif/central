@@ -139,6 +139,14 @@ export async function POST(req: NextRequest) {
   const end = new Date(today); end.setDate(end.getDate() + days)
   const startDate = fmt(today), endDate = fmt(end)
 
+  // Eventos auto-detectados (Ticketmaster, etc.) → factor por fecha. Se combina con el
+  // calendario manual vía MAX (el más alto manda). Tabla vacía ⇒ no cambia nada.
+  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
+    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
+  `).catch(() => [])
+  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
   const results: any[] = []
 
   for (const r of recs) {
@@ -185,7 +193,7 @@ export async function POST(req: NextRequest) {
       // aplicación → min/max del propietario (autoridad FINAL — incluye el suelo de coste).
       let target = clamp(baseTarget, floorBase, ceilBase)
       // Premium por evento (Semana Santa/Feria/…): puede superar el techo del mercado normal.
-      if (r.events_enabled) target = Math.round(target * eventFactor(date))
+      if (r.events_enabled) target = Math.round(target * Math.max(eventFactor(date), autoEv.get(date) ?? 1))
       // Descuento de hueco: noche suelta libre entre dos reservas (difícil de vender).
       if (Number(r.gap_discount_pct) > 0) {
         const prevD = fmt(new Date(new Date(date).getTime() - 86400000))
