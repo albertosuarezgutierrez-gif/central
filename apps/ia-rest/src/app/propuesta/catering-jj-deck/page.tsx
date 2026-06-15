@@ -130,7 +130,40 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 4 · Comercial & comisiones
+  // 4 · El recorrido (de boda.net al evento cerrado)
+  {
+    kicker: 'De la solicitud al cierre',
+    titulo: 'De boda.net al evento cerrado',
+    sub: 'La solicitud entra por un lado y sale un evento ejecutado y cerrado. Los agentes hacen el trabajo en cada paso.',
+    color: C.amber,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:1000 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, flexWrap:'wrap', marginBottom:26 }}>
+          <Node color={C.teal} title="Solicitud" sub="boda.net → CRM" />
+          <Arrow label="presupuesto solo" color={C.gold} />
+          <Node color={C.amber} title="Presupuesto" sub="menú + tu margen" />
+          <Arrow label="paga la señal" color={C.green} />
+          <Node color={C.green} title="Confirmado" sub="cobro online" />
+          <Arrow label="explota el menú" color={C.red} />
+          <Node color={C.red} title="Producción" sub="compra + cocina" />
+          <Arrow label="mise-en-place" color={C.teal} />
+          <Node color={C.gold} title="Evento" sub="sala por carga" />
+          <Arrow label="cierre" color={C.ink4} />
+          <Node color={C.teal} title="Cerrado" sub="roturas + reseña" />
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+          <Card icon="🛒" color={C.red} titulo="Compra al proveedor" body="El evento confirmado genera el pedido solo; el albarán entra por foto y la factura cuadra sola." />
+          <Card icon="👨‍🍳" color={C.teal} titulo="Parte de trabajo a cocina" body="El menú se explota en elaboraciones fechadas por caducidad, repartidas por cocinero con su tiempo." />
+          <Card icon="📸" color={C.amber} titulo="Cierre del evento" body="Inventario y roturas por foto, informe de rentabilidad y la reseña que alimenta el ranking." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, marginTop:26, textAlign:'center' }}>
+          La entrada desde boda.net es un conector; el resto del recorrido ya está construido.
+        </p>
+      </div>
+    ),
+  },
+
+  // 5 · Comercial & comisiones
   {
     kicker: 'Lo que pide el comprador',
     titulo: 'Comercial y comisiones',
