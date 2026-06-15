@@ -90,28 +90,25 @@ export async function analizarMovimientos(cuentaId: string, limite = 150): Promi
   `
   if (pendientes.length === 0) return { categorizados: 0 }
 
-  // Trocear en sub-lotes para que cada respuesta IA quepa sin truncarse.
-  const cats: Categorizacion[] = []
+  // Trocear en sub-lotes y PERSISTIR lote a lote: cada respuesta IA cabe sin truncarse y,
+  // si la función se queda sin tiempo, lo ya categorizado queda guardado (idempotente:
+  // marca analizado_at, así un re-análisis o el cron continúa donde lo dejó).
+  let n = 0
   for (let i = 0; i < pendientes.length; i += TAM_LOTE_IA) {
     const trozo = pendientes.slice(i, i + TAM_LOTE_IA)
-    const c = await categorizarLote(
+    const cats = await categorizarLote(
       trozo.map(p => ({ id: p.id, concepto: p.concepto, contraparte: p.contraparte, importe: Number(p.importe) })),
     )
-    for (const x of c) cats.push(x)
-  }
-  if (cats.length === 0) return { categorizados: 0 }
-
-  // Persistencia: un UPDATE por movimiento, scoped por cuenta vía la subconsulta.
-  let n = 0
-  for (const c of cats) {
-    const res = await prisma.$executeRaw`
-      UPDATE movimientos_bancarios
-      SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
-          categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision}, analizado_at = now()
-      WHERE id = ${c.id}::uuid
-        AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
-    `
-    n += Number(res)
+    for (const c of cats) {
+      const res = await prisma.$executeRaw`
+        UPDATE movimientos_bancarios
+        SET categoria = ${c.categoria}, concepto_normalizado = ${c.conceptoNormalizado},
+            categoria_pgc = ${c.categoriaPgc}, requiere_revision = ${c.requiereRevision}, analizado_at = now()
+        WHERE id = ${c.id}::uuid
+          AND cuenta_bancaria_id IN (SELECT id FROM cuentas_bancarias WHERE cuenta_id = ${cuentaId}::uuid)
+      `
+      n += Number(res)
+    }
   }
   return { categorizados: n }
 }
