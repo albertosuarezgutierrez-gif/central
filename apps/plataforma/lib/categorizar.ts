@@ -91,14 +91,20 @@ export const DESTINO_LABEL: Record<Destino, string> = {
 const RE_TITULAR = /SUAREZ.*GUTIERREZ|GUTIERREZ.*SUAREZ|ALBERTO SUAREZ/i
 const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUTUA|LINEA DIRECTA|SANITAS|ADESLAS|SEGURCAIXA|DKV|ASISA|CATALANA OCCIDENTE|OCCIDENT|LIBERTY|HELVETIA|PLUS ULTRA|SANTALUCIA|OCASO|PELAYO|VERTI|GENESIS|FENIX|DIVINA PASTORA|FIATC|SEGUROS BILBAO|NATIONALE|VIDACAIXA|ANTARES|ARAG|ASEFA|PREVENTIVA|SURNE|QUALITAS|SEGURO|SEGUROS)\b/i
 const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI)\b/i
+// Gastos propios del Dúplex (en la cuenta BBVA): comunidad, luz, internet, agua, IBI/ayto + reservas.
+const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|ENDESA|FINETWORK|EMASESA|IBERDROLA|NATURGY|MOVISTAR|VODAFONE|ORANGE|DIGI|AYUNTAMIENTO|AYTO|BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE)\b/i
 
 export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null): Destino {
-  const t = `${concepto ?? ''} ${contraparte ?? ''}`
-  const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')   // BBVA = Dúplex + seguros; Kutxa = resto pisos + personal
-  if (RE_TITULAR.test(t)) return 'traspaso_interno'             // transferencias a/desde uno mismo
-  if (RE_SEGUROS.test(t)) return 'seguros'
-  if (RE_PISOS.test(t)) return esBBVA ? 'turistico_duplex' : 'turistico_pisos'
-  return esBBVA ? 'turistico_duplex' : 'personal'
+  const txt = `${concepto ?? ''} ${contraparte ?? ''}`
+  const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')
+  // Traspaso interno SOLO si el RECEPTOR (contraparte) eres tú — no si solo apareces como
+  // ordenante en el concepto de una transferencia a un tercero.
+  if (RE_TITULAR.test(contraparte ?? '')) return 'traspaso_interno'
+  if (RE_SEGUROS.test(txt)) return 'seguros'
+  // BBVA = Dúplex (gastos del piso) + correduría de seguros. Lo que no sea del piso → correduría.
+  if (esBBVA) return RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros'
+  // Kutxa = resto de pisos turísticos + personal.
+  return RE_PISOS.test(txt) ? 'turistico_pisos' : 'personal'
 }
 
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
