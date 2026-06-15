@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T14:55:34Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T15:50:44Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 20 packages · 23 capacidades · 13 skills · 781 rutas API.
+**Resumen:** 5 apps · 20 packages · 23 capacidades · 13 skills · 783 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -24,9 +24,9 @@
 - **Rutas API:** 35
 ### rrhh
 - **Módulos que usa:** core-storage, module-chat, module-documental
-- **Capacidades:** —
-- **Tablas (6):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.mensajes, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 13
+- **Capacidades:** Notificaciones (push)
+- **Tablas (7):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 15
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -131,7 +131,7 @@
 - ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra.
 - ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
 - ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 - ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, sivra; falta en rrhh.
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 

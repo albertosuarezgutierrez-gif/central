@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T14:55:34Z",
+  "generadoEn": "2026-06-15T15:50:44Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1129,8 +1129,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "sivra": {
         "presente": false,
@@ -1896,6 +1896,7 @@
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
       "/api/auth/login",
@@ -1903,6 +1904,7 @@
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/login",
+      "/api/e/push/subscribe",
       "/api/e/solicitudes"
     ],
     "sivra": [
@@ -2128,6 +2130,7 @@
       "rrhh.empleados",
       "rrhh.empresas",
       "rrhh.mensajes",
+      "rrhh.push_subscriptions",
       "rrhh.solicitudes",
       "rrhh.usuarios_rrhh"
     ],
@@ -2518,10 +2521,10 @@
         "label": "Notificaciones (push)",
         "tiene": [
           "ia-rest",
-          "ialimp"
+          "ialimp",
+          "rrhh"
         ],
         "falta": [
-          "rrhh",
           "sivra"
         ]
       },
@@ -2557,7 +2560,7 @@
     "packages": 20,
     "capacidades": 23,
     "skills": 13,
-    "apis": 781,
+    "apis": 783,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
