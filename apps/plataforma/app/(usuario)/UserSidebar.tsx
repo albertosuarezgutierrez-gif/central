@@ -2,13 +2,21 @@
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 
-const NAV = [
+const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
+  { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
+  { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
 ]
 
-export default function UserSidebar({ email, nombre }: { email: string; nombre: string }) {
+const NAV_OPERADOR = [
+  { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
+  { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
+  { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
+]
+
+export default function UserSidebar({ email, nombre, isOperator }: { email: string; nombre: string; isOperator: boolean }) {
   const path = usePathname()
   const router = useRouter()
 
@@ -31,8 +39,9 @@ export default function UserSidebar({ email, nombre }: { email: string; nombre: 
         </div>
       </div>
 
-      <div style={{ flex: 1, padding: '12px' }}>
-        {NAV.map(({ href, icon, label }) => {
+      <div style={{ flex: 1, padding: '12px', overflowY: 'auto' }}>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
+        {NAV_NEGOCIO.map(({ href, icon, label }) => {
           const active = path === href || (href !== '/dashboard' && path.startsWith(href))
           return (
             <Link key={href} href={href} style={{
@@ -41,13 +50,35 @@ export default function UserSidebar({ email, nombre }: { email: string; nombre: 
               fontWeight: active ? 700 : 400,
               background: active ? 'var(--primary-light)' : 'transparent',
               color: active ? 'var(--primary)' : 'var(--text)',
-              fontSize: '14px',
+              fontSize: '14px', textDecoration: 'none',
             }}>
               <span>{icon}</span>
               <span>{label}</span>
             </Link>
           )
         })}
+
+        {isOperator && (
+          <>
+            <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
+            {NAV_OPERADOR.map(({ href, icon, label }) => {
+              const active = path.startsWith(href)
+              return (
+                <Link key={href} href={href} style={{
+                  display: 'flex', alignItems: 'center', gap: '10px',
+                  padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
+                  fontWeight: active ? 700 : 400,
+                  background: active ? 'var(--primary-light)' : 'transparent',
+                  color: active ? 'var(--primary)' : 'var(--text)',
+                  fontSize: '14px', textDecoration: 'none',
+                }}>
+                  <span>{icon}</span>
+                  <span>{label}</span>
+                </Link>
+              )
+            })}
+          </>
+        )}
       </div>
 
       <div style={{ padding: '16px', borderTop: '1px solid var(--border)' }}>
