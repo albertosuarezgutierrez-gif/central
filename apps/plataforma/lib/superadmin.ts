@@ -78,3 +78,12 @@ export async function requireAdmin() {
   if (!a) throw new Error('No autorizado')
   return a
 }
+
+// Busca un superadmin activo por email SIN verificar password ni escribir nada.
+// Uso: login unificado (la identidad ya fue verificada por la password de cuentas).
+export async function findActiveAdminByEmail(email: string): Promise<{ id: string; email: string } | null> {
+  const rows = await prisma.$queryRaw<Array<{ id: string; email: string }>>`
+    SELECT id, email FROM superadmins WHERE lower(email) = lower(${email}) AND activo = true LIMIT 1
+  `
+  return rows[0] ?? null
+}

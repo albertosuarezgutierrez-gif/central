@@ -3,7 +3,7 @@ import { requireSession } from '@/lib/session'
 import { analizarMovimientos } from '@/lib/categorizar'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 // POST /api/banca/analizar — (re)categoriza por IA los movimientos pendientes de
 // la cuenta. Idempotente (solo toca los que no tienen analizado_at). Scoped por sesión.

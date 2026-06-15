@@ -5,7 +5,7 @@ import { crearSesion } from '@/lib/enablebanking'
 import { sincronizarSesion } from '@/lib/psd2'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 // GET /api/banca/psd2/callback?code=... — el banco redirige aquí tras el consentimiento.
 // La petición lleva la cookie de sesión, así que sabemos la cuenta. Canjeamos el `code`

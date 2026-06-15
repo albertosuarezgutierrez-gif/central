@@ -12,7 +12,7 @@
 // → por cuenta: /details (IBAN) + /balances + /transactions.
 
 import { SignJWT } from 'jose'
-import { createPrivateKey } from 'node:crypto'
+import { createPrivateKey, type KeyObject } from 'node:crypto'
 
 const BASE = process.env.ENABLEBANKING_BASE_URL?.replace(/\/$/, '') || 'https://api.enablebanking.com'
 
@@ -22,15 +22,53 @@ export function disponible(): boolean {
 
 let jwtCache: { token: string; exp: number } | null = null
 
+// Carga la clave privada desde el valor pegado en la env var de Vercel, tolerando los
+// estropicios típicos del copia-pega y devolviendo un KeyObject listo para firmar:
+//  - comillas envolventes y saltos escapados (\n / \r\n);
+//  - PEM en una sola línea (se reconstruye cabecera/pie + cuerpo base64 a 64);
+//  - SIN cabecera PEM: cuerpo base64 suelto → se trata como DER (pkcs8/pkcs1/sec1), o como
+//    un PEM re-codificado en base64. Este último es el caso real de Enable Banking cuando
+//    se pega solo el cuerpo de la clave sin las líneas -----BEGIN/END-----.
+function cargarClavePrivada(raw: string): KeyObject {
+  let s = raw.trim()
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) s = s.slice(1, -1)
+  s = s.replace(/\\r/g, '').replace(/\\n/g, '\n').trim()
+
+  // Caso A: trae armadura PEM (-----BEGIN ... -----).
+  if (s.includes('-----BEGIN')) {
+    if (!s.includes('\n')) {
+      const m = s.match(/-----BEGIN ([A-Z0-9 ]+?)-----\s*([\s\S]*?)\s*-----END \1-----/)
+      if (m) {
+        const body = (m[2].replace(/\s+/g, '').match(/.{1,64}/g) ?? []).join('\n')
+        s = `-----BEGIN ${m[1].trim()}-----\n${body}\n-----END ${m[1].trim()}-----\n`
+      }
+    }
+    return createPrivateKey(s)
+  }
+
+  // Caso B: sin armadura → cuerpo base64 suelto.
+  const compact = s.replace(/\s+/g, '')
+  const der = Buffer.from(compact, 'base64')
+  // (1) ¿es base64 de un PEM completo? Al decodificar aparecerían las líneas -----BEGIN-----.
+  const comoTexto = der.toString('utf8')
+  if (comoTexto.includes('-----BEGIN')) return createPrivateKey(comoTexto)
+  // (2) DER crudo: probar los tres formatos habituales.
+  for (const type of ['pkcs8', 'pkcs1', 'sec1'] as const) {
+    try { return createPrivateKey({ key: der, format: 'der', type }) } catch { /* siguiente */ }
+  }
+  // (3) Último intento: envolver el cuerpo como PKCS#8 PEM y dejar que OpenSSL lo intente.
+  const pem = `-----BEGIN PRIVATE KEY-----\n${(compact.match(/.{1,64}/g) ?? []).join('\n')}\n-----END PRIVATE KEY-----\n`
+  return createPrivateKey(pem)
+}
+
 // Firma un JWT RS256 con la clave privada de la app. createPrivateKey acepta tanto
-// PKCS#1 ("BEGIN RSA PRIVATE KEY") como PKCS#8 ("BEGIN PRIVATE KEY"). El env puede venir
-// con saltos de línea escapados (\n) si se pegó en una sola línea en Vercel.
+// PKCS#1 ("BEGIN RSA PRIVATE KEY") como PKCS#8 ("BEGIN PRIVATE KEY").
 async function jwt(): Promise<string> {
   if (jwtCache && jwtCache.exp > Date.now() + 60_000) return jwtCache.token
   const appId = process.env.ENABLEBANKING_APP_ID
-  const pem = (process.env.ENABLEBANKING_PRIVATE_KEY || '').replace(/\\n/g, '\n')
-  if (!appId || !pem) throw new Error('Enable Banking sin configurar')
-  const key = createPrivateKey(pem)
+  const raw = process.env.ENABLEBANKING_PRIVATE_KEY || ''
+  if (!appId || !raw) throw new Error('Enable Banking sin configurar')
+  const key = cargarClavePrivada(raw)
   const iat = Math.floor(Date.now() / 1000)
   const exp = iat + 3600
   const token = await new SignJWT({})
@@ -80,19 +118,44 @@ export function iniciarAuth(aspspName: string, country: string, redirect: string
 }
 
 // Canjea el `code` del callback por una sesión autenticada con la lista de cuentas (uids).
-export type Sesion = { session_id: string; accounts: string[] }
+export type Sesion = { session_id: string; accounts: string[]; aspsp?: string }
 export async function crearSesion(code: string): Promise<Sesion> {
-  const j = await api<{ session_id: string; accounts: Array<string | { uid: string }> }>('/sessions', {
+  const j = await api<Record<string, unknown>>('/sessions', {
     method: 'POST',
     body: JSON.stringify({ code }),
   })
-  return { session_id: j.session_id, accounts: (j.accounts ?? []).map(a => typeof a === 'string' ? a : a.uid) }
+  return { session_id: String(j.session_id ?? ''), accounts: extraerUids(j), aspsp: nombreAspsp(j) }
 }
 
 // Recupera una sesión ya creada (para el re-sync diario): devuelve sus cuentas (uids).
+// Enable Banking devuelve `accounts` como lista de objetos cuenta (con `uid`) o de uids
+// string según el endpoint; aceptamos varias formas para no perder ninguna cuenta.
 export async function getSesion(sessionId: string): Promise<Sesion> {
-  const j = await api<{ accounts: Array<string | { uid: string }> }>(`/sessions/${sessionId}`)
-  return { session_id: sessionId, accounts: (j.accounts ?? []).map(a => typeof a === 'string' ? a : a.uid) }
+  const j = await api<Record<string, unknown>>(`/sessions/${sessionId}`)
+  return { session_id: sessionId, accounts: extraerUids(j), aspsp: nombreAspsp(j) }
+}
+
+function nombreAspsp(j: Record<string, unknown>): string | undefined {
+  const a = j.aspsp as Record<string, unknown> | undefined
+  return typeof a?.name === 'string' ? a.name : undefined
+}
+
+// Extrae los uid de cuenta de una respuesta de sesión, tolerando las variantes de la API:
+// accounts: [uid] | [{uid}] | [{account:{uid}}]; o accounts_data: [{uid}]; o accounts: [{id}].
+function extraerUids(j: Record<string, unknown>): string[] {
+  const fuentes = [j.accounts, (j as Record<string, unknown>).accounts_data].filter(Array.isArray) as unknown[][]
+  const uids: string[] = []
+  for (const arr of fuentes) {
+    for (const a of arr) {
+      if (typeof a === 'string') { uids.push(a); continue }
+      if (a && typeof a === 'object') {
+        const o = a as Record<string, unknown>
+        const uid = o.uid ?? o.id ?? (o.account as Record<string, unknown> | undefined)?.uid
+        if (typeof uid === 'string') uids.push(uid)
+      }
+    }
+  }
+  return [...new Set(uids)]
 }
 
 export type CuentaDetalle = { iban?: string; nombre?: string; divisa?: string }
@@ -134,11 +197,16 @@ type Transacciones = { transactions: MovRaw[]; continuation_key?: string }
 
 export async function getMovimientos(accountUid: string): Promise<MovEB[]> {
   const out: MovEB[] = []
+  // Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve
+  // vacío. Pedimos ~2 años hacia atrás (el consentimiento PSD2 suele permitir 90d de histórico,
+  // el banco recorta a lo que tenga disponible).
+  const dateFrom = new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   let cont: string | undefined
   let guard = 0
   do {
-    const qs = cont ? `?continuation_key=${encodeURIComponent(cont)}` : ''
-    const j: Transacciones = await api<Transacciones>(`/accounts/${accountUid}/transactions${qs}`)
+    const p = new URLSearchParams({ date_from: dateFrom })
+    if (cont) p.set('continuation_key', cont)
+    const j: Transacciones = await api<Transacciones>(`/accounts/${accountUid}/transactions?${p.toString()}`)
     for (const m of j.transactions ?? []) {
       const abs = Math.abs(Number(m.transaction_amount.amount))
       if (!Number.isFinite(abs)) continue

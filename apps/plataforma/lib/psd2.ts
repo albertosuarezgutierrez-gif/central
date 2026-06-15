@@ -8,6 +8,7 @@
 //     lo que el re-sync diario reutiliza para releer cuentas/movimientos.
 
 import { createHash } from 'node:crypto'
+import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
 
@@ -33,7 +34,7 @@ export async function sincronizarSesion(
       getMovimientos(accountUid).catch(() => [] as MovEB[]),
     ])
     const iban = detalle?.iban || accountUid
-    const banco = detalle?.nombre || 'Banco (PSD2)'
+    const banco = ses.aspsp || detalle?.nombre || 'Banco (PSD2)'
     const mascara = iban.length >= 4 ? `****${iban.slice(-4)}` : iban
 
     const filas = await prisma.$queryRaw<Array<{ id: string }>>`
@@ -49,19 +50,33 @@ export async function sincronizarSesion(
     if (!cbId) continue
     cuentas += 1
 
-    for (const m of movs) {
-      if (!Number.isFinite(m.importe)) continue
-      const res = await prisma.$executeRaw`
+    // Inserción EN BLOQUE (un solo INSERT por cuenta) — antes era uno a uno y con cuentas
+    // grandes (p. ej. Kutxa) el callback superaba el timeout de la función serverless.
+    // Dedup EN MEMORIA por hash: el ON CONFLICT no deduplica filas repetidas dentro del
+    // MISMO INSERT, así que si el banco devuelve un movimiento dos veces lo quitamos aquí.
+    const vistos = new Set<string>()
+    const validos = movs.filter(m => {
+      if (!Number.isFinite(m.importe)) return false
+      const h = hashMov(accountUid, m)
+      if (vistos.has(h)) return false
+      vistos.add(h)
+      return true
+    })
+    if (validos.length) {
+      const filasMov = validos.map(m => Prisma.sql`(
+        ${cbId}::uuid, ${m.bookingDate || null}::date, ${m.valueDate || m.bookingDate || null}::date,
+        ${m.importe}, ${m.concepto || null}, ${m.contraparte || null},
+        ${m.entryReference || null}, 'psd2', ${hashMov(accountUid, m)}
+      )`)
+      const res = await prisma.$executeRaw(Prisma.sql`
         INSERT INTO movimientos_bancarios
           (cuenta_bancaria_id, fecha_operacion, fecha_valor, importe, concepto, contraparte, referencia, origen, dedupe_hash)
-        VALUES (
-          ${cbId}::uuid, ${m.bookingDate || null}::date, ${m.valueDate || m.bookingDate || null}::date,
-          ${m.importe}, ${m.concepto || null}, ${m.contraparte || null},
-          ${m.entryReference || null}, 'psd2', ${hashMov(accountUid, m)}
-        )
+        VALUES ${Prisma.join(filasMov)}
         ON CONFLICT (cuenta_bancaria_id, dedupe_hash) DO NOTHING
-      `
-      if (Number(res) === 1) insertados += 1; else duplicados += 1
+      `)
+      const ins = Number(res)
+      insertados += ins
+      duplicados += validos.length - ins
     }
   }
 
