@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T08:44:13Z",
+  "generadoEn": "2026-06-15T09:00:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1756,6 +1756,7 @@
       "iarest.checklist_plantillas",
       "iarest.produccion_tareas",
       "iarest.produccion_tiempos_estandar",
+      "iarest.recibos_digitales",
       "incidencias_sistema",
       "inventario_menaje",
       "inventario_menaje_evento",
@@ -1934,16 +1935,8 @@
   ],
   "novedades": [
     {
-      "titulo": "🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)",
+      "titulo": "🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256",
       "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)",
-      "fecha": "14/06/2026"
     },
     {
       "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
@@ -1991,6 +1984,14 @@
     },
     {
       "titulo": "📦 Reposición de stock (ia-rest) — branch `claude/reposicion-stock-iarest`",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "⭐ Scoring/ranking de limpiadoras (ialimp) — branch `claude/scoring-limpiadoras-ialimp` (PR #207)",
+      "fecha": "14/06/2026"
+    },
+    {
+      "titulo": "💸 Agente de impagos (ialimp) — branch `claude/impagos-ialimp`",
       "fecha": "14/06/2026"
     }
   ],
