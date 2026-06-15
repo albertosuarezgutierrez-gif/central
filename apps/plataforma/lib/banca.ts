@@ -383,6 +383,7 @@ type DupRow = {
   fecha_operacion: Date | null; otro_fecha: Date | null
   conciliado: boolean; otro_conciliado: boolean
   contraparte_key: string | null
+  ocurrencias_contraparte: number
 }
 
 // Pares de gastos sospechosos de cobro doble: mismo importe + misma contraparte/concepto en
@@ -397,7 +398,12 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
            a.importe::float AS importe,
            a.fecha_operacion, b.fecha_operacion AS otro_fecha,
            a.conciliado, b.conciliado AS otro_conciliado,
-           coalesce(a.contraparte, a.concepto) AS contraparte_key
+           coalesce(a.contraparte, a.concepto) AS contraparte_key,
+           (SELECT count(*)::int FROM movimientos_bancarios m2
+             WHERE m2.cuenta_bancaria_id = a.cuenta_bancaria_id
+               AND coalesce(m2.contraparte, m2.concepto) = coalesce(a.contraparte, a.concepto)
+               AND m2.importe < 0
+               AND m2.fecha_operacion >= current_date - 60) AS ocurrencias_contraparte
     FROM movimientos_bancarios a
     JOIN movimientos_bancarios b
       ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id > a.id
@@ -422,6 +428,7 @@ export async function getDuplicadosSospechosos(cuentaId: string): Promise<DupGru
     fecha: toIso(r.fecha_operacion), otroFecha: toIso(r.otro_fecha),
     conciliado: r.conciliado, otroConciliado: r.otro_conciliado,
     contraparteKey: r.contraparte_key || '',
+    ocurrenciasContraparte: Number(r.ocurrencias_contraparte),
   }))
   return agruparDuplicados(pares, DUP_UMBRAL_BANNER)
 }
