@@ -14,18 +14,19 @@ const TOL_DIAS = 5
 type Candidato = { ref: string; importe: number; fecha: string }  // importe>0 ingreso, <0 gasto
 
 // Candidatos (ingresos + gastos) de un negocio sivra, por propertyId.
+// Gastos se leen de `gastos` (tabla raw, 71 filas) en vez de `expenses` (Prisma, 34 filas obsoletas).
 async function candidatosSivra(propertyId: string): Promise<Candidato[]> {
   const [ing, gas] = await Promise.all([
     prisma.$queryRaw<Array<{ id: string; total: unknown; fecha: Date | null }>>`
       SELECT id, amount AS total, date AS fecha FROM incomes
       WHERE "propertyId" = ${propertyId} AND date >= now() - interval '400 days'`,
     prisma.$queryRaw<Array<{ id: string; total: unknown; fecha: Date | null }>>`
-      SELECT id, amount AS total, date AS fecha FROM expenses
-      WHERE "propertyId" = ${propertyId} AND date >= now() - interval '400 days'`,
+      SELECT id::text AS id, total, fecha FROM gastos
+      WHERE propiedad = ${propertyId} AND fecha >= now() - interval '400 days'`,
   ])
   return [
     ...ing.map(r => ({ ref: `sivra:income:${r.id}`, importe: Math.abs(Number(r.total)), fecha: fechaIso(r.fecha) })),
-    ...gas.map(r => ({ ref: `sivra:expense:${r.id}`, importe: -Math.abs(Number(r.total)), fecha: fechaIso(r.fecha) })),
+    ...gas.map(r => ({ ref: `sivra:gasto:${r.id}`, importe: -Math.abs(Number(r.total)), fecha: fechaIso(r.fecha) })),
   ]
 }
 

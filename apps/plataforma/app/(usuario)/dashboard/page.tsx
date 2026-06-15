@@ -6,6 +6,27 @@ import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financi
 import { getSaldoConsolidado } from '@/lib/banca'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
 
+async function getStripHoy(cuentaId: string) {
+  const hoy = new Date().toISOString().slice(0, 10)
+  const [checkIns, checkOuts, movsHoy] = await Promise.all([
+    prisma.$queryRaw<Array<{ guestName: string | null }>>`
+      SELECT "guestName" FROM incomes WHERE "checkIn"::date = ${hoy}::date ORDER BY "checkIn" LIMIT 10`,
+    prisma.$queryRaw<Array<{ guestName: string | null }>>`
+      SELECT "guestName" FROM incomes WHERE "checkOut"::date = ${hoy}::date ORDER BY "checkOut" LIMIT 10`,
+    prisma.$queryRaw<Array<{ importe: number }>>`
+      SELECT mb.importe::float AS importe
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      JOIN sociedades s ON s.id = cb.sociedad_id
+      WHERE s.cuenta_id = ${cuentaId}::uuid AND mb.fecha_operacion::date = ${hoy}::date`,
+  ])
+  const entradas = checkIns.length
+  const salidas = checkOuts.length
+  const ingresos = movsHoy.filter(m => m.importe > 0).reduce((s, m) => s + m.importe, 0)
+  const gastos = movsHoy.filter(m => m.importe < 0).reduce((s, m) => s + Math.abs(m.importe), 0)
+  return { entradas, salidas, movimientos: movsHoy.length, ingresos, gastos }
+}
+
 const SECTOR_LABEL: Record<string, string> = {
   hosteleria:  '🍽️ Hostelería',
   limpieza:    '🧹 Limpieza',
@@ -30,8 +51,11 @@ export default async function DashboardPage() {
     orderBy: { createdAt: 'asc' },
   })
 
-  // Saldo bancario consolidado (todas las cuentas de todas las sociedades).
-  const saldo = await getSaldoConsolidado(session.id)
+  // Saldo bancario consolidado + strip hoy
+  const [saldo, stripHoy] = await Promise.all([
+    getSaldoConsolidado(session.id),
+    getStripHoy(session.id),
+  ])
 
   // Fetch financial summaries in parallel for all negocios
   const negociosConFinanciero = await Promise.all(
@@ -79,6 +103,25 @@ export default async function DashboardPage() {
                 color={saldo.cuentas.length > 0 ? (saldo.total >= 0 ? '#16a34a' : '#dc2626') : 'var(--primary)'}
               />
             </Link>
+          </div>
+        )}
+
+        {/* Strip hoy */}
+        {(stripHoy.entradas > 0 || stripHoy.salidas > 0 || stripHoy.movimientos > 0) && (
+          <div style={{
+            background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 'var(--radius)',
+            padding: '10px 16px', marginBottom: '20px',
+            display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center', fontSize: '13px',
+          }}>
+            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Hoy</span>
+            {stripHoy.entradas > 0 && <span>🏨 <strong>{stripHoy.entradas}</strong> {stripHoy.entradas === 1 ? 'entrada' : 'entradas'}</span>}
+            {stripHoy.salidas > 0 && <span>🚪 <strong>{stripHoy.salidas}</strong> {stripHoy.salidas === 1 ? 'salida' : 'salidas'}</span>}
+            {stripHoy.movimientos > 0 && (
+              <span>🏦 <strong>{stripHoy.movimientos}</strong> {stripHoy.movimientos === 1 ? 'movimiento' : 'movimientos'} bancarios
+                {stripHoy.ingresos > 0 && <span style={{ color: '#16a34a' }}> +{fmtEur(stripHoy.ingresos)}</span>}
+                {stripHoy.gastos > 0 && <span style={{ color: '#dc2626' }}> −{fmtEur(stripHoy.gastos)}</span>}
+              </span>
+            )}
           </div>
         )}
 
