@@ -8,7 +8,7 @@ export default function EntradaEmpleado({ params }: { params: Promise<{ token: s
     e.preventDefault(); setErr('')
     const r = await fetch('/api/e/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ token, pin }) })
     const j = await r.json()
-    if (r.ok) { setOk(true) /* siguiente plan: redirigir a /e (expediente) */ }
+    if (r.ok) { location.href = '/e' }
     else { if (j.necesita_pin) setNecesitaPin(true); setErr(j.error ?? 'Error') }
   }
   if (ok) return <main style={{ maxWidth: 320, margin: '64px auto', padding: 16 }}><h1>Acceso correcto</h1><p>Tu expediente estará disponible en breve.</p></main>

@@ -57,9 +57,15 @@
     firmada vía core-storage), `lib/documental.ts` (listar/subir/borrar, scope empresa+empleado). API:
     `/api/admin/empleados/[id]/documentos` (GET expediente con URLs firmadas, POST subir FormData) +
     `[docId]` (DELETE). **Tabla `rrhh.documentos` APLICADA** + **bucket privado `rrhh-documentos` creado**.
-    `next build` verde (12 rutas). Falta UI del expediente (la subida hoy es solo API) + lado empleado `/e`.
-  - **PENDIENTE Fase 1:** UI del expediente (`/admin/empleados/[id]`), `module-chat` (+ adopción ialimp con
-    preview verde), notificaciones (push+email) + PWA, proyecto Vercel `rrhh`. **Precio a cliente:** diferido.
+    `next build` verde.
+  - **🖥️ UI del expediente IMPLEMENTADA (ambos lados) — 15/06:** lado **gestor** `/admin/empleados/[id]`
+    (`ExpedienteClient.tsx`: carpetas con subir/descargar por URL firmada/borrar) + lado **empleado** `/e`
+    (`getSesionEmpleado` lee cookie, `ExpedienteEmpleado.tsx`: ve sus carpetas visibles y **sube solo donde
+    el módulo lo permite** — datos personales y partes médicos). API `/api/e/expediente` (GET/POST, actor
+    `titular`). `/e/[token]` redirige a `/e` tras login. **Flujo documental BIDIRECCIONAL completo.**
+    `next build` verde (16 rutas).
+  - **PENDIENTE Fase 1:** `module-chat` (+ adopción ialimp con preview verde), notificaciones (push+email
+    al subir/al asignar firma) + PWA, proyecto Vercel `rrhh` (+ env vars). **Fase 2:** firma. **Precio:** diferido.
 
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
