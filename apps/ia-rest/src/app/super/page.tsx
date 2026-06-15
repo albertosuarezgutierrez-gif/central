@@ -2304,6 +2304,8 @@ function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: st
   const [saving, setSaving] = React.useState(false)
   const [expandido, setExpandido] = React.useState<string | null>(null)
   const [ideasProveedores, setIdeasProveedores] = React.useState<any[]>([])
+  const [generando, setGenerando] = React.useState(false)
+  const [genMsg, setGenMsg] = React.useState('')
 
   React.useEffect(() => {
     fetch('/api/super/proveedores-tech?blog=true')
@@ -2371,6 +2373,23 @@ function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: st
     await cargar()
   }
 
+  // Disparo manual del cron blog-seo (mismo generador que el cron de los lunes).
+  // El endpoint acepta la sesión de super_admin vía x-ia-session — no expone el CRON_SECRET.
+  const generar = async () => {
+    setGenerando(true)
+    setGenMsg('')
+    try {
+      const res = await fetch('/api/cron/blog-seo', { headers: { 'x-ia-session': JSON.stringify(session) } })
+      const data = await res.json()
+      if (data.ok) { setGenMsg(`✅ Artículo generado: "${data.titulo}"`); await cargar() }
+      else setGenMsg(`⚠️ ${data.msg || data.error || 'No se generó'}`)
+    } catch (e: any) {
+      setGenMsg(`❌ Error: ${e.message}`)
+    } finally {
+      setGenerando(false)
+    }
+  }
+
   const publicados = articulos.filter(a => a.estado === 'publicado').length
   const borradores = articulos.filter(a => a.estado === 'borrador').length
 
@@ -2388,7 +2407,19 @@ function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: st
           <h1 style={{ fontFamily: SE, fontSize: 28, fontWeight: 500, margin: '0 0 4px', color: C.ink }}>Blog</h1>
           <p style={{ fontFamily: SN, fontSize: 13, color: C.ink3, margin: 0 }}>Artículos generados automáticamente · Revisa, edita y publica</p>
         </div>
-        <div style={{ display: 'flex', gap: 20 }}>
+        <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
+          <button
+            onClick={generar}
+            disabled={generando}
+            style={{
+              background: generando ? C.rule : C.red, color: generando ? C.ink4 : '#fff',
+              border: 'none', borderRadius: 8, padding: '10px 18px',
+              fontFamily: SM, fontSize: 11, letterSpacing: '.06em',
+              cursor: generando ? 'default' : 'pointer',
+            }}
+          >
+            {generando ? '⏳ Generando…' : '⚡ Generar ahora'}
+          </button>
           {[{ label: 'publicados', val: publicados, color: '#3F7D44' }, { label: 'borradores', val: borradores, color: C.red }].map(k => (
             <div key={k.label} style={{ textAlign: 'right' }}>
               <div style={{ fontFamily: SE, fontSize: 22, color: k.color }}>{k.val}</div>
@@ -2397,6 +2428,15 @@ function BlogSuperTab({ session, C, SE, SN, SM }: { session: any; C: any; SE: st
           ))}
         </div>
       </div>
+
+      {genMsg && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 8, fontFamily: SN, fontSize: 13,
+          background: genMsg.startsWith('✅') ? '#3F7D4415' : genMsg.startsWith('⚠️') ? '#C7901815' : C.red + '15',
+          border: `1px solid ${genMsg.startsWith('✅') ? '#3F7D4440' : genMsg.startsWith('⚠️') ? '#C7901840' : C.red + '40'}`,
+          color: C.ink2,
+        }}>{genMsg}</div>
+      )}
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
