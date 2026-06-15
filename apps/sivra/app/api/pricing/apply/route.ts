@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
+import { getSmoobuKey } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300
@@ -28,7 +29,6 @@ export const maxDuration = 300
 // Protegido por CRON_SECRET (Bearer o ?secret=) PARA LOS CRONS, o por una sesión de
 // admin logueada (panel del propietario, que llama desde el navegador sin el secreto).
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE = "https://login.smoobu.com/api"
 
 const SMOOBU_ID: Record<string, number> = {
@@ -73,6 +73,9 @@ export async function POST(req: NextRequest) {
     paused = cfg[0]?.paused === true
   } catch { /* sin tabla aún: no pausado */ }
   if (paused && !dryRun) dryRun = true              // fuerza simulación
+
+  // Fuente única de la API key de Smoobu (BD pms_connections, env como respaldo).
+  const SMOOBU_KEY = await getSmoobuKey()
 
   // Guardia de confianza: no escribir con mercado escaso/viejo.
   const MIN_SAMPLE = 5
@@ -136,6 +139,14 @@ export async function POST(req: NextRequest) {
   const end = new Date(today); end.setDate(end.getDate() + days)
   const startDate = fmt(today), endDate = fmt(end)
 
+  // Eventos auto-detectados (Ticketmaster, etc.) → factor por fecha. Se combina con el
+  // calendario manual vía MAX (el más alto manda). Tabla vacía ⇒ no cambia nada.
+  const autoEvRows = await prisma.$queryRaw<{ rate_date: string; factor: number }[]>(Prisma.sql`
+    SELECT rate_date::text AS rate_date, MAX(factor)::float8 AS factor
+    FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
+  `).catch(() => [])
+  const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
   const results: any[] = []
 
   for (const r of recs) {
@@ -182,7 +193,7 @@ export async function POST(req: NextRequest) {
       // aplicación → min/max del propietario (autoridad FINAL — incluye el suelo de coste).
       let target = clamp(baseTarget, floorBase, ceilBase)
       // Premium por evento (Semana Santa/Feria/…): puede superar el techo del mercado normal.
-      if (r.events_enabled) target = Math.round(target * eventFactor(date))
+      if (r.events_enabled) target = Math.round(target * Math.max(eventFactor(date), autoEv.get(date) ?? 1))
       // Descuento de hueco: noche suelta libre entre dos reservas (difícil de vender).
       if (Number(r.gap_discount_pct) > 0) {
         const prevD = fmt(new Date(new Date(date).getTime() - 86400000))

@@ -1,9 +1,33 @@
 import { redirect } from 'next/navigation'
+import Link from 'next/link'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
 import { getResumenNegocio, fmtEur, type ResumenFinanciero } from '@/lib/financiero'
-import LogoutButton from './LogoutButton'
+import { getSaldoConsolidado } from '@/lib/banca'
 import { NuevaSociedadBtn, NuevoNegocioBtn, EliminarSociedadBtn, EliminarNegocioBtn, EditarSociedadBtn, EditarNegocioBtn } from './GestionSociedad'
+
+async function getStripHoy(cuentaId: string) {
+  const hoy = new Date().toISOString().slice(0, 10)
+  const [checkIns, checkOuts, movsHoy] = await Promise.all([
+    prisma.$queryRaw<Array<{ guestName: string | null }>>`
+      SELECT "guestName" FROM incomes WHERE "checkIn"::date = ${hoy}::date ORDER BY "checkIn" LIMIT 10`,
+    prisma.$queryRaw<Array<{ guestName: string | null }>>`
+      SELECT "guestName" FROM incomes WHERE "checkOut"::date = ${hoy}::date ORDER BY "checkOut" LIMIT 10`,
+    prisma.$queryRaw<Array<{ importe: number; descripcion: string | null }>>`
+      SELECT mb.importe::float AS importe,
+             coalesce(mb.concepto_normalizado, mb.concepto, mb.contraparte) AS descripcion
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      JOIN sociedades s ON s.id = cb.sociedad_id
+      WHERE s.cuenta_id = ${cuentaId}::uuid AND mb.fecha_operacion::date = ${hoy}::date
+      ORDER BY abs(mb.importe) DESC LIMIT 10`,
+  ])
+  const entradas = checkIns.length
+  const salidas = checkOuts.length
+  const ingresos = movsHoy.filter(m => m.importe > 0).reduce((s, m) => s + m.importe, 0)
+  const gastos = movsHoy.filter(m => m.importe < 0).reduce((s, m) => s + Math.abs(m.importe), 0)
+  return { entradas, salidas, movimientos: movsHoy.length, ingresos, gastos, movs: movsHoy }
+}
 
 const SECTOR_LABEL: Record<string, string> = {
   hosteleria:  '🍽️ Hostelería',
@@ -29,6 +53,12 @@ export default async function DashboardPage() {
     orderBy: { createdAt: 'asc' },
   })
 
+  // Saldo bancario consolidado + strip hoy
+  const [saldo, stripHoy] = await Promise.all([
+    getSaldoConsolidado(session.id),
+    getStripHoy(session.id),
+  ])
+
   // Fetch financial summaries in parallel for all negocios
   const negociosConFinanciero = await Promise.all(
     sociedades.flatMap(soc =>
@@ -52,32 +82,14 @@ export default async function DashboardPage() {
   }))
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Header */}
-      <header style={{
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '0 24px', height: '56px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        position: 'sticky', top: 0, zIndex: 10,
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontWeight: 800 }}>
-          <span style={{ background: 'var(--primary)', color: '#fff', borderRadius: '6px', padding: '2px 8px', fontSize: '15px' }}>ia</span>
-          <span>plataforma</span>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-          <span style={{ fontSize: '14px', color: 'var(--muted)' }}>{session.email}</span>
-          <LogoutButton />
-        </div>
-      </header>
-
-      <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+    <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
         {/* KPI bar consolidado */}
-        {totalNegocios > 0 && (
+        {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
           <div style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 'var(--radius)', padding: '20px 24px',
             display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '32px',
-            boxShadow: 'var(--shadow)',
+            boxShadow: 'var(--shadow)', alignItems: 'center',
           }}>
             <KPI label={`Ingresos ${anio}`} value={fmtEur(totalIngresos)} color="var(--primary)" />
             <KPI
@@ -86,6 +98,37 @@ export default async function DashboardPage() {
               color={totalResultado >= 0 ? '#16a34a' : '#dc2626'}
             />
             <KPI label="Negocios" value={String(totalNegocios)} color="var(--muted)" />
+            <Link href="/banca" style={{ textDecoration: 'none', marginLeft: 'auto' }}>
+              <KPI
+                label="🏦 Saldo del grupo ↗"
+                value={saldo.cuentas.length > 0 ? fmtEur(saldo.total) : 'Conectar banco'}
+                color={saldo.cuentas.length > 0 ? (saldo.total >= 0 ? '#16a34a' : '#dc2626') : 'var(--primary)'}
+              />
+            </Link>
+          </div>
+        )}
+
+        {/* Strip hoy */}
+        {(stripHoy.entradas > 0 || stripHoy.salidas > 0 || stripHoy.movimientos > 0) && (
+          <div style={{
+            background: 'var(--primary-light)', border: '1px solid var(--primary)', borderRadius: 'var(--radius)',
+            padding: '10px 16px', marginBottom: '20px',
+            display: 'flex', gap: '20px', flexWrap: 'wrap', alignItems: 'center', fontSize: '13px',
+          }}>
+            <span style={{ fontWeight: 700, color: 'var(--primary)' }}>Hoy</span>
+            {stripHoy.entradas > 0 && <span>🏨 <strong>{stripHoy.entradas}</strong> {stripHoy.entradas === 1 ? 'entrada' : 'entradas'}</span>}
+            {stripHoy.salidas > 0 && <span>🚪 <strong>{stripHoy.salidas}</strong> {stripHoy.salidas === 1 ? 'salida' : 'salidas'}</span>}
+            {stripHoy.movimientos === 1 && (
+              <span>🏦 {stripHoy.movs[0].descripcion || 'Movimiento'}
+                <strong style={{ color: stripHoy.movs[0].importe >= 0 ? '#16a34a' : '#dc2626' }}> {fmtEur(stripHoy.movs[0].importe)}</strong>
+              </span>
+            )}
+            {stripHoy.movimientos > 1 && (
+              <span>🏦 <strong>{stripHoy.movimientos}</strong> movimientos: {stripHoy.movs.slice(0, 2).map(m => m.descripcion).filter(Boolean).join(', ')}{stripHoy.movimientos > 2 ? '…' : ''}
+                {stripHoy.ingresos > 0 && <span style={{ color: '#16a34a' }}> +{fmtEur(stripHoy.ingresos)}</span>}
+                {stripHoy.gastos > 0 && <span style={{ color: '#dc2626' }}> −{fmtEur(stripHoy.gastos)}</span>}
+              </span>
+            )}
           </div>
         )}
 
@@ -150,7 +193,6 @@ export default async function DashboardPage() {
           </section>
         ))}
       </main>
-    </div>
   )
 }
 

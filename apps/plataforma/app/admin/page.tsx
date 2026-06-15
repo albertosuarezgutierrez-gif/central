@@ -26,12 +26,23 @@ export default function OperadorPanel() {
   const [form, setForm] = useState({ email: 'alberto.suarez.gutierrez@gmail.com', password: '' })
   const [ficha, setFicha] = useState<Ficha | null>(null)
   const [busy, setBusy] = useState<string | null>(null)
-  const [tab, setTab] = useState<'clientes' | 'estructura'>('clientes')
+  const [tab, setTab] = useState<'clientes' | 'estructura' | 'iarest' | 'sivra'>('clientes')
   const [ialimp, setIalimp] = useState('')
   const [modulos, setModulos] = useState<{ key: string; label: string; activo: boolean }[]>([])
   const [showNuevo, setShowNuevo] = useState(false)
   const [nuevo, setNuevo] = useState({ vertical: 'ialimp', nombre: '', email: '', password: '', ciudad: '' })
   const [nuevoErr, setNuevoErr] = useState('')
+  const [isMobile, setIsMobile] = useState(false)
+  const [menuOpen, setMenuOpen] = useState(false)
+
+  // Detecta móvil para plegar la barra lateral tras una hamburguesa.
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 768px)')
+    const apply = () => setIsMobile(mq.matches)
+    apply()
+    mq.addEventListener('change', apply)
+    return () => mq.removeEventListener('change', apply)
+  }, [])
 
   const cargar = useCallback(async () => {
     setLoading(true); setError('')
@@ -120,29 +131,79 @@ export default function OperadorPanel() {
   const verticales = ['ialimp', 'sivra', 'iarest'] as const
   const activos = clientes.filter(c => c.activo && c.id !== 'iarest-info').length
 
+  const SIDEBAR_NAV = [
+    { key: 'clientes', icon: '🏢', label: 'Negocios' },
+    { key: 'iarest', icon: '🍽️', label: 'ia-rest' },
+    { key: 'sivra', icon: '🏠', label: 'Sivra' },
+    { key: 'estructura', icon: '🗺️', label: 'Estructura' },
+  ] as const
+
   return (
-    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '18px 28px', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap', gap: 12 }}>
-        <div style={{ fontWeight: 800, fontSize: 18 }}>🎛️ Panel de control <span style={{ color: C.muted, fontWeight: 500, fontSize: 13 }}>· todas las verticales</span></div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-          {ialimp && <a href={ialimp} target="_blank" rel="noreferrer" style={{ fontSize: 13, color: C.accent, textDecoration: 'none', fontWeight: 700, padding: '6px 12px', border: `1px solid ${C.border}`, borderRadius: 8 }}>🏠 Mis propiedades ↗</a>}
-          <button onClick={() => { setNuevoErr(''); setShowNuevo(true) }} style={{ background: C.accent, border: 'none', color: '#fff', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontFamily: FONT, fontWeight: 700, fontSize: 13 }}>➕ Nuevo cliente</button>
-          <span style={{ fontSize: 13, color: C.muted }}>{operador}</span>
-          <button onClick={logout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: FONT }}>Salir</button>
+    <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT, display: 'flex', flexDirection: 'column' }}>
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: isMobile ? '12px 16px' : '14px 24px', borderBottom: `1px solid ${C.border}`, flexWrap: 'wrap', gap: 12, flexShrink: 0 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
+          {isMobile && (
+            <button onClick={() => setMenuOpen(o => !o)} aria-label="Abrir menú"
+              style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontSize: 18, lineHeight: 1, fontFamily: FONT }}>☰</button>
+          )}
+          <div style={{ fontWeight: 800, fontSize: 17, whiteSpace: 'nowrap' }}>🎛️ Panel de control</div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <button onClick={() => { setNuevoErr(''); setShowNuevo(true) }} style={{ background: C.accent, border: 'none', color: '#fff', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontFamily: FONT, fontWeight: 700, fontSize: 13 }}>{isMobile ? '➕' : '➕ Nuevo cliente'}</button>
+          {!isMobile && <span style={{ fontSize: 13, color: C.muted }}>{operador}</span>}
+          <button onClick={logout} style={{ background: 'transparent', border: `1px solid ${C.border}`, color: C.muted, borderRadius: 8, padding: '5px 10px', cursor: 'pointer', fontFamily: FONT }}>Salir</button>
         </div>
       </div>
 
-      <div style={{ padding: 28, maxWidth: 1100, margin: '0 auto' }}>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24, borderBottom: `1px solid ${C.border}` }}>
-          {([['clientes', '🏢 Negocios'], ['estructura', '🗺️ Estructura']] as const).map(([k, label]) => (
-            <button key={k} onClick={() => setTab(k)}
-              style={{ background: 'transparent', border: 'none', borderBottom: `2px solid ${tab === k ? C.accent : 'transparent'}`, color: tab === k ? C.text : C.muted, padding: '10px 6px', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: FONT }}>
-              {label}
+      {/* Body: sidebar + content */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', position: 'relative' }}>
+        {/* Backdrop (sólo móvil con el menú abierto) */}
+        {isMobile && menuOpen && (
+          <div onClick={() => setMenuOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 40 }} />
+        )}
+        {/* Sidebar: barra fija en escritorio, drawer plegable en móvil */}
+        <nav style={isMobile
+          ? { position: 'fixed', top: 0, left: 0, bottom: 0, width: 250, maxWidth: '82vw', background: C.card, borderRight: `1px solid ${C.border}`, padding: '14px 12px', display: 'flex', flexDirection: 'column', gap: 2, zIndex: 50, transform: menuOpen ? 'translateX(0)' : 'translateX(-100%)', transition: 'transform .25s ease', boxShadow: menuOpen ? '2px 0 28px rgba(0,0,0,.5)' : 'none' }
+          : { width: 200, flexShrink: 0, borderRight: `1px solid ${C.border}`, padding: '16px 12px', display: 'flex', flexDirection: 'column', gap: 2 }
+        }>
+          {isMobile && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '2px 8px 12px', marginBottom: 4, borderBottom: `1px solid ${C.border}` }}>
+              <span style={{ fontSize: 12, color: C.muted, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{operador}</span>
+              <button onClick={() => setMenuOpen(false)} aria-label="Cerrar menú" style={{ background: 'transparent', border: 'none', color: C.muted, fontSize: 22, lineHeight: 1, cursor: 'pointer' }}>×</button>
+            </div>
+          )}
+          {SIDEBAR_NAV.map(({ key, icon, label }) => (
+            <button key={key} onClick={() => { setTab(key as typeof tab); setMenuOpen(false) }}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, width: '100%', textAlign: 'left', background: tab === key ? C.card2 : 'transparent', border: 'none', color: tab === key ? C.text : C.muted, fontWeight: tab === key ? 700 : 400, fontSize: 14, cursor: 'pointer', fontFamily: FONT }}>
+              <span>{icon}</span><span>{label}</span>
             </button>
           ))}
-        </div>
+          {ialimp && (
+            <a href={ialimp} target="_blank" rel="noreferrer" onClick={() => setMenuOpen(false)}
+              style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '9px 12px', borderRadius: 8, marginTop: 8, color: C.muted, fontSize: 14, textDecoration: 'none' }}>
+              <span>🛠️</span><span>Mis prop. ↗</span>
+            </a>
+          )}
+        </nav>
 
+        {/* Content */}
+        <div style={{ flex: 1, padding: isMobile ? 16 : 28, overflowY: 'auto', maxWidth: 960, width: '100%', boxSizing: 'border-box' }}>
         {tab === 'estructura' && <MapaArquitectura />}
+
+        {tab === 'iarest' && (
+          <div style={{ color: C.muted, fontSize: 14, padding: '48px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🍽️</div>
+            <p>Resumen de ia-rest próximamente.</p>
+          </div>
+        )}
+
+        {tab === 'sivra' && (
+          <div style={{ color: C.muted, fontSize: 14, padding: '48px 0', textAlign: 'center' }}>
+            <div style={{ fontSize: 36, marginBottom: 12 }}>🏠</div>
+            <p>Resumen de sivra próximamente.</p>
+          </div>
+        )}
 
         {tab === 'clientes' && <>
         <div style={{ display: 'flex', gap: 16, marginBottom: 24, flexWrap: 'wrap' }}>
@@ -189,7 +250,8 @@ export default function OperadorPanel() {
           )
         })}
         </>}
-      </div>
+        </div>{/* /content */}
+      </div>{/* /body */}
 
       {ficha && (
         <div onClick={() => setFicha(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { verifyPassword, createSessionToken, COOKIE_NAME, COOKIE_OPTS } from '@/lib/auth'
+import { findActiveAdminByEmail, createAdminToken, ADMIN_COOKIE, ADMIN_COOKIE_OPTS } from '@/lib/superadmin'
 
 const Body = z.object({ email: z.string().email(), password: z.string().min(1) })
 
@@ -25,5 +26,10 @@ export async function POST(req: NextRequest) {
 
   const res = NextResponse.json({ ok: true, nombre: cuenta.nombre })
   res.cookies.set(COOKIE_NAME, token, COOKIE_OPTS)
+
+  // Si el mismo email existe como superadmin activo, emitir también la cookie de operador.
+  const sa = await findActiveAdminByEmail(cuenta.email)
+  if (sa) res.cookies.set(ADMIN_COOKIE, await createAdminToken(sa.id, sa.email), ADMIN_COOKIE_OPTS)
+
   return res
 }

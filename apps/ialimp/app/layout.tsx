@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 import CookieBanner from '@/components/CookieBanner'
 import BrandingStyle from '@/components/BrandingStyle'
+import SessionGuard from '@/components/SessionGuard'
 import { getEmpresaId } from '@/lib/tenant'
 import { getBranding } from '@/lib/branding'
 
@@ -35,6 +36,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           {children}
         </BrandingStyle>
         <CookieBanner />
+        <SessionGuard />
       </body>
     </html>
   )

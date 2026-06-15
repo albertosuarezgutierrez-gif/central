@@ -654,8 +654,47 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
   }
 
   return (
-    <div style={{ fontFamily:"'Nunito',-apple-system,sans-serif", background:C.bg, minHeight:'100vh', maxWidth:1080, margin:'0 auto' }}>
-      <style>{`*{box-sizing:border-box;margin:0;padding:0} ::-webkit-scrollbar{display:none}`}</style>
+    <div className="prop-root" style={{ fontFamily:"'Nunito',-apple-system,sans-serif" }}>
+      <style>{`
+        *{box-sizing:border-box;margin:0;padding:0}
+        ::-webkit-scrollbar{display:none}
+        .prop-root{ background:${C.bg}; min-height:100vh; max-width:1080px; margin:0 auto; }
+        .prop-deskbar{ display:none; }
+        @media(min-width:1024px){
+          .prop-root{ max-width:none; margin:0; padding-left:248px; }
+          .prop-deskbar{ display:flex; }
+          .prop-hamburger{ display:none !important; }
+          .prop-content{ max-width:1280px; margin:0 auto; }
+        }
+      `}</style>
+
+      {/* ── Sidebar fija (solo escritorio ≥1024px; en móvil se usa el drawer) ── */}
+      <aside className="prop-deskbar" style={{ position:'fixed', top:0, left:0, bottom:0, width:248, background:'#fff', borderRight:`1px solid ${C.border}`, zIndex:60, flexDirection:'column' }}>
+        <div style={{ background:C.primary, padding:'20px 20px 16px' }}>
+          <div style={{ marginBottom:10 }}><LogoIalimp size={18} nombre={cliente.marca_nombre || cliente.empresa_nombre} logoUrl={cliente.logo_url} /></div>
+          <div style={{ color:'white', fontWeight:700, fontSize:13 }}>{cliente.nombre.split(' ').slice(0,2).join(' ')}</div>
+          <div style={{ color:'rgba(255,255,255,0.6)', fontSize:11, marginTop:2 }}>{cliente.empresa_nombre}</div>
+        </div>
+        <nav style={{ flex:1, padding:'10px 0', overflowY:'auto' }}>
+          {MENU_ITEMS.map(item => (
+            <button key={item.id} onClick={()=>setTab(item.id as any)}
+              style={{ width:'100%', padding:'12px 20px', border:'none', background:tab===item.id?C.light:'transparent', display:'flex', alignItems:'center', gap:12, cursor:'pointer', borderLeft:`3px solid ${tab===item.id?C.primary:'transparent'}`, fontFamily:'inherit' }}>
+              <span style={{ fontSize:18, width:24, textAlign:'center' }}>{item.icon}</span>
+              <span style={{ fontSize:14, fontWeight:tab===item.id?700:500, color:tab===item.id?C.primary:C.text }}>{item.label}</span>
+              {tab===item.id && <span style={{ marginLeft:'auto', width:6, height:6, borderRadius:'50%', background:C.primary }} />}
+            </button>
+          ))}
+        </nav>
+        {sesionPropia && (
+          <button onClick={cerrarSesion}
+            style={{ margin:'0 16px 12px', padding:'12px', border:`1px solid ${C.border}`, background:'#fff', borderRadius:10, color:C.primary, fontFamily:'inherit', fontWeight:800, fontSize:14, cursor:'pointer', display:'flex', alignItems:'center', justifyContent:'center', gap:8 }}>
+            ⎋ Cerrar sesión
+          </button>
+        )}
+        <div style={{ padding:'14px 20px', borderTop:`1px solid ${C.border}`, fontSize:11, color:C.muted, textAlign:'center' }}>
+          {cliente.empresa_nombre} · <span style={{ color:C.brand, fontWeight:600 }}>ialimp</span>
+        </div>
+      </aside>
 
       {/* ── Header ── */}
       <div style={{ background:C.primary, padding:'14px 16px 16px', position:'sticky', top:0, zIndex:50 }}>
@@ -678,7 +717,7 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
                 +
               </button>
             )}
-            <button onClick={()=>setMenu(true)}
+            <button onClick={()=>setMenu(true)} className="prop-hamburger"
               style={{ background:'rgba(255,255,255,0.15)', border:'none', borderRadius:8, width:36, height:36, cursor:'pointer', display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', gap:4 }}>
               {[0,1,2].map(i=><span key={i} style={{ display:'block', width:16, height:2, background:'white', borderRadius:2 }} />)}
             </button>
@@ -756,7 +795,7 @@ export default function PropietarioClient({ cliente, propiedades, historial, tok
       )}
 
       {/* ── Contenido ── */}
-      <div style={{ padding:14 }}>
+      <div className="prop-content" style={{ padding:14 }}>
 
         {/* TAB HOY */}
         {tab==='hoy' && (

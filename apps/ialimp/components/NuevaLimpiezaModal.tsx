@@ -22,6 +22,14 @@ interface Props {
 
 type Paso = 1 | 2 | 3
 
+// Sesión cerrada (ausente/caducada o expulsada por iniciar sesión en otro
+// dispositivo → "sesión única"). Avisamos claro y llevamos al login en vez de
+// dejar errores confusos (p. ej. "este cliente no tiene propiedades").
+function sesionExpirada() {
+  alert('Tu sesión se ha cerrado. Probablemente iniciaste sesión en otro dispositivo (solo se permite una sesión a la vez). Vuelve a iniciar sesión.')
+  window.location.href = '/login'
+}
+
 // hora_* puede venir como "HH:MM:SS", ISO o vacío → la dejamos en "HH:MM" para el <input type=time>
 const toHHMM = (v: any): string => {
   if (!v) return ''
@@ -70,6 +78,8 @@ export default function NuevaLimpiezaModal({
   const [propiedades, setPropiedades]       = useState<any[]>([])
   const [propiedadId, setPropiedadId]       = useState(editando ? (sesion.propiedad_id || '') : '')
   const [loadingProps, setLoadingProps]     = useState(false)
+  const [propsError, setPropsError]         = useState('')   // '' = sin error; si hay valor, la carga de pisos falló (NO es "no hay pisos")
+  const [recargaProps, setRecargaProps]     = useState(0)    // bump para reintentar
 
   // ── Paso 3: Trabajo ──
   const [form, setForm] = useState({
@@ -87,16 +97,23 @@ export default function NuevaLimpiezaModal({
 
   const f = (k: string, v: string) => setForm(p => ({ ...p, [k]: v }))
 
-  // Cargar propiedades cuando cambia el cliente (solo en modo crear)
+  // Cargar propiedades cuando cambia el cliente (solo en modo crear).
+  // Distingue "falló la carga / sesión cerrada" de "el cliente no tiene pisos":
+  // un 401 NO debe mostrarse como "este cliente no tiene propiedades".
   useEffect(() => {
     if (editando) return
-    if (!clienteId) { setPropiedades([]); setPropiedadId(''); return }
-    setLoadingProps(true)
+    if (!clienteId) { setPropiedades([]); setPropiedadId(''); setPropsError(''); return }
+    setLoadingProps(true); setPropsError('')
     fetch(`/api/admin/propiedades?cliente_id=${clienteId}`)
-      .then(r => r.json())
-      .then(d => { setPropiedades(d.propiedades || []); setPropiedadId('') })
+      .then(async r => {
+        if (r.status === 401) { sesionExpirada(); return }
+        const d = await r.json().catch(() => ({}))
+        if (!r.ok) { setPropsError(d.error || 'No se pudieron cargar los pisos'); setPropiedades([]); return }
+        setPropiedades(d.propiedades || []); setPropiedadId(''); setPropsError('')
+      })
+      .catch(() => setPropsError('Error de conexión al cargar los pisos'))
       .finally(() => setLoadingProps(false))
-  }, [clienteId, editando])
+  }, [clienteId, editando, recargaProps])
 
   // ── Submit final ──
   async function submit() {
@@ -118,6 +135,7 @@ export default function NuevaLimpiezaModal({
             notas:                  form.notas || null,
           }),
         })
+        if (res.status === 401) { sesionExpirada(); return }
         const data = await res.json()
         if (!res.ok) { setError(data.error || 'Error'); return }
         onActualizada?.(data.sesion)
@@ -143,6 +161,7 @@ export default function NuevaLimpiezaModal({
           notas:         form.notas || null,
         }),
       })
+      if (res.status === 401) { sesionExpirada(); return }
       const data = await res.json()
       if (!res.ok) { setError(data.error || 'Error'); return }
       onCreada(data.sesion)
@@ -156,6 +175,7 @@ export default function NuevaLimpiezaModal({
     setLoading(true); setError('')
     try {
       const res = await fetch('/api/admin/sesiones/' + sesion.id, { method: 'DELETE', credentials: 'include' })
+      if (res.status === 401) { sesionExpirada(); return }
       const data = await res.json().catch(() => ({}))
       if (!res.ok) { setError(data.error || 'No se pudo eliminar'); return }
       onEliminada?.(sesion.id)
@@ -314,6 +334,16 @@ export default function NuevaLimpiezaModal({
 
                 {loadingProps ? (
                   <p className="text-sm text-gray-400 text-center py-4">Cargando propiedades…</p>
+                ) : propsError ? (
+                  <div className="text-center py-6 space-y-3">
+                    <p className="text-sm text-red-500">⚠️ {propsError}</p>
+                    <p className="text-xs text-gray-400">No se pudieron cargar los pisos (no significa que el cliente no tenga).</p>
+                    <button type="button" onClick={() => setRecargaProps(n => n + 1)}
+                      className="inline-block text-sm font-semibold px-4 py-2 rounded-xl transition"
+                      style={{ background: 'var(--brand-primary)', color: 'white' }}>
+                      🔄 Reintentar
+                    </button>
+                  </div>
                 ) : propiedades.length === 0 ? (
                   <div className="text-center py-6 space-y-3">
                     <p className="text-sm text-gray-400">Este cliente no tiene propiedades creadas</p>

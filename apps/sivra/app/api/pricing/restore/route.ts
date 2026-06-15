@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { prisma } from "@/lib/prisma"
 import { Prisma } from "@prisma/client"
 import { isCronAuthorized } from "@/lib/cron-auth"
+import { getSmoobuKey } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -12,7 +13,6 @@ export const maxDuration = 60
 // pricing_applied (último cambio REAL por fecha) para las fechas futuras de ese piso. Red de
 // seguridad para deshacer una aplicación. Exige sesión admin o CRON_SECRET.
 
-const SMOOBU_KEY = process.env.SMOOBU_API_KEY ?? ""
 const BASE = "https://login.smoobu.com/api"
 const SMOOBU_ID: Record<string, number> = {
   prop_house_sevillana: 352007,
@@ -29,6 +29,7 @@ export async function POST(req: NextRequest) {
   const smoobuId = SMOOBU_ID[property]
   if (!smoobuId) return NextResponse.json({ error: "property inválida" }, { status: 400 })
   const dryRun = req.nextUrl.searchParams.get("dryRun") === "true"
+  const SMOOBU_KEY = await getSmoobuKey()
 
   // Último cambio real por fecha futura con old_price conocido.
   const rows = await prisma.$queryRaw<{ rate_date: string; old_price: number }[]>(Prisma.sql`
