@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
+  Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).
+  - **Tabla nueva `iarest.recibos_digitales`** (token único + snapshot JSONB autocontenido + RLS service_role).
+    Migración aplicada en el proyecto compartido `wswbehlcuxqxyinousql`, schema `iarest`.
+  - **`src/lib/recibo.ts`**: tipo `ReciboSnapshot`, `generarTokenRecibo()` (16 bytes base64url),
+    `crearReciboDigital()` (insert, devuelve token; no bloquea impresión si falla).
+  - **`src/lib/courier.ts`**: en `crearPrintJobCuenta` se crea el recibo (snapshot + token) y se imprime
+    un **bloque QR ESC/POS** (`escposQR`, modelo 2) en el ticket de cuenta → `iarest.es/recibo/[token]`.
+    El fallback de texto plano imprime la URL. `aeat` queda `null` (la factura legal se emite en cobro, no al pedir cuenta).
+  - **Ruta pública `src/app/recibo/[token]/page.tsx` + `ReciboView.tsx`**: server component, token = secreto
+    (sin sesión), diseño mobile-first con tema `C` (avatar inicial + nombre + items + total + IVA + AEAT si hay).
+    `next build` OK, ruta `ƒ /recibo/[token]`.
+  - **Fase 2 pendiente:** descargar PDF · pedir factura con NIF desde el móvil · email · marca avanzada
+    por restaurante (logo/color en `restaurantes` — hoy no existen esos campos).
+
 - **🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital — 15/06/2026**
   Alberto comparte `receiptmaker.ai` (generador de recibos por IA → PDF/imagen con logo,
   colores, tipografías; familia receiptmaker.io/.org, muchas orientadas a recibos "fake/demo").
