@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import ChatPanel from '@/components/ChatPanel'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; creada_at: string; url: string | null }
@@ -35,6 +36,8 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
       <h1>Expediente · {empleado.nombre}</h1>
       <p style={{ color: '#666' }}>{[empleado.puesto, empleado.email].filter(Boolean).join(' · ')}</p>
       {error && <p style={{ color: 'crimson' }}>{error}</p>}
+
+      <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
 
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)

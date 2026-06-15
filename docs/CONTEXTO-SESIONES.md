@@ -64,8 +64,15 @@
     el módulo lo permite** — datos personales y partes médicos). API `/api/e/expediente` (GET/POST, actor
     `titular`). `/e/[token]` redirige a `/e` tras login. **Flujo documental BIDIRECCIONAL completo.**
     `next build` verde (16 rutas).
-  - **PENDIENTE Fase 1:** `module-chat` (+ adopción ialimp con preview verde), notificaciones (push+email
-    al subir/al asignar firma) + PWA, proyecto Vercel `rrhh` (+ env vars). **Fase 2:** firma. **Precio:** diferido.
+  - **💬 `module-chat` IMPLEMENTADO + chat en rrhh — 15/06:** nuevo paquete `packages/@central/module-chat`
+    (motor puro de mensajería 1-a-1 gestor↔titular: tipos, `noLeidos`, `contraparte`, `ordenarCronologico`,
+    `validarTexto`; **tests 4/4 verde**). rrhh lo consume (`file:` + transpilePackages): tabla
+    `rrhh.mensajes` (un hilo implícito por empleado, leído por parte) **aplicada**, `lib/chat.ts`
+    (listar+marca leído / enviar, scoped por empresa), API `/api/admin/empleados/[id]/chat` (gestor) +
+    `/api/e/chat` (empleado), y **`components/ChatPanel.tsx`** reutilizable (polling 5s) embebido en el
+    expediente del gestor y en `/e`. `next build` verde. (Datos por `cuenta_id` en plataforma = unificación futura.)
+  - **PENDIENTE Fase 1:** notificaciones (push+email al subir doc / nuevo mensaje) + PWA, proyecto Vercel
+    `rrhh` (+ env vars) — necesitan infra de Alberto. **Fase 2:** firma (Firmafy). **Precio:** diferido.
 
 - **🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256**
   Ejecutado el plan `apps/ia-rest/docs/superpowers/plans/2026-06-15-e-recibo-digital.md` (subagent-driven).

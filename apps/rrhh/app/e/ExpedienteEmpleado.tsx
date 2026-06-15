@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import ChatPanel from '@/components/ChatPanel'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; creada_at: string; url: string | null }
@@ -25,6 +26,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
   return (
     <main style={{ maxWidth: 520, margin: '24px auto', padding: 16 }}>
       <h1>Mi documentación</h1>
+
+      <ChatPanel endpoint="/api/e/chat" yo="titular" />
 
       <section style={{ border: '1px solid #ddd', borderRadius: 8, padding: 12, margin: '12px 0' }}>
         <h2 style={{ fontSize: 15 }}>Enviar un documento</h2>
