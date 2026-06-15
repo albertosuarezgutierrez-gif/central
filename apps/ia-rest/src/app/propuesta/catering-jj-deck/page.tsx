@@ -78,7 +78,7 @@ const SLIDES: Slide[] = [
           Catering Joaquín Jaén · Hacienda El Alba + Hacienda Trinidad
         </div>
         <h1 style={{ fontFamily:SE, fontWeight:600, fontSize:60, lineHeight:1.08, color:C.paper, margin:'0 0 26px' }}>
-          Una plataforma para <span style={{ color:C.gold }}>todo tu grupo</span>,<br/>no seis programas sueltos.
+          Una plataforma para <span style={{ color:C.gold }}>todo tu grupo</span>,<br/>en un solo sitio.
         </h1>
         <p style={{ fontFamily:SN, fontSize:21, color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:680 }}>
           Conectamos lo que ya funciona —empezando por tu cocina— y unimos comercial, material,
