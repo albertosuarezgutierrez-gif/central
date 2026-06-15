@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada — 15/06/2026**
+  La gráfica "Evolución mensual" del dashboard mezcla todo en un único Ingresos/Gastos → **a Alberto no le vale**
+  (mezcla cuentas bancarias y mezcla lo personal con lo de los pisos = poco informativo). Regla fijada:
+  **BBVA** = Duplex Center + seguros (unidad **aparte**); **Kutxa** = gastos personales + los **3 apartamentos
+  turísticos**, que hay que sacar **limpios sin lo personal**. Los 3 turísticos (confirmado por Alberto):
+  **Socorro = House Sevillana** (Calle Socorro 24, `prop_house_sevillana`), **Busto Tavera = Busto Reform**
+  (`prop_busto_reform`) **+ Luxury Busto** (`prop_luxury_busto`). Duplex Center NO entra en esa P&L.
+  Detalle + mapeo + gap del modelo de datos en **`apps/sivra/docs/contabilidad.md`** (enlazado desde
+  `apps/sivra/CLAUDE.md` y router `sivra-maestro`). **Pendiente:** implementar la segregación + filtro mes/año
+  + gráfico resumen en la vista "Mis apartamentos" / dashboard.
+
 - **🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269**
   Petición de Pilar (RR.HH. de Mariscos González, audio): intranet de empleados con expediente
   documental por trabajador (carpetas: datos personales/contratos/nóminas/partes médicos/otros, subida
