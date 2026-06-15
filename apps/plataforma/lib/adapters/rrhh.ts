@@ -1,7 +1,8 @@
 // Adaptador de la vertical rrhh (Portal del Empleado · iarrhh). rrhh posee su propio
 // schema en la BD compartida, pero NO lo tocamos desde aquí: se habla con su PUERTO HTTP
 // (`/api/operador/empresas`) con un secreto compartido. Sin fusionar BD. Patrón igual a ia-rest.
-// Requiere envs en plataforma: RRHH_URL + OPERADOR_SHARED_SECRET.
+// Requiere envs en plataforma: RRHH_URL + RRHH_OPERADOR_SECRET (secreto PROPIO de iarrhh,
+// distinto del OPERADOR_SHARED_SECRET que usa el puerto de ia-rest).
 
 import type { VerticalAdapter, ClienteSaaS, Cliente360, Metrica } from './types'
 
@@ -15,7 +16,7 @@ interface EmpresaPort {
 }
 
 const base = () => process.env.RRHH_URL?.replace(/\/$/, '')
-const secret = () => process.env.OPERADOR_SHARED_SECRET
+const secret = () => process.env.RRHH_OPERADOR_SECRET
 
 function info(mensaje: string): ClienteSaaS {
   return { vertical: 'rrhh', id: 'rrhh-info', nombre: `iarrhh — ${mensaje}`, activo: false, puedeBloquear: false, metricas: [] }
@@ -70,14 +71,14 @@ export const rrhhAdapter: VerticalAdapter = {
       method: 'POST',
       body: JSON.stringify({ empresa: nombre, color, responsable_nombre: responsableNombre, responsable_email: email, password }),
     })
-    if (!res) throw new Error('iarrhh sin conectar (define RRHH_URL + OPERADOR_SHARED_SECRET)')
+    if (!res) throw new Error('iarrhh sin conectar (define RRHH_URL + RRHH_OPERADOR_SECRET)')
     if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || 'No se pudo crear en iarrhh') }
     const { id } = await res.json()
     return { id }
   },
 
   async listar() {
-    if (!base() || !secret()) return [info('configura RRHH_URL + OPERADOR_SHARED_SECRET')]
+    if (!base() || !secret()) return [info('configura RRHH_URL + RRHH_OPERADOR_SECRET')]
     try {
       return (await listarRaw()).map(aCliente)
     } catch (e: any) {

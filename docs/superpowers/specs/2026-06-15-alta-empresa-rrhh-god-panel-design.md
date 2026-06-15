@@ -16,7 +16,7 @@ Plataforma **no escribe** en el schema `rrhh` de la BD compartida (acoplaría ro
 apps y rompería la segmentación). Se replica el patrón ya usado con ia-rest:
 
 ```
-[plataforma god-panel]  --HTTP Bearer OPERADOR_SHARED_SECRET-->  [rrhh /api/operador/empresas]  --SQL-->  schema rrhh
+[plataforma god-panel]  --HTTP Bearer RRHH_OPERADOR_SECRET-->  [rrhh /api/operador/empresas]  --SQL-->  schema rrhh
 ```
 
 - **rrhh** posee la escritura en su propio schema; expone un puerto de operador.
@@ -24,15 +24,16 @@ apps y rompería la segmentación). Se replica el patrón ya usado con ia-rest:
   `iarest.ts`.
 
 ### Secreto compartido
-Se reutiliza el concepto `OPERADOR_SHARED_SECRET` (mismo nombre que el puerto ia-rest). Su
-**valor** se fija en el proyecto Vercel `central-rrhh` y en `plataforma`. Plataforma añade
-además `RRHH_URL` (URL de producción de central-rrhh).
+`RRHH_OPERADOR_SECRET` es un secreto **propio de iarrhh**, distinto del `OPERADOR_SHARED_SECRET`
+que usa el puerto de ia-rest (no se reutiliza, para no acoplar ambas integraciones). Su **valor**
+se fija en el proyecto Vercel `central-rrhh` y en `plataforma`. Plataforma añade además
+`RRHH_URL` (URL de producción de central-rrhh).
 
 ## Parte A — Puerto de operador en `apps/rrhh`
 
 ### Autenticación
 Helper `lib/operador.ts`: `function operadorAutorizado(req): boolean` — comprueba
-`Authorization: Bearer <OPERADOR_SHARED_SECRET>` contra `process.env.OPERADOR_SHARED_SECRET`.
+`Authorization: Bearer <RRHH_OPERADOR_SECRET>` contra `process.env.RRHH_OPERADOR_SECRET`.
 Si la env no está definida, devuelve `false` (puerto cerrado por defecto).
 
 ### Endpoint `app/api/operador/empresas/route.ts`
@@ -48,7 +49,7 @@ Si la env no está definida, devuelve `false` (puerto cerrado por defecto).
 - Sin Bearer válido → 401. Reutiliza el `prisma` existente (rol `rrhh_app`, BYPASSRLS).
 
 ### Env nueva en rrhh
-`OPERADOR_SHARED_SECRET` (en el proyecto Vercel `central-rrhh`).
+`RRHH_OPERADOR_SECRET` (en el proyecto Vercel `central-rrhh`).
 
 ## Parte B — Adaptador + UI en `apps/plataforma`
 
@@ -59,7 +60,7 @@ Si la env no está definida, devuelve `false` (puerto cerrado por defecto).
   `email`/`password` = credenciales del responsable).
 
 ### `lib/adapters/rrhh.ts` (nuevo, espejo de `iarest.ts`)
-- `base()` = `process.env.RRHH_URL`, `secret()` = `process.env.OPERADOR_SHARED_SECRET`.
+- `base()` = `process.env.RRHH_URL`, `secret()` = `process.env.RRHH_OPERADOR_SECRET`.
 - `port(path, init)` idéntico al de iarest (Bearer, timeout 8s, cache no-store).
 - `vertical: 'rrhh'`, `etiqueta: 'RR.HH. (iarrhh)'`, `puedeCrear: true`.
 - `listar()`: GET `/api/operador/empresas` → mapea a `ClienteSaaS` con
@@ -93,7 +94,7 @@ Si la env no está definida, devuelve `false` (puerto cerrado por defecto).
 - KPI "Verticales": pasa de `'3'` a `'4'`.
 
 ### Envs nuevas en plataforma
-`RRHH_URL` (URL producción de central-rrhh) + `OPERADOR_SHARED_SECRET` (mismo valor que en rrhh).
+`RRHH_URL` (URL producción de central-rrhh) + `RRHH_OPERADOR_SECRET` (mismo valor que en rrhh).
 
 ## Qué NO toca
 
@@ -114,7 +115,7 @@ Si la env no está definida, devuelve `false` (puerto cerrado por defecto).
 
 ## Seguridad / riesgos
 
-- `OPERADOR_SHARED_SECRET` solo en envs, nunca en repo. El puerto se cierra si la env falta.
+- `RRHH_OPERADOR_SECRET` solo en envs, nunca en repo. El puerto se cierra si la env falta.
 - Email único global en `usuarios_rrhh` evita duplicados; el POST devuelve 409 legible.
 - La contraseña inicial la fija el operador y se muestra una vez para entregársela al cliente
   (el cliente puede cambiarla más adelante — fuera de alcance de este spec).
