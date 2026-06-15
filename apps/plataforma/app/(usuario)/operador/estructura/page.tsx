@@ -5,7 +5,11 @@ import MapaArquitectura from '@/app/admin/MapaArquitectura'
 export const dynamic = 'force-dynamic'
 
 export default async function OperadorEstructuraPage() {
-  const admin = await getAdmin()
+  // getAdmin toca la BD compartida; si da timeout, degradamos a "no operador" y
+  // redirigimos en vez de tumbar la página con un 500. (El redirect va FUERA del
+  // try: internamente lanza NEXT_REDIRECT y no debe capturarse.)
+  let admin: Awaited<ReturnType<typeof getAdmin>> = null
+  try { admin = await getAdmin() } catch { admin = null }
   if (!admin) redirect('/dashboard')
 
   return (
