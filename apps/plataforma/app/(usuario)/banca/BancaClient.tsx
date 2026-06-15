@@ -309,6 +309,19 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
   const [res, setRes] = useState(resueltos)
   const [busy, setBusy] = useState<string | null>(null)
   const [verResueltos, setVerResueltos] = useState(false)
+  const [recl, setRecl] = useState<{ asunto: string; cuerpo: string } | null>(null)
+  const [copiado, setCopiado] = useState(false)
+
+  async function redactar(g: DupGrupoUI) {
+    setBusy(g.clave)
+    const r = await fetch('/api/banca/duplicados/reclamacion', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ comercio: g.movimientos[0]?.concepto || 'Comercio', importe: g.importe, fechas: g.movimientos.map(m => m.fecha).filter((f): f is string => !!f) }),
+    })
+    setBusy(null)
+    const d = await r.json().catch(() => null)
+    if (r.ok && d) { setRecl({ asunto: d.asunto, cuerpo: d.cuerpo }); setCopiado(false) }
+  }
 
   async function resolver(g: DupGrupoUI, estado: 'ignorado' | 'confirmado') {
     setBusy(g.clave)
@@ -358,7 +371,9 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
                   <span style={{ fontWeight: 700, color: '#dc2626', width: '92px', textAlign: 'right', flexShrink: 0 }}>{eur(m.importe)}</span>
                 </div>
               ))}
-              <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '10px' }}>
+              <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginTop: '10px' }}>
+                <button disabled={busy === g.clave} onClick={() => redactar(g)} style={dupGhost}>📝 Reclamar</button>
+                <div style={{ flex: 1 }} />
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'ignorado')} style={dupGhost}>Es normal</button>
                 <button disabled={busy === g.clave} onClick={() => resolver(g, 'confirmado')} style={dupDanger}>Es un cobro doble</button>
               </div>
@@ -385,6 +400,20 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {recl && (
+        <div style={overlay} onClick={() => setRecl(null)}>
+          <div style={{ ...modal, maxWidth: '560px' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>Reclamación</h3>
+            <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '12px' }}>{recl.asunto}</p>
+            <textarea readOnly value={recl.cuerpo} style={{ ...input, width: '100%', minHeight: '200px', resize: 'vertical', fontFamily: 'inherit' }} />
+            <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end', marginTop: '12px' }}>
+              <button onClick={() => setRecl(null)} style={cancel}>Cerrar</button>
+              <button onClick={() => { navigator.clipboard?.writeText(recl.cuerpo); setCopiado(true) }} style={btn}>{copiado ? '✓ Copiado' : 'Copiar'}</button>
+            </div>
+          </div>
         </div>
       )}
     </section>
