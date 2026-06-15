@@ -1,32 +1,31 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, fmtEur } from '@/lib/banca'
-import { DESTINO_LABEL } from '@/lib/categorizar'
+import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, fmtEur, type EvolucionDestino } from '@/lib/banca'
+import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
+import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
-// Etiqueta visible por categoría IA (Fase 2).
-const CAT_LABEL: Record<string, string> = {
-  nomina: '👤 Nómina', proveedor: '📦 Proveedor', impuestos: '🏛️ Impuestos',
-  suministros: '💡 Suministros', alquiler: '🏠 Alquiler', comision_bancaria: '🏦 Comisión',
-  cobro_cliente: '💰 Cobro cliente', transferencia: '🔁 Transferencia', tarjeta: '💳 Tarjeta',
-  prestamo: '📉 Préstamo', seguro: '🛡️ Seguro', otros: '• Otros',
-}
+// Etiqueta visible por categoría IA (Fase 2). Compartida desde lib/categorizar.
+const CAT_LABEL = CATEGORIA_LABEL
 
 export default async function BancaPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino] = await Promise.all([
+  const anio = new Date().getFullYear()
+  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
-    listarMovimientos(session.id, undefined, 100),
+    listarMovimientos(session.id, undefined, 300),
     getTesoreria(session.id),
     listarPorRevisar(session.id),
     getResumenPorDestino(session.id),
+    getEvolucionPorDestino(session.id, 6),
+    getEstimacionFiscal(session.id, anio),
   ])
 
   return (
@@ -40,6 +39,7 @@ export default async function BancaPage() {
             {movimientos.length > 0 && <ReanalizarBtn />}
             {movimientos.length > 0 && <ConciliarBtn />}
             {movimientos.length > 0 && <SubirFacturaBtn />}
+            {movimientos.length > 0 && <ExportarBtn />}
             <ConectarBancoBtn sociedades={sociedades} />
             <ImportarExtractoBtn sociedades={sociedades} />
           </div>
@@ -95,6 +95,16 @@ export default async function BancaPage() {
           </section>
         )}
 
+        {/* Evolución del neto por negocio (últimos 6 meses) */}
+        {evolucionNegocio.filas.length > 0 && (
+          <EvolucionNegocio meses={evolucionNegocio.meses} filas={evolucionNegocio.filas} />
+        )}
+
+        {/* Estimación fiscal orientativa por trimestre */}
+        {fiscal.some(t => t.ingresos > 0 || t.gastos > 0) && (
+          <EstimacionFiscal trimestres={fiscal} anio={anio} />
+        )}
+
         {/* Previsión de tesorería (F5) */}
         {tesoreria.recurrentes.length > 0 && (
           <section style={{ marginBottom: '32px' }}>
@@ -134,40 +144,88 @@ export default async function BancaPage() {
           />
         )}
 
-        {/* Movimientos */}
+        {/* Movimientos con buscador + filtros */}
         {movimientos.length > 0 && (
-          <section>
-            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
-              <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Últimos movimientos</h2>
-              {(() => {
-                const conc = movimientos.filter(m => m.conciliado).length
-                return <span style={{ fontSize: '12px', color: 'var(--muted)' }}>🔗 {conc}/{movimientos.length} conciliados con factura</span>
-              })()}
-            </div>
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
-              {movimientos.map((m, i) => (
-                <div key={m.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px',
-                  borderTop: i === 0 ? 'none' : '1px solid var(--border)',
-                }}>
-                  <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fechaOperacion || '—'}</div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento'}
-                    </div>
-                    {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{CAT_LABEL[m.categoria] || m.categoria}</div>}
-                  </div>
-                  <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
-                    {m.conciliado ? '🔗' : ''}
-                  </div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0 }}>
-                    {fmtEur(m.importe)}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
+          <MovimientosTabla
+            catLabel={CAT_LABEL}
+            movimientos={movimientos.map(m => ({
+              id: m.id,
+              fecha: m.fechaOperacion,
+              concepto: m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento',
+              categoria: m.categoria,
+              importe: m.importe,
+              conciliado: m.conciliado,
+            }))}
+          />
         )}
       </main>
+  )
+}
+
+const MES_CORTO = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic']
+function etiquetaMes(mes: string): string { return MES_CORTO[Number(mes.slice(5, 7)) - 1] || mes }
+
+// Tabla de evolución del neto por negocio: filas = negocio, columnas = últimos meses.
+function EvolucionNegocio({ meses, filas }: { meses: string[]; filas: EvolucionDestino[] }) {
+  return (
+    <section style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Neto por negocio (últimos {meses.length} meses)</h2>
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'auto' }}>
+        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
+          <thead>
+            <tr style={{ borderBottom: '1px solid var(--border)' }}>
+              <th style={{ textAlign: 'left', padding: '10px 16px', fontWeight: 600, color: 'var(--muted)' }}>Negocio</th>
+              {meses.map(m => <th key={m} style={{ textAlign: 'right', padding: '10px 12px', fontWeight: 600, color: 'var(--muted)' }}>{etiquetaMes(m)}</th>)}
+              <th style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700 }}>Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {filas.map(f => (
+              <tr key={f.destino} style={{ borderTop: '1px solid var(--border)' }}>
+                <td style={{ padding: '10px 16px', fontWeight: 600, whiteSpace: 'nowrap' }}>{DESTINO_LABEL[f.destino as keyof typeof DESTINO_LABEL] || f.destino}</td>
+                {f.netoPorMes.map((n, i) => (
+                  <td key={i} style={{ textAlign: 'right', padding: '10px 12px', color: n === 0 ? 'var(--muted)' : (n > 0 ? '#16a34a' : '#dc2626') }}>
+                    {n === 0 ? '—' : fmtEur(n)}
+                  </td>
+                ))}
+                <td style={{ textAlign: 'right', padding: '10px 16px', fontWeight: 700, color: f.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(f.total)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  )
+}
+
+// Estimación fiscal ORIENTATIVA por trimestre (IVA + pago fraccionado IRPF). No es la
+// liquidación real: para eso, "Exportar (CSV)" y que lo calcule el gestor con las facturas.
+function EstimacionFiscal({ trimestres, anio }: { trimestres: Trimestre[]; anio: number }) {
+  return (
+    <section style={{ marginBottom: '32px' }}>
+      <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🧾 Estimación fiscal {anio} <span style={{ fontSize: '12px', fontWeight: 500, color: 'var(--muted)' }}>(orientativa)</span></h2>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>
+        Aproximación al tipo general (IVA 21%, IRPF fraccionado 20% del resultado). Hay actividades exentas o a tipo reducido (alquiler turístico, seguros): la liquidación real la hace tu gestor con las facturas. Usa <strong>Exportar (CSV)</strong> para pasárselo.
+      </p>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '16px' }}>
+        {trimestres.map(t => (
+          <div key={t.trimestre} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '16px', boxShadow: 'var(--shadow)' }}>
+            <div style={{ fontSize: '13px', fontWeight: 700, marginBottom: '8px' }}>{t.trimestre}T {anio}</div>
+            <FiscalLinea label="Resultado" valor={fmtEur(t.resultado)} color={t.resultado >= 0 ? '#16a34a' : '#dc2626'} />
+            <FiscalLinea label="IVA a ingresar" valor={fmtEur(t.ivaAIngresar)} />
+            <FiscalLinea label="IRPF fraccionado" valor={fmtEur(t.irpfFraccionado)} />
+          </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+function FiscalLinea({ label, valor, color }: { label: string; valor: string; color?: string }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: '8px', fontSize: '13px', marginTop: '4px' }}>
+      <span style={{ color: 'var(--muted)' }}>{label}</span>
+      <span style={{ fontWeight: 700, color: color || 'var(--text)' }}>{valor}</span>
+    </div>
   )
 }
