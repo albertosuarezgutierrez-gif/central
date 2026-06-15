@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T17:55:40Z",
+  "generadoEn": "2026-06-15T20:03:05Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1906,7 +1906,8 @@
       "/api/e/expediente",
       "/api/e/login",
       "/api/e/push/subscribe",
-      "/api/e/solicitudes"
+      "/api/e/solicitudes",
+      "/api/operador/empresas"
     ],
     "sivra": [
       "/api/admin/limpiadoras/asignacion",
@@ -2561,7 +2562,7 @@
     "packages": 20,
     "capacidades": 23,
     "skills": 13,
-    "apis": 784,
+    "apis": 785,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
