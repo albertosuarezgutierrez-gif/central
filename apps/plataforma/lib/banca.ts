@@ -211,6 +211,181 @@ type MovRow = {
 }
 
 // Resumen por "destino"/negocio (pisos, dúplex, seguros, traspaso interno, personal).
+// Evolución mensual (ingresos vs gastos) de los últimos N meses, desde los movimientos
+// bancarios, excluyendo traspasos internos (no son ingreso/gasto real). Para el gráfico.
+export type MesEvolucion = { mes: string; ingresos: number; gastos: number }
+export async function getEvolucionMensual(cuentaId: string, meses = 12): Promise<MesEvolucion[]> {
+  const rows = await prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown }>>`
+    SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+           coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+           coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}))
+    GROUP BY 1 ORDER BY 1
+  `
+  return rows.map(r => ({ mes: r.mes, ingresos: Number(r.ingresos), gastos: Number(r.gastos) }))
+}
+
+// Todos los movimientos de la cuenta para exportar (al gestor). Orden cronológico,
+// con la sociedad/banco, categoría y negocio ya resueltos. Scoped por cuenta_id.
+export type MovExport = {
+  fecha: string | null; valor: string | null; sociedad: string; banco: string | null
+  concepto: string; contraparte: string | null; categoria: string | null
+  categoriaPgc: string | null; destino: string | null; importe: number; conciliado: boolean
+}
+export async function getMovimientosExport(cuentaId: string): Promise<MovExport[]> {
+  const rows = await prisma.$queryRaw<Array<{
+    fecha_operacion: Date | null; fecha_valor: Date | null; sociedad: string; banco: string | null
+    concepto: string | null; concepto_normalizado: string | null; contraparte: string | null
+    categoria: string | null; categoria_pgc: string | null; destino: string | null
+    importe: unknown; conciliado: boolean
+  }>>`
+    SELECT mb.fecha_operacion, mb.fecha_valor, s.nombre AS sociedad, cb.banco,
+           mb.concepto, mb.concepto_normalizado, mb.contraparte, mb.categoria,
+           mb.categoria_pgc, mb.destino, mb.importe, mb.conciliado
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    JOIN sociedades s ON s.id = cb.sociedad_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+    ORDER BY mb.fecha_operacion ASC NULLS LAST, mb.created_at ASC
+  `
+  return rows.map(r => ({
+    fecha: r.fecha_operacion ? r.fecha_operacion.toISOString().slice(0, 10) : null,
+    valor: r.fecha_valor ? r.fecha_valor.toISOString().slice(0, 10) : null,
+    sociedad: r.sociedad,
+    banco: r.banco,
+    concepto: r.concepto_normalizado || r.concepto || r.contraparte || '',
+    contraparte: r.contraparte,
+    categoria: r.categoria,
+    categoriaPgc: r.categoria_pgc,
+    destino: r.destino,
+    importe: Number(r.importe),
+    conciliado: r.conciliado,
+  }))
+}
+
+// Comparativa del mes en curso vs el mes anterior (ingresos/gastos/neto), excluyendo
+// traspasos internos. Para la tira de "este mes vs anterior" del dashboard.
+export type ComparativaMes = { ingresos: number; gastos: number; neto: number }
+export async function getComparativaMensual(cuentaId: string): Promise<{ actual: ComparativaMes; anterior: ComparativaMes }> {
+  const rows = await prisma.$queryRaw<Array<{ mes: string; ingresos: unknown; gastos: unknown }>>`
+    SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+           coalesce(sum(mb.importe) FILTER (WHERE mb.importe > 0), 0) AS ingresos,
+           coalesce(sum(-mb.importe) FILTER (WHERE mb.importe < 0), 0) AS gastos
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => 1))
+    GROUP BY 1
+  `
+  const mesActual = new Date().toISOString().slice(0, 7)
+  const find = (mes: string): ComparativaMes => {
+    const r = rows.find(x => x.mes === mes)
+    const ingresos = r ? Number(r.ingresos) : 0
+    const gastos = r ? Number(r.gastos) : 0
+    return { ingresos, gastos, neto: ingresos - gastos }
+  }
+  const prev = new Date(); prev.setDate(1); prev.setMonth(prev.getMonth() - 1)
+  return { actual: find(mesActual), anterior: find(prev.toISOString().slice(0, 7)) }
+}
+
+// Desglose de GASTOS por categoría (la etiqueta IA/reglas) del año en curso, para el
+// gráfico de barras "en qué se va el dinero". Excluye traspasos internos.
+export type GastoCategoria = { categoria: string; total: number; movs: number }
+export async function getGastosPorCategoria(cuentaId: string): Promise<GastoCategoria[]> {
+  const rows = await prisma.$queryRaw<Array<{ categoria: string | null; total: unknown; movs: bigint }>>`
+    SELECT coalesce(nullif(mb.categoria, ''), 'otros') AS categoria,
+           coalesce(sum(-mb.importe), 0) AS total, count(*) AS movs
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.importe < 0
+      AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND mb.fecha_operacion >= date_trunc('year', current_date)
+    GROUP BY 1 ORDER BY 2 DESC
+  `
+  return rows.map(r => ({ categoria: r.categoria ?? 'otros', total: Number(r.total), movs: Number(r.movs) }))
+}
+
+// Evolución del NETO mensual por negocio/destino (últimos N meses), para ver qué negocio
+// tira de la caja mes a mes. Devuelve {meses, filas: por destino con neto por mes}.
+export type EvolucionDestino = { destino: string; netoPorMes: number[]; total: number }
+export async function getEvolucionPorDestino(cuentaId: string, meses = 6): Promise<{ meses: string[]; filas: EvolucionDestino[] }> {
+  const rows = await prisma.$queryRaw<Array<{ destino: string | null; mes: string; neto: unknown }>>`
+    SELECT coalesce(mb.destino, 'personal') AS destino,
+           to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+           coalesce(sum(mb.importe), 0) AS neto
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND coalesce(mb.destino, '') <> 'traspaso_interno'
+      AND mb.fecha_operacion >= (date_trunc('month', current_date) - make_interval(months => ${meses - 1}))
+    GROUP BY 1, 2
+  `
+  // Eje de meses (los últimos N, en orden cronológico).
+  const ejes: string[] = []
+  const base = new Date(); base.setDate(1)
+  for (let i = meses - 1; i >= 0; i--) {
+    const d = new Date(base); d.setMonth(d.getMonth() - i)
+    ejes.push(d.toISOString().slice(0, 7))
+  }
+  const porDestino = new Map<string, Map<string, number>>()
+  for (const r of rows) {
+    const dest = r.destino ?? 'personal'
+    if (!porDestino.has(dest)) porDestino.set(dest, new Map())
+    porDestino.get(dest)!.set(r.mes, Number(r.neto))
+  }
+  const filas: EvolucionDestino[] = [...porDestino.entries()].map(([destino, m]) => {
+    const netoPorMes = ejes.map(mes => m.get(mes) ?? 0)
+    return { destino, netoPorMes, total: netoPorMes.reduce((s, n) => s + n, 0) }
+  }).sort((a, b) => Math.abs(b.total) - Math.abs(a.total))
+  return { meses: ejes, filas }
+}
+
+// Alertas accionables para el dashboard: movimientos por revisar y posibles cargos
+// duplicados (mismo importe y contraparte en ±4 días). Todo desde movimientos_bancarios.
+export type Alertas = {
+  porRevisar: number
+  duplicados: number
+  duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
+}
+export async function getAlertas(cuentaId: string): Promise<Alertas> {
+  const [rev, dups] = await Promise.all([
+    prisma.$queryRaw<Array<{ n: bigint }>>`
+      SELECT count(*) AS n
+      FROM movimientos_bancarios mb
+      JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true`,
+    prisma.$queryRaw<Array<{ id: string; concepto: string | null; contraparte: string | null; importe: number; fecha_operacion: Date | null }>>`
+      SELECT DISTINCT ON (a.id) a.id,
+             coalesce(a.concepto_normalizado, a.concepto, a.contraparte) AS concepto,
+             a.contraparte, a.importe::float AS importe, a.fecha_operacion
+      FROM movimientos_bancarios a
+      JOIN movimientos_bancarios b
+        ON b.cuenta_bancaria_id = a.cuenta_bancaria_id AND b.id <> a.id
+       AND b.importe = a.importe
+       AND coalesce(b.contraparte, b.concepto) = coalesce(a.contraparte, a.concepto)
+       AND abs(b.fecha_operacion - a.fecha_operacion) <= 4
+      JOIN cuentas_bancarias cb ON cb.id = a.cuenta_bancaria_id
+      WHERE cb.cuenta_id = ${cuentaId}::uuid AND a.importe < 0
+        AND a.fecha_operacion >= current_date - 60
+      ORDER BY a.id, a.fecha_operacion DESC
+      LIMIT 6`,
+  ])
+  return {
+    porRevisar: Number(rev[0]?.n ?? 0),
+    duplicados: dups.length,
+    duplicadosDetalle: dups.slice(0, 3).map(d => ({
+      concepto: d.concepto || 'Movimiento',
+      importe: Number(d.importe),
+      fecha: d.fecha_operacion ? d.fecha_operacion.toISOString().slice(0, 10) : null,
+    })),
+  }
+}
+
 export type ResumenDestino = { destino: string; movs: number; ingresos: number; gastos: number }
 export async function getResumenPorDestino(cuentaId: string): Promise<ResumenDestino[]> {
   const rows = await prisma.$queryRaw<Array<{ destino: string | null; movs: bigint; ingresos: unknown; gastos: unknown }>>`
