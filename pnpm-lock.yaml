@@ -474,6 +474,8 @@ importers:
         specifier: ^3.6.4
         version: 3.6.4
 
+  packages/core-receipts: {}
+
   packages/core-storage: {}
 
   packages/module-agenda: {}
