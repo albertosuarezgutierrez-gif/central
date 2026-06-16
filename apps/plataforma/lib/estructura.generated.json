@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:30:54Z",
+  "generadoEn": "2026-06-16T14:36:38Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -258,7 +258,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "sivra": {
         "estado": "usado",
@@ -2346,6 +2346,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🎨 RRHH · Marca blanca por empresa (white-label)",
       "fecha": "16/06/2026"
     },
@@ -2399,10 +2403,6 @@
     },
     {
       "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
       "fecha": "15/06/2026"
     }
   ],

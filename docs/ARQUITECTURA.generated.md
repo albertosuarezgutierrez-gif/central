@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T14:30:54Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T14:36:38Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -143,6 +143,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/06/2026) 🤖 RRHH · Verticales conectadas a la pasarela de IA central
 - (16/06/2026) 🎨 RRHH · Marca blanca por empresa (white-label)
 - (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard
 - (16/06/2026) 📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)
@@ -152,5 +153,4 @@
 - (16/06/2026) 🤖 SIVRA · Agente de pricing — 1er ciclo con datos reales + motor por temporada (Paso 6/B2)
 - (16/06/2026) 🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)
 - (16/06/2026) 📧 Skill `facturas-correo` creada (agente de facturas por email)
-- (16/06/2026) 🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales
 
