@@ -11,7 +11,7 @@ export const TEXTO_CONSENTIMIENTO =
 /** SHA-256 (hex) del contenido. Usa WebCrypto (Node 18+/Edge/navegador). */
 export async function hashDocumento(bytes: Uint8Array | ArrayBuffer): Promise<string> {
   const data = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes)
-  const digest = await crypto.subtle.digest('SHA-256', data)
+  const digest = await crypto.subtle.digest('SHA-256', data as BufferSource)
   return [...new Uint8Array(digest)].map(b => b.toString(16).padStart(2, '0')).join('')
 }
 
