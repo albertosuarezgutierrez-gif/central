@@ -17,7 +17,10 @@ export async function responderAsistente(
   messages: MensajeAsistente[],
 ): Promise<{ respuesta: string }> {
   // Sin API key → degradación elegante (no 500).
-  if (!process.env.NVIDIA_API_KEY) return { respuesta: SIN_IA }
+  if (!process.env.NVIDIA_API_KEY) {
+    console.error('[asistente] NVIDIA_API_KEY ausente en runtime')
+    return { respuesta: SIN_IA }
+  }
 
   const [datos, documentos, solicitudes] = await Promise.all([
     prisma.$queryRaw<{ nombre: string; puesto: string | null; fecha_alta: unknown }[]>(Prisma.sql`
@@ -49,11 +52,14 @@ export async function responderAsistente(
   try {
     const respuesta = await aiComplete(recientes, {
       system: construirSystemPrompt(ctx),
+      model: 'meta/llama-3.3-70b-instruct',
       maxTokens: 700,
       timeoutMs: 20_000,
     })
     return { respuesta: respuesta.trim() || 'No he podido generar una respuesta. Inténtalo de nuevo.' }
-  } catch {
+  } catch (e) {
+    // Loguea el motivo REAL (status/mensaje de NIM) para poder diagnosticar en los Runtime Logs.
+    console.error('[asistente] fallo IA:', e instanceof Error ? `${e.name}: ${e.message}` : e)
     return { respuesta: SIN_IA }
   }
 }
