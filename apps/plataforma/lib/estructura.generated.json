@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T09:28:03Z",
+  "generadoEn": "2026-06-16T09:44:37Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -257,8 +257,8 @@
         "evidencias": 6
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "usado",
@@ -1205,8 +1205,8 @@
         "evidencias": 2
       },
       "rrhh": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "sivra": {
         "presente": true,
@@ -1974,6 +1974,7 @@
       "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/expediente/[docId]/firmar",
@@ -2624,18 +2625,6 @@
         ]
       },
       {
-        "capacidad": "asistente-ia",
-        "label": "Asistente / copiloto IA",
-        "tiene": [
-          "ia-rest",
-          "ialimp",
-          "sivra"
-        ],
-        "falta": [
-          "rrhh"
-        ]
-      },
-      {
         "capacidad": "concursos",
         "label": "Concursos públicos",
         "tiene": [
@@ -2655,9 +2644,9 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 804,
+    "apis": 805,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 23,
+    "oportunidadesPortar": 22,
     "reimplementaciones": 0
   }
 }
