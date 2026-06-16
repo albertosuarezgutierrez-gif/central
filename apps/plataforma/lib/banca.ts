@@ -356,15 +356,17 @@ export type Alertas = {
   porRevisar: number
   duplicados: number
   duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
+  tarjetasSinDesglose: TarjetaSinDesglose[]
 }
 export async function getAlertas(cuentaId: string): Promise<Alertas> {
-  const [rev, grupos] = await Promise.all([
+  const [rev, grupos, sinDesglose] = await Promise.all([
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true`,
     getDuplicadosSospechosos(cuentaId),
+    getTarjetasSinDesglose(cuentaId),
   ])
   const visibles = grupos.filter(g => g.superaUmbral)
   return {
@@ -375,7 +377,40 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
       importe: g.importe,
       fecha: g.movimientos[0]?.fecha ?? null,
     })),
+    tarjetasSinDesglose: sinDesglose,
   }
+}
+
+// Liquidaciones de tarjeta (el TOTAL "TARJ.CRDTO"/"PAGO RECIBO 466…" que carga la tarjeta en la
+// cuenta) cuyo DESGLOSE (las compras detalladas, que entran en una cuenta de banco "💳 Tarjeta…")
+// NO está importado para ese periodo. Sirve para que el dueño controle el 100%: el total opaco no
+// dice en qué se gastó. Heurística: una liquidación está "sin desglose" si NO hay movimientos en
+// ninguna cuenta de tarjeta en la ventana [mes-1, mes+1) de la liquidación (la compra suele
+// liquidarse el mes siguiente). Scoped por cuenta_id.
+export type TarjetaSinDesglose = { mes: string; importe: number; concepto: string }
+export async function getTarjetasSinDesglose(cuentaId: string): Promise<TarjetaSinDesglose[]> {
+  const rows = await prisma.$queryRaw<Array<{ mes: string; importe: unknown; concepto: string | null }>>`
+    SELECT to_char(date_trunc('month', mb.fecha_operacion), 'YYYY-MM') AS mes,
+           sum(-mb.importe) AS importe,
+           max(mb.concepto) AS concepto
+    FROM movimientos_bancarios mb
+    JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
+    WHERE cb.cuenta_id = ${cuentaId}::uuid
+      AND mb.importe < 0
+      AND cb.banco NOT ILIKE '%tarjeta%'
+      AND (mb.concepto ~* 'TARJ\.?\s*CR[EÉ]?DTO' OR mb.concepto ~* 'PAGO RECIBO 466')
+      AND NOT EXISTS (
+        SELECT 1 FROM movimientos_bancarios d
+        JOIN cuentas_bancarias dc ON dc.id = d.cuenta_bancaria_id
+        WHERE dc.cuenta_id = cb.cuenta_id
+          AND dc.banco ILIKE '%tarjeta%'
+          AND d.fecha_operacion >= date_trunc('month', mb.fecha_operacion) - interval '1 month'
+          AND d.fecha_operacion <  date_trunc('month', mb.fecha_operacion) + interval '1 month'
+      )
+    GROUP BY 1
+    ORDER BY 1 DESC
+  `
+  return rows.map(r => ({ mes: r.mes, importe: Number(r.importe), concepto: r.concepto ?? 'Tarjeta' }))
 }
 
 type DupRow = {

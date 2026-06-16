@@ -386,12 +386,20 @@ function GraficoMensual({ data }: { data: MesEvolucion[] }) {
 // Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos
 // duplicados). Si no hay nada, no renderiza.
 function AlertasBanner({ alertas }: { alertas: Alertas }) {
-  if (alertas.porRevisar === 0 && alertas.duplicados === 0) return null
+  const sinDesglose = alertas.tarjetasSinDesglose ?? []
+  if (alertas.porRevisar === 0 && alertas.duplicados === 0 && sinDesglose.length === 0) return null
+  const totalSinDesglose = sinDesglose.reduce((s, t) => s + t.importe, 0)
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
       padding: '12px 16px', marginBottom: '20px', display: 'flex', flexDirection: 'column', gap: '6px',
     }}>
+      {sinDesglose.length > 0 && (
+        <Link href="/banca" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
+          💳 <strong>{sinDesglose.length}</strong> {sinDesglose.length === 1 ? 'liquidación de tarjeta' : 'liquidaciones de tarjeta'} sin desglose
+          <span style={{ color: 'var(--muted)', fontWeight: 400 }}> ({fmtEur(totalSinDesglose)} sin detallar — sube el extracto de la tarjeta para controlar el 100%)</span> →
+        </Link>
+      )}
       {alertas.porRevisar > 0 && (
         <Link href="/banca" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none', fontWeight: 600 }}>
           🔎 Tienes <strong>{alertas.porRevisar}</strong> {alertas.porRevisar === 1 ? 'movimiento' : 'movimientos'} por revisar →

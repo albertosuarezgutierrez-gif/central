@@ -1,7 +1,7 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, getDuplicadosSospechosos, getDuplicadosResueltos, fmtEur, type EvolucionDestino } from '@/lib/banca'
+import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, getDuplicadosSospechosos, getDuplicadosResueltos, getTarjetasSinDesglose, fmtEur, type EvolucionDestino, type TarjetaSinDesglose } from '@/lib/banca'
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
@@ -24,7 +24,7 @@ export default async function BancaPage({ searchParams }: { searchParams: Promis
   }
 
   const anio = new Date().getFullYear()
-  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos] = await Promise.all([
+  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos, tarjetasSinDesglose] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientos(session.id, undefined, 5000),   // todos: el filtrado por negocio/fecha es en cliente
@@ -35,6 +35,7 @@ export default async function BancaPage({ searchParams }: { searchParams: Promis
     getEstimacionFiscal(session.id, anio),
     getDuplicadosSospechosos(session.id),
     getDuplicadosResueltos(session.id),
+    getTarjetasSinDesglose(session.id),
   ])
 
   return (
@@ -54,6 +55,9 @@ export default async function BancaPage({ searchParams }: { searchParams: Promis
             <ImportarExtractoBtn sociedades={sociedades} />
           </div>
         </div>
+
+        {/* Aviso: liquidaciones de tarjeta sin su desglose importado */}
+        {tarjetasSinDesglose.length > 0 && <TarjetaSinDesgloseBanner items={tarjetasSinDesglose} />}
 
         {/* Cuentas por sociedad */}
         {saldo.cuentas.length === 0 ? (
@@ -233,6 +237,28 @@ function EstimacionFiscal({ trimestres, anio }: { trimestres: Trimestre[]; anio:
             <FiscalLinea label="IVA a ingresar" valor={fmtEur(t.ivaAIngresar)} />
             <FiscalLinea label="IRPF fraccionado" valor={fmtEur(t.irpfFraccionado)} />
           </div>
+        ))}
+      </div>
+    </section>
+  )
+}
+
+// Aviso accionable: hay liquidaciones de tarjeta (un total opaco) cuyo desglose no se ha
+// importado. Para controlar el 100% del gasto, hay que subir el extracto de la tarjeta.
+function TarjetaSinDesgloseBanner({ items }: { items: TarjetaSinDesglose[] }) {
+  const total = items.reduce((s, t) => s + t.importe, 0)
+  return (
+    <section style={{ background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', padding: '14px 16px', marginBottom: '24px' }}>
+      <div style={{ fontSize: '14px', fontWeight: 700, marginBottom: '4px' }}>💳 Tarjeta sin desglose ({items.length})</div>
+      <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '10px' }}>
+        Estas liquidaciones entraron como un <strong>total</strong> ({fmtEur(total)} en conjunto), pero no veo el desglose de las compras.
+        Sube el extracto de la <strong>tarjeta</strong> (botón «⬆️ Importar extracto» arriba) para controlar el 100% del gasto.
+      </p>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {items.map(t => (
+          <span key={t.mes} style={{ fontSize: '12px', fontWeight: 600, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '999px', padding: '4px 10px' }}>
+            {etiquetaMes(t.mes)} {t.mes.slice(0, 4)} · {fmtEur(t.importe)}
+          </span>
         ))}
       </div>
     </section>
