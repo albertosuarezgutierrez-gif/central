@@ -12,6 +12,12 @@ const NAV_NEGOCIO = [
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
 ]
 
+const NAV_PISOS = [
+  { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
+  { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
+  { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
+]
+
 const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
   { href: '/operador/personas', icon: '👤', label: 'Personas' },
@@ -44,6 +50,23 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
         <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '4px 12px 6px', textTransform: 'uppercase' }}>Mi negocio</div>
         {NAV_NEGOCIO.map(({ href, icon, label }) => {
           const active = path === href || (href !== '/dashboard' && path.startsWith(href))
+          return (
+            <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
+              fontWeight: active ? 700 : 400,
+              background: active ? 'var(--primary-light)' : 'transparent',
+              color: active ? 'var(--primary)' : 'var(--text)',
+              fontSize: '14px', textDecoration: 'none',
+            }}>
+              <span>{icon}</span><span>{label}</span>
+            </Link>
+          )
+        })}
+
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Mis pisos</div>
+        {NAV_PISOS.map(({ href, icon, label }) => {
+          const active = path.startsWith(href)
           return (
             <Link key={href} href={href} onClick={() => setOpen(false)} style={{
               display: 'flex', alignItems: 'center', gap: '10px',
