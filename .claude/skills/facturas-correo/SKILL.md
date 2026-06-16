@@ -172,6 +172,37 @@ Estructura: **`Facturas / <año> / <negocio>`**
 
 Facturas de Si Que Brilla ya están en Drive en carpetas mensuales — verificar con `search_files` antes de subir duplicados.
 
+### Registrar en Supabase tras archivar (tabla `facturas_drive`)
+Después de cada `create_file` exitoso en Drive, ejecutar via `execute_sql`:
+```sql
+INSERT INTO facturas_drive (proveedor, anio, mes, drive_url, drive_file_id, importe, nombre_archivo, fuente)
+VALUES ('<proveedor_id>', <año>, <mes>, '<webViewLink>', '<file_id>', <importe_o_null>, '<nombre_archivo>', 'agente')
+ON CONFLICT (proveedor, anio, mes) DO UPDATE
+  SET drive_url = EXCLUDED.drive_url, drive_file_id = EXCLUDED.drive_file_id,
+      importe = COALESCE(EXCLUDED.importe, facturas_drive.importe), fuente = 'agente';
+```
+
+Mapeo de `proveedor_id` por nombre/correo del proveedor:
+| Proveedor                       | proveedor_id       |
+|---------------------------------|--------------------|
+| Si Que Brilla SL                | si_que_brilla      |
+| El Giraldillo                   | giraldillo         |
+| ENDESA contrato 130139486193 (Socorro) | endesa_socorro |
+| ENDESA contrato 130139685932 (Luxury)  | endesa_luxury  |
+| ENDESA contrato 130139655504 (Bustos)  | endesa_bustos  |
+| ENDESA dúplex (CPVR, BBVA)      | endesa_duplex      |
+| EMASESA contrato 0104785292 (Socorro)  | emasesa_socorro |
+| EMASESA contrato 0105185751 (Bustos)   | emasesa_bustos  |
+| EMASESA contrato 0105137440 (Luxury)   | emasesa_luxury  |
+| DIGI                            | digi               |
+| PriceLabs                       | pricelabs          |
+| Chekin Soluciones               | chekin             |
+| Renta Gutierrez Alcalá Luxury   | renta_luxury       |
+| Renta Gutierrez Alcalá Bustos   | renta_bustos       |
+| Comunidad Pasaje Francisco      | comunidad_pasaje   |
+| Comunidad Monte Carmelo         | comunidad_monte    |
+| Smoobu                          | smoobu             |
+
 ## Paso 4 — Conciliar con el banco (Supabase)
 Por cada factura, busca su cargo. SIEMPRE scope por `cuenta_bancaria_id`:
 ```sql

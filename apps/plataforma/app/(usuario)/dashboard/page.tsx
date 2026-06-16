@@ -386,7 +386,7 @@ function GraficoMensual({ data }: { data: MesEvolucion[] }) {
 // Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos
 // duplicados). Si no hay nada, no renderiza.
 function AlertasBanner({ alertas }: { alertas: Alertas }) {
-  if (alertas.porRevisar === 0 && alertas.duplicados === 0) return null
+  if (alertas.porRevisar === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
@@ -406,6 +406,11 @@ function AlertasBanner({ alertas }: { alertas: Alertas }) {
             </span>
           )}
           {' '}→
+        </Link>
+      )}
+      {alertas.facturasFaltantes > 0 && (
+        <Link href="/sivra/facturas-control" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
+          🗂️ <strong>{alertas.facturasFaltantes}</strong> {alertas.facturasFaltantes === 1 ? 'factura recurrente falta' : 'facturas recurrentes faltan'} del mes pasado → Ver facturas
         </Link>
       )}
     </div>
