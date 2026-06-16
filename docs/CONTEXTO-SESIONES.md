@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)**
+  El banner del dashboard ya detectaba "posibles cargos duplicados" (`getAlertas`) pero era ingenuo
+  (falsos positivos con micro-gastos recurrentes, p. ej. HORNO NUEVA FLORIDA −3 €) y de solo lectura.
+  Ahora es **fiable y accionable**, en 3 fases (todas pusheadas y desplegando en Vercel):
+  - **F1:** columna aditiva `movimientos_bancarios.duplicado_estado` (NULL/ignorado/confirmado, migración
+    `2026-06-15_banca_duplicados.sql` **ya aplicada** por Supabase MCP en `wswbehlcuxqxyinousql`).
+    Lógica PURA y testeada en `lib/duplicados.ts` (`clasificarConfianza`, `superaUmbralBanner`,
+    `esRecurrente`, `agruparDuplicados`; `lib/duplicados.test.ts`, 8 tests `node --test` verde). `lib/banca.ts`:
+    `getDuplicadosSospechosos`/`getDuplicadosResueltos`/`resolverDuplicados`; `getAlertas` reusa la misma
+    fuente con **umbral** (`DUP_UMBRAL_BANNER`, 5 €) → micro-gastos no disparan el banner. Excluye pares ya
+    conciliados a facturas distintas. API `POST /api/banca/duplicados`. UI `DuplicadosBandeja` en `/banca`
+    (resolver/deshacer + plegable "ya resueltos"); banner del dashboard enlaza a `/banca#duplicados`.
+  - **F2:** borrador de reclamación IA (`lib/reclamacion.ts` con `aiComplete`, degrada a plantilla) +
+    `POST /api/banca/duplicados/reclamacion` + botón/modal "Reclamar" en la bandeja.
+  - **F3:** auto-detección de recurrentes (subconsulta de ocurrencias en 60 d → `esRecurrente` degrada a
+    confianza baja). Verificado con datos reales: el IBI (recibo mismo día) sale como sospecha ALTA; HORNO
+    (16/mes) y GALOS (19/mes) quedan silenciados.
+  - **Spec:** `docs/superpowers/specs/2026-06-15-duplicados-bancarios-design.md`. **Plan:**
+    `docs/superpowers/plans/2026-06-15-duplicados-bancarios.md`.
+  - **Pendiente (opcional):** enganchar duplicados al email del cron `banca-alertas`.
+
 - **✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26) — 16/06/2026**
   Decisión: **firma propia** legalmente válida (no Firmafy ahora; avanzada basta para nóminas/contratos
   por art. 29 ET + STS 1023/2016). Firmafy queda **enchufable** como otro proveedor del puerto.

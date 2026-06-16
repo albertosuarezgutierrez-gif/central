@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T06:12:09Z",
+  "generadoEn": "2026-06-16T06:58:40Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -249,7 +249,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "no",
@@ -1896,6 +1896,8 @@
       "/api/auth/register",
       "/api/banca/analizar",
       "/api/banca/conciliar",
+      "/api/banca/duplicados",
+      "/api/banca/duplicados/reclamacion",
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
@@ -2243,6 +2245,10 @@
   ],
   "novedades": [
     {
+      "titulo": "⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
       "fecha": "16/06/2026"
     },
@@ -2296,10 +2302,6 @@
     },
     {
       "titulo": "📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
       "fecha": "14/06/2026"
     }
   ],
@@ -2596,7 +2598,7 @@
     "packages": 21,
     "capacidades": 23,
     "skills": 13,
-    "apis": 789,
+    "apis": 791,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
