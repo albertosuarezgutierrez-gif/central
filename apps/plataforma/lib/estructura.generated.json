@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:54:07Z",
+  "generadoEn": "2026-06-16T15:13:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -250,11 +250,11 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "usado",
@@ -1932,6 +1932,7 @@
       "/api/agente/chat",
       "/api/ai/chat",
       "/api/ai/search",
+      "/api/ai/vision",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -2346,6 +2347,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
       "fecha": "16/06/2026"
     },
@@ -2399,10 +2404,6 @@
     },
     {
       "titulo": "🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)",
       "fecha": "15/06/2026"
     }
   ],
@@ -2687,7 +2688,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 847,
+    "apis": 848,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
