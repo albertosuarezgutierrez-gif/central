@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - **Decisión de Alberto**: la IA NO se configura por proyecto. Las **keys de proveedor viven solo en
+    plataforma**; cada vertical llama a la pasarela. La conexión (`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`)
+    se pone **UNA vez como Variables Compartidas a nivel de equipo (Team) en Vercel** → todos los
+    proyectos la heredan, sin repetir por proyecto.
+  - **Pasarela ampliada con VISIÓN/OCR**: `gatewayVision` (core-ai) + `POST /api/ai/vision` en plataforma
+    (NIM vision, Bearer, presupuesto, registro en `ai_usos`). Necesario porque ialimp/sivra hacen mucho OCR.
+  - **ialimp** (100% migrado): `lib/ai-client.ts` reescrito → `aiComplete` y `aiVision` enrutan por la
+    pasarela con fallback a NIM directo. Los **7 sitios de OCR** (`concursos-ocr`, `cron/procesar-documentos`,
+    `propietario/escanear`, `admin/escanear/process`, `admin/ia/{analizar-foto,analizar-botes,comparar-foto}`)
+    cambiados de `nimVision`→`aiVision` (misma firma). `lib/concursos.ts` importa `aiComplete` del wrapper.
+  - **sivra**: `lib/ai-client.ts` → `aiComplete` y `aiExtractInvoice` (OCR facturas) por la pasarela con fallback.
+  - **ia-rest PENDIENTE** (Fase 2): los 4 agentes con **tool-calling de Anthropic** (agente-arquitecto, agentes-seo,
+    agentes-ai, cron/seo-agent) + el `seo-refresh` de sivra NO migran: la pasarela hace chat+búsqueda+visión, no
+    tool-calling. Para unificarlos hay que extender la pasarela con un endpoint de tool-calling (Anthropic). Las
+    llamadas NIM/Gemini planas de ia-rest sí se pueden migrar (su `ai-client.ts`) en otro PR.
+  - **Migración SIN romper nada**: sin los envs, todo sigue con las keys directas; al ponerlos, pasa por la pasarela.
+  - **Tras configurar**: el gasto de ialimp/sivra/rrhh se ve en plataforma → god-panel → 🤖 IA · gasto.
+
 - **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
   - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
     de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de

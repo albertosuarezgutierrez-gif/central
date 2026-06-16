@@ -4,7 +4,7 @@
 // viven en la app, nunca en el módulo.
 
 import type { AiRunner } from '@central/module-concursos'
-import { aiComplete } from '@central/core-ai'
+import { aiComplete } from '@/lib/ai-client'
 
 /**
  * Puerto del LLM para el módulo de concursos: envía system+user al proveedor

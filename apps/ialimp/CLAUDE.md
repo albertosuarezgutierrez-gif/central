@@ -78,8 +78,15 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
   - **Buscador de pliegos (oportunidades por sector):** corpus compartido `concursos_licitaciones` (no por empresa) alimentado por cron `/api/cron/concursos-ingesta` (cada 6 h, upsert desde PLACSP con el parser ampliado de `lib/concursos-radar.ts`). Buscador `GET /api/admin/concursos/radar/buscar` con **full-text de Postgres** (`tsvector`/`plainto_tsquery`, índices GIN) y filtros: CPV (prefijo) · texto · **solo en plazo** (por defecto) · provincia · presupuesto · orden. UI **"🔎 Buscar concursos"** con **"guardar búsqueda como alerta"** (reusa los criterios del radar → buscador *pull* y radar *push* son dos vistas del mismo corpus). Migración nueva: `add_concursos_licitaciones.sql`. Fase 2: BOE como fuente adicional (mismo corpus) y unificar el radar sobre el corpus.
 - **Deuda conocida:** `cleaning_sessions.property_id` (text legacy) convive con `propiedad_id` (uuid) en 2 formatos (slug `prop_*` y UUID) para los mismos pisos → al consultar, normaliza con `COALESCE(NULLIF(propiedad_id::text,''), property_id::text)` (**ambos a `::text`**: si no, COALESCE peta con `42804` text vs uuid). Sesiones iCal antiguas quedaron con slug `prop_*`, **sin `property_name`** ni `propiedad_id` (salían como «Sin piso» en la UI); `pms/sync` ahora **sana** ambos en el `ON CONFLICT` (`COALESCE(NULLIF(...,''), EXCLUDED...)`) y hay backfill en `prisma/migrations/backfill_property_name_ical.sql`. (Nota: el slug `prop_house_sevillana` es en realidad **Casa Socorro**.)
 
-## IA (solo NVIDIA NIM, free tier)
-- Todo vía `lib/ai-client.ts`. `aiComplete()` = llama-3.3-70b · `aiExtractInvoice()` = llama-3.2-90b-vision.
+## IA (pasarela central de plataforma; NVIDIA NIM por debajo)
+- **Todo vía `lib/ai-client.ts`** = `aiComplete()` (texto) y `aiVision()` (OCR/visión). Ambos **enrutan por la
+  PASARELA de IA de plataforma** (las keys de proveedor viven SOLO en plataforma; el gasto se ve en su god-panel
+  → 🤖 IA · gasto). Si faltan los envs **`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`** (= los de plataforma; se ponen
+  UNA vez como Variables Compartidas a nivel de equipo en Vercel), cae a **NIM directo** (`NVIDIA_API_KEY`) como
+  fallback de transición. Modelos por debajo: texto llama-3.3-70b · visión llama-3.2-90b-vision.
+- **`aiVision` tiene la MISMA firma que `nimVision`** (`config, system, images, userText, maxTokens?, opts?`): para
+  migrar un sitio de OCR basta cambiar el import `nimVision`→`aiVision` de `@/lib/ai-client`. No importar `nimVision`
+  de `@central/core-ai` directamente en rutas nuevas: usa el wrapper.
 - `@anthropic-ai/sdk` está **ELIMINADO**. Cualquier feature de IA nueva usa `aiComplete()`.
 - Agentes ya existentes (no duplicar): auto-asignación, calidad-fotos, informes (día 1), cotizador, clasificar-queja, escáner de documentos, briefing-diario, comparar-foto, selección de CVs (RRHH).
 

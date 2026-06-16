@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { nimVision } from '@central/core-ai'
+import { aiVision } from '@/lib/ai-client'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
 const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
@@ -53,7 +53,7 @@ ${catalogoStr}
 
 Map producto_id only if the item name clearly matches a catalog entry; copy the catalog id verbatim, otherwise null.`
 
-  const raw = await nimVision(
+  const raw = await aiVision(
     nimConfig(), '',
     [{ data: base64img, mediaType }],
     prompt, 800, { temperature: 0.05 },

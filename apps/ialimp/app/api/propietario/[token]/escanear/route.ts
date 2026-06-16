@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { nimVision } from '@central/core-ai'
+import { aiVision } from '@/lib/ai-client'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
 const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
@@ -54,7 +54,7 @@ ${catalogoStr}
 
 Mapea producto_id si coincide nombre/descripción con el catálogo. IVA 21% si no se especifica.`
 
-  const raw = await nimVision(
+  const raw = await aiVision(
     nimConfig(), '',
     [{ data: base64, mediaType }],
     prompt, 1200, { temperature: 0.1 },
