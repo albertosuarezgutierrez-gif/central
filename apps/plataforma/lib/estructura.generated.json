@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:27:07Z",
+  "generadoEn": "2026-06-16T08:37:39Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -342,7 +342,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
         "estado": "usado",
@@ -1927,6 +1927,7 @@
       "/api/admin/estructura/clientes",
       "/api/admin/login",
       "/api/admin/logout",
+      "/api/admin/personas",
       "/api/admin/propiedades",
       "/api/auth/login",
       "/api/auth/logout",
@@ -1977,7 +1978,8 @@
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/solicitudes",
-      "/api/operador/empresas"
+      "/api/operador/empresas",
+      "/api/operador/personas"
     ],
     "sivra": [
       "/api/admin/limpiadoras/asignacion",
@@ -2637,7 +2639,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 13,
-    "apis": 796,
+    "apis": 798,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
