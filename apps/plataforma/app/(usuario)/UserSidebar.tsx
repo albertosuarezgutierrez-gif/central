@@ -19,6 +19,9 @@ const NAV_PISOS = [
   { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
   { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
   { href: '/sivra/mensajes', icon: '💬', label: 'Mensajes' },
+  { href: '/sivra/mercado', icon: '📊', label: 'Mercado' },
+  { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
+  { href: '/sivra/pricing-auto', icon: '🤖', label: 'Pricing auto' },
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
 ]
