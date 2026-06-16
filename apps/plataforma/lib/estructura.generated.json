@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:47:13Z",
+  "generadoEn": "2026-06-16T14:52:19Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,11 +254,11 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "sivra": {
         "estado": "usado",
@@ -915,8 +915,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 17
       },
       "rrhh": {
         "presente": false,
@@ -937,8 +937,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 6
       },
       "rrhh": {
         "presente": false,
@@ -1930,6 +1930,8 @@
       "/api/admin/personas",
       "/api/admin/propiedades",
       "/api/agente/chat",
+      "/api/ai/chat",
+      "/api/ai/search",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -1970,13 +1972,35 @@
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/knowledge",
       "/api/sivra/mensajes/reply",
+      "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/ingest",
+      "/api/sivra/mercado/search",
+      "/api/sivra/mercado/stats",
+      "/api/sivra/mercado/sweep",
+      "/api/sivra/pricing/apply",
+      "/api/sivra/pricing/apply-auto",
+      "/api/sivra/pricing/config",
+      "/api/sivra/pricing/experiments",
+      "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/guard",
+      "/api/sivra/pricing/historial",
+      "/api/sivra/pricing/pilot-track",
+      "/api/sivra/pricing/pilot-track/historial",
+      "/api/sivra/pricing/recommend",
+      "/api/sivra/pricing/restore",
+      "/api/sivra/pricing/resultados",
+      "/api/sivra/pricing/resumen-diario",
+      "/api/sivra/pricing/settings",
+      "/api/sivra/pricing/stats",
       "/api/sivra/seo-proposals",
       "/api/sivra/seo-refresh",
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
+      "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -2215,6 +2239,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "ai_usos",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2321,6 +2346,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🎨 RRHH · Marca blanca por empresa (white-label)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard",
       "fecha": "16/06/2026"
     },
@@ -2371,14 +2404,6 @@
     {
       "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
       "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
-      "fecha": "15/06/2026"
     }
   ],
   "saludRepo": {
@@ -2662,7 +2687,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 823,
+    "apis": 847,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
