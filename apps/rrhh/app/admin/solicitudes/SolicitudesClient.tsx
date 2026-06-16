@@ -1,9 +1,9 @@
 'use client'
 import { useState } from 'react'
-import { tipoEtiqueta } from '@/lib/solicitudes'
+import { tipoEtiqueta } from '@/lib/solicitudes-tipos'
 import AdminShell from '@/components/AdminShell'
 
-type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string }
+type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string; tiene_justificante?: boolean }
 
 const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
 
@@ -24,6 +24,10 @@ export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
             <strong>{s.empleado_nombre}</strong> · {tipoEtiqueta(s.tipo)} {rango(s) && <span>· {rango(s)}</span>}
             <span className={`ml-2 ${COLOR[s.estado] ?? ''}`}>[{s.estado}]</span>
             {s.motivo && <div className="text-ink-3 text-sm">{s.motivo}</div>}
+            {s.tiene_justificante && (
+              <a href={`/api/admin/solicitudes/${s.id}/justificante`} target="_blank" rel="noreferrer"
+                className="text-accent text-sm no-underline hover:underline">📎 Ver justificante</a>
+            )}
             {s.estado === 'solicitada' && (
               <div className="mt-2 flex gap-2">
                 <button onClick={() => resolver(s.id, true)}>Aprobar</button>

@@ -65,6 +65,9 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
                   <span className="text-ink-3 text-xs">· {d.subido_por}</span>
                   {FIRMA[d.estado_firma] && <span className={`text-xs font-semibold ${FIRMA[d.estado_firma].cls}`}>· {FIRMA[d.estado_firma].txt}</span>}
                   <span className="ml-auto flex items-center gap-1">
+                    {d.estado_firma === 'firmado' && (
+                      <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-0.5 text-xs text-accent no-underline hover:underline">Verificar</a>
+                    )}
                     {d.estado_firma === 'no_requiere' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-0.5 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}

@@ -1,16 +1,21 @@
 'use client'
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 
 const PROPS = [
-  { id: 'prop_house_sevillana', label: 'House Sevillana', color: '#84cc16', short: 'HS' },
-  { id: 'prop_busto_reform',    label: 'Busto Reform',    color: '#f59e0b', short: 'BR' },
-  { id: 'prop_duplex_center',   label: 'Duplex Center',   color: '#10b981', short: 'DC' },
-  { id: 'prop_luxury_busto',    label: 'Luxury Busto',    color: '#ef4444', short: 'LB' },
+  { id: 'prop_house_sevillana', label: 'House Sevillana',    color: '#84cc16', short: 'HS' },
+  { id: 'prop_busto_reform',    label: 'Busto Reform',       color: '#f59e0b', short: 'BR' },
+  { id: 'prop_duplex_center',   label: 'Duplex Center',      color: '#10b981', short: 'DC' },
+  { id: 'prop_luxury_busto',    label: 'Luxury Busto',       color: '#ef4444', short: 'LB' },
 ]
 
-const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio',
-                 'Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre']
-const DAYS   = ['L','M','X','J','V','S','D']
+const PORTAL_COLORS: Record<string, string> = {
+  AIRBNB: '#FF5A5F', BOOKING: '#003580', VRBO: '#1D3C6E', DIRECTO: '#7c3aed',
+}
+
+const DAY_W = 46     // px per day column
+const ROW_H = 52     // px per property row
+const LABEL_W = 130  // px for left label column
+const DAYS  = 30     // days visible in timeline
 
 type Income = {
   id: string; propertyId: string; guestName: string | null
@@ -19,31 +24,18 @@ type Income = {
 
 function isoDate(d: Date) { return d.toISOString().slice(0, 10) }
 function addDays(date: Date, n: number) { const d = new Date(date); d.setDate(d.getDate() + n); return d }
-
-function getOccupiedDates(checkIn: string, checkOut: string): string[] {
-  const dates: string[] = []
-  const cur = new Date(checkIn)
-  const end = new Date(checkOut)
-  while (cur < end) { dates.push(isoDate(cur)); cur.setDate(cur.getDate() + 1) }
-  return dates
-}
-
-function propColor(propId: string) { return PROPS.find(p => p.id === propId)?.color ?? '#94a3b8' }
-function propShort(propId: string) { return PROPS.find(p => p.id === propId)?.short ?? '?' }
-function propLabel(propId: string) { return PROPS.find(p => p.id === propId)?.label ?? propId }
-
-function fmt(d: string) {
-  const [, m, day] = d.split('-')
-  return `${day}/${m}`
-}
+function daysBetween(a: Date, b: Date) { return Math.round((b.getTime() - a.getTime()) / 86400000) }
+function shortDay(d: Date) { return ['D','L','M','X','J','V','S'][d.getDay()] }
+function fmtEur(n: number) { return new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n) }
+function fmt(d: string) { const [, m, day] = d.split('-'); return `${day}/${m}` }
 
 export default function CalendarioPage() {
-  const now = new Date()
-  const [incomes, setIncomes]     = useState<Income[]>([])
-  const [loading, setLoading]     = useState(true)
-  const [baseYear, setBaseYear]   = useState(now.getFullYear())
-  const [baseMonth, setBaseMonth] = useState(now.getMonth())
-  const [hoverDate, setHoverDate] = useState<string | null>(null)
+  const now = new Date(); now.setHours(0,0,0,0)
+  const [incomes, setIncomes]   = useState<Income[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [winStart, setWinStart] = useState<Date>(now)
+  const [selected, setSelected] = useState<Income | null>(null)
+  const scrollRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     fetch('/api/sivra/incomes')
@@ -52,252 +44,357 @@ export default function CalendarioPage() {
       .catch(() => setLoading(false))
   }, [])
 
-  const occMap = useMemo(() => {
-    const map: Record<string, { propId: string; income: Income }[]> = {}
-    incomes.forEach(inc => {
-      if (!inc.checkIn || !inc.checkOut) return
-      getOccupiedDates(inc.checkIn, inc.checkOut).forEach(d => {
-        if (!map[d]) map[d] = []
-        map[d].push({ propId: inc.propertyId, income: inc })
-      })
-    })
-    return map
-  }, [incomes])
+  const winDays = useMemo(() => {
+    return Array.from({ length: DAYS }, (_, i) => addDays(winStart, i))
+  }, [winStart])
 
-  const months = [0, 1, 2].map(offset => {
-    const m = (baseMonth + offset) % 12
-    const y = baseYear + Math.floor((baseMonth + offset) / 12)
-    return { year: y, month: m }
-  })
-
+  // Occupancy stats (30 days from today)
   const stats = useMemo(() => {
     return PROPS.map(p => {
-      const count = Array.from({ length: 30 }, (_, i) => isoDate(addDays(now, i)))
-        .filter(d => occMap[d]?.some(o => o.propId === p.id)).length
-      return { ...p, days: count, pct: Math.round((count / 30) * 100) }
+      const occupied = Array.from({ length: 30 }, (_, i) => isoDate(addDays(now, i)))
+        .filter(d => incomes.some(inc =>
+          inc.propertyId === p.id && inc.checkIn <= d && inc.checkOut > d
+        )).length
+      return { ...p, pct: Math.round((occupied / 30) * 100) }
     })
-  }, [occMap])
-
-  const upcoming = useMemo(() => {
-    const today = isoDate(now)
-    const limit = isoDate(addDays(now, 14))
-    return incomes
-      .filter(inc => inc.checkIn >= today && inc.checkIn <= limit)
-      .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
-      .slice(0, 12)
   }, [incomes])
 
-  function prevMonths() {
-    if (baseMonth === 0) { setBaseYear(y => y - 1); setBaseMonth(10) }
-    else setBaseMonth(m => m - 1)
-  }
-  function nextMonths() {
-    if (baseMonth >= 10) { setBaseYear(y => y + 1); setBaseMonth((baseMonth + 1) % 12) }
-    else setBaseMonth(m => m + 1)
+  // Cleaning days: checkout + checkin same day, same property
+  const cleaningDays = useMemo(() => {
+    const days = new Set<string>()
+    winDays.forEach(d => {
+      const ds = isoDate(d)
+      PROPS.forEach(p => {
+        const hasCheckout = incomes.some(i => i.propertyId === p.id && i.checkOut === ds)
+        const hasCheckin  = incomes.some(i => i.propertyId === p.id && i.checkIn === ds)
+        if (hasCheckout && hasCheckin) days.add(`${ds}:${p.id}`)
+      })
+    })
+    return days
+  }, [incomes, winDays])
+
+  // Gap days: 1-2 free days between reservations
+  const gapDays = useMemo(() => {
+    const gaps = new Set<string>()
+    PROPS.forEach(p => {
+      const sorted = incomes
+        .filter(i => i.propertyId === p.id)
+        .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
+      for (let i = 0; i < sorted.length - 1; i++) {
+        const endPrev  = new Date(sorted[i].checkOut)
+        const startNext = new Date(sorted[i + 1].checkIn)
+        const gap = daysBetween(endPrev, startNext)
+        if (gap >= 1 && gap <= 2) {
+          for (let g = 0; g < gap; g++) {
+            gaps.add(`${isoDate(addDays(endPrev, g))}:${p.id}`)
+          }
+        }
+      }
+    })
+    return gaps
+  }, [incomes])
+
+  function getReservationsForProp(propId: string) {
+    const winEnd = isoDate(addDays(winStart, DAYS))
+    const winStartStr = isoDate(winStart)
+    return incomes.filter(i =>
+      i.propertyId === propId && i.checkOut > winStartStr && i.checkIn < winEnd
+    )
   }
 
+  function getBarGeometry(inc: Income) {
+    const ciDate = new Date(inc.checkIn)
+    const coDate = new Date(inc.checkOut)
+    const startOff = Math.max(0, daysBetween(winStart, ciDate))
+    const endOff   = Math.min(DAYS, daysBetween(winStart, coDate))
+    return { left: startOff * DAY_W, width: (endOff - startOff) * DAY_W }
+  }
+
+  const todayStr = isoDate(now)
+
   return (
-    <div style={{ padding: '24px', maxWidth: '80rem' }}>
+    <div style={{ padding: '24px 20px', maxWidth: '100%' }}>
       {/* Header */}
-      <div style={{ marginBottom: '20px', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: '20px', fontWeight: 700, color: 'var(--text)' }}>Calendario de ocupación</h1>
-          <p style={{ margin: '4px 0 0', fontSize: '13px', color: 'var(--muted)' }}>Vista unificada · {PROPS.length} propiedades · datos Smoobu</p>
+          <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>Calendario de ocupación</h1>
+          <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--muted)' }}>
+            {PROPS.length} propiedades · datos Smoobu · {DAYS} días
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-          <button onClick={prevMonths} style={btnStyle}>‹</button>
-          <button onClick={() => { setBaseYear(now.getFullYear()); setBaseMonth(now.getMonth()) }} style={{ ...btnStyle, padding: '0 12px', fontSize: '12px' }}>Hoy</button>
-          <button onClick={nextMonths} style={btnStyle}>›</button>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+          <button onClick={() => setWinStart(d => addDays(d, -DAYS))} style={btnStyle}>‹ Anterior</button>
+          <button onClick={() => setWinStart(now)} style={{ ...btnStyle, padding: '0 14px', fontWeight: 600 }}>Hoy</button>
+          <button onClick={() => setWinStart(d => addDays(d, DAYS))} style={btnStyle}>Siguiente ›</button>
         </div>
       </div>
 
-      {/* Leyenda + stats ocupación 30 días */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginBottom: '20px' }}>
+      {/* Stats cards */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
         {stats.map(p => (
-          <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 12px', display: 'flex', alignItems: 'center', gap: '12px', minWidth: '160px' }}>
-            <div style={{ width: '10px', height: '10px', borderRadius: '50%', background: p.color, flexShrink: 0 }} />
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.label}</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '4px' }}>
-                <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg)', maxWidth: '64px' }}>
-                  <div style={{ height: '100%', borderRadius: '2px', width: `${p.pct}%`, background: p.color, transition: 'width .3s' }} />
+          <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 150 }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', whiteSpace: 'nowrap' }}>{p.label}</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 3 }}>
+                <div style={{ flex: 1, height: 3, borderRadius: 2, background: 'rgba(0,0,0,.08)', maxWidth: 60 }}>
+                  <div style={{ height: '100%', borderRadius: 2, width: `${p.pct}%`, background: p.color }} />
                 </div>
-                <span style={{ fontSize: '10px', fontWeight: 700, color: p.color }}>{p.pct}%</span>
-                <span style={{ fontSize: '10px', color: 'var(--muted)' }}>/30d</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: p.color }}>{p.pct}%</span>
+                <span style={{ fontSize: 10, color: 'var(--muted)' }}>/30d</span>
               </div>
             </div>
           </div>
         ))}
       </div>
 
-      {/* Calendarios 3 meses */}
-      {loading ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '192px', color: 'var(--muted)', fontSize: '14px' }}>Cargando reservas…</div>
-      ) : (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px', marginBottom: '24px' }}>
-          {months.map(({ year, month }) => {
-            const daysInMonth = new Date(year, month + 1, 0).getDate()
-            const firstDow = (() => { const d = new Date(year, month, 1).getDay(); return d === 0 ? 6 : d - 1 })()
-            const todayStr = isoDate(now)
+      {/* Leyenda iconos */}
+      <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontSize: 11, color: 'var(--muted)', flexWrap: 'wrap' }}>
+        <span>🧹 = turno limpieza urgente</span>
+        <span style={{ color: '#ef4444' }}>■ = gap 1-2 días (difícil vender)</span>
+      </div>
 
-            return (
-              <div key={`${year}-${month}`} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
-                <div style={{ padding: '12px 16px', borderBottom: '1px solid var(--border)' }}>
-                  <span style={{ fontWeight: 600, fontSize: '14px', color: 'var(--text)' }}>{MONTHS[month]} {year}</span>
-                </div>
-                {/* Cabecera días */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', padding: '8px 12px 0' }}>
-                  {DAYS.map(d => (
-                    <div key={d} style={{ textAlign: 'center', fontSize: '9px', fontWeight: 600, color: 'var(--muted)', padding: '4px 0', textTransform: 'uppercase', letterSpacing: '.04em' }}>{d}</div>
-                  ))}
-                </div>
-                {/* Grid días */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', padding: '0 8px 12px', gap: '1px' }}>
-                  {Array.from({ length: firstDow }).map((_, i) => <div key={`e-${i}`} />)}
-                  {Array.from({ length: daysInMonth }, (_, i) => {
-                    const day = i + 1
-                    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-                    const occ = occMap[dateStr] || []
-                    const propIds = [...new Set(occ.map(o => o.propId))]
-                    const isToday = dateStr === todayStr
-                    const isPast  = dateStr < todayStr
-                    const isHover = hoverDate === dateStr
+      {/* Gantt timeline */}
+      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden', marginBottom: 24 }}>
+        {/* Scrollable wrapper */}
+        <div ref={scrollRef} style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+          <div style={{ minWidth: LABEL_W + DAYS * DAY_W }}>
 
-                    return (
-                      <div key={day}
-                        style={{
-                          position: 'relative', borderRadius: '6px', display: 'flex', flexDirection: 'column',
-                          alignItems: 'center', padding: '4px 1px', cursor: 'default',
-                          background: isHover && propIds.length > 0 ? 'var(--primary-light)' : 'transparent',
-                          opacity: isPast ? 0.45 : 1,
-                        }}
-                        onMouseEnter={() => setHoverDate(dateStr)}
-                        onMouseLeave={() => setHoverDate(null)}
-                      >
-                        <span style={{
-                          fontSize: '10px', lineHeight: 1, marginBottom: '2px',
-                          fontWeight: isToday ? 800 : propIds.length > 0 ? 600 : 400,
-                          color: isToday ? 'var(--primary)' : 'var(--text)',
-                        }}>{day}</span>
-                        {propIds.length > 0 && (
-                          <div style={{ display: 'flex', gap: '1px', flexWrap: 'wrap', justifyContent: 'center', maxWidth: '22px' }}>
-                            {propIds.slice(0, 3).map(pid => (
-                              <div key={pid} style={{ width: '5px', height: '5px', borderRadius: '50%', background: propColor(pid) }} />
-                            ))}
-                            {propIds.length > 3 && <div style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#94a3b8' }} />}
-                          </div>
-                        )}
-                        {isHover && propIds.length > 0 && (
-                          <div style={{
-                            position: 'absolute', bottom: '100%', left: '50%', transform: 'translateX(-50%)',
-                            marginBottom: '4px', zIndex: 20, background: '#09090b', color: '#fff',
-                            fontSize: '9px', borderRadius: '6px', padding: '4px 8px', whiteSpace: 'nowrap', pointerEvents: 'none',
-                          }}>
-                            {occ.slice(0, 3).map((o, idx) => (
-                              <div key={idx}>{propShort(o.propId)} · {o.income.guestName?.split(' ')[0] || '?'}</div>
-                            ))}
-                            {occ.length > 3 && <div>+{occ.length - 3} más</div>}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-                {/* Footer ocupación del mes */}
-                <div style={{ padding: '8px 16px', borderTop: '1px solid var(--border)' }}>
-                  {(() => {
-                    const daysInM = new Date(year, month + 1, 0).getDate()
-                    const prefix = `${year}-${String(month + 1).padStart(2, '0')}`
-                    const occupiedDays = new Set(Object.keys(occMap).filter(d => d.startsWith(prefix))).size
-                    const pct = Math.round((occupiedDays / daysInM) * 100)
-                    return (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ flex: 1, height: '4px', borderRadius: '2px', background: 'var(--bg)' }}>
-                          <div style={{ height: '100%', borderRadius: '2px', background: 'var(--primary)', width: `${pct}%` }} />
-                        </div>
-                        <span style={{ fontSize: '10px', color: 'var(--muted)', flexShrink: 0 }}>{pct}% ocupación</span>
-                      </div>
-                    )
-                  })()}
-                </div>
+            {/* Day header row */}
+            <div style={{ display: 'flex', borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,.02)', position: 'sticky', top: 0, zIndex: 10 }}>
+              {/* Label spacer */}
+              <div style={{ width: LABEL_W, flexShrink: 0, borderRight: '1px solid var(--border)', padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'var(--muted)' }}>
+                Propiedad
               </div>
-            )
-          })}
+              {/* Day columns */}
+              {winDays.map((d, i) => {
+                const ds = isoDate(d)
+                const isToday = ds === todayStr
+                const isWeekend = d.getDay() === 0 || d.getDay() === 6
+                return (
+                  <div key={i} style={{
+                    width: DAY_W, flexShrink: 0, textAlign: 'center', padding: '4px 2px',
+                    borderRight: i < DAYS - 1 ? '1px solid var(--border)' : 'none',
+                    background: isToday ? 'var(--primary-light)' : isWeekend ? 'rgba(0,0,0,.02)' : 'transparent',
+                  }}>
+                    <div style={{ fontSize: 9, color: isToday ? 'var(--primary)' : 'var(--muted)', fontWeight: 600, textTransform: 'uppercase' }}>{shortDay(d)}</div>
+                    <div style={{ fontSize: 12, fontWeight: isToday ? 800 : 500, color: isToday ? 'var(--primary)' : 'var(--text)' }}>{d.getDate()}</div>
+                    <div style={{ fontSize: 8, color: 'var(--muted)' }}>{d.getMonth() + 1 !== winStart.getMonth() + 1 ? `${d.toLocaleString('es-ES', { month: 'short' })}` : ''}</div>
+                  </div>
+                )
+              })}
+            </div>
+
+            {/* Property rows */}
+            {loading ? (
+              <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Cargando reservas…</div>
+            ) : PROPS.map((prop, pi) => {
+              const reservations = getReservationsForProp(prop.id)
+              return (
+                <div key={prop.id} style={{ display: 'flex', borderBottom: pi < PROPS.length - 1 ? '1px solid var(--border)' : 'none' }}>
+                  {/* Property label */}
+                  <div style={{
+                    width: LABEL_W, flexShrink: 0, borderRight: '1px solid var(--border)',
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '0 12px',
+                    height: ROW_H, background: 'rgba(0,0,0,.01)',
+                  }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', background: prop.color, flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--text)', lineHeight: 1.2 }}>{prop.label}</span>
+                  </div>
+
+                  {/* Timeline cells */}
+                  <div style={{ position: 'relative', width: DAYS * DAY_W, height: ROW_H }}>
+                    {/* Background day cells */}
+                    {winDays.map((d, i) => {
+                      const ds = isoDate(d)
+                      const isToday = ds === todayStr
+                      const isWeekend = d.getDay() === 0 || d.getDay() === 6
+                      const isGap = gapDays.has(`${ds}:${prop.id}`)
+                      const isCleaning = cleaningDays.has(`${ds}:${prop.id}`)
+                      return (
+                        <div key={i} style={{
+                          position: 'absolute', left: i * DAY_W, top: 0, width: DAY_W, height: ROW_H,
+                          borderRight: '1px solid var(--border)',
+                          background: isGap ? 'rgba(239,68,68,.08)' : isToday ? 'rgba(99,102,241,.05)' : isWeekend ? 'rgba(0,0,0,.015)' : 'transparent',
+                          display: 'flex', alignItems: 'flex-start', justifyContent: 'center', paddingTop: 2,
+                        }}>
+                          {isCleaning && <span style={{ fontSize: 10 }}>🧹</span>}
+                        </div>
+                      )
+                    })}
+
+                    {/* Reservation bars */}
+                    {reservations.map((inc) => {
+                      const { left, width } = getBarGeometry(inc)
+                      if (width <= 0) return null
+                      const nights = inc.nights || Math.max(1, daysBetween(new Date(inc.checkIn), new Date(inc.checkOut)))
+                      const adr = nights > 0 ? Math.round(inc.amount / nights) : 0
+                      const portalColor = PORTAL_COLORS[inc.portal || ''] || prop.color
+                      const isSelected = selected?.id === inc.id
+                      return (
+                        <div
+                          key={inc.id}
+                          onClick={() => setSelected(isSelected ? null : inc)}
+                          title={`${inc.guestName || '?'} · ${nights}n · €${inc.amount}`}
+                          style={{
+                            position: 'absolute',
+                            left: left + 2,
+                            top: 10,
+                            width: Math.max(width - 4, 4),
+                            height: ROW_H - 20,
+                            borderRadius: 6,
+                            background: prop.color,
+                            cursor: 'pointer',
+                            display: 'flex', alignItems: 'center',
+                            paddingLeft: width > 60 ? 8 : 4,
+                            overflow: 'hidden',
+                            boxShadow: isSelected ? `0 0 0 2px #fff, 0 0 0 3px ${prop.color}` : '0 1px 3px rgba(0,0,0,.15)',
+                            transition: 'box-shadow .15s',
+                            zIndex: 2,
+                          }}
+                        >
+                          {/* Portal color stripe */}
+                          <div style={{ position: 'absolute', left: 0, top: 0, width: 4, height: '100%', background: portalColor, borderRadius: '6px 0 0 6px' }} />
+                          {width > 30 && (
+                            <div style={{ paddingLeft: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 1 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: width - 24 }}>
+                                {inc.guestName?.split(' ')[0] || '?'}
+                              </span>
+                              {width > 70 && adr > 0 && (
+                                <span style={{ fontSize: 9, color: 'rgba(255,255,255,.8)', whiteSpace: 'nowrap' }}>
+                                  {fmtEur(adr)}/n · {nights}n
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Reservation detail panel */}
+      {selected && (
+        <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Huésped</div>
+              <div style={{ fontWeight: 700, color: 'var(--text)' }}>{selected.guestName || '—'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Propiedad</div>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{PROPS.find(p => p.id === selected.propertyId)?.label || selected.propertyId}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Entrada / Salida</div>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{fmt(selected.checkIn)} → {fmt(selected.checkOut)}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Noches</div>
+              <div style={{ fontWeight: 600, color: 'var(--text)' }}>{selected.nights || '?'}</div>
+            </div>
+            <div>
+              <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Total / ADR</div>
+              <div style={{ fontWeight: 700, color: 'var(--text)' }}>
+                {fmtEur(selected.amount)} · {fmtEur(selected.amount / (selected.nights || 1))}/n
+              </div>
+            </div>
+            {selected.portal && (
+              <div>
+                <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Portal</div>
+                <span style={{ padding: '2px 8px', borderRadius: 4, fontSize: 11, fontWeight: 700, background: PORTAL_COLORS[selected.portal] || 'var(--primary)', color: '#fff' }}>
+                  {selected.portal}
+                </span>
+              </div>
+            )}
+          </div>
+          <button onClick={() => setSelected(null)} style={{ background: 'transparent', border: 'none', cursor: 'pointer', fontSize: 18, color: 'var(--muted)', lineHeight: 1, padding: 4 }}>×</button>
         </div>
       )}
 
-      {/* Próximas llegadas 14 días */}
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', overflow: 'hidden' }}>
-        <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h3 style={{ margin: 0, fontSize: '14px', fontWeight: 600, color: 'var(--text)' }}>Próximas llegadas · 14 días</h3>
-          <span style={{ fontSize: '12px', color: 'var(--muted)' }}>{upcoming.length} reservas</span>
-        </div>
-        {upcoming.length === 0 ? (
-          <div style={{ padding: '24px', textAlign: 'center', fontSize: '14px', color: 'var(--muted)' }}>
-            {loading ? 'Cargando…' : 'No hay llegadas en los próximos 14 días'}
-          </div>
-        ) : (
-          <div style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-              <thead>
-                <tr>
-                  {['Entrada', 'Propiedad', 'Huésped', 'Portal', 'Noches', 'Importe'].map(h => (
-                    <th key={h} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {upcoming.map((inc, i) => {
-                  const nights = inc.nights ?? (inc.checkOut
-                    ? Math.round((new Date(inc.checkOut).getTime() - new Date(inc.checkIn).getTime()) / 86400000)
-                    : 1)
-                  const isToday    = inc.checkIn === isoDate(now)
-                  const isTomorrow = inc.checkIn === isoDate(addDays(now, 1))
+      {/* Próximas llegadas */}
+      <UpcomingArrivals incomes={incomes} now={now} />
+    </div>
+  )
+}
 
-                  return (
-                    <tr key={inc.id || i} style={{ borderBottom: '1px solid var(--bg)', background: isToday ? 'var(--primary-light)' : 'transparent' }}>
-                      <td style={{ padding: '10px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{ fontWeight: 600, color: 'var(--text)' }}>{fmt(inc.checkIn)}</span>
-                          {isToday && <span style={{ padding: '1px 6px', borderRadius: '20px', background: 'var(--primary)', color: '#fff', fontSize: '9px', fontWeight: 700 }}>HOY</span>}
-                          {isTomorrow && <span style={{ padding: '1px 6px', borderRadius: '20px', background: '#f59e0b', color: '#fff', fontSize: '9px', fontWeight: 700 }}>MAÑANA</span>}
-                        </div>
-                        <div style={{ fontSize: '10px', color: 'var(--muted)' }}>hasta {inc.checkOut ? fmt(inc.checkOut) : '?'}</div>
-                      </td>
-                      <td style={{ padding: '10px 16px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                          <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: propColor(inc.propertyId), flexShrink: 0 }} />
-                          <span style={{ fontWeight: 500, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: '120px' }}>{propLabel(inc.propertyId)}</span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '10px 16px', fontWeight: 500, color: 'var(--text)' }}>{inc.guestName || <span style={{ color: 'var(--muted)' }}>—</span>}</td>
-                      <td style={{ padding: '10px 16px' }}>
-                        {inc.portal && (
-                          <span style={{
-                            padding: '2px 6px', borderRadius: '4px', fontSize: '10px', fontWeight: 600,
-                            background: inc.portal === 'AIRBNB' ? '#FF5A5F' : inc.portal === 'BOOKING' ? '#003580' : 'var(--primary)',
-                            color: '#fff',
-                          }}>{inc.portal}</span>
-                        )}
-                      </td>
-                      <td style={{ padding: '10px 16px', color: 'var(--muted)' }}>{nights}n</td>
-                      <td style={{ padding: '10px 16px', fontWeight: 600, color: 'var(--text)' }}>
-                        {inc.amount ? new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(inc.amount) : '—'}
-                      </td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+function UpcomingArrivals({ incomes, now }: { incomes: Income[]; now: Date }) {
+  const todayStr = isoDate(now)
+  const limitStr = isoDate(addDays(now, 14))
+  const upcoming = incomes
+    .filter(i => i.checkIn >= todayStr && i.checkIn <= limitStr)
+    .sort((a, b) => a.checkIn.localeCompare(b.checkIn))
+    .slice(0, 10)
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
+      <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <h3 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>Próximas llegadas · 14 días</h3>
+        <span style={{ fontSize: 12, color: 'var(--muted)' }}>{upcoming.length} reservas</span>
       </div>
+      {upcoming.length === 0 ? (
+        <div style={{ padding: '24px', textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>Sin llegadas en 14 días</div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                {['Entrada', 'Propiedad', 'Huésped', 'Portal', 'Noches', 'Total', 'ADR'].map(h => (
+                  <th key={h} style={{ padding: '9px 14px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {upcoming.map((inc, i) => {
+                const nights = inc.nights ?? Math.round((new Date(inc.checkOut).getTime() - new Date(inc.checkIn).getTime()) / 86400000)
+                const isToday    = inc.checkIn === todayStr
+                const isTomorrow = inc.checkIn === isoDate(addDays(now, 1))
+                const prop = PROPS.find(p => p.id === inc.propertyId)
+                return (
+                  <tr key={inc.id || i} style={{ borderBottom: '1px solid var(--border)', background: isToday ? 'var(--primary-light)' : 'transparent' }}>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <span style={{ fontWeight: 600, color: 'var(--text)' }}>{fmt(inc.checkIn)}</span>
+                        {isToday && <span style={{ padding: '1px 6px', borderRadius: 20, background: 'var(--primary)', color: '#fff', fontSize: 9, fontWeight: 700 }}>HOY</span>}
+                        {isTomorrow && <span style={{ padding: '1px 6px', borderRadius: 20, background: '#f59e0b', color: '#fff', fontSize: 9, fontWeight: 700 }}>MAÑANA</span>}
+                      </div>
+                      <div style={{ fontSize: 10, color: 'var(--muted)' }}>→ {fmt(inc.checkOut)}</div>
+                    </td>
+                    <td style={{ padding: '10px 14px' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <div style={{ width: 7, height: 7, borderRadius: '50%', background: prop?.color || '#94a3b8', flexShrink: 0 }} />
+                        <span style={{ fontWeight: 500, color: 'var(--text)', whiteSpace: 'nowrap' }}>{prop?.label || inc.propertyId}</span>
+                      </div>
+                    </td>
+                    <td style={{ padding: '10px 14px', fontWeight: 500, color: 'var(--text)' }}>{inc.guestName || '—'}</td>
+                    <td style={{ padding: '10px 14px' }}>
+                      {inc.portal && (
+                        <span style={{ padding: '2px 6px', borderRadius: 4, fontSize: 10, fontWeight: 700, background: PORTAL_COLORS[inc.portal] || 'var(--primary)', color: '#fff' }}>
+                          {inc.portal}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 14px', color: 'var(--muted)' }}>{nights}n</td>
+                    <td style={{ padding: '10px 14px', fontWeight: 600, color: 'var(--text)' }}>{fmtEur(inc.amount)}</td>
+                    <td style={{ padding: '10px 14px', color: 'var(--muted)' }}>{fmtEur(Math.round(inc.amount / (nights || 1)))}/n</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   )
 }
 
 const btnStyle: React.CSSProperties = {
-  width: '32px', height: '32px', borderRadius: '6px',
-  border: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-  fontSize: '18px', color: 'var(--muted)', background: 'var(--surface)', cursor: 'pointer',
+  padding: '0 12px', height: 32, borderRadius: 6,
+  border: '1px solid var(--border)', fontSize: 12, fontWeight: 500,
+  color: 'var(--text)', background: 'var(--surface)', cursor: 'pointer', whiteSpace: 'nowrap',
 }
