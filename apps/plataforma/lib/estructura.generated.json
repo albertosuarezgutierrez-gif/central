@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:36:29Z",
+  "generadoEn": "2026-06-16T13:47:13Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1976,6 +1976,7 @@
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/cuenta/convenio",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -1983,6 +1984,7 @@
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -2319,6 +2321,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
       "fecha": "16/06/2026"
     },
@@ -2372,10 +2378,6 @@
     },
     {
       "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)",
       "fecha": "15/06/2026"
     }
   ],
@@ -2660,7 +2662,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 821,
+    "apis": 823,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
