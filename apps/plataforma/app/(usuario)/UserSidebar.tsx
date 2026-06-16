@@ -14,6 +14,7 @@ const NAV_NEGOCIO = [
 
 const NAV_PISOS = [
   { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
+  { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
 ]
 
 const NAV_OPERADOR = [
