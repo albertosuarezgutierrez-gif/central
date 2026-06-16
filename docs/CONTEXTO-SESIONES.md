@@ -16,6 +16,33 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📝 ia-rest BLOG SEO arreglado (timeout 504) + botón "Generar ahora" + credenciales super_admin restauradas — 16/06/2026**
+  Cadena de fallos a raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
+  - **Causa real del fallo del blog:** la función `/api/cron/blog-seo` se corta a **~60s** (límite del plan de Vercel
+    en el proyecto **ia-rest**; `maxDuration=300` **NO se respeta** ahí, aunque sí en plataforma). Generar ~1800
+    palabras con `llama-3.3-70b` (no-stream) tarda >60s → Vercel mata la función con **504** (devuelve **texto plano**,
+    no el JSON de la ruta → el frontend petaba al parsear: "Unexpected token 'A'…"). El primer fix (PR #254: timeout
+    interno 110s + `maxDuration=300` + reintento) **NO servía**: la plataforma corta antes de que salte nuestro timeout.
+  - **Fix definitivo (PR #302):** generar con el **modelo rápido `meta/llama-3.1-8b-instruct`** (~30-40s), `max_tokens`
+    3000, timeout interno 45s (salta ANTES del corte de Vercel → fallo = JSON limpio, no 504). `callAI` (en
+    `apps/ia-rest/src/lib/ai-client.ts`) ahora acepta un 6º arg `model?` opcional que sobreescribe el modelo NIM por
+    llamada. **Verificado en preview: genera OK.** *Tradeoff:* 8B < 70B en calidad; el artículo es **borrador** que se
+    revisa antes de publicar. Para recuperar la calidad 70B haría falta **subir el límite de función en Vercel** (plan)
+    o mover la generación a un job en background (Edge Function con más presupuesto).
+  - **Botón "⚡ Generar ahora" (PR #283):** el tab Blog de `/super` (`BlogSuperTab` en `app/super/page.tsx`) no tenía
+    generación manual (solo el cron de los lunes). Añadido botón que llama a `/api/cron/blog-seo` con `x-ia-session`
+    (sin exponer `CRON_SECRET`).
+  - **🚨 Hueco de la migración Fase A2 (credenciales `personal`):** en la BD unificada (`wswbehlcuxqxyinousql`, schema
+    `iarest`), la tabla `personal` tenía **`email` y `password_hash` en NULL en TODAS las filas** → **nadie podía entrar
+    por email/contraseña** (Alberto incluido; daba 401 "incorrectos" con cualquier clave). Restaurada la fila
+    `super_admin` (`alberto.suarez.gutierrez@gmail.com`). **PENDIENTE:** las otras cuentas (owner, camarero, cocina,
+    running, jefe_sala, gestor) **siguen con email/password NULL** → sus logins por email están rotos (el login por
+    PIN/código_acceso puede seguir bien — revisar si se usan).
+  - **Datos viejos NO migrados (por diseño, Fase A2 = solo-esquema):** `efncqyvhniaxsirhdxaa` (BD vieja) conserva 8
+    `blog_borradores` (TODOS `publicado` → **vivos como ficheros** `app/blog/<slug>/page.tsx`, se sirven en
+    iarest.es/blog), 395 leads y 142 comandas. La unificada arranca vacía → por eso `/super → Blog` dice "No hay
+    artículos" (los publicados no dependen de la BD). Proyecto viejo sigue para **jubilar**.
+
 - **📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026) — 16/06/2026**
   El panel "Mis apartamentos / Febrero 2026" mostraba **0 € de ingresos** (Gastos: 1.641 €, resultado −1.641 €).
   Causa raíz: la API key de Smoobu estuvo rota ~sep-2025→14-jun-2026 y el cron solo tiene ventana de 2 días

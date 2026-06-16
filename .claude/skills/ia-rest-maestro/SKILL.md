@@ -255,11 +255,15 @@ Authorization: Bearer {VERCEL_TOKEN}
 - LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct → fallback Claude Haiku
 - LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct → fallback Claude Haiku
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `cleanJSON()`
-- `callAI(system, user, maxTokens, timeoutMs, noFallback=false)`
-  - `noFallback=false` (default) → NIM primario, fallback Haiku si falla
-  - `noFallback=true` → NIM puro, lanza error si falla, NUNCA toca Anthropic
-  - Usar `noFallback=true` en crons/agentes independientes de créditos externos
+- `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
+  - `noFallback=true` (default real) → NIM puro, lanza error si falla, NUNCA toca Anthropic
+    (la cuenta Anthropic está SIN saldo). `noFallback=false` reactiva el fallback Haiku.
+  - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM o Anthropic directamente desde componentes o API routes
+- ⚠️ **LÍMITE ~60s en funciones Vercel de ia-rest** (el plan NO respeta `maxDuration=300` aquí, sí en
+  plataforma). El 70b a ~4000 tokens tarda >60s → la función muere con **504** (texto plano, no JSON).
+  Para **generaciones largas** (p. ej. blog-seo) usar el **modelo rápido `meta/llama-3.1-8b-instruct`**
+  (`callAI(..., model)`) con timeout interno < 60s. Lección de la sesión 16/06 (blog-seo, PR #302).
 - Brain: lib/brain.ts + lib/brain-cache.ts + lib/brain-patron.ts + lib/brain-router.ts
 - Cache menú: 5min por restaurante. Few-shot con comandas del turno activo vía ia_training_log
 
