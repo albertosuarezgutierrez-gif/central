@@ -7,6 +7,8 @@ export type DatosPlantilla = {
   dni?: string | null
   /** Fecha legible ya formateada (p. ej. "16/06/2026"). */
   fecha: string
+  /** Convenio colectivo aplicable, ya formateado (p. ej. "cód. 41000105011982"). */
+  convenio?: string | null
 }
 
 export type Plantilla = {
@@ -35,6 +37,7 @@ function documento(meta: { titulo: string; version: string }, d: DatosPlantilla,
     `<p class="meta">Empresa: <strong>${esc(d.empresa)}</strong> · Trabajador/a: <strong>${esc(d.trabajador)}</strong>` +
     `${d.dni ? ` (DNI ${esc(d.dni)})` : ''} · Fecha: ${esc(d.fecha)}</p>` +
     cuerpo +
+    (d.convenio ? `<p class="meta">Convenio colectivo aplicable: ${esc(d.convenio)}.</p>` : '') +
     `<div class="firma">Firmado por ${esc(d.trabajador)} — ${esc(d.empresa)}. La firma electrónica avanzada ` +
     `(Reglamento eIDAS, art. 26) vincula la identidad del firmante con el contenido del documento.</div>` +
     `<p class="pie">Plantilla «${esc(meta.titulo)}» · versión ${esc(meta.version)}. Documento generado como base; ` +
