@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T09:17:17Z",
+  "generadoEn": "2026-06-16T09:28:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2302,6 +2302,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde",
       "fecha": "16/06/2026"
     },
@@ -2355,10 +2359,6 @@
     },
     {
       "titulo": "🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)",
       "fecha": "15/06/2026"
     }
   ],

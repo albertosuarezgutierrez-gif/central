@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T09:17:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T09:28:03Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -144,6 +144,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/06/2026) 📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)
 - (16/06/2026) 📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde
 - (16/06/2026) 🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh
 - (16/06/2026) 🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`
@@ -153,5 +154,4 @@
 - (16/06/2026) 🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales
 - (15/06/2026) 🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada
 - (15/06/2026) ⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)
-- (16/06/2026) ✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)
 
