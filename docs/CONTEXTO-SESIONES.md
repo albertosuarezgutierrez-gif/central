@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026) — 16/06/2026**
+  El panel "Mis apartamentos / Febrero 2026" mostraba **0 € de ingresos** (Gastos: 1.641 €, resultado −1.641 €).
+  Causa raíz: la API key de Smoobu estuvo rota ~sep-2025→14-jun-2026 y el cron solo tiene ventana de 2 días
+  (`modifiedFrom = hoy − 2 días`), por lo que nunca rellenó hacia atrás. PRs #294 y #297 añadieron
+  `from`/`to` de llegada (Smoobu solo devuelve próximas si no se pasan esas fechas) y `maxPages` al
+  endpoint `GET /api/updates/sync`. Backfill ejecutado por tramos via `web_fetch_vercel_url`; a pesar de
+  los 502 de Cloudflare (timeout de gateway), el Lambda de Vercel procesa y escribe. Resultado final:
+  - 2025-09: 17 res · 7.653 € ✅ | 2025-10: 36 res · 12.783 € ✅ | 2025-11: 20 res · 7.490 € ✅
+  - 2025-12: 15 res · 10.342 € ✅ | 2026-01: 15 res · 4.927 € ✅ | 2026-02: 24 res · **9.902 €** ✅
+  - 2026-03: 23 res · 8.171 € ✅ | 2026-04: 33 res · **17.961 €** ✅ | 2026-05: 27 res · **13.665 €** ✅
+  **El hueco sep-2025→may-2026 está 100% cerrado.** El cron diario (ventana 2 días) ya corre con la key
+  correcta (de `pms_connections`, arreglada el 14/06/2026) y mantiene los datos al día. Verificado por
+  Supabase SQL (`SELECT … FROM incomes GROUP BY mes`).
+
 - **📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde — 16/06/2026**
   - **Manual de usuario** del Portal del Empleado (responsable RR.HH.): `apps/rrhh/public/manual.html`
     (servido en `central-rrhh.vercel.app/manual.html`), dirigido a **Pilar** (Mariscos González). Cubre
