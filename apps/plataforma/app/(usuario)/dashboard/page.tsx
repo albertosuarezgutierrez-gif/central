@@ -101,7 +101,7 @@ export default async function DashboardPage() {
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
     safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
     safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
-    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [] }),
+    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [], tarjetasSinDesglose: [] }),
     safe(getProximasLlegadas(), [] as Array<{ propertyId: string; propertyName: string | null; guestName: string | null; checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null }>),
   ])
 
