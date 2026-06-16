@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T05:17:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T06:58:40Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 20 packages · 23 capacidades · 13 skills · 788 rutas API.
+**Resumen:** 5 apps · 21 packages · 23 capacidades · 13 skills · 791 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -23,10 +23,10 @@
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 38
 ### rrhh
-- **Módulos que usa:** core-storage, module-chat, module-documental
+- **Módulos que usa:** core-email, core-firma, core-storage, module-chat, module-documental
 - **Capacidades:** Notificaciones (push)
-- **Tablas (7):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 17
+- **Tablas (9):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 20
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -38,7 +38,10 @@
   - Lo usan: ia-rest, ialimp, plataforma, sivra
   - Depende de: —
 - **core-email** (core) → `@central/core-email`
-  - Lo usan: ialimp, sivra
+  - Lo usan: ialimp, rrhh, sivra
+  - Depende de: —
+- **core-firma** (core) → `@central/core-firma`
+  - Lo usan: rrhh
   - Depende de: —
 - **core-fiscal** (core) → `@central/core-fiscal`
   - Lo usan: ia-rest, ialimp
@@ -137,6 +140,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (15/06/2026) ⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)
+- (16/06/2026) ✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)
 - (15/06/2026) 🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280
 - (15/06/2026) 🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269
 - (15/06/2026) 🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)
@@ -145,5 +149,4 @@
 - (14/06/2026) 🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)
 - (14/06/2026) 🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)
 - (15/06/2026) 🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital
-- (15/06/2026) 🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)
 
