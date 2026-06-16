@@ -176,7 +176,7 @@ function PreviewModal({ item, onClose }: { item: Inmueble; onClose: () => void }
           <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--muted)', marginBottom: 8 }}>📄 Contenido del email</p>
           {item.email_subject && <p style={{ fontSize: 12, marginBottom: 4, fontWeight: 500, color: 'var(--muted)' }}>Asunto: {item.email_subject}</p>}
           {item.email_body ? (
-            <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-words', lineHeight: 1.6, color: 'var(--text)', fontFamily: 'inherit', marginTop: 8 }}>
+            <pre style={{ fontSize: 12, whiteSpace: 'pre-wrap', wordBreak: 'break-word', lineHeight: 1.6, color: 'var(--text)', fontFamily: 'inherit', marginTop: 8 }}>
               {stripHtml(item.email_body)}
             </pre>
           ) : (
