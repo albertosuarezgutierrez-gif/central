@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:44:36Z",
+  "generadoEn": "2026-06-16T14:54:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -258,7 +258,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 3
       },
       "sivra": {
         "estado": "usado",
@@ -1998,6 +1998,7 @@
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
       "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
@@ -2345,6 +2346,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🎨 RRHH · Marca blanca por empresa (white-label)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal",
       "fecha": "16/06/2026"
     },
@@ -2394,14 +2403,6 @@
     },
     {
       "titulo": "⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
       "fecha": "15/06/2026"
     }
   ],
@@ -2686,7 +2687,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 846,
+    "apis": 847,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
