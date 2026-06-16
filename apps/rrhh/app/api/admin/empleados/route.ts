@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSesion, AuthError } from '@/lib/tenant'
 import { generarAccesoToken, normalizarEmpleado } from '@/lib/empleados'
+import { nuevaPersonaId } from '@central/core-identity'
 
 export async function GET() {
   try {
@@ -21,8 +22,8 @@ export async function POST(req: Request) {
     const n = normalizarEmpleado(body)
     const token = generarAccesoToken()
     const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO empleados (empresa_id, nombre, dni, email, telefono, puesto, acceso_token)
-      VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token})
+      INSERT INTO empleados (empresa_id, nombre, dni, email, telefono, puesto, acceso_token, persona_id)
+      VALUES (${empresa_id}::uuid, ${n.nombre}, ${n.dni}, ${n.email}, ${n.telefono}, ${body.puesto ?? null}, ${token}, ${nuevaPersonaId()}::uuid)
       RETURNING id, nombre, acceso_token`)
     return NextResponse.json({ empleado: rows[0] }, { status: 201 })
   } catch (e) {

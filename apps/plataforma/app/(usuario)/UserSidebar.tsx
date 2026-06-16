@@ -14,6 +14,7 @@ const NAV_NEGOCIO = [
 
 const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
+  { href: '/operador/personas', icon: '👤', label: 'Personas' },
   { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
 ]

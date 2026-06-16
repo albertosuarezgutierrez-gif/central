@@ -1,37 +1,141 @@
 'use client'
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import ActivarPush from '@/components/ActivarPush'
 import AdminShell from '@/components/AdminShell'
 
 type E = { id: string; nombre: string; email: string | null; puesto: string | null; estado: string; acceso_token: string }
 
 export default function EmpleadosClient({ inicial }: { inicial: E[] }) {
-  const [lista, setLista] = useState<E[]>(inicial); const [nombre, setNombre] = useState(''); const [email, setEmail] = useState('')
-  async function alta(e: React.FormEvent) {
-    e.preventDefault()
-    const r = await fetch('/api/admin/empleados', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ nombre, email }) })
-    if (r.ok) { setNombre(''); setEmail(''); const g = await (await fetch('/api/admin/empleados')).json(); setLista(g.empleados) }
+  const [lista, setLista] = useState<E[]>(inicial)
+  const [alta, setAlta] = useState({ nombre: '', email: '', dni: '', telefono: '', puesto: '' })
+  const [altaErr, setAltaErr] = useState('')
+  const [editId, setEditId] = useState<string | null>(null)
+  const [edit, setEdit] = useState({ nombre: '', email: '', puesto: '', estado: 'activo' })
+  const [busy, setBusy] = useState(false)
+  const [q, setQ] = useState('')
+  const [filtro, setFiltro] = useState<'activos' | 'baja' | 'todos'>('activos')
+  const [copiado, setCopiado] = useState<string | null>(null)
+
+  async function refrescar() {
+    const g = await (await fetch('/api/admin/empleados')).json(); setLista(g.empleados)
   }
+
+  const visibles = useMemo(() => {
+    const t = q.trim().toLowerCase()
+    return lista.filter(e => {
+      if (filtro === 'activos' && e.estado === 'baja') return false
+      if (filtro === 'baja' && e.estado !== 'baja') return false
+      if (!t) return true
+      return e.nombre.toLowerCase().includes(t) || (e.email ?? '').toLowerCase().includes(t)
+    })
+  }, [lista, q, filtro])
+
+  async function crear(ev: React.FormEvent) {
+    ev.preventDefault(); setAltaErr(''); setBusy(true)
+    const r = await fetch('/api/admin/empleados', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(alta) })
+    setBusy(false)
+    if (r.ok) { setAlta({ nombre: '', email: '', dni: '', telefono: '', puesto: '' }); await refrescar() }
+    else setAltaErr((await r.json()).error ?? 'No se pudo crear')
+  }
+
+  function abrirEdicion(e: E) {
+    setEditId(e.id); setEdit({ nombre: e.nombre, email: e.email ?? '', puesto: e.puesto ?? '', estado: e.estado || 'activo' })
+  }
+  async function guardar(id: string) {
+    setBusy(true)
+    const r = await fetch(`/api/admin/empleados/${id}`, { method: 'PATCH', headers: { 'content-type': 'application/json' }, body: JSON.stringify(edit) })
+    setBusy(false)
+    if (r.ok) { setEditId(null); await refrescar() } else alert((await r.json()).error ?? 'No se pudo guardar')
+  }
+  async function borrar(e: E) {
+    if (!confirm(`¿Borrar a ${e.nombre}? Se eliminará su ficha y su expediente. Esta acción no se puede deshacer.\n\nSi solo quieres que deje de tener acceso, usa "Editar" y ponle estado "baja".`)) return
+    setBusy(true)
+    const r = await fetch(`/api/admin/empleados/${e.id}`, { method: 'DELETE' })
+    setBusy(false)
+    if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo borrar')
+  }
+  function copiarEnlace(e: E) {
+    const url = `${window.location.origin}/e/${e.acceso_token}`
+    navigator.clipboard?.writeText(url).then(() => { setCopiado(e.id); setTimeout(() => setCopiado(null), 1500) }).catch(() => {})
+  }
+  async function regenerar(e: E) {
+    if (!confirm(`¿Regenerar el enlace de ${e.nombre}? El enlace anterior dejará de funcionar.`)) return
+    setBusy(true)
+    const r = await fetch(`/api/admin/empleados/${e.id}/acceso`, { method: 'POST' })
+    setBusy(false)
+    if (r.ok) await refrescar(); else alert((await r.json()).error ?? 'No se pudo regenerar')
+  }
+
   return (
     <AdminShell activo="empleados">
       <div className="mb-4 flex items-center justify-between gap-3">
         <h1 className="text-2xl">Empleados</h1>
         <ActivarPush endpoint="/api/admin/push/subscribe" />
       </div>
-      <form onSubmit={alta} className="mb-4 flex flex-wrap gap-2">
-        <input placeholder="Nombre" value={nombre} onChange={e => setNombre(e.target.value)} />
-        <input placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} />
-        <button type="submit">Añadir</button>
+
+      {/* Alta */}
+      <form onSubmit={crear} className="mb-4 rounded-[12px] border border-line bg-card p-3">
+        <div className="flex flex-wrap gap-2">
+          <input placeholder="Nombre *" value={alta.nombre} onChange={e => setAlta(s => ({ ...s, nombre: e.target.value }))} />
+          <input placeholder="Email * (para firmar)" type="email" value={alta.email} onChange={e => setAlta(s => ({ ...s, email: e.target.value }))} />
+          <input placeholder="DNI/NIE" value={alta.dni} onChange={e => setAlta(s => ({ ...s, dni: e.target.value }))} />
+          <input placeholder="Teléfono" value={alta.telefono} onChange={e => setAlta(s => ({ ...s, telefono: e.target.value }))} />
+          <input placeholder="Puesto" value={alta.puesto} onChange={e => setAlta(s => ({ ...s, puesto: e.target.value }))} />
+          <button type="submit" disabled={busy}>Añadir</button>
+        </div>
+        {altaErr && <p className="text-alert mt-2 text-sm">⚠️ {altaErr}</p>}
       </form>
+
+      {/* Buscador + filtro */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <input placeholder="Buscar por nombre o email…" value={q} onChange={e => setQ(e.target.value)} className="min-w-[200px] flex-1" />
+        <div className="flex gap-1">
+          {(['activos', 'baja', 'todos'] as const).map(f => (
+            <button key={f} onClick={() => setFiltro(f)}
+              className={filtro === f ? '' : 'bg-paper-2 text-ink-2 hover:bg-line'}>
+              {f === 'activos' ? 'Activos' : f === 'baja' ? 'Baja' : 'Todos'}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <ul className="overflow-hidden rounded-[12px] border border-line bg-card">
-        {lista.map(e => (
-          <li key={e.id} className="flex flex-wrap items-center gap-2 border-b border-line px-4 py-3 last:border-b-0">
-            <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
-            {e.email && <span className="text-ink-3 text-sm">· {e.email}</span>}
-            <code className="ml-auto rounded-md bg-accent-soft px-2 py-0.5 text-xs text-accent-ink">/e/{e.acceso_token}</code>
+        {visibles.map(e => (
+          <li key={e.id} className="border-b border-line px-4 py-3 last:border-b-0">
+            {editId === e.id ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <input placeholder="Nombre" value={edit.nombre} onChange={ev => setEdit(s => ({ ...s, nombre: ev.target.value }))} />
+                  <input placeholder="Email" value={edit.email} onChange={ev => setEdit(s => ({ ...s, email: ev.target.value }))} />
+                  <input placeholder="Puesto" value={edit.puesto} onChange={ev => setEdit(s => ({ ...s, puesto: ev.target.value }))} />
+                  <select value={edit.estado} onChange={ev => setEdit(s => ({ ...s, estado: ev.target.value }))}>
+                    <option value="activo">Activo</option>
+                    <option value="baja">Baja</option>
+                  </select>
+                </div>
+                <div className="flex gap-2">
+                  <button disabled={busy || !edit.nombre.trim()} onClick={() => guardar(e.id)}>Guardar</button>
+                  <button className="bg-paper-2 text-ink-2 hover:bg-line" onClick={() => setEditId(null)}>Cancelar</button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <a href={`/admin/empleados/${e.id}`} className="font-medium text-ink no-underline hover:text-accent">{e.nombre}</a>
+                {e.email && <span className="text-ink-3 text-sm">· {e.email}</span>}
+                {e.estado === 'baja' && <span className="rounded-full bg-paper-2 px-2 py-0.5 text-xs text-ink-3">baja</span>}
+                <div className="ml-auto flex flex-wrap items-center gap-1">
+                  <button className="bg-accent-soft px-2 py-0.5 text-xs text-accent-ink hover:opacity-80" onClick={() => copiarEnlace(e)}>
+                    {copiado === e.id ? '✓ Copiado' : '🔗 Copiar enlace'}
+                  </button>
+                  <button className="bg-paper-2 px-2 py-0.5 text-xs text-ink-2 hover:bg-line" onClick={() => regenerar(e)}>Regenerar</button>
+                  <button className="px-2 py-0.5 text-xs" onClick={() => abrirEdicion(e)}>Editar</button>
+                  <button className="bg-paper-2 px-2 py-0.5 text-xs text-alert hover:bg-line" onClick={() => borrar(e)}>Borrar</button>
+                </div>
+              </div>
+            )}
           </li>
         ))}
-        {lista.length === 0 && <li className="px-4 py-3 text-ink-3">Sin empleados todavía</li>}
+        {visibles.length === 0 && <li className="px-4 py-3 text-ink-3">{lista.length === 0 ? 'Sin empleados todavía' : 'Ningún empleado coincide'}</li>}
       </ul>
     </AdminShell>
   )

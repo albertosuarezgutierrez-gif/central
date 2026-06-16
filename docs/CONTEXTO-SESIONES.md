@@ -16,6 +16,53 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh — 16/06/2026** (PR #287, rama `claude/bold-ride-s4s8eq`)
+  - **Fase 1 (ialimp da RR.HH. a las limpiadoras):** consume `@central/module-rrhh` + `module-documental` +
+    `core-firma`. Tablas `documentos_limpiadora`/`firmas_limpiadora`/`firma_otps_limpiadora` (+ `limpiadoras.email`
+    OBLIGATORIO para el OTP, `+dni`). Bucket **privado** `documentos-limpiadora` (policy read). `lib/{carpetas,storage,
+    expediente,firma}-limpiadora.ts` + `lib/nomina-pdf.ts` (pdf-lib, agrega `partes_trabajo`). Rutas `/api/l/expediente*`
+    (firma OTP) + `/api/admin/limpiadoras/[id]/{expediente,nomina}`. UI: **`/l/documentos`** (botón en `/l`) + pestaña
+    **📁 Expediente** en `/admin/rrhh` (`components/ExpedienteLimpiadoraAdmin.tsx`). Remitente OTP parametrizado
+    `FIRMA_FROM` (default `hola@ialimp.es`). Migración `2026-06-16_rrhh_limpiadora.sql` aplicada.
+  - **Fase 2 (identidad de persona compartida):** `@central/core-identity` añade tipo **`Persona`** + helpers puros
+    (`nuevaPersonaId`, `normalizarDni/Email`, `coincidenciaPersona`, `mismaPersona`). Columna **`persona_id`** (uuid,
+    indexada) en `limpiadoras` y `rrhh.empleados`, **provisión automática al alta**. Verificado e2e: join cross-vertical
+    por `persona_id` (misma persona en ialimp ↔ rrhh).
+  - **Arreglos panel Empleados (rrhh):** faltaban editar/borrar en la UI (el backend ya los tenía). Añadido editar inline
+    + estado activo/baja, **alta completa** (email OBLIGATORIO + DNI/tel/puesto), buscador + filtro, **copiar/regenerar
+    enlace**, **borrado blindado** (409 si tiene firmas → conservar evidencia). Fix PATCH parcial (no machaca dni/tel).
+    Fix infra: **policy read del bucket `rrhh-documentos`** (sin ella, con RLS, el firmado de URLs devolvía null → no se
+    descargaban los documentos del expediente).
+  - **Tests:** los 4 paquetes vitest (`core-firma`/`module-rrhh`/`module-documental`/`module-chat`) + `core-identity`
+    estaban huérfanos (sin runner) → **cableados** (`vitest` devDep root + `test:vitest` dentro de `test`). **40/40 verdes.**
+  - **Fase 3 (consolidación en plataforma, SOLO LECTURA) — HECHA:** nuevo endpoint READ-ONLY en rrhh
+    `/api/operador/personas` (empleados+persona_id por el puerto operador). En plataforma `lib/personas.ts`
+    consolida "la persona a través de verticales" (ialimp.limpiadoras por prisma directo + rrhh por HTTP),
+    agrupa por `persona_id` y PROPONE enlaces no hechos por DNI/email (`coincidenciaPersona`). God-panel:
+    `/operador/personas` (`PersonasClient.tsx`, item nuevo en `UserSidebar`) + `GET /api/admin/personas`.
+  - **Pendiente:** **enlace MANUAL** del `persona_id` cross-vertical (escritura: setear el mismo persona_id
+    en ambas filas/dos apps — hoy solo se SUGIERE en `/operador/personas`). Roadmap de módulos
+    (fichaje RD 8/2019, art. 28 RGPD, canal de denuncias, vacaciones, onboarding, gestoría…).
+
+- **🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh` — 16/06/2026**
+  Objetivo (decisión de Alberto): RR.HH. (nóminas + firma + expediente) reutilizable por **cualquier
+  vertical** y **cliente directo**. Casos que cubre el diseño: (1) limpiadoras de ialimp (Vanessa),
+  (2) cualquier vertical futura, (3) cliente RR.HH. directo tipo **Joaquín Jaén** (entra como `empresa`
+  en la app rrhh por el god-panel/puerto operador ya existente, sin tocar nada). Identidad de persona
+  cross-vertical vía `core-identity` + consolidación en `plataforma`.
+  - **Hecho (Fase 0):** nuevo paquete **`@central/module-rrhh`** (`packages/module-rrhh`, TS puro):
+    orquestación de firma con OTP **owner-agnóstica** (puertos `RepoFirma`/`PuertoEmailFirma`/
+    `PuertoDescarga` que inyecta cada vertical) + taxonomía `CARPETAS_RRHH` compartida (reusa
+    `module-documental`). Tests vitest **9/9**.
+  - **Refactor sin cambio de comportamiento:** `apps/rrhh/lib/firma.ts` ahora es un adaptador fino que
+    construye los puertos con el SQL de rrhh (`rrhh.documentos/firmas/firma_otps`) y delega en el módulo;
+    `apps/rrhh/lib/carpetas.ts` reusa `CARPETAS_RRHH`. Añadido `file:` dep + `transpilePackages`. Tests
+    rrhh 3/3 y core-firma 9/9 verdes; sin regresión.
+  - **Pendiente (Fase 1+):** ialimp ofrece RR.HH. a limpiadoras (migraciones `documentos/firmas/
+    firma_otps_limpiadora`, bucket privado, nómina PDF desde `partes_trabajo`, UI `/l/documentos`).
+    **Decisiones abiertas:** email de limpiadora obligatorio (para OTP) y marca del remitente. Fase 2
+    identidad de persona; Fase 3 consolidación en plataforma. Roadmap: fichaje (RD 8/2019), art. 28 RGPD,
+    canal de denuncias (Ley 2/2023), vacaciones, onboarding, gestoría.
 - **🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)**
   Construido el cerebro + los raíles del agente de pricing autónomo (sobre #290, que ya creó las 3 tablas).
   - **Paso 4 (raíl, sivra):** `POST /api/pricing/aplicar-propuesta`. La IA propone y este endpoint aplica la

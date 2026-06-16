@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:32:24Z",
+  "generadoEn": "2026-06-16T08:44:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -113,6 +113,11 @@
       "id": "module-revenue",
       "tipo": "module",
       "npm": "@central/module-revenue"
+    },
+    {
+      "id": "module-rrhh",
+      "tipo": "module",
+      "npm": "@central/module-rrhh"
     }
   ],
   "capacidades": [
@@ -288,8 +293,8 @@
         "evidencias": 0
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "no",
@@ -337,11 +342,11 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 1
       },
       "sivra": {
         "estado": "no",
@@ -377,7 +382,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "plataforma": {
         "estado": "no",
@@ -530,8 +535,8 @@
         "evidencias": 0
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "plataforma": {
         "estado": "no",
@@ -539,7 +544,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -699,6 +704,28 @@
         "estado": "no",
         "evidencias": 0
       }
+    },
+    "module-rrhh": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
     }
   },
   "matrizCapacidades": {
@@ -841,7 +868,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 8
       },
       "plataforma": {
         "presente": false,
@@ -1230,7 +1257,11 @@
     "module-organizador-trabajo": [],
     "module-presupuestos": [],
     "module-proveedores": [],
-    "module-revenue": []
+    "module-revenue": [],
+    "module-rrhh": [
+      "core-firma",
+      "module-documental"
+    ]
   },
   "apisPorVertical": {
     "ia-rest": [
@@ -1771,6 +1802,9 @@
       "/api/admin/lenceria/[id]",
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
+      "/api/admin/limpiadoras/[id]/expediente",
+      "/api/admin/limpiadoras/[id]/expediente/[docId]",
+      "/api/admin/limpiadoras/[id]/nomina",
       "/api/admin/limpiadoras/[id]/propiedades",
       "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
@@ -1827,6 +1861,9 @@
       "/api/l/complete",
       "/api/l/consumo",
       "/api/l/early-checkin",
+      "/api/l/expediente",
+      "/api/l/expediente/[docId]/firmar",
+      "/api/l/expediente/[docId]/firmar/codigo",
       "/api/l/fichar",
       "/api/l/incidencias",
       "/api/l/inventario",
@@ -1890,6 +1927,7 @@
       "/api/admin/estructura/clientes",
       "/api/admin/login",
       "/api/admin/logout",
+      "/api/admin/personas",
       "/api/admin/propiedades",
       "/api/agente/chat",
       "/api/auth/login",
@@ -1925,6 +1963,7 @@
     "rrhh": [
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/acceso",
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
@@ -1942,7 +1981,8 @@
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/solicitudes",
-      "/api/operador/empresas"
+      "/api/operador/empresas",
+      "/api/operador/personas"
     ],
     "sivra": [
       "/api/admin/limpiadoras/asignacion",
@@ -2136,6 +2176,9 @@
       "concursos_radar_anuncios",
       "cuentas",
       "documentos_contables",
+      "documentos_limpiadora",
+      "firma_otps_limpiadora",
+      "firmas_limpiadora",
       "ingresos_manuales",
       "mailing_campanas",
       "mailing_envios",
@@ -2254,6 +2297,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)",
       "fecha": "16/06/2026"
     },
@@ -2304,14 +2355,6 @@
     {
       "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
       "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria",
-      "fecha": "14/06/2026"
     }
   ],
   "saludRepo": {
@@ -2604,10 +2647,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 21,
+    "packages": 22,
     "capacidades": 23,
     "skills": 14,
-    "apis": 795,
+    "apis": 804,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
