@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T07:15:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T08:01:52Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 22 packages · 23 capacidades · 13 skills · 789 rutas API.
+**Resumen:** 5 apps · 22 packages · 23 capacidades · 13 skills · 795 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -13,10 +13,10 @@
 - **Tablas (81):** arqueos_caja_empleado, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales…
 - **Rutas API:** 457
 ### ialimp
-- **Módulos que usa:** core-ai, core-email, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-materiales, module-proveedores
+- **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA, Concursos públicos
-- **Tablas (27):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos, tenant_modulos
-- **Rutas API:** 187
+- **Tablas (30):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos, tenant_modulos
+- **Rutas API:** 193
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
 - **Capacidades:** Facturación / VeriFactu
@@ -41,7 +41,7 @@
   - Lo usan: ialimp, rrhh, sivra
   - Depende de: —
 - **core-firma** (core) → `@central/core-firma`
-  - Lo usan: rrhh
+  - Lo usan: ialimp, rrhh
   - Depende de: —
 - **core-fiscal** (core) → `@central/core-fiscal`
   - Lo usan: ia-rest, ialimp
@@ -74,7 +74,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **module-documental** (module) → `@central/module-documental`
-  - Lo usan: rrhh
+  - Lo usan: ialimp, rrhh
   - Depende de: —
 - **module-feedback** (module) → `@central/module-feedback`
   - Lo usan: ia-rest
@@ -98,7 +98,7 @@
   - Lo usan: —
   - Depende de: —
 - **module-rrhh** (module) → `@central/module-rrhh`
-  - Lo usan: rrhh
+  - Lo usan: ialimp, rrhh
   - Depende de: core-firma, module-documental
 
 ## Skills del proyecto
