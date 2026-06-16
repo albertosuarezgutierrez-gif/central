@@ -88,8 +88,11 @@ function nimConfig(): NimConfig {
 }
 
 // ── NVIDIA: llamada texto (delega en @central/core-ai) ────────────────────────
-async function nvidiaText(system: string, user: string, maxTokens = 600): Promise<string> {
-  return nimText(nimConfig(), system, user, maxTokens)
+// `model` permite forzar un modelo concreto por llamada (p. ej. el 8B rápido para
+// tareas con presupuesto de tiempo ajustado). Por defecto usa el de nimConfig().
+async function nvidiaText(system: string, user: string, maxTokens = 600, model?: string): Promise<string> {
+  const config = model ? { ...nimConfig(), textModel: model } : nimConfig()
+  return nimText(config, system, user, maxTokens)
 }
 
 // ── NVIDIA: llamada visión (multi-imagen, delega en @central/core-ai) ─────────
@@ -155,7 +158,10 @@ export async function callAI(
   // Default NIM puro: la cuenta de Anthropic (fallback) está SIN SALDO, así que caer
   // a ella solo da "credit balance too low". Pasa noFallback=false explícito para
   // reactivar el fallback (cuando Anthropic tenga crédito de nuevo).
-  noFallback = true
+  noFallback = true,
+  // Modelo NIM concreto para esta llamada (p. ej. 'meta/llama-3.1-8b-instruct' rápido
+  // cuando hay poco presupuesto de tiempo). Por defecto, el modelo de nimConfig().
+  model?: string
 ): Promise<string> {
   const messages: { role: 'user' | 'assistant'; content: string }[] =
     typeof userOrMessages === 'string'
@@ -175,7 +181,7 @@ export async function callAI(
         effectiveSystem = system + `\n\nCONVERSACIÓN PREVIA:\n${history}`
       }
       return await Promise.race([
-        nvidiaText(effectiveSystem, user, maxTokens),
+        nvidiaText(effectiveSystem, user, maxTokens, model),
         new Promise<never>((_, r) => setTimeout(() => r(new Error('NVIDIA timeout')), timeoutMs)),
       ])
     } catch (e) {
