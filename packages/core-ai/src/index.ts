@@ -8,6 +8,6 @@ export type { NimChatMessage, NimChatOptions, NimToolMessage, NimToolCall, NimTo
 export { geminiSearch } from './gemini'
 export type { GeminiConfig } from './gemini'
 export type { ImageInput, NimConfig } from './types'
-export { aiComplete } from './client'
-export { gatewayChat, gatewaySearch, gatewayVision } from './gateway'
+export { aiComplete, aiTools } from './client'
+export { gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from './gateway'
 export type { GatewayConfig } from './gateway'

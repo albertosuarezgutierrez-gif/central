@@ -1,4 +1,4 @@
-import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools, gatewayChat, gatewaySearch, gatewayVision } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools, gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from '@central/core-ai'
 import type { ImageInput, NimConfig, NimToolMessage, NimToolResult, GatewayConfig } from '@central/core-ai'
 
 /**
@@ -88,9 +88,8 @@ function nimConfig(): NimConfig {
 }
 
 // PASARELA central (plataforma): si está configurada (env de equipo en Vercel), las llamadas de
-// texto/búsqueda/visión van por ahí (keys de proveedor y control de coste viven en plataforma).
-// Si no está, o si falla, se cae al camino directo NIM→Anthropic de abajo. callAITools NO pasa por
-// la pasarela (no expone function-calling) → sigue directo a NIM.
+// texto/búsqueda/visión/function-calling van por ahí (keys de proveedor y control de coste viven en
+// plataforma). Si no está, o si falla, se cae al camino directo NIM→Anthropic/Gemini de abajo.
 const APP = 'ia-rest'
 function gatewayCfg(): GatewayConfig | null {
   const url = process.env.AI_GATEWAY_URL
@@ -258,6 +257,15 @@ export async function callAITools(
   tools: unknown[],
   maxTokens = 1024,
 ): Promise<NimToolResult> {
+  // Pasarela central primero (registra uso/coste en plataforma). Si no está o falla, NIM directo.
+  const cfg = gatewayCfg()
+  if (cfg) {
+    try {
+      return await gatewayTools(cfg, messages, tools, { system, maxTokens })
+    } catch (e) {
+      console.warn('[AI-CLIENT] pasarela tools falló, fallback NIM directo:', (e as Error).message)
+    }
+  }
   return nimChatTools(nimConfig(), messages, tools, { system, maxTokens })
 }
 
