@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:36:38Z",
+  "generadoEn": "2026-06-16T15:16:34Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2346,6 +2346,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 Facturas · Auditoría completa de recurrentes y clasificación banco",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
       "fecha": "16/06/2026"
     },
@@ -2400,10 +2404,6 @@
     {
       "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
       "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
-      "fecha": "15/06/2026"
     }
   ],
   "saludRepo": {
