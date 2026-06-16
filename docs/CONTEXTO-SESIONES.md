@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📧 FACTURAS CORREO · Agente de contabilidad + botón en Banca — 16/06/2026** (PR #324 MERGED)
+  - **Pasada manual 30 días ejecutada** (primera vez): Gmail → 13 threads procesados:
+    - Deducibles archivados en Drive (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic (seguros),
+      TotalEnergies (parcial), PriceLabs.
+    - Pisos turísticos: IONOS, Vercel, PriceLabs, TotalEnergies.
+    - Seguros (correduría): Anthropic Ireland 217.80€.
+    - Personales (no archivados): Círculo Mercantil, Kutxabank tarjeta, otros.
+    - IKEA 888.89€ + PDFs TotalEnergies: **necesitan subida manual a Drive** (MCP Gmail no descarga adjuntos).
+    - Todos etiquetados `Facturas/Procesada` (Label_11) en Gmail.
+  - **Corrección en BD**: `movimientos_bancarios` IONOS corregido de `personal` → `turistico_pisos`.
+  - **Carpeta Drive creada**: `06-Junio-2026` dentro de `FACTURAS Apartamentos/2026/`.
+  - **Slash command** `.claude/commands/facturas-correo.md` → `/facturas-correo` en menú de Claude Code web.
+  - **Botón en Banca** (`BancaClient.tsx` + `page.tsx`): `RevisarCorreoBtn` abre `claude.ai/code` y copia
+    `/facturas-correo` al portapapeles con un clic.
+  - **Trigger diario PENDIENTE**: Alberto debe configurarlo manualmente en `claude.ai/code → Settings → Scheduled sessions`
+    (prompt: "Ejecuta la skill facturas-correo", MCP Gmail+Drive+Supabase activos).
+  - **Pendientes de conciliar**: Vercel 190.93€ y Anthropic 217.80€ no encontrados en banco (cargo pendiente).
+  - **BSH Electrodomésticos y Tutrocito 122.87€**: sin clasificar, pendiente de Alberto.
+
+
 - **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
   - **Decisión de Alberto**: la IA NO se configura por proyecto. Las **keys de proveedor viven solo en
     plataforma**; cada vertical llama a la pasarela. La conexión (`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`)
