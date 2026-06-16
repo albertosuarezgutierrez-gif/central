@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:12:59Z",
+  "generadoEn": "2026-06-16T14:18:44Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,11 +254,11 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "sivra": {
         "estado": "usado",
@@ -1930,6 +1930,8 @@
       "/api/admin/personas",
       "/api/admin/propiedades",
       "/api/agente/chat",
+      "/api/ai/chat",
+      "/api/ai/search",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -1997,6 +1999,7 @@
     ],
     "rrhh": [
       "/api/admin/cuenta/convenio",
+      "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -2235,6 +2238,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "ai_usos",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2682,7 +2686,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 843,
+    "apis": 846,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
