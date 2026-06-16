@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:13:33Z",
+  "generadoEn": "2026-06-16T08:29:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -249,7 +249,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "no",
@@ -897,7 +897,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 23
+        "evidencias": 24
       }
     },
     "mercado": {
@@ -1174,8 +1174,8 @@
         "evidencias": 2
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -1891,6 +1891,7 @@
       "/api/admin/login",
       "/api/admin/logout",
       "/api/admin/propiedades",
+      "/api/agente/chat",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -2008,6 +2009,7 @@
       "/api/mercado/sweep",
       "/api/pitch",
       "/api/pricing-alerts",
+      "/api/pricing/aplicar-propuesta",
       "/api/pricing/apply",
       "/api/pricing/apply-auto",
       "/api/pricing/config",
@@ -2207,6 +2209,11 @@
     {
       "id": "plataforma-maestro",
       "name": "plataforma-maestro",
+      "description": ">"
+    },
+    {
+      "id": "pricing-agente",
+      "name": "pricing-agente",
       "description": ">"
     },
     {
@@ -2599,8 +2606,8 @@
     "verticales": 5,
     "packages": 21,
     "capacidades": 23,
-    "skills": 13,
-    "apis": 793,
+    "skills": 14,
+    "apis": 795,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

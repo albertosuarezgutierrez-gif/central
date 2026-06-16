@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T08:13:33Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T08:29:24Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 21 packages · 23 capacidades · 13 skills · 793 rutas API.
+**Resumen:** 5 apps · 21 packages · 23 capacidades · 14 skills · 795 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -19,9 +19,9 @@
 - **Rutas API:** 187
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
-- **Capacidades:** Facturación / VeriFactu
+- **Capacidades:** Facturación / VeriFactu, Asistente / copiloto IA
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 38
+- **Rutas API:** 39
 ### rrhh
 - **Módulos que usa:** core-email, core-firma, core-storage, module-chat, module-documental
 - **Capacidades:** Notificaciones (push)
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
-- **Rutas API:** 91
+- **Rutas API:** 92
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -105,6 +105,7 @@
 - **ia-rest-maestro** — >
 - **ialimp-maestro** — >
 - **plataforma-maestro** — >
+- **pricing-agente** — >
 - **receiving-code-review** — Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 - **requesting-code-review** — Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 - **sivra-maestro** — >
