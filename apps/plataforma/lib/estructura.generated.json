@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:12:59Z",
+  "generadoEn": "2026-06-16T14:21:35Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,11 +254,11 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "sivra": {
         "estado": "usado",
@@ -1930,6 +1930,8 @@
       "/api/admin/personas",
       "/api/admin/propiedades",
       "/api/agente/chat",
+      "/api/ai/chat",
+      "/api/ai/search",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -1997,6 +1999,7 @@
     ],
     "rrhh": [
       "/api/admin/cuenta/convenio",
+      "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -2235,6 +2238,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "ai_usos",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2341,6 +2345,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes + fixes móvil dashboard",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
       "fecha": "16/06/2026"
     },
@@ -2390,14 +2402,6 @@
     },
     {
       "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)",
       "fecha": "15/06/2026"
     }
   ],
@@ -2682,7 +2686,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 843,
+    "apis": 846,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
