@@ -255,7 +255,7 @@ Authorization: Bearer {VERCEL_TOKEN}
 - LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct → fallback Claude Haiku
 - LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct → fallback Claude Haiku
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
-- **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), `callAI`/`callAISearch`/`callAIVision` enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`) y caen al camino directo NIM→Haiku si falla. `callAITools` (function-calling de los agentes del god-panel) va **directo a NIM** (la pasarela no expone tool-calling)
+- **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM→Haiku/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=false)`
   - `noFallback=false` (default) → NIM primario, fallback Haiku si falla
   - `noFallback=true` → NIM puro, lanza error si falla, NUNCA toca Anthropic
