@@ -5,13 +5,20 @@ import MapaArquitectura from '@/app/admin/MapaArquitectura'
 export const dynamic = 'force-dynamic'
 
 export default async function OperadorEstructuraPage() {
-  const admin = await getAdmin()
+  // getAdmin toca la BD compartida; si da timeout, degradamos a "no operador" y
+  // redirigimos en vez de tumbar la página con un 500. (El redirect va FUERA del
+  // try: internamente lanza NEXT_REDIRECT y no debe capturarse.)
+  let admin: Awaited<ReturnType<typeof getAdmin>> = null
+  try { admin = await getAdmin() } catch { admin = null }
   if (!admin) redirect('/dashboard')
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>🗺️ Estructura del repo</h1>
-      <MapaArquitectura />
+      <div style={{ marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '2px' }}>🗺️ Estructura del repo</h1>
+        <div style={{ fontSize: '13px', color: 'var(--muted)' }}>Radiografía viva del monorepo · auto-generada en cada push</div>
+      </div>
+      <MapaArquitectura theme="light" />
     </main>
   )
 }

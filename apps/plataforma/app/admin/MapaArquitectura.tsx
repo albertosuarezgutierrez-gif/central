@@ -10,7 +10,30 @@ import {
   CHECKLIST_NUEVA_VERTICAL, enlacesApp, enlacesModulo, enlacesSkill,
 } from '@/lib/estructura'
 
-const C = { bg: '#0b1020', card: '#151b2e', card2: '#1c2540', border: '#2a3457', text: '#e8ecf7', muted: '#8b97b8', accent: '#6366f1', ok: '#22c55e', okBg: '#0c2a18', warn: '#fbbf24', red: '#ef4444', redBg: '#2a0c0c' }
+// Paleta referida por variables CSS: el componente es theme-agnóstico y se pinta
+// con los valores que inyecta el contenedor según el prop `theme` (ver PALETAS).
+// Así el mismo mapa sirve al god-panel oscuro (/admin) y al shell claro del
+// operador (/operador/estructura) sin duplicar el componente.
+const C = {
+  bg: 'var(--mapa-bg)', card: 'var(--mapa-card)', card2: 'var(--mapa-card2)', border: 'var(--mapa-border)',
+  text: 'var(--mapa-text)', muted: 'var(--mapa-muted)', accent: 'var(--mapa-accent)',
+  ok: 'var(--mapa-ok)', okBg: 'var(--mapa-okBg)', warn: 'var(--mapa-warn)', warnBg: 'var(--mapa-warnBg)',
+  red: 'var(--mapa-red)', redBg: 'var(--mapa-redBg)', redText: 'var(--mapa-redText)', border2: 'var(--mapa-border2)',
+}
+const PALETAS: Record<'dark' | 'light', React.CSSProperties> = {
+  dark: {
+    '--mapa-bg': '#0b1020', '--mapa-card': '#151b2e', '--mapa-card2': '#1c2540', '--mapa-border': '#2a3457',
+    '--mapa-text': '#e8ecf7', '--mapa-muted': '#8b97b8', '--mapa-accent': '#6366f1',
+    '--mapa-ok': '#22c55e', '--mapa-okBg': '#0c2a18', '--mapa-warn': '#fbbf24', '--mapa-warnBg': '#2a230c',
+    '--mapa-red': '#ef4444', '--mapa-redBg': '#2a0c0c', '--mapa-redText': '#fca5a5', '--mapa-border2': '#7a2a2a',
+  } as React.CSSProperties,
+  light: {
+    '--mapa-bg': '#f8fafc', '--mapa-card': '#ffffff', '--mapa-card2': '#f1f5f9', '--mapa-border': '#e2e8f0',
+    '--mapa-text': '#0f172a', '--mapa-muted': '#64748b', '--mapa-accent': '#4f46e5',
+    '--mapa-ok': '#16a34a', '--mapa-okBg': '#dcfce7', '--mapa-warn': '#d97706', '--mapa-warnBg': '#fef3c7',
+    '--mapa-red': '#dc2626', '--mapa-redBg': '#fef2f2', '--mapa-redText': '#dc2626', '--mapa-border2': '#fecaca',
+  } as React.CSSProperties,
+}
 const FONT = "system-ui, -apple-system, 'Segoe UI', sans-serif"
 const VLABEL: Record<string, string> = { 'ia-rest': 'ia.rest', ialimp: 'ialimp', sivra: 'SIVRA', plataforma: 'matriz' }
 const vlabel = (v: string) => VLABEL[v] || v
@@ -24,7 +47,7 @@ type Sel =
   | { tipo: 'skill'; id: string }
   | null
 
-export default function MapaArquitectura() {
+export default function MapaArquitectura({ theme = 'dark' }: { theme?: 'dark' | 'light' }) {
   const R = RADIOGRAFIA
   const [sel, setSel] = useState<Sel>(null)
   const [q, setQ] = useState('')
@@ -50,7 +73,7 @@ export default function MapaArquitectura() {
   const mods = MODULOS.filter(m => m.tipo === 'module')
 
   return (
-    <div>
+    <div style={{ ...PALETAS[theme], color: C.text, fontFamily: FONT }}>
       {/* Resumen explicativo + KPIs */}
       <div style={{ ...card(), marginBottom: 16 }}>
         <P>{RESUMEN_EXPLICATIVO}</P>
@@ -251,7 +274,7 @@ function ClientesApp({ vertical }: { vertical: 'ialimp' | 'sivra' | 'iarest' }) 
         {cs?.map(c => (
           <div key={c.id}>
             <button onClick={() => setSel(sel === c.id ? null : c.id)} style={{ ...chipBtn, width: '100%', textAlign: 'left', justifyContent: 'space-between', display: 'flex' }}>
-              <span>{c.nombre} {!c.activo && <span style={{ color: '#fca5a5' }}>· bloqueado</span>}</span>
+              <span>{c.nombre} {!c.activo && <span style={{ color: C.redText }}>· bloqueado</span>}</span>
               <span style={{ color: C.muted }}>módulos {sel === c.id ? '▲' : '▼'}</span>
             </button>
             {sel === c.id && <ModulosCliente vertical={vertical} id={c.id} />}
@@ -335,7 +358,7 @@ function Salud({ R }: { R: typeof RADIOGRAFIA }) {
   )
 }
 function SaludItem({ ok, txt }: { ok: boolean; txt: string }) {
-  return <div style={{ ...card(), padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderColor: ok ? C.border : '#7a2a2a' }}><span style={{ color: ok ? C.ok : C.warn }}>{ok ? '✓' : '⚠️'}</span><span style={{ fontSize: 13 }}>{txt}</span></div>
+  return <div style={{ ...card(), padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center', borderColor: ok ? C.border : C.border2 }}><span style={{ color: ok ? C.ok : C.warn }}>{ok ? '✓' : '⚠️'}</span><span style={{ fontSize: 13 }}>{txt}</span></div>
 }
 
 function Glosario() {
@@ -384,18 +407,18 @@ function Radiografia({ R }: { R: typeof RADIOGRAFIA }) {
         { titulo: 'Módulos de dominio · module-*', filas: mods.map(p => ({ label: p.id, cells: R.verticales.map(v => moduloCell(R.matrizModulos[p.id]?.[v])) })) },
       ]} />
       <div style={{ fontSize: 11, color: C.muted, margin: '8px 0 20px' }}>
-        <Chip c={C.ok} bg={C.okBg}>✓ usado</Chip> en código · <Chip c={C.warn} bg="#2a230c">◐ declarado</Chip> sin import · · no presente
+        <Chip c={C.ok} bg={C.okBg}>✓ usado</Chip> en código · <Chip c={C.warn} bg={C.warnBg}>◐ declarado</Chip> sin import · · no presente
       </div>
       <div style={subS}>🗂️ Capacidades por vertical <span style={{ color: C.muted, fontWeight: 500 }}>· detectado por rutas</span></div>
       <Matriz cols={R.verticales} secciones={grupos.map(g => ({ titulo: g.grupo, filas: g.caps.map(c => ({ label: c.label, cells: R.verticales.map(v => capCell(R.matrizCapacidades[c.id]?.[v])) })) }))} />
       {R.gaps.reimplementaciones.length > 0 && (
         <div style={{ marginTop: 20 }}><div style={subS}>♻️ Reimplementaciones</div>
-          {R.gaps.reimplementaciones.map(r => <div key={r.capacidad} style={{ ...card('#7a2a2a'), padding: '10px 14px', marginBottom: 6, fontSize: 13 }}><b>{r.label}</b> <code style={codeS}>{r.modulo}</code> — a mano en <b style={{ color: '#fca5a5' }}>{r.duplicada.map(vlabel).join(', ')}</b></div>)}
+          {R.gaps.reimplementaciones.map(r => <div key={r.capacidad} style={{ ...card(C.border2), padding: '10px 14px', marginBottom: 6, fontSize: 13 }}><b>{r.label}</b> <code style={codeS}>{r.modulo}</code> — a mano en <b style={{ color: C.redText }}>{r.duplicada.map(vlabel).join(', ')}</b></div>)}
         </div>
       )}
       {R.gaps.oportunidadesPortar.length > 0 && (
         <div style={{ marginTop: 20 }}><div style={subS}>↔️ Diferencias entre verticales · candidatas a portar</div>
-          {R.gaps.oportunidadesPortar.map(o => <div key={o.capacidad} style={{ ...card(), padding: '8px 14px', marginBottom: 6, fontSize: 13, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><b>{o.label}</b><span style={muteS}>tiene <b style={{ color: C.ok }}>{o.tiene.map(vlabel).join(', ')}</b> · falta <b style={{ color: '#fca5a5' }}>{o.falta.map(vlabel).join(', ')}</b></span></div>)}
+          {R.gaps.oportunidadesPortar.map(o => <div key={o.capacidad} style={{ ...card(), padding: '8px 14px', marginBottom: 6, fontSize: 13, display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}><b>{o.label}</b><span style={muteS}>tiene <b style={{ color: C.ok }}>{o.tiene.map(vlabel).join(', ')}</b> · falta <b style={{ color: C.redText }}>{o.falta.map(vlabel).join(', ')}</b></span></div>)}
         </div>
       )}
     </Sec>
@@ -407,7 +430,7 @@ const muteS: React.CSSProperties = { fontSize: 12, color: C.muted, marginTop: 4 
 const subS: React.CSSProperties = { fontSize: 14, fontWeight: 800, margin: '0 0 12px' }
 const codeS: React.CSSProperties = { background: C.card2, padding: '1px 5px', borderRadius: 4, fontSize: 11 }
 const chipBtn: React.CSSProperties = { background: C.card2, border: `1px solid ${C.border}`, color: C.text, borderRadius: 8, padding: '6px 12px', fontSize: 13, cursor: 'pointer', fontFamily: FONT }
-function card(accent?: string): React.CSSProperties { return { background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 12, padding: '14px 16px' } }
+function card(accent?: string): React.CSSProperties { return { background: C.card, border: `1px solid ${accent || C.border}`, borderRadius: 12, padding: '14px 16px', boxShadow: '0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04)' } }
 function Kpi({ label, valor }: { label: string; valor: string }) { return <div style={{ background: C.card, border: `1px solid ${C.border}`, borderRadius: 12, padding: '14px 20px', minWidth: 110 }}><div style={{ fontSize: 11, color: C.muted, fontWeight: 700, textTransform: 'uppercase' }}>{label}</div><div style={{ fontSize: 24, fontWeight: 800, marginTop: 4 }}>{valor}</div></div> }
 function P({ children }: { children: React.ReactNode }) { return <p style={{ color: C.text, fontSize: 13, lineHeight: 1.6, margin: 0 }}>{children}</p> }
 function H({ children }: { children: React.ReactNode }) { return <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 6, paddingRight: 24 }}>{children}</div> }
