@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T18:19:19Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T19:14:19Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -144,7 +144,7 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (16/06/2026) 🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel
-- (16/06/2026) 📧 FACTURAS CORREO · Agente de contabilidad + botón en Banca
+- (16/06/2026) 📧 FACTURAS CORREO · Sistema completo en producción
 - (16/06/2026) 🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN
 - (16/06/2026) 🤖 RRHH · Verticales conectadas a la pasarela de IA central
 - (16/06/2026) 🎨 RRHH · Marca blanca por empresa (white-label)
