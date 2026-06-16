@@ -1,12 +1,12 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { auth } from '@/lib/auth'
+import { aiSearch } from '@/lib/ai-client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
 const GITHUB_TOKEN  = process.env.GITHUB_TOKEN!
-const ANTHROPIC_KEY = process.env.ANTHROPIC_API_KEY!
 
 async function fetchLanding() {
   const res = await fetch(
@@ -55,34 +55,17 @@ function applySeoReplacements(raw: string, title: string, description: string, o
       `<meta property=\\"og:description\\" content=\\"${escJs(ogDescription)}\\"`)
 }
 
-async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': ANTHROPIC_KEY,
-      'anthropic-version': '2023-06-01',
-      'anthropic-beta': 'web-search-2025-03-05',
-    },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 4000,
-      tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-      system: `Eres un experto SEO para alojamientos turísticos en España.
+// Análisis SEO vía pasarela central (Gemini + Google Search por debajo) — antes Anthropic web_search.
+const SEO_SYSTEM = `Eres un experto SEO para alojamientos turísticos en España.
 Analiza la competencia para House Sevillana (www.housesevillana.es).
 Propiedad: casa 290m2, 6 dormitorios, 4 banos, parking privado, patio andaluz, terraza, hasta 12 personas. Calle Socorro 24, Sevilla. VFT/SE/01179. Reserva directa sin comisiones OTA.
 Keywords: "apartamento turistico Sevilla centro", "casa vacacional Sevilla grupos", "VFT Sevilla parking", "alquiler vacacional Sevilla 12 personas".
 Responde SOLO con JSON valido sin markdown:
-{"title":"(max 60 chars)","description":"(max 155 chars)","og_description":"(max 100 chars)","analysis":"150-200 palabras","top_competitors":[{"title":"","why_ranking":""}]}`,
-      messages: [{
-        role: 'user',
-        content: `Title actual: ${current.title}\nDescription actual: ${current.description}\n\n1. Busca "apartamento turistico Sevilla centro 6 dormitorios"\n2. Busca "casa vacacional Sevilla grupos parking"\n3. Genera metadatos mejorados. Solo JSON.`,
-      }],
-    }),
-  })
-  const data = await res.json()
-  const blocks = (data.content ?? []).filter((b: {type: string}) => b.type === 'text')
-  const raw = (blocks[blocks.length - 1] as {text?: string})?.text ?? ''
+{"title":"(max 60 chars)","description":"(max 155 chars)","og_description":"(max 100 chars)","analysis":"150-200 palabras","top_competitors":[{"title":"","why_ranking":""}]}`
+
+async function runSeoAnalysis(current: ReturnType<typeof extractSeoParams>) {
+  const user = `Title actual: ${current.title}\nDescription actual: ${current.description}\n\n1. Busca "apartamento turistico Sevilla centro 6 dormitorios"\n2. Busca "casa vacacional Sevilla grupos parking"\n3. Genera metadatos mejorados. Solo JSON.`
+  const raw = await aiSearch(SEO_SYSTEM, user, { maxTokens: 4000, timeoutMs: 50_000 })
   return JSON.parse(raw.replace(/```json|```/g, '').trim())
 }
 

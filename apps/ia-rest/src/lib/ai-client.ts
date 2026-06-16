@@ -1,5 +1,5 @@
-import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools } from '@central/core-ai'
-import type { ImageInput, NimConfig, NimToolMessage, NimToolResult } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools, gatewayChat, gatewaySearch, gatewayVision } from '@central/core-ai'
+import type { ImageInput, NimConfig, NimToolMessage, NimToolResult, GatewayConfig } from '@central/core-ai'
 
 /**
  * ai-client.ts
@@ -87,6 +87,17 @@ function nimConfig(): NimConfig {
   return { apiKey, textModel: TEXT_MODEL_NVIDIA, visionModel: VISION_MODEL_NVIDIA }
 }
 
+// PASARELA central (plataforma): si está configurada (env de equipo en Vercel), las llamadas de
+// texto/búsqueda/visión van por ahí (keys de proveedor y control de coste viven en plataforma).
+// Si no está, o si falla, se cae al camino directo NIM→Anthropic de abajo. callAITools NO pasa por
+// la pasarela (no expone function-calling) → sigue directo a NIM.
+const APP = 'ia-rest'
+function gatewayCfg(): GatewayConfig | null {
+  const url = process.env.AI_GATEWAY_URL
+  const secret = process.env.AI_GATEWAY_SECRET
+  return url && secret ? { url, secret, app: APP } : null
+}
+
 // ── NVIDIA: llamada texto (delega en @central/core-ai) ────────────────────────
 async function nvidiaText(system: string, user: string, maxTokens = 600): Promise<string> {
   return nimText(nimConfig(), system, user, maxTokens)
@@ -163,6 +174,17 @@ export async function callAI(
       : userOrMessages
 
   const user = messages[messages.length - 1]?.content ?? ''
+
+  // Pasarela central primero (si configurada). Si falla, sigue el camino directo de abajo.
+  const cfg = gatewayCfg()
+  if (cfg) {
+    try {
+      return await gatewayChat(cfg, messages, { system, maxTokens, timeoutMs })
+    } catch (e) {
+      console.warn('[AI-CLIENT] pasarela chat falló, fallback directo:', (e as Error).message)
+    }
+  }
+
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
   if (hasNvidia) {
@@ -200,6 +222,16 @@ export async function callAISearch(
   maxTokens = 1500,
   timeoutMs = 45_000
 ): Promise<string> {
+  // Pasarela central primero (Gemini por debajo). Si falla, intenta Gemini directo y luego NIM.
+  const cfg = gatewayCfg()
+  if (cfg) {
+    try {
+      return await gatewaySearch(cfg, system, user, { maxTokens, timeoutMs })
+    } catch (e) {
+      console.warn('[AI-CLIENT] pasarela search falló, fallback directo:', (e as Error).message)
+    }
+  }
+
   const geminiKey = process.env.GEMINI_API_KEY
 
   if (geminiKey) {
@@ -240,6 +272,16 @@ export async function callAIVision(
   timeoutMs = 30_000,
   noFallback = true // NIM puro por defecto (el fallback Anthropic está sin saldo)
 ): Promise<string> {
+  // Pasarela central primero (NIM vision por debajo). Si falla, sigue el camino directo de abajo.
+  const cfg = gatewayCfg()
+  if (cfg) {
+    try {
+      return await gatewayVision(cfg, system, images, userText, { maxTokens })
+    } catch (e) {
+      console.warn('[AI-CLIENT] pasarela vision falló, fallback directo:', (e as Error).message)
+    }
+  }
+
   const hasNvidia = !!process.env.NVIDIA_API_KEY
 
   if (hasNvidia) {

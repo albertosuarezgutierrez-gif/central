@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325 — 16/06/2026** (PR #327)
+  - **sivra `seo-refresh`** ya NO usa Anthropic web_search: `lib/ai-client.ts` gana `aiSearch()` →
+    `gatewaySearch` (pasarela central, Gemini+Google Search); sin pasarela cae a NIM puro. Eliminada
+    `ANTHROPIC_API_KEY` de la ruta. **Con esto NINGÚN agente del repo llama ya a Anthropic como vía principal.**
+  - **ia-rest `lib/ai-client.ts`** enruta por la **pasarela central** (como ialimp/sivra): `gatewayCfg()`
+    (`AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, env de equipo Vercel); `callAI`/`callAISearch`/`callAIVision`
+    intentan la pasarela primero y caen al camino directo NIM→Anthropic si no está / falla.
+    `callAITools` (function-calling de los agentes del god-panel) sigue **directo a NIM** (la pasarela no
+    expone tool-calling).
+  - Anthropic queda solo como fallback de transición en ia-rest (hoy sin saldo). `tsc` limpio en ambas apps.
+
 - **🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel — 16/06/2026** (PR #325 MERGED, squash `97bdcc2`)
   - **Motivo**: los 4 agentes daban error 500 *"Anthropic no disponible (sin crédito)"*. Decisión de Alberto:
     quitar Anthropic → **NVIDIA NIM + Gemini** (gratis, sin saldo).
