@@ -1,6 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { tipoEtiqueta } from '@/lib/solicitudes'
+import { tipoEtiqueta } from '@/lib/solicitudes-tipos'
 import AdminShell from '@/components/AdminShell'
 
 type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string }

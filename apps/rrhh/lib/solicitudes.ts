@@ -1,24 +1,21 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { IDS_SOLICITUD, tipoEtiqueta } from '@/lib/solicitudes-tipos'
 
-export const TIPOS_SOLICITUD = ['vacaciones', 'permiso_retribuido', 'parte_medico', 'baja', 'otro'] as const
-export type TipoSolicitud = (typeof TIPOS_SOLICITUD)[number]
-
-const ETIQUETAS: Record<TipoSolicitud, string> = {
-  vacaciones: 'Vacaciones', permiso_retribuido: 'Permiso retribuido',
-  parte_medico: 'Parte médico', baja: 'Baja', otro: 'Otro',
-}
-export const tipoEtiqueta = (t: string) => (ETIQUETAS as Record<string, string>)[t] ?? t
+// Catálogo de tipos en `@/lib/solicitudes-tipos` (puro, compartido con la UI). Re-exportamos lo
+// que ya consumían otros módulos para no romper imports existentes.
+export { tipoEtiqueta }
+export const TIPOS_SOLICITUD = IDS_SOLICITUD
 
 type EntradaSolicitud = { tipo: string; fecha_inicio?: string | null; fecha_fin?: string | null; motivo?: string | null }
 
 /** Valida y normaliza una solicitud entrante. Lanza Error legible si algo no cuadra. */
 export function validarSolicitud(e: EntradaSolicitud) {
-  if (!TIPOS_SOLICITUD.includes(e.tipo as TipoSolicitud)) throw new Error('Tipo de solicitud no válido')
+  if (!IDS_SOLICITUD.includes(e.tipo)) throw new Error('Tipo de solicitud no válido')
   const ini = e.fecha_inicio || null
   const fin = e.fecha_fin || null
   if (ini && fin && fin < ini) throw new Error('La fecha fin no puede ser anterior a la de inicio')
-  return { tipo: e.tipo as TipoSolicitud, fecha_inicio: ini, fecha_fin: fin, motivo: (e.motivo ?? '').trim() || null }
+  return { tipo: e.tipo, fecha_inicio: ini, fecha_fin: fin, motivo: (e.motivo ?? '').trim() || null }
 }
 
 async function exigeEmpleado(empresaId: string, empleadoId: string) {
