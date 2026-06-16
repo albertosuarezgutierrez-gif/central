@@ -2,7 +2,6 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { getSesion, AuthError } from '@/lib/tenant'
-import { normalizarEmpleado } from '@/lib/empleados'
 
 export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -41,6 +40,16 @@ export async function DELETE(_req: Request, { params }: { params: Promise<{ id: 
   try {
     const { empresa_id } = await getSesion()
     const { id } = await params
+    // Blindaje: si el empleado tiene documentos FIRMADOS, no se borra en duro (hay que conservar
+    // la evidencia legal). Se obliga a darlo de baja (PATCH estado='baja') en su lugar.
+    const firmas = await prisma.$queryRaw<any[]>(Prisma.sql`
+      SELECT 1 FROM rrhh.firmas WHERE empleado_id=${id}::uuid AND empresa_id=${empresa_id}::uuid LIMIT 1`)
+    if (firmas[0]) {
+      return NextResponse.json(
+        { error: 'Este empleado tiene documentos firmados: no puede borrarse (se conserva por evidencia legal). Dale de baja en su lugar.' },
+        { status: 409 })
+    }
+    await prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.documentos WHERE empleado_id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     await prisma.$executeRaw(Prisma.sql`DELETE FROM empleados WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     return NextResponse.json({ ok: true })
   } catch (e) { if (e instanceof AuthError) return NextResponse.json({ error: e.message }, { status: 401 }); throw e }
