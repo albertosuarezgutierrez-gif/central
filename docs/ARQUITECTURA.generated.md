@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T08:13:01Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T08:25:24Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -23,7 +23,7 @@
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 36
 ### rrhh
-- **Módulos que usa:** core-email, core-firma, core-storage, module-chat, module-documental, module-rrhh
+- **Módulos que usa:** core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push)
 - **Tablas (9):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
 - **Rutas API:** 21
@@ -47,7 +47,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: ialimp, plataforma
+  - Lo usan: ialimp, plataforma, rrhh
   - Depende de: —
 - **core-push** (core) → `@central/core-push`
   - Lo usan: ia-rest, ialimp, sivra
