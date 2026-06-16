@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T15:16:34Z",
+  "generadoEn": "2026-06-16T16:39:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1092,7 +1092,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -1963,6 +1963,7 @@
       "/api/sivra/expenses/fijos",
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/facturas-control",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -2687,7 +2688,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 847,
+    "apis": 848,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
