@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:08:14Z",
+  "generadoEn": "2026-06-16T14:18:44Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,7 +254,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "usado",
@@ -915,8 +915,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 17
       },
       "rrhh": {
         "presente": false,
@@ -937,8 +937,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 6
       },
       "rrhh": {
         "presente": false,
@@ -1972,6 +1972,26 @@
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/knowledge",
       "/api/sivra/mensajes/reply",
+      "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/ingest",
+      "/api/sivra/mercado/search",
+      "/api/sivra/mercado/stats",
+      "/api/sivra/mercado/sweep",
+      "/api/sivra/pricing/apply",
+      "/api/sivra/pricing/apply-auto",
+      "/api/sivra/pricing/config",
+      "/api/sivra/pricing/experiments",
+      "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/guard",
+      "/api/sivra/pricing/historial",
+      "/api/sivra/pricing/pilot-track",
+      "/api/sivra/pricing/pilot-track/historial",
+      "/api/sivra/pricing/recommend",
+      "/api/sivra/pricing/restore",
+      "/api/sivra/pricing/resultados",
+      "/api/sivra/pricing/resumen-diario",
+      "/api/sivra/pricing/settings",
+      "/api/sivra/pricing/stats",
       "/api/sivra/seo-proposals",
       "/api/sivra/seo-refresh",
       "/api/sociedades",
@@ -2666,7 +2686,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 826,
+    "apis": 846,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

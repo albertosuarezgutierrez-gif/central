@@ -18,6 +18,34 @@
     {
       "path": "/api/sivra/expenses/fijos/generar",
       "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/sivra/mercado/cron",
+      "schedule": "15 7 * * *"
+    },
+    {
+      "path": "/api/sivra/mercado/sweep",
+      "schedule": "0 3 * * 0"
+    },
+    {
+      "path": "/api/sivra/pricing/guard",
+      "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/sivra/pricing/experiments/check-results",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/sivra/pricing/apply-auto",
+      "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/sivra/pricing/resumen-diario",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/sivra/pricing/pilot-track",
+      "schedule": "15 9 * * *"
     }
   ]
 }
