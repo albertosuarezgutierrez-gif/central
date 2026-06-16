@@ -40,13 +40,20 @@ a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
 `destino` ∈ { turistico_pisos, turistico_duplex, seguros, personal } (traspaso_interno no aplica aquí).
 
 - **turistico_pisos (deducible):** BOOKING, EXPEDIA, AIRBNB, STRIPE, SMOOBU, PRICELABS, IONOS
-  (dominios), IKEA/LEROY/BRICO/FERRETER (mobiliario pisos), SIQUE (limpieza), EMASESA (agua),
-  ENDESA (luz), DIGI (internet), DIMITRI (mantenimiento), D CULTO (comida empresa).
+  (dominios), IKEA/LEROY/BRICO/FERRETER (mobiliario pisos), TASKRABBIT (montaje/instalación en pisos),
+  SIQUE (limpieza), EMASESA (agua), ENDESA/TOTALENERGIES (luz), DIGI (internet),
+  DIMITRI (mantenimiento), D CULTO (comida empresa).
 - **turistico_duplex (deducible):** COMUNIDAD, PASAJE FRANCISCO, y suministros del dúplex.
-- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser…).
+- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…).
 - **personal (NO deducible):** Círculo Mercantil / natación / gimnasio / colegio / vacunas /
   compras de familia (Carmen, Pilar, etc.), IBI de la vivienda habitual (Monte Carmelo).
-  Ante la duda → **personal** y márcalo "para revisar con Alberto".
+
+### Reenvíos de Pilar (pilar.pina.franco@gmail.com) — regla especial
+Los reenvíos de Pilar pueden ser tanto personales como de pisos. **NUNCA auto-clasificar** si el
+concepto puede ir a cualquier lado. Regla:
+- Círculo Mercantil, natación, colegio, farmacia, supermercado → **personal** (auto).
+- Taskrabbit, fontanero, electricista, tiendas de muebles/hogar, Amazon, ferretería → **"Para tu decisión"** (pregunta siempre: ¿es para los pisos o personal?).
+- Proveedores claramente de pisos (IKEA con dirección de piso, Sique, Emasesa…) → **turistico_pisos** (auto solo si el concepto lo deja claro).
 
 > Contexto fijo: Dúplex = **Pasaje Francisco** (no Monte Carmelo). Pisos turísticos en Kutxa;
 > Dúplex + correduría en BBVA. Detalle en `apps/sivra/docs/contabilidad.md`.
