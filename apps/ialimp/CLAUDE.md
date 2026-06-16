@@ -143,6 +143,33 @@ Herramienta de **prospección de IALIMP** (el SaaS) para captar empresas de limp
 - **Cumplimiento:** cada correo lleva identificación del responsable + baja funcional + `List-Unsubscribe`; bajas registradas. Es marketing **propio de IALIMP** (rompe white-label), por eso vive en superadmin y no en el panel de empresa.
 - **Manual:** es tooling INTERNO de IALIMP (no lo usan los tenants) → no va a `public/manual.html`.
 
+## RR.HH. de la limpiadora (expediente + nómina PDF + firma avanzada)
+RR.HH. como **capacidad compartida**: ialimp consume `@central/module-rrhh` (orquestación de firma OTP
+owner-agnóstica) + `@central/module-documental` (permisos por carpeta) + `@central/core-firma` (firma
+eIDAS art.26) — los mismos núcleos que la app `rrhh`. Datos en el schema `public` de ialimp, scopeados por
+`(empresa_id, limpiadora_id)`. OwnerRef = `{tipo:'limpiadora', id}`.
+- **Tablas** (migración `prisma/migrations/2026-06-16_rrhh_limpiadora.sql`, aplicada): `documentos_limpiadora`,
+  `firmas_limpiadora`, `firma_otps_limpiadora` (espejo de `rrhh.documentos/firmas/firma_otps`). Además
+  `limpiadoras.email` (**OBLIGATORIO** en el alta — canal del OTP de firma) y `limpiadoras.dni`.
+- **Storage**: bucket **PRIVADO** `documentos-limpiadora` (policy `read` para firmar URLs, como los demás
+  privados); subir/borrar con service_role, descargar para hashear al firmar, URL firmada 1 h vía core-storage.
+  `lib/storage-limpiadora.ts` (≠ bucket público de fotos).
+- **Carpetas**: las estándar de RR.HH. (`CARPETAS_RRHH` de module-rrhh): datos_personales/contratos/nominas/
+  partes_medicos/otros. `lib/carpetas-limpiadora.ts`.
+- **Email/OTP del firmado**: `lib/firma-limpiadora.ts` usa el transporter de `lib/mailer.ts`; remitente
+  **parametrizado** `FIRMA_FROM` (env; por defecto `MAIL_FROM` = `hola@ialimp.es`, ya verificado) para poder
+  migrarlo a la marca principal sin tocar la lógica.
+- **Nómina PDF** (`lib/nomina-pdf.ts`, usa `pdf-lib`): agrega `partes_trabajo` del rango (misma fuente que
+  `/api/admin/nomina`), genera el recibo A4, lo guarda en carpeta `nominas` y lo deja **pendiente de firma**.
+- **Rutas limpiadora** (`/api/l/*`, exentas en middleware, auth `getLimpiadoraSession`): `expediente` (GET),
+  `expediente/[docId]/firmar` (POST), `expediente/[docId]/firmar/codigo` (POST OTP). UI: **`/l/documentos`**
+  (botón "📄 Mis documentos" en la cabecera de `/l`), con modal de firma (código + confirmación de nombre).
+- **Rutas admin/gestor** (`requireEmpresaId`): `/api/admin/limpiadoras/[id]/expediente` (GET/POST subir),
+  `.../expediente/[docId]` (POST solicitar firma · DELETE), `.../nomina` (POST genera la nómina). UI:
+  pestaña **📁 Expediente** en `/admin/rrhh` (`components/ExpedienteLimpiadoraAdmin.tsx`): seleccionar
+  limpiadora → generar nómina (rango/quincena) → subir docs → pedir firma. `lib/expediente-limpiadora.ts`
+  = listar/subir/borrar (espejo de `apps/rrhh/lib/documental.ts`).
+
 ## VeriFactu
 `lib/verifactu.ts` (SHA-256 + XML SOAP AEAT), campos `vf_*`. Sique Brilla SL: obligatorio desde ene-2027.
 
