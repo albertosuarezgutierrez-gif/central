@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T07:17:23Z",
+  "generadoEn": "2026-06-16T13:43:26Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -32,6 +32,11 @@
       "id": "core-push",
       "tipo": "core",
       "npm": "@central/core-push"
+    },
+    {
+      "id": "core-receipts",
+      "tipo": "core",
+      "npm": "@central/core-receipts"
     },
     {
       "id": "core-storage",
@@ -305,6 +310,24 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 1
+      }
+    },
+    "core-receipts": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-storage": {
@@ -946,6 +969,7 @@
     "core-fiscal": [],
     "core-identity": [],
     "core-push": [],
+    "core-receipts": [],
     "core-storage": [],
     "module-agenda": [],
     "module-asn": [],
@@ -2215,7 +2239,7 @@
   },
   "resumen": {
     "verticales": 4,
-    "packages": 17,
+    "packages": 18,
     "capacidades": 23,
     "skills": 13,
     "apis": 767,
