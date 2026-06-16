@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 Facturas · Auditoría completa de recurrentes y clasificación banco — 16/06/2026**
+  - Revisión completa del Gmail + Drive + banco (Kutxabank + BBVA) para facturas de pisos turísticos.
+  - **Skill `facturas-correo` actualizada** con: registro completo de proveedores, Paso 0 de control
+    de recurrentes, clasificaciones correctas, errores históricos detectados en banco, estructura Drive.
+  - **Errores de clasificación detectados en `movimientos_bancarios`** (pendiente corregir con UPDATE):
+    - Si Que Brilla (5 pagos TRANSF. 2100 LIMPIEZA): `personal` → `turistico_pisos`
+    - El Giraldillo (2+ pagos TRANSF. 0049 LAVANDERIA): `personal` → `turistico_pisos`
+    - IONOS (cargos tarjeta PAYPAL *IONOS CLOUD): `turistico_pisos` → `personal`
+  - **Mapa de suministros completo**:
+    - EMASESA: 3 contratos bimestrales (Socorro 0104785292 / Bustos 0105185751 / Luxury 0105137440)
+    - ENDESA: 4 contratos mensuales (3 Kutxabank pisos + 1 BBVA dúplex CPVR)
+    - DIGI: 3 líneas (~76€/mes) → 2/3 negocio (Socorro + Luxury/Bustos), 1/3 personal (Monte Carmelo)
+    - Si Que Brilla: factura mensual desglosada por inmueble (Luxury/Bustos/Dúplex/Socorro)
+    - El Giraldillo (lavandería Umbrete): mensual, sin desglose por piso → reparto ÷4
+    - PriceLabs: mensual ~55-65 USD tarjeta; Smoobu: anual marzo ~1.018€
+  - **Estructura Bustos Tavera 22**: Bajo IZQ = Bustos Reforma (alquilado a Gutierrez Alcala ~259€/mes),
+    Bajo DER = Luxury (alquilado ~309€/mes). Comparten DIGI internet.
+  - **Identidad**: facturas hasta oct 2025 a Punto y Coma Gestión SL (B90446683), desde nov 2025 a Alberto DNI 28823484E.
+  - **Personal (no deducible)**: IONOS, Vercel, IBI Monte Carmelo, comunidad Monte Carmelo.
+  - **Pendiente confirmar**: TotalEnergies (sigue mandando facturas jun 2026 — ¿contratos activos?),
+    renta Gutierrez Alcala (¿clasificar como turistico_pisos?), Chekin Soluciones (¿negocio?).
+  - **Facturas Giraldillo en Drive**: AFV-11625 (may 29, sin pagar), AFV-11528 (pagada mayo), AFV-11466 (pago reciente, sin confirmar banco), AFV-11389 (pagada), AFV-11289 (pagada).
+
+
 - **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
   - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
     de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de
