@@ -77,10 +77,10 @@ const SLIDES: Slide[] = [
         <div style={{ fontFamily:SN, letterSpacing:4, fontSize:14, color:C.gold, textTransform:'uppercase', marginBottom:28 }}>
           Catering Joaquín Jaén · Hacienda El Alba + Hacienda Trinidad
         </div>
-        <h1 style={{ fontFamily:SE, fontWeight:600, fontSize:60, lineHeight:1.08, color:C.paper, margin:'0 0 26px' }}>
+        <h1 style={{ fontFamily:SE, fontWeight:600, fontSize:'clamp(30px,7vw,60px)', lineHeight:1.08, color:C.paper, margin:'0 0 26px' }}>
           Una plataforma para <span style={{ color:C.gold }}>todo tu grupo</span>,<br/>en un solo sitio.
         </h1>
-        <p style={{ fontFamily:SN, fontSize:21, color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:680 }}>
+        <p style={{ fontFamily:SN, fontSize:'clamp(16px,3.6vw,21px)', color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:680 }}>
           Conectamos lo que ya funciona —empezando por tu cocina— y unimos comercial, material,
           eventos y contabilidad en un solo sitio.
         </p>
@@ -118,7 +118,7 @@ const SLIDES: Slide[] = [
           El sistema de cocina que ya tenéis <span style={{ color:C.green }}>se queda</span>.
           ia.rest se enchufa a él y reparte sus datos al resto del grupo.
         </p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
           <Card icon="📋" color={C.gold} titulo="Escandallos → presupuesto" body="El coste por comensal que ya calculáis alimenta el presupuesto y la lista de compra." />
           <Card icon="🛒" color={C.teal} titulo="Cocina → compra" body="Lo que entra por un evento se convierte en pedido a proveedor, sin reteclear." />
           <Card icon="📊" color={C.red} titulo="Coste → contabilidad" body="Los costes reales suben solos al financiero consolidado del holding." />
@@ -151,7 +151,7 @@ const SLIDES: Slide[] = [
           <Arrow label="cierre" color={C.ink4} />
           <Node color={C.teal} title="Cerrado" sub="roturas + reseña" />
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
           <Card icon="🛒" color={C.red} titulo="Compra al proveedor" body="El evento confirmado genera el pedido solo; el albarán entra por foto y la factura cuadra sola." />
           <Card icon="👨‍🍳" color={C.teal} titulo="Parte de trabajo a cocina" body="El menú se explota en elaboraciones fechadas por caducidad, repartidas por cocinero con su tiempo." />
           <Card icon="📸" color={C.amber} titulo="Cierre del evento" body="Inventario y roturas por foto, informe de rentabilidad y la reseña que alimenta el ranking." />
@@ -170,7 +170,7 @@ const SLIDES: Slide[] = [
     sub: 'El equipo se autogestiona y ves quién aporta de verdad.',
     color: C.red,
     render: () => (
-      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:18 }}>
+      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:18 }}>
         <Card icon="🏆" color={C.red} titulo="Ranking en tiempo real" body="Quién vende con más margen, no solo quién factura más. Cada comercial ve lo suyo." />
         <Card icon="💸" color={C.amber} titulo="Bonos automáticos" body="Por margen, por ticket más alto y por reseñas conseguidas. Se calculan solos." />
         <Card icon="📈" color={C.gold} titulo="Contrato con % escalable" body="La comisión sube sola al alcanzar objetivos; baja si no se cumplen. Sin discusiones." />
@@ -186,7 +186,7 @@ const SLIDES: Slide[] = [
     sub: 'Saber qué tienes, qué se rompió y qué hará falta — sin recuentos por vídeo.',
     color: C.teal,
     render: () => (
-      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
         <Card icon="🍽️" color={C.teal} titulo="Catálogo con stock real" body="Mesas, sillas, vajilla y cristalería. Cada evento descuenta lo que sale." />
         <Card icon="📸" color={C.red} titulo="Roturas con foto" body="Al cerrar la boda registras las roturas con foto y se liquidan solas." />
         <Card icon="🌡️" color={C.amber} titulo="Previsión por evento" body="Material y bebida según aforo, temporada y temperatura (verano/invierno, día/noche)." />
@@ -219,7 +219,7 @@ const SLIDES: Slide[] = [
     sub: 'El trabajador entra a su perfil, ve su trabajo ya organizado y lo cierra con foto — en sala y en cocina.',
     color: C.green,
     render: () => (
-      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:20 }}>
+      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:20 }}>
         <Card icon="✅" color={C.green}
           titulo="Checklist de sala cruzado con la carga"
           body="Tareas por sección (barra, sala, terraza) marcadas con foto. ia.rest las cruza con las mesas y comandas reales: tarea sin hacer + sala vacía = «sin excusa»; sala llena = contexto. Reclamas el trabajo con datos." />
@@ -307,7 +307,7 @@ const SLIDES: Slide[] = [
     color: C.red,
     render: () => (
       <div style={{ width:'100%', maxWidth:960 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18, marginBottom:24 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18, marginBottom:24 }}>
           <Card icon="①" color={C.gold} titulo="Semana 1–2 · Material + comercial" body="Catálogo de material con stock real y alta del equipo comercial con sus comisiones. Primer evento descontando material solo." />
           <Card icon="②" color={C.teal} titulo="Semana 3–4 · Conectar cocina" body="Roturas por foto, ranking del equipo en vivo y puente con vuestros escandallos → presupuesto." />
           <Card icon="③" color={C.green} titulo="Mes 2 · Marketplace + holding" body="Previsión por evento, presupuesto self-service (piloto) y financiero del catering consolidado." />
@@ -365,17 +365,17 @@ export default function DeckCateringJJ() {
       <div style={{ position:'absolute', top:0, left:0, height:4, width:`${((i + 1) / n) * 100}%`, background:s.color, transition:'width .35s ease', zIndex:10 }} />
 
       {/* slide */}
-      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'72px 48px 96px' }}>
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'safe center', overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'clamp(54px,8vh,72px) clamp(18px,5vw,48px) clamp(80px,11vh,96px)' }}>
         {(s.kicker || s.titulo) && (
           <div style={{ width:'100%', maxWidth:1000, marginBottom:28, textAlign: i === 0 ? 'center' : 'left' }}>
             {s.kicker && (
               <div style={{ fontFamily:SN, fontWeight:700, fontSize:13, letterSpacing:2.5, color:s.color, textTransform:'uppercase', marginBottom:12 }}>{s.kicker}</div>
             )}
             {s.titulo && (
-              <h2 style={{ fontFamily:SE, fontWeight:600, fontSize:44, lineHeight:1.12, color:C.paper, margin:0 }}>{s.titulo}</h2>
+              <h2 style={{ fontFamily:SE, fontWeight:600, fontSize:'clamp(26px,6vw,44px)', lineHeight:1.12, color:C.paper, margin:0 }}>{s.titulo}</h2>
             )}
             {s.sub && (
-              <p style={{ fontFamily:SN, fontSize:19, color:C.ink3, margin:'14px 0 0', lineHeight:1.45, maxWidth:820 }}>{s.sub}</p>
+              <p style={{ fontFamily:SN, fontSize:'clamp(15px,3.4vw,19px)', color:C.ink3, margin:'14px 0 0', lineHeight:1.45, maxWidth:820 }}>{s.sub}</p>
             )}
           </div>
         )}
@@ -383,9 +383,9 @@ export default function DeckCateringJJ() {
       </div>
 
       {/* navegación */}
-      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:64, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 28px', borderTop:`1px solid ${C.bg3}`, background:C.bg2 }}>
-        <div style={{ fontFamily:SN, fontSize:13, color:C.ink4, letterSpacing:1 }}>CATERING JOAQUÍN JAÉN · ia.rest</div>
-        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:64, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, padding:'0 clamp(12px,4vw,28px)', borderTop:`1px solid ${C.bg3}`, background:C.bg2 }}>
+        <div style={{ fontFamily:SN, fontSize:13, color:C.ink4, letterSpacing:1, minWidth:0, flexShrink:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>CATERING JOAQUÍN JAÉN · ia.rest</div>
+        <div style={{ display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
           <button onClick={() => go(-1)} disabled={i === 0}
             style={{ background:'transparent', border:`1px solid ${C.bg3}`, color: i === 0 ? C.ink4 : C.cream, borderRadius:8, padding:'8px 16px', fontSize:15, cursor: i === 0 ? 'default' : 'pointer' }}>← Atrás</button>
           <div style={{ fontFamily:SN, fontSize:14, color:C.ink3, minWidth:54, textAlign:'center' }}>{i + 1} / {n}</div>
