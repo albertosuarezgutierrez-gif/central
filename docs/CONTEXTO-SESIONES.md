@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard — 16/06/2026** (PR #310, mergeado)
+  - **Mensajería de huéspedes** migrada de sivra → plataforma:
+    - `lib/smoobu.ts` — `getSmoobuKey()` lee `pms_connections.smoobu_api_key` (tabla de ialimp) con caché 5min; fallback a `SMOOBU_API_KEY` env solo si BD falla
+    - `GET /api/sivra/mensajes` — threads Smoobu + join `incomes` (checkIn/checkOut/portal) + `mensajes_status` (overrides manuales). Clasifica: trivial/info/importante → estado: respondido/pendiente/urgente
+    - `GET|PATCH /api/sivra/mensajes/[bookingId]` — mensajes por reserva, cambio de estado persiste en `mensajes_status` (ON CONFLICT UPDATE)
+    - `POST /api/sivra/mensajes/reply` — reglas de negocio (late checkout, early checkin, parking) → RAG en `knowledge_base` → `aiComplete` de `@central/core-ai`. Notifica `SIVRA_URL/api/limpiadoras/early-checkin` para early in/out
+    - `GET|POST|PATCH|DELETE /api/sivra/mensajes/knowledge` — CRUD base de conocimiento (tabla `knowledge_base`)
+    - `/sivra/mensajes/page.tsx` — UI completa: paneles redimensionables, lista de threads con filtros (estado/propiedad/búsqueda), chat, sugerencia IA, traducción vía MyMemory, Gmail draft, guardar en KB. Mobile: vista única list/chat con toggle
+  - **UserSidebar** — NAV_PISOS actualizado a 8 entradas (añadida Mensajes entre Fiscal y Inversión)
+  - **Dashboard fixes responsive**:
+    - Fecha `checkIn` ahora usa `::date::text` (antes `::text` devolvía timestamp completo `2026-06-16 12:00:00+00`)
+    - Widget "Esta semana en los pisos": `maxWidth: 90` en nombre de piso (era `minWidth`) + `minWidth: 0` en contenedor → importe ya no se corta en móvil
+  - **Env vars necesarias en proyecto Vercel `plataforma`**: `SMOOBU_API_KEY` (fallback), `SMOOBU_PMS_CONNECTION_ID` (opcional, tiene default), `SIVRA_URL` (para notificar limpiadoras)
+  - **Fase 3 pendiente**: `/sivra/mercado` + `/sivra/pricing` + `/sivra/pricing-auto` (⚠️ A/B test live en Busto Reform)
+
 - **🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard — 16/06/2026** (PR #305, rama `claude/sivra-fase1b-income-expenses`)
   - **Páginas migradas** de sivra → plataforma `/sivra/*`:
     - `/sivra/income` — lista completa de reservas con filtros (portal, propiedad, fecha, huésped) + 4 KPIs: reservas, ingresos brutos, media/reserva, noches. API `GET /api/sivra/income`.
