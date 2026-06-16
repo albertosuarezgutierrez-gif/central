@@ -46,10 +46,9 @@
   - **Slash command** `.claude/commands/facturas-correo.md` → `/facturas-correo` en menú de Claude Code web.
   - **Botón en Banca** (`BancaClient.tsx` + `page.tsx`): `RevisarCorreoBtn` abre `claude.ai/code` y copia
     `/facturas-correo` al portapapeles con un clic.
-  - **Trigger diario PENDIENTE**: Alberto debe configurarlo manualmente en `claude.ai/code → Settings → Scheduled sessions`
-    (prompt: "Ejecuta la skill facturas-correo", MCP Gmail+Drive+Supabase activos).
-  - **Pendientes de conciliar**: Vercel 190.93€ y Anthropic 217.80€ no encontrados en banco (cargo pendiente).
-  - **BSH Electrodomésticos y Tutrocito 122.87€**: sin clasificar, pendiente de Alberto.
+  - **Trigger diario CONFIGURADO**: Rutina `Revisar facturas correo` activa en claude.ai/code → Rutinas. Corre daily at 8:00 CEST.
+  - **Vercel 190.93€ y Anthropic 217.80€**: pagados desde cuenta **N26** (no BBVA/Kutxa) → no aparecen en el extracto. Deducibles pero fuera del circuito PSD2 actual. Pendiente conectar N26 o subir extracto manual cuando llegue.
+  - **BSH Electrodomésticos y Tutrocito 122.87€**: clasificados como **personal**, no archivados.
 
 
 - **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
