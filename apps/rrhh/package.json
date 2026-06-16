@@ -14,6 +14,7 @@
     "@central/core-email": "file:../../packages/core-email",
     "@central/core-firma": "file:../../packages/core-firma",
     "@central/core-storage": "file:../../packages/core-storage",
+    "@central/legal-templates": "file:../../packages/legal-templates",
     "@central/module-chat": "file:../../packages/module-chat",
     "@central/module-documental": "file:../../packages/module-documental",
     "@central/module-rrhh": "file:../../packages/module-rrhh",
