@@ -11,3 +11,9 @@ export type {
   GlosaContext,
   GlosaProvider,
 } from './types.ts'
+
+export {
+  assertFiscalIntegrity,
+  formatFiscalNumber,
+  FiscalIntegrityError,
+} from './integrity.ts'
