@@ -1,0 +1,12 @@
+{
+  "name": "@central/core-firma",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Núcleo de FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26) para la casa de marcas. Puro (sin BD, sin Storage, sin red): define el puerto ProveedorFirma, la evidencia de firma (hash del documento + identidad + sello de tiempo + consentimiento + auditoría) y la implementación propia FirmaPropia. Firmafy u otros proveedores se enchufan implementando el mismo puerto. Lo consume rrhh (firma de nóminas/contratos por el empleado).",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

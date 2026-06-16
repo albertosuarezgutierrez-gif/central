@@ -1,6 +1,6 @@
 import Wordmark from '@/components/Wordmark'
 
-type NavKey = 'empleados' | 'solicitudes'
+type NavKey = 'empleados' | 'solicitudes' | 'cuenta'
 
 /** Marco del panel del responsable: sidebar + contenido. Presentacional puro. */
 export default function AdminShell({ activo, children }: { activo: NavKey; children: React.ReactNode }) {
@@ -21,6 +21,7 @@ export default function AdminShell({ activo, children }: { activo: NavKey; child
         <nav className="flex flex-row gap-1 md:flex-col">
           {item('empleados', '/admin/empleados', 'Empleados')}
           {item('solicitudes', '/admin/solicitudes', 'Solicitudes')}
+          {item('cuenta', '/admin/cuenta', 'Mi cuenta')}
         </nav>
       </aside>
       <main className="mx-auto w-full max-w-3xl p-6">{children}</main>

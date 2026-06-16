@@ -1,11 +1,11 @@
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
-import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, fmtEur, type EvolucionDestino } from '@/lib/banca'
+import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPorDestino, getEvolucionPorDestino, getDuplicadosSospechosos, getDuplicadosResueltos, fmtEur, type EvolucionDestino } from '@/lib/banca'
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -17,7 +17,7 @@ export default async function BancaPage() {
   if (!session) redirect('/login')
 
   const anio = new Date().getFullYear()
-  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal] = await Promise.all([
+  const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
     listarMovimientos(session.id, undefined, 300),
@@ -26,6 +26,8 @@ export default async function BancaPage() {
     getResumenPorDestino(session.id),
     getEvolucionPorDestino(session.id, 6),
     getEstimacionFiscal(session.id, anio),
+    getDuplicadosSospechosos(session.id),
+    getDuplicadosResueltos(session.id),
   ])
 
   return (
@@ -130,6 +132,9 @@ export default async function BancaPage() {
             </div>
           </section>
         )}
+
+        {/* Posibles cargos duplicados — el dueño los resuelve */}
+        <DuplicadosBandeja grupos={duplicados} resueltos={dupResueltos} />
 
         {/* Por revisar (IA dudó) — el dueño asigna categoría */}
         {porRevisar.length > 0 && (
