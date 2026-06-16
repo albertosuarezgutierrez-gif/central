@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T15:13:00Z",
+  "generadoEn": "2026-06-16T17:13:49Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2347,6 +2347,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📧 FACTURAS CORREO · Agente de contabilidad + botón en Banca",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN",
       "fecha": "16/06/2026"
     },
@@ -2401,10 +2405,6 @@
     {
       "titulo": "🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales",
       "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada",
-      "fecha": "15/06/2026"
     }
   ],
   "saludRepo": {
