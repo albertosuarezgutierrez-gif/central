@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { signCleaningPhoto } from '@/lib/cleaning-photos'
-import { nimVision } from '@central/core-ai'
+import { aiVision } from '@/lib/ai-client'
 
 export const runtime = 'nodejs'
 export const maxDuration = 60
@@ -57,7 +57,7 @@ NO marques revisar por diferencias de iluminacion, angulo, encuadre, calidad de 
 Responde UNICAMENTE con JSON valido, sin markdown:
 {"coincide": true|false, "accion": "ok"|"revisar", "observaciones": ["maximo 3 frases breves"]}`
 
-  const txt = await nimVision(
+  const txt = await aiVision(
     nimConfig(), '',
     [{ data: montajeB64, mediaType: 'image/jpeg' }],
     prompt, 400, { temperature: 0.1 },

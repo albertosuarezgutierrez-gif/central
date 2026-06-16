@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { nimVision } from '@central/core-ai'
+import { aiVision } from '@/lib/ai-client'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY!
 const VISION_MODEL   = 'meta/llama-3.2-90b-vision-instruct'
@@ -51,7 +51,7 @@ Rules:
 - confianza alta = clearly visible, media = partially visible, baja = estimated
 - If a bottle is clearly new/full = 95-100%, clearly almost empty = 5-10%`
 
-    const raw = await nimVision(
+    const raw = await aiVision(
       nimConfig(), '',
       [{ data: imagen_base64, mediaType: media_type || 'image/jpeg' }],
       prompt, 600, { temperature: 0.05 },

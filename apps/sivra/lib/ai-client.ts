@@ -1,11 +1,23 @@
 /**
  * ai-client.ts — Wrapper IA para SIVRA
- * `aiComplete` delega en @central/core-ai.
- * `aiExtractInvoice` es específico de SIVRA (extrae facturas) y se mantiene aquí.
+ * Enruta por la PASARELA central (plataforma): las keys de proveedor y el control de coste/uso
+ * viven en plataforma. Si la pasarela no está configurada (sin AI_GATEWAY_URL+SECRET), usa NVIDIA
+ * NIM directo (fallback de transición). `aiExtractInvoice` (facturas) se mantiene aquí.
  */
-import { aiComplete as _aiComplete, nimVision, type NimConfig } from '@central/core-ai'
+import {
+  aiComplete as _aiComplete, nimVision,
+  gatewayChat, gatewayVision,
+  type NimConfig, type GatewayConfig,
+} from '@central/core-ai'
 
+const APP = 'sivra'
 const NVIDIA_VISION = 'meta/llama-3.2-90b-vision-instruct'
+
+function gatewayCfg(): GatewayConfig | null {
+  const url = process.env.AI_GATEWAY_URL
+  const secret = process.env.AI_GATEWAY_SECRET
+  return url && secret ? { url, secret, app: APP } : null
+}
 
 function nimConfig(): NimConfig {
   const apiKey = process.env.NVIDIA_API_KEY
@@ -31,7 +43,17 @@ export async function aiComplete(
   options:  AiOptions = {}
 ): Promise<string> {
   const { system, maxTokens = 800, temperature = 0.3, timeoutMs = 25_000, model } = options
+  const cfg = gatewayCfg()
+  if (cfg) return gatewayChat(cfg, messages, { system, model, maxTokens, timeoutMs })
   return _aiComplete(messages, { system, maxTokens, temperature, timeoutMs, model })
+}
+
+/** Visión / OCR: pasarela si está configurada; si no, NIM directo. */
+async function visionExtraer(system: string, imageBase64: string, mimeType: string): Promise<string> {
+  const cfg = gatewayCfg()
+  const images = [{ data: imageBase64, mediaType: mimeType }]
+  if (cfg) return gatewayVision(cfg, system, images, 'Extrae los datos de esta factura en JSON:', { maxTokens: 512, model: NVIDIA_VISION })
+  return nimVision(nimConfig(), system, images, 'Extrae los datos de esta factura en JSON:', 512, { signal: AbortSignal.timeout(30_000) })
 }
 
 // ─── Invoice extraction ───────────────────────────────────────────────
@@ -70,14 +92,7 @@ export async function aiExtractInvoice(input: {
 }): Promise<Record<string, any>> {
   // ── Imagen: modelo visión ────────────────────────────────────────────
   if (input.imageBase64 && input.mimeType) {
-    const txt = await nimVision(
-      nimConfig(),
-      INVOICE_SYSTEM,
-      [{ data: input.imageBase64, mediaType: input.mimeType }],
-      'Extrae los datos de esta factura en JSON:',
-      512,
-      { signal: AbortSignal.timeout(30_000) },
-    )
+    const txt = await visionExtraer(INVOICE_SYSTEM, input.imageBase64, input.mimeType)
     const clean = txt.replace(/```json|```/g, '').trim()
     try { return JSON.parse(clean) } catch { return {} }
   }

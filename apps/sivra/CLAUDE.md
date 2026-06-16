@@ -22,7 +22,7 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
   de enrutado en `middleware.ts`.
 - **Datos:** PostgreSQL en **Supabase** (proyecto **"Ingresos Y gastos Smoobu"**, ref
   `wswbehlcuxqxyinousql`). Prisma con conexión directa (`DATABASE_URL`).
-- **IA:** `lib/ai-client.ts` → NVIDIA NIM (texto + visión para facturas).
+- **IA:** `lib/ai-client.ts` → **pasarela de IA central de plataforma** (las keys viven solo en plataforma; gasto en su god-panel). `aiComplete` (texto) y `aiExtractInvoice` (OCR facturas) enrutan por la pasarela; sin los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` caen a NVIDIA NIM directo (fallback). El `seo-refresh` (Anthropic tool-calling) sigue directo.
 - **i18n:** next-intl (es/en/fr/de/it).
 - **Deploy:** Vercel (build `prisma generate && next build`), 10 crons en `vercel.json`.
 

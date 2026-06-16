@@ -3,6 +3,7 @@
 // uso y aplica presupuesto. Adaptador puro (fetch), sin secretos hardcodeados.
 
 import type { NimChatMessage } from './nim'
+import type { ImageInput } from './types'
 
 export type GatewayConfig = {
   /** URL base de la pasarela (p. ej. la de plataforma). */
@@ -45,4 +46,17 @@ export function gatewaySearch(
   opts: { maxTokens?: number; timeoutMs?: number } = {},
 ): Promise<string> {
   return llamar(config, '/api/ai/search', { system, user, maxTokens: opts.maxTokens }, opts.timeoutMs ?? 45_000)
+}
+
+/** Visión (OCR / análisis de imágenes) a través de la pasarela (NIM vision por debajo). */
+export function gatewayVision(
+  config: GatewayConfig,
+  system: string,
+  images: ImageInput[],
+  userText: string,
+  opts: { maxTokens?: number; model?: string; timeoutMs?: number } = {},
+): Promise<string> {
+  return llamar(config, '/api/ai/vision', {
+    system, images, userText, maxTokens: opts.maxTokens, model: opts.model,
+  }, opts.timeoutMs ?? 45_000)
 }
