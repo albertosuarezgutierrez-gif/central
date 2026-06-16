@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T07:17:23Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T13:41:14Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 4 apps · 17 packages · 23 capacidades · 13 skills · 767 rutas API.
+**Resumen:** 5 apps · 17 packages · 23 capacidades · 13 skills · 767 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -22,6 +22,11 @@
 - **Capacidades:** Facturación / VeriFactu
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 35
+### rrhh
+- **Módulos que usa:** —
+- **Capacidades:** —
+- **Tablas (0):** —
+- **Rutas API:** 0
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -97,25 +102,29 @@
 - **writing-plans** — Use when you have a spec or requirements for a multi-step task, before touching code
 
 ## Avisos de arquitectura
-- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Eventos / catering / BEO**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Reservas**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest.
-- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp.
-- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp.
-- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp.
-- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, sivra.
-- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Informes**: en ialimp; falta en ia-rest, sivra.
-- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp; falta en sivra.
-- ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, sivra.
+- ⚠️ **TPV / comanda**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **KDS (cocina)**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Eventos / catering / BEO**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Reservas**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **QR / portal cliente**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Feedback / propinas**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Equipo limpiadoras**: en ialimp, sivra; falta en ia-rest, rrhh.
+- ⚠️ **Agenda / auto-asignación**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Pricing dinámico**: en sivra; falta en ia-rest, ialimp, rrhh.
+- ⚠️ **Mercado / ingest**: en sivra; falta en ia-rest, ialimp, rrhh.
+- ⚠️ **CRM / leads / cotizador**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Marketing (blog/IG/SEO)**: en ia-rest, sivra; falta en ialimp, rrhh.
+- ⚠️ **RRHH / equipo**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Almacén / stock / ASN**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Proveedores / compras**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Contabilidad**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Facturación / VeriFactu**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Hardware bridge**: en ia-rest; falta en ialimp, rrhh, sivra.
+- ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
+- ⚠️ **Notificaciones (push)**: en ia-rest, ialimp; falta en rrhh, sivra.
+- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, sivra; falta en rrhh.
+- ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (15/06/2026) 🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)
