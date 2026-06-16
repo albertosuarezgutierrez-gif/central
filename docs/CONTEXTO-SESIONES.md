@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
+    de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de
+    proveedor y el **control de coste/uso** quedan centralizados en plataforma (`/operador/ia`).
+  - **Nuevo**: `lib/ai.ts` — `viaIA()` (pura, testeada), `iaDisponible()`, `iaChat()` (pasarela→NIM),
+    `iaSearch()` (pasarela search→degrada a chat; fallback Gemini/NIM directo). Prioriza la pasarela;
+    si no está configurada, usa la key directa (transición sin romper nada). Test `lib/ai.test.ts`.
+  - **Envs nuevos en Vercel `central-rrhh`**: `AI_GATEWAY_URL` (= URL de plataforma) + `AI_GATEWAY_SECRET`
+    (mismo valor que en plataforma). Al activarlos se podrán quitar `NVIDIA_API_KEY`/`GEMINI_API_KEY` de rrhh.
+  - **Bonus**: esto probablemente **arregla el "asistente no disponible"** (la key vivía en rrhh; ahora la
+    llamada la hace plataforma, donde `NVIDIA_API_KEY` ya funciona).
+
 - **🎨 RRHH · Marca blanca por empresa (white-label) — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
   - Cada empresa define su **color corporativo (hex)** y su **logo** desde **Mi cuenta** (gestor);
     el **Portal del Empleado** (`/e`) se tiñe con ellos (logo en cabecera + acento de la marca).

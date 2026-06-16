@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { aiComplete } from '@central/core-ai'
+import { iaChat, iaDisponible } from '@/lib/ai'
 import { listarExpediente } from '@/lib/documental'
 import { misSolicitudes, tipoEtiqueta } from '@/lib/solicitudes'
 import { ACTOR_TITULAR } from '@/lib/carpetas'
@@ -16,9 +16,9 @@ export async function responderAsistente(
   empleadoId: string,
   messages: MensajeAsistente[],
 ): Promise<{ respuesta: string }> {
-  // Sin API key → degradación elegante (no 500).
-  if (!process.env.NVIDIA_API_KEY) {
-    console.error('[asistente] NVIDIA_API_KEY ausente en runtime')
+  // Sin vía de IA (ni pasarela ni key directa) → degradación elegante (no 500).
+  if (!iaDisponible()) {
+    console.error('[asistente] IA no configurada en runtime (ni AI_GATEWAY_* ni NVIDIA_API_KEY)')
     return { respuesta: SIN_IA }
   }
 
@@ -50,7 +50,7 @@ export async function responderAsistente(
   const recientes = messages.slice(-10).map(m => ({ role: m.role, content: m.content }))
 
   try {
-    const respuesta = await aiComplete(recientes, {
+    const respuesta = await iaChat(recientes, {
       system: construirSystemPrompt(ctx),
       model: 'meta/llama-3.3-70b-instruct',
       maxTokens: 700,
@@ -58,7 +58,7 @@ export async function responderAsistente(
     })
     return { respuesta: respuesta.trim() || 'No he podido generar una respuesta. Inténtalo de nuevo.' }
   } catch (e) {
-    // Loguea el motivo REAL (status/mensaje de NIM) para poder diagnosticar en los Runtime Logs.
+    // Loguea el motivo REAL (status/mensaje de pasarela o NIM) para diagnosticar en los Runtime Logs.
     console.error('[asistente] fallo IA:', e instanceof Error ? `${e.name}: ${e.message}` : e)
     return { respuesta: SIN_IA }
   }
