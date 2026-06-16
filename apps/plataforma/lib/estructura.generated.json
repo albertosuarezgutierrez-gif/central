@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T19:20:04Z",
+  "generadoEn": "2026-06-16T19:35:30Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,7 +254,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 14
+        "evidencias": 15
       },
       "rrhh": {
         "estado": "usado",
@@ -1932,6 +1932,7 @@
       "/api/agente/chat",
       "/api/ai/chat",
       "/api/ai/search",
+      "/api/ai/tools",
       "/api/ai/vision",
       "/api/auth/login",
       "/api/auth/logout",
@@ -2688,7 +2689,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 848,
+    "apis": 849,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
