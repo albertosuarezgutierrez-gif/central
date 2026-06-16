@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T17:13:49Z",
+  "generadoEn": "2026-06-16T18:19:19Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2347,6 +2347,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "📧 FACTURAS CORREO · Agente de contabilidad + botón en Banca",
       "fecha": "16/06/2026"
     },
@@ -2400,10 +2404,6 @@
     },
     {
       "titulo": "📧 Skill `facturas-correo` creada (agente de facturas por email)",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales",
       "fecha": "16/06/2026"
     }
   ],
