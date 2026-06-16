@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:51:11Z",
+  "generadoEn": "2026-06-16T14:08:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,7 +254,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 8
+        "evidencias": 10
       },
       "rrhh": {
         "estado": "usado",
@@ -1930,6 +1930,8 @@
       "/api/admin/personas",
       "/api/admin/propiedades",
       "/api/agente/chat",
+      "/api/ai/chat",
+      "/api/ai/search",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
@@ -2216,6 +2218,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "ai_usos",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2663,7 +2666,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 824,
+    "apis": 826,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
