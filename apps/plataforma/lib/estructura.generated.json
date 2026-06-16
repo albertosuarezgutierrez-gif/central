@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T07:02:32Z",
+  "generadoEn": "2026-06-16T07:35:05Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -919,7 +919,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 10
+        "evidencias": 11
       }
     },
     "crm-leads": {
@@ -2005,6 +2005,7 @@
       "/api/mercado/ingest-auto",
       "/api/mercado/search",
       "/api/mercado/stats",
+      "/api/mercado/sweep",
       "/api/pitch",
       "/api/pricing-alerts",
       "/api/pricing/apply",
@@ -2598,7 +2599,7 @@
     "packages": 21,
     "capacidades": 23,
     "skills": 13,
-    "apis": 791,
+    "apis": 792,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
