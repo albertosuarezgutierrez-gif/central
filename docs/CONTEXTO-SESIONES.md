@@ -84,6 +84,15 @@
   - **Pendiente (necesita a Alberto):** Paso 1 (datos) — lanzar `/api/pricing/pisos-zona` logueado en sivra
     para poblar zona/CP/aforo reales. Luego: Paso 3 (bootstrap mercado por piso/fecha con conectores, lo hago
     yo) y primeros ciclos del agente en dry-run antes de vivo.
+- **📧 Skill `facturas-correo` creada (agente de facturas por email) — 16/06/2026**
+  Nueva skill `.claude/skills/facturas-correo/SKILL.md`: agente PROGRAMADO que revisa el Gmail de
+  Alberto, localiza facturas/justificantes, los clasifica (personal vs negocio deducible con las
+  reglas de `lib/categorizar.ts`), archiva los deducibles en Drive (`Facturas/<año>/<negocio>`), los
+  concilia contra `movimientos_bancarios` (Supabase) y deja un resumen en 3 bloques. Idempotente vía
+  etiqueta Gmail `Facturas/Procesado`. Alcance v1 elegido por Alberto: **Leer + Drive + conciliar**.
+  - **PENDIENTE DE ALBERTO (manual, 1 vez):** crear el **trigger diario en Claude Code web** con el
+    prompt «Ejecuta la skill `facturas-correo`» (entorno con MCP de Gmail + Drive + Supabase conectados).
+    Sin el trigger, la skill solo corre cuando él la pide. NO hay agente 24/7 — son pasadas programadas.
 
 - **🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales — 16/06/2026**
   Sesión de uso real con Alberto sobre los movimientos importados:
