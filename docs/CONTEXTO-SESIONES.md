@@ -16,6 +16,30 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26) — 16/06/2026**
+  Decisión: **firma propia** legalmente válida (no Firmafy ahora; avanzada basta para nóminas/contratos
+  por art. 29 ET + STS 1023/2016). Firmafy queda **enchufable** como otro proveedor del puerto.
+  - **Núcleo puro `@central/core-firma`** (`packages/core-firma`): puerto `ProveedorFirma` +
+    `FirmaPropia`. `hashDocumento` (SHA-256/WebCrypto), `nombreCoincide`, `cumpleArt26`,
+    `verificarIntegridad`, `TEXTO_CONSENTIMIENTO`, evidencia. Tests vitest **9/9**. Añadido a
+    `transpilePackages` + `file:` dep en rrhh.
+  - **Cómo cumple art.26:** (a) empleado teclea su nombre, se valida que coincide con el titular;
+    (b) guarda nombre+email/DNI; (c) control exclusivo por **token personal** del empleado
+    (`metodo='sesion_token'`; OTP email = refuerzo futuro); (d) **SHA-256 del documento** al firmar →
+    alteración detectable.
+  - **DB:** tabla `rrhh.firmas` (`prisma/migrations/0006_firmas.sql`, aplicada; FK a documentos
+    ON DELETE CASCADE, RLS on). `documentos.estado_firma`: `no_requiere→pendiente→firmado`.
+  - **App:** `lib/firma.ts` (`solicitarFirma`/`firmarDocumento`), `lib/storage.ts#descargarObjeto`,
+    API `POST /api/admin/empleados/[id]/documentos/[docId]/solicitar-firma` (avisa al empleado) y
+    `POST /api/e/expediente/[docId]/firmar` (avisa a responsables). UI: admin badge+"Solicitar firma";
+    empleado badge+"Firmar" (modal consentimiento + teclear nombre). Spec:
+    `docs/superpowers/specs/2026-06-16-rrhh-firma-avanzada-design.md`.
+  - **Probado:** core-firma 9/9; build rrhh verde; integración BD (estado→firmado, evidencia,
+    integro_original=true / integro_si_modificado=false, cascade) → datos de prueba borrados;
+    `hashDocumento`==`node:crypto` SHA-256.
+  - **Pendiente:** proveedor **Firmafy** (cuando Alberto tenga alta/credenciales — el flujo rrhh no
+    cambia, solo se elige proveedor); refuerzo OTP email con SMTP. **Precio** al cliente.
+
 - **🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280**
   Marca propia **iarrhh** (no del cliente). Todo en producción y **verificado en vivo**.
   - **Rediseño visual (#276):** vestida toda `apps/rrhh` con la imagen de la casa (estilo ia-rest):
