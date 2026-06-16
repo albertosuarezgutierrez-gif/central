@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T09:28:03Z",
+  "generadoEn": "2026-06-16T10:03:39Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1957,6 +1957,7 @@
       "/api/cron/psd2-sync",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/incomes",
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
@@ -2655,7 +2656,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 804,
+    "apis": 805,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
