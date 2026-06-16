@@ -63,6 +63,27 @@
     **Decisiones abiertas:** email de limpiadora obligatorio (para OTP) y marca del remitente. Fase 2
     identidad de persona; Fase 3 consolidación en plataforma. Roadmap: fichaje (RD 8/2019), art. 28 RGPD,
     canal de denuncias (Ley 2/2023), vacaciones, onboarding, gestoría.
+- **🤖 SIVRA · Agente de pricing — 1er ciclo con datos reales + motor por temporada (Paso 6/B2) — 16/06/2026**
+  Continuación del agente (#291 ya MERGED). Ejecutado el primer ciclo y construido B2.
+  - **Zona poblada** (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo), aforo y tipo
+    reales sacados de `propiedades` (el endpoint `/api/pricing/pisos-zona` requiere sesión y al abrirlo sin
+    login redirige; por eso se pobló por SQL desde `propiedades`).
+  - **Mercado real por zona+aforo** (`market_rates`, conector Booking MCP): finde julio (p50 ~132€ 4pax / ~122€
+    2pax), **Semana Santa 2027 p50 ~462€/noche (¡~3,3× normal!, ya disparado 9m vista)**, Feria 2027 (~162€, aún
+    sin rampar → oportunidad de adelantarse; FECHAS A CONFIRMAR).
+  - **Memoria** (`pricing_aprendizaje`): factor pelotazo SS, baseline verano, nota Feria. **Decisiones dry-run**
+    (`pricing_decisiones`, fuente `agente_bootstrap`): SS 2027 base Smoobu Duplex 371 / Luxury 354 / Busto 319, min-stay 3.
+  - **Paso 6/B2 (motor por temporada)** en `apps/sivra/app/api/pricing/apply/route.ts`: el motor tarificaba con
+    UN percentil por piso (mezclando fechas → precios planos). Ahora agrupa comps por **mes de `checkin_date`**
+    (más reciente por scenario+fecha+nombre, ventana 120d) y tarifica cada fecha con el mercado de SU mes;
+    fallback al global si <3 comps. Evento: si usa bucket mensual (ya refleja el evento) NO multiplica por
+    `eventFactor` (sin doble conteo) pero garantiza ≥ global×eventFactor; en fallback, comportamiento idéntico
+    al previo. Validado por SQL (buckets jul/oct/SS/Feria correctos). Va en rama `claude/pricing-b2-temporada`.
+  - **Pendiente:** (1) calibrar coste→`min_price` (suelo) de Duplex/Luxury/House (hoy NULL; apply_enabled=false →
+    solo dry-run); (2) House Sevillana necesita comps de unidad grande (12 plazas) + activar apply_enabled;
+    (3) aplicar a Smoobu vía raíles (Paso 4) requiere CRON_SECRET (cron) o sesión — Claude no puede llamarlo solo;
+    (4) confirmar fechas exactas de Feria 2027 y re-consultar conectores más cerca.
+
 - **🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)**
   Construido el cerebro + los raíles del agente de pricing autónomo (sobre #290, que ya creó las 3 tablas).
   - **Paso 4 (raíl, sivra):** `POST /api/pricing/aplicar-propuesta`. La IA propone y este endpoint aplica la
