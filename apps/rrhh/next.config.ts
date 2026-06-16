@@ -8,7 +8,7 @@ const monorepoRoot = path.join(__dirname, "..", "..")
 const nextConfig: NextConfig = {
   outputFileTracingRoot: monorepoRoot,
   // Núcleos compartidos (TS puro) que rrhh compila en su build.
-  transpilePackages: ['@central/core-firma', '@central/core-storage', '@central/module-documental', '@central/module-chat'],
+  transpilePackages: ['@central/core-email', '@central/core-firma', '@central/core-storage', '@central/module-documental', '@central/module-chat'],
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true }
 }
