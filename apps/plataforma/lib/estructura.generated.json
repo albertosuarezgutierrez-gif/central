@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T10:12:50Z",
+  "generadoEn": "2026-06-16T10:18:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -981,8 +981,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -1960,6 +1960,8 @@
       "/api/sivra/incomes",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
+      "/api/sivra/seo-proposals",
+      "/api/sivra/seo-refresh",
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
@@ -2658,7 +2660,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 807,
+    "apis": 809,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
