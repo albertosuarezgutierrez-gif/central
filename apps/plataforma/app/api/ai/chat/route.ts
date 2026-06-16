@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { aiComplete, type NimChatMessage } from '@central/core-ai'
 import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
 
+export const maxDuration = 60
+
 /** Pasarela IA — completion de texto (NIM). Las verticales llaman con Bearer AI_GATEWAY_SECRET. */
 export async function POST(req: Request) {
   if (!verificarSecreto(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -25,7 +27,7 @@ export async function POST(req: Request) {
       system: typeof body?.system === 'string' ? body.system : undefined,
       model: modelo,
       maxTokens: Number(body?.maxTokens) || 700,
-      timeoutMs: Number(body?.timeoutMs) || 20_000,
+      timeoutMs: Number(body?.timeoutMs) || 25_000,
     })
     await registrarUso({ app, endpoint: 'chat', proveedor: 'nim', modelo: modelo ?? null, ok: true, ms: Date.now() - t0 })
     return NextResponse.json({ text })

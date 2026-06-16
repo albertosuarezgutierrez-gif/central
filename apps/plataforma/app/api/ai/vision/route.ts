@@ -4,6 +4,8 @@ import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-ga
 
 const VISION_MODEL = 'meta/llama-3.2-90b-vision-instruct'
 
+export const maxDuration = 60
+
 /** Pasarela IA — visión / OCR (NIM vision). Bearer AI_GATEWAY_SECRET. */
 export async function POST(req: Request) {
   if (!verificarSecreto(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

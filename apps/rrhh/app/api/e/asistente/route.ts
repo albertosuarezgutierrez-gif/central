@@ -4,6 +4,9 @@ import { getSesionEmpleado } from '@/lib/empleado-tenant'
 import { AuthError } from '@/lib/tenant'
 import { responderAsistente } from '@/lib/asistente'
 
+// La función debe poder esperar a que NIM responda por la pasarela (hasta ~25 s) sin cortarse.
+export const maxDuration = 60
+
 const Body = z.object({
   messages: z
     .array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().max(2000) }))
