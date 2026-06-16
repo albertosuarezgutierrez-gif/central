@@ -4,8 +4,13 @@ import ChatPanel from '@/components/ChatPanel'
 import AdminShell from '@/components/AdminShell'
 
 type Carpeta = { id: string; etiqueta: string }
-type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; creada_at: string; url: string | null }
+type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; creada_at: string; url: string | null }
 type Empleado = { id: string; nombre: string; email: string | null; puesto: string | null }
+
+const FIRMA: Record<string, { txt: string; cls: string }> = {
+  pendiente: { txt: 'Pendiente de firma', cls: 'text-alert' },
+  firmado: { txt: '✔ Firmado', cls: 'text-ok' },
+}
 
 export default function ExpedienteClient({ empleado, carpetas, inicial }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[] }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
@@ -31,6 +36,12 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
     if (r.ok) await recargar()
   }
 
+  async function solicitarFirma(docId: string) {
+    setError('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/${docId}/solicitar-firma`, { method: 'POST' })
+    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error')
+  }
+
   return (
     <AdminShell activo="empleados">
       <a href="/admin/empleados" className="text-ink-3 text-sm no-underline hover:text-accent">← Empleados</a>
@@ -52,7 +63,13 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
                     ? <a href={d.url} target="_blank" rel="noreferrer" className="text-accent no-underline hover:underline">{d.nombre}</a>
                     : <span>{d.nombre}</span>}
                   <span className="text-ink-3 text-xs">· {d.subido_por}</span>
-                  <button onClick={() => borrar(d.id)} className="ml-auto bg-transparent px-2 py-0.5 text-alert hover:bg-paper-2">Borrar</button>
+                  {FIRMA[d.estado_firma] && <span className={`text-xs font-semibold ${FIRMA[d.estado_firma].cls}`}>· {FIRMA[d.estado_firma].txt}</span>}
+                  <span className="ml-auto flex items-center gap-1">
+                    {d.estado_firma === 'no_requiere' && (
+                      <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-0.5 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
+                    )}
+                    <button onClick={() => borrar(d.id)} className="bg-transparent px-2 py-0.5 text-alert hover:bg-paper-2">Borrar</button>
+                  </span>
                 </li>
               ))}
               {dc.length === 0 && <li className="text-ink-3 text-sm">Sin documentos</li>}

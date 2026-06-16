@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T20:44:56Z",
+  "generadoEn": "2026-06-16T05:20:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -18,6 +18,11 @@
       "id": "core-email",
       "tipo": "core",
       "npm": "@central/core-email"
+    },
+    {
+      "id": "core-firma",
+      "tipo": "core",
+      "npm": "@central/core-firma"
     },
     {
       "id": "core-fiscal",
@@ -275,6 +280,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 5
+      }
+    },
+    "core-firma": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-fiscal": {
@@ -1185,6 +1212,7 @@
   "depsModulos": {
     "core-ai": [],
     "core-email": [],
+    "core-firma": [],
     "core-fiscal": [],
     "core-identity": [],
     "core-push": [],
@@ -1897,6 +1925,7 @@
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -1905,6 +1934,7 @@
       "/api/auth/logout",
       "/api/e/chat",
       "/api/e/expediente",
+      "/api/e/expediente/[docId]/firmar",
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/solicitudes",
@@ -2132,6 +2162,7 @@
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresas",
+      "rrhh.firmas",
       "rrhh.mensajes",
       "rrhh.push_subscriptions",
       "rrhh.solicitudes",
@@ -2210,6 +2241,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
       "fecha": "15/06/2026"
     },
@@ -2263,10 +2298,6 @@
     },
     {
       "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
       "fecha": "14/06/2026"
     }
   ],
@@ -2560,10 +2591,10 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 20,
+    "packages": 21,
     "capacidades": 23,
     "skills": 13,
-    "apis": 786,
+    "apis": 788,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

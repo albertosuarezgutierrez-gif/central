@@ -66,3 +66,24 @@ model documentos {
   @@index([empleado_id])
   @@index([empresa_id])
 }
+
+model firmas {
+  id              String   @id @default(uuid()) @db.Uuid
+  empresa_id      String   @db.Uuid
+  empleado_id     String   @db.Uuid
+  documento_id    String   @db.Uuid
+  doc_hash        String
+  algoritmo       String   @default("SHA-256")
+  metodo          String
+  firmante_nombre String
+  firmante_email  String?
+  firmante_dni    String?
+  ip              String?
+  user_agent      String?
+  sello_tiempo    DateTime @db.Timestamptz(6)
+  evidencia       Json
+  creada_at       DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([documento_id])
+  @@index([empresa_id])
+}

@@ -36,3 +36,11 @@ export async function borrarObjeto(path: string): Promise<void> {
 export async function urlFirmada(path: string): Promise<string | null> {
   return signStorageObject(cfg(), BUCKET_DOCS, path, 3600)
 }
+
+/** Descarga los bytes de un objeto del bucket privado (service_role). Para hashear al firmar. */
+export async function descargarObjeto(path: string): Promise<ArrayBuffer> {
+  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/${BUCKET_DOCS}/${path}`
+  const r = await fetch(url, { headers: { Authorization: `Bearer ${serviceKey()}` } })
+  if (!r.ok) throw new Error(`Storage download ${r.status}`)
+  return r.arrayBuffer()
+}
