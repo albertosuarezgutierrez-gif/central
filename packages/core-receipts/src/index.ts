@@ -17,3 +17,11 @@ export {
   formatFiscalNumber,
   FiscalIntegrityError,
 } from './integrity.ts'
+
+export {
+  generarEscPos,
+  generarTextoPlano,
+  generarTicketCuenta,
+  generarEscPosCuenta,
+} from './renderers/thermal.ts'
+export type { PrintPayload, ItemCuenta, TicketCuentaParams, CuentaParams } from './renderers/thermal.ts'
