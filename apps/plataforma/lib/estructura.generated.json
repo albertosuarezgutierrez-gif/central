@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T07:41:38Z",
+  "generadoEn": "2026-06-16T08:13:33Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -897,7 +897,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 22
+        "evidencias": 23
       }
     },
     "mercado": {
@@ -2017,6 +2017,7 @@
       "/api/pricing/historial",
       "/api/pricing/pilot-track",
       "/api/pricing/pilot-track/historial",
+      "/api/pricing/pisos-zona",
       "/api/pricing/recommend",
       "/api/pricing/restore",
       "/api/pricing/resultados",
@@ -2599,7 +2600,7 @@
     "packages": 21,
     "capacidades": 23,
     "skills": 13,
-    "apis": 792,
+    "apis": 793,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
