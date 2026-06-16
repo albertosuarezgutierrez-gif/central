@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:46:43Z",
+  "generadoEn": "2026-06-16T13:51:11Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -258,7 +258,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 4
       },
       "sivra": {
         "estado": "usado",
@@ -1977,6 +1977,7 @@
     ],
     "rrhh": [
       "/api/admin/cuenta/convenio",
+      "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -2662,7 +2663,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 823,
+    "apis": 824,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
