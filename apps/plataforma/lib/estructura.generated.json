@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T06:12:09Z",
+  "generadoEn": "2026-06-16T07:15:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -113,6 +113,11 @@
       "id": "module-revenue",
       "tipo": "module",
       "npm": "@central/module-revenue"
+    },
+    {
+      "id": "module-rrhh",
+      "tipo": "module",
+      "npm": "@central/module-rrhh"
     }
   ],
   "capacidades": [
@@ -539,7 +544,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -694,6 +699,28 @@
       "rrhh": {
         "estado": "no",
         "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-rrhh": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 3
       },
       "sivra": {
         "estado": "no",
@@ -1230,7 +1257,11 @@
     "module-organizador-trabajo": [],
     "module-presupuestos": [],
     "module-proveedores": [],
-    "module-revenue": []
+    "module-revenue": [],
+    "module-rrhh": [
+      "core-firma",
+      "module-documental"
+    ]
   },
   "apisPorVertical": {
     "ia-rest": [
@@ -2243,6 +2274,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
       "fecha": "16/06/2026"
     },
@@ -2296,10 +2331,6 @@
     },
     {
       "titulo": "📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
       "fecha": "14/06/2026"
     }
   ],
@@ -2593,7 +2624,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 21,
+    "packages": 22,
     "capacidades": 23,
     "skills": 13,
     "apis": 789,

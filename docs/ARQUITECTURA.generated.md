@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T06:12:09Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T07:15:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 21 packages · 23 capacidades · 13 skills · 789 rutas API.
+**Resumen:** 5 apps · 22 packages · 23 capacidades · 13 skills · 789 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -23,7 +23,7 @@
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 36
 ### rrhh
-- **Módulos que usa:** core-email, core-firma, core-storage, module-chat, module-documental
+- **Módulos que usa:** core-email, core-firma, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push)
 - **Tablas (9):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
 - **Rutas API:** 20
@@ -97,6 +97,9 @@
 - **module-revenue** (module) → `@central/module-revenue`
   - Lo usan: —
   - Depende de: —
+- **module-rrhh** (module) → `@central/module-rrhh`
+  - Lo usan: rrhh
+  - Depende de: core-firma, module-documental
 
 ## Skills del proyecto
 - **auditoria-central** — Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte "¿se ha roto algo?", "haz una auditoría", "revisa que todo está bien" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP).
@@ -139,6 +142,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/06/2026) 🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`
 - (16/06/2026) ✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)
 - (15/06/2026) 🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280
 - (15/06/2026) 🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269
@@ -148,5 +152,4 @@
 - (14/06/2026) 🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)
 - (14/06/2026) 🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)
 - (15/06/2026) 🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital
-- (15/06/2026) 🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)
 
