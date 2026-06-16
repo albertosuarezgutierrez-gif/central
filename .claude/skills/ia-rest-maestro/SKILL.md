@@ -254,7 +254,8 @@ Authorization: Bearer {VERCEL_TOKEN}
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
 - LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct → fallback Claude Haiku
 - LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct → fallback Claude Haiku
-- Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `cleanJSON()`
+- Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
+- **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), `callAI`/`callAISearch`/`callAIVision` enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`) y caen al camino directo NIM→Haiku si falla. `callAITools` (function-calling de los agentes del god-panel) va **directo a NIM** (la pasarela no expone tool-calling)
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=false)`
   - `noFallback=false` (default) → NIM primario, fallback Haiku si falla
   - `noFallback=true` → NIM puro, lanza error si falla, NUNCA toca Anthropic
@@ -1656,8 +1657,10 @@ supabase/functions/nim-diagnostico · nim-sentiment · notify-error
 - `pg_cron` en Supabase → job #6 (alerta-ritmo).
 
 ## Su "cerebro"
-Todos llaman a `lib/ai-client.ts` → `callAI()` → NIM → Haiku.
-NINGUNO usa la API de Anthropic ni Claude Code directamente.
+Todos llaman a `lib/ai-client.ts` (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) → **pasarela central**
+si está configurada, si no NIM → Haiku. Los 4 agentes del god-panel (agentes-ai, agente-arquitecto,
+agentes-seo, cron/seo-agent) migraron de Anthropic a NIM+Gemini el 16/06/2026 (`callAITools`/`callAISearch`).
+NINGUNO usa ya la API de Anthropic como vía principal (solo queda como fallback sin saldo).
 
 ## Su estado / memoria
 Tablas de BD: `qa_patrones_error`, `ia_training_log`, `alerta_log`,
