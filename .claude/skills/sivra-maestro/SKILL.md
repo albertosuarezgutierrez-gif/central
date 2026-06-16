@@ -34,7 +34,7 @@ description: >
 ## Infra (sin secretos — nombres de variable)
 - **Supabase** `wswbehlcuxqxyinousql` (schema `public`) — **COMPARTIDA con ialimp y plataforma**.
 - **Prisma** con conexión directa (`DATABASE_URL`/`DIRECT_URL`); auth NextAuth v5 (admin) + cookie
-  `limpiadora_token`. IA por `lib/ai-client.ts` (NVIDIA NIM). Deploy Vercel, 10 crons en `vercel.json`.
+  `limpiadora_token`. IA por `lib/ai-client.ts` → **pasarela central de plataforma** (`aiComplete`+`aiExtractInvoice` OCR+`aiSearch` web; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, fallback NIM directo). `seo-refresh` migró a `aiSearch`→`gatewaySearch`/Gemini (16/06/2026) → **sin Anthropic**. Deploy Vercel, 10 crons en `vercel.json`.
 - Envs: `NEXTAUTH_SECRET/URL`, `SMOOBU_API_KEY`, `NVIDIA_API_KEY`, `SERPER_API_KEY`,
   `GMAIL_USER/GMAIL_APP_PASSWORD`, `NEXT_PUBLIC_SUPABASE_URL/ANON_KEY`, `CRON_SECRET`, `DRIVE_SCRIPT_URL`,
   `AUTH_TRUST_HOST=true` (local). Valores en Vercel env, nunca en repo.

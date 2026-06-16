@@ -12,6 +12,7 @@
   "dependencies": {
     "@central/core-ai": "file:../../packages/core-ai",
     "@central/core-email": "file:../../packages/core-email",
+    "@central/core-identity": "file:../../packages/core-identity",
     "@central/core-firma": "file:../../packages/core-firma",
     "@central/core-storage": "file:../../packages/core-storage",
     "@central/legal-templates": "file:../../packages/legal-templates",
@@ -44,7 +45,7 @@
     "postcss": "^8.4.49",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
-    "vitest": "^2.1.0"
+    "vitest": "^3.2.6 <4.0.0"
   },
   "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile"
 }

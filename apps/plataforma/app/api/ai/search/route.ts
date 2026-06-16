@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { geminiSearch } from '@central/core-ai'
 import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
 
+export const maxDuration = 60
+
 /** Pasarela IA — búsqueda web + síntesis (Gemini). Bearer AI_GATEWAY_SECRET. */
 export async function POST(req: Request) {
   if (!verificarSecreto(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

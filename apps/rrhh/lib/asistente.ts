@@ -54,7 +54,9 @@ export async function responderAsistente(
       system: construirSystemPrompt(ctx),
       model: 'meta/llama-3.3-70b-instruct',
       maxTokens: 700,
-      timeoutMs: 20_000,
+      // El cliente debe esperar MÁS que el timeout de NIM en la pasarela (25 s) para no abortar
+      // justo cuando la pasarela aún está respondiendo (causaba "no disponible" con NIM lento).
+      timeoutMs: 35_000,
     })
     return { respuesta: respuesta.trim() || 'No he podido generar una respuesta. Inténtalo de nuevo.' }
   } catch (e) {

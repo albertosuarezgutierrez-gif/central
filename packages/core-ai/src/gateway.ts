@@ -2,7 +2,8 @@
 // proveedor: llaman a la pasarela con un secreto compartido y ésta enruta a NIM/Gemini, registra el
 // uso y aplica presupuesto. Adaptador puro (fetch), sin secretos hardcodeados.
 
-import type { NimChatMessage } from './nim'
+import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
+import type { ImageInput } from './types'
 
 export type GatewayConfig = {
   /** URL base de la pasarela (p. ej. la de plataforma). */
@@ -45,4 +46,39 @@ export function gatewaySearch(
   opts: { maxTokens?: number; timeoutMs?: number } = {},
 ): Promise<string> {
   return llamar(config, '/api/ai/search', { system, user, maxTokens: opts.maxTokens }, opts.timeoutMs ?? 45_000)
+}
+
+/**
+ * Function-calling a través de la pasarela (NIM por debajo). Devuelve el mensaje del modelo
+ * (`content` y/o `tool_calls`); la vertical ejecuta las herramientas y reenvía los resultados.
+ * No usa `llamar` porque la respuesta no es `{text}` sino `{content, tool_calls}`.
+ */
+export async function gatewayTools(
+  config: GatewayConfig,
+  messages: NimToolMessage[],
+  tools: unknown[],
+  opts: { system?: string; model?: string; maxTokens?: number; timeoutMs?: number } = {},
+): Promise<NimToolResult> {
+  const res = await fetch(`${config.url.replace(/\/$/, '')}/api/ai/tools`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${config.secret}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ app: config.app, messages, tools, system: opts.system, model: opts.model, maxTokens: opts.maxTokens }),
+    signal: AbortSignal.timeout(opts.timeoutMs ?? 30_000),
+  })
+  if (!res.ok) throw new Error(`Gateway-Tools HTTP ${res.status}: ${(await res.text()).slice(0, 150)}`)
+  const data = await res.json()
+  return { content: data?.content ?? null, tool_calls: data?.tool_calls }
+}
+
+/** Visión (OCR / análisis de imágenes) a través de la pasarela (NIM vision por debajo). */
+export function gatewayVision(
+  config: GatewayConfig,
+  system: string,
+  images: ImageInput[],
+  userText: string,
+  opts: { maxTokens?: number; model?: string; timeoutMs?: number } = {},
+): Promise<string> {
+  return llamar(config, '/api/ai/vision', {
+    system, images, userText, maxTokens: opts.maxTokens, model: opts.model,
+  }, opts.timeoutMs ?? 45_000)
 }

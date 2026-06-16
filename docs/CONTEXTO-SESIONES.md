@@ -16,6 +16,82 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo — 16/06/2026** (PR #329 MERGED, squash `92e6140`)
+  - Nuevo endpoint **`POST /api/ai/tools`** en plataforma (espejo de `/api/ai/chat`): `verificarSecreto` +
+    `dentroDePresupuesto` + `registrarUso` (endpoint `'tools'`). Recibe `messages`+`tools` (OpenAI),
+    responde `{content, tool_calls}`.
+  - **`@central/core-ai`**: `aiTools` (lee `NVIDIA_API_KEY`, en `client.ts`) + `gatewayTools` (adaptador
+    vertical, en `gateway.ts`). Exports añadidos.
+  - **ia-rest** `callAITools` enruta por la pasarela (`gatewayTools`) y cae a `nimChatTools` directo si falla.
+  - **Resultado:** las **4 vías** de IA de ia-rest (`callAI`/`callAISearch`/`callAIVision`/`callAITools`)
+    pasan ya por la pasarela cuando está configurada → gasto 100% centralizado en `/operador/ia`. `tsc` limpio.
+
+- **🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325 — 16/06/2026** (PR #327)
+  - **sivra `seo-refresh`** ya NO usa Anthropic web_search: `lib/ai-client.ts` gana `aiSearch()` →
+    `gatewaySearch` (pasarela central, Gemini+Google Search); sin pasarela cae a NIM puro. Eliminada
+    `ANTHROPIC_API_KEY` de la ruta. **Con esto NINGÚN agente del repo llama ya a Anthropic como vía principal.**
+  - **ia-rest `lib/ai-client.ts`** enruta por la **pasarela central** (como ialimp/sivra): `gatewayCfg()`
+    (`AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, env de equipo Vercel); `callAI`/`callAISearch`/`callAIVision`
+    intentan la pasarela primero y caen al camino directo NIM→Anthropic si no está / falla.
+    `callAITools` (function-calling de los agentes del god-panel) sigue **directo a NIM** (la pasarela no
+    expone tool-calling).
+  - Anthropic queda solo como fallback de transición en ia-rest (hoy sin saldo). `tsc` limpio en ambas apps.
+
+- **🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel — 16/06/2026** (PR #325 MERGED, squash `97bdcc2`)
+  - **Motivo**: los 4 agentes daban error 500 *"Anthropic no disponible (sin crédito)"*. Decisión de Alberto:
+    quitar Anthropic → **NVIDIA NIM + Gemini** (gratis, sin saldo).
+  - **`@central/core-ai`**: nuevo `nimChatTools` (function-calling con NIM, endpoint OpenAI-compatible) +
+    tipos `NimToolMessage`/`NimToolCall`/`NimToolResult`. NIM corre el bucle agéntico; la app ejecuta sus tools.
+  - **ia-rest `lib/ai-client.ts`**: `callAITools(system, messages, tools)` (wrapper de `nimChatTools`).
+  - **Agentes migrados** (las herramientas se ejecutan igual; solo cambió el "cerebro"):
+    - `agentes-ai` (solo búsqueda web) → **Gemini** (`callAISearch`).
+    - `agente-arquitecto` (GitHub/Drive) → **NIM function-calling**.
+    - `agentes-seo` (web_search + GSC/GA4) → **NIM**; `web_search` pasa a tool custom respaldada por **Gemini**.
+    - `cron/seo-agent` (web_search + escritura SEO + GSC/GA4) → **NIM + Gemini**.
+  - Funciona con `NVIDIA_API_KEY` + `GEMINI_API_KEY` que ia-rest **ya tiene**. `tsc` limpio. 5 deploys Vercel en verde.
+  - **PENDIENTE**: (a) **sivra `seo-refresh`** (cron) aún usa Anthropic web_search → migrar igual a Gemini.
+    (b) Conectar el `ai-client` de ia-rest a la pasarela central (como ialimp/sivra) para centralizar su gasto.
+
+
+- **📧 FACTURAS CORREO · Sistema completo en producción — 16/06/2026** (PR #324 MERGED)
+  - **Flujo diario automatizado:**
+    - 06:00 UTC → cron PSD2 sincroniza BBVA + Kutxa (23 movimientos insertados en primera sync)
+    - 08:00 CEST → Rutina Claude `Revisar facturas correo` procesa Gmail → Drive → Supabase
+  - **Infraestructura:**
+    - `CRON_SECRET` configurado en Vercel plataforma → cron PSD2 ya funciona
+    - Rutina activa en `claude.ai/code → Rutinas` (daily 8:00 CEST, repo `central`, MCPs Gmail+Drive+Supabase)
+    - Botón `📧 Revisar correo` en Banca → abre Claude Code + copia `/facturas-correo` al portapapeles
+    - Slash command `/facturas-correo` disponible en Claude Code web
+  - **Clasificaciones confirmadas por Alberto:**
+    - IKEA/Taskrabbit/ferretería → `turistico_pisos`; TotalEnergies → `turistico_pisos`
+    - Anthropic Ireland → `seguros`; BSH + Tutrocito 122.87€ → `personal`
+    - Círculo Mercantil → siempre `personal`
+  - **Regla reenvíos Pilar** (actualizada en skill): Taskrabbit/fontanero/Amazon/ferretería → siempre "Para tu decisión" (no auto-clasificar)
+  - **Archivados en Drive** (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic, TotalEnergies, PriceLabs, Taskrabbit 85.41€ (montaje IKEA, 16/06)
+  - **Pendiente subida manual**: IKEA 888.89€ PDF + PDFs TotalEnergies (MCP Gmail no descarga adjuntos)
+  - **Vercel 190.93€ + Anthropic 217.80€**: pagados desde **N26** → pendiente conectar N26 al PSD2 o subir extracto manual
+  - **Etiqueta Gmail**: `Facturas/Procesada` (Label_11) — todos los correos procesados etiquetados
+
+
+- **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - **Decisión de Alberto**: la IA NO se configura por proyecto. Las **keys de proveedor viven solo en
+    plataforma**; cada vertical llama a la pasarela. La conexión (`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`)
+    se pone **UNA vez como Variables Compartidas a nivel de equipo (Team) en Vercel** → todos los
+    proyectos la heredan, sin repetir por proyecto.
+  - **Pasarela ampliada con VISIÓN/OCR**: `gatewayVision` (core-ai) + `POST /api/ai/vision` en plataforma
+    (NIM vision, Bearer, presupuesto, registro en `ai_usos`). Necesario porque ialimp/sivra hacen mucho OCR.
+  - **ialimp** (100% migrado): `lib/ai-client.ts` reescrito → `aiComplete` y `aiVision` enrutan por la
+    pasarela con fallback a NIM directo. Los **7 sitios de OCR** (`concursos-ocr`, `cron/procesar-documentos`,
+    `propietario/escanear`, `admin/escanear/process`, `admin/ia/{analizar-foto,analizar-botes,comparar-foto}`)
+    cambiados de `nimVision`→`aiVision` (misma firma). `lib/concursos.ts` importa `aiComplete` del wrapper.
+  - **sivra**: `lib/ai-client.ts` → `aiComplete` y `aiExtractInvoice` (OCR facturas) por la pasarela con fallback.
+  - **ia-rest PENDIENTE** (Fase 2): los 4 agentes con **tool-calling de Anthropic** (agente-arquitecto, agentes-seo,
+    agentes-ai, cron/seo-agent) + el `seo-refresh` de sivra NO migran: la pasarela hace chat+búsqueda+visión, no
+    tool-calling. Para unificarlos hay que extender la pasarela con un endpoint de tool-calling (Anthropic). Las
+    llamadas NIM/Gemini planas de ia-rest sí se pueden migrar (su `ai-client.ts`) en otro PR.
+  - **Migración SIN romper nada**: sin los envs, todo sigue con las keys directas; al ponerlos, pasa por la pasarela.
+  - **Tras configurar**: el gasto de ialimp/sivra/rrhh se ve en plataforma → god-panel → 🤖 IA · gasto.
+
 - **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
   - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
     de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de
@@ -45,6 +121,18 @@
     Gemini, Bearer `AI_GATEWAY_SECRET`) + god-panel `🤖 IA · gasto` (`/operador/ia`) + tabla `public.ai_usos`.
     Pendiente Alberto: env `AI_GATEWAY_SECRET` (+opc. `GEMINI_API_KEY`, `AI_GATEWAY_LIMITE_MENSUAL`) en plataforma.
 
+- **🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal — 16/06/2026** (PR #316 mergeado, rama `claude/sivra-fase3-mercado-pricing`)
+  - **Páginas migradas** de sivra → plataforma `/sivra/*`:
+    - `/sivra/mercado` — benchmark de competidores: panel por escenario (normal/corpus), toggle de portales, percentiles p25/p50/p75, búsqueda en tiempo real (Serper+NIM). APIs `GET /api/sivra/mercado/stats`, `GET /api/sivra/mercado/search`, `POST /api/sivra/mercado/ingest`.
+    - `/sivra/pricing` — Pricing Lab en modo shadow: tabla de experimentos A/B por propiedad (booked/libre/activo), stats de ocupación vs PriceLabs. APIs `GET|POST|DELETE /api/sivra/pricing/experiments`, `GET /api/sivra/pricing/stats`.
+    - `/sivra/pricing-auto` — Motor de precios completo: 13 parámetros por propiedad, botón de pánico, historial de aplicaciones, resultados €, pilot tracking 🟢🟡🔴. APIs `GET /api/sivra/pricing/settings`, `GET /api/sivra/pricing/apply`, `GET /api/sivra/pricing/historial`, `GET /api/sivra/pricing/resultados`, `GET /api/sivra/pricing/pilot-track`, etc.
+  - **Calendario Gantt** (`/sivra/calendario`) — barras ahora coloreadas por portal de reserva (Airbnb rojo, Booking azul, VRBO azul oscuro, Directo violeta, Otros gris). Leyenda actualizada. Antes eran por propiedad (redundante con filas).
+  - **Libs puras copiadas de sivra**: `lib/sivra/pricing-engine.ts` (motor de recomendación), `lib/sivra/pricing-calendar.ts` (eventos/estaciones), `lib/sivra/pilot-track.ts` (evaluación 🟢🟡🔴).
+  - **7 nuevos crons** en `vercel.json`: mercado/cron (07:15), mercado/sweep (dom 03:00), pricing/guard (07:30), pricing/experiments/check-results (08:00), pricing/apply-auto (08:30), pricing/resumen-diario (09:00), pricing/pilot-track (09:15).
+  - **UserSidebar.tsx** — NAV_PISOS ampliado con 3 entradas: Mensajes, Mercado, Pricing Lab, Pricing auto.
+  - **Estado CI**: todos los proyectos en Ready ✅ (plataforma, ialimp, sivra, ia-rest, central-rrhh)
+  - **Siguiente Fase 4**: Admin limpiadoras (⚠️ riesgo ialimp, requiere auditoría RLS previa)
+
 - **🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard — 16/06/2026** (PR #310, mergeado)
   - **Mensajería de huéspedes** migrada de sivra → plataforma:
     - `lib/smoobu.ts` — `getSmoobuKey()` lee `pms_connections.smoobu_api_key` (tabla de ialimp) con caché 5min; fallback a `SMOOBU_API_KEY` env solo si BD falla
@@ -58,7 +146,6 @@
     - Fecha `checkIn` ahora usa `::date::text` (antes `::text` devolvía timestamp completo `2026-06-16 12:00:00+00`)
     - Widget "Esta semana en los pisos": `maxWidth: 90` en nombre de piso (era `minWidth`) + `minWidth: 0` en contenedor → importe ya no se corta en móvil
   - **Env vars necesarias en proyecto Vercel `plataforma`**: `SMOOBU_API_KEY` (fallback), `SMOOBU_PMS_CONNECTION_ID` (opcional, tiene default), `SIVRA_URL` (para notificar limpiadoras)
-  - **Fase 3 pendiente**: `/sivra/mercado` + `/sivra/pricing` + `/sivra/pricing-auto` (⚠️ A/B test live en Busto Reform)
 
 - **🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard — 16/06/2026** (PR #305, rama `claude/sivra-fase1b-income-expenses`)
   - **Páginas migradas** de sivra → plataforma `/sivra/*`:

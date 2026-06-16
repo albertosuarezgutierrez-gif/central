@@ -423,6 +423,27 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
 const dupGhost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
 const dupDanger: React.CSSProperties = { background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
 
+// Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar.
+export function RevisarCorreoBtn() {
+  const [estado, setEstado] = useState<'idle' | 'ok'>('idle')
+
+  function abrir() {
+    navigator.clipboard?.writeText('/facturas-correo').catch(() => {})
+    window.open('https://claude.ai/code', '_blank', 'noopener')
+    setEstado('ok')
+    setTimeout(() => setEstado('idle'), 3000)
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <button onClick={abrir} style={ghost} title="Abre Claude Code y copia el comando al portapapeles">
+        {estado === 'ok' ? '✓ Comando copiado' : '📧 Revisar correo'}
+      </button>
+      {estado === 'ok' && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Pega con Ctrl+V en Claude</span>}
+    </span>
+  )
+}
+
 // Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
 // sobre los movimientos ya cargados; sin llamadas extra al servidor.
 type MovTabla = {
