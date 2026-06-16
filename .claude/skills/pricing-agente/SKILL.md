@@ -102,3 +102,24 @@ demasiadas fechas o % medio enorme) · solo fechas disponibles · auditoría en 
   (`getSmoobuKey`), tú nunca la manejas.
 - BD compartida con ialimp/plataforma: no toques RLS/buckets/GRANTs (ver `sivra-maestro`).
 - Memoria del proyecto: al cerrar, actualiza `docs/CONTEXTO-SESIONES.md`.
+
+## Estado vivo (16/06/2026) — leer al empezar el ciclo
+- **Zona** poblada (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo).
+- **Costes/suelos** ya calibrados (`pricing_aprendizaje/ALL/costes` + `pricing_settings.min_price`):
+  busto 90 · duplex 85 · luxury 95 · house 180. Coste real/noche ~14-30€ (limpieza + fijos; busto y luxury
+  son **subarriendo** → la renta es coste duro). El suelo es protección, no precio.
+- **Motor por temporada (B2)** YA en prod: `apply/route.ts` tarifica por mes de `checkin_date` con fallback al
+  global. NO hace falta reimplementar bucketing; solo alimentar `market_rates` con comps fechados por mes.
+- **EN VIVO solo `busto_reform`** (`apply_enabled=true`). Duplex/Luxury/House en dry-run hasta que Alberto valide
+  Busto. NO actives `apply_enabled` de otros pisos sin OK explícito de Alberto.
+- **Mercado real ya cargado** (Booking MCP): verano, Semana Santa 2027 (~462€ p50, pelotazo) y Feria 2027 (sin rampar).
+- **Pendiente de datos:** comps de Semana Santa **para Busto** (2 plazas); **fechas exactas de Feria 2027**;
+  comps de unidad grande (12 plazas) para House Sevillana.
+
+## Recurrencia / autonomía (importante, no prometer 24/7 de más)
+- **Va solo (crons in-app):** `apply-auto` (tarifica Busto a diario), `rates/snapshot` (mide `was_booked`),
+  `mercado/sweep` + `eventos/sync` (refrescan datos), `resumen-diario`/`pilot-track` (KPIs). Bucle determinista
+  que se retroalimenta sin Claude.
+- **Solo con sesión de Claude:** este agente con los **conectores de viajes** (Booking/Tripadvisor/Trivago) —
+  los conectores viven en la sesión, no en la app. Para que corra periódicamente: **sesión programada de Claude
+  Code on web** apuntando a este skill. Sin ella, el motor sigue con los datos que tenga (plan B).
