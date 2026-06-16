@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T06:58:40Z",
+  "generadoEn": "2026-06-16T07:02:32Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2245,6 +2245,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)",
       "fecha": "15/06/2026"
     },
@@ -2298,10 +2302,6 @@
     },
     {
       "titulo": "🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)",
       "fecha": "14/06/2026"
     }
   ],

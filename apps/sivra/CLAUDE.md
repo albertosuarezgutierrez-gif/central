@@ -11,6 +11,11 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 > Booking/Trivago, endpoint `/api/mercado/ingest`, piloto Busto Reform) está documentado en
 > **`docs/pricing-automatico.md`**, con el checklist de lo que falta para que sea vendible ("no puede fallar").
 
+> **🧾 Contabilidad — separación de cuentas (REGLA):** la P&L NO se mezcla. **BBVA** = Duplex Center +
+> seguros (aparte). **Kutxa** = personal + los **3 apartamentos turísticos** (Socorro/House Sevillana +
+> Busto Reform + Luxury Busto), que hay que sacar **sin lo personal**. Detalle y mapeo en
+> **`docs/contabilidad.md`**. El dashboard "Evolución mensual" actual mezcla todo → no vale.
+
 ## Stack
 - **Next.js 15** (App Router) · React 19 · TypeScript 5.6 · Tailwind 3.4
 - **Auth:** NextAuth v5 (credenciales admin) + cookie `limpiadora_token` para limpiadoras. Lógica

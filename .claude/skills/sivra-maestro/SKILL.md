@@ -26,6 +26,7 @@ description: >
 |---|---|
 | Reglas y gotchas del repo | `apps/sivra/CLAUDE.md` |
 | Pricing dinámico (producto a vender) | `apps/sivra/docs/pricing-automatico.md` |
+| Contabilidad — separación de cuentas (BBVA vs Kutxa, 3 pisos vs personal) | `apps/sivra/docs/contabilidad.md` |
 | Seguridad de BD (qué se aplicó / qué se revirtió) | `apps/sivra/docs/auditoria-seguridad.md` |
 | Estado vivo del proyecto | `docs/CONTEXTO-SESIONES.md` (entradas de arriba) |
 | Estructura del monorepo | `MATRIZ.md` |
