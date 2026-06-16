@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:07:45Z",
+  "generadoEn": "2026-06-16T14:12:59Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -916,7 +916,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 15
+        "evidencias": 17
       },
       "rrhh": {
         "presente": false,
