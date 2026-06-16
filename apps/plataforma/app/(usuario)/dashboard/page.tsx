@@ -38,7 +38,7 @@ async function getProximasLlegadas() {
     checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null
   }>>`
     SELECT i."propertyId" AS "propertyId", p.name AS "propertyName",
-           i."guestName", i."checkIn"::text, i."checkOut"::text,
+           i."guestName", i."checkIn"::date::text AS "checkIn", i."checkOut"::date::text AS "checkOut",
            i.portal, i.amount::float, i.nights
     FROM incomes i
     LEFT JOIN properties p ON p.id = i."propertyId"
@@ -196,20 +196,20 @@ export default async function DashboardPage() {
                 const propColor = PROP_COLORS[inc.propertyId] ?? '#94a3b8'
                 const portalBg = PORTAL_BADGE[inc.portal ?? ''] ?? '#64748b'
                 return (
-                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 8px', borderRadius: 6, background: isToday ? 'var(--primary-light)' : 'transparent' }}>
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, background: isToday ? 'var(--primary-light)' : 'transparent', minWidth: 0 }}>
                     <div style={{ width: 6, height: 6, borderRadius: '50%', background: propColor, flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--muted)', minWidth: 32, flexShrink: 0 }}>
+                    <span style={{ fontSize: 12, fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--muted)', width: 30, flexShrink: 0 }}>
                       {isToday ? 'HOY' : isTomorrow ? 'MÑN' : `${d}/${m}`}
                     </span>
-                    <span style={{ fontSize: 12, color: 'var(--muted)', minWidth: 90, flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {inc.propertyName ?? inc.propertyId}
+                    <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
+                      {(inc.propertyName ?? inc.propertyId).replace('prop_', '').replace(/_/g, ' ')}
                     </span>
-                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
                       {inc.guestName ?? '—'}
                     </span>
                     <span style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{nights}n</span>
                     {inc.portal && (
-                      <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 3, background: portalBg, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
+                      <span style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: portalBg, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
                         {inc.portal.slice(0, 3)}
                       </span>
                     )}

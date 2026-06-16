@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:45:05Z",
+  "generadoEn": "2026-06-16T13:36:29Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,7 +254,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 7
+        "evidencias": 8
       },
       "rrhh": {
         "estado": "usado",
@@ -1966,13 +1966,16 @@
       "/api/sivra/incomes",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
+      "/api/sivra/mensajes",
+      "/api/sivra/mensajes/[bookingId]",
+      "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/reply",
       "/api/sivra/seo-proposals",
       "/api/sivra/seo-refresh",
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
     "rrhh": [
-      "/api/admin/cuenta/convenio",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
       "/api/admin/empleados/[id]/acceso",
@@ -1980,7 +1983,6 @@
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
-      "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -2658,7 +2660,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 819,
+    "apis": 821,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
