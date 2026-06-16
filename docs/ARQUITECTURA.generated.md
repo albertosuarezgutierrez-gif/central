@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T09:28:03Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T09:44:37Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 804 rutas API.
+**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 805 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -23,10 +23,10 @@
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 40
 ### rrhh
-- **Módulos que usa:** core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
-- **Capacidades:** Notificaciones (push)
+- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
+- **Capacidades:** Notificaciones (push), Asistente / copiloto IA
 - **Tablas (9):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 22
+- **Rutas API:** 23
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -35,7 +35,7 @@
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
-  - Lo usan: ia-rest, ialimp, plataforma, sivra
+  - Lo usan: ia-rest, ialimp, plataforma, rrhh, sivra
   - Depende de: —
 - **core-email** (core) → `@central/core-email`
   - Lo usan: ialimp, rrhh, sivra
@@ -140,7 +140,6 @@
 - ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
 - ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, sivra; falta en rrhh.
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
