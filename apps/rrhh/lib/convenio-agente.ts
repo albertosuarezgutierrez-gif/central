@@ -1,6 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { geminiSearch, aiComplete } from '@central/core-ai'
+import { iaSearch, iaDisponible } from '@/lib/ai'
 import { construirPromptConvenio, parsearConvenio, type ConvenioDatos } from '@/lib/convenio-prompt'
 
 const AVISO = 'Datos extraídos por IA — ORIENTATIVOS. Verifícalos con el texto oficial del convenio antes de aplicarlos.'
@@ -18,21 +18,19 @@ export async function analizarConvenio(empresaId: string): Promise<ResultadoAnal
   const codigo: string | null = rows[0]?.convenio_codigo ?? null
   if (!codigo) return { ok: false, mensaje: 'Primero indica el código del convenio en «Mi cuenta».' }
 
+  if (!iaDisponible()) {
+    console.error('[convenio] IA no configurada en runtime (ni AI_GATEWAY_* ni keys directas)')
+    return { ok: false, mensaje: 'El agente de convenios no está disponible (falta configurar la IA).' }
+  }
+
   const { system, user } = construirPromptConvenio(codigo, rows[0]?.convenio_nombre ?? null)
 
   let texto: string
   let conBusqueda: boolean
   try {
-    if (process.env.GEMINI_API_KEY) {
-      texto = await geminiSearch({ apiKey: process.env.GEMINI_API_KEY }, system, user, { maxTokens: 1200, timeoutMs: 40_000 })
-      conBusqueda = true
-    } else if (process.env.NVIDIA_API_KEY) {
-      texto = await aiComplete(user, { system, maxTokens: 900, timeoutMs: 20_000 })
-      conBusqueda = false
-    } else {
-      console.error('[convenio] sin GEMINI_API_KEY ni NVIDIA_API_KEY en runtime')
-      return { ok: false, mensaje: 'El agente de convenios no está disponible (falta configurar la IA).' }
-    }
+    const r = await iaSearch(system, user, { maxTokens: 1200, timeoutMs: 40_000 })
+    texto = r.text
+    conBusqueda = r.conBusqueda
   } catch (e) {
     console.error('[convenio] fallo IA:', e instanceof Error ? `${e.name}: ${e.message}` : e)
     return { ok: false, mensaje: 'No se pudo analizar el convenio ahora mismo. Inténtalo más tarde.' }

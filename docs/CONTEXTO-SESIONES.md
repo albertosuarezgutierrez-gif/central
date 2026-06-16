@@ -16,6 +16,35 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
+    de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de
+    proveedor y el **control de coste/uso** quedan centralizados en plataforma (`/operador/ia`).
+  - **Nuevo**: `lib/ai.ts` — `viaIA()` (pura, testeada), `iaDisponible()`, `iaChat()` (pasarela→NIM),
+    `iaSearch()` (pasarela search→degrada a chat; fallback Gemini/NIM directo). Prioriza la pasarela;
+    si no está configurada, usa la key directa (transición sin romper nada). Test `lib/ai.test.ts`.
+  - **Envs nuevos en Vercel `central-rrhh`**: `AI_GATEWAY_URL` (= URL de plataforma) + `AI_GATEWAY_SECRET`
+    (mismo valor que en plataforma). Al activarlos se podrán quitar `NVIDIA_API_KEY`/`GEMINI_API_KEY` de rrhh.
+  - **Bonus**: esto probablemente **arregla el "asistente no disponible"** (la key vivía en rrhh; ahora la
+    llamada la hace plataforma, donde `NVIDIA_API_KEY` ya funciona).
+
+- **🎨 RRHH · Marca blanca por empresa (white-label) — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - Cada empresa define su **color corporativo (hex)** y su **logo** desde **Mi cuenta** (gestor);
+    el **Portal del Empleado** (`/e`) se tiñe con ellos (logo en cabecera + acento de la marca).
+  - Reutilizable para CUALQUIER cliente (no hardcodea Mariscos González). Para aplicar la marca de
+    Mariscos: el sitio `mariscosgonzalez.com` **no es accesible** desde el entorno (bloqueado por la
+    allowlist de egress) → Alberto sube el logo + elige el color en Mi cuenta (self-service).
+  - **Nuevo**: `lib/branding.ts` (puro: `normalizaHex`, `derivarPaleta`, `estiloMarca`) + test;
+    `app/api/admin/cuenta/branding/route.ts` (POST multipart, gestor); migración
+    `0013_empresa_branding.sql` (`empresas.color_primario`, `empresas.logo_path`; **aplicada**).
+  - **Modificado**: `lib/empresa.ts` (`getBranding`, `actualizarBranding`); `app/e/page.tsx` +
+    `app/e/ExpedienteEmpleado.tsx` (aplica color vía CSS vars `--accent*` inline + logo); `app/admin/cuenta/page.tsx`
+    + `CuentaClient.tsx` (sección "Identidad corporativa"). Logo en bucket privado `rrhh-documentos`
+    (`branding/<empresa>/...`), servido por URL firmada en cada render.
+  - **AI gateway (PR #315 MERGED)**: pasarela de IA en plataforma (`/api/ai/chat` NIM, `/api/ai/search`
+    Gemini, Bearer `AI_GATEWAY_SECRET`) + god-panel `🤖 IA · gasto` (`/operador/ia`) + tabla `public.ai_usos`.
+    Pendiente Alberto: env `AI_GATEWAY_SECRET` (+opc. `GEMINI_API_KEY`, `AI_GATEWAY_LIMITE_MENSUAL`) en plataforma.
+
 - **🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal — 16/06/2026** (PR #316 mergeado, rama `claude/sivra-fase3-mercado-pricing`)
   - **Páginas migradas** de sivra → plataforma `/sivra/*`:
     - `/sivra/mercado` — benchmark de competidores: panel por escenario (normal/corpus), toggle de portales, percentiles p25/p50/p75, búsqueda en tiempo real (Serper+NIM). APIs `GET /api/sivra/mercado/stats`, `GET /api/sivra/mercado/search`, `POST /api/sivra/mercado/ingest`.
