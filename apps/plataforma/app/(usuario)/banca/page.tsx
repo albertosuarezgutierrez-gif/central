@@ -5,7 +5,7 @@ import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPor
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -42,6 +42,7 @@ export default async function BancaPage() {
             {movimientos.length > 0 && <ConciliarBtn />}
             {movimientos.length > 0 && <SubirFacturaBtn />}
             {movimientos.length > 0 && <ExportarBtn />}
+            <RevisarCorreoBtn />
             <ConectarBancoBtn sociedades={sociedades} />
             <ImportarExtractoBtn sociedades={sociedades} />
           </div>
