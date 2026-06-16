@@ -37,8 +37,18 @@
   - **Probado:** core-firma 9/9; build rrhh verde; integración BD (estado→firmado, evidencia,
     integro_original=true / integro_si_modificado=false, cascade) → datos de prueba borrados;
     `hashDocumento`==`node:crypto` SHA-256.
-  - **Pendiente:** proveedor **Firmafy** (cuando Alberto tenga alta/credenciales — el flujo rrhh no
-    cambia, solo se elige proveedor); refuerzo OTP email con SMTP. **Precio** al cliente.
+  - **Refuerzo OTP por email (hecho, 16/06/2026):** al pulsar "Firmar" se envía un código de 6 dígitos
+    al email del empleado (tabla `firma_otps`, `0007_firma_otps.sql`, hash SHA-256, 10 min, 5 intentos);
+    si se emitió, es obligatorio para firmar → `metodo='otp_email'`. **Degrada limpio:** sin email/SMTP
+    se firma por sesión (`sesion_token`), la firma sigue válida. **Remitente: reusamos Resend de ia.rest**
+    (`hola@iarest.es`, dominio verificado) con display **"iarrhh"** (`lib/mailer.ts` sobre `@central/core-email`;
+    `notificar.ts` migrado a ese mailer). **Requiere `RESEND_API_KEY` en el proyecto Vercel central-rrhh**
+    (mismo valor que ia-rest); sin ella, OTP no se envía y se firma por sesión. Endpoint
+    `POST /api/e/expediente/[docId]/firmar/codigo`. Probado: build verde + integración BD (upsert resetea
+    intentos, hash válido, firma `otp_email`, OTP consumido) → datos borrados.
+  - **Pendiente:** poner `RESEND_API_KEY` en central-rrhh (Vercel) para activar el OTP en vivo; proveedor
+    **Firmafy** (cuando Alberto tenga alta/credenciales — el flujo rrhh no cambia, solo se elige proveedor).
+    **Precio** al cliente.
 
 - **🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280**
   Marca propia **iarrhh** (no del cliente). Todo en producción y **verificado en vivo**.

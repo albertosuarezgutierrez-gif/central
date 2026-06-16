@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T05:20:17Z",
+  "generadoEn": "2026-06-16T06:12:09Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -274,8 +274,8 @@
         "evidencias": 0
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "usado",
@@ -1935,6 +1935,7 @@
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/expediente/[docId]/firmar",
+      "/api/e/expediente/[docId]/firmar/codigo",
       "/api/e/login",
       "/api/e/push/subscribe",
       "/api/e/solicitudes",
@@ -2162,6 +2163,7 @@
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresas",
+      "rrhh.firma_otps",
       "rrhh.firmas",
       "rrhh.mensajes",
       "rrhh.push_subscriptions",
@@ -2594,7 +2596,7 @@
     "packages": 21,
     "capacidades": 23,
     "skills": 13,
-    "apis": 788,
+    "apis": 789,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

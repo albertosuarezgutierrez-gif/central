@@ -67,6 +67,19 @@ model documentos {
   @@index([empresa_id])
 }
 
+model firma_otps {
+  id           String   @id @default(uuid()) @db.Uuid
+  empresa_id   String   @db.Uuid
+  empleado_id  String   @db.Uuid
+  documento_id String   @db.Uuid
+  codigo_hash  String
+  expira_at    DateTime @db.Timestamptz(6)
+  intentos     Int      @default(0)
+  creada_at    DateTime @default(now()) @db.Timestamptz(6)
+
+  @@unique([documento_id, empleado_id])
+}
+
 model firmas {
   id              String   @id @default(uuid()) @db.Uuid
   empresa_id      String   @db.Uuid

@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@central/core-email": "file:../../packages/core-email",
     "@central/core-firma": "file:../../packages/core-firma",
     "@central/core-storage": "file:../../packages/core-storage",
     "@central/module-chat": "file:../../packages/module-chat",

@@ -17,6 +17,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
   const [error, setError] = useState('')
   const [firmarDoc, setFirmarDoc] = useState<Doc | null>(null)
   const [nombreFirma, setNombreFirma] = useState('')
+  const [codigo, setCodigo] = useState('')
+  const [otp, setOtp] = useState<{ enviado: boolean; email_parcial?: string } | null>(null)
   const [firmando, setFirmando] = useState(false)
   const [firmaError, setFirmaError] = useState('')
   const etiqueta = (id: string) => visibles.find(c => c.id === id)?.etiqueta ?? id
@@ -25,14 +27,21 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
     const r = await fetch('/api/e/expediente'); if (r.ok) setDocs((await r.json()).documentos)
   }
 
+  async function abrirFirma(d: Doc) {
+    setFirmarDoc(d); setNombreFirma(''); setCodigo(''); setFirmaError(''); setOtp(null)
+    // Pide un código OTP por email (refuerzo). Si no hay email/SMTP, se firma sin él.
+    const r = await fetch(`/api/e/expediente/${d.id}/firmar/codigo`, { method: 'POST' })
+    setOtp(r.ok ? await r.json() : { enviado: false })
+  }
+
   async function confirmarFirma() {
     if (!firmarDoc) return
     setFirmando(true); setFirmaError('')
     const r = await fetch(`/api/e/expediente/${firmarDoc.id}/firmar`, {
       method: 'POST', headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ nombre_confirmado: nombreFirma }),
+      body: JSON.stringify({ nombre_confirmado: nombreFirma, codigo: codigo || undefined }),
     })
-    if (r.ok) { setFirmarDoc(null); setNombreFirma(''); await recargar() }
+    if (r.ok) { setFirmarDoc(null); setNombreFirma(''); setCodigo(''); await recargar() }
     else setFirmaError((await r.json()).error ?? 'No se pudo firmar')
     setFirmando(false)
   }
@@ -80,8 +89,7 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
               <span className="text-ink-3 text-xs">· {etiqueta(d.carpeta)}</span>
               {d.estado_firma === 'firmado' && <span className="text-ok text-xs font-semibold">· ✔ Firmado</span>}
               {d.estado_firma === 'pendiente' && (
-                <button onClick={() => { setFirmarDoc(d); setNombreFirma(''); setFirmaError('') }}
-                  className="ml-auto px-2 py-0.5 text-xs">Firmar</button>
+                <button onClick={() => abrirFirma(d)} className="ml-auto px-2 py-0.5 text-xs">Firmar</button>
               )}
             </li>
           ))}
@@ -95,11 +103,22 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
             <h2 className="text-base">Firmar documento</h2>
             <p className="mt-1 text-sm font-medium">{firmarDoc.nombre}</p>
             <p className="mt-3 text-xs leading-relaxed text-ink-2">{CONSENTIMIENTO}</p>
+            {otp?.enviado && (
+              <>
+                <label className="mt-3 block text-xs text-ink-2">
+                  Código enviado a tu email{otp.email_parcial ? ` (${otp.email_parcial})` : ''}:
+                </label>
+                <input className="mt-1 w-full tracking-widest" value={codigo} inputMode="numeric" maxLength={6}
+                  onChange={e => setCodigo(e.target.value.replace(/\D/g, ''))} placeholder="6 dígitos" />
+              </>
+            )}
             <label className="mt-3 block text-xs text-ink-2">Escribe tu nombre completo para firmar:</label>
             <input className="mt-1 w-full" value={nombreFirma} onChange={e => setNombreFirma(e.target.value)} placeholder="Nombre y apellidos" />
             {firmaError && <p className="mt-2 text-alert text-sm">{firmaError}</p>}
             <div className="mt-4 flex gap-2">
-              <button onClick={confirmarFirma} disabled={firmando || !nombreFirma.trim()} className="flex-1">
+              <button onClick={confirmarFirma}
+                disabled={firmando || !nombreFirma.trim() || (!!otp?.enviado && codigo.length !== 6)}
+                className="flex-1">
                 {firmando ? 'Firmando…' : 'Firmar'}
               </button>
               <button onClick={() => setFirmarDoc(null)} className="bg-paper-2 text-ink-2 hover:bg-line">Cancelar</button>
