@@ -45,6 +45,22 @@
     Gemini, Bearer `AI_GATEWAY_SECRET`) + god-panel `🤖 IA · gasto` (`/operador/ia`) + tabla `public.ai_usos`.
     Pendiente Alberto: env `AI_GATEWAY_SECRET` (+opc. `GEMINI_API_KEY`, `AI_GATEWAY_LIMITE_MENSUAL`) en plataforma.
 
+- **🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal — 16/06/2026** (PR #316 mergeado, rama `claude/sivra-fase3-mercado-pricing`)
+  - **Páginas migradas** de sivra → plataforma `/sivra/*`:
+    - `/sivra/mercado` — benchmark de competidores: panel por escenario (normal/corpus), toggle de portales, percentiles p25/p50/p75, búsqueda en tiempo real (Serper+NIM). APIs `GET /api/sivra/mercado/stats`, `GET /api/sivra/mercado/search`, `POST /api/sivra/mercado/ingest`.
+    - `/sivra/pricing` — Pricing Lab en modo shadow: tabla de experimentos A/B por propiedad (booked/libre/activo), stats de ocupación vs PriceLabs. APIs `GET|POST|DELETE /api/sivra/pricing/experiments`, `GET /api/sivra/pricing/stats`.
+    - `/sivra/pricing-auto` — Motor de precios completo: 13 parámetros por propiedad, botón de pánico, historial de aplicaciones, resultados €, pilot tracking 🟢🟡🔴. APIs `GET /api/sivra/pricing/settings`, `GET /api/sivra/pricing/apply`, `GET /api/sivra/pricing/historial`, `GET /api/sivra/pricing/resultados`, `GET /api/sivra/pricing/pilot-track`, etc.
+  - **Calendario Gantt** (`/sivra/calendario`) — barras ahora coloreadas por portal de reserva (Airbnb rojo, Booking azul, VRBO azul oscuro, Directo violeta, Otros gris). Leyenda actualizada. Antes eran por propiedad (redundante con filas).
+  - **Libs puras copiadas de sivra**: `lib/sivra/pricing-engine.ts` (motor de recomendación), `lib/sivra/pricing-calendar.ts` (eventos/estaciones), `lib/sivra/pilot-track.ts` (evaluación 🟢🟡🔴).
+  - **7 nuevos crons** en `vercel.json`: mercado/cron (07:15), mercado/sweep (dom 03:00), pricing/guard (07:30), pricing/experiments/check-results (08:00), pricing/apply-auto (08:30), pricing/resumen-diario (09:00), pricing/pilot-track (09:15).
+  - **UserSidebar.tsx** — NAV_PISOS ampliado con 3 entradas: Mensajes, Mercado, Pricing Lab, Pricing auto.
+  - **Estado CI**: todos los proyectos en Ready ✅ (plataforma, ialimp, sivra, ia-rest, central-rrhh)
+  - **Siguiente Fase 4**: Admin limpiadoras (⚠️ riesgo ialimp, requiere auditoría RLS previa)
+
+- **🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes + fixes móvil dashboard — 16/06/2026** (PR #310 mergeado)
+  - `/sivra/mensajes` — mensajería de huéspedes via Smoobu: lista de conversaciones con badges de no-leídos, hilo de mensajes, envío de respuesta manual, panel de detalle de reserva. Usa `getSmoobuKey()` de `lib/smoobu.ts`. APIs `GET /api/sivra/mensajes`, `GET /api/sivra/mensajes/[id]`, `POST /api/sivra/mensajes/[id]`.
+  - **Dashboard móvil**: corregido overflow horizontal en tarjetas de negocio, widget pisos responsive.
+
 - **🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard — 16/06/2026** (PR #305, rama `claude/sivra-fase1b-income-expenses`)
   - **Páginas migradas** de sivra → plataforma `/sivra/*`:
     - `/sivra/income` — lista completa de reservas con filtros (portal, propiedad, fecha, huésped) + 4 KPIs: reservas, ingresos brutos, media/reserva, noches. API `GET /api/sivra/income`.

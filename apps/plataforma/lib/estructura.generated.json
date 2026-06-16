@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:36:38Z",
+  "generadoEn": "2026-06-16T14:54:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -346,7 +346,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "sivra": {
         "estado": "no",
@@ -372,7 +372,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       }
     },
     "core-storage": {
@@ -422,7 +422,7 @@
     "module-asn": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -510,7 +510,7 @@
     "module-crm": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -554,7 +554,7 @@
     "module-feedback": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -576,7 +576,7 @@
     "module-horario": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -598,7 +598,7 @@
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -614,7 +614,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       }
     },
     "module-organizador-trabajo": {
@@ -642,7 +642,7 @@
     "module-presupuestos": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -664,7 +664,7 @@
     "module-proveedores": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -680,7 +680,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       }
     },
     "module-revenue": {
@@ -2354,6 +2354,14 @@
       "fecha": "16/06/2026"
     },
     {
+      "titulo": "🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes + fixes móvil dashboard",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
       "fecha": "16/06/2026"
     },
@@ -2395,14 +2403,6 @@
     },
     {
       "titulo": "⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
       "fecha": "15/06/2026"
     }
   ],

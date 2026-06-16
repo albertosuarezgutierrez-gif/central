@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T14:36:38Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T14:54:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -145,12 +145,12 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (16/06/2026) 🤖 RRHH · Verticales conectadas a la pasarela de IA central
 - (16/06/2026) 🎨 RRHH · Marca blanca por empresa (white-label)
+- (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal
+- (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes + fixes móvil dashboard
 - (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard
 - (16/06/2026) 📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)
 - (16/06/2026) 📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde
 - (16/06/2026) 🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh
 - (16/06/2026) 🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`
 - (16/06/2026) 🤖 SIVRA · Agente de pricing — 1er ciclo con datos reales + motor por temporada (Paso 6/B2)
-- (16/06/2026) 🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)
-- (16/06/2026) 📧 Skill `facturas-correo` creada (agente de facturas por email)
 
