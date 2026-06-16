@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T20:43:27Z",
+  "generadoEn": "2026-06-16T05:17:40Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1902,13 +1902,15 @@
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
+      "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/e/chat",
       "/api/e/expediente",
       "/api/e/login",
       "/api/e/push/subscribe",
-      "/api/e/solicitudes"
+      "/api/e/solicitudes",
+      "/api/operador/empresas"
     ],
     "sivra": [
       "/api/admin/limpiadoras/asignacion",
@@ -2214,6 +2216,10 @@
       "fecha": "15/06/2026"
     },
     {
+      "titulo": "🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
       "fecha": "15/06/2026"
     },
@@ -2263,10 +2269,6 @@
     },
     {
       "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
       "fecha": "14/06/2026"
     }
   ],
@@ -2563,7 +2565,7 @@
     "packages": 20,
     "capacidades": 23,
     "skills": 13,
-    "apis": 786,
+    "apis": 788,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

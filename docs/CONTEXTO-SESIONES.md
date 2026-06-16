@@ -37,6 +37,36 @@
     `docs/superpowers/plans/2026-06-15-duplicados-bancarios.md`.
   - **Pendiente (opcional):** enganchar duplicados al email del cron `banca-alertas`.
 
+- **🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280**
+  Marca propia **iarrhh** (no del cliente). Todo en producción y **verificado en vivo**.
+  - **Rediseño visual (#276):** vestida toda `apps/rrhh` con la imagen de la casa (estilo ia-rest):
+    paleta papel/tinta + acento **teal `#2B6A6E`**, fuentes Inter Tight/Newsreader/JetBrains Mono,
+    sidebar admin (`components/AdminShell.tsx`), wordmark `ia·rrhh` (`components/Wordmark.tsx`),
+    monograma SVG (`public/icon.svg`), portal del empleado móvil-primero. Tokens en `globals.css` +
+    `tailwind.config.ts`. **Sin tocar lógica/API/datos.** Spec: `docs/superpowers/specs/2026-06-15-iarrhh-rediseno-visual-design.md`.
+  - **Alta de empresa desde el god-panel (#278):** el operador crea empresa cliente + responsable desde
+    **plataforma → `/operador/clientes` → ➕ Nuevo cliente → "RR.HH. · iarrhh"**. Arquitectura **puerto HTTP**
+    (patrón ia-rest, NO escritura directa cross-schema): rrhh expone `GET/POST /api/operador/empresas`
+    (`lib/operador.ts` + ruta); plataforma lo consume con `lib/adapters/rrhh.ts` (vertical `'rrhh'` en el
+    contrato `VerticalAdapter`). El responsable luego entra en iarrhh y crea a sus empleados.
+    Spec: `docs/superpowers/specs/2026-06-15-alta-empresa-rrhh-god-panel-design.md`.
+  - **⚠️ LANDMINE de secretos (#279):** `OPERADOR_SHARED_SECRET` en plataforma **YA ES** el secreto del
+    puerto god-panel↔**ia-rest**. Reutilizarlo para rrhh rompía la integración ia-rest. **Desacoplado:**
+    iarrhh usa su **propio** `RRHH_OPERADOR_SECRET`. NO volver a colapsarlos.
+  - **Cambio de contraseña del responsable (#280):** `/admin/cuenta` (`POST /api/auth/cambiar-password`),
+    ítem "Mi cuenta" en el sidebar.
+  - **Envs (3 proyectos Vercel):**
+    - `central-rrhh`: `RRHH_OPERADOR_SECRET`.
+    - `plataforma`: `RRHH_OPERADOR_SECRET` (mismo valor que central-rrhh) + `RRHH_URL` (=`https://central-rrhh.vercel.app`)
+      + `OPERADOR_SHARED_SECRET` (este es el de ia-rest, valor compartido con el proyecto `ia-rest`).
+    - `ia-rest`: `OPERADOR_SHARED_SECRET` (mismo valor que en plataforma).
+  - **Verificado en vivo:** Alberto creó una empresa de prueba por el panel → fila correcta en BD (cadena
+    UI→plataforma→HTTP→rrhh→BD OK) → borrada. BD queda con 1 empresa real: **Mariscos González** (responsable
+    **Pilar Piña** `pilar.pina.franco@gmail.com`; contraseña reseteada a `Mariscos2026` para onboarding,
+    cambiable desde Mi cuenta).
+  - **Pendiente:** firma avanzada vía **Firmafy** (Fase 2, necesita alta/credenciales con el partner —
+    acción de Alberto; dejar montado puerto `core-firma`); **precio** al cliente.
+
 - **🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269**
   Petición de Pilar (RR.HH. de Mariscos González, audio): intranet de empleados con expediente
   documental por trabajador (carpetas: datos personales/contratos/nóminas/partes médicos/otros, subida
