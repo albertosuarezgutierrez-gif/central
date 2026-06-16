@@ -1,12 +1,19 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 
-export type EmpresaConvenio = { nombre: string; convenio_codigo: string | null; convenio_nombre: string | null }
+export type EmpresaConvenio = {
+  nombre: string
+  convenio_codigo: string | null
+  convenio_nombre: string | null
+  convenio_datos: unknown | null
+  convenio_actualizado_at: string | null
+}
 
-/** Datos de la empresa (incluido el convenio colectivo). */
+/** Datos de la empresa (incluido el convenio colectivo y el análisis IA del agente). */
 export async function getEmpresa(empresaId: string): Promise<EmpresaConvenio | null> {
   const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT nombre, convenio_codigo, convenio_nombre FROM rrhh.empresas WHERE id = ${empresaId}::uuid LIMIT 1`)
+    SELECT nombre, convenio_codigo, convenio_nombre, convenio_datos, convenio_actualizado_at
+    FROM rrhh.empresas WHERE id = ${empresaId}::uuid LIMIT 1`)
   return rows[0] ?? null
 }
 
