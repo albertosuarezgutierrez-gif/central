@@ -13,8 +13,11 @@ import { prisma } from './db'
 import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
 
 function hashMov(accountUid: string, m: MovEB): string {
-  // El banco da un entry_reference estable → dedupe perfecto. Fallback a fecha+importe.
-  const base = m.entryReference || `${accountUid}|${m.bookingDate ?? ''}|${m.importe}`
+  // Hash de CONTENIDO, estable entre sincronizaciones. NO usamos entry_reference: algunos bancos
+  // (p. ej. Kutxa vía Enable Banking) lo devuelven cambiante entre fetches, así que el hash
+  // variaba y el ON CONFLICT no deduplicaba → el re-sync diario reinsertaba el mismo movimiento.
+  // Mismos campos que el importador Norma 43: cuenta + fechas + importe + concepto + contraparte.
+  const base = [accountUid, m.bookingDate ?? '', m.valueDate ?? '', m.importe, m.concepto ?? '', m.contraparte ?? ''].join('|')
   return createHash('sha1').update(base).digest('hex')
 }
 
@@ -54,19 +57,23 @@ export async function sincronizarSesion(
     // grandes (p. ej. Kutxa) el callback superaba el timeout de la función serverless.
     // Dedup EN MEMORIA por hash: el ON CONFLICT no deduplica filas repetidas dentro del
     // MISMO INSERT, así que si el banco devuelve un movimiento dos veces lo quitamos aquí.
-    const vistos = new Set<string>()
-    const validos = movs.filter(m => {
-      if (!Number.isFinite(m.importe)) return false
-      const h = hashMov(accountUid, m)
-      if (vistos.has(h)) return false
-      vistos.add(h)
-      return true
-    })
+    // Ordinal por hash base para distinguir movimientos REALMENTE idénticos del mismo día
+    // (dos cafés iguales), igual que el importador Norma 43. Como el hash es de contenido y el
+    // banco devuelve los movimientos en el mismo orden, el ordinal es estable entre syncs.
+    const vistos = new Map<string, number>()
+    const validos: Array<{ m: MovEB; hash: string }> = []
+    for (const m of movs) {
+      if (!Number.isFinite(m.importe)) continue
+      const base = hashMov(accountUid, m)
+      const n = (vistos.get(base) ?? 0) + 1
+      vistos.set(base, n)
+      validos.push({ m, hash: n > 1 ? `${base}-${n}` : base })
+    }
     if (validos.length) {
-      const filasMov = validos.map(m => Prisma.sql`(
+      const filasMov = validos.map(({ m, hash }) => Prisma.sql`(
         ${cbId}::uuid, ${m.bookingDate || null}::date, ${m.valueDate || m.bookingDate || null}::date,
         ${m.importe}, ${m.concepto || null}, ${m.contraparte || null},
-        ${m.entryReference || null}, 'psd2', ${hashMov(accountUid, m)}
+        ${m.entryReference || null}, 'psd2', ${hash}
       )`)
       const res = await prisma.$executeRaw(Prisma.sql`
         INSERT INTO movimientos_bancarios
