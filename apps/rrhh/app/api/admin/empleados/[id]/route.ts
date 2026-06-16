@@ -9,10 +9,25 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
     const { empresa_id } = await getSesion()
     const { id } = await params
     const body = await req.json().catch(() => ({}))
-    const n = normalizarEmpleado(body)
+    // PATCH PARCIAL: solo se tocan los campos enviados (COALESCE), para no machacar a NULL
+    // dni/telefono cuando la edición no los incluye. El nombre, si viene, no puede quedar vacío.
+    const nombre = body.nombre !== undefined ? String(body.nombre).trim() : null
+    if (body.nombre !== undefined && !nombre) {
+      return NextResponse.json({ error: 'El nombre es obligatorio' }, { status: 400 })
+    }
+    const email    = body.email    !== undefined ? (String(body.email).trim()    || null) : undefined
+    const telefono = body.telefono !== undefined ? (String(body.telefono).trim() || null) : undefined
+    const dni      = body.dni      !== undefined ? (String(body.dni).trim()      || null) : undefined
+    const puesto   = body.puesto   !== undefined ? (String(body.puesto).trim()   || null) : undefined
+    const estado   = body.estado   !== undefined ? String(body.estado)                    : undefined
     await prisma.$executeRaw(Prisma.sql`
-      UPDATE empleados SET nombre=${n.nombre}, dni=${n.dni}, email=${n.email}, telefono=${n.telefono},
-        puesto=${body.puesto ?? null}, estado=${body.estado ?? 'activo'}
+      UPDATE empleados SET
+        nombre   = COALESCE(${nombre},   nombre),
+        email    = ${email    === undefined ? Prisma.sql`email`    : Prisma.sql`${email}`},
+        telefono = ${telefono === undefined ? Prisma.sql`telefono` : Prisma.sql`${telefono}`},
+        dni      = ${dni      === undefined ? Prisma.sql`dni`      : Prisma.sql`${dni}`},
+        puesto   = ${puesto   === undefined ? Prisma.sql`puesto`   : Prisma.sql`${puesto}`},
+        estado   = COALESCE(${estado},   estado)
       WHERE id=${id}::uuid AND empresa_id=${empresa_id}::uuid`)
     return NextResponse.json({ ok: true })
   } catch (e) {
