@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:31:42Z",
+  "generadoEn": "2026-06-16T13:39:21Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1979,6 +1979,7 @@
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
       "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
@@ -2656,7 +2657,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 817,
+    "apis": 818,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
