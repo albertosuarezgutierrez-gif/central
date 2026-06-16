@@ -47,11 +47,11 @@ Luxury y Bustos Reforma comparten edificio (Bustos Tavera 22) y línea DIGI de i
 | PriceLabs (`support@pricelabs.co`) | Mensual (~día 8) | ~55-65 USD | Tarjeta Kutxabank. Sin desglose → reparto ÷4 |
 | Smoobu | Anual (marzo) | ~1.018€ | Tarjeta Kutxabank. Sin desglose → reparto ÷4 |
 | BOOKING.COM (comisiones/facturas) | Mensual | Variable | Facturas Invoice XXXXXXX vía noreply@booking.com |
-| Chekin Soluciones Digitales SL | Mensual | ~variable | Check-in digital para pisos turísticos |
+| Chekin Soluciones Digitales SL (`invoice+statements@stripe.com` de Chekin) | Mensual | ~variable | Check-in digital para pisos turísticos. Deducible. |
 | IONOS (`noreply@ionos.es`) | Mensual | Variable | **PERSONAL** — informática a nombre personal. NO archivar como deducible |
 | Vercel (`invoice+statements@vercel.com`) | Mensual | Variable | **PERSONAL** — informática junto con IONOS. NO archivar como deducible |
-| Renta Gutierrez Alcala — Luxury (Bajo DER) | Mensual (~día 8) | ~309€ | Banco: "RECIBO GUTIERREZ ALCALA BAJO DERECHA BUSTOS TAVERA 22". Confirmar clasificación con Alberto |
-| Renta Gutierrez Alcala — Bustos (Bajo IZQ) | Mensual (~día 8) | ~259€ | Banco: "RECIBO GUTIERREZ ALCALA BAJO IZQUIERDA BUSTOS TAVERA 22". Confirmar clasificación con Alberto |
+| Renta Gutierrez Alcala — Luxury (Bajo DER) | Mensual (~día 8) | ~309€ | Banco: "RECIBO GUTIERREZ ALCALA BAJO DERECHA BUSTOS TAVERA 22". Alquiler del piso para subarrendar turístico. Deducible. |
+| Renta Gutierrez Alcala — Bustos (Bajo IZQ) | Mensual (~día 8) | ~259€ | Banco: "RECIBO GUTIERREZ ALCALA BAJO IZQUIERDA BUSTOS TAVERA 22". Alquiler del piso para subarrendar turístico. Deducible. |
 | IKEA/LEROY/BRICO (mobiliario pisos) | Esporádico | Variable | Deducible si es para pisos turísticos |
 | D CULTO (comida empresa) | Esporádico | Variable | Deducible |
 
@@ -78,14 +78,13 @@ Luxury y Bustos Reforma comparten edificio (Bustos Tavera 22) y línea DIGI de i
 | Anthropic/Claude subscriptions | |
 | TUTROCITO, compras familia | |
 
-### Proveedores a verificar con Alberto
-| Proveedor | Duda |
+### Proveedores a verificar / ignorar
+| Proveedor | Estado |
 |---|---|
-| TotalEnergies | Sigue mandando facturas en jun 2026. ¿Contratos activos o residuales pendientes de cancelar? |
-| BSH Electrodomésticos | Servicio técnico. ¿Para qué piso? |
+| TotalEnergies | Dado de baja. Emails residuales — ignorar, no archivar. |
 | BSH Electrodomésticos | Servicio técnico ~50€. Alberto no lo pagará — ignorar. |
-| Petroprix (gasolina) | ¿Deducible como desplazamiento de negocio? |
-| IBI Socorro | ¿Cuándo llega? No visto en 2026. `turistico_pisos` cuando llegue |
+| Petroprix (gasolina) | Pendiente confirmar si deducible como desplazamiento de negocio. |
+| IBI Socorro | No visto en 2026. Cuando llegue → `turistico_pisos`. |
 
 ## Errores históricos de clasificación en banco (ya detectados)
 Estos movimientos están mal clasificados en `movimientos_bancarios`. Corregir si se encuentran:
@@ -187,12 +186,17 @@ ORDER BY abs(mb.fecha_operacion - <fecha_factura>::date) LIMIT 3;
 - **Encontrado + destino incorrecto** → propón UPDATE del `destino` (especialmente los errores históricos listados arriba).
 - **No encontrado** → "pendiente de que entre el movimiento / extracto sin subir".
 
-## Paso 5 — Etiquetar y resumir
+## Paso 5 — Etiquetar, resumir y notificar
 - `label_message` con `Facturas/Procesado` en cada correo tratado.
 - Resumen en tres bloques:
   1. **Deducibles archivados** — emisor · importe · negocio · enlace Drive · conciliación (✅/⏳)
   2. **Personales** — emisor · importe (no archivado)
   3. **Para tu decisión** — ambiguos + recurrentes que faltan este mes
+- **Notificación**: crea un draft en Gmail con `create_draft` dirigido a
+  `alberto.suarez.gutierrez@gmail.com` con el resumen completo. Asunto:
+  `🧾 Facturas [YYYY-MM-DD] — X deducibles, Y pendientes de decisión`.
+  Aparece en la carpeta Borradores de Gmail. Si no hay nada relevante
+  (ningún deducible nuevo ni recurrente que falte), NO crear draft.
 
 ## Trigger (paso MANUAL de Alberto, 1 sola vez)
 Claude Code web → crear **trigger programado diario** que lance una sesión con el prompt:
