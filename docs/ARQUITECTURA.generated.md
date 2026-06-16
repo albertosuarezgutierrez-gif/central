@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T13:36:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T13:47:13Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 821 rutas API.
+**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 823 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -26,7 +26,7 @@
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
 - **Tablas (9):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 24
+- **Rutas API:** 26
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
@@ -143,6 +143,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard
 - (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard
 - (16/06/2026) 📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)
 - (16/06/2026) 📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde
@@ -152,5 +153,4 @@
 - (16/06/2026) 🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)
 - (16/06/2026) 📧 Skill `facturas-correo` creada (agente de facturas por email)
 - (16/06/2026) 🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales
-- (15/06/2026) 🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada
 
