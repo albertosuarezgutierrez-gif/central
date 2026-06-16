@@ -148,9 +148,21 @@ export default function CalendarioPage() {
         ))}
       </div>
 
-      {/* Leyenda iconos */}
-      <div style={{ display: 'flex', gap: 14, marginBottom: 12, fontSize: 11, color: 'var(--muted)', flexWrap: 'wrap' }}>
-        <span>🧹 = turno limpieza urgente</span>
+      {/* Leyenda */}
+      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 11, color: 'var(--muted)', flexWrap: 'wrap', alignItems: 'center' }}>
+        {[
+          { color: '#FF5A5F', label: 'Airbnb' },
+          { color: '#003580', label: 'Booking' },
+          { color: '#1D3C6E', label: 'VRBO' },
+          { color: '#7c3aed', label: 'Directo' },
+          { color: '#6B7F96', label: 'Otros' },
+        ].map(({ color, label }) => (
+          <span key={label} style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <span style={{ width: 10, height: 10, borderRadius: 2, background: color, display: 'inline-block' }} />
+            {label}
+          </span>
+        ))}
+        <span style={{ marginLeft: 4 }}>🧹 = turno limpieza urgente</span>
         <span style={{ color: '#ef4444' }}>■ = gap 1-2 días (difícil vender)</span>
       </div>
 
@@ -229,7 +241,7 @@ export default function CalendarioPage() {
                       if (width <= 0) return null
                       const nights = inc.nights || Math.max(1, daysBetween(new Date(inc.checkIn), new Date(inc.checkOut)))
                       const adr = nights > 0 ? Math.round(inc.amount / nights) : 0
-                      const portalColor = PORTAL_COLORS[inc.portal || ''] || prop.color
+                      const portalColor = PORTAL_COLORS[inc.portal || ''] || '#6B7F96'
                       const isSelected = selected?.id === inc.id
                       return (
                         <div
@@ -243,18 +255,16 @@ export default function CalendarioPage() {
                             width: Math.max(width - 4, 4),
                             height: ROW_H - 20,
                             borderRadius: 6,
-                            background: prop.color,
+                            background: portalColor,
                             cursor: 'pointer',
                             display: 'flex', alignItems: 'center',
                             paddingLeft: width > 60 ? 8 : 4,
                             overflow: 'hidden',
-                            boxShadow: isSelected ? `0 0 0 2px #fff, 0 0 0 3px ${prop.color}` : '0 1px 3px rgba(0,0,0,.15)',
+                            boxShadow: isSelected ? `0 0 0 2px #fff, 0 0 0 3px ${portalColor}` : '0 1px 3px rgba(0,0,0,.15)',
                             transition: 'box-shadow .15s',
                             zIndex: 2,
                           }}
                         >
-                          {/* Portal color stripe */}
-                          <div style={{ position: 'absolute', left: 0, top: 0, width: 4, height: '100%', background: portalColor, borderRadius: '6px 0 0 6px' }} />
                           {width > 30 && (
                             <div style={{ paddingLeft: 6, overflow: 'hidden', display: 'flex', flexDirection: 'column', gap: 1 }}>
                               <span style={{ fontSize: 10, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: width - 24 }}>
