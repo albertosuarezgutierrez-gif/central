@@ -145,13 +145,14 @@ export type MovimientoBancario = {
   concepto: string | null
   conceptoNormalizado: string | null
   categoria: string | null
+  destino: string | null
   contraparte: string | null
   conciliado: boolean
   requiereRevision: boolean
 }
 
 const SELECT_MOV = Prisma.sql`mb.id, mb.cuenta_bancaria_id, mb.fecha_operacion, mb.importe, mb.concepto,
-  mb.concepto_normalizado, mb.categoria, mb.contraparte, mb.conciliado, mb.requiere_revision`
+  mb.concepto_normalizado, mb.categoria, mb.destino, mb.contraparte, mb.conciliado, mb.requiere_revision`
 
 function mapMov(r: MovRow): MovimientoBancario {
   return {
@@ -162,6 +163,7 @@ function mapMov(r: MovRow): MovimientoBancario {
     concepto: r.concepto,
     conceptoNormalizado: r.concepto_normalizado,
     categoria: r.categoria,
+    destino: r.destino,
     contraparte: r.contraparte,
     conciliado: r.conciliado,
     requiereRevision: r.requiere_revision,
@@ -210,7 +212,7 @@ export async function listarPorRevisar(cuentaId: string, limite = 40): Promise<M
 type MovRow = {
   id: string; cuenta_bancaria_id: string; fecha_operacion: Date | null; importe: unknown
   concepto: string | null; concepto_normalizado: string | null; categoria: string | null
-  contraparte: string | null; conciliado: boolean; requiere_revision: boolean
+  destino: string | null; contraparte: string | null; conciliado: boolean; requiere_revision: boolean
 }
 
 // Resumen por "destino"/negocio (pisos, dúplex, seguros, traspaso interno, personal).

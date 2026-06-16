@@ -1,6 +1,6 @@
 'use client'
 import { useRouter } from 'next/navigation'
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type SociedadOpt = { id: string; nombre: string }
 
@@ -444,43 +444,92 @@ export function RevisarCorreoBtn() {
   )
 }
 
-// Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
-// sobre los movimientos ya cargados; sin llamadas extra al servidor.
+// Tabla de movimientos con buscador + filtros (negocio, signo, categoría, rango de fechas,
+// sin conciliar). Filtra en cliente sobre TODOS los movimientos ya cargados (sin llamadas extra).
+// Los filtros se reflejan en la URL (enlazable, recargable, botón atrás) y las tarjetas de
+// "Por negocio" enlazan aquí con ?negocio=…#movimientos. La cabecera recalcula totales en vivo.
 type MovTabla = {
   id: string; fecha: string | null; concepto: string; categoria: string | null
-  importe: number; conciliado: boolean
+  destino: string | null; importe: number; conciliado: boolean
 }
-export function MovimientosTabla({ movimientos, catLabel }: {
+type FiltrosIniciales = { negocio: string; signo: string; categoria: string; q: string; desde: string; hasta: string; sinConciliar: boolean }
+export function MovimientosTabla({ movimientos, catLabel, destinoLabel, initial }: {
   movimientos: MovTabla[]
   catLabel: Record<string, string>
+  destinoLabel: Record<string, string>
+  initial: FiltrosIniciales
 }) {
-  const [q, setQ] = useState('')
-  const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>('todos')
-  const [cat, setCat] = useState('todas')
+  const [q, setQ] = useState(initial.q)
+  const [signo, setSigno] = useState<'todos' | 'ingreso' | 'gasto'>(initial.signo === 'ingreso' || initial.signo === 'gasto' ? initial.signo : 'todos')
+  const [cat, setCat] = useState(initial.categoria || 'todas')
+  const [negocio, setNegocio] = useState(initial.negocio || 'todos')
+  const [desde, setDesde] = useState(initial.desde)
+  const [hasta, setHasta] = useState(initial.hasta)
+  const [sinConciliar, setSinConciliar] = useState(initial.sinConciliar)
+
+  // Refleja los filtros en la URL (enlazable y recargable) SIN recargar datos: el filtrado es en
+  // cliente, así que usamos history.replaceState en vez de router.replace (que en una página
+  // force-dynamic refetcharía los 5000 movimientos en cada tecleo). Las tarjetas "Por negocio"
+  // sí navegan de verdad (?negocio=…#movimientos), por lo que el botón atrás salta entre negocios.
+  useEffect(() => {
+    const p = new URLSearchParams()
+    if (negocio !== 'todos') p.set('negocio', negocio)
+    if (signo !== 'todos') p.set('signo', signo)
+    if (cat !== 'todas') p.set('categoria', cat)
+    if (q.trim()) p.set('q', q.trim())
+    if (desde) p.set('desde', desde)
+    if (hasta) p.set('hasta', hasta)
+    if (sinConciliar) p.set('sinConciliar', '1')
+    const qs = p.toString()
+    window.history.replaceState(window.history.state, '', `/banca${qs ? `?${qs}` : ''}#movimientos`)
+  }, [q, signo, cat, negocio, desde, hasta, sinConciliar])
 
   const cats = Array.from(new Set(movimientos.map(m => m.categoria).filter(Boolean))) as string[]
+  const negocios = Array.from(new Set(movimientos.map(m => m.destino ?? 'personal'))) as string[]
   const texto = q.trim().toLowerCase()
   const filtrados = movimientos.filter(m => {
     if (texto && !m.concepto.toLowerCase().includes(texto)) return false
     if (signo === 'ingreso' && m.importe < 0) return false
     if (signo === 'gasto' && m.importe >= 0) return false
     if (cat !== 'todas' && m.categoria !== cat) return false
+    if (negocio !== 'todos' && (m.destino ?? 'personal') !== negocio) return false
+    if (desde && (!m.fecha || m.fecha < desde)) return false
+    if (hasta && (!m.fecha || m.fecha > hasta)) return false
+    if (sinConciliar && m.conciliado) return false
     return true
   })
-  const suma = filtrados.reduce((s, m) => s + m.importe, 0)
+  const ingresos = filtrados.filter(m => m.importe > 0).reduce((s, m) => s + m.importe, 0)
+  const gastos = filtrados.filter(m => m.importe < 0).reduce((s, m) => s + m.importe, 0)
+  const neto = ingresos + gastos
   const conc = filtrados.filter(m => m.conciliado).length
 
+  const hayFiltro = !!(texto || signo !== 'todos' || cat !== 'todas' || negocio !== 'todos' || desde || hasta || sinConciliar)
+  function limpiar() { setQ(''); setSigno('todos'); setCat('todas'); setNegocio('todos'); setDesde(''); setHasta(''); setSinConciliar(false) }
+
   return (
-    <section>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px', flexWrap: 'wrap' }}>
+    <section id="movimientos" style={{ scrollMarginTop: '16px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', marginBottom: '12px', flexWrap: 'wrap' }}>
         <h2 style={{ fontSize: '16px', fontWeight: 700 }}>Movimientos</h2>
-        <span style={{ fontSize: '12px', color: 'var(--muted)' }}>
-          {filtrados.length}/{movimientos.length} · suma {eur(suma)} · 🔗 {conc} conciliados
-        </span>
+        {negocio !== 'todos' && <span style={{ fontSize: '13px', fontWeight: 700 }}>· {destinoLabel[negocio] || negocio}</span>}
+        {hayFiltro && <button onClick={limpiar} style={{ ...ghost, padding: '4px 10px', fontSize: '12px' }}>✕ Limpiar filtros</button>}
       </div>
+
+      {/* Totales en vivo de lo filtrado */}
+      <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap', marginBottom: '14px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '12px 16px' }}>
+        <TotalLive label="Movimientos" valor={`${filtrados.length}/${movimientos.length}`} />
+        <TotalLive label="Ingresos" valor={eur(ingresos)} color="#16a34a" />
+        <TotalLive label="Gastos" valor={eur(gastos)} color="#dc2626" />
+        <TotalLive label="Neto" valor={eur(neto)} color={neto >= 0 ? '#16a34a' : '#dc2626'} />
+        <TotalLive label="Conciliados" valor={`🔗 ${conc}`} />
+      </div>
+
       <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px' }}>
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="🔍 Buscar concepto…"
-          style={{ ...input, flex: '1 1 200px', minWidth: '160px' }} />
+          style={{ ...input, flex: '1 1 180px', minWidth: '150px' }} />
+        <select value={negocio} onChange={e => setNegocio(e.target.value)} style={{ ...input, flexShrink: 0 }}>
+          <option value="todos">Todos los negocios</option>
+          {negocios.map(n => <option key={n} value={n}>{destinoLabel[n] || n}</option>)}
+        </select>
         <select value={signo} onChange={e => setSigno(e.target.value as typeof signo)} style={{ ...input, flexShrink: 0 }}>
           <option value="todos">Ingresos y gastos</option>
           <option value="ingreso">Solo ingresos</option>
@@ -491,6 +540,18 @@ export function MovimientosTabla({ movimientos, catLabel }: {
           {cats.map(c => <option key={c} value={c}>{catLabel[c] || c}</option>)}
         </select>
       </div>
+      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '12px', alignItems: 'center' }}>
+        <label style={{ fontSize: '12px', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          Desde <input type="date" value={desde} onChange={e => setDesde(e.target.value)} style={{ ...input, padding: '6px 8px' }} />
+        </label>
+        <label style={{ fontSize: '12px', color: 'var(--muted)', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+          Hasta <input type="date" value={hasta} onChange={e => setHasta(e.target.value)} style={{ ...input, padding: '6px 8px' }} />
+        </label>
+        <label style={{ fontSize: '13px', color: 'var(--text)', display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}>
+          <input type="checkbox" checked={sinConciliar} onChange={e => setSinConciliar(e.target.checked)} /> Solo sin conciliar
+        </label>
+      </div>
+
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {filtrados.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos que coincidan.</div>
@@ -499,7 +560,9 @@ export function MovimientosTabla({ movimientos, catLabel }: {
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
-              {m.categoria && <div style={{ fontSize: '11px', color: 'var(--muted)' }}>{catLabel[m.categoria] || m.categoria}</div>}
+              <div style={{ fontSize: '11px', color: 'var(--muted)' }}>
+                {m.destino ? (destinoLabel[m.destino] || m.destino) : '👨‍👩‍👧 Personal'}{m.categoria ? ` · ${catLabel[m.categoria] || m.categoria}` : ''}
+              </div>
             </div>
             <div style={{ fontSize: '13px', flexShrink: 0, width: '18px', textAlign: 'center' }} title={m.conciliado ? 'Conciliado con factura' : 'Sin conciliar'}>
               {m.conciliado ? '🔗' : ''}
@@ -509,5 +572,14 @@ export function MovimientosTabla({ movimientos, catLabel }: {
         ))}
       </div>
     </section>
+  )
+}
+
+function TotalLive({ label, valor, color }: { label: string; valor: string; color?: string }) {
+  return (
+    <div>
+      <div style={{ fontSize: '11px', color: 'var(--muted)', fontWeight: 500 }}>{label}</div>
+      <div style={{ fontSize: '16px', fontWeight: 800, color: color || 'var(--text)', marginTop: '2px' }}>{valor}</div>
+    </div>
   )
 }

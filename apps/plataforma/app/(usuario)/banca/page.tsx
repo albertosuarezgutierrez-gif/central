@@ -12,15 +12,22 @@ export const dynamic = 'force-dynamic'
 // Etiqueta visible por categoría IA (Fase 2). Compartida desde lib/categorizar.
 const CAT_LABEL = CATEGORIA_LABEL
 
-export default async function BancaPage() {
+export default async function BancaPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
   const session = await getSession()
   if (!session) redirect('/login')
+
+  const sp = await searchParams
+  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? ''
+  const filtrosIniciales = {
+    negocio: first(sp.negocio), signo: first(sp.signo), categoria: first(sp.categoria),
+    q: first(sp.q), desde: first(sp.desde), hasta: first(sp.hasta), sinConciliar: first(sp.sinConciliar) === '1',
+  }
 
   const anio = new Date().getFullYear()
   const [sociedades, saldo, movimientos, tesoreria, porRevisar, porDestino, evolucionNegocio, fiscal, duplicados, dupResueltos] = await Promise.all([
     prisma.sociedad.findMany({ where: { cuentaId: session.id }, orderBy: { createdAt: 'asc' }, select: { id: true, nombre: true } }),
     getSaldoConsolidado(session.id),
-    listarMovimientos(session.id, undefined, 300),
+    listarMovimientos(session.id, undefined, 5000),   // todos: el filtrado por negocio/fecha es en cliente
     getTesoreria(session.id),
     listarPorRevisar(session.id),
     getResumenPorDestino(session.id),
@@ -81,19 +88,21 @@ export default async function BancaPage() {
             <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>🏷️ Por negocio</h2>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
               {porDestino.map(d => (
-                <div key={d.destino} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)' }}>
+                <a key={d.destino} href={`/banca?negocio=${encodeURIComponent(d.destino)}#movimientos`}
+                   title="Ver sus movimientos"
+                   style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '18px', boxShadow: 'var(--shadow)', textDecoration: 'none', color: 'var(--text)', display: 'block', cursor: 'pointer' }}>
                   <div style={{ fontSize: '13px', fontWeight: 700 }}>{DESTINO_LABEL[d.destino as keyof typeof DESTINO_LABEL] || d.destino}</div>
-                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{d.movs} movimientos</div>
+                  <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '8px' }}>{d.movs} movimientos →</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#16a34a' }}>+{fmtEur(d.ingresos)}</div>
                   <div style={{ fontSize: '14px', fontWeight: 700, color: '#dc2626' }}>{fmtEur(d.gastos)}</div>
                   <div style={{ fontSize: '13px', fontWeight: 800, marginTop: '4px', borderTop: '1px solid var(--border)', paddingTop: '4px', color: (d.ingresos + d.gastos) >= 0 ? '#16a34a' : '#dc2626' }}>
                     {fmtEur(d.ingresos + d.gastos)}
                   </div>
-                </div>
+                </a>
               ))}
             </div>
             <p style={{ fontSize: '11px', color: 'var(--muted)', marginTop: '8px' }}>
-              🔁 Los traspasos internos no son ingresos/gastos reales. La tarjeta entrará detallada al subir su extracto.
+              👆 Pincha un negocio para ver y filtrar sus movimientos. 🔁 Los traspasos internos no son ingresos/gastos reales.
             </p>
           </section>
         )}
@@ -150,15 +159,18 @@ export default async function BancaPage() {
           />
         )}
 
-        {/* Movimientos con buscador + filtros */}
+        {/* Movimientos con buscador + filtros (negocio, signo, categoría, fechas, sin conciliar) */}
         {movimientos.length > 0 && (
           <MovimientosTabla
             catLabel={CAT_LABEL}
+            destinoLabel={DESTINO_LABEL}
+            initial={filtrosIniciales}
             movimientos={movimientos.map(m => ({
               id: m.id,
               fecha: m.fechaOperacion,
               concepto: m.conceptoNormalizado || m.concepto || m.contraparte || 'Movimiento',
               categoria: m.categoria,
+              destino: m.destino,
               importe: m.importe,
               conciliado: m.conciliado,
             }))}
