@@ -63,6 +63,73 @@
     **Decisiones abiertas:** email de limpiadora obligatorio (para OTP) y marca del remitente. Fase 2
     identidad de persona; Fase 3 consolidación en plataforma. Roadmap: fichaje (RD 8/2019), art. 28 RGPD,
     canal de denuncias (Ley 2/2023), vacaciones, onboarding, gestoría.
+- **🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)**
+  Construido el cerebro + los raíles del agente de pricing autónomo (sobre #290, que ya creó las 3 tablas).
+  - **Paso 4 (raíl, sivra):** `POST /api/pricing/aplicar-propuesta`. La IA propone y este endpoint aplica la
+    cadena que la IA NO puede saltarse: pausa global → `apply_enabled` → suelo de coste (`min_price`) →
+    tope ±`max_change_pct`/día vs precio actual → techo opcional → **circuit-breaker** (aborta la pasada
+    entera, HTTP 409, si la intención cruda mueve demasiadas fechas o un % medio enorme) → solo fechas
+    disponibles → escribe en Smoobu → audita en `pricing_applied` (`source='agente'`) + `pricing_decisiones`.
+    `dryRun` por defecto TRUE.
+  - **Paso 5 (cerebro):** skill `.claude/skills/pricing-agente/SKILL.md` para la sesión recurrente de Claude.
+    Lee `pricing_aprendizaje` + mide outcomes → reúne variables (mercado por zona/fecha vía conectores MCP,
+    eventos, ocupación, costes, características) → decide (máx. margen, pelotazo en eventos con ramp) → aplica
+    por el Paso 4 → escribe aprendizaje. Memoria = BD (sesión efímera).
+  - **Paso 5-bis (humano en el bucle, plataforma):** entrada de sidebar 🤖 Agente precios → `/agente`, chat
+    (`app/(usuario)/agente/page.tsx` + `app/api/agente/chat/route.ts`). Alberto pregunta "¿por qué X el día Y?"
+    (lee `pricing_decisiones.motivo`) y da instrucciones ("no bajes Busto de 120") que se guardan en
+    `pricing_aprendizaje` y el agente respeta el próximo ciclo. NO escribe precios (solo el Paso 4).
+  - **CI:** sivra/plataforma/ialimp/ia-rest deploy verde. `central-rrhh` falla (pre-existente, su `main` está
+    roto; este PR no toca `apps/rrhh`). Verificado `tsc` sin errores nuevos en los ficheros añadidos.
+  - **Pendiente (necesita a Alberto):** Paso 1 (datos) — lanzar `/api/pricing/pisos-zona` logueado en sivra
+    para poblar zona/CP/aforo reales. Luego: Paso 3 (bootstrap mercado por piso/fecha con conectores, lo hago
+    yo) y primeros ciclos del agente en dry-run antes de vivo.
+
+- **🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales — 16/06/2026**
+  Sesión de uso real con Alberto sobre los movimientos importados:
+  - **Fix regla de categorización** (`lib/categorizar.ts`): el IBI del ayuntamiento caía en `proveedor`
+    porque el banco trunca "AYUNTAMIENTO"→"AYUNTAMIEN" y la regla buscaba la palabra entera + no contemplaba
+    "IBI". Ahora la regla de `impuestos` incluye `AYUNTAMIEN`, ` IBI ` (con espacios, para no chocar con
+    "RECIBIDO"), `CONTRIBUCION`, `PLUSVALIA`. Los IBI futuros se auto-categorizan como 🏛️ Impuestos.
+  - **IBI Monte Carmelo 68** (ref. catastral `4707007TG3440N0003TR`, 2× −171,55 € = mismo inmueble al 50%
+    Alberto / 50% su mujer): corregidos a `categoria=impuestos` y **`destino=personal`** — es su **vivienda
+    habitual**, NO deducible. (El Dúplex es Pasaje Francisco, no Monte Carmelo.) Hecho por SQL (Supabase MCP).
+  - **Cargos duplicados** (PR #282, ya en prod): el caso "HORNO NUEVA FLORIDA −2,80 €" (5 compras repartidas)
+    se clasifica correctamente como **"Sospecha baja"** y queda bajo el umbral del banner (5 €), así que no
+    molesta en el dashboard. Confirmado que la feature ya hace lo pedido; Alberto silencia cada grupo con
+    "Es normal" (→ `duplicado_estado='ignorado'`). NO se reconstruyó nada.
+
+- **🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada — 15/06/2026**
+  La gráfica "Evolución mensual" del dashboard mezcla todo en un único Ingresos/Gastos → **a Alberto no le vale**
+  (mezcla cuentas bancarias y mezcla lo personal con lo de los pisos = poco informativo). Regla fijada:
+  **BBVA** = Duplex Center + seguros (unidad **aparte**); **Kutxa** = gastos personales + los **3 apartamentos
+  turísticos**, que hay que sacar **limpios sin lo personal**. Los 3 turísticos (confirmado por Alberto):
+  **Socorro = House Sevillana** (Calle Socorro 24, `prop_house_sevillana`), **Busto Tavera = Busto Reform**
+  (`prop_busto_reform`) **+ Luxury Busto** (`prop_luxury_busto`). Duplex Center NO entra en esa P&L.
+  Detalle + mapeo + gap del modelo de datos en **`apps/sivra/docs/contabilidad.md`** (enlazado desde
+  `apps/sivra/CLAUDE.md` y router `sivra-maestro`). **Pendiente:** implementar la segregación + filtro mes/año
+  + gráfico resumen en la vista "Mis apartamentos" / dashboard.
+
+- **⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)**
+  El banner del dashboard ya detectaba "posibles cargos duplicados" (`getAlertas`) pero era ingenuo
+  (falsos positivos con micro-gastos recurrentes, p. ej. HORNO NUEVA FLORIDA −3 €) y de solo lectura.
+  Ahora es **fiable y accionable**, en 3 fases (todas pusheadas y desplegando en Vercel):
+  - **F1:** columna aditiva `movimientos_bancarios.duplicado_estado` (NULL/ignorado/confirmado, migración
+    `2026-06-15_banca_duplicados.sql` **ya aplicada** por Supabase MCP en `wswbehlcuxqxyinousql`).
+    Lógica PURA y testeada en `lib/duplicados.ts` (`clasificarConfianza`, `superaUmbralBanner`,
+    `esRecurrente`, `agruparDuplicados`; `lib/duplicados.test.ts`, 8 tests `node --test` verde). `lib/banca.ts`:
+    `getDuplicadosSospechosos`/`getDuplicadosResueltos`/`resolverDuplicados`; `getAlertas` reusa la misma
+    fuente con **umbral** (`DUP_UMBRAL_BANNER`, 5 €) → micro-gastos no disparan el banner. Excluye pares ya
+    conciliados a facturas distintas. API `POST /api/banca/duplicados`. UI `DuplicadosBandeja` en `/banca`
+    (resolver/deshacer + plegable "ya resueltos"); banner del dashboard enlaza a `/banca#duplicados`.
+  - **F2:** borrador de reclamación IA (`lib/reclamacion.ts` con `aiComplete`, degrada a plantilla) +
+    `POST /api/banca/duplicados/reclamacion` + botón/modal "Reclamar" en la bandeja.
+  - **F3:** auto-detección de recurrentes (subconsulta de ocurrencias en 60 d → `esRecurrente` degrada a
+    confianza baja). Verificado con datos reales: el IBI (recibo mismo día) sale como sospecha ALTA; HORNO
+    (16/mes) y GALOS (19/mes) quedan silenciados.
+  - **Spec:** `docs/superpowers/specs/2026-06-15-duplicados-bancarios-design.md`. **Plan:**
+    `docs/superpowers/plans/2026-06-15-duplicados-bancarios.md`.
+  - **Pendiente (opcional):** enganchar duplicados al email del cron `banca-alertas`.
 
 - **✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26) — 16/06/2026**
   Decisión: **firma propia** legalmente válida (no Firmafy ahora; avanzada basta para nóminas/contratos

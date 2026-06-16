@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:37:39Z",
+  "generadoEn": "2026-06-16T08:44:24Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,7 +254,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 6
       },
       "rrhh": {
         "estado": "no",
@@ -924,7 +924,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 22
+        "evidencias": 24
       }
     },
     "mercado": {
@@ -946,7 +946,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 10
+        "evidencias": 11
       }
     },
     "crm-leads": {
@@ -1201,8 +1201,8 @@
         "evidencias": 2
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -1929,11 +1929,14 @@
       "/api/admin/logout",
       "/api/admin/personas",
       "/api/admin/propiedades",
+      "/api/agente/chat",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
       "/api/banca/analizar",
       "/api/banca/conciliar",
+      "/api/banca/duplicados",
+      "/api/banca/duplicados/reclamacion",
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
@@ -2043,8 +2046,10 @@
       "/api/mercado/ingest-auto",
       "/api/mercado/search",
       "/api/mercado/stats",
+      "/api/mercado/sweep",
       "/api/pitch",
       "/api/pricing-alerts",
+      "/api/pricing/aplicar-propuesta",
       "/api/pricing/apply",
       "/api/pricing/apply-auto",
       "/api/pricing/config",
@@ -2054,6 +2059,7 @@
       "/api/pricing/historial",
       "/api/pricing/pilot-track",
       "/api/pricing/pilot-track/historial",
+      "/api/pricing/pisos-zona",
       "/api/pricing/recommend",
       "/api/pricing/restore",
       "/api/pricing/resultados",
@@ -2249,6 +2255,11 @@
       "description": ">"
     },
     {
+      "id": "pricing-agente",
+      "name": "pricing-agente",
+      "description": ">"
+    },
+    {
       "id": "receiving-code-review",
       "name": "receiving-code-review",
       "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation"
@@ -2294,6 +2305,22 @@
       "fecha": "16/06/2026"
     },
     {
+      "titulo": "🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada",
+      "fecha": "15/06/2026"
+    },
+    {
+      "titulo": "⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)",
+      "fecha": "15/06/2026"
+    },
+    {
       "titulo": "✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26)",
       "fecha": "16/06/2026"
     },
@@ -2328,22 +2355,6 @@
     {
       "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
       "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)",
-      "fecha": "14/06/2026"
     }
   ],
   "saludRepo": {
@@ -2638,8 +2649,8 @@
     "verticales": 5,
     "packages": 22,
     "capacidades": 23,
-    "skills": 13,
-    "apis": 798,
+    "skills": 14,
+    "apis": 804,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0

@@ -1,8 +1,10 @@
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { getSession } from '@/lib/session'
-import { getPropiedades } from '@/lib/propiedades'
+import { getPropiedades, getResumenAnual, PROP_TURISTICOS, PROP_BBVA } from '@/lib/propiedades'
 import { fmtEur } from '@/lib/banca'
+import Filtro from './Filtro'
+import BarrasMensuales from './BarrasMensuales'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,38 +12,83 @@ const PORTAL_LABEL: Record<string, string> = {
   BOOKING: 'Booking', AIRBNB: 'Airbnb', VRBO: 'VRBO',
   DIRECTO: 'Directo', EXPEDIA: 'Expedia', OTRO: 'Otro',
 }
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
-export default async function ApartamentosPage() {
+export default async function ApartamentosPage({ searchParams }: { searchParams: Promise<{ year?: string; month?: string }> }) {
   const session = await getSession()
   if (!session) redirect('/login')
 
-  const propiedades = await getPropiedades()
+  const sp = await searchParams
+  const now = new Date()
+  const year  = Number(sp.year) || now.getFullYear()
+  const monthRaw = Number(sp.month)
+  const month = monthRaw >= 1 && monthRaw <= 12 ? monthRaw : null
+  const periodoLabel = month ? `${MESES[month - 1]} ${year}` : `Año ${year}`
+
+  const [propiedades, resumen] = await Promise.all([
+    getPropiedades({ year, month }),
+    getResumenAnual(year),
+  ])
   const propias = propiedades.filter(p => !p.id.includes('multi') && !p.id.includes('personal'))
 
-  const totalMes = propias.reduce((s, p) => s + p.ingresosMes, 0)
-  const totalAnio = propias.reduce((s, p) => s + p.ingresosAnio, 0)
-  const gastosMes = propias.reduce((s, p) => s + p.gastosMes, 0)
-  const totalNoches = propias.reduce((s, p) => s + p.noches, 0)
-  const ocupMedia = propias.length > 0 ? Math.round(propias.reduce((s, p) => s + p.ocupacion, 0) / propias.length) : 0
+  // Separación de cuentas (ver apps/sivra/docs/contabilidad.md): NO mezclar.
+  const turisticos = propias.filter(p => (PROP_TURISTICOS as readonly string[]).includes(p.id))
+  const bbva       = propias.filter(p => (PROP_BBVA as readonly string[]).includes(p.id))
+
+  const grupoKpis = (lista: typeof propias) => ({
+    ingresos: lista.reduce((s, p) => s + p.ingresosMes, 0),
+    gastos:   lista.reduce((s, p) => s + p.gastosMes, 0),
+    anio:     lista.reduce((s, p) => s + p.ingresosAnio, 0),
+    noches:   lista.reduce((s, p) => s + p.noches, 0),
+    ocup:     lista.length > 0 ? Math.round(lista.reduce((s, p) => s + p.ocupacion, 0) / lista.length) : 0,
+  })
+  const kTur = grupoKpis(turisticos)
+  const kBbva = grupoKpis(bbva)
 
   return (
     <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '28px' }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700 }}>🏨 Mis apartamentos</h1>
+        <Filtro year={year} month={month} />
+      </div>
+      <p style={{ fontSize: '13px', color: 'var(--muted)', marginBottom: '24px' }}>{periodoLabel}</p>
+
+      {/* KPI — Explotación turística (cuenta Kutxa, sin gastos personales) */}
+      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+        Explotación turística · 3 pisos (Kutxa)
+      </div>
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
+        padding: '20px 24px', display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '20px',
+        boxShadow: 'var(--shadow)',
+      }}>
+        <KPI label="Ingresos periodo" value={fmtEur(kTur.ingresos)} color="var(--primary)" />
+        <KPI label="Gastos periodo" value={fmtEur(kTur.gastos)} color="var(--muted)" />
+        <KPI label="Resultado" value={fmtEur(kTur.ingresos - kTur.gastos)} color={kTur.ingresos - kTur.gastos >= 0 ? '#16a34a' : '#dc2626'} />
+        <KPI label={`Ingresos ${year}`} value={fmtEur(kTur.anio)} color="var(--text)" />
+        <KPI label="Noches ocupadas" value={`${kTur.noches} noches`} color="var(--text)" />
+        <KPI label="Ocupación media" value={`${kTur.ocup}%`} color={kTur.ocup >= 70 ? '#16a34a' : kTur.ocup >= 40 ? '#d97706' : '#dc2626'} />
       </div>
 
-      {/* KPI strip */}
+      {/* KPI — Duplex + seguros (cuenta BBVA, unidad aparte) */}
+      <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
+        Duplex + seguros (BBVA) · aparte
+      </div>
       <div style={{
         background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
         padding: '20px 24px', display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '28px',
         boxShadow: 'var(--shadow)',
       }}>
-        <KPI label="Ingresos este mes" value={fmtEur(totalMes)} color="var(--primary)" />
-        <KPI label="Gastos este mes" value={fmtEur(gastosMes)} color="var(--muted)" />
-        <KPI label="Resultado mes" value={fmtEur(totalMes - gastosMes)} color={totalMes - gastosMes >= 0 ? '#16a34a' : '#dc2626'} />
-        <KPI label={`Ingresos ${new Date().getFullYear()}`} value={fmtEur(totalAnio)} color="var(--text)" />
-        <KPI label="Noches ocupadas" value={`${totalNoches} noches`} color="var(--text)" />
-        <KPI label="Ocupación media" value={`${ocupMedia}%`} color={ocupMedia >= 70 ? '#16a34a' : ocupMedia >= 40 ? '#d97706' : '#dc2626'} />
+        <KPI label="Ingresos periodo" value={fmtEur(kBbva.ingresos)} color="var(--primary)" />
+        <KPI label="Gastos periodo" value={fmtEur(kBbva.gastos)} color="var(--muted)" />
+        <KPI label="Resultado" value={fmtEur(kBbva.ingresos - kBbva.gastos)} color={kBbva.ingresos - kBbva.gastos >= 0 ? '#16a34a' : '#dc2626'} />
+        <KPI label={`Ingresos ${year}`} value={fmtEur(kBbva.anio)} color="var(--text)" />
+      </div>
+
+      {/* Gráficos resumen anual (Ingresos vs Gastos por mes) — una unidad por gráfico */}
+      <div style={{ display: 'grid', gap: '16px', marginBottom: '28px' }}>
+        <BarrasMensuales titulo={`Explotación turística ${year}`} badge="3 pisos · Kutxa" serie={resumen.turisticos} />
+        <BarrasMensuales titulo={`Duplex + seguros ${year}`} badge="BBVA · aparte" serie={resumen.bbva} />
       </div>
 
       {/* Tarjetas por apartamento */}

@@ -1,10 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'ia plataforma',
   description: 'Cuadro de mando consolidado',
   manifest: '/manifest.json',
+}
+
+// Next 15 exige themeColor en el export `viewport`, no en `metadata` (antes
+// emitía «⚠ Unsupported metadata themeColor…» en cada render en producción).
+export const viewport: Viewport = {
   themeColor: '#4f46e5',
 }
 

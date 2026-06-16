@@ -42,27 +42,39 @@ const APP_URL: Record<string, string> = {
   sivra:     process.env.SIVRA_URL   || '#',
 }
 
+// Degradación elegante: la BD compartida (Supabase) puede dar timeouts puntuales bajo
+// carga. Sin esto, un único query lento dentro del Promise.all reventaba TODA la página
+// con un 500 (síntoma observado: el mismo /dashboard unas veces 200 y otras 500). Ahora
+// cada fuente cae a un valor vacío y el panel se pinta parcial en vez de romperse.
+async function safe<T>(p: Promise<T>, fallback: T): Promise<T> {
+  try { return await p } catch (e) { console.error('[dashboard] fallo cargando datos, degradando:', e); return fallback }
+}
+
 export default async function DashboardPage() {
   const session = await getSession()
   if (!session) redirect('/login')
 
   const anio = new Date().getFullYear()
 
-  const sociedades = await prisma.sociedad.findMany({
+  // El tipo del fallback se infiere del propio query (Awaited<typeof query>) para que
+  // conserve el `include: { negocios }`; con ReturnType<typeof findMany> se perdía la
+  // relación y `soc.negocios` no existía en el tipo.
+  const sociedadesQuery = prisma.sociedad.findMany({
     where: { cuentaId: session.id },
     include: { negocios: { orderBy: { createdAt: 'asc' } } },
     orderBy: { createdAt: 'asc' },
   })
+  const sociedades = await safe(sociedadesQuery, [] as Awaited<typeof sociedadesQuery>)
 
-  // Saldo bancario consolidado + strip hoy + evolución mensual + comparativa + gastos por
-  // categoría + alertas accionables.
+  // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
+  // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
   const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas] = await Promise.all([
-    getSaldoConsolidado(session.id),
-    getStripHoy(session.id),
-    getEvolucionMensual(session.id),
-    getComparativaMensual(session.id),
-    getGastosPorCategoria(session.id),
-    getAlertas(session.id),
+    safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
+    safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
+    safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
+    safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
+    safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
+    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [] }),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -313,14 +325,15 @@ function AlertasBanner({ alertas }: { alertas: Alertas }) {
         </Link>
       )}
       {alertas.duplicados > 0 && (
-        <div style={{ fontSize: '13px', color: 'var(--text)' }}>
+        <Link href="/banca#duplicados" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
           ⚠️ <strong>{alertas.duplicados}</strong> {alertas.duplicados === 1 ? 'posible cargo duplicado' : 'posibles cargos duplicados'}
           {alertas.duplicadosDetalle.length > 0 && (
             <span style={{ color: 'var(--muted)' }}>
               {' '}— {alertas.duplicadosDetalle.map(d => `${d.concepto} (${fmtEur(d.importe)})`).join(', ')}
             </span>
           )}
-        </div>
+          {' '}→
+        </Link>
       )}
     </div>
   )
