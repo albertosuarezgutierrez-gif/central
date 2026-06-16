@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:01:52Z",
+  "generadoEn": "2026-06-16T08:13:01Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1959,6 +1959,7 @@
     "rrhh": [
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/acceso",
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
@@ -2636,7 +2637,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 13,
-    "apis": 795,
+    "apis": 796,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
     "reimplementaciones": 0
