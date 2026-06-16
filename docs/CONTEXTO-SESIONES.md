@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 SIVRA · Agente de pricing — 1er ciclo real + costes/suelos + Busto en vivo — 16/06/2026**
+  Tras #291 (raíles+skill+chat) y #295 (motor por temporada B2), ejecutado el primer ciclo con datos REALES:
+  - **Zona** (`pricing_piso_zona`): 4 pisos en CP 41003 (Bustos Tavera / Casco Antiguo), aforo/tipo reales
+    (sacados de `propiedades`; el endpoint `/api/pricing/pisos-zona` pide sesión → al abrirlo sin login redirige).
+  - **Mercado real por zona+aforo** (conector Booking MCP, en `market_rates`): verano p50 ~132€ (4pax)/~122€ (2pax);
+    **Semana Santa 2027 p50 ~462€/noche (¡~3,3× normal!, ya disparado)**; Feria 2027 ~162€ (aún sin rampar; FECHAS A CONFIRMAR).
+  - **Costes reales y SUELOS** (`pricing_settings.min_price` + memoria `pricing_aprendizaje/ALL/costes`):
+    limpieza/sesión busto 20€·duplex 25€·luxury 28€·house 90€ (12 plazas); fijos/mes busto ALQUILER 259€,
+    luxury ALQUILER 309€ (**subarriendo → renta = coste duro**), duplex 97€, house sin fijos. Coste/noche ~14-30€,
+    muy por debajo de mercado → el suelo es protección. Suelos: **busto 90 (de Alberto), duplex 85, luxury 95, house 180**.
+  - **🟢 EN VIVO: solo `busto_reform`** (decisión de Alberto: validar Busto al 100% antes de pasar al resto).
+    Simulación verificada: julio ~90€ (toca suelo), octubre ~115€, eventos vía `eventFactor`. Duplex/Luxury/House
+    con suelo puesto pero `apply_enabled=false` (dry-run) hasta el OK.
+  - **Decisiones dry-run** del pelotazo SS en `pricing_decisiones` (fuente `agente_bootstrap`): Duplex 371 / Luxury 354 / Busto 319 base, min-stay 3.
+  - **⚙️ Autonomía (clave):** el bucle DETERMINISTA va solo por crons in-app (apply-auto diario tarifica Busto por
+    temporada, rates/snapshot mide `was_booked`, mercado/sweep+eventos refrescan, resumen-diario/pilot-track miden KPIs).
+    El **agente IA con los conectores de viajes** (estudio fino por zona/aforo + escribir insights) **solo corre cuando
+    hay sesión de Claude** (los conectores viven en la sesión, no en la app) → para recurrencia hace falta una **sesión
+    programada de Claude Code on web** apuntando al skill `pricing-agente` (plan B = crons in-app, ya activos). La memoria
+    (`pricing_aprendizaje`) persiste entre sesiones.
+  - **Pendiente:** validar Busto en vivo unos días → activar Duplex+Luxury; comps de Semana Santa **para Busto** (2 plazas);
+    confirmar **fechas Feria 2027**; House necesita comps de unidad grande (12 plazas) antes de activar; (opcional) montar el disparador semanal del agente.
+
 - **📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026) — 16/06/2026**
   El panel "Mis apartamentos / Febrero 2026" mostraba **0 € de ingresos** (Gastos: 1.641 €, resultado −1.641 €).
   Causa raíz: la API key de Smoobu estuvo rota ~sep-2025→14-jun-2026 y el cron solo tiene ventana de 2 días
