@@ -27,6 +27,7 @@ description: >
 |---|---|
 | Qué es, BD, envs, estado, reglas | `apps/plataforma/CLAUDE.md` |
 | **Personas a través de verticales** (god-panel, RR.HH., solo lectura) | `/operador/personas` + `lib/personas.ts`; consolida por `persona_id` (ialimp por prisma + rrhh por puerto `/api/operador/personas`), sugiere enlaces por DNI/email (`@central/core-identity`). Enlace MANUAL pendiente. Detalle en `apps/plataforma/CLAUDE.md` |
+| **Pasarela de IA central** (keys de proveedor solo aquí) | `/api/ai/{chat,search,vision}` (Bearer `AI_GATEWAY_SECRET`) + `lib/ai-gateway.ts` (`verificarSecreto`/`registrarUso`/`dentroDePresupuesto`/`resumenIA`) + tabla `public.ai_usos`. Panel **god-panel → 🤖 IA · gasto** (`/operador/ia`). Las verticales (rrhh/ialimp/sivra) llaman con `gatewayChat`/`gatewaySearch`/`gatewayVision` de `@central/core-ai`; conexión por envs Team-shared `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`. ia-rest (tool-calling Anthropic) pendiente |
 | Diseño del god-panel | `docs/DISEÑO-god-panel.md` |
 | Plataforma modular (roadmap) | `docs/PLAN-plataforma-modular.md` |
 | Radiografía del repo (pestaña 🗺️ Estructura) | `docs/ESTRUCTURA.md` |
