@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)**
+  Construido el cerebro + los raíles del agente de pricing autónomo (sobre #290, que ya creó las 3 tablas).
+  - **Paso 4 (raíl, sivra):** `POST /api/pricing/aplicar-propuesta`. La IA propone y este endpoint aplica la
+    cadena que la IA NO puede saltarse: pausa global → `apply_enabled` → suelo de coste (`min_price`) →
+    tope ±`max_change_pct`/día vs precio actual → techo opcional → **circuit-breaker** (aborta la pasada
+    entera, HTTP 409, si la intención cruda mueve demasiadas fechas o un % medio enorme) → solo fechas
+    disponibles → escribe en Smoobu → audita en `pricing_applied` (`source='agente'`) + `pricing_decisiones`.
+    `dryRun` por defecto TRUE.
+  - **Paso 5 (cerebro):** skill `.claude/skills/pricing-agente/SKILL.md` para la sesión recurrente de Claude.
+    Lee `pricing_aprendizaje` + mide outcomes → reúne variables (mercado por zona/fecha vía conectores MCP,
+    eventos, ocupación, costes, características) → decide (máx. margen, pelotazo en eventos con ramp) → aplica
+    por el Paso 4 → escribe aprendizaje. Memoria = BD (sesión efímera).
+  - **Paso 5-bis (humano en el bucle, plataforma):** entrada de sidebar 🤖 Agente precios → `/agente`, chat
+    (`app/(usuario)/agente/page.tsx` + `app/api/agente/chat/route.ts`). Alberto pregunta "¿por qué X el día Y?"
+    (lee `pricing_decisiones.motivo`) y da instrucciones ("no bajes Busto de 120") que se guardan en
+    `pricing_aprendizaje` y el agente respeta el próximo ciclo. NO escribe precios (solo el Paso 4).
+  - **CI:** sivra/plataforma/ialimp/ia-rest deploy verde. `central-rrhh` falla (pre-existente, su `main` está
+    roto; este PR no toca `apps/rrhh`). Verificado `tsc` sin errores nuevos en los ficheros añadidos.
+  - **Pendiente (necesita a Alberto):** Paso 1 (datos) — lanzar `/api/pricing/pisos-zona` logueado en sivra
+    para poblar zona/CP/aforo reales. Luego: Paso 3 (bootstrap mercado por piso/fecha con conectores, lo hago
+    yo) y primeros ciclos del agente en dry-run antes de vivo.
+
 - **🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales — 16/06/2026**
   Sesión de uso real con Alberto sobre los movimientos importados:
   - **Fix regla de categorización** (`lib/categorizar.ts`): el IBI del ayuntamiento caía en `proveedor`
