@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T09:44:37Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T10:56:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 805 rutas API.
+**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 810 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -19,9 +19,9 @@
 - **Rutas API:** 193
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
-- **Capacidades:** Facturación / VeriFactu, Asistente / copiloto IA
+- **Capacidades:** Marketing (blog/IG/SEO), Facturación / VeriFactu, Asistente / copiloto IA
 - **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 40
+- **Rutas API:** 45
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA

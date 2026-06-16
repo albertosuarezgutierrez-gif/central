@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T09:44:37Z",
+  "generadoEn": "2026-06-16T10:56:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -254,7 +254,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 6
+        "evidencias": 7
       },
       "rrhh": {
         "estado": "usado",
@@ -981,8 +981,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -1957,6 +1957,11 @@
       "/api/cron/psd2-sync",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/incomes",
+      "/api/sivra/inversion",
+      "/api/sivra/inversion/analyze",
+      "/api/sivra/seo-proposals",
+      "/api/sivra/seo-refresh",
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
@@ -2644,7 +2649,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 805,
+    "apis": 810,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
