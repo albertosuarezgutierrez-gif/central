@@ -22,6 +22,14 @@ export default function AdminShell({ activo, children }: { activo: NavKey; child
           {item('empleados', '/admin/empleados', 'Empleados')}
           {item('solicitudes', '/admin/solicitudes', 'Solicitudes')}
           {item('cuenta', '/admin/cuenta', 'Mi cuenta')}
+          <a
+            href="/manual.html"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-2.5 rounded-[10px] px-3 py-2 text-sm font-medium text-ink-2 no-underline hover:bg-paper-2 md:mt-auto"
+          >
+            📖 Manual
+          </a>
         </nav>
       </aside>
       <main className="mx-auto w-full max-w-3xl p-6">{children}</main>
