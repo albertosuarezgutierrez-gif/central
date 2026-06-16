@@ -41,8 +41,10 @@
     agrupa por `persona_id` y PROPONE enlaces no hechos por DNI/email (`coincidenciaPersona`). God-panel:
     `/operador/personas` (`PersonasClient.tsx`, item nuevo en `UserSidebar`) + `GET /api/admin/personas`.
   - **Pendiente:** **enlace MANUAL** del `persona_id` cross-vertical (escritura: setear el mismo persona_id
-    en ambas filas/dos apps — hoy solo se SUGIERE en `/operador/personas`). Roadmap de módulos
-    (fichaje RD 8/2019, art. 28 RGPD, canal de denuncias, vacaciones, onboarding, gestoría…).
+    en ambas filas/dos apps — hoy solo se SUGIERE en `/operador/personas`). **Roadmap completo en
+    `docs/ROADMAP-rrhh.md`** (todas las ideas con top-3 marcado: asistente IA del trabajador + multi-idioma,
+    verificación pública por QR estilo VeriFactu, plantillas legales versionadas; + fichaje RD 8/2019,
+    art. 28 RGPD, canal de denuncias, coste laboral en plataforma, pago real Stripe, etc.).
 
 - **🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh` — 16/06/2026**
   Objetivo (decisión de Alberto): RR.HH. (nóminas + firma + expediente) reutilizable por **cualquier
