@@ -6,7 +6,7 @@
  */
 import {
   aiComplete as _aiComplete, nimVision,
-  gatewayChat, gatewayVision,
+  gatewayChat, gatewayVision, gatewaySearch,
   type NimConfig, type GatewayConfig,
 } from '@central/core-ai'
 
@@ -46,6 +46,22 @@ export async function aiComplete(
   const cfg = gatewayCfg()
   if (cfg) return gatewayChat(cfg, messages, { system, model, maxTokens, timeoutMs })
   return _aiComplete(messages, { system, maxTokens, temperature, timeoutMs, model })
+}
+
+/**
+ * Búsqueda web + síntesis a través de la pasarela central (Gemini + Google Search por debajo).
+ * Usar para tareas que necesitan datos actuales de internet (p. ej. análisis SEO de competencia).
+ * Sin pasarela configurada cae a NIM puro (texto, SIN búsqueda web real) como último recurso.
+ */
+export async function aiSearch(
+  system: string,
+  user: string,
+  options: { maxTokens?: number; timeoutMs?: number } = {},
+): Promise<string> {
+  const { maxTokens = 1500, timeoutMs = 45_000 } = options
+  const cfg = gatewayCfg()
+  if (cfg) return gatewaySearch(cfg, system, user, { maxTokens, timeoutMs })
+  return _aiComplete([{ role: 'user', content: user }], { system, maxTokens, timeoutMs })
 }
 
 /** Visión / OCR: pasarela si está configurada; si no, NIM directo. */
