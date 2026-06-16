@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel — 16/06/2026** (PR #325 MERGED, squash `97bdcc2`)
+  - **Motivo**: los 4 agentes daban error 500 *"Anthropic no disponible (sin crédito)"*. Decisión de Alberto:
+    quitar Anthropic → **NVIDIA NIM + Gemini** (gratis, sin saldo).
+  - **`@central/core-ai`**: nuevo `nimChatTools` (function-calling con NIM, endpoint OpenAI-compatible) +
+    tipos `NimToolMessage`/`NimToolCall`/`NimToolResult`. NIM corre el bucle agéntico; la app ejecuta sus tools.
+  - **ia-rest `lib/ai-client.ts`**: `callAITools(system, messages, tools)` (wrapper de `nimChatTools`).
+  - **Agentes migrados** (las herramientas se ejecutan igual; solo cambió el "cerebro"):
+    - `agentes-ai` (solo búsqueda web) → **Gemini** (`callAISearch`).
+    - `agente-arquitecto` (GitHub/Drive) → **NIM function-calling**.
+    - `agentes-seo` (web_search + GSC/GA4) → **NIM**; `web_search` pasa a tool custom respaldada por **Gemini**.
+    - `cron/seo-agent` (web_search + escritura SEO + GSC/GA4) → **NIM + Gemini**.
+  - Funciona con `NVIDIA_API_KEY` + `GEMINI_API_KEY` que ia-rest **ya tiene**. `tsc` limpio. 5 deploys Vercel en verde.
+  - **PENDIENTE**: (a) **sivra `seo-refresh`** (cron) aún usa Anthropic web_search → migrar igual a Gemini.
+    (b) Conectar el `ai-client` de ia-rest a la pasarela central (como ialimp/sivra) para centralizar su gasto.
+
+
 - **📧 FACTURAS CORREO · Agente de contabilidad + botón en Banca — 16/06/2026** (PR #324 MERGED)
   - **Pasada manual 30 días ejecutada** (primera vez): Gmail → 13 threads procesados:
     - Deducibles archivados en Drive (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic (seguros),
