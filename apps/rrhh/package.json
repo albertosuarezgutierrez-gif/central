@@ -15,6 +15,7 @@
     "@central/core-storage": "file:../../packages/core-storage",
     "@central/module-chat": "file:../../packages/module-chat",
     "@central/module-documental": "file:../../packages/module-documental",
+    "@central/module-rrhh": "file:../../packages/module-rrhh",
     "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.46.2",
     "bcryptjs": "^2.4.3",

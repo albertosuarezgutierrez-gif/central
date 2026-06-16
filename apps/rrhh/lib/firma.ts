@@ -1,121 +1,105 @@
-import { createHash, randomInt } from 'crypto'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { FirmaPropia, nombreCoincide, type ContextoFirma, type Firmante, type MetodoFirma } from '@central/core-firma'
+import { FirmaPropia, type Firmante } from '@central/core-firma'
+import {
+  solicitarCodigoFirma as orquestarCodigo,
+  solicitarFirma as orquestarSolicitud,
+  firmarDocumento as orquestarFirma,
+  type DepsFirma, type RepoFirma, type DocFirmable,
+} from '@central/module-rrhh'
 import { descargarObjeto } from '@/lib/storage'
 import { getTransporter, MAIL_FROM } from '@/lib/mailer'
 
 const proveedor = new FirmaPropia()
 
-const hashCodigo = (c: string) => createHash('sha256').update(c).digest('hex')
-
-/** Enmascara un email para el acuse (j***@dominio.com). */
-function enmascarar(email: string): string {
-  const [u, d] = email.split('@')
-  if (!d) return '***'
-  return `${u[0] ?? ''}***@${d}`
-}
-
 /**
- * Genera un código OTP de 6 dígitos, lo envía al email del empleado y lo guarda (hasheado, 10 min).
- * Refuerza el control exclusivo (eIDAS art. 26.c). Si no hay email/SMTP, devuelve { enviado:false }
- * y la firma sigue siendo válida por sesión (token personal) sin OTP.
+ * Construye los puertos de firma con el SQL de rrhh (tablas `rrhh.documentos/firmas/firma_otps`),
+ * scopeados a (empresa, empleado). La orquestación owner-agnóstica vive en `@central/module-rrhh`.
  */
-export async function solicitarCodigoFirma(
-  empresaId: string, empleadoId: string, docId: string
-): Promise<{ enviado: boolean; email_parcial?: string }> {
-  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT d.estado_firma, e.email, e.nombre
-    FROM rrhh.documentos d JOIN rrhh.empleados e ON e.id = d.empleado_id
-    WHERE d.id = ${docId}::uuid AND d.empleado_id = ${empleadoId}::uuid AND d.empresa_id = ${empresaId}::uuid LIMIT 1`)
-  const doc = rows[0]
-  if (!doc) throw new Error('Documento no encontrado')
-  if (doc.estado_firma !== 'pendiente') throw new Error('Este documento no requiere firma')
+function deps(empresaId: string, empleadoId: string): DepsFirma {
+  const repo: RepoFirma = {
+    async cargarDoc(docId): Promise<DocFirmable | null> {
+      const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT d.estado_firma, d.storage_path, e.nombre, e.email, e.dni
+        FROM rrhh.documentos d JOIN rrhh.empleados e ON e.id = d.empleado_id
+        WHERE d.id = ${docId}::uuid AND d.empleado_id = ${empleadoId}::uuid AND d.empresa_id = ${empresaId}::uuid LIMIT 1`)
+      const doc = rows[0]
+      if (!doc) return null
+      const titular: Firmante = { id: empleadoId, nombre: doc.nombre, email: doc.email, dni: doc.dni }
+      return { estadoFirma: doc.estado_firma, storagePath: doc.storage_path, titular }
+    },
+    async guardarOtp(docId, codigoHash, expiraAt) {
+      await prisma.$executeRaw(Prisma.sql`
+        INSERT INTO rrhh.firma_otps (empresa_id, empleado_id, documento_id, codigo_hash, expira_at)
+        VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${docId}::uuid, ${codigoHash}, ${expiraAt.toISOString()}::timestamptz)
+        ON CONFLICT (documento_id, empleado_id)
+        DO UPDATE SET codigo_hash = EXCLUDED.codigo_hash, expira_at = EXCLUDED.expira_at, intentos = 0, creada_at = now()`)
+    },
+    async cargarOtp(docId) {
+      const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
+        SELECT codigo_hash, expira_at, intentos FROM rrhh.firma_otps
+        WHERE documento_id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid LIMIT 1`)
+      const o = rows[0]
+      return o ? { codigoHash: o.codigo_hash, expiraAt: o.expira_at, intentos: o.intentos } : null
+    },
+    async sumarIntentoOtp(docId) {
+      await prisma.$executeRaw(Prisma.sql`
+        UPDATE rrhh.firma_otps SET intentos = intentos + 1
+        WHERE documento_id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid`)
+    },
+    async marcarPendiente(docId) {
+      await prisma.$executeRaw(Prisma.sql`UPDATE rrhh.documentos SET estado_firma = 'pendiente' WHERE id = ${docId}::uuid`)
+    },
+    async registrarFirma(docId, evidencia, contexto) {
+      const f = evidencia.firmante
+      await prisma.$transaction([
+        prisma.$executeRaw(Prisma.sql`
+          INSERT INTO rrhh.firmas (empresa_id, empleado_id, documento_id, doc_hash, algoritmo, metodo,
+            firmante_nombre, firmante_email, firmante_dni, ip, user_agent, sello_tiempo, evidencia)
+          VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${docId}::uuid, ${evidencia.doc_hash}, ${evidencia.algoritmo}, ${evidencia.metodo},
+            ${f.nombre}, ${f.email}, ${f.dni}, ${contexto.ip}, ${contexto.user_agent},
+            ${contexto.fecha}::timestamptz, ${JSON.stringify(evidencia)}::jsonb)`),
+        prisma.$executeRaw(Prisma.sql`UPDATE rrhh.documentos SET estado_firma = 'firmado' WHERE id = ${docId}::uuid`),
+        prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.firma_otps WHERE documento_id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid`),
+      ])
+    },
+  }
 
   const t = getTransporter()
-  if (!t || !doc.email) return { enviado: false }
+  const email = t
+    ? {
+        async enviarCodigo({ to, nombre, codigo }: { to: string; nombre: string; codigo: string }) {
+          try {
+            await t.sendMail({
+              from: MAIL_FROM, to,
+              subject: 'Tu código para firmar el documento',
+              text: `Hola ${nombre},\n\nTu código para firmar electrónicamente el documento es: ${codigo}\n\nCaduca en 10 minutos. Si no has solicitado firmar, ignora este mensaje.`,
+            })
+            return true
+          } catch {
+            return false
+          }
+        },
+      }
+    : null
 
-  const codigo = String(randomInt(0, 1_000_000)).padStart(6, '0')
-  const expira = new Date(Date.now() + 10 * 60 * 1000)
-  await prisma.$executeRaw(Prisma.sql`
-    INSERT INTO rrhh.firma_otps (empresa_id, empleado_id, documento_id, codigo_hash, expira_at)
-    VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${docId}::uuid, ${hashCodigo(codigo)}, ${expira.toISOString()}::timestamptz)
-    ON CONFLICT (documento_id, empleado_id)
-    DO UPDATE SET codigo_hash = EXCLUDED.codigo_hash, expira_at = EXCLUDED.expira_at, intentos = 0, creada_at = now()`)
+  return { repo, email, storage: { descargar: descargarObjeto }, proveedor }
+}
 
-  try {
-    await t.sendMail({
-      from: MAIL_FROM, to: doc.email,
-      subject: 'Tu código para firmar el documento',
-      text: `Hola ${doc.nombre},\n\nTu código para firmar electrónicamente el documento es: ${codigo}\n\nCaduca en 10 minutos. Si no has solicitado firmar, ignora este mensaje.`,
-    })
-  } catch {
-    return { enviado: false }
-  }
-  return { enviado: true, email_parcial: enmascarar(doc.email) }
+/** Genera y envía el código OTP de firma (10 min). Ver `@central/module-rrhh`. */
+export async function solicitarCodigoFirma(empresaId: string, empleadoId: string, docId: string) {
+  return orquestarCodigo(deps(empresaId, empleadoId), docId)
 }
 
 /** El gestor solicita la firma de un documento (estado_firma → 'pendiente'). Scope por empresa. */
 export async function solicitarFirma(empresaId: string, empleadoId: string, docId: string) {
-  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT estado_firma FROM rrhh.documentos
-    WHERE id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid AND empresa_id = ${empresaId}::uuid LIMIT 1`)
-  const doc = rows[0]
-  if (!doc) throw new Error('Documento no encontrado')
-  if (doc.estado_firma === 'firmado') throw new Error('El documento ya está firmado')
-  await prisma.$executeRaw(Prisma.sql`UPDATE rrhh.documentos SET estado_firma = 'pendiente' WHERE id = ${docId}::uuid`)
+  return orquestarSolicitud(deps(empresaId, empleadoId), docId)
 }
 
-/** El empleado firma el documento (firma avanzada propia, eIDAS art. 26). Devuelve la evidencia. */
+/** El empleado firma el documento (firma avanzada propia, eIDAS art.26). Devuelve la evidencia. */
 export async function firmarDocumento(
   empresaId: string, empleadoId: string, docId: string,
   ctx: { ip?: string | null; user_agent?: string | null; nombre_confirmado: string; codigo?: string | null }
 ) {
-  const rows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT d.storage_path, d.estado_firma, e.nombre, e.email, e.dni
-    FROM rrhh.documentos d JOIN rrhh.empleados e ON e.id = d.empleado_id
-    WHERE d.id = ${docId}::uuid AND d.empleado_id = ${empleadoId}::uuid AND d.empresa_id = ${empresaId}::uuid LIMIT 1`)
-  const doc = rows[0]
-  if (!doc) throw new Error('Documento no encontrado')
-  if (doc.estado_firma === 'firmado') throw new Error('El documento ya está firmado')
-  if (doc.estado_firma !== 'pendiente') throw new Error('Este documento no requiere firma')
-  if (!nombreCoincide(ctx.nombre_confirmado, doc.nombre)) throw new Error('El nombre no coincide con el del titular')
-
-  // Si se emitió un OTP para este documento, es OBLIGATORIO validarlo (control exclusivo reforzado).
-  let metodo: MetodoFirma = 'sesion_token'
-  const otpRows = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT codigo_hash, expira_at, intentos FROM rrhh.firma_otps
-    WHERE documento_id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid LIMIT 1`)
-  if (otpRows[0]) {
-    const o = otpRows[0]
-    if (!ctx.codigo) throw new Error('Falta el código de verificación')
-    if (new Date(o.expira_at) < new Date()) throw new Error('El código ha caducado, pide uno nuevo')
-    if (o.intentos >= 5) throw new Error('Demasiados intentos, pide un código nuevo')
-    if (hashCodigo(String(ctx.codigo)) !== o.codigo_hash) {
-      await prisma.$executeRaw(Prisma.sql`
-        UPDATE rrhh.firma_otps SET intentos = intentos + 1
-        WHERE documento_id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid`)
-      throw new Error('Código incorrecto')
-    }
-    metodo = 'otp_email'
-  }
-
-  const bytes = await descargarObjeto(doc.storage_path)
-  const firmante: Firmante = { id: empleadoId, nombre: doc.nombre, email: doc.email, dni: doc.dni }
-  const contexto: ContextoFirma = { fecha: new Date().toISOString(), ip: ctx.ip ?? null, user_agent: ctx.user_agent ?? null }
-  const evidencia = await proveedor.firmar({
-    firmante, documento_id: docId, bytes, contexto, metodo, nombre_confirmado: ctx.nombre_confirmado,
-  })
-
-  await prisma.$transaction([
-    prisma.$executeRaw(Prisma.sql`
-      INSERT INTO rrhh.firmas (empresa_id, empleado_id, documento_id, doc_hash, algoritmo, metodo,
-        firmante_nombre, firmante_email, firmante_dni, ip, user_agent, sello_tiempo, evidencia)
-      VALUES (${empresaId}::uuid, ${empleadoId}::uuid, ${docId}::uuid, ${evidencia.doc_hash}, ${evidencia.algoritmo}, ${evidencia.metodo},
-        ${firmante.nombre}, ${firmante.email}, ${firmante.dni}, ${contexto.ip}, ${contexto.user_agent},
-        ${contexto.fecha}::timestamptz, ${JSON.stringify(evidencia)}::jsonb)`),
-    prisma.$executeRaw(Prisma.sql`UPDATE rrhh.documentos SET estado_firma = 'firmado' WHERE id = ${docId}::uuid`),
-    prisma.$executeRaw(Prisma.sql`DELETE FROM rrhh.firma_otps WHERE documento_id = ${docId}::uuid AND empleado_id = ${empleadoId}::uuid`),
-  ])
-  return evidencia
+  return orquestarFirma(deps(empresaId, empleadoId), docId, ctx)
 }
