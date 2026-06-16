@@ -1,5 +1,5 @@
-import { cleanJSON, nimText, nimVision, geminiSearch } from '@central/core-ai'
-import type { ImageInput, NimConfig } from '@central/core-ai'
+import { cleanJSON, nimText, nimVision, geminiSearch, nimChatTools } from '@central/core-ai'
+import type { ImageInput, NimConfig, NimToolMessage, NimToolResult } from '@central/core-ai'
 
 /**
  * ai-client.ts
@@ -213,6 +213,20 @@ export async function callAISearch(
 
   // Fallback a NIM puro sin search grounding (sin tocar Anthropic, que está sin saldo)
   return callAI(system, user, maxTokens, timeoutMs, true)
+}
+
+/**
+ * Function-calling con NVIDIA NIM (sustituye al tool-calling de Anthropic en los agentes del
+ * god-panel). `tools` en formato OpenAI. Devuelve el mensaje del modelo (texto y/o tool_calls);
+ * la ruta ejecuta las herramientas y reenvía los resultados como mensajes `role:'tool'`.
+ */
+export async function callAITools(
+  system: string,
+  messages: NimToolMessage[],
+  tools: unknown[],
+  maxTokens = 1024,
+): Promise<NimToolResult> {
+  return nimChatTools(nimConfig(), messages, tools, { system, maxTokens })
 }
 
 /**
