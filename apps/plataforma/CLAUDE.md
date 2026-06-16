@@ -65,6 +65,12 @@ El alta manual por SQL ya no es necesaria.
 - **Adaptadores:** `lib/adapters/*` — ialimp/sivra por BD compartida, ia-rest e **iarrhh** por HTTP Bearer
   (iarrhh: alta de empresa+responsable desde `/operador/clientes`, vertical `'rrhh'`).
 - **`lib/conciliacion.ts`:** `candidatosSivra()` lee tabla `gastos` (raw SQL). Ref: `sivra:gasto:<id>`.
+- **Personas a través de verticales (RR.HH., SOLO LECTURA):** `/operador/personas` (`PersonasClient.tsx`)
+  consolida a la **misma persona** aunque tenga roles en varias verticales, agrupando por **`persona_id`**.
+  `lib/personas.ts` lee ialimp (`limpiadoras`, prisma directo) + rrhh (empleados por el puerto operador
+  `/api/operador/personas`, Bearer `RRHH_OPERADOR_SECRET`) y **propone enlaces** no hechos por DNI/email
+  (`coincidenciaPersona` de `@central/core-identity`). API: `GET /api/admin/personas`. **El enlace MANUAL
+  del `persona_id` (escritura cross-app) está PENDIENTE** — hoy solo se sugiere.
 
 ## Reglas
 - Multi-tenant: SIEMPRE filtrar por `cuenta_id` en todas las queries.

@@ -26,6 +26,7 @@ description: >
 | Tema | Fuente |
 |---|---|
 | Qué es, BD, envs, estado, reglas | `apps/plataforma/CLAUDE.md` |
+| **Personas a través de verticales** (god-panel, RR.HH., solo lectura) | `/operador/personas` + `lib/personas.ts`; consolida por `persona_id` (ialimp por prisma + rrhh por puerto `/api/operador/personas`), sugiere enlaces por DNI/email (`@central/core-identity`). Enlace MANUAL pendiente. Detalle en `apps/plataforma/CLAUDE.md` |
 | Diseño del god-panel | `docs/DISEÑO-god-panel.md` |
 | Plataforma modular (roadmap) | `docs/PLAN-plataforma-modular.md` |
 | Radiografía del repo (pestaña 🗺️ Estructura) | `docs/ESTRUCTURA.md` |
