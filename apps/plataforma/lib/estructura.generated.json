@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:12:44Z",
+  "generadoEn": "2026-06-16T13:14:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1957,6 +1957,12 @@
       "/api/cron/psd2-sync",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/expenses",
+      "/api/sivra/expenses/fijos",
+      "/api/sivra/expenses/fijos/generar",
+      "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/fiscal",
+      "/api/sivra/income",
       "/api/sivra/incomes",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
@@ -2308,7 +2314,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🤖 SIVRA · Agente de pricing — 1er ciclo real + costes/suelos + Busto en vivo",
+      "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
       "fecha": "16/06/2026"
     },
     {
@@ -2649,7 +2655,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 810,
+    "apis": 816,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

@@ -14,6 +14,10 @@ const NAV_NEGOCIO = [
 
 const NAV_PISOS = [
   { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
+  { href: '/sivra/income', icon: '💰', label: 'Ingresos' },
+  { href: '/sivra/expenses', icon: '🧾', label: 'Gastos' },
+  { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
+  { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
 ]
