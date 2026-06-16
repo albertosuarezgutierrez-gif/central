@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T19:38:43Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-16T20:03:00Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -151,6 +151,6 @@
 - (16/06/2026) 🤖 RRHH · Verticales conectadas a la pasarela de IA central
 - (16/06/2026) 🎨 RRHH · Marca blanca por empresa (white-label)
 - (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal
-- (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes + fixes móvil dashboard
+- (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard
 - (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard
 
