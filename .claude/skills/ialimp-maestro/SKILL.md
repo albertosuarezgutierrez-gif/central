@@ -30,6 +30,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 | Tema | Fuente |
 |---|---|
 | Reglas, gotchas, módulos (TODO) | `apps/ialimp/CLAUDE.md` |
+| **RR.HH. de la limpiadora** (expediente + nómina PDF + **firma OTP**) | `apps/ialimp/CLAUDE.md` § "RR.HH. de la limpiadora"; consume `@central/module-rrhh`/`module-documental`/`core-firma`. `lib/*-limpiadora.ts` + `lib/nomina-pdf.ts`; UI `/l/documentos` + pestaña 📁 Expediente en `/admin/rrhh`. Bucket privado `documentos-limpiadora`. **email de limpiadora OBLIGATORIO** (OTP). `limpiadoras.persona_id` enlaza con `rrhh.empleados` (misma persona) |
 | Guía de la app de limpiadoras | `apps/ialimp/docs/guia-limpiadoras.md` |
 | Mejoras pedidas por Vanessa | `apps/ialimp/docs/mejoras-vanessa.md` |
 | Landing `ialimp.es` (proyecto Vercel separado) | `apps/ialimp/landing/ialimp-es/` (+ su README) |
