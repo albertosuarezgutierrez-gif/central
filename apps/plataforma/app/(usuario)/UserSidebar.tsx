@@ -30,6 +30,9 @@ const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
   { href: '/operador/personas', icon: '👤', label: 'Personas' },
   { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
+  { href: '/operador/iarest/cobros', icon: '💶', label: 'Cobros', sub: true },
+  { href: '/operador/iarest/soporte', icon: '🎫', label: 'Soporte', sub: true },
+  { href: '/operador/iarest/sugerencias', icon: '💡', label: 'Sugerencias', sub: true },
   { href: '/operador/ia', icon: '🤖', label: 'IA · gasto' },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
 ]
@@ -93,16 +96,19 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
         {isOperator && (
           <>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
-            {NAV_OPERADOR.map(({ href, icon, label }) => {
-              const active = path.startsWith(href)
+            {NAV_OPERADOR.map(({ href, icon, label, sub }) => {
+              const exactActive = sub
+                ? path === href || path.startsWith(href + '/')
+                : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))
               return (
                 <Link key={href} href={href} onClick={() => setOpen(false)} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
-                  fontWeight: active ? 700 : 400,
-                  background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
-                  fontSize: '14px', textDecoration: 'none',
+                  padding: sub ? '6px 12px 6px 28px' : '9px 12px',
+                  borderRadius: '8px', marginBottom: '2px',
+                  fontWeight: exactActive ? 700 : 400,
+                  background: exactActive ? 'var(--primary-light)' : 'transparent',
+                  color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
+                  fontSize: sub ? '13px' : '14px', textDecoration: 'none',
                 }}>
                   <span>{icon}</span><span>{label}</span>
                 </Link>
