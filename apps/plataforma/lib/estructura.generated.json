@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T19:14:19Z",
+  "generadoEn": "2026-06-16T19:19:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2347,6 +2347,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
       "fecha": "16/06/2026"
     },
@@ -2400,10 +2404,6 @@
     },
     {
       "titulo": "🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "📧 Skill `facturas-correo` creada (agente de facturas por email)",
       "fecha": "16/06/2026"
     }
   ],
