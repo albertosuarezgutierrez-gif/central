@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
+import AsistentePanel from '@/components/AsistentePanel'
 import SolicitudesEmpleado from '@/components/SolicitudesEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import Wordmark from '@/components/Wordmark'
@@ -61,6 +62,8 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
       </header>
 
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
+
+      <AsistentePanel />
 
       <ChatPanel endpoint="/api/e/chat" yo="titular" />
 
