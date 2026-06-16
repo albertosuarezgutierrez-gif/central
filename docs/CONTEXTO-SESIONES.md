@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde — 16/06/2026**
+  - **Manual de usuario** del Portal del Empleado (responsable RR.HH.): `apps/rrhh/public/manual.html`
+    (servido en `central-rrhh.vercel.app/manual.html`), dirigido a **Pilar** (Mariscos González). Cubre
+    entrar/cambiar contraseña, alta de trabajador (email obligatorio), enviar enlace de acceso, expediente
+    (5 carpetas), nóminas + **firma eIDAS art.26 con OTP**, cómo firma el empleado, vacaciones/permisos,
+    chat, baja vs borrado, qué ve el empleado, FAQ. **Sin credenciales** (no se hardcodean: el fichero es
+    público). Enlace **📖 Manual** añadido al sidebar del panel (`components/AdminShell.tsx`).
+  - **Roadmap RR.HH.** consolidado y durable en **`docs/ROADMAP-rrhh.md`** (PR #296, mergeado): todas las
+    ideas con top-3 (asistente IA del trabajador + multi-idioma, verificación pública por QR estilo
+    VeriFactu, plantillas legales versionadas).
+  - **CI verde en main:** fix `packages/core-firma/src/firma.ts` (cast `BufferSource` en `hashDocumento`,
+    PR #293 mergeado) — el `Typecheck · ialimp` que rompía main tras el merge de #287 ya pasa.
+  - **Pendiente conocido (no mío, latente):** `components/ActivarPush.tsx` tiene el MISMO patrón
+    `Uint8Array→BufferSource` sin castear (rrhh no está en el matrix estricto de Typecheck y `next build`
+    ignora TS, por eso no rompe CI). Candidato a limpiar cuando se toque ese fichero.
+
 - **🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh — 16/06/2026** (PR #287, rama `claude/bold-ride-s4s8eq`)
   - **Fase 1 (ialimp da RR.HH. a las limpiadoras):** consume `@central/module-rrhh` + `module-documental` +
     `core-firma`. Tablas `documentos_limpiadora`/`firmas_limpiadora`/`firma_otps_limpiadora` (+ `limpiadoras.email`

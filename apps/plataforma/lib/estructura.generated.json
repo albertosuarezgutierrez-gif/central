@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T09:10:26Z",
+  "generadoEn": "2026-06-16T09:17:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2302,6 +2302,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh",
       "fecha": "16/06/2026"
     },
@@ -2356,10 +2360,6 @@
     {
       "titulo": "🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)",
       "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)",
-      "fecha": "14/06/2026"
     }
   ],
   "saludRepo": {
