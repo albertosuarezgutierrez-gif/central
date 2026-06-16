@@ -13,6 +13,7 @@
     "@central/core-ai": "workspace:*",
     "@central/core-fiscal": "workspace:*",
     "@central/core-push": "workspace:*",
+    "@central/core-receipts": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
     "@central/module-crm": "workspace:*",
     "@central/module-materiales": "workspace:*",
