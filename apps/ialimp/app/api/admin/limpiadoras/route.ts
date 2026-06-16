@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { requireEmpresaId } from '@/lib/tenant'
-import { sha256Hex as hashPin } from '@central/core-identity'
+import { sha256Hex as hashPin, nuevaPersonaId } from '@central/core-identity'
 
 // GET — listar limpiadoras de la empresa
 export async function GET() {
@@ -45,8 +45,8 @@ export async function POST(req: NextRequest) {
     if (existe.length > 0) return NextResponse.json({ error: 'PIN ya en uso en esta empresa' }, { status: 400 })
 
     const [nueva] = await prisma.$queryRaw<any[]>(Prisma.sql`
-      INSERT INTO limpiadoras (empresa_id, nombre, telefono, email, dni, pin_hash, color, activa)
-      VALUES (${empresa_id}::uuid, ${nombre.trim()}, ${telefono || null}, ${emailNorm}, ${dni?.trim() || null}, ${pinHash}, ${color || '#6366f1'}, true)
+      INSERT INTO limpiadoras (empresa_id, nombre, telefono, email, dni, pin_hash, color, activa, persona_id)
+      VALUES (${empresa_id}::uuid, ${nombre.trim()}, ${telefono || null}, ${emailNorm}, ${dni?.trim() || null}, ${pinHash}, ${color || '#6366f1'}, true, ${nuevaPersonaId()}::uuid)
       RETURNING id::text, nombre, telefono, email, dni, color, activa
     `)
 
