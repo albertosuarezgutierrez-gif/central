@@ -35,9 +35,14 @@
     descargaban los documentos del expediente).
   - **Tests:** los 4 paquetes vitest (`core-firma`/`module-rrhh`/`module-documental`/`module-chat`) + `core-identity`
     estaban huérfanos (sin runner) → **cableados** (`vitest` devDep root + `test:vitest` dentro de `test`). **40/40 verdes.**
-  - **Pendiente:** Fase 3 (consolidar en `plataforma` la persona a través de verticales, solo lectura) + roadmap de
-    módulos (fichaje RD 8/2019, art. 28 RGPD, canal de denuncias, vacaciones, onboarding, gestoría…). UI de enlace
-    cross-vertical de `persona_id` (hoy hay provisión + columnas + matching puro; falta el enlazado manual desde plataforma).
+  - **Fase 3 (consolidación en plataforma, SOLO LECTURA) — HECHA:** nuevo endpoint READ-ONLY en rrhh
+    `/api/operador/personas` (empleados+persona_id por el puerto operador). En plataforma `lib/personas.ts`
+    consolida "la persona a través de verticales" (ialimp.limpiadoras por prisma directo + rrhh por HTTP),
+    agrupa por `persona_id` y PROPONE enlaces no hechos por DNI/email (`coincidenciaPersona`). God-panel:
+    `/operador/personas` (`PersonasClient.tsx`, item nuevo en `UserSidebar`) + `GET /api/admin/personas`.
+  - **Pendiente:** **enlace MANUAL** del `persona_id` cross-vertical (escritura: setear el mismo persona_id
+    en ambas filas/dos apps — hoy solo se SUGIERE en `/operador/personas`). Roadmap de módulos
+    (fichaje RD 8/2019, art. 28 RGPD, canal de denuncias, vacaciones, onboarding, gestoría…).
 
 - **🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh` — 16/06/2026**
   Objetivo (decisión de Alberto): RR.HH. (nóminas + firma + expediente) reutilizable por **cualquier
