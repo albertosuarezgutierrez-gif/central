@@ -7,9 +7,13 @@
   "scripts": {
     "auditar": "node scripts/auditar-estructura.mjs",
     "auditar:check": "node scripts/auditar-estructura.mjs --check",
-    "test": "node --test test/*.test.ts && pnpm -r run test",
+    "test": "node --test test/*.test.ts && pnpm -r run test && pnpm run test:vitest",
     "test:guardia": "node --test test/*.test.ts",
-    "test:packages": "pnpm -r --filter \"./packages/*\" run test"
+    "test:packages": "pnpm -r --filter \"./packages/*\" run test",
+    "test:vitest": "vitest run packages/core-firma packages/module-rrhh packages/module-documental packages/module-chat"
+  },
+  "devDependencies": {
+    "vitest": "^2.1.0"
   },
   "pnpm": {
     "overrides": {
