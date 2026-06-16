@@ -12,12 +12,13 @@ import { Prisma } from '@prisma/client'
 import { prisma } from './db'
 import { getSesion, getDetalleCuenta, getSaldo, getMovimientos, type MovEB } from './enablebanking'
 
-function hashMov(accountUid: string, m: MovEB): string {
-  // Hash de CONTENIDO, estable entre sincronizaciones. NO usamos entry_reference: algunos bancos
-  // (p. ej. Kutxa vía Enable Banking) lo devuelven cambiante entre fetches, así que el hash
-  // variaba y el ON CONFLICT no deduplicaba → el re-sync diario reinsertaba el mismo movimiento.
-  // Mismos campos que el importador Norma 43: cuenta + fechas + importe + concepto + contraparte.
-  const base = [accountUid, m.bookingDate ?? '', m.valueDate ?? '', m.importe, m.concepto ?? '', m.contraparte ?? ''].join('|')
+function hashMov(m: MovEB): string {
+  // Clave de dedupe ESTABLE entre sincronizaciones. Usa el entry_reference del banco si lo da
+  // (único por apunte); si no (p. ej. Kutxa lo deja vacío), hash de CONTENIDO. Clave del fix:
+  // NO incluir el accountUid — Enable Banking lo cambia entre sesiones, así que el hash variaba
+  // en cada sync y el ON CONFLICT no deduplicaba (reimportaba el mismo cargo). La unicidad por
+  // cuenta ya la garantiza el ON CONFLICT (cuenta_bancaria_id, dedupe_hash).
+  const base = m.entryReference || [m.bookingDate ?? '', m.valueDate ?? '', m.importe, m.concepto ?? '', m.contraparte ?? ''].join('|')
   return createHash('sha1').update(base).digest('hex')
 }
 
@@ -64,7 +65,7 @@ export async function sincronizarSesion(
     const validos: Array<{ m: MovEB; hash: string }> = []
     for (const m of movs) {
       if (!Number.isFinite(m.importe)) continue
-      const base = hashMov(accountUid, m)
+      const base = hashMov(m)
       const n = (vistos.get(base) ?? 0) + 1
       vistos.set(base, n)
       validos.push({ m, hash: n > 1 ? `${base}-${n}` : base })
