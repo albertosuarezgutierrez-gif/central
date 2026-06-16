@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T13:14:12Z",
+  "generadoEn": "2026-06-16T13:31:42Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1982,6 +1982,7 @@
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
+      "/api/admin/solicitudes/[id]/justificante",
       "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
@@ -2655,7 +2656,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 816,
+    "apis": 817,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
