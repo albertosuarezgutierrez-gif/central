@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T14:18:44Z",
+  "generadoEn": "2026-06-16T14:30:54Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1998,6 +1998,7 @@
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/cuenta/branding",
       "/api/admin/cuenta/convenio",
       "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
@@ -2345,6 +2346,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🎨 RRHH · Marca blanca por empresa (white-label)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
       "fecha": "16/06/2026"
     },
@@ -2398,10 +2403,6 @@
     },
     {
       "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
-      "fecha": "15/06/2026"
-    },
-    {
-      "titulo": "🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)",
       "fecha": "15/06/2026"
     }
   ],
@@ -2686,7 +2687,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 846,
+    "apis": 847,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
