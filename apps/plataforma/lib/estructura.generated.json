@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:44:24Z",
+  "generadoEn": "2026-06-16T08:53:36Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2240,6 +2240,11 @@
       "description": ">"
     },
     {
+      "id": "facturas-correo",
+      "name": "facturas-correo",
+      "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
+    },
+    {
       "id": "ia-rest-maestro",
       "name": "ia-rest-maestro",
       "description": ">"
@@ -2309,6 +2314,10 @@
       "fecha": "16/06/2026"
     },
     {
+      "titulo": "📧 Skill `facturas-correo` creada (agente de facturas por email)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales",
       "fecha": "16/06/2026"
     },
@@ -2351,10 +2360,6 @@
     {
       "titulo": "🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)",
       "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
-      "fecha": "15/06/2026"
     }
   ],
   "saludRepo": {
@@ -2649,7 +2654,7 @@
     "verticales": 5,
     "packages": 22,
     "capacidades": 23,
-    "skills": 14,
+    "skills": 15,
     "apis": 804,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 23,
