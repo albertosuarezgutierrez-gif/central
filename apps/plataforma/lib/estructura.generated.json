@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T08:25:24Z",
+  "generadoEn": "2026-06-16T08:27:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2284,6 +2284,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`",
       "fecha": "16/06/2026"
     },
@@ -2337,10 +2341,6 @@
     },
     {
       "titulo": "🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)",
-      "fecha": "14/06/2026"
-    },
-    {
-      "titulo": "📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)",
       "fecha": "14/06/2026"
     }
   ],
