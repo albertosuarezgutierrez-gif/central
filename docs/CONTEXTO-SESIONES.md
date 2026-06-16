@@ -32,23 +32,24 @@
     (b) Conectar el `ai-client` de ia-rest a la pasarela central (como ialimp/sivra) para centralizar su gasto.
 
 
-- **📧 FACTURAS CORREO · Agente de contabilidad + botón en Banca — 16/06/2026** (PR #324 MERGED)
-  - **Pasada manual 30 días ejecutada** (primera vez): Gmail → 13 threads procesados:
-    - Deducibles archivados en Drive (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic (seguros),
-      TotalEnergies (parcial), PriceLabs.
-    - Pisos turísticos: IONOS, Vercel, PriceLabs, TotalEnergies.
-    - Seguros (correduría): Anthropic Ireland 217.80€.
-    - Personales (no archivados): Círculo Mercantil, Kutxabank tarjeta, otros.
-    - IKEA 888.89€ + PDFs TotalEnergies: **necesitan subida manual a Drive** (MCP Gmail no descarga adjuntos).
-    - Todos etiquetados `Facturas/Procesada` (Label_11) en Gmail.
-  - **Corrección en BD**: `movimientos_bancarios` IONOS corregido de `personal` → `turistico_pisos`.
-  - **Carpeta Drive creada**: `06-Junio-2026` dentro de `FACTURAS Apartamentos/2026/`.
-  - **Slash command** `.claude/commands/facturas-correo.md` → `/facturas-correo` en menú de Claude Code web.
-  - **Botón en Banca** (`BancaClient.tsx` + `page.tsx`): `RevisarCorreoBtn` abre `claude.ai/code` y copia
-    `/facturas-correo` al portapapeles con un clic.
-  - **Trigger diario CONFIGURADO**: Rutina `Revisar facturas correo` activa en claude.ai/code → Rutinas. Corre daily at 8:00 CEST.
-  - **Vercel 190.93€ y Anthropic 217.80€**: pagados desde cuenta **N26** (no BBVA/Kutxa) → no aparecen en el extracto. Deducibles pero fuera del circuito PSD2 actual. Pendiente conectar N26 o subir extracto manual cuando llegue.
-  - **BSH Electrodomésticos y Tutrocito 122.87€**: clasificados como **personal**, no archivados.
+- **📧 FACTURAS CORREO · Sistema completo en producción — 16/06/2026** (PR #324 MERGED)
+  - **Flujo diario automatizado:**
+    - 06:00 UTC → cron PSD2 sincroniza BBVA + Kutxa (23 movimientos insertados en primera sync)
+    - 08:00 CEST → Rutina Claude `Revisar facturas correo` procesa Gmail → Drive → Supabase
+  - **Infraestructura:**
+    - `CRON_SECRET` configurado en Vercel plataforma → cron PSD2 ya funciona
+    - Rutina activa en `claude.ai/code → Rutinas` (daily 8:00 CEST, repo `central`, MCPs Gmail+Drive+Supabase)
+    - Botón `📧 Revisar correo` en Banca → abre Claude Code + copia `/facturas-correo` al portapapeles
+    - Slash command `/facturas-correo` disponible en Claude Code web
+  - **Clasificaciones confirmadas por Alberto:**
+    - IKEA/Taskrabbit/ferretería → `turistico_pisos`; TotalEnergies → `turistico_pisos`
+    - Anthropic Ireland → `seguros`; BSH + Tutrocito 122.87€ → `personal`
+    - Círculo Mercantil → siempre `personal`
+  - **Regla reenvíos Pilar** (actualizada en skill): Taskrabbit/fontanero/Amazon/ferretería → siempre "Para tu decisión" (no auto-clasificar)
+  - **Archivados en Drive** (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic, TotalEnergies, PriceLabs, Taskrabbit 85.41€ (montaje IKEA, 16/06)
+  - **Pendiente subida manual**: IKEA 888.89€ PDF + PDFs TotalEnergies (MCP Gmail no descarga adjuntos)
+  - **Vercel 190.93€ + Anthropic 217.80€**: pagados desde **N26** → pendiente conectar N26 al PSD2 o subir extracto manual
+  - **Etiqueta Gmail**: `Facturas/Procesada` (Label_11) — todos los correos procesados etiquetados
 
 
 - **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
