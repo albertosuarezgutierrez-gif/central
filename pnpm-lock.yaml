@@ -25,6 +25,9 @@ importers:
       '@central/core-fiscal':
         specifier: workspace:*
         version: link:../../packages/core-fiscal
+      '@central/core-payments':
+        specifier: workspace:*
+        version: link:../../packages/core-payments
       '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
@@ -106,9 +109,6 @@ importers:
       resend:
         specifier: ^6.12.3
         version: 6.12.4
-      stripe:
-        specifier: ^22.1.1
-        version: 22.2.0(@types/node@20.19.42)
     devDependencies:
       '@tailwindcss/postcss':
         specifier: ^4
@@ -161,6 +161,9 @@ importers:
       '@central/core-identity':
         specifier: workspace:*
         version: link:../../packages/core-identity
+      '@central/core-payments':
+        specifier: workspace:*
+        version: link:../../packages/core-payments
       '@central/core-push':
         specifier: workspace:*
         version: link:../../packages/core-push
@@ -239,9 +242,6 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.2.4(react@19.2.4)
-      stripe:
-        specifier: ^16.0.0
-        version: 16.12.0
       web-push:
         specifier: ^3.6.7
         version: 3.6.7
@@ -586,6 +586,12 @@ importers:
       jose:
         specifier: ^5.9.3
         version: 5.10.0
+
+  packages/core-payments:
+    dependencies:
+      stripe:
+        specifier: ^22.1.1
+        version: 22.2.0(@types/node@22.19.20)
 
   packages/core-push:
     dependencies:
@@ -4628,10 +4634,6 @@ packages:
 
   strip-literal@3.1.0:
     resolution: {integrity: sha512-8r3mkIM/2+PpjHoOtiAW8Rg3jJLHaV7xPwG+YRGrv6FP0wwk/toTpATxWYOW0BKdWwl82VT2tFYi5DlROa0Mxg==}
-
-  stripe@16.12.0:
-    resolution: {integrity: sha512-H7eFVLDxeTNNSn4JTRfL2//LzCbDrMSZ+2q1c7CanVWgK2qIW5TwS+0V7N9KcKZZNpYh/uCqK0PyZh/2UsaAtQ==}
-    engines: {node: '>=12.*'}
 
   stripe@22.2.0:
     resolution: {integrity: sha512-WFGpMOom9QZqso1kcnSwJsCdC1QHDlMoCOxBZRf3JraMzhkfw7dgSdD2a1CFZrqC+mzAfqeEtYILrZhWKIDruA==}
@@ -9274,14 +9276,9 @@ snapshots:
     dependencies:
       js-tokens: 9.0.1
 
-  stripe@16.12.0:
-    dependencies:
-      '@types/node': 20.19.42
-      qs: 6.15.2
-
-  stripe@22.2.0(@types/node@20.19.42):
+  stripe@22.2.0(@types/node@22.19.20):
     optionalDependencies:
-      '@types/node': 20.19.42
+      '@types/node': 22.19.20
 
   strnum@2.4.0:
     dependencies:
