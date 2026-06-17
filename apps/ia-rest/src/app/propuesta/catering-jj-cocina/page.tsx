@@ -74,6 +74,21 @@ function Quote({ text }: { text: string }) {
   )
 }
 
+function Step({ n, color, head, body, last }: { n: number; color: string; head: string; body: string; last?: boolean }) {
+  return (
+    <div style={{ display:'flex', gap:16, alignItems:'stretch' }}>
+      <div style={{ display:'flex', flexDirection:'column', alignItems:'center' }}>
+        <div style={{ width:40, height:40, borderRadius:'50%', background:color, color:'#fff', fontFamily:SN, fontWeight:800, fontSize:19, display:'flex', alignItems:'center', justifyContent:'center', flexShrink:0 }}>{n}</div>
+        {!last && <div style={{ flex:1, width:2, background:C.bg3, marginTop:4 }} />}
+      </div>
+      <div style={{ paddingBottom: last ? 0 : 18, paddingTop:5 }}>
+        <div style={{ fontFamily:SN, fontWeight:700, fontSize:'clamp(17px,3.8vw,21px)', color:C.cream }}>{head}</div>
+        <div style={{ fontFamily:SN, fontSize:'clamp(14px,3vw,16.5px)', color:C.ink3, lineHeight:1.45, marginTop:3 }}>{body}</div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Contenido: SOLO lo hablado con Carmen (cocina) ──────────
 const SLIDES: Slide[] = [
   // 1 · Portada
@@ -113,36 +128,47 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 3 · Tu cocina, de la recepción al carro
+  // 3 · El esquema del proceso (paso a paso, claro)
   {
-    kicker: 'Os escuchamos · tal cual nos lo contasteis',
-    titulo: 'Tu cocina, de la recepción al carro',
-    sub: 'Este es el flujo que ya tienes en la cabeza. Lo dibujamos tal cual para que lo lleve el sistema — no tú.',
+    kicker: 'El proceso, de un vistazo',
+    titulo: 'Tu cocina, paso a paso',
+    sub: 'Este es el flujo que ya tienes en la cabeza, dibujado tal cual nos lo contaste. ¿Lo vemos así?',
     color: C.teal,
     render: () => (
-      <div style={{ width:'100%', maxWidth:1000 }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, flexWrap:'wrap', marginBottom:26 }}>
-          <Node color={C.teal} title="Recepción" sub="pesa · escanea etiqueta" />
-          <Arrow label="entra valorado" color={C.gold} />
-          <Node color={C.gold} title="Economato" sub="almacén con valor" />
-          <Arrow label="parte de elaboración" color={C.red} />
-          <Node color={C.red} title="Producción" sub="partidas frío / caliente" />
-          <Arrow label="identificado por color" color={C.amber} />
-          <Node color={C.amber} title="Salida" sub="carros por evento" />
-          <Arrow label="transportista" color={C.green} />
-          <Node color={C.green} title="Evento" sub="montado y servido" />
-        </div>
+      <div style={{ width:'100%', maxWidth:760 }}>
+        <Step n={1} color={C.teal} head="Recepción de mercancía"
+          body="Llega el proveedor, se pesa y se escanea la etiqueta. El producto entra al economato con su valor." />
+        <Step n={2} color={C.gold} head="Parte de elaboración a cocina"
+          body="El menú del evento se convierte en qué elaborar, con sus fichas técnicas y cantidades." />
+        <Step n={3} color={C.red} head="Producción por partidas"
+          body="Frío y caliente, corte, montaje y elaboración. Cada partida con sus puntos de control y su tiempo." />
+        <Step n={4} color={C.amber} head="Salida identificada por color"
+          body="Cada evento un color; se montan los carros y queda todo trazado." />
+        <Step n={5} color={C.green} head="Transportista → evento" last
+          body="El transporte recoge lo preparado y llega al evento montado y servido." />
+      </div>
+    ),
+  },
+
+  // 4 · Los detalles que controlas
+  {
+    kicker: 'Lo que no se te escapa',
+    titulo: 'Los detalles que controlas',
+    sub: 'El sistema lo lleva por ti, con tu nivel de exigencia.',
+    color: C.teal,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:960 }}>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
           <Card icon="🏷️" color={C.gold} titulo="La etiqueta de entrada, sin duplicar"
-            body="La propia etiqueta del proveedor —con lote, alérgenos, caducidad y precio— se escanea y vale como referencia para todo el seguimiento, sin reimprimir un QR nuevo. Si el precio sube, salta el aviso y el coste se actualiza solo." />
+            body="La propia etiqueta del proveedor —con lote, alérgenos, caducidad y precio— se escanea y vale como referencia, sin reimprimir un QR nuevo. Si el precio sube, salta el aviso y el coste se actualiza solo." />
           <Card icon="🌡️" color={C.teal} titulo="Control sanitario, justificado"
             body="Desinfección, enfriamiento y descongelación según ingredientes; vida útil justificada por pH y actividad de agua. La auditoría, siempre lista." />
           <Card icon="⏱️" color={C.red} titulo="Partidas cronometradas"
-            body="Frío y caliente, corte, montaje y elaboración. Cada cocinero entra y encuentra su trabajo repartido y cronometrado, con avisos encadenados entre partidas." />
+            body="Cada cocinero entra y encuentra su trabajo repartido y cronometrado, con avisos encadenados entre partidas (frío pide patata → caliente recibe el aviso)." />
           <Card icon="🎨" color={C.amber} titulo="Salida por color, no por nombre"
             body="Cada evento, un color; los carros se identifican y el transportista los recoge. Cada fase entrega a la siguiente, como una cadena." />
         </div>
-        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, marginTop:26, textAlign:'center' }}>
+        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, marginTop:24, textAlign:'center' }}>
           Todo esto ya lo haces tú de cabeza. El objetivo es que deje de depender de ti.
         </p>
       </div>
