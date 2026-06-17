@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T14:26:57Z",
+  "generadoEn": "2026-06-17T16:43:01Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2420,6 +2420,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🍳 DEMO PARTE CARMEN MERGEADO",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "💶 MÓDULO /finanzas MERGEADO",
       "fecha": "17/06/2026"
     },
@@ -2473,10 +2477,6 @@
     },
     {
       "titulo": "🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
       "fecha": "16/06/2026"
     }
   ],
