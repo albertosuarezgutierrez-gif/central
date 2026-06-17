@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+// Publicar un Reel espera a que Instagram procese el vídeo (hasta ~120s en publicarReel).
+// Con 60s Vercel mataba la función a mitad → el reel nunca se subía. 300s da margen de sobra.
+export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
