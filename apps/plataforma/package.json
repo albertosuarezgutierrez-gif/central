@@ -29,6 +29,8 @@
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
+    "@types/mailparser": "^3.4.4",
+    "@types/pdf-parse": "^1.1.4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

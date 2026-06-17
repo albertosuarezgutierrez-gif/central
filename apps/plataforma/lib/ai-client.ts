@@ -65,7 +65,7 @@ export async function aiExtractInvoice(input: {
       { role: 'user' as const, content: `Factura:\n${input.text.slice(0, 4000)}` },
     ]
     const txt = await nimChat(
-      { apiKey: cfg.apiKey, model: NVIDIA_TEXT },
+      { apiKey: cfg.apiKey, textModel: NVIDIA_TEXT },
       messages,
       { maxTokens: 512, temperature: 0.1, timeoutMs: 25_000 },
     )
