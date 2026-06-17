@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T09:08:19Z",
+  "generadoEn": "2026-06-17T13:41:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -33,6 +33,11 @@
       "id": "core-identity",
       "tipo": "core",
       "npm": "@central/core-identity"
+    },
+    {
+      "id": "core-payments",
+      "tipo": "core",
+      "npm": "@central/core-payments"
     },
     {
       "id": "core-push",
@@ -347,6 +352,28 @@
       "rrhh": {
         "estado": "usado",
         "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-payments": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 19
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
       },
       "sivra": {
         "estado": "no",
@@ -1242,6 +1269,7 @@
     "core-firma": [],
     "core-fiscal": [],
     "core-identity": [],
+    "core-payments": [],
     "core-push": [],
     "core-storage": [],
     "module-agenda": [],
@@ -2720,7 +2748,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 22,
+    "packages": 23,
     "capacidades": 23,
     "skills": 15,
     "apis": 883,
