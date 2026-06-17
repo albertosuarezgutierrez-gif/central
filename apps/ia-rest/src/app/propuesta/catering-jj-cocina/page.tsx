@@ -226,48 +226,19 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 7 · Ya funciona hoy (lo de cocina)
+  // 7 · Cómo arrancamos
   {
-    kicker: 'No es una promesa',
-    titulo: 'Ya funciona hoy',
-    sub: 'Casi todo lo que tu cocina necesita ya está construido y en producción. Lo nuevo es conectarlo a tu forma de trabajar.',
-    color: C.green,
-    render: () => (
-      <div style={{ width:'100%', maxWidth:960 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:16, marginBottom:22 }}>
-          <Card icon="📋" color={C.gold} titulo="Escandallos y coste por comensal"
-            body="Coste por comensal con factor de rendimiento y margen mínimo, ya calculado por evento." />
-          <Card icon="📦" color={C.teal} titulo="Almacén valorado"
-            body="Stock por movimientos, kits, FEFO, alertas de mínimo y caducidad e inventario físico cíclico." />
-          <Card icon="🛒" color={C.amber} titulo="Proveedores: pedido + albarán por foto"
-            body="Pedido, albarán por foto y cotejo a 3 bandas (pedido ↔ albarán ↔ stock). Apartado ya cerrado." />
-          <Card icon="💬" color={C.green} titulo="Mensajería interna"
-            body="Chat privado y de grupo por turno, con audio y registro. El sustituto del WhatsApp ya existe." />
-          <Card icon="🥗" color={C.red} titulo="Alérgenos y APPCC automático"
-            body="Fichas con alérgenos, etiquetas para imprimir y el APPCC que se genera solo en cada evento." />
-          <Card icon="🧾" color={C.teal} titulo="Comanda, cocina y facturación legal"
-            body="Comanda por QR, pantalla de cocina (KDS) y facturación VeriFactu — en producción en iarest.es." />
-        </div>
-        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, textAlign:'center', lineHeight:1.5 }}>
-          Lo que estamos terminando para ti: el reparto automático del trabajo a cocina. Su lógica ya está escrita y probada.
-        </p>
-      </div>
-    ),
-  },
-
-  // 8 · Cómo arrancamos
-  {
-    kicker: 'Bajo riesgo, contigo',
+    kicker: 'Lo construimos contigo',
     titulo: 'Cómo arrancamos',
     color: C.red,
     render: () => (
       <div style={{ width:'100%', maxWidth:900 }}>
-        <Bullet icon="🤝" color={C.teal} head="Empezamos simple, con tu cocina"
-          body="Co-diseñamos sobre lo que ya tienes montado. Tú como socia técnica: nadie conoce tu proceso mejor que tú." />
-        <Bullet icon="🗺️" color={C.gold} head="Te traemos el esquema"
-          body="Dibujamos tu flujo completo y vamos puliéndolo en reuniones cortas, semana a semana." />
+        <Bullet icon="🤝" color={C.teal} head="Lo diseñamos sobre tu forma de trabajar"
+          body="Partimos de lo que ya tienes en la cabeza y montado. Tú como socia técnica: nadie conoce tu proceso mejor que tú." />
+        <Bullet icon="🛠️" color={C.gold} head="Para la próxima, te lo traemos montado"
+          body="No solo un esquema: una primera versión con tu flujo, para que la toques y la ajustemos juntos. Y seguimos sumando mejoras." />
         <Bullet icon="📅" color={C.green} head="Próxima cita: jueves 25, 12:00"
-          body="Venimos con el esquema y, si lo ves factible, empezamos por lo que más te quita tiempo." />
+          body="Lo vemos funcionando con tu cocina y lo vamos puliendo semana a semana, por donde más te quita tiempo." />
       </div>
     ),
   },
