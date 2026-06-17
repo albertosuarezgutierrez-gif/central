@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T07:04:15Z",
+  "generadoEn": "2026-06-17T07:09:20Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2367,11 +2367,23 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 EDGE FUNCTIONS sin Anthropic",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "🧹 QUITAR ANTHROPIC de ia-rest (#4)",
       "fecha": "17/06/2026"
     },
     {
       "titulo": "💸 PASARELA IA · coste real + fallback + healthcheck",
+      "fecha": "17/06/2026"
+    },
+    {
+      "titulo": "✅ PR #336 MERGED",
+      "fecha": "17/06/2026"
+    },
+    {
+      "titulo": "✅ PR #335 MERGED",
       "fecha": "17/06/2026"
     },
     {
@@ -2412,18 +2424,6 @@
     },
     {
       "titulo": "🎨 RRHH · Marca blanca por empresa (white-label)",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
       "fecha": "16/06/2026"
     }
   ],

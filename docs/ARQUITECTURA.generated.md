@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T07:04:15Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T07:09:20Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -143,14 +143,14 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (17/06/2026) 🧹 EDGE FUNCTIONS sin Anthropic
 - (17/06/2026) 🧹 QUITAR ANTHROPIC de ia-rest (#4)
 - (17/06/2026) 💸 PASARELA IA · coste real + fallback + healthcheck
+- (17/06/2026) ✅ PR #336 MERGED
+- (17/06/2026) ✅ PR #335 MERGED
 - (17/06/2026) ✅ PR #334 MERGED
 - (17/06/2026) ✅ PR #333 MERGED
 - (16/06/2026) 🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*
 - (16/06/2026) 🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo
 - (16/06/2026) 🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325
-- (16/06/2026) 🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel
-- (16/06/2026) 📧 FACTURAS CORREO · Sistema completo en producción
-- (16/06/2026) 🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN
 
