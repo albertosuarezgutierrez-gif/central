@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS — 17/06/2026** (Catering Joaquín Jaén, cocina)
+  - **PR #352** → `iarest.es/propuesta/parte-jj`: parte de elaboración real del 20/6 (estático, datos OCR del PDF
+    de Carmen). 4 eventos por color, 4 partidas, sub-elaboraciones como "Depende de", badges APPCC. Marca verde/dorado.
+  - **PR #354** → `iarest.es/propuesta/parte-jj-vivo`: el parte **conducido por el motor puro REAL**
+    `@central/module-organizador-trabajo` (enchufado como workspace dep + `transpilePackages`). `asignarTrabajo`
+    reparte por cocinero, `agruparPorPartida` arma columnas, `avisosAlCompletar` encadena base→plato (pulsar
+    "Hecho" en un fondo/salsa dispara "Lista para empezar" en el plato). Verificado con `next build` (164/164) +
+    64/64 tests del módulo. Sin BD/secretos (semilla en cliente).
+  - **Reunión con Carmen: jueves 25 a las 12:00.** Logo real DESCARTADO por Alberto ("con las mejoras mejor, el
+    logotipo no es importante").
+  - **PENDIENTE (gated, plan #351):** persistencia real sobre `produccion_tareas` (cocinero entra a ia.rest, ve su
+    día repartido + cronómetro + avisos encadenados desde BD). Toca la Supabase compartida → rama Supabase + gate
+    manual antes de prod. ia-rest YA tiene base: `produccion_tareas`, rutas `/api/produccion/*`, UI cocinero/productividad.
+
 - **💶 MÓDULO /finanzas MERGEADO — 17/06/2026** (PR #341 merged en main, 5/5 Vercel ✅)
   - Hub financiero consolidado para Alberto: correduría seguros, 4 pisos turísticos, gastos personales BBVA/Kutxa, fiscal IRPF.
   - Archivos nuevos: `lib/finanzas.ts` · `app/api/finanzas/route.ts` · `app/api/finanzas/export/route.ts` · `app/(usuario)/finanzas/page.tsx` · `app/(usuario)/finanzas/FinanzasClient.tsx`.
