@@ -61,7 +61,7 @@ Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto
 El alta manual por SQL ya no es necesaria.
 
 ## Panel de OPERADOR — arquitectura post PR #249
-- **`/admin`** (god-panel oscuro original): sigue vivo como fallback, misma auth (`plataforma_admin`).
+- **`/admin`** → redirect a `/operador/clientes` (PR #332, merged). Ya no sirve el god-panel oscuro.
 - **`/operador/*`** (nuevo, tema claro): `ClientesClient.tsx`, `MapaArquitectura`, placeholder ia-rest. Mismas APIs `/api/admin/*` sin tocar.
 - **Auth:** `lib/superadmin.ts` + cookie `plataforma_admin` 8h. El login de `/login` (no `/admin/login`) ya emite ambas cookies si el email está en `superadmins`.
 - **Adaptadores:** `lib/adapters/*` — ialimp/sivra por BD compartida, ia-rest e **iarrhh** por HTTP Bearer

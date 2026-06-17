@@ -16,6 +16,8 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **✅ PR #333 MERGED — 17/06/2026** — Panel ia-rest/super en plataforma (`/operador/iarest/cobros|soporte|sugerencias`). Rebase completado contra main (conflictos en UserSidebar.tsx y generated files resueltos). 5/5 proyectos Vercel ✅ Ready antes del merge. Ver entrada de sesión 16/06 para detalle completo.
+
 - **🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/* — 16/06/2026** (rama `claude/nice-heisenberg-jo4vy1`)
   - **PR #332 MERGED**: `/admin` (god-panel dark 338 líneas) → redirect a `/operador/clientes`. Limpieza definitiva.
   - **Panel ia-rest** (mismo PR): 3 nuevos endpoints en ia-rest `/api/admin/` (Bearer `OPERADOR_SHARED_SECRET`, mismo patrón que `/api/operador/`):
