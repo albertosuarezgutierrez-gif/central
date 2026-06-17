@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T04:56:07Z",
+  "generadoEn": "2026-06-17T06:01:14Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1268,6 +1268,7 @@
       "/api/admin/cobros",
       "/api/admin/soporte",
       "/api/admin/sugerencias",
+      "/api/admin/suscripciones",
       "/api/almacen-central/grupo",
       "/api/almacen-central/login",
       "/api/almacen-central/restaurante/[id]",
@@ -1931,6 +1932,7 @@
       "/api/admin/iarest/cobros",
       "/api/admin/iarest/soporte",
       "/api/admin/iarest/sugerencias",
+      "/api/admin/iarest/suscripciones",
       "/api/admin/login",
       "/api/admin/logout",
       "/api/admin/personas",
@@ -2695,7 +2697,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 855,
+    "apis": 857,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
