@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T14:02:57Z",
+  "generadoEn": "2026-06-17T14:26:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -259,7 +259,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 15
+        "evidencias": 16
       },
       "rrhh": {
         "estado": "usado",
@@ -2010,7 +2010,10 @@
       "/api/finanzas/export",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/eventos/sync",
       "/api/sivra/expenses",
+      "/api/sivra/expenses/agent/resumen-mensual",
+      "/api/sivra/expenses/agent/scan",
       "/api/sivra/expenses/fijos",
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
@@ -2758,7 +2761,7 @@
     "packages": 23,
     "capacidades": 23,
     "skills": 15,
-    "apis": 890,
+    "apis": 893,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
