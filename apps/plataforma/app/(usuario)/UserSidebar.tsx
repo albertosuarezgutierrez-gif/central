@@ -35,6 +35,9 @@ const NAV_OPERADOR = [
   { href: '/operador/iarest/suscripciones', icon: '💳', label: 'Suscripciones', sub: true },
   { href: '/operador/iarest/soporte', icon: '🎫', label: 'Soporte', sub: true },
   { href: '/operador/iarest/sugerencias', icon: '💡', label: 'Sugerencias', sub: true },
+  { href: '/operador/iarest/crecimiento', icon: '📈', label: 'Crecimiento', sub: true },
+  { href: '/operador/iarest/sistema', icon: '🔬', label: 'Sistema', sub: true },
+  { href: '/operador/iarest/crm', icon: '🎯', label: 'CRM', sub: true },
   { href: '/operador/ia', icon: '🤖', label: 'IA · gasto' },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
 ]
