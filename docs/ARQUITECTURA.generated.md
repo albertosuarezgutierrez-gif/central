@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T07:54:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T08:43:11Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -19,7 +19,7 @@
 - **Rutas API:** 193
 ### plataforma _(matriz)_
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
-- **Capacidades:** Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), Facturación / VeriFactu, Asistente / copiloto IA
+- **Capacidades:** Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Facturación / VeriFactu, Asistente / copiloto IA
 - **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
 - **Rutas API:** 91
 ### rrhh
@@ -143,6 +143,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (17/06/2026) 💶 MÓDULO /finanzas MERGEADO
 - (17/06/2026) 🧹 EDGE FUNCTIONS sin Anthropic
 - (17/06/2026) 🧹 QUITAR ANTHROPIC de ia-rest (#4)
 - (17/06/2026) 💸 PASARELA IA · coste real + fallback + healthcheck
@@ -152,5 +153,4 @@
 - (17/06/2026) ✅ PR #333 MERGED
 - (16/06/2026) 🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*
 - (16/06/2026) 🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo
-- (16/06/2026) 🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325
 
