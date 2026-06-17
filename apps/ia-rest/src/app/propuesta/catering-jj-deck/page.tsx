@@ -199,7 +199,32 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 6 · Comercial & comisiones
+  // 6 · Fuera WhatsApp — todo en la intranet
+  {
+    kicker: 'Menos móvil, más control',
+    titulo: 'Fuera el WhatsApp: todo en la intranet',
+    sub: 'Hoy los pedidos y la comunicación van por tu WhatsApp personal, y acabas todo el día con el móvil. Lo movemos dentro de la app.',
+    color: C.green,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:940 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18, marginBottom:24 }}>
+          <Card icon="💬" color={C.green} titulo="Mensajería interna en la app"
+            body="Equipo, comercial y dirección hablan dentro de la plataforma. Cada mensaje queda ligado a su evento o partida, no perdido en un chat del móvil personal." />
+          <Card icon="📦" color={C.teal} titulo="Pedidos por la intranet"
+            body="El apartado de proveedores ya está cerrado: pides, recibes el albarán y cuadras la entrada sin salir de la plataforma." />
+          <Card icon="📥" color={C.amber} titulo="Una sola bandeja de entrada"
+            body="Cambios de novios, altas y bajas y avisos entran a un único sitio y se convierten solos en tareas. Dejan de depender de que tú los vuelques cada noche." />
+          <Card icon="🗂️" color={C.gold} titulo="Todo queda registrado"
+            body="Cada conversación, pedido y cambio queda con histórico y trazable. Si alguien falta un día, la información no se va con él." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:17, color:C.ink3, textAlign:'center', lineHeight:1.5 }}>
+          El móvil deja de ser tu oficina: la información vive en la plataforma, no en tu chat.
+        </p>
+      </div>
+    ),
+  },
+
+  // 7 · Comercial & comisiones
   {
     kicker: 'Lo que pide el comprador',
     titulo: 'Comercial y comisiones',
