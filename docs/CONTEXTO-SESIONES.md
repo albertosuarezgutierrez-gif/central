@@ -29,6 +29,10 @@
   - **NO incluido (pendiente, PR aparte):** quitar `@anthropic-ai/sdk` de ia-rest — lo tocan 11 ficheros
     (qa-runner, brain, transcribe, health, edge functions…), merece su propio PR testeado.
 
+- **✅ PR #336 MERGED — 17/06/2026** — Fase 5 COMPLETA: Sistema (QA runs + training IA), Crecimiento (Instagram/Blog/Leads landing) y CRM (pipeline de leads con filtros, buscador, fila expandible con contactos/notas) en `/operador/iarest/*`. 5/5 proyectos Vercel ✅ Ready. `iarest.es/super` ya absorbido al 100% en plataforma (modo read-only). Ver detalle abajo.
+
+- **✅ PR #335 MERGED — 17/06/2026** — Fase 5 Restaurantes: lista completa de locales con KPIs + detalle por restaurante en `/operador/iarest/restaurantes/[id]`.
+
 - **✅ PR #334 MERGED — 17/06/2026** — Fase 5 Suscripciones Stripe (read-only) en `/operador/iarest/suscripciones`. Rebase sobre main (conflicto en generated files: commit intermedio saltado). 4/4 proyectos Vercel ✅ Ready. Ver entrada de sesión 17/06 para detalle.
 
 - **✅ PR #333 MERGED — 17/06/2026** — Panel ia-rest/super en plataforma (`/operador/iarest/cobros|soporte|sugerencias`). Rebase completado contra main (conflictos en UserSidebar.tsx y generated files resueltos). 5/5 proyectos Vercel ✅ Ready antes del merge. Ver entrada de sesión 16/06 para detalle completo.
