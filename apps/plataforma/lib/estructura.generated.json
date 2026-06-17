@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T07:54:40Z",
+  "generadoEn": "2026-06-17T08:43:11Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1003,8 +1003,8 @@
         "evidencias": 10
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 5
       },
       "rrhh": {
         "presente": false,
@@ -2369,6 +2369,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 MÓDULO /finanzas MERGEADO",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "🧹 EDGE FUNCTIONS sin Anthropic",
       "fecha": "17/06/2026"
     },
@@ -2422,10 +2426,6 @@
     },
     {
       "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🎨 RRHH · Marca blanca por empresa (white-label)",
       "fecha": "16/06/2026"
     }
   ],
