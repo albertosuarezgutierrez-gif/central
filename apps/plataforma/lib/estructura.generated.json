@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T17:00:16Z",
+  "generadoEn": "2026-06-17T17:27:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -123,6 +123,11 @@
       "id": "module-rrhh",
       "tipo": "module",
       "npm": "@central/module-rrhh"
+    },
+    {
+      "id": "module-trazabilidad",
+      "tipo": "module",
+      "npm": "@central/module-trazabilidad"
     }
   ],
   "capacidades": [
@@ -753,6 +758,28 @@
         "estado": "no",
         "evidencias": 0
       }
+    },
+    "module-trazabilidad": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
     }
   },
   "matrizCapacidades": {
@@ -1289,7 +1316,8 @@
     "module-rrhh": [
       "core-firma",
       "module-documental"
-    ]
+    ],
+    "module-trazabilidad": []
   },
   "apisPorVertical": {
     "ia-rest": [
@@ -2758,7 +2786,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 23,
+    "packages": 24,
     "capacidades": 23,
     "skills": 15,
     "apis": 893,
