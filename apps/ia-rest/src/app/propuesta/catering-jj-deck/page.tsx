@@ -66,6 +66,15 @@ function Arrow({ label, color, dashed }: { label: string; color: string; dashed?
   )
 }
 
+function Quote({ text }: { text: string }) {
+  return (
+    <div style={{ display:'flex', gap:14, alignItems:'flex-start', padding:'16px 0', borderBottom:`1px solid ${C.bg3}` }}>
+      <div style={{ fontFamily:SE, fontSize:'clamp(30px,6vw,44px)', lineHeight:.9, color:C.gold, flexShrink:0 }}>“</div>
+      <p style={{ fontFamily:SE, fontStyle:'italic', fontSize:'clamp(18px,3.8vw,24px)', lineHeight:1.42, color:C.cream, margin:0 }}>{text}</p>
+    </div>
+  )
+}
+
 // ─── Contenido de la presentación ────────────────────────────
 const SLIDES: Slide[] = [
   // 1 · Portada
@@ -107,7 +116,23 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 3 · Principio
+  // 3 · En tus palabras
+  {
+    kicker: 'En tus palabras',
+    titulo: 'Lo que nos dijiste',
+    sub: 'Tus frases, tal cual. De aquí sale todo lo que te proponemos.',
+    color: C.gold,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:880 }}>
+        <Quote text="Todo lo que no está planificado depende de mí." />
+        <Quote text="Reduje los papeles un 75 %." />
+        <Quote text="El cliente no viene a comer cualquier cosa: quiere el arroz de categoría." />
+        <Quote text="Que llegue por la mañana, me identifique por mi partida y ya esté todo." />
+      </div>
+    ),
+  },
+
+  // 4 · Principio
   {
     kicker: 'El principio que lo ordena todo',
     titulo: 'Conectamos, no reemplazamos',
