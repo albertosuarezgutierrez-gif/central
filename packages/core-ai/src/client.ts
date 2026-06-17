@@ -2,8 +2,8 @@
 // Las apps que necesiten config explícita (tests, multi-proveedor) siguen usando
 // nimChat/nimText directamente con su NimConfig inyectado.
 
-import { nimChat } from './nim'
-import type { NimChatMessage } from './nim'
+import { nimChat, nimChatTools } from './nim'
+import type { NimChatMessage, NimToolMessage, NimToolResult } from './nim'
 import type { NimConfig } from './types'
 
 const DEFAULT_MODEL = 'meta/llama-3.3-70b-instruct'
@@ -37,5 +37,21 @@ export async function aiComplete(
     maxTokens,
     temperature,
     signal: timeoutMs ? AbortSignal.timeout(timeoutMs) : undefined,
+  })
+}
+
+/**
+ * Function-calling con NVIDIA NIM desde el entorno (lee `NVIDIA_API_KEY`).
+ * Wrapper de `nimChatTools` para la pasarela central (endpoint `/api/ai/tools`).
+ */
+export async function aiTools(
+  messages: NimToolMessage[],
+  tools: unknown[],
+  options: { system?: string; maxTokens?: number; model?: string } = {},
+): Promise<NimToolResult> {
+  return nimChatTools(envConfig(options.model), messages, tools, {
+    system: options.system,
+    model: options.model,
+    maxTokens: options.maxTokens,
   })
 }

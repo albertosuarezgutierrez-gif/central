@@ -6,7 +6,8 @@ const SERVICE_KEY     = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
 const TM_API_KEY      = Deno.env.get('TICKETMASTER_API_KEY') ?? ''
 const TG_TOKEN        = Deno.env.get('TELEGRAM_TOKEN') ?? ''
 const TG_CHAT         = Deno.env.get('TELEGRAM_CHAT_ID') ?? ''
-const ANTHROPIC_KEY   = Deno.env.get('ANTHROPIC_API_KEY') ?? ''
+// Búsqueda web de eventos: Gemini + Google Search (antes Anthropic web_search, retirado 17/06/2026).
+const GEMINI_KEY      = Deno.env.get('GEMINI_API_KEY') ?? ''
 
 function calcularImpacto(aforo: number): number {
   if (aforo > 20000) return 1.60
@@ -127,7 +128,7 @@ serve(async () => {
 
 
   // ── 4. Claude web_search: ferias, festivos, fútbol (1x/semana) ─────────────
-  if (ANTHROPIC_KEY) {
+  if (GEMINI_KEY) {
     for (const rest of restaurantes) {
       const ciudad   = (rest as Record<string,unknown>).ciudad as string ?? rest.cp_local ?? 'España'
       const fechaHoy = hoy.toISOString().split('T')[0]
@@ -136,7 +137,7 @@ serve(async () => {
       // Comprobar si ya corrió esta semana
       const { data: yaHecho } = await supabase
         .from('eventos_entorno').select('id')
-        .eq('local_id', rest.id).eq('fuente', 'claude-websearch')
+        .eq('local_id', rest.id).eq('fuente', 'gemini-websearch')
         .gte('created_at', new Date(Date.now() - 6 * 86400000).toISOString()).limit(1)
       if (yaHecho?.length) continue
 
@@ -155,14 +156,7 @@ serve(async () => {
         .join(' | ')
 
       try {
-        const res = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01' },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001', max_tokens: 2000,
-            tools: [{ type: 'web_search_20250305', name: 'web_search' }],
-            messages: [{ role: 'user', content:
-              `Busca eventos CONFIRMADOS en ${ciudad} entre ${fechaHoy} y ${fecha180} (próximos 6 meses) relevantes para bares y restaurantes: partidos LaLiga (Sevilla FC, Real Betis), conciertos en recintos >1000 personas, ferias locales, festivos municipales y nacionales, festivales.
+        const prompt = `Busca eventos CONFIRMADOS en ${ciudad} entre ${fechaHoy} y ${fecha180} (próximos 6 meses) relevantes para bares y restaurantes: partidos LaLiga (Sevilla FC, Real Betis), conciertos en recintos >1000 personas, ferias locales, festivos municipales y nacionales, festivales.
 
 EVENTOS YA REGISTRADOS (NO repetir ni incluir nada similar a estos):
 ${resumenExistentes || 'Ninguno aún'}
@@ -171,14 +165,25 @@ Incluye solo eventos con fecha fija confirmada que NO estén ya en la lista ante
 
 Responde SOLO con JSON válido sin markdown:
 {"eventos":[{"fecha":"YYYY-MM-DD","nombre":"nombre corto descriptivo","tipo":"deportes|concierto|feria|festivo|otro","aforo_estimado":25000}]}
-Si no hay nada nuevo: {"eventos":[]}` }],
-          }),
-        })
+Si no hay nada nuevo: {"eventos":[]}`
+
+        const res = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${GEMINI_KEY}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              contents: [{ role: 'user', parts: [{ text: prompt }] }],
+              tools: [{ google_search: {} }],
+              generationConfig: { maxOutputTokens: 2000, temperature: 0.2 },
+            }),
+          },
+        )
         if (!res.ok) continue
         const data = await res.json()
-        const text = (data.content ?? [])
-          .filter((b: {type:string}) => b.type === 'text')
-          .map((b: {text:string}) => b.text).join('')
+        const text: string = (data?.candidates?.[0]?.content?.parts ?? [])
+          .filter((p: {text?: string}) => p.text)
+          .map((p: {text: string}) => p.text).join('')
 
         let parsed: {eventos: Array<{fecha:string;nombre:string;tipo:string;aforo_estimado?:number}>}
         try { parsed = JSON.parse(text.replace(/```json|```/g,'').trim()) } catch { continue }
@@ -202,12 +207,12 @@ Si no hay nada nuevo: {"eventos":[]}` }],
           await supabase.from('eventos_entorno').upsert({
             local_id: rest.id, nombre: ev.nombre,
             fecha_inicio: `${ev.fecha}T00:00:00Z`,
-            tipo: ev.tipo ?? 'otro', fuente: 'claude-websearch',
+            tipo: ev.tipo ?? 'otro', fuente: 'gemini-websearch',
             aforo_estimado: aforo, impacto_estimado: calcularImpacto(aforo), raw: ev,
           }, { onConflict: 'local_id,nombre,fecha_inicio', ignoreDuplicates: true })
           insertados++
         }
-      } catch(e) { console.error(`Claude websearch error ${rest.nombre}:`, e) }
+      } catch(e) { console.error(`Gemini websearch error ${rest.nombre}:`, e) }
     }
   }
 

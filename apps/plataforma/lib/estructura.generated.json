@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-15T17:55:40Z",
+  "generadoEn": "2026-06-17T14:26:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -20,6 +20,11 @@
       "npm": "@central/core-email"
     },
     {
+      "id": "core-firma",
+      "tipo": "core",
+      "npm": "@central/core-firma"
+    },
+    {
       "id": "core-fiscal",
       "tipo": "core",
       "npm": "@central/core-fiscal"
@@ -28,6 +33,11 @@
       "id": "core-identity",
       "tipo": "core",
       "npm": "@central/core-identity"
+    },
+    {
+      "id": "core-payments",
+      "tipo": "core",
+      "npm": "@central/core-payments"
     },
     {
       "id": "core-push",
@@ -108,6 +118,11 @@
       "id": "module-revenue",
       "tipo": "module",
       "npm": "@central/module-revenue"
+    },
+    {
+      "id": "module-rrhh",
+      "tipo": "module",
+      "npm": "@central/module-rrhh"
     }
   ],
   "capacidades": [
@@ -240,15 +255,15 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 10
+        "evidencias": 2
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 16
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 3
       },
       "sivra": {
         "estado": "usado",
@@ -265,16 +280,38 @@
         "evidencias": 2
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "rrhh": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "sivra": {
         "estado": "usado",
         "evidencias": 5
+      }
+    },
+    "core-firma": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-fiscal": {
@@ -310,7 +347,29 @@
       },
       "plataforma": {
         "estado": "usado",
+        "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "usado",
         "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-payments": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 19
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
       },
       "rrhh": {
         "estado": "no",
@@ -340,7 +399,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       }
     },
     "core-storage": {
@@ -350,7 +409,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "plataforma": {
         "estado": "no",
@@ -390,7 +449,7 @@
     "module-asn": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -464,7 +523,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -478,7 +537,7 @@
     "module-crm": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -503,8 +562,8 @@
         "evidencias": 0
       },
       "ialimp": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 4
       },
       "plataforma": {
         "estado": "no",
@@ -512,7 +571,7 @@
       },
       "rrhh": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 4
       },
       "sivra": {
         "estado": "no",
@@ -522,7 +581,7 @@
     "module-feedback": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -544,7 +603,7 @@
     "module-horario": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -566,7 +625,7 @@
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "usado",
@@ -582,7 +641,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       }
     },
     "module-organizador-trabajo": {
@@ -610,7 +669,7 @@
     "module-presupuestos": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "no",
@@ -632,7 +691,7 @@
     "module-proveedores": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 2
+        "evidencias": 3
       },
       "ialimp": {
         "estado": "usado",
@@ -648,7 +707,7 @@
       },
       "sivra": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       }
     },
     "module-revenue": {
@@ -667,6 +726,28 @@
       "rrhh": {
         "estado": "no",
         "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-rrhh": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 3
       },
       "sivra": {
         "estado": "no",
@@ -814,11 +895,11 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 8
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -839,8 +920,8 @@
         "evidencias": 3
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -861,8 +942,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 17
       },
       "rrhh": {
         "presente": false,
@@ -870,7 +951,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 22
+        "evidencias": 24
       }
     },
     "mercado": {
@@ -883,8 +964,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 6
       },
       "rrhh": {
         "presente": false,
@@ -892,21 +973,21 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 10
+        "evidencias": 11
       }
     },
     "crm-leads": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "presente": true,
         "evidencias": 6
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 3
       },
       "rrhh": {
         "presente": false,
@@ -927,8 +1008,8 @@
         "evidencias": 0
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -949,8 +1030,8 @@
         "evidencias": 10
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 5
       },
       "rrhh": {
         "presente": false,
@@ -971,8 +1052,8 @@
         "evidencias": 8
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -993,8 +1074,8 @@
         "evidencias": 1
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -1147,12 +1228,12 @@
         "evidencias": 2
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 2
       },
       "rrhh": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "sivra": {
         "presente": true,
@@ -1185,8 +1266,10 @@
   "depsModulos": {
     "core-ai": [],
     "core-email": [],
+    "core-firma": [],
     "core-fiscal": [],
     "core-identity": [],
+    "core-payments": [],
     "core-push": [],
     "core-storage": [],
     "module-agenda": [],
@@ -1202,10 +1285,23 @@
     "module-organizador-trabajo": [],
     "module-presupuestos": [],
     "module-proveedores": [],
-    "module-revenue": []
+    "module-revenue": [],
+    "module-rrhh": [
+      "core-firma",
+      "module-documental"
+    ]
   },
   "apisPorVertical": {
     "ia-rest": [
+      "/api/admin/cobros",
+      "/api/admin/crecimiento",
+      "/api/admin/crm",
+      "/api/admin/restaurantes",
+      "/api/admin/restaurantes/[id]",
+      "/api/admin/sistema",
+      "/api/admin/soporte",
+      "/api/admin/sugerencias",
+      "/api/admin/suscripciones",
       "/api/almacen-central/grupo",
       "/api/almacen-central/login",
       "/api/almacen-central/restaurante/[id]",
@@ -1743,6 +1839,9 @@
       "/api/admin/lenceria/[id]",
       "/api/admin/limpiadoras",
       "/api/admin/limpiadoras/[id]/acceso",
+      "/api/admin/limpiadoras/[id]/expediente",
+      "/api/admin/limpiadoras/[id]/expediente/[docId]",
+      "/api/admin/limpiadoras/[id]/nomina",
       "/api/admin/limpiadoras/[id]/propiedades",
       "/api/admin/limpiadoras/ranking",
       "/api/admin/limpiadoras/usuarios",
@@ -1799,6 +1898,9 @@
       "/api/l/complete",
       "/api/l/consumo",
       "/api/l/early-checkin",
+      "/api/l/expediente",
+      "/api/l/expediente/[docId]/firmar",
+      "/api/l/expediente/[docId]/firmar/codigo",
       "/api/l/fichar",
       "/api/l/incidencias",
       "/api/l/inventario",
@@ -1860,14 +1962,32 @@
       "/api/admin/descuadres-iarest",
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
+      "/api/admin/iarest/cobros",
+      "/api/admin/iarest/crecimiento",
+      "/api/admin/iarest/crm",
+      "/api/admin/iarest/restaurantes",
+      "/api/admin/iarest/restaurantes/[id]",
+      "/api/admin/iarest/sistema",
+      "/api/admin/iarest/soporte",
+      "/api/admin/iarest/sugerencias",
+      "/api/admin/iarest/suscripciones",
       "/api/admin/login",
       "/api/admin/logout",
+      "/api/admin/personas",
       "/api/admin/propiedades",
+      "/api/agente/chat",
+      "/api/ai/chat",
+      "/api/ai/health",
+      "/api/ai/search",
+      "/api/ai/tools",
+      "/api/ai/vision",
       "/api/auth/login",
       "/api/auth/logout",
       "/api/auth/register",
       "/api/banca/analizar",
       "/api/banca/conciliar",
+      "/api/banca/duplicados",
+      "/api/banca/duplicados/reclamacion",
       "/api/banca/export",
       "/api/banca/factura",
       "/api/banca/importar",
@@ -1886,27 +2006,100 @@
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/cron/psd2-sync",
+      "/api/finanzas",
+      "/api/finanzas/export",
       "/api/negocios",
       "/api/negocios/[id]",
+      "/api/sivra/eventos/sync",
+      "/api/sivra/expenses",
+      "/api/sivra/expenses/agent/resumen-mensual",
+      "/api/sivra/expenses/agent/scan",
+      "/api/sivra/expenses/fijos",
+      "/api/sivra/expenses/fijos/generar",
+      "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/fiscal",
+      "/api/sivra/income",
+      "/api/sivra/incomes",
+      "/api/sivra/inversion",
+      "/api/sivra/inversion/analyze",
+      "/api/sivra/limpiadoras/alerta-ventana",
+      "/api/sivra/limpiadoras/asignacion",
+      "/api/sivra/limpiadoras/ausencias",
+      "/api/sivra/limpiadoras/auto-assign",
+      "/api/sivra/limpiadoras/auto-sessions",
+      "/api/sivra/limpiadoras/checklist",
+      "/api/sivra/limpiadoras/disponibilidad",
+      "/api/sivra/limpiadoras/facturacion",
+      "/api/sivra/limpiadoras/historial",
+      "/api/sivra/limpiadoras/informe",
+      "/api/sivra/limpiadoras/items",
+      "/api/sivra/limpiadoras/lenceria",
+      "/api/sivra/limpiadoras/productos",
+      "/api/sivra/limpiadoras/proveedores",
+      "/api/sivra/limpiadoras/tarifas",
+      "/api/sivra/limpiadoras/usuarios",
+      "/api/sivra/mensajes",
+      "/api/sivra/mensajes/[bookingId]",
+      "/api/sivra/mensajes/auto-reply",
+      "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/reply",
+      "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/ingest",
+      "/api/sivra/mercado/search",
+      "/api/sivra/mercado/stats",
+      "/api/sivra/mercado/sweep",
+      "/api/sivra/pricing/apply",
+      "/api/sivra/pricing/apply-auto",
+      "/api/sivra/pricing/config",
+      "/api/sivra/pricing/experiments",
+      "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/guard",
+      "/api/sivra/pricing/historial",
+      "/api/sivra/pricing/pilot-track",
+      "/api/sivra/pricing/pilot-track/historial",
+      "/api/sivra/pricing/recommend",
+      "/api/sivra/pricing/restore",
+      "/api/sivra/pricing/resultados",
+      "/api/sivra/pricing/resumen-diario",
+      "/api/sivra/pricing/settings",
+      "/api/sivra/pricing/stats",
+      "/api/sivra/rates/snapshot",
+      "/api/sivra/resumen-semanal",
+      "/api/sivra/seo-proposals",
+      "/api/sivra/seo-refresh",
+      "/api/sivra/updates/sync",
       "/api/sociedades",
       "/api/sociedades/[id]"
     ],
     "rrhh": [
+      "/api/admin/cuenta/branding",
+      "/api/admin/cuenta/convenio",
+      "/api/admin/cuenta/convenio/analizar",
       "/api/admin/empleados",
       "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/acceso",
       "/api/admin/empleados/[id]/chat",
       "/api/admin/empleados/[id]/documentos",
       "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/generar",
       "/api/admin/push/subscribe",
       "/api/admin/solicitudes",
       "/api/admin/solicitudes/[id]",
+      "/api/admin/solicitudes/[id]/justificante",
+      "/api/auth/cambiar-password",
       "/api/auth/login",
       "/api/auth/logout",
+      "/api/e/asistente",
       "/api/e/chat",
       "/api/e/expediente",
+      "/api/e/expediente/[docId]/firmar",
+      "/api/e/expediente/[docId]/firmar/codigo",
       "/api/e/login",
       "/api/e/push/subscribe",
-      "/api/e/solicitudes"
+      "/api/e/solicitudes",
+      "/api/operador/empresas",
+      "/api/operador/personas"
     ],
     "sivra": [
       "/api/admin/limpiadoras/asignacion",
@@ -1970,8 +2163,10 @@
       "/api/mercado/ingest-auto",
       "/api/mercado/search",
       "/api/mercado/stats",
+      "/api/mercado/sweep",
       "/api/pitch",
       "/api/pricing-alerts",
+      "/api/pricing/aplicar-propuesta",
       "/api/pricing/apply",
       "/api/pricing/apply-auto",
       "/api/pricing/config",
@@ -1981,6 +2176,7 @@
       "/api/pricing/historial",
       "/api/pricing/pilot-track",
       "/api/pricing/pilot-track/historial",
+      "/api/pricing/pisos-zona",
       "/api/pricing/recommend",
       "/api/pricing/restore",
       "/api/pricing/resultados",
@@ -2097,6 +2293,9 @@
       "concursos_radar_anuncios",
       "cuentas",
       "documentos_contables",
+      "documentos_limpiadora",
+      "firma_otps_limpiadora",
+      "firmas_limpiadora",
       "ingresos_manuales",
       "mailing_campanas",
       "mailing_envios",
@@ -2114,6 +2313,7 @@
       "tenant_modulos"
     ],
     "plataforma": [
+      "ai_usos",
       "comunicacion_categorias",
       "comunicacion_conversacion_participantes",
       "comunicacion_conversaciones",
@@ -2130,6 +2330,8 @@
       "rrhh.documentos",
       "rrhh.empleados",
       "rrhh.empresas",
+      "rrhh.firma_otps",
+      "rrhh.firmas",
       "rrhh.mensajes",
       "rrhh.push_subscriptions",
       "rrhh.solicitudes",
@@ -2156,6 +2358,11 @@
       "description": ">"
     },
     {
+      "id": "facturas-correo",
+      "name": "facturas-correo",
+      "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
+    },
+    {
       "id": "ia-rest-maestro",
       "name": "ia-rest-maestro",
       "description": ">"
@@ -2168,6 +2375,11 @@
     {
       "id": "plataforma-maestro",
       "name": "plataforma-maestro",
+      "description": ">"
+    },
+    {
+      "id": "pricing-agente",
+      "name": "pricing-agente",
       "description": ">"
     },
     {
@@ -2208,64 +2420,64 @@
   ],
   "novedades": [
     {
-      "titulo": "🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269",
-      "fecha": "15/06/2026"
+      "titulo": "💶 MÓDULO /finanzas MERGEADO",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)",
-      "fecha": "15/06/2026"
+      "titulo": "🧹 EDGE FUNCTIONS sin Anthropic",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256",
-      "fecha": "15/06/2026"
+      "titulo": "🧹 QUITAR ANTHROPIC de ia-rest (#4)",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)",
-      "fecha": "15/06/2026"
+      "titulo": "💸 PASARELA IA · coste real + fallback + healthcheck",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)",
-      "fecha": "14/06/2026"
+      "titulo": "✅ PR #336 MERGED",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)",
-      "fecha": "14/06/2026"
+      "titulo": "✅ PR #335 MERGED",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital",
-      "fecha": "15/06/2026"
+      "titulo": "✅ PR #334 MERGED",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)",
-      "fecha": "15/06/2026"
+      "titulo": "✅ PR #333 MERGED",
+      "fecha": "17/06/2026"
     },
     {
-      "titulo": "🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria",
-      "fecha": "14/06/2026"
+      "titulo": "🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239",
-      "fecha": "14/06/2026"
+      "titulo": "🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "🤖 AUTOMATIZACIÓN: comando `/auditoria-diaria` (reconciliación memoria/skills) — PR #237 (MERGED)",
-      "fecha": "14/06/2026"
+      "titulo": "🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "📱 PLATAFORMA: god-panel `/admin` 100% adaptable a móvil (hamburguesa plegable) — PR #236 (MERGED)",
-      "fecha": "14/06/2026"
+      "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "🧹 IALIMP: arreglo \"No autenticado\" + bloqueo 2º login + pantalla Incidencias + revisar limpieza hecha — PRs #231/#233/#234 (MERGED)",
-      "fecha": "14/06/2026"
+      "titulo": "📧 FACTURAS CORREO · Sistema completo en producción",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "🧹 IALIMP: \"Agenda\" añadida al menú del panel admin — PR #229 (MERGED, `24a76d7`)",
-      "fecha": "14/06/2026"
+      "titulo": "🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "🏦 PLATAFORMA: consolidación bancaria inteligente (F1–F6)",
-      "fecha": "14/06/2026"
+      "titulo": "🤖 RRHH · Verticales conectadas a la pasarela de IA central",
+      "fecha": "16/06/2026"
     }
   ],
   "saludRepo": {
@@ -2530,18 +2742,6 @@
         ]
       },
       {
-        "capacidad": "asistente-ia",
-        "label": "Asistente / copiloto IA",
-        "tiene": [
-          "ia-rest",
-          "ialimp",
-          "sivra"
-        ],
-        "falta": [
-          "rrhh"
-        ]
-      },
-      {
         "capacidad": "concursos",
         "label": "Concursos públicos",
         "tiene": [
@@ -2558,12 +2758,12 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 20,
+    "packages": 23,
     "capacidades": 23,
-    "skills": 13,
-    "apis": 784,
+    "skills": 15,
+    "apis": 893,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 23,
+    "oportunidadesPortar": 22,
     "reimplementaciones": 0
   }
 }

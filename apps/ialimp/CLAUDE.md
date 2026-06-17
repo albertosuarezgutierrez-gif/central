@@ -78,8 +78,15 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
   - **Buscador de pliegos (oportunidades por sector):** corpus compartido `concursos_licitaciones` (no por empresa) alimentado por cron `/api/cron/concursos-ingesta` (cada 6 h, upsert desde PLACSP con el parser ampliado de `lib/concursos-radar.ts`). Buscador `GET /api/admin/concursos/radar/buscar` con **full-text de Postgres** (`tsvector`/`plainto_tsquery`, índices GIN) y filtros: CPV (prefijo) · texto · **solo en plazo** (por defecto) · provincia · presupuesto · orden. UI **"🔎 Buscar concursos"** con **"guardar búsqueda como alerta"** (reusa los criterios del radar → buscador *pull* y radar *push* son dos vistas del mismo corpus). Migración nueva: `add_concursos_licitaciones.sql`. Fase 2: BOE como fuente adicional (mismo corpus) y unificar el radar sobre el corpus.
 - **Deuda conocida:** `cleaning_sessions.property_id` (text legacy) convive con `propiedad_id` (uuid) en 2 formatos (slug `prop_*` y UUID) para los mismos pisos → al consultar, normaliza con `COALESCE(NULLIF(propiedad_id::text,''), property_id::text)` (**ambos a `::text`**: si no, COALESCE peta con `42804` text vs uuid). Sesiones iCal antiguas quedaron con slug `prop_*`, **sin `property_name`** ni `propiedad_id` (salían como «Sin piso» en la UI); `pms/sync` ahora **sana** ambos en el `ON CONFLICT` (`COALESCE(NULLIF(...,''), EXCLUDED...)`) y hay backfill en `prisma/migrations/backfill_property_name_ical.sql`. (Nota: el slug `prop_house_sevillana` es en realidad **Casa Socorro**.)
 
-## IA (solo NVIDIA NIM, free tier)
-- Todo vía `lib/ai-client.ts`. `aiComplete()` = llama-3.3-70b · `aiExtractInvoice()` = llama-3.2-90b-vision.
+## IA (pasarela central de plataforma; NVIDIA NIM por debajo)
+- **Todo vía `lib/ai-client.ts`** = `aiComplete()` (texto) y `aiVision()` (OCR/visión). Ambos **enrutan por la
+  PASARELA de IA de plataforma** (las keys de proveedor viven SOLO en plataforma; el gasto se ve en su god-panel
+  → 🤖 IA · gasto). Si faltan los envs **`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`** (= los de plataforma; se ponen
+  UNA vez como Variables Compartidas a nivel de equipo en Vercel), cae a **NIM directo** (`NVIDIA_API_KEY`) como
+  fallback de transición. Modelos por debajo: texto llama-3.3-70b · visión llama-3.2-90b-vision.
+- **`aiVision` tiene la MISMA firma que `nimVision`** (`config, system, images, userText, maxTokens?, opts?`): para
+  migrar un sitio de OCR basta cambiar el import `nimVision`→`aiVision` de `@/lib/ai-client`. No importar `nimVision`
+  de `@central/core-ai` directamente en rutas nuevas: usa el wrapper.
 - `@anthropic-ai/sdk` está **ELIMINADO**. Cualquier feature de IA nueva usa `aiComplete()`.
 - Agentes ya existentes (no duplicar): auto-asignación, calidad-fotos, informes (día 1), cotizador, clasificar-queja, escáner de documentos, briefing-diario, comparar-foto, selección de CVs (RRHH).
 
@@ -142,6 +149,33 @@ Herramienta de **prospección de IALIMP** (el SaaS) para captar empresas de limp
 - **Envs nuevas:** `MAILING_FROM`/`MAILING_FROM_NAME` (remitente), `IALIMP_WHATSAPP` (nº wa.me para CTAs; por defecto `34637349990`, también fijado en la landing `index.html`), `MAILING_AVISO_TO` (a quién avisar de clicks/leads; por defecto `MAIL_FROM`), `RESEND_WEBHOOK_SECRET` (firma webhook), `GOOGLE_PLACES_API_KEY` (recolector de leads de Google). **Proveedor de envío actual = IONOS SMTP** (587/STARTTLS), no Resend → con IONOS el `from` debe ser un buzón REAL (`MAILING_FROM` sin poner = usa `hola@ialimp.es`; no inventar `news@…` salvo que se cree el buzón), conviene `max_dia` bajo (20-30) para no quemar el buzón, y el **webhook de rebotes de Resend queda inactivo** (las bajas por rebote automáticas solo van con Resend; el enlace de baja manual y `List-Unsubscribe` sí funcionan). Para escalar volumen en frío sin riesgo: migrar a Resend con `ialimp.es` verificado (SPF/DKIM/DMARC) y un subdominio/buzón dedicado.
 - **Cumplimiento:** cada correo lleva identificación del responsable + baja funcional + `List-Unsubscribe`; bajas registradas. Es marketing **propio de IALIMP** (rompe white-label), por eso vive en superadmin y no en el panel de empresa.
 - **Manual:** es tooling INTERNO de IALIMP (no lo usan los tenants) → no va a `public/manual.html`.
+
+## RR.HH. de la limpiadora (expediente + nómina PDF + firma avanzada)
+RR.HH. como **capacidad compartida**: ialimp consume `@central/module-rrhh` (orquestación de firma OTP
+owner-agnóstica) + `@central/module-documental` (permisos por carpeta) + `@central/core-firma` (firma
+eIDAS art.26) — los mismos núcleos que la app `rrhh`. Datos en el schema `public` de ialimp, scopeados por
+`(empresa_id, limpiadora_id)`. OwnerRef = `{tipo:'limpiadora', id}`.
+- **Tablas** (migración `prisma/migrations/2026-06-16_rrhh_limpiadora.sql`, aplicada): `documentos_limpiadora`,
+  `firmas_limpiadora`, `firma_otps_limpiadora` (espejo de `rrhh.documentos/firmas/firma_otps`). Además
+  `limpiadoras.email` (**OBLIGATORIO** en el alta — canal del OTP de firma) y `limpiadoras.dni`.
+- **Storage**: bucket **PRIVADO** `documentos-limpiadora` (policy `read` para firmar URLs, como los demás
+  privados); subir/borrar con service_role, descargar para hashear al firmar, URL firmada 1 h vía core-storage.
+  `lib/storage-limpiadora.ts` (≠ bucket público de fotos).
+- **Carpetas**: las estándar de RR.HH. (`CARPETAS_RRHH` de module-rrhh): datos_personales/contratos/nominas/
+  partes_medicos/otros. `lib/carpetas-limpiadora.ts`.
+- **Email/OTP del firmado**: `lib/firma-limpiadora.ts` usa el transporter de `lib/mailer.ts`; remitente
+  **parametrizado** `FIRMA_FROM` (env; por defecto `MAIL_FROM` = `hola@ialimp.es`, ya verificado) para poder
+  migrarlo a la marca principal sin tocar la lógica.
+- **Nómina PDF** (`lib/nomina-pdf.ts`, usa `pdf-lib`): agrega `partes_trabajo` del rango (misma fuente que
+  `/api/admin/nomina`), genera el recibo A4, lo guarda en carpeta `nominas` y lo deja **pendiente de firma**.
+- **Rutas limpiadora** (`/api/l/*`, exentas en middleware, auth `getLimpiadoraSession`): `expediente` (GET),
+  `expediente/[docId]/firmar` (POST), `expediente/[docId]/firmar/codigo` (POST OTP). UI: **`/l/documentos`**
+  (botón "📄 Mis documentos" en la cabecera de `/l`), con modal de firma (código + confirmación de nombre).
+- **Rutas admin/gestor** (`requireEmpresaId`): `/api/admin/limpiadoras/[id]/expediente` (GET/POST subir),
+  `.../expediente/[docId]` (POST solicitar firma · DELETE), `.../nomina` (POST genera la nómina). UI:
+  pestaña **📁 Expediente** en `/admin/rrhh` (`components/ExpedienteLimpiadoraAdmin.tsx`): seleccionar
+  limpiadora → generar nómina (rango/quincena) → subir docs → pedir firma. `lib/expediente-limpiadora.ts`
+  = listar/subir/borrar (espejo de `apps/rrhh/lib/documental.ts`).
 
 ## VeriFactu
 `lib/verifactu.ts` (SHA-256 + XML SOAP AEAT), campos `vf_*`. Sique Brilla SL: obligatorio desde ene-2027.

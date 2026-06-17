@@ -11,13 +11,18 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
 > Booking/Trivago, endpoint `/api/mercado/ingest`, piloto Busto Reform) está documentado en
 > **`docs/pricing-automatico.md`**, con el checklist de lo que falta para que sea vendible ("no puede fallar").
 
+> **🧾 Contabilidad — separación de cuentas (REGLA):** la P&L NO se mezcla. **BBVA** = Duplex Center +
+> seguros (aparte). **Kutxa** = personal + los **3 apartamentos turísticos** (Socorro/House Sevillana +
+> Busto Reform + Luxury Busto), que hay que sacar **sin lo personal**. Detalle y mapeo en
+> **`docs/contabilidad.md`**. El dashboard "Evolución mensual" actual mezcla todo → no vale.
+
 ## Stack
 - **Next.js 15** (App Router) · React 19 · TypeScript 5.6 · Tailwind 3.4
 - **Auth:** NextAuth v5 (credenciales admin) + cookie `limpiadora_token` para limpiadoras. Lógica
   de enrutado en `middleware.ts`.
 - **Datos:** PostgreSQL en **Supabase** (proyecto **"Ingresos Y gastos Smoobu"**, ref
   `wswbehlcuxqxyinousql`). Prisma con conexión directa (`DATABASE_URL`).
-- **IA:** `lib/ai-client.ts` → NVIDIA NIM (texto + visión para facturas).
+- **IA:** `lib/ai-client.ts` → **pasarela de IA central de plataforma** (las keys viven solo en plataforma; gasto en su god-panel). `aiComplete` (texto), `aiExtractInvoice` (OCR facturas) y `aiSearch` (búsqueda web, p. ej. `seo-refresh`) enrutan por la pasarela; sin los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` caen a NVIDIA NIM directo (fallback). **Ya NO se usa Anthropic** (el `seo-refresh` migró de Anthropic web_search a `aiSearch`→`gatewaySearch`/Gemini el 16/06/2026).
 - **i18n:** next-intl (es/en/fr/de/it).
 - **Deploy:** Vercel (build `prisma generate && next build`), 10 crons en `vercel.json`.
 

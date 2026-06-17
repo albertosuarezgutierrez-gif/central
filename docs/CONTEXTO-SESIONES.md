@@ -16,6 +16,472 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 MÓDULO /finanzas MERGEADO — 17/06/2026** (PR #341 merged en main, 5/5 Vercel ✅)
+  - Hub financiero consolidado para Alberto: correduría seguros, 4 pisos turísticos, gastos personales BBVA/Kutxa, fiscal IRPF.
+  - Archivos nuevos: `lib/finanzas.ts` · `app/api/finanzas/route.ts` · `app/api/finanzas/export/route.ts` · `app/(usuario)/finanzas/page.tsx` · `app/(usuario)/finanzas/FinanzasClient.tsx`.
+  - `UserSidebar.tsx`: "💶 Finanzas" segundo ítem en Mi negocio, "🤖 Agente IA" renombrado (era "Agente precios"), Mercado 📊→🗺️, sección "Mis pisos"→"Pisos · detalle".
+  - Lógica fiscal: `calcularTramos()` (tramos IRPF 2025 declaración conjunta, reducción €3.400). Correduría = cobrado neto / 0.85 (bruto); retenciones = cobrado × 0.15/0.85; no modelo 130 ni 303.
+  - Pisos propios (House Sevillana + Duplex Center): placeholder amortización 3%. Pisos subarrendados (Luxury Busto + Busto Reform): alquiler pagado = deducible 100%.
+  - Export CSV (`/api/finanzas/export?year=YYYY`) para gestoría: filtro destino seguros+turistico_pisos+turistico_duplex.
+  - Bloque Modelo 179: tracker de obligación informativa trimestral para los 4 pisos turísticos.
+  - Filtros temporales: año + Q1/Q2/Q3/Q4.
+
+- **🧹 EDGE FUNCTIONS sin Anthropic — 17/06/2026** (PR pendiente) — **ya NO queda Anthropic en ia-rest.**
+  - `supabase/functions/qr-assistant`: eliminado el fallback Anthropic (ya usaba NIM como principal).
+  - `supabase/functions/eventos-entorno`: web_search de Anthropic → **Gemini `gemini-2.0-flash` + `google_search`**
+    (mismo prompt/JSON). `fuente` pasa de `claude-websearch` → `gemini-websearch` (re-corre 1 vez por local, dedup ok).
+  - **DESPLIEGUE MANUAL (Alberto):** estas son edge functions de **Supabase** (no Vercel), así que no se
+    despliegan con el push. Hay que `supabase functions deploy qr-assistant eventos-entorno` y poner el
+    **secret `GEMINI_API_KEY`** en el proyecto Supabase de ia-rest (`efncqyvhniaxsirhdxaa`) para eventos-entorno.
+
+- **🧹 QUITAR ANTHROPIC de ia-rest (#4) — 17/06/2026** (PR pendiente)
+  - Eliminada la dependencia **`@anthropic-ai/sdk`** del `package.json` de ia-rest + sus 3 imports:
+    `brain.ts` (`callAnthropic`, fallback de pago del POS) y `ai-client.ts` (`anthropicText`/`anthropicVision`).
+    El brain ahora es **NIM puro** (si falla → aviso); `callAI`/`callAIVision` lanzan error si NIM no está
+    (sin fallback de pago). `noFallback` se mantiene en firmas por compatibilidad.
+  - `pnpm-lock.yaml` regenerado (−32 líneas, solo Anthropic). `package-lock.json` de ia-rest es **vestigial**
+    (npm; el build usa pnpm `--no-frozen-lockfile`), no se tocó. `tsc` limpio (0 errores).
+  - **Pendiente (queda, PR aparte):** 2 **edge functions Deno** (`supabase/functions/qr-assistant`,
+    `eventos-entorno`) aún llaman a `api.anthropic.com` por `fetch` → migrar a NIM/Gemini (runtime distinto).
+    Referencias inertes a `ANTHROPIC_API_KEY` (health/qa-runner/transcribe: solo booleano/diagnóstico) se dejaron.
+
+- **💸 PASARELA IA · coste real + fallback + healthcheck — 17/06/2026** (PR pendiente)
+  - **Coste/tokens reales en `/operador/ia`**: `ai_usos` gana columnas `tokens`+`coste_eur` (migración
+    `2026-06-17_ai_usos_coste.sql`, **YA aplicada** en Supabase `wswbehlcuxqxyinousql`, aditiva/idempotente).
+    `ai-gateway.ts`: `estimarTokens` (~4 chars/token), `costeEur` (precio €/1k por proveedor, env
+    `AI_PRECIO_NIM_EUR_1K`=0 / `AI_PRECIO_GEMINI_EUR_1K`=0.0002). Los 4 endpoints registran tokens+€.
+    El panel muestra KPIs **Coste €** y **Tokens**, € por app, y tokens/€ por llamada.
+  - **Alerta de presupuesto**: `estadoPresupuesto()` + banner en `/operador/ia` al ≥80% (rojo al 100%).
+  - **Fallback de proveedor DENTRO de la pasarela**: `/api/ai/chat` hace **NIM → Gemini** si NIM falla
+    (con `GEMINI_API_KEY`) → las verticales podrán quedarse sin keys de proveedor propias.
+  - **Healthcheck**: `GET /api/ai/health` (sin secreto, no gasta) → `{ok, proveedores:{nim,gemini}, limite}`.
+  - **NO incluido (pendiente, PR aparte):** quitar `@anthropic-ai/sdk` de ia-rest — lo tocan 11 ficheros
+    (qa-runner, brain, transcribe, health, edge functions…), merece su propio PR testeado.
+
+- **✅ PR #336 MERGED — 17/06/2026** — Fase 5 COMPLETA: Sistema (QA runs + training IA), Crecimiento (Instagram/Blog/Leads landing) y CRM (pipeline de leads con filtros, buscador, fila expandible con contactos/notas) en `/operador/iarest/*`. 5/5 proyectos Vercel ✅ Ready. `iarest.es/super` ya absorbido al 100% en plataforma (modo read-only). Ver detalle abajo.
+
+- **✅ PR #335 MERGED — 17/06/2026** — Fase 5 Restaurantes: lista completa de locales con KPIs + detalle por restaurante en `/operador/iarest/restaurantes/[id]`.
+
+- **✅ PR #334 MERGED — 17/06/2026** — Fase 5 Suscripciones Stripe (read-only) en `/operador/iarest/suscripciones`. Rebase sobre main (conflicto en generated files: commit intermedio saltado). 4/4 proyectos Vercel ✅ Ready. Ver entrada de sesión 17/06 para detalle.
+
+- **✅ PR #333 MERGED — 17/06/2026** — Panel ia-rest/super en plataforma (`/operador/iarest/cobros|soporte|sugerencias`). Rebase completado contra main (conflictos en UserSidebar.tsx y generated files resueltos). 5/5 proyectos Vercel ✅ Ready antes del merge. Ver entrada de sesión 16/06 para detalle completo.
+
+- **🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/* — 16/06/2026** (rama `claude/nice-heisenberg-jo4vy1`)
+  - **PR #332 MERGED**: `/admin` (god-panel dark 338 líneas) → redirect a `/operador/clientes`. Limpieza definitiva.
+  - **Panel ia-rest** (mismo PR): 3 nuevos endpoints en ia-rest `/api/admin/` (Bearer `OPERADOR_SHARED_SECRET`, mismo patrón que `/api/operador/`):
+    - `cobros/route.ts` — lee `v_cobro_resumen_super` + `resumen_cobros_mensual`. Totales globales + histórico 12m.
+    - `soporte/route.ts` — GET/POST(responder)/PATCH(cambiar estado) de tickets de soporte.
+    - `sugerencias/route.ts` — GET/PATCH sugerencias del equipo de sala (estado, nota admin, leída).
+  - Plataforma: 3 proxy APIs en `/api/admin/iarest/` (auth `plataforma_admin` cookie → Bearer ia-rest) + 4 páginas:
+    - `/operador/iarest` — overview con cards de sección + link al panel legacy `iarest.es/super`.
+    - `/operador/iarest/cobros` — tabla de volumen/comisiones por restaurante + histórico mensual. Read-only.
+    - `/operador/iarest/soporte` — lista de tickets con panel lateral: responder inline + cambiar estado (abierto/escalado/resuelto).
+    - `/operador/iarest/sugerencias` — lista de ideas con filtros (categoría/estado/no leídas) + nota interna editable.
+  - **UserSidebar**: sub-items indentados bajo 🍽️ ia-rest (💶 Cobros, 🎫 Soporte, 💡 Sugerencias).
+  - **Auth iarest.es/super no tocada**: los `/api/super/*` siguen con `x-ia-session`. Los `/api/admin/*` son endpoints nuevos aditivos.
+  - **Env requerido en ia-rest Vercel**: `OPERADOR_SHARED_SECRET` (ya existe, mismo valor que plataforma). Sin él, los 3 endpoints devuelven 401 silencioso.
+  - **Pendiente Fase 5**: CRM/leads (~20 endpoints), Clientes/Restaurantes (~11), Instagram/Blog (~15), sistema/health (~12), autocuras — iterativos.
+  - **Pendiente Fase 4**: Admin limpiadoras (riesgo ialimp — auditoría RLS previa necesaria).
+
+- **🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo — 16/06/2026** (PR #329 MERGED, squash `92e6140`)
+  - Nuevo endpoint **`POST /api/ai/tools`** en plataforma (espejo de `/api/ai/chat`): `verificarSecreto` +
+    `dentroDePresupuesto` + `registrarUso` (endpoint `'tools'`). Recibe `messages`+`tools` (OpenAI),
+    responde `{content, tool_calls}`.
+  - **`@central/core-ai`**: `aiTools` (lee `NVIDIA_API_KEY`, en `client.ts`) + `gatewayTools` (adaptador
+    vertical, en `gateway.ts`). Exports añadidos.
+  - **ia-rest** `callAITools` enruta por la pasarela (`gatewayTools`) y cae a `nimChatTools` directo si falla.
+  - **Resultado:** las **4 vías** de IA de ia-rest (`callAI`/`callAISearch`/`callAIVision`/`callAITools`)
+    pasan ya por la pasarela cuando está configurada → gasto 100% centralizado en `/operador/ia`. `tsc` limpio.
+
+- **🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325 — 16/06/2026** (PR #327)
+  - **sivra `seo-refresh`** ya NO usa Anthropic web_search: `lib/ai-client.ts` gana `aiSearch()` →
+    `gatewaySearch` (pasarela central, Gemini+Google Search); sin pasarela cae a NIM puro. Eliminada
+    `ANTHROPIC_API_KEY` de la ruta. **Con esto NINGÚN agente del repo llama ya a Anthropic como vía principal.**
+  - **ia-rest `lib/ai-client.ts`** enruta por la **pasarela central** (como ialimp/sivra): `gatewayCfg()`
+    (`AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`, env de equipo Vercel); `callAI`/`callAISearch`/`callAIVision`
+    intentan la pasarela primero y caen al camino directo NIM→Anthropic si no está / falla.
+    `callAITools` (function-calling de los agentes del god-panel) sigue **directo a NIM** (la pasarela no
+    expone tool-calling).
+  - Anthropic queda solo como fallback de transición en ia-rest (hoy sin saldo). `tsc` limpio en ambas apps.
+
+- **🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel — 16/06/2026** (PR #325 MERGED, squash `97bdcc2`)
+  - **Motivo**: los 4 agentes daban error 500 *"Anthropic no disponible (sin crédito)"*. Decisión de Alberto:
+    quitar Anthropic → **NVIDIA NIM + Gemini** (gratis, sin saldo).
+  - **`@central/core-ai`**: nuevo `nimChatTools` (function-calling con NIM, endpoint OpenAI-compatible) +
+    tipos `NimToolMessage`/`NimToolCall`/`NimToolResult`. NIM corre el bucle agéntico; la app ejecuta sus tools.
+  - **ia-rest `lib/ai-client.ts`**: `callAITools(system, messages, tools)` (wrapper de `nimChatTools`).
+  - **Agentes migrados** (las herramientas se ejecutan igual; solo cambió el "cerebro"):
+    - `agentes-ai` (solo búsqueda web) → **Gemini** (`callAISearch`).
+    - `agente-arquitecto` (GitHub/Drive) → **NIM function-calling**.
+    - `agentes-seo` (web_search + GSC/GA4) → **NIM**; `web_search` pasa a tool custom respaldada por **Gemini**.
+    - `cron/seo-agent` (web_search + escritura SEO + GSC/GA4) → **NIM + Gemini**.
+  - Funciona con `NVIDIA_API_KEY` + `GEMINI_API_KEY` que ia-rest **ya tiene**. `tsc` limpio. 5 deploys Vercel en verde.
+  - **PENDIENTE**: (a) **sivra `seo-refresh`** (cron) aún usa Anthropic web_search → migrar igual a Gemini.
+    (b) Conectar el `ai-client` de ia-rest a la pasarela central (como ialimp/sivra) para centralizar su gasto.
+
+
+- **📧 FACTURAS CORREO · Sistema completo en producción — 16/06/2026** (PR #324 MERGED)
+  - **Flujo diario automatizado:**
+    - 06:00 UTC → cron PSD2 sincroniza BBVA + Kutxa (23 movimientos insertados en primera sync)
+    - 08:00 CEST → Rutina Claude `Revisar facturas correo` procesa Gmail → Drive → Supabase
+  - **Infraestructura:**
+    - `CRON_SECRET` configurado en Vercel plataforma → cron PSD2 ya funciona
+    - Rutina activa en `claude.ai/code → Rutinas` (daily 8:00 CEST, repo `central`, MCPs Gmail+Drive+Supabase)
+    - Botón `📧 Revisar correo` en Banca → abre Claude Code + copia `/facturas-correo` al portapapeles
+    - Slash command `/facturas-correo` disponible en Claude Code web
+  - **Clasificaciones confirmadas por Alberto:**
+    - IKEA/Taskrabbit/ferretería → `turistico_pisos`; TotalEnergies → `turistico_pisos`
+    - Anthropic Ireland → `seguros`; BSH + Tutrocito 122.87€ → `personal`
+    - Círculo Mercantil → siempre `personal`
+  - **Regla reenvíos Pilar** (actualizada en skill): Taskrabbit/fontanero/Amazon/ferretería → siempre "Para tu decisión" (no auto-clasificar)
+  - **Archivados en Drive** (`FACTURAS Apartamentos/2026/06-Junio-2026/`): Vercel, Anthropic, TotalEnergies, PriceLabs, Taskrabbit 85.41€ (montaje IKEA, 16/06)
+  - **Pendiente subida manual**: IKEA 888.89€ PDF + PDFs TotalEnergies (MCP Gmail no descarga adjuntos)
+  - **Vercel 190.93€ + Anthropic 217.80€**: pagados desde **N26** → pendiente conectar N26 al PSD2 o subir extracto manual
+  - **Etiqueta Gmail**: `Facturas/Procesada` (Label_11) — todos los correos procesados etiquetados
+
+
+- **🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - **Decisión de Alberto**: la IA NO se configura por proyecto. Las **keys de proveedor viven solo en
+    plataforma**; cada vertical llama a la pasarela. La conexión (`AI_GATEWAY_URL` + `AI_GATEWAY_SECRET`)
+    se pone **UNA vez como Variables Compartidas a nivel de equipo (Team) en Vercel** → todos los
+    proyectos la heredan, sin repetir por proyecto.
+  - **Pasarela ampliada con VISIÓN/OCR**: `gatewayVision` (core-ai) + `POST /api/ai/vision` en plataforma
+    (NIM vision, Bearer, presupuesto, registro en `ai_usos`). Necesario porque ialimp/sivra hacen mucho OCR.
+  - **ialimp** (100% migrado): `lib/ai-client.ts` reescrito → `aiComplete` y `aiVision` enrutan por la
+    pasarela con fallback a NIM directo. Los **7 sitios de OCR** (`concursos-ocr`, `cron/procesar-documentos`,
+    `propietario/escanear`, `admin/escanear/process`, `admin/ia/{analizar-foto,analizar-botes,comparar-foto}`)
+    cambiados de `nimVision`→`aiVision` (misma firma). `lib/concursos.ts` importa `aiComplete` del wrapper.
+  - **sivra**: `lib/ai-client.ts` → `aiComplete` y `aiExtractInvoice` (OCR facturas) por la pasarela con fallback.
+  - **ia-rest PENDIENTE** (Fase 2): los 4 agentes con **tool-calling de Anthropic** (agente-arquitecto, agentes-seo,
+    agentes-ai, cron/seo-agent) + el `seo-refresh` de sivra NO migran: la pasarela hace chat+búsqueda+visión, no
+    tool-calling. Para unificarlos hay que extender la pasarela con un endpoint de tool-calling (Anthropic). Las
+    llamadas NIM/Gemini planas de ia-rest sí se pueden migrar (su `ai-client.ts`) en otro PR.
+  - **Migración SIN romper nada**: sin los envs, todo sigue con las keys directas; al ponerlos, pasa por la pasarela.
+  - **Tras configurar**: el gasto de ialimp/sivra/rrhh se ve en plataforma → god-panel → 🤖 IA · gasto.
+
+- **🤖 RRHH · Verticales conectadas a la pasarela de IA central — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - El **asistente del empleado** (`lib/asistente.ts`) y el **agente de convenios** (`lib/convenio-agente.ts`)
+    de iarrhh ya **llaman a la pasarela de plataforma** en vez de a NIM/Gemini directos → las keys de
+    proveedor y el **control de coste/uso** quedan centralizados en plataforma (`/operador/ia`).
+  - **Nuevo**: `lib/ai.ts` — `viaIA()` (pura, testeada), `iaDisponible()`, `iaChat()` (pasarela→NIM),
+    `iaSearch()` (pasarela search→degrada a chat; fallback Gemini/NIM directo). Prioriza la pasarela;
+    si no está configurada, usa la key directa (transición sin romper nada). Test `lib/ai.test.ts`.
+  - **Envs nuevos en Vercel `central-rrhh`**: `AI_GATEWAY_URL` (= URL de plataforma) + `AI_GATEWAY_SECRET`
+    (mismo valor que en plataforma). Al activarlos se podrán quitar `NVIDIA_API_KEY`/`GEMINI_API_KEY` de rrhh.
+  - **Bonus**: esto probablemente **arregla el "asistente no disponible"** (la key vivía en rrhh; ahora la
+    llamada la hace plataforma, donde `NVIDIA_API_KEY` ya funciona).
+
+- **🎨 RRHH · Marca blanca por empresa (white-label) — 16/06/2026** (rama `claude/bold-ride-s4s8eq`)
+  - Cada empresa define su **color corporativo (hex)** y su **logo** desde **Mi cuenta** (gestor);
+    el **Portal del Empleado** (`/e`) se tiñe con ellos (logo en cabecera + acento de la marca).
+  - Reutilizable para CUALQUIER cliente (no hardcodea Mariscos González). Para aplicar la marca de
+    Mariscos: el sitio `mariscosgonzalez.com` **no es accesible** desde el entorno (bloqueado por la
+    allowlist de egress) → Alberto sube el logo + elige el color en Mi cuenta (self-service).
+  - **Nuevo**: `lib/branding.ts` (puro: `normalizaHex`, `derivarPaleta`, `estiloMarca`) + test;
+    `app/api/admin/cuenta/branding/route.ts` (POST multipart, gestor); migración
+    `0013_empresa_branding.sql` (`empresas.color_primario`, `empresas.logo_path`; **aplicada**).
+  - **Modificado**: `lib/empresa.ts` (`getBranding`, `actualizarBranding`); `app/e/page.tsx` +
+    `app/e/ExpedienteEmpleado.tsx` (aplica color vía CSS vars `--accent*` inline + logo); `app/admin/cuenta/page.tsx`
+    + `CuentaClient.tsx` (sección "Identidad corporativa"). Logo en bucket privado `rrhh-documentos`
+    (`branding/<empresa>/...`), servido por URL firmada en cada render.
+  - **AI gateway (PR #315 MERGED)**: pasarela de IA en plataforma (`/api/ai/chat` NIM, `/api/ai/search`
+    Gemini, Bearer `AI_GATEWAY_SECRET`) + god-panel `🤖 IA · gasto` (`/operador/ia`) + tabla `public.ai_usos`.
+    Pendiente Alberto: env `AI_GATEWAY_SECRET` (+opc. `GEMINI_API_KEY`, `AI_GATEWAY_LIMITE_MENSUAL`) en plataforma.
+
+- **🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal — 16/06/2026** (PR #316 mergeado, rama `claude/sivra-fase3-mercado-pricing`)
+  - **Páginas migradas** de sivra → plataforma `/sivra/*`:
+    - `/sivra/mercado` — benchmark de competidores: panel por escenario (normal/corpus), toggle de portales, percentiles p25/p50/p75, búsqueda en tiempo real (Serper+NIM). APIs `GET /api/sivra/mercado/stats`, `GET /api/sivra/mercado/search`, `POST /api/sivra/mercado/ingest`.
+    - `/sivra/pricing` — Pricing Lab en modo shadow: tabla de experimentos A/B por propiedad (booked/libre/activo), stats de ocupación vs PriceLabs. APIs `GET|POST|DELETE /api/sivra/pricing/experiments`, `GET /api/sivra/pricing/stats`.
+    - `/sivra/pricing-auto` — Motor de precios completo: 13 parámetros por propiedad, botón de pánico, historial de aplicaciones, resultados €, pilot tracking 🟢🟡🔴. APIs `GET /api/sivra/pricing/settings`, `GET /api/sivra/pricing/apply`, `GET /api/sivra/pricing/historial`, `GET /api/sivra/pricing/resultados`, `GET /api/sivra/pricing/pilot-track`, etc.
+  - **Calendario Gantt** (`/sivra/calendario`) — barras ahora coloreadas por portal de reserva (Airbnb rojo, Booking azul, VRBO azul oscuro, Directo violeta, Otros gris). Leyenda actualizada. Antes eran por propiedad (redundante con filas).
+  - **Libs puras copiadas de sivra**: `lib/sivra/pricing-engine.ts` (motor de recomendación), `lib/sivra/pricing-calendar.ts` (eventos/estaciones), `lib/sivra/pilot-track.ts` (evaluación 🟢🟡🔴).
+  - **7 nuevos crons** en `vercel.json`: mercado/cron (07:15), mercado/sweep (dom 03:00), pricing/guard (07:30), pricing/experiments/check-results (08:00), pricing/apply-auto (08:30), pricing/resumen-diario (09:00), pricing/pilot-track (09:15).
+  - **UserSidebar.tsx** — NAV_PISOS ampliado con 3 entradas: Mensajes, Mercado, Pricing Lab, Pricing auto.
+  - **Estado CI**: todos los proyectos en Ready ✅ (plataforma, ialimp, sivra, ia-rest, central-rrhh)
+  - **Siguiente Fase 4**: Admin limpiadoras (⚠️ riesgo ialimp, requiere auditoría RLS previa)
+
+- **🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard — 16/06/2026** (PR #310, mergeado)
+  - **Mensajería de huéspedes** migrada de sivra → plataforma:
+    - `lib/smoobu.ts` — `getSmoobuKey()` lee `pms_connections.smoobu_api_key` (tabla de ialimp) con caché 5min; fallback a `SMOOBU_API_KEY` env solo si BD falla
+    - `GET /api/sivra/mensajes` — threads Smoobu + join `incomes` (checkIn/checkOut/portal) + `mensajes_status` (overrides manuales). Clasifica: trivial/info/importante → estado: respondido/pendiente/urgente
+    - `GET|PATCH /api/sivra/mensajes/[bookingId]` — mensajes por reserva, cambio de estado persiste en `mensajes_status` (ON CONFLICT UPDATE)
+    - `POST /api/sivra/mensajes/reply` — reglas de negocio (late checkout, early checkin, parking) → RAG en `knowledge_base` → `aiComplete` de `@central/core-ai`. Notifica `SIVRA_URL/api/limpiadoras/early-checkin` para early in/out
+    - `GET|POST|PATCH|DELETE /api/sivra/mensajes/knowledge` — CRUD base de conocimiento (tabla `knowledge_base`)
+    - `/sivra/mensajes/page.tsx` — UI completa: paneles redimensionables, lista de threads con filtros (estado/propiedad/búsqueda), chat, sugerencia IA, traducción vía MyMemory, Gmail draft, guardar en KB. Mobile: vista única list/chat con toggle
+  - **UserSidebar** — NAV_PISOS actualizado a 8 entradas (añadida Mensajes entre Fiscal y Inversión)
+  - **Dashboard fixes responsive**:
+    - Fecha `checkIn` ahora usa `::date::text` (antes `::text` devolvía timestamp completo `2026-06-16 12:00:00+00`)
+    - Widget "Esta semana en los pisos": `maxWidth: 90` en nombre de piso (era `minWidth`) + `minWidth: 0` en contenedor → importe ya no se corta en móvil
+  - **Env vars necesarias en proyecto Vercel `plataforma`**: `SMOOBU_API_KEY` (fallback), `SMOOBU_PMS_CONNECTION_ID` (opcional, tiene default), `SIVRA_URL` (para notificar limpiadoras)
+
+- **🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard — 16/06/2026** (PR #305, rama `claude/sivra-fase1b-income-expenses`)
+  - **Páginas migradas** de sivra → plataforma `/sivra/*`:
+    - `/sivra/income` — lista completa de reservas con filtros (portal, propiedad, fecha, huésped) + 4 KPIs: reservas, ingresos brutos, media/reserva, noches. API `GET /api/sivra/income`.
+    - `/sivra/expenses` — gastos manuales con formulario, subida a Drive, filtros por mes/propiedad/categoría. APIs `GET/POST/DELETE /api/sivra/expenses` + `POST /api/sivra/expenses/parse-invoice` (OCR NVIDIA NIM).
+    - `/sivra/gastos-fijos` — CRUD de plantillas de gastos recurrentes. APIs `GET/POST/PUT/DELETE /api/sivra/expenses/fijos` + `GET /api/sivra/expenses/fijos/generar` (cron día 1/mes).
+    - `/sivra/fiscal` — NUEVA (no existía en sivra): export IRPF por piso/trimestre. Tabla de rendimientos brutos, gastos deducibles (por categorías: limpieza, suministros, seguros, ibi, amortización, comisiones), resultado neto, descarga CSV con BOM UTF-8. API `GET /api/sivra/fiscal?year=YYYY`.
+  - **Calendario Gantt** completo (reescritura desde cero, `/sivra/calendario`):
+    - Barras de reserva con posicionado absoluto (DAY_W=46, ROW_H=52, LABEL_W=130, DAYS=30)
+    - Color de propiedad + stripe de portal (Airbnb rojo, Booking azul, VRBO azul oscuro, Directo violeta)
+    - ADR/noche visible en barras anchas, nombre del huésped
+    - Detector de gaps (1-2 días libres entre reservas) → fondo rojo suave
+    - Indicator de limpieza (checkout+checkin mismo día/piso) → emoji 🧹 en cabecera de columna
+    - Panel de detalle al click en reserva
+    - Stats de propiedades con barra de ocupación %
+    - Tabla de próximas llegadas con ADR al final
+  - **Widget "Esta semana en los pisos"** en `/dashboard`:
+    - `getProximasLlegadas()` — query server-side sobre `incomes` + `properties`, próximos 7 días
+    - Filas: dot color por propiedad, etiqueta HOY/MÑN/dd/mm, nombre piso, huésped, noches, badge portal, importe
+    - HOY resaltado en `--primary-light`; link directo a `/sivra/calendario`
+  - **lib/sivra/fingerprint.ts** — helper de deduplicación para gastos (copiado de sivra)
+  - **lib/sivra/gastos-fijos.ts** — generador mensual de entradas desde plantillas
+  - **vercel.json** — añadido cron `0 6 1 * *` para `/api/sivra/expenses/fijos/generar`
+  - **UserSidebar.tsx** — NAV_PISOS actualizado con 7 entradas: Calendario, Ingresos, Gastos, Gastos fijos, Fiscal IRPF, Inversión, SEO
+  - **Fix TypeScript**: `inversion/page.tsx` corregido `'break-words'` → `'break-word'` (typecheck CI)
+  - **Estado CI**: todos los proyectos en Ready ✅ (plataforma, ialimp, sivra, ia-rest)
+  - **Pendiente Fase 2**: `/sivra/mensajes` (Smoobu, getSmoobuKey()), OCR Gmail, crons sync
+
+- **📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026) — 16/06/2026**
+  El panel "Mis apartamentos / Febrero 2026" mostraba **0 € de ingresos** (Gastos: 1.641 €, resultado −1.641 €).
+  Causa raíz: la API key de Smoobu estuvo rota ~sep-2025→14-jun-2026 y el cron solo tiene ventana de 2 días
+  (`modifiedFrom = hoy − 2 días`), por lo que nunca rellenó hacia atrás. PRs #294 y #297 añadieron
+  `from`/`to` de llegada (Smoobu solo devuelve próximas si no se pasan esas fechas) y `maxPages` al
+  endpoint `GET /api/updates/sync`. Backfill ejecutado por tramos via `web_fetch_vercel_url`; a pesar de
+  los 502 de Cloudflare (timeout de gateway), el Lambda de Vercel procesa y escribe. Resultado final:
+  - 2025-09: 17 res · 7.653 € ✅ | 2025-10: 36 res · 12.783 € ✅ | 2025-11: 20 res · 7.490 € ✅
+  - 2025-12: 15 res · 10.342 € ✅ | 2026-01: 15 res · 4.927 € ✅ | 2026-02: 24 res · **9.902 €** ✅
+  - 2026-03: 23 res · 8.171 € ✅ | 2026-04: 33 res · **17.961 €** ✅ | 2026-05: 27 res · **13.665 €** ✅
+  **El hueco sep-2025→may-2026 está 100% cerrado.** El cron diario (ventana 2 días) ya corre con la key
+  correcta (de `pms_connections`, arreglada el 14/06/2026) y mantiene los datos al día. Verificado por
+  Supabase SQL (`SELECT … FROM incomes GROUP BY mes`).
+
+- **📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde — 16/06/2026**
+  - **Manual de usuario** del Portal del Empleado (responsable RR.HH.): `apps/rrhh/public/manual.html`
+    (servido en `central-rrhh.vercel.app/manual.html`), dirigido a **Pilar** (Mariscos González). Cubre
+    entrar/cambiar contraseña, alta de trabajador (email obligatorio), enviar enlace de acceso, expediente
+    (5 carpetas), nóminas + **firma eIDAS art.26 con OTP**, cómo firma el empleado, vacaciones/permisos,
+    chat, baja vs borrado, qué ve el empleado, FAQ. **Sin credenciales** (no se hardcodean: el fichero es
+    público). Enlace **📖 Manual** añadido al sidebar del panel (`components/AdminShell.tsx`).
+  - **Roadmap RR.HH.** consolidado y durable en **`docs/ROADMAP-rrhh.md`** (PR #296, mergeado): todas las
+    ideas con top-3 (asistente IA del trabajador + multi-idioma, verificación pública por QR estilo
+    VeriFactu, plantillas legales versionadas).
+  - **CI verde en main:** fix `packages/core-firma/src/firma.ts` (cast `BufferSource` en `hashDocumento`,
+    PR #293 mergeado) — el `Typecheck · ialimp` que rompía main tras el merge de #287 ya pasa.
+  - **Pendiente conocido (no mío, latente):** `components/ActivarPush.tsx` tiene el MISMO patrón
+    `Uint8Array→BufferSource` sin castear (rrhh no está en el matrix estricto de Typecheck y `next build`
+    ignora TS, por eso no rompe CI). Candidato a limpiar cuando se toque ese fichero.
+
+- **🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh — 16/06/2026** (PR #287, rama `claude/bold-ride-s4s8eq`)
+  - **Fase 1 (ialimp da RR.HH. a las limpiadoras):** consume `@central/module-rrhh` + `module-documental` +
+    `core-firma`. Tablas `documentos_limpiadora`/`firmas_limpiadora`/`firma_otps_limpiadora` (+ `limpiadoras.email`
+    OBLIGATORIO para el OTP, `+dni`). Bucket **privado** `documentos-limpiadora` (policy read). `lib/{carpetas,storage,
+    expediente,firma}-limpiadora.ts` + `lib/nomina-pdf.ts` (pdf-lib, agrega `partes_trabajo`). Rutas `/api/l/expediente*`
+    (firma OTP) + `/api/admin/limpiadoras/[id]/{expediente,nomina}`. UI: **`/l/documentos`** (botón en `/l`) + pestaña
+    **📁 Expediente** en `/admin/rrhh` (`components/ExpedienteLimpiadoraAdmin.tsx`). Remitente OTP parametrizado
+    `FIRMA_FROM` (default `hola@ialimp.es`). Migración `2026-06-16_rrhh_limpiadora.sql` aplicada.
+  - **Fase 2 (identidad de persona compartida):** `@central/core-identity` añade tipo **`Persona`** + helpers puros
+    (`nuevaPersonaId`, `normalizarDni/Email`, `coincidenciaPersona`, `mismaPersona`). Columna **`persona_id`** (uuid,
+    indexada) en `limpiadoras` y `rrhh.empleados`, **provisión automática al alta**. Verificado e2e: join cross-vertical
+    por `persona_id` (misma persona en ialimp ↔ rrhh).
+  - **Arreglos panel Empleados (rrhh):** faltaban editar/borrar en la UI (el backend ya los tenía). Añadido editar inline
+    + estado activo/baja, **alta completa** (email OBLIGATORIO + DNI/tel/puesto), buscador + filtro, **copiar/regenerar
+    enlace**, **borrado blindado** (409 si tiene firmas → conservar evidencia). Fix PATCH parcial (no machaca dni/tel).
+    Fix infra: **policy read del bucket `rrhh-documentos`** (sin ella, con RLS, el firmado de URLs devolvía null → no se
+    descargaban los documentos del expediente).
+  - **Tests:** los 4 paquetes vitest (`core-firma`/`module-rrhh`/`module-documental`/`module-chat`) + `core-identity`
+    estaban huérfanos (sin runner) → **cableados** (`vitest` devDep root + `test:vitest` dentro de `test`). **40/40 verdes.**
+  - **Fase 3 (consolidación en plataforma, SOLO LECTURA) — HECHA:** nuevo endpoint READ-ONLY en rrhh
+    `/api/operador/personas` (empleados+persona_id por el puerto operador). En plataforma `lib/personas.ts`
+    consolida "la persona a través de verticales" (ialimp.limpiadoras por prisma directo + rrhh por HTTP),
+    agrupa por `persona_id` y PROPONE enlaces no hechos por DNI/email (`coincidenciaPersona`). God-panel:
+    `/operador/personas` (`PersonasClient.tsx`, item nuevo en `UserSidebar`) + `GET /api/admin/personas`.
+  - **Pendiente:** **enlace MANUAL** del `persona_id` cross-vertical (escritura: setear el mismo persona_id
+    en ambas filas/dos apps — hoy solo se SUGIERE en `/operador/personas`). **Roadmap completo en
+    `docs/ROADMAP-rrhh.md`** (todas las ideas con top-3 marcado: asistente IA del trabajador + multi-idioma,
+    verificación pública por QR estilo VeriFactu, plantillas legales versionadas; + fichaje RD 8/2019,
+    art. 28 RGPD, canal de denuncias, coste laboral en plataforma, pago real Stripe, etc.).
+
+- **🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh` — 16/06/2026**
+  Objetivo (decisión de Alberto): RR.HH. (nóminas + firma + expediente) reutilizable por **cualquier
+  vertical** y **cliente directo**. Casos que cubre el diseño: (1) limpiadoras de ialimp (Vanessa),
+  (2) cualquier vertical futura, (3) cliente RR.HH. directo tipo **Joaquín Jaén** (entra como `empresa`
+  en la app rrhh por el god-panel/puerto operador ya existente, sin tocar nada). Identidad de persona
+  cross-vertical vía `core-identity` + consolidación en `plataforma`.
+  - **Hecho (Fase 0):** nuevo paquete **`@central/module-rrhh`** (`packages/module-rrhh`, TS puro):
+    orquestación de firma con OTP **owner-agnóstica** (puertos `RepoFirma`/`PuertoEmailFirma`/
+    `PuertoDescarga` que inyecta cada vertical) + taxonomía `CARPETAS_RRHH` compartida (reusa
+    `module-documental`). Tests vitest **9/9**.
+  - **Refactor sin cambio de comportamiento:** `apps/rrhh/lib/firma.ts` ahora es un adaptador fino que
+    construye los puertos con el SQL de rrhh (`rrhh.documentos/firmas/firma_otps`) y delega en el módulo;
+    `apps/rrhh/lib/carpetas.ts` reusa `CARPETAS_RRHH`. Añadido `file:` dep + `transpilePackages`. Tests
+    rrhh 3/3 y core-firma 9/9 verdes; sin regresión.
+  - **Pendiente (Fase 1+):** ialimp ofrece RR.HH. a limpiadoras (migraciones `documentos/firmas/
+    firma_otps_limpiadora`, bucket privado, nómina PDF desde `partes_trabajo`, UI `/l/documentos`).
+    **Decisiones abiertas:** email de limpiadora obligatorio (para OTP) y marca del remitente. Fase 2
+    identidad de persona; Fase 3 consolidación en plataforma. Roadmap: fichaje (RD 8/2019), art. 28 RGPD,
+    canal de denuncias (Ley 2/2023), vacaciones, onboarding, gestoría.
+- **🤖 SIVRA · Agente de pricing — 1er ciclo con datos reales + motor por temporada (Paso 6/B2) — 16/06/2026**
+  Continuación del agente (#291 ya MERGED). Ejecutado el primer ciclo y construido B2.
+  - **Zona poblada** (`pricing_piso_zona`): 4 pisos, CP 41003 (Bustos Tavera / Casco Antiguo), aforo y tipo
+    reales sacados de `propiedades` (el endpoint `/api/pricing/pisos-zona` requiere sesión y al abrirlo sin
+    login redirige; por eso se pobló por SQL desde `propiedades`).
+  - **Mercado real por zona+aforo** (`market_rates`, conector Booking MCP): finde julio (p50 ~132€ 4pax / ~122€
+    2pax), **Semana Santa 2027 p50 ~462€/noche (¡~3,3× normal!, ya disparado 9m vista)**, Feria 2027 (~162€, aún
+    sin rampar → oportunidad de adelantarse; FECHAS A CONFIRMAR).
+  - **Memoria** (`pricing_aprendizaje`): factor pelotazo SS, baseline verano, nota Feria. **Decisiones dry-run**
+    (`pricing_decisiones`, fuente `agente_bootstrap`): SS 2027 base Smoobu Duplex 371 / Luxury 354 / Busto 319, min-stay 3.
+  - **Paso 6/B2 (motor por temporada)** en `apps/sivra/app/api/pricing/apply/route.ts`: el motor tarificaba con
+    UN percentil por piso (mezclando fechas → precios planos). Ahora agrupa comps por **mes de `checkin_date`**
+    (más reciente por scenario+fecha+nombre, ventana 120d) y tarifica cada fecha con el mercado de SU mes;
+    fallback al global si <3 comps. Evento: si usa bucket mensual (ya refleja el evento) NO multiplica por
+    `eventFactor` (sin doble conteo) pero garantiza ≥ global×eventFactor; en fallback, comportamiento idéntico
+    al previo. Validado por SQL (buckets jul/oct/SS/Feria correctos). Va en rama `claude/pricing-b2-temporada`.
+  - **Pendiente:** (1) calibrar coste→`min_price` (suelo) de Duplex/Luxury/House (hoy NULL; apply_enabled=false →
+    solo dry-run); (2) House Sevillana necesita comps de unidad grande (12 plazas) + activar apply_enabled;
+    (3) aplicar a Smoobu vía raíles (Paso 4) requiere CRON_SECRET (cron) o sesión — Claude no puede llamarlo solo;
+    (4) confirmar fechas exactas de Feria 2027 y re-consultar conectores más cerca.
+
+- **🤖 SIVRA · Agente de pricing IA — raíles + skill + chat (Fase 2-B, Pasos 4/5/5-bis) — 16/06/2026 — PR #291 (draft)**
+  Construido el cerebro + los raíles del agente de pricing autónomo (sobre #290, que ya creó las 3 tablas).
+  - **Paso 4 (raíl, sivra):** `POST /api/pricing/aplicar-propuesta`. La IA propone y este endpoint aplica la
+    cadena que la IA NO puede saltarse: pausa global → `apply_enabled` → suelo de coste (`min_price`) →
+    tope ±`max_change_pct`/día vs precio actual → techo opcional → **circuit-breaker** (aborta la pasada
+    entera, HTTP 409, si la intención cruda mueve demasiadas fechas o un % medio enorme) → solo fechas
+    disponibles → escribe en Smoobu → audita en `pricing_applied` (`source='agente'`) + `pricing_decisiones`.
+    `dryRun` por defecto TRUE.
+  - **Paso 5 (cerebro):** skill `.claude/skills/pricing-agente/SKILL.md` para la sesión recurrente de Claude.
+    Lee `pricing_aprendizaje` + mide outcomes → reúne variables (mercado por zona/fecha vía conectores MCP,
+    eventos, ocupación, costes, características) → decide (máx. margen, pelotazo en eventos con ramp) → aplica
+    por el Paso 4 → escribe aprendizaje. Memoria = BD (sesión efímera).
+  - **Paso 5-bis (humano en el bucle, plataforma):** entrada de sidebar 🤖 Agente precios → `/agente`, chat
+    (`app/(usuario)/agente/page.tsx` + `app/api/agente/chat/route.ts`). Alberto pregunta "¿por qué X el día Y?"
+    (lee `pricing_decisiones.motivo`) y da instrucciones ("no bajes Busto de 120") que se guardan en
+    `pricing_aprendizaje` y el agente respeta el próximo ciclo. NO escribe precios (solo el Paso 4).
+  - **CI:** sivra/plataforma/ialimp/ia-rest deploy verde. `central-rrhh` falla (pre-existente, su `main` está
+    roto; este PR no toca `apps/rrhh`). Verificado `tsc` sin errores nuevos en los ficheros añadidos.
+  - **Pendiente (necesita a Alberto):** Paso 1 (datos) — lanzar `/api/pricing/pisos-zona` logueado en sivra
+    para poblar zona/CP/aforo reales. Luego: Paso 3 (bootstrap mercado por piso/fecha con conectores, lo hago
+    yo) y primeros ciclos del agente en dry-run antes de vivo.
+- **📧 Skill `facturas-correo` creada (agente de facturas por email) — 16/06/2026**
+  Nueva skill `.claude/skills/facturas-correo/SKILL.md`: agente PROGRAMADO que revisa el Gmail de
+  Alberto, localiza facturas/justificantes, los clasifica (personal vs negocio deducible con las
+  reglas de `lib/categorizar.ts`), archiva los deducibles en Drive (`Facturas/<año>/<negocio>`), los
+  concilia contra `movimientos_bancarios` (Supabase) y deja un resumen en 3 bloques. Idempotente vía
+  etiqueta Gmail `Facturas/Procesado`. Alcance v1 elegido por Alberto: **Leer + Drive + conciliar**.
+  - **PENDIENTE DE ALBERTO (manual, 1 vez):** crear el **trigger diario en Claude Code web** con el
+    prompt «Ejecuta la skill `facturas-correo`» (entorno con MCP de Gmail + Drive + Supabase conectados).
+    Sin el trigger, la skill solo corre cuando él la pide. NO hay agente 24/7 — son pasadas programadas.
+
+- **🏦 PLATAFORMA · Banca: clasificación IBI + revisión de gastos reales — 16/06/2026**
+  Sesión de uso real con Alberto sobre los movimientos importados:
+  - **Fix regla de categorización** (`lib/categorizar.ts`): el IBI del ayuntamiento caía en `proveedor`
+    porque el banco trunca "AYUNTAMIENTO"→"AYUNTAMIEN" y la regla buscaba la palabra entera + no contemplaba
+    "IBI". Ahora la regla de `impuestos` incluye `AYUNTAMIEN`, ` IBI ` (con espacios, para no chocar con
+    "RECIBIDO"), `CONTRIBUCION`, `PLUSVALIA`. Los IBI futuros se auto-categorizan como 🏛️ Impuestos.
+  - **IBI Monte Carmelo 68** (ref. catastral `4707007TG3440N0003TR`, 2× −171,55 € = mismo inmueble al 50%
+    Alberto / 50% su mujer): corregidos a `categoria=impuestos` y **`destino=personal`** — es su **vivienda
+    habitual**, NO deducible. (El Dúplex es Pasaje Francisco, no Monte Carmelo.) Hecho por SQL (Supabase MCP).
+  - **Cargos duplicados** (PR #282, ya en prod): el caso "HORNO NUEVA FLORIDA −2,80 €" (5 compras repartidas)
+    se clasifica correctamente como **"Sospecha baja"** y queda bajo el umbral del banner (5 €), así que no
+    molesta en el dashboard. Confirmado que la feature ya hace lo pedido; Alberto silencia cada grupo con
+    "Es normal" (→ `duplicado_estado='ignorado'`). NO se reconstruyó nada.
+
+- **🧾 SIVRA · Contabilidad: REGLA de separación de cuentas anclada — 15/06/2026**
+  La gráfica "Evolución mensual" del dashboard mezcla todo en un único Ingresos/Gastos → **a Alberto no le vale**
+  (mezcla cuentas bancarias y mezcla lo personal con lo de los pisos = poco informativo). Regla fijada:
+  **BBVA** = Duplex Center + seguros (unidad **aparte**); **Kutxa** = gastos personales + los **3 apartamentos
+  turísticos**, que hay que sacar **limpios sin lo personal**. Los 3 turísticos (confirmado por Alberto):
+  **Socorro = House Sevillana** (Calle Socorro 24, `prop_house_sevillana`), **Busto Tavera = Busto Reform**
+  (`prop_busto_reform`) **+ Luxury Busto** (`prop_luxury_busto`). Duplex Center NO entra en esa P&L.
+  Detalle + mapeo + gap del modelo de datos en **`apps/sivra/docs/contabilidad.md`** (enlazado desde
+  `apps/sivra/CLAUDE.md` y router `sivra-maestro`). **Pendiente:** implementar la segregación + filtro mes/año
+  + gráfico resumen en la vista "Mis apartamentos" / dashboard.
+
+- **⚠️ `apps/plataforma` · Resolución de cargos duplicados (banca) IMPLEMENTADO — 15/06/2026 — PR #282 (draft)**
+  El banner del dashboard ya detectaba "posibles cargos duplicados" (`getAlertas`) pero era ingenuo
+  (falsos positivos con micro-gastos recurrentes, p. ej. HORNO NUEVA FLORIDA −3 €) y de solo lectura.
+  Ahora es **fiable y accionable**, en 3 fases (todas pusheadas y desplegando en Vercel):
+  - **F1:** columna aditiva `movimientos_bancarios.duplicado_estado` (NULL/ignorado/confirmado, migración
+    `2026-06-15_banca_duplicados.sql` **ya aplicada** por Supabase MCP en `wswbehlcuxqxyinousql`).
+    Lógica PURA y testeada en `lib/duplicados.ts` (`clasificarConfianza`, `superaUmbralBanner`,
+    `esRecurrente`, `agruparDuplicados`; `lib/duplicados.test.ts`, 8 tests `node --test` verde). `lib/banca.ts`:
+    `getDuplicadosSospechosos`/`getDuplicadosResueltos`/`resolverDuplicados`; `getAlertas` reusa la misma
+    fuente con **umbral** (`DUP_UMBRAL_BANNER`, 5 €) → micro-gastos no disparan el banner. Excluye pares ya
+    conciliados a facturas distintas. API `POST /api/banca/duplicados`. UI `DuplicadosBandeja` en `/banca`
+    (resolver/deshacer + plegable "ya resueltos"); banner del dashboard enlaza a `/banca#duplicados`.
+  - **F2:** borrador de reclamación IA (`lib/reclamacion.ts` con `aiComplete`, degrada a plantilla) +
+    `POST /api/banca/duplicados/reclamacion` + botón/modal "Reclamar" en la bandeja.
+  - **F3:** auto-detección de recurrentes (subconsulta de ocurrencias en 60 d → `esRecurrente` degrada a
+    confianza baja). Verificado con datos reales: el IBI (recibo mismo día) sale como sospecha ALTA; HORNO
+    (16/mes) y GALOS (19/mes) quedan silenciados.
+  - **Spec:** `docs/superpowers/specs/2026-06-15-duplicados-bancarios-design.md`. **Plan:**
+    `docs/superpowers/plans/2026-06-15-duplicados-bancarios.md`.
+  - **Pendiente (opcional):** enganchar duplicados al email del cron `banca-alertas`.
+
+- **✍️ `apps/rrhh` (iarrhh) FASE 2 — FIRMA ELECTRÓNICA AVANZADA (eIDAS art. 26) — 16/06/2026**
+  Decisión: **firma propia** legalmente válida (no Firmafy ahora; avanzada basta para nóminas/contratos
+  por art. 29 ET + STS 1023/2016). Firmafy queda **enchufable** como otro proveedor del puerto.
+  - **Núcleo puro `@central/core-firma`** (`packages/core-firma`): puerto `ProveedorFirma` +
+    `FirmaPropia`. `hashDocumento` (SHA-256/WebCrypto), `nombreCoincide`, `cumpleArt26`,
+    `verificarIntegridad`, `TEXTO_CONSENTIMIENTO`, evidencia. Tests vitest **9/9**. Añadido a
+    `transpilePackages` + `file:` dep en rrhh.
+  - **Cómo cumple art.26:** (a) empleado teclea su nombre, se valida que coincide con el titular;
+    (b) guarda nombre+email/DNI; (c) control exclusivo por **token personal** del empleado
+    (`metodo='sesion_token'`; OTP email = refuerzo futuro); (d) **SHA-256 del documento** al firmar →
+    alteración detectable.
+  - **DB:** tabla `rrhh.firmas` (`prisma/migrations/0006_firmas.sql`, aplicada; FK a documentos
+    ON DELETE CASCADE, RLS on). `documentos.estado_firma`: `no_requiere→pendiente→firmado`.
+  - **App:** `lib/firma.ts` (`solicitarFirma`/`firmarDocumento`), `lib/storage.ts#descargarObjeto`,
+    API `POST /api/admin/empleados/[id]/documentos/[docId]/solicitar-firma` (avisa al empleado) y
+    `POST /api/e/expediente/[docId]/firmar` (avisa a responsables). UI: admin badge+"Solicitar firma";
+    empleado badge+"Firmar" (modal consentimiento + teclear nombre). Spec:
+    `docs/superpowers/specs/2026-06-16-rrhh-firma-avanzada-design.md`.
+  - **Probado:** core-firma 9/9; build rrhh verde; integración BD (estado→firmado, evidencia,
+    integro_original=true / integro_si_modificado=false, cascade) → datos de prueba borrados;
+    `hashDocumento`==`node:crypto` SHA-256.
+  - **Refuerzo OTP por email (hecho, 16/06/2026):** al pulsar "Firmar" se envía un código de 6 dígitos
+    al email del empleado (tabla `firma_otps`, `0007_firma_otps.sql`, hash SHA-256, 10 min, 5 intentos);
+    si se emitió, es obligatorio para firmar → `metodo='otp_email'`. **Degrada limpio:** sin email/SMTP
+    se firma por sesión (`sesion_token`), la firma sigue válida. **Remitente: reusamos Resend de ia.rest**
+    (`hola@iarest.es`, dominio verificado) con display **"iarrhh"** (`lib/mailer.ts` sobre `@central/core-email`;
+    `notificar.ts` migrado a ese mailer). **Requiere `RESEND_API_KEY` en el proyecto Vercel central-rrhh**
+    (mismo valor que ia-rest); sin ella, OTP no se envía y se firma por sesión. Endpoint
+    `POST /api/e/expediente/[docId]/firmar/codigo`. Probado: build verde + integración BD (upsert resetea
+    intentos, hash válido, firma `otp_email`, OTP consumido) → datos borrados.
+  - **Pendiente:** poner `RESEND_API_KEY` en central-rrhh (Vercel) para activar el OTP en vivo; proveedor
+    **Firmafy** (cuando Alberto tenga alta/credenciales — el flujo rrhh no cambia, solo se elige proveedor).
+    **Precio** al cliente.
+
+- **🎨🏢🔑 `apps/rrhh` (iarrhh) — REDISEÑO + ALTA DESDE GOD-PANEL + CAMBIO PASS — 15/06/2026 — PRs #276/#278/#279/#280**
+  Marca propia **iarrhh** (no del cliente). Todo en producción y **verificado en vivo**.
+  - **Rediseño visual (#276):** vestida toda `apps/rrhh` con la imagen de la casa (estilo ia-rest):
+    paleta papel/tinta + acento **teal `#2B6A6E`**, fuentes Inter Tight/Newsreader/JetBrains Mono,
+    sidebar admin (`components/AdminShell.tsx`), wordmark `ia·rrhh` (`components/Wordmark.tsx`),
+    monograma SVG (`public/icon.svg`), portal del empleado móvil-primero. Tokens en `globals.css` +
+    `tailwind.config.ts`. **Sin tocar lógica/API/datos.** Spec: `docs/superpowers/specs/2026-06-15-iarrhh-rediseno-visual-design.md`.
+  - **Alta de empresa desde el god-panel (#278):** el operador crea empresa cliente + responsable desde
+    **plataforma → `/operador/clientes` → ➕ Nuevo cliente → "RR.HH. · iarrhh"**. Arquitectura **puerto HTTP**
+    (patrón ia-rest, NO escritura directa cross-schema): rrhh expone `GET/POST /api/operador/empresas`
+    (`lib/operador.ts` + ruta); plataforma lo consume con `lib/adapters/rrhh.ts` (vertical `'rrhh'` en el
+    contrato `VerticalAdapter`). El responsable luego entra en iarrhh y crea a sus empleados.
+    Spec: `docs/superpowers/specs/2026-06-15-alta-empresa-rrhh-god-panel-design.md`.
+  - **⚠️ LANDMINE de secretos (#279):** `OPERADOR_SHARED_SECRET` en plataforma **YA ES** el secreto del
+    puerto god-panel↔**ia-rest**. Reutilizarlo para rrhh rompía la integración ia-rest. **Desacoplado:**
+    iarrhh usa su **propio** `RRHH_OPERADOR_SECRET`. NO volver a colapsarlos.
+  - **Cambio de contraseña del responsable (#280):** `/admin/cuenta` (`POST /api/auth/cambiar-password`),
+    ítem "Mi cuenta" en el sidebar.
+  - **Envs (3 proyectos Vercel):**
+    - `central-rrhh`: `RRHH_OPERADOR_SECRET`.
+    - `plataforma`: `RRHH_OPERADOR_SECRET` (mismo valor que central-rrhh) + `RRHH_URL` (=`https://central-rrhh.vercel.app`)
+      + `OPERADOR_SHARED_SECRET` (este es el de ia-rest, valor compartido con el proyecto `ia-rest`).
+    - `ia-rest`: `OPERADOR_SHARED_SECRET` (mismo valor que en plataforma).
+  - **Verificado en vivo:** Alberto creó una empresa de prueba por el panel → fila correcta en BD (cadena
+    UI→plataforma→HTTP→rrhh→BD OK) → borrada. BD queda con 1 empresa real: **Mariscos González** (responsable
+    **Pilar Piña** `pilar.pina.franco@gmail.com`; contraseña reseteada a `Mariscos2026` para onboarding,
+    cambiable desde Mi cuenta).
+  - **Pendiente:** firma avanzada vía **Firmafy** (Fase 2, necesita alta/credenciales con el partner —
+    acción de Alberto; dejar montado puerto `core-firma`); **precio** al cliente.
+
 - **🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269**
   Petición de Pilar (RR.HH. de Mariscos González, audio): intranet de empleados con expediente
   documental por trabajador (carpetas: datos personales/contratos/nóminas/partes médicos/otros, subida

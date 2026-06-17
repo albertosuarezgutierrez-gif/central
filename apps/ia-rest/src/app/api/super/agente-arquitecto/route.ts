@@ -3,6 +3,7 @@ export const maxDuration = 60
 
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
+import { callAITools } from '@/lib/ai-client'
 import { createSign } from 'crypto'
 
 // ─── Credenciales desde env vars ─────────────────────────────────────────────
@@ -116,27 +117,39 @@ async function executeTool(name: string, input: any): Promise<string> {
   }
 }
 
-// ─── Tools para Anthropic ─────────────────────────────────────────────────────
+// ─── Tools para NVIDIA NIM (function-calling, formato OpenAI) ──────────────────
 const TOOLS = [
   {
-    name: 'read_github_file',
-    description: 'Lee el contenido de un archivo del repositorio ia.rest en GitHub.',
-    input_schema: { type: 'object', properties: { path: { type: 'string', description: 'Ruta desde la raíz. Ej: src/lib/ai-client.ts' } }, required: ['path'] }
+    type: 'function',
+    function: {
+      name: 'read_github_file',
+      description: 'Lee el contenido de un archivo del repositorio ia.rest en GitHub.',
+      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Ruta desde la raíz. Ej: src/lib/ai-client.ts' } }, required: ['path'] },
+    },
   },
   {
-    name: 'list_github_dir',
-    description: 'Lista el contenido de un directorio del repositorio ia.rest.',
-    input_schema: { type: 'object', properties: { path: { type: 'string', description: 'Ruta del directorio. Ej: src/app/api, src/components' } }, required: ['path'] }
+    type: 'function',
+    function: {
+      name: 'list_github_dir',
+      description: 'Lista el contenido de un directorio del repositorio ia.rest.',
+      parameters: { type: 'object', properties: { path: { type: 'string', description: 'Ruta del directorio. Ej: src/app/api, src/components' } }, required: ['path'] },
+    },
   },
   {
-    name: 'read_drive_doc',
-    description: 'Lee un documento de Google Drive del proyecto ia.rest.',
-    input_schema: { type: 'object', properties: { doc: { type: 'string', enum: ['master', 'log_cambios', 'skill', 'reglas'] } }, required: ['doc'] }
+    type: 'function',
+    function: {
+      name: 'read_drive_doc',
+      description: 'Lee un documento de Google Drive del proyecto ia.rest.',
+      parameters: { type: 'object', properties: { doc: { type: 'string', enum: ['master', 'log_cambios', 'skill', 'reglas'] } }, required: ['doc'] },
+    },
   },
   {
-    name: 'update_drive_doc',
-    description: 'Actualiza el contenido de un documento de Drive. SOLO usar con aprobación explícita del usuario.',
-    input_schema: { type: 'object', properties: { doc: { type: 'string', enum: ['master', 'log_cambios', 'skill', 'reglas'] }, content: { type: 'string' } }, required: ['doc', 'content'] }
+    type: 'function',
+    function: {
+      name: 'update_drive_doc',
+      description: 'Actualiza el contenido de un documento de Drive. SOLO usar con aprobación explícita del usuario.',
+      parameters: { type: 'object', properties: { doc: { type: 'string', enum: ['master', 'log_cambios', 'skill', 'reglas'] }, content: { type: 'string' } }, required: ['doc', 'content'] },
+    },
   },
 ]
 
@@ -171,51 +184,36 @@ export async function POST(req: NextRequest) {
   if (!session || session.rol !== 'super_admin')
     return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  const AVISO_ANTHROPIC = '⚠️ Esta función usa búsqueda web/herramientas vía Anthropic, que ahora mismo no está disponible (sin crédito). El resto del panel funciona con normalidad.'
-  if (!apiKey) return NextResponse.json({ error: AVISO_ANTHROPIC }, { status: 500 })
-
   try {
     const { messages } = await req.json()
     const toolLog: { tool: string; input: any; result: string }[] = []
-    let currentMessages = messages.map((m: any) => ({ role: m.role, content: m.content }))
+    // Bucle agéntico con NVIDIA NIM (function-calling). Las herramientas (GitHub/Drive) se ejecutan
+    // aquí igual que antes; solo cambió el "cerebro" de Anthropic a NIM (gratis, sin saldo).
+    const currentMessages: any[] = messages.map((m: any) => ({ role: m.role, content: m.content }))
     let finalText = ''
-    let iterations = 0
 
-    while (iterations < 8) {
-      iterations++
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system: SYSTEM, tools: TOOLS, messages: currentMessages }),
-      })
-      const data = await res.json()
-      if (!data.content) { finalText = 'Error: respuesta vacía'; break }
+    for (let iterations = 0; iterations < 8; iterations++) {
+      const msg = await callAITools(SYSTEM, currentMessages, TOOLS, 2048)
 
-      const textBlocks = data.content.filter((b: any) => b.type === 'text')
-      if (textBlocks.length > 0) finalText = textBlocks.map((b: any) => b.text).join('')
-      if (data.stop_reason === 'end_turn') break
-
-      if (data.stop_reason === 'tool_use') {
-        const toolUses = data.content.filter((b: any) => b.type === 'tool_use')
-        currentMessages = [...currentMessages, { role: 'assistant', content: data.content }]
-        const results = await Promise.all(
-          toolUses.map(async (tu: any) => {
-            const result = await executeTool(tu.name, tu.input)
-            toolLog.push({ tool: tu.name, input: tu.input, result: result.slice(0, 200) })
-            return { type: 'tool_result', tool_use_id: tu.id, content: result }
-          })
-        )
-        currentMessages = [...currentMessages, { role: 'user', content: results }]
+      if (msg.tool_calls?.length) {
+        currentMessages.push({ role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls })
+        for (const tc of msg.tool_calls) {
+          let input: any = {}
+          try { input = JSON.parse(tc.function.arguments || '{}') } catch { /* args no-JSON */ }
+          const result = await executeTool(tc.function.name, input)
+          toolLog.push({ tool: tc.function.name, input, result: result.slice(0, 200) })
+          currentMessages.push({ role: 'tool', tool_call_id: tc.id, content: result })
+        }
         continue
       }
+
+      finalText = msg.content || ''
       break
     }
 
     return NextResponse.json({ text: finalText || 'Sin respuesta.', toolLog })
   } catch (err: any) {
-    const m = String(err?.message || err)
-    const sinSaldo = /credit balance|too low|insufficient|x-api-key|authentication|\b401\b|\b403\b/i.test(m)
-    return NextResponse.json({ error: sinSaldo ? AVISO_ANTHROPIC : m }, { status: 500 })
+    console.error('[agente-arquitecto]', err)
+    return NextResponse.json({ error: String(err?.message || err) }, { status: 500 })
   }
 }

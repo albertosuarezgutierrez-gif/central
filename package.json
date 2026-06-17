@@ -7,13 +7,19 @@
   "scripts": {
     "auditar": "node scripts/auditar-estructura.mjs",
     "auditar:check": "node scripts/auditar-estructura.mjs --check",
-    "test": "node --test test/*.test.ts && pnpm -r run test",
+    "test": "node --test test/*.test.ts && pnpm -r run test && pnpm run test:vitest",
     "test:guardia": "node --test test/*.test.ts",
-    "test:packages": "pnpm -r --filter \"./packages/*\" run test"
+    "test:packages": "pnpm -r --filter \"./packages/*\" run test",
+    "test:vitest": "vitest run packages/core-firma packages/module-rrhh packages/module-documental packages/module-chat packages/core-identity/src/persona.test.ts"
+  },
+  "devDependencies": {
+    "vitest": "^3.2.6"
   },
   "pnpm": {
     "overrides": {
-      "axios": ">=1.16.0"
+      "axios": ">=1.16.0",
+      "vitest": ">=3.2.6 <4.0.0",
+      "form-data": ">=4.0.6"
     },
     "onlyBuiltDependencies": [
       "@prisma/client",

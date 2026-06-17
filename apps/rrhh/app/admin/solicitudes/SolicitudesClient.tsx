@@ -1,10 +1,11 @@
 'use client'
 import { useState } from 'react'
-import { tipoEtiqueta } from '@/lib/solicitudes'
+import { tipoEtiqueta } from '@/lib/solicitudes-tipos'
+import AdminShell from '@/components/AdminShell'
 
-type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string }
+type S = { id: string; tipo: string; fecha_inicio: string | null; fecha_fin: string | null; motivo: string | null; estado: string; empleado_nombre: string; tiene_justificante?: boolean }
 
-const COLOR: Record<string, string> = { solicitada: '#b58900', aprobada: 'green', rechazada: 'crimson' }
+const COLOR: Record<string, string> = { solicitada: 'text-ink-3', aprobada: 'text-ok', rechazada: 'text-alert' }
 
 export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
   const [lista, setLista] = useState<S[]>(inicial)
@@ -15,25 +16,28 @@ export default function SolicitudesClient({ inicial }: { inicial: S[] }) {
   }
   const rango = (s: S) => [s.fecha_inicio, s.fecha_fin].filter(Boolean).join(' → ')
   return (
-    <main style={{ maxWidth: 760, margin: '32px auto', padding: 16 }}>
-      <a href="/admin/empleados">← Empleados</a>
-      <h1>Solicitudes</h1>
-      <ul style={{ listStyle: 'none', padding: 0 }}>
+    <AdminShell activo="solicitudes">
+      <h1 className="text-2xl">Solicitudes</h1>
+      <ul className="mt-3 grid list-none gap-2 p-0">
         {lista.map(s => (
-          <li key={s.id} style={{ border: '1px solid #ddd', borderRadius: 8, padding: 10, margin: '8px 0' }}>
+          <li key={s.id} className="rounded-card border border-line bg-card p-3">
             <strong>{s.empleado_nombre}</strong> · {tipoEtiqueta(s.tipo)} {rango(s) && <span>· {rango(s)}</span>}
-            <span style={{ color: COLOR[s.estado], marginLeft: 8 }}>[{s.estado}]</span>
-            {s.motivo && <div style={{ color: '#666', fontSize: 13 }}>{s.motivo}</div>}
+            <span className={`ml-2 ${COLOR[s.estado] ?? ''}`}>[{s.estado}]</span>
+            {s.motivo && <div className="text-ink-3 text-sm">{s.motivo}</div>}
+            {s.tiene_justificante && (
+              <a href={`/api/admin/solicitudes/${s.id}/justificante`} target="_blank" rel="noreferrer"
+                className="text-accent text-sm no-underline hover:underline">📎 Ver justificante</a>
+            )}
             {s.estado === 'solicitada' && (
-              <div style={{ marginTop: 6, display: 'flex', gap: 8 }}>
-                <button onClick={() => resolver(s.id, true)}>✅ Aprobar</button>
-                <button onClick={() => resolver(s.id, false)}>❌ Rechazar</button>
+              <div className="mt-2 flex gap-2">
+                <button onClick={() => resolver(s.id, true)}>Aprobar</button>
+                <button onClick={() => resolver(s.id, false)} className="bg-paper-2 text-ink-2 hover:bg-line">Rechazar</button>
               </div>
             )}
           </li>
         ))}
-        {lista.length === 0 && <li style={{ color: '#aaa' }}>Sin solicitudes</li>}
+        {lista.length === 0 && <li className="text-ink-3">Sin solicitudes</li>}
       </ul>
-    </main>
+    </AdminShell>
   )
 }

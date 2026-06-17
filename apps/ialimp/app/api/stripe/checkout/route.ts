@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server'
+import { createStripe } from '@central/core-payments'
 import { requireEmpresaId } from '@/lib/tenant'
 
 const PRICES: Record<string, Record<string, string>> = {
@@ -12,16 +13,10 @@ export async function POST(req: Request) {
     const { plan, annual = false } = await req.json()
 
     if (!process.env.STRIPE_SECRET_KEY) {
-      return NextResponse.json({
-        error: 'Stripe no configurado. Contacta con soporte.',
-        demo: true
-      }, { status: 503 })
+      return NextResponse.json({ error: 'Stripe no configurado. Contacta con soporte.' }, { status: 503 })
     }
 
-    // Dynamic import para evitar problemas si Stripe no está instalado
-    const Stripe = (await import('stripe')).default
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!)
-
+    const stripe = createStripe()
     const priceKey = annual ? 'annual' : 'monthly'
     const priceId  = PRICES[plan]?.[priceKey]
 

@@ -1,21 +1,6 @@
-import nodemailer from 'nodemailer'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-
-const MAIL_FROM = process.env.MAIL_FROM || 'rrhh@central.local'
-
-/** Transporter SMTP best-effort. Devuelve null si no hay credenciales configuradas. */
-function getTransporter() {
-  const { SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASSWORD } = process.env
-  if (!SMTP_USER || !SMTP_PASSWORD) return null
-  return nodemailer.createTransport({
-    host: SMTP_HOST || 'smtp.ionos.es',
-    port: Number(SMTP_PORT || 587),
-    secure: Number(SMTP_PORT || 587) === 465,
-    auth: { user: SMTP_USER, pass: SMTP_PASSWORD },
-    connectionTimeout: 10000, greetingTimeout: 10000, socketTimeout: 15000,
-  })
-}
+import { getTransporter, MAIL_FROM } from '@/lib/mailer'
 
 /** Emails de los responsables de RR.HH. de una empresa. */
 async function responsables(empresaId: string): Promise<string[]> {

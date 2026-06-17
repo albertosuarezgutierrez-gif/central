@@ -1,50 +1,56 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-15T17:55:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T14:26:57Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 20 packages · 23 capacidades · 13 skills · 784 rutas API.
+**Resumen:** 5 apps · 23 packages · 23 capacidades · 15 skills · 893 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
-- **Módulos que usa:** core-ai, core-fiscal, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-horario, module-materiales, module-presupuestos, module-proveedores
+- **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-horario, module-materiales, module-presupuestos, module-proveedores
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (81):** arqueos_caja_empleado, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales…
-- **Rutas API:** 457
+- **Rutas API:** 466
 ### ialimp
-- **Módulos que usa:** core-ai, core-email, core-fiscal, core-identity, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-materiales, module-proveedores
+- **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA, Concursos públicos
-- **Tablas (27):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos, tenant_modulos
-- **Rutas API:** 187
+- **Tablas (30):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos, tenant_modulos
+- **Rutas API:** 193
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-identity, module-contabilidad
-- **Capacidades:** Facturación / VeriFactu
-- **Tablas (11):** comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 36
+- **Módulos que usa:** core-ai, core-email, core-identity, module-contabilidad
+- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA
+- **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
+- **Rutas API:** 114
 ### rrhh
-- **Módulos que usa:** core-storage, module-chat, module-documental
-- **Capacidades:** Notificaciones (push)
-- **Tablas (7):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
-- **Rutas API:** 15
+- **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
+- **Capacidades:** Notificaciones (push), Asistente / copiloto IA
+- **Tablas (9):** rrhh.documentos, rrhh.empleados, rrhh.empresas, rrhh.firma_otps, rrhh.firmas, rrhh.mensajes, rrhh.push_subscriptions, rrhh.solicitudes, rrhh.usuarios_rrhh
+- **Rutas API:** 28
 ### sivra
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
-- **Rutas API:** 89
+- **Rutas API:** 92
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
-  - Lo usan: ia-rest, ialimp, plataforma, sivra
+  - Lo usan: ia-rest, ialimp, plataforma, rrhh, sivra
   - Depende de: —
 - **core-email** (core) → `@central/core-email`
-  - Lo usan: ialimp, sivra
+  - Lo usan: ialimp, plataforma, rrhh, sivra
+  - Depende de: —
+- **core-firma** (core) → `@central/core-firma`
+  - Lo usan: ialimp, rrhh
   - Depende de: —
 - **core-fiscal** (core) → `@central/core-fiscal`
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-identity** (core) → `@central/core-identity`
-  - Lo usan: ialimp, plataforma
+  - Lo usan: ialimp, plataforma, rrhh
+  - Depende de: —
+- **core-payments** (core) → `@central/core-payments`
+  - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **core-push** (core) → `@central/core-push`
   - Lo usan: ia-rest, ialimp, sivra
@@ -71,7 +77,7 @@
   - Lo usan: ia-rest, ialimp
   - Depende de: —
 - **module-documental** (module) → `@central/module-documental`
-  - Lo usan: rrhh
+  - Lo usan: ialimp, rrhh
   - Depende de: —
 - **module-feedback** (module) → `@central/module-feedback`
   - Lo usan: ia-rest
@@ -94,14 +100,19 @@
 - **module-revenue** (module) → `@central/module-revenue`
   - Lo usan: —
   - Depende de: —
+- **module-rrhh** (module) → `@central/module-rrhh`
+  - Lo usan: ialimp, rrhh
+  - Depende de: core-firma, module-documental
 
 ## Skills del proyecto
 - **auditoria-central** — Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte "¿se ha roto algo?", "haz una auditoría", "revisa que todo está bien" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP).
 - **brainstorming** — "You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation."
 - **central-maestro** — >
+- **facturas-correo** — Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida "revisa mis correos/facturas", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen.
 - **ia-rest-maestro** — >
 - **ialimp-maestro** — >
 - **plataforma-maestro** — >
+- **pricing-agente** — >
 - **receiving-code-review** — Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation
 - **requesting-code-review** — Use when completing tasks, implementing major features, or before merging to verify work meets requirements
 - **sivra-maestro** — >
@@ -132,18 +143,17 @@
 - ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
 - ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
-- ⚠️ **Asistente / copiloto IA**: en ia-rest, ialimp, sivra; falta en rrhh.
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
-- (15/06/2026) 🧑‍💼 NUEVA VERTICAL `apps/rrhh` · Portal del Empleado — Fase 1 cimiento IMPLEMENTADO — 15/06/2026 — PR #269
-- (15/06/2026) 🏦 PLATAFORMA · Banca: análisis + fiscal + operativa — 15/06/2026 — PR #272 (MERGED)
-- (15/06/2026) 🧾 IA-REST · E-recibo digital MVP IMPLEMENTADO (QR en ticket de cuenta) — 15/06/2026 — PR #256
-- (15/06/2026) 🏨 PLATAFORMA: detalle completo por apartamento — PR #255 (MERGED)
-- (14/06/2026) 🔑 SIVRA: Smoobu key unificada → fuente única en BD (14/06/2026)
-- (14/06/2026) 🚨 SIVRA pricing: PAUSA GLOBAL activada — bug de techo en fechas de evento (14/06/2026)
-- (15/06/2026) 🧾 IA-REST · IDEA (no implementada): ticket moderno + e-recibo digital
-- (15/06/2026) 🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED)
-- (14/06/2026) 🏦 PLATAFORMA: conexión bancaria PSD2 EN VIVO (Enable Banking) + categorización IA diaria
-- (14/06/2026) 🧹 IALIMP: portal del propietario responsive en escritorio (sidebar fija) — PR #239
+- (17/06/2026) 💶 MÓDULO /finanzas MERGEADO
+- (17/06/2026) 🧹 EDGE FUNCTIONS sin Anthropic
+- (17/06/2026) 🧹 QUITAR ANTHROPIC de ia-rest (#4)
+- (17/06/2026) 💸 PASARELA IA · coste real + fallback + healthcheck
+- (17/06/2026) ✅ PR #336 MERGED
+- (17/06/2026) ✅ PR #335 MERGED
+- (17/06/2026) ✅ PR #334 MERGED
+- (17/06/2026) ✅ PR #333 MERGED
+- (16/06/2026) 🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*
+- (16/06/2026) 🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo
 

@@ -3,7 +3,7 @@
 // texto (necesitaOcr). Vive en la app (red/binarios/secretos).
 import { getDocument } from 'pdfjs-dist/legacy/build/pdf.mjs'
 import { createCanvas } from '@napi-rs/canvas'
-import { nimVision } from '@central/core-ai'
+import { aiVision } from '@/lib/ai-client'
 
 const NVIDIA_API_KEY = process.env.NVIDIA_API_KEY || ''
 const VISION_MODEL = 'meta/llama-3.2-90b-vision-instruct'
@@ -37,7 +37,7 @@ export async function ocrPaginasPliego(buffer: Buffer): Promise<string> {
   const partes: string[] = []
   for (const data of imagenes) {
     try {
-      const txt = await nimVision(config, TRANSCRIBE_SYS, [{ data, mediaType: 'image/png' }], TRANSCRIBE_USER)
+      const txt = await aiVision(config, TRANSCRIBE_SYS, [{ data, mediaType: 'image/png' }], TRANSCRIBE_USER)
       if (txt) partes.push(txt)
     } catch { /* una página fallida no tumba el resto */ }
   }

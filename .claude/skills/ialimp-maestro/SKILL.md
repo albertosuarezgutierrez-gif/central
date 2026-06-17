@@ -30,6 +30,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 | Tema | Fuente |
 |---|---|
 | Reglas, gotchas, módulos (TODO) | `apps/ialimp/CLAUDE.md` |
+| **RR.HH. de la limpiadora** (expediente + nómina PDF + **firma OTP**) | `apps/ialimp/CLAUDE.md` § "RR.HH. de la limpiadora"; consume `@central/module-rrhh`/`module-documental`/`core-firma`. `lib/*-limpiadora.ts` + `lib/nomina-pdf.ts`; UI `/l/documentos` + pestaña 📁 Expediente en `/admin/rrhh`. Bucket privado `documentos-limpiadora`. **email de limpiadora OBLIGATORIO** (OTP). `limpiadoras.persona_id` enlaza con `rrhh.empleados` (misma persona) |
 | Guía de la app de limpiadoras | `apps/ialimp/docs/guia-limpiadoras.md` |
 | Mejoras pedidas por Vanessa | `apps/ialimp/docs/mejoras-vanessa.md` |
 | Landing `ialimp.es` (proyecto Vercel separado) | `apps/ialimp/landing/ialimp-es/` (+ su README) |
@@ -40,7 +41,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 - **Supabase** `wswbehlcuxqxyinousql` (schema `public`) — **COMPARTIDA con sivra y plataforma**.
 - Stack: Next 15 · Prisma · **JWT propio (jose+bcryptjs, SIN NextAuth)** · cookie `ialimp_session`
   (portal propietario = cookie SEPARADA `ialimp_prop`; limpiadora = `limpiadora_token`).
-- IA: solo NVIDIA NIM vía `lib/ai-client.ts` (`@anthropic-ai/sdk` ELIMINADO).
+- IA: **pasarela central de plataforma** vía `lib/ai-client.ts` (`aiComplete` texto + `aiVision` OCR; NIM por debajo). Keys solo en plataforma; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared) → fallback NIM directo. `@anthropic-ai/sdk` ELIMINADO.
 - Email: `lib/mailer.ts` (activo IONOS SMTP `:587`; orden Resend→IONOS→Gmail). `MAIL_FROM=hola@ialimp.es`.
 - Build: `prisma generate && next build`; **Vercel usa `buildCommand` de `vercel.json`** (debe incluir
   `node scripts/fetch-fonts.mjs`). Commits con prefijo `fix:`/`feat:`.

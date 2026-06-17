@@ -5,15 +5,45 @@ import { usePathname, useRouter } from 'next/navigation'
 
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
+  { href: '/finanzas', icon: '💶', label: 'Finanzas' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
   { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
+  { href: '/agente', icon: '🤖', label: 'Agente IA' },
+]
+
+const NAV_PISOS = [
+  { href: '/sivra/calendario', icon: '📅', label: 'Calendario' },
+  { href: '/sivra/income', icon: '💰', label: 'Ingresos' },
+  { href: '/sivra/expenses', icon: '🧾', label: 'Gastos' },
+  { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
+  { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
+  { href: '/sivra/mensajes', icon: '💬', label: 'Mensajes' },
+  { href: '/sivra/mercado', icon: '🗺️', label: 'Mercado' },
+  { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
+  { href: '/sivra/pricing-auto', icon: '🤖', label: 'Pricing auto' },
+  { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
+  { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
+  { href: '/sivra/limpiadoras', icon: '🧹', label: 'Admin limpiezas' },
 ]
 
 const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
+  { href: '/operador/personas', icon: '👤', label: 'Personas' },
   { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
+  { href: '/operador/iarest/restaurantes', icon: '🏪', label: 'Restaurantes', sub: true },
+  { href: '/operador/iarest/cobros', icon: '💶', label: 'Cobros', sub: true },
+  { href: '/operador/iarest/suscripciones', icon: '💳', label: 'Suscripciones', sub: true },
+  { href: '/operador/iarest/soporte', icon: '🎫', label: 'Soporte', sub: true },
+  { href: '/operador/iarest/sugerencias', icon: '💡', label: 'Sugerencias', sub: true },
+  { href: '/operador/iarest/crecimiento', icon: '📈', label: 'Crecimiento', sub: true },
+  { href: '/operador/iarest/sistema', icon: '🔬', label: 'Sistema', sub: true },
+  { href: '/operador/iarest/crm', icon: '🎯', label: 'CRM', sub: true },
+  { href: '/operador/ia', icon: '🤖', label: 'IA · gasto' },
+  { href: '/operador/rrhh', icon: '👥', label: 'RR.HH.' },
+  { href: '/operador/rrhh/empleados', icon: '🧑‍💼', label: 'Empleados', sub: true },
+  { href: '/operador/rrhh/solicitudes', icon: '📋', label: 'Solicitudes', sub: true },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
 ]
 
@@ -56,19 +86,39 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
           )
         })}
 
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>
+        {NAV_PISOS.map(({ href, icon, label }) => {
+          const active = path.startsWith(href)
+          return (
+            <Link key={href} href={href} onClick={() => setOpen(false)} style={{
+              display: 'flex', alignItems: 'center', gap: '10px',
+              padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
+              fontWeight: active ? 700 : 400,
+              background: active ? 'var(--primary-light)' : 'transparent',
+              color: active ? 'var(--primary)' : 'var(--text)',
+              fontSize: '14px', textDecoration: 'none',
+            }}>
+              <span>{icon}</span><span>{label}</span>
+            </Link>
+          )
+        })}
+
         {isOperator && (
           <>
             <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Operador</div>
-            {NAV_OPERADOR.map(({ href, icon, label }) => {
-              const active = path.startsWith(href)
+            {NAV_OPERADOR.map(({ href, icon, label, sub }) => {
+              const exactActive = sub
+                ? path === href || path.startsWith(href + '/')
+                : path === href || (path.startsWith(href + '/') && !NAV_OPERADOR.some(n => n.sub && (path === n.href || path.startsWith(n.href + '/'))))
               return (
                 <Link key={href} href={href} onClick={() => setOpen(false)} style={{
                   display: 'flex', alignItems: 'center', gap: '10px',
-                  padding: '9px 12px', borderRadius: '8px', marginBottom: '2px',
-                  fontWeight: active ? 700 : 400,
-                  background: active ? 'var(--primary-light)' : 'transparent',
-                  color: active ? 'var(--primary)' : 'var(--text)',
-                  fontSize: '14px', textDecoration: 'none',
+                  padding: sub ? '6px 12px 6px 28px' : '9px 12px',
+                  borderRadius: '8px', marginBottom: '2px',
+                  fontWeight: exactActive ? 700 : 400,
+                  background: exactActive ? 'var(--primary-light)' : 'transparent',
+                  color: exactActive ? 'var(--primary)' : (sub ? 'var(--muted)' : 'var(--text)'),
+                  fontSize: sub ? '13px' : '14px', textDecoration: 'none',
                 }}>
                   <span>{icon}</span><span>{label}</span>
                 </Link>

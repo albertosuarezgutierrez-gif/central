@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import ExpedienteLimpiadoraAdmin from '@/components/ExpedienteLimpiadoraAdmin'
 
 const C = {
   primary: 'var(--brand-primary)', brand: 'var(--brand-secondary)', light: 'var(--brand-light)',
@@ -31,7 +32,7 @@ function Stars({ n }: { n: number }) {
 interface Props { limpiadoras: any[]; quejas: any[] }
 
 export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) {
-  const [tab, setTab]           = useState<'quejas'|'equipo'|'limpiadoras'|'ia'>('quejas')
+  const [tab, setTab]           = useState<'quejas'|'equipo'|'limpiadoras'|'expediente'|'ia'>('quejas')
   const [limpSel, setLimpSel]   = useState<any>(null)
   const [analisis, setAnalisis] = useState<any>(null)
   const [loadingIA, setLoadingIA] = useState(false)
@@ -44,7 +45,7 @@ export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) 
   const [showModal, setShowModal] = useState(false)
   const [saving, setSaving]     = useState(false)
   const [formErr, setFormErr]   = useState('')
-  const [form, setForm]         = useState({ nombre: '', telefono: '', pin: '', color: '#6366f1' })
+  const [form, setForm]         = useState({ nombre: '', telefono: '', email: '', dni: '', pin: '', color: '#6366f1' })
 
   const pendientes = quejasList.filter(q => q.estado === 'pendiente').length
 
@@ -57,6 +58,7 @@ export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) 
   async function crearLimpiadora() {
     setFormErr('')
     if (!form.nombre.trim()) return setFormErr('El nombre es obligatorio')
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) return setFormErr('El email es obligatorio (se usa para firmar nóminas)')
     if (!form.pin || form.pin.length < 4) return setFormErr('El PIN debe tener al menos 4 dígitos')
     if (!/^\d+$/.test(form.pin)) return setFormErr('El PIN solo puede contener números')
 
@@ -72,7 +74,7 @@ export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) 
     if (d.error) return setFormErr(d.error)
 
     setShowModal(false)
-    setForm({ nombre: '', telefono: '', pin: '', color: '#6366f1' })
+    setForm({ nombre: '', telefono: '', email: '', dni: '', pin: '', color: '#6366f1' })
     await cargarLimpiadoras()
   }
 
@@ -152,6 +154,7 @@ export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) 
           { id: 'quejas',      label: `Quejas${pendientes > 0 ? ` (${pendientes})` : ''}` },
           { id: 'equipo',      label: 'Equipo' },
           { id: 'limpiadoras', label: '🧹 Limpiadoras' },
+          { id: 'expediente',  label: '📁 Expediente' },
           { id: 'ia',          label: '🤖 IA' },
         ].map(t => (
           <button key={t.id} onClick={() => setTab(t.id as any)}
@@ -405,6 +408,9 @@ export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) 
           </div>
         )}
 
+        {/* ── EXPEDIENTE Y NÓMINAS ────────────────────────────────── */}
+        {tab === 'expediente' && <ExpedienteLimpiadoraAdmin />}
+
         {/* ── ANÁLISIS IA ─────────────────────────────────────────── */}
         {tab === 'ia' && (
           <div>
@@ -499,15 +505,30 @@ export default function RRHHClient({ limpiadoras: initialLimp, quejas }: Props) 
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, outline: 'none', fontFamily: 'inherit' }} />
             </div>
 
-            {/* Teléfono */}
+            {/* Email (obligatorio) */}
             <div style={{ marginBottom: 14 }}>
               <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>
-                Teléfono
+                Email * <span style={{ fontWeight: 400, textTransform: 'none' }}>(para firmar nóminas)</span>
               </label>
-              <input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))}
-                placeholder="+34 600 000 000"
-                type="tel"
+              <input value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                placeholder="nombre@email.com" type="email"
                 style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, outline: 'none', fontFamily: 'inherit' }} />
+            </div>
+
+            {/* Teléfono + DNI */}
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 14 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>Teléfono</label>
+                <input value={form.telefono} onChange={e => setForm(f => ({ ...f, telefono: e.target.value }))}
+                  placeholder="+34 600 000 000" type="tel"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, outline: 'none', fontFamily: 'inherit' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: C.muted, textTransform: 'uppercase', letterSpacing: '0.06em', display: 'block', marginBottom: 6 }}>DNI/NIE</label>
+                <input value={form.dni} onChange={e => setForm(f => ({ ...f, dni: e.target.value }))}
+                  placeholder="00000000X"
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: `1.5px solid ${C.border}`, fontSize: 14, color: C.text, outline: 'none', fontFamily: 'inherit' }} />
+              </div>
             </div>
 
             {/* PIN */}

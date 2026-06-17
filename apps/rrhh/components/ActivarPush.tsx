@@ -22,7 +22,7 @@ export default function ActivarPush({ endpoint }: { endpoint: string }) {
       const reg = await navigator.serviceWorker.ready
       const perm = await Notification.requestPermission()
       if (perm !== 'granted') { setEstado('Permiso denegado'); return }
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(clave) })
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(clave) as BufferSource })
       const j = sub.toJSON()
       const r = await fetch(endpoint, {
         method: 'POST', headers: { 'content-type': 'application/json' },
@@ -33,9 +33,9 @@ export default function ActivarPush({ endpoint }: { endpoint: string }) {
   }
 
   return (
-    <span>
-      <button onClick={activar}>🔔 Activar notificaciones</button>
-      {estado && <span style={{ marginLeft: 8, fontSize: 13 }}>{estado}</span>}
+    <span className="inline-flex items-center gap-2">
+      <button onClick={activar} className="bg-paper-2 text-ink-2 hover:bg-line">Activar notificaciones</button>
+      {estado && <span className="text-ink-3 text-sm">{estado}</span>}
     </span>
   )
 }
