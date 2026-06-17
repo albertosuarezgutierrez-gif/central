@@ -4,6 +4,7 @@
 // y envía push al camarero asignado
 import { NextRequest, NextResponse } from 'next/server'
 import { createStripe } from '@central/core-payments'
+import type Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 import { round2 } from '@central/module-contabilidad'
 

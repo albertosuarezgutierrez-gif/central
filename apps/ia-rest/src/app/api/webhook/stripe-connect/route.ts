@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createStripe } from '@central/core-payments'
+import type Stripe from 'stripe'
 import { createServerClient } from '@/lib/supabase'
 import { tgAlert } from '@/lib/telegram'
 import { resolverComisionConfig, calcularComision } from '@/lib/cobros-comision'

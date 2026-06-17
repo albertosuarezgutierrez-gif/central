@@ -7,6 +7,7 @@ export const runtime = 'nodejs'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { createStripe } from '@central/core-payments'
+import type Stripe from 'stripe'
 import { tgAlert } from '@/lib/telegram'
 
 export async function POST(req: NextRequest) {
