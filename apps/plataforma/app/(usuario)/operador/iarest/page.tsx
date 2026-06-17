@@ -10,6 +10,12 @@ export default async function OperadorIaRestPage() {
 
   const sections = [
     {
+      href: '/operador/iarest/restaurantes',
+      icon: '🏪',
+      title: 'Restaurantes',
+      desc: 'Lista completa de locales: plan, personal, mesas y actividad. Detalle por restaurante.',
+    },
+    {
       href: '/operador/iarest/cobros',
       icon: '💶',
       title: 'Cobros',
