@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/* — 16/06/2026** (rama `claude/nice-heisenberg-jo4vy1`)
+  - **PR #332 MERGED**: `/admin` (god-panel dark 338 líneas) → redirect a `/operador/clientes`. Limpieza definitiva.
+  - **Panel ia-rest** (mismo PR): 3 nuevos endpoints en ia-rest `/api/admin/` (Bearer `OPERADOR_SHARED_SECRET`, mismo patrón que `/api/operador/`):
+    - `cobros/route.ts` — lee `v_cobro_resumen_super` + `resumen_cobros_mensual`. Totales globales + histórico 12m.
+    - `soporte/route.ts` — GET/POST(responder)/PATCH(cambiar estado) de tickets de soporte.
+    - `sugerencias/route.ts` — GET/PATCH sugerencias del equipo de sala (estado, nota admin, leída).
+  - Plataforma: 3 proxy APIs en `/api/admin/iarest/` (auth `plataforma_admin` cookie → Bearer ia-rest) + 4 páginas:
+    - `/operador/iarest` — overview con cards de sección + link al panel legacy `iarest.es/super`.
+    - `/operador/iarest/cobros` — tabla de volumen/comisiones por restaurante + histórico mensual. Read-only.
+    - `/operador/iarest/soporte` — lista de tickets con panel lateral: responder inline + cambiar estado (abierto/escalado/resuelto).
+    - `/operador/iarest/sugerencias` — lista de ideas con filtros (categoría/estado/no leídas) + nota interna editable.
+  - **UserSidebar**: sub-items indentados bajo 🍽️ ia-rest (💶 Cobros, 🎫 Soporte, 💡 Sugerencias).
+  - **Auth iarest.es/super no tocada**: los `/api/super/*` siguen con `x-ia-session`. Los `/api/admin/*` son endpoints nuevos aditivos.
+  - **Env requerido en ia-rest Vercel**: `OPERADOR_SHARED_SECRET` (ya existe, mismo valor que plataforma). Sin él, los 3 endpoints devuelven 401 silencioso.
+  - **Pendiente Fase 5 completa**: CRM/leads, Stripe suscripciones, Instagram/Blog, sistema/health, autocuras — requieren endpoints adicionales y son más complejos (se pueden implementar iterativamente).
+  - **Pendiente Fase 4**: Admin limpiadoras (riesgo ialimp — auditoría RLS previa necesaria).
+
 - **🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo — 16/06/2026** (PR #329 MERGED, squash `92e6140`)
   - Nuevo endpoint **`POST /api/ai/tools`** en plataforma (espejo de `/api/ai/chat`): `verificarSecreto` +
     `dentroDePresupuesto` + `registrarUso` (endpoint `'tools'`). Recibe `messages`+`tools` (OpenAI),

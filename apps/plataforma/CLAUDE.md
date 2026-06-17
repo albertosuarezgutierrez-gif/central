@@ -52,7 +52,9 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Command palette Cmd/Ctrl+K:** `CommandPalette.tsx`.
 - [x] **Strip "Hoy" en dashboard.**
 - [x] **Detalle apartamento (PR #255):** `lib/propiedades.ts` enriquecida (ocupación %, ADR, top portal) + nueva `getApartamentoDetalle(id)`. Ruta `/apartamentos/[id]` con 8 KPIs, gap detector, break-even, mix portales, histórico 12 meses, gastos por categoría (incl. SEGURO) + gastos compartidos + últimas 20 reservas.
-- [ ] **Pendiente:** convertir `/admin` a redirect → `/operador/clientes` (cuando Alberto confirme que funciona).
+- [x] **`/admin` → redirect `/operador/clientes`** (PR #332, merged).
+- [x] **Panel ia-rest/super (Fase 5 parcial):** `/operador/iarest/cobros` · `/operador/iarest/soporte` · `/operador/iarest/sugerencias` + 3 endpoints `/api/admin/iarest/*` + 3 endpoints ia-rest `/api/admin/` (Bearer OPERADOR_SHARED_SECRET).
+- [ ] **Fase 5 restante:** CRM/leads, Stripe suscripciones, Instagram/Blog, sistema/health, autocuras (iterativo).
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.

@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getAdmin } from '@/lib/superadmin'
+import Link from 'next/link'
 
 export const dynamic = 'force-dynamic'
 
@@ -7,24 +8,59 @@ export default async function OperadorIaRestPage() {
   const admin = await getAdmin()
   if (!admin) redirect('/dashboard')
 
+  const sections = [
+    {
+      href: '/operador/iarest/cobros',
+      icon: '💶',
+      title: 'Cobros',
+      desc: 'Volumen y comisiones por restaurante. Histórico mensual.',
+    },
+    {
+      href: '/operador/iarest/soporte',
+      icon: '🎫',
+      title: 'Soporte',
+      desc: 'Tickets de los restaurantes. Responde y cierra desde aquí.',
+    },
+    {
+      href: '/operador/iarest/sugerencias',
+      icon: '💡',
+      title: 'Sugerencias',
+      desc: 'Ideas y peticiones del equipo de sala. Prioriza y anota.',
+    },
+  ]
+
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-      <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>🍽️ ia-rest</h1>
-      <div style={{
-        background: 'var(--surface)', border: '1px dashed var(--border)',
-        borderRadius: 'var(--radius)', padding: '48px 24px', textAlign: 'center', color: 'var(--muted)',
-      }}>
-        <div style={{ fontSize: '36px', marginBottom: '12px' }}>🍽️</div>
-        <p style={{ fontWeight: 600, marginBottom: '6px' }}>Resumen de ia-rest — próximamente</p>
-        <p style={{ fontSize: '13px' }}>KPIs por restaurante + acceso directo.</p>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
+        <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🍽️ ia-rest</h1>
         <a
-          href={process.env.IAREST_URL || 'https://iarest.es'}
+          href={`${process.env.IAREST_URL || 'https://iarest.es'}/super`}
           target="_blank"
           rel="noreferrer"
-          style={{ display: 'inline-block', marginTop: '16px', color: 'var(--primary)', fontWeight: 600, fontSize: '14px' }}
+          style={{ fontSize: '13px', color: 'var(--muted)', textDecoration: 'none' }}
         >
-          Abrir ia-rest ↗
+          Panel legacy ↗
         </a>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+        {sections.map(s => (
+          <Link
+            key={s.href}
+            href={s.href}
+            style={{ textDecoration: 'none', color: 'var(--text)' }}
+          >
+            <div style={{
+              background: 'var(--surface)', border: '1px solid var(--border)',
+              borderRadius: 'var(--radius)', padding: '20px',
+              transition: 'border-color .15s',
+            }}>
+              <div style={{ fontSize: '28px', marginBottom: '10px' }}>{s.icon}</div>
+              <div style={{ fontWeight: 700, fontSize: '16px', marginBottom: '4px' }}>{s.title}</div>
+              <div style={{ fontSize: '13px', color: 'var(--muted)', lineHeight: 1.5 }}>{s.desc}</div>
+            </div>
+          </Link>
+        ))}
       </div>
     </main>
   )
