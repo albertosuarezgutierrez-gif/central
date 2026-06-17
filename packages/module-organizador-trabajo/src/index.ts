@@ -13,6 +13,7 @@ export type {
   TareaPlanificada,
   ParteTrabajo,
   ResumenTrabajador,
+  Aviso,
 } from './types.ts'
 
 // Señal de carga
@@ -29,3 +30,6 @@ export { siguienteTarea } from './siguiente.ts'
 
 // Partes de trabajo / tiempo imputado
 export { construirParte, resumirPartes } from './partes.ts'
+
+// Dependencias entre tareas (avisos encadenados entre partidas)
+export { tareasDesbloqueadas, tareasBloqueadas, avisosAlCompletar } from './dependencias.ts'
