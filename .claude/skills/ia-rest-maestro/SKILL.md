@@ -252,15 +252,14 @@ Authorization: Bearer {VERCEL_TOKEN}
 ## STACK IA
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
-- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct → fallback Claude Haiku
-- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct → fallback Claude Haiku
+- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**sin fallback Anthropic** — retirado 17/06/2026, cuenta sin saldo)
+- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback Anthropic**)
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
-- **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM→Haiku/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
-- `callAI(system, user, maxTokens, timeoutMs, noFallback=false)`
-  - `noFallback=false` (default) → NIM primario, fallback Haiku si falla
-  - `noFallback=true` → NIM puro, lanza error si falla, NUNCA toca Anthropic
-  - Usar `noFallback=true` en crons/agentes independientes de créditos externos
-- NUNCA llamar NIM o Anthropic directamente desde componentes o API routes
+- **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
+- `callAI(system, user, maxTokens, timeoutMs, noFallback=true)`
+  - El parámetro `noFallback` se mantiene por compatibilidad, pero **ya no hay fallback de pago**:
+    `@anthropic-ai/sdk` se quitó de ia-rest (17/06/2026). Si NIM falla, lanza error.
+- NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)
 - Brain: lib/brain.ts + lib/brain-cache.ts + lib/brain-patron.ts + lib/brain-router.ts
 - Cache menú: 5min por restaurante. Few-shot con comandas del turno activo vía ia_training_log
 
@@ -1628,8 +1627,10 @@ Para impresoras Star con WiFi integrado. **No necesita bridge-local.js**.
 # ═══════════════════════════════════════════════
 
 > Aclaración clave: **los agentes de ia.rest NO son agentes de Claude Code.**
-> Son código de producción que corre solo en Vercel/Supabase usando NIM
-> (fallback Haiku). Claude Code solo los **edita y despliega**; no los ejecuta
+> Son código de producción que corre solo en Vercel/Supabase usando NIM/Gemini
+> (sin fallback Anthropic; salvo 2 edge functions Deno —qr-assistant, eventos-entorno—
+> que aún llaman a api.anthropic.com por fetch, pendientes de migrar).
+> Claude Code solo los **edita y despliega**; no los ejecuta
 > ni ellos lo llaman a él. Relación: Claude Code construye → Vercel ejecuta.
 
 ## Dónde está guardado cada agente (todo en el repo de GitHub)

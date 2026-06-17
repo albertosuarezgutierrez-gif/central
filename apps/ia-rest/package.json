@@ -21,7 +21,6 @@
     "@central/module-feedback": "workspace:*",
     "@central/module-horario": "workspace:*",
     "@central/module-asn": "workspace:*",
-    "@anthropic-ai/sdk": "^0.92.0",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.5.0",
     "@supabase/ssr": "^0.10.2",

@@ -78,7 +78,6 @@ export type { ImageInput }
 // Modelos por defecto (sobrescribibles via env var si hace falta)
 const TEXT_MODEL_NVIDIA   = process.env.NVIDIA_BRAIN_MODEL      ?? 'meta/llama-3.3-70b-instruct'
 const VISION_MODEL_NVIDIA = process.env.NVIDIA_VISION_MODEL     ?? 'meta/llama-3.2-11b-vision-instruct'
-const TEXT_MODEL_ANTHROPIC = 'claude-haiku-4-5-20251001'
 
 // Config NIM desde el entorno de ESTA app (el paquete core-ai no lee process.env).
 function nimConfig(): NimConfig {
@@ -107,49 +106,9 @@ async function nvidiaVision(system: string, images: ImageInput[], userText: stri
   return nimVision(nimConfig(), system, images, userText, maxTokens)
 }
 
-// ── Anthropic: texto (fallback) ──────────────────────────────────────────────
-async function anthropicText(system: string, messages: { role: 'user' | 'assistant'; content: string }[], maxTokens = 600): Promise<string> {
-  const Anthropic = await import('@anthropic-ai/sdk').then(m => m.default)
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const response = await client.messages.create({
-    model: TEXT_MODEL_ANTHROPIC,
-    max_tokens: maxTokens,
-    system,
-    messages,
-  })
-  const content = response.content[0]
-  if (content.type !== 'text') throw new Error('Anthropic: respuesta inesperada')
-  return content.text
-}
-
-// ── Anthropic: visión (fallback) ─────────────────────────────────────────────
-async function anthropicVision(system: string, images: ImageInput[], userText: string, maxTokens = 2000): Promise<string> {
-  const VALID_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'] as const
-  type ValidType = typeof VALID_TYPES[number]
-
-  const Anthropic = await import('@anthropic-ai/sdk').then(m => m.default)
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-
-  const imageBlocks = images.map(img => {
-    let mt = img.mediaType as string
-    if (mt === 'image/jpg') mt = 'image/jpeg'
-    if (!(VALID_TYPES as readonly string[]).includes(mt)) mt = 'image/jpeg'
-    return {
-      type: 'image' as const,
-      source: { type: 'base64' as const, media_type: mt as ValidType, data: img.data },
-    }
-  })
-
-  const response = await client.messages.create({
-    model: TEXT_MODEL_ANTHROPIC,
-    max_tokens: maxTokens,
-    system,
-    messages: [{ role: 'user', content: [...imageBlocks, { type: 'text' as const, text: userText }] }],
-  })
-  const content = response.content[0]
-  if (content.type !== 'text') throw new Error('Anthropic-Vision: respuesta inesperada')
-  return content.text
-}
+// Nota: el fallback a Anthropic (texto y visión) se RETIRÓ el 17/06/2026 — la cuenta estaba sin
+// saldo y la IA ya va por NVIDIA NIM + Gemini (directo o por la pasarela central). `noFallback`
+// se mantiene en las firmas por compatibilidad, pero ya no existe proveedor de fallback de pago.
 
 // ── API pública ──────────────────────────────────────────────────────────────
 
@@ -206,8 +165,8 @@ export async function callAI(
     }
   }
 
-  if (noFallback) throw new Error('NVIDIA_API_KEY no configurada y noFallback=true')
-  return anthropicText(system, messages, maxTokens)
+  // Sin fallback Anthropic (retirado). Si NIM no está disponible, error.
+  throw new Error('NIM no disponible (NVIDIA_API_KEY ausente o falló) y sin fallback Anthropic')
 }
 
 /**
@@ -304,6 +263,6 @@ export async function callAIVision(
     }
   }
 
-  if (noFallback) throw new Error('[AI-CLIENT] NVIDIA no disponible y noFallback=true')
-  return anthropicVision(system, images, userText, maxTokens)
+  // Sin fallback Anthropic (retirado). Si NIM no está disponible, error.
+  throw new Error('[AI-CLIENT] NVIDIA-Vision no disponible y sin fallback Anthropic')
 }
