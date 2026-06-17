@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T06:01:22Z",
+  "generadoEn": "2026-06-17T06:03:25Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2356,6 +2356,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ PR #334 MERGED",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "✅ PR #333 MERGED",
       "fecha": "17/06/2026"
     },
@@ -2409,10 +2413,6 @@
     },
     {
       "titulo": "📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh",
       "fecha": "16/06/2026"
     }
   ],
