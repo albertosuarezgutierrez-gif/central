@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T04:54:26Z",
+  "generadoEn": "2026-06-17T04:56:07Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2354,6 +2354,10 @@
   ],
   "novedades": [
     {
+      "titulo": "✅ PR #333 MERGED",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*",
       "fecha": "16/06/2026"
     },
@@ -2407,10 +2411,6 @@
     },
     {
       "titulo": "🧩 RR.HH. CAPACIDAD COMPARTIDA — Fases 1+2 + verificación + arreglos rrhh",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`",
       "fecha": "16/06/2026"
     }
   ],

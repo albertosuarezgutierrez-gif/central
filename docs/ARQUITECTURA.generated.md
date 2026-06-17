@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T04:54:26Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T04:56:07Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -143,6 +143,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (17/06/2026) ✅ PR #333 MERGED
 - (16/06/2026) 🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*
 - (16/06/2026) 🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo
 - (16/06/2026) 🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325
@@ -152,5 +153,4 @@
 - (16/06/2026) 🤖 RRHH · Verticales conectadas a la pasarela de IA central
 - (16/06/2026) 🎨 RRHH · Marca blanca por empresa (white-label)
 - (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 3 completa: mercado, pricing lab, pricing automático + calendario por portal
-- (16/06/2026) 🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard
 
