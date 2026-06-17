@@ -4,22 +4,6 @@
   "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile",
   "crons": [
     {
-      "path": "/api/updates/sync",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/limpiadoras/auto-sessions",
-      "schedule": "0 5 * * *"
-    },
-    {
-      "path": "/api/mensajes/auto-reply",
-      "schedule": "0 6 * * *"
-    },
-    {
-      "path": "/api/rates/snapshot",
-      "schedule": "0 7 * * *"
-    },
-    {
       "path": "/api/mercado/cron",
       "schedule": "15 7 * * *"
     },
@@ -42,18 +26,6 @@
     {
       "path": "/api/pricing/pilot-track",
       "schedule": "15 9 * * *"
-    },
-    {
-      "path": "/api/limpiadoras/auto-assign",
-      "schedule": "30 5 * * *"
-    },
-    {
-      "path": "/api/resumen-semanal",
-      "schedule": "0 9 * * 1"
-    },
-    {
-      "path": "/api/limpiadoras/alerta-ventana",
-      "schedule": "0 8 * * *"
     },
     {
       "path": "/api/expenses/agent/scan",
