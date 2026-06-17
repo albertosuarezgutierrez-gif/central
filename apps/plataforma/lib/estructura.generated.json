@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T14:26:57Z",
+  "generadoEn": "2026-06-17T16:53:37Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -646,8 +646,8 @@
     },
     "module-organizador-trabajo": {
       "ia-rest": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 2
       },
       "ialimp": {
         "estado": "no",
