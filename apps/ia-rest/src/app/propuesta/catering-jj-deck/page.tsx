@@ -163,7 +163,43 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 5 · Comercial & comisiones
+  // 5 · El flujo de la cocina de Carmen (recepción → carro)
+  {
+    kicker: 'Os escuchamos · tal cual nos lo contasteis',
+    titulo: 'Tu cocina, de la recepción al carro',
+    sub: 'Este es el flujo que ya tienes en la cabeza. Lo dibujamos tal cual para que lo lleve el sistema — no tú.',
+    color: C.teal,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:1000 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, flexWrap:'wrap', marginBottom:26 }}>
+          <Node color={C.teal} title="Recepción" sub="pesa · escanea · QR" />
+          <Arrow label="entra valorado" color={C.gold} />
+          <Node color={C.gold} title="Economato" sub="almacén con valor" />
+          <Arrow label="parte de elaboración" color={C.red} />
+          <Node color={C.red} title="Producción" sub="partidas frío / caliente" />
+          <Arrow label="identificado por color" color={C.amber} />
+          <Node color={C.amber} title="Salida" sub="carros por evento" />
+          <Arrow label="transportista" color={C.green} />
+          <Node color={C.green} title="Evento" sub="montado y servido" />
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
+          <Card icon="🏷️" color={C.gold} titulo="Trazabilidad en la entrada"
+            body="Cada producto recibe un QR interno con proveedor, lote, alérgenos, caducidad y precio. Si el precio sube, salta el aviso y el coste se actualiza solo." />
+          <Card icon="🌡️" color={C.teal} titulo="Control sanitario, justificado"
+            body="Desinfección, enfriamiento y descongelación según ingredientes; vida útil justificada por pH y actividad de agua. La auditoría, siempre lista." />
+          <Card icon="⏱️" color={C.red} titulo="Partidas cronometradas"
+            body="Frío y caliente, corte, montaje y elaboración. Cada cocinero entra y encuentra su trabajo repartido y cronometrado, con avisos encadenados entre partidas." />
+          <Card icon="🎨" color={C.amber} titulo="Salida por color, no por nombre"
+            body="Cada evento, un color; los carros se identifican y el transportista los recoge. Cada fase entrega a la siguiente, como una cadena." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, marginTop:26, textAlign:'center' }}>
+          Todo esto ya lo haces tú de cabeza. El objetivo es que deje de depender de ti.
+        </p>
+      </div>
+    ),
+  },
+
+  // 6 · Comercial & comisiones
   {
     kicker: 'Lo que pide el comprador',
     titulo: 'Comercial y comisiones',
