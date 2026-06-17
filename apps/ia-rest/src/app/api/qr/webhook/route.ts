@@ -2,7 +2,7 @@
 // v2: registra cada pago en resumen_cobros_mensual (panel financiero Alberto)
 import { NextRequest, NextResponse } from 'next/server'
 import { createStripe } from '@central/core-payments'
-import type Stripe from 'stripe'
+import type { Stripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 import { notifyError } from '@/lib/notify'
 

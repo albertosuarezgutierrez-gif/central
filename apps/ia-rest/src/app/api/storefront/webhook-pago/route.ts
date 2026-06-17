@@ -8,7 +8,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { crearPrintJobs } from '@/lib/courier'
 import { createStripe } from '@central/core-payments'
-import type Stripe from 'stripe'
+import type { Stripe } from '@central/core-payments'
 
 const getStripe = () => createStripe()
 

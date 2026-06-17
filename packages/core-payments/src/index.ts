@@ -11,5 +11,5 @@ export function createStripe(secretKey?: string): Stripe {
   )
 }
 
-export type { Stripe }
+export type { default as Stripe } from 'stripe'
 export type CentralApp = 'ia-rest' | 'ialimp' | 'rrhh'
