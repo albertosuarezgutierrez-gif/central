@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T08:43:11Z",
+  "generadoEn": "2026-06-17T09:08:19Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -496,7 +496,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "estado": "no",
@@ -871,8 +871,8 @@
         "evidencias": 8
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 16
       },
       "rrhh": {
         "presente": false,
@@ -1025,8 +1025,8 @@
         "evidencias": 8
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -1047,8 +1047,8 @@
         "evidencias": 1
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 1
       },
       "rrhh": {
         "presente": false,
@@ -1991,6 +1991,19 @@
       "/api/sivra/incomes",
       "/api/sivra/inversion",
       "/api/sivra/inversion/analyze",
+      "/api/sivra/limpiadoras/asignacion",
+      "/api/sivra/limpiadoras/ausencias",
+      "/api/sivra/limpiadoras/checklist",
+      "/api/sivra/limpiadoras/disponibilidad",
+      "/api/sivra/limpiadoras/facturacion",
+      "/api/sivra/limpiadoras/historial",
+      "/api/sivra/limpiadoras/informe",
+      "/api/sivra/limpiadoras/items",
+      "/api/sivra/limpiadoras/lenceria",
+      "/api/sivra/limpiadoras/productos",
+      "/api/sivra/limpiadoras/proveedores",
+      "/api/sivra/limpiadoras/tarifas",
+      "/api/sivra/limpiadoras/usuarios",
       "/api/sivra/mensajes",
       "/api/sivra/mensajes/[bookingId]",
       "/api/sivra/mensajes/knowledge",
@@ -2710,7 +2723,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 870,
+    "apis": 883,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
