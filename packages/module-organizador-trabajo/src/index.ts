@@ -38,10 +38,23 @@ export { tareasDesbloqueadas, tareasBloqueadas, avisosAlCompletar } from './depe
 // Partidas (frío / caliente / corte / montaje): carga por sección
 export { agruparPorPartida } from './partidas.ts'
 
-// Estimación de producción (croquetas → minutos) y personal necesario
-export { estimarMinutosProduccion, personasNecesarias } from './produccion.ts'
-export type { LineaProduccion } from './produccion.ts'
+// Estimación de producción (croquetas → minutos), personal y previsión por día
+export { estimarMinutosProduccion, personasNecesarias, personalPorDia } from './produccion.ts'
+export type { LineaProduccion, CargaDia } from './produccion.ts'
 
 // Estimación de compra con factor de holgura que aprende (±10%)
 export { estimarCompra, aprenderFactor } from './compra.ts'
 export type { AprendizajeCompra } from './compra.ts'
+
+// Caducidad: FEFO de lotes y avisos de certificados (manipulador) a punto de vencer
+export { ordenarPorCaducidad, proximosACaducar } from './caducidad.ts'
+export type { ConCaducidad } from './caducidad.ts'
+
+// Costes: costeo de elaboraciones/mermas/fondos y rentabilidad por evento
+export { costearElaboracion, rentabilidadEvento } from './costes.ts'
+export type {
+  ElaboracionCosteable,
+  CosteElaboracion,
+  EntradaRentabilidad,
+  RentabilidadEvento,
+} from './costes.ts'
