@@ -276,25 +276,7 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 8 · Plan de ejecución
-  {
-    kicker: 'Cómo lo construimos',
-    titulo: 'Plan de ejecución',
-    sub: 'Por fases, empezando por lo que más te quita tiempo.',
-    color: C.green,
-    render: () => (
-      <div style={{ width:'100%', maxWidth:820 }}>
-        <Step n={1} color={C.red} head="Fase 1 · Esta semana — tu flujo, montado"
-          body="Validamos el esquema y montamos la primera versión del organizador: reparto de tareas por partida y cronometraje. Lo ves funcionando el jueves 25." />
-        <Step n={2} color={C.amber} head="Fase 2 · Semanas 2–4 — fuera papeles y WhatsApp"
-          body="Foto = datos en recepción, economato valorado, partes por voz en cocina y mensajería interna en lugar del WhatsApp personal." />
-        <Step n={3} color={C.green} head="Fase 3 · Mes 2 — que se anticipe solo" last
-          body="Estimación de compra que aprende, previsión de personal, APPCC y dossier de auditoría automáticos, y rentabilidad por evento." />
-      </div>
-    ),
-  },
-
-  // 9 · Cómo arrancamos
+  // 8 · Cómo arrancamos
   {
     kicker: 'Lo construimos contigo',
     titulo: 'Cómo arrancamos',
