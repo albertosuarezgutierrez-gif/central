@@ -16,6 +16,12 @@ export default async function OperadorIaRestPage() {
       desc: 'Volumen y comisiones por restaurante. Histórico mensual.',
     },
     {
+      href: '/operador/iarest/suscripciones',
+      icon: '💳',
+      title: 'Suscripciones',
+      desc: 'Estado Stripe por cuenta, MRR y próximos cobros. Solo lectura.',
+    },
+    {
       href: '/operador/iarest/soporte',
       icon: '🎫',
       title: 'Soporte',
