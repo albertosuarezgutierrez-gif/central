@@ -35,3 +35,7 @@ export {
 // Muestras testigo: aviso de las que ya pueden retirarse
 export { muestrasACaducar } from './muestras.ts'
 export type { MuestraACaducar } from './muestras.ts'
+
+// Generación automática del parte a partir de catálogo + eventos
+export { generarParte, paxTotal } from './generar.ts'
+export type { EscandalloIngrediente, FichaCatalogo, EventoInput } from './generar.ts'
