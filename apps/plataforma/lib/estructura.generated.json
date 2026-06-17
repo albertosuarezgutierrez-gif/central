@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T07:09:20Z",
+  "generadoEn": "2026-06-17T07:54:40Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1978,6 +1978,8 @@
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/cron/psd2-sync",
+      "/api/finanzas",
+      "/api/finanzas/export",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sivra/expenses",
@@ -2708,7 +2710,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 868,
+    "apis": 870,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
