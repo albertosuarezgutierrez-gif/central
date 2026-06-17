@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { aiTools, type NimToolMessage } from '@central/core-ai'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, costeEur } from '@/lib/ai-gateway'
 
 export const maxDuration = 60
 
@@ -31,7 +31,12 @@ export async function POST(req: Request) {
       model: modelo,
       maxTokens: Number(body?.maxTokens) || 1024,
     })
-    await registrarUso({ app, endpoint: 'tools', proveedor: 'nim', modelo: modelo ?? null, ok: true, ms: Date.now() - t0 })
+    const tokens = estimarTokens(
+      typeof body?.system === 'string' ? body.system : '',
+      JSON.stringify(messages), JSON.stringify(tools),
+      result.content, JSON.stringify(result.tool_calls ?? ''),
+    )
+    await registrarUso({ app, endpoint: 'tools', proveedor: 'nim', modelo: modelo ?? null, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('nim', tokens) })
     return NextResponse.json({ content: result.content, tool_calls: result.tool_calls })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'

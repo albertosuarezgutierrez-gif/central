@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { nimVision, type ImageInput } from '@central/core-ai'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, costeEur } from '@/lib/ai-gateway'
 
 const VISION_MODEL = 'meta/llama-3.2-90b-vision-instruct'
 
@@ -33,7 +33,9 @@ export async function POST(req: Request) {
     const text = await nimVision({ apiKey: key, visionModel: modelo }, system, images, userText, Number(body?.maxTokens) || 512, {
       signal: AbortSignal.timeout(40_000),
     })
-    await registrarUso({ app, endpoint: 'vision', proveedor: 'nim', modelo, ok: true, ms: Date.now() - t0 })
+    // ~258 tokens por imagen (NIM vision) + texto de entrada/salida.
+    const tokens = estimarTokens(system, userText, text) + images.length * 258
+    await registrarUso({ app, endpoint: 'vision', proveedor: 'nim', modelo, ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('nim', tokens) })
     return NextResponse.json({ text })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'
