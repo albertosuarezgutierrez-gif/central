@@ -58,6 +58,9 @@ importers:
       '@central/module-proveedores':
         specifier: workspace:*
         version: link:../../packages/module-proveedores
+      '@central/module-trazabilidad':
+        specifier: workspace:*
+        version: link:../../packages/module-trazabilidad
       '@stripe/react-stripe-js':
         specifier: ^6.3.0
         version: 6.6.0(@stripe/stripe-js@9.7.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
@@ -664,6 +667,8 @@ importers:
       '@central/module-documental':
         specifier: workspace:*
         version: link:../module-documental
+
+  packages/module-trazabilidad: {}
 
 packages:
 
