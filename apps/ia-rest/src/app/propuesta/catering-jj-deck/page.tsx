@@ -172,7 +172,7 @@ const SLIDES: Slide[] = [
     render: () => (
       <div style={{ width:'100%', maxWidth:1000 }}>
         <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, flexWrap:'wrap', marginBottom:26 }}>
-          <Node color={C.teal} title="Recepción" sub="pesa · escanea · QR" />
+          <Node color={C.teal} title="Recepción" sub="pesa · escanea etiqueta" />
           <Arrow label="entra valorado" color={C.gold} />
           <Node color={C.gold} title="Economato" sub="almacén con valor" />
           <Arrow label="parte de elaboración" color={C.red} />
@@ -183,8 +183,8 @@ const SLIDES: Slide[] = [
           <Node color={C.green} title="Evento" sub="montado y servido" />
         </div>
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
-          <Card icon="🏷️" color={C.gold} titulo="Trazabilidad en la entrada"
-            body="Cada producto recibe un QR interno con proveedor, lote, alérgenos, caducidad y precio. Si el precio sube, salta el aviso y el coste se actualiza solo." />
+          <Card icon="🏷️" color={C.gold} titulo="La etiqueta de entrada, sin duplicar"
+            body="La propia etiqueta del proveedor —con lote, alérgenos, caducidad y precio— se escanea y vale como referencia para todo el seguimiento, sin reimprimir un QR nuevo. Si el precio sube, salta el aviso y el coste se actualiza solo." />
           <Card icon="🌡️" color={C.teal} titulo="Control sanitario, justificado"
             body="Desinfección, enfriamiento y descongelación según ingredientes; vida útil justificada por pH y actividad de agua. La auditoría, siempre lista." />
           <Card icon="⏱️" color={C.red} titulo="Partidas cronometradas"
