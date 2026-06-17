@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T06:26:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T07:43:43Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 868 rutas API.
+**Resumen:** 5 apps · 22 packages · 23 capacidades · 15 skills · 870 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-identity, module-contabilidad
 - **Capacidades:** Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), Facturación / VeriFactu, Asistente / copiloto IA
 - **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 89
+- **Rutas API:** 91
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -144,6 +144,8 @@
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (17/06/2026) 💸 PASARELA IA · coste real + fallback + healthcheck
+- (17/06/2026) ✅ PR #336 MERGED
+- (17/06/2026) ✅ PR #335 MERGED
 - (17/06/2026) ✅ PR #334 MERGED
 - (17/06/2026) ✅ PR #333 MERGED
 - (16/06/2026) 🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*
@@ -151,6 +153,4 @@
 - (16/06/2026) 🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325
 - (16/06/2026) 🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel
 - (16/06/2026) 📧 FACTURAS CORREO · Sistema completo en producción
-- (16/06/2026) 🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN
-- (16/06/2026) 🤖 RRHH · Verticales conectadas a la pasarela de IA central
 

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T06:26:17Z",
+  "generadoEn": "2026-06-17T07:43:43Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1978,6 +1978,8 @@
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
       "/api/cron/psd2-sync",
+      "/api/finanzas",
+      "/api/finanzas/export",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sivra/expenses",
@@ -2371,6 +2373,14 @@
       "fecha": "17/06/2026"
     },
     {
+      "titulo": "✅ PR #336 MERGED",
+      "fecha": "17/06/2026"
+    },
+    {
+      "titulo": "✅ PR #335 MERGED",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "✅ PR #334 MERGED",
       "fecha": "17/06/2026"
     },
@@ -2416,14 +2426,6 @@
     },
     {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 2 completa: /sivra/mensajes (Smoobu) + fixes responsive dashboard",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)",
       "fecha": "16/06/2026"
     }
   ],
@@ -2708,7 +2710,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 868,
+    "apis": 870,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
