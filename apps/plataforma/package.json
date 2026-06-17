@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@central/core-ai": "workspace:*",
+    "@central/core-email": "workspace:*",
     "@central/core-identity": "workspace:*",
     "@central/module-contabilidad": "workspace:*",
     "@prisma/client": "^5.22.0",
