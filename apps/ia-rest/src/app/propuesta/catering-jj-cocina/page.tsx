@@ -252,7 +252,49 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 7 · Cómo arrancamos
+  // 7 · Y lo optimizamos aún más
+  {
+    kicker: 'Y aún hay más',
+    titulo: 'Y lo optimizamos aún más',
+    sub: 'Aprovechando que ia.rest nace de la voz y la cámara: casi sin teclear.',
+    color: C.amber,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:980, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,220px),1fr))', gap:16 }}>
+        <Card icon="🎙️" color={C.red} titulo="Voz, manos libres"
+          body="Con las manos en la masa, el cocinero habla: «croquetas terminadas», «abro el atún». Sin tocar pantallas sucias." />
+        <Card icon="📸" color={C.teal} titulo="Foto = datos"
+          body="La cámara lee la etiqueta y saca lote, alérgenos, caducidad y precio. Casi nada que teclear ni que volcar a mano." />
+        <Card icon="♻️" color={C.green} titulo="Mermas y fondos, valorados"
+          body="Tus fondos y elaboraciones almacenadas se valoran como producto propio. Sabes cuánto ahorras frente a comprarlo." />
+        <Card icon="📅" color={C.gold} titulo="Previsión de personal"
+          body="Con las bodas cerradas, te avisa con antelación si la semana que viene faltan manos en una partida." />
+        <Card icon="🌡️" color={C.amber} titulo="APPCC en tiempo real"
+          body="Si falta registrar una temperatura o una desinfección, salta el aviso antes de que sea un problema de auditoría." />
+        <Card icon="🎓" color={C.teal} titulo="Certificados al día"
+          body="El curso de manipulador y los certificados, ligados a cada perfil, con aviso cuando caducan." />
+      </div>
+    ),
+  },
+
+  // 8 · Plan de ejecución
+  {
+    kicker: 'Cómo lo construimos',
+    titulo: 'Plan de ejecución',
+    sub: 'Por fases, empezando por lo que más te quita tiempo.',
+    color: C.green,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:820 }}>
+        <Step n={1} color={C.red} head="Fase 1 · Esta semana — tu flujo, montado"
+          body="Validamos el esquema y montamos la primera versión del organizador: reparto de tareas por partida y cronometraje. Lo ves funcionando el jueves 25." />
+        <Step n={2} color={C.amber} head="Fase 2 · Semanas 2–4 — fuera papeles y WhatsApp"
+          body="Foto = datos en recepción, economato valorado, partes por voz en cocina y mensajería interna en lugar del WhatsApp personal." />
+        <Step n={3} color={C.green} head="Fase 3 · Mes 2 — que se anticipe solo" last
+          body="Estimación de compra que aprende, previsión de personal, APPCC y dossier de auditoría automáticos, y rentabilidad por evento." />
+      </div>
+    ),
+  },
+
+  // 9 · Cómo arrancamos
   {
     kicker: 'Lo construimos contigo',
     titulo: 'Cómo arrancamos',
@@ -261,8 +303,8 @@ const SLIDES: Slide[] = [
       <div style={{ width:'100%', maxWidth:900 }}>
         <Bullet icon="🤝" color={C.teal} head="Lo diseñamos sobre tu forma de trabajar"
           body="Partimos de tu proceso, que conoces como nadie. No tienes que migrar ni montar nada: lo construimos nosotros, contigo como socia técnica." />
-        <Bullet icon="🛠️" color={C.gold} head="Para la próxima, te lo traemos montado"
-          body="No solo un esquema: una primera versión con tu flujo, para que la toques y la ajustemos juntos. Y seguimos sumando mejoras." />
+        <Bullet icon="🌱" color={C.gold} head="Empezamos pequeño y vamos creciendo"
+          body="Arrancamos por lo que más te quita tiempo y sumamos módulos a tu ritmo, sin parar la cocina." />
         <Bullet icon="📅" color={C.green} head="Próxima cita: jueves 25, 12:00"
           body="Lo vemos funcionando con tu cocina y lo vamos puliendo semana a semana, por donde más te quita tiempo." />
       </div>
