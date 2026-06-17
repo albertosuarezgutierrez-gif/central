@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T14:26:57Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-17T16:53:37Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -8,7 +8,7 @@
 
 ## Apps (verticales)
 ### ia-rest
-- **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-horario, module-materiales, module-presupuestos, module-proveedores
+- **Módulos que usa:** core-ai, core-fiscal, core-payments, core-push, module-asn, module-contabilidad, module-crm, module-feedback, module-horario, module-materiales, module-organizador-trabajo, module-presupuestos, module-proveedores
 - **Capacidades:** TPV / comanda, KDS (cocina), Eventos / catering / BEO, Reservas, QR / portal cliente, Feedback / propinas, Agenda / auto-asignación, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Hardware bridge, Escáner / OCR, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (81):** arqueos_caja_empleado, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales…
 - **Rutas API:** 466
@@ -89,7 +89,7 @@
   - Lo usan: ia-rest, ialimp, sivra
   - Depende de: —
 - **module-organizador-trabajo** (module) → `@central/module-organizador-trabajo`
-  - Lo usan: —
+  - Lo usan: ia-rest
   - Depende de: —
 - **module-presupuestos** (module) → `@central/module-presupuestos`
   - Lo usan: ia-rest
