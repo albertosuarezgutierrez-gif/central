@@ -3,14 +3,14 @@
 // Detecta sesiones QR abiertas sin pago pasado el timer configurado por el dueño
 // y envía push al camarero asignado
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 import { round2 } from '@central/module-contabilidad'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
+const getStripe = () => createStripe()
 const COMISION_RATE = 0.005
 
 // Cierre automático de cuentas INDIVIDUALES con tarjeta guardada (pre_auth) que llevan

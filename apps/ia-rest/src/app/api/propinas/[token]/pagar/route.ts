@@ -7,7 +7,7 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 
 export async function POST(
   req: NextRequest,
@@ -32,7 +32,7 @@ export async function POST(
   const rest = propina.restaurantes as unknown as { nombre: string } | null
   const importeCents = Math.round(importe * 100)
 
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
+  const stripe = createStripe()
 
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',

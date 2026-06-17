@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
   // (las env vars de Supabase solo están disponibles en runtime)
 
   // Monorepo casa de marcas: compila los paquetes workspace (fuente TS) en el build.
-  transpilePackages: ['@central/core-ai', '@central/core-fiscal', '@central/core-push', '@central/module-contabilidad', '@central/module-crm', '@central/module-materiales', '@central/module-horario', '@central/module-asn', '@central/module-presupuestos', '@central/module-proveedores', '@central/module-feedback'],
+  transpilePackages: ['@central/core-ai', '@central/core-fiscal', '@central/core-payments', '@central/core-push', '@central/module-contabilidad', '@central/module-crm', '@central/module-materiales', '@central/module-horario', '@central/module-asn', '@central/module-presupuestos', '@central/module-proveedores', '@central/module-feedback'],
   outputFileTracingRoot: monorepoRoot,
   turbopack: { root: monorepoRoot },
 

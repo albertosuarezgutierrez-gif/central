@@ -7,10 +7,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { crearPrintJobs } from '@/lib/courier'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 
-let _stripe: Stripe | null = null
-function getStripe() { if (!_stripe) _stripe = new Stripe(process.env.STRIPE_SECRET_KEY ?? 'placeholder', { apiVersion: '2026-04-22.dahlia' as never }); return _stripe }
+const getStripe = () => createStripe()
 
 export async function POST(req: NextRequest) {
   const body = await req.text()
