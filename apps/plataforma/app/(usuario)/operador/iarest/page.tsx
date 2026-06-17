@@ -39,6 +39,24 @@ export default async function OperadorIaRestPage() {
       title: 'Sugerencias',
       desc: 'Ideas y peticiones del equipo de sala. Prioriza y anota.',
     },
+    {
+      href: '/operador/iarest/crecimiento',
+      icon: '📈',
+      title: 'Crecimiento',
+      desc: 'Instagram, blog y leads de landing. Borradores pendientes y alcance.',
+    },
+    {
+      href: '/operador/iarest/sistema',
+      icon: '🔬',
+      title: 'Sistema',
+      desc: 'QA runs, score de salud, training IA y estadísticas por fuente.',
+    },
+    {
+      href: '/operador/iarest/crm',
+      icon: '🎯',
+      title: 'CRM',
+      desc: 'Pipeline de leads: prospección, contactos y estado de cada oportunidad.',
+    },
   ]
 
   return (
