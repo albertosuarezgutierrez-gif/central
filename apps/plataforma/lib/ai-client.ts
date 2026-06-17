@@ -67,7 +67,7 @@ export async function aiExtractInvoice(input: {
     const txt = await nimChat(
       { apiKey: cfg.apiKey, textModel: NVIDIA_TEXT },
       messages,
-      { maxTokens: 512, temperature: 0.1, timeoutMs: 25_000 },
+      { maxTokens: 512, temperature: 0.1, signal: AbortSignal.timeout(25_000) },
     )
     const clean = txt.replace(/```json|```/g, '').trim()
     try { return JSON.parse(clean) } catch { return {} }
