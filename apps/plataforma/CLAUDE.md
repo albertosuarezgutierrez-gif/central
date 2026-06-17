@@ -54,6 +54,12 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Detalle apartamento (PR #255):** `lib/propiedades.ts` enriquecida (ocupación %, ADR, top portal) + nueva `getApartamentoDetalle(id)`. Ruta `/apartamentos/[id]` con 8 KPIs, gap detector, break-even, mix portales, histórico 12 meses, gastos por categoría (incl. SEGURO) + gastos compartidos + últimas 20 reservas.
 - [x] **`/admin` → redirect `/operador/clientes`** (PR #332, merged).
 - [x] **Panel ia-rest/super (Fase 5 COMPLETA — PR #333–#336):** `/operador/iarest/cobros` · `/operador/iarest/soporte` · `/operador/iarest/sugerencias` · `/operador/iarest/suscripciones` · `/operador/iarest/restaurantes` · `/operador/iarest/crecimiento` · `/operador/iarest/sistema` · `/operador/iarest/crm`. `iarest.es/super` absorbido al 100% en modo read-only. Escrituras siguen en el panel legacy.
+- [x] **Módulo `/finanzas` (PR #341):** Hub financiero consolidado. Correduría (BBVA, persona física) + 4 pisos turísticos (propios: amortización 3%; subarrendados: alquiler deducible) + gastos personales BBVA (Alberto solo) / Kutxa (familiar compartida). Base imponible IRPF 2025 con tramos, declaración conjunta, reducción €3.400. Export CSV gestoría, Modelo 179 tracker. Filtros año/trimestre. Sidebar: "💶 Finanzas" 2º ítem Mi negocio.
+- [ ] **Fase 1 sivra restante:** `/sivra/income` · `/sivra/expenses` · `/sivra/gastos-fijos` · `/sivra/fiscal` (fast wins sin riesgo, lectura pura).
+- [ ] **Fase 2:** mensajes huéspedes (Smoobu), OCR facturas (NVIDIA NIM).
+- [ ] **Fase 3:** pricing + mercado (⚠️ A/B test Busto Reform activo).
+- [ ] **Fase 4:** admin limpiadoras (⚠️ auditoría RLS previa, tablas compartidas con ialimp).
+- [ ] **Fase 6:** rrhh admin en `/operador/rrhh/`.
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.

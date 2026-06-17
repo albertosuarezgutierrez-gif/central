@@ -16,6 +16,16 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💶 MÓDULO /finanzas MERGEADO — 17/06/2026** (PR #341 merged en main, 5/5 Vercel ✅)
+  - Hub financiero consolidado para Alberto: correduría seguros, 4 pisos turísticos, gastos personales BBVA/Kutxa, fiscal IRPF.
+  - Archivos nuevos: `lib/finanzas.ts` · `app/api/finanzas/route.ts` · `app/api/finanzas/export/route.ts` · `app/(usuario)/finanzas/page.tsx` · `app/(usuario)/finanzas/FinanzasClient.tsx`.
+  - `UserSidebar.tsx`: "💶 Finanzas" segundo ítem en Mi negocio, "🤖 Agente IA" renombrado (era "Agente precios"), Mercado 📊→🗺️, sección "Mis pisos"→"Pisos · detalle".
+  - Lógica fiscal: `calcularTramos()` (tramos IRPF 2025 declaración conjunta, reducción €3.400). Correduría = cobrado neto / 0.85 (bruto); retenciones = cobrado × 0.15/0.85; no modelo 130 ni 303.
+  - Pisos propios (House Sevillana + Duplex Center): placeholder amortización 3%. Pisos subarrendados (Luxury Busto + Busto Reform): alquiler pagado = deducible 100%.
+  - Export CSV (`/api/finanzas/export?year=YYYY`) para gestoría: filtro destino seguros+turistico_pisos+turistico_duplex.
+  - Bloque Modelo 179: tracker de obligación informativa trimestral para los 4 pisos turísticos.
+  - Filtros temporales: año + Q1/Q2/Q3/Q4.
+
 - **🧹 EDGE FUNCTIONS sin Anthropic — 17/06/2026** (PR pendiente) — **ya NO queda Anthropic en ia-rest.**
   - `supabase/functions/qr-assistant`: eliminado el fallback Anthropic (ya usaba NIM como principal).
   - `supabase/functions/eventos-entorno`: web_search de Anthropic → **Gemini `gemini-2.0-flash` + `google_search`**
