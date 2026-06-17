@@ -3,7 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 
 function getStripeKey(): string {
   const mode = process.env.STRIPE_MODE ?? 'test'
@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   const { proveedor_id, accion, orden_id, return_url } = await req.json()
   if (!proveedor_id || !accion) return NextResponse.json({ error: 'proveedor_id y accion requeridos' }, { status: 400 })
 
-  const stripe = new Stripe(getStripeKey(), { apiVersion: '2023-10-16' as never })
+  const stripe = createStripe(getStripeKey())
 
   // Cargar proveedor
   const { data: prov } = await supabase

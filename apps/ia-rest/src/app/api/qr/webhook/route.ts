@@ -1,7 +1,8 @@
 // POST /api/qr/webhook — Stripe webhook: checkout.session.completed
 // v2: registra cada pago en resumen_cobros_mensual (panel financiero Alberto)
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
+import type { Stripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 import { notifyError } from '@/lib/notify'
 
@@ -9,7 +10,7 @@ export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 const COMISION_RATE = 0.005 // 0,5% ia.rest cobro
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
+const getStripe = () => createStripe()
 
 export async function POST(req: NextRequest) {
   const body = await req.text()

@@ -12,6 +12,7 @@
 ├── packages/          ← módulos compartidos, portables y enchufables
 │   ├── core-ai        ← IA (proveedores, geminiSearch, …)
 │   ├── core-fiscal    ← fiscalidad (VeriFactu, ES, …)
+│   ├── core-payments  ← cliente Stripe compartido (factory única, API version canónica 2026-04-22.dahlia)
 │   ├── core-push      ← Web Push (envoltura pura sobre web-push; dep npm propia)
 │   ├── core-storage   ← signed URLs de Supabase Storage (puro, vía REST)
 │   ├── core-email     ← transporter de nodemailer (multi-proveedor; dep npm propia)
