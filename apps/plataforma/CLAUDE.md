@@ -53,8 +53,8 @@ Tablas propias: `cuentas`, `sociedades`, `negocios` (migración `2026-06-09_cuen
 - [x] **Strip "Hoy" en dashboard.**
 - [x] **Detalle apartamento (PR #255):** `lib/propiedades.ts` enriquecida (ocupación %, ADR, top portal) + nueva `getApartamentoDetalle(id)`. Ruta `/apartamentos/[id]` con 8 KPIs, gap detector, break-even, mix portales, histórico 12 meses, gastos por categoría (incl. SEGURO) + gastos compartidos + últimas 20 reservas.
 - [x] **`/admin` → redirect `/operador/clientes`** (PR #332, merged).
-- [x] **Panel ia-rest/super (Fase 5 parcial):** `/operador/iarest/cobros` · `/operador/iarest/soporte` · `/operador/iarest/sugerencias` + 3 endpoints `/api/admin/iarest/*` + 3 endpoints ia-rest `/api/admin/` (Bearer OPERADOR_SHARED_SECRET).
-- [ ] **Fase 5 restante:** CRM/leads, Stripe suscripciones, Instagram/Blog, sistema/health, autocuras (iterativo).
+- [x] **Panel ia-rest/super (Fase 5 parcial):** `/operador/iarest/cobros` · `/operador/iarest/soporte` · `/operador/iarest/sugerencias` · `/operador/iarest/suscripciones` (PR #333+#334). 4 endpoints `/api/admin/iarest/*` + 4 endpoints ia-rest `/api/admin/` (Bearer OPERADOR_SHARED_SECRET). Suscripciones: MRR, KPIs Stripe, tabla cuentas — read-only.
+- [ ] **Fase 5 restante:** CRM/leads (~20 endpoints), Clientes/Restaurantes (~11), Instagram/Blog (~15), sistema/health (~12), autocuras (iterativo).
 
 ## Registrar una cuenta
 Desde la propia app: **`/register`** (nombre + email + password ≥8). Hace auto-login.
