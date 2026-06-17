@@ -9,6 +9,19 @@
 
 **⚠️ Riesgo (regla de la matriz):** ia.rest está EN PRODUCCIÓN (`iarest.es`). Las migraciones van a la Supabase compartida → **aplicar por rama de Supabase + revisión antes de merge**. Cada tabla con RLS por `local_id`/tenant como el resto de ia-rest. NO tocar tablas vivas (comandas, facturas); estas son nuevas.
 
+**🧭 Decisión (Alberto, 17/06/2026): construir, NO conectar.** Carmen ya tiene un sistema propio
+(`plataformacateringjoaquinjaen.com`, módulo `traza_parte_elaboracion`) que genera el "Parte de
+elaboración" con trazabilidad completa. NO haremos un conector vivo a esa plataforma PHP (frágil,
+dependencia externa). Lo **construimos nativo en ia-rest** y usamos su parte real como **molde del
+modelo** y **semilla de datos** (volcado puntual, una sola vez). Ya existe la base en ia-rest
+(`produccion_tareas`, `produccion_tiempos_estandar`, rutas `/api/produccion/*`, UI `cocinero`/`productividad`).
+
+**📄 Modelo tomado del parte real de Carmen (20/6/2026):** elaboración con ficha de
+`Ingredientes | Cantidad | Nº Lote | Proveedor | Desinfección | Descongelación`; sub-elaboraciones en
+MAYÚSCULAS = **dependencias** (`depende_de`: SALSA…, FONDO…, …CORTADA); puntos de control
+(tratamiento térmico >70°/2min, congelación 60→10ºC <2h, ≤-18ºC); destino por **ubicación/evento** con
+**PAX** y **FechaEvento**; muestras testigo; firma responsable; hora/temperatura de entrada y salida.
+
 ---
 
 ## File / DB Structure
