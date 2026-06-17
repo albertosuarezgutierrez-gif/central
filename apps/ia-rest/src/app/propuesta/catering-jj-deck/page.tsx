@@ -373,15 +373,27 @@ const SLIDES: Slide[] = [
   {
     kicker: 'No es una promesa',
     titulo: 'Ya funciona hoy',
+    sub: 'Casi todo lo que necesitas ya está construido y en producción. Lo nuevo es conectarlo a tu cocina.',
     color: C.green,
     render: () => (
-      <div style={{ width:'100%', maxWidth:900 }}>
-        <Bullet icon="📊" color={C.green} head="Financiero consolidado real"
-          body="La plataforma ya une el financiero de varios negocios reales de sectores distintos en un solo cuadro de mando — funcionando hoy, no en maqueta." />
-        <Bullet icon="🧾" color={C.red} head="Facturación y VeriFactu"
-          body="POS, comanda por QR y facturación legal ya en producción en iarest.es." />
-        <Bullet icon="🏛️" color={C.teal} head="Agente de concursos públicos"
-          body="Módulo terminado que rastrea licitaciones — cross-sell directo para la obra del cuñado." />
+      <div style={{ width:'100%', maxWidth:960 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:16, marginBottom:22 }}>
+          <Card icon="🧾" color={C.red} titulo="Comanda, KDS y VeriFactu"
+            body="POS, comanda por QR, pantalla de cocina y facturación legal VeriFactu — en producción en iarest.es." />
+          <Card icon="📋" color={C.gold} titulo="Escandallos y coste por comensal"
+            body="Coste por comensal con factor de rendimiento y margen mínimo, ya calculado por evento." />
+          <Card icon="💬" color={C.teal} titulo="Mensajería interna"
+            body="Chat privado y de grupo por turno, con audio y auditoría. El sustituto del WhatsApp ya existe." />
+          <Card icon="🛒" color={C.amber} titulo="Proveedores: ASN + OCR"
+            body="Pedido, albarán por foto y cotejo a 3 bandas (pedido ↔ albarán ↔ stock). Apartado ya cerrado." />
+          <Card icon="📦" color={C.green} titulo="Almacén valorado"
+            body="Stock por ledger, kits, FEFO, alertas de mínimo y caducidad e inventario físico cíclico." />
+          <Card icon="🎯" color={C.red} titulo="Eventos y comisiones"
+            body="Pipeline con presupuesto, APPCC de alérgenos, comisiones y cierre con rentabilidad por evento." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, textAlign:'center', lineHeight:1.5 }}>
+          Lo que estamos terminando para ti: el reparto automático del trabajo a cocina. Su lógica ya está escrita y probada.
+        </p>
       </div>
     ),
   },
