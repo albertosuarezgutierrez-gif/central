@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 EDGE FUNCTIONS sin Anthropic — 17/06/2026** (PR pendiente) — **ya NO queda Anthropic en ia-rest.**
+  - `supabase/functions/qr-assistant`: eliminado el fallback Anthropic (ya usaba NIM como principal).
+  - `supabase/functions/eventos-entorno`: web_search de Anthropic → **Gemini `gemini-2.0-flash` + `google_search`**
+    (mismo prompt/JSON). `fuente` pasa de `claude-websearch` → `gemini-websearch` (re-corre 1 vez por local, dedup ok).
+  - **DESPLIEGUE MANUAL (Alberto):** estas son edge functions de **Supabase** (no Vercel), así que no se
+    despliegan con el push. Hay que `supabase functions deploy qr-assistant eventos-entorno` y poner el
+    **secret `GEMINI_API_KEY`** en el proyecto Supabase de ia-rest (`efncqyvhniaxsirhdxaa`) para eventos-entorno.
+
 - **🧹 QUITAR ANTHROPIC de ia-rest (#4) — 17/06/2026** (PR pendiente)
   - Eliminada la dependencia **`@anthropic-ai/sdk`** del `package.json` de ia-rest + sus 3 imports:
     `brain.ts` (`callAnthropic`, fallback de pago del POS) y `ai-client.ts` (`anthropicText`/`anthropicVision`).

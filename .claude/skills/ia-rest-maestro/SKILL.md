@@ -1628,8 +1628,8 @@ Para impresoras Star con WiFi integrado. **No necesita bridge-local.js**.
 
 > Aclaración clave: **los agentes de ia.rest NO son agentes de Claude Code.**
 > Son código de producción que corre solo en Vercel/Supabase usando NIM/Gemini
-> (sin fallback Anthropic; salvo 2 edge functions Deno —qr-assistant, eventos-entorno—
-> que aún llaman a api.anthropic.com por fetch, pendientes de migrar).
+> (**sin Anthropic en ningún sitio** desde 17/06/2026: las 2 edge functions Deno
+> —qr-assistant→NIM, eventos-entorno→Gemini google_search— ya migradas).
 > Claude Code solo los **edita y despliega**; no los ejecuta
 > ni ellos lo llaman a él. Relación: Claude Code construye → Vercel ejecuta.
 
