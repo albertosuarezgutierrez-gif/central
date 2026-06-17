@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T06:24:58Z",
+  "generadoEn": "2026-06-17T06:26:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -952,15 +952,15 @@
     "crm-leads": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "presente": true,
         "evidencias": 6
       },
       "plataforma": {
-        "presente": false,
-        "evidencias": 0
+        "presente": true,
+        "evidencias": 3
       },
       "rrhh": {
         "presente": false,
@@ -1266,8 +1266,11 @@
   "apisPorVertical": {
     "ia-rest": [
       "/api/admin/cobros",
+      "/api/admin/crecimiento",
+      "/api/admin/crm",
       "/api/admin/restaurantes",
       "/api/admin/restaurantes/[id]",
+      "/api/admin/sistema",
       "/api/admin/soporte",
       "/api/admin/sugerencias",
       "/api/admin/suscripciones",
@@ -1932,8 +1935,11 @@
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
       "/api/admin/iarest/cobros",
+      "/api/admin/iarest/crecimiento",
+      "/api/admin/iarest/crm",
       "/api/admin/iarest/restaurantes",
       "/api/admin/iarest/restaurantes/[id]",
+      "/api/admin/iarest/sistema",
       "/api/admin/iarest/soporte",
       "/api/admin/iarest/sugerencias",
       "/api/admin/iarest/suscripciones",
@@ -2702,7 +2708,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 862,
+    "apis": 868,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
