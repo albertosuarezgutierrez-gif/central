@@ -74,6 +74,18 @@
     {
       "path": "/api/sivra/resumen-semanal",
       "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/sivra/expenses/agent/scan",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/sivra/expenses/agent/resumen-mensual",
+      "schedule": "0 9 1 * *"
+    },
+    {
+      "path": "/api/sivra/eventos/sync",
+      "schedule": "0 4 * * 1"
     }
   ]
 }
