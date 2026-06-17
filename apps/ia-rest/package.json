@@ -23,6 +23,7 @@
     "@central/module-horario": "workspace:*",
     "@central/module-asn": "workspace:*",
     "@central/module-organizador-trabajo": "workspace:*",
+    "@central/module-trazabilidad": "workspace:*",
     "@stripe/react-stripe-js": "^6.3.0",
     "@stripe/stripe-js": "^9.5.0",
     "@supabase/ssr": "^0.10.2",
