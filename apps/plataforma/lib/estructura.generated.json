@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T06:26:17Z",
+  "generadoEn": "2026-06-17T07:04:15Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2367,6 +2367,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧹 QUITAR ANTHROPIC de ia-rest (#4)",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "💸 PASARELA IA · coste real + fallback + healthcheck",
       "fecha": "17/06/2026"
     },
@@ -2420,10 +2424,6 @@
     },
     {
       "titulo": "🏠 PLATAFORMA · Sivra Fase 1b completa: income, expenses, gastos-fijos, fiscal, calendario Gantt, widget dashboard",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)",
       "fecha": "16/06/2026"
     }
   ],
