@@ -30,6 +30,7 @@ const NAV_OPERADOR = [
   { href: '/operador/clientes', icon: '🏢', label: 'Clientes' },
   { href: '/operador/personas', icon: '👤', label: 'Personas' },
   { href: '/operador/iarest', icon: '🍽️', label: 'ia-rest' },
+  { href: '/operador/iarest/restaurantes', icon: '🏪', label: 'Restaurantes', sub: true },
   { href: '/operador/iarest/cobros', icon: '💶', label: 'Cobros', sub: true },
   { href: '/operador/iarest/suscripciones', icon: '💳', label: 'Suscripciones', sub: true },
   { href: '/operador/iarest/soporte', icon: '🎫', label: 'Soporte', sub: true },
