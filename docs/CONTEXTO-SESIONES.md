@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **💸 PASARELA IA · coste real + fallback + healthcheck — 17/06/2026** (PR pendiente)
+  - **Coste/tokens reales en `/operador/ia`**: `ai_usos` gana columnas `tokens`+`coste_eur` (migración
+    `2026-06-17_ai_usos_coste.sql`, **YA aplicada** en Supabase `wswbehlcuxqxyinousql`, aditiva/idempotente).
+    `ai-gateway.ts`: `estimarTokens` (~4 chars/token), `costeEur` (precio €/1k por proveedor, env
+    `AI_PRECIO_NIM_EUR_1K`=0 / `AI_PRECIO_GEMINI_EUR_1K`=0.0002). Los 4 endpoints registran tokens+€.
+    El panel muestra KPIs **Coste €** y **Tokens**, € por app, y tokens/€ por llamada.
+  - **Alerta de presupuesto**: `estadoPresupuesto()` + banner en `/operador/ia` al ≥80% (rojo al 100%).
+  - **Fallback de proveedor DENTRO de la pasarela**: `/api/ai/chat` hace **NIM → Gemini** si NIM falla
+    (con `GEMINI_API_KEY`) → las verticales podrán quedarse sin keys de proveedor propias.
+  - **Healthcheck**: `GET /api/ai/health` (sin secreto, no gasta) → `{ok, proveedores:{nim,gemini}, limite}`.
+  - **NO incluido (pendiente, PR aparte):** quitar `@anthropic-ai/sdk` de ia-rest — lo tocan 11 ficheros
+    (qa-runner, brain, transcribe, health, edge functions…), merece su propio PR testeado.
+
 - **✅ PR #334 MERGED — 17/06/2026** — Fase 5 Suscripciones Stripe (read-only) en `/operador/iarest/suscripciones`. Rebase sobre main (conflicto en generated files: commit intermedio saltado). 4/4 proyectos Vercel ✅ Ready. Ver entrada de sesión 17/06 para detalle.
 
 - **✅ PR #333 MERGED — 17/06/2026** — Panel ia-rest/super en plataforma (`/operador/iarest/cobros|soporte|sugerencias`). Rebase completado contra main (conflictos en UserSidebar.tsx y generated files resueltos). 5/5 proyectos Vercel ✅ Ready antes del merge. Ver entrada de sesión 16/06 para detalle completo.

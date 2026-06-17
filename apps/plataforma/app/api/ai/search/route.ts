@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { geminiSearch } from '@central/core-ai'
-import { verificarSecreto, registrarUso, dentroDePresupuesto } from '@/lib/ai-gateway'
+import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, costeEur } from '@/lib/ai-gateway'
 
 export const maxDuration = 60
 
@@ -27,7 +27,8 @@ export async function POST(req: Request) {
   const t0 = Date.now()
   try {
     const text = await geminiSearch({ apiKey: key }, system, user, { maxTokens: Number(body?.maxTokens) || 1200, timeoutMs: 40_000 })
-    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-2.0-flash', ok: true, ms: Date.now() - t0 })
+    const tokens = estimarTokens(system, user, text)
+    await registrarUso({ app, endpoint: 'search', proveedor: 'gemini', modelo: 'gemini-2.0-flash', ok: true, ms: Date.now() - t0, tokens, costeEur: costeEur('gemini', tokens) })
     return NextResponse.json({ text })
   } catch (e) {
     const msg = e instanceof Error ? `${e.name}: ${e.message}`.slice(0, 200) : 'error'

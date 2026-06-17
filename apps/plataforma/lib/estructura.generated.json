@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T06:13:52Z",
+  "generadoEn": "2026-06-17T06:24:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1943,6 +1943,7 @@
       "/api/admin/propiedades",
       "/api/agente/chat",
       "/api/ai/chat",
+      "/api/ai/health",
       "/api/ai/search",
       "/api/ai/tools",
       "/api/ai/vision",
@@ -2360,6 +2361,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💸 PASARELA IA · coste real + fallback + healthcheck",
+      "fecha": "17/06/2026"
+    },
+    {
       "titulo": "✅ PR #334 MERGED",
       "fecha": "17/06/2026"
     },
@@ -2413,10 +2418,6 @@
     },
     {
       "titulo": "📊 SIVRA · Backfill de ingresos Smoobu completado (sep-2025→may-2026)",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "📖 MANUAL de iarrhh para Pilar (Mariscos González) + roadmap RR.HH. + CI verde",
       "fecha": "16/06/2026"
     }
   ],
@@ -2701,7 +2702,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 861,
+    "apis": 862,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
