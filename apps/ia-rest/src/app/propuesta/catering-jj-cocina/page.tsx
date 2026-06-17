@@ -103,9 +103,9 @@ const SLIDES: Slide[] = [
         <h1 style={{ fontFamily:SE, fontWeight:600, fontSize:'clamp(30px,7vw,60px)', lineHeight:1.08, color:C.paper, margin:'0 0 26px' }}>
           Que la cocina se <span style={{ color:C.gold }}>organice sola</span>.<br/>Sin depender de ti.
         </h1>
-        <p style={{ fontFamily:SN, fontSize:'clamp(16px,3.6vw,21px)', color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:700 }}>
-          Conectamos lo que ya tienes montado y dejamos que los agentes repartan el trabajo,
-          midan el tiempo y te saquen del móvil.
+        <p style={{ fontFamily:SN, fontSize:'clamp(16px,3.6vw,21px)', color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:720 }}>
+          El proceso lo tienes clarísimo en la cabeza. Nosotros lo construimos y dejamos que los agentes
+          repartan el trabajo, midan el tiempo y te saquen del móvil.
         </p>
         <div style={{ marginTop:40, fontFamily:SN, fontSize:15, color:C.ink4 }}>ia.rest · para [ella]</div>
       </div>
@@ -260,7 +260,7 @@ const SLIDES: Slide[] = [
     render: () => (
       <div style={{ width:'100%', maxWidth:900 }}>
         <Bullet icon="🤝" color={C.teal} head="Lo diseñamos sobre tu forma de trabajar"
-          body="Partimos de lo que ya tienes en la cabeza y montado. Tú como socia técnica: nadie conoce tu proceso mejor que tú." />
+          body="Partimos de tu proceso, que conoces como nadie. No tienes que migrar ni montar nada: lo construimos nosotros, contigo como socia técnica." />
         <Bullet icon="🛠️" color={C.gold} head="Para la próxima, te lo traemos montado"
           body="No solo un esquema: una primera versión con tu flujo, para que la toques y la ajustemos juntos. Y seguimos sumando mejoras." />
         <Bullet icon="📅" color={C.green} head="Próxima cita: jueves 25, 12:00"
