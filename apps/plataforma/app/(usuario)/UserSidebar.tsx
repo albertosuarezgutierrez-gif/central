@@ -5,11 +5,12 @@ import { usePathname, useRouter } from 'next/navigation'
 
 const NAV_NEGOCIO = [
   { href: '/dashboard', icon: '🏠', label: 'Resumen' },
+  { href: '/finanzas', icon: '💶', label: 'Finanzas' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
   { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
-  { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
+  { href: '/agente', icon: '🤖', label: 'Agente IA' },
 ]
 
 const NAV_PISOS = [
@@ -19,7 +20,7 @@ const NAV_PISOS = [
   { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
   { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
   { href: '/sivra/mensajes', icon: '💬', label: 'Mensajes' },
-  { href: '/sivra/mercado', icon: '📊', label: 'Mercado' },
+  { href: '/sivra/mercado', icon: '🗺️', label: 'Mercado' },
   { href: '/sivra/pricing', icon: '🔬', label: 'Pricing Lab' },
   { href: '/sivra/pricing-auto', icon: '🤖', label: 'Pricing auto' },
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
@@ -81,7 +82,7 @@ export default function UserSidebar({ email, nombre, isOperator }: { email: stri
           )
         })}
 
-        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Mis pisos</div>
+        <div style={{ fontSize: '10px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', padding: '16px 12px 6px', textTransform: 'uppercase' }}>Pisos · detalle</div>
         {NAV_PISOS.map(({ href, icon, label }) => {
           const active = path.startsWith(href)
           return (
