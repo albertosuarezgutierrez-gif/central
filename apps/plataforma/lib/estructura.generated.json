@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-16T20:03:00Z",
+  "generadoEn": "2026-06-17T04:54:26Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1265,6 +1265,9 @@
   },
   "apisPorVertical": {
     "ia-rest": [
+      "/api/admin/cobros",
+      "/api/admin/soporte",
+      "/api/admin/sugerencias",
       "/api/almacen-central/grupo",
       "/api/almacen-central/login",
       "/api/almacen-central/restaurante/[id]",
@@ -1925,6 +1928,9 @@
       "/api/admin/descuadres-iarest",
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
+      "/api/admin/iarest/cobros",
+      "/api/admin/iarest/soporte",
+      "/api/admin/iarest/sugerencias",
       "/api/admin/login",
       "/api/admin/logout",
       "/api/admin/personas",
@@ -2348,6 +2354,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo",
       "fecha": "16/06/2026"
     },
@@ -2401,10 +2411,6 @@
     },
     {
       "titulo": "🧩 RR.HH. COMO CAPACIDAD COMPARTIDA — Fase 0: `@central/module-rrhh`",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🤖 SIVRA · Agente de pricing — 1er ciclo con datos reales + motor por temporada (Paso 6/B2)",
       "fecha": "16/06/2026"
     }
   ],
@@ -2689,7 +2695,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 849,
+    "apis": 855,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
