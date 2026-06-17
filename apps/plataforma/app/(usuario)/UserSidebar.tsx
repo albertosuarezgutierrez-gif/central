@@ -25,6 +25,7 @@ const NAV_PISOS = [
   { href: '/sivra/pricing-auto', icon: '🤖', label: 'Pricing auto' },
   { href: '/sivra/inversion', icon: '🏡', label: 'Inversión' },
   { href: '/sivra/seo', icon: '🔍', label: 'SEO' },
+  { href: '/sivra/limpiadoras', icon: '🧹', label: 'Admin limpiezas' },
 ]
 
 const NAV_OPERADOR = [
