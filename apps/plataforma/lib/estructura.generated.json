@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T06:03:25Z",
+  "generadoEn": "2026-06-17T06:13:52Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1266,6 +1266,8 @@
   "apisPorVertical": {
     "ia-rest": [
       "/api/admin/cobros",
+      "/api/admin/restaurantes",
+      "/api/admin/restaurantes/[id]",
       "/api/admin/soporte",
       "/api/admin/sugerencias",
       "/api/admin/suscripciones",
@@ -1930,6 +1932,8 @@
       "/api/admin/estructura/chat",
       "/api/admin/estructura/clientes",
       "/api/admin/iarest/cobros",
+      "/api/admin/iarest/restaurantes",
+      "/api/admin/iarest/restaurantes/[id]",
       "/api/admin/iarest/soporte",
       "/api/admin/iarest/sugerencias",
       "/api/admin/iarest/suscripciones",
@@ -2697,7 +2701,7 @@
     "packages": 22,
     "capacidades": 23,
     "skills": 15,
-    "apis": 857,
+    "apis": 861,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
