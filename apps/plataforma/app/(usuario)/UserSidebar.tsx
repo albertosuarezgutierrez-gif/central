@@ -40,6 +40,9 @@ const NAV_OPERADOR = [
   { href: '/operador/iarest/sistema', icon: '🔬', label: 'Sistema', sub: true },
   { href: '/operador/iarest/crm', icon: '🎯', label: 'CRM', sub: true },
   { href: '/operador/ia', icon: '🤖', label: 'IA · gasto' },
+  { href: '/operador/rrhh', icon: '👥', label: 'RR.HH.' },
+  { href: '/operador/rrhh/empleados', icon: '🧑‍💼', label: 'Empleados', sub: true },
+  { href: '/operador/rrhh/solicitudes', icon: '📋', label: 'Solicitudes', sub: true },
   { href: '/operador/estructura', icon: '🗺️', label: 'Estructura' },
 ]
 
