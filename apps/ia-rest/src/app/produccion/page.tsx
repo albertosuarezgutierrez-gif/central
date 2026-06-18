@@ -270,20 +270,24 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
   const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', conforme: true, observaciones: '' })
+  const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string }>({ cocina_rol: 'responsable', partidas: [], nombre: '' })
 
   const cargar = useCallback(async () => {
-    const [pr, rr, cr] = await Promise.all([
+    const [pr, rr, cr, yr] = await Promise.all([
       fetch('/api/cocina/parte', { headers: sh() }),
       fetch('/api/cocina/registros', { headers: sh() }),
       fetch('/api/cocina/recepciones', { headers: sh() }),
+      fetch('/api/cocina/yo', { headers: sh() }),
     ])
     const d = await pr.json().catch(() => ({ recetas: [], eventos: [] }))
     const reg = await rr.json().catch(() => ({ registros: [] }))
     const rec = await cr.json().catch(() => ({ recepciones: [] }))
+    const me = await yr.json().catch(() => ({ cocina_rol: 'responsable', partidas: [], nombre: '' }))
     setRecetas(d.recetas ?? [])
     setEventos(d.eventos ?? [])
     setRegistros(reg.registros ?? [])
     setRecepciones(rec.recepciones ?? [])
+    setYo({ cocina_rol: me.cocina_rol ?? 'responsable', partidas: me.partidas ?? [], nombre: me.nombre ?? '' })
   }, [])
 
   const accion = useCallback(async (receta_id: string, payload: Record<string, unknown>) => {
@@ -342,9 +346,23 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return asignarTrabajo(tareas, COCINEROS)
   }, [parte, eventos, minPorPax])
 
+  const esResponsable = yo.cocina_rol === 'responsable'
+  const esCocinero    = yo.cocina_rol === 'cocinero'
+  const esPreparacion = yo.cocina_rol === 'preparacion'
+
   const porPartida = useMemo(() => {
     const orden = ['frio', 'caliente', 'corte', 'montaje']
-    return orden.map(p => ({ partida: p, elabs: parte.elaboraciones.filter(e => e.partida === p) })).filter(g => g.elabs.length > 0)
+    let grupos = orden.map(p => ({ partida: p, elabs: parte.elaboraciones.filter(e => e.partida === p) })).filter(g => g.elabs.length > 0)
+    // El cocinero solo ve su(s) partida(s); responsable y preparación ven todo.
+    if (esCocinero && yo.partidas.length > 0) grupos = grupos.filter(g => yo.partidas.includes(g.partida))
+    return grupos
+  }, [parte, esCocinero, yo.partidas])
+
+  // Bases a preparar (sub-elaboraciones 'depende de') — vista de preparación
+  const basesPreparacion = useMemo(() => {
+    const set = new Set<string>()
+    parte.elaboraciones.forEach(e => (e.depende_de ?? []).forEach(b => set.add(b)))
+    return Array.from(set)
   }, [parte])
 
   const muestras = muestrasACaducar(parte.elaboraciones, '2026-06-22T20:00:00Z', 2)
@@ -417,17 +435,48 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
             Parte del día · {eventos.length} eventos · {total} PAX · {parte.elaboraciones.length} elaboraciones
           </div>
           <div className="noprint" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            <button onClick={() => { setGestion(v => !v); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionAbierta ? '#fff' : C.verde, background: gestionAbierta ? C.verde : 'transparent', border: `1px solid ${C.verde}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
-              {gestionAbierta ? 'Cerrar' : '✎ Eventos'}
-            </button>
-            <button onClick={() => { setGestionRecetas(v => !v); setGestion(false); setGestionRecep(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecetas ? '#fff' : C.oro, background: gestionRecetas ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
-              {gestionRecetas ? 'Cerrar' : '✎ Recetas'}
-            </button>
-            <button onClick={() => { setGestionRecep(v => !v); setGestion(false); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecep ? '#fff' : C.ambar, background: gestionRecep ? C.ambar : 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
-              {gestionRecep ? 'Cerrar' : '📦 Recepción'}
-            </button>
+            {esResponsable && (
+              <button onClick={() => { setGestion(v => !v); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionAbierta ? '#fff' : C.verde, background: gestionAbierta ? C.verde : 'transparent', border: `1px solid ${C.verde}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+                {gestionAbierta ? 'Cerrar' : '✎ Eventos'}
+              </button>
+            )}
+            {esResponsable && (
+              <button onClick={() => { setGestionRecetas(v => !v); setGestion(false); setGestionRecep(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecetas ? '#fff' : C.oro, background: gestionRecetas ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+                {gestionRecetas ? 'Cerrar' : '✎ Recetas'}
+              </button>
+            )}
+            {(esResponsable || esPreparacion) && (
+              <button onClick={() => { setGestionRecep(v => !v); setGestion(false); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecep ? '#fff' : C.ambar, background: gestionRecep ? C.ambar : 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+                {gestionRecep ? 'Cerrar' : '📦 Recepción'}
+              </button>
+            )}
           </div>
         </div>
+
+        {/* Banner de rol (cocinero / preparación) */}
+        {!esResponsable && (
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, background: esPreparacion ? 'rgba(154,107,18,.08)' : 'rgba(2,71,59,.06)', border: `1px solid ${esPreparacion ? C.ambar : C.verde}`, borderRadius: 12, padding: '8px 14px', marginBottom: 16 }}>
+            <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: esPreparacion ? C.ambar : C.verde }}>{esPreparacion ? '🔪 Preparación' : '👨‍🍳 Cocinero'}{yo.nombre ? ` · ${yo.nombre}` : ''}</span>
+            {esCocinero && (
+              <span style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3 }}>
+                {yo.partidas.length > 0 ? `Tu partida: ${yo.partidas.map(p => PARTIDA_NOMBRE[p] ?? p).join(', ')}` : 'Sin partida asignada — habla con el responsable'}
+              </span>
+            )}
+            {esPreparacion && <span style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3 }}>Recepción de mercancía + bases (mise en place)</span>}
+          </div>
+        )}
+
+        {/* Bases a preparar (mise en place) — vista de preparación */}
+        {esPreparacion && basesPreparacion.length > 0 && (
+          <div style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.tinta, marginBottom: 10 }}>Bases a preparar</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {basesPreparacion.map(b => (
+                <span key={b} style={{ fontFamily: SN, fontSize: 12.5, color: C.tinta, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 8, padding: '5px 10px' }}>{b}</span>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Recepción de mercancía (albaranes) */}
         {gestionRecep && (
@@ -513,15 +562,17 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           </div>
         )}
 
-        {/* Reparto del motor */}
-        <div className="noprint" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-          {COCINEROS.map(c => (
-            <div key={c.id} style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 10, padding: '7px 12px' }}>
-              <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 13.5, color: C.tinta }}>{c.nombre}</div>
-              <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{plan.minutos_por_trabajador[c.id] ?? 0} min</div>
-            </div>
-          ))}
-        </div>
+        {/* Reparto del motor (solo responsable) */}
+        {esResponsable && (
+          <div className="noprint" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+            {COCINEROS.map(c => (
+              <div key={c.id} style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 10, padding: '7px 12px' }}>
+                <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 13.5, color: C.tinta }}>{c.nombre}</div>
+                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{plan.minutos_por_trabajador[c.id] ?? 0} min</div>
+              </div>
+            ))}
+          </div>
+        )}
 
         {muestras.length > 0 && (
           <div className="noprint" style={{ background: 'rgba(154,107,18,.08)', border: `1px solid ${C.ambar}`, borderRadius: 12, padding: '10px 14px', marginBottom: 16, fontFamily: SN, fontSize: 13.5, color: C.ambar }}>

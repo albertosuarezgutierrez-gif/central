@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T08:14:22Z",
+  "generadoEn": "2026-06-18T08:26:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 19
+        "evidencias": 20
       },
       "ialimp": {
         "presente": false,
@@ -1391,6 +1391,7 @@
       "/api/cocina/recetas/[id]",
       "/api/cocina/registros",
       "/api/cocina/validar-pin",
+      "/api/cocina/yo",
       "/api/comanda",
       "/api/comanda/[id]/audit",
       "/api/comanda/[id]/camarero",
@@ -2797,7 +2798,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 901,
+    "apis": 902,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
