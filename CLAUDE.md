@@ -28,6 +28,20 @@ El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo 
 Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba). El hook `Stop`
 (`.claude/hooks/persist-memoria.sh`) lo commitea y empuja.
 
+Salvaguardas para no perder información:
+- **Guardián de cierre** (`persist-memoria.sh`): si la sesión hizo commits que tocan algo
+  distinto de la memoria pero NO anotó `CONTEXTO-SESIONES.md`, el hook `Stop` bloquea UNA
+  vez y pide anotarlo antes de cerrar. (Se apoya en el SHA base que graba
+  `.claude/hooks/memoria-record-base.sh` al arrancar.)
+- **Hook `PreCompact`** (`.claude/hooks/memoria-precompact.sh`): en sesiones largas,
+  recuerda volcar el estado clave a la memoria ANTES de compactar (el resumen pierde detalle).
+- **Auditoría programada** (`/auditoria-diaria`): red de seguridad nocturna que reconcilia
+  memoria/skills/docs contra el código real y abre PR draft. Cadencias y setup del trigger
+  en `docs/RUTINAS-PROGRAMADAS.md`. Índice de skills en `docs/SKILLS.md`.
+- **Límite conocido:** una sesión de **solo charla** (decisión importante pero sin commit)
+  no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
+  decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
+
 ## Reglas de la matriz
 - Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
   proyecto Vercel con **Root Directory `apps/<app>`** + install `npm install --legacy-peer-deps`.

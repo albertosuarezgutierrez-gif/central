@@ -4,10 +4,21 @@ description: Auditoría diaria del monorepo central — reconcilia memoria + ski
 
 # Auditoría diaria — `central`
 
-> Pensado para ejecutarse 1×/día desde un **trigger programado** de Claude Code en web,
-> o a mano con `/auditoria-diaria`. Su trabajo NO es "releer conversaciones" (no
-> persisten: el contenedor es efímero), sino detectar y corregir el **drift** entre lo
-> que afirman la memoria/skills/docs y lo que de verdad hace el código y la infra.
+> Pensado para ejecutarse desde un **trigger programado** de Claude Code en web (lo corre
+> una sesión-nube autónoma, "cowork"), o a mano con `/auditoria-diaria`. Su trabajo NO es
+> "releer conversaciones" (no persisten: el contenedor es efímero), sino detectar y
+> corregir el **drift** entre lo que afirman la memoria/skills/docs y lo que de verdad
+> hace el código y la infra.
+>
+> **MCPs que necesita:** Supabase + Vercel + github (todo lectura, salvo abrir el PR).
+>
+> **Dos cadencias (ver `docs/RUTINAS-PROGRAMADAS.md`):**
+> - **Ligera (por defecto, diaria):** reconcilia memoria/skills/docs + checks baratos
+>   (lockfile, radiografía de estructura, drift skills↔código). SALTA typecheck de las 4
+>   apps y tests pesados. Rápida y de bajo ruido. Es la red de seguridad del guardián de
+>   cierre (`persist-memoria.sh`): caza lo que las sesiones no anotaron a mano.
+> - **Profunda (`/auditoria-diaria --profunda`, semanal):** corre `auditoria-central`
+>   ENTERA (typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP).
 
 ## Por qué existe
 El hook `Stop` (`persist-memoria.sh`) ya persiste `CONTEXTO-SESIONES.md` por sesión,
@@ -28,10 +39,15 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    últimas ~48h si no hay referencia). Si NO hay commits nuevos desde la última
    auditoría → **para aquí sin abrir PR** (no metas ruido).
 
-2. **Auditoría completa.** Invoca la skill **`auditoria-central`** y recórrela ENTERA
-   (integridad estructural, typecheck de las 4 apps, tests, seguridad multi-tenant,
-   deps, infra real por MCP, coherencia de docs). Distingue error real de ruido de
-   entorno; no infles conteos.
+2. **Auditoría según cadencia.**
+   - **Modo ligero (por defecto):** invoca **`auditoria-central`** pero recorre solo los
+     bloques baratos (integridad estructural: lockfile + radiografía + `transpilePackages`;
+     coherencia de docs; deps/código muerto rápidos). SALTA typecheck de las 4 apps y los
+     tests pesados — esos son de la pasada semanal.
+   - **Modo profundo (`--profunda` en el prompt):** recorre `auditoria-central` ENTERA
+     (integridad, typecheck de las 4 apps, tests, seguridad multi-tenant, deps, infra real
+     por MCP, coherencia de docs).
+   Distingue error real de ruido de entorno; no infles conteos.
 
 3. **Informe.** Crea/actualiza `docs/AUDITORIA-<YYYY-MM>.md` con hallazgos por
    severidad (🔴/🟡/🟢), cada uno con `ruta:línea` + acción, y el checklist de acciones
@@ -44,6 +60,9 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
      `ialimp-maestro`, `plataforma-maestro`) y los `apps/*/CLAUDE.md`: corrige cualquier
      afirmación que el código contradiga (rutas, envs, tablas, reglas, estado). Si una
      skill y el código discrepan, **manda el código**.
+   - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
+     `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
+     existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
 
 5. **Arreglos en el acto:** solo bugs de bajo riesgo (típicos de `auditoria-central`).
    Lo de gran radio NO se toca: déjalo como hallazgo + acción manual en el informe.

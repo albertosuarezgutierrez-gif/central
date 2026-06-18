@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA — 18/06/2026** (rama `claude/project-review-skill-p0jrkc`)
+  - **Guardián de cierre**: el hook `Stop` (`.claude/hooks/persist-memoria.sh`) ahora, si la
+    sesión hizo commits que tocan algo distinto de la memoria pero NO anotó este archivo,
+    **bloquea una vez** y pide anotarlo antes de cerrar. Usa el SHA base que graba el nuevo
+    hook `SessionStart` `memoria-record-base.sh`. Sesiones de solo lectura nunca se bloquean.
+  - **Hook `PreCompact`** (`.claude/hooks/memoria-precompact.sh`): recuerda volcar memoria
+    antes de compactar sesiones largas. Ambos hooks registrados en `.claude/settings.json`.
+  - **Auditoría programada**: `/auditoria-diaria` ahora tiene cadencia escalonada — **ligera**
+    (diaria, reconcilia memoria/skills/docs + checks baratos) y **profunda** (`--profunda`,
+    semanal, `auditoria-central` entera). Documentado en **`docs/RUTINAS-PROGRAMADAS.md`**.
+  - **Índice de skills**: nuevo **`docs/SKILLS.md`** (qué skills hay y cuándo usar cada una);
+    `/auditoria-diaria` lo mantiene al día contra `.claude/skills/` y `.claude/commands/`.
+  - **PENDIENTE DE ALBERTO (manual, UI):** crear en `claude.ai/code → Rutinas` los dos
+    triggers de auditoría (diaria `Ejecuta /auditoria-diaria` 04:00 CEST; semanal
+    `Ejecuta /auditoria-diaria --profunda` domingos). MCPs: Supabase + Vercel + github.
+  - **Límite conocido:** sesiones de solo charla (decisión sin commit) no las caza el
+    guardián → anótalas a mano.
+
 - **🔍 AUDITORÍA DIARIA — 18/06/2026** (`docs/AUDITORIA-2026-06-18.md`) — **estado SANO, sin bugs nuevos.**
   - Rango #356→#372. Verde: lockfile en sync, radiografía al día, guardián 21/21, `transpilePackages`
     vs deps coherente (los 2 módulos nuevos de cocina — `module-trazabilidad`, `module-organizador-trabajo`
