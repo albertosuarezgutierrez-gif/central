@@ -65,12 +65,20 @@ export default function CommandPalette({ isOperator }: { isOperator: boolean }) 
   if (!open) return null
 
   return (
-    <div
-      onClick={() => setOpen(false)}
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 16px' }}
-    >
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .palette-panel { width: calc(100% - 32px) !important; max-width: unset !important; max-height: 80vh !important; display: flex; flex-direction: column; }
+          .palette-list { flex: 1; overflow-y: auto; }
+        }
+      `}</style>
+      <div
+        onClick={() => setOpen(false)}
+        style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 16px' }}
+      >
       <div
         onClick={e => e.stopPropagation()}
+        className="palette-panel"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', overflow: 'hidden' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)', gap: '10px' }}>
@@ -86,7 +94,7 @@ export default function CommandPalette({ isOperator }: { isOperator: boolean }) 
           <span style={{ fontSize: '11px', color: 'var(--muted)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: '4px', padding: '2px 6px' }}>Esc</span>
         </div>
 
-        <div style={{ maxHeight: '320px', overflowY: 'auto' }}>
+        <div className="palette-list" style={{ maxHeight: '320px', overflowY: 'auto' }}>
           {filtered.length === 0 && (
             <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin resultados</div>
           )}
@@ -125,5 +133,6 @@ export default function CommandPalette({ isOperator }: { isOperator: boolean }) 
         </div>
       </div>
     </div>
+    </>
   )
 }

@@ -54,12 +54,19 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
 
   return (
     <div style={{ padding: '24px', maxWidth: 900 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .solic-filters { flex-direction: column !important; }
+          .solic-card { flex-direction: column !important; align-items: flex-start !important; }
+          .solic-card-meta { width: 100% !important; flex-direction: row !important; flex-wrap: wrap; gap: 6px; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>RR.HH. · Solicitudes</h1>
         <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>{visibles.length} / {solicitudes.length}</span>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div className="solic-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <input
           placeholder="Buscar por empleado o tipo…"
           value={q}
@@ -92,7 +99,7 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
           const rango = [fmt(s.fecha_inicio), fmt(s.fecha_fin)].filter(Boolean).join(' → ')
           return (
             <div key={s.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
+              <div className="solic-card" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flexWrap: 'wrap' }}>
                 <div style={{ flex: 1 }}>
                   <span style={{ fontWeight: 600, color: 'var(--text)' }}>{s.empleado_nombre}</span>
                   <span style={{ color: 'var(--muted)', fontSize: 13 }}> · {s.empresa_nombre}</span>
@@ -102,7 +109,7 @@ export default function SolicitudesRrhhClient({ solicitudes }: { solicitudes: So
                   </div>
                   {s.motivo && <div style={{ marginTop: 4, fontSize: 13, color: 'var(--muted)' }}>{s.motivo}</div>}
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <div className="solic-card-meta" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
                   {est && (
                     <span style={{ fontSize: 12, fontWeight: 600, padding: '3px 10px', borderRadius: 12, color: est.color, background: est.bg }}>
                       {est.label}

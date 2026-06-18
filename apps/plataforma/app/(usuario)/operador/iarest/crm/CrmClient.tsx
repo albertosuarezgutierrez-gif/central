@@ -110,6 +110,12 @@ export default function CrmClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .crm-filters { flex-wrap: wrap !important; }
+          .crm-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🎯 CRM · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -117,7 +123,7 @@ export default function CrmClient() {
       </div>
 
       {/* KPIs por estado */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+      <div className="crm-filters" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <button
           onClick={() => setFiltroEstado('todos')}
           style={{
@@ -167,7 +173,7 @@ export default function CrmClient() {
       </div>
 
       {/* Tabla */}
-      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <div className="crm-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>

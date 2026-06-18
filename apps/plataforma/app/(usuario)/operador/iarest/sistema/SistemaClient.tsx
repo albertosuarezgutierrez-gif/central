@@ -61,6 +61,12 @@ export default function SistemaClient() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .sistema-cards { grid-template-columns: 1fr 1fr !important; }
+          .sistema-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🔬 Sistema · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -73,7 +79,7 @@ export default function SistemaClient() {
           QA Runs (últimos 20)
         </div>
         {lastRun && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+          <div className="sistema-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: '10px', marginBottom: '16px' }}>
             {[
               { label: 'Score', val: lastRun.score !== null ? `${lastRun.score}%` : '—', color: scoreColor(lastRun.score) },
               { label: 'OK', val: String(lastRun.ok), color: '#16a34a' },
@@ -89,7 +95,7 @@ export default function SistemaClient() {
           </div>
         )}
 
-        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className="sistema-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
@@ -131,7 +137,7 @@ export default function SistemaClient() {
           <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '12px' }}>
             Training IA
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+          <div className="sistema-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '16px' }}>
             {[
               { label: 'Total muestras', val: String(training.global.total_samples ?? 0) },
               { label: 'Corregidos', val: String(training.global.corregidos ?? 0) },
@@ -146,7 +152,7 @@ export default function SistemaClient() {
           </div>
 
           {training.porFuente.length > 0 && (
-            <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+            <div className="sistema-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                 <thead>
                   <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
