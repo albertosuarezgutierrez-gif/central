@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T07:52:18Z",
+  "generadoEn": "2026-06-18T08:03:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2454,6 +2454,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
       "fecha": "18/06/2026"
     },
@@ -2507,10 +2511,6 @@
     },
     {
       "titulo": "🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
       "fecha": "16/06/2026"
     }
   ],
