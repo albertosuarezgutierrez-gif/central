@@ -288,6 +288,30 @@ El rol `comercial` solo ve /comercial. El jefe_sala puede ser transversal: resta
 
 ---
 
+## COCINA CENTRAL (catering / comida para llevar) — ≠ restaurante
+
+Una **cocina central de preparación** es un MODELO DISTINTO al restaurante: **sin mesas, comandas,
+voz ni KDS**. Su mundo es **evento → parte de elaboración → producción → trazabilidad APPCC → recepción**.
+Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
+
+- **Activación por local:** `iarest.restaurantes.modo` (`'restaurante'` por defecto | `'cocina_central'`).
+  El login lee el flag (`/api/auth` firma `cocina_central`) y enruta `cocina`+`cocina_central` → **`/produccion`**
+  (no `/kds`). `/cocina` sigue redirigiendo a `/kds` para restaurantes.
+- **Pantalla `/produccion`** (cliente, header fino, móvil-first, sin voz/mesas). Usa los módulos puros
+  `@central/module-trazabilidad` (generarParte, alérgenos, controles, muestras, evaluarSalida) y
+  `@central/module-organizador-trabajo` (asignarTrabajo).
+- **Tablas (schema `iarest`, aditivas, server=service_role):** `cocina_recetas` + `cocina_receta_ingredientes`
+  (escandallo por PAX), `cocina_eventos` + `cocina_evento_elaboraciones`, `cocina_registros` (operativa del
+  día: hecho/controles Tª/muestra/firma), `cocina_recepciones` (albaranes). Más `personal.partidas text[]`
+  y `personal.cocina_rol` (`responsable`|`cocinero`|`preparacion`).
+- **APIs** (auth `x-ia-session` + `local_id`): `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros`
+  `recepciones[/id]` `yo`.
+- **Roles internos de cocina** (`personal.cocina_rol`): **responsable** (Carmen) ve y gestiona todo;
+  **cocinero** ve solo su(s) `partidas`; **preparación** = recepción + bases. Frontera = "contacto con
+  mercancía cruda".
+
+---
+
 ## PATRONES CRÍTICOS (NO NEGOCIABLES)
 
 ### Auth en API routes
