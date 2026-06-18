@@ -27,6 +27,7 @@ const COCINEROS: Trabajador[] = [
 
 type Receta = FichaCatalogo
 type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; elaboraciones: string[] }
+type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string }>; muestra_testigo_at: string | null; firma: string | null }
 
 const sh = (): Record<string, string> => ({ 'x-ia-session': (typeof window !== 'undefined' && localStorage.getItem('ia_rest_session')) || '' })
 
@@ -34,15 +35,32 @@ function Chip({ children, bg, fg, br }: { children: React.ReactNode; bg: string;
   return <span style={{ fontFamily: SN, fontSize: 11.5, fontWeight: 600, color: fg, background: bg, border: br ? `1px solid ${br}` : 'none', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{children}</span>
 }
 
-function Ficha({ e, ubNombre }: { e: ElaboracionTraza; ubNombre: Record<string, string> }): ReactElement {
+function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion }: {
+  e: ElaboracionTraza
+  ubNombre: Record<string, string>
+  registro?: Registro
+  requiereMuestra: boolean
+  onAccion: (recetaId: string, payload: Record<string, unknown>) => void
+}): ReactElement {
   const alergenos = alergenosElaboracion(e)
   const controles = validarControles(e)
+  const ctrlReg = (tipo: string) => (registro?.controles ?? []).find(c => c.tipo === tipo)
+  const ctrlsOk = controles.every(c => !!ctrlReg(c.tipo))
+  const muestraOk = !requiereMuestra || !!registro?.muestra_testigo_at
+  const lista = !!registro?.hecho && ctrlsOk && muestraOk && !!registro?.firma
   return (
-    <div className="ficha" style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
+    <div className="ficha" style={{ background: '#fff', border: `1px solid ${lista ? '#3F7D44' : C.linea}`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-        <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 'clamp(14px,3.6vw,16px)', color: C.tinta }}>{e.nombre}</div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
+          <button className="noprint" onClick={() => onAccion(e.id, { action: 'hecho' })} title="Marcar hecho"
+            style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, cursor: 'pointer', border: `2px solid ${registro?.hecho ? '#3F7D44' : C.linea}`, background: registro?.hecho ? '#3F7D44' : '#fff', color: '#fff', fontSize: 13, lineHeight: 1 }}>
+            {registro?.hecho ? '✓' : ''}
+          </button>
+          <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 'clamp(14px,3.6vw,16px)', color: C.tinta }}>{e.nombre}</div>
+        </div>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
           {e.ubicaciones.map(u => <Chip key={u} bg={C.papel} fg={C.ink3} br={C.linea}>{ubNombre[u] ?? u}</Chip>)}
+          <Chip bg={lista ? 'rgba(63,125,68,.12)' : 'rgba(158,43,37,.07)'} fg={lista ? '#2f6b34' : C.rojo} br={lista ? '#3F7D44' : 'rgba(158,43,37,.3)'}>{lista ? '✓ Lista' : '⛔ Pendiente'}</Chip>
         </div>
       </div>
       {alergenos.length > 0 && (
@@ -66,12 +84,25 @@ function Ficha({ e, ubNombre }: { e: ElaboracionTraza; ubNombre: Record<string, 
         ))}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
-        {controles.map((r, i) => (
-          <span key={i} style={{ fontFamily: SN, fontSize: 11.5, color: C.tinta, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 8, padding: '3px 8px' }}>
-            {CTRL_ICONO[r.tipo]} {objetivoControl(r.tipo)} <strong style={{ color: C.ink3 }}>⬚</strong>
-          </span>
-        ))}
-        <span style={{ fontFamily: SN, fontSize: 11.5, color: C.ink3, padding: '3px 8px' }}>🧪 Muestra ⬚ · ✍️ Firma ⬚</span>
+        {controles.map((r, i) => {
+          const reg = ctrlReg(r.tipo)
+          return (
+            <button key={i} className="noprint" onClick={() => { const v = window.prompt(`${objetivoControl(r.tipo)}\nValor (°C):`, reg?.valor != null ? String(reg.valor) : ''); if (v !== null) onAccion(e.id, { action: 'control', tipo: r.tipo, valor: v }) }}
+              style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: reg ? '#2f6b34' : C.tinta, background: reg ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${reg ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>
+              {CTRL_ICONO[r.tipo]} {objetivoControl(r.tipo)} <strong>{reg ? `✓ ${reg.valor ?? ''}${reg.valor != null ? '°' : ''}` : '⬚'}</strong>
+            </button>
+          )
+        })}
+        {requiereMuestra && (
+          <button className="noprint" onClick={() => onAccion(e.id, { action: 'muestra' })}
+            style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: registro?.muestra_testigo_at ? '#2f6b34' : C.ink3, background: registro?.muestra_testigo_at ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${registro?.muestra_testigo_at ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>🧪 Muestra {registro?.muestra_testigo_at ? '✓' : '⬚'}</button>
+        )}
+        <button className="noprint" onClick={() => { const f = window.prompt('Firma del responsable:', registro?.firma ?? ''); if (f !== null) onAccion(e.id, { action: 'firma', firma: f }) }}
+          style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: registro?.firma ? '#2f6b34' : C.ink3, background: registro?.firma ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${registro?.firma ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>✍️ {registro?.firma ? registro.firma : 'Firmar ⬚'}</button>
+        {/* Versión impresa de los controles */}
+        <span className="solo-print" style={{ display: 'none', fontFamily: SN, fontSize: 11.5, color: C.ink3 }}>
+          {controles.map(r => { const reg = ctrlReg(r.tipo); return `${objetivoControl(r.tipo)}: ${reg ? (reg.valor ?? '✓') : '⬚'}` }).join(' · ')} · Firma: {registro?.firma ?? '⬚'}
+        </span>
       </div>
     </div>
   )
@@ -223,6 +254,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [ready, setReady]   = useState(false)
   const [recetas, setRecetas] = useState<Receta[]>([])
   const [eventos, setEventos] = useState<Evento[]>([])
+  const [registros, setRegistros] = useState<Registro[]>([])
   const [saving, setSaving] = useState(false)
   const [editor, setEditor] = useState<{ modo: 'nuevo' | 'editar'; evento?: Evento } | null>(null)
   const [gestionAbierta, setGestion] = useState(false)
@@ -230,10 +262,22 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionRecetas, setGestionRecetas] = useState(false)
 
   const cargar = useCallback(async () => {
-    const r = await fetch('/api/cocina/parte', { headers: sh() })
-    const d = await r.json().catch(() => ({ recetas: [], eventos: [] }))
+    const [pr, rr] = await Promise.all([
+      fetch('/api/cocina/parte', { headers: sh() }),
+      fetch('/api/cocina/registros', { headers: sh() }),
+    ])
+    const d = await pr.json().catch(() => ({ recetas: [], eventos: [] }))
+    const reg = await rr.json().catch(() => ({ registros: [] }))
     setRecetas(d.recetas ?? [])
     setEventos(d.eventos ?? [])
+    setRegistros(reg.registros ?? [])
+  }, [])
+
+  const accion = useCallback(async (receta_id: string, payload: Record<string, unknown>) => {
+    await fetch('/api/cocina/registros', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ receta_id, ...payload }) })
+    const rr = await fetch('/api/cocina/registros', { headers: sh() })
+    const reg = await rr.json().catch(() => ({ registros: [] }))
+    setRegistros(reg.registros ?? [])
   }, [])
 
   useEffect(() => {
@@ -248,6 +292,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
   const ubNombre = useMemo(() => Object.fromEntries(eventos.map(e => [e.id, e.nombre])), [eventos])
   const minPorPax = useMemo(() => Object.fromEntries(recetas.map(r => [r.id, r.min_por_pax ?? 0.4])), [recetas])
+  const registroPorReceta = useMemo(() => Object.fromEntries(registros.map(r => [r.receta_id, r])) as Record<string, Registro>, [registros])
+  const recetaMuestra = useMemo(() => Object.fromEntries(recetas.map(r => [r.id, r.requiere_muestra ?? false])) as Record<string, boolean>, [recetas])
 
   const parte = useMemo(() => {
     const ev: EventoInput[] = eventos.map(e => ({ id: e.id, nombre: e.nombre, pax: e.pax, fecha_evento: e.fecha_evento ?? '', elaboraciones: e.elaboraciones }))
@@ -317,7 +363,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
   return (
     <div style={{ minHeight: '100dvh', background: C.papel, color: C.tinta, fontFamily: SN }}>
-      <style>{`@media print { .noprint { display:none !important } body { background:#fff !important } }`}</style>
+      <style>{`@media print { .noprint { display:none !important } .solo-print { display:inline !important } body { background:#fff !important } }`}</style>
 
       {/* Header fino (sin voz, sin mesas) */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: `1px solid ${C.linea}`, padding: '10px clamp(14px,4vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -421,7 +467,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 15, letterSpacing: .5 }}>{(PARTIDA_NOMBRE[g.partida] ?? g.partida).toUpperCase()}</span>
               <span style={{ marginLeft: 'auto', fontFamily: SN, fontSize: 13, opacity: .9 }}>{g.elabs.length}</span>
             </div>
-            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} />)}
+            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} registro={registroPorReceta[e.id]} requiereMuestra={recetaMuestra[e.id] ?? false} onAccion={accion} />)}
           </div>
         ))}
 
