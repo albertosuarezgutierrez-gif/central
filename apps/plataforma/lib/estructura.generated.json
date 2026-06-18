@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T09:06:12Z",
+  "generadoEn": "2026-06-18T09:47:40Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2458,6 +2458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🔍 AUDITORÍA DIARIA",
       "fecha": "18/06/2026"
     },
@@ -2512,10 +2516,6 @@
     {
       "titulo": "✅ PR #333 MERGED",
       "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*",
-      "fecha": "16/06/2026"
     }
   ],
   "saludRepo": {
