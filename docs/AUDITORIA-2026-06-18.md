@@ -57,11 +57,10 @@ no se toca** (mismo criterio que `xlsx`).
 Prototype Pollution + ReDoS en `apps/ialimp>xlsx`. ialimp **solo ESCRIBE** xlsx (export), nunca parsea
 → no explotable. Sin parche npm. Ver `AUDITORIA-2026-06.md`. Si algún día se añade parseo → migrar a `exceljs`.
 
-### 4. `rrhh` sin proyecto Vercel en el equipo `pisos-turisticos-projects`
-`CLAUDE.md` cita la vertical rrhh en `central-rrhh.vercel.app`, pero el equipo Vercel
-`pisos-turisticos-projects` solo lista 6 proyectos (ia-rest, ialimp, sivra, plataforma, ialimp-landing,
-house-sevillana-landing) — **no aparece rrhh**. Puede estar en otra cuenta/equipo. **Acción manual de
-Alberto:** confirmar dónde está desplegado rrhh (o si aún no lo está).
+### 4. ~~`rrhh` sin proyecto Vercel~~ — descartado (sí existe)
+La primera lectura de `list_projects` devolvió 6 proyectos (truncada) sin rrhh, pero el **status de CI
+del PR confirma `Vercel – central-rrhh`** desplegando en el equipo `pisos-turisticos-projects`. Por tanto
+rrhh **sí** tiene su proyecto Vercel (`central-rrhh`, coherente con `CLAUDE.md`). Sin acción.
 
 ---
 

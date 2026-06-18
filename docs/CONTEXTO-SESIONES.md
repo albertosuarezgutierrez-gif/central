@@ -23,8 +23,8 @@
     APIs nuevas de cocina (scope `local_id` + guards).
   - Reconciliado: memoria (#372 no anotado), skill `ia-rest-maestro` (faltaban APIs `personal`/`validar-pin`),
     y sincronizado `apps/ia-rest/next.config.js` (residuo con 3 paquetes) con el `.ts` (14) como red de seguridad.
-  - **Acciones manuales de Alberto (no urgentes):** confirmar dónde se despliega `rrhh` (no aparece proyecto
-    Vercel en el equipo `pisos-turisticos-projects`); opcional borrar el `next.config.js` redundante de ia-rest.
+  - **Acción manual (no urgente):** opcional borrar el `next.config.js` redundante de ia-rest (ya sincronizado).
+    (Nota: `rrhh` SÍ despliega como `central-rrhh` en el equipo Vercel — confirmado por el CI del PR.)
   - Vulns: 2 high `xlsx` (ialimp solo escribe → no explotable, ya documentado) + 4 moderate transitivas
     (postcss/uuid/file-type) — no se tocan (override arriesga el build de apps vivas).
 
