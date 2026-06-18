@@ -114,8 +114,21 @@ export default function CalendarioPage() {
 
   return (
     <div style={{ padding: '24px 20px', maxWidth: '100%' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .cal-header { flex-direction: column !important; align-items: flex-start !important; }
+          .cal-stats-row { flex-direction: column !important; }
+          .cal-stats-row > div { width: 100% !important; min-width: unset !important; }
+          .cal-legend { flex-direction: column !important; gap: 6px !important; }
+          .cal-detail { flex-direction: column !important; }
+          .cal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+        }
+        @media (max-width: 480px) {
+          .cal-nav-btns { flex-wrap: wrap !important; }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
+      <div className="cal-header" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 800, color: 'var(--text)' }}>Calendario de ocupación</h1>
           <p style={{ margin: '3px 0 0', fontSize: 12, color: 'var(--muted)' }}>
@@ -130,7 +143,7 @@ export default function CalendarioPage() {
       </div>
 
       {/* Stats cards */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
+      <div className="cal-stats-row" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 20 }}>
         {stats.map(p => (
           <div key={p.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10, minWidth: 150 }}>
             <div style={{ width: 10, height: 10, borderRadius: '50%', background: p.color, flexShrink: 0 }} />
@@ -149,7 +162,7 @@ export default function CalendarioPage() {
       </div>
 
       {/* Leyenda */}
-      <div style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 11, color: 'var(--muted)', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="cal-legend" style={{ display: 'flex', gap: 16, marginBottom: 12, fontSize: 11, color: 'var(--muted)', flexWrap: 'wrap', alignItems: 'center' }}>
         {[
           { color: '#FF5A5F', label: 'Airbnb' },
           { color: '#003580', label: 'Booking' },
@@ -291,7 +304,7 @@ export default function CalendarioPage() {
       {/* Reservation detail panel */}
       {selected && (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '16px 20px', marginBottom: 24, display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
-          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
+          <div className="cal-detail" style={{ display: 'flex', gap: 20, flexWrap: 'wrap' }}>
             <div>
               <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>Huésped</div>
               <div style={{ fontWeight: 700, color: 'var(--text)' }}>{selected.guestName || '—'}</div>
@@ -350,7 +363,7 @@ function UpcomingArrivals({ incomes, now }: { incomes: Income[]; now: Date }) {
       {upcoming.length === 0 ? (
         <div style={{ padding: '24px', textAlign: 'center', fontSize: 13, color: 'var(--muted)' }}>Sin llegadas en 14 días</div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
+        <div className="cal-table-wrap" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
             <thead>
               <tr>

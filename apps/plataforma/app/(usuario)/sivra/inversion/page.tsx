@@ -449,10 +449,24 @@ export default function InversionPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1280 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .inv-header { flex-direction: column !important; align-items: flex-start !important; }
+          .inv-stats-grid { grid-template-columns: repeat(4, 1fr) !important; }
+          .inv-filters { flex-direction: column !important; }
+          .inv-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+          .inv-cards-grid { grid-template-columns: 1fr !important; }
+          .inv-price-row { flex-wrap: wrap !important; }
+        }
+        @media (max-width: 480px) {
+          .inv-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .inv-header > div:last-child { flex-wrap: wrap !important; }
+        }
+      `}</style>
       {toast && <Toast msg={toast.msg} type={toast.type} onClose={() => setToast(null)} />}
       {previewItem && <PreviewModal item={previewItem} onClose={() => setPreviewItem(null)} />}
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
+      <div className="inv-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, letterSpacing: '-0.03em', color: 'var(--text)', margin: 0 }}>🏡 Inversión</h1>
           <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 2 }}>
@@ -479,7 +493,7 @@ export default function InversionPage() {
 
       {confirmId && <ConfirmBar onYes={doDelete} onNo={() => setConfirmId(null)} />}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 20 }}>
+      <div className="inv-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 20 }}>
         {([['🏠', stats.total, `de ${total}`], ['🔥', stats.chollos, 'Chollos'], ['📉', stats.bajadas, 'Bajadas'], ['🏖️', stats.playa, 'Playa'], ['🏊', stats.piscina, 'Piscina'], ['🏡', stats.casas, 'Casas'], ['⭐', stats.interesa, 'Interesa']] as const).map(([ic, v, l]) => (
           <div key={String(l)} style={{ borderRadius: 10, padding: '10px 8px', textAlign: 'center', background: 'var(--surface)', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: 16 }}>{ic}</div>
@@ -524,7 +538,7 @@ export default function InversionPage() {
         </div>
       ) : view === 'cards' ? (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+          <div className="inv-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
             {inmuebles.map(item => (
               <Card key={item.id} item={item} onEstado={updateEstado} onDelete={setConfirmId} onPreview={setPreviewItem}
                 editingId={editingId} setEditingId={setEditingId} editNota={editNota} setEditNota={setEditNota} saveNota={saveNota} />
@@ -541,7 +555,7 @@ export default function InversionPage() {
         </>
       ) : (
         <>
-          <div style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
+          <div className="inv-table-wrap" style={{ borderRadius: 10, overflow: 'hidden', border: '1px solid var(--border)' }}>
             <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
