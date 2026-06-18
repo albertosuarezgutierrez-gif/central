@@ -126,6 +126,98 @@ function EventoForm({ recetas, inicial, onGuardar, onCancelar, saving }: {
   )
 }
 
+type IngForm = { nombre: string; por_pax: string; unidad: string; desinfeccion: boolean; descongelacion: boolean }
+const CONTROLES_OPC: Array<{ id: TipoControl; label: string }> = [
+  { id: 'termico', label: '🌡️ Térmico' }, { id: 'refrigeracion', label: '🧊 Refrigeración' },
+  { id: 'congelacion', label: '❄️ Congelación' }, { id: 'abatimiento', label: '🧊 Abatimiento' },
+]
+const UNIDADES = ['g', 'kg', 'ml', 'l', 'u']
+const DESINF_DEFAULT = { dosificacion: '1 past./10 L', permanencia: '10 min', aclarado: 'agua abundante' }
+
+function RecetaForm({ inicial, onGuardar, onCancelar, saving }: {
+  inicial?: Receta
+  onGuardar: (v: Record<string, unknown>) => void
+  onCancelar: () => void
+  saving: boolean
+}): ReactElement {
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '')
+  const [partida, setPartida] = useState(inicial?.partida ?? 'caliente')
+  const [minPax, setMinPax] = useState(String(inicial?.min_por_pax ?? 0.4))
+  const [muestra, setMuestra] = useState(inicial?.requiere_muestra ?? true)
+  const [controles, setControles] = useState<string[]>(inicial?.controles ?? [])
+  const [dependeDe, setDependeDe] = useState((inicial?.depende_de ?? []).join('\n'))
+  const [ings, setIngs] = useState<IngForm[]>(
+    (inicial?.ingredientes ?? []).map(i => ({
+      nombre: i.nombre, por_pax: String((i as { por_pax?: number }).por_pax ?? ''), unidad: i.unidad ?? 'g',
+      desinfeccion: !!i.desinfeccion, descongelacion: !!i.descongelacion,
+    })),
+  )
+  const toggleCtrl = (id: string) => setControles(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
+  const setIng = (i: number, patch: Partial<IngForm>) => setIngs(p => p.map((x, j) => j === i ? { ...x, ...patch } : x))
+  const addIng = () => setIngs(p => [...p, { nombre: '', por_pax: '', unidad: 'g', desinfeccion: false, descongelacion: false }])
+  const delIng = (i: number) => setIngs(p => p.filter((_, j) => j !== i))
+
+  const guardar = () => onGuardar({
+    nombre: nombre.trim(), partida, min_por_pax: parseFloat(minPax) || 0.4, requiere_muestra: muestra, controles,
+    depende_de: dependeDe.split('\n').map(s => s.trim()).filter(Boolean),
+    ingredientes: ings.filter(i => i.nombre.trim()).map(i => ({
+      nombre: i.nombre.trim(), por_pax: parseFloat(i.por_pax) || 0, unidad: i.unidad,
+      desinfeccion: i.desinfeccion ? DESINF_DEFAULT : null, descongelacion: i.descongelacion,
+    })),
+  })
+
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,150px),1fr))', gap: 10 }}>
+        <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Nombre de la elaboración *</label><input style={inp} value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Delicia de pollo…" /></div>
+        <div><label style={lbl}>Partida</label>
+          <select style={inp} value={partida ?? 'caliente'} onChange={e => setPartida(e.target.value)}>
+            {['frio', 'caliente', 'corte', 'montaje'].map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+        </div>
+        <div><label style={lbl}>Min/PAX</label><input style={inp} type="number" step="0.1" min="0" value={minPax} onChange={e => setMinPax(e.target.value)} /></div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, alignSelf: 'end', paddingBottom: 9 }}>
+          <input type="checkbox" checked={muestra} onChange={e => setMuestra(e.target.checked)} /> Muestra testigo
+        </label>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label style={lbl}>Controles APPCC</label>
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {CONTROLES_OPC.map(c => (
+            <button key={c.id} type="button" onClick={() => toggleCtrl(c.id)} style={{ padding: '5px 10px', borderRadius: 20, cursor: 'pointer', fontFamily: SN, fontSize: 12, background: controles.includes(c.id) ? C.verde : '#fff', color: controles.includes(c.id) ? '#fff' : C.ink3, border: `1px solid ${controles.includes(c.id) ? C.verde : C.linea}` }}>{c.label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label style={lbl}>Ingredientes (cantidad por PAX)</label>
+        {ings.map((ing, i) => (
+          <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+            <input style={{ ...inp, flex: '2 1 140px', fontSize: 13, padding: '7px 9px' }} placeholder="ingrediente" value={ing.nombre} onChange={e => setIng(i, { nombre: e.target.value })} />
+            <input style={{ ...inp, flex: '0 1 70px', fontSize: 13, padding: '7px 9px' }} type="number" step="0.1" placeholder="cant." value={ing.por_pax} onChange={e => setIng(i, { por_pax: e.target.value })} />
+            <select style={{ ...inp, flex: '0 1 70px', fontSize: 13, padding: '7px 9px' }} value={ing.unidad} onChange={e => setIng(i, { unidad: e.target.value })}>{UNIDADES.map(u => <option key={u}>{u}</option>)}</select>
+            <label style={{ fontFamily: SN, fontSize: 11, color: C.ink3, display: 'flex', alignItems: 'center', gap: 3 }}><input type="checkbox" checked={ing.desinfeccion} onChange={e => setIng(i, { desinfeccion: e.target.checked })} />🧪</label>
+            <label style={{ fontFamily: SN, fontSize: 11, color: C.ink3, display: 'flex', alignItems: 'center', gap: 3 }}><input type="checkbox" checked={ing.descongelacion} onChange={e => setIng(i, { descongelacion: e.target.checked })} />❄️</label>
+            <button type="button" onClick={() => delIng(i)} style={{ fontFamily: SN, fontSize: 13, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 9px', cursor: 'pointer' }}>✕</button>
+          </div>
+        ))}
+        <button type="button" onClick={addIng} style={{ fontFamily: SN, fontSize: 12.5, color: C.verde, background: 'transparent', border: `1px dashed ${C.verde}`, borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}>+ ingrediente</button>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <label style={lbl}>Sub-elaboraciones / "depende de" (una por línea)</label>
+        <textarea style={{ ...inp, minHeight: 56, fontSize: 13 }} value={dependeDe} onChange={e => setDependeDe(e.target.value)} placeholder={'SALSA DE MOSTAZA Y MIEL\nPOLLO MARINADO'} />
+      </div>
+
+      <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+        <button onClick={onCancelar} style={{ fontFamily: SN, fontSize: 14, color: C.ink3, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 8, padding: '9px 14px', cursor: 'pointer' }}>Cancelar</button>
+        <button disabled={saving || !nombre.trim()} onClick={guardar} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || !nombre.trim() ? C.ink3 : C.verde, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: saving ? 'default' : 'pointer' }}>{saving ? 'Guardando…' : 'Guardar'}</button>
+      </div>
+    </div>
+  )
+}
+
 export default function ProduccionCocinaCentralPage(): ReactElement {
   const [nombreLocal, setNombreLocal] = useState('Cocina central')
   const [ready, setReady]   = useState(false)
@@ -134,6 +226,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [saving, setSaving] = useState(false)
   const [editor, setEditor] = useState<{ modo: 'nuevo' | 'editar'; evento?: Evento } | null>(null)
   const [gestionAbierta, setGestion] = useState(false)
+  const [editorReceta, setEditorReceta] = useState<{ modo: 'nuevo' | 'editar'; receta?: Receta } | null>(null)
+  const [gestionRecetas, setGestionRecetas] = useState(false)
 
   const cargar = useCallback(async () => {
     const r = await fetch('/api/cocina/parte', { headers: sh() })
@@ -200,6 +294,25 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
+  const guardarReceta = async (v: Record<string, unknown>) => {
+    setSaving(true)
+    try {
+      if (editorReceta?.modo === 'editar' && editorReceta.receta) {
+        await fetch(`/api/cocina/recetas/${editorReceta.receta.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(v) })
+      } else {
+        await fetch('/api/cocina/recetas', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(v) })
+      }
+      await cargar()
+      setEditorReceta(null)
+    } finally { setSaving(false) }
+  }
+
+  const borrarReceta = async (r: Receta) => {
+    if (!window.confirm(`¿Borrar la elaboración "${r.nombre}"? Se quitará de los eventos que la usen.`)) return
+    await fetch(`/api/cocina/recetas/${r.id}`, { method: 'DELETE', headers: sh() })
+    await cargar()
+  }
+
   if (!ready) return <div style={{ minHeight: '100dvh', background: C.papel }} />
 
   return (
@@ -224,10 +337,41 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           <div style={{ fontFamily: SN, fontSize: 'clamp(13px,3.4vw,15px)', color: C.ink3 }}>
             Parte del día · {eventos.length} eventos · {total} PAX · {parte.elaboraciones.length} elaboraciones
           </div>
-          <button className="noprint" onClick={() => setGestion(v => !v)} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionAbierta ? '#fff' : C.verde, background: gestionAbierta ? C.verde : 'transparent', border: `1px solid ${C.verde}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
-            {gestionAbierta ? 'Cerrar gestión' : '✎ Gestionar eventos'}
-          </button>
+          <div className="noprint" style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+            <button onClick={() => { setGestion(v => !v); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionAbierta ? '#fff' : C.verde, background: gestionAbierta ? C.verde : 'transparent', border: `1px solid ${C.verde}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+              {gestionAbierta ? 'Cerrar' : '✎ Eventos'}
+            </button>
+            <button onClick={() => { setGestionRecetas(v => !v); setGestion(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecetas ? '#fff' : C.oro, background: gestionRecetas ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+              {gestionRecetas ? 'Cerrar' : '✎ Recetas'}
+            </button>
+          </div>
         </div>
+
+        {/* Gestión de recetas (catálogo de elaboraciones) */}
+        {gestionRecetas && (
+          <div className="noprint" style={{ background: 'rgba(158,129,82,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.oro }}>Catálogo de elaboraciones</div>
+              {!editorReceta && <button onClick={() => setEditorReceta({ modo: 'nuevo' })} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.oro, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Nueva receta</button>}
+            </div>
+
+            {editorReceta && (
+              <RecetaForm inicial={editorReceta.receta} saving={saving} onCancelar={() => setEditorReceta(null)} onGuardar={guardarReceta} />
+            )}
+
+            {!editorReceta && recetas.map(r => (
+              <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${C.linea}` }}>
+                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                  <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>{r.nombre}</div>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{r.partida ?? 'sin partida'} · {r.ingredientes.length} ingredientes</div>
+                </div>
+                <button onClick={() => setEditorReceta({ modo: 'editar', receta: r })} style={{ fontFamily: SN, fontSize: 12.5, color: C.oro, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Editar</button>
+                <button onClick={() => borrarReceta(r)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
+              </div>
+            ))}
+            {!editorReceta && recetas.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recetas. Pulsa "+ Nueva receta".</div>}
+          </div>
+        )}
 
         {/* Gestión de eventos (añadir / editar / borrar) */}
         {gestionAbierta && (
