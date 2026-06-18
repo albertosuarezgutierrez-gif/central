@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-18T13:11:05Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-18T13:12:33Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -151,12 +151,12 @@
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
 - (18/06/2026) 🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA
 - (18/06/2026) 🔍 AUDITORÍA DIARIA
+- (18/06/2026) 🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN
+- (18/06/2026) 🗺️ ROADMAP COCINA CENTRAL (backlog acordado — "todo menos voz")
 - (18/06/2026) 👥 COCINA CENTRAL · GESTIÓN DE EQUIPO
 - (18/06/2026) 🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE
 - (18/06/2026) 🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill
 - (18/06/2026) 🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE
 - (17/06/2026) 🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS
 - (17/06/2026) 💶 MÓDULO /finanzas MERGEADO
-- (17/06/2026) 🧹 EDGE FUNCTIONS sin Anthropic
-- (17/06/2026) 🧹 QUITAR ANTHROPIC de ia-rest (#4)
 
