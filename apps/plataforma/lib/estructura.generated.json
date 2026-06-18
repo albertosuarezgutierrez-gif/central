@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T09:47:40Z",
+  "generadoEn": "2026-06-18T13:11:05Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 21
+        "evidencias": 23
       },
       "ialimp": {
         "presente": false,
@@ -1382,12 +1382,14 @@
       "/api/cloudprnt/[deviceId]",
       "/api/cobros/[slug]",
       "/api/cobros/[slug]/checkout",
+      "/api/cocina/asignaciones",
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
       "/api/cocina/parte",
       "/api/cocina/personal",
       "/api/cocina/recepciones",
       "/api/cocina/recepciones/[id]",
+      "/api/cocina/recepciones/reconocer",
       "/api/cocina/recetas",
       "/api/cocina/recetas/[id]",
       "/api/cocina/registros",
@@ -2799,7 +2801,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 903,
+    "apis": 905,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
