@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T13:17:04Z",
+  "generadoEn": "2026-06-18T14:00:26Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2469,6 +2469,10 @@
       "fecha": "18/06/2026"
     },
     {
+      "titulo": "✨ COCINA CENTRAL · GENERADOR DE MENÚS IA",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN",
       "fecha": "18/06/2026"
     },
@@ -2514,10 +2518,6 @@
     },
     {
       "titulo": "✅ PR #336 MERGED",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "✅ PR #335 MERGED",
       "fecha": "17/06/2026"
     }
   ],
