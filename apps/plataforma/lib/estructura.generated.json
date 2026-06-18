@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-17T23:48:15Z",
+  "generadoEn": "2026-06-18T06:35:35Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2448,6 +2448,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS",
       "fecha": "17/06/2026"
     },
@@ -2501,10 +2505,6 @@
     },
     {
       "titulo": "📧 FACTURAS CORREO · Sistema completo en producción",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🤖 IA UNIFICADA · ialimp + sivra a la pasarela central + endpoint de VISIÓN",
       "fecha": "16/06/2026"
     }
   ],
