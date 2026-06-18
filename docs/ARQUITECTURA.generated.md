@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-18T14:53:26Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-18T17:38:20Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -149,6 +149,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (18/06/2026) 📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina
 - (18/06/2026) 📱 RESPONSIVE COMPLETO
 - (18/06/2026) 🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA
 - (18/06/2026) 🔍 AUDITORÍA DIARIA
@@ -158,5 +159,4 @@
 - (18/06/2026) 👥 COCINA CENTRAL · GESTIÓN DE EQUIPO
 - (18/06/2026) 🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE
 - (18/06/2026) 🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill
-- (18/06/2026) 🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE
 
