@@ -344,6 +344,9 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionEquipo, setGestionEquipo] = useState(false)
   const [editorMiembro, setEditorMiembro] = useState<{ modo: 'nuevo' | 'editar'; miembro?: Miembro } | null>(null)
   const [asignaciones, setAsignaciones] = useState<Array<{ receta_id: string; trabajador_id: string | null; origen: string }>>([])
+  const [sugForm, setSugForm] = useState({ open: false, descripcion: '', pax: '', restricciones: '' })
+  const [sugiriendo, setSugiriendo] = useState(false)
+  const [sugNotas, setSugNotas] = useState('')
 
   const cargar = useCallback(async () => {
     const [pr, rr, cr, yr, ar] = await Promise.all([
@@ -373,6 +376,22 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const asignar = async (receta_id: string, trabajador_id: string | null) => {
     await fetch('/api/cocina/asignaciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ action: 'set', receta_id, trabajador_id }) })
     await cargar()
+  }
+
+  // ✨ La IA propone un menú del catálogo → abre el editor de evento prerrellenado para que Carmen lo revise
+  const sugerirMenu = async () => {
+    if (!sugForm.descripcion.trim()) return
+    setSugiriendo(true); setSugNotas('')
+    try {
+      const r = await fetch('/api/cocina/menu-sugerido', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ descripcion: sugForm.descripcion, pax: sugForm.pax, restricciones: sugForm.restricciones }) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo sugerir el menú'); return }
+      const ids: string[] = (d.menu ?? []).map((m: { receta_id: string }) => m.receta_id)
+      if (ids.length === 0) { window.alert('La IA no encontró platos del catálogo para este evento. ' + (d.notas ?? '')); return }
+      setSugNotas(d.notas ?? '')
+      setEditor({ modo: 'nuevo', evento: { id: '', nombre: sugForm.descripcion, pax: Number(sugForm.pax) || 0, fecha_evento: null, ubicacion: null, elaboraciones: ids } })
+      setSugForm({ open: false, descripcion: '', pax: '', restricciones: '' })
+    } finally { setSugiriendo(false) }
   }
 
   const guardarMiembro = async (v: Record<string, unknown>) => {
@@ -744,11 +763,33 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           <div className="noprint" style={{ background: 'rgba(2,71,59,.04)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.verde }}>Eventos</div>
-              {!editor && <button onClick={() => setEditor({ modo: 'nuevo' })} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Nuevo evento</button>}
+              {!editor && (
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => setSugForm(f => ({ ...f, open: !f.open }))} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: sugForm.open ? '#fff' : C.oro, background: sugForm.open ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>✨ Sugerir menú</button>
+                  <button onClick={() => setEditor({ modo: 'nuevo' })} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Nuevo evento</button>
+                </div>
+              )}
             </div>
 
+            {!editor && sugForm.open && (
+              <div style={{ background: 'rgba(158,129,82,.06)', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
+                <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 10 }}>Describe el evento y la IA propone un menú con tus recetas. Lo abrirá como evento nuevo para que lo revises.</div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,150px),1fr))', gap: 8 }}>
+                  <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Evento *</label><input style={inp} value={sugForm.descripcion} onChange={e => setSugForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: boda 150 pax, menú mediterráneo" /></div>
+                  <div><label style={lbl}>PAX</label><input style={inp} type="number" value={sugForm.pax} onChange={e => setSugForm(f => ({ ...f, pax: e.target.value }))} /></div>
+                  <div><label style={lbl}>Restricciones</label><input style={inp} value={sugForm.restricciones} onChange={e => setSugForm(f => ({ ...f, restricciones: e.target.value }))} placeholder="sin gluten, vegano…" /></div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
+                  <button disabled={sugiriendo || !sugForm.descripcion.trim()} onClick={sugerirMenu} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: sugiriendo || !sugForm.descripcion.trim() ? C.ink3 : C.oro, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>{sugiriendo ? 'Pensando…' : '✨ Proponer menú'}</button>
+                </div>
+              </div>
+            )}
+
             {editor && (
-              <EventoForm recetas={recetas} inicial={editor.evento} saving={saving} onCancelar={() => setEditor(null)} onGuardar={guardarEvento} />
+              <>
+                {sugNotas && <div style={{ fontFamily: SN, fontSize: 12.5, color: C.oro, marginBottom: 8 }}>✨ {sugNotas}</div>}
+                <EventoForm recetas={recetas} inicial={editor.evento} saving={saving} onCancelar={() => { setEditor(null); setSugNotas('') }} onGuardar={guardarEvento} />
+              </>
             )}
 
             {!editor && eventos.map(ev => (
