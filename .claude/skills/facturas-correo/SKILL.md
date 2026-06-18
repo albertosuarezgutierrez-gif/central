@@ -31,7 +31,7 @@ newer_than:2d -label:Facturas/Procesado -in:draft
   OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi) )
 ```
 Incluye también los **reenvíos de `pilar.pina.franco@gmail.com`** que sean justificantes de compra.
-Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`) y promociones.
+Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`), promociones y **notificaciones operativas de la correduría** (recibos devueltos de clientes, avisos de emisión, circulares de compañías aseguradoras — Allianz, Mapfre, Generali, Occident — que NO sean facturas a nombre de Alberto).
 
 Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, importe(s), concepto,
 a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
