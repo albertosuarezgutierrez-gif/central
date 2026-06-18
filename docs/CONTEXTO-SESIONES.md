@@ -28,9 +28,10 @@
     semanal, `auditoria-central` entera). Documentado en **`docs/RUTINAS-PROGRAMADAS.md`**.
   - **Índice de skills**: nuevo **`docs/SKILLS.md`** (qué skills hay y cuándo usar cada una);
     `/auditoria-diaria` lo mantiene al día contra `.claude/skills/` y `.claude/commands/`.
-  - **PENDIENTE DE ALBERTO (manual, UI):** crear en `claude.ai/code → Rutinas` los dos
-    triggers de auditoría (diaria `Ejecuta /auditoria-diaria` 04:00 CEST; semanal
-    `Ejecuta /auditoria-diaria --profunda` domingos). MCPs: Supabase + Vercel + github.
+  - **Triggers ACTIVOS** (creados por Alberto en `claude.ai/code → Rutinas`, 18/06): diaria
+    `Ejecuta /auditoria-diaria` 04:00 CEST; semanal `Ejecuta /auditoria-diaria --profunda`
+    domingos. Conectores: Supabase + Vercel (**GitHub es nativo** al vincular el repo, no es
+    un conector MCP aparte). PR #374 mergeado a `main`.
   - **Límite conocido:** sesiones de solo charla (decisión sin commit) no las caza el
     guardián → anótalas a mano.
 

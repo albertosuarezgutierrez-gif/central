@@ -17,24 +17,24 @@
 
 ## Rutinas
 
-### 1. Auditoría nocturna ligera — *pendiente de activar*
+### 1. Auditoría nocturna ligera — *activa*
 | | |
 |---|---|
 | **Cuándo** | Diaria, ~**04:00 CEST** |
 | **Prompt** | `Ejecuta /auditoria-diaria` |
-| **MCPs** | Supabase + Vercel + github (lectura; github también para el PR) |
+| **MCPs** | Supabase + Vercel (lectura). **GitHub es nativo** al vincular el repo — no es un conector aparte; ya cubre lectura + abrir el PR. |
 | **Qué hace** | Reconcilia `CONTEXTO-SESIONES.md` + skills-maestro + `CLAUDE.md` + `docs/SKILLS.md` contra el código real + checks baratos (lockfile, estructura, drift). SALTA typecheck/tests pesados. |
 | **Resultado** | PR draft `claude/auditoria-diaria-<fecha>`, o **nada** si no hubo cambios. |
 
 Es la **red de seguridad** del guardián de cierre (`.claude/hooks/persist-memoria.sh`):
 caza lo que las sesiones del día no anotaron a mano.
 
-### 2. Auditoría semanal profunda — *pendiente de activar*
+### 2. Auditoría semanal profunda — *activa*
 | | |
 |---|---|
 | **Cuándo** | Semanal (domingos, ~**04:00 CEST**) |
 | **Prompt** | `Ejecuta /auditoria-diaria --profunda` |
-| **MCPs** | Supabase + Vercel + github |
+| **MCPs** | Supabase + Vercel. **GitHub nativo** (al vincular el repo, no es un conector aparte). |
 | **Qué hace** | `auditoria-central` ENTERA: typecheck de las 4 apps + tests + seguridad multi-tenant + infra por MCP + coherencia de docs. |
 | **Resultado** | PR draft con informe `docs/AUDITORIA-<YYYY-MM>.md` por severidad + acciones manuales. |
 
