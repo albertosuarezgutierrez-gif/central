@@ -103,15 +103,24 @@ export default function FiscalPage() {
 
   return (
     <div style={{ padding: '32px 24px', maxWidth: 1100, margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .fiscal-header { flex-direction: column !important; align-items: flex-start !important; }
+          .fiscal-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+          .fiscal-grand-grid { grid-template-columns: 1fr !important; }
+          .fiscal-prop-summary { flex-direction: column !important; align-items: flex-start !important; gap: 4px !important; }
+          .fiscal-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
+      <div className="fiscal-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 28 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 24, fontWeight: 800, color: 'var(--text)' }}>Fiscal IRPF</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>
             Rendimientos de capital inmobiliario por propiedad y trimestre
           </p>
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div className="fiscal-header-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <select
             value={year}
             onChange={e => setYear(Number(e.target.value))}
@@ -135,7 +144,7 @@ export default function FiscalPage() {
 
       {/* Grand totals */}
       {rows.length > 0 && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
+        <div className="fiscal-grand-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 32 }}>
           {[
             { label: 'Ingresos brutos', value: `€${fmt(grand.ingresos)}`, color: 'var(--text)' },
             { label: 'Gastos deducibles', value: `€${fmt(grand.totalGastos)}`, color: '#ef4444' },
@@ -171,7 +180,7 @@ export default function FiscalPage() {
         const propName = prows[0].propertyName || pid
         return (
           <div key={pid} style={{ marginBottom: 32 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <div className="fiscal-prop-summary" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700, color: 'var(--text)' }}>{propName}</h2>
               <div style={{ display: 'flex', gap: 20, fontSize: 13, color: 'var(--muted)' }}>
                 <span>Ingresos: <strong style={{ color: 'var(--text)' }}>€{fmt(totals.ingresos)}</strong></span>
@@ -180,7 +189,7 @@ export default function FiscalPage() {
               </div>
             </div>
 
-            <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+            <div className="fiscal-table-wrap" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
                   <tr style={{ background: 'rgba(0,0,0,.03)', borderBottom: '1px solid var(--border)' }}>

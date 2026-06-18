@@ -105,12 +105,24 @@ export default function PricingPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 960, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 32 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .pricing-header { flex-direction: column !important; gap: 12px !important; }
+          .pricing-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+          .pricing-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .pricing-shadow-grid { grid-template-columns: 1fr !important; }
+          .pricing-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+        @media (max-width: 480px) {
+          .pricing-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+      `}</style>
+      <div className="pricing-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between' }}>
         <div>
           <h1 style={{ fontSize: 24, fontWeight: 700, color: 'var(--text)', margin: 0 }}>Pricing Lab</h1>
           <p style={{ fontSize: 14, color: 'var(--muted)', margin: '4px 0 0' }}>Shadow mode + experimentos Phase 1</p>
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="pricing-header-actions" style={{ display: 'flex', gap: 8 }}>
           <button onClick={checkResults}
             style={{ padding: '8px 12px', fontSize: 14, background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 8, cursor: 'pointer', color: 'var(--text)' }}>
             🔄 Actualizar resultados
@@ -124,7 +136,7 @@ export default function PricingPage() {
 
       {/* RESUMEN EXPERIMENTOS */}
       {resumen && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
+        <div className="pricing-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16 }}>
           {[
             { label: "Total experimentos", val: resumen.total, color: 'var(--text)' },
             { label: "Reservados ✅", val: resumen.reservados, color: '#16a34a' },
@@ -155,7 +167,7 @@ export default function PricingPage() {
       {/* SHADOW MODE */}
       <div>
         <h2 style={{ fontSize: 18, fontWeight: 600, color: 'var(--text)', margin: '0 0 12px' }}>Shadow mode — Últimos 30 días</h2>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="pricing-shadow-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
           {shadow.map((s: any) => {
             const name = PROPS[s.property_id] ?? s.property_id
             const rec  = recPriceLabs[s.property_id] ?? ""
@@ -205,7 +217,7 @@ export default function PricingPage() {
             <div style={{ fontSize: 14, marginTop: 4 }}>Cuando subas manualmente un precio en Smoobu, regístralo aquí.</div>
           </div>
         ) : (
-          <div style={{ overflowX: 'auto' }}>
+          <div className="pricing-table-wrap" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', fontSize: 14, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)', textAlign: 'left' }}>

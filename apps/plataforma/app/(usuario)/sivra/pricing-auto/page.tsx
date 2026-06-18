@@ -215,6 +215,21 @@ export default function PricingAutoPage() {
 
   return (
     <div style={{ padding: "20px 24px", maxWidth: 1100, margin: "0 auto" }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .pricingauto-top-bar { flex-direction: column !important; align-items: stretch !important; }
+          .pricingauto-pilot-grid { flex-direction: column !important; }
+          .pricingauto-pilot-card { flex: unset !important; min-width: unset !important; }
+          .pricingauto-prop-header { flex-direction: column !important; align-items: flex-start !important; }
+          .pricingauto-prop-stats { flex-direction: row !important; flex-wrap: wrap !important; gap: 12px !important; }
+          .pricingauto-params-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .pricingauto-hist-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .pricingauto-actions { flex-wrap: wrap !important; }
+        }
+        @media (max-width: 480px) {
+          .pricingauto-params-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <div style={{ marginBottom: 14 }}>
         <h1 style={{ fontSize: 22, fontWeight: 800, color: C.ink, margin: 0 }}>Pricing Auto · Panel del propietario</h1>
         <p style={{ fontSize: 13, color: C.soft, margin: "6px 0 0" }}>
@@ -224,7 +239,7 @@ export default function PricingAutoPage() {
       </div>
 
       {/* Barra superior: resultados + pausa + push */}
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
+      <div className="pricingauto-top-bar" style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "center", marginBottom: 16 }}>
         <div style={{ flex: "1 1 240px", background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: "12px 16px" }}>
           <div style={{ fontSize: 11, color: C.soft, textTransform: "uppercase", letterSpacing: 0.5 }}>Generado vs PriceLabs</div>
           <div style={{ fontSize: 24, fontWeight: 800, color: C.ok }}>
@@ -248,7 +263,7 @@ export default function PricingAutoPage() {
               {pilotBusy ? "…" : "Ejecutar ahora"}
             </button>
           </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+          <div className="pricingauto-pilot-grid" style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             {Object.values(pilot).map((p) => {
               const color = p.verdict === "rojo" ? C.warn : p.verdict === "amarillo" ? "#B45309" : C.ok
               const dot = p.verdict === "rojo" ? "🔴" : p.verdict === "amarillo" ? "🟡" : "🟢"
@@ -289,7 +304,7 @@ export default function PricingAutoPage() {
           return (
             <div key={p.property_id} style={{ background: C.card, border: `1px solid ${C.line}`, borderRadius: 12, padding: 16 }}>
               {/* Cabecera */}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
+              <div className="pricingauto-prop-header" style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: 10 }}>
                 <div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: C.ink }}>{p.name}</div>
                   <div style={{ fontSize: 12, color: C.soft }}>
@@ -297,7 +312,7 @@ export default function PricingAutoPage() {
                     {p.occupancy != null && ` · ocupación ${Math.round(p.occupancy * 100)}%`}
                   </div>
                 </div>
-                <div style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
+                <div className="pricingauto-prop-stats" style={{ display: "flex", gap: 16, alignItems: "center", flexWrap: "wrap" }}>
                   <Stat label="Base actual" value={p.base_actual != null ? `${p.base_actual}€` : "—"} />
                   <Stat label="Recomendado (base)" value={recoBase != null ? `${recoBase}€` : "—"} accent
                     sub={delta != null ? `${delta >= 0 ? "+" : ""}${delta}€` : undefined} />
@@ -328,7 +343,7 @@ export default function PricingAutoPage() {
               </div>
 
               {/* Parámetros */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
+              <div className="pricingauto-params-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(180px, 1fr))", gap: 10 }}>
                 {NUM_FIELDS.map((f) => (
                   <label key={f.key} style={{ display: "flex", flexDirection: "column", gap: 3 }}>
                     <span style={{ fontSize: 11, fontWeight: 600, color: C.ink }}>{f.label}</span>
@@ -342,7 +357,7 @@ export default function PricingAutoPage() {
               </div>
 
               {/* Acciones */}
-              <div style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
+              <div className="pricingauto-actions" style={{ display: "flex", gap: 10, alignItems: "center", marginTop: 14, flexWrap: "wrap" }}>
                 <button onClick={() => save(p.property_id)} disabled={busy === p.property_id}
                   style={btn(C.green, busy === p.property_id)}>Guardar</button>
                 <button onClick={() => apply(p.property_id, true)} disabled={busy === p.property_id}
@@ -363,7 +378,7 @@ export default function PricingAutoPage() {
 
               {/* Histórico */}
               {rows && (
-                <div style={{ marginTop: 12, maxHeight: 220, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 8 }}>
+                <div className="pricingauto-hist-wrap" style={{ marginTop: 12, maxHeight: 220, overflowY: "auto", border: `1px solid ${C.line}`, borderRadius: 8 }}>
                   {rows.length === 0 ? <div style={{ padding: 10, fontSize: 12, color: C.soft }}>Sin cambios registrados.</div> : (
                     <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
                       <thead><tr style={{ background: C.bg, color: C.soft }}>
