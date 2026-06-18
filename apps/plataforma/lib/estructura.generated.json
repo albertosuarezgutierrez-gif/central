@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T14:00:26Z",
+  "generadoEn": "2026-06-18T15:38:03Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2461,6 +2461,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "📱 RESPONSIVE COMPLETO",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
       "fecha": "18/06/2026"
     },
@@ -2510,14 +2518,6 @@
     },
     {
       "titulo": "🧹 QUITAR ANTHROPIC de ia-rest (#4)",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "💸 PASARELA IA · coste real + fallback + healthcheck",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "✅ PR #336 MERGED",
       "fecha": "17/06/2026"
     }
   ],
