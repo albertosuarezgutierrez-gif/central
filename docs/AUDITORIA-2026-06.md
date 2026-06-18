@@ -181,3 +181,76 @@ pnpm test                               # 104 tests (guardián + packages), 0 fa
 pnpm exec prisma generate --schema=apps/ialimp/prisma/schema.prisma
 pnpm exec tsc --noEmit -p apps/ialimp/tsconfig.json
 ```
+
+---
+
+## Addendum 2026-06-18 — Auditoría profunda semanal
+
+> Auditoría `auditoria-central` ENTERA: integridad estructural + typecheck 5 apps + tests +
+> seguridad Supabase + deps + infra Vercel + coherencia docs. Rango cubierto: desde PR #373
+> (auditoría diaria 18/06) hasta PR #374 (guardián de cierre). Estado: **SANO**.
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Integridad estructural (lockfile, radiografía, guardián `@iarest/`) | ✅ Sano |
+| Typecheck 5 apps (ia-rest, sivra, ialimp, plataforma, rrhh) | ✅ 0 errores |
+| Tests (rrhh 25/25, packages 40/40, guardián 21/21) | ✅ Verde |
+| Seguridad Supabase (0 ERROR, 0 WARN evitable) | ✅ Mantenido |
+| Deps (vulns sin cambios, documentadas) | ✅ Sin cambios |
+| Infra Vercel (4 proyectos READY, último deploy #374) | ✅ Sano |
+| Coherencia docs (SKILLS.md en sync) | ✅ Sano |
+| RUTINAS-PROGRAMADAS.md — desync "pendiente" vs activas | 🟡 PR #375 corrige |
+| `documentos-contables` bucket con listing público | 🟡 Revisar |
+
+---
+
+### 🟡 Hallazgos MEDIO
+
+#### P1. `documentos-contables` — bucket público con listing habilitado
+`mcp__Supabase__get_advisors("security")` devuelve 4× `public_bucket_allows_listing` para
+el bucket `documentos-contables`. El bucket es público (acceso anon a ficheros con URL),
+pero el **listing** expone el índice completo de todos los ficheros a cualquier agente
+anónimo.
+- Riesgo: un tercero con la URL base puede enumerar todos los documentos contables de todos
+  los tenants sin autenticación.
+- **Acción de Alberto**: en Supabase Storage → `documentos-contables` → deshabilitar
+  "Public bucket listing" (o hacer el bucket privado si las URLs firmadas son suficientes).
+- Rollback: re-habilitar el listing si alguna integración lo necesita.
+
+#### P2. RUTINAS-PROGRAMADAS.md desync — dice "pendiente de activar" pero las rutinas están activas
+`docs/RUTINAS-PROGRAMADAS.md` sigue marcando la auditoría nocturna ligera y la semanal
+profunda como "pendiente de activar". Esta misma sesión es la prueba de que **están activas**.
+- PR #375 (draft) ya corrige el doc. Mergear para que la fuente de verdad refleje la realidad.
+- **Acción de Alberto**: mergear PR #375 (solo docs, bajo riesgo).
+
+---
+
+### 🟢 Hallazgos BAJO
+
+#### P3. `pg_net` instalada en schema `public`
+1× `extension_in_public` (INFO): la extensión `pg_net` está en el schema `public` en lugar
+de un schema dedicado. No es explotable actualmente, pero es una best practice moverla a
+`extensions`. Sin impacto en operación actual; documentado para la próxima ventana de mantenimiento.
+
+#### P4. PRs stale abiertas (8 drafts)
+8 PRs en draft sin actividad reciente: #302 (blog SEO), #307 (core-receipts spec),
+#312 (rrhh scaffold), #322 (facturas control), #331 (plataforma ingresos), #351 (organizador plan),
+#364 (memoria lead), #375 (rutinas docs — pendiente de merge). Las 7 primeras son work-in-progress
+o specs; sin urgencia, pero acumulan ruido en la lista de PRs.
+- **Acción de Alberto**: revisar y cerrar (o re-abrir como no-draft) las que ya no procedan.
+
+---
+
+### Checklist de acciones manuales — 18/06/2026
+
+1. **[P1]** Deshabilitar listing del bucket `documentos-contables` en Supabase Storage.
+   Rollback: re-habilitar.
+2. **[P2]** Mergear PR #375 (docs `RUTINAS-PROGRAMADAS.md` — solo docs, cero riesgo).
+3. **[P4]** Revisar/cerrar PRs stale: #302, #307, #312, #322, #331, #351, #364.
+4. **[A3 carry-forward]** Aplicar `add_concursos_radar_criterios.sql` +
+   `add_concursos_radar_anuncios.sql` en Supabase (arregla el cron de concursos).
+   Rollback: `DROP TABLE`.
+5. **[B2 carry-forward]** Proyecto Supabase viejo `efncqyvhniaxsirhdxaa` — jubilar tras
+   el corte de envs de ia-rest (aún ACTIVE).
