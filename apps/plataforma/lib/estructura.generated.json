@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T13:12:33Z",
+  "generadoEn": "2026-06-18T13:17:04Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 23
+        "evidencias": 24
       },
       "ialimp": {
         "presente": false,
@@ -1385,6 +1385,7 @@
       "/api/cocina/asignaciones",
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
+      "/api/cocina/menu-sugerido",
       "/api/cocina/parte",
       "/api/cocina/personal",
       "/api/cocina/recepciones",
@@ -2801,7 +2802,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 905,
+    "apis": 906,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
