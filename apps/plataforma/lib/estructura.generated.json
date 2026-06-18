@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T08:57:47Z",
+  "generadoEn": "2026-06-18T09:37:19Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2458,6 +2458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
       "fecha": "18/06/2026"
     },
@@ -2511,10 +2515,6 @@
     },
     {
       "titulo": "🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325",
       "fecha": "16/06/2026"
     }
   ],
