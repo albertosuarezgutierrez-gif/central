@@ -129,9 +129,23 @@ export default async function DashboardPage() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .dash-main { padding: 16px 12px !important; }
+            .dash-kpi-bar { gap: 16px !important; padding: 14px 16px !important; }
+            .dash-kpi-bar > * { min-width: 0; }
+            .dash-negocios-grid { grid-template-columns: 1fr !important; }
+            .dash-comparativa-row { gap: 16px !important; }
+            .dash-gastos-label { width: 100px !important; }
+          }
+          @media (max-width: 480px) {
+            .dash-kpi-bar { flex-direction: column !important; align-items: flex-start !important; }
+            .dash-kpi-bar a { margin-left: 0 !important; }
+          }
+        `}</style>
         {/* KPI bar consolidado */}
         {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
-          <div style={{
+          <div className="dash-kpi-bar" style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 'var(--radius)', padding: '20px 24px',
             display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '32px',
@@ -273,7 +287,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            <div className="dash-negocios-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
               {soc.negocios.map(neg => {
                 const url = neg.app ? APP_URL[neg.app] : null
                 const fin = neg.financiero
@@ -423,7 +437,7 @@ function Comparativa({ actual, anterior }: { actual: ComparativaMes; anterior: C
   return (
     <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📅 Este mes vs. el anterior</h2>
-      <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+      <div className="dash-comparativa-row" style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
         {filas.map(f => {
           const d = delta(f.a, f.b)
           const sube = d >= 0
@@ -458,7 +472,7 @@ function GastosPorCategoria({ data }: { data: GastoCategoria[] }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {top.map(d => (
           <div key={d.categoria} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '140px', flexShrink: 0, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="dash-gastos-label" style={{ width: '140px', flexShrink: 0, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {CATEGORIA_LABEL[d.categoria as Categoria] ?? d.categoria}
             </div>
             <div style={{ flex: 1, background: 'var(--bg)', borderRadius: '6px', height: '20px', overflow: 'hidden' }}>
