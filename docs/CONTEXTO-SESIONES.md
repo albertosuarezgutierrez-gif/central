@@ -47,6 +47,20 @@
     ~mensual). **NO** se cuelga del agente de concursos (ese sondea PLACSP por CPV, fuente distinta).
   - Pendiente: crear el **trigger** de la rutina en `claude.ai/code → Rutinas`. Importes Andalucía son
     orientativos (afinar contra BOJA en la 1ª pasada del vigilante).
+- **🔍 AUDITORÍA PROFUNDA SEMANAL — 18/06/2026** (`docs/AUDITORIA-2026-06.md` addendum)
+  - Estado general: **SANO**. 0 errores de tipos en las 5 apps (ia-rest, sivra, ialimp,
+    plataforma, rrhh). Tests verdes (rrhh 25/25, packages 40/40, guardián 21/21). Lockfile en
+    sync. Radiografía al día. 0 referencias `@iarest/` (guardián).
+  - **Supabase**: 0 ERRORS mantenido. Nuevo hallazgo 🟡: bucket `documentos-contables` con
+    listing público habilitado → revisar (expone índice de ficheros a agentes anon).
+  - **Docs**: `RUTINAS-PROGRAMADAS.md` desync — dice "pendiente de activar" pero las rutinas
+    están activas → PR #375 (draft) lo corrige. Pendiente de que Alberto lo mergee.
+  - **PRs stale**: 8 drafts abiertos sin actividad (#302, #307, #312, #322, #331, #351, #364,
+    #375). Revisar y cerrar los que ya no procedan.
+  - **Carry-forward**: aplicar migraciones `concursos_radar` en Supabase (A3 de jun-12) + jubilar
+    proyecto viejo `efncqyvhniaxsirhdxaa` (B2).
+  - **Rutinas programadas** activas (confirmado por esta sesión): ligera diaria 04:00 CEST +
+    profunda semanal domingos. Ambas abren PR draft; sin cambios → sin PR.
 
 - **🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA — 18/06/2026** (rama `claude/project-review-skill-p0jrkc`)
   - **Guardián de cierre**: el hook `Stop` (`.claude/hooks/persist-memoria.sh`) ahora, si la
