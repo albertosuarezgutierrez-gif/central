@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession } from '@/lib/session'
 import { prisma } from '@/lib/db'
+import { getResumenFinanciero } from '@/lib/finanzas'
 
 export const dynamic = 'force-dynamic'
 
@@ -53,6 +54,24 @@ export async function GET(req: NextRequest) {
       return `${r.fecha_operacion?.toISOString().slice(0, 10) ?? ''},"${concepto}",${importe},"${cat}","${actividad}","${banco}","${soc}",Sí`
     }),
   ]
+
+  // Desglose fiscal (mínimos + deducciones) para la gestoría.
+  try {
+    const resumen = await getResumenFinanciero(session.id, year, 0)
+    const r = resumen.deducciones.resultado
+    lines.push('')
+    lines.push('--- DEDUCCIONES Y CUOTA (orientativo) ---')
+    lines.push('Concepto,Importe,Ámbito,Reembolsable')
+    lines.push(`Mínimo personal y familiar,${r.minimoPersonalYFamiliar.toFixed(2).replace('.', ',')},,`)
+    lines.push(`Cuota íntegra (tras mínimos),${r.cuotaIntegra.toFixed(2).replace('.', ',')},,`)
+    for (const dd of r.deducciones) {
+      lines.push(`"${dd.concepto.replace(/,/g, ' ')}",${dd.importe.toFixed(2).replace('.', ',')},${dd.ambito},${dd.reembolsable ? 'Sí' : 'No'}`)
+    }
+    lines.push(`Retenciones ya pagadas,${r.retenciones.toFixed(2).replace('.', ',')},,`)
+    lines.push(`Resultado (${r.resultado <= 0 ? 'a devolver' : 'a pagar'}),${Math.abs(r.resultado).toFixed(2).replace('.', ',')},,`)
+  } catch (e) {
+    console.error('[finanzas/export] deducciones', e)
+  }
 
   return new NextResponse(lines.join('\n'), {
     headers: {
