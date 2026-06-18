@@ -16,6 +16,38 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE — 18/06/2026** (concepto clave, decisión de Alberto)
+  - **Distinción fundamental:** una **cocina central de preparación** (catering / comida para llevar / obrador) es
+    un MODELO DISTINTO al de un restaurante. ia-rest nació para restaurante (mesas, comandas, voz, KDS). Para la
+    cocina central **NO aplican** mesas/comandas/voz/KDS: su mundo es **eventos → parte de elaboración → producción
+    → trazabilidad APPCC → recepción de mercancía**. NO calibrar el KDS de restaurante para catering — es el mundo
+    equivocado; se le da **pantalla propia**.
+  - **Modo del local:** columna nueva aditiva `iarest.restaurantes.modo` (`'restaurante'` por defecto |
+    `'cocina_central'`). El local de Carmen (Catering Joaquín Jaén, id `067c8bab-4edf-4765-a0d6-11b6ea112e8f`) está
+    marcado `cocina_central`. El login lee el flag (`/api/auth` → sesión firma `cocina_central`) y enruta
+    `cocina`+`cocina_central` → **`/produccion`** (no a `/kds`). `/cocina` se deja intacto (sigue → /kds para restaurantes).
+  - **ROLES de la cocina central (modelo acordado):**
+    - **Responsable de cocina central** (Carmen): distribuye el trabajo, **recepciona mercancía**, coordina, **firma**
+      la salida, supervisa APPCC. Ve TODO (parte, reparto, productividad, dossier).
+    - **Cocinero/a**: cocina/monta los platos finales con material ya tratado; **no toca mercancía cruda**. Ve su lista del día.
+    - **Preparación** (a estudiar/implementar): recepción + mise en place de las BASES. **Frontera recomendada por
+      Claude = "contacto con mercancía cruda"** (recepción/lavar/desinfectar/descongelar/cortar/porcionar + bases frías →
+      preparación; cocción/montaje → cocinero). Principio APPCC de **marcha adelante** (crudo y cocinado no se cruzan).
+    - En el motor `@central/module-organizador-trabajo`: se modela con `requiere_rol` por tarea + `depende_de`
+      (encadenado base→plato ya hecho). `asignarTrabajo` respeta `requiere_rol`.
+  - **Hecho esta sesión:** módulo `@central/module-trazabilidad` (APPCC: ficha ingredientes·lote·proveedor·desinf·
+    descong, controles térmico/abatimiento/congelación, muestras testigo, **bloqueo de salida**, **14 alérgenos
+    automáticos**, **generarParte** desde catálogo+eventos; 29 tests). Demos: `/propuesta/parte-jj`, `parte-jj-vivo`,
+    `parte-jj-traza`, `parte-jj-auto` (mergeadas). Acceso de **Carmen** creado (rol `cocina`, PIN **4 dígitos**, login por
+    token de local; el PIN va en CLARO en BD → rate-limited). Arreglos: nombre del local en `/login?t=`, móvil (tablas
+    del parte → filas; header KDS envuelve), parpadeo del panel Elaboraciones del KDS (#361).
+  - **PENDIENTE (bloqueado solo por outage del clasificador de Bash):** `next build` + commit + PR + merge de la
+    **vista de Carmen `/produccion`** (home de cocina central LIMPIO: header fino con nombre del local + Salir, **sin
+    voz/mesas/comandas**, parte del día + reparto + trazabilidad + dossier imprimible, móvil-first). Rama
+    `claude/cocina-central` (código listo y revisado, sin commitear).
+  - **SIGUIENTE (gated):** persistencia real en BD (rama Supabase + gate) y las pantallas de **cocinero** y
+    **preparación** (taggeando cada (sub)elaboración por "contacto con crudo"). Reunión Carmen: **jueves 25, 12:00**.
+
 - **🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS — 17/06/2026** (Catering Joaquín Jaén, cocina)
   - **PR #352** → `iarest.es/propuesta/parte-jj`: parte de elaboración real del 20/6 (estático, datos OCR del PDF
     de Carmen). 4 eventos por color, 4 partidas, sub-elaboraciones como "Depende de", badges APPCC. Marca verde/dorado.

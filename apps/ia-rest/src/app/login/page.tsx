@@ -23,7 +23,12 @@ function detectRestauranteCode(): string | null {
   return null
 }
 
-function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modulos_gestion?: string[] }) {
+function navigateByRol(camarero: { rol: string; seccion_id?: string | null; modulos_gestion?: string[]; cocina_central?: boolean }) {
+  // Cocina central (catering): pantalla propia /produccion — sin mesas, comandas ni voz.
+  if (camarero.cocina_central && camarero.rol === 'cocina') {
+    window.location.href = '/produccion'
+    return
+  }
   const dest: Record<string, string> = {
     super_admin: '/super', owner: '/owner', admin: '/hub',
     jefe_sala: '/jefe',
