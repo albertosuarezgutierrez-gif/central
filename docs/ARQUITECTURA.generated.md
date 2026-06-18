@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-18T09:47:40Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-18T10:33:09Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -149,6 +149,7 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (18/06/2026) 🔍 AUDITORÍA PROFUNDA SEMANAL
 - (18/06/2026) 🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA
 - (18/06/2026) 🔍 AUDITORÍA DIARIA
 - (18/06/2026) 👥 COCINA CENTRAL · GESTIÓN DE EQUIPO
@@ -158,5 +159,4 @@
 - (17/06/2026) 🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS
 - (17/06/2026) 💶 MÓDULO /finanzas MERGEADO
 - (17/06/2026) 🧹 EDGE FUNCTIONS sin Anthropic
-- (17/06/2026) 🧹 QUITAR ANTHROPIC de ia-rest (#4)
 

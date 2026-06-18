@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T09:47:40Z",
+  "generadoEn": "2026-06-18T10:33:09Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2458,6 +2458,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA PROFUNDA SEMANAL",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
       "fecha": "18/06/2026"
     },
@@ -2511,10 +2515,6 @@
     },
     {
       "titulo": "✅ PR #334 MERGED",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "✅ PR #333 MERGED",
       "fecha": "17/06/2026"
     }
   ],
