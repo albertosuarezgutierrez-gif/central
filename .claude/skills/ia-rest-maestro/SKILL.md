@@ -302,14 +302,22 @@ Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
   `@central/module-organizador-trabajo` (asignarTrabajo).
 - **Tablas (schema `iarest`, aditivas, server=service_role):** `cocina_recetas` + `cocina_receta_ingredientes`
   (escandallo por PAX), `cocina_eventos` + `cocina_evento_elaboraciones`, `cocina_registros` (operativa del
-  día: hecho/controles Tª/muestra/firma), `cocina_recepciones` (albaranes). Más `personal.partidas text[]`
-  y `personal.cocina_rol` (`responsable`|`cocinero`|`preparacion`).
+  día: hecho/controles Tª/muestra/firma + **atribución** `hecho_por[_id]`/`hecho_at`/`firma_por_id`),
+  `cocina_recepciones` (albaranes, con `caducidad`), `cocina_asignaciones` (reparto receta→trabajador,
+  `origen` ia|manual). Más `personal.partidas text[]` y `personal.cocina_rol` (`responsable`|`cocinero`|`preparacion`).
 - **APIs** (auth `x-ia-session` + `local_id`): `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros`
-  `recepciones[/id]` `yo` `validar-pin` `personal` (gestión de equipo, guard solo-responsable).
+  `recepciones[/id]` `recepciones/reconocer` (📷 foto etiqueta/albarán → producto/proveedor/lote/caducidad/Tª
+  vía `callAIVision`) `yo` `validar-pin` `personal` (gestión de equipo, guard solo-responsable)
+  `asignaciones` (reparto) `menu-sugerido` (✨ la IA compone menú eligiendo del catálogo vía `callAI`).
 - **Roles internos de cocina** (`personal.cocina_rol`): **responsable** (Carmen) ve y gestiona todo
   (incl. **alta/baja del equipo** desde `/produccion` → `/api/cocina/personal`, con PIN 4 díg. único por
   local + `partidas`); **cocinero** ve solo su(s) `partidas`; **preparación** = recepción + bases. Frontera
   = "contacto con mercancía cruda". (El rol `co-responsable` está previsto pero aún no habilitado en el guard.)
+- **IA en `/produccion`:** **✨ Repartir con IA** (`asignarTrabajo` por partida sobre el equipo real;
+  reasignable a mano → los ajustes quedan `origen='manual'` como señal de aprendizaje), **✨ Sugerir menú**
+  (describe el evento → menú del catálogo → abre `EventoForm` prerrellenado para revisión humana),
+  **📷 Foto-recepción** (autorrellena el albarán). **Pendiente:** análisis de overrides para reentrenar la
+  propuesta de reparto, recalibrado de tiempos con `hecho_at`, y **control por voz** (sin comandas).
 
 ---
 

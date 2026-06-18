@@ -47,6 +47,13 @@
   - Vulns: 2 high `xlsx` (ialimp solo escribe → no explotable, ya documentado) + 4 moderate transitivas
     (postcss/uuid/file-type) — no se tocan (override arriesga el build de apps vivas).
 
+- **✨ COCINA CENTRAL · GENERADOR DE MENÚS IA — 18/06/2026** (PR #379 merged, `65a68a1`)
+  - **API `/api/cocina/menu-sugerido`** (`callAI`, solo responsable): describe el evento (pax/restricciones) →
+    la IA compone un menú **eligiendo SOLO del catálogo `cocina_recetas` del local** (valida ids, no inventa),
+    equilibra entrante/principal/postre. En `/produccion` (panel Eventos): botón **"✨ Sugerir menú"** → abre
+    `EventoForm` **prerrellenado** con las elaboraciones propuestas (revisión humana antes de guardar) + notas IA.
+  - Skill `ia-rest-maestro` actualizado con reparto IA / atribución / foto-recepción / generador de menús.
+
 - **🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN — 18/06/2026** (PR #377 merged, `fa1e48e`)
   - **Reparto IA con aprendizaje:** tabla `cocina_asignaciones` (receta_id→trabajador_id, `origen` ia|manual).
     API `/api/cocina/asignaciones` (GET + set/bulk, solo responsable). En `/produccion`: botón **"✨ Repartir con IA"**
