@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T07:23:33Z",
+  "generadoEn": "2026-06-18T07:27:38Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2451,6 +2451,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE",
       "fecha": "18/06/2026"
     },
@@ -2504,10 +2508,6 @@
     },
     {
       "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "📧 FACTURAS CORREO · Sistema completo en producción",
       "fecha": "16/06/2026"
     }
   ],
