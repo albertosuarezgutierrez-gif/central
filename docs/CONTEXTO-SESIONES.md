@@ -47,6 +47,33 @@
   - Vulns: 2 high `xlsx` (ialimp solo escribe → no explotable, ya documentado) + 4 moderate transitivas
     (postcss/uuid/file-type) — no se tocan (override arriesga el build de apps vivas).
 
+- **🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN — 18/06/2026** (PR #377 merged, `fa1e48e`)
+  - **Reparto IA con aprendizaje:** tabla `cocina_asignaciones` (receta_id→trabajador_id, `origen` ia|manual).
+    API `/api/cocina/asignaciones` (GET + set/bulk, solo responsable). En `/produccion`: botón **"✨ Repartir con IA"**
+    (`asignarTrabajo` por partida sobre el equipo real, `requiere_rol=partida` + `trabajador.roles=partidas`; fallback a
+    semilla con todas las partidas). Selector por ficha → los ajustes de Carmen quedan `origen='manual'` (señal de aprendizaje).
+  - **Atribución + tiempos (APPCC real):** `cocina_registros.hecho_por/hecho_por_id/hecho_at/firma_por_id`; controles con `por`.
+    La ficha y el dossier muestran "Hecho por X · hora" y el autor de cada control.
+  - **📷 Foto-recepción:** `cocina_recepciones.caducidad`; API `/api/cocina/recepciones/reconocer` (`callAIVision`, reutiliza
+    patrón de `/api/vinos/reconocer`): foto de etiqueta/albarán → producto/proveedor/lote/caducidad/Tª; albarán multi-producto
+    registra todos. Botón "📷 Foto de etiqueta/albarán" en el panel Recepción + campo Caducidad.
+  - **Aprendizaje real (análisis de overrides → ajustar la propuesta) = pendiente.**
+
+- **🗺️ ROADMAP COCINA CENTRAL (backlog acordado — "todo menos voz") — 18/06/2026**
+  - Decisión Alberto: ejecutar todo el backlog **menos control por voz** (voz → PENDIENTE). La IA hace y aprende.
+  - **Pendiente por orden sugerido:** (1) **Generador de menús IA** (describe evento → propone menú del catálogo) ·
+    (2) **Etiqueta de regeneración en destino** + **etiquetas APPCC imprimibles por elaboración** (lote/caducidad/alérgenos) ·
+    (3) **Control de Tª de cámaras programado con alarma** · (4) **Comparador de precios de proveedores** (requiere capturar
+    precio en foto-albarán) · (5) **Lista de la compra automática** (escandallo×PAX → pedido por proveedor, 1 clic) ·
+    (6) **Parte/eventos desde PDF del cliente** (visión doc) · (7) **Cronograma del día "en riesgo"** (motor ya da holgura/empezar_antes) ·
+    (8) **Hoja de alérgenos por evento (PDF)** · (9) **Hoja de carga/picking del furgón + Tª transporte** ·
+    (10) **Costes/márgenes por evento → plataforma** · (11) **Recalibrado automático de tiempos** (usa `hecho_at`) ·
+    (12) **Plantillas de evento** · (13) **Mise en place consolidada con cantidades** · (14) **No conformidades + partes de limpieza (L+D)** ·
+    (15) **Modo "inspección sanitaria" (dossier total)** · (16) **QR de trazabilidad en etiqueta** · (17) **Presupuesto/PDF al cliente** ·
+    (18) **Resumen diario a Carmen** · (19) **Mermas/sobrantes** · (20) **Asistente conversacional del parte** · (21) **Foto del plato terminado** ·
+    (22) **Histórico de partes + dossier PDF** · (23) **Firma de entrega digital del cliente** · (24) **Ficha de cliente/CRM**.
+  - **PENDIENTE explícito:** control por voz (recalibrado para cocina central, sin comandas).
+
 - **👥 COCINA CENTRAL · GESTIÓN DE EQUIPO — 18/06/2026** (PR #372 merged, `a43fdb1`)
   - Carmen (responsable) gestiona su equipo desde `/produccion` (panel "👥 Equipo"): alta/edición/baja/borrado
     de miembros con **PIN 4 díg. único por local** + `partidas`; muestra el enlace del local + PIN de cada persona.
