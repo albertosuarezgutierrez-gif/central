@@ -85,24 +85,19 @@ function Ficha({ e }: { e: ElaboracionTraza }): ReactElement {
           {alergenos.map(a => <Chip key={a} bg="rgba(154,107,18,.10)" fg={C.ambar} br="rgba(154,107,18,.3)">{ALERGENO_NOMBRE[a]}</Chip>)}
         </div>
       )}
-      <div style={{ marginTop: 10, overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 12, minWidth: 480 }}>
-          <thead><tr style={{ color: C.ink3, textAlign: 'left' }}>
-            {['Ingrediente', 'Cantidad', 'Nº Lote', 'Proveedor', 'Desinf.', 'Descong.'].map(h => <th key={h} style={{ borderBottom: `1px solid ${C.linea}`, padding: '3px 7px', fontWeight: 700 }}>{h}</th>)}
-          </tr></thead>
-          <tbody>
-            {e.ingredientes.map((ing, i) => (
-              <tr key={i} style={{ color: C.tinta }}>
-                <td style={{ padding: '3px 7px' }}>{ing.nombre}</td>
-                <td style={{ padding: '3px 7px', fontWeight: 700 }}>{ing.cantidad}</td>
-                <td style={{ padding: '3px 7px', color: C.ink3 }}>⬚</td>
-                <td style={{ padding: '3px 7px', color: C.ink3 }}>⬚</td>
-                <td style={{ padding: '3px 7px' }}>{ing.desinfeccion ? '✓' : '—'}</td>
-                <td style={{ padding: '3px 7px' }}>{ing.descongelacion ? '✓' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ marginTop: 10 }}>
+        {e.ingredientes.map((ing, i) => (
+          <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '2px 10px', padding: '6px 0', borderBottom: `1px solid ${C.papel}` }}>
+            <span style={{ fontFamily: SN, fontWeight: 700, fontSize: 13, color: C.tinta, flex: '1 1 auto', minWidth: 0 }}>{ing.nombre}</span>
+            <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.verde, whiteSpace: 'nowrap' }}>{ing.cantidad}</span>
+            <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
+              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>Lote ⬚</span>
+              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>Prov. ⬚</span>
+              {ing.desinfeccion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>🧪 Desinf.</span>}
+              {ing.descongelacion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>❄️ Descong.</span>}
+            </div>
+          </div>
+        ))}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
         {controles.map((r, i) => (

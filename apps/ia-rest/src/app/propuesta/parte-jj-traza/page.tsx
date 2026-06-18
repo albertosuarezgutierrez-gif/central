@@ -172,31 +172,23 @@ function FichaElaboracion({ e }: { e: ElaboracionTraza }): ReactElement {
         </div>
       )}
 
-      {/* Ficha de ingredientes (columnas del parte real) */}
-      <div style={{ marginTop: 14, overflowX: 'auto' }}>
-        <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 12.5, minWidth: 520 }}>
-          <thead>
-            <tr style={{ color: C.ink3, textAlign: 'left' }}>
-              {['Ingrediente', 'Cantidad', 'Nº Lote', 'Proveedor', 'Desinf.', 'Descong.'].map(h => (
-                <th key={h} style={{ borderBottom: `1px solid ${C.linea}`, padding: '4px 8px', fontWeight: 700 }}>{h}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {e.ingredientes.map((ing, i) => (
-              <tr key={i} style={{ color: C.tinta }}>
-                <td style={{ padding: '4px 8px', borderBottom: `1px solid ${C.papel}` }}>{ing.nombre}</td>
-                <td style={{ padding: '4px 8px', borderBottom: `1px solid ${C.papel}` }}>{ing.cantidad || '—'}</td>
-                <td style={{ padding: '4px 8px', borderBottom: `1px solid ${C.papel}`, color: ing.lote ? C.tinta : C.ink3 }}>{ing.lote || '⬚'}</td>
-                <td style={{ padding: '4px 8px', borderBottom: `1px solid ${C.papel}`, color: ing.proveedor ? C.tinta : C.ink3 }}>{ing.proveedor || '⬚'}</td>
-                <td style={{ padding: '4px 8px', borderBottom: `1px solid ${C.papel}` }}>{ing.desinfeccion ? '✓' : '—'}</td>
-                <td style={{ padding: '4px 8px', borderBottom: `1px solid ${C.papel}` }}>{ing.descongelacion ? '✓' : '—'}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 4 }}>⬚ = se rellena en recepción (lote/proveedor del albarán)</div>
+      {/* Ficha de ingredientes — filas que envuelven (responsive, sin scroll horizontal) */}
+      <div style={{ marginTop: 14 }}>
+        {e.ingredientes.map((ing, i) => (
+          <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '2px 10px', padding: '7px 0', borderBottom: `1px solid ${C.papel}` }}>
+            <span style={{ fontFamily: SN, fontWeight: 700, fontSize: 13.5, color: C.tinta, flex: '1 1 auto', minWidth: 0 }}>{ing.nombre}</span>
+            <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 13.5, color: C.verde, whiteSpace: 'nowrap' }}>{ing.cantidad || '—'}</span>
+            <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
+              <span style={{ fontFamily: SN, fontSize: 11, color: ing.lote ? C.tinta : C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>Lote {ing.lote || '⬚'}</span>
+              <span style={{ fontFamily: SN, fontSize: 11, color: ing.proveedor ? C.tinta : C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>Prov. {ing.proveedor || '⬚'}</span>
+              {ing.desinfeccion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>🧪 Desinfección</span>}
+              {ing.descongelacion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>❄️ Descongelación</span>}
+            </div>
+          </div>
+        ))}
+        <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 6 }}>⬚ = se rellena en recepción (lote/proveedor del albarán)</div>
       </div>
+
 
       {/* Puntos de control con su estado */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
