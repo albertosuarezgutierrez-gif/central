@@ -29,6 +29,9 @@ type Receta = FichaCatalogo
 type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; elaboraciones: string[] }
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string }>; muestra_testigo_at: string | null; firma: string | null }
 type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; conforme: boolean; observaciones: string | null }
+type Miembro = { id: string; nombre: string; pin: string; cocina_rol: string; partidas: string[]; activo: boolean }
+const COCINA_ROL_LABEL: Record<string, string> = { responsable: 'Responsable', cocinero: 'Cocinero', preparacion: 'Preparación' }
+const PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
 
 const sh = (): Record<string, string> => ({ 'x-ia-session': (typeof window !== 'undefined' && localStorage.getItem('ia_rest_session')) || '' })
 
@@ -256,6 +259,51 @@ function RecetaForm({ inicial, onGuardar, onCancelar, saving }: {
   )
 }
 
+function MiembroForm({ inicial, onGuardar, onCancelar, saving }: {
+  inicial?: Miembro
+  onGuardar: (v: Record<string, unknown>) => void
+  onCancelar: () => void
+  saving: boolean
+}): ReactElement {
+  const [nombre, setNombre] = useState(inicial?.nombre ?? '')
+  const [pin, setPin] = useState(inicial?.pin ?? '')
+  const [rol, setRol] = useState(inicial?.cocina_rol ?? 'cocinero')
+  const [partidas, setPartidas] = useState<string[]>(inicial?.partidas ?? [])
+  const togglePartida = (p: string) => setPartidas(prev => prev.includes(p) ? prev.filter(x => x !== p) : [...prev, p])
+  const valido = nombre.trim() && /^\d{4}$/.test(pin)
+
+  return (
+    <div style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,160px),1fr))', gap: 10 }}>
+        <div><label style={lbl}>Nombre *</label><input style={inp} value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Ej: Marta" /></div>
+        <div><label style={lbl}>PIN (4 dígitos) *</label><input style={inp} inputMode="numeric" value={pin} onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))} placeholder="4321" /></div>
+        <div><label style={lbl}>Rol</label>
+          <select style={inp} value={rol} onChange={e => setRol(e.target.value)}>
+            <option value="cocinero">Cocinero</option>
+            <option value="preparacion">Preparación</option>
+            <option value="responsable">Co-responsable</option>
+          </select>
+        </div>
+      </div>
+      {rol === 'cocinero' && (
+        <div style={{ marginTop: 12 }}>
+          <label style={lbl}>Partidas que cubre</label>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+            {PARTIDAS.map(p => (
+              <button key={p} type="button" onClick={() => togglePartida(p)} style={{ padding: '5px 12px', borderRadius: 20, cursor: 'pointer', fontFamily: SN, fontSize: 12, background: partidas.includes(p) ? C.verde : '#fff', color: partidas.includes(p) ? '#fff' : C.ink3, border: `1px solid ${partidas.includes(p) ? C.verde : C.linea}` }}>{PARTIDA_NOMBRE[p] ?? p}</button>
+            ))}
+          </div>
+        </div>
+      )}
+      <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
+        <button onClick={onCancelar} style={{ fontFamily: SN, fontSize: 14, color: C.ink3, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 8, padding: '9px 14px', cursor: 'pointer' }}>Cancelar</button>
+        <button disabled={saving || !valido} onClick={() => onGuardar({ nombre: nombre.trim(), pin, cocina_rol: rol, partidas })}
+          style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || !valido ? C.ink3 : C.verde, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: saving ? 'default' : 'pointer' }}>{saving ? 'Guardando…' : 'Guardar'}</button>
+      </div>
+    </div>
+  )
+}
+
 export default function ProduccionCocinaCentralPage(): ReactElement {
   const [nombreLocal, setNombreLocal] = useState('Cocina central')
   const [ready, setReady]   = useState(false)
@@ -270,7 +318,10 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
   const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', conforme: true, observaciones: '' })
-  const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string }>({ cocina_rol: 'responsable', partidas: [], nombre: '' })
+  const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
+  const [equipo, setEquipo] = useState<Miembro[]>([])
+  const [gestionEquipo, setGestionEquipo] = useState(false)
+  const [editorMiembro, setEditorMiembro] = useState<{ modo: 'nuevo' | 'editar'; miembro?: Miembro } | null>(null)
 
   const cargar = useCallback(async () => {
     const [pr, rr, cr, yr] = await Promise.all([
@@ -282,13 +333,40 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     const d = await pr.json().catch(() => ({ recetas: [], eventos: [] }))
     const reg = await rr.json().catch(() => ({ registros: [] }))
     const rec = await cr.json().catch(() => ({ recepciones: [] }))
-    const me = await yr.json().catch(() => ({ cocina_rol: 'responsable', partidas: [], nombre: '' }))
+    const me = await yr.json().catch(() => ({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null }))
     setRecetas(d.recetas ?? [])
     setEventos(d.eventos ?? [])
     setRegistros(reg.registros ?? [])
     setRecepciones(rec.recepciones ?? [])
-    setYo({ cocina_rol: me.cocina_rol ?? 'responsable', partidas: me.partidas ?? [], nombre: me.nombre ?? '' })
+    setYo({ cocina_rol: me.cocina_rol ?? 'responsable', partidas: me.partidas ?? [], nombre: me.nombre ?? '', access_token: me.access_token ?? null })
+    if ((me.cocina_rol ?? 'responsable') === 'responsable') {
+      const eq = await fetch('/api/cocina/personal', { headers: sh() }).then(r => r.json()).catch(() => ({ equipo: [] }))
+      setEquipo(eq.equipo ?? [])
+    }
   }, [])
+
+  const guardarMiembro = async (v: Record<string, unknown>) => {
+    setSaving(true)
+    try {
+      if (editorMiembro?.modo === 'editar' && editorMiembro.miembro) {
+        await fetch('/api/cocina/personal', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: editorMiembro.miembro.id, ...v }) })
+      } else {
+        await fetch('/api/cocina/personal', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(v) })
+      }
+      await cargar()
+      setEditorMiembro(null)
+    } finally { setSaving(false) }
+  }
+  const bajaMiembro = async (m: Miembro) => {
+    await fetch('/api/cocina/personal', { method: 'PUT', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: m.id, activo: !m.activo }) })
+    await cargar()
+  }
+  const borrarMiembro = async (m: Miembro) => {
+    if (!window.confirm(`¿Borrar a ${m.nombre}?`)) return
+    const r = await fetch('/api/cocina/personal', { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ id: m.id }) })
+    if (!r.ok) { const e = await r.json().catch(() => ({})); window.alert(e.error ?? 'No se pudo borrar') }
+    await cargar()
+  }
 
   const accion = useCallback(async (receta_id: string, payload: Record<string, unknown>) => {
     await fetch('/api/cocina/registros', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ receta_id, ...payload }) })
@@ -446,12 +524,51 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               </button>
             )}
             {(esResponsable || esPreparacion) && (
-              <button onClick={() => { setGestionRecep(v => !v); setGestion(false); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecep ? '#fff' : C.ambar, background: gestionRecep ? C.ambar : 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+              <button onClick={() => { setGestionRecep(v => !v); setGestion(false); setGestionRecetas(false); setGestionEquipo(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecep ? '#fff' : C.ambar, background: gestionRecep ? C.ambar : 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
                 {gestionRecep ? 'Cerrar' : '📦 Recepción'}
+              </button>
+            )}
+            {esResponsable && (
+              <button onClick={() => { setGestionEquipo(v => !v); setGestion(false); setGestionRecetas(false); setGestionRecep(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionEquipo ? '#fff' : C.tinta, background: gestionEquipo ? C.tinta : 'transparent', border: `1px solid ${C.tinta}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+                {gestionEquipo ? 'Cerrar' : '👥 Equipo'}
               </button>
             )}
           </div>
         </div>
+
+        {/* Gestión de equipo (solo responsable) */}
+        {gestionEquipo && esResponsable && (
+          <div className="noprint" style={{ background: 'rgba(30,38,34,.04)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+              <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.tinta }}>Equipo de cocina</div>
+              {!editorMiembro && <button onClick={() => setEditorMiembro({ modo: 'nuevo' })} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: 'pointer' }}>+ Nuevo miembro</button>}
+            </div>
+            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>
+              Cada persona entra con el <strong>enlace del local + su PIN</strong>{yo.access_token ? <> · enlace: <code style={{ fontSize: 11 }}>iarest.es/login?t={yo.access_token}</code></> : null}
+            </div>
+
+            {editorMiembro && (
+              <MiembroForm inicial={editorMiembro.miembro} saving={saving} onCancelar={() => setEditorMiembro(null)} onGuardar={guardarMiembro} />
+            )}
+
+            {!editorMiembro && equipo.map(m => (
+              <div key={m.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${C.linea}`, opacity: m.activo ? 1 : .5 }}>
+                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                  <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>
+                    {m.nombre} <span style={{ fontFamily: SN, fontSize: 11, fontWeight: 700, color: C.oro, marginLeft: 4 }}>{COCINA_ROL_LABEL[m.cocina_rol] ?? m.cocina_rol}</span>{!m.activo && <span style={{ fontSize: 11, color: C.ink3 }}> · baja</span>}
+                  </div>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>
+                    PIN <strong>{m.pin}</strong>{m.cocina_rol === 'cocinero' && m.partidas.length > 0 ? ` · ${m.partidas.map(p => PARTIDA_NOMBRE[p] ?? p).join(', ')}` : ''}
+                  </div>
+                </div>
+                <button onClick={() => setEditorMiembro({ modo: 'editar', miembro: m })} style={{ fontFamily: SN, fontSize: 12.5, color: C.verde, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Editar</button>
+                <button onClick={() => bajaMiembro(m)} style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>{m.activo ? 'Baja' : 'Alta'}</button>
+                <button onClick={() => borrarMiembro(m)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
+              </div>
+            ))}
+            {!editorMiembro && equipo.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay equipo. Pulsa "+ Nuevo miembro" para dar de alta a tus cocineros y preparación.</div>}
+          </div>
+        )}
 
         {/* Banner de rol (cocinero / preparación) */}
         {!esResponsable && (

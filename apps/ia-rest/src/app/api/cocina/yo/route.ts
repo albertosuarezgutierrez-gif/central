@@ -14,16 +14,15 @@ export async function GET(req: NextRequest) {
   if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   const rid = getRestauranteId(req)
 
-  const { data } = await supabase
-    .from('personal')
-    .select('nombre, cocina_rol, partidas')
-    .eq('id', session.id)
-    .eq('local_id', rid)
-    .maybeSingle()
+  const [{ data }, { data: rest }] = await Promise.all([
+    supabase.from('personal').select('nombre, cocina_rol, partidas').eq('id', session.id).eq('local_id', rid).maybeSingle(),
+    supabase.from('restaurantes').select('access_token').eq('id', rid).maybeSingle(),
+  ])
 
   return NextResponse.json({
     nombre: data?.nombre ?? session.nombre ?? '',
     cocina_rol: data?.cocina_rol ?? 'responsable',
     partidas: data?.partidas ?? [],
+    access_token: rest?.access_token ?? null,
   })
 }
