@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T13:11:05Z",
+  "generadoEn": "2026-06-18T13:12:16Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2468,6 +2468,14 @@
       "fecha": "18/06/2026"
     },
     {
+      "titulo": "🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "🗺️ ROADMAP COCINA CENTRAL (backlog acordado — \"todo menos voz\")",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "👥 COCINA CENTRAL · GESTIÓN DE EQUIPO",
       "fecha": "18/06/2026"
     },
@@ -2509,14 +2517,6 @@
     },
     {
       "titulo": "✅ PR #335 MERGED",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "✅ PR #334 MERGED",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "✅ PR #333 MERGED",
       "fecha": "17/06/2026"
     }
   ],
