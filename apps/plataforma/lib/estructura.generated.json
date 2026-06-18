@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T08:57:47Z",
+  "generadoEn": "2026-06-18T09:06:12Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -366,7 +366,7 @@
     "core-payments": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 19
+        "evidencias": 20
       },
       "ialimp": {
         "estado": "usado",
@@ -454,7 +454,7 @@
     "module-asn": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -520,7 +520,7 @@
     "module-contabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "ialimp": {
         "estado": "usado",
@@ -542,7 +542,7 @@
     "module-crm": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "usado",
@@ -586,7 +586,7 @@
     "module-feedback": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -608,7 +608,7 @@
     "module-horario": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -630,7 +630,7 @@
     "module-materiales": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "ialimp": {
         "estado": "usado",
@@ -652,7 +652,7 @@
     "module-organizador-trabajo": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -674,7 +674,7 @@
     "module-presupuestos": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "no",
@@ -696,7 +696,7 @@
     "module-proveedores": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 3
+        "evidencias": 4
       },
       "ialimp": {
         "estado": "usado",
@@ -762,7 +762,7 @@
     "module-trazabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 5
+        "evidencias": 6
       },
       "ialimp": {
         "estado": "no",
@@ -2458,6 +2458,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA DIARIA",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "👥 COCINA CENTRAL · GESTIÓN DE EQUIPO",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
       "fecha": "18/06/2026"
     },
@@ -2507,14 +2515,6 @@
     },
     {
       "titulo": "🍽️ PLATAFORMA · Panel ia-rest/super absorbido → /operador/iarest/*",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🧰 FUNCTION-CALLING POR LA PASARELA · cerrar el último cabo",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325",
       "fecha": "16/06/2026"
     }
   ],

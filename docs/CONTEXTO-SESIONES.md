@@ -16,6 +16,26 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA DIARIA — 18/06/2026** (`docs/AUDITORIA-2026-06-18.md`) — **estado SANO, sin bugs nuevos.**
+  - Rango #356→#372. Verde: lockfile en sync, radiografía al día, guardián 21/21, `transpilePackages`
+    vs deps coherente (los 2 módulos nuevos de cocina — `module-trazabilidad`, `module-organizador-trabajo`
+    — declarados en ambos), **typecheck 0 errores en las 5 apps**, tests en verde, multi-tenant OK en las
+    APIs nuevas de cocina (scope `local_id` + guards).
+  - Reconciliado: memoria (#372 no anotado), skill `ia-rest-maestro` (faltaban APIs `personal`/`validar-pin`),
+    y sincronizado `apps/ia-rest/next.config.js` (residuo con 3 paquetes) con el `.ts` (14) como red de seguridad.
+  - **Acción manual (no urgente):** opcional borrar el `next.config.js` redundante de ia-rest (ya sincronizado).
+    (Nota: `rrhh` SÍ despliega como `central-rrhh` en el equipo Vercel — confirmado por el CI del PR.)
+  - Vulns: 2 high `xlsx` (ialimp solo escribe → no explotable, ya documentado) + 4 moderate transitivas
+    (postcss/uuid/file-type) — no se tocan (override arriesga el build de apps vivas).
+
+- **👥 COCINA CENTRAL · GESTIÓN DE EQUIPO — 18/06/2026** (PR #372 merged, `a43fdb1`)
+  - Carmen (responsable) gestiona su equipo desde `/produccion` (panel "👥 Equipo"): alta/edición/baja/borrado
+    de miembros con **PIN 4 díg. único por local** + `partidas`; muestra el enlace del local + PIN de cada persona.
+  - **API `/api/cocina/personal`** (GET/POST/PUT/DELETE) con guard **solo-responsable** (`cocina_rol === 'responsable'`,
+    403 si no). Crea filas en `personal` con `rol='cocina'`. `/api/cocina/yo` añade `access_token` del local.
+  - Cada miembro entra por el **mismo enlace del local** con su PIN; `/api/cocina/yo` le sirve su vista por rol/partida.
+  - `cocina_rol` previsto `co-responsable` (aún no habilitado en el guard). Reunión Carmen: **jueves 25, 12:00**.
+
 - **🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE — 18/06/2026** (Catering Joaquín Jaén, `/produccion`)
   - **Carmen** (rol `cocina`, PIN **1234** de prueba) entra por su enlace → **`/produccion`** (no al KDS de mesas).
   - **Ya NO es consultivo: herramienta completa, persistida en BD `iarest`** (service_role). PRs mergeados:

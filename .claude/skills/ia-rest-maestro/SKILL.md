@@ -305,10 +305,11 @@ Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
   día: hecho/controles Tª/muestra/firma), `cocina_recepciones` (albaranes). Más `personal.partidas text[]`
   y `personal.cocina_rol` (`responsable`|`cocinero`|`preparacion`).
 - **APIs** (auth `x-ia-session` + `local_id`): `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros`
-  `recepciones[/id]` `yo`.
-- **Roles internos de cocina** (`personal.cocina_rol`): **responsable** (Carmen) ve y gestiona todo;
-  **cocinero** ve solo su(s) `partidas`; **preparación** = recepción + bases. Frontera = "contacto con
-  mercancía cruda".
+  `recepciones[/id]` `yo` `validar-pin` `personal` (gestión de equipo, guard solo-responsable).
+- **Roles internos de cocina** (`personal.cocina_rol`): **responsable** (Carmen) ve y gestiona todo
+  (incl. **alta/baja del equipo** desde `/produccion` → `/api/cocina/personal`, con PIN 4 díg. único por
+  local + `partidas`); **cocinero** ve solo su(s) `partidas`; **preparación** = recepción + bases. Frontera
+  = "contacto con mercancía cruda". (El rol `co-responsable` está previsto pero aún no habilitado en el guard.)
 
 ---
 
