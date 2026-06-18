@@ -99,6 +99,20 @@ Panel **"Material del evento"** en el detalle del evento (en `/produccion` para 
     plantilla visual para la próxima boda igual.
 17. **Calendario logístico unificado:** agenda diaria cocina + montajes/desmontajes + mantenimientos.
 
+## Estado de implementación (18/06/2026)
+**1er corte CONSTRUIDO** (rama `claude/jj-logistica-materiales-k5eko3`), con una **desviación
+consciente del anclaje**: se ancló en **`cocina_eventos`** (no en la tabla CRM `eventos`) porque JJ
+trabaja exclusivamente en `/produccion` y no usa aún el módulo CRM de eventos → así es usable y
+testeable HOY sin construir gestión de eventos CRM. Enlace genérico
+(`materiales_asignacion.destino_tipo='evento'`, `destino_ref=cocina_eventos.id`), por lo que migrar
+al spine `eventos` luego = repuntar `destino_ref`/`parent_id` (sin reescribir).
+- API: `apps/ia-rest/src/app/api/cocina/eventos/[id]/material/route.ts` (GET/POST/DELETE).
+- UI: panel "📦 Material" por evento en `apps/ia-rest/src/app/produccion/page.tsx` (kits + suelto,
+  descuento de stock, valor en riesgo, quitar).
+- **Sigue pendiente del spine completo:** `cocina_eventos.evento_id` + creación/enlace de la fila
+  `eventos` (CRM) cuando catering empiece a usar presupuestos/espacios/fechas de montaje; reservas por
+  fecha (`materiales_reservas` + `disponibilidadEnFecha`); roturas en el cierre económico del evento.
+
 ## Fuera de alcance
 - Construir la integración (esto es solo el diseño).
 - Migrar datos `inventario_menaje_evento` → `materiales`.

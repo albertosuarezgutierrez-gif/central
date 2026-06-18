@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO) — 18/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
+  - Nuevo: cada **evento de cocina** (`/produccion`) lleva su **material** (mesas/sillas/menaje). Botón
+    **📦 Material** por evento → panel para añadir **kits** o **material suelto**, con descuento de stock,
+    valor en riesgo (coste de reposición) y quitar (repone stock).
+  - **API** `apps/ia-rest/src/app/api/cocina/eventos/[id]/material/route.ts` (GET/POST/DELETE), auth de
+    cocina (`x-ia-session`), scope `local_id`. Enlace **genérico sin FK dura**:
+    `materiales_asignacion.destino_tipo='evento'`, `destino_ref=cocina_eventos.id`, `destino_nombre=nombre`.
+  - **UI** en `produccion/page.tsx`: panel desplegable bajo cada evento (solo responsable).
+  - **DECISIÓN/DESVIACIÓN:** el v1 ancla en **`cocina_eventos`** (lo que JJ usa hoy), NO en la tabla CRM
+    `eventos` que se había elegido — porque JJ no usa el módulo CRM de eventos y así es testeable ya. La
+    unificación sobre `eventos` (CRM) sigue siendo el norte; migración futura = repuntar `destino_ref`.
+  - **Sembrado para probar** (Catering Joaquín Jaén): owner **PIN 1369** (/owner→Materiales), montador
+    **PIN 4040** (/montaje), Carmen **1234** (/produccion). 5 materiales + kit "Boda 100 pax" + 2 asignaciones.
+    Enlace: `https://www.iarest.es/login?r=catering-joaquin-jaen`.
+  - Verificación: pendiente preview Vercel de ia-rest (sin toolchain TS local).
+
 - **📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina — 18/06/2026**
   (rama `claude/jj-logistica-materiales-k5eko3`)
   - **Bug de fondo resuelto:** el código de Fase B del módulo materiales (mesas/sillas/menaje de

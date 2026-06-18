@@ -35,6 +35,11 @@ type Recepcion = { id: string; producto: string; proveedor: string | null; lote:
 type Miembro = { id: string; nombre: string; pin: string; cocina_rol: string; partidas: string[]; activo: boolean }
 const COCINA_ROL_LABEL: Record<string, string> = { responsable: 'Responsable', cocinero: 'Cocinero', preparacion: 'Preparación' }
 const PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
+// Material del evento (mesas/sillas/menaje) — comparte la "boda" con la cocina
+type MatLinea = { id: string; material_id: string; cantidad: number; cantidad_devuelta: number; estado: string }
+type MatCat = { id: string; nombre: string; categoria: string | null; cantidad_disponible: number; coste_reposicion: number | null }
+type MatKit = { id: string; nombre: string }
+const eur = (n: number) => n.toLocaleString('es', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
 
 const sh = (): Record<string, string> => ({ 'x-ia-session': (typeof window !== 'undefined' && localStorage.getItem('ia_rest_session')) || '' })
 
@@ -347,6 +352,10 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [sugForm, setSugForm] = useState({ open: false, descripcion: '', pax: '', restricciones: '' })
   const [sugiriendo, setSugiriendo] = useState(false)
   const [sugNotas, setSugNotas] = useState('')
+  // Material del evento (panel desplegable bajo cada evento)
+  const [matPanel, setMatPanel] = useState<{ evento: Evento; material: MatLinea[]; catalogo: MatCat[]; kits: MatKit[] } | null>(null)
+  const [matAdd, setMatAdd] = useState({ kit_id: '', kit_cantidad: '1', material_id: '', cantidad: '1' })
+  const [matBusy, setMatBusy] = useState(false)
 
   const cargar = useCallback(async () => {
     const [pr, rr, cr, yr, ar] = await Promise.all([
@@ -565,6 +574,48 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     if (!window.confirm(`¿Borrar el evento "${ev.nombre}"?`)) return
     await fetch(`/api/cocina/eventos/${ev.id}`, { method: 'DELETE', headers: sh() })
     await cargar()
+  }
+
+  // ── Material del evento ───────────────────────────────────────
+  const cargarMaterial = async (evId: string) => {
+    const r = await fetch(`/api/cocina/eventos/${evId}/material`, { headers: sh() })
+    const d = await r.json().catch(() => ({}))
+    return { material: (d.material ?? []) as MatLinea[], catalogo: (d.catalogo ?? []) as MatCat[], kits: (d.kits ?? []) as MatKit[] }
+  }
+  const abrirMaterial = async (ev: Evento) => {
+    if (matPanel?.evento.id === ev.id) { setMatPanel(null); return }
+    setMatBusy(true)
+    try {
+      const d = await cargarMaterial(ev.id)
+      setMatPanel({ evento: ev, ...d })
+      setMatAdd({ kit_id: '', kit_cantidad: '1', material_id: '', cantidad: '1' })
+    } finally { setMatBusy(false) }
+  }
+  const refrescarMaterial = async () => {
+    if (!matPanel) return
+    const d = await cargarMaterial(matPanel.evento.id)
+    setMatPanel(p => p ? { ...p, ...d } : p)
+  }
+  const agregarMaterial = async (payload: Record<string, unknown>) => {
+    if (!matPanel) return
+    setMatBusy(true)
+    try {
+      const r = await fetch(`/api/cocina/eventos/${matPanel.evento.id}/material`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(payload) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { window.alert(d.error ?? 'No se pudo añadir el material'); return }
+      await refrescarMaterial()
+      setMatAdd(a => ({ ...a, kit_id: '', material_id: '', cantidad: '1', kit_cantidad: '1' }))
+    } finally { setMatBusy(false) }
+  }
+  const quitarMaterial = async (asignacion_id: string) => {
+    if (!matPanel) return
+    setMatBusy(true)
+    try {
+      const r = await fetch(`/api/cocina/eventos/${matPanel.evento.id}/material`, { method: 'DELETE', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ asignacion_id }) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { window.alert(d.error ?? 'No se pudo quitar'); return }
+      await refrescarMaterial()
+    } finally { setMatBusy(false) }
   }
 
   const guardarReceta = async (v: Record<string, unknown>) => {
@@ -793,13 +844,63 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
             )}
 
             {!editor && eventos.map(ev => (
-              <div key={ev.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0', borderBottom: `1px solid ${C.linea}` }}>
-                <div style={{ flex: '1 1 auto', minWidth: 0 }}>
-                  <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>{ev.nombre}</div>
-                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{ev.fecha_evento ?? 'sin fecha'} · {ev.pax} PAX · {ev.elaboraciones.length} elaboraciones</div>
+              <div key={ev.id} style={{ borderBottom: `1px solid ${C.linea}` }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '10px 0' }}>
+                  <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                    <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>{ev.nombre}</div>
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{ev.fecha_evento ?? 'sin fecha'} · {ev.pax} PAX · {ev.elaboraciones.length} elaboraciones</div>
+                  </div>
+                  <button onClick={() => abrirMaterial(ev)} style={{ fontFamily: SN, fontSize: 12.5, fontWeight: 700, color: matPanel?.evento.id === ev.id ? '#fff' : C.oro, background: matPanel?.evento.id === ev.id ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>📦 Material</button>
+                  <button onClick={() => setEditor({ modo: 'editar', evento: ev })} style={{ fontFamily: SN, fontSize: 12.5, color: C.verde, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Editar</button>
+                  <button onClick={() => borrarEvento(ev)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
                 </div>
-                <button onClick={() => setEditor({ modo: 'editar', evento: ev })} style={{ fontFamily: SN, fontSize: 12.5, color: C.verde, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Editar</button>
-                <button onClick={() => borrarEvento(ev)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
+                {matPanel && matPanel.evento.id === ev.id && (() => {
+                  const mp = matPanel
+                  const totalUds = mp.material.reduce((s, l) => s + l.cantidad, 0)
+                  const totalCoste = mp.material.reduce((s, l) => s + (mp.catalogo.find(c => c.id === l.material_id)?.coste_reposicion ?? 0) * l.cantidad, 0)
+                  return (
+                    <div className="noprint" style={{ background: 'rgba(158,129,82,.05)', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 14, margin: '2px 0 12px' }}>
+                      <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.oro, marginBottom: 8 }}>📦 Material del evento{matBusy ? ' · …' : ''}</div>
+                      {mp.material.length === 0 && <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3 }}>Sin material asignado todavía. Añade un kit o material suelto abajo.</div>}
+                      {mp.material.map(ln => {
+                        const cat = mp.catalogo.find(c => c.id === ln.material_id)
+                        const coste = (cat?.coste_reposicion ?? 0) * ln.cantidad
+                        return (
+                          <div key={ln.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, padding: '7px 0', borderBottom: `1px solid ${C.papel}` }}>
+                            <div style={{ flex: '1 1 auto', minWidth: 0, fontFamily: SN, fontSize: 13, color: C.tinta }}><strong>{ln.cantidad}×</strong> {cat?.nombre ?? '—'}</div>
+                            <Chip bg={C.papel} fg={C.ink3} br={C.linea}>{ln.estado}</Chip>
+                            {coste > 0 && <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{eur(coste)}</span>}
+                            {ln.estado === 'reservado' && <button onClick={() => quitarMaterial(ln.id)} style={{ fontFamily: SN, fontSize: 12, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '4px 10px', cursor: 'pointer' }}>Quitar</button>}
+                          </div>
+                        )
+                      })}
+                      {mp.material.length > 0 && <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 8 }}>{totalUds} uds · valor en riesgo {eur(totalCoste)}</div>}
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'end', marginTop: 12 }}>
+                        <div style={{ flex: '2 1 150px' }}><label style={lbl}>Kit</label>
+                          <select style={inp} value={matAdd.kit_id} onChange={e => setMatAdd(a => ({ ...a, kit_id: e.target.value }))}>
+                            <option value="">— elegir kit —</option>
+                            {mp.kits.map(k => <option key={k.id} value={k.id}>{k.nombre}</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: '0 1 64px' }}><label style={lbl}>×</label><input style={inp} type="number" min="1" value={matAdd.kit_cantidad} onChange={e => setMatAdd(a => ({ ...a, kit_cantidad: e.target.value }))} /></div>
+                        <button disabled={matBusy || !matAdd.kit_id} onClick={() => agregarMaterial({ kit_id: matAdd.kit_id, kit_cantidad: Number(matAdd.kit_cantidad) || 1 })} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: matBusy || !matAdd.kit_id ? C.ink3 : C.oro, border: 'none', borderRadius: 8, padding: '9px 14px', cursor: 'pointer' }}>+ Kit</button>
+                      </div>
+
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'end', marginTop: 8 }}>
+                        <div style={{ flex: '2 1 150px' }}><label style={lbl}>Material suelto</label>
+                          <select style={inp} value={matAdd.material_id} onChange={e => setMatAdd(a => ({ ...a, material_id: e.target.value }))}>
+                            <option value="">— elegir material —</option>
+                            {mp.catalogo.map(c => <option key={c.id} value={c.id}>{c.nombre} ({c.cantidad_disponible} disp.)</option>)}
+                          </select>
+                        </div>
+                        <div style={{ flex: '0 1 64px' }}><label style={lbl}>Cant.</label><input style={inp} type="number" min="1" value={matAdd.cantidad} onChange={e => setMatAdd(a => ({ ...a, cantidad: e.target.value }))} /></div>
+                        <button disabled={matBusy || !matAdd.material_id} onClick={() => agregarMaterial({ material_id: matAdd.material_id, cantidad: Number(matAdd.cantidad) || 0 })} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: matBusy || !matAdd.material_id ? C.ink3 : C.verde, border: 'none', borderRadius: 8, padding: '9px 14px', cursor: 'pointer' }}>+ Añadir</button>
+                      </div>
+                      {mp.catalogo.length === 0 && <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3, marginTop: 8 }}>No hay material en el catálogo. Dalo de alta en <strong>/owner → Materiales</strong>.</div>}
+                    </div>
+                  )
+                })()}
               </div>
             ))}
             {!editor && eventos.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay eventos. Pulsa "+ Nuevo evento".</div>}
