@@ -39,7 +39,14 @@ export default function ComunicacionClient({ operador, negocios, categorias }: {
 
   return (
     <div style={{ minHeight: '100%', background: 'var(--bg)', color: 'var(--text)', display: 'flex', flexDirection: 'column' }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .comun-header { flex-wrap: wrap !important; gap: 8px !important; }
+          .comun-layout { flex-direction: column !important; }
+          .comun-bandeja { width: 100% !important; border-right: none !important; border-bottom: 1px solid var(--border) !important; max-height: 260px; }
+        }
+      `}</style>
+      <div className="comun-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: '1px solid var(--border)', background: 'var(--surface)' }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>💬 Comunicación</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <a href="/comunicacion/config" style={{ color: 'var(--muted)', fontSize: 13, textDecoration: 'none' }}>⚙️ Configurar</a>
@@ -47,9 +54,9 @@ export default function ComunicacionClient({ operador, negocios, categorias }: {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <div className="comun-layout" style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Bandeja */}
-        <div style={{ width: 300, borderRight: '1px solid var(--border)', overflowY: 'auto', padding: 12, background: 'var(--surface)' }}>
+        <div className="comun-bandeja" style={{ width: 300, borderRight: '1px solid var(--border)', overflowY: 'auto', padding: 12, background: 'var(--surface)' }}>
           {convs.length === 0 && <div style={{ color: 'var(--muted)', fontSize: 13, padding: 12 }}>Sin conversaciones todavía.</div>}
           {convs.map(c => (
             <div key={c.id} onClick={() => abrir(c.id)} style={{ padding: '10px 12px', borderRadius: 10, marginBottom: 6, cursor: 'pointer', background: sel === c.id ? 'var(--primary-light)' : 'transparent', border: `1px solid ${sel === c.id ? 'var(--border)' : 'transparent'}` }}>

@@ -25,6 +25,14 @@ export default function PersonasClient({ personas, sugerencias, rrhhDisponible }
 
   return (
     <div style={{ padding: '24px clamp(16px,4vw,40px)', maxWidth: 1000, margin: '0 auto' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .personas-sugerencia-row { flex-direction: column !important; align-items: flex-start !important; }
+          .personas-filtros { flex-direction: column !important; }
+          .personas-filtros input { min-width: unset !important; width: 100% !important; }
+          .personas-roles { flex-direction: column !important; }
+        }
+      `}</style>
       <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>👤 Personas a través de verticales</h1>
       <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>
         Consolidación por <code>persona_id</code> (solo lectura). {personas.length} personas · <b>{multi}</b> en más de una vertical.
@@ -38,7 +46,7 @@ export default function PersonasClient({ personas, sugerencias, rrhhDisponible }
           <p style={{ fontSize: 13, color: '#78350f', marginTop: 0 }}>Parejas que parecen la misma persona pero aún no comparten <code>persona_id</code>. El enlace manual se hará desde aquí (pendiente); de momento es informativo.</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {sugerencias.map((s, i) => (
-              <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, background: 'white', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
+              <div key={i} className="personas-sugerencia-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, background: 'white', borderRadius: 8, padding: '8px 12px', fontSize: 13 }}>
                 <span style={{ fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: s.confianza === 'probable' ? '#dcfce7' : '#fef3c7', color: s.confianza === 'probable' ? '#166534' : '#92400e' }}>
                   {s.confianza === 'probable' ? '● Probable' : '○ Posible'} · {s.motivo}
                 </span>
@@ -52,7 +60,7 @@ export default function PersonasClient({ personas, sugerencias, rrhhDisponible }
       )}
 
       {/* Filtros */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', margin: '12px 0' }}>
+      <div className="personas-filtros" style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center', margin: '12px 0' }}>
         <input placeholder="Buscar por nombre, email o DNI…" value={q} onChange={e => setQ(e.target.value)}
           style={{ flex: 1, minWidth: 220, padding: '9px 12px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 14 }} />
         <label style={{ fontSize: 13, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -69,7 +77,7 @@ export default function PersonasClient({ personas, sugerencias, rrhhDisponible }
               {p.multivertical && <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 20, background: '#eef2ff', color: '#4f46e5' }}>misma persona · {p.roles.length} roles</span>}
               {!p.persona_id && <span style={{ fontSize: 11, color: '#94a3b8' }}>(sin persona_id)</span>}
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
+            <div className="personas-roles" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 8 }}>
               {p.roles.map((r, j) => (
                 <span key={j} style={{ fontSize: 12, background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: '4px 10px' }}>
                   {VICON[r.vertical]} <b>{r.rol}</b> · {VLABEL[r.vertical]}{r.empresa ? ` · ${r.empresa}` : ''}{r.email ? ` · ${r.email}` : ''}

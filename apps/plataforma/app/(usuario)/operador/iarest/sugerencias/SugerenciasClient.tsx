@@ -77,9 +77,16 @@ export default function SugerenciasClient() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .suger-filtros { flex-direction: column !important; }
+          .suger-filtros select, .suger-filtros label { width: 100% !important; }
+          .suger-layout { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '20px' }}>💡 Sugerencias · ia-rest</h1>
 
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+      <div className="suger-filtros" style={{ display: 'flex', gap: '8px', marginBottom: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
         <select
           value={filtroCat}
           onChange={e => setFiltroCat(e.target.value)}
@@ -103,7 +110,7 @@ export default function SugerenciasClient() {
       {loading && <p style={{ color: 'var(--muted)' }}>Cargando…</p>}
       {error && <p style={{ color: '#e53' }}>{error}</p>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: '16px', marginTop: '16px' }}>
+      <div className="suger-layout" style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 380px' : '1fr', gap: '16px', marginTop: '16px' }}>
         <div>
           {sugerencias.length === 0 && !loading && (
             <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '48px' }}>Sin sugerencias.</p>

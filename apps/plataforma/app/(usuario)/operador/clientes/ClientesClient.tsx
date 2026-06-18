@@ -84,6 +84,14 @@ export default function ClientesClient({ operador }: { operador: string }) {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .clientes-kpi-grid { flex-direction: column !important; }
+          .clientes-kpi-grid > div { min-width: unset !important; width: 100% !important; }
+          .clientes-card { flex-direction: column !important; align-items: flex-start !important; }
+          .clientes-card-actions { width: 100% !important; justify-content: flex-end !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
         <div>
@@ -99,7 +107,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
+      <div className="clientes-kpi-grid" style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
         {[
           { label: 'Clientes activos', valor: String(activos) },
           { label: 'Total clientes', valor: String(clientes.filter(c => c.id !== 'iarest-info').length) },
@@ -125,7 +133,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {cs.length === 0 && !loading && <div style={{ color: 'var(--muted)', fontSize: '13px' }}>Sin clientes.</div>}
               {cs.map(c => (
-                <div key={c.vertical + c.id} style={{
+                <div key={c.vertical + c.id} className="clientes-card" style={{
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 'var(--radius)', padding: '12px 16px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
@@ -141,7 +149,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
                       ))}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className="clientes-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {c.id !== 'iarest-info' && (
                       <span style={{
                         fontSize: '11px', fontWeight: 700, borderRadius: '6px', padding: '3px 10px',

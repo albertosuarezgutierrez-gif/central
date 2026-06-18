@@ -44,6 +44,14 @@ export default function ConfigClient({ negocios }: { negocios: Negocio[] }) {
 
   return (
     <div style={{ minHeight: '100vh', background: C.bg, color: C.text, fontFamily: FONT }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .config-cat-row { flex-direction: column !important; }
+          .config-cat-row input, .config-cat-row button { width: 100% !important; }
+          .config-grupo-selects { flex-direction: column !important; }
+          .config-grupo-selects select { width: 100% !important; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 24px', borderBottom: `1px solid ${C.border}` }}>
         <div style={{ fontWeight: 800, fontSize: 18 }}>⚙️ Configurar comunicación</div>
         <a href="/comunicacion" style={{ color: C.muted, fontSize: 13, textDecoration: 'none' }}>← Volver al hub</a>
@@ -61,7 +69,7 @@ export default function ConfigClient({ negocios }: { negocios: Negocio[] }) {
               </span>
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div className="config-cat-row" style={{ display: 'flex', gap: 8 }}>
             <input value={catNombre} onChange={e => setCatNombre(e.target.value)} placeholder="Nueva categoría (p.ej. Directiva)" style={{ ...inp, flex: 1 }} />
             <input type="color" value={catColor} onChange={e => setCatColor(e.target.value)} style={{ ...inp, width: 48, padding: 4, cursor: 'pointer' }} />
             <button onClick={crearCat} style={btn}>Añadir</button>
@@ -82,7 +90,7 @@ export default function ConfigClient({ negocios }: { negocios: Negocio[] }) {
           </div>
           <div style={{ display: 'grid', gap: 8 }}>
             <input value={grNombre} onChange={e => setGrNombre(e.target.value)} placeholder="Nombre del grupo (p.ej. Participantes del catering)" style={inp} />
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div className="config-grupo-selects" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <select value={grTipo} onChange={e => setGrTipo(e.target.value as any)} style={{ ...inp, flex: 1 }}>
                 <option value="estatico">Estático (eliges personas)</option>
                 <option value="dinamico">Dinámico (de una vertical)</option>

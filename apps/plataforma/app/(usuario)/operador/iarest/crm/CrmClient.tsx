@@ -110,6 +110,13 @@ export default function CrmClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .crm-filtros { flex-direction: column !important; }
+          .crm-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .crm-contactos-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🎯 CRM · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -117,7 +124,7 @@ export default function CrmClient() {
       </div>
 
       {/* KPIs por estado */}
-      <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
+      <div className="crm-filtros" style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginBottom: '20px' }}>
         <button
           onClick={() => setFiltroEstado('todos')}
           style={{
@@ -167,7 +174,7 @@ export default function CrmClient() {
       </div>
 
       {/* Tabla */}
-      <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+      <div className="crm-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
             <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
@@ -230,7 +237,7 @@ export default function CrmClient() {
                           <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>
                             Contactos
                           </div>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '8px' }}>
+                          <div className="crm-contactos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '8px' }}>
                             {l.contactos.map(c => (
                               <div key={c.id} style={{ background: 'var(--bg, #fff)', border: '1px solid var(--border)', borderRadius: '6px', padding: '10px 12px', fontSize: '12px' }}>
                                 <div style={{ fontWeight: 600, marginBottom: '2px' }}>

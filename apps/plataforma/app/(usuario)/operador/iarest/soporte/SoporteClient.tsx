@@ -76,6 +76,12 @@ export default function SoporteClient() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .soporte-layout { grid-template-columns: 1fr !important; }
+          .soporte-detail { position: fixed; inset: 0; z-index: 40; overflow-y: auto; }
+        }
+      `}</style>
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '20px' }}>🎫 Soporte · ia-rest</h1>
 
       <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -99,7 +105,7 @@ export default function SoporteClient() {
       {loading && <p style={{ color: 'var(--muted)' }}>Cargando…</p>}
       {error && <p style={{ color: '#e53' }}>{error}</p>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 360px' : '1fr', gap: '16px' }}>
+      <div className="soporte-layout" style={{ display: 'grid', gridTemplateColumns: selected ? '1fr 360px' : '1fr', gap: '16px' }}>
         <div>
           {tickets.length === 0 && !loading && (
             <p style={{ color: 'var(--muted)', textAlign: 'center', padding: '48px' }}>Sin tickets.</p>

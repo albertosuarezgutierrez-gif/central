@@ -69,8 +69,15 @@ export default function CommandPalette({ isOperator }: { isOperator: boolean }) 
       onClick={() => setOpen(false)}
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.35)', zIndex: 100, display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '80px 16px 16px' }}
     >
+      <style>{`
+        @media (max-width: 768px) {
+          .cmdpal-modal { width: calc(100vw - 32px) !important; margin: 0 !important; border-radius: 10px !important; }
+          .cmdpal-overlay { padding: 16px 0 0 !important; align-items: flex-end !important; }
+        }
+      `}</style>
       <div
         onClick={e => e.stopPropagation()}
+        className="cmdpal-modal"
         style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '12px', width: '100%', maxWidth: '500px', boxShadow: '0 20px 60px rgba(0,0,0,.2)', overflow: 'hidden' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', padding: '12px 16px', borderBottom: '1px solid var(--border)', gap: '10px' }}>
