@@ -1,5 +1,62 @@
 import { prisma } from './db'
 import { Prisma } from '@prisma/client'
+import {
+  calcularResultadoFiscal,
+  avisosOportunidad,
+  deduccionesAplicablesNoMarcadas,
+  transicionesEdad,
+  importesDe,
+  PLAZOS_FISCALES,
+  type PerfilFiscal,
+  type Descendiente,
+  type ResultadoFiscal,
+} from './fiscal-deducciones'
+
+export type DescendienteView = {
+  id: string
+  nombre: string
+  fechaNacimiento: string
+  gradoDiscapacidad: number
+  computoCompleto: boolean
+}
+
+export type NovedadView = {
+  id: string
+  clave: string
+  concepto: string
+  importeAnterior: number | null
+  importeNuevo: number | null
+  ambito: string
+  fuenteUrl: string | null
+}
+
+export type DeduccionesView = {
+  perfil: PerfilFiscal
+  descendientes: DescendienteView[]
+  resultado: ResultadoFiscal
+  avisos: string[]
+  sugerencias: { clave: string; motivo: string }[]
+  transiciones: { nombre: string; aviso: string }[]
+  calendario: typeof PLAZOS_FISCALES
+  novedades: NovedadView[]
+  historico: { anio: number; cuotaLiquida: number; deduccionesTotal: number; resultado: number }[]
+  fuente: string
+  revisado: string
+}
+
+const PERFIL_DEFECTO: PerfilFiscal = {
+  comunidadAutonoma: 'andalucia',
+  declaracionConjunta: true,
+  familiaNumerosa: null,
+  conyugeTrabaja: false,
+  gastoGuarderiaAnual: 0,
+  aportacionPlanPensiones: 0,
+  gradoDiscapacidadTitular: 0,
+  gradoDiscapacidadConyuge: 0,
+  ascendientesACargo: 0,
+  ascendientesMayores75: 0,
+  donativosAnual: 0,
+}
 
 export type MovResumen = {
   id: string
@@ -43,6 +100,7 @@ export type ResumenFinanciero = {
     trimestres: { q: number; ingresos: number; gastosDeducibles: number; resultado: number }[]
     retencionesAcumuladas: number
   }
+  deducciones: DeduccionesView
   year: number
   quarter: number
   anterior: { ingresos: number; gastos: number; resultado: number } | null
@@ -85,6 +143,96 @@ function mesRange(year: number, quarter: number): { inicio: string; fin: string 
   return {
     inicio: `${year}-${String(mesInicio).padStart(2, '0')}-01`,
     fin: fin.toISOString().slice(0, 10),
+  }
+}
+
+// ── Deducciones fiscales (perfil familiar + motor puro) ──────────────────────
+async function getDeducciones(
+  cuentaId: string,
+  year: number,
+  baseImponible: number,
+  retenciones: number,
+): Promise<DeduccionesView> {
+  const perfilRows = await prisma.$queryRaw<Array<{
+    comunidad_autonoma: string; declaracion_conjunta: boolean; familia_numerosa: string | null
+    conyuge_trabaja: boolean; gasto_guarderia_anual: unknown; aportacion_plan_pensiones: unknown
+    grado_discapacidad_titular: number; grado_discapacidad_conyuge: number
+    ascendientes_a_cargo: number; ascendientes_mayores_75: number; donativos_anual: unknown
+  }>>`SELECT * FROM fiscal_perfil WHERE cuenta_id = ${cuentaId}::uuid LIMIT 1`
+
+  const perfil: PerfilFiscal = perfilRows[0]
+    ? {
+        comunidadAutonoma: perfilRows[0].comunidad_autonoma,
+        declaracionConjunta: perfilRows[0].declaracion_conjunta,
+        familiaNumerosa: (perfilRows[0].familia_numerosa as PerfilFiscal['familiaNumerosa']) ?? null,
+        conyugeTrabaja: perfilRows[0].conyuge_trabaja,
+        gastoGuarderiaAnual: Number(perfilRows[0].gasto_guarderia_anual),
+        aportacionPlanPensiones: Number(perfilRows[0].aportacion_plan_pensiones),
+        gradoDiscapacidadTitular: perfilRows[0].grado_discapacidad_titular,
+        gradoDiscapacidadConyuge: perfilRows[0].grado_discapacidad_conyuge,
+        ascendientesACargo: perfilRows[0].ascendientes_a_cargo,
+        ascendientesMayores75: perfilRows[0].ascendientes_mayores_75,
+        donativosAnual: Number(perfilRows[0].donativos_anual),
+      }
+    : { ...PERFIL_DEFECTO }
+
+  const hijosRows = await prisma.$queryRaw<Array<{
+    id: string; nombre: string; fecha_nacimiento: Date; grado_discapacidad: number; computo_completo: boolean
+  }>>`SELECT id, nombre, fecha_nacimiento, grado_discapacidad, computo_completo
+      FROM fiscal_descendientes WHERE cuenta_id = ${cuentaId}::uuid ORDER BY fecha_nacimiento`
+
+  const descendientes: DescendienteView[] = hijosRows.map(h => ({
+    id: h.id,
+    nombre: h.nombre,
+    fechaNacimiento: h.fecha_nacimiento.toISOString().slice(0, 10),
+    gradoDiscapacidad: h.grado_discapacidad,
+    computoCompleto: h.computo_completo,
+  }))
+  const hijosCalc: Descendiente[] = descendientes.map(h => ({
+    nombre: h.nombre, fechaNacimiento: h.fechaNacimiento, gradoDiscapacidad: h.gradoDiscapacidad, computoCompleto: h.computoCompleto,
+  }))
+
+  const novedadesRows = await prisma.$queryRaw<Array<{
+    id: string; clave: string; importe_anterior: unknown; importe_nuevo: unknown; ambito: string; fuente_url: string | null
+  }>>`SELECT id, clave, importe_anterior, importe_nuevo, ambito, fuente_url
+      FROM fiscal_novedades WHERE beneficia = true AND descartado = false ORDER BY detectado_at DESC LIMIT 5`
+
+  const novedades: NovedadView[] = novedadesRows.map(n => ({
+    id: n.id,
+    clave: n.clave,
+    concepto: n.clave,
+    importeAnterior: n.importe_anterior != null ? Number(n.importe_anterior) : null,
+    importeNuevo: n.importe_nuevo != null ? Number(n.importe_nuevo) : null,
+    ambito: n.ambito,
+    fuenteUrl: n.fuente_url,
+  }))
+
+  const histRows = await prisma.$queryRaw<Array<{
+    anio: number; cuota_liquida: unknown; deducciones_total: unknown; resultado: unknown
+  }>>`SELECT anio, cuota_liquida, deducciones_total, resultado
+      FROM fiscal_historico WHERE cuenta_id = ${cuentaId}::uuid ORDER BY anio`
+  const historico = histRows.map(h => ({
+    anio: h.anio,
+    cuotaLiquida: Number(h.cuota_liquida),
+    deduccionesTotal: Number(h.deducciones_total),
+    resultado: Number(h.resultado),
+  }))
+
+  const imp = importesDe(year)
+  const resultado = calcularResultadoFiscal(baseImponible, retenciones, perfil, hijosCalc, year, imp)
+
+  return {
+    perfil,
+    descendientes,
+    resultado,
+    avisos: avisosOportunidad(perfil, baseImponible, year, imp),
+    sugerencias: deduccionesAplicablesNoMarcadas(perfil, hijosCalc, year),
+    transiciones: transicionesEdad(hijosCalc, year),
+    calendario: PLAZOS_FISCALES,
+    novedades,
+    historico,
+    fuente: imp.fuente,
+    revisado: imp.revisado,
   }
 }
 
@@ -269,6 +417,9 @@ export async function getResumenFinanciero(
     return { q, ingresos: ing, gastosDeducibles: gas, resultado: ing - gas }
   })
 
+  // Deducciones fiscales (perfil familiar → cuota → resultado)
+  const deducciones = await getDeducciones(cuentaId, year, baseImponible, retencionesEstimadas)
+
   // Recientes por destino
   const corrRecientes = recientesAll.filter(r => r.destino === 'seguros').slice(0, 8).map(mapReciente)
   const pisosRecientes = recientesAll.filter(r => r.destino === 'turistico_pisos' || r.destino === 'turistico_duplex').slice(0, 8).map(mapReciente)
@@ -312,6 +463,7 @@ export async function getResumenFinanciero(
       trimestres,
       retencionesAcumuladas: retencionesEstimadas,
     },
+    deducciones,
     year,
     quarter,
     anterior,

@@ -1,6 +1,6 @@
 'use client'
 import { useRouter, usePathname } from 'next/navigation'
-import { useState, useTransition } from 'react'
+import { useState, useTransition, type CSSProperties } from 'react'
 import type { ResumenFinanciero, MovResumen } from '@/lib/finanzas'
 
 type Props = {
@@ -110,11 +110,239 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal'
   )
 }
 
+// ── Banner de novedad fiscal (cambio normativo que te beneficia) ─────────────
+function NovedadBanner({ novedades, onDescartar }: { novedades: ResumenFinanciero['deducciones']['novedades']; onDescartar: (id: string) => void }) {
+  if (!novedades.length) return null
+  return (
+    <div style={{ marginBottom: '16px' }}>
+      {novedades.map(n => (
+        <div key={n.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#c6f6d5', border: '1px solid #9ae6b4', borderRadius: 'var(--radius)', padding: '12px 16px', marginBottom: '8px' }}>
+          <span style={{ fontSize: '20px' }}>📈</span>
+          <div style={{ flex: 1, fontSize: '13px', color: '#22543d' }}>
+            <strong>Novedad fiscal a tu favor:</strong> «{n.concepto}»
+            {n.importeAnterior != null && n.importeNuevo != null && <> sube de {fmt(n.importeAnterior)} a <strong>{fmt(n.importeNuevo)}</strong></>}
+            {n.fuenteUrl && <> · <a href={n.fuenteUrl} target="_blank" rel="noreferrer" style={{ color: '#22543d', textDecoration: 'underline' }}>fuente ({n.ambito.toUpperCase()})</a></>}
+          </div>
+          <button onClick={() => onDescartar(n.id)} style={{ fontSize: '12px', padding: '4px 10px', background: '#fff', border: '1px solid #9ae6b4', borderRadius: '6px', cursor: 'pointer', color: '#22543d', fontWeight: 600 }}>Entendido</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+const inputStyle: CSSProperties = { padding: '6px 8px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', fontSize: '13px', width: '100%' }
+const labelStyle: CSSProperties = { fontSize: '11px', color: 'var(--muted)', marginBottom: '3px', display: 'block' }
+
+// ── Formulario de situación familiar/fiscal ──────────────────────────────────
+function SituacionFamiliarForm({ ded, onClose, onSaved }: { ded: ResumenFinanciero['deducciones']; onClose: () => void; onSaved: () => void }) {
+  const [perfil, setPerfil] = useState(ded.perfil)
+  const [hijos, setHijos] = useState(ded.descendientes.map(h => ({ ...h })))
+  const [saving, setSaving] = useState(false)
+  const set = (k: keyof typeof perfil, v: unknown) => setPerfil(p => ({ ...p, [k]: v }))
+
+  async function guardar() {
+    setSaving(true)
+    const res = await fetch('/api/finanzas/perfil', {
+      method: 'PUT', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ perfil, descendientes: hijos }),
+    })
+    setSaving(false)
+    if (res.ok) { onSaved(); onClose() }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'flex-start', justifyContent: 'center', padding: '24px', zIndex: 50, overflowY: 'auto' }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', borderRadius: 'var(--radius)', padding: '24px', maxWidth: '560px', width: '100%', border: '1px solid var(--border)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+          <h2 style={{ fontSize: '16px', fontWeight: 700, margin: 0 }}>⚙️ Mi situación familiar y fiscal</h2>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--muted)' }}>×</button>
+        </div>
+
+        {/* Hijos */}
+        <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Hijos / descendientes</div>
+        {hijos.map((h, i) => (
+          <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 130px 70px auto', gap: '6px', marginBottom: '6px', alignItems: 'center' }}>
+            <input style={inputStyle} placeholder="Nombre" value={h.nombre} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, nombre: e.target.value } : x))} />
+            <input style={inputStyle} type="date" value={h.fechaNacimiento} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, fechaNacimiento: e.target.value } : x))} />
+            <input style={inputStyle} type="number" placeholder="% disc." title="Grado de discapacidad" value={h.gradoDiscapacidad} onChange={e => setHijos(hs => hs.map((x, j) => j === i ? { ...x, gradoDiscapacidad: Number(e.target.value) } : x))} />
+            <button onClick={() => setHijos(hs => hs.filter((_, j) => j !== i))} style={{ background: 'none', border: 'none', color: '#e53e3e', cursor: 'pointer', fontSize: '16px' }}>×</button>
+          </div>
+        ))}
+        <button onClick={() => setHijos(hs => [...hs, { id: '', nombre: '', fechaNacimiento: '', gradoDiscapacidad: 0, computoCompleto: true }])} style={{ fontSize: '12px', color: 'var(--primary)', background: 'none', border: '1px dashed var(--border)', borderRadius: '6px', padding: '6px', cursor: 'pointer', width: '100%', marginBottom: '16px' }}>+ Añadir hijo</button>
+
+        {/* Situación */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+          <div>
+            <label style={labelStyle}>Comunidad autónoma</label>
+            <select style={inputStyle} value={perfil.comunidadAutonoma} onChange={e => set('comunidadAutonoma', e.target.value)}>
+              <option value="andalucia">Andalucía</option>
+              <option value="otra">Otra</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Familia numerosa</label>
+            <select style={inputStyle} value={perfil.familiaNumerosa ?? ''} onChange={e => set('familiaNumerosa', e.target.value || null)}>
+              <option value="">No</option>
+              <option value="general">General</option>
+              <option value="especial">Especial</option>
+            </select>
+          </div>
+          <div>
+            <label style={labelStyle}>Gasto guardería (anual)</label>
+            <input style={inputStyle} type="number" value={perfil.gastoGuarderiaAnual} onChange={e => set('gastoGuarderiaAnual', Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Aportación plan de pensiones</label>
+            <input style={inputStyle} type="number" value={perfil.aportacionPlanPensiones} onChange={e => set('aportacionPlanPensiones', Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Discapacidad titular (%)</label>
+            <input style={inputStyle} type="number" value={perfil.gradoDiscapacidadTitular} onChange={e => set('gradoDiscapacidadTitular', Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Discapacidad cónyuge (%)</label>
+            <input style={inputStyle} type="number" value={perfil.gradoDiscapacidadConyuge} onChange={e => set('gradoDiscapacidadConyuge', Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Ascendientes a cargo</label>
+            <input style={inputStyle} type="number" value={perfil.ascendientesACargo} onChange={e => set('ascendientesACargo', Number(e.target.value))} />
+          </div>
+          <div>
+            <label style={labelStyle}>Donativos (anual)</label>
+            <input style={inputStyle} type="number" value={perfil.donativosAnual} onChange={e => set('donativosAnual', Number(e.target.value))} />
+          </div>
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '8px' }}>
+          <input type="checkbox" checked={perfil.conyugeTrabaja} onChange={e => set('conyugeTrabaja', e.target.checked)} />
+          La madre/cónyuge trabaja (autónoma o cuenta ajena) — activa la deducción por maternidad
+        </label>
+        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', marginBottom: '16px' }}>
+          <input type="checkbox" checked={perfil.declaracionConjunta} onChange={e => set('declaracionConjunta', e.target.checked)} />
+          Declaración conjunta
+        </label>
+
+        <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+          <button onClick={onClose} style={{ padding: '8px 16px', borderRadius: '6px', border: '1px solid var(--border)', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer', fontSize: '13px' }}>Cancelar</button>
+          <button onClick={guardar} disabled={saving} style={{ padding: '8px 16px', borderRadius: '6px', border: 'none', background: 'var(--primary)', color: '#fff', cursor: 'pointer', fontSize: '13px', fontWeight: 600 }}>{saving ? 'Guardando…' : 'Guardar'}</button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Sección de deducciones, cuota, simulador, checklist, calendario, histórico ─
+function DeduccionesSection({ ded, tipoMarginal, onEditar }: { ded: ResumenFinanciero['deducciones']; tipoMarginal: number; onEditar: () => void }) {
+  const r = ded.resultado
+  const [aport, setAport] = useState(0)
+  const ahorroSim = Math.round(aport * tipoMarginal)
+
+  return (
+    <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', marginTop: '20px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px', flexWrap: 'wrap', gap: '8px' }}>
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>🧮 Deducciones y cuota estimada</div>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '2px' }}>Orientativo · Fuente: {ded.fuente} · Revisado {ded.revisado}</div>
+        </div>
+        <button onClick={onEditar} style={{ fontSize: '12px', padding: '6px 12px', background: 'var(--primary)', color: '#fff', borderRadius: '6px', border: 'none', cursor: 'pointer', fontWeight: 600 }}>⚙️ Mi situación familiar</button>
+      </div>
+
+      <div className="finanzas-fiscal-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+        {/* Columna izquierda: cadena de cálculo */}
+        <div>
+          {[
+            { label: 'Mínimo personal y familiar', valor: r.minimoPersonalYFamiliar, muted: true },
+            { label: 'Cuota íntegra (tras mínimos)', valor: r.cuotaIntegra },
+          ].map(x => (
+            <div key={x.label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--muted)' }}>{x.label}</span>
+              <span style={{ fontWeight: 600 }}>{fmt(x.valor)}</span>
+            </div>
+          ))}
+          {r.deducciones.map(dd => (
+            <div key={dd.clave} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+              <span style={{ color: 'var(--muted)' }}>− {dd.concepto}{dd.ambito === 'andalucia' ? ' 🌅' : ''}{dd.reembolsable ? ' ♻️' : ''}</span>
+              <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(dd.importe)}</span>
+            </div>
+          ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+            <span style={{ color: 'var(--muted)' }}>− Retenciones ya pagadas</span>
+            <span style={{ fontWeight: 600, color: 'var(--primary)' }}>−{fmt(r.retenciones)}</span>
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px', padding: '10px 12px', borderRadius: '8px', background: r.resultado <= 0 ? '#c6f6d5' : '#fff5f5', border: `1px solid ${r.resultado <= 0 ? '#9ae6b4' : '#feb2b2'}` }}>
+            <span style={{ fontSize: '13px', fontWeight: 700, color: r.resultado <= 0 ? '#22543d' : '#742a2a' }}>{r.resultado <= 0 ? '✓ Te sale a DEVOLVER' : '⚠️ Te sale a PAGAR'}</span>
+            <span style={{ fontSize: '18px', fontWeight: 800, color: r.resultado <= 0 ? '#22543d' : '#742a2a' }}>{fmt(Math.abs(r.resultado))}</span>
+          </div>
+          <div style={{ fontSize: '10px', color: 'var(--muted)', marginTop: '6px' }}>♻️ deducción reembolsable (se devuelve aunque no haya cuota) · 🌅 autonómica Andalucía</div>
+        </div>
+
+        {/* Columna derecha: simulador + avisos + checklist */}
+        <div>
+          {/* Simulador */}
+          <div style={{ background: 'var(--primary-light)', borderRadius: '8px', padding: '12px', marginBottom: '12px' }}>
+            <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '6px' }}>🎚️ Simulador «¿y si…?»</div>
+            <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '6px' }}>Aporto al plan de pensiones: <strong>{fmt(aport)}</strong></div>
+            <input type="range" min={0} max={1500} step={100} value={aport} onChange={e => setAport(Number(e.target.value))} style={{ width: '100%' }} />
+            <div style={{ fontSize: '12px', marginTop: '6px' }}>Ahorro fiscal estimado (tipo marginal {(tipoMarginal * 100).toFixed(0)} %): <strong style={{ color: 'var(--primary)' }}>{fmt(ahorroSim)}</strong></div>
+          </div>
+
+          {/* Avisos de oportunidad */}
+          {ded.avisos.map((a, i) => (
+            <div key={i} style={{ fontSize: '12px', padding: '8px 10px', background: '#fefcbf', border: '1px solid #faf089', borderRadius: '6px', marginBottom: '6px', color: '#744210' }}>💡 {a}</div>
+          ))}
+
+          {/* Checklist: deducciones que te dejas */}
+          {ded.sugerencias.length > 0 && (
+            <div style={{ marginBottom: '6px' }}>
+              <div style={{ fontSize: '11px', fontWeight: 600, color: 'var(--muted)', marginBottom: '4px' }}>DEDUCCIONES QUE PODRÍAS ESTAR DEJANDO</div>
+              {ded.sugerencias.map(s => (
+                <div key={s.clave} style={{ fontSize: '12px', padding: '6px 8px', background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: '6px', marginBottom: '4px' }}>☐ {s.motivo}</div>
+              ))}
+            </div>
+          )}
+
+          {/* Transiciones de edad */}
+          {ded.transiciones.map((t, i) => (
+            <div key={i} style={{ fontSize: '11px', color: 'var(--muted)', padding: '4px 0' }}>🎂 <strong>{t.nombre}</strong> {t.aviso}</div>
+          ))}
+        </div>
+      </div>
+
+      {/* Calendario fiscal */}
+      <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+        <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>📆 Calendario fiscal</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '8px' }}>
+          {ded.calendario.map(c => (
+            <div key={c.clave} style={{ fontSize: '11px', padding: '8px', border: '1px solid var(--border)', borderRadius: '6px' }}>
+              <div style={{ fontWeight: 600 }}>{c.etiqueta}</div>
+              <div style={{ color: 'var(--muted)' }}>{c.ventana} · {c.detalle}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Histórico interanual */}
+      {ded.historico.length > 0 && (
+        <div style={{ marginTop: '16px', borderTop: '1px solid var(--border)', paddingTop: '12px' }}>
+          <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>📊 Histórico — deducciones aplicadas por año</div>
+          {ded.historico.map(h => (
+            <div key={h.anio} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+              <span><strong>{h.anio}</strong></span>
+              <span style={{ color: 'var(--muted)' }}>Deducciones: <strong style={{ color: 'var(--primary)' }}>{fmt(h.deduccionesTotal)}</strong></span>
+              <span style={{ color: h.resultado <= 0 ? 'var(--primary)' : '#e53e3e' }}>{h.resultado <= 0 ? 'Devolución' : 'A pagar'} {fmt(Math.abs(h.resultado))}</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function FinanzasClient({ initialData, year, quarter }: Props) {
   const router = useRouter()
   const [data, setData] = useState<ResumenFinanciero | null>(initialData)
   const [isPending, startTransition] = useTransition()
   const [showMovs, setShowMovs] = useState<'correduria' | 'pisos' | 'personal' | null>(null)
+  const [formOpen, setFormOpen] = useState(false)
 
   function navigate(y: number, q: number) {
     startTransition(async () => {
@@ -122,6 +350,12 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
       if (res.ok) setData(await res.json())
     })
     router.push(`/finanzas?year=${y}&quarter=${q}`, { scroll: false })
+  }
+
+  const refresh = () => navigate(year, quarter)
+  async function descartarNovedad(id: string) {
+    await fetch(`/api/finanzas/novedades/${id}/descartar`, { method: 'POST' })
+    refresh()
   }
 
   const d = data
@@ -191,6 +425,9 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
         <div style={{ padding: '48px', textAlign: 'center', color: 'var(--muted)' }}>Sin datos para este periodo.</div>
       ) : (
         <>
+          {/* ── Banner novedad fiscal ── */}
+          <NovedadBanner novedades={d.deducciones.novedades} onDescartar={descartarNovedad} />
+
           {/* ── KPIs ── */}
           <div className="finanzas-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             {[
@@ -468,6 +705,13 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
               </div>
             </div>
           </div>
+
+          {/* ── Deducciones y cuota ── */}
+          <DeduccionesSection ded={d.deducciones} tipoMarginal={d.fiscal.tramoActual.tipo} onEditar={() => setFormOpen(true)} />
+
+          {formOpen && (
+            <SituacionFamiliarForm ded={d.deducciones} onClose={() => setFormOpen(false)} onSaved={refresh} />
+          )}
         </>
       )}
     </main>
