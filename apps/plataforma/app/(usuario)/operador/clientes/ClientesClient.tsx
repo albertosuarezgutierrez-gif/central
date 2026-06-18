@@ -84,6 +84,14 @@ export default function ClientesClient({ operador }: { operador: string }) {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .clientes-kpis { grid-template-columns: 1fr 1fr !important; }
+          .clientes-card { flex-direction: column !important; align-items: flex-start !important; }
+          .clientes-card-actions { width: 100%; justify-content: flex-start !important; flex-wrap: wrap !important; }
+          .clientes-modal { width: calc(100% - 32px) !important; max-width: unset !important; }
+        }
+      `}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
         <div>
@@ -99,7 +107,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
+      <div className="clientes-kpis" style={{ display: 'flex', gap: '16px', marginBottom: '28px', flexWrap: 'wrap' }}>
         {[
           { label: 'Clientes activos', valor: String(activos) },
           { label: 'Total clientes', valor: String(clientes.filter(c => c.id !== 'iarest-info').length) },
@@ -125,7 +133,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
               {cs.length === 0 && !loading && <div style={{ color: 'var(--muted)', fontSize: '13px' }}>Sin clientes.</div>}
               {cs.map(c => (
-                <div key={c.vertical + c.id} style={{
+                <div key={c.vertical + c.id} className="clientes-card" style={{
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 'var(--radius)', padding: '12px 16px',
                   display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap',
@@ -141,7 +149,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
                       ))}
                     </div>
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <div className="clientes-card-actions" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                     {c.id !== 'iarest-info' && (
                       <span style={{
                         fontSize: '11px', fontWeight: 700, borderRadius: '6px', padding: '3px 10px',
@@ -182,7 +190,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
       {/* Modal 360 */}
       {ficha && (
         <div onClick={() => setFicha(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '460px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+          <div onClick={e => e.stopPropagation()} className="clientes-modal" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '460px', maxHeight: '85vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '4px' }}>
               <div style={{ fontSize: '18px', fontWeight: 800 }}>{ficha.nombre}</div>
               <button onClick={() => setFicha(null)} style={{ background: 'transparent', border: 'none', color: 'var(--muted)', fontSize: '20px', cursor: 'pointer' }}>×</button>
@@ -217,7 +225,7 @@ export default function ClientesClient({ operador }: { operador: string }) {
       {/* Modal nuevo cliente */}
       {showNuevo && (
         <div onClick={() => setShowNuevo(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 50 }}>
-          <form onClick={e => e.stopPropagation()} onSubmit={crear} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+          <form onClick={e => e.stopPropagation()} onSubmit={crear} className="clientes-modal" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '24px', width: '100%', maxWidth: '420px', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
             <div style={{ fontSize: '18px', fontWeight: 800, marginBottom: '16px' }}>➕ Nuevo cliente</div>
             {nuevoErr && <div style={{ background: '#fef2f2', color: '#dc2626', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoErr}</div>}
             {nuevoOk && <div style={{ background: '#dcfce7', color: '#16a34a', borderRadius: '8px', padding: '8px 12px', marginBottom: '12px', fontSize: '13px' }}>{nuevoOk}</div>}

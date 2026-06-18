@@ -1,5 +1,19 @@
 'use client'
 import { useState, useEffect, useCallback, useRef } from 'react'
+// Responsive CSS injected once (prefix: extra-)
+const EXTRA_STYLES = `
+  @media (max-width: 768px) {
+    .extra-grid-2 { grid-template-columns: 1fr !important; }
+    .extra-grid-3 { grid-template-columns: 1fr !important; }
+    .extra-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+    .extra-btn-row { flex-wrap: wrap !important; }
+    .extra-card { width: 100% !important; min-width: unset !important; }
+    .extra-informe-grid { grid-template-columns: 1fr !important; }
+  }
+  @media (max-width: 480px) {
+    .extra-hide-xs { display: none !important; }
+  }
+`
 
 const PROPS = [
   { id: 'prop_house_sevillana', name: 'House Sevillana', color: '#16a34a', short: 'HS' },
@@ -102,6 +116,7 @@ export function TabChecklists() {
 
   return (
     <div>
+      <style>{EXTRA_STYLES}</style>
       <div style={{display:'flex',gap:8,marginBottom:16,flexWrap:'wrap'}}>
         {PROPS.map(p=>(
           <button key={p.id} onClick={()=>setSelProp(p.id)}
@@ -121,7 +136,7 @@ export function TabChecklists() {
               <div>
                 <input value={editData.description||''} onChange={e=>setEditData((p:any)=>({...p,description:e.target.value}))}
                   style={{width:'100%',border:'1px solid var(--border)',borderRadius:8,padding:'7px 10px',fontSize:14,marginBottom:8,boxSizing:'border-box' as const,background:'var(--surface)',color:'var(--text)'}}/>
-                <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
+                <div className="extra-grid-2" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:8}}>
                   <select value={editData.frequency||'per_change'} onChange={e=>setEditData((p:any)=>({...p,frequency:e.target.value}))}
                     style={{border:'1px solid var(--border)',borderRadius:8,padding:'6px 8px',fontSize:13,background:'var(--surface)',color:'var(--text)'}}>
                     {FREQ_OPTS.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}
@@ -191,7 +206,7 @@ export function TabChecklists() {
         <input value={newItem.description} onChange={e=>setNewItem(p=>({...p,description:e.target.value}))}
           placeholder="Descripción del ítem..."
           style={{width:'100%',border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:14,marginBottom:8,boxSizing:'border-box' as const,background:'var(--surface)',color:'var(--text)'}}/>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
+        <div className="extra-grid-2" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:10}}>
           <select value={newItem.frequency} onChange={e=>setNewItem(p=>({...p,frequency:e.target.value}))}
             style={{border:'1px solid var(--border)',borderRadius:8,padding:'7px 10px',fontSize:13,background:'var(--surface)',color:'var(--text)'}}>
             {FREQ_OPTS.map(f=><option key={f.value} value={f.value}>{f.label}</option>)}
@@ -252,7 +267,7 @@ export function TabInformes() {
   return (
     <div>
       <div style={{background:'var(--surface)',border:'1px solid var(--border)',borderRadius:12,padding:16,marginBottom:14}}>
-        <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
+        <div className="extra-informe-grid" style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:14}}>
           <div>
             <div style={{fontSize:11,color:'var(--muted)',marginBottom:5,fontWeight:600}}>Limpiadora</div>
             <select value={selLimp} onChange={e=>setSelLimp(e.target.value)}
@@ -364,7 +379,7 @@ export function TabFacturacion() {
         <div>
           <div style={{background:'var(--surface)',borderRadius:12,padding:16,marginBottom:14,border:'1px solid var(--border)'}}>
             <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:'var(--text)'}}>Configurar tarifa</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:10}}>
+            <div className="extra-grid-3" style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:10}}>
               <select value={newTarifa.limpiadora_id} onChange={e=>setNewTarifa(p=>({...p,limpiadora_id:e.target.value}))}
                 style={{border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:13,background:'var(--surface)',color:'var(--text)'}}>
                 <option value="">Limpiadora</option>
@@ -400,7 +415,7 @@ export function TabFacturacion() {
         <div>
           <div style={{background:'#f0fdf4',border:'1px solid #86efac',borderRadius:12,padding:16,marginBottom:16}}>
             <div style={{fontWeight:700,fontSize:13,marginBottom:10,color:'#1B4332'}}>📄 Generar nueva factura</div>
-            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:10}}>
+            <div className="extra-grid-3" style={{display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:8,marginBottom:10}}>
               <select value={gen.limpiadora_id} onChange={e=>setGen(p=>({...p,limpiadora_id:e.target.value}))}
                 style={{border:'1px solid var(--border)',borderRadius:8,padding:'8px 10px',fontSize:13,background:'var(--surface)',color:'var(--text)'}}>
                 <option value="">Limpiadora</option>

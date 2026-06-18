@@ -115,9 +115,21 @@ export default function GastosFijosPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 900 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .fijos-header { flex-direction: column !important; align-items: flex-start !important; }
+          .fijos-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+          .fijos-form-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .fijos-form-grid > [style*="gridColumn"] { grid-column: 1 / -1 !important; }
+          .fijos-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+        @media (max-width: 480px) {
+          .fijos-form-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div className="fijos-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, marginBottom: 8 }}>
         <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos fijos</h1>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="fijos-header-actions" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <a href="/sivra/expenses" style={{ padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, color: 'var(--muted)', textDecoration: 'none', background: 'var(--surface)' }}>← Gastos</a>
           <button onClick={generarAhora} style={{ padding: '8px 16px', background: 'var(--primary)', color: '#fff', border: 'none', borderRadius: 6, fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
             Generar mes actual ahora
@@ -136,7 +148,7 @@ export default function GastosFijosPage() {
       {/* Form */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, marginBottom: 20 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 14 }}>{editing ? 'Editar gasto fijo' : 'Nuevo gasto fijo'}</div>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+        <div className="fijos-form-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
           <div style={{ gridColumn: '1 / 3' }}>
             <label style={{ display: 'block', fontSize: 11, color: 'var(--muted)', marginBottom: 4, fontWeight: 600 }}>Concepto *</label>
             <input value={form.concepto} onChange={e => set('concepto', e.target.value)} style={inp} placeholder="Alquiler / Comunidad dúplex…" />
@@ -211,6 +223,7 @@ export default function GastosFijosPage() {
         ) : fijos.length === 0 ? (
           <div style={{ padding: 24, fontSize: 13, color: 'var(--muted)' }}>Aún no hay gastos fijos. Crea el primero arriba.</div>
         ) : (
+          <div className="fijos-table-wrap" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', background: 'rgba(0,0,0,0.02)' }}>
@@ -243,6 +256,7 @@ export default function GastosFijosPage() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
     </div>

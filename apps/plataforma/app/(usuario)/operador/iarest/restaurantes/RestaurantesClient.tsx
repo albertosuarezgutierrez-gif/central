@@ -63,6 +63,12 @@ export default function RestaurantesClient() {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .rest-kpis { grid-template-columns: 1fr 1fr !important; }
+          .rest-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: '12px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>🍽️ Restaurantes · ia-rest</h1>
         <a
@@ -76,7 +82,7 @@ export default function RestaurantesClient() {
       </div>
 
       {/* KPIs */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+      <div className="rest-kpis" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
         {[
           { label: 'Total', val: String(restaurantes.length) },
           { label: 'Activos', val: String(activos) },
@@ -108,7 +114,7 @@ export default function RestaurantesClient() {
 
       {/* Tabla */}
       {filtrados.length > 0 ? (
-        <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+        <div className="rest-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>

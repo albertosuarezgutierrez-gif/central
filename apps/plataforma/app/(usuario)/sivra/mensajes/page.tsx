@@ -389,7 +389,17 @@ export default function MensajesPage() {
 
   return (
     <>
-      <style>{`@keyframes spin { to { transform: rotate(360deg); } } @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+        @media (max-width: 768px) {
+          .msg-bubble { max-width: 90% !important; }
+          .msg-actions { flex-wrap: wrap !important; }
+          .msg-reply-row { flex-direction: column !important; }
+          .msg-reply-row > div:last-child { flex-direction: row !important; }
+          .msg-hint-row { flex-wrap: wrap !important; }
+        }
+      `}</style>
       <div style={{ display:'flex', height:'calc(100vh - 56px)', overflow:'hidden' }}>
 
         {/* ── Thread list ── */}
@@ -577,7 +587,7 @@ export default function MensajesPage() {
                   const isHost = msg.from === 'host'
                   return (
                     <div key={msg.id} style={{ display:'flex', justifyContent: isHost ? 'flex-end' : 'flex-start' }}>
-                      <div style={{ maxWidth:'75%' }}>
+                      <div className="msg-bubble" style={{ maxWidth:'75%' }}>
                         <div style={{
                           borderRadius: isHost ? '6px 6px 0 6px' : '6px 6px 6px 0',
                           padding:'10px 16px', fontSize:14, lineHeight:1.5,
@@ -643,7 +653,7 @@ export default function MensajesPage() {
                       🔗 Guía personalizada huésped
                     </a>
                   )}
-                  <div style={{ display:'flex', gap:8, marginTop:8, alignItems:'center', flexWrap:'wrap' }}>
+                  <div className="msg-actions" style={{ display:'flex', gap:8, marginTop:8, alignItems:'center', flexWrap:'wrap' }}>
                     <button onClick={()=>sendReply(aiDraft)} style={{ padding:'4px 12px', background:C.lime, color:C.dark, fontSize:12, fontWeight:600, borderRadius:4, border:'none', cursor:'pointer' }}>
                       Copiar
                     </button>
@@ -678,7 +688,7 @@ export default function MensajesPage() {
 
               {/* Reply input */}
               <div style={{ background:C.white, padding:'16px 20px', overflowY:'auto', height:bottomPanel.height, flexShrink:0 }}>
-                <div style={{ display:'flex', gap:8, marginBottom:8, alignItems:'center' }}>
+                <div className="msg-hint-row" style={{ display:'flex', gap:8, marginBottom:8, alignItems:'center' }}>
                   <button onClick={generateAI} disabled={aiLoading} style={{
                     display:'flex', alignItems:'center', gap:6, padding:'6px 12px', borderRadius:4, fontSize:12,
                     fontWeight:600, border:`1px solid ${C.border}`, color:C.limeD, background:'transparent',
@@ -700,7 +710,7 @@ export default function MensajesPage() {
                      thread.lang && thread.lang !== 'ES' ? `🌐 ${thread.lang}` : ''}
                   </span>
                 </div>
-                <div style={{ display:'flex', gap:8 }}>
+                <div className="msg-reply-row" style={{ display:'flex', gap:8 }}>
                   <textarea
                     value={reply}
                     onChange={e=>setReply(e.target.value)}

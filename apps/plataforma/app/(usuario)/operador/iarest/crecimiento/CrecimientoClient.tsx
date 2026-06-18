@@ -43,6 +43,13 @@ export default function CrecimientoClient() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .crec-metrics { grid-template-columns: 1fr 1fr !important; }
+          .crec-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .crec-tabs { flex-wrap: wrap !important; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '24px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700, margin: 0 }}>📈 Crecimiento · ia-rest</h1>
         <a href="https://iarest.es/super" target="_blank" rel="noreferrer"
@@ -50,7 +57,7 @@ export default function CrecimientoClient() {
       </div>
 
       {/* Tabs */}
-      <div style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>
+      <div className="crec-tabs" style={{ display: 'flex', gap: '8px', marginBottom: '24px', borderBottom: '1px solid var(--border)', paddingBottom: '0' }}>
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)} style={{
             padding: '8px 16px', fontSize: '14px', fontWeight: tab === t.key ? 700 : 400,
@@ -65,7 +72,7 @@ export default function CrecimientoClient() {
       {/* Instagram */}
       {tab === 'instagram' && (
         <div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '24px' }}>
+          <div className="crec-metrics" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '10px', marginBottom: '24px' }}>
             {[
               { label: 'Publicados', val: String(data.instagram.resumen.publicados) },
               { label: 'Alcance total', val: String(data.instagram.resumen.totalAlcance) },
@@ -82,7 +89,7 @@ export default function CrecimientoClient() {
           {data.instagram.borradores.length > 0 && (
             <div style={{ marginBottom: '24px' }}>
               <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Borradores pendientes</div>
-              <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+              <div className="crec-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
                   <thead><tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
                     {['Título', 'Plantilla', 'Tema', 'Fecha'].map(h => <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontWeight: 600, color: 'var(--muted)' }}>{h}</th>)}

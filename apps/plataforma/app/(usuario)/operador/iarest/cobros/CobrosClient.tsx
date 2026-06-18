@@ -47,10 +47,16 @@ export default function CobrosClient() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .cobros-stats { grid-template-columns: 1fr 1fr !important; }
+          .cobros-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <h1 style={{ fontSize: '22px', fontWeight: 700, marginBottom: '24px' }}>💶 Cobros · ia-rest</h1>
 
       {totales && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '32px' }}>
+        <div className="cobros-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '12px', marginBottom: '32px' }}>
           {[
             { label: 'Volumen mes', val: eur(totales.volumen_mes) },
             { label: 'Comisión mes', val: eur(totales.comision_mes) },
@@ -72,7 +78,7 @@ export default function CobrosClient() {
       {restaurantes.length > 0 && (
         <div style={{ marginBottom: '32px' }}>
           <h2 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>Por restaurante</h2>
-          <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+          <div className="cobros-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>
@@ -102,7 +108,7 @@ export default function CobrosClient() {
       {historico.length > 0 && (
         <div>
           <h2 style={{ fontSize: '15px', fontWeight: 700, marginBottom: '12px' }}>Histórico mensual (12 meses)</h2>
-          <div style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
+          <div className="cobros-table-wrap" style={{ border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
               <thead>
                 <tr style={{ background: 'var(--surface)', borderBottom: '1px solid var(--border)' }}>

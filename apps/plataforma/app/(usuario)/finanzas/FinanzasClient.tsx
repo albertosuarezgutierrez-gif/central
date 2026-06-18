@@ -79,7 +79,7 @@ function TramoBar({ tramosIRPF, base }: { tramosIRPF: ResumenFinanciero['fiscal'
   const MAX = 80000
   const COLORES = ['#68d391', '#4fd1c5', '#63b3ed', '#f6ad55', '#fc8181', '#feb2b2']
   return (
-    <div>
+    <div className="finanzas-tramo-bar">
       <div style={{ position: 'relative', height: '20px', borderRadius: '6px', overflow: 'hidden', display: 'flex', marginTop: '10px' }}>
         {tramosIRPF.map((t, i) => {
           const desde = t.desde
@@ -146,6 +146,18 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
 
   return (
     <main style={{ maxWidth: '1100px', margin: '0 auto', padding: '24px 16px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .finanzas-kpi-grid { grid-template-columns: 1fr 1fr !important; }
+          .finanzas-bloques { grid-template-columns: 1fr !important; }
+          .finanzas-fiscal-cols { grid-template-columns: 1fr !important; }
+          .finanzas-tramo-bar { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .finanzas-trimestres { grid-template-columns: auto 1fr 1fr 1fr !important; font-size: 11px !important; }
+        }
+        @media (max-width: 480px) {
+          .finanzas-kpi-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* ── Controles ── */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
@@ -180,7 +192,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
       ) : (
         <>
           {/* ── KPIs ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
+          <div className="finanzas-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '20px' }}>
             {[
               { label: 'Ingresos netos', value: totalIngresos, color: 'var(--primary)', sub: periodoLabel },
               { label: 'Gastos totales', value: totalGastos, color: '#e53e3e', sub: 'Negocio + personal' },
@@ -218,7 +230,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
           )}
 
           {/* ── Grid 2×2 ── */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
+          <div className="finanzas-bloques" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '16px', marginBottom: '20px' }}>
 
             {/* Correduría */}
             <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px' }}>
@@ -395,7 +407,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
             </div>
 
             {/* Cálculo base imponible */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+            <div className="finanzas-fiscal-cols" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
               <div>
                 <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Cálculo base imponible</div>
                 {[
@@ -435,7 +447,7 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
             {/* Tabla trimestral */}
             <div>
               <div style={{ fontSize: '12px', fontWeight: 600, marginBottom: '8px' }}>Evolución trimestral (actividades + pisos)</div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
+              <div className="finanzas-trimestres" style={{ display: 'grid', gridTemplateColumns: 'auto 1fr 1fr 1fr', gap: '8px', fontSize: '12px' }}>
                 <div style={{ fontWeight: 600, color: 'var(--muted)' }}>Trimestre</div>
                 <div style={{ fontWeight: 600, color: 'var(--muted)', textAlign: 'right' }}>Ingresos</div>
                 <div style={{ fontWeight: 600, color: 'var(--muted)', textAlign: 'right' }}>Gastos deducibles</div>

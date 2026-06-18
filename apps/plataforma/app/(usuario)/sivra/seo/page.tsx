@@ -54,10 +54,21 @@ export default function SeoPage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 896 }}>
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      <style>{`
+        @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+        @media (max-width: 768px) {
+          .seo-header { flex-direction: column !important; align-items: flex-start !important; }
+          .seo-changes-row { flex-direction: column !important; }
+          .seo-changes-row > div { width: 100% !important; }
+          .seo-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+        }
+        @media (max-width: 480px) {
+          .seo-header button { width: 100% !important; justify-content: center !important; }
+        }
+      `}</style>
 
       {/* Header + button */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
+      <div className="seo-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: 0 }}>SEO · housesevillana.es</h1>
           <p style={{ fontSize: 13, color: 'var(--muted)', marginTop: 4, marginBottom: 0 }}>Analiza la competencia y actualiza los metadatos de la landing directamente</p>
@@ -170,7 +181,7 @@ export default function SeoPage() {
                           { label: 'Desc antes',     val: p.currentDescription, muted: true },
                           { label: 'Desc aplicada',  val: p.description,        muted: false },
                         ].map(r => (
-                          <div key={r.label} style={{ display: 'flex', gap: 8, padding: 8, borderRadius: 4, fontSize: 12, background: r.muted ? '#f9f9f9' : '#f0fdf4' }}>
+                          <div key={r.label} className="seo-changes-row" style={{ display: 'flex', gap: 8, padding: 8, borderRadius: 4, fontSize: 12, background: r.muted ? '#f9f9f9' : '#f0fdf4' }}>
                             <span style={{ flexShrink: 0, fontWeight: 600, width: 96, color: r.muted ? '#9ca3af' : '#15803d' }}>{r.label}</span>
                             <span style={{ color: r.muted ? '#9ca3af' : '#15803d', fontWeight: r.muted ? 400 : 500 }}>{r.val}</span>
                           </div>

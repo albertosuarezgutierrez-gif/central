@@ -29,12 +29,18 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
 
   return (
     <div style={{ padding: '24px', maxWidth: 900 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .emp-filters { flex-direction: column !important; }
+          .emp-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
         <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text)' }}>RR.HH. · Empleados</h1>
         <span style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--border)', borderRadius: 20, padding: '2px 10px' }}>{visibles.length} / {empleados.length}</span>
       </div>
 
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+      <div className="emp-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
         <input
           placeholder="Buscar por nombre o email…"
           value={q}
@@ -63,7 +69,7 @@ export default function EmpleadosRrhhClient({ empleados }: { empleados: Empleado
         </div>
       </div>
 
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+      <div className="emp-table-wrap" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
           <thead>
             <tr style={{ background: 'var(--background, #f9f9f9)', borderBottom: '1px solid var(--border)' }}>

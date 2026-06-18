@@ -141,7 +141,19 @@ export default function ExpensesPage() {
 
   return (
     <div style={{ padding: 24, maxWidth: 1100 }}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .expenses-header { flex-direction: column !important; align-items: flex-start !important; }
+          .expenses-header-actions { flex-direction: row !important; flex-wrap: wrap !important; }
+          .expenses-filters { flex-direction: column !important; align-items: stretch !important; }
+          .expenses-filters select { width: 100% !important; box-sizing: border-box; }
+          .expenses-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .expenses-modal { width: 100% !important; max-width: 100% !important; margin: 0 !important; }
+          .expenses-form-2col { grid-template-columns: 1fr !important; }
+          .expenses-form-3col { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div className="expenses-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Gastos</h1>
           {!loading && (
@@ -150,7 +162,7 @@ export default function ExpensesPage() {
             </p>
           )}
         </div>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div className="expenses-header-actions" style={{ display: 'flex', gap: 8 }}>
           <a href="/sivra/gastos-fijos" style={{ padding: '8px 14px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, color: 'var(--muted)', textDecoration: 'none', background: 'var(--surface)' }}>
             📋 Gastos fijos
           </a>
@@ -161,7 +173,7 @@ export default function ExpensesPage() {
       </div>
 
       {/* Filters */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
+      <div className="expenses-filters" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
         <select value={filterYear}  onChange={e => setFilterYear(e.target.value)}  style={filterSel}>
           <option value="">Todos los años</option>
           {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
@@ -191,7 +203,7 @@ export default function ExpensesPage() {
         </div>
       ) : (
         <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, overflow: 'hidden' }}>
-          <div style={{ overflowX: 'auto' }}>
+          <div className="expenses-table-wrap" style={{ overflowX: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead>
                 <tr style={{ background: 'rgba(0,0,0,0.02)', borderBottom: '1px solid var(--border)' }}>
@@ -251,7 +263,7 @@ export default function ExpensesPage() {
                 {!extracting && !aiSource && <p style={{ fontSize: 12, color: 'var(--muted)', marginTop: 4 }}>Al adjuntar, la IA rellenará el formulario automáticamente</p>}
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="expenses-form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 600 }}>Fecha *</label>
                   <input type="date" value={form.fecha} onChange={e => handleFormChange('fecha', e.target.value)} style={inp} />
@@ -276,7 +288,7 @@ export default function ExpensesPage() {
                   {PROPS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <div className="expenses-form-3col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 600 }}>Base imponible</label>
                   <input type="number" step="0.01" value={form.base_imponible} onChange={e => handleFormChange('base_imponible', e.target.value)} placeholder="0.00" style={inp} />
@@ -293,7 +305,7 @@ export default function ExpensesPage() {
                   <input type="number" step="0.01" value={form.total} onChange={e => handleFormChange('total', e.target.value)} placeholder="0.00" style={{ ...inp, fontWeight: 700 }} />
                 </div>
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div className="expenses-form-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
                 <div>
                   <label style={{ display: 'block', fontSize: 12, color: 'var(--muted)', marginBottom: 4, fontWeight: 600 }}>Nº Factura</label>
                   <input type="text" value={form.numero_factura} onChange={e => handleFormChange('numero_factura', e.target.value)} style={inp} />

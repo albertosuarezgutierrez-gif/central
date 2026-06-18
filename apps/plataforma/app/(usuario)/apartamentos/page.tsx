@@ -47,7 +47,18 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
 
   return (
     <main style={{ maxWidth: '1000px', margin: '0 auto', padding: '32px 24px' }}>
-      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .aptos-header { flex-direction: column !important; align-items: flex-start !important; }
+          .aptos-kpi-strip { gap: 16px !important; }
+          .aptos-kpi-strip > div { min-width: calc(50% - 8px) !important; }
+          .aptos-grid { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+          .aptos-kpi-strip > div { min-width: 100% !important; }
+        }
+      `}</style>
+      <div className="aptos-header" style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '8px' }}>
         <h1 style={{ fontSize: '22px', fontWeight: 700 }}>🏨 Mis apartamentos</h1>
         <Filtro year={year} month={month} />
       </div>
@@ -57,7 +68,7 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
         Explotación turística · 3 pisos (Kutxa)
       </div>
-      <div style={{
+      <div className="aptos-kpi-strip" style={{
         background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
         padding: '20px 24px', display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '20px',
         boxShadow: 'var(--shadow)',
@@ -74,7 +85,7 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
       <div style={{ fontSize: '12px', fontWeight: 700, color: 'var(--muted)', textTransform: 'uppercase', letterSpacing: '0.04em', marginBottom: '8px' }}>
         Duplex + seguros (BBVA) · aparte
       </div>
-      <div style={{
+      <div className="aptos-kpi-strip" style={{
         background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)',
         padding: '20px 24px', display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '28px',
         boxShadow: 'var(--shadow)',
@@ -92,7 +103,7 @@ export default async function ApartamentosPage({ searchParams }: { searchParams:
       </div>
 
       {/* Tarjetas por apartamento */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+      <div className="aptos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
         {propias.map(p => (
           <Link key={p.id} href={`/apartamentos/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
             <div className="apt-card" style={{

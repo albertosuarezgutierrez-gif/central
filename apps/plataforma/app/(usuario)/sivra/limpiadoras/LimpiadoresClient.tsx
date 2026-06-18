@@ -110,7 +110,7 @@ function TabHoy() {
   if (loading) return <Spinner />
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+      <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
         <StatCard value={sessions.length} label="Total hoy" />
         <StatCard value={pending} label="Pendientes" color="#f59e0b" />
         <StatCard value={done} label="Completadas" color="#16a34a" />
@@ -127,7 +127,7 @@ function TabHoy() {
         const sts = s.completed_at ? 'completada' : s.started_at ? 'en_curso' : 'pendiente'
         return (
           <div key={s.id} style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 14, padding: 16, marginBottom: 12 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+            <div className="limp-session-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontWeight: 700, color: p?.color }}>{p?.name}</span>
@@ -145,7 +145,7 @@ function TabHoy() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div className="limp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
               <div>
                 <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 3 }}>Tipo</div>
                 <select value={s.tipo_limpieza || 'estandar'} onChange={e => setTipo(s.id, e.target.value)}
@@ -231,7 +231,7 @@ function TabSemana() {
         <button onClick={() => setWeekOffset(o => o + 1)} style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '6px 14px', background: 'var(--surface)', color: 'var(--text)', cursor: 'pointer' }}>Sig. ›</button>
       </div>
 
-      <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+      <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <StatCard value={sessions.length} label="Sesiones" />
         <StatCard value={sessions.filter(s => s.completed_at).length} label="Completadas" color="#16a34a" />
         <StatCard value={totalHoras > 0 ? `${Math.floor(totalHoras/60)}h` : '—'} label="Horas totales" color="#2563eb" />
@@ -393,7 +393,7 @@ function TabDisponibilidad() {
             Horario semanal — {limp.nombre}
           </div>
           {(disponibilidad[limp.id] || []).map((d, i) => (
-            <div key={i} style={{ display: 'grid', gridTemplateColumns: '60px 48px 1fr 1fr 70px', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+            <div key={i} className="limp-disp-row" style={{ display: 'grid', gridTemplateColumns: '60px 48px 1fr 1fr 70px', gap: 8, alignItems: 'center', marginBottom: 8 }}>
               <span style={{ fontSize: 12, fontWeight: 600, color: d.activo ? 'var(--text)' : 'var(--muted)' }}>{DIAS[i + 1]}</span>
               <label style={{ display: 'flex', alignItems: 'center', gap: 4, cursor: 'pointer' }}>
                 <input type="checkbox" checked={!!d.activo} onChange={e => updateDia(limp.id, i, 'activo', e.target.checked)} />
@@ -533,7 +533,7 @@ function TabProveedores() {
           </div>
           {showForm && (
             <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 16, marginBottom: 14, border: '1px solid var(--border)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+              <div className="limp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                 {[['nombre', 'Nombre *'], ['empresa', 'Empresa'], ['telefono', 'Teléfono'], ['email', 'Email'], ['whatsapp', 'WhatsApp']].map(([k, l]) => (
                   <input key={k} placeholder={l} value={form[k] || ''} onChange={e => setForm((p: any) => ({ ...p, [k]: e.target.value }))}
                     style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontSize: 12, background: 'var(--surface)', color: 'var(--text)' }} />
@@ -585,7 +585,7 @@ function TabProveedores() {
           </div>
           {showFormProd && (
             <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 16, marginBottom: 14, border: '1px solid var(--border)' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+              <div className="limp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
                 <select value={formProd.proveedor_id} onChange={e => setFormProd((p: any) => ({ ...p, proveedor_id: e.target.value }))}
                   style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontSize: 12, background: 'var(--surface)', color: 'var(--text)' }}>
                   <option value="">Sin proveedor</option>
@@ -674,7 +674,7 @@ function TabLenceria() {
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+      <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
         <StatCard value={totalPiezas} label="Total piezas" />
         <StatCard value={disponibles} label="Disponibles" color="#16a34a" />
         <StatCard value={enLavanderia} label="En lavandería" color="#2563eb" />
@@ -702,7 +702,7 @@ function TabLenceria() {
 
       {showForm && (
         <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 14, marginBottom: 14, border: '1px solid var(--border)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
+          <div className="limp-grid-3" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8, marginBottom: 8 }}>
             <select value={form.property_id} onChange={e => setForm((p: any) => ({ ...p, property_id: e.target.value }))}
               style={{ border: '1px solid var(--border)', borderRadius: 8, padding: '7px 10px', fontSize: 12, background: 'var(--surface)', color: 'var(--text)' }}>
               {PROPS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -812,7 +812,7 @@ function TabLimpiadoras() {
       </div>
       {showForm && (
         <div style={{ background: 'var(--surface)', borderRadius: 12, padding: 16, marginBottom: 16, border: '1px solid var(--border)' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
+          <div className="limp-grid-2" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 10 }}>
             {[['nombre', 'Nombre *'], ['telefono', 'Teléfono'], ['pin', 'PIN (4 dígitos) *']].map(([k, l]) => (
               <input key={k} placeholder={l} value={(form as any)[k]} type={k === 'pin' ? 'password' : 'text'}
                 onChange={e => setForm(p => ({ ...p, [k]: e.target.value }))}
@@ -891,7 +891,7 @@ function TabStock() {
   if (loading) return <Spinner />
   return (
     <div>
-      <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+      <div className="limp-stats-row" style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <StatCard value={filtered.length} label="Artículos" />
         <StatCard value={alertas.length} label="⚠️ Alertas" color={alertas.length > 0 ? '#dc2626' : '#16a34a'} />
       </div>
@@ -946,39 +946,62 @@ export default function LimpiadoresClient() {
   const [activeTab, setActiveTab] = useState(0)
 
   return (
-    <div style={{ fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', minHeight: '100vh', background: 'var(--surface)' }}>
-      {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg,#1B4332,#2D6A4F)', padding: '20px 24px 0' }}>
-        <div style={{ color: '#fff', marginBottom: 16 }}>
-          <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase', letterSpacing: 2 }}>SIVRA</div>
-          <div style={{ fontSize: 22, fontWeight: 800 }}>Gestión limpiadoras</div>
+    <>
+      <style>{`
+        @media (max-width: 768px) {
+          .limp-stats-row { flex-direction: column !important; }
+          .limp-stats-row > div { flex: none !important; width: 100% !important; }
+          .limp-grid-2 { grid-template-columns: 1fr !important; }
+          .limp-grid-3 { grid-template-columns: 1fr !important; }
+          .limp-disp-row { grid-template-columns: 50px 36px 1fr 1fr 60px !important; gap: 4px !important; }
+          .limp-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch !important; }
+          .limp-card { width: 100% !important; min-width: unset !important; }
+          .limp-factura-grid { grid-template-columns: 1fr 1fr !important; }
+          .limp-tarifa-grid { grid-template-columns: 1fr 1fr !important; }
+          .limp-session-header { flex-direction: column !important; align-items: flex-start !important; }
+          .limp-session-header > div:last-child { text-align: left !important; }
+          .limp-btn-row { flex-wrap: wrap !important; }
+        }
+        @media (max-width: 480px) {
+          .limp-factura-grid { grid-template-columns: 1fr !important; }
+          .limp-tarifa-grid { grid-template-columns: 1fr !important; }
+          .limp-hide-xs { display: none !important; }
+        }
+      `}</style>
+      <div style={{ fontFamily: '-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif', minHeight: '100vh', background: 'var(--surface)' }}>
+        {/* Header */}
+        <div style={{ background: 'linear-gradient(135deg,#1B4332,#2D6A4F)', padding: '20px 24px 0' }}>
+          <div style={{ color: '#fff', marginBottom: 16 }}>
+            <div style={{ fontSize: 11, opacity: 0.7, textTransform: 'uppercase', letterSpacing: 2 }}>SIVRA</div>
+            <div style={{ fontSize: 22, fontWeight: 800 }}>Gestión limpiadoras</div>
+          </div>
+          {/* Tabs */}
+          <div style={{ display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none', WebkitOverflowScrolling: 'touch' } as React.CSSProperties}>
+            {TABS.map((t, i) => (
+              <button key={t} onClick={() => setActiveTab(i)}
+                style={{ padding: '10px 16px', border: 'none', borderBottom: activeTab === i ? '3px solid #a3e635' : '3px solid transparent',
+                  background: 'transparent', color: activeTab === i ? '#fff' : 'rgba(255,255,255,0.6)',
+                  fontWeight: activeTab === i ? 700 : 500, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                {t}
+              </button>
+            ))}
+          </div>
         </div>
-        {/* Tabs */}
-        <div style={{ display: 'flex', gap: 0, overflowX: 'auto', scrollbarWidth: 'none' }}>
-          {TABS.map((t, i) => (
-            <button key={t} onClick={() => setActiveTab(i)}
-              style={{ padding: '10px 16px', border: 'none', borderBottom: activeTab === i ? '3px solid #a3e635' : '3px solid transparent',
-                background: 'transparent', color: activeTab === i ? '#fff' : 'rgba(255,255,255,0.6)',
-                fontWeight: activeTab === i ? 700 : 500, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              {t}
-            </button>
-          ))}
-        </div>
-      </div>
 
-      {/* Content */}
-      <div style={{ maxWidth: 960, margin: '0 auto', padding: 20 }}>
-        {activeTab === 0 && <TabHoy />}
-        {activeTab === 1 && <TabSemana />}
-        {activeTab === 2 && <TabLimpiadoras />}
-        {activeTab === 3 && <TabDisponibilidad />}
-        {activeTab === 4 && <TabProveedores />}
-        {activeTab === 5 && <TabStock />}
-        {activeTab === 6 && <TabLenceria />}
-        {activeTab === 7 && <TabChecklists />}
-        {activeTab === 8 && <TabInformes />}
-        {activeTab === 9 && <TabFacturacion />}
+        {/* Content */}
+        <div style={{ maxWidth: 960, margin: '0 auto', padding: 20 }}>
+          {activeTab === 0 && <TabHoy />}
+          {activeTab === 1 && <TabSemana />}
+          {activeTab === 2 && <TabLimpiadoras />}
+          {activeTab === 3 && <TabDisponibilidad />}
+          {activeTab === 4 && <TabProveedores />}
+          {activeTab === 5 && <TabStock />}
+          {activeTab === 6 && <TabLenceria />}
+          {activeTab === 7 && <TabChecklists />}
+          {activeTab === 8 && <TabInformes />}
+          {activeTab === 9 && <TabFacturacion />}
+        </div>
       </div>
-    </div>
+    </>
   )
 }

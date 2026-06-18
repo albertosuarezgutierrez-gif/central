@@ -164,6 +164,22 @@ export default function MercadoPage() {
 
   return (
     <div style={{ padding: '16px 24px', maxWidth: 960, display: 'flex', flexDirection: 'column', gap: 20 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .mercado-portal-grid { grid-template-columns: 1fr !important; }
+          .mercado-stats-grid { grid-template-columns: repeat(3, 1fr) !important; }
+          .mercado-pos-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .mercado-apt-grid { grid-template-columns: 1fr !important; }
+          .mercado-bench-layout { grid-template-columns: 1fr !important; }
+          .mercado-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .mercado-prop-tabs { flex-wrap: wrap !important; }
+          .mercado-actions { flex-wrap: wrap !important; }
+        }
+        @media (max-width: 480px) {
+          .mercado-stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .mercado-pos-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
@@ -190,7 +206,7 @@ export default function MercadoPage() {
       </div>
 
       {/* Comparativa multi-portal */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+      <div className="mercado-portal-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
         {portalStats.map(pt => (
           <div key={pt.id}
             onClick={() => setPortal(pt.hasData ? pt.id : "all")}
@@ -271,7 +287,7 @@ export default function MercadoPage() {
             </div>
 
             {/* Stats */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
+            <div className="mercado-stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 20 }}>
               {[
                 { label:"Mínimo", val:stats.min, color:"#6B7F96" },
                 { label:"P25",    val:stats.p25, color:"#f59e0b" },
@@ -307,7 +323,7 @@ export default function MercadoPage() {
             </div>
 
             {/* Posición nuestros pisos */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+            <div className="mercado-pos-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
               {OUR_PRICES.map(p => {
                 const price = scenario === "normal" ? p.normal : (p as any)[scenario]
                 const pos = getPosition(price, stats)
@@ -335,7 +351,7 @@ export default function MercadoPage() {
                 <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
                   Alojamientos · {portal.toUpperCase()}
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div className="mercado-apt-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                   {[...live.apartments].sort((a,b) => a.price_night - b.price_night).map((apt,i) => (
                     <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: 'var(--surface)', borderRadius: 4, border: '1px solid var(--border)' }}>
                       <div style={{ position: 'relative', width: 80, height: 6, background: 'var(--border)', borderRadius: 999, flexShrink: 0 }}>
@@ -356,7 +372,7 @@ export default function MercadoPage() {
       {/* Análisis por piso */}
       <div>
         <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 12 }}>Análisis por alojamiento</div>
-        <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <div className="mercado-prop-tabs" style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
           {FALLBACK_PROPS.map((p,i) => (
             <button key={p.id} onClick={() => setPropIdx(i)}
               style={{
@@ -371,7 +387,7 @@ export default function MercadoPage() {
           ))}
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
+        <div className="mercado-bench-layout" style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 20 }}>
           <div style={{ background: 'var(--surface)', borderRadius: 6, border: '1px solid var(--border)', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
               <div>
@@ -405,6 +421,7 @@ export default function MercadoPage() {
               </div>
             </div>
 
+            <div className="mercado-table-wrap">
             <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
               <thead>
                 <tr style={{ borderBottom: '1px solid var(--border)' }}>
@@ -441,6 +458,7 @@ export default function MercadoPage() {
                 </tr>
               </tbody>
             </table>
+            </div>
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
