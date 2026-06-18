@@ -16,6 +16,17 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE — 18/06/2026** (Catering Joaquín Jaén, `/produccion`)
+  - **Carmen** (rol `cocina`, PIN **1234** de prueba) entra por su enlace → **`/produccion`** (no al KDS de mesas).
+  - **Ya NO es consultivo: herramienta completa, persistida en BD `iarest`** (service_role). PRs mergeados:
+    - **#363** eventos editables (CRUD + asignación de elaboraciones) + GET `/api/cocina/parte`.
+    - **#365** CRUD de **recetas/escandallo** (partida, min/PAX, muestra, controles APPCC, "depende de", ingredientes por PAX con desinf/descong).
+    - **#366** **operativa del día**: tabla `cocina_registros`; cada ficha marca **hecho**, registra **Tª por control**, **muestra testigo**, **firma**; chip "✓ Lista / ⛔ Pendiente"; controles impresos en el dossier.
+  - **Tablas nuevas (iarest, aditivas):** `cocina_eventos`, `cocina_recetas`, `cocina_receta_ingredientes`, `cocina_evento_elaboraciones`, `cocina_registros`; `restaurantes.modo` (`cocina_central`); `personal.partidas text[]` (aún sin cablear).
+  - **APIs:** `/api/cocina/parte` (GET), `/api/cocina/eventos[/id]`, `/api/cocina/recetas[/id]`, `/api/cocina/registros` (GET+POST acciones). Auth por sesión firmada `x-ia-session` + `local_id`.
+  - **Ciclo de Carmen funcionando:** crear recetas → crear eventos → asignar → ejecutar el día (Tª/firma/muestra) → dossier imprimible. Motor `@central/module-trazabilidad` + `module-organizador-trabajo`.
+  - **PENDIENTE (siguiente):** **recepción de mercancía** (albaranes: lote/proveedor/Tª entrada → rellena la ficha) · **vistas por rol/partida** (cocinero ve su partida; preparación = recepción+bases; frontera = "contacto con mercancía cruda") · reparto con personas reales (ahora 3 cocineros semilla). Reunión Carmen: **jueves 25, 12:00**.
+
 - **🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill — 18/06/2026**
   - **Archivadas en Drive** (`FACTURAS Apartamentos/2026/`): 7 facturas Anthropic (abr–jun) + Codeoscopic €769.56.
     - **Cuentas Anthropic** (dos, mismo NIF 28823484E, ambas deducibles `seguros`):
