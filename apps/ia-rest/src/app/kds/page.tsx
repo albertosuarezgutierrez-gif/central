@@ -486,7 +486,7 @@ function KDSInner() {
             )}
           </div>
           {/* Derecha: controles audio, reloj, chat, etc. */}
-          <div style={{ display:'flex', alignItems:'center', gap:16 }}>
+          <div style={{ display:'flex', alignItems:'center', flexWrap:'wrap', justifyContent:'flex-end', gap:'8px 14px' }}>
           {/* Parte derecha de fila-1: controles de audio, reloj, chat, etc. */}
           <button onClick={()=>setSonidoOn(v=>!v)} title={sonidoOn?'Silenciar':'Activar sonido'}
             style={{ cursor:'pointer', padding:'3px 8px', borderRadius:3, fontFamily:SM, fontSize:9, fontWeight:700, letterSpacing:'.08em', border:'none',
