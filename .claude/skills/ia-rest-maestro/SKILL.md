@@ -445,6 +445,14 @@ Usuarios finales   → Email (Resend): valoraciones, portales, presupuestos
 NUNCA email para alertas internas del sistema
 ```
 
+> **Captación de leads (landing) — `/api/leads/landing`:** TODA landing (home/hostelería/catering/espacios) postea
+> aquí → guarda en `leads_landing` + crea lead CRM en `leads` (origen `inbound_web`) → avisa por `tgAlert()` **y**
+> `enviarEmailNuevoLead()` (a `hola@iarest.es`, que está en el Gmail de Alberto). El cliente y la API DEBEN cuadrar
+> campos: la home manda `restaurante:""` y email opcional → la API exige `nombre` + (teléfono **o** email), nunca
+> `restaurante`/`email` obligatorios. Si no cuadran = **400 silencioso = lead perdido sin rastro en BD** (el form
+> hace `await fetch` en try/catch e igual muestra "Recibido"); el intento sí queda en **GA4 `generate_lead`**. Fix
+> 18/06/2026 (PR #360).
+
 ---
 
 ## GIT / DEPLOY
