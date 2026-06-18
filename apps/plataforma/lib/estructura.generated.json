@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T07:39:10Z",
+  "generadoEn": "2026-06-18T08:01:57Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 16
+        "evidencias": 17
       },
       "ialimp": {
         "presente": false,
@@ -1387,6 +1387,7 @@
       "/api/cocina/parte",
       "/api/cocina/recetas",
       "/api/cocina/recetas/[id]",
+      "/api/cocina/registros",
       "/api/cocina/validar-pin",
       "/api/comanda",
       "/api/comanda/[id]/audit",
@@ -2453,6 +2454,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
       "fecha": "18/06/2026"
     },
@@ -2506,10 +2511,6 @@
     },
     {
       "titulo": "🔌 IA POR LA PASARELA · cerrar los 2 pendientes del #325",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
       "fecha": "16/06/2026"
     }
   ],
@@ -2794,7 +2795,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 898,
+    "apis": 899,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
