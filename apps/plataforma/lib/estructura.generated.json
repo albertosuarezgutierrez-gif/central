@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T07:23:33Z",
+  "generadoEn": "2026-06-18T07:39:10Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 14
+        "evidencias": 16
       },
       "ialimp": {
         "presente": false,
@@ -1385,6 +1385,8 @@
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
       "/api/cocina/parte",
+      "/api/cocina/recetas",
+      "/api/cocina/recetas/[id]",
       "/api/cocina/validar-pin",
       "/api/comanda",
       "/api/comanda/[id]/audit",
@@ -2451,6 +2453,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE",
       "fecha": "18/06/2026"
     },
@@ -2504,10 +2510,6 @@
     },
     {
       "titulo": "🤖 AGENTES IA-REST · quitar Anthropic de los 4 agentes del god-panel",
-      "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "📧 FACTURAS CORREO · Sistema completo en producción",
       "fecha": "16/06/2026"
     }
   ],
@@ -2792,7 +2794,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 896,
+    "apis": 898,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
