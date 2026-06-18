@@ -97,7 +97,22 @@ export default function IncomePage() {
 
   return (
     <div style={{ padding: '24px', maxWidth: 1200 }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: 12 }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .income-header { flex-direction: column !important; align-items: flex-start !important; }
+          .income-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .income-split-grid { grid-template-columns: 1fr !important; }
+          .income-filters { flex-direction: column !important; align-items: stretch !important; }
+          .income-filters select, .income-filters input, .income-filters button { width: 100% !important; box-sizing: border-box; }
+          .income-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+          .income-adv-filters { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .income-kpi-grid { grid-template-columns: 1fr !important; }
+          .income-adv-filters { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
+      <div className="income-header" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginBottom: '24px', flexWrap: 'wrap', gap: 12 }}>
         <div>
           <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Ingresos — Reservas</h1>
           <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--muted)' }}>Reservas importadas desde Smoobu</p>
@@ -109,7 +124,7 @@ export default function IncomePage() {
 
       {incomes.length > 0 && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 12 }}>
+          <div className="income-kpi-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: 12, marginBottom: 12 }}>
             {[
               { label: 'Reservas', value: filtrados.length.toString() },
               { label: 'Ingresos brutos', value: fmt(totalBruto) },
@@ -123,7 +138,7 @@ export default function IncomePage() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
+          <div className="income-split-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12, marginBottom: 12 }}>
             {[
               { title: 'Por portal', data: porPortal, label: (k: string) => PORTAL_LABELS[k] || k, color: (k: string) => PORTAL_COLORS[k] || '#71717a' },
               { title: 'Por propiedad', data: porPropiedad, label: (k: string) => k, color: () => 'var(--primary)' },
@@ -145,7 +160,7 @@ export default function IncomePage() {
 
       {/* Filters */}
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="income-filters" style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
           <input placeholder="Buscar huésped o ID..." value={busqueda} onChange={e => setBusqueda(e.target.value)} style={{ ...inp, flex: '1 1 160px', minWidth: 0 }} />
           <select value={filtroPortal} onChange={e => setFiltroPortal(e.target.value)} style={sel}>
             <option value="">Todos portales</option>
@@ -171,7 +186,7 @@ export default function IncomePage() {
         </div>
 
         {filtrosAbiertos && (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+          <div className="income-adv-filters" style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 12, marginTop: 12, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
             {[
               ['Entrada desde', fechaDesde, setFechaDesde, 'date'],
               ['Entrada hasta', fechaHasta, setFechaHasta, 'date'],
@@ -206,7 +221,7 @@ export default function IncomePage() {
         ) : filtrados.length === 0 ? (
           <div style={{ padding: '32px', textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>Sin resultados para los filtros aplicados.</div>
         ) : (
-          <div style={{ overflowX: 'auto', maxHeight: 600, overflowY: 'auto' }}>
+          <div className="income-table-wrap" style={{ overflowX: 'auto', maxHeight: 600, overflowY: 'auto' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
               <thead style={{ position: 'sticky', top: 0, background: 'var(--surface)', zIndex: 1 }}>
                 <tr>

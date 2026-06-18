@@ -56,6 +56,16 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .aptodet-kpi-grid { grid-template-columns: repeat(2, 1fr) !important; }
+          .aptodet-two-col { grid-template-columns: 1fr !important; }
+          .aptodet-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+        }
+        @media (max-width: 480px) {
+          .aptodet-kpi-grid { grid-template-columns: 1fr !important; }
+        }
+      `}</style>
 
       {/* Breadcrumb + título */}
       <div style={{ marginBottom: '24px' }}>
@@ -70,7 +80,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
       </div>
 
       {/* KPI strip */}
-      <div style={{
+      <div className="aptodet-kpi-grid" style={{
         display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))',
         gap: '12px', marginBottom: '28px',
       }}>
@@ -88,7 +98,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
         <KPICard label={`Resultado ${anio}`} value={fmtEur(d.resultadoAnio)} color={d.resultadoAnio >= 0 ? '#16a34a' : '#dc2626'} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+      <div className="aptodet-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         {/* Próximas reservas */}
         <Section title="📅 Próximas reservas">
           {d.proximas.length === 0 ? (
@@ -160,6 +170,7 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
         {d.mensual.length === 0 ? (
           <Empty text="Sin datos históricos" />
         ) : (
+          <div className="aptodet-table-wrap">
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border)', color: 'var(--muted)', fontSize: '11px' }}>
@@ -191,10 +202,11 @@ export default async function ApartamentoDetallePage({ params }: { params: Promi
               })}
             </tbody>
           </table>
+          </div>
         )}
       </Section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
+      <div className="aptodet-two-col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
         {/* Gastos por categoría */}
         <Section title={`💶 Gastos por categoría (${anio})`}>
           {d.gastosCat.length === 0 ? (
