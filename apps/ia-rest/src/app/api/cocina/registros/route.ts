@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({ fecha, registros: data ?? [] })
 }
 
-type Control = { tipo: string; valor: number | null; hora: string }
+type Control = { tipo: string; valor: number | null; hora: string; por?: string }
 
 /**
  * POST /api/cocina/registros — registra una acción del día (upsert por receta+fecha).
@@ -43,6 +43,7 @@ export async function POST(req: NextRequest) {
     .from('cocina_registros').select('*')
     .eq('local_id', rid).eq('fecha', fecha).eq('receta_id', receta_id).maybeSingle()
 
+  const quien = session.nombre ?? ''
   const row: Record<string, unknown> = {
     local_id: rid, fecha, receta_id,
     hecho: actual?.hecho ?? false,
@@ -50,15 +51,25 @@ export async function POST(req: NextRequest) {
     muestra_testigo_at: actual?.muestra_testigo_at ?? null,
     firma: actual?.firma ?? null,
     firmado_at: actual?.firmado_at ?? null,
+    hecho_por: actual?.hecho_por ?? null,
+    hecho_por_id: actual?.hecho_por_id ?? null,
+    hecho_at: actual?.hecho_at ?? null,
+    firma_por_id: actual?.firma_por_id ?? null,
     updated_at: ahora,
   }
 
   switch (body.action) {
-    case 'hecho':
-      row.hecho = body.valor ?? !actual?.hecho
+    case 'hecho': {
+      const nuevo = body.valor ?? !actual?.hecho
+      row.hecho = nuevo
+      // atribución: quién y cuándo marcó hecho (tiempo real)
+      row.hecho_por = nuevo ? quien : null
+      row.hecho_por_id = nuevo ? session.id : null
+      row.hecho_at = nuevo ? ahora : null
       break
+    }
     case 'control': {
-      const ctrl: Control = { tipo: String(body.tipo), valor: body.valor != null && body.valor !== '' ? Number(body.valor) : null, hora: ahora }
+      const ctrl: Control = { tipo: String(body.tipo), valor: body.valor != null && body.valor !== '' ? Number(body.valor) : null, hora: ahora, por: quien }
       const lista = (Array.isArray(row.controles) ? row.controles : []) as Control[]
       // sustituye el control del mismo tipo si ya existía
       row.controles = [...lista.filter(c => c.tipo !== ctrl.tipo), ctrl]
@@ -68,8 +79,9 @@ export async function POST(req: NextRequest) {
       row.muestra_testigo_at = actual?.muestra_testigo_at ? null : ahora
       break
     case 'firma':
-      row.firma = String(body.firma ?? session.nombre ?? '').trim() || null
+      row.firma = String(body.firma ?? quien).trim() || null
       row.firmado_at = row.firma ? ahora : null
+      row.firma_por_id = row.firma ? session.id : null
       break
     default:
       return NextResponse.json({ error: 'acción no válida' }, { status: 400 })
