@@ -22,10 +22,12 @@
     - **#363** eventos editables (CRUD + asignación de elaboraciones) + GET `/api/cocina/parte`.
     - **#365** CRUD de **recetas/escandallo** (partida, min/PAX, muestra, controles APPCC, "depende de", ingredientes por PAX con desinf/descong).
     - **#366** **operativa del día**: tabla `cocina_registros`; cada ficha marca **hecho**, registra **Tª por control**, **muestra testigo**, **firma**; chip "✓ Lista / ⛔ Pendiente"; controles impresos en el dossier.
-  - **Tablas nuevas (iarest, aditivas):** `cocina_eventos`, `cocina_recetas`, `cocina_receta_ingredientes`, `cocina_evento_elaboraciones`, `cocina_registros`; `restaurantes.modo` (`cocina_central`); `personal.partidas text[]` (aún sin cablear).
-  - **APIs:** `/api/cocina/parte` (GET), `/api/cocina/eventos[/id]`, `/api/cocina/recetas[/id]`, `/api/cocina/registros` (GET+POST acciones). Auth por sesión firmada `x-ia-session` + `local_id`.
-  - **Ciclo de Carmen funcionando:** crear recetas → crear eventos → asignar → ejecutar el día (Tª/firma/muestra) → dossier imprimible. Motor `@central/module-trazabilidad` + `module-organizador-trabajo`.
-  - **PENDIENTE (siguiente):** **recepción de mercancía** (albaranes: lote/proveedor/Tª entrada → rellena la ficha) · **vistas por rol/partida** (cocinero ve su partida; preparación = recepción+bases; frontera = "contacto con mercancía cruda") · reparto con personas reales (ahora 3 cocineros semilla). Reunión Carmen: **jueves 25, 12:00**.
+    - **#368** **recepción de mercancía** (`cocina_recepciones`): registrar albarán (producto/proveedor/lote/Tª/conforme); rellena Lote/Prov./Tª de la ficha por coincidencia de nombre.
+    - **#369** **vistas por rol/partida** (`personal.cocina_rol`): GET `/api/cocina/yo`; responsable ve todo; **cocinero** solo su(s) partida(s) sin gestión; **preparación** = recepción + "Bases a preparar".
+  - **Tablas nuevas (iarest, aditivas):** `cocina_eventos`, `cocina_recetas`, `cocina_receta_ingredientes`, `cocina_evento_elaboraciones`, `cocina_registros`, `cocina_recepciones`; `restaurantes.modo` (`cocina_central`); `personal.partidas text[]` + `personal.cocina_rol` (Carmen=`responsable`).
+  - **APIs:** `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros` `recepciones[/id]` `yo`. Auth por sesión firmada `x-ia-session` + `local_id`.
+  - **CICLO COMPLETO (5 bloques):** recetas → eventos → asignar → recepción → ejecutar el día (Tª/firma/muestra) → dossier; con roles cocinero/preparación. Motor `@central/module-trazabilidad` + `module-organizador-trabajo`.
+  - **PENDIENTE/MEJORAS:** dar de alta usuarios reales de cocinero/preparación (con su `cocina_rol`/`partidas`) — aún sin ellos para Catering JJ; reparto con personas reales (ahora 3 cocineros semilla); "Bases a preparar" como checklist persistido; PIN propio (ahora 1234 de prueba). Reunión Carmen: **jueves 25, 12:00**.
 
 - **🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill — 18/06/2026**
   - **Archivadas en Drive** (`FACTURAS Apartamentos/2026/`): 7 facturas Anthropic (abr–jun) + Codeoscopic €769.56.
