@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T06:44:22Z",
+  "generadoEn": "2026-06-18T07:23:33Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -762,7 +762,7 @@
     "module-trazabilidad": {
       "ia-rest": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "ialimp": {
         "estado": "no",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 11
+        "evidencias": 14
       },
       "ialimp": {
         "presente": false,
@@ -1382,6 +1382,9 @@
       "/api/cloudprnt/[deviceId]",
       "/api/cobros/[slug]",
       "/api/cobros/[slug]/checkout",
+      "/api/cocina/eventos",
+      "/api/cocina/eventos/[id]",
+      "/api/cocina/parte",
       "/api/cocina/validar-pin",
       "/api/comanda",
       "/api/comanda/[id]/audit",
@@ -2789,7 +2792,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 893,
+    "apis": 896,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
