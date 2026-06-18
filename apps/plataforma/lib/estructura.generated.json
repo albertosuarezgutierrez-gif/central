@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T08:03:55Z",
+  "generadoEn": "2026-06-18T08:14:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 17
+        "evidencias": 19
       },
       "ialimp": {
         "presente": false,
@@ -1385,6 +1385,8 @@
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
       "/api/cocina/parte",
+      "/api/cocina/recepciones",
+      "/api/cocina/recepciones/[id]",
       "/api/cocina/recetas",
       "/api/cocina/recetas/[id]",
       "/api/cocina/registros",
@@ -2795,7 +2797,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 899,
+    "apis": 901,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

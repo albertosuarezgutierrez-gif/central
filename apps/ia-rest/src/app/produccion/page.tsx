@@ -28,6 +28,7 @@ const COCINEROS: Trabajador[] = [
 type Receta = FichaCatalogo
 type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; elaboraciones: string[] }
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string }>; muestra_testigo_at: string | null; firma: string | null }
+type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; conforme: boolean; observaciones: string | null }
 
 const sh = (): Record<string, string> => ({ 'x-ia-session': (typeof window !== 'undefined' && localStorage.getItem('ia_rest_session')) || '' })
 
@@ -35,12 +36,13 @@ function Chip({ children, bg, fg, br }: { children: React.ReactNode; bg: string;
   return <span style={{ fontFamily: SN, fontSize: 11.5, fontWeight: 600, color: fg, background: bg, border: br ? `1px solid ${br}` : 'none', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{children}</span>
 }
 
-function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion }: {
+function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep }: {
   e: ElaboracionTraza
   ubNombre: Record<string, string>
   registro?: Registro
   requiereMuestra: boolean
   onAccion: (recetaId: string, payload: Record<string, unknown>) => void
+  matchRecep: (nombre: string) => Recepcion | undefined
 }): ReactElement {
   const alergenos = alergenosElaboracion(e)
   const controles = validarControles(e)
@@ -70,18 +72,23 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion }: {
         </div>
       )}
       <div style={{ marginTop: 10 }}>
-        {e.ingredientes.map((ing, i) => (
-          <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '2px 10px', padding: '6px 0', borderBottom: `1px solid ${C.papel}` }}>
-            <span style={{ fontFamily: SN, fontWeight: 700, fontSize: 13, color: C.tinta, flex: '1 1 auto', minWidth: 0 }}>{ing.nombre}</span>
-            <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.verde, whiteSpace: 'nowrap' }}>{ing.cantidad}</span>
-            <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
-              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>Lote ⬚</span>
-              <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>Prov. ⬚</span>
-              {ing.desinfeccion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>🧪 Desinf.</span>}
-              {ing.descongelacion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>❄️ Descong.</span>}
+        {e.ingredientes.map((ing, i) => {
+          const rec = matchRecep(ing.nombre)
+          const okBox: React.CSSProperties = { fontFamily: SN, fontSize: 11, borderRadius: 6, padding: '1px 7px', border: `1px solid ${rec ? '#3F7D44' : C.linea}`, background: rec ? 'rgba(63,125,68,.10)' : C.papel, color: rec ? '#2f6b34' : C.ink3 }
+          return (
+            <div key={i} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '2px 10px', padding: '6px 0', borderBottom: `1px solid ${C.papel}` }}>
+              <span style={{ fontFamily: SN, fontWeight: 700, fontSize: 13, color: C.tinta, flex: '1 1 auto', minWidth: 0 }}>{ing.nombre}</span>
+              <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.verde, whiteSpace: 'nowrap' }}>{ing.cantidad}</span>
+              <div style={{ flex: '1 1 100%', display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 3 }}>
+                <span style={okBox}>Lote {rec?.lote || '⬚'}</span>
+                <span style={okBox}>Prov. {rec?.proveedor || '⬚'}</span>
+                {rec?.temperatura != null && <span style={okBox}>{rec.temperatura}° entrada</span>}
+                {ing.desinfeccion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>🧪 Desinf.</span>}
+                {ing.descongelacion && <span style={{ fontFamily: SN, fontSize: 11, color: C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 6, padding: '1px 7px' }}>❄️ Descong.</span>}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
         {controles.map((r, i) => {
@@ -260,17 +267,23 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionAbierta, setGestion] = useState(false)
   const [editorReceta, setEditorReceta] = useState<{ modo: 'nuevo' | 'editar'; receta?: Receta } | null>(null)
   const [gestionRecetas, setGestionRecetas] = useState(false)
+  const [recepciones, setRecepciones] = useState<Recepcion[]>([])
+  const [gestionRecep, setGestionRecep] = useState(false)
+  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', conforme: true, observaciones: '' })
 
   const cargar = useCallback(async () => {
-    const [pr, rr] = await Promise.all([
+    const [pr, rr, cr] = await Promise.all([
       fetch('/api/cocina/parte', { headers: sh() }),
       fetch('/api/cocina/registros', { headers: sh() }),
+      fetch('/api/cocina/recepciones', { headers: sh() }),
     ])
     const d = await pr.json().catch(() => ({ recetas: [], eventos: [] }))
     const reg = await rr.json().catch(() => ({ registros: [] }))
+    const rec = await cr.json().catch(() => ({ recepciones: [] }))
     setRecetas(d.recetas ?? [])
     setEventos(d.eventos ?? [])
     setRegistros(reg.registros ?? [])
+    setRecepciones(rec.recepciones ?? [])
   }, [])
 
   const accion = useCallback(async (receta_id: string, payload: Record<string, unknown>) => {
@@ -294,6 +307,26 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const minPorPax = useMemo(() => Object.fromEntries(recetas.map(r => [r.id, r.min_por_pax ?? 0.4])), [recetas])
   const registroPorReceta = useMemo(() => Object.fromEntries(registros.map(r => [r.receta_id, r])) as Record<string, Registro>, [registros])
   const recetaMuestra = useMemo(() => Object.fromEntries(recetas.map(r => [r.id, r.requiere_muestra ?? false])) as Record<string, boolean>, [recetas])
+
+  const matchRecep = useCallback((nombre: string): Recepcion | undefined => {
+    const norm = (s: string) => s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim()
+    const limpia = norm(nombre)
+    return recepciones.find(r => { const p = norm(r.producto); return !!p && (limpia.includes(p) || p.includes(limpia)) })
+  }, [recepciones])
+
+  const crearRecepcion = async () => {
+    if (!recForm.producto.trim()) return
+    setSaving(true)
+    try {
+      await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(recForm) })
+      setRecForm({ producto: '', proveedor: '', lote: '', temperatura: '', conforme: true, observaciones: '' })
+      await cargar()
+    } finally { setSaving(false) }
+  }
+  const borrarRecepcion = async (id: string) => {
+    await fetch(`/api/cocina/recepciones/${id}`, { method: 'DELETE', headers: sh() })
+    await cargar()
+  }
 
   const parte = useMemo(() => {
     const ev: EventoInput[] = eventos.map(e => ({ id: e.id, nombre: e.nombre, pax: e.pax, fecha_evento: e.fecha_evento ?? '', elaboraciones: e.elaboraciones }))
@@ -387,11 +420,46 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
             <button onClick={() => { setGestion(v => !v); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionAbierta ? '#fff' : C.verde, background: gestionAbierta ? C.verde : 'transparent', border: `1px solid ${C.verde}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
               {gestionAbierta ? 'Cerrar' : '✎ Eventos'}
             </button>
-            <button onClick={() => { setGestionRecetas(v => !v); setGestion(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecetas ? '#fff' : C.oro, background: gestionRecetas ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+            <button onClick={() => { setGestionRecetas(v => !v); setGestion(false); setGestionRecep(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecetas ? '#fff' : C.oro, background: gestionRecetas ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
               {gestionRecetas ? 'Cerrar' : '✎ Recetas'}
+            </button>
+            <button onClick={() => { setGestionRecep(v => !v); setGestion(false); setGestionRecetas(false) }} style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: gestionRecep ? '#fff' : C.ambar, background: gestionRecep ? C.ambar : 'transparent', border: `1px solid ${C.ambar}`, borderRadius: 8, padding: '7px 14px', cursor: 'pointer' }}>
+              {gestionRecep ? 'Cerrar' : '📦 Recepción'}
             </button>
           </div>
         </div>
+
+        {/* Recepción de mercancía (albaranes) */}
+        {gestionRecep && (
+          <div className="noprint" style={{ background: 'rgba(154,107,18,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar, marginBottom: 4 }}>Recepción de mercancía</div>
+            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>El lote, proveedor y Tª de entrada rellenan la ficha de trazabilidad (por coincidencia de nombre).</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,130px),1fr))', gap: 8, alignItems: 'end' }}>
+              <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Producto *</label><input style={inp} value={recForm.producto} onChange={e => setRecForm(f => ({ ...f, producto: e.target.value }))} placeholder="Ej: pechuga de pollo" /></div>
+              <div><label style={lbl}>Proveedor</label><input style={inp} value={recForm.proveedor} onChange={e => setRecForm(f => ({ ...f, proveedor: e.target.value }))} /></div>
+              <div><label style={lbl}>Lote</label><input style={inp} value={recForm.lote} onChange={e => setRecForm(f => ({ ...f, lote: e.target.value }))} /></div>
+              <div><label style={lbl}>Tª entrada</label><input style={inp} type="number" step="0.1" value={recForm.temperatura} onChange={e => setRecForm(f => ({ ...f, temperatura: e.target.value }))} /></div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, paddingBottom: 9 }}>
+                <input type="checkbox" checked={recForm.conforme} onChange={e => setRecForm(f => ({ ...f, conforme: e.target.checked }))} /> Conforme
+              </label>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 12 }}>
+              <button disabled={saving || !recForm.producto.trim()} onClick={crearRecepcion} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || !recForm.producto.trim() ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>+ Registrar recepción</button>
+            </div>
+            <div style={{ marginTop: 12 }}>
+              {recepciones.map(r => (
+                <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${C.linea}` }}>
+                  <div style={{ flex: '1 1 auto', minWidth: 0 }}>
+                    <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>{r.producto} {!r.conforme && <span style={{ color: C.rojo, fontSize: 12 }}>· no conforme</span>}</div>
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Lote {r.lote || '—'} · {r.proveedor || 'sin proveedor'}{r.temperatura != null ? ` · ${r.temperatura}°` : ''}</div>
+                  </div>
+                  <button onClick={() => borrarRecepcion(r.id)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
+                </div>
+              ))}
+              {recepciones.length === 0 && <div style={{ fontFamily: SN, fontSize: 13, color: C.ink3 }}>Aún no hay recepciones registradas hoy.</div>}
+            </div>
+          </div>
+        )}
 
         {/* Gestión de recetas (catálogo de elaboraciones) */}
         {gestionRecetas && (
@@ -467,7 +535,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 15, letterSpacing: .5 }}>{(PARTIDA_NOMBRE[g.partida] ?? g.partida).toUpperCase()}</span>
               <span style={{ marginLeft: 'auto', fontFamily: SN, fontSize: 13, opacity: .9 }}>{g.elabs.length}</span>
             </div>
-            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} registro={registroPorReceta[e.id]} requiereMuestra={recetaMuestra[e.id] ?? false} onAccion={accion} />)}
+            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} registro={registroPorReceta[e.id]} requiereMuestra={recetaMuestra[e.id] ?? false} onAccion={accion} matchRecep={matchRecep} />)}
           </div>
         ))}
 
