@@ -16,6 +16,27 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill — 18/06/2026**
+  - **Archivadas en Drive** (`FACTURAS Apartamentos/2026/`): 7 facturas Anthropic (abr–jun) + Codeoscopic €769.56.
+    - **Cuentas Anthropic** (dos, mismo NIF 28823484E, ambas deducibles `seguros`):
+      - `albertosuarezgutierrez@gmail.com` → **Anthropic Ireland Ltd** (EU, API credits, IVA 21%):
+        `2026-04-15` €21.78 · `2026-04-17` $6.05 · `2026-05-02` $6.05 · `2026-05-05` €142.50
+      - `manuelsuarezz@gmail.com` → **Anthropic PBC** (US, Max plan 20x, Mastercard **-0341** sin identificar):
+        `2026-04-13` €163.21 (KX7NRNU6-0003, crédito −16.79) · `2026-05-13` €180.00 (KX7NRNU6-0004)
+    - **Codeoscopic** `2026-05-21` €769.56 (Workspace software correduría, ya pagado por transferencia).
+    - Todos como documentos de texto en Drive (PDFs no subibles por MCP base64). PDFs originales pendientes de subida manual.
+  - **Fix skill** (commit `e069a49`): añadida exclusión explícita de **notificaciones operativas de la correduría**
+    (recibos devueltos de clientes, avisos de emisión, circulares de Allianz/Mapfre/Generali/Occident) — el agente
+    rutinario había etiquetado `Facturas/Procesada` un email de "recibo devuelto de cliente" de Allianz (falso positivo).
+  - **FACTURA MAPFRE** (31/05): es liquidación de comisiones (INGRESO de la correduría), NO gasto deducible → excluida.
+  - **N26 sin conectar a PSD2**: Vercel ($190.93 anterior) y facturas Anthropic pagadas desde N26 no aparecerán en banco hasta subir extracto manual.
+  - **Pendientes detectados en pasada 60d** (sin procesar aún):
+    - EMASESA × 3 (Bustos Tavera DER, Bustos Tavera IZQ, Socorro 24) — agua pisos turísticos
+    - Endesa SOCORRO 24 (Ref P26CON021029273, "Luz pendiente 2026") — luz pisos
+    - Lavandería El Giraldillo (AFV-11528, 25/05/2026) — lavandería pisos, **factura pendiente de pago**
+    - IONOS Correo Basic 1 (31/05/2026, ~€1.50/mes)
+  - **Para tu decisión (sin respuesta de Alberto):** Registro de la Propiedad "Factura 2025/AM 2345" (¿qué propiedad?) · Amazon WORKPRO Grapadora (¿pisos o personal?)
+
 - **🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE — 18/06/2026** (concepto clave, decisión de Alberto)
   - **Distinción fundamental:** una **cocina central de preparación** (catering / comida para llevar / obrador) es
     un MODELO DISTINTO al de un restaurante. ia-rest nació para restaurante (mesas, comandas, voz, KDS). Para la
