@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       proveedor: body.proveedor?.trim() || null,
       lote: body.lote?.trim() || null,
       temperatura: body.temperatura != null && body.temperatura !== '' ? Number(body.temperatura) : null,
+      caducidad: typeof body.caducidad === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(body.caducidad) ? body.caducidad : null,
       conforme: body.conforme ?? true,
       observaciones: body.observaciones?.trim() || null,
     })

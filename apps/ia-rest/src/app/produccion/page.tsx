@@ -19,16 +19,19 @@ const PARTIDA_COLOR: Record<string, string> = { frio: '#2B6A6E', caliente: '#C04
 const PARTIDA_NOMBRE: Record<string, string> = { frio: 'Frío', caliente: 'Caliente', corte: 'Corte', montaje: 'Montaje' }
 const CTRL_ICONO: Record<TipoControl, string> = { termico: '🌡️', abatimiento: '🧊', congelacion: '❄️', refrigeracion: '🧊' }
 
+const TODAS_PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
+// Semilla de ejemplo (fallback hasta que el responsable dé de alta a su equipo real). Cubren todas las partidas.
 const COCINEROS: Trabajador[] = [
-  { id: 'c1', nombre: 'Carmen', rol: 'cocinero', disponible: true },
-  { id: 'c2', nombre: 'Cocina 2', rol: 'cocinero', disponible: true },
-  { id: 'c3', nombre: 'Cocina 3', rol: 'cocinero', disponible: true },
+  { id: 'c1', nombre: 'Cocina 1', rol: 'cocinero', disponible: true, roles: TODAS_PARTIDAS },
+  { id: 'c2', nombre: 'Cocina 2', rol: 'cocinero', disponible: true, roles: TODAS_PARTIDAS },
+  { id: 'c3', nombre: 'Cocina 3', rol: 'cocinero', disponible: true, roles: TODAS_PARTIDAS },
 ]
 
 type Receta = FichaCatalogo
 type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; elaboraciones: string[] }
-type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string }>; muestra_testigo_at: string | null; firma: string | null }
-type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; conforme: boolean; observaciones: string | null }
+type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string; por?: string }>; muestra_testigo_at: string | null; firma: string | null; hecho_por?: string | null; hecho_at?: string | null }
+const horaCorta = (iso?: string | null) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
+type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; caducidad: string | null; conforme: boolean; observaciones: string | null }
 type Miembro = { id: string; nombre: string; pin: string; cocina_rol: string; partidas: string[]; activo: boolean }
 const COCINA_ROL_LABEL: Record<string, string> = { responsable: 'Responsable', cocinero: 'Cocinero', preparacion: 'Preparación' }
 const PARTIDAS = ['frio', 'caliente', 'corte', 'montaje']
@@ -39,13 +42,18 @@ function Chip({ children, bg, fg, br }: { children: React.ReactNode; bg: string;
   return <span style={{ fontFamily: SN, fontSize: 11.5, fontWeight: 600, color: fg, background: bg, border: br ? `1px solid ${br}` : 'none', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{children}</span>
 }
 
-function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep }: {
+function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep, asignadoId, nombreTrab, cocinerosPartida, onAsignar, puedeAsignar }: {
   e: ElaboracionTraza
   ubNombre: Record<string, string>
   registro?: Registro
   requiereMuestra: boolean
   onAccion: (recetaId: string, payload: Record<string, unknown>) => void
   matchRecep: (nombre: string) => Recepcion | undefined
+  asignadoId?: string | null
+  nombreTrab: Record<string, string>
+  cocinerosPartida: Array<{ id: string; nombre: string }>
+  onAsignar: (recetaId: string, trabajadorId: string | null) => void
+  puedeAsignar: boolean
 }): ReactElement {
   const alergenos = alergenosElaboracion(e)
   const controles = validarControles(e)
@@ -64,6 +72,14 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep }:
           <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 'clamp(14px,3.6vw,16px)', color: C.tinta }}>{e.nombre}</div>
         </div>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+          {asignadoId && !puedeAsignar && <Chip bg={C.papel} fg={C.verde} br={C.linea}>👤 {nombreTrab[asignadoId] ?? '—'}</Chip>}
+          {puedeAsignar && (
+            <select className="noprint" value={asignadoId ?? ''} onChange={ev => onAsignar(e.id, ev.target.value || null)} title="Asignar a"
+              style={{ fontFamily: SN, fontSize: 12, color: asignadoId ? C.verde : C.ink3, background: C.papel, border: `1px solid ${C.linea}`, borderRadius: 8, padding: '3px 6px', cursor: 'pointer' }}>
+              <option value="">👤 sin asignar</option>
+              {cocinerosPartida.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+            </select>
+          )}
           {e.ubicaciones.map(u => <Chip key={u} bg={C.papel} fg={C.ink3} br={C.linea}>{ubNombre[u] ?? u}</Chip>)}
           <Chip bg={lista ? 'rgba(63,125,68,.12)' : 'rgba(158,43,37,.07)'} fg={lista ? '#2f6b34' : C.rojo} br={lista ? '#3F7D44' : 'rgba(158,43,37,.3)'}>{lista ? '✓ Lista' : '⛔ Pendiente'}</Chip>
         </div>
@@ -99,7 +115,7 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep }:
           return (
             <button key={i} className="noprint" onClick={() => { const v = window.prompt(`${objetivoControl(r.tipo)}\nValor (°C):`, reg?.valor != null ? String(reg.valor) : ''); if (v !== null) onAccion(e.id, { action: 'control', tipo: r.tipo, valor: v }) }}
               style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: reg ? '#2f6b34' : C.tinta, background: reg ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${reg ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>
-              {CTRL_ICONO[r.tipo]} {objetivoControl(r.tipo)} <strong>{reg ? `✓ ${reg.valor ?? ''}${reg.valor != null ? '°' : ''}` : '⬚'}</strong>
+              {CTRL_ICONO[r.tipo]} {objetivoControl(r.tipo)} <strong>{reg ? `✓ ${reg.valor ?? ''}${reg.valor != null ? '°' : ''}` : '⬚'}</strong>{reg?.por ? <span style={{ opacity: .75 }}> · {reg.por}</span> : null}
             </button>
           )
         })}
@@ -111,9 +127,13 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep }:
           style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: registro?.firma ? '#2f6b34' : C.ink3, background: registro?.firma ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${registro?.firma ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>✍️ {registro?.firma ? registro.firma : 'Firmar ⬚'}</button>
         {/* Versión impresa de los controles */}
         <span className="solo-print" style={{ display: 'none', fontFamily: SN, fontSize: 11.5, color: C.ink3 }}>
-          {controles.map(r => { const reg = ctrlReg(r.tipo); return `${objetivoControl(r.tipo)}: ${reg ? (reg.valor ?? '✓') : '⬚'}` }).join(' · ')} · Firma: {registro?.firma ?? '⬚'}
+          {controles.map(r => { const reg = ctrlReg(r.tipo); return `${objetivoControl(r.tipo)}: ${reg ? `${reg.valor ?? '✓'}${reg.por ? ` (${reg.por})` : ''}` : '⬚'}` }).join(' · ')} · Firma: {registro?.firma ?? '⬚'}{registro?.hecho_por ? ` · Hecho por ${registro.hecho_por} ${horaCorta(registro.hecho_at)}` : ''}
         </span>
       </div>
+      {/* Atribución (quién/cuándo lo marcó hecho) */}
+      {registro?.hecho && registro?.hecho_por && (
+        <div style={{ fontFamily: SN, fontSize: 11, color: C.ink3, marginTop: 6 }}>✓ Hecho por <strong>{registro.hecho_por}</strong>{registro.hecho_at ? ` · ${horaCorta(registro.hecho_at)}` : ''}</div>
+      )}
     </div>
   )
 }
@@ -317,33 +337,43 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionRecetas, setGestionRecetas] = useState(false)
   const [recepciones, setRecepciones] = useState<Recepcion[]>([])
   const [gestionRecep, setGestionRecep] = useState(false)
-  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', conforme: true, observaciones: '' })
+  const [recForm, setRecForm] = useState({ producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' })
+  const [recLeyendo, setRecLeyendo] = useState(false)
   const [yo, setYo] = useState<{ cocina_rol: string; partidas: string[]; nombre: string; access_token: string | null }>({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null })
   const [equipo, setEquipo] = useState<Miembro[]>([])
   const [gestionEquipo, setGestionEquipo] = useState(false)
   const [editorMiembro, setEditorMiembro] = useState<{ modo: 'nuevo' | 'editar'; miembro?: Miembro } | null>(null)
+  const [asignaciones, setAsignaciones] = useState<Array<{ receta_id: string; trabajador_id: string | null; origen: string }>>([])
 
   const cargar = useCallback(async () => {
-    const [pr, rr, cr, yr] = await Promise.all([
+    const [pr, rr, cr, yr, ar] = await Promise.all([
       fetch('/api/cocina/parte', { headers: sh() }),
       fetch('/api/cocina/registros', { headers: sh() }),
       fetch('/api/cocina/recepciones', { headers: sh() }),
       fetch('/api/cocina/yo', { headers: sh() }),
+      fetch('/api/cocina/asignaciones', { headers: sh() }),
     ])
     const d = await pr.json().catch(() => ({ recetas: [], eventos: [] }))
     const reg = await rr.json().catch(() => ({ registros: [] }))
     const rec = await cr.json().catch(() => ({ recepciones: [] }))
     const me = await yr.json().catch(() => ({ cocina_rol: 'responsable', partidas: [], nombre: '', access_token: null }))
+    const asg = await ar.json().catch(() => ({ asignaciones: [] }))
     setRecetas(d.recetas ?? [])
     setEventos(d.eventos ?? [])
     setRegistros(reg.registros ?? [])
     setRecepciones(rec.recepciones ?? [])
+    setAsignaciones(asg.asignaciones ?? [])
     setYo({ cocina_rol: me.cocina_rol ?? 'responsable', partidas: me.partidas ?? [], nombre: me.nombre ?? '', access_token: me.access_token ?? null })
     if ((me.cocina_rol ?? 'responsable') === 'responsable') {
       const eq = await fetch('/api/cocina/personal', { headers: sh() }).then(r => r.json()).catch(() => ({ equipo: [] }))
       setEquipo(eq.equipo ?? [])
     }
   }, [])
+
+  const asignar = async (receta_id: string, trabajador_id: string | null) => {
+    await fetch('/api/cocina/asignaciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ action: 'set', receta_id, trabajador_id }) })
+    await cargar()
+  }
 
   const guardarMiembro = async (v: Record<string, unknown>) => {
     setSaving(true)
@@ -396,12 +426,13 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     return recepciones.find(r => { const p = norm(r.producto); return !!p && (limpia.includes(p) || p.includes(limpia)) })
   }, [recepciones])
 
+  const recVacio = { producto: '', proveedor: '', lote: '', temperatura: '', caducidad: '', conforme: true, observaciones: '' }
   const crearRecepcion = async () => {
     if (!recForm.producto.trim()) return
     setSaving(true)
     try {
       await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify(recForm) })
-      setRecForm({ producto: '', proveedor: '', lote: '', temperatura: '', conforme: true, observaciones: '' })
+      setRecForm(recVacio)
       await cargar()
     } finally { setSaving(false) }
   }
@@ -410,19 +441,67 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
+  // 📷 Foto de etiqueta/albarán → la IA lee y autorrellena (o registra todo el albarán)
+  const reconocerFoto = async (file: File) => {
+    setRecLeyendo(true)
+    try {
+      const dataUrl: string = await new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = rej; r.readAsDataURL(file) })
+      const base64 = dataUrl.split(',')[1] ?? ''
+      const mediaType = (dataUrl.match(/^data:([^;]+);/)?.[1]) || 'image/jpeg'
+      const r = await fetch('/api/cocina/recepciones/reconocer', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ imagen: base64, mediaType }) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo leer la imagen'); return }
+      const prods: Array<Record<string, unknown>> = d.productos ?? []
+      if (prods.length === 0) { window.alert('No se reconoció ningún producto. Rellénalo a mano.'); return }
+      if (prods.length === 1) {
+        const p = prods[0]
+        setRecForm({ producto: String(p.producto ?? ''), proveedor: String(p.proveedor ?? d.proveedor ?? ''), lote: String(p.lote ?? ''), temperatura: p.temperatura != null ? String(p.temperatura) : '', caducidad: String(p.caducidad ?? ''), conforme: p.conforme !== false, observaciones: '' })
+      } else {
+        // Albarán con varios → registra todos de golpe (Carmen los ve en la lista)
+        if (!window.confirm(`Se han leído ${prods.length} productos del albarán. ¿Registrarlos todos?`)) return
+        for (const p of prods) {
+          await fetch('/api/cocina/recepciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ producto: p.producto, proveedor: p.proveedor ?? d.proveedor, lote: p.lote, temperatura: p.temperatura, caducidad: p.caducidad, conforme: p.conforme !== false }) })
+        }
+        await cargar()
+      }
+    } finally { setRecLeyendo(false) }
+  }
+
   const parte = useMemo(() => {
     const ev: EventoInput[] = eventos.map(e => ({ id: e.id, nombre: e.nombre, pax: e.pax, fecha_evento: e.fecha_evento ?? '', elaboraciones: e.elaboraciones }))
     return generarParte(recetas, ev)
   }, [recetas, eventos])
   const total = paxTotal(parte)
 
-  const plan = useMemo(() => {
-    const tareas: Tarea[] = parte.elaboraciones.map(e => {
-      const pax = e.ubicaciones.reduce((a, id) => a + (eventos.find(ev => ev.id === id)?.pax ?? 0), 0)
-      return { id: e.id, nombre: e.nombre, tipo: 'elaboracion', partida: e.partida ?? undefined, duracion_estimada_min: Math.max(10, Math.round((minPorPax[e.id] ?? 0.4) * pax)), prioridad: e.partida === 'caliente' ? 'alta' : 'normal' }
-    })
-    return asignarTrabajo(tareas, COCINEROS)
-  }, [parte, eventos, minPorPax])
+  // Equipo real de cocineros (con sus partidas como capacidades); fallback a la semilla si aún no hay equipo
+  const cocineros = useMemo<Trabajador[]>(() => {
+    const reales = equipo.filter(m => m.cocina_rol === 'cocinero' && m.activo)
+      .map(m => ({ id: m.id, nombre: m.nombre, rol: 'cocinero', roles: m.partidas, disponible: true }))
+    return reales.length > 0 ? reales : COCINEROS
+  }, [equipo])
+
+  const duracionTarea = useCallback((e: ElaboracionTraza) => {
+    const pax = e.ubicaciones.reduce((a, id) => a + (eventos.find(ev => ev.id === id)?.pax ?? 0), 0)
+    return Math.max(10, Math.round((minPorPax[e.id] ?? 0.4) * pax))
+  }, [eventos, minPorPax])
+
+  const asignMap = useMemo(() => Object.fromEntries(asignaciones.map(a => [a.receta_id, a.trabajador_id])) as Record<string, string | null>, [asignaciones])
+  const nombreTrab = useMemo(() => Object.fromEntries(cocineros.map(c => [c.id, c.nombre])) as Record<string, string>, [cocineros])
+  const cocinerosDePartida = useCallback((p: string | null | undefined) => cocineros.filter(c => !p || (c.roles ?? []).includes(p)), [cocineros])
+  const cargaPorCocinero = useMemo(() => {
+    const m: Record<string, number> = {}
+    parte.elaboraciones.forEach(e => { const t = asignMap[e.id]; if (t) m[t] = (m[t] ?? 0) + duracionTarea(e) })
+    return m
+  }, [parte, asignMap, duracionTarea])
+
+  // La IA propone el reparto (por partida, balanceando carga); Carmen luego ajusta a mano.
+  const reasignarIA = async () => {
+    const tareas: Tarea[] = parte.elaboraciones.map(e => ({ id: e.id, nombre: e.nombre, tipo: 'elaboracion', partida: e.partida ?? undefined, requiere_rol: e.partida ?? undefined, duracion_estimada_min: duracionTarea(e), prioridad: e.partida === 'caliente' ? 'alta' : 'normal' }))
+    const plan = asignarTrabajo(tareas, cocineros)
+    const items = plan.asignaciones.map(a => ({ receta_id: a.tarea_id, trabajador_id: a.trabajador_id }))
+    await fetch('/api/cocina/asignaciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ action: 'bulk', origen: 'ia', asignaciones: items }) })
+    await cargar()
+  }
 
   const esResponsable = yo.cocina_rol === 'responsable'
   const esCocinero    = yo.cocina_rol === 'cocinero'
@@ -598,13 +677,20 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
         {/* Recepción de mercancía (albaranes) */}
         {gestionRecep && (
           <div className="noprint" style={{ background: 'rgba(154,107,18,.05)', border: `1px solid ${C.linea}`, borderRadius: 14, padding: 16, marginBottom: 20 }}>
-            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar, marginBottom: 4 }}>Recepción de mercancía</div>
-            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>El lote, proveedor y Tª de entrada rellenan la ficha de trazabilidad (por coincidencia de nombre).</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+              <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.ambar }}>Recepción de mercancía</div>
+              <label style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: recLeyendo ? C.ink3 : '#fff', background: recLeyendo ? C.ink3 : C.ambar, border: 'none', borderRadius: 8, padding: '8px 14px', cursor: recLeyendo ? 'default' : 'pointer' }}>
+                {recLeyendo ? 'Leyendo…' : '📷 Foto de etiqueta / albarán'}
+                <input type="file" accept="image/*" capture="environment" style={{ display: 'none' }} disabled={recLeyendo} onChange={e => { const f = e.target.files?.[0]; if (f) reconocerFoto(f); e.currentTarget.value = '' }} />
+              </label>
+            </div>
+            <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 12 }}>Haz una foto de la etiqueta o el albarán y la IA rellena los datos. El lote/proveedor/Tª rellenan la ficha (por coincidencia de nombre).</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,130px),1fr))', gap: 8, alignItems: 'end' }}>
               <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Producto *</label><input style={inp} value={recForm.producto} onChange={e => setRecForm(f => ({ ...f, producto: e.target.value }))} placeholder="Ej: pechuga de pollo" /></div>
               <div><label style={lbl}>Proveedor</label><input style={inp} value={recForm.proveedor} onChange={e => setRecForm(f => ({ ...f, proveedor: e.target.value }))} /></div>
               <div><label style={lbl}>Lote</label><input style={inp} value={recForm.lote} onChange={e => setRecForm(f => ({ ...f, lote: e.target.value }))} /></div>
               <div><label style={lbl}>Tª entrada</label><input style={inp} type="number" step="0.1" value={recForm.temperatura} onChange={e => setRecForm(f => ({ ...f, temperatura: e.target.value }))} /></div>
+              <div><label style={lbl}>Caducidad</label><input style={inp} type="date" value={recForm.caducidad} onChange={e => setRecForm(f => ({ ...f, caducidad: e.target.value }))} /></div>
               <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: SN, fontSize: 13, color: C.tinta, paddingBottom: 9 }}>
                 <input type="checkbox" checked={recForm.conforme} onChange={e => setRecForm(f => ({ ...f, conforme: e.target.checked }))} /> Conforme
               </label>
@@ -617,7 +703,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                 <div key={r.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, padding: '9px 0', borderBottom: `1px solid ${C.linea}` }}>
                   <div style={{ flex: '1 1 auto', minWidth: 0 }}>
                     <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>{r.producto} {!r.conforme && <span style={{ color: C.rojo, fontSize: 12 }}>· no conforme</span>}</div>
-                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Lote {r.lote || '—'} · {r.proveedor || 'sin proveedor'}{r.temperatura != null ? ` · ${r.temperatura}°` : ''}</div>
+                    <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Lote {r.lote || '—'} · {r.proveedor || 'sin proveedor'}{r.temperatura != null ? ` · ${r.temperatura}°` : ''}{r.caducidad ? ` · cad. ${r.caducidad}` : ''}</div>
                   </div>
                   <button onClick={() => borrarRecepcion(r.id)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
                 </div>
@@ -679,15 +765,22 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           </div>
         )}
 
-        {/* Reparto del motor (solo responsable) */}
+        {/* Reparto por persona (solo responsable): la IA propone, Carmen ajusta */}
         {esResponsable && (
-          <div className="noprint" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
-            {COCINEROS.map(c => (
-              <div key={c.id} style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 10, padding: '7px 12px' }}>
-                <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 13.5, color: C.tinta }}>{c.nombre}</div>
-                <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{plan.minutos_por_trabajador[c.id] ?? 0} min</div>
-              </div>
-            ))}
+          <div className="noprint" style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+              <span style={{ fontFamily: SN, fontSize: 12, fontWeight: 700, color: C.ink3, textTransform: 'uppercase', letterSpacing: .5 }}>Reparto</span>
+              <button onClick={reasignarIA} style={{ fontFamily: SN, fontSize: 12.5, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '6px 12px', cursor: 'pointer' }}>✨ Repartir con IA</button>
+              {equipo.filter(m => m.cocina_rol === 'cocinero' && m.activo).length === 0 && <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>(equipo de ejemplo — da de alta a los tuyos en 👥 Equipo)</span>}
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {cocineros.map(c => (
+                <div key={c.id} style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 10, padding: '7px 12px' }}>
+                  <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 13.5, color: C.tinta }}>{c.nombre}</div>
+                  <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{cargaPorCocinero[c.id] ?? 0} min</div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -703,7 +796,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
               <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 15, letterSpacing: .5 }}>{(PARTIDA_NOMBRE[g.partida] ?? g.partida).toUpperCase()}</span>
               <span style={{ marginLeft: 'auto', fontFamily: SN, fontSize: 13, opacity: .9 }}>{g.elabs.length}</span>
             </div>
-            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} registro={registroPorReceta[e.id]} requiereMuestra={recetaMuestra[e.id] ?? false} onAccion={accion} matchRecep={matchRecep} />)}
+            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} registro={registroPorReceta[e.id]} requiereMuestra={recetaMuestra[e.id] ?? false} onAccion={accion} matchRecep={matchRecep} asignadoId={asignMap[e.id]} nombreTrab={nombreTrab} cocinerosPartida={cocinerosDePartida(e.partida)} onAsignar={asignar} puedeAsignar={esResponsable} />)}
           </div>
         ))}
 
