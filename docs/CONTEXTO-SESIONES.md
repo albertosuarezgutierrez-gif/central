@@ -16,6 +16,18 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📱 RESPONSIVE COMPLETO — 18/06/2026** (PR #381 mergeado a `main`)
+  - Añadidas media queries `@media (max-width: 768px)` en 30+ páginas de `apps/plataforma`.
+  - Lote 1: `LayoutShell`, `dashboard`, `banca` (×2), `finanzas/FinanzasClient`.
+  - Lote 2: `apartamentos` (×2), `sivra/mercado`, `sivra/pricing`, `sivra/pricing-auto`,
+    `sivra/income`, `sivra/expenses`, `sivra/gastos-fijos`, `sivra/fiscal`.
+  - Lote 3: `sivra/limpiadoras` (×2), `sivra/mensajes`, `sivra/calendario`, `sivra/inversion`, `sivra/seo`.
+  - Lote 4: `operador/clientes`, `operador/personas`, `operador/iarest/*` (8 páginas),
+    `operador/rrhh/*` (2 páginas), `comunicacion` (×2), `CommandPalette`.
+  - Estrategia: `<style>` JSX tags + `className` en divs estructurales. Sin Tailwind, sin reescribir
+    inline styles. Breakpoints: 768px (tablet/mobile) y 480px (xs). Utilidades globales en `globals.css`.
+  - Todos los CI verdes (4 typechecks + tests + 4 builds Vercel Ready).
+
 - **🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA — 18/06/2026** (rama `claude/project-review-skill-p0jrkc`)
   - **Guardián de cierre**: el hook `Stop` (`.claude/hooks/persist-memoria.sh`) ahora, si la
     sesión hizo commits que tocan algo distinto de la memoria pero NO anotó este archivo,

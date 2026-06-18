@@ -326,10 +326,15 @@ export default function FinanzasClient({ initialData, year, quarter }: Props) {
                 { label: '🟣 Kutxa — Familiar', data: d.personal.kutxa },
               ].map(r => (
                 <div key={r.label} style={{ marginBottom: '12px', paddingBottom: '12px', borderBottom: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: r.data.gastos === 0 ? '4px' : '6px' }}>
                     <span style={{ fontSize: '13px', fontWeight: 600 }}>{r.label}</span>
                     <span style={{ fontSize: '15px', fontWeight: 700, color: '#e53e3e' }}>{fmt(r.data.gastos)}</span>
                   </div>
+                  {r.data.gastos === 0 && r.label.includes('BBVA') && (
+                    <div style={{ fontSize: '11px', color: 'var(--muted)', marginBottom: '4px' }}>
+                      Los gastos BBVA están en Correduría (seguros) y Pisos — no hay gastos personales en esta cuenta.
+                    </div>
+                  )}
                   {r.data.porCategoria.slice(0, 4).map(c => {
                     const pctVal = r.data.gastos > 0 ? (c.importe / r.data.gastos) * 100 : 0
                     return (
