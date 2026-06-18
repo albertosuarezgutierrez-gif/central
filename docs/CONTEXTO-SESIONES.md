@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🐛 FIXES COMUNICACIÓN + FINANZAS — 18/06/2026** (PR #382 mergeado a `main`)
+  - **`/comunicacion` → Nuevo mensaje → Persona**: dropdown vacío corregido. `sivraAdapter` no
+    tenía `listarDirectorio` → añadido: query `limpiadoras WHERE activa = true ORDER BY nombre`
+    (single-tenant, sin filtro empresa_id). Ahora muestra las 15 limpiadoras activas.
+  - **`/finanzas` → BBVA 0€ personal**: comportamiento correcto (todos los movimientos personales
+    BBVA son positivos — Bizum recibido, pensiones). Añadida nota explicativa inline en
+    `FinanzasClient.tsx` cuando `gastos === 0` y la etiqueta contiene "BBVA".
+
 - **📱 RESPONSIVE COMPLETO — 18/06/2026** (PR #381 mergeado a `main`)
   - Añadidas media queries `@media (max-width: 768px)` en 30+ páginas de `apps/plataforma`.
   - Lote 1: `LayoutShell`, `dashboard`, `banca` (×2), `finanzas/FinanzasClient`.
