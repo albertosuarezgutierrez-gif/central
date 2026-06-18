@@ -16,6 +16,32 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧾 `@central/core-receipts`: FASE 1 (fundación) — PR #307 (draft) — 16/06/2026**
+  Origen: Alberto comparte `receiptmaker.ai` ("esto para nuestros negocios"). Tras descartar el caso
+  "fake receipt" (choca de frente con VeriFactu / facturas falsas), objetivo acordado: **emitir los
+  recibos/tickets REALES más bonitos y con marca, transversal a las verticales, con un toque de IA en
+  cada emisión confinado a la capa de presentación NO-fiscal** (modo A; modo B opcional solo ialimp/sivra).
+  - **Spec**: `docs/superpowers/specs/2026-06-16-core-receipts-design.md`. **Plan Fase 1**:
+    `docs/superpowers/plans/2026-06-16-core-receipts-fase1.md`.
+  - **Nuevo paquete `packages/core-receipts`** (`@central/core-receipts`, workspace:*). Expone:
+    tipos del dominio (`ReceiptDoc`, `FiscalFields`, `Branding`, `GlosaProvider`), `assertFiscalIntegrity`
+    (fail-closed: no emite si falta un campo VeriFactu o si la glosa cuela una cifra fiscal), y el
+    **renderer térmico ESC/POS migrado VERBATIM** desde `apps/ia-rest/src/lib/courier.ts` (`generarEscPos`,
+    `generarTextoPlano`, `generarTicketCuenta`, `generarEscPosCuenta`).
+  - **ia-rest** ahora importa esos generadores del paquete (courier.ts re-exporta para los 11 consumidores).
+    `tsc --noEmit` exit 0. **Cero cambio de comportamiento** (igualdad de bytes garantizada por tests golden).
+  - **Tests 12/12** (`node --test`). Ojo aprendido: `generarEscPosCuenta` lee `new Date()` (reloj de pared)
+    → el test era flaky; se congela el reloj con `withFrozenClock` en `test/fixtures.ts`.
+  - **Pendiente**: Fases 2-4 en planes propios. Fase 2 = renderer HTML + adopción `ReceiptDoc` en las 3
+    rutas de factura (`apps/ia-rest/.../factura/cliente`, `apps/ialimp/.../propietario/[token]/factura/[id]`,
+    `apps/sivra/.../limpiadoras/facturacion`) reutilizando el white-label de ialimp (`lib/branding.ts`,
+    `getBranding`) — ⚠️ ialimp tiene piloto vivo (Sique Brilla): paridad visual por snapshot + flag.
+    Fase 3 = glosa IA (`@central/core-ai`) + PDF (`@react-pdf/renderer`). Fase 4 = modo B.
+  - **Nota infra**: el proyecto Vercel `central-rrhh` (Root Directory `apps/rrhh`) falla en TODOS los PRs
+    porque `apps/rrhh` no existe en el repo. Se intentó scaffold (PR #312) pero Alberto lo **cerró sin
+    mergear**. Para quitar el rojo recurrente: pausar/borrar `central-rrhh` en el dashboard de Vercel (acción
+    manual de Alberto). NO reabrir #312 ni rehacer el scaffold salvo que lo pida.
+
 - **🎛️ PLATAFORMA: panel unificado — un solo shell (Mi negocio + Operador) — PR #249 (MERGED) — 15/06/2026**
   Dos zonas separadas (usuario `/dashboard` + god-panel `/admin`) unificadas en una sola pantalla con sidebar único, tema claro y un solo login.
 
