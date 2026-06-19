@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T08:55:10Z",
+  "generadoEn": "2026-06-19T09:06:08Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 25
+        "evidencias": 26
       },
       "ialimp": {
         "presente": false,
@@ -1006,7 +1006,7 @@
     "crm-leads": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "ialimp": {
         "presente": true,
@@ -1385,6 +1385,7 @@
       "/api/cocina/asignaciones",
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
+      "/api/cocina/eventos/[id]/crm",
       "/api/cocina/eventos/[id]/material",
       "/api/cocina/menu-sugerido",
       "/api/cocina/parte",
@@ -2470,6 +2471,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)",
+      "fecha": "19/06/2026"
+    },
+    {
       "titulo": "🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)",
       "fecha": "18/06/2026"
     },
@@ -2523,10 +2528,6 @@
     },
     {
       "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE",
       "fecha": "18/06/2026"
     }
   ],
@@ -2811,7 +2812,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 910,
+    "apis": 911,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
