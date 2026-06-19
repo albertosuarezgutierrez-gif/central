@@ -86,38 +86,10 @@ cobro_cliente o transferencia. Responde SOLO un array JSON:
   }
 }
 
-// "Destino"/negocio del movimiento (a quién pertenece): pisos turísticos, Dúplex, seguros,
-// traspaso entre cuentas propias o personal. Se decide por reglas (banco + palabras clave).
-export type Destino = 'turistico_pisos' | 'turistico_duplex' | 'seguros' | 'traspaso_interno' | 'personal'
-export const DESTINO_LABEL: Record<Destino, string> = {
-  turistico_pisos: '🏖️ Pisos turísticos',
-  turistico_duplex: '🏠 Dúplex Center',
-  seguros: '🛡️ Seguros (correduría)',
-  traspaso_interno: '🔁 Traspaso interno',
-  personal: '👨‍👩‍👧 Personal',
-}
-const RE_TITULAR = /SUAREZ.*GUTIERREZ|GUTIERREZ.*SUAREZ|ALBERTO SUAREZ/i
-const RE_SEGUROS = /\b(GENERALI|ALLIANZ|MAPFRE|CASER|AXA|ZURICH|REALE|MUTUA|LINEA DIRECTA|SANITAS|ADESLAS|SEGURCAIXA|DKV|ASISA|CATALANA OCCIDENTE|OCCIDENT|LIBERTY|HELVETIA|PLUS ULTRA|SANTALUCIA|OCASO|PELAYO|VERTI|GENESIS|FENIX|DIVINA PASTORA|FIATC|SEGUROS BILBAO|NATIONALE|VIDACAIXA|ANTARES|ARAG|ASEFA|PREVENTIVA|SURNE|QUALITAS|SEGURO|SEGUROS)\b/i
-const RE_PISOS = /\b(BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE|HOTELBEDS|HOMETOGO|RENTALIA|VRBO|HOLIDU|SMOOBU|PRICELABS|DYNAPRICE|HOMEEXCHANG|IONOS|IKEA|LEROY|BRICO|FERRETER|D CULTO|DCULTO|SIQUE|EMASESA|ENDESA|DIGI|DIMITRI)\b/i
-// Gastos propios del Dúplex (en la cuenta BBVA): comunidad, luz, internet, agua, IBI/ayto + reservas + mobiliario.
-const RE_DUPLEX = /\b(COMUNIDAD|PASAJE FRANCISCO|ENDESA|FINETWORK|EMASESA|IBERDROLA|NATURGY|MOVISTAR|VODAFONE|ORANGE|DIGI|AYUNTAMIENTO|AYTO|IKEA|LEROY|BRICO|FERRETER|SMOOBU|PRICELABS|BOOKING|EXPEDIA|TRAVELSCAPE|AGODA|AIRBNB|STRIPE)\b/i
-
-export function clasificarDestino(banco: string | null, concepto: string | null, contraparte: string | null): Destino {
-  const txt = `${concepto ?? ''} ${contraparte ?? ''}`
-  const esBBVA = (banco ?? '').toUpperCase().includes('BBVA')
-  // Liquidación/pago de tarjeta (agregado de Kutxa "TARJ.CRDTO" o "PAGO RECIBO 4662…" en la
-  // propia tarjeta): es un movimiento entre cuenta y tarjeta, NO un gasto real → no duplicar,
-  // porque el gasto real ya está en el detalle de la tarjeta.
-  if (/TARJ\.?\s*CR[EÉ]?DTO|PAGO RECIBO 466|466203201|PAGO DE TARJETA|LIQUIDACION? (DE )?TARJETA/i.test(txt)) return 'traspaso_interno'
-  // Traspaso interno SOLO si el RECEPTOR (contraparte) eres tú — no si solo apareces como
-  // ordenante en el concepto de una transferencia a un tercero.
-  if (RE_TITULAR.test(contraparte ?? '')) return 'traspaso_interno'
-  if (RE_SEGUROS.test(txt)) return 'seguros'
-  // BBVA = Dúplex (gastos del piso) + correduría de seguros. Lo que no sea del piso → correduría.
-  if (esBBVA) return RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros'
-  // Kutxa = resto de pisos turísticos + personal.
-  return RE_PISOS.test(txt) ? 'turistico_pisos' : 'personal'
-}
+// "Destino"/negocio del movimiento (a quién pertenece). La lógica PURA (y testeable) vive en
+// lib/destino.ts; se reexporta aquí para no romper los imports existentes desde '@/lib/categorizar'.
+export { clasificarDestino, DESTINO_LABEL, type Destino } from './destino'
+import { clasificarDestino, type Destino } from './destino'
 
 // Reglas deterministas: categoriza por palabras clave del concepto/contraparte SIN IA.
 // Cubre la mayoría de movimientos al instante (y sin gastar el cupo gratuito de NIM). Lo
@@ -172,7 +144,7 @@ export async function analizarMovimientos(cuentaId: string, limite = 400): Promi
   if (pendientes.length === 0) return { categorizados: 0 }
 
   // El destino (negocio) se decide siempre por reglas; lo guardamos junto a la categoría.
-  const destinoDe = new Map(pendientes.map(p => [p.id, clasificarDestino(p.banco, p.concepto, p.contraparte)]))
+  const destinoDe = new Map(pendientes.map(p => [p.id, clasificarDestino(p.banco, p.concepto, p.contraparte, Number(p.importe))]))
   let n = 0
   const paraIA: MovPend[] = []
 

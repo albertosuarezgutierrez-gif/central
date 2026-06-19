@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T18:28:25Z",
+  "generadoEn": "2026-06-19T08:55:10Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1146,7 +1146,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -2050,6 +2050,8 @@
       "/api/cron/psd2-sync",
       "/api/finanzas",
       "/api/finanzas/export",
+      "/api/finanzas/novedades/[id]/descartar",
+      "/api/finanzas/perfil",
       "/api/negocios",
       "/api/negocios/[id]",
       "/api/sivra/eventos/sync",
@@ -2059,6 +2061,7 @@
       "/api/sivra/expenses/fijos",
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/facturas-control",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -2405,6 +2408,11 @@
       "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
     },
     {
+      "id": "fiscal-novedades",
+      "name": "fiscal-novedades",
+      "description": "Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida \"revisa si han cambiado las deducciones\" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV)."
+    },
+    {
       "id": "ia-rest-maestro",
       "name": "ia-rest-maestro",
       "description": ">"
@@ -2474,6 +2482,14 @@
       "fecha": "18/06/2026"
     },
     {
+      "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "🔍 AUDITORÍA PROFUNDA SEMANAL",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
       "fecha": "18/06/2026"
     },
@@ -2502,24 +2518,16 @@
       "fecha": "18/06/2026"
     },
     {
+      "titulo": "📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
       "fecha": "18/06/2026"
     },
     {
       "titulo": "🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE",
       "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "💶 MÓDULO /finanzas MERGEADO",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "🧹 EDGE FUNCTIONS sin Anthropic",
-      "fecha": "17/06/2026"
     }
   ],
   "saludRepo": {
@@ -2802,8 +2810,8 @@
     "verticales": 5,
     "packages": 24,
     "capacidades": 23,
-    "skills": 15,
-    "apis": 907,
+    "skills": 16,
+    "apis": 910,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

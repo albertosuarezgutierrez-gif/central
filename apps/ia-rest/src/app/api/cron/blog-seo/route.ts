@@ -1,9 +1,9 @@
 export const dynamic = 'force-dynamic'
-// Generar un artículo de ~1800 palabras (max_tokens 4096, sin streaming) en NIM
-// llama-3.3-70b tarda ~70-100s. Con maxDuration=60 Vercel mataba la función antes
-// de terminar. Subimos a 300 (como el cron de briefing) para que quepan DOS intentos
-// de ~110s: si NIM va lento o falla en un run, el reintento lo absorbe en vez de
-// caer con "NIM falló: NVIDIA timeout".
+// La función de Vercel se corta a ~60s en este proyecto (maxDuration=300 NO se
+// respeta — el plan lo capa). El modelo grande (llama-3.3-70b) tardaba >60s en
+// generar el artículo → Vercel mataba la función con un 504 (texto plano, no JSON).
+// Por eso la generación usa el modelo RÁPIDO 8B (ver generarTexto), que cabe en la
+// ventana. Dejamos maxDuration=300 como margen por si el plan llegara a permitirlo.
 export const maxDuration = 300
 
 import { NextRequest, NextResponse } from 'next/server'
@@ -93,20 +93,15 @@ async function elegirKeyword(keywords: any[], existentes: string[]): Promise<str
   return slug0
 }
 
-// Llamada a NIM con un reintento ante fallos transitorios (timeout/5xx de NVIDIA).
-// 2 intentos de 110s caben dentro de maxDuration=300. Si ambos fallan, propaga el
-// último error (el cron lo reporta por Telegram como hasta ahora).
-async function generarConReintento(system: string, prompt: string): Promise<string> {
-  let ultimoError: unknown
-  for (let intento = 1; intento <= 2; intento++) {
-    try {
-      return await callAI(system, prompt, 4096, 110_000)
-    } catch (e) {
-      ultimoError = e
-      console.warn(`[blog-seo] intento ${intento}/2 falló:`, (e as Error).message)
-    }
-  }
-  throw ultimoError
+// El modelo grande (70b) a 4096 tokens tardaba >60s y Vercel cortaba la función con
+// un 504 (ni siquiera saltaba nuestro timeout interno). Generamos con el modelo
+// RÁPIDO 8B (≈30-40s para el artículo) y un timeout interno de 45s que salta ANTES
+// del corte de Vercel (~60s): así un fallo devuelve JSON limpio en vez de un 504.
+// Sin reintento: no hay presupuesto de tiempo para un 2º intento dentro de la ventana.
+const BLOG_MODELO = 'meta/llama-3.1-8b-instruct'
+
+async function generarTexto(system: string, prompt: string): Promise<string> {
+  return callAI(system, prompt, 3000, 45_000, true, BLOG_MODELO)
 }
 
 async function generarArticulo(keyword: string): Promise<{ titulo: string; slug: string; meta: string; tsx: string }> {
@@ -142,11 +137,9 @@ RESPONDE SOLO con un JSON válido, sin markdown ni backticks:
   "cta_texto": "texto del CTA final"
 }`
 
-  // timeoutMs explícito de 110s: el default de callAI (15s) es muy corto para una
-  // generación de 4096 tokens y provocaba "NIM falló: NVIDIA timeout". Reintentamos
-  // una vez si NIM va lento/falla en un run concreto — caben 2 intentos dentro de
-  // maxDuration=300, así una latencia puntual de NVIDIA no tumba el cron.
-  const raw = await generarConReintento(
+  // Modelo rápido 8B + timeout 45s (ver generarTexto): cabe en la ventana de ~60s
+  // de Vercel, que con el modelo grande se agotaba (504).
+  const raw = await generarTexto(
     'Eres un experto en SEO y copywriting para hostelería española. Respondes SOLO con un JSON válido, sin markdown ni backticks.',
     prompt
   )

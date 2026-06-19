@@ -54,6 +54,14 @@ caza lo que las sesiones del día no anotaron a mano.
 | **MCPs** | Booking + Tripadvisor + Trivago (+ Supabase) |
 | **Qué hace** | Estudia el mercado y aplica precios por los raíles del Paso 4. El motor in-app sigue solo sin esta rutina (plan B). |
 
+### 5. Vigilante de novedades fiscales (IRPF) — *pendiente de trigger*
+| | |
+|---|---|
+| **Cuándo** | ~**Mensual** (y antes de la campaña de renta, abril) |
+| **Prompt** | `Ejecuta la skill fiscal-novedades` |
+| **MCPs** | WebFetch/WebSearch (BOE/BOJA/AEAT) + Supabase. **GitHub nativo** (abre el PR). |
+| **Qué hace** | Contrasta `IMPORTES_POR_ANIO` de `/finanzas` con BOE (estatal) + BOJA (Andalucía). Si una deducción/mínimo cambia: actualiza la constante por PR draft e inserta en `fiscal_novedades` (`beneficia` = subió) → la app avisa en pantalla. Sin cambios → sin PR. |
+
 ---
 
 ## Notas

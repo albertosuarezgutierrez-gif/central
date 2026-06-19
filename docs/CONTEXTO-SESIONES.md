@@ -67,6 +67,40 @@
   - Estrategia: `<style>` JSX tags + `className` en divs estructurales. Sin Tailwind, sin reescribir
     inline styles. Breakpoints: 768px (tablet/mobile) y 480px (xs). Utilidades globales en `globals.css`.
   - Todos los CI verdes (4 typechecks + tests + 4 builds Vercel Ready).
+- **🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma) — 18/06/2026** (rama `claude/tax-deductions-personal-finance-e098a7`)
+  - Nuevo apartado de **deducciones IRPF** en el módulo `/finanzas`: el cálculo ya no se queda en
+    los tramos, ahora llega a **cuota íntegra → mínimos → deducciones → retenciones → a pagar/devolver**.
+  - **Motor PURO testeado** `apps/plataforma/lib/fiscal-deducciones.ts` (+ `.test.ts`, 6 casos, `node --test`):
+    mínimo personal y familiar, maternidad (hijos <3, madre con actividad), familia numerosa,
+    autonómicas **Andalucía** (nacimiento + FN), donativos, plan de pensiones. Importes en
+    `IMPORTES_POR_ANIO` (con `fuente`/`revisado`). Optimizador: avisos de oportunidad, checklist
+    "deducciones que te dejas", transiciones de edad, calendario fiscal.
+  - **BD** (migración `2026-06-18_fiscal_perfil_descendientes.sql`, aplicada a `wswbehlcuxqxyinousql`):
+    `fiscal_perfil`, `fiscal_descendientes`, `fiscal_novedades`, `fiscal_justificantes`, `fiscal_historico`.
+    3 modelos Prisma nuevos. Datos de Alberto sembrados (3 hijos 2018/2024/2025, madre autónoma, FN general).
+  - **UI** `FinanzasClient.tsx`: banner de novedad fiscal, tarjeta de deducciones+cuota, simulador
+    "¿y si…?" (plan de pensiones), checklist, calendario, histórico interanual, y **formulario**
+    de situación familiar (`PUT /api/finanzas/perfil`). CSV gestoría ampliado con el desglose.
+  - **Vigilante** skill **`fiscal-novedades`** (BOE estatal + BOJA Andalucía): contrasta los importes,
+    abre PR draft al actualizar la constante e inserta en `fiscal_novedades` (`beneficia`=subió) →
+    la app **avisa en pantalla**. Registrada en `docs/SKILLS.md` + `docs/RUTINAS-PROGRAMADAS.md` (rutina #5,
+    ~mensual). **NO** se cuelga del agente de concursos (ese sondea PLACSP por CPV, fuente distinta).
+  - Pendiente: crear el **trigger** de la rutina en `claude.ai/code → Rutinas`. Importes Andalucía son
+    orientativos (afinar contra BOJA en la 1ª pasada del vigilante).
+- **🔍 AUDITORÍA PROFUNDA SEMANAL — 18/06/2026** (`docs/AUDITORIA-2026-06.md` addendum)
+  - Estado general: **SANO**. 0 errores de tipos en las 5 apps (ia-rest, sivra, ialimp,
+    plataforma, rrhh). Tests verdes (rrhh 25/25, packages 40/40, guardián 21/21). Lockfile en
+    sync. Radiografía al día. 0 referencias `@iarest/` (guardián).
+  - **Supabase**: 0 ERRORS mantenido. Nuevo hallazgo 🟡: bucket `documentos-contables` con
+    listing público habilitado → revisar (expone índice de ficheros a agentes anon).
+  - **Docs**: `RUTINAS-PROGRAMADAS.md` desync — dice "pendiente de activar" pero las rutinas
+    están activas → PR #375 (draft) lo corrige. Pendiente de que Alberto lo mergee.
+  - **PRs stale**: 8 drafts abiertos sin actividad (#302, #307, #312, #322, #331, #351, #364,
+    #375). Revisar y cerrar los que ya no procedan.
+  - **Carry-forward**: aplicar migraciones `concursos_radar` en Supabase (A3 de jun-12) + jubilar
+    proyecto viejo `efncqyvhniaxsirhdxaa` (B2).
+  - **Rutinas programadas** activas (confirmado por esta sesión): ligera diaria 04:00 CEST +
+    profunda semanal domingos. Ambas abren PR draft; sin cambios → sin PR.
 
 - **🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA — 18/06/2026** (rama `claude/project-review-skill-p0jrkc`)
   - **Guardián de cierre**: el hook `Stop` (`.claude/hooks/persist-memoria.sh`) ahora, si la
@@ -153,6 +187,22 @@
   - **APIs:** `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros` `recepciones[/id]` `yo`. Auth por sesión firmada `x-ia-session` + `local_id`.
   - **CICLO COMPLETO (5 bloques):** recetas → eventos → asignar → recepción → ejecutar el día (Tª/firma/muestra) → dossier; con roles cocinero/preparación. Motor `@central/module-trazabilidad` + `module-organizador-trabajo`.
   - **PENDIENTE/MEJORAS:** dar de alta usuarios reales de cocinero/preparación (con su `cocina_rol`/`partidas`) — aún sin ellos para Catering JJ; reparto con personas reales (ahora 3 cocineros semilla); "Bases a preparar" como checklist persistido; PIN propio (ahora 1234 de prueba). Reunión Carmen: **jueves 25, 12:00**.
+- **📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA — 18/06/2026** (PR #360 merged en main)
+  - `iarest.es/#contacto` (home) manda `restaurante:""` y email opcional, pero `/api/leads/landing` exigía
+    `nombre && restaurante && email` → **400 en CADA envío de la home**, antes de guardar y antes de avisar
+    (`tgAlert()` + `enviarEmailNuevoLead()` van en `Promise.allSettled`, no se llegaban a ejecutar). El cliente
+    ignora la respuesta y muestra "Recibido" → fallo invisible. Las otras landings (catering/hostelería/espacios)
+    SÍ mandan `restaurante`, por eso esas funcionaban.
+  - **Fix** (solo `app/api/leads/landing/route.ts`): la API exige `nombre` + al menos un medio de contacto
+    (teléfono **o** email); `restaurante`/`email` vacíos se normalizan (`'Sin especificar'` / `''` / `null`)
+    respetando los NOT NULL reales de `leads_landing` (restaurante, email) y `leads` (restaurante, telefono);
+    dedup CRM por email o, si no hay, por teléfono; `consent_rgpd: true`.
+  - **Verificado EN VIVO** (Alberto rellenó el form real): llega **Telegram** ✅ + **email** ✅ a `hola@iarest.es`
+    (alias send-as + recepción confirmada en su Gmail). → `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` SÍ están en
+    Vercel y Resend tiene `iarest.es` verificado.
+  - **Gotcha leads perdidos:** los envíos fallidos NO dejaron rastro en BD (400 antes del insert). El recuento de
+    intentos perdidos vive en **GA4 → evento `generate_lead`** (`origen=landing-principal`), que el form dispara en
+    cliente pase lo que pase con la API. GA guarda el evento, no nombre/teléfono.
 
 - **🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill — 18/06/2026**
   - **Archivadas en Drive** (`FACTURAS Apartamentos/2026/`): 7 facturas Anthropic (abr–jun) + Codeoscopic €769.56.
@@ -220,6 +270,17 @@
   - **PENDIENTE (gated, plan #351):** persistencia real sobre `produccion_tareas` (cocinero entra a ia.rest, ve su
     día repartido + cronómetro + avisos encadenados desde BD). Toca la Supabase compartida → rama Supabase + gate
     manual antes de prod. ia-rest YA tiene base: `produccion_tareas`, rutas `/api/produccion/*`, UI cocinero/productividad.
+- **🍳 DEMO PARTE CARMEN MERGEADO — 17/06/2026** (PR #352 merged en main, CI + Tests + 5/5 Vercel ✅)
+  - Página `apps/ia-rest/src/app/propuesta/parte-jj/page.tsx` → **`iarest.es/propuesta/parte-jj`**.
+  - Para la reunión con **Carmen (cocina, Catering Joaquín Jaén) — jueves 25 a las 12:00**: su **parte de
+    elaboración REAL del 20/6/2026** ya organizado por nuestro sistema. 4 eventos por color (Hacienda El Alba
+    115 pax, Finca Los Fresnos 131, Hacienda Trinidad 136, Decanato 20), 4 partidas (Frío/Caliente/Corte/Montaje),
+    sub-elaboraciones como "Depende de" (dependencias), badges de puntos de control APPCC. Marca verde `#02473B`
+    + dorado `#9E8152`.
+  - **Autocontenida** (`'use client'`, sin BD/imports/secretos) = molde visual. La versión viva sobre
+    `produccion_tareas` sigue siendo hito posterior (plan en PR #351, con gate manual de migración Supabase).
+  - **PENDIENTE (diferido por Alberto, "luego lo hago"):** logo real `logo-jj.svg` en repo + aplicarlo a
+    decks/UI. Decks ya mergeados: `/propuesta/catering-jj-cocina` (Carmen) y `/propuesta/catering-jj-deck` (grupo/Joaquín).
 
 - **💶 MÓDULO /finanzas MERGEADO — 17/06/2026** (PR #341 merged en main, 5/5 Vercel ✅)
   - Hub financiero consolidado para Alberto: correduría seguros, 4 pisos turísticos, gastos personales BBVA/Kutxa, fiscal IRPF.

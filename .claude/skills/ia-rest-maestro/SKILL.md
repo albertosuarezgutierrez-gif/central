@@ -256,10 +256,15 @@ Authorization: Bearer {VERCEL_TOKEN}
 - LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback Anthropic**)
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
-- `callAI(system, user, maxTokens, timeoutMs, noFallback=true)`
+- `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
   - El parámetro `noFallback` se mantiene por compatibilidad, pero **ya no hay fallback de pago**:
     `@anthropic-ai/sdk` se quitó de ia-rest (17/06/2026). Si NIM falla, lanza error.
+  - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)
+- ⚠️ **LÍMITE ~60s en funciones Vercel de ia-rest** (el plan NO respeta `maxDuration=300` aquí, sí en
+  plataforma). El 70b a ~4000 tokens tarda >60s → la función muere con **504** (texto plano, no JSON).
+  Para **generaciones largas** (p. ej. blog-seo) usar el **modelo rápido `meta/llama-3.1-8b-instruct`**
+  (`callAI(..., model)`) con timeout interno < 60s. Lección de la sesión 16/06 (blog-seo, PR #302).
 - Brain: lib/brain.ts + lib/brain-cache.ts + lib/brain-patron.ts + lib/brain-router.ts
 - Cache menú: 5min por restaurante. Few-shot con comandas del turno activo vía ia_training_log
 
@@ -472,6 +477,14 @@ Operador (Alberto) → SIEMPRE Telegram (tgAlert())
 Usuarios finales   → Email (Resend): valoraciones, portales, presupuestos
 NUNCA email para alertas internas del sistema
 ```
+
+> **Captación de leads (landing) — `/api/leads/landing`:** TODA landing (home/hostelería/catering/espacios) postea
+> aquí → guarda en `leads_landing` + crea lead CRM en `leads` (origen `inbound_web`) → avisa por `tgAlert()` **y**
+> `enviarEmailNuevoLead()` (a `hola@iarest.es`, que está en el Gmail de Alberto). El cliente y la API DEBEN cuadrar
+> campos: la home manda `restaurante:""` y email opcional → la API exige `nombre` + (teléfono **o** email), nunca
+> `restaurante`/`email` obligatorios. Si no cuadran = **400 silencioso = lead perdido sin rastro en BD** (el form
+> hace `await fetch` en try/catch e igual muestra "Recibido"); el intento sí queda en **GA4 `generate_lead`**. Fix
+> 18/06/2026 (PR #360).
 
 ---
 

@@ -18,6 +18,7 @@ const NAV_PISOS = [
   { href: '/sivra/income', icon: '💰', label: 'Ingresos' },
   { href: '/sivra/expenses', icon: '🧾', label: 'Gastos' },
   { href: '/sivra/gastos-fijos', icon: '📋', label: 'Gastos fijos' },
+  { href: '/sivra/facturas-control', icon: '🗂️', label: 'Facturas' },
   { href: '/sivra/fiscal', icon: '📊', label: 'Fiscal IRPF' },
   { href: '/sivra/mensajes', icon: '💬', label: 'Mensajes' },
   { href: '/sivra/mercado', icon: '🗺️', label: 'Mercado' },
