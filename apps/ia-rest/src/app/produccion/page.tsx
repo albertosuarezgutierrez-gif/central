@@ -7,6 +7,7 @@ import {
   type FichaCatalogo, type EventoInput, type ElaboracionTraza, type TipoControl,
 } from '@central/module-trazabilidad'
 import { asignarTrabajo, type Tarea, type Trabajador } from '@central/module-organizador-trabajo'
+import { Wordmark } from '@/components/Wordmark'
 
 // ─── Marca ───────────────────────────────────────────────────
 const C = {
@@ -646,8 +647,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
       {/* Header fino (sin voz, sin mesas) */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: `1px solid ${C.linea}`, padding: '10px clamp(14px,4vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
         <div style={{ minWidth: 0 }}>
-          <div style={{ fontFamily: SN, letterSpacing: 2, fontSize: 10, color: C.oro, textTransform: 'uppercase', fontWeight: 700 }}>Cocina central</div>
-          <div style={{ fontFamily: SE, fontSize: 'clamp(16px,4.6vw,22px)', fontWeight: 600, color: C.verde, lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{nombreLocal}</div>
+          <Wordmark nombre={nombreLocal} sub="Cocina central" />
         </div>
         <div className="noprint" style={{ display: 'flex', gap: 8, flexShrink: 0 }}>
           <button onClick={() => window.print()} title="Imprimir dossier APPCC" style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: '#fff', background: C.verde, border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer' }}>🖨️</button>

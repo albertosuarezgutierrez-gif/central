@@ -6,6 +6,7 @@ import Analytics from '@/components/Analytics'
 import AnalyticsComparativo from '@/components/owner/AnalyticsComparativo'
 import SugerenciaButton from '@/components/SugerenciaButton'
 import { HelpChat } from '@/components/help/HelpChat'
+import { Wordmark } from '@/components/Wordmark'
 import { copyToClipboard } from '@/lib/clipboard'
 import { supabase } from '@/lib/supabase'
 import CartaPublicPanel from '@/components/owner/CartaPublicPanel'
@@ -8321,10 +8322,16 @@ export default function OwnerPage() {
       <header style={{ position: 'sticky', top: 0, zIndex: 50, background: 'rgba(246,241,231,.94)',
         backdropFilter: 'blur(14px)', borderBottom: `1px solid ${C.rule}`,
         display: 'flex', alignItems: 'center', gap: 10, padding: '0 14px', height: 52 }}>
-        <Logo/>
-        <div style={{ fontFamily: SE, fontSize: 17, fontWeight: 500, color: C.ink }}>
-          ia<span style={{ color: C.red }}>.</span>rest
-        </div>
+        {/joaqu|ja[eé]n/i.test((session as { restaurante_nombre?: string }).restaurante_nombre ?? '') ? (
+          <Wordmark nombre={(session as { restaurante_nombre?: string }).restaurante_nombre ?? 'Catering Joaquín Jaén'} size="sm" />
+        ) : (
+          <>
+            <Logo/>
+            <div style={{ fontFamily: SE, fontSize: 17, fontWeight: 500, color: C.ink }}>
+              ia<span style={{ color: C.red }}>.</span>rest
+            </div>
+          </>
+        )}
         <div className="owner-hdr-badge" style={{ fontFamily: SM, fontSize: 10, fontWeight: 700, letterSpacing: '.12em',
           color: C.ink3, textTransform: 'uppercase', padding: '3px 8px', background: C.paper2,
           border: `1px solid ${C.rule}`, borderRadius: 3, whiteSpace: 'nowrap' }}>
