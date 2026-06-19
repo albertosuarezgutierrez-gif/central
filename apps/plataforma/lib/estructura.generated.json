@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T10:07:11Z",
+  "generadoEn": "2026-06-19T10:25:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2471,6 +2471,14 @@
   ],
   "novedades": [
     {
+      "titulo": "📅 `diaHabitual` en facturas-control",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)",
+      "fecha": "19/06/2026"
+    },
+    {
       "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
       "fecha": "18/06/2026"
     },
@@ -2520,14 +2528,6 @@
     },
     {
       "titulo": "👥 COCINA CENTRAL · GESTIÓN DE EQUIPO",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA",
       "fecha": "18/06/2026"
     }
   ],

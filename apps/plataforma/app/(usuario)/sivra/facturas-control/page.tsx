@@ -134,7 +134,7 @@ export default function FacturasControlPage() {
                         ? <a href={row.driveUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>{row.label}</a>
                         : row.label}
                       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, display: 'flex', gap: 8 }}>
-                        {row.diaHabitual != null && <span>~día {row.diaHabitual}</span>}
+                        {row.diaHabitual != null && <span>~{row.diaHabitual} {MESES[mes - 1].slice(0, 3).toLowerCase()}</span>}
                         {row.importe != null && <span>{row.importe.toFixed(2)} €</span>}
                       </div>
                     </td>
