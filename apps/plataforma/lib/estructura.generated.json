@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T17:38:20Z",
+  "generadoEn": "2026-06-18T18:28:25Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 24
+        "evidencias": 25
       },
       "ialimp": {
         "presente": false,
@@ -1385,6 +1385,7 @@
       "/api/cocina/asignaciones",
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
+      "/api/cocina/eventos/[id]/material",
       "/api/cocina/menu-sugerido",
       "/api/cocina/parte",
       "/api/cocina/personal",
@@ -2461,6 +2462,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina",
       "fecha": "18/06/2026"
     },
@@ -2514,10 +2519,6 @@
     },
     {
       "titulo": "🧹 EDGE FUNCTIONS sin Anthropic",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "🧹 QUITAR ANTHROPIC de ia-rest (#4)",
       "fecha": "17/06/2026"
     }
   ],
@@ -2802,7 +2803,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 15,
-    "apis": 906,
+    "apis": 907,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
