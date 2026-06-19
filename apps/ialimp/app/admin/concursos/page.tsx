@@ -7,6 +7,12 @@ import type { Biblioteca } from '@central/module-concursos';
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
+// Sincroniza "Seguir" (buscador) con el panel "Mis concursos" sin prop drilling.
+const SEGUIDOS_EVT = 'concursos-seguidos-changed';
+const emitSeguidos = () => { try { window.dispatchEvent(new Event(SEGUIDOS_EVT)); } catch {} };
+const ESTADOS_SEGUIMIENTO = ['interesado','preparando','presentado','adjudicado','perdido'];
+const ESTADO_LABEL: Record<string,string> = { interesado:'⭐ Interesado', preparando:'✍️ Preparando', presentado:'📤 Presentado', adjudicado:'🏆 Adjudicado', perdido:'❌ Perdido' };
+
 const SOBRE_LABEL: Record<string,string> = { administrativo:'📋 Sobre administrativo', tecnico:'📐 Sobre técnico', economico:'💶 Sobre económico' };
 const SEMAFORO: Record<string,{bg:string;txt:string;label:string}> = {
   verde: { bg:'#dcfce7', txt:'#166534', label:'🟢 Adelante' },
@@ -68,6 +74,9 @@ export default function Concursos() {
 
       {/* Buscador de pliegos */}
       <div style={{ maxWidth:760, width:'100%' }}><BuscadorPanel /></div>
+
+      {/* Mis concursos (seguimiento) */}
+      <div style={{ maxWidth:760, width:'100%' }}><MisConcursosPanel /></div>
 
       {/* Entrada */}
       <div style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, maxWidth:760, width:'100%', marginBottom:16 }}>
@@ -425,6 +434,23 @@ function BuscadorPanel() {
   const [hecha, setHecha] = useState(false);
   const [actualizando, setActualizando] = useState(false);
   const [msgIngesta, setMsgIngesta] = useState('');
+  const [seguidas, setSeguidas] = useState<Set<string>>(new Set());
+
+  // Conjunto de anuncios ya seguidos (para alternar el botón). Se recarga al cambiar.
+  const cargarSeguidas = async () => {
+    try {
+      const r = await fetch('/api/admin/concursos/seguidos').then(r=>r.json());
+      setSeguidas(new Set((r.seguidos||[]).map((s:any)=>s.dedupe_key)));
+    } catch {}
+  };
+  useEffect(()=>{ cargarSeguidas(); window.addEventListener(SEGUIDOS_EVT, cargarSeguidas); return ()=>window.removeEventListener(SEGUIDOS_EVT, cargarSeguidas); }, []);
+
+  const seguir = async (a:any) => {
+    const licitacion = { titulo:a.titulo, organo:a.organo, provincia:a.provincia, cpv:a.cpv, presupuesto:a.presupuesto, fin_presentacion:a.fin_presentacion, url:a.url };
+    setSeguidas(prev => new Set(prev).add(a.dedupe_key)); // optimista
+    try { await fetch('/api/admin/concursos/seguidos', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dedupe_key:a.dedupe_key, licitacion }) }); } catch {}
+    emitSeguidos();
+  };
 
   const buscar = async () => {
     setCargando(true);
@@ -518,7 +544,57 @@ function BuscadorPanel() {
             </div>
             <div style={{ fontSize:12, color:C.muted }}>{a.organo}{a.provincia?` · ${a.provincia}`:''}{a.presupuesto?` · ${Number(a.presupuesto).toLocaleString('es-ES')} €`:''}</div>
             <div style={{ fontSize:12, marginTop:4 }}>{(a.cpv||[]).slice(0,4).join(' · ')}</div>
-            {a.url && <a href={a.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
+            <div style={{ display:'flex', gap:12, alignItems:'center', marginTop:6, flexWrap:'wrap' }}>
+              {a.url && <a href={a.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
+              {seguidas.has(a.dedupe_key)
+                ? <span style={{ fontSize:12, color:'#166534', fontWeight:700 }}>📌 Siguiendo</span>
+                : <button onClick={()=>seguir(a)} style={{ fontSize:12, background:'transparent', color:C.indigo, border:`1px solid ${C.indigo}`, borderRadius:8, padding:'3px 10px', fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>📌 Seguir</button>}
+            </div>
+          </div>
+        ); })}
+      </div>
+    </div>
+  );
+}
+
+// "Mis concursos" (feature G): licitaciones que sigues, con su estado y plazo.
+function MisConcursosPanel() {
+  const [seguidos, setSeguidos] = useState<any[]>([]);
+  const cargar = async () => {
+    try { const r = await fetch('/api/admin/concursos/seguidos').then(r=>r.json()); setSeguidos(r.seguidos||[]); } catch {}
+  };
+  useEffect(()=>{ cargar(); window.addEventListener(SEGUIDOS_EVT, cargar); return ()=>window.removeEventListener(SEGUIDOS_EVT, cargar); }, []);
+
+  const cambiarEstado = async (dedupe_key:string, estado:string) => {
+    setSeguidos(prev => prev.map(s => s.dedupe_key===dedupe_key ? { ...s, estado } : s)); // optimista
+    try { await fetch('/api/admin/concursos/seguidos', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dedupe_key, estado }) }); } catch {}
+  };
+  const quitar = async (dedupe_key:string) => {
+    setSeguidos(prev => prev.filter(s => s.dedupe_key!==dedupe_key)); // optimista
+    try { await fetch('/api/admin/concursos/seguidos?dedupe_key=' + encodeURIComponent(dedupe_key), { method:'DELETE' }); } catch {}
+    emitSeguidos();
+  };
+  const dias = (iso:string) => { if(!iso) return null; return Math.ceil((new Date(iso).getTime()-Date.now())/86400000); };
+
+  if (!seguidos.length) return null;
+  return (
+    <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
+      <strong style={{ fontSize:15 }}>📌 Mis concursos <span style={{ color:C.muted, fontWeight:400 }}>({seguidos.length})</span></strong>
+      <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:8 }}>
+        {seguidos.map(s => { const l = s.licitacion||{}; const d = dias(s.fin_presentacion); return (
+          <div key={s.id} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:10 }}>
+            <div style={{ display:'flex', justifyContent:'space-between', gap:8, alignItems:'flex-start' }}>
+              <strong style={{ fontSize:14 }}>{l.titulo || 'Licitación'}</strong>
+              {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700, whiteSpace:'nowrap' }}>{d<0?'cerrado':`${d} d`}</span>}
+            </div>
+            <div style={{ fontSize:12, color:C.muted }}>{l.organo}{l.provincia?` · ${l.provincia}`:''}{l.presupuesto?` · ${Number(l.presupuesto).toLocaleString('es-ES')} €`:''}</div>
+            <div style={{ display:'flex', gap:10, alignItems:'center', marginTop:6, flexWrap:'wrap' }}>
+              <select value={s.estado} onChange={e=>cambiarEstado(s.dedupe_key, e.target.value)} style={{ fontFamily:FONT, fontSize:12, padding:'3px 6px', borderRadius:8, border:`1px solid ${C.border}` }}>
+                {ESTADOS_SEGUIMIENTO.map(e => <option key={e} value={e}>{ESTADO_LABEL[e]}</option>)}
+              </select>
+              {l.url && <a href={l.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
+              <button onClick={()=>quitar(s.dedupe_key)} style={{ fontSize:12, background:'transparent', color:C.muted, border:`1px solid ${C.border}`, borderRadius:8, padding:'3px 10px', fontFamily:FONT, cursor:'pointer' }}>Quitar</button>
+            </div>
           </div>
         ); })}
       </div>

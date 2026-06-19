@@ -66,6 +66,14 @@
     {
       "path": "/api/cron/impagos",
       "schedule": "30 8 * * *"
+    },
+    {
+      "path": "/api/cron/concursos-cierre",
+      "schedule": "0 9 * * *"
+    },
+    {
+      "path": "/api/cron/concursos-avisos",
+      "schedule": "30 7 * * *"
     }
   ]
 }
