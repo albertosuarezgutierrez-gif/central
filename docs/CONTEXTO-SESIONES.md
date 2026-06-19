@@ -16,7 +16,7 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ) — 19/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`, SIN mergear)
+- **🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ) — 19/06/2026** (PR #391 mergeado a `main`)
   - **Por qué:** crítica de Joaquín — las dietas son de **comensales puntuales** (5 sin gluten, 3 veganos),
     NO un filtro global que cambie el menú entero por 1 persona. Antes, "✨ Sugerir menú" pasaba
     "Restricciones" como texto libre a la IA → habría hecho TODO el menú sin gluten. Corregido de raíz.
@@ -34,9 +34,18 @@
   - **UI `/produccion`:** EventoForm con sección "Comensales con dieta especial"; "Sugerir menú" con grupos de dieta;
     fichas de dieta con chip "🟢 sin gluten · 5 raciones"; `duracionTarea` usa comensales; reparto IA ignora líneas de dieta;
     **avisos de seguridad** (#3), **resumen de dietas para sala** (#4), **hoja de alérgenos imprimible** (#1).
-  - Verificado: `tsc --noEmit` limpio + tests del paquete verdes. **Pendiente:** preview Vercel verde antes de mergear
-    (el usuario pidió ejecutar esto DESPUÉS de la demo de Joaquín). Backlog: #2 etiqueta/plato, #6 lista compra resta dietas,
-    #7 coste/margen, #8 plantillas evento, #10 histórico cliente.
+  - Verificado: `tsc --noEmit` limpio + tests del paquete verdes; 5/5 previews Vercel en verde. Backlog:
+    #2 etiqueta/plato, #6 lista compra resta dietas, #7 coste/margen, #8 plantillas evento, #10 histórico cliente.
+
+- **📅 `diaHabitual` en facturas-control — 19/06/2026** (PR #389, builds Ready)
+  - Usuario vio 13 facturas en estado "Falta"/"En plazo" sin saber cuándo llega cada una.
+  - Añadido `diaHabitual?: number | null` a `ProveedorRecurrente` en `lib/sivra/facturas-control.ts`.
+  - Los 17 proveedores recurrentes tienen ahora su día típico del mes (1, 5, 8, 10, 15, 25).
+  - La UI (`sivra/facturas-control/page.tsx`) muestra "~día X" en gris debajo del nombre del proveedor.
+  - La API route (`route.ts`) no necesitó cambios (spread `...p` ya pasa `diaHabitual` al JSON).
+  - **Stop hook:** local branch `claude/responsive-panel` → remote `claude/nice-heisenberg-jo4vy1`.
+    El hook busca `origin/claude/responsive-panel` (no existe) → cae a `origin/HEAD` (main) →
+    escanea 28 commits. Fix manual: `git fetch origin claude/responsive-panel && git push --force origin HEAD:claude/responsive-panel`.
 
 - **🐛 FIXES COMUNICACIÓN + FINANZAS — 18/06/2026** (PR #382 mergeado a `main`)
   - **`/comunicacion` → Nuevo mensaje → Persona**: dropdown vacío corregido. `sivraAdapter` no
