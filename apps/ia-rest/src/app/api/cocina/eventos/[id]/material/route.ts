@@ -17,10 +17,10 @@ type SB = ReturnType<typeof createServerClient>
 async function eventoDe(supabase: SB, rid: string, id: string) {
   const { data } = await supabase
     .from('cocina_eventos')
-    .select('id, nombre')
+    .select('id, nombre, evento_id')
     .eq('id', id).eq('local_id', rid)
     .single()
-  return data as { id: string; nombre: string } | null
+  return data as { id: string; nombre: string; evento_id: string | null } | null
 }
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -32,11 +32,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const ev = await eventoDe(supabase, rid, id)
   if (!ev) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+  // La boda ancla el material en su ficha CRM (`eventos`) si existe; si no, en el evento de cocina.
+  const anchor = ev.evento_id ?? id
 
   const [matRes, catRes, kitRes] = await Promise.all([
     supabase.from('materiales_asignacion')
       .select('id, material_id, cantidad, cantidad_devuelta, estado, created_at')
-      .eq('restaurante_id', rid).eq('destino_tipo', 'evento').eq('destino_ref', id)
+      .eq('restaurante_id', rid).eq('destino_tipo', 'evento').eq('destino_ref', anchor)
       .order('created_at', { ascending: true }),
     supabase.from('materiales')
       .select('id, nombre, categoria, cantidad_disponible, coste_reposicion')
@@ -65,6 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const ev = await eventoDe(supabase, rid, id)
   if (!ev) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+  const anchor = ev.evento_id ?? id
 
   const body = await req.json()
 
@@ -104,7 +107,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       restaurante_id: rid,
       material_id: ln.material_id,
       destino_tipo: 'evento',
-      destino_ref: id,
+      destino_ref: anchor,
       destino_nombre: ev.nombre,
       cantidad: ln.cantidad,
       estado: 'reservado',
@@ -129,10 +132,14 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const { asignacion_id } = await req.json()
   if (!asignacion_id) return NextResponse.json({ error: 'asignacion_id requerido' }, { status: 400 })
 
+  const ev = await eventoDe(supabase, rid, id)
+  if (!ev) return NextResponse.json({ error: 'Evento no encontrado' }, { status: 404 })
+  const anchor = ev.evento_id ?? id
+
   const { data: asig } = await supabase
     .from('materiales_asignacion')
     .select('id, material_id, cantidad, cantidad_devuelta, estado')
-    .eq('id', asignacion_id).eq('restaurante_id', rid).eq('destino_ref', id)
+    .eq('id', asignacion_id).eq('restaurante_id', rid).eq('destino_ref', anchor)
     .single()
   if (!asig) return NextResponse.json({ error: 'Asignación no encontrada' }, { status: 404 })
   if (asig.estado !== 'reservado') {

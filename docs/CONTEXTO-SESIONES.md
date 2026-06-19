@@ -16,6 +16,21 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM) — 19/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
+  - **Aclaración:** el módulo CRM de eventos (`eventos` "Eventos v2": presupuesto/espacio/fechas
+    montaje) y `cocina_eventos` YA existían; lo que faltaba era **unirlos**. Hecho.
+  - **DB (BD viva + repo):** `cocina_eventos.evento_id uuid REFERENCES eventos(id)` (puente, nullable).
+    Migración `apps/ia-rest/supabase/migrations/2026-06-19_cocina_evento_crm_link.sql`.
+  - **API nueva** `api/cocina/eventos/[id]/crm` (GET/POST): crea una ficha `eventos` mínima desde el
+    evento de cocina (cliente=nombre, fecha, aforo=pax, modo_local='cerrado', requiere_appcc) o enlaza
+    a una existente; **re-apunta el material** ya asignado del id de cocina → id del evento CRM.
+  - **Anclaje del material:** `api/cocina/eventos/[id]/material` ahora usa `evento_id ?? cocina_evento.id`
+    como `destino_ref`. Si la boda tiene ficha CRM, cocina + material cuelgan del MISMO `eventos.id`.
+  - **UI `/produccion`:** botón **🔗 Ficha CRM** por evento (crea/enlaza) → chip cuando está unido;
+    el panel de material indica "unido a la ficha CRM". `parte` devuelve `evento_id`.
+  - **Legacy** `inventario_menaje_evento` (menaje viejo sobre `eventos`) se deja como está (no migrado).
+  - Verificado: `tsc --noEmit` limpio; insert de `eventos` probado contra constraints (smoke + limpieza).
+
 - **🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO) — 18/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
   - Nuevo: cada **evento de cocina** (`/produccion`) lleva su **material** (mesas/sillas/menaje). Botón
     **📦 Material** por evento → panel para añadir **kits** o **material suelto**, con descuento de stock,

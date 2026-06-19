@@ -29,7 +29,7 @@ const COCINEROS: Trabajador[] = [
 ]
 
 type Receta = FichaCatalogo
-type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; elaboraciones: string[] }
+type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; evento_id?: string | null; elaboraciones: string[] }
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string; por?: string }>; muestra_testigo_at: string | null; firma: string | null; hecho_por?: string | null; hecho_at?: string | null }
 const horaCorta = (iso?: string | null) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
 type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; caducidad: string | null; conforme: boolean; observaciones: string | null }
@@ -577,6 +577,20 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
+  // Crea/enlaza la ficha de evento del CRM (presupuesto/espacio/fechas) para esta boda.
+  // El material del evento queda anclado a esa ficha (misma boda en cocina + material + CRM).
+  const vincularCRM = async (ev: Evento) => {
+    if (!window.confirm(`Crear la ficha de evento (CRM) de "${ev.nombre}"?\nUnifica cocina + material + presupuesto en la misma boda.`)) return
+    setSaving(true)
+    try {
+      const r = await fetch(`/api/cocina/eventos/${ev.id}/crm`, { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({}) })
+      const d = await r.json().catch(() => ({}))
+      if (!r.ok) { window.alert(d.error ?? 'No se pudo crear la ficha CRM'); return }
+      await cargar()
+      if (matPanel?.evento.id === ev.id) await refrescarMaterial()
+    } finally { setSaving(false) }
+  }
+
   // ── Material del evento ───────────────────────────────────────
   const cargarMaterial = async (evId: string) => {
     const r = await fetch(`/api/cocina/eventos/${evId}/material`, { headers: sh() })
@@ -850,6 +864,9 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                     <div style={{ fontFamily: SN, fontWeight: 700, fontSize: 14, color: C.tinta }}>{ev.nombre}</div>
                     <div style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>{ev.fecha_evento ?? 'sin fecha'} · {ev.pax} PAX · {ev.elaboraciones.length} elaboraciones</div>
                   </div>
+                  {ev.evento_id
+                    ? <Chip bg="rgba(2,71,59,.08)" fg={C.verde} br={C.verde}>🔗 Ficha CRM</Chip>
+                    : <button onClick={() => vincularCRM(ev)} style={{ fontFamily: SN, fontSize: 12.5, fontWeight: 700, color: C.verde, background: 'transparent', border: `1px dashed ${C.verde}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>🔗 Ficha CRM</button>}
                   <button onClick={() => abrirMaterial(ev)} style={{ fontFamily: SN, fontSize: 12.5, fontWeight: 700, color: matPanel?.evento.id === ev.id ? '#fff' : C.oro, background: matPanel?.evento.id === ev.id ? C.oro : 'transparent', border: `1px solid ${C.oro}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>📦 Material</button>
                   <button onClick={() => setEditor({ modo: 'editar', evento: ev })} style={{ fontFamily: SN, fontSize: 12.5, color: C.verde, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Editar</button>
                   <button onClick={() => borrarEvento(ev)} style={{ fontFamily: SN, fontSize: 12.5, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 12px', cursor: 'pointer' }}>Borrar</button>
@@ -860,7 +877,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
                   const totalCoste = mp.material.reduce((s, l) => s + (mp.catalogo.find(c => c.id === l.material_id)?.coste_reposicion ?? 0) * l.cantidad, 0)
                   return (
                     <div className="noprint" style={{ background: 'rgba(158,129,82,.05)', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 14, margin: '2px 0 12px' }}>
-                      <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.oro, marginBottom: 8 }}>📦 Material del evento{matBusy ? ' · …' : ''}</div>
+                      <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.oro, marginBottom: 8 }}>📦 Material del evento{mp.evento.evento_id ? ' · 🔗 unido a la ficha CRM' : ''}{matBusy ? ' · …' : ''}</div>
                       {mp.material.length === 0 && <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3 }}>Sin material asignado todavía. Añade un kit o material suelto abajo.</div>}
                       {mp.material.map(ln => {
                         const cat = mp.catalogo.find(c => c.id === ln.material_id)

@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
     pax: e.pax,
     fecha_evento: e.fecha_evento,
     ubicacion: e.ubicacion,
+    evento_id: e.evento_id ?? null,
     elaboraciones: elabsPorEvento.get(e.id) ?? [],
   }))
 
