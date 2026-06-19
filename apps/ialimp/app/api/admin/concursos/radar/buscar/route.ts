@@ -49,7 +49,7 @@ export async function GET(req: Request) {
     : Prisma.sql`ORDER BY created_at DESC`
 
   const resultados = await prisma.$queryRaw<any[]>(Prisma.sql`
-    SELECT id, titulo, objeto, cpv, presupuesto, organo, provincia, tipo_contrato, estado, fin_presentacion, url
+    SELECT id, dedupe_key, titulo, objeto, cpv, presupuesto, organo, provincia, tipo_contrato, estado, fin_presentacion, url
     FROM concursos_licitaciones
     ${where}
     ${order}
