@@ -3,6 +3,7 @@ import { SE, SN, SM } from '@/lib/colors'
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { storeRestauranteCode } from '@/hooks/useAuth'
 import FicharEntradaModal from '@/components/FicharEntradaModal'
+import { Wordmark } from '@/components/Wordmark'
 
 const C = { bg:'#F6F1E7', e1:'#FBF8F1', e2:'#EFE7D6', fg:'#1A1714', fg3:'#6B5F52', rule:'#D8CDB6', rS:'#B8A98B', red:'#D9442B', teal:'#2B6A6E', green:'#3F7D44' }
 
@@ -321,9 +322,16 @@ export default function LoginPage() {
       `}</style>
 
       <div style={{ display:'flex', flexDirection:'column', alignItems:'center', gap:10, marginBottom:28 }}>
+        {/^(catering )?joaqu|ja[eé]n/i.test(tokenNombre ?? lastRestauranteName ?? restauranteCode ?? '') ? (
+          <>
+            <Wordmark nombre={tokenNombre ?? lastRestauranteName ?? 'Catering Joaquín Jaén'} sub="Acceso" />
+            <div style={{ fontFamily:SM, fontSize:9, color:C.fg3, letterSpacing:'.1em', opacity:.7, marginTop:2 }}>con tecnología ia.rest</div>
+          </>
+        ) : (
+          <>
         <svg width="52" height="52" viewBox="0 0 56 56"><rect width="56" height="56" rx="8" fill="#1A1714"/><g transform="translate(11,14)"><rect x="0" y="11" width="3" height="6" rx="1.5" fill="#F6F1E7"/><rect x="6" y="6" width="3" height="16" rx="1.5" fill="#F6F1E7"/><rect x="12" y="0" width="3" height="28" rx="1.5" fill="#D9442B"/><rect x="18" y="3" width="3" height="22" rx="1.5" fill="#F6F1E7"/><rect x="24" y="9" width="3" height="10" rx="1.5" fill="#F6F1E7"/><rect x="30" y="12" width="3" height="4" rx="1.5" fill="#F6F1E7"/></g></svg>
         <div style={{ fontFamily:SE, fontSize:26, color:C.fg, fontWeight:500 }}>ia<span style={{color:C.red}}>.</span>rest</div>
-        {(tokenNombre || lastRestauranteName || restauranteCode) && (
+        {(tokenNombre || lastRestauranteName || restauranteCode) && !/^(catering )?joaqu|ja[eé]n/i.test(tokenNombre ?? lastRestauranteName ?? restauranteCode ?? '') && (
           <div style={{
             display: 'flex', alignItems: 'center', gap: 5,
             background: restauranteCode === 'DEMO' ? '#E8A33B22' : '#1A171408',
@@ -340,6 +348,8 @@ export default function LoginPage() {
               {tokenNombre ?? lastRestauranteName ?? restauranteCode}
             </span>
           </div>
+        )}
+          </>
         )}
       </div>
 

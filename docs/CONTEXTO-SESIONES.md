@@ -24,6 +24,61 @@
     BBVA son positivos — Bizum recibido, pensiones). Añadida nota explicativa inline en
     `FinanzasClient.tsx` cuando `gastos === 0` y la etiqueta contiene "BBVA".
 
+- **🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM) — 19/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
+  - **Aclaración:** el módulo CRM de eventos (`eventos` "Eventos v2": presupuesto/espacio/fechas
+    montaje) y `cocina_eventos` YA existían; lo que faltaba era **unirlos**. Hecho.
+  - **DB (BD viva + repo):** `cocina_eventos.evento_id uuid REFERENCES eventos(id)` (puente, nullable).
+    Migración `apps/ia-rest/supabase/migrations/2026-06-19_cocina_evento_crm_link.sql`.
+  - **API nueva** `api/cocina/eventos/[id]/crm` (GET/POST): crea una ficha `eventos` mínima desde el
+    evento de cocina (cliente=nombre, fecha, aforo=pax, modo_local='cerrado', requiere_appcc) o enlaza
+    a una existente; **re-apunta el material** ya asignado del id de cocina → id del evento CRM.
+  - **Anclaje del material:** `api/cocina/eventos/[id]/material` ahora usa `evento_id ?? cocina_evento.id`
+    como `destino_ref`. Si la boda tiene ficha CRM, cocina + material cuelgan del MISMO `eventos.id`.
+  - **UI `/produccion`:** botón **🔗 Ficha CRM** por evento (crea/enlaza) → chip cuando está unido;
+    el panel de material indica "unido a la ficha CRM". `parte` devuelve `evento_id`.
+  - **Legacy** `inventario_menaje_evento` (menaje viejo sobre `eventos`) se deja como está (no migrado).
+  - Verificado: `tsc --noEmit` limpio; insert de `eventos` probado contra constraints (smoke + limpieza).
+
+- **🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO) — 18/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
+  - Nuevo: cada **evento de cocina** (`/produccion`) lleva su **material** (mesas/sillas/menaje). Botón
+    **📦 Material** por evento → panel para añadir **kits** o **material suelto**, con descuento de stock,
+    valor en riesgo (coste de reposición) y quitar (repone stock).
+  - **API** `apps/ia-rest/src/app/api/cocina/eventos/[id]/material/route.ts` (GET/POST/DELETE), auth de
+    cocina (`x-ia-session`), scope `local_id`. Enlace **genérico sin FK dura**:
+    `materiales_asignacion.destino_tipo='evento'`, `destino_ref=cocina_eventos.id`, `destino_nombre=nombre`.
+  - **UI** en `produccion/page.tsx`: panel desplegable bajo cada evento (solo responsable).
+  - **DECISIÓN/DESVIACIÓN:** el v1 ancla en **`cocina_eventos`** (lo que JJ usa hoy), NO en la tabla CRM
+    `eventos` que se había elegido — porque JJ no usa el módulo CRM de eventos y así es testeable ya. La
+    unificación sobre `eventos` (CRM) sigue siendo el norte; migración futura = repuntar `destino_ref`.
+  - **Sembrado para probar** (Catering Joaquín Jaén): owner **PIN 1369** (/owner→Materiales), montador
+    **PIN 4040** (/montaje), Carmen **1234** (/produccion). 5 materiales + kit "Boda 100 pax" + 2 asignaciones.
+    Enlace: `https://www.iarest.es/login?r=catering-joaquin-jaen`.
+  - Verificación: pendiente preview Vercel de ia-rest (sin toolchain TS local).
+
+- **📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina — 18/06/2026**
+  (rama `claude/jj-logistica-materiales-k5eko3`)
+  - **Bug de fondo resuelto:** el código de Fase B del módulo materiales (mesas/sillas/menaje de
+    catering JJ) estaba desplegado pero **solo existían 3 de 16 tablas** en la BD viva
+    (`wswbehlcuxqxyinousql`, schema `iarest`). Sus migraciones apuntaban a la BD VIEJA
+    (`efncqyvhniaxsirhdxaa`) y nunca se aplicaron al schema compartido → las ~15 pantallas/rutas de
+    Fase B (espacios, kits, proveedores, clientes, reservas, movimientos, unidades/QR, mantenimiento,
+    inventario físico, categorías, alertas) fallaban 404/500 en producción.
+  - **Aplicadas las 4 migraciones** (`materiales_v2`, `_categorias`, `_ledger`, `_fase_b`) al schema
+    `iarest` con `SET search_path TO iarest, public` (para que aterricen en `iarest`, NO en `public`
+    de ialimp/sivra). **Verificado:** 16 tablas `materiales_*` en `iarest`, **0 en `public`**,
+    `materiales` con 25 columnas (tipo/estado/proveedor_id/codigo_qr/stock_minimo OK), **RLS 16/16**.
+    Añadida policy `service_role_all` a `materiales_categorias` (solo tenía la de current_setting).
+  - **Repo sincronizado:** corregidos los headers de las 4 migraciones (BD vieja → compartida iarest)
+    + añadido `search_path` para que reaplicarlas vaya al schema correcto.
+  - **Diseño integración boda → cocina + material** (decisión Alberto: anclar en la tabla `eventos`,
+    el CRM rico, NO en `cocina_eventos`): doc nuevo
+    `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md`. Principio
+    "**junto pero separado por módulo**": `eventos` = tronco común; cocina (`cocina_eventos.evento_id`,
+    columna nueva propuesta) y materiales (enlace genérico `parent_tipo/destino_tipo='evento'`, sin FK
+    dura) cuelgan del mismo evento sin depender entre sí. Incluye 1er corte ("Material del evento" con
+    kits + `disponibilidadEnFecha`) y 17 ideas. **NO implementado aún** (solo diseño).
+  - **Pendiente para sesión siguiente:** construir el panel "Material del evento" + `cocina_eventos.evento_id`.
+
 - **📱 RESPONSIVE COMPLETO — 18/06/2026** (PR #381 mergeado a `main`)
   - Añadidas media queries `@media (max-width: 768px)` en 30+ páginas de `apps/plataforma`.
   - Lote 1: `LayoutShell`, `dashboard`, `banca` (×2), `finanzas/FinanzasClient`.
@@ -35,6 +90,40 @@
   - Estrategia: `<style>` JSX tags + `className` en divs estructurales. Sin Tailwind, sin reescribir
     inline styles. Breakpoints: 768px (tablet/mobile) y 480px (xs). Utilidades globales en `globals.css`.
   - Todos los CI verdes (4 typechecks + tests + 4 builds Vercel Ready).
+- **🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma) — 18/06/2026** (rama `claude/tax-deductions-personal-finance-e098a7`)
+  - Nuevo apartado de **deducciones IRPF** en el módulo `/finanzas`: el cálculo ya no se queda en
+    los tramos, ahora llega a **cuota íntegra → mínimos → deducciones → retenciones → a pagar/devolver**.
+  - **Motor PURO testeado** `apps/plataforma/lib/fiscal-deducciones.ts` (+ `.test.ts`, 6 casos, `node --test`):
+    mínimo personal y familiar, maternidad (hijos <3, madre con actividad), familia numerosa,
+    autonómicas **Andalucía** (nacimiento + FN), donativos, plan de pensiones. Importes en
+    `IMPORTES_POR_ANIO` (con `fuente`/`revisado`). Optimizador: avisos de oportunidad, checklist
+    "deducciones que te dejas", transiciones de edad, calendario fiscal.
+  - **BD** (migración `2026-06-18_fiscal_perfil_descendientes.sql`, aplicada a `wswbehlcuxqxyinousql`):
+    `fiscal_perfil`, `fiscal_descendientes`, `fiscal_novedades`, `fiscal_justificantes`, `fiscal_historico`.
+    3 modelos Prisma nuevos. Datos de Alberto sembrados (3 hijos 2018/2024/2025, madre autónoma, FN general).
+  - **UI** `FinanzasClient.tsx`: banner de novedad fiscal, tarjeta de deducciones+cuota, simulador
+    "¿y si…?" (plan de pensiones), checklist, calendario, histórico interanual, y **formulario**
+    de situación familiar (`PUT /api/finanzas/perfil`). CSV gestoría ampliado con el desglose.
+  - **Vigilante** skill **`fiscal-novedades`** (BOE estatal + BOJA Andalucía): contrasta los importes,
+    abre PR draft al actualizar la constante e inserta en `fiscal_novedades` (`beneficia`=subió) →
+    la app **avisa en pantalla**. Registrada en `docs/SKILLS.md` + `docs/RUTINAS-PROGRAMADAS.md` (rutina #5,
+    ~mensual). **NO** se cuelga del agente de concursos (ese sondea PLACSP por CPV, fuente distinta).
+  - Pendiente: crear el **trigger** de la rutina en `claude.ai/code → Rutinas`. Importes Andalucía son
+    orientativos (afinar contra BOJA en la 1ª pasada del vigilante).
+- **🔍 AUDITORÍA PROFUNDA SEMANAL — 18/06/2026** (`docs/AUDITORIA-2026-06.md` addendum)
+  - Estado general: **SANO**. 0 errores de tipos en las 5 apps (ia-rest, sivra, ialimp,
+    plataforma, rrhh). Tests verdes (rrhh 25/25, packages 40/40, guardián 21/21). Lockfile en
+    sync. Radiografía al día. 0 referencias `@iarest/` (guardián).
+  - **Supabase**: 0 ERRORS mantenido. Nuevo hallazgo 🟡: bucket `documentos-contables` con
+    listing público habilitado → revisar (expone índice de ficheros a agentes anon).
+  - **Docs**: `RUTINAS-PROGRAMADAS.md` desync — dice "pendiente de activar" pero las rutinas
+    están activas → PR #375 (draft) lo corrige. Pendiente de que Alberto lo mergee.
+  - **PRs stale**: 8 drafts abiertos sin actividad (#302, #307, #312, #322, #331, #351, #364,
+    #375). Revisar y cerrar los que ya no procedan.
+  - **Carry-forward**: aplicar migraciones `concursos_radar` en Supabase (A3 de jun-12) + jubilar
+    proyecto viejo `efncqyvhniaxsirhdxaa` (B2).
+  - **Rutinas programadas** activas (confirmado por esta sesión): ligera diaria 04:00 CEST +
+    profunda semanal domingos. Ambas abren PR draft; sin cambios → sin PR.
 
 - **🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA — 18/06/2026** (rama `claude/project-review-skill-p0jrkc`)
   - **Guardián de cierre**: el hook `Stop` (`.claude/hooks/persist-memoria.sh`) ahora, si la
@@ -121,6 +210,22 @@
   - **APIs:** `/api/cocina/parte` `eventos[/id]` `recetas[/id]` `registros` `recepciones[/id]` `yo`. Auth por sesión firmada `x-ia-session` + `local_id`.
   - **CICLO COMPLETO (5 bloques):** recetas → eventos → asignar → recepción → ejecutar el día (Tª/firma/muestra) → dossier; con roles cocinero/preparación. Motor `@central/module-trazabilidad` + `module-organizador-trabajo`.
   - **PENDIENTE/MEJORAS:** dar de alta usuarios reales de cocinero/preparación (con su `cocina_rol`/`partidas`) — aún sin ellos para Catering JJ; reparto con personas reales (ahora 3 cocineros semilla); "Bases a preparar" como checklist persistido; PIN propio (ahora 1234 de prueba). Reunión Carmen: **jueves 25, 12:00**.
+- **📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA — 18/06/2026** (PR #360 merged en main)
+  - `iarest.es/#contacto` (home) manda `restaurante:""` y email opcional, pero `/api/leads/landing` exigía
+    `nombre && restaurante && email` → **400 en CADA envío de la home**, antes de guardar y antes de avisar
+    (`tgAlert()` + `enviarEmailNuevoLead()` van en `Promise.allSettled`, no se llegaban a ejecutar). El cliente
+    ignora la respuesta y muestra "Recibido" → fallo invisible. Las otras landings (catering/hostelería/espacios)
+    SÍ mandan `restaurante`, por eso esas funcionaban.
+  - **Fix** (solo `app/api/leads/landing/route.ts`): la API exige `nombre` + al menos un medio de contacto
+    (teléfono **o** email); `restaurante`/`email` vacíos se normalizan (`'Sin especificar'` / `''` / `null`)
+    respetando los NOT NULL reales de `leads_landing` (restaurante, email) y `leads` (restaurante, telefono);
+    dedup CRM por email o, si no hay, por teléfono; `consent_rgpd: true`.
+  - **Verificado EN VIVO** (Alberto rellenó el form real): llega **Telegram** ✅ + **email** ✅ a `hola@iarest.es`
+    (alias send-as + recepción confirmada en su Gmail). → `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_ID` SÍ están en
+    Vercel y Resend tiene `iarest.es` verificado.
+  - **Gotcha leads perdidos:** los envíos fallidos NO dejaron rastro en BD (400 antes del insert). El recuento de
+    intentos perdidos vive en **GA4 → evento `generate_lead`** (`origen=landing-principal`), que el form dispara en
+    cliente pase lo que pase con la API. GA guarda el evento, no nombre/teléfono.
 
 - **🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill — 18/06/2026**
   - **Archivadas en Drive** (`FACTURAS Apartamentos/2026/`): 7 facturas Anthropic (abr–jun) + Codeoscopic €769.56.
@@ -188,6 +293,17 @@
   - **PENDIENTE (gated, plan #351):** persistencia real sobre `produccion_tareas` (cocinero entra a ia.rest, ve su
     día repartido + cronómetro + avisos encadenados desde BD). Toca la Supabase compartida → rama Supabase + gate
     manual antes de prod. ia-rest YA tiene base: `produccion_tareas`, rutas `/api/produccion/*`, UI cocinero/productividad.
+- **🍳 DEMO PARTE CARMEN MERGEADO — 17/06/2026** (PR #352 merged en main, CI + Tests + 5/5 Vercel ✅)
+  - Página `apps/ia-rest/src/app/propuesta/parte-jj/page.tsx` → **`iarest.es/propuesta/parte-jj`**.
+  - Para la reunión con **Carmen (cocina, Catering Joaquín Jaén) — jueves 25 a las 12:00**: su **parte de
+    elaboración REAL del 20/6/2026** ya organizado por nuestro sistema. 4 eventos por color (Hacienda El Alba
+    115 pax, Finca Los Fresnos 131, Hacienda Trinidad 136, Decanato 20), 4 partidas (Frío/Caliente/Corte/Montaje),
+    sub-elaboraciones como "Depende de" (dependencias), badges de puntos de control APPCC. Marca verde `#02473B`
+    + dorado `#9E8152`.
+  - **Autocontenida** (`'use client'`, sin BD/imports/secretos) = molde visual. La versión viva sobre
+    `produccion_tareas` sigue siendo hito posterior (plan en PR #351, con gate manual de migración Supabase).
+  - **PENDIENTE (diferido por Alberto, "luego lo hago"):** logo real `logo-jj.svg` en repo + aplicarlo a
+    decks/UI. Decks ya mergeados: `/propuesta/catering-jj-cocina` (Carmen) y `/propuesta/catering-jj-deck` (grupo/Joaquín).
 
 - **💶 MÓDULO /finanzas MERGEADO — 17/06/2026** (PR #341 merged en main, 5/5 Vercel ✅)
   - Hub financiero consolidado para Alberto: correduría seguros, 4 pisos turísticos, gastos personales BBVA/Kutxa, fiscal IRPF.
@@ -1231,7 +1347,9 @@
   - **UI** `owner/materiales/page.tsx`: tabs Kits, Clientes, Proveedores, Mantenimiento, Reservas, Inventario Físico wizard añadidos.
   - **Fixes CI** iterativos: Turbopack `await` en callback no-async, TS strict `never[]` → tipado explícito en `instanciar/route.ts` y `cerrar/route.ts`.
   - **CI final**: 10/10 checks ✅, 4 Vercel ✅. Squash-mergeado a `main` (SHA `8174ffd`).
-  - **⚠️ PENDIENTE**: aplicar migración SQL `2026-06-12_materiales_fase_b.sql` en Supabase `efncqyvhniaxsirhdxaa` (ia-rest BD) via MCP `apply_migration`. Sin esto las rutas de Fase B devolverán 404/500 en producción.
+  - **✅ RESUELTO (18/06/2026):** la migración (y `_v2`/`_categorias`/`_ledger`) se aplicó a la BD VIVA
+    correcta — schema `iarest` del proyecto compartido `wswbehlcuxqxyinousql`, no la vieja
+    `efncqyvhniaxsirhdxaa`. 16/16 tablas + RLS verificadas. Ver entrada de 18/06 arriba.
 
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:

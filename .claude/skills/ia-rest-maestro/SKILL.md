@@ -256,10 +256,15 @@ Authorization: Bearer {VERCEL_TOKEN}
 - LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback Anthropic**)
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
-- `callAI(system, user, maxTokens, timeoutMs, noFallback=true)`
+- `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
   - El parámetro `noFallback` se mantiene por compatibilidad, pero **ya no hay fallback de pago**:
     `@anthropic-ai/sdk` se quitó de ia-rest (17/06/2026). Si NIM falla, lanza error.
+  - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)
+- ⚠️ **LÍMITE ~60s en funciones Vercel de ia-rest** (el plan NO respeta `maxDuration=300` aquí, sí en
+  plataforma). El 70b a ~4000 tokens tarda >60s → la función muere con **504** (texto plano, no JSON).
+  Para **generaciones largas** (p. ej. blog-seo) usar el **modelo rápido `meta/llama-3.1-8b-instruct`**
+  (`callAI(..., model)`) con timeout interno < 60s. Lección de la sesión 16/06 (blog-seo, PR #302).
 - Brain: lib/brain.ts + lib/brain-cache.ts + lib/brain-patron.ts + lib/brain-router.ts
 - Cache menú: 5min por restaurante. Few-shot con comandas del turno activo vía ia_training_log
 
@@ -318,6 +323,34 @@ Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
   (describe el evento → menú del catálogo → abre `EventoForm` prerrellenado para revisión humana),
   **📷 Foto-recepción** (autorrellena el albarán). **Pendiente:** análisis de overrides para reentrenar la
   propuesta de reparto, recalibrado de tiempos con `hecho_at`, y **control por voz** (sin comandas).
+
+---
+
+## MATERIALES / LOGÍSTICA (mesas, sillas, menaje de catering) — ≠ almacén de cocina
+
+Módulo **independiente de eventos** (sirve para catering JJ, haciendas o alquiler puro), gating por
+`personal.modulos_gestion = 'materiales'`. Motor puro `@central/module-materiales`
+(`packages/module-materiales`: `expandirKit`, `disponibilidadEnFecha`, `stockActualDesdeLedger`,
+`ajusteInventario`, `alertasVencimiento`). UI: dueño en `/owner` tab **Materiales** (14 sub-pestañas:
+Resumen, Catálogo, Espacios, Transferencias, Serializados, Kits, Inventario, Mantenimiento, Reservas,
+Clientes, Proveedores, Historial, Importar, Informes); montador en **`/montaje`** (sus asignaciones,
+recogido/devuelto, rotura con foto).
+
+- **16 tablas en schema `iarest`** (aplicadas a la BD compartida el 18/06/2026 — antes solo existían
+  las 3 base y la Fase B fallaba en prod): `materiales`, `materiales_asignacion`, `materiales_dano`
+  (MVP) + `materiales_espacios`, `materiales_transferencias`, `materiales_categorias`,
+  `materiales_movimientos` (ledger), `materiales_unidades` (serializados/QR), `materiales_proveedores`,
+  `materiales_clientes`, `materiales_kits` (+`_items`), `materiales_inventario_fisico` (+`_lineas`),
+  `materiales_mantenimiento`, `materiales_reservas`. Todas RLS `service_role_all`.
+- **Enlace a evento (genérico, sin FK dura):** asignación con `destino_tipo`/`destino_ref`/`destino_nombre`;
+  reservas/movimientos con `parent_tipo`/`parent_id`. Permite colgar material de un `eventos.id`.
+- **APIs** `/api/materiales/*`: `route` (catálogo) · `asignacion` · `dano` · `perfil` · `categorias` ·
+  `espacios` · `proveedores` · `clientes` · `kits[/id/items][/instanciar]` · `reservas` · `movimientos` ·
+  `unidades` · `mantenimiento` · `inventario-fisico[/id/lineas|cerrar]` · `alertas` · `qr/[id]` · `import` · `informe`.
+- **Integración con cocina central (boda → cocina + material)** = diseñada, NO construida:
+  `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
+  por módulo", anclaje en tabla `eventos`).
+- Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
 
 ---
 
@@ -444,6 +477,14 @@ Operador (Alberto) → SIEMPRE Telegram (tgAlert())
 Usuarios finales   → Email (Resend): valoraciones, portales, presupuestos
 NUNCA email para alertas internas del sistema
 ```
+
+> **Captación de leads (landing) — `/api/leads/landing`:** TODA landing (home/hostelería/catering/espacios) postea
+> aquí → guarda en `leads_landing` + crea lead CRM en `leads` (origen `inbound_web`) → avisa por `tgAlert()` **y**
+> `enviarEmailNuevoLead()` (a `hola@iarest.es`, que está en el Gmail de Alberto). El cliente y la API DEBEN cuadrar
+> campos: la home manda `restaurante:""` y email opcional → la API exige `nombre` + (teléfono **o** email), nunca
+> `restaurante`/`email` obligatorios. Si no cuadran = **400 silencioso = lead perdido sin rastro en BD** (el form
+> hace `await fetch` en try/catch e igual muestra "Recibido"); el intento sí queda en **GA4 `generate_lead`**. Fix
+> 18/06/2026 (PR #360).
 
 ---
 

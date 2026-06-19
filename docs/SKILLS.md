@@ -24,6 +24,7 @@
 |---|---|
 | **`facturas-correo`** | Revisar Gmail → clasificar facturas → archivar en Drive → conciliar con banca. A mano o por rutina diaria (08:00 CEST). |
 | **`pricing-agente`** | Correr el agente de precios de SIVRA (estudia mercado y tarifica por los raíles del Paso 4). A mano o por rutina recurrente. |
+| **`fiscal-novedades`** | Vigilar cambios en las deducciones del IRPF (BOE estatal + BOJA Andalucía) y sincronizar `IMPORTES_POR_ANIO` de `/finanzas` por PR + avisar en pantalla si beneficia. A mano o por rutina ~mensual (y antes de la renta). |
 
 ## Metodología (superpowers)
 | Skill | Cuándo usarla |
