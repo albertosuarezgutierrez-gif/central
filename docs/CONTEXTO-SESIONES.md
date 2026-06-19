@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad — 19/06/2026** (PR #400 mergeado a `main`)
+  - **H "Preparar candidatura 1 clic":** botón en cada resultado del buscador → `POST /api/admin/concursos/preparar`
+    crea un `concursos` con **ficha mínima** desde el anuncio (sin pliego) y lo abre en el workspace (evento DOM
+    `concurso-preparado` → `FichaView`). El sobre administrativo (DEUC+declaración) ya funciona con perfil+biblioteca;
+    para Go/No-Go, criterios, memoria y oferta hay que subir el pliego.
+  - **D "¿Me conviene?":** (1) **resumen IA** por anuncio (`POST radar/resumen`, `aiRunner`, cacheado en
+    `concursos_licitaciones.resumen_ia` — migración `2026-06-19_concursos_licitaciones_resumen.sql`, aplicada); (2)
+    **semáforo de encaje DETERMINISTA** (módulo puro `encajeConcurso(anuncio, criterios)` vs criterios del radar →
+    🟢/🟡, sin IA). 96 tests del módulo en verde (+6 de encaje).
+  - **K "Búsqueda en lenguaje natural":** caja "✨ Describe lo que buscas" → `POST radar/interpretar` (la IA traduce a
+    `{cpv, ccaa, provincia, presupuesto, q}`) → rellena los filtros y busca; degrada a búsqueda por texto si la IA falla.
+  - **Nota:** "🏛️ Concursos" YA está en el menú lateral del panel (`DashboardClient.tsx` NAV, sin gating por rol).
+    El agente está COMPLETO salvo extra opcional (BOE como fuente adicional + unificar el radar sobre el corpus).
+
 - **🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos) — 19/06/2026** (PR #398 mergeado a `main`)
   - **El agente pasa de *pull* (buscar) a proactivo (te trae y te avisa).** Tres piezas:
   - **G "Mis concursos" (seguimiento):** tabla `concursos_seguidos` (scope `empresa_id`, `dedupe_key`,
