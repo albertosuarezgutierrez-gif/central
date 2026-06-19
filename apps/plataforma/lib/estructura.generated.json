@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T18:50:11Z",
+  "generadoEn": "2026-06-19T18:51:36Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2476,6 +2476,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)",
+      "fecha": "19/06/2026"
+    },
+    {
       "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda",
       "fecha": "19/06/2026"
     },
@@ -2529,10 +2533,6 @@
     },
     {
       "titulo": "🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🗺️ ROADMAP COCINA CENTRAL (backlog acordado — \"todo menos voz\")",
       "fecha": "18/06/2026"
     }
   ],
