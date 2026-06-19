@@ -88,7 +88,14 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
       `/api/cron/concursos-cierre` (diario `0 9 * * *`, auth Bearer `CRON_SECRET`): avisa por **email** a
       `empresas.email` de los seguidos (estado interesado/preparando) que cierran en ≤3 días, idempotente vía
       `recordatorio_cierre_at` (push NO: las suscripciones son de limpiadoras). **OJO:** aplicar la migración a mano en Supabase (hecho).
-    - Fase 2 (pendiente): B avisos proactivos de nuevos matches (digest email/push del corpus por sector+zona). Fase 3: BOE como fuente adicional + unificar el radar sobre el corpus.
+    - **Avisos proactivos de NUEVOS (F2-B):** cron `/api/cron/concursos-avisos` (diario `30 7 * * *`, auth Bearer
+      `CRON_SECRET`) que manda **digest por email** a `empresas.email` de los matches del **radar**
+      (`concursos_radar_anuncios`, alimentado por el cron `concursos-radar` según `concursos_radar_criterios`)
+      aparecidos en las **últimas 48 h** y aún no enviados, solo para empresas con `radar_activo=true`. Idempotente
+      vía columna nueva **`concursos_radar_anuncios.avisado_email_at`** (migración `2026-06-19_radar_anuncios_avisado.sql`,
+      aplicada); los matches >2 días sin enviar se marcan sin email (no hay blast de backfill). Tope 20 por correo
+      (resto "…y N más en tu panel"). Es el **push** del agente (buscador=pull, radar in-app=aviso, email=proactivo).
+    - Fase 3 (pendiente): BOE como fuente adicional + unificar el radar sobre el corpus; H "preparar candidatura 1 clic" + D resumen IA.
 - **Deuda conocida:** `cleaning_sessions.property_id` (text legacy) convive con `propiedad_id` (uuid) en 2 formatos (slug `prop_*` y UUID) para los mismos pisos → al consultar, normaliza con `COALESCE(NULLIF(propiedad_id::text,''), property_id::text)` (**ambos a `::text`**: si no, COALESCE peta con `42804` text vs uuid). Sesiones iCal antiguas quedaron con slug `prop_*`, **sin `property_name`** ni `propiedad_id` (salían como «Sin piso» en la UI); `pms/sync` ahora **sana** ambos en el `ON CONFLICT` (`COALESCE(NULLIF(...,''), EXCLUDED...)`) y hay backfill en `prisma/migrations/backfill_property_name_ical.sql`. (Nota: el slug `prop_house_sevillana` es en realidad **Casa Socorro**.)
 
 ## IA (pasarela central de plataforma; NVIDIA NIM por debajo)
