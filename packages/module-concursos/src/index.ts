@@ -112,3 +112,7 @@ export {
   necesitaOcr,
   MIN_TEXTO_PLIEGO,
 } from './radar'
+
+// Catálogo de sectores → CPV (puro): buscar "tu sector" sin saber los códigos
+export { SECTORES, cpvDeSectores } from './sectores'
+export type { Sector } from './sectores'
