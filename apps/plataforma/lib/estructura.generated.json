@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T18:14:50Z",
+  "generadoEn": "2026-06-19T18:25:15Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2472,6 +2472,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda",
+      "fecha": "19/06/2026"
+    },
+    {
       "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
       "fecha": "19/06/2026"
     },
@@ -2525,10 +2529,6 @@
     },
     {
       "titulo": "🗺️ ROADMAP COCINA CENTRAL (backlog acordado — \"todo menos voz\")",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "👥 COCINA CENTRAL · GESTIÓN DE EQUIPO",
       "fecha": "18/06/2026"
     }
   ],
