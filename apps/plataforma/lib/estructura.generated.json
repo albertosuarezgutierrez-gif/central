@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T10:20:06Z",
+  "generadoEn": "2026-06-19T10:38:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2471,6 +2471,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
+      "fecha": "19/06/2026"
+    },
+    {
       "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
       "fecha": "18/06/2026"
     },
@@ -2524,10 +2528,6 @@
     },
     {
       "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA",
       "fecha": "18/06/2026"
     }
   ],
