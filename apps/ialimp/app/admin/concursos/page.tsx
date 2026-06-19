@@ -1,7 +1,7 @@
 // → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores } from '@central/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
@@ -409,7 +409,7 @@ function RadarPanel() {
 }
 
 function BuscadorPanel() {
-  const [f, setF] = useState<any>({ q:'', cpv:'', provincia:'', presupuesto_min:'', presupuesto_max:'', en_plazo:true, orden:'relevancia', sectores:[] as string[] });
+  const [f, setF] = useState<any>({ q:'', cpv:'', provincia:'', ccaa:'', presupuesto_min:'', presupuesto_max:'', en_plazo:true, orden:'relevancia', sectores:[] as string[] });
   const [res, setRes] = useState<any[]>([]);
 
   // Selector de sector → rellena el filtro CPV con los prefijos del catálogo.
@@ -417,9 +417,14 @@ function BuscadorPanel() {
     const sel: string[] = f.sectores.includes(id) ? f.sectores.filter((x:string)=>x!==id) : [...f.sectores, id];
     setF({ ...f, sectores: sel, cpv: cpvDeSectores(sel).join(', ') });
   };
+  // Zona (CCAA) persistente entre sesiones.
+  const setZona = (z:string) => { setF({ ...f, ccaa: z }); try { localStorage.setItem('ialimp_concursos_zona', z); } catch {} };
+  useEffect(() => { try { const z = localStorage.getItem('ialimp_concursos_zona'); if (z) setF((p:any)=>({ ...p, ccaa: z })); } catch {} }, []);
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(false);
   const [hecha, setHecha] = useState(false);
+  const [actualizando, setActualizando] = useState(false);
+  const [msgIngesta, setMsgIngesta] = useState('');
 
   const buscar = async () => {
     setCargando(true);
@@ -427,12 +432,23 @@ function BuscadorPanel() {
     if (f.q) p.set('q', f.q);
     if (f.cpv) p.set('cpv', f.cpv);
     if (f.provincia) p.set('provincia', f.provincia);
+    if (f.ccaa) p.set('ccaa', f.ccaa);
     if (f.presupuesto_min) p.set('presupuesto_min', f.presupuesto_min);
     if (f.presupuesto_max) p.set('presupuesto_max', f.presupuesto_max);
     p.set('en_plazo', f.en_plazo ? '1' : '0');
     p.set('orden', f.orden);
     const r = await fetch('/api/admin/concursos/radar/buscar?' + p.toString()).then(r=>r.json()).catch(()=>null);
     setRes(r?.resultados ?? []); setTotal(r?.total ?? 0); setHecha(true); setCargando(false);
+  };
+
+  // Dispara la ingesta del corpus a demanda (PLACSP responde desde Vercel, no en local).
+  const actualizarAhora = async () => {
+    setActualizando(true); setMsgIngesta('');
+    try {
+      const r = await fetch('/api/admin/concursos/ingesta', { method:'POST' }).then(r=>r.json()).catch(()=>null);
+      if (r?.ok) { setMsgIngesta(`✅ ${r.ingeridos} anuncios actualizados`); await buscar(); }
+      else setMsgIngesta(r?.error || 'No se pudo actualizar.');
+    } finally { setActualizando(false); }
   };
 
   const guardarComoAlerta = async () => {
@@ -463,6 +479,11 @@ function BuscadorPanel() {
           </button>
         ); })}
       </div>
+      <div style={{ fontSize:12, color:C.muted, margin:'10px 0 4px' }}>Tu zona:</div>
+      <select value={f.ccaa} onChange={e=>setZona(e.target.value)} style={{ fontFamily:FONT, fontSize:13, padding:'6px 8px', borderRadius:8, border:`1px solid ${C.border}` }}>
+        <option value="">Toda España</option>
+        {COMUNIDADES.map(c => <option key={c.id} value={c.id}>{c.nombre}</option>)}
+      </select>
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8, margin:'10px 0' }}>
         <input placeholder="Buscar por texto (objeto)…" value={f.q} onChange={e=>setF({...f,q:e.target.value})} onKeyDown={e=>{ if(e.key==='Enter') buscar(); }} />
         <input placeholder="CPV (coma, por prefijo)" value={f.cpv} onChange={e=>setF({...f,cpv:e.target.value})} />
@@ -483,6 +504,8 @@ function BuscadorPanel() {
         </label>
         <button onClick={buscar} disabled={cargando} style={{ background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'8px 14px', fontFamily:FONT, fontWeight:800, fontSize:13, cursor:'pointer' }}>{cargando?'Buscando…':'Buscar'}</button>
         {hecha && <button onClick={guardarComoAlerta} style={{ background:'transparent', border:`1px solid ${C.border}`, borderRadius:8, padding:'8px 12px', fontSize:13, cursor:'pointer' }}>🔔 Guardar como alerta</button>}
+        <button onClick={actualizarAhora} disabled={actualizando} title="Trae los últimos concursos de PLACSP" style={{ background:'transparent', color:C.indigo, border:`1px solid ${C.indigo}`, borderRadius:8, padding:'8px 12px', fontFamily:FONT, fontWeight:800, fontSize:13, cursor:'pointer' }}>{actualizando?'⟳ Actualizando…':'⟳ Actualizar ahora'}</button>
+        {msgIngesta && <span style={{ fontSize:12, color:C.muted }}>{msgIngesta}</span>}
       </div>
 
       {hecha && <div style={{ fontSize:12, color:C.muted, marginTop:10 }}>{total} resultado{total===1?'':'s'}</div>}
