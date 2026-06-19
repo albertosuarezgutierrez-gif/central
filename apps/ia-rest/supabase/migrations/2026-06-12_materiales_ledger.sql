@@ -2,8 +2,10 @@
 -- Materiales ledger — Fase A
 -- Añade: materiales_movimientos, materiales_unidades
 -- Altera: materiales (codigo_qr), materiales_espacios (codigo_qr)
--- BD: ia-rest (efncqyvhniaxsirhdxaa, schema public)
+-- BD: compartida wswbehlcuxqxyinousql · schema iarest (aplicada 2026-06-18)
 -- ============================================================
+
+SET search_path TO iarest, public;
 
 -- ── QR columns ───────────────────────────────────────────────
 

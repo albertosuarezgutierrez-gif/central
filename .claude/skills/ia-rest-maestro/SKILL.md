@@ -326,6 +326,34 @@ Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
 
 ---
 
+## MATERIALES / LOGÍSTICA (mesas, sillas, menaje de catering) — ≠ almacén de cocina
+
+Módulo **independiente de eventos** (sirve para catering JJ, haciendas o alquiler puro), gating por
+`personal.modulos_gestion = 'materiales'`. Motor puro `@central/module-materiales`
+(`packages/module-materiales`: `expandirKit`, `disponibilidadEnFecha`, `stockActualDesdeLedger`,
+`ajusteInventario`, `alertasVencimiento`). UI: dueño en `/owner` tab **Materiales** (14 sub-pestañas:
+Resumen, Catálogo, Espacios, Transferencias, Serializados, Kits, Inventario, Mantenimiento, Reservas,
+Clientes, Proveedores, Historial, Importar, Informes); montador en **`/montaje`** (sus asignaciones,
+recogido/devuelto, rotura con foto).
+
+- **16 tablas en schema `iarest`** (aplicadas a la BD compartida el 18/06/2026 — antes solo existían
+  las 3 base y la Fase B fallaba en prod): `materiales`, `materiales_asignacion`, `materiales_dano`
+  (MVP) + `materiales_espacios`, `materiales_transferencias`, `materiales_categorias`,
+  `materiales_movimientos` (ledger), `materiales_unidades` (serializados/QR), `materiales_proveedores`,
+  `materiales_clientes`, `materiales_kits` (+`_items`), `materiales_inventario_fisico` (+`_lineas`),
+  `materiales_mantenimiento`, `materiales_reservas`. Todas RLS `service_role_all`.
+- **Enlace a evento (genérico, sin FK dura):** asignación con `destino_tipo`/`destino_ref`/`destino_nombre`;
+  reservas/movimientos con `parent_tipo`/`parent_id`. Permite colgar material de un `eventos.id`.
+- **APIs** `/api/materiales/*`: `route` (catálogo) · `asignacion` · `dano` · `perfil` · `categorias` ·
+  `espacios` · `proveedores` · `clientes` · `kits[/id/items][/instanciar]` · `reservas` · `movimientos` ·
+  `unidades` · `mantenimiento` · `inventario-fisico[/id/lineas|cerrar]` · `alertas` · `qr/[id]` · `import` · `informe`.
+- **Integración con cocina central (boda → cocina + material)** = diseñada, NO construida:
+  `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
+  por módulo", anclaje en tabla `eventos`).
+- Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
+
+---
+
 ## PATRONES CRÍTICOS (NO NEGOCIABLES)
 
 ### Auth en API routes

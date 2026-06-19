@@ -16,6 +16,46 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO) — 18/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
+  - Nuevo: cada **evento de cocina** (`/produccion`) lleva su **material** (mesas/sillas/menaje). Botón
+    **📦 Material** por evento → panel para añadir **kits** o **material suelto**, con descuento de stock,
+    valor en riesgo (coste de reposición) y quitar (repone stock).
+  - **API** `apps/ia-rest/src/app/api/cocina/eventos/[id]/material/route.ts` (GET/POST/DELETE), auth de
+    cocina (`x-ia-session`), scope `local_id`. Enlace **genérico sin FK dura**:
+    `materiales_asignacion.destino_tipo='evento'`, `destino_ref=cocina_eventos.id`, `destino_nombre=nombre`.
+  - **UI** en `produccion/page.tsx`: panel desplegable bajo cada evento (solo responsable).
+  - **DECISIÓN/DESVIACIÓN:** el v1 ancla en **`cocina_eventos`** (lo que JJ usa hoy), NO en la tabla CRM
+    `eventos` que se había elegido — porque JJ no usa el módulo CRM de eventos y así es testeable ya. La
+    unificación sobre `eventos` (CRM) sigue siendo el norte; migración futura = repuntar `destino_ref`.
+  - **Sembrado para probar** (Catering Joaquín Jaén): owner **PIN 1369** (/owner→Materiales), montador
+    **PIN 4040** (/montaje), Carmen **1234** (/produccion). 5 materiales + kit "Boda 100 pax" + 2 asignaciones.
+    Enlace: `https://www.iarest.es/login?r=catering-joaquin-jaen`.
+  - Verificación: pendiente preview Vercel de ia-rest (sin toolchain TS local).
+
+- **📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina — 18/06/2026**
+  (rama `claude/jj-logistica-materiales-k5eko3`)
+  - **Bug de fondo resuelto:** el código de Fase B del módulo materiales (mesas/sillas/menaje de
+    catering JJ) estaba desplegado pero **solo existían 3 de 16 tablas** en la BD viva
+    (`wswbehlcuxqxyinousql`, schema `iarest`). Sus migraciones apuntaban a la BD VIEJA
+    (`efncqyvhniaxsirhdxaa`) y nunca se aplicaron al schema compartido → las ~15 pantallas/rutas de
+    Fase B (espacios, kits, proveedores, clientes, reservas, movimientos, unidades/QR, mantenimiento,
+    inventario físico, categorías, alertas) fallaban 404/500 en producción.
+  - **Aplicadas las 4 migraciones** (`materiales_v2`, `_categorias`, `_ledger`, `_fase_b`) al schema
+    `iarest` con `SET search_path TO iarest, public` (para que aterricen en `iarest`, NO en `public`
+    de ialimp/sivra). **Verificado:** 16 tablas `materiales_*` en `iarest`, **0 en `public`**,
+    `materiales` con 25 columnas (tipo/estado/proveedor_id/codigo_qr/stock_minimo OK), **RLS 16/16**.
+    Añadida policy `service_role_all` a `materiales_categorias` (solo tenía la de current_setting).
+  - **Repo sincronizado:** corregidos los headers de las 4 migraciones (BD vieja → compartida iarest)
+    + añadido `search_path` para que reaplicarlas vaya al schema correcto.
+  - **Diseño integración boda → cocina + material** (decisión Alberto: anclar en la tabla `eventos`,
+    el CRM rico, NO en `cocina_eventos`): doc nuevo
+    `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md`. Principio
+    "**junto pero separado por módulo**": `eventos` = tronco común; cocina (`cocina_eventos.evento_id`,
+    columna nueva propuesta) y materiales (enlace genérico `parent_tipo/destino_tipo='evento'`, sin FK
+    dura) cuelgan del mismo evento sin depender entre sí. Incluye 1er corte ("Material del evento" con
+    kits + `disponibilidadEnFecha`) y 17 ideas. **NO implementado aún** (solo diseño).
+  - **Pendiente para sesión siguiente:** construir el panel "Material del evento" + `cocina_eventos.evento_id`.
+
 - **📱 RESPONSIVE COMPLETO — 18/06/2026** (PR #381 mergeado a `main`)
   - Añadidas media queries `@media (max-width: 768px)` en 30+ páginas de `apps/plataforma`.
   - Lote 1: `LayoutShell`, `dashboard`, `banca` (×2), `finanzas/FinanzasClient`.
@@ -1284,7 +1324,9 @@
   - **UI** `owner/materiales/page.tsx`: tabs Kits, Clientes, Proveedores, Mantenimiento, Reservas, Inventario Físico wizard añadidos.
   - **Fixes CI** iterativos: Turbopack `await` en callback no-async, TS strict `never[]` → tipado explícito en `instanciar/route.ts` y `cerrar/route.ts`.
   - **CI final**: 10/10 checks ✅, 4 Vercel ✅. Squash-mergeado a `main` (SHA `8174ffd`).
-  - **⚠️ PENDIENTE**: aplicar migración SQL `2026-06-12_materiales_fase_b.sql` en Supabase `efncqyvhniaxsirhdxaa` (ia-rest BD) via MCP `apply_migration`. Sin esto las rutas de Fase B devolverán 404/500 en producción.
+  - **✅ RESUELTO (18/06/2026):** la migración (y `_v2`/`_categorias`/`_ledger`) se aplicó a la BD VIVA
+    correcta — schema `iarest` del proyecto compartido `wswbehlcuxqxyinousql`, no la vieja
+    `efncqyvhniaxsirhdxaa`. 16/16 tablas + RLS verificadas. Ver entrada de 18/06 arriba.
 
 - **🧱 Config de build compartida en la MATRIZ — PR #180 — 12/06/2026**
   "Lo compartido sube a la matriz" aplicado a la config de build/herramientas:
