@@ -51,7 +51,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 - **`ignoreBuildErrors`/`ignoreDuringBuilds` = true**: el build verde NO garantiza tipos sanos (sí caza sintaxis).
 - **White-label por empresa** (no por host): acentos con `var(--brand-*)`, no hex fijo (salvo colores semánticos).
 - **RGPD**: gate de consentimiento del portal del propietario; páginas legales rompen el white-label (responsable = IALIMP).
-- **Concursos públicos** = módulo puro `@central/module-concursos` (LLM por puerto `AiRunner`); migraciones `add_concursos*.sql` se aplican **a mano** en Supabase.
+- **Concursos públicos** = módulo puro `@central/module-concursos` (LLM por puerto `AiRunner`); migraciones `add_concursos*.sql` se aplican **a mano** en Supabase. **Buscador** = corpus compartido `concursos_licitaciones` (ingesta PLACSP en `lib/concursos-ingesta.ts`: cron `concursos-ingesta` + botón "⟳ Actualizar ahora" → `POST /api/admin/concursos/ingesta`). **OJO: PLACSP da 403 a IPs no-Vercel** → la ingesta solo se prueba en preview/prod, NUNCA desde el contenedor de dev. Sectores→CPV y provincia→CCAA = mapas puros (`sectores.ts`/`provincias.ts`); el filtro casa por prefijo SIN punto (`4533`, no `45.33`).
 - **Verificación de email**: Claude lo comprueba él mismo (Gmail de Alberto + runtime logs de Vercel), no se lo pide al usuario.
 - Bucket `cleaning-photos` **PRIVADO** (signed URLs vía proxy `/api/l/photo`).
 
