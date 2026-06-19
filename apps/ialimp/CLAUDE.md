@@ -95,7 +95,16 @@ Next.js `^15.5` · React 19 · Prisma `^5.22` · **JWT (jose + bcryptjs, SIN Nex
       vía columna nueva **`concursos_radar_anuncios.avisado_email_at`** (migración `2026-06-19_radar_anuncios_avisado.sql`,
       aplicada); los matches >2 días sin enviar se marcan sin email (no hay blast de backfill). Tope 20 por correo
       (resto "…y N más en tu panel"). Es el **push** del agente (buscador=pull, radar in-app=aviso, email=proactivo).
-    - Fase 3 (pendiente): BOE como fuente adicional + unificar el radar sobre el corpus; H "preparar candidatura 1 clic" + D resumen IA.
+    - **Del hallazgo a la oferta + usabilidad (F3-F4):** (H) **"📝 Preparar candidatura"** en cada resultado →
+      `POST /api/admin/concursos/preparar` crea un `concursos` con ficha mínima desde el anuncio (sin pliego) y lo
+      abre en el workspace (evento DOM `concurso-preparado`); el sobre administrativo ya funciona con perfil+biblioteca,
+      el resto pide subir el pliego. (D) **"✨ ¿Me conviene?"** = resumen IA por anuncio (`POST radar/resumen`,
+      `aiRunner`, **cacheado en `concursos_licitaciones.resumen_ia`**, migración `2026-06-19_concursos_licitaciones_resumen.sql`)
+      + **semáforo de encaje** determinista (módulo puro `encajeConcurso(anuncio, criterios)` cruzando con los
+      criterios del radar; 🟢/🟡, sin IA). (K) **Búsqueda en lenguaje natural** = caja "✨ Describe lo que buscas" →
+      `POST radar/interpretar` (`aiRunner` traduce a `{cpv, ccaa, provincia, presupuesto, q}`) → rellena los filtros y
+      busca; degrada a búsqueda por texto si la IA falla.
+    - Fase futura (pendiente): BOE como fuente adicional + unificar el radar sobre el corpus.
 - **Deuda conocida:** `cleaning_sessions.property_id` (text legacy) convive con `propiedad_id` (uuid) en 2 formatos (slug `prop_*` y UUID) para los mismos pisos → al consultar, normaliza con `COALESCE(NULLIF(propiedad_id::text,''), property_id::text)` (**ambos a `::text`**: si no, COALESCE peta con `42804` text vs uuid). Sesiones iCal antiguas quedaron con slug `prop_*`, **sin `property_name`** ni `propiedad_id` (salían como «Sin piso» en la UI); `pms/sync` ahora **sana** ambos en el `ON CONFLICT` (`COALESCE(NULLIF(...,''), EXCLUDED...)`) y hay backfill en `prisma/migrations/backfill_property_name_ical.sql`. (Nota: el slug `prop_house_sevillana` es en realidad **Casa Socorro**.)
 
 ## IA (pasarela central de plataforma; NVIDIA NIM por debajo)
