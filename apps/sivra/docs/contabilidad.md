@@ -28,6 +28,8 @@ La contabilidad que hay que sacar limpia es la de estos 3 (confirmado contra la 
 ## Lo que NO entra en la contabilidad de los 3 apartamentos
 
 - **Duplex Center** (`prop_duplex_center`) → va por **BBVA**, junto con **seguros**. **Aparte.**
+  ⚠️ Es el piso que Alberto llama **"Villasís"** (Pasaje Villasís 1 / Pasaje Francisco Molina 4, el
+  mismo piso con dos accesos). Alias a reconocer: *Villasís*, *Pasaje Francisco Molina*.
 - **Gastos personales** de Alberto (`prop_personal`) → fuera de la P&L de pisos. Salen de Kutxa
   pero **no son** de la explotación.
 - `prop_multi_apartamentos` ("Gastos compartidos") → comunes a la explotación; se reparten entre
@@ -46,3 +48,17 @@ El dashboard / "Evolución mensual" debe poder mostrar, como mínimo, **separado
 > cuenta bancaria ni un agrupador "unidad de explotación". Hoy la separación se puede hacer por
 > `propiedad` (filtrando los 3 turísticos vs Duplex vs personal), pero conviene formalizar el
 > agrupador para no depender de recordar qué piso va con qué cuenta. Decidir al implementar.
+
+## Tributación (IRPF) vs contabilidad de explotación — NO confundir
+
+> Aclarado revisando la **Renta 2025** (19/06/2026). La separación de arriba es **contable** (por
+> cuenta/explotación). La **tributación en el IRPF** es otra capa. Detalle completo y mapa
+> entidad↔propiedad en la skill **`perfil-fiscal`**.
+
+- **Socorro (House Sevillana)** y el **Dúplex/Villasís** → su alquiler turístico **tributa en el
+  IRPF personal** de Alberto (Socorro **50/50** con Pilar), **aunque** las plataformas ingresen en
+  la cuenta de la **sociedad Punto y Coma SL**: ingresar ahí **no** significa tributar ahí, y **no
+  hay contrato** de cesión que respalde el desvío → debe declararse en personal (riesgo de paralela
+  si no). Es un punto **recurrente** (ya pasó en 2024). Confirmado por la asesoría (Asecon).
+- **Busto Reform / Luxury Busto** → presumiblemente vía **Punto y Coma SL** (*a confirmar*).
+- **Asesoría:** Asecon Consultores (lleva renta personal + la sociedad).
