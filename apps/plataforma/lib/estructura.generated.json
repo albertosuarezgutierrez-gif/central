@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T18:51:36Z",
+  "generadoEn": "2026-06-19T20:03:10Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -502,7 +502,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 12
+        "evidencias": 13
       },
       "plataforma": {
         "estado": "no",
@@ -1274,7 +1274,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 16
+        "evidencias": 19
       },
       "plataforma": {
         "presente": false,
@@ -1833,10 +1833,13 @@
       "/api/admin/concursos/biblioteca",
       "/api/admin/concursos/ingesta",
       "/api/admin/concursos/perfil",
+      "/api/admin/concursos/preparar",
       "/api/admin/concursos/radar",
       "/api/admin/concursos/radar/buscar",
       "/api/admin/concursos/radar/criterios",
       "/api/admin/concursos/radar/importar",
+      "/api/admin/concursos/radar/interpretar",
+      "/api/admin/concursos/radar/resumen",
       "/api/admin/concursos/radar/visto",
       "/api/admin/concursos/seguidos",
       "/api/admin/consumos",
@@ -2817,7 +2820,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 915,
+    "apis": 918,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0

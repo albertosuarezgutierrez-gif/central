@@ -1,7 +1,7 @@
 // → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES } from '@central/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES, encajeConcurso } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
@@ -44,6 +44,12 @@ export default function Concursos() {
     } catch {}
   };
   useEffect(()=>{ cargar(); cargarBiblioteca(); }, []);
+  // "Preparar candidatura" (H) crea el concurso en el buscador y lo abre aquí.
+  useEffect(()=>{
+    const abrir = (e:any) => { setActual(e.detail); setError(''); setOcrAplicado(false); cargar(); window.scrollTo({ top:0, behavior:'smooth' }); };
+    window.addEventListener('concurso-preparado', abrir);
+    return ()=>window.removeEventListener('concurso-preparado', abrir);
+  }, []);
 
   const analizar = async (form: FormData | null, body?: any) => {
     setLoad(true); setError(''); setActual(null); setOcrAplicado(false);
@@ -435,6 +441,14 @@ function BuscadorPanel() {
   const [actualizando, setActualizando] = useState(false);
   const [msgIngesta, setMsgIngesta] = useState('');
   const [seguidas, setSeguidas] = useState<Set<string>>(new Set());
+  const [criterios, setCriterios] = useState<any>(null);          // criterios del radar → encaje "¿me conviene?"
+  const [resumenes, setResumenes] = useState<Record<string,string>>({});
+  const [cargandoResumen, setCargandoResumen] = useState('');
+  const [nl, setNl] = useState('');                                // búsqueda en lenguaje natural (K)
+  const [interpretando, setInterpretando] = useState(false);
+
+  // Carga los criterios del radar una vez (para el semáforo de encaje por resultado).
+  useEffect(()=>{ fetch('/api/admin/concursos/radar/criterios').then(r=>r.json()).then(r=>setCriterios(r.criterios)).catch(()=>{}); }, []);
 
   // Conjunto de anuncios ya seguidos (para alternar el botón). Se recarga al cambiar.
   const cargarSeguidas = async () => {
@@ -452,19 +466,55 @@ function BuscadorPanel() {
     emitSeguidos();
   };
 
-  const buscar = async () => {
+  const buscar = async (override?:any) => {
     setCargando(true);
+    const ff = override ? { ...f, ...override } : f;
     const p = new URLSearchParams();
-    if (f.q) p.set('q', f.q);
-    if (f.cpv) p.set('cpv', f.cpv);
-    if (f.provincia) p.set('provincia', f.provincia);
-    if (f.ccaa) p.set('ccaa', f.ccaa);
-    if (f.presupuesto_min) p.set('presupuesto_min', f.presupuesto_min);
-    if (f.presupuesto_max) p.set('presupuesto_max', f.presupuesto_max);
-    p.set('en_plazo', f.en_plazo ? '1' : '0');
-    p.set('orden', f.orden);
+    if (ff.q) p.set('q', ff.q);
+    if (ff.cpv) p.set('cpv', ff.cpv);
+    if (ff.provincia) p.set('provincia', ff.provincia);
+    if (ff.ccaa) p.set('ccaa', ff.ccaa);
+    if (ff.presupuesto_min) p.set('presupuesto_min', ff.presupuesto_min);
+    if (ff.presupuesto_max) p.set('presupuesto_max', ff.presupuesto_max);
+    p.set('en_plazo', ff.en_plazo ? '1' : '0');
+    p.set('orden', ff.orden);
     const r = await fetch('/api/admin/concursos/radar/buscar?' + p.toString()).then(r=>r.json()).catch(()=>null);
     setRes(r?.resultados ?? []); setTotal(r?.total ?? 0); setHecha(true); setCargando(false);
+  };
+
+  // K — búsqueda en lenguaje natural: la IA traduce la frase a filtros y busca.
+  const buscarNL = async () => {
+    const t = nl.trim(); if (!t) return;
+    setInterpretando(true);
+    let fl:any = { q: t };
+    try {
+      const r = await fetch('/api/admin/concursos/radar/interpretar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texto: t }) }).then(x=>x.json());
+      if (r?.filtros) fl = r.filtros;
+    } catch {}
+    const nf = { q: fl.q ?? '', cpv: (fl.cpv||[]).join(', '), ccaa: fl.ccaa ?? '', provincia: fl.provincia ?? '', presupuesto_min: fl.presupuesto_min ?? '', presupuesto_max: fl.presupuesto_max ?? '', sectores: [] as string[] };
+    setF((prev:any)=>({ ...prev, ...nf }));
+    setInterpretando(false);
+    await buscar(nf);
+  };
+
+  // D — resumen IA bajo demanda (cacheado en el corpus).
+  const pedirResumen = async (a:any) => {
+    if (resumenes[a.id]) return;
+    setCargandoResumen(a.id);
+    try {
+      const r = await fetch('/api/admin/concursos/radar/resumen', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id:a.id, titulo:a.titulo, objeto:a.objeto, cpv:a.cpv, presupuesto:a.presupuesto }) }).then(x=>x.json());
+      setResumenes(prev=>({ ...prev, [a.id]: r?.resumen || '(no disponible ahora)' }));
+    } catch { setResumenes(prev=>({ ...prev, [a.id]: '(no disponible ahora)' })); }
+    setCargandoResumen('');
+  };
+
+  // H — preparar candidatura: crea el concurso y lo abre en el workspace.
+  const preparar = async (a:any) => {
+    const licitacion = { titulo:a.titulo, objeto:a.objeto, expediente:a.expediente, organo:a.organo, provincia:a.provincia, cpv:a.cpv, presupuesto:a.presupuesto, fin_presentacion:a.fin_presentacion, url:a.url };
+    try {
+      const r = await fetch('/api/admin/concursos/preparar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ licitacion }) }).then(x=>x.json());
+      if (r?.concurso) window.dispatchEvent(new CustomEvent('concurso-preparado', { detail: r.concurso }));
+    } catch {}
   };
 
   // Dispara la ingesta del corpus a demanda (PLACSP responde desde Vercel, no en local).
@@ -495,7 +545,13 @@ function BuscadorPanel() {
   return (
     <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
       <strong style={{ fontSize:15 }}>🔎 Buscar concursos</strong>
-      <div style={{ fontSize:12, color:C.muted, margin:'8px 0 4px' }}>Tu sector (rellena el CPV):</div>
+      <div style={{ display:'flex', gap:6, margin:'8px 0 4px' }}>
+        <input placeholder="✨ Describe lo que buscas (ej: fontanería en Sevilla hasta 50.000€)" value={nl}
+          onChange={e=>setNl(e.target.value)} onKeyDown={e=>{ if(e.key==='Enter') buscarNL(); }}
+          style={{ flex:1, minWidth:0 }} />
+        <button onClick={buscarNL} disabled={interpretando} style={{ background:C.soft, color:C.indigo, border:`1px solid ${C.indigo}`, borderRadius:8, padding:'8px 12px', fontFamily:FONT, fontWeight:800, fontSize:13, cursor:'pointer', whiteSpace:'nowrap' }}>{interpretando?'Interpretando…':'✨ Buscar'}</button>
+      </div>
+      <div style={{ fontSize:12, color:C.muted, margin:'8px 0 4px' }}>…o por sector (rellena el CPV):</div>
       <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:6 }}>
         {SECTORES.map(s => { const on = f.sectores.includes(s.id); return (
           <button key={s.id} onClick={()=>toggleSector(s.id)} type="button"
@@ -536,16 +592,25 @@ function BuscadorPanel() {
 
       {hecha && <div style={{ fontSize:12, color:C.muted, marginTop:10 }}>{total} resultado{total===1?'':'s'}</div>}
       <div style={{ marginTop:8, display:'flex', flexDirection:'column', gap:8 }}>
-        {res.map(a => { const d = dias(a.fin_presentacion); return (
+        {res.map(a => { const d = dias(a.fin_presentacion);
+          const enc = criterios ? encajeConcurso({ titulo:a.titulo, objeto:a.objeto, cpv:a.cpv, presupuesto:a.presupuesto!=null?Number(a.presupuesto):undefined }, criterios) : null;
+          return (
           <div key={a.id} style={{ border:`1px solid ${C.border}`, borderRadius:10, padding:10 }}>
             <div style={{ display:'flex', justifyContent:'space-between', gap:8 }}>
               <strong style={{ fontSize:14 }}>{a.titulo}</strong>
-              {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700 }}>{d<0?'cerrado':`${d} d`}</span>}
+              <div style={{ display:'flex', gap:6, alignItems:'center', whiteSpace:'nowrap' }}>
+                {enc==='verde' && <span title="Encaja con tu radar" style={{ fontSize:11, fontWeight:700, background:'#dcfce7', color:'#166534', borderRadius:999, padding:'2px 7px' }}>🟢 Encaja</span>}
+                {enc==='ambar' && <span title="Encaje parcial" style={{ fontSize:11, fontWeight:700, background:'#fef9c3', color:'#854d0e', borderRadius:999, padding:'2px 7px' }}>🟡 Posible</span>}
+                {d!==null && <span style={{ fontSize:12, color: d<=3?'#b91c1c':C.muted, fontWeight:700 }}>{d<0?'cerrado':`${d} d`}</span>}
+              </div>
             </div>
             <div style={{ fontSize:12, color:C.muted }}>{a.organo}{a.provincia?` · ${a.provincia}`:''}{a.presupuesto?` · ${Number(a.presupuesto).toLocaleString('es-ES')} €`:''}</div>
             <div style={{ fontSize:12, marginTop:4 }}>{(a.cpv||[]).slice(0,4).join(' · ')}</div>
+            {resumenes[a.id] && <div style={{ fontSize:12, color:C.text, marginTop:6, background:C.soft, borderRadius:8, padding:'6px 8px' }}>✨ {resumenes[a.id]}</div>}
             <div style={{ display:'flex', gap:12, alignItems:'center', marginTop:6, flexWrap:'wrap' }}>
               {a.url && <a href={a.url} target="_blank" rel="noreferrer" style={{ fontSize:12, color:C.indigo }}>Ver anuncio ↗</a>}
+              {!resumenes[a.id] && <button onClick={()=>pedirResumen(a)} disabled={cargandoResumen===a.id} style={{ fontSize:12, background:'transparent', color:C.indigo, border:0, padding:0, fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>{cargandoResumen===a.id?'✨ resumiendo…':'✨ ¿Me conviene?'}</button>}
+              <button onClick={()=>preparar(a)} title="Crea el expediente y ábrelo para preparar la oferta" style={{ fontSize:12, background:C.indigo, color:'#fff', border:0, borderRadius:8, padding:'3px 10px', fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>📝 Preparar candidatura</button>
               {seguidas.has(a.dedupe_key)
                 ? <span style={{ fontSize:12, color:'#166534', fontWeight:700 }}>📌 Siguiendo</span>
                 : <button onClick={()=>seguir(a)} style={{ fontSize:12, background:'transparent', color:C.indigo, border:`1px solid ${C.indigo}`, borderRadius:8, padding:'3px 10px', fontFamily:FONT, fontWeight:700, cursor:'pointer' }}>📌 Seguir</button>}
