@@ -60,5 +60,9 @@ El dashboard / "Evolución mensual" debe poder mostrar, como mínimo, **separado
   la cuenta de la **sociedad Punto y Coma SL**: ingresar ahí **no** significa tributar ahí, y **no
   hay contrato** de cesión que respalde el desvío → debe declararse en personal (riesgo de paralela
   si no). Es un punto **recurrente** (ya pasó en 2024). Confirmado por la asesoría (Asecon).
-- **Busto Reform / Luxury Busto** → presumiblemente vía **Punto y Coma SL** (*a confirmar*).
+- **Busto Reform / Luxury Busto** → vía **Punto y Coma SL** hasta dic-2025; desde 2026, personal u
+  otra estructura (*a confirmar*).
+- ⚠️ **Punto y Coma SL CERRADA (disuelta/liquidada) en diciembre de 2025.** Desde 2026 no va nada
+  por la sociedad. El cierre es un hecho fiscal (IS final + posible ganancia/pérdida patrimonial
+  para los socios en la renta). Refuerza que **Socorro tribute en personal**.
 - **Asesoría:** Asecon Consultores (lleva renta personal + la sociedad).

@@ -15,8 +15,12 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
   (casados, separación de bienes). ⚠️ El cónyuge es **Pilar**, no "Carmen". **3 hijos** →
   **familia numerosa general** (título solicitado en 2025; sus efectos se retrotraen a la fecha de
   solicitud, así que aplica a la Renta 2025).
-- **Sociedad:** **Punto y Coma SL** (la lleva la misma asesoría). Algunos pisos turísticos van por
-  ella.
+- **Sociedad:** **Punto y Coma SL** — ⚠️ **CERRADA (disuelta/liquidada) en diciembre de 2025**. En
+  2025 operó hasta su cierre; **desde 2026 NO va nada por ella**. Lo que tributaba por la sociedad
+  pasa a **personal** (o a una nueva estructura, a confirmar). Su **cierre es un hecho fiscal**: IS
+  final + posible **ganancia/pérdida patrimonial** para los socios al repartir el haber de
+  liquidación (cuota de liquidación − valor de adquisición de las participaciones) → a reflejar en
+  la renta. Lo lleva la asesoría.
 - **Asesoría:** **Asecon Consultores** (renta personal **y** la sociedad). Interlocutora habitual:
   Marta (`malbarran@` / `rentas@aseconconsultores.com`).
 
@@ -25,8 +29,8 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 |---|---|---|
 | **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar |
 | **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1 = Pasaje Francisco Molina 4 (mismo piso) | **IRPF personal** (Alberto) |
-| **Busto Reform** | `prop_busto_reform` | Punto y Coma SL (*a confirmar*) |
-| **Luxury Busto** | `prop_luxury_busto` | Punto y Coma SL (*a confirmar*) |
+| **Busto Reform** | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; desde 2026 personal/otra estructura (*a confirmar*) |
+| **Luxury Busto** | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; desde 2026 personal/otra estructura (*a confirmar*) |
 | **Monte Carmelo 68** | — | **Vivienda habitual** (no es turístico; su IBI = personal) |
 
 > **Riesgo recurrente — Socorro:** las plataformas (Booking/Airbnb) ingresan en una **cuenta de
