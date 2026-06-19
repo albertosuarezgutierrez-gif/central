@@ -19,6 +19,18 @@ test('cpvDeSectores: une prefijos sin duplicados y respeta el orden', () => {
   assert.deepEqual(cpvDeSectores(['limpieza', 'jardineria']), ['90', '77', '03'])
 })
 
+test('fontanería mapea al prefijo CPV de trabajos de fontanería (4533)', () => {
+  assert.deepEqual(cpvDeSectores(['fontaneria']), ['4533'])
+})
+
+test('ningún prefijo CPV lleva punto (el filtro casa con LIKE sobre códigos sin punto)', () => {
+  for (const s of SECTORES) {
+    for (const p of s.cpv) {
+      assert.ok(/^[0-9]+$/.test(p), `prefijo no numérico en ${s.id}: "${p}"`)
+    }
+  }
+})
+
 test('cpvDeSectores: deduplica prefijos compartidos entre sectores', () => {
   // 'informatica' → ['72','48'], 'consultoria' → ['79']; sin solapes aquí,
   // pero un id repetido no debe duplicar.
