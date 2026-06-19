@@ -1,7 +1,7 @@
 // → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion } from '@central/module-concursos';
+import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
 
 const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
@@ -409,8 +409,14 @@ function RadarPanel() {
 }
 
 function BuscadorPanel() {
-  const [f, setF] = useState<any>({ q:'', cpv:'', provincia:'', presupuesto_min:'', presupuesto_max:'', en_plazo:true, orden:'relevancia' });
+  const [f, setF] = useState<any>({ q:'', cpv:'', provincia:'', presupuesto_min:'', presupuesto_max:'', en_plazo:true, orden:'relevancia', sectores:[] as string[] });
   const [res, setRes] = useState<any[]>([]);
+
+  // Selector de sector → rellena el filtro CPV con los prefijos del catálogo.
+  const toggleSector = (id:string) => {
+    const sel: string[] = f.sectores.includes(id) ? f.sectores.filter((x:string)=>x!==id) : [...f.sectores, id];
+    setF({ ...f, sectores: sel, cpv: cpvDeSectores(sel).join(', ') });
+  };
   const [total, setTotal] = useState(0);
   const [cargando, setCargando] = useState(false);
   const [hecha, setHecha] = useState(false);
@@ -447,6 +453,16 @@ function BuscadorPanel() {
   return (
     <div style={{ border:`1px solid ${C.border}`, borderRadius:12, padding:14, marginBottom:14 }}>
       <strong style={{ fontSize:15 }}>🔎 Buscar concursos</strong>
+      <div style={{ fontSize:12, color:C.muted, margin:'8px 0 4px' }}>Tu sector (rellena el CPV):</div>
+      <div style={{ display:'flex', gap:6, flexWrap:'wrap', marginBottom:6 }}>
+        {SECTORES.map(s => { const on = f.sectores.includes(s.id); return (
+          <button key={s.id} onClick={()=>toggleSector(s.id)} type="button"
+            style={{ fontSize:12, cursor:'pointer', borderRadius:999, padding:'3px 10px',
+              border:`1px solid ${on?C.indigo:C.border}`, background:on?C.indigo:'transparent', color:on?'#fff':C.text, fontFamily:FONT }}>
+            {s.nombre}
+          </button>
+        ); })}
+      </div>
       <div style={{ display:'grid', gridTemplateColumns:'2fr 1fr', gap:8, margin:'10px 0' }}>
         <input placeholder="Buscar por texto (objeto)…" value={f.q} onChange={e=>setF({...f,q:e.target.value})} onKeyDown={e=>{ if(e.key==='Enter') buscar(); }} />
         <input placeholder="CPV (coma, por prefijo)" value={f.cpv} onChange={e=>setF({...f,cpv:e.target.value})} />
