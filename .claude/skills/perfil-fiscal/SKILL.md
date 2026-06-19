@@ -22,7 +22,7 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
   dormida mantiene **obligaciones formales mínimas** (baja de actividad en Hacienda/036, **IS de la
   sociedad inactiva** a cero, depósito de cuentas) pero **SIN** evento de liquidación (no hay cuota
   de liquidación ni ganancia/pérdida patrimonial por disolución). Lo lleva la asesoría.
-  **Pendiente: que Marta lo confirme.**
+  **➡️ Desde 2026, TODOS los pisos van a nombre de Alberto (IRPF personal): nada por la sociedad.**
 - **Asesoría:** **Asecon Consultores** (renta personal **y** la sociedad). Interlocutora habitual:
   Marta (`malbarran@` / `rentas@aseconconsultores.com`).
 
@@ -31,8 +31,8 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
 |---|---|---|
 | **Socorro** (C/ Socorro 24) | House Sevillana / `prop_house_sevillana` | **IRPF personal**, 50/50 Alberto+Pilar |
 | **Villasís** = **el Dúplex** | Duplex Center / `prop_duplex_center` · Pasaje Villasís 1 = Pasaje Francisco Molina 4 (mismo piso) | **IRPF personal** (Alberto) |
-| **Busto Reform** | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; desde 2026 personal/otra estructura (*a confirmar*) |
-| **Luxury Busto** | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; desde 2026 personal/otra estructura (*a confirmar*) |
+| **Busto Reform** | `prop_busto_reform` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
+| **Luxury Busto** | `prop_luxury_busto` | Punto y Coma SL hasta dic-2025; **desde 2026 personal (Alberto)** |
 | **Monte Carmelo 68** | — | **Vivienda habitual** (no es turístico; su IBI = personal) |
 
 > **Riesgo recurrente — Socorro:** las plataformas (Booking/Airbnb) ingresan en una **cuenta de

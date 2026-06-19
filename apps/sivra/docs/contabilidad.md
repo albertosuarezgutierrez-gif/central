@@ -60,11 +60,11 @@ El dashboard / "Evolución mensual" debe poder mostrar, como mínimo, **separado
   la cuenta de la **sociedad Punto y Coma SL**: ingresar ahí **no** significa tributar ahí, y **no
   hay contrato** de cesión que respalde el desvío → debe declararse en personal (riesgo de paralela
   si no). Es un punto **recurrente** (ya pasó en 2024). Confirmado por la asesoría (Asecon).
-- **Busto Reform / Luxury Busto** → vía **Punto y Coma SL** hasta dic-2025; desde 2026, personal u
-  otra estructura (*a confirmar*).
+- **Busto Reform / Luxury Busto** → vía **Punto y Coma SL** hasta dic-2025; **desde 2026 a nombre de
+  Alberto (personal)**.
 - ⚠️ **Punto y Coma SL DORMIDA / INACTIVA desde finales de 2025** (NO disuelta ni liquidada — la SL
-  sigue existiendo, solo cesa la actividad; más barato que liquidarla). Desde 2026 no opera nada por
-  ella → refuerza que **Socorro tribute en personal**. Al estar dormida mantiene obligaciones
-  formales mínimas (baja de actividad, IS inactiva a cero, depósito de cuentas) pero **sin** evento
-  de liquidación. Pendiente de confirmar con la asesoría.
+  sigue existiendo, solo cesa la actividad; más barato que liquidarla). Al estar dormida mantiene
+  obligaciones formales mínimas (baja de actividad, IS inactiva a cero, depósito de cuentas) pero
+  **sin** evento de liquidación. **➡️ Desde 2026 TODOS los pisos van a nombre de Alberto (IRPF
+  personal); nada por la sociedad.**
 - **Asesoría:** Asecon Consultores (lleva renta personal + la sociedad).
