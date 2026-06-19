@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-19T10:07:11Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-19T10:25:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -150,6 +150,8 @@
 - ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (19/06/2026) 📅 `diaHabitual` en facturas-control
+- (19/06/2026) 🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)
 - (18/06/2026) 🐛 FIXES COMUNICACIÓN + FINANZAS
 - (19/06/2026) 🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)
 - (18/06/2026) 🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)
@@ -158,6 +160,4 @@
 - (18/06/2026) 🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)
 - (18/06/2026) 🔍 AUDITORÍA PROFUNDA SEMANAL
 - (18/06/2026) 🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA
-- (18/06/2026) 🔍 AUDITORÍA DIARIA
-- (18/06/2026) ✨ COCINA CENTRAL · GENERADOR DE MENÚS IA
 
