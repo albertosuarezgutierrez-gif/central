@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T10:44:53Z",
+  "generadoEn": "2026-06-19T18:14:50Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -502,7 +502,7 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 11
+        "evidencias": 12
       },
       "plataforma": {
         "estado": "no",
@@ -1274,7 +1274,7 @@
       },
       "ialimp": {
         "presente": true,
-        "evidencias": 14
+        "evidencias": 15
       },
       "plataforma": {
         "presente": false,
@@ -1831,6 +1831,7 @@
       "/api/admin/concursos/[id]/sobre-administrativo",
       "/api/admin/concursos/analizar",
       "/api/admin/concursos/biblioteca",
+      "/api/admin/concursos/ingesta",
       "/api/admin/concursos/perfil",
       "/api/admin/concursos/radar",
       "/api/admin/concursos/radar/buscar",
@@ -2812,7 +2813,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 911,
+    "apis": 912,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
