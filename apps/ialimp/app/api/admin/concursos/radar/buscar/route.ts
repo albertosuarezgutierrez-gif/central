@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
+import { provinciasDeComunidad } from '@central/module-concursos'
 
 // Buscador del corpus de licitaciones. El corpus es común; exige sesión.
 
@@ -14,6 +15,7 @@ export async function GET(req: Request) {
   const q = (sp.get('q') || '').trim()
   const enPlazo = sp.get('en_plazo') !== '0' // por defecto sí
   const provincia = (sp.get('provincia') || '').trim()
+  const ccaa = (sp.get('ccaa') || '').trim()
   const min = sp.get('presupuesto_min') ? Number(sp.get('presupuesto_min')) : null
   const max = sp.get('presupuesto_max') ? Number(sp.get('presupuesto_max')) : null
   const orden = sp.get('orden') || 'relevancia'
@@ -29,6 +31,13 @@ export async function GET(req: Request) {
   }
   if (q) conds.push(Prisma.sql`fts @@ plainto_tsquery('spanish', ${q})`)
   if (provincia) conds.push(Prisma.sql`provincia ILIKE ${'%' + provincia + '%'}`)
+  if (ccaa) {
+    const provs = provinciasDeComunidad(ccaa)
+    if (provs.length) {
+      const likes = provs.map(p => Prisma.sql`provincia ILIKE ${'%' + p + '%'}`)
+      conds.push(Prisma.sql`(${Prisma.join(likes, ' OR ')})`)
+    }
+  }
   if (min !== null && Number.isFinite(min)) conds.push(Prisma.sql`presupuesto >= ${min}`)
   if (max !== null && Number.isFinite(max)) conds.push(Prisma.sql`presupuesto <= ${max}`)
   const where = conds.length ? Prisma.sql`WHERE ${Prisma.join(conds, ' AND ')}` : Prisma.empty

@@ -2,29 +2,11 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { matchesDeAtom } from '@/lib/concursos-radar'
+import { descargarAtom } from '@/lib/concursos-ingesta'
 import type { CriteriosRadar } from '@central/module-concursos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
-
-const FEED_URL = process.env.PLACSP_FEED_URL
-  || 'https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom'
-const MAX_PAGINAS = 3
-
-/** Descarga hasta MAX_PAGINAS del ATOM siguiendo <link rel="next">, concatenadas. */
-async function descargarAtom(): Promise<string> {
-  let url: string | null = FEED_URL
-  const partes: string[] = []
-  for (let i = 0; i < MAX_PAGINAS && url; i++) {
-    const res: Response = await fetch(url, { headers: { 'User-Agent': 'ialimp-radar/1.0' }, cache: 'no-store' })
-    if (!res.ok) break
-    const xml: string = await res.text()
-    partes.push(xml)
-    const m: RegExpMatchArray | null = xml.match(/<link[^>]+rel=["']next["'][^>]+href=["']([^"']+)["']/i)
-    url = m ? m[1] : null
-  }
-  return partes.join('\n')
-}
 
 export async function GET() {
   let xml = ''

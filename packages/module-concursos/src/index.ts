@@ -116,3 +116,7 @@ export {
 // Catálogo de sectores → CPV (puro): buscar "tu sector" sin saber los códigos
 export { SECTORES, cpvDeSectores } from './sectores'
 export type { Sector } from './sectores'
+
+// Mapa provincia↔CCAA (puro): filtrar licitaciones por zona (p.ej. Andalucía)
+export { COMUNIDADES, provinciasDeComunidad, comunidadDeProvincia } from './provincias'
+export type { Comunidad } from './provincias'
