@@ -15,12 +15,14 @@ IBAN) NO están aquí**: viven en la BD (`fiscal_perfil` + `fiscal_descendientes
   (casados, separación de bienes). ⚠️ El cónyuge es **Pilar**, no "Carmen". **3 hijos** →
   **familia numerosa general** (título solicitado en 2025; sus efectos se retrotraen a la fecha de
   solicitud, así que aplica a la Renta 2025).
-- **Sociedad:** **Punto y Coma SL** — ⚠️ **CERRADA (disuelta/liquidada) en diciembre de 2025**. En
-  2025 operó hasta su cierre; **desde 2026 NO va nada por ella**. Lo que tributaba por la sociedad
-  pasa a **personal** (o a una nueva estructura, a confirmar). Su **cierre es un hecho fiscal**: IS
-  final + posible **ganancia/pérdida patrimonial** para los socios al repartir el haber de
-  liquidación (cuota de liquidación − valor de adquisición de las participaciones) → a reflejar en
-  la renta. Lo lleva la asesoría.
+- **Sociedad:** **Punto y Coma SL** — ⚠️ **dejada DORMIDA / INACTIVA desde finales de 2025** (NO
+  disuelta ni liquidada: la SL **sigue existiendo**, solo cesa la actividad — es más barato que
+  liquidarla formalmente). En 2025 operó hasta el cese; **desde 2026 no opera nada por ella** → lo
+  que tributaba por la sociedad pasa a **personal** (o nueva estructura, a confirmar). Al estar
+  dormida mantiene **obligaciones formales mínimas** (baja de actividad en Hacienda/036, **IS de la
+  sociedad inactiva** a cero, depósito de cuentas) pero **SIN** evento de liquidación (no hay cuota
+  de liquidación ni ganancia/pérdida patrimonial por disolución). Lo lleva la asesoría.
+  **Pendiente: que Marta lo confirme.**
 - **Asesoría:** **Asecon Consultores** (renta personal **y** la sociedad). Interlocutora habitual:
   Marta (`malbarran@` / `rentas@aseconconsultores.com`).
 

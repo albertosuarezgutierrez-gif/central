@@ -62,7 +62,9 @@ El dashboard / "Evolución mensual" debe poder mostrar, como mínimo, **separado
   si no). Es un punto **recurrente** (ya pasó en 2024). Confirmado por la asesoría (Asecon).
 - **Busto Reform / Luxury Busto** → vía **Punto y Coma SL** hasta dic-2025; desde 2026, personal u
   otra estructura (*a confirmar*).
-- ⚠️ **Punto y Coma SL CERRADA (disuelta/liquidada) en diciembre de 2025.** Desde 2026 no va nada
-  por la sociedad. El cierre es un hecho fiscal (IS final + posible ganancia/pérdida patrimonial
-  para los socios en la renta). Refuerza que **Socorro tribute en personal**.
+- ⚠️ **Punto y Coma SL DORMIDA / INACTIVA desde finales de 2025** (NO disuelta ni liquidada — la SL
+  sigue existiendo, solo cesa la actividad; más barato que liquidarla). Desde 2026 no opera nada por
+  ella → refuerza que **Socorro tribute en personal**. Al estar dormida mantiene obligaciones
+  formales mínimas (baja de actividad, IS inactiva a cero, depósito de cuentas) pero **sin** evento
+  de liquidación. Pendiente de confirmar con la asesoría.
 - **Asesoría:** Asecon Consultores (lleva renta personal + la sociedad).
