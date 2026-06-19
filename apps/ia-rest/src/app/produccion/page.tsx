@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactElement } from 're
 import {
   generarParte, paxTotal,
   alergenosElaboracion, validarControles, objetivoControl, muestrasACaducar,
-  ALERGENO_NOMBRE,
+  avisosDietas, ALERGENO_NOMBRE,
   type FichaCatalogo, type EventoInput, type ElaboracionTraza, type TipoControl,
 } from '@central/module-trazabilidad'
 import { asignarTrabajo, type Tarea, type Trabajador } from '@central/module-organizador-trabajo'
@@ -29,7 +29,10 @@ const COCINEROS: Trabajador[] = [
 ]
 
 type Receta = FichaCatalogo
-type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; evento_id?: string | null; elaboraciones: string[] }
+type DietaUI = { receta_id: string; dieta: string; comensales: number }
+type Evento = { id: string; nombre: string; pax: number; fecha_evento: string | null; ubicacion: string | null; evento_id?: string | null; elaboraciones: string[]; dietas: DietaUI[] }
+// Dietas frecuentes en catering (etiquetas sugeridas; el selector permite escribir otra)
+const DIETAS_COMUNES = ['sin gluten', 'vegano', 'vegetariano', 'sin lactosa', 'sin frutos secos', 'sin marisco']
 type Registro = { receta_id: string; hecho: boolean; controles: Array<{ tipo: string; valor: number | null; hora: string; por?: string }>; muestra_testigo_at: string | null; firma: string | null; hecho_por?: string | null; hecho_at?: string | null }
 const horaCorta = (iso?: string | null) => { if (!iso) return ''; try { return new Date(iso).toLocaleTimeString('es', { hour: '2-digit', minute: '2-digit' }) } catch { return '' } }
 type Recepcion = { id: string; producto: string; proveedor: string | null; lote: string | null; temperatura: number | null; caducidad: string | null; conforme: boolean; observaciones: string | null }
@@ -48,8 +51,9 @@ function Chip({ children, bg, fg, br }: { children: React.ReactNode; bg: string;
   return <span style={{ fontFamily: SN, fontSize: 11.5, fontWeight: 600, color: fg, background: bg, border: br ? `1px solid ${br}` : 'none', borderRadius: 20, padding: '2px 9px', whiteSpace: 'nowrap' }}>{children}</span>
 }
 
-function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep, asignadoId, nombreTrab, cocinerosPartida, onAsignar, puedeAsignar }: {
+function Ficha({ e, recetaId, ubNombre, registro, requiereMuestra, onAccion, matchRecep, asignadoId, nombreTrab, cocinerosPartida, onAsignar, puedeAsignar }: {
   e: ElaboracionTraza
+  recetaId: string
   ubNombre: Record<string, string>
   registro?: Registro
   requiereMuestra: boolean
@@ -71,7 +75,7 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep, a
     <div className="ficha" style={{ background: '#fff', border: `1px solid ${lista ? '#3F7D44' : C.linea}`, borderRadius: 12, padding: '14px 16px', marginBottom: 12 }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-          <button className="noprint" onClick={() => onAccion(e.id, { action: 'hecho' })} title="Marcar hecho"
+          <button className="noprint" onClick={() => onAccion(recetaId, { action: 'hecho' })} title="Marcar hecho"
             style={{ width: 24, height: 24, flexShrink: 0, borderRadius: 6, cursor: 'pointer', border: `2px solid ${registro?.hecho ? '#3F7D44' : C.linea}`, background: registro?.hecho ? '#3F7D44' : '#fff', color: '#fff', fontSize: 13, lineHeight: 1 }}>
             {registro?.hecho ? '✓' : ''}
           </button>
@@ -87,6 +91,7 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep, a
             </select>
           )}
           {e.ubicaciones.map(u => <Chip key={u} bg={C.papel} fg={C.ink3} br={C.linea}>{ubNombre[u] ?? u}</Chip>)}
+          {e.dieta && <Chip bg="rgba(63,125,68,.12)" fg="#2f6b34" br="#3F7D44">🟢 {e.dieta} · {e.comensales} ración{e.comensales === 1 ? '' : 'es'}</Chip>}
           <Chip bg={lista ? 'rgba(63,125,68,.12)' : 'rgba(158,43,37,.07)'} fg={lista ? '#2f6b34' : C.rojo} br={lista ? '#3F7D44' : 'rgba(158,43,37,.3)'}>{lista ? '✓ Lista' : '⛔ Pendiente'}</Chip>
         </div>
       </div>
@@ -119,17 +124,17 @@ function Ficha({ e, ubNombre, registro, requiereMuestra, onAccion, matchRecep, a
         {controles.map((r, i) => {
           const reg = ctrlReg(r.tipo)
           return (
-            <button key={i} className="noprint" onClick={() => { const v = window.prompt(`${objetivoControl(r.tipo)}\nValor (°C):`, reg?.valor != null ? String(reg.valor) : ''); if (v !== null) onAccion(e.id, { action: 'control', tipo: r.tipo, valor: v }) }}
+            <button key={i} className="noprint" onClick={() => { const v = window.prompt(`${objetivoControl(r.tipo)}\nValor (°C):`, reg?.valor != null ? String(reg.valor) : ''); if (v !== null) onAccion(recetaId, { action: 'control', tipo: r.tipo, valor: v }) }}
               style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: reg ? '#2f6b34' : C.tinta, background: reg ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${reg ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>
               {CTRL_ICONO[r.tipo]} {objetivoControl(r.tipo)} <strong>{reg ? `✓ ${reg.valor ?? ''}${reg.valor != null ? '°' : ''}` : '⬚'}</strong>{reg?.por ? <span style={{ opacity: .75 }}> · {reg.por}</span> : null}
             </button>
           )
         })}
         {requiereMuestra && (
-          <button className="noprint" onClick={() => onAccion(e.id, { action: 'muestra' })}
+          <button className="noprint" onClick={() => onAccion(recetaId, { action: 'muestra' })}
             style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: registro?.muestra_testigo_at ? '#2f6b34' : C.ink3, background: registro?.muestra_testigo_at ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${registro?.muestra_testigo_at ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>🧪 Muestra {registro?.muestra_testigo_at ? '✓' : '⬚'}</button>
         )}
-        <button className="noprint" onClick={() => { const f = window.prompt('Firma del responsable:', registro?.firma ?? ''); if (f !== null) onAccion(e.id, { action: 'firma', firma: f }) }}
+        <button className="noprint" onClick={() => { const f = window.prompt('Firma del responsable:', registro?.firma ?? ''); if (f !== null) onAccion(recetaId, { action: 'firma', firma: f }) }}
           style={{ fontFamily: SN, fontSize: 11.5, cursor: 'pointer', color: registro?.firma ? '#2f6b34' : C.ink3, background: registro?.firma ? 'rgba(63,125,68,.10)' : C.papel, border: `1px solid ${registro?.firma ? '#3F7D44' : C.linea}`, borderRadius: 8, padding: '3px 8px' }}>✍️ {registro?.firma ? registro.firma : 'Firmar ⬚'}</button>
         {/* Versión impresa de los controles */}
         <span className="solo-print" style={{ display: 'none', fontFamily: SN, fontSize: 11.5, color: C.ink3 }}>
@@ -150,7 +155,7 @@ const lbl: React.CSSProperties = { display: 'block', fontFamily: SN, fontSize: 1
 function EventoForm({ recetas, inicial, onGuardar, onCancelar, saving }: {
   recetas: Receta[]
   inicial?: Evento
-  onGuardar: (v: { nombre: string; fecha_evento: string; pax: number; ubicacion: string; elaboraciones: string[] }) => void
+  onGuardar: (v: { nombre: string; fecha_evento: string; pax: number; ubicacion: string; elaboraciones: string[]; dietas: DietaUI[] }) => void
   onCancelar: () => void
   saving: boolean
 }): ReactElement {
@@ -159,7 +164,12 @@ function EventoForm({ recetas, inicial, onGuardar, onCancelar, saving }: {
   const [pax, setPax]       = useState(String(inicial?.pax ?? ''))
   const [ubicacion, setUbic] = useState(inicial?.ubicacion ?? '')
   const [elabs, setElabs]   = useState<string[]>(inicial?.elaboraciones ?? [])
+  const [dietas, setDietas] = useState<DietaUI[]>(inicial?.dietas ?? [])
   const toggle = (id: string) => setElabs(p => p.includes(id) ? p.filter(x => x !== id) : [...p, id])
+  const addDieta = () => setDietas(p => [...p, { dieta: DIETAS_COMUNES[0], comensales: 1, receta_id: recetas[0]?.id ?? '' }])
+  const setDieta = (i: number, patch: Partial<DietaUI>) => setDietas(p => p.map((d, j) => j === i ? { ...d, ...patch } : d))
+  const delDieta = (i: number) => setDietas(p => p.filter((_, j) => j !== i))
+  const dietasValidas = dietas.filter(d => d.dieta.trim() && d.receta_id && d.comensales > 0)
 
   return (
     <div style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 16, marginBottom: 12 }}>
@@ -182,9 +192,31 @@ function EventoForm({ recetas, inicial, onGuardar, onCancelar, saving }: {
           {recetas.length === 0 && <span style={{ fontFamily: SN, fontSize: 12, color: C.ink3 }}>Aún no hay recetas en el catálogo.</span>}
         </div>
       </div>
+
+      {/* Comensales con dieta especial (comensales puntuales) — NO cambian el menú principal */}
+      <div style={{ marginTop: 14, borderTop: `1px solid ${C.linea}`, paddingTop: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+          <label style={{ ...lbl, marginBottom: 0 }}>🟢 Comensales con dieta especial</label>
+          <button type="button" onClick={addDieta} disabled={recetas.length === 0} style={{ fontFamily: SN, fontSize: 12, color: C.verde, background: 'transparent', border: `1px dashed ${C.verde}`, borderRadius: 8, padding: '4px 10px', cursor: recetas.length === 0 ? 'default' : 'pointer', opacity: recetas.length === 0 ? .5 : 1 }}>+ grupo</button>
+        </div>
+        <div style={{ fontFamily: SN, fontSize: 11.5, color: C.ink3, marginBottom: 8 }}>Para los pocos comensales con una dieta concreta (p. ej. 5 sin gluten): se cocina su <strong>plato adaptado</strong> aparte, sin tocar el menú de todos.</div>
+        {dietas.map((d, i) => (
+          <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+            <input list="dietas-comunes" style={{ ...inp, flex: '1 1 130px', fontSize: 13, padding: '7px 9px' }} placeholder="dieta" value={d.dieta} onChange={e => setDieta(i, { dieta: e.target.value })} />
+            <input style={{ ...inp, flex: '0 1 70px', fontSize: 13, padding: '7px 9px' }} type="number" min="1" placeholder="nº" value={d.comensales || ''} onChange={e => setDieta(i, { comensales: parseInt(e.target.value) || 0 })} />
+            <select style={{ ...inp, flex: '2 1 160px', fontSize: 13, padding: '7px 9px' }} value={d.receta_id} onChange={e => setDieta(i, { receta_id: e.target.value })}>
+              <option value="">— plato adaptado —</option>
+              {recetas.map(r => <option key={r.id} value={r.id}>{r.nombre}</option>)}
+            </select>
+            <button type="button" onClick={() => delDieta(i)} style={{ fontFamily: SN, fontSize: 13, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 9px', cursor: 'pointer' }}>✕</button>
+          </div>
+        ))}
+        <datalist id="dietas-comunes">{DIETAS_COMUNES.map(x => <option key={x} value={x} />)}</datalist>
+      </div>
+
       <div style={{ display: 'flex', gap: 8, marginTop: 14, justifyContent: 'flex-end' }}>
         <button onClick={onCancelar} style={{ fontFamily: SN, fontSize: 14, color: C.ink3, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 8, padding: '9px 14px', cursor: 'pointer' }}>Cancelar</button>
-        <button disabled={saving || !nombre.trim()} onClick={() => onGuardar({ nombre: nombre.trim(), fecha_evento: fecha, pax: parseInt(pax) || 0, ubicacion: ubicacion.trim(), elaboraciones: elabs })}
+        <button disabled={saving || !nombre.trim()} onClick={() => onGuardar({ nombre: nombre.trim(), fecha_evento: fecha, pax: parseInt(pax) || 0, ubicacion: ubicacion.trim(), elaboraciones: elabs, dietas: dietasValidas })}
           style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: saving || !nombre.trim() ? C.ink3 : C.verde, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: saving ? 'default' : 'pointer' }}>
           {saving ? 'Guardando…' : 'Guardar'}
         </button>
@@ -350,7 +382,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   const [gestionEquipo, setGestionEquipo] = useState(false)
   const [editorMiembro, setEditorMiembro] = useState<{ modo: 'nuevo' | 'editar'; miembro?: Miembro } | null>(null)
   const [asignaciones, setAsignaciones] = useState<Array<{ receta_id: string; trabajador_id: string | null; origen: string }>>([])
-  const [sugForm, setSugForm] = useState({ open: false, descripcion: '', pax: '', restricciones: '' })
+  const [sugForm, setSugForm] = useState<{ open: boolean; descripcion: string; pax: string; dietas: Array<{ dieta: string; comensales: number }> }>({ open: false, descripcion: '', pax: '', dietas: [] })
   const [sugiriendo, setSugiriendo] = useState(false)
   const [sugNotas, setSugNotas] = useState('')
   // Material del evento (panel desplegable bajo cada evento)
@@ -388,19 +420,30 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
     await cargar()
   }
 
-  // ✨ La IA propone un menú del catálogo → abre el editor de evento prerrellenado para que Carmen lo revise
+  // ✨ La IA propone el menú principal (todos los PAX) y, por dieta, los platos adaptados del catálogo.
+  // Abre el editor de evento prerrellenado (menú + grupos de dieta) para que Carmen lo revise.
   const sugerirMenu = async () => {
     if (!sugForm.descripcion.trim()) return
     setSugiriendo(true); setSugNotas('')
     try {
-      const r = await fetch('/api/cocina/menu-sugerido', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ descripcion: sugForm.descripcion, pax: sugForm.pax, restricciones: sugForm.restricciones }) })
+      const dietasIn = sugForm.dietas.filter(d => d.dieta.trim())
+      const r = await fetch('/api/cocina/menu-sugerido', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ descripcion: sugForm.descripcion, pax: sugForm.pax, dietas: dietasIn }) })
       const d = await r.json().catch(() => ({}))
       if (!r.ok || !d.ok) { window.alert(d.error ?? 'No se pudo sugerir el menú'); return }
       const ids: string[] = (d.menu ?? []).map((m: { receta_id: string }) => m.receta_id)
       if (ids.length === 0) { window.alert('La IA no encontró platos del catálogo para este evento. ' + (d.notas ?? '')); return }
+      // Aplana las alternativas por dieta → un grupo de dieta por cada plato adaptado propuesto.
+      const dietas: DietaUI[] = []
+      for (const alt of (d.alternativas ?? []) as Array<{ dieta?: string; comensales?: number; platos?: Array<{ receta_id?: string }> }>) {
+        const dieta = String(alt?.dieta ?? '').trim()
+        const comensales = Number(alt?.comensales) || (dietasIn.find(x => x.dieta.toLowerCase() === dieta.toLowerCase())?.comensales ?? 0)
+        for (const p of (alt?.platos ?? [])) {
+          if (p?.receta_id) dietas.push({ receta_id: p.receta_id, dieta, comensales })
+        }
+      }
       setSugNotas(d.notas ?? '')
-      setEditor({ modo: 'nuevo', evento: { id: '', nombre: sugForm.descripcion, pax: Number(sugForm.pax) || 0, fecha_evento: null, ubicacion: null, elaboraciones: ids } })
-      setSugForm({ open: false, descripcion: '', pax: '', restricciones: '' })
+      setEditor({ modo: 'nuevo', evento: { id: '', nombre: sugForm.descripcion, pax: Number(sugForm.pax) || 0, fecha_evento: null, ubicacion: null, elaboraciones: ids, dietas } })
+      setSugForm({ open: false, descripcion: '', pax: '', dietas: [] })
     } finally { setSugiriendo(false) }
   }
 
@@ -497,7 +540,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   }
 
   const parte = useMemo(() => {
-    const ev: EventoInput[] = eventos.map(e => ({ id: e.id, nombre: e.nombre, pax: e.pax, fecha_evento: e.fecha_evento ?? '', elaboraciones: e.elaboraciones }))
+    const ev: EventoInput[] = eventos.map(e => ({ id: e.id, nombre: e.nombre, pax: e.pax, fecha_evento: e.fecha_evento ?? '', elaboraciones: e.elaboraciones, dietas: e.dietas }))
     return generarParte(recetas, ev)
   }, [recetas, eventos])
   const total = paxTotal(parte)
@@ -510,8 +553,9 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
   }, [equipo])
 
   const duracionTarea = useCallback((e: ElaboracionTraza) => {
-    const pax = e.ubicaciones.reduce((a, id) => a + (eventos.find(ev => ev.id === id)?.pax ?? 0), 0)
-    return Math.max(10, Math.round((minPorPax[e.id] ?? 0.4) * pax))
+    // Las líneas de dieta producen solo sus raciones (comensales); el resto, el PAX del evento.
+    const pax = e.comensales ?? e.ubicaciones.reduce((a, id) => a + (eventos.find(ev => ev.id === id)?.pax ?? 0), 0)
+    return Math.max(10, Math.round((minPorPax[e.receta_base ?? e.id] ?? 0.4) * pax))
   }, [eventos, minPorPax])
 
   const asignMap = useMemo(() => Object.fromEntries(asignaciones.map(a => [a.receta_id, a.trabajador_id])) as Record<string, string | null>, [asignaciones])
@@ -525,7 +569,8 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
   // La IA propone el reparto (por partida, balanceando carga); Carmen luego ajusta a mano.
   const reasignarIA = async () => {
-    const tareas: Tarea[] = parte.elaboraciones.map(e => ({ id: e.id, nombre: e.nombre, tipo: 'elaboracion', partida: e.partida ?? undefined, requiere_rol: e.partida ?? undefined, duracion_estimada_min: duracionTarea(e), prioridad: e.partida === 'caliente' ? 'alta' : 'normal' }))
+    // El reparto se hace sobre las recetas reales (no las líneas de dieta, que comparten receta base).
+    const tareas: Tarea[] = parte.elaboraciones.filter(e => !e.dieta).map(e => ({ id: e.id, nombre: e.nombre, tipo: 'elaboracion', partida: e.partida ?? undefined, requiere_rol: e.partida ?? undefined, duracion_estimada_min: duracionTarea(e), prioridad: e.partida === 'caliente' ? 'alta' : 'normal' }))
     const plan = asignarTrabajo(tareas, cocineros)
     const items = plan.asignaciones.map(a => ({ receta_id: a.tarea_id, trabajador_id: a.trabajador_id }))
     await fetch('/api/cocina/asignaciones', { method: 'POST', headers: { 'Content-Type': 'application/json', ...sh() }, body: JSON.stringify({ action: 'bulk', origen: 'ia', asignaciones: items }) })
@@ -553,12 +598,31 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
   const muestras = muestrasACaducar(parte.elaboraciones, '2026-06-22T20:00:00Z', 2)
 
+  // Avisos de seguridad de dietas (#3): plato con alérgeno incompatible / comensales > PAX.
+  const avisos = useMemo(() => {
+    const ev: EventoInput[] = eventos.map(e => ({ id: e.id, nombre: e.nombre, pax: e.pax, fecha_evento: e.fecha_evento ?? '', elaboraciones: e.elaboraciones, dietas: e.dietas }))
+    return avisosDietas(ev, recetas)
+  }, [eventos, recetas])
+
+  // Resumen de dietas por evento (#4 — para sala): "5 sin gluten · 3 veganos".
+  const resumenDietas = useMemo(() => eventos.map(e => {
+    const m = new Map<string, number>()
+    for (const d of e.dietas) m.set(d.dieta, (m.get(d.dieta) ?? 0) + d.comensales)
+    return { evento: e, grupos: [...m.entries()].map(([dieta, comensales]) => ({ dieta, comensales })) }
+  }).filter(x => x.grupos.length > 0), [eventos])
+
+  // Hoja de alérgenos del evento (#1 — imprimible): cada elaboración con sus alérgenos.
+  const hojaAlergenos = useMemo(() => parte.elaboraciones.map(e => ({
+    id: e.id, nombre: e.nombre, dieta: e.dieta ?? null, comensales: e.comensales ?? null,
+    alergenos: alergenosElaboracion(e),
+  })), [parte])
+
   const salir = () => {
     try { localStorage.removeItem('ia_rest_session'); localStorage.removeItem('ia_kds_token') } catch { /* noop */ }
     window.location.href = '/login'
   }
 
-  const guardarEvento = async (v: { nombre: string; fecha_evento: string; pax: number; ubicacion: string; elaboraciones: string[] }) => {
+  const guardarEvento = async (v: { nombre: string; fecha_evento: string; pax: number; ubicacion: string; elaboraciones: string[]; dietas: DietaUI[] }) => {
     setSaving(true)
     try {
       if (editor?.modo === 'editar' && editor.evento) {
@@ -656,7 +720,7 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
   return (
     <div style={{ minHeight: '100dvh', background: C.papel, color: C.tinta, fontFamily: SN }}>
-      <style>{`@media print { .noprint { display:none !important } .solo-print { display:inline !important } body { background:#fff !important } }`}</style>
+      <style>{`@media print { .noprint { display:none !important } .solo-print { display:inline !important } .solo-print-block { display:block !important } body { background:#fff !important } }`}</style>
 
       {/* Header fino (sin voz, sin mesas) */}
       <div style={{ position: 'sticky', top: 0, zIndex: 10, background: '#fff', borderBottom: `1px solid ${C.linea}`, padding: '10px clamp(14px,4vw,28px)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
@@ -838,11 +902,24 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
 
             {!editor && sugForm.open && (
               <div style={{ background: 'rgba(158,129,82,.06)', border: `1px solid ${C.linea}`, borderRadius: 12, padding: 14, marginBottom: 12 }}>
-                <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 10 }}>Describe el evento y la IA propone un menú con tus recetas. Lo abrirá como evento nuevo para que lo revises.</div>
+                <div style={{ fontFamily: SN, fontSize: 12.5, color: C.ink3, marginBottom: 10 }}>Describe el evento y la IA propone el <strong>menú principal</strong> (para todos). Si hay comensales con dieta, añádelos abajo y la IA propondrá su <strong>plato adaptado</strong> del catálogo — sin cambiar el menú de todos.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,150px),1fr))', gap: 8 }}>
                   <div style={{ gridColumn: '1 / -1' }}><label style={lbl}>Evento *</label><input style={inp} value={sugForm.descripcion} onChange={e => setSugForm(f => ({ ...f, descripcion: e.target.value }))} placeholder="Ej: boda 150 pax, menú mediterráneo" /></div>
                   <div><label style={lbl}>PAX</label><input style={inp} type="number" value={sugForm.pax} onChange={e => setSugForm(f => ({ ...f, pax: e.target.value }))} /></div>
-                  <div><label style={lbl}>Restricciones</label><input style={inp} value={sugForm.restricciones} onChange={e => setSugForm(f => ({ ...f, restricciones: e.target.value }))} placeholder="sin gluten, vegano…" /></div>
+                </div>
+                <div style={{ marginTop: 10 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
+                    <label style={{ ...lbl, marginBottom: 0 }}>🟢 Comensales con dieta (opcional)</label>
+                    <button type="button" onClick={() => setSugForm(f => ({ ...f, dietas: [...f.dietas, { dieta: DIETAS_COMUNES[0], comensales: 1 }] }))} style={{ fontFamily: SN, fontSize: 12, color: C.oro, background: 'transparent', border: `1px dashed ${C.oro}`, borderRadius: 8, padding: '4px 10px', cursor: 'pointer' }}>+ dieta</button>
+                  </div>
+                  {sugForm.dietas.map((d, i) => (
+                    <div key={i} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', marginBottom: 6 }}>
+                      <input list="dietas-comunes" style={{ ...inp, flex: '1 1 130px', fontSize: 13, padding: '7px 9px' }} placeholder="dieta" value={d.dieta} onChange={e => setSugForm(f => ({ ...f, dietas: f.dietas.map((x, j) => j === i ? { ...x, dieta: e.target.value } : x) }))} />
+                      <input style={{ ...inp, flex: '0 1 70px', fontSize: 13, padding: '7px 9px' }} type="number" min="1" placeholder="nº" value={d.comensales || ''} onChange={e => setSugForm(f => ({ ...f, dietas: f.dietas.map((x, j) => j === i ? { ...x, comensales: parseInt(e.target.value) || 0 } : x) }))} />
+                      <button type="button" onClick={() => setSugForm(f => ({ ...f, dietas: f.dietas.filter((_, j) => j !== i) }))} style={{ fontFamily: SN, fontSize: 13, color: C.rojo, background: 'transparent', border: `1px solid ${C.linea}`, borderRadius: 7, padding: '6px 9px', cursor: 'pointer' }}>✕</button>
+                    </div>
+                  ))}
+                  <datalist id="dietas-comunes">{DIETAS_COMUNES.map(x => <option key={x} value={x} />)}</datalist>
                 </div>
                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 10 }}>
                   <button disabled={sugiriendo || !sugForm.descripcion.trim()} onClick={sugerirMenu} style={{ fontFamily: SN, fontSize: 14, fontWeight: 700, color: '#fff', background: sugiriendo || !sugForm.descripcion.trim() ? C.ink3 : C.oro, border: 'none', borderRadius: 8, padding: '9px 16px', cursor: 'pointer' }}>{sugiriendo ? 'Pensando…' : '✨ Proponer menú'}</button>
@@ -949,19 +1026,69 @@ export default function ProduccionCocinaCentralPage(): ReactElement {
           </div>
         )}
 
+        {/* ⚠️ Avisos de seguridad de dietas (#3) */}
+        {avisos.length > 0 && (
+          <div className="noprint" style={{ background: 'rgba(158,43,37,.06)', border: `1px solid ${C.rojo}`, borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+            <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 13, color: C.rojo, marginBottom: 4 }}>⚠️ Revisa estas dietas</div>
+            {avisos.map((a, i) => (
+              <div key={i} style={{ fontFamily: SN, fontSize: 13, color: C.tinta, padding: '2px 0' }}>
+                {a.tipo === 'alergeno_incompatible' ? '🔴' : '🟠'} {a.mensaje}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* 🟢 Resumen de dietas para sala (#4) */}
+        {resumenDietas.length > 0 && (
+          <div style={{ background: '#fff', border: `1px solid ${C.linea}`, borderRadius: 12, padding: '10px 14px', marginBottom: 16 }}>
+            <div style={{ fontFamily: SN, fontWeight: 800, fontSize: 12.5, color: C.verde, letterSpacing: .3, marginBottom: 6 }}>🟢 DIETAS PARA SALA</div>
+            {resumenDietas.map(({ evento, grupos }) => (
+              <div key={evento.id} style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', padding: '3px 0' }}>
+                <span style={{ fontFamily: SN, fontSize: 13, fontWeight: 700, color: C.tinta }}>{evento.nombre}:</span>
+                {grupos.map(g => <Chip key={g.dieta} bg="rgba(63,125,68,.10)" fg="#2f6b34" br="#3F7D44">{g.comensales} {g.dieta}</Chip>)}
+              </div>
+            ))}
+          </div>
+        )}
+
         {porPartida.map(g => (
           <div key={g.partida} style={{ marginBottom: 20 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', borderRadius: 10, background: PARTIDA_COLOR[g.partida], color: '#fff', marginBottom: 12 }}>
               <span style={{ fontFamily: SN, fontWeight: 800, fontSize: 15, letterSpacing: .5 }}>{(PARTIDA_NOMBRE[g.partida] ?? g.partida).toUpperCase()}</span>
               <span style={{ marginLeft: 'auto', fontFamily: SN, fontSize: 13, opacity: .9 }}>{g.elabs.length}</span>
             </div>
-            {g.elabs.map(e => <Ficha key={e.id} e={e} ubNombre={ubNombre} registro={registroPorReceta[e.id]} requiereMuestra={recetaMuestra[e.id] ?? false} onAccion={accion} matchRecep={matchRecep} asignadoId={asignMap[e.id]} nombreTrab={nombreTrab} cocinerosPartida={cocinerosDePartida(e.partida)} onAsignar={asignar} puedeAsignar={esResponsable} />)}
+            {g.elabs.map(e => { const rid = e.receta_base ?? e.id; return <Ficha key={e.id} e={e} recetaId={rid} ubNombre={ubNombre} registro={registroPorReceta[rid]} requiereMuestra={recetaMuestra[rid] ?? false} onAccion={accion} matchRecep={matchRecep} asignadoId={e.dieta ? null : asignMap[e.id]} nombreTrab={nombreTrab} cocinerosPartida={cocinerosDePartida(e.partida)} onAsignar={asignar} puedeAsignar={esResponsable && !e.dieta} /> })}
           </div>
         ))}
 
         {parte.elaboraciones.length === 0 && (
           <div style={{ textAlign: 'center', padding: 40, fontFamily: SE, fontStyle: 'italic', color: C.ink3 }}>
             Sin elaboraciones todavía. Crea un evento y asígnale elaboraciones desde "Gestionar eventos".
+          </div>
+        )}
+
+        {/* 📄 Hoja de alérgenos del evento (#1) — solo al imprimir el dossier */}
+        {hojaAlergenos.length > 0 && (
+          <div className="solo-print-block" style={{ display: 'none', marginTop: 24, breakInside: 'avoid' }}>
+            <div style={{ fontFamily: SE, fontStyle: 'italic', fontSize: 18, color: C.tinta, borderBottom: `2px solid ${C.oro}`, paddingBottom: 4, marginBottom: 10 }}>Hoja de alérgenos del evento</div>
+            {resumenDietas.length > 0 && (
+              <div style={{ fontFamily: SN, fontSize: 12.5, color: C.tinta, marginBottom: 10 }}>
+                {resumenDietas.map(({ evento, grupos }) => (
+                  <div key={evento.id}><strong>{evento.nombre}:</strong> {grupos.map(g => `${g.comensales} ${g.dieta}`).join(' · ')}</div>
+                ))}
+              </div>
+            )}
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontFamily: SN, fontSize: 12 }}>
+              <thead><tr><th style={{ textAlign: 'left', borderBottom: `1px solid ${C.linea}`, padding: '4px 6px' }}>Elaboración</th><th style={{ textAlign: 'left', borderBottom: `1px solid ${C.linea}`, padding: '4px 6px' }}>Alérgenos</th></tr></thead>
+              <tbody>
+                {hojaAlergenos.map(h => (
+                  <tr key={h.id}>
+                    <td style={{ padding: '4px 6px', borderBottom: `1px solid ${C.papel}` }}>{h.nombre}{h.dieta ? ` · ${h.comensales} ración(es)` : ''}</td>
+                    <td style={{ padding: '4px 6px', borderBottom: `1px solid ${C.papel}` }}>{h.alergenos.length ? h.alergenos.map(a => ALERGENO_NOMBRE[a]).join(', ') : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         )}
 

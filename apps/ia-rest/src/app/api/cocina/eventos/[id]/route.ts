@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
+import { buildElaboracionRows } from '@/lib/cocina-elaboraciones'
 
 /** PATCH /api/cocina/eventos/[id] — edita un evento (+ reemplaza asignación si llega `elaboraciones`) */
 export async function PATCH(
@@ -27,11 +28,13 @@ export async function PATCH(
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  if (Array.isArray(body.elaboraciones)) {
+  // Si llega `elaboraciones` (o `dietas`), reemplazamos TODO el menú del evento
+  // (principal + grupos de dieta). La UI envía siempre ambos juntos.
+  if (Array.isArray(body.elaboraciones) || Array.isArray(body.dietas)) {
     await supabase.from('cocina_evento_elaboraciones').delete().eq('evento_id', id)
-    if (body.elaboraciones.length > 0) {
-      await supabase.from('cocina_evento_elaboraciones')
-        .insert(body.elaboraciones.map((receta_id: string) => ({ evento_id: id, receta_id })))
+    const rows = buildElaboracionRows(id, body)
+    if (rows.length > 0) {
+      await supabase.from('cocina_evento_elaboraciones').insert(rows)
     }
   }
 
