@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex, nofollow">
+<title>Guion de demo — Catering Joaquín Jaén · ia.rest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@0,400;0,500;0,600;1,400&family=Inter+Tight:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --dark:#14110E;--bg2:#1E1A15;--bg3:#2A221A;
+  --paper:#F6F1E7;--ink2:#D8CDB6;--ink3:#9C8E7E;--ink4:#6B5F52;
+  --red:#D9442B;--red2:#A8311E;--green:#3F7D44;--amber:#E8A33B;
+  --rule:#2E2720;
+}
+body{font-family:'Inter Tight',sans-serif;background:var(--dark);min-height:100vh;color:var(--paper);line-height:1.55;-webkit-text-size-adjust:100%}
+
+/* TOP BAR */
+.topbar{background:var(--dark);border-bottom:1px solid var(--rule);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:10}
+.topbar-brand{display:flex;align-items:center;gap:8px;text-decoration:none}
+.topbar-dot{width:8px;height:8px;background:var(--red);border-radius:50%}
+.topbar-name{color:var(--paper);font-size:14px;font-weight:600;letter-spacing:.01em}
+.topbar-tag{color:var(--ink4);font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+
+.wrap{max-width:620px;margin:0 auto;padding:2rem 1.1rem 5rem}
+
+/* HEAD */
+.kicker{font-size:11px;color:var(--red);letter-spacing:.12em;text-transform:uppercase;font-weight:700;margin-bottom:.5rem}
+h1{font-family:'Newsreader',serif;font-size:2rem;line-height:1.12;font-weight:600;margin-bottom:.5rem}
+h1 span{color:var(--red)}
+.lede{color:var(--ink2);font-size:1rem;margin-bottom:1.5rem}
+
+/* ACCESS BOX */
+.access{background:var(--bg2);border:1px solid var(--rule);border-radius:14px;padding:1.1rem 1.2rem;margin-bottom:1.6rem}
+.access h2{font-family:'Inter Tight',sans-serif;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink3);margin-bottom:.8rem;font-weight:600}
+.access-link{display:block;background:var(--bg3);border:1px solid var(--rule);border-radius:10px;padding:.7rem .85rem;color:var(--paper);text-decoration:none;font-size:13px;word-break:break-all;margin-bottom:.9rem}
+.access-link b{color:var(--green)}
+.pins{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.55rem}
+@media(max-width:460px){.pins{grid-template-columns:1fr}}
+.pin{background:var(--bg3);border:1px solid var(--rule);border-radius:10px;padding:.6rem .7rem}
+.pin .who{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.04em}
+.pin .code{font-family:'Newsreader',serif;font-size:1.5rem;color:var(--paper);font-weight:600;letter-spacing:.06em}
+.pin .go{font-size:11px;color:var(--ink4)}
+.pin .go b{color:var(--amber);font-weight:600}
+
+/* SECTIONS */
+.sec{background:var(--bg2);border:1px solid var(--rule);border-radius:16px;padding:1.3rem 1.3rem 1.1rem;margin-bottom:1.1rem;position:relative;overflow:hidden}
+.sec::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--red)}
+.sec-num{display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:50%;background:rgba(217,68,43,.1);border:1px solid var(--red);color:var(--red);font-weight:700;font-size:13px;margin-bottom:.7rem}
+.sec h3{font-family:'Newsreader',serif;font-size:1.3rem;font-weight:600;margin-bottom:.25rem}
+.sec .role{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.9rem}
+.sec .role b{color:var(--amber)}
+
+.block{margin-top:.85rem}
+.block-h{display:flex;align-items:center;gap:7px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);font-weight:600;margin-bottom:.45rem}
+.say{background:var(--bg3);border-left:2px solid var(--ink4);border-radius:0 8px 8px 0;padding:.7rem .85rem;color:var(--ink2);font-family:'Newsreader',serif;font-size:1.02rem;font-style:italic}
+.say.hook{border-left-color:var(--red);color:var(--paper)}
+ul.do{list-style:none;margin:.2rem 0 0}
+ul.do li{position:relative;padding:.35rem 0 .35rem 1.5rem;font-size:14px;color:var(--ink2);border-bottom:1px solid var(--rule)}
+ul.do li:last-child{border-bottom:none}
+ul.do li::before{content:'';position:absolute;left:0;top:.85rem;width:7px;height:7px;border-radius:2px;background:var(--red)}
+ul.do li b{color:var(--paper);font-weight:600}
+.tag{display:inline-block;background:var(--bg2);border:1px solid var(--rule);border-radius:6px;padding:.1rem .45rem;font-size:12px;color:var(--ink2);font-weight:500}
+.chip{display:inline-block;background:rgba(63,125,68,.14);border:1px solid var(--green);color:#8fd093;border-radius:20px;padding:.1rem .5rem;font-size:12px;font-weight:600}
+
+.note{background:rgba(232,163,59,.08);border:1px solid rgba(232,163,59,.4);border-radius:10px;padding:.7rem .85rem;font-size:13px;color:var(--ink2);margin-top:.85rem}
+.note b{color:var(--amber)}
+
+/* CLOSE */
+.close{background:linear-gradient(160deg,#221c16,#171310);border:1px solid var(--rule);border-radius:16px;padding:1.5rem 1.3rem;margin-top:1.5rem;text-align:center}
+.close h3{font-family:'Newsreader',serif;font-size:1.4rem;margin-bottom:.6rem}
+.close p{color:var(--ink2);font-size:14px;max-width:46ch;margin:0 auto .4rem}
+.close .next{font-size:12px;color:var(--ink4);margin-top:1rem;border-top:1px solid var(--rule);padding-top:.9rem}
+.close .next b{color:var(--amber)}
+
+/* FOOTER */
+.footer{text-align:center;margin-top:2.2rem;padding-top:1.4rem;border-top:1px solid var(--rule)}
+.footer a{display:inline-flex;align-items:center;gap:6px;text-decoration:none;color:var(--ink4);font-size:12px}
+.footer a:hover{color:var(--ink2)}
+
+@media print{
+  body{background:#fff;color:#14110E}
+  .topbar{display:none}
+  .sec,.access,.close{background:#fff;border-color:#ccc;break-inside:avoid}
+  .say{background:#f4f4f4;color:#333}
+  h1,h1 span,.sec h3{color:#14110E}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <a class="topbar-brand" href="https://www.iarest.es" target="_blank">
+    <span class="topbar-dot"></span>
+    <span class="topbar-name">ia.rest</span>
+  </a>
+  <span class="topbar-tag">Guion de demo · uso interno</span>
+</div>
+
+<div class="wrap">
+
+  <div class="kicker">Catering Joaquín Jaén · La boda de 100 pax</div>
+  <h1>Una boda, <span>todo conectado</span></h1>
+  <p class="lede">Cocina, dietas, material y presupuesto dejan de vivir en cabezas, WhatsApps y Excels sueltos: son <b>la misma boda</b> dentro de ia.rest, y cada persona ve solo lo suyo.</p>
+
+  <!-- ACCESO -->
+  <div class="access">
+    <h2>Antes de empezar · ten esto a mano</h2>
+    <a class="access-link" href="https://www.iarest.es/login?r=catering-joaquin-jaen" target="_blank">
+      🔗 www.iarest.es/login?r=<b>catering-joaquin-jaen</b>
+    </a>
+    <div class="pins">
+      <div class="pin"><div class="who">Carmen · cocina</div><div class="code">1234</div><div class="go">entra a <b>/produccion</b></div></div>
+      <div class="pin"><div class="who">Owner · negocio</div><div class="code">1369</div><div class="go">entra a <b>/owner</b></div></div>
+      <div class="pin"><div class="who">Montador</div><div class="code">4040</div><div class="go">entra a <b>/montaje</b></div></div>
+    </div>
+    <div class="note">El <b>mismo enlace</b> sirve para los tres. Cada PIN abre directamente la vista de su rol — no hay menús que enseñar de más. Esa es la idea: <b>cada uno entra a lo suyo</b>.</div>
+  </div>
+
+  <!-- 1 COCINA -->
+  <div class="sec">
+    <span class="sec-num">1</span>
+    <h3>La cocina ve la boda entera</h3>
+    <div class="role">Carmen · PIN <b>1234</b> · pantalla <b>/produccion</b></div>
+
+    <div class="block">
+      <div class="block-h">🎙️ Di esto</div>
+      <div class="say hook">«Hoy, una boda de 100 está repartida entre tu cabeza, el grupo de WhatsApp y un Excel. Mira lo que pasa cuando es una sola ficha.»</div>
+    </div>
+    <div class="block">
+      <div class="block-h">👆 Haz esto</div>
+      <ul class="do">
+        <li>Abre la <b>boda</b> en la lista de eventos.</li>
+        <li>Enseña <b>“Elaboraciones que se sirven”</b>: el <b>menú principal</b> para los 100 pax.</li>
+        <li>Señala que el <b>parte de producción</b> y los escandallos <b>escalan solos por pax</b> — nadie multiplica a mano.</li>
+        <li>Menciona el <b>APPCC</b> (temperaturas, muestras, firma) en la misma pantalla.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 2 DIETAS -->
+  <div class="sec">
+    <span class="sec-num">2</span>
+    <h3>Las dietas, como en la vida real</h3>
+    <div class="role">Sigue como Carmen · sección <b>“🟢 Comensales con dieta especial”</b></div>
+
+    <div class="block">
+      <div class="block-h">🎙️ Di esto (su propia crítica)</div>
+      <div class="say hook">«Tú me dijiste: “no todos comen lo mismo, son 5 sin gluten y 3 veganos, no quiero cambiar el menú de todos”. Exacto. Mira.»</div>
+    </div>
+    <div class="block">
+      <div class="block-h">👆 Haz esto</div>
+      <ul class="do">
+        <li>Pulsa <span class="tag">+ grupo</span> bajo el menú principal.</li>
+        <li>Rellena un grupo: <b>dieta</b> (“sin gluten”) · <b>nº</b> (5) · <b>“— plato adaptado —”</b> (una receta que <b>ya está en tu catálogo</b>).</li>
+        <li>Repite: <b>vegano · 3</b>.</li>
+        <li>En las fichas aparece el chip <span class="chip">🟢 sin gluten · 5 raciones</span> — se cocina <b>solo para esos 5</b>, escala por comensales, no por los 100.</li>
+      </ul>
+    </div>
+    <div class="note"><b>El gancho de confianza:</b> la IA <b>no inventa recetas</b> — coge un plato que ya haces. Y si una dieta choca con un alérgeno, salta un <b>aviso de seguridad</b>. Para la sala queda un <b>resumen de dietas</b> y una <b>hoja de alérgenos imprimible</b>.</div>
+  </div>
+
+  <!-- 3 MATERIAL -->
+  <div class="sec">
+    <span class="sec-num">3</span>
+    <h3>El material, en la misma boda</h3>
+    <div class="role">Sigue como Carmen · botón <b>“📦 Material”</b> del evento</div>
+
+    <div class="block">
+      <div class="block-h">🎙️ Di esto</div>
+      <div class="say">«La cocina ya está. ¿Y las mesas, sillas y el menaje? No es otro programa: es esta misma boda.»</div>
+    </div>
+    <div class="block">
+      <div class="block-h">👆 Haz esto</div>
+      <ul class="do">
+        <li>Despliega <span class="tag">📦 Material</span> en la boda.</li>
+        <li>Añade el <b>kit “Boda 100 pax”</b> y algún material suelto; mira el <b>stock</b> y el <b>coste</b>.</li>
+        <li>Pulsa <span class="tag">🔗 Ficha CRM</span>: une <b>cocina + material + presupuesto</b> en una sola boda.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 4 OWNER -->
+  <div class="sec">
+    <span class="sec-num">4</span>
+    <h3>El dueño ve el negocio</h3>
+    <div class="role">Owner · PIN <b>1369</b> · pantalla <b>/owner</b> → pestaña <b>Materiales</b></div>
+
+    <div class="block">
+      <div class="block-h">🎙️ Di esto</div>
+      <div class="say">«Tú, desde arriba, ves el catálogo y qué hay disponible sin llamar a nadie.»</div>
+    </div>
+    <div class="block">
+      <div class="block-h">👆 Haz esto</div>
+      <ul class="do">
+        <li>Entra a <b>/owner</b> y abre la pestaña <b>Materiales</b>.</li>
+        <li>Enseña el <b>catálogo</b> (materiales y kits), el <b>stock</b> y lo que está <b>fuera/asignado</b> a eventos.</li>
+        <li>Recalca: el owner lo ve <b>todo</b>; cada operario, solo su parte.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 5 MONTADOR -->
+  <div class="sec">
+    <span class="sec-num">5</span>
+    <h3>El montador, sin distracciones</h3>
+    <div class="role">Montador · PIN <b>4040</b> · entra directo a <b>/montaje</b></div>
+
+    <div class="block">
+      <div class="block-h">🎙️ Di esto</div>
+      <div class="say">«El que monta no necesita ver recetas ni dinero. Entra y solo ve lo que carga y devuelve.»</div>
+    </div>
+    <div class="block">
+      <div class="block-h">👆 Haz esto</div>
+      <ul class="do">
+        <li>Entra con <b>4040</b>: aterriza <b>directo en /montaje</b>, solo <b>materiales</b>.</li>
+        <li>Mueve un material por sus estados: <b>reservado → entregado → devuelto</b>.</li>
+        <li>Cierra: «Lo que él marca aquí lo ve Carmen y lo ves tú, al instante.»</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- CIERRE -->
+  <div class="close">
+    <h3>El cierre</h3>
+    <p>Una boda. Tres personas. Una sola verdad: cocina, dietas, material y presupuesto <b>siempre cuadrados</b>, sin reescribir nada en tres sitios.</p>
+    <p style="color:var(--ink3)">Y esto es solo una boda. El día de mañana, la <b>cocina central</b> surte a tus tiendas y la flota se reparte entre negocios — el mismo sistema, creciendo contigo.</p>
+    <div class="next">Próximo paso · reunión con <b>Carmen</b>: jueves 25, 12:00 — dar de alta cocineros reales y sus PIN.</div>
+  </div>
+
+  <div class="footer">
+    <a href="https://www.iarest.es" target="_blank">
+      <span style="width:7px;height:7px;background:var(--red);border-radius:50%"></span>
+      Demo gestionada por <strong style="color:var(--ink2)">ia.rest</strong>
+    </a>
+  </div>
+
+</div>
+</body>
+</html>
