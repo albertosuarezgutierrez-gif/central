@@ -60,9 +60,21 @@ export interface RegistroTemp {
   temp?: number | null
 }
 
+/**
+ * Un grupo de comensales con DIETA ESPECIAL dentro de un evento (comensales
+ * puntuales: 5 sin gluten, 3 veganos…). NO cambia el menú principal — pide una
+ * elaboración aparte (el plato adaptado del catálogo) para esos comensales.
+ */
+export interface DietaGrupo {
+  receta_id: string   // plato adaptado del catálogo que cubre esta dieta
+  dieta: string       // etiqueta: 'sin gluten' | 'vegano' | 'sin lactosa' | …
+  comensales: number  // nº de comensales de esa dieta para ese plato
+}
+
 /** Una elaboración del parte, con su ficha completa de trazabilidad. */
 export interface ElaboracionTraza {
-  id: string
+  id: string                         // id de la LÍNEA del parte (sintético en las de dieta)
+  receta_base?: string               // id real de la receta del catálogo (para registros/asignaciones)
   nombre: string
   partida?: string | null
   ubicaciones: string[]              // ids de las ubicaciones/eventos destino
@@ -74,6 +86,8 @@ export interface ElaboracionTraza {
   entrada?: RegistroTemp             // Tª/hora de entrada (recepción / cámara)
   salida?: RegistroTemp              // Tª/hora de salida (expedición)
   firma?: string | null              // responsable que firma
+  dieta?: string | null              // si es elaboración de dieta: la etiqueta (null = menú principal)
+  comensales?: number | null         // nº de comensales de la dieta (null = menú principal → PAX evento)
 }
 
 /** Una ubicación/evento destino (con PAX y fecha de evento). */

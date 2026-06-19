@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T10:25:17Z",
+  "generadoEn": "2026-06-19T10:44:53Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2471,11 +2471,11 @@
   ],
   "novedades": [
     {
-      "titulo": "📅 `diaHabitual` en facturas-control",
+      "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
       "fecha": "19/06/2026"
     },
     {
-      "titulo": "🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)",
+      "titulo": "📅 `diaHabitual` en facturas-control",
       "fecha": "19/06/2026"
     },
     {
