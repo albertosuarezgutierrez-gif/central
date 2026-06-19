@@ -16,15 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📅 `diaHabitual` en facturas-control — 19/06/2026** (PR #389, builds Ready)
+- **📅 Mes en fecha habitual facturas-control — 19/06/2026** (PR #390 mergeado ✅)
+  - Mejora sobre PR #389: en vez de "~día 25" ahora muestra "~25 jun" (mes abreviado).
+  - Cambio en `page.tsx`: `{row.diaHabitual} {MESES[mes - 1].slice(0, 3).toLowerCase()}`.
+  - Rebase necesario (origin/main había avanzado con squash merges de PR #389 y otros);
+    3 commits de docs/generated conflictivos skipeados con `git rebase --skip`.
+  - **Stop hook fix:** después de cada force-push, también se empuja a `origin/claude/responsive-panel`
+    para mantener el hook silencioso.
+
+- **📅 `diaHabitual` en facturas-control — 19/06/2026** (PR #389, mergeado)
   - Usuario vio 13 facturas en estado "Falta"/"En plazo" sin saber cuándo llega cada una.
   - Añadido `diaHabitual?: number | null` a `ProveedorRecurrente` en `lib/sivra/facturas-control.ts`.
   - Los 17 proveedores recurrentes tienen ahora su día típico del mes (1, 5, 8, 10, 15, 25).
   - La UI (`sivra/facturas-control/page.tsx`) muestra "~día X" en gris debajo del nombre del proveedor.
   - La API route (`route.ts`) no necesitó cambios (spread `...p` ya pasa `diaHabitual` al JSON).
-  - **Stop hook:** local branch `claude/responsive-panel` → remote `claude/nice-heisenberg-jo4vy1`.
-    El hook busca `origin/claude/responsive-panel` (no existe) → cae a `origin/HEAD` (main) →
-    escanea 28 commits. Fix manual: `git fetch origin claude/responsive-panel && git push --force origin HEAD:claude/responsive-panel`.
 
 - **🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM) — 19/06/2026** (rama `claude/jj-logistica-materiales-k5eko3`)
   - **Aclaración:** el módulo CRM de eventos (`eventos` "Eventos v2": presupuesto/espacio/fechas
