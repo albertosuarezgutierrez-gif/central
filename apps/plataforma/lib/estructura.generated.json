@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T18:36:50Z",
+  "generadoEn": "2026-06-19T18:50:11Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1931,6 +1931,7 @@
       "/api/auth/register",
       "/api/catastro/municipio",
       "/api/cotizador",
+      "/api/cron/concursos-avisos",
       "/api/cron/concursos-cierre",
       "/api/cron/concursos-ingesta",
       "/api/cron/concursos-radar",
@@ -2816,7 +2817,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 914,
+    "apis": 915,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
