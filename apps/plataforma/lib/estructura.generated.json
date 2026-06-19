@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T17:07:47Z",
+  "generadoEn": "2026-06-19T13:13:21Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1146,7 +1146,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 1
+        "evidencias": 2
       },
       "rrhh": {
         "presente": false,
@@ -2060,6 +2060,7 @@
       "/api/sivra/expenses/fijos",
       "/api/sivra/expenses/fijos/generar",
       "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/facturas-control",
       "/api/sivra/fiscal",
       "/api/sivra/income",
       "/api/sivra/incomes",
@@ -2421,6 +2422,11 @@
       "description": ">"
     },
     {
+      "id": "perfil-fiscal",
+      "name": "perfil-fiscal",
+      "description": "Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + la sociedad Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, su asesoría, o cuando trabajes con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. NO duplica los datos personales (esos viven en la BD `fiscal_perfil`/`fiscal_descendientes`); aquí está la ESTRUCTURA: qué entidad declara qué, las reglas de gasto y los caveats. Sin cifras ni datos sensibles."
+    },
+    {
       "id": "plataforma-maestro",
       "name": "plataforma-maestro",
       "description": ">"
@@ -2467,6 +2473,10 @@
     }
   ],
   "novedades": [
+    {
+      "titulo": "🧾 GROUND TRUTH FISCAL de Alberto persistido",
+      "fecha": "19/06/2026"
+    },
     {
       "titulo": "📱 RESPONSIVE COMPLETO",
       "fecha": "18/06/2026"
@@ -2521,10 +2531,6 @@
     },
     {
       "titulo": "🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS",
-      "fecha": "17/06/2026"
-    },
-    {
-      "titulo": "🍳 DEMO PARTE CARMEN MERGEADO",
       "fecha": "17/06/2026"
     }
   ],
@@ -2808,8 +2814,8 @@
     "verticales": 5,
     "packages": 24,
     "capacidades": 23,
-    "skills": 16,
-    "apis": 908,
+    "skills": 17,
+    "apis": 909,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 22,
     "reimplementaciones": 0
