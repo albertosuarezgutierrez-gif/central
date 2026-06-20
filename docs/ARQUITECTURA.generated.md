@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-20T05:43:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-20T06:52:36Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -149,6 +149,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (20/06/2026) 🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona
 - (19/06/2026) 🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)
@@ -158,5 +159,4 @@
 - (18/06/2026) 🐛 FIXES COMUNICACIÓN + FINANZAS
 - (19/06/2026) 🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)
 - (18/06/2026) 🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)
-- (18/06/2026) 📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina
 

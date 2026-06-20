@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-20T05:43:17Z",
+  "generadoEn": "2026-06-20T06:52:36Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2479,6 +2479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
+      "fecha": "20/06/2026"
+    },
+    {
       "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
       "fecha": "19/06/2026"
     },
@@ -2532,10 +2536,6 @@
     },
     {
       "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA DIARIA",
       "fecha": "18/06/2026"
     }
   ],
