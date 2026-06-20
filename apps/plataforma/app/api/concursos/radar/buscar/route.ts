@@ -30,12 +30,15 @@ export async function GET(req: Request) {
     conds.push(Prisma.sql`EXISTS (SELECT 1 FROM unnest(cpv) AS c WHERE ${Prisma.join(likes, ' OR ')})`)
   }
   if (q) conds.push(Prisma.sql`fts @@ plainto_tsquery('spanish', ${q})`)
-  if (provincia) conds.push(Prisma.sql`provincia ILIKE ${'%' + provincia + '%'}`)
+  // Zona/provincia: el feed PLACSP a menudo NO trae la provincia (queda NULL). Si
+  // filtrásemos en duro, esas licitaciones desaparecerían y el usuario vería 0.
+  // Por eso incluimos también las de ubicación desconocida (provincia NULL/'').
+  if (provincia) conds.push(Prisma.sql`(provincia ILIKE ${'%' + provincia + '%'} OR provincia IS NULL OR provincia = '')`)
   if (ccaa) {
     const provs = provinciasDeComunidad(ccaa)
     if (provs.length) {
       const likes = provs.map(p => Prisma.sql`provincia ILIKE ${'%' + p + '%'}`)
-      conds.push(Prisma.sql`(${Prisma.join(likes, ' OR ')})`)
+      conds.push(Prisma.sql`(${Prisma.join(likes, ' OR ')} OR provincia IS NULL OR provincia = '')`)
     }
   }
   if (min !== null && Number.isFinite(min)) conds.push(Prisma.sql`presupuesto >= ${min}`)

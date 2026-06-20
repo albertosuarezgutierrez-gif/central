@@ -71,7 +71,13 @@ export function parsearAtomPlacsp(xml: string): AnuncioPlacsp[] {
       : undefined
 
     const estado = texto(cfs?.ContractFolderStatusCode)
-    const provincia = texto(pp?.RealizedLocation?.Address?.CountrySubentity)
+    // Provincia: el feed suele OMITIR RealizedLocation; como fallback usamos la
+    // dirección del órgano de contratación (LocatedContractingParty), que sí viene.
+    const party = cfs?.LocatedContractingParty?.Party
+    const provincia =
+      texto(pp?.RealizedLocation?.Address?.CountrySubentity)
+      || texto(party?.PostalAddress?.CountrySubentity)
+      || texto(party?.PostalAddress?.CityName)
     const tipo_contrato = texto(pp?.TypeCode)
     const fin_presentacion = texto(cfs?.TenderingProcess?.TenderSubmissionDeadlinePeriod?.EndDate)
 
