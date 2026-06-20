@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     SELECT a.id, a.empresa_id, a.anuncio, a.puntuacion,
            e.nombre AS empresa_nombre, e.email AS empresa_email
     FROM concursos_radar_anuncios a
-    JOIN empresas e ON e.id = a.empresa_id
+    JOIN cuentas e ON e.id = a.empresa_id
     JOIN concursos_perfil_empresa p ON p.empresa_id = a.empresa_id
     WHERE a.avisado_email_at IS NULL
       AND a.created_at >= now() - interval '2 days'

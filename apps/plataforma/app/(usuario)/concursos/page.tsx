@@ -1,10 +1,10 @@
-// → app/admin/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
+// → app/concursos/page.tsx — Agente de concursos públicos (módulo @central/module-concursos)
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { autocompletarChecklist, documentosFaltantes, evaluarOferta, precioMinimoRentable, estadoPresentacion, plazoSubsanacion, SECTORES, cpvDeSectores, COMUNIDADES, encajeConcurso } from '@central/module-concursos';
 import type { Biblioteca } from '@central/module-concursos';
 
-const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
+const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
 // Sincroniza "Seguir" (buscador) con el panel "Mis concursos" sin prop drilling.
@@ -33,12 +33,12 @@ export default function Concursos() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const cargar = async () => {
-    try { const r = await fetch('/api/admin/concursos/analizar').then(x=>x.json()); setLista(r.concursos||[]); } catch {}
+    try { const r = await fetch('/api/concursos/analizar').then(x=>x.json()); setLista(r.concursos||[]); } catch {}
   };
   // Carga la biblioteca de empresa para autocompletar el checklist y avisar de lo que falta.
   const cargarBiblioteca = async () => {
     try {
-      const r = await fetch('/api/admin/concursos/biblioteca').then(x=>x.json());
+      const r = await fetch('/api/concursos/biblioteca').then(x=>x.json());
       const docs = (r.documentos||[]).map((d:any)=>({ tipo:d.tipo, nombre:d.nombre, vigencia_hasta:d.vigencia_hasta ?? undefined }));
       setBiblioteca(docs);
     } catch {}
@@ -55,7 +55,7 @@ export default function Concursos() {
     setLoad(true); setError(''); setActual(null); setOcrAplicado(false);
     try {
       const opt:any = form ? { method:'POST', body:form } : { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body) };
-      const r = await fetch('/api/admin/concursos/analizar', opt).then(x=>x.json());
+      const r = await fetch('/api/concursos/analizar', opt).then(x=>x.json());
       if (r.error) { setError(r.error); } else { setActual(r.concurso); setOcrAplicado(r.ocr_aplicado === true); cargar(); }
     } catch { setError('No se pudo analizar el pliego.'); }
     setLoad(false);
@@ -69,8 +69,8 @@ export default function Concursos() {
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:760 }}>
         <h1 style={{ fontWeight:900, fontSize:24, margin:'0 0 4px' }}>Concursos públicos</h1>
         <div style={{ display:'flex', gap:14, flexWrap:'wrap' }}>
-          <a href="/admin/concursos/perfil" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>🏢 Perfil de empresa →</a>
-          <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
+          <a href="/concursos/perfil" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>🏢 Perfil de empresa →</a>
+          <a href="/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>📚 Mi biblioteca →</a>
         </div>
       </div>
       <p style={{ color:C.muted, margin:'0 0 16px', fontSize:14 }}>Sube el pliego (PDF) o pega su texto: el agente extrae la ficha, decide si te conviene presentarte y monta el checklist de documentos.</p>
@@ -129,14 +129,14 @@ export default function Concursos() {
 function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca; ocrAplicado?:boolean }) {
   const [sobre, setSobre] = useState<any>(null);
   const cargarSobre = async () => {
-    try { const r = await fetch(`/api/admin/concursos/${c.id}/sobre-administrativo`).then(x=>x.json()); setSobre(r); } catch {}
+    try { const r = await fetch(`/api/concursos/${c.id}/sobre-administrativo`).then(x=>x.json()); setSobre(r); } catch {}
   };
   const [memoria, setMemoria] = useState<any>(null);
   const [genMem, setGenMem] = useState(false);
   const generarMemoria = async () => {
     setGenMem(true);
     try {
-      const r = await fetch(`/api/admin/concursos/${c.id}/memoria`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ contexto: '' }) }).then(x=>x.json());
+      const r = await fetch(`/api/concursos/${c.id}/memoria`, { method:'POST', headers:{'content-type':'application/json'}, body: JSON.stringify({ contexto: '' }) }).then(x=>x.json());
       setMemoria(r);
     } catch {}
     setGenMem(false);
@@ -148,7 +148,7 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
   const minRent = precioMinimoRentable(coste);
   const setO = (k:string) => (e:any) => setOferta({ ...oferta, [k]: e.target.value });
   const guardarOferta = async () => {
-    try { await fetch(`/api/admin/concursos/${c.id}/oferta`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(coste) }); } catch {}
+    try { await fetch(`/api/concursos/${c.id}/oferta`, { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(coste) }); } catch {}
   };
   const [sobresListos, setSobresListos] = useState({ administrativo:false, tecnico:false, economico:false });
   const hoyISO = new Date().toISOString().slice(0,10);
@@ -231,7 +231,7 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
       {faltan.length>0 && (
         <div style={{ background:C.soft, color:C.indigo, borderRadius:10, padding:'8px 12px', fontSize:13, marginBottom:10 }}>
           Te faltan <strong>{faltan.length}</strong> documento{faltan.length>1?'s':''} en tu biblioteca: {faltan.map((d:any)=>d.nombre).join(' · ')}.{' '}
-          <a href="/admin/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, textDecoration:'underline' }}>Subirlos a Mi biblioteca</a>
+          <a href="/concursos/biblioteca" style={{ color:C.indigo, fontWeight:800, textDecoration:'underline' }}>Subirlos a Mi biblioteca</a>
         </div>
       )}
 
@@ -243,7 +243,7 @@ function FichaView({ c, biblioteca, ocrAplicado }:{ c:any; biblioteca:Biblioteca
         <div style={{ marginTop:10, border:`1px solid ${C.border}`, borderRadius:10, padding:12 }}>
           {sobre.perfil_completo===false && (
             <div style={{ background:'#fef9c3', color:'#854d0e', borderRadius:8, padding:'6px 10px', fontSize:13, marginBottom:8 }}>
-              Completa el <a href="/admin/concursos/perfil" style={{ color:C.indigo, fontWeight:800 }}>perfil de empresa</a> para rellenar el DEUC.
+              Completa el <a href="/concursos/perfil" style={{ color:C.indigo, fontWeight:800 }}>perfil de empresa</a> para rellenar el DEUC.
             </div>
           )}
           <strong style={{ fontSize:14 }}>Sobre administrativo</strong>
@@ -352,8 +352,8 @@ function RadarPanel() {
 
   const cargar = async () => {
     const [c, a] = await Promise.all([
-      fetch('/api/admin/concursos/radar/criterios').then(r=>r.json()).catch(()=>null),
-      fetch('/api/admin/concursos/radar').then(r=>r.json()).catch(()=>null),
+      fetch('/api/concursos/radar/criterios').then(r=>r.json()).catch(()=>null),
+      fetch('/api/concursos/radar').then(r=>r.json()).catch(()=>null),
     ]);
     if (c?.criterios) setCrit({
       activo: c.criterios.activo,
@@ -368,7 +368,7 @@ function RadarPanel() {
 
   const guardar = async () => {
     setCargando(true);
-    await fetch('/api/admin/concursos/radar/criterios', {
+    await fetch('/api/concursos/radar/criterios', {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         activo: crit.activo,
@@ -381,7 +381,7 @@ function RadarPanel() {
   };
 
   const marcarVisto = async (id:string) => {
-    await fetch('/api/admin/concursos/radar/visto', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
+    await fetch('/api/concursos/radar/visto', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id }) });
     cargar();
   };
 
@@ -448,12 +448,12 @@ function BuscadorPanel() {
   const [interpretando, setInterpretando] = useState(false);
 
   // Carga los criterios del radar una vez (para el semáforo de encaje por resultado).
-  useEffect(()=>{ fetch('/api/admin/concursos/radar/criterios').then(r=>r.json()).then(r=>setCriterios(r.criterios)).catch(()=>{}); }, []);
+  useEffect(()=>{ fetch('/api/concursos/radar/criterios').then(r=>r.json()).then(r=>setCriterios(r.criterios)).catch(()=>{}); }, []);
 
   // Conjunto de anuncios ya seguidos (para alternar el botón). Se recarga al cambiar.
   const cargarSeguidas = async () => {
     try {
-      const r = await fetch('/api/admin/concursos/seguidos').then(r=>r.json());
+      const r = await fetch('/api/concursos/seguidos').then(r=>r.json());
       setSeguidas(new Set((r.seguidos||[]).map((s:any)=>s.dedupe_key)));
     } catch {}
   };
@@ -462,7 +462,7 @@ function BuscadorPanel() {
   const seguir = async (a:any) => {
     const licitacion = { titulo:a.titulo, organo:a.organo, provincia:a.provincia, cpv:a.cpv, presupuesto:a.presupuesto, fin_presentacion:a.fin_presentacion, url:a.url };
     setSeguidas(prev => new Set(prev).add(a.dedupe_key)); // optimista
-    try { await fetch('/api/admin/concursos/seguidos', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dedupe_key:a.dedupe_key, licitacion }) }); } catch {}
+    try { await fetch('/api/concursos/seguidos', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dedupe_key:a.dedupe_key, licitacion }) }); } catch {}
     emitSeguidos();
   };
 
@@ -478,7 +478,7 @@ function BuscadorPanel() {
     if (ff.presupuesto_max) p.set('presupuesto_max', ff.presupuesto_max);
     p.set('en_plazo', ff.en_plazo ? '1' : '0');
     p.set('orden', ff.orden);
-    const r = await fetch('/api/admin/concursos/radar/buscar?' + p.toString()).then(r=>r.json()).catch(()=>null);
+    const r = await fetch('/api/concursos/radar/buscar?' + p.toString()).then(r=>r.json()).catch(()=>null);
     setRes(r?.resultados ?? []); setTotal(r?.total ?? 0); setHecha(true); setCargando(false);
   };
 
@@ -488,7 +488,7 @@ function BuscadorPanel() {
     setInterpretando(true);
     let fl:any = { q: t };
     try {
-      const r = await fetch('/api/admin/concursos/radar/interpretar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texto: t }) }).then(x=>x.json());
+      const r = await fetch('/api/concursos/radar/interpretar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ texto: t }) }).then(x=>x.json());
       if (r?.filtros) fl = r.filtros;
     } catch {}
     const nf = { q: fl.q ?? '', cpv: (fl.cpv||[]).join(', '), ccaa: fl.ccaa ?? '', provincia: fl.provincia ?? '', presupuesto_min: fl.presupuesto_min ?? '', presupuesto_max: fl.presupuesto_max ?? '', sectores: [] as string[] };
@@ -502,7 +502,7 @@ function BuscadorPanel() {
     if (resumenes[a.id]) return;
     setCargandoResumen(a.id);
     try {
-      const r = await fetch('/api/admin/concursos/radar/resumen', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id:a.id, titulo:a.titulo, objeto:a.objeto, cpv:a.cpv, presupuesto:a.presupuesto }) }).then(x=>x.json());
+      const r = await fetch('/api/concursos/radar/resumen', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ id:a.id, titulo:a.titulo, objeto:a.objeto, cpv:a.cpv, presupuesto:a.presupuesto }) }).then(x=>x.json());
       setResumenes(prev=>({ ...prev, [a.id]: r?.resumen || '(no disponible ahora)' }));
     } catch { setResumenes(prev=>({ ...prev, [a.id]: '(no disponible ahora)' })); }
     setCargandoResumen('');
@@ -512,7 +512,7 @@ function BuscadorPanel() {
   const preparar = async (a:any) => {
     const licitacion = { titulo:a.titulo, objeto:a.objeto, expediente:a.expediente, organo:a.organo, provincia:a.provincia, cpv:a.cpv, presupuesto:a.presupuesto, fin_presentacion:a.fin_presentacion, url:a.url };
     try {
-      const r = await fetch('/api/admin/concursos/preparar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ licitacion }) }).then(x=>x.json());
+      const r = await fetch('/api/concursos/preparar', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ licitacion }) }).then(x=>x.json());
       if (r?.concurso) window.dispatchEvent(new CustomEvent('concurso-preparado', { detail: r.concurso }));
     } catch {}
   };
@@ -521,14 +521,14 @@ function BuscadorPanel() {
   const actualizarAhora = async () => {
     setActualizando(true); setMsgIngesta('');
     try {
-      const r = await fetch('/api/admin/concursos/ingesta', { method:'POST' }).then(r=>r.json()).catch(()=>null);
+      const r = await fetch('/api/concursos/ingesta', { method:'POST' }).then(r=>r.json()).catch(()=>null);
       if (r?.ok) { setMsgIngesta(`✅ ${r.ingeridos} anuncios actualizados`); await buscar(); }
       else setMsgIngesta(r?.error || 'No se pudo actualizar.');
     } finally { setActualizando(false); }
   };
 
   const guardarComoAlerta = async () => {
-    await fetch('/api/admin/concursos/radar/criterios', {
+    await fetch('/api/concursos/radar/criterios', {
       method:'PUT', headers:{'Content-Type':'application/json'},
       body: JSON.stringify({
         activo: true,
@@ -626,17 +626,17 @@ function BuscadorPanel() {
 function MisConcursosPanel() {
   const [seguidos, setSeguidos] = useState<any[]>([]);
   const cargar = async () => {
-    try { const r = await fetch('/api/admin/concursos/seguidos').then(r=>r.json()); setSeguidos(r.seguidos||[]); } catch {}
+    try { const r = await fetch('/api/concursos/seguidos').then(r=>r.json()); setSeguidos(r.seguidos||[]); } catch {}
   };
   useEffect(()=>{ cargar(); window.addEventListener(SEGUIDOS_EVT, cargar); return ()=>window.removeEventListener(SEGUIDOS_EVT, cargar); }, []);
 
   const cambiarEstado = async (dedupe_key:string, estado:string) => {
     setSeguidos(prev => prev.map(s => s.dedupe_key===dedupe_key ? { ...s, estado } : s)); // optimista
-    try { await fetch('/api/admin/concursos/seguidos', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dedupe_key, estado }) }); } catch {}
+    try { await fetch('/api/concursos/seguidos', { method:'PATCH', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ dedupe_key, estado }) }); } catch {}
   };
   const quitar = async (dedupe_key:string) => {
     setSeguidos(prev => prev.filter(s => s.dedupe_key!==dedupe_key)); // optimista
-    try { await fetch('/api/admin/concursos/seguidos?dedupe_key=' + encodeURIComponent(dedupe_key), { method:'DELETE' }); } catch {}
+    try { await fetch('/api/concursos/seguidos?dedupe_key=' + encodeURIComponent(dedupe_key), { method:'DELETE' }); } catch {}
     emitSeguidos();
   };
   const dias = (iso:string) => { if(!iso) return null; return Math.ceil((new Date(iso).getTime()-Date.now())/86400000); };

@@ -16,6 +16,22 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp) — 19/06/2026**
+  - **Por qué:** las licitaciones son **transversales a los negocios de la cuenta** (fontanería, catering JJ,
+    limpieza…), no de la vertical de limpiezas. Decisión de Alberto: el agente va en **plataforma**, no en ialimp.
+  - **Plataforma (nuevo):** sección de usuario **🏛️ Concursos** (`/concursos`, sidebar *Mi negocio* + command palette).
+    Scope = **CUENTA** (`requireEmpresaId()` shim → `requireSession().id` = `cuenta_id`; las tablas guardan ese id en
+    su columna `empresa_id`). Corpus `concursos_licitaciones` GLOBAL. Consume `@central/module-concursos`.
+  - **Shims clave en plataforma** (para reusar el código de ialimp sin reescribir): `lib/prisma.ts` (→`lib/db`),
+    `lib/tenant.ts` (`requireEmpresaId`), `lib/mailer.ts` (`getTransporter`/`MAIL_FROM` sobre `@central/core-email`),
+    y `aiComplete()` añadido a `lib/ai-client.ts` (NVIDIA `nimChat`). Crons de email hacen `JOIN cuentas` (no `empresas`).
+    OCR NO portado (deps pdfjs/canvas). 4 crons en `vercel.json` (ingesta/radar/avisos/cierre).
+  - **ialimp (borrado):** eliminadas páginas `/admin/concursos`, rutas `api/admin/concursos`, 4 crons, libs
+    `concursos*.ts`, y entradas de menú (`DashboardClient` NAV/NAV_MODULO). Las **tablas se quedan** (las usa plataforma).
+  - **Verificado:** build de plataforma ✓ y de ialimp ✓ (tras el borrado). Sin migraciones nuevas (reusa tablas).
+  - **PENDIENTE para que los emails salgan:** poner `SMTP_*`/`RESEND_API_KEY` en el proyecto Vercel **plataforma**
+    (hoy viven en ialimp). `NVIDIA_API_KEY`/`CRON_SECRET` ya están en plataforma.
+
 - **🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad — 19/06/2026** (PR #400 mergeado a `main`)
   - **H "Preparar candidatura 1 clic":** botón en cada resultado del buscador → `POST /api/admin/concursos/preparar`
     crea un `concursos` con **ficha mínima** desde el anuncio (sin pliego) y lo abre en el workspace (evento DOM

@@ -4,6 +4,22 @@
   "framework": "nextjs",
   "crons": [
     {
+      "path": "/api/cron/concursos-ingesta",
+      "schedule": "30 */6 * * *"
+    },
+    {
+      "path": "/api/cron/concursos-radar",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/concursos-avisos",
+      "schedule": "30 7 * * *"
+    },
+    {
+      "path": "/api/cron/concursos-cierre",
+      "schedule": "0 9 * * *"
+    },
+    {
       "path": "/api/cron/briefing",
       "schedule": "0 8 * * 1"
     },

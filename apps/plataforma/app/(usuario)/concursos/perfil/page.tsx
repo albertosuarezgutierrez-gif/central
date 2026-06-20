@@ -1,10 +1,10 @@
-// → app/admin/concursos/perfil/page.tsx — Perfil de identificación de la empresa
+// → app/concursos/perfil/page.tsx — Perfil de identificación de la empresa
 // (F3 del módulo @central/module-concursos). Estos datos rellenan el DEUC y la
 // declaración responsable de cada concurso. Imita layout/paleta del v1 y F2.
 'use client';
 import { useEffect, useState } from 'react';
 
-const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
+const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
 const INPUT: React.CSSProperties = { padding:'10px 12px', borderRadius:12, border:`1px solid ${C.border}`, fontFamily:FONT, fontSize:14, boxSizing:'border-box', width:'100%' };
@@ -14,12 +14,12 @@ export default function PerfilConcursos() {
   const [msg, setMsg] = useState('');
 
   useEffect(() => { (async () => {
-    try { const r = await fetch('/api/admin/concursos/perfil').then(x=>x.json()); if (r.perfil) setP((prev:any)=>({ ...prev, ...r.perfil })); } catch {}
+    try { const r = await fetch('/api/concursos/perfil').then(x=>x.json()); if (r.perfil) setP((prev:any)=>({ ...prev, ...r.perfil })); } catch {}
   })(); }, []);
 
   async function guardar(e: React.FormEvent) {
     e.preventDefault(); setMsg('Guardando…');
-    const r = await fetch('/api/admin/concursos/perfil', { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(p) });
+    const r = await fetch('/api/concursos/perfil', { method:'PUT', headers:{'content-type':'application/json'}, body: JSON.stringify(p) });
     setMsg(r.ok ? 'Guardado ✔' : 'Error al guardar');
   }
   const set = (k:string) => (e:any) => setP({ ...p, [k]: e.target.type==='checkbox' ? e.target.checked : e.target.value });
@@ -28,7 +28,7 @@ export default function PerfilConcursos() {
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:560, marginBottom:4 }}>
         <h1 style={{ fontWeight:900, fontSize:24, margin:0 }}>Perfil de empresa (concursos)</h1>
-        <a href="/admin/concursos" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>← Concursos</a>
+        <a href="/concursos" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>← Concursos</a>
       </div>
       <p style={{ color:C.muted, fontSize:14, margin:'0 0 16px' }}>Estos datos rellenan el DEUC y la declaración responsable de cada concurso.</p>
       <form onSubmit={guardar} style={{ background:C.card, border:`1px solid ${C.border}`, borderRadius:14, padding:16, display:'grid', gap:10, maxWidth:560, width:'100%', boxSizing:'border-box' }}>

@@ -1,10 +1,10 @@
-// → app/admin/concursos/biblioteca/page.tsx — Mi biblioteca de empresa (F2 del
+// → app/concursos/biblioteca/page.tsx — Mi biblioteca de empresa (F2 del
 // módulo @central/module-concursos). El licitador sube sus documentos una vez y
 // cada concurso autocompleta su checklist. Imita layout/paleta del v1 de concursos.
 'use client';
 import { useEffect, useState } from 'react';
 
-const C = { indigo:'var(--brand-primary)', soft:'var(--brand-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
+const C = { indigo:'var(--primary)', soft:'var(--primary-light)', text:'#1e1b4b', bg:'#f1f5f9', card:'#fff', border:'#e2e8f0', muted:'#64748b' };
 const FONT = 'Nunito, system-ui, sans-serif';
 
 // Valores de TipoDocumentoBiblioteca del módulo (mantener en sync).
@@ -33,7 +33,7 @@ export default function Biblioteca() {
   const [error, setError] = useState('');
 
   const cargar = async () => {
-    try { const r = await fetch('/api/admin/concursos/biblioteca').then(x=>x.json()); setDocs(r.documentos||[]); } catch {}
+    try { const r = await fetch('/api/concursos/biblioteca').then(x=>x.json()); setDocs(r.documentos||[]); } catch {}
   };
   useEffect(()=>{ cargar(); }, []);
 
@@ -42,7 +42,7 @@ export default function Biblioteca() {
     if (!nombre.trim()) { setError('Pon un nombre al documento.'); return; }
     setLoad(true); setError('');
     try {
-      const r = await fetch('/api/admin/concursos/biblioteca', {
+      const r = await fetch('/api/concursos/biblioteca', {
         method:'POST', headers:{'Content-Type':'application/json'},
         body: JSON.stringify({ tipo, nombre, vigencia_hasta: vigencia || undefined }),
       }).then(x=>x.json());
@@ -55,7 +55,7 @@ export default function Biblioteca() {
     <div style={{ fontFamily:FONT, color:C.text, background:C.bg, minHeight:'100vh', padding:16 }}>
       <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', gap:10, flexWrap:'wrap', maxWidth:760, marginBottom:4 }}>
         <h1 style={{ fontWeight:900, fontSize:24, margin:0 }}>Mi biblioteca</h1>
-        <a href="/admin/concursos" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>← Concursos</a>
+        <a href="/concursos" style={{ color:C.indigo, fontWeight:800, fontSize:14, textDecoration:'none' }}>← Concursos</a>
       </div>
       <p style={{ color:C.muted, margin:'0 0 16px', fontSize:14 }}>Sube tus documentos una vez: cada concurso autocompletará su checklist con lo que ya tienes y te avisará de lo que falta o caduca.</p>
 
