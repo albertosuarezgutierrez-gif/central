@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T20:04:29Z",
+  "generadoEn": "2026-06-20T02:12:58Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2479,6 +2479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA DIARIA LIGERA",
+      "fecha": "20/06/2026"
+    },
+    {
       "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad",
       "fecha": "19/06/2026"
     },
@@ -2497,6 +2501,10 @@
     {
       "titulo": "📅 `diaHabitual` en facturas-control",
       "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🟢 fix(ia-rest/blog-seo) + fix(plataforma/banca) + feat(plataforma): Control de Facturas",
+      "fecha": "18/06/2026"
     },
     {
       "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
@@ -2528,14 +2536,6 @@
     },
     {
       "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA DIARIA",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "✨ COCINA CENTRAL · GENERADOR DE MENÚS IA",
       "fecha": "18/06/2026"
     }
   ],
