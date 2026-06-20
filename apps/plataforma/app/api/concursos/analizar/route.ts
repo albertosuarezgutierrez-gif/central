@@ -2,9 +2,8 @@ import { NextResponse } from 'next/server'
 import { requireEmpresaId } from '@/lib/tenant'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
-import { analizarConcurso, necesitaOcr, type PerfilEmpresa } from '@central/module-concursos'
+import { analizarConcurso, type PerfilEmpresa } from '@central/module-concursos'
 import { aiRunner, extraerTextoPdf } from '@/lib/concursos'
-import { ocrPaginasPliego } from '@/lib/concursos-ocr'
 
 export const maxDuration = 60 // la extracción IA puede tardar
 
@@ -58,12 +57,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'No se pudo leer el pliego enviado' }, { status: 400 })
   }
 
-  // 1b) Si el PDF no trae texto (escaneo), reusar la visión IA (OCR) sobre el mismo Buffer.
-  let ocr_aplicado = false
-  if (buf && necesitaOcr(texto)) {
-    const textoOcr = await ocrPaginasPliego(buf)
-    if (textoOcr) { texto = textoOcr; ocr_aplicado = true }
-  }
+  // OCR de PDFs escaneados NO portado a plataforma (deps pesadas pdfjs/canvas). Si el
+  // pliego viene como imagen sin texto, se avisa abajo (subir el texto o un PDF con capa de texto).
+  const ocr_aplicado = false
 
   if (!texto.trim()) {
     return NextResponse.json({ error: 'El pliego está vacío o el PDF no contiene texto (¿es un escaneo?)' }, { status: 400 })

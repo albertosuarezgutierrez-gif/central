@@ -23,7 +23,6 @@ const NAV_MODULO: Record<string, string> = {
   '/admin/negocio': 'clientes',
   '/admin/materiales': 'stock',
   '/admin/contabilidad': 'contabilidad',
-  '/admin/concursos': 'concursos',
 }
 
 const TIPO_COLOR: Record<string,string> = {
@@ -52,7 +51,6 @@ const NAV = [
   { href:'/admin/materiales',    icon:'📦', label:'Materiales'    },
   { href:'/admin/configuracion', icon:'⚙️', label:'Configuración' },
   { href:'/admin/contabilidad',  icon:'📊', label:'Contabilidad'  },
-  { href:'/admin/concursos',     icon:'🏛️', label:'Concursos'     },
   { href:'/admin/asistente',    icon:'🤖', label:'Asistente IA'  },
 ]
 

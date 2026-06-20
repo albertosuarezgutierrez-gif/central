@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
            (s.fin_presentacion - current_date) AS dias,
            e.nombre AS empresa_nombre, e.email AS empresa_email
     FROM concursos_seguidos s
-    JOIN empresas e ON e.id = s.empresa_id
+    JOIN cuentas e ON e.id = s.empresa_id
     WHERE s.estado IN ('interesado', 'preparando')
       AND s.fin_presentacion IS NOT NULL
       AND s.fin_presentacion >= current_date

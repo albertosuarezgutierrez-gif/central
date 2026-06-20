@@ -1,14 +1,16 @@
-import { NextResponse } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { matchesDeAtom } from '@/lib/concursos-radar'
 import { descargarAtom } from '@/lib/concursos-ingesta'
+import { isCronAuthorized } from '@/lib/cron-auth'
 import type { CriteriosRadar } from '@central/module-concursos'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  if (!isCronAuthorized(req)) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   let xml = ''
   try { xml = await descargarAtom() }
   catch (e: any) { return NextResponse.json({ ok: false, error: 'fetch ATOM: ' + (e?.message || e) }, { status: 200 }) }

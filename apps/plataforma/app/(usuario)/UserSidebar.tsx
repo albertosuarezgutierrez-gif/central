@@ -10,6 +10,7 @@ const NAV_NEGOCIO = [
   { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
+  { href: '/concursos', icon: '🏛️', label: 'Concursos' },
   { href: '/agente', icon: '🤖', label: 'Agente IA' },
 ]
 
