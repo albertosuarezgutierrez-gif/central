@@ -22,17 +22,21 @@
 ├── apps/              ← VERTICALES (un proyecto Vercel por carpeta, Root Directory = apps/<app>)
 │   ├── sivra          ← intranet de pisos turísticos (Sevilla)            [✅ en apps/]
 │   ├── ialimp         ← SaaS multi-tenant de limpiezas (app.ialimp.es)    [✅ en apps/]
-│   └── ia-rest        ← Voice POS / hostelería (iarest.es)                [✅ en apps/]
+│   ├── ia-rest        ← Voice POS / hostelería (iarest.es)                [✅ en apps/]
+│   ├── plataforma     ← cuadro de mando consolidado / god-panel           [✅ en apps/]
+│   └── rrhh           ← portal del empleado multi-tenant (iarrhh)         [✅ en apps/]
 └── docs/              ← runbook del corte, contexto de sesiones, arquitectura
 ```
 
-## Verticales (las 3 son hermanas; ninguna es la matriz)
+## Verticales (las 5 son hermanas; ninguna es la matriz)
 
 | Vertical | Producto | Proyecto Vercel | Estado |
 |---|---|---|---|
 | **ia-rest** | Voice POS / hostelería | `ia-rest` | ✅ En `apps/ia-rest`, Root Directory `apps/ia-rest` (live en `iarest.es`). |
 | **sivra** | Intranet pisos turísticos | `sivra` | ✅ En `apps/sivra`, Root Directory `apps/sivra`. |
 | **ialimp** | SaaS de limpiezas | `ialimp` | ✅ En `apps/ialimp`, Root Directory `apps/ialimp`. |
+| **plataforma** | Cuadro de mando consolidado / god-panel | `plataforma` | ✅ En `apps/plataforma`, Root Directory `apps/plataforma`. BD compartida con sivra e ialimp (`wswbehlcuxqxyinousql`). |
+| **rrhh** | Portal del Empleado multi-tenant (iarrhh) | `rrhh` | ✅ En `apps/rrhh`, Root Directory `apps/rrhh` (live en `central-rrhh.vercel.app`). Schema `rrhh` en BD compartida. |
 
 ## Cómo se bajó `ia.rest` a `apps/ia-rest` (HECHO — 08/06/2026, PR #90)
 
