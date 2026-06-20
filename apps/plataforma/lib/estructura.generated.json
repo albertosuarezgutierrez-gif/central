@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-19T20:04:29Z",
+  "generadoEn": "2026-06-20T05:43:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -286,7 +286,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "usado",
@@ -502,11 +502,11 @@
       },
       "ialimp": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 1
       },
       "plataforma": {
-        "estado": "no",
-        "evidencias": 0
+        "estado": "usado",
+        "evidencias": 13
       },
       "rrhh": {
         "estado": "no",
@@ -1273,12 +1273,12 @@
         "evidencias": 0
       },
       "ialimp": {
-        "presente": true,
-        "evidencias": 19
-      },
-      "plataforma": {
         "presente": false,
         "evidencias": 0
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -1826,22 +1826,6 @@
       "/api/admin/clientes/[id]/desactivar",
       "/api/admin/clientes/[id]/enviar-acceso",
       "/api/admin/clientes/[id]/reactivar",
-      "/api/admin/concursos/[id]/memoria",
-      "/api/admin/concursos/[id]/oferta",
-      "/api/admin/concursos/[id]/sobre-administrativo",
-      "/api/admin/concursos/analizar",
-      "/api/admin/concursos/biblioteca",
-      "/api/admin/concursos/ingesta",
-      "/api/admin/concursos/perfil",
-      "/api/admin/concursos/preparar",
-      "/api/admin/concursos/radar",
-      "/api/admin/concursos/radar/buscar",
-      "/api/admin/concursos/radar/criterios",
-      "/api/admin/concursos/radar/importar",
-      "/api/admin/concursos/radar/interpretar",
-      "/api/admin/concursos/radar/resumen",
-      "/api/admin/concursos/radar/visto",
-      "/api/admin/concursos/seguidos",
       "/api/admin/consumos",
       "/api/admin/contabilidad/adjunto",
       "/api/admin/contabilidad/apuntes",
@@ -1934,10 +1918,6 @@
       "/api/auth/register",
       "/api/catastro/municipio",
       "/api/cotizador",
-      "/api/cron/concursos-avisos",
-      "/api/cron/concursos-cierre",
-      "/api/cron/concursos-ingesta",
-      "/api/cron/concursos-radar",
       "/api/cron/impagos",
       "/api/cron/procesar-documentos",
       "/api/dashboard",
@@ -2053,8 +2033,28 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/concursos/[id]/memoria",
+      "/api/concursos/[id]/oferta",
+      "/api/concursos/[id]/sobre-administrativo",
+      "/api/concursos/analizar",
+      "/api/concursos/biblioteca",
+      "/api/concursos/ingesta",
+      "/api/concursos/perfil",
+      "/api/concursos/preparar",
+      "/api/concursos/radar",
+      "/api/concursos/radar/buscar",
+      "/api/concursos/radar/criterios",
+      "/api/concursos/radar/importar",
+      "/api/concursos/radar/interpretar",
+      "/api/concursos/radar/resumen",
+      "/api/concursos/radar/visto",
+      "/api/concursos/seguidos",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/concursos-avisos",
+      "/api/cron/concursos-cierre",
+      "/api/cron/concursos-ingesta",
+      "/api/cron/concursos-radar",
       "/api/cron/psd2-sync",
       "/api/finanzas",
       "/api/finanzas/export",
@@ -2479,6 +2479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
+      "fecha": "19/06/2026"
+    },
+    {
       "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad",
       "fecha": "19/06/2026"
     },
@@ -2532,10 +2536,6 @@
     },
     {
       "titulo": "🔍 AUDITORÍA DIARIA",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "✨ COCINA CENTRAL · GENERADOR DE MENÚS IA",
       "fecha": "18/06/2026"
     }
   ],
@@ -2799,18 +2799,6 @@
         "falta": [
           "sivra"
         ]
-      },
-      {
-        "capacidad": "concursos",
-        "label": "Concursos públicos",
-        "tiene": [
-          "ialimp"
-        ],
-        "falta": [
-          "ia-rest",
-          "rrhh",
-          "sivra"
-        ]
       }
     ],
     "reimplementaciones": []
@@ -2822,7 +2810,7 @@
     "skills": 16,
     "apis": 918,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 22,
+    "oportunidadesPortar": 21,
     "reimplementaciones": 0
   }
 }

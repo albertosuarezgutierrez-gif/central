@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-19T20:04:29Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-20T05:43:17Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -14,14 +14,14 @@
 - **Rutas API:** 481
 ### ialimp
 - **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
-- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA, Concursos públicos
+- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (31):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, concursos_seguidos, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos…
-- **Rutas API:** 200
+- **Rutas API:** 180
 ### plataforma _(matriz)_
-- **Módulos que usa:** core-ai, core-email, core-identity, module-contabilidad
-- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA
+- **Módulos que usa:** core-ai, core-email, core-identity, module-concursos, module-contabilidad
+- **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 117
+- **Rutas API:** 137
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -68,7 +68,7 @@
   - Lo usan: rrhh
   - Depende de: —
 - **module-concursos** (module) → `@central/module-concursos`
-  - Lo usan: ialimp
+  - Lo usan: ialimp, plataforma
   - Depende de: —
 - **module-contabilidad** (module) → `@central/module-contabilidad`
   - Lo usan: ia-rest, ialimp, plataforma, sivra
@@ -147,9 +147,9 @@
 - ⚠️ **Escáner / OCR**: en ia-rest, ialimp; falta en rrhh, sivra.
 - ⚠️ **Informes**: en ialimp; falta en ia-rest, rrhh, sivra.
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
-- ⚠️ **Concursos públicos**: en ialimp; falta en ia-rest, rrhh, sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (19/06/2026) 🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda
@@ -159,5 +159,4 @@
 - (19/06/2026) 🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)
 - (18/06/2026) 🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)
 - (18/06/2026) 📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina
-- (18/06/2026) 📱 RESPONSIVE COMPLETO
 
