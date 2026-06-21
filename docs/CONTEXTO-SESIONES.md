@@ -34,10 +34,18 @@
     `.claude/skills/ia-rest-maestro/SKILL.md` (STACK IA), `packages/core-ai/README.md` (exports `groq*`
     + scope `@central`), `docs/SKILL-proyecto-claude.md`, `docs/HANDOFF-unificacion-casa-marcas.md`, y
     specs/planes forward-looking (maître-ia, consolidación/duplicados bancarios). Todos → "NIM → Groq, gratis".
+  - **Propagado a sivra/ialimp/plataforma (misma PR #415):** el fallback NIM → Groq se metió en el
+    **wrapper compartido** `aiComplete`/`aiTools` de `packages/core-ai/src/client.ts`. Como las rutas-servidor
+    de la **pasarela** (`apps/plataforma/app/api/ai/{chat,tools}/route.ts`) llaman a esos wrappers, UNA edición
+    cubre a la vez (a) el camino directo de las 3 verticales y (b) el tráfico por pasarela. En el chat de
+    pasarela queda **NIM → Groq → Gemini** (Gemini ya existía). Visión NIM-only. Verificado: tsc 0 errores en
+    plataforma/ia-rest/sivra (sivra tras `prisma generate`).
+    - ⚠️ **Requiere `GROQ_API_KEY` en el Vercel de plataforma** (host de la pasarela; ahí va casi todo el
+      tráfico de sivra/ialimp/plataforma) y, para el camino directo sin pasarela, también en sivra/ialimp.
+      ia-rest ya la tiene (Whisper). Sin la key el fallback queda inactivo, no rompe nada. Override `GROQ_BRAIN_MODEL`.
   - **Pendiente (futuro, no en este PR):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
     comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
-    CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host. Propagar el
-    fallback Groq a sivra/ialimp/plataforma si interesa (de momento solo ia-rest, el caso live/crítico).
+    CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host.
 
 - **🌐 URLs de producción (no perder) — 16/06/2026**
   - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).

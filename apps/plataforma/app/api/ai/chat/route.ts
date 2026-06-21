@@ -4,7 +4,9 @@ import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, cos
 
 export const maxDuration = 60
 
-/** Pasarela IA — completion de texto (NIM → Gemini fallback). Las verticales llaman con Bearer AI_GATEWAY_SECRET. */
+/** Pasarela IA — completion de texto (NIM → Groq → Gemini fallback). Las verticales llaman con Bearer AI_GATEWAY_SECRET.
+ *  Nota: `aiComplete` ya cae internamente de NIM a Groq (gratis, mismo Llama 3.3 70B) si hay GROQ_API_KEY;
+ *  el `catch` de abajo solo se alcanza si NIM y Groq fallan, y entonces prueba Gemini. */
 export async function POST(req: Request) {
   if (!verificarSecreto(req)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const body = await req.json().catch(() => ({}))

@@ -19,11 +19,17 @@ vive en cada app:
   cerebro de texto: **mismo Llama 3.3 70B que NIM, gratis** → fallback ideal.
 - `geminiSearch(config, system, user, { maxTokens?, timeoutMs? })` — búsqueda web
   (Gemini + Google Search grounding); lanza error si falla (la app decide el fallback).
+- `aiComplete(promptOrMessages, opts)` / `aiTools(messages, tools, opts)` — wrappers de
+  **alto nivel** que leen el entorno (`NVIDIA_API_KEY`, `GROQ_API_KEY`) y ya aplican la
+  política de fallback de TEXTO **NIM → Groq** (gratis, mismo Llama 3.3 70B). Los usan las
+  verticales que no inyectan config (sivra/ialimp/plataforma) y la **pasarela** de plataforma
+  (`/api/ai/{chat,tools}`). Override de modelo Groq: `GROQ_BRAIN_MODEL`.
 - Tipos: `ImageInput`, `NimConfig`, `GroqConfig`, `GeminiConfig` (+ tipos `Nim*` reutilizados por `groq*`).
 
-La **política** (fallback de texto **NIM → Groq**, timeouts, selección de modelo) se
-queda en cada app (ia.rest: `src/lib/ai-client.ts`), que envuelve esta superficie. La
-visión sigue NIM-only (Groq no tiene vision model gratis equivalente).
+Los **adaptadores** (`nim*`/`groq*`/`gemini*`) son puros; la **política** de fallback vive en
+`aiComplete`/`aiTools` (camino env-aware, NIM → Groq) y en cada app (ia.rest: `src/lib/ai-client.ts`,
+que además encadena con Gemini para búsqueda). La **visión sigue NIM-only** (Groq no tiene vision
+model gratis equivalente).
 
 ## Consumo (Fase 0/1)
 Se resuelve como fuente vía alias de `tsconfig` (`@central/core-ai`) + `transpilePackages`
