@@ -42,6 +42,21 @@
   - **Auto-mantenimiento de manuales:** ampliado `/auditoria-diaria` (paso 4) para que el agente nocturno
     también reconcilie los manuales de usuario (help-prompts.ts + manual.html) cuando haya features nuevas,
     y deje los PDF como acción manual. Antes solo cubría memoria/skills/CLAUDE.md/SKILLS.md.
+  - **Fase 2b — VOZ NATIVA bloqueado: CÓDIGO ESCRITO (no compilado) en #414.** Nuevo
+    `android/.../PreavisoVozService.kt` (foreground `specialUse` + Supabase Realtime sobre
+    `preavisos` + TTS `es-ES`, habla solo si la app NO está visible → no duplica la voz web).
+    `BridgeInterface.setPreavisoSesion(...)`, `MainActivity` set `appVisible` en onResume/onPause,
+    manifest con permiso `FOREGROUND_SERVICE_SPECIAL_USE`. La WebView pasa las credenciales
+    Supabase ACTUALES (no hardcode). **Pendiente: build+firma+publicar APK (v13/v3.1) por Alberto.**
+  - **🔴 HALLAZGO (pre-existente):** `BridgeService.kt` apunta al proyecto Supabase viejo
+    `efncqyvhniaxsirhdxaa` (anon key hardcodeada), que YA NO tiene el schema `iarest`. Verificado
+    por MCP: la app vive en `wswbehlcuxqxyinousql` ("Ingresos Y gastos Smoobu", BD unificada,
+    schema `iarest`, donde están restaurantes/comandas/preavisos + mis columnas). → **La impresión
+    por el bridge nativo probablemente está ROTA en prod.** Acción de Alberto (fuera de alcance del PR).
+  - **Texto PDF manuales:** `docs/manuals-texto-preaviso.md` (camarero/cocina/owner) listo para
+    pegar al regenerar los PDF (binarios, no los toca Claude).
+  - **⚠️ Aclaración BD:** ia.rest en PROD usa `wswbehlcuxqxyinousql` (schema `iarest`), NO el
+    proyecto `efncqyvhniaxsirhdxaa` (ese es el viejo standalone, ya sin tablas iarest).
   - **⚠️ Correción de nota previa:** el código de ia.rest SÍ vive en `central` (`apps/ia-rest`), buildea
     en Vercel y se mergeó por #408. La nota antigua de "repo aparte" está desactualizada.
 

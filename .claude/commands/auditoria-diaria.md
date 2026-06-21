@@ -63,13 +63,22 @@ marcados, y las skills-maestro / `CLAUDE.md` que el código ya contradice.
    - `docs/SKILLS.md` (índice vivo): verifica que lista las skills y comandos REALES de
      `.claude/skills/` y `.claude/commands/`; añade los que falten, quita los que ya no
      existan, y corrige las descripciones de "cuándo usar" que estén desactualizadas.
-   - **Manuales de usuario final** (que el código nuevo no suele actualizar): cuando en el
-     rango haya features visibles para el usuario, comprueba que están documentadas y
-     parchéalas si el arreglo es barato (texto):
-     - `apps/ia-rest/src/components/help/help-prompts.ts` (chat de ayuda 🤖 por rol).
-     - `apps/ia-rest/public/manual.html` y `public/manuales.html` (manual web).
-     - Los **PDF** de `public/manuals/*.pdf` son binarios generados aparte: NO los toques;
-       déjalos como acción manual de Alberto con el texto listo en el informe.
+   - **Manuales de usuario final** (que el código nuevo casi nunca actualiza — punto ciego
+     histórico). Procedimiento concreto, no "echar un vistazo":
+     1. Del `git log` del rango, lista las features VISIBLES para el usuario (rutas nuevas en
+        `apps/*/src/app/**`, botones/toggles en componentes, endpoints que cambian el flujo de
+        un rol). Ignora cambios internos (libs, tipos, crons sin UI).
+     2. Por cada feature visible, comprueba que aparece (por palabra clave) en:
+        - `apps/ia-rest/src/components/help/help-prompts.ts` — en el `ROLE_PROMPTS` del/los
+          rol(es) afectado(s) (camarero `/edge`, cocina `/kds`, owner `/owner`, etc.).
+        - `apps/ia-rest/public/manual.html` (y `public/manuales.html` si aplica).
+        Si falta, **parchéala** (es texto, riesgo bajo): añade 1-3 líneas en el rol correcto,
+        en el mismo tono que las entradas vecinas.
+     3. Los **PDF** de `public/manuals/*.pdf` son binarios generados aparte: NO los toques.
+        Deja/actualiza el texto listo para pegar en `docs/manuals-texto-<feature>.md` y anótalo
+        como acción manual de Alberto en el informe.
+     4. En el cuerpo del PR di explícitamente qué manuales tocaste y cuáles quedan pendientes
+        (los PDF). Si todo estaba documentado, dilo y no toques nada.
 
 5. **Arreglos en el acto:** solo bugs de bajo riesgo (típicos de `auditoria-central`).
    Lo de gran radio NO se toca: déjalo como hallazgo + acción manual en el informe.

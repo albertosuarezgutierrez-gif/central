@@ -752,6 +752,28 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   const quitarPreaviso = useCallback((id: string) => {
     setPreavisos(prev => prev.filter(x => x.id !== id))
   }, [])
+
+  // Voz nativa (APK Android, Fase 2b): pasamos al servicio nativo la sesión + las
+  // credenciales Supabase ACTUALES (env vars, sin hardcode) para que lea el preaviso con
+  // la pantalla apagada. En navegador no existe IaRestBridge → no hace nada.
+  useEffect(() => {
+    const w = window as unknown as {
+      isNativeApp?: boolean
+      IaRestBridge?: { setPreavisoSesion?: (u: string, a: string, s: string, r: string, ids: string, v: boolean) => void }
+    }
+    if (!w.isNativeApp || !w.IaRestBridge?.setPreavisoSesion) return
+    const ids = Array.from(misComandaIdsRef.current).join(',')
+    try {
+      w.IaRestBridge.setPreavisoSesion(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        SB_SCHEMA,
+        session.restaurante_id ?? '',
+        ids,
+        !ttsOff,
+      )
+    } catch { /* bridge no disponible */ }
+  }, [comandas, ttsOff, session.restaurante_id])
   const handleMensajeNuevo = useCallback((m: import('@/hooks/useMensajes').Mensaje) => {
     if (ttsOff) return
     const quien = m.nombre_origen ?? m.rol_origen

@@ -1,7 +1,34 @@
 # Fase 2 — Voz nativa del preaviso con el móvil BLOQUEADO (APK Android) — Diseño
 
 > Extensión de `2026-06-21-preaviso-voz-cascos-design.md` (Capa 3). Vertical `apps/ia-rest`.
-> Fecha: 2026-06-21 · Estado: diseño, pendiente construir.
+> Fecha: 2026-06-21 · Estado: **código escrito (Kotlin + web), NO compilado en el entorno cloud.**
+> Pendiente: build + firma + publicación de la APK por Alberto.
+
+## Implementado (PR #414)
+- `android/app/src/main/java/es/iarest/app/PreavisoVozService.kt` (NUEVO): foreground service
+  (`specialUse`) que escucha `preavisos` por Supabase Realtime y lee el preaviso con el TTS
+  nativo (`es-ES`) + vibra, SOLO cuando la app NO está visible (anti-duplicado con la voz web).
+  Dedup por id, heartbeat phoenix cada 25s, reconexión a 5s.
+- `BridgeInterface.kt`: método `setPreavisoSesion(url, anonKey, schema, restauranteId,
+  comandaIdsCsv, voiceOn)` — arranca/para el servicio.
+- `MainActivity.kt`: `PreavisoVozService.appVisible` en `onResume`/`onPause`.
+- `AndroidManifest.xml`: permiso `FOREGROUND_SERVICE_SPECIAL_USE` + `<service>` con subtype.
+- Web `src/app/edge/page.tsx`: pasa al bridge la sesión + **credenciales Supabase actuales**
+  (`NEXT_PUBLIC_SUPABASE_URL/ANON_KEY` + `SB_SCHEMA`) cuando cambian las comandas o `ttsOff`.
+
+> **Credenciales NO hardcodeadas** (decisión): la WebView las inyecta desde las env vars, para no
+> repetir el bug del `BridgeService` (ver hallazgo abajo).
+
+## ⚠️ Hallazgo colateral (pre-existente, NO de este PR) — acción de Alberto
+`BridgeService.kt` tiene **hardcodeado el proyecto Supabase `efncqyvhniaxsirhdxaa`** (URL + anon
+key) para el Realtime de impresión. Verificado por MCP: ese proyecto **ya no tiene el schema
+`iarest`** (la app migró a la BD unificada `wswbehlcuxqxyinousql`, "Ingresos Y gastos Smoobu",
+donde SÍ están `iarest.restaurantes/comandas/preavisos`). → **La impresión por el bridge nativo
+probablemente está ROTA en producción.** Arreglo recomendado: que el `BridgeService` reciba la
+URL+anon key desde la WebView (igual que ahora hace la voz), o actualizar las constantes al
+proyecto unificado. Fuera del alcance de este PR (es impresión, no preaviso).
+
+### Versionado original (referencia)
 
 ## Problema
 La voz web (Capa 1) solo suena con la app abierta y la pantalla visible. Con el móvil
