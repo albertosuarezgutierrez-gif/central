@@ -1,5 +1,13 @@
 # CLAUDE.md — SIVRA
 
+> **⚠️ DEPRECADO — consolidado en `apps/plataforma` (21/06/2026).** Toda la funcionalidad de sivra
+> (páginas `/sivra/*`, APIs `/api/sivra/*`, los crons, mensajería, limpiadoras y el motor de pricing)
+> vive ya en **plataforma** (`plataforma-ten-flame.vercel.app`), que comparte la misma Supabase. Esta app
+> standalone (`housesevillana.vercel.app`, proyecto Vercel `sivra`) está **pendiente de retirada (Fase 2)**:
+> antes de borrarla hay que (1) confirmar que las limpiadoras reales NO entran por housesevillana sino por
+> ialimp, y (2) redirigir el dominio. **No añadas features nuevas aquí — hazlas en `apps/plataforma`.**
+> Plan completo en el PR de retirada. NO toques RLS/buckets/GRANTs de la BD compartida.
+
 Memoria de proyecto para sesiones de Claude Code. Léelo al empezar.
 
 ## Qué es

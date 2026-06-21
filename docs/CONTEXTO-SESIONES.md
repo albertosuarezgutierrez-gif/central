@@ -16,6 +16,25 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo) — 21/06/2026**
+  Sivra ya está 100% consolidado en `apps/plataforma` (`/sivra/*`, APIs, crons); la app standalone
+  `housesevillana.vercel.app` está **deprecada**. **Fase 1 (esta sesión, rama `claude/dynamic-pricing-uhvnak`):**
+  - **Quitada la dependencia de `SIVRA_URL`**: `app/api/sivra/mensajes/reply/route.ts` ya NO hace `fetch` HTTP
+    a la app sivra para el aviso de early check-in/out. Se portó la lógica a `lib/limpiadoras-early.ts`
+    (`registrarAvisoHuesped`) + nuevo endpoint `app/api/sivra/limpiadoras/early-checkin/route.ts` (POST+PATCH,
+    auth `getSession()`); el caller la llama **directa** (sin red, sin 404 si se apaga sivra).
+  - **Deduplicado `pricing-calendar`**: borrado `lib/sivra/pricing-calendar.ts` (idéntico a `lib/pricing-calendar.ts`);
+    repuntados imports en `pricing/apply`, `pricing/apply-auto`, `pricing/pilot-track` a `@/lib/pricing-calendar`.
+  - **Dashboard**: el card de negocio "sivra" enlaza ahora a `/sivra/income` interno (antes `SIVRA_URL`).
+  - Marcado deprecado en `apps/sivra/CLAUDE.md` y `MATRIZ.md`.
+  - *(Merge previo: se fusionó `claude/plataforma-url` — que traía la consolidación de 81 archivos sivra — en
+    `claude/dynamic-pricing-uhvnak`; conflictos solo en docs/generados, resueltos.)*
+  - **FASE 2 PENDIENTE (gated, no hacer aún):** (B) **confirmar por dónde entran las limpiadoras reales** —
+    `limpiadora_sessions` tiene 36 logins/90d, 6 limpiadoras, último 14-jun, pero la tabla es compartida y NO
+    distingue housesevillana(sivra) vs ialimp; la doc dice que las reales van por ialimp pero NO es concluyente.
+    Luego: redirigir dominio housesevillana→plataforma, actualizar enlaces/QR de Smoobu, borrar `apps/sivra/` +
+    proyecto Vercel `sivra` + env `SIVRA_URL`.
+
 - **🌐 URLs de producción (no perder) — 16/06/2026**
   - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).
   - **sivra** (motor de pricing dinámico + endpoints `/api/pricing/*`, `/api/mercado/*`, etc.): `housesevillana.vercel.app` (la pantalla de login es la verde "SIVRA").

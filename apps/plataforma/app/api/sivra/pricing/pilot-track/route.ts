@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
 import { evaluatePilot, type PilotVerdict } from "@/lib/sivra/pilot-track"
 import { computeRecommendation, recommendedBaseFromEngine, percentile } from "@/lib/sivra/pricing-engine"
-import { EVENTS_LAST_DATE } from "@/lib/sivra/pricing-calendar"
+import { EVENTS_LAST_DATE } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 60
@@ -164,7 +164,7 @@ export async function GET(req: NextRequest) {
   if (snapAge == null || snapAge >= 1) watchdog.push(`Snapshot viejo (${snapAge ?? "nunca"}d) — ¿corrió rates/snapshot?`)
   if (mktAge == null || mktAge > 7) watchdog.push(`Mercado viejo (${mktAge ?? "nunca"}d) — refresca market_rates (ingest).`)
   const evAheadDays = Math.round((+new Date(EVENTS_LAST_DATE + "T00:00:00") - +today) / 86400000)
-  if (evAheadDays < 90) watchdog.push(`Eventos cargados solo hasta ${EVENTS_LAST_DATE} (${evAheadDays}d) — añade el próximo periodo en lib/sivra/pricing-calendar.`)
+  if (evAheadDays < 90) watchdog.push(`Eventos cargados solo hasta ${EVENTS_LAST_DATE} (${evAheadDays}d) — añade el próximo periodo en lib/pricing-calendar.`)
 
   const byId = <T extends { property_id: string }>(arr: T[]) =>
     Object.fromEntries(arr.map((r) => [r.property_id, r]))
