@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T05:58:43Z",
+  "generadoEn": "2026-06-21T09:56:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -926,7 +926,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 19
+        "evidencias": 20
       },
       "rrhh": {
         "presente": false,
@@ -2082,6 +2082,7 @@
       "/api/sivra/limpiadoras/auto-sessions",
       "/api/sivra/limpiadoras/checklist",
       "/api/sivra/limpiadoras/disponibilidad",
+      "/api/sivra/limpiadoras/early-checkin",
       "/api/sivra/limpiadoras/facturacion",
       "/api/sivra/limpiadoras/historial",
       "/api/sivra/limpiadoras/informe",
@@ -2479,6 +2480,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🌐 URLs de producción (no perder)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
       "fecha": "21/06/2026"
     },
@@ -2528,14 +2537,6 @@
     },
     {
       "titulo": "📱 RESPONSIVE COMPLETO",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA PROFUNDA SEMANAL",
       "fecha": "18/06/2026"
     }
   ],
@@ -2808,7 +2809,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 918,
+    "apis": 919,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

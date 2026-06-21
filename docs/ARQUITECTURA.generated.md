@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T05:58:43Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T09:56:02Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 24 packages · 23 capacidades · 16 skills · 918 rutas API.
+**Resumen:** 5 apps · 24 packages · 23 capacidades · 16 skills · 919 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -21,7 +21,7 @@
 - **Módulos que usa:** core-ai, core-email, core-identity, module-concursos, module-contabilidad
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, CRM / leads / cotizador, Marketing (blog/IG/SEO), RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Facturación / VeriFactu, Asistente / copiloto IA, Concursos públicos
 - **Tablas (12):** ai_usos, comunicacion_categorias, comunicacion_conversacion_participantes, comunicacion_conversaciones, comunicacion_grupo_miembros, comunicacion_grupos, comunicacion_mensajes, comunicacion_nodos, comunicacion_reglas, conexiones_banco, cuentas_bancarias, movimientos_bancarios
-- **Rutas API:** 137
+- **Rutas API:** 138
 ### rrhh
 - **Módulos que usa:** core-ai, core-email, core-firma, core-identity, core-storage, module-chat, module-documental, module-rrhh
 - **Capacidades:** Notificaciones (push), Asistente / copiloto IA
@@ -149,6 +149,8 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (21/06/2026) 🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)
+- (16/06/2026) 🌐 URLs de producción (no perder)
 - (21/06/2026) 🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito
 - (20/06/2026) 🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona
 - (19/06/2026) 🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)
@@ -157,6 +159,4 @@
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda
 - (19/06/2026) 🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)
 - (19/06/2026) 📅 `diaHabitual` en facturas-control
-- (18/06/2026) 🐛 FIXES COMUNICACIÓN + FINANZAS
-- (19/06/2026) 🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)
 
