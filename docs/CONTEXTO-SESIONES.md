@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo — 21/06/2026**
+  - Tras poblar provincia por código postal del órgano (#418), el filtro de zona pasa a **estricto**: al elegir
+    zona se muestran SOLO las ubicadas en ella. Verificado en la BD: **Andalucía → 6 resultados, todos andaluces,
+    0 de Canarias** (antes se colaban por la inclusión de NULL).
+  - **Límite de la fuente:** el feed PLACSP solo trae ubicación en ~56% de los anuncios; el ~44% restante queda
+    sin provincia y aparece solo en "Toda España" (no se cuela en otras zonas). Backfill de normalización aplicado
+    en la BD (`provincia` = provincia oficial o NULL; se limpiaron municipios crudos de la versión anterior).
+
 - **🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia — 21/06/2026**
   - **Problema:** al elegir zona (Andalucía) salían licitaciones de otra región (Canarias) porque la
     provincia estaba vacía en el corpus y el filtro incluía las de ubicación desconocida (recall sobre precisión).
