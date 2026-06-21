@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T18:40:02Z",
+  "generadoEn": "2026-06-21T19:36:19Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2485,6 +2485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "📝 Doc drift corregido — crons de sivra",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
       "fecha": "21/06/2026"
     },
@@ -2538,10 +2542,6 @@
     },
     {
       "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
       "fecha": "19/06/2026"
     }
   ],
