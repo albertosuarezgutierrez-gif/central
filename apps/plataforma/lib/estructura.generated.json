@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:28:16Z",
+  "generadoEn": "2026-06-21T20:45:00Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -43,6 +43,11 @@
       "id": "core-push",
       "tipo": "core",
       "npm": "@central/core-push"
+    },
+    {
+      "id": "core-receipts",
+      "tipo": "core",
+      "npm": "@central/core-receipts"
     },
     {
       "id": "core-storage",
@@ -405,6 +410,28 @@
       "sivra": {
         "estado": "usado",
         "evidencias": 2
+      }
+    },
+    "core-receipts": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
       }
     },
     "core-storage": {
@@ -1298,6 +1325,7 @@
     "core-identity": [],
     "core-payments": [],
     "core-push": [],
+    "core-receipts": [],
     "core-storage": [],
     "module-agenda": [],
     "module-asn": [],
@@ -2491,6 +2519,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🧾 `@central/core-receipts`: FASE 1 (fundación) — PR #307 — 16/06/2026 (rev. 21/06: alcance reducido)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino",
       "fecha": "21/06/2026"
     },
@@ -2545,10 +2577,6 @@
     {
       "titulo": "🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis)",
       "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🌐 URLs de producción (no perder)",
-      "fecha": "16/06/2026"
     }
   ],
   "saludRepo": {
@@ -2817,7 +2845,7 @@
   },
   "resumen": {
     "verticales": 5,
-    "packages": 24,
+    "packages": 25,
     "capacidades": 23,
     "skills": 17,
     "apis": 924,
