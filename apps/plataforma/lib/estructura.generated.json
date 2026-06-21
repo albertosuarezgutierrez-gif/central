@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:23:07Z",
+  "generadoEn": "2026-06-21T20:23:18Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -501,8 +501,8 @@
         "evidencias": 0
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "usado",
@@ -2438,6 +2438,11 @@
       "description": ">"
     },
     {
+      "id": "perfil-fiscal",
+      "name": "perfil-fiscal",
+      "description": "Router de contexto FISCAL y PATRIMONIAL de Alberto (persona física) + la sociedad Punto y Coma SL. Úsalo SIEMPRE que Alberto pida algo de su renta/IRPF, declaración, gastos deducibles, qué piso tributa dónde, su asesoría, o cuando trabajes con `facturas-correo`, `fiscal-novedades` o el módulo `/finanzas`. NO duplica los datos personales (esos viven en la BD `fiscal_perfil`/`fiscal_descendientes`); aquí está la ESTRUCTURA: qué entidad declara qué, las reglas de gasto y los caveats. Sin cifras ni datos sensibles."
+    },
+    {
       "id": "plataforma-maestro",
       "name": "plataforma-maestro",
       "description": ">"
@@ -2485,8 +2490,20 @@
   ],
   "novedades": [
     {
-      "titulo": "📝 ia-rest BLOG SEO arreglado (timeout 504) + botón \"Generar ahora\" + credenciales super_admin restauradas — PR #302 (mergeado 21/06)",
-      "fecha": ""
+      "titulo": "🧾 GROUND TRUTH FISCAL de Alberto persistido",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🕵️ ia-rest: inteligencia competitiva (comandiavoz.com)",
+      "fecha": "21/06/2026"
     },
     {
       "titulo": "📝 Doc drift corregido — crons de sivra",
@@ -2531,18 +2548,6 @@
     {
       "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
       "fecha": "20/06/2026"
-    },
-    {
-      "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)",
-      "fecha": "19/06/2026"
     }
   ],
   "saludRepo": {
@@ -2813,7 +2818,7 @@
     "verticales": 5,
     "packages": 24,
     "capacidades": 23,
-    "skills": 16,
+    "skills": 17,
     "apis": 923,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,

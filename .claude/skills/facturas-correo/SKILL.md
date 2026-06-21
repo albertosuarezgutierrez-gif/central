@@ -43,10 +43,13 @@ a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
   (dominios), IKEA/LEROY/BRICO/FERRETER (mobiliario pisos), TASKRABBIT (montaje/instalación en pisos),
   SIQUE (limpieza), EMASESA (agua), ENDESA/TOTALENERGIES (luz), DIGI (internet),
   DIMITRI (mantenimiento), D CULTO (comida empresa).
-- **turistico_duplex (deducible):** COMUNIDAD, PASAJE FRANCISCO, y suministros del dúplex.
+- **turistico_duplex (deducible):** COMUNIDAD, PASAJE FRANCISCO, **PASAJE/FRANCISCO MOLINA**,
+  **VILLASÍS** y suministros del dúplex. ⚠️ El **dúplex = "Villasís"** son el **mismo piso** (Pasaje
+  Villasís 1 / Pasaje Francisco Molina 4, dos accesos); tributa en el **IRPF personal de Alberto**.
 - **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…), **CABIFY** (desplazamientos de la correduría — el recibo llega de `no-reply@mgx.cabify.com` con asunto `Alberto, tu viaje por X €`; incluye origen/destino/importe).
 - **personal (NO deducible):** Círculo Mercantil / natación / gimnasio / colegio / vacunas /
-  compras de familia (Carmen, Pilar, etc.), IBI de la vivienda habitual (Monte Carmelo).
+  compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI de la vivienda habitual
+  (Monte Carmelo), y **trading** (FTMO / retos de bróker, cuenta Interactive Brokers).
 
 ### Reenvíos de Pilar (pilar.pina.franco@gmail.com) — regla especial
 Los reenvíos de Pilar pueden ser tanto personales como de pisos. **NUNCA auto-clasificar** si el
@@ -55,8 +58,16 @@ concepto puede ir a cualquier lado. Regla:
 - Taskrabbit, fontanero, electricista, tiendas de muebles/hogar, Amazon, ferretería → **"Para tu decisión"** (pregunta siempre: ¿es para los pisos o personal?).
 - Proveedores claramente de pisos (IKEA con dirección de piso, Sique, Emasesa…) → **turistico_pisos** (auto solo si el concepto lo deja claro).
 
-> Contexto fijo: Dúplex = **Pasaje Francisco** (no Monte Carmelo). Pisos turísticos en Kutxa;
-> Dúplex + correduría en BBVA. Detalle en `apps/sivra/docs/contabilidad.md`.
+> Contexto fijo: Dúplex (= **Villasís**) = **Pasaje Francisco Molina / Pasaje Villasís** (no Monte
+> Carmelo, que es la vivienda habitual). Pisos turísticos en Kutxa; Dúplex + correduría en BBVA.
+> Detalle en `apps/sivra/docs/contabilidad.md`.
+>
+> **Tratamiento fiscal (IRPF) → skill `perfil-fiscal`.** Resumen de lo que NO es "destino" sino
+> tributación: **Socorro** y el **dúplex/Villasís** tributan en el **IRPF personal** de Alberto
+> (Socorro 50/50 con Pilar) aunque cobren en cuentas de la **sociedad Punto y Coma SL**. Reglas de
+> gasto que esta skill NO debe tratar como gasto corriente del año: **notaría/registro de
+> compraventa** = coste de adquisición; **mobiliario y obras** (IKEA, aire acond., fachada) = a
+> **amortizar**. Los pagos al Ayto. de ~19,5 € son **tasa de basura**, no IBI.
 
 ## Paso 3 — Archivar en Drive (solo deducibles)
 Estructura: **`Facturas / <año> / <negocio>`** (p. ej. `Facturas/2026/Pisos turísticos`).

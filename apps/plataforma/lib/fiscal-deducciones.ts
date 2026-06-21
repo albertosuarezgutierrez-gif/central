@@ -177,6 +177,11 @@ export function calcularDeducciones(
   const menores3 = descendientes.filter(h => esMenor3(h.fechaNacimiento, anio))
 
   // Maternidad (madre con actividad): €1.200/año por hijo < 3 + incremento guardería.
+  // CAVEAT (conocido, sin corregir): NO se prorratea por mes de nacimiento. En el AÑO de
+  // nacimiento la deducción es proporcional a los meses desde el nacimiento (un hijo nacido en
+  // nov. da ~2/12 ≈ €200, no €1.200) y está topada por las cotizaciones de la madre ese periodo.
+  // Por eso esta cifra puede SOBREESTIMAR el año del nacimiento → es orientativa; el dato fino sale
+  // del borrador AEAT. Ver skill `perfil-fiscal`. (Mejora pendiente: prorrateo mensual.)
   if (perfil.conyugeTrabaja && menores3.length > 0) {
     lineas.push({
       clave: 'maternidad', ambito: 'estatal', reembolsable: true,

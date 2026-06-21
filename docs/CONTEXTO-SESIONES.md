@@ -16,33 +16,69 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
-- **📝 ia-rest BLOG SEO arreglado (timeout 504) + botón "Generar ahora" + credenciales super_admin restauradas — PR #302 (mergeado 21/06)**
-  Cadena de fallos a raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
-  - **Causa real del fallo del blog:** la función `/api/cron/blog-seo` se corta a **~60s** (límite del plan de Vercel
-    en el proyecto **ia-rest**; `maxDuration=300` **NO se respeta** ahí, aunque sí en plataforma). Generar ~1800
-    palabras con `llama-3.3-70b` (no-stream) tarda >60s → Vercel mata la función con **504** (devuelve **texto plano**,
-    no el JSON de la ruta → el frontend petaba al parsear: "Unexpected token 'A'…"). El primer fix (PR #254: timeout
-    interno 110s + `maxDuration=300` + reintento) **NO servía**: la plataforma corta antes de que salte nuestro timeout.
-  - **Fix definitivo (PR #302):** generar con el **modelo rápido `meta/llama-3.1-8b-instruct`** (~30-40s), `max_tokens`
-    3000, timeout interno 45s (salta ANTES del corte de Vercel → fallo = JSON limpio, no 504). `callAI` (en
-    `apps/ia-rest/src/lib/ai-client.ts`) acepta un 6º arg `model?` opcional que sobreescribe el modelo NIM por
-    llamada. **Verificado en preview: genera OK.** *Tradeoff:* 8B < 70B en calidad; el artículo es **borrador** que se
-    revisa antes de publicar. Para recuperar la calidad 70B haría falta **subir el límite de función en Vercel** (plan)
-    o mover la generación a un job en background (Edge Function con más presupuesto).
-  - **Botón "⚡ Generar ahora" (PR #283):** el tab Blog de `/super` (`BlogSuperTab` en `app/super/page.tsx`) no tenía
-    generación manual (solo el cron de los lunes). Añadido botón que llama a `/api/cron/blog-seo` con `x-ia-session`
-    (sin exponer `CRON_SECRET`).
-  - **🚨 Hueco de la migración Fase A2 (credenciales `personal`):** en la BD unificada (`wswbehlcuxqxyinousql`, schema
-    `iarest`), la tabla `personal` tenía **`email` y `password_hash` en NULL en TODAS las filas** → **nadie podía entrar
-    por email/contraseña** (Alberto incluido; daba 401 "incorrectos" con cualquier clave). Restaurada la fila
-    `super_admin` (`alberto.suarez.gutierrez@gmail.com`). **PENDIENTE:** las otras cuentas (owner, camarero, cocina,
-    running, jefe_sala, gestor) **siguen con email/password NULL** → sus logins por email están rotos (el login por
-    PIN/código_acceso puede seguir bien — revisar si se usan).
-  - **Datos viejos NO migrados (por diseño, Fase A2 = solo-esquema):** `efncqyvhniaxsirhdxaa` (BD vieja) conserva 8
-    `blog_borradores` (TODOS `publicado` → **vivos como ficheros** `app/blog/<slug>/page.tsx`, se sirven en
-    iarest.es/blog), 395 leads y 142 comandas. La unificada arranca vacía → por eso `/super → Blog` dice "No hay
-    artículos" (los publicados no dependen de la BD). Proyecto viejo sigue para **jubilar**.
+- **🧾 GROUND TRUTH FISCAL de Alberto persistido — 19/06/2026** (rama `claude/tax-deductions-personal-finance-e098a7`)
+  - Sesión de revisión de la **Renta 2025** (borradores AEAT, libro de familia, Excel gastos/reservas,
+    PDFs IBKR y seguro, hilos con la asesoría Asecon). Salieron hechos que el repo tenía mal/ausentes
+    y se han persistido en **4 sitios** (datos sensibles SOLO en BD; en git solo estructura).
+  - **Hechos clave aclarados:**
+    - **Cónyuge = Pilar Piña Franco** (el repo asumía "Carmen"). **3 hijos** → **familia numerosa general**.
+    - **Villasís = el Dúplex = Duplex Center** = Pasaje Villasís 1 / Pasaje Francisco Molina 4 (**mismo
+      piso**, dos accesos). Tributa en **IRPF personal**.
+    - **Socorro** (House Sevillana) → **IRPF personal 50/50** Alberto+Pilar, **aunque** cobre en cuenta
+      de **Punto y Coma SL** (sin contrato de cesión → riesgo de paralela; recurrente desde 2024).
+    - **Asesoría = Asecon Consultores** (renta personal + sociedad). **Interactive Brokers**: ganancias
+      no salen en el borrador → declarar + **revisar Modelo 720**.
+    - Reglas de gasto: trading/FTMO = personal; notaría/registro de compraventa = adquisición;
+      mobiliario/obras = amortizar; los ~19,5 € del Ayto = tasa de basura (NO IBI).
+  - **Cambios (git):** nueva skill **`.claude/skills/perfil-fiscal/`** (+ índice en `docs/SKILLS.md`);
+    `facturas-correo/SKILL.md` y `apps/sivra/docs/contabilidad.md` corregidos (alias Villasís, cónyuge,
+    regla Socorro-personal); `apps/plataforma/lib/destino.ts` reconoce "Villasís/Francisco Molina" como
+    dúplex; caveat del **prorrateo de maternidad** documentado en `lib/fiscal-deducciones.ts`.
+  - **Cambios (BD, NO git):** `fiscal_perfil` de Alberto → `gasto_guarderia_anual` real (escuela infantil
+    autorizada) y `fiscal_descendientes` con las **fechas reales** de nacimiento (años 2018/2024/2025) en
+    vez de placeholders. (Fechas exactas e importes viven solo en la BD, no aquí.)
+  - **Pendiente:** confirmar si Busto Reform/Luxury Busto van por Punto y Coma SL; decisión individual vs
+    conjunta (la herramienta tiene `declaracion_conjunta=true`); (opcional) prorrateo mensual de maternidad
+    en el motor. La asesoría tiene aún pendiente meter familia numerosa, hijo nov-2025, guardería e IBKR.
+- **🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA — 18/06/2026** (PR #384 + PR #385 mergeados a `main`)
+  - **PR #384** — `fix(plataforma/banca)`: los ingresos de la correduría no cuadraban (~€10.026 ocultos en P&L). Causa: en abonos Norma 43, el banco rotula la contraparte con el TITULAR → la regla 'titular ⇒ traspaso_interno' escondía comisiones. Fix: lógica pura extraída a `lib/destino.ts` (nuevo, testeable `node --test`, 7 casos reales del extracto). ABONOS se clasifican por CONCEPTO (`LIQ.COMISIONES`/aseguradoras ⇒ `seguros`; pensión/nómina/Bizum ⇒ `personal`). CARGOS sin cambios (el titular sí marca traspaso en salidas). `lib/categorizar.ts` reexporta. SQL de reclasificación aplicado a BD compartida (`prisma/migrations/2026-06-16_reclasificar_abonos_correduria.sql`).
+  - **PR #385** — `feat(plataforma)`: panel `/sivra/facturas-control` (entrada 🗂️ Facturas en sidebar, sección Mis pisos). Estado por proveedor/mes: ✅ En Drive / ⏳ En plazo / ❌ Falta. 17 proveedores recurrentes (mensual/bimestral_impar/anual_marzo) en `lib/sivra/facturas-control.ts`. API `GET/POST /api/sivra/facturas-control` (sube PDF → Apps Script → Drive → tabla `facturas_drive`). Alerta `facturasFaltantes` del mes anterior en `getAlertas(lib/banca.ts)` → banner en `/dashboard`.
+- **🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes — 21/06/2026**
+  - **Análisis Modelo 190 vs BD completo:** Modelo 190 bruto €8.593,76 → neto esperado €7.305. BD tras correcciones: €6.176,53. Gap ~€1.128 = timing (dic-2025 cobrado ene-2026).
+  - **Compañías identificadas definitivamente:**
+    - Occident: `Saldo. m00171` + `Saldo. 8/92361` ✅
+    - Mapfre: `Liq.comisiones YYYYMM` ✅
+    - Caser: `fra-comis` ✅
+    - Generali: `G.65792 liq.XXX generali se` + `Pago saldo cta` ✅
+    - Pelayo: `COMISIONES [nombre] [7 dígitos]` ✅
+    - ASISA: **M1454** (~€46/mes) ✅ confirmado por Alberto
+    - Aegon: `REMSALDO` ✅
+    - AXA: `Liq. saldo cuenta` ✅ (importe pequeño, ~€41 neto)
+    - Reale: `Liquidacion de comisiones` ✅
+    - Fidelidade: probable `Pd005 saldo agente` (pendiente confirmar)
+  - **Compañías con dinero retenido sin pagar:**
+    - **Allianz (mediador 18638/PA342520):** saldo **€521,53** a abr-2026. Extractos en Gmail desde mediador@allianz.es asunto "Cuenta Agente".
+    - **Helvetia:** trámite cambio cuenta iniciado mar-2025 (Nieves Calvo → Cac.corredores@helvetia.es + Elena Pérez) nunca completado.
+    - **AXA (mediador 634471):** sin comercial asignado, importe pendiente desconocido.
+  - **3 borradores Gmail creados** (Allianz/Helvetia/AXA) con IBAN ES34 0182 9465 6002 0233 1175 y enlace Drive.
+  - **⚠️ Certificado BBVA:** el PDF guardado en Drive era un justificante Bizum (equivocado). Pedir certificado de titularidad real desde app BBVA (Mis productos → cuenta → Documentos → Certificado de titularidad) y adjuntar manualmente a los 3 borradores.
+  - **Google Apps Script** creado para salvar adjuntos Gmail→Drive (script.google.com, función `guardarCertificadoBBVAenDrive`).
+  - **Pendiente Alberto:** obtener certificado titularidad BBVA real → adjuntar a los 3 borradores → enviar.
 
+- **🕵️ ia-rest: inteligencia competitiva (comandiavoz.com) — 21/06/2026**
+  - **Disparador:** Alberto pasó un anuncio de Meta/Instagram (`fbclid`) de **comandiavoz.com**
+    (parece comanda-por-voz para hostelería = competidor directo de ia.rest) y pidió estudiar competencia.
+  - **Bloqueo del entorno:** egress de red cortado en la sesión web (`WebFetch` → 403 "Host not in
+    allowlist" para TODOS los hosts; `WebSearch` US-only no indexa el dominio). **No se pudo leer
+    comandiavoz.com** → su perfil queda pendiente (ver checklist §11 del doc).
+  - **Hecho:** `apps/ia-rest/docs/competencia.md` — mapa del mercado VERIFICADO (Veovox, Storyous,
+    Qamarero, SmartBar; precios TPV ES: Glop/Ágora/Revo/Last.app/Tipsi/Cuiner; dolores cuantificados),
+    battlecard ia.rest y checklist para cerrar el perfil de comandiavoz. Rama `claude/competitor-research-rca1fz`.
+  - **🚨 VeriFactu APLAZADO a 2027 — CORREGIDO:** el RD-ley 15/2025 (BOE 3-dic-2025) prorrogó un año
+    (sociedades 1-ene-**2027**, resto 1-jul-**2027**). Corregido en este PR: maestro/skill (`SKILL.md`
+    §VeriFactu) **y** código `apps/ia-rest/src/lib/verifactu.ts` (`VERIFACTU_STATUS`, solo info en API,
+    no gatea lógica). **Pendiente Alberto:** confirmar en sede oficial AEAT antes de uso legal/comercial.
+  - **Para cerrar:** habilitar egress (o pegar el contenido de comandiavoz.com) y rellenar §2/§7/§11 del doc.
 - **📝 Doc drift corregido — crons de sivra — 21/06/2026**
   El `CLAUDE.md` de sivra y el skill `sivra-maestro` decían "10 crons en vercel.json", pero es
   **obsoleto**: el `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal, #419).
@@ -322,6 +358,24 @@
   - **Stop hook:** local branch `claude/responsive-panel` → remote `claude/nice-heisenberg-jo4vy1`.
     El hook busca `origin/claude/responsive-panel` (no existe) → cae a `origin/HEAD` (main) →
     escanea 28 commits. Fix manual: `git fetch origin claude/responsive-panel && git push --force origin HEAD:claude/responsive-panel`.
+
+- **🟢 fix(ia-rest/blog-seo) + fix(plataforma/banca) + feat(plataforma): Control de Facturas — 18/06/2026** (PRs #384, #385 mergeados; blog-seo sin PR propio)
+  - **fix(ia-rest/blog-seo):** `callAI` gana 6º arg `model` opcional. El cron `app/api/cron/blog-seo/route.ts`
+    usa `meta/llama-3.1-8b-instruct` (8B) con timeout interno <60 s para no superar el límite de Vercel.
+    `ia-rest-maestro` skill actualizada. Añadida spec `docs/superpowers/specs/2026-06-16-core-receipts-design.md`.
+    Recrea PR #302 (stale draft, código portado directamente a main).
+  - **fix(plataforma/banca) — PR #384:** Ingresos de la correduría (comisiones + liquidaciones Allianz/Mapfre)
+    llegaban con signo negativo y se clasificaban como gastos, descuadrando el panel `/finanzas`. Solución:
+    nuevo `apps/plataforma/lib/destino.ts` (clasificador basado en destino, no en signo) +
+    `lib/destino.test.ts` (44 tests). Migración `2026-06-16_reclasificar_abonos_correduria.sql` (aplica
+    `UPDATE movimientos_bancarios SET clasificacion_manual=...` a los movimientos históricos mal clasificados).
+    Recrea PR #331 (stale draft).
+  - **feat(plataforma): Control de Facturas — PR #385:** Panel `/sivra/facturas-control` en plataforma
+    (lista de proveedores recurrentes con frecuencia esperada vs. última factura recibida).
+    `GET /api/sivra/facturas-control` compara `facturas_drive` contra el registry en
+    `apps/plataforma/lib/sivra/facturas-control.ts`. Alerta `facturasFaltantes` en `getAlertas`
+    (`lib/banca.ts`) + banner en `/dashboard` + entrada `🗂️ Facturas` en el sidebar (Mis pisos).
+    Spec `docs/superpowers/plans/2026-06-16-facturas-control.md` (741 líneas). Recrea PR #322.
 
 - **🐛 FIXES COMUNICACIÓN + FINANZAS — 18/06/2026** (PR #382 mergeado a `main`)
   - **`/comunicacion` → Nuevo mensaje → Persona**: dropdown vacío corregido. `sivraAdapter` no
