@@ -34,6 +34,15 @@ export const QUERIES: Array<{ vertical: ApifyVertical; query: string }> = [
   { vertical: 'franquicia', query: 'cadenas de restaurantes Sevilla' },
   { vertical: 'franquicia', query: 'franquicias de cafetería y heladería España' },
   { vertical: 'franquicia', query: 'franquicias de hamburgueserías Málaga' },
+  // Catering a nivel NACIONAL (grandes ciudades + bodas/empresa)
+  { vertical: 'catering', query: 'empresas de catering Madrid' },
+  { vertical: 'catering', query: 'catering para bodas y eventos Barcelona' },
+  { vertical: 'catering', query: 'empresas de catering Valencia' },
+  { vertical: 'catering', query: 'catering para empresas Málaga' },
+  { vertical: 'catering', query: 'empresas de catering Bilbao' },
+  { vertical: 'catering', query: 'catering bodas y eventos Zaragoza' },
+  { vertical: 'catering', query: 'empresas de catering Murcia' },
+  { vertical: 'catering', query: 'catering para eventos A Coruña' },
 ]
 export const MAX_PLACES = 30
 
