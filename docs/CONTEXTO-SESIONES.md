@@ -16,6 +16,19 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino — 21/06/2026**
+  Petición de Alberto ("mergea todo y prueba todo"). Se cerraron los 10 PRs draft pendientes de
+  otras sesiones a estado terminal: **mergeados** #416 (memoria Groq), #410 (competencia ia-rest +
+  VeriFactu 2027), #406/#405/#402/#387 (auditorías), #392 (skill perfil-fiscal), #413 (retirada
+  sivra Fase 1). **Cerrada** #302 (blog-seo: su fix ya estaba en main vía `c4db1df`, superada).
+  **Retenida #307** (`@central/core-receipts`): NO es "solo spec" como decía — trae el paquete
+  nuevo + refactor de `apps/ia-rest/src/lib/courier.ts` (−473 líneas, impresión térmica ESC/POS);
+  cambio de código gordo sin revisar → pendiente de decisión de Alberto (no mergeado).
+  Conflictos resueltos (CONTEXTO/MATRIZ/skills/generados) preservando lo ya en main.
+  **Regresión cazada y corregida:** `destino.test.ts` fallaba 1/7 porque una aserción de #392
+  (`LIQ. OP.→seguros`) chocaba con la regla deliberada de hoy (`LIQ. OP.` de BBVA = Booking dúplex).
+  Test alineado al comportamiento vigente → 8/8. Suite repo verde (guardián 21, packages, vitest 40).
+
 - **🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo) — 21/06/2026**
   Sivra ya está 100% consolidado en `apps/plataforma` (`/sivra/*`, APIs, crons); la app standalone
   `housesevillana.vercel.app` está **deprecada**. **Fase 1 (esta sesión, rama `claude/dynamic-pricing-uhvnak`):**
