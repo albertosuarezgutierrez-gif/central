@@ -30,15 +30,16 @@ export async function GET(req: Request) {
     conds.push(Prisma.sql`EXISTS (SELECT 1 FROM unnest(cpv) AS c WHERE ${Prisma.join(likes, ' OR ')})`)
   }
   if (q) conds.push(Prisma.sql`fts @@ plainto_tsquery('spanish', ${q})`)
-  // Zona/provincia: el feed PLACSP a menudo NO trae la provincia (queda NULL). Si
-  // filtrásemos en duro, esas licitaciones desaparecerían y el usuario vería 0.
-  // Por eso incluimos también las de ubicación desconocida (provincia NULL/'').
-  if (provincia) conds.push(Prisma.sql`(provincia ILIKE ${'%' + provincia + '%'} OR provincia IS NULL OR provincia = '')`)
+  // Zona/provincia: filtro ESTRICTO — al elegir zona se muestran SOLO las licitaciones
+  // ubicadas en ella. La provincia se deduce del código postal del órgano (provinciaDeCP);
+  // las que el feed PLACSP no permite ubicar (≈44%) quedan sin provincia y aparecen
+  // únicamente en "Toda España" (no se cuelan en otras zonas → no más Canarias en Andalucía).
+  if (provincia) conds.push(Prisma.sql`provincia ILIKE ${'%' + provincia + '%'}`)
   if (ccaa) {
     const provs = provinciasDeComunidad(ccaa)
     if (provs.length) {
       const likes = provs.map(p => Prisma.sql`provincia ILIKE ${'%' + p + '%'}`)
-      conds.push(Prisma.sql`(${Prisma.join(likes, ' OR ')} OR provincia IS NULL OR provincia = '')`)
+      conds.push(Prisma.sql`(${Prisma.join(likes, ' OR ')})`)
     }
   }
   if (min !== null && Number.isFinite(min)) conds.push(Prisma.sql`presupuesto >= ${min}`)

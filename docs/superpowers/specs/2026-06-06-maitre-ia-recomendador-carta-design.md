@@ -16,7 +16,7 @@ carrito que ya existe.
 
 Es el equivalente para **platos** del recomendador de vino que ya existe
 (`POST /api/vinos/recomendar` + prompt "sumiller"). Reutiliza el mismo patrón:
-leer catálogo desde `productos`, montar lista de texto, `callAI()` (NIM → Haiku),
+leer catálogo desde `productos`, montar lista de texto, `callAI()` (NIM → Groq, gratis),
 devolver respuesta corta.
 
 **Principio rector de ia.rest:** todo configurable al 100% desde `/owner`. El
@@ -64,7 +64,7 @@ Notas técnicas:
   (`lib/ai-client.ts` → `callAI`) vive en Next.js. Por eso la puerta del comensal
   es una **API route Next.js** (`/api/qr/recomendar`), no un Edge Function —
   mismo modelo de auth por `token` que ya usa `/api/qr/carta-i18n`.
-- `callAI` con `noFallback=false` (default): NIM primario, fallback Haiku.
+- `callAI`: NIM primario, fallback automático a Groq `llama-3.3-70b-versatile` (gratis). `noFallback` es legacy (ya no bloquea el fallback gratis).
 - Salida en JSON estricto vía `cleanJSON` (ya existe en `ai-client.ts`).
 
 ---

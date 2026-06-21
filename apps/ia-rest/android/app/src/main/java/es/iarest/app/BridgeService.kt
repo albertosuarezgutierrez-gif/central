@@ -40,12 +40,15 @@ class BridgeService : Service() {
         const val CHANNEL_ID     = "iarest_bridge"
         const val NOTIF_ID       = 1001
         const val API            = "https://www.iarest.es"
-        const val SUPABASE_URL   = "https://efncqyvhniaxsirhdxaa.supabase.co"
-        const val ANON_KEY       = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVmbmNxeXZobmlheHNpcmhkeGFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2ODk5MzYsImV4cCI6MjA5MzI2NTkzNn0.dt3ko-HWzJK57FQyRDTjU07QBsYv9fpGo8Sm3Cs6heA"
-        const val VERSION        = "7.0.0-android"
+        // Credenciales Supabase: NO se hardcodean (el proyecto cambió y dejó colgado el
+        // Realtime). Las inyecta la WebView por IaRestBridge.setSupabase y se guardan en prefs.
+        const val VERSION        = "7.1.0-android"
         const val PREFS_NAME     = "iarest_bridge"
         const val PREF_TOKEN     = "bridge_token"
         const val PREF_DEVICE    = "device_name"
+        const val PREF_SB_URL    = "sb_url"
+        const val PREF_SB_ANON   = "sb_anon"
+        const val PREF_SB_SCHEMA = "sb_schema"
         const val HEARTBEAT_MS   = 5_000L
         const val STANDBY_MS     = 10_000L
 
@@ -53,6 +56,16 @@ class BridgeService : Service() {
             ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
                 .putString(PREF_TOKEN, token)
                 .putString(PREF_DEVICE, deviceName.ifEmpty { android.os.Build.MODEL })
+                .apply()
+        }
+
+        // La WebView pasa la URL/anon/schema ACTUALES de Supabase (env vars) → el Realtime
+        // de print_jobs deja de depender de un proyecto hardcodeado obsoleto.
+        fun setSupabase(ctx: Context, url: String, anon: String, schema: String) {
+            ctx.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit()
+                .putString(PREF_SB_URL, url)
+                .putString(PREF_SB_ANON, anon)
+                .putString(PREF_SB_SCHEMA, schema.ifEmpty { "public" })
                 .apply()
         }
 
@@ -184,23 +197,33 @@ class BridgeService : Service() {
 
     // ── WebSocket Realtime Supabase ──────────────────────────────
     private fun conectarRealtime(token: String, rid: String) {
-        val wsUrl = SUPABASE_URL.replace("https://", "wss://") +
-            "/realtime/v1/websocket?apikey=$ANON_KEY&vsn=1.0.0"
+        val prefs  = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+        val sbUrl  = prefs.getString(PREF_SB_URL, "") ?: ""
+        val anon   = prefs.getString(PREF_SB_ANON, "") ?: ""
+        val schema = (prefs.getString(PREF_SB_SCHEMA, "public") ?: "public").ifEmpty { "public" }
+        if (sbUrl.isEmpty() || anon.isEmpty()) {
+            // La WebView aún no ha inyectado credenciales → sin Realtime, pero el polling
+            // HTTP del tick (cada ${HEARTBEAT_MS}ms) sigue imprimiendo igual.
+            Log.i(TAG, "Sin credenciales Supabase (las pasa la WebView) — Realtime omitido, uso polling")
+            return
+        }
+        val wsUrl = sbUrl.replace("https://", "wss://") +
+            "/realtime/v1/websocket?apikey=$anon&vsn=1.0.0"
 
         val req = Request.Builder().url(wsUrl).build()
         ws = http.newWebSocket(req, object : WebSocketListener() {
             override fun onOpen(webSocket: WebSocket, response: Response) {
                 Log.i(TAG, "Realtime conectado")
-                // Suscribir a print_jobs del restaurante
+                // Suscribir a print_jobs del restaurante (schema actual de la app)
                 val join = JSONObject().apply {
-                    put("topic", "realtime:public:print_jobs:local_id=eq.$rid")
+                    put("topic", "realtime:$schema:print_jobs:local_id=eq.$rid")
                     put("event", "phx_join")
                     put("payload", JSONObject().apply {
                         put("config", JSONObject().apply {
                             put("postgres_changes", JSONArray().apply {
                                 put(JSONObject().apply {
                                     put("event", "INSERT")
-                                    put("schema", "public")
+                                    put("schema", schema)
                                     put("table", "print_jobs")
                                     put("filter", "local_id=eq.$rid")
                                 })

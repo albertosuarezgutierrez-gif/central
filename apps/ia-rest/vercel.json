@@ -25,6 +25,10 @@
       "schedule": "*/2 * * * *"
     },
     {
+      "path": "/api/cron/preavisos-auto",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/cobro-inactividad",
       "schedule": "*/5 * * * *"
     },
@@ -117,12 +121,12 @@
       "schedule": "0 7 * * 1"
     },
     {
-      "path": "/api/cron/lead-onboarding",
-      "schedule": "*/30 * * * *"
-    },
-    {
       "path": "/api/cron/crm-lead-hunter-sevilla",
       "schedule": "0 6 * * 1-5"
+    },
+    {
+      "path": "/api/cron/crm-emails-catering",
+      "schedule": "30 7 * * 1-5"
     },
     {
       "path": "/api/cron/crm-recordatorio-dia2",
