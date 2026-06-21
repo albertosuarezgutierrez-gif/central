@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:17:04Z",
+  "generadoEn": "2026-06-21T20:17:52Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2485,6 +2485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🕵️ ia-rest: inteligencia competitiva (comandiavoz.com)",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "📝 Doc drift corregido — crons de sivra",
       "fecha": "21/06/2026"
     },
@@ -2538,10 +2542,6 @@
     },
     {
       "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda",
       "fecha": "19/06/2026"
     }
   ],
