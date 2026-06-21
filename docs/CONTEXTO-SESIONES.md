@@ -16,6 +16,20 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🕵️ ia-rest: inteligencia competitiva (comandiavoz.com) — 21/06/2026**
+  - **Disparador:** Alberto pasó un anuncio de Meta/Instagram (`fbclid`) de **comandiavoz.com**
+    (parece comanda-por-voz para hostelería = competidor directo de ia.rest) y pidió estudiar competencia.
+  - **Bloqueo del entorno:** egress de red cortado en la sesión web (`WebFetch` → 403 "Host not in
+    allowlist" para TODOS los hosts; `WebSearch` US-only no indexa el dominio). **No se pudo leer
+    comandiavoz.com** → su perfil queda pendiente (ver checklist §11 del doc).
+  - **Hecho:** `apps/ia-rest/docs/competencia.md` — mapa del mercado VERIFICADO (Veovox, Storyous,
+    Qamarero, SmartBar; precios TPV ES: Glop/Ágora/Revo/Last.app/Tipsi/Cuiner; dolores cuantificados),
+    battlecard ia.rest y checklist para cerrar el perfil de comandiavoz. Rama `claude/competitor-research-rca1fz`.
+  - **🚨 Hallazgo accionable — VeriFactu APLAZADO a 2027:** el RD-ley 15/2025 (BOE 3-dic-2025) prorrogó
+    un año (sociedades 1-ene-**2027**, resto 1-jul-**2027**). El maestro/skill de ia.rest aún dicen 2026.
+    **Verificar en sede AEAT y corregir** maestro+skill antes de comunicar "2026" en material comercial/legal.
+  - **Para cerrar:** habilitar egress (o pegar el contenido de comandiavoz.com) y rellenar §2/§7/§11 del doc.
+
 - **🌐 URLs de producción (no perder) — 16/06/2026**
   - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).
   - **sivra** (motor de pricing dinámico + endpoints `/api/pricing/*`, `/api/mercado/*`, etc.): `housesevillana.vercel.app` (la pantalla de login es la verde "SIVRA").
