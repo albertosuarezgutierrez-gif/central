@@ -22,7 +22,7 @@ export default function ActivarPush({ endpoint }: { endpoint: string }) {
       const reg = await navigator.serviceWorker.ready
       const perm = await Notification.requestPermission()
       if (perm !== 'granted') { setEstado('Permiso denegado'); return }
-      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(clave) })
+      const sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: base64ToUint8Array(clave) as BufferSource })
       const j = sub.toJSON()
       const r = await fetch(endpoint, {
         method: 'POST', headers: { 'content-type': 'application/json' },

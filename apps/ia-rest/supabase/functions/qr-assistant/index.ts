@@ -101,28 +101,8 @@ REGLAS:
       respuesta = nimData.choices?.[0]?.message?.content ?? ''
     }
 
-    // Fallback: Anthropic Claude Haiku si NIM falla
-    if (!respuesta) {
-      const anthropicKey = Deno.env.get('ANTHROPIC_API_KEY')
-      if (anthropicKey) {
-        const aRes = await fetch('https://api.anthropic.com/v1/messages', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': anthropicKey,
-            'anthropic-version': '2023-06-01',
-          },
-          body: JSON.stringify({
-            model: 'claude-haiku-4-5-20251001',
-            max_tokens: 256,
-            system,
-            messages: msgs,
-          }),
-        })
-        const aData = await aRes.json()
-        respuesta = aData.content?.find((b: any) => b.type === 'text')?.text ?? ''
-      }
-    }
+    // Sin fallback Anthropic (retirado 17/06/2026, cuenta sin saldo). Si NIM no responde, se
+    // devuelve el mensaje por defecto de abajo.
 
     return new Response(JSON.stringify({ respuesta: respuesta.trim() || 'Lo siento, no puedo responder en este momento. Pregunta al camarero.' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },

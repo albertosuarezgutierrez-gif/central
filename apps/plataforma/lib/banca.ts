@@ -354,16 +354,31 @@ export type Alertas = {
   porRevisar: number
   duplicados: number
   duplicadosDetalle: Array<{ concepto: string; importe: number; fecha: string | null }>
+  facturasFaltantes: number
 }
 export async function getAlertas(cuentaId: string): Promise<Alertas> {
-  const [rev, grupos] = await Promise.all([
+  const now = new Date()
+  const mesPrev = now.getMonth() === 0 ? 12 : now.getMonth()
+  const añoPrev = now.getMonth() === 0 ? now.getFullYear() - 1 : now.getFullYear()
+
+  const [rev, grupos, registrosPrev] = await Promise.all([
     prisma.$queryRaw<Array<{ n: bigint }>>`
       SELECT count(*) AS n
       FROM movimientos_bancarios mb
       JOIN cuentas_bancarias cb ON cb.id = mb.cuenta_bancaria_id
       WHERE cb.cuenta_id = ${cuentaId}::uuid AND mb.requiere_revision = true`,
     getDuplicadosSospechosos(cuentaId),
+    prisma.$queryRaw<Array<{ proveedor: string }>>`
+      SELECT proveedor FROM facturas_drive WHERE anio = ${añoPrev} AND mes = ${mesPrev}`,
   ])
+
+  // Facturas recurrentes que faltan del mes anterior. Se importa la lib aquí (no al tope del
+  // fichero) para no crear dependencia circular con lib/sivra/facturas-control.
+  const { PROVEEDORES_RECURRENTES, esperadoEnMes } = await import('./sivra/facturas-control')
+  const esperados = PROVEEDORES_RECURRENTES.filter(p => esperadoEnMes(p, añoPrev, mesPrev))
+  const archivados = new Set(registrosPrev.map(r => r.proveedor))
+  const facturasFaltantes = esperados.filter(p => !archivados.has(p.id)).length
+
   const visibles = grupos.filter(g => g.superaUmbral)
   return {
     porRevisar: Number(rev[0]?.n ?? 0),
@@ -373,6 +388,7 @@ export async function getAlertas(cuentaId: string): Promise<Alertas> {
       importe: g.importe,
       fecha: g.movimientos[0]?.fecha ?? null,
     })),
+    facturasFaltantes,
   }
 }
 

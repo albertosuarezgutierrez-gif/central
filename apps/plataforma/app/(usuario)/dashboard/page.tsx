@@ -30,6 +30,33 @@ async function getStripHoy(cuentaId: string) {
   return { entradas, salidas, movimientos: movsHoy.length, ingresos, gastos, movs: movsHoy }
 }
 
+async function getProximasLlegadas() {
+  const today = new Date().toISOString().slice(0, 10)
+  const limit = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10)
+  return prisma.$queryRaw<Array<{
+    propertyId: string; propertyName: string | null; guestName: string | null
+    checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null
+  }>>`
+    SELECT i."propertyId" AS "propertyId", p.name AS "propertyName",
+           i."guestName", i."checkIn"::date::text AS "checkIn", i."checkOut"::date::text AS "checkOut",
+           i.portal, i.amount::float, i.nights
+    FROM incomes i
+    LEFT JOIN properties p ON p.id = i."propertyId"
+    WHERE i."checkIn"::date >= ${today}::date
+      AND i."checkIn"::date <= ${limit}::date
+      AND i."propertyId" NOT LIKE '%personal%'
+    ORDER BY i."checkIn" ASC
+    LIMIT 10
+  `
+}
+
+const PROP_COLORS: Record<string, string> = {
+  prop_house_sevillana: '#84cc16', prop_busto_reform: '#f59e0b',
+  prop_duplex_center: '#10b981', prop_luxury_busto: '#ef4444',
+  prop_multi_apartamentos: '#8b5cf6',
+}
+const PORTAL_BADGE: Record<string, string> = { AIRBNB: '#FF5A5F', BOOKING: '#003580', VRBO: '#1D3C6E', DIRECTO: '#7c3aed' }
+
 const SECTOR_LABEL: Record<string, string> = {
   hosteleria:  '🍽️ Hostelería',
   limpieza:    '🧹 Limpieza',
@@ -68,13 +95,14 @@ export default async function DashboardPage() {
 
   // Saldo + strip hoy + evolución + comparativa + gastos por categoría + alertas, cada uno
   // tolerante a fallos: un timeout de la BD compartida degrada a vacío en vez de tumbar la página.
-  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas] = await Promise.all([
+  const [saldo, stripHoy, evolucion, comparativa, gastosCat, alertas, proximasLlegadas] = await Promise.all([
     safe(getSaldoConsolidado(session.id), { total: 0, porSociedad: [], cuentas: [] }),
     safe(getStripHoy(session.id), { entradas: 0, salidas: 0, movimientos: 0, ingresos: 0, gastos: 0, movs: [] as Array<{ importe: number; descripcion: string | null }> }),
     safe(getEvolucionMensual(session.id), [] as MesEvolucion[]),
     safe(getComparativaMensual(session.id), { actual: { ingresos: 0, gastos: 0, neto: 0 }, anterior: { ingresos: 0, gastos: 0, neto: 0 } }),
     safe(getGastosPorCategoria(session.id), [] as GastoCategoria[]),
-    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [] }),
+    safe(getAlertas(session.id), { porRevisar: 0, duplicados: 0, duplicadosDetalle: [], facturasFaltantes: 0 }),
+    safe(getProximasLlegadas(), [] as Array<{ propertyId: string; propertyName: string | null; guestName: string | null; checkIn: string; checkOut: string; portal: string | null; amount: number; nights: number | null }>),
   ])
 
   // Fetch financial summaries in parallel for all negocios
@@ -101,9 +129,23 @@ export default async function DashboardPage() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .dash-main { padding: 16px 12px !important; }
+            .dash-kpi-bar { gap: 16px !important; padding: 14px 16px !important; }
+            .dash-kpi-bar > * { min-width: 0; }
+            .dash-negocios-grid { grid-template-columns: 1fr !important; }
+            .dash-comparativa-row { gap: 16px !important; }
+            .dash-gastos-label { width: 100px !important; }
+          }
+          @media (max-width: 480px) {
+            .dash-kpi-bar { flex-direction: column !important; align-items: flex-start !important; }
+            .dash-kpi-bar a { margin-left: 0 !important; }
+          }
+        `}</style>
         {/* KPI bar consolidado */}
         {(totalNegocios > 0 || saldo.cuentas.length > 0) && (
-          <div style={{
+          <div className="dash-kpi-bar" style={{
             background: 'var(--surface)', border: '1px solid var(--border)',
             borderRadius: 'var(--radius)', padding: '20px 24px',
             display: 'flex', gap: '32px', flexWrap: 'wrap', marginBottom: '32px',
@@ -147,6 +189,51 @@ export default async function DashboardPage() {
                 {stripHoy.gastos > 0 && <span style={{ color: '#dc2626' }}> −{fmtEur(stripHoy.gastos)}</span>}
               </span>
             )}
+          </div>
+        )}
+
+        {/* Widget próximas llegadas pisos */}
+        {proximasLlegadas.length > 0 && (
+          <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '14px 18px', marginBottom: '20px', boxShadow: 'var(--shadow)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>🏠 Esta semana en los pisos</span>
+              <Link href="/sivra/calendario" style={{ fontSize: 11, color: 'var(--primary)', textDecoration: 'none', fontWeight: 600 }}>Ver calendario →</Link>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {proximasLlegadas.map((inc, i) => {
+                const today = new Date().toISOString().slice(0, 10)
+                const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10)
+                const isToday = inc.checkIn === today
+                const isTomorrow = inc.checkIn === tomorrow
+                const [, m, d] = inc.checkIn.split('-')
+                const nights = inc.nights ?? Math.round((new Date(inc.checkOut).getTime() - new Date(inc.checkIn).getTime()) / 86400000)
+                const propColor = PROP_COLORS[inc.propertyId] ?? '#94a3b8'
+                const portalBg = PORTAL_BADGE[inc.portal ?? ''] ?? '#64748b'
+                return (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 6, background: isToday ? 'var(--primary-light)' : 'transparent', minWidth: 0 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: propColor, flexShrink: 0 }} />
+                    <span style={{ fontSize: 12, fontWeight: 700, color: isToday ? 'var(--primary)' : 'var(--muted)', width: 30, flexShrink: 0 }}>
+                      {isToday ? 'HOY' : isTomorrow ? 'MÑN' : `${d}/${m}`}
+                    </span>
+                    <span style={{ fontSize: 12, color: 'var(--muted)', flexShrink: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', maxWidth: 90 }}>
+                      {(inc.propertyName ?? inc.propertyId).replace('prop_', '').replace(/_/g, ' ')}
+                    </span>
+                    <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--text)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>
+                      {inc.guestName ?? '—'}
+                    </span>
+                    <span style={{ fontSize: 10, color: 'var(--muted)', flexShrink: 0 }}>{nights}n</span>
+                    {inc.portal && (
+                      <span style={{ fontSize: 9, padding: '1px 4px', borderRadius: 3, background: portalBg, color: '#fff', fontWeight: 700, flexShrink: 0 }}>
+                        {inc.portal.slice(0, 3)}
+                      </span>
+                    )}
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text)', flexShrink: 0 }}>
+                      {new Intl.NumberFormat('es-ES', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(inc.amount)}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -200,7 +287,7 @@ export default async function DashboardPage() {
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
+            <div className="dash-negocios-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: '16px' }}>
               {soc.negocios.map(neg => {
                 const url = neg.app ? APP_URL[neg.app] : null
                 const fin = neg.financiero
@@ -313,7 +400,7 @@ function GraficoMensual({ data }: { data: MesEvolucion[] }) {
 // Banner de alertas: lo que requiere acción del dueño (revisar categoría, posibles cargos
 // duplicados). Si no hay nada, no renderiza.
 function AlertasBanner({ alertas }: { alertas: Alertas }) {
-  if (alertas.porRevisar === 0 && alertas.duplicados === 0) return null
+  if (alertas.porRevisar === 0 && alertas.duplicados === 0 && alertas.facturasFaltantes === 0) return null
   return (
     <div style={{
       background: '#fffbeb', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)',
@@ -335,6 +422,11 @@ function AlertasBanner({ alertas }: { alertas: Alertas }) {
           {' '}→
         </Link>
       )}
+      {alertas.facturasFaltantes > 0 && (
+        <Link href="/sivra/facturas-control" style={{ fontSize: '13px', color: 'var(--text)', textDecoration: 'none' }}>
+          🗂️ <strong>{alertas.facturasFaltantes}</strong> {alertas.facturasFaltantes === 1 ? 'factura recurrente falta' : 'facturas recurrentes faltan'} del mes pasado → Ver facturas
+        </Link>
+      )}
     </div>
   )
 }
@@ -350,7 +442,7 @@ function Comparativa({ actual, anterior }: { actual: ComparativaMes; anterior: C
   return (
     <section style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: '20px', boxShadow: 'var(--shadow)', marginBottom: '28px' }}>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📅 Este mes vs. el anterior</h2>
-      <div style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
+      <div className="dash-comparativa-row" style={{ display: 'flex', gap: '28px', flexWrap: 'wrap' }}>
         {filas.map(f => {
           const d = delta(f.a, f.b)
           const sube = d >= 0
@@ -385,7 +477,7 @@ function GastosPorCategoria({ data }: { data: GastoCategoria[] }) {
       <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
         {top.map(d => (
           <div key={d.categoria} style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ width: '140px', flexShrink: 0, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            <div className="dash-gastos-label" style={{ width: '140px', flexShrink: 0, fontSize: '13px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {CATEGORIA_LABEL[d.categoria as Categoria] ?? d.categoria}
             </div>
             <div style={{ flex: 1, background: 'var(--bg)', borderRadius: '6px', height: '20px', overflow: 'hidden' }}>

@@ -34,6 +34,7 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
   const [enviandoMail, setEnviandoMail] = useState(false)
   const [enviandoFranq, setEnviandoFranq] = useState(false)
   const [enviandoIg, setEnviandoIg] = useState(false)
+  const [enviandoCat, setEnviandoCat] = useState(false)
   const [reenviando, setReenviando] = useState(false)
   const [reparando, setReparando] = useState(false)
   const [msg, setMsg] = useState<string>('')
@@ -110,6 +111,19 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
     }
   }
 
+  const emailsCatering = async () => {
+    setEnviandoCat(true); setMsg('')
+    try {
+      const r = await fetch('/api/super/emails-catering', { method: 'POST', headers: headers() })
+      const j = await r.json()
+      setMsg(j.error ? `Error: ${j.error}` : `🍽️ ${j.enviados ?? 0} catering (España) listos para aprobar en Telegram${j.motivo ? ` (${j.motivo})` : ''}`)
+    } catch (e) {
+      setMsg(`Error: ${e instanceof Error ? e.message : 'desconocido'}`)
+    } finally {
+      setEnviandoCat(false)
+    }
+  }
+
   const reenviarPendientes = async () => {
     setReenviando(true); setMsg('')
     try {
@@ -177,6 +191,10 @@ export default function ProspeccionApifyTab({ session }: { session: unknown }) {
         <button onClick={enviarFranquicias} disabled={enviandoFranq}
           style={{ background: enviandoFranq ? C.bg3 : C.ink, color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoFranq ? 'default' : 'pointer' }}>
           {enviandoFranq ? 'Preparando…' : '🏢 Preparar emails franquicias'}
+        </button>
+        <button onClick={emailsCatering} disabled={enviandoCat}
+          style={{ background: enviandoCat ? C.bg3 : '#B5651D', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 22px', fontFamily: SN, fontWeight: 700, fontSize: 14, cursor: enviandoCat ? 'default' : 'pointer' }}>
+          {enviandoCat ? 'Preparando…' : '🍽️ Emails catering (España)'}
         </button>
         <button onClick={() => instagramDM('catering')} disabled={enviandoIg}
           style={{ background: enviandoIg ? C.bg3 : '#C13584', color: '#fff', border: 'none', borderRadius: 8, padding: '11px 18px', fontFamily: SN, fontWeight: 700, fontSize: 13, cursor: enviandoIg ? 'default' : 'pointer' }}>

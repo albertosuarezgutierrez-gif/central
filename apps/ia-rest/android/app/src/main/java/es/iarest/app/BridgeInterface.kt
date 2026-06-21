@@ -36,6 +36,14 @@ class BridgeInterface(private val ctx: Context) {
     fun getToken(): String =
         BridgeService.getToken(ctx) ?: ""
 
+    // La WebView inyecta las credenciales Supabase actuales (env vars) para que el
+    // Realtime de impresión no dependa de un proyecto hardcodeado obsoleto.
+    @JavascriptInterface
+    fun setSupabase(url: String, anon: String, schema: String) {
+        if (url.isBlank() || anon.isBlank()) return
+        BridgeService.setSupabase(ctx, url, anon, schema)
+    }
+
     @JavascriptInterface
     fun stop() {
         ctx.stopService(Intent(ctx, BridgeService::class.java))
@@ -49,4 +57,24 @@ class BridgeInterface(private val ctx: Context) {
 
     @JavascriptInterface
     fun getVersion(): String = BridgeService.VERSION
+
+    // ── Voz del preaviso de marcha (Fase 2b) ─────────────────────
+    // La WebView (/edge) pasa las credenciales Supabase ACTUALES (de las env
+    // vars, sin hardcode), el restaurante, las comandas de este camarero y si
+    // la voz está activa. Arranca/para el servicio que habla con pantalla apagada.
+    @JavascriptInterface
+    fun setPreavisoSesion(
+        supabaseUrl: String, anonKey: String, schema: String,
+        restauranteId: String, comandaIdsCsv: String, voiceOn: Boolean
+    ) {
+        val ids = comandaIdsCsv.split(",").map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        PreavisoVozService.actualizarSesion(supabaseUrl, anonKey, schema, restauranteId, ids, voiceOn)
+        val intent = Intent(ctx, PreavisoVozService::class.java)
+        if (restauranteId.isNotEmpty() && voiceOn && supabaseUrl.isNotEmpty() && anonKey.isNotEmpty()) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) ctx.startForegroundService(intent)
+            else ctx.startService(intent)
+        } else {
+            ctx.stopService(intent)
+        }
+    }
 }

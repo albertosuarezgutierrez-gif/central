@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { signCleaningPhoto } from '@/lib/cleaning-photos'
-import { nimVision } from '@central/core-ai'
+import { aiVision } from '@/lib/ai-client'
 
 const SUPABASE_URL  = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SUPABASE_ANON = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -46,7 +46,7 @@ Responde ÚNICAMENTE con un objeto JSON válido, sin markdown, sin explicaciones
 
 Si no hay ningún problema visible, usa: hay_incidencia=false, tipo="ninguno", severidad="baja".`
 
-  const content = await nimVision(
+  const content = await aiVision(
     nimConfig(), '',
     [{ data: base64, mediaType: mimeType }],
     prompt, 256, { temperature: 0.1 },

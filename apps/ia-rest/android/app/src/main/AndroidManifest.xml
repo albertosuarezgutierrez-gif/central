@@ -11,6 +11,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE"/>
     <!-- Android 14+: tipo connectedDevice para gestión de impresoras -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_CONNECTED_DEVICE"/>
+    <!-- Android 14+: tipo specialUse para la voz del preaviso con pantalla apagada -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE"/>
 
     <!-- Micrófono (PTT + Whisper) -->
     <uses-permission android:name="android.permission.RECORD_AUDIO"/>
@@ -60,6 +62,16 @@
             android:name=".BridgeService"
             android:exported="false"
             android:foregroundServiceType="connectedDevice"/>
+
+        <!-- Voz del preaviso de marcha — lee los preavisos con pantalla apagada -->
+        <service
+            android:name=".PreavisoVozService"
+            android:exported="false"
+            android:foregroundServiceType="specialUse">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="Lee en voz alta los preavisos de cocina para el camarero con la pantalla apagada"/>
+        </service>
 
         <receiver
             android:name="androidx.media.session.MediaButtonReceiver"

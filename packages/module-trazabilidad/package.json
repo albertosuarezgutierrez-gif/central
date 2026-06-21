@@ -1,0 +1,17 @@
+{
+  "name": "@central/module-trazabilidad",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Trazabilidad / APPCC (casa de marcas): lógica PURA del parte de elaboración de hostelería. Modela la ficha de cada elaboración (ingredientes, lote, proveedor, desinfección, descongelación), los puntos de control sanitario (tratamiento térmico, abatimiento, congelación), muestras testigo, temperaturas de entrada/salida y firma. Valida los controles APPCC, bloquea la salida si falta un registro, detecta los 14 alérgenos por ingrediente y avisa de muestras testigo a punto de caducar. Agnóstico de BD/vertical: lo enchufa ia-rest (cocina) y cualquier cliente de catering. Sin BD, sin secretos, sin LLM.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.ts"
+  },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

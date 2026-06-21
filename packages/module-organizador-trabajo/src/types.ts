@@ -14,6 +14,23 @@ export interface Tarea {
   vence_at?: string | null         // ISO 8601: cuándo debe estar HECHA (caducidad / "listo para")
   requiere_rol?: string | null     // rol/capacidad requerida; null/ausente = cualquiera la puede hacer
   estado?: EstadoTarea             // ausente = se trata como 'pendiente'
+  depende_de?: string[]            // ids de tareas que deben estar HECHAS antes (avisos encadenados)
+  partida?: string | null          // sección de trabajo: 'frio' | 'caliente' | 'corte' | 'montaje' | ...
+}
+
+/** Carga de una partida (sección de cocina/sala): nº de tareas y minutos estimados pendientes. */
+export interface CargaPartida {
+  partida: string
+  tareas: Tarea[]
+  minutos_estimados: number
+}
+
+/** Aviso de que una tarea ha quedado lista para empezar (un prerequisito se completó). */
+export interface Aviso {
+  tarea_id: string
+  nombre: string
+  desbloqueada_por: string         // id de la tarea recién completada que la destrabó
+  mensaje: string
 }
 
 /** Quien ejecuta el trabajo: cocinero, camarero, limpiadora… */

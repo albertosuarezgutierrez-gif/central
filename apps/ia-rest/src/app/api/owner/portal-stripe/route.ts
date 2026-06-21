@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 import { getSession, getRestauranteId } from '@/lib/session'
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No hay suscripción activa' }, { status: 404 })
   }
 
-  const stripe = new Stripe(getStripeSecretKey(), { apiVersion: '2023-10-16' as never })
+  const stripe = createStripe(getStripeSecretKey())
   const appUrl = process.env.APP_URL ?? 'https://www.iarest.es'
 
   const portalSession = await stripe.billingPortal.sessions.create({

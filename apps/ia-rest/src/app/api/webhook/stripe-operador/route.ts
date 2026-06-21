@@ -2,16 +2,13 @@ export const dynamic = 'force-dynamic'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
+import type { Stripe } from '@central/core-payments'
 import { tgAlert } from '@/lib/telegram'
 import { Resend } from 'resend'
 import { periodoStr, trimestreActual } from '@/lib/contabilidad'
 
-function getStripe() {
-  return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: '2023-10-16' as never,
-  })
-}
+const getStripe = () => createStripe()
 function getResend() { return new Resend(process.env.RESEND_API_KEY!) }
 
 export async function POST(req: NextRequest) {

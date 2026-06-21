@@ -10,7 +10,7 @@ const monorepoRoot = path.join(__dirname, "..", "..");
 
 const nextConfig: NextConfig = {
   serverExternalPackages: ["nodemailer", "pdf-parse"],
-  transpilePackages: ["@central/core-ai", "@central/core-storage", "@central/core-email", "@central/module-contabilidad"],
+  transpilePackages: ["@central/core-ai", "@central/core-storage", "@central/core-email", "@central/core-push", "@central/module-contabilidad", "@central/module-materiales", "@central/module-proveedores"],
   outputFileTracingRoot: monorepoRoot,
   // ESLint está configurado (.eslintrc.json) y disponible vía `npm run lint`,
   // pero no debe tumbar el build de producción por hallazgos preexistentes.

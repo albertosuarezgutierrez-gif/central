@@ -195,12 +195,12 @@ type MovRaw = {
 }
 type Transacciones = { transactions: MovRaw[]; continuation_key?: string }
 
-export async function getMovimientos(accountUid: string): Promise<MovEB[]> {
+export async function getMovimientos(accountUid: string, dateFromOverride?: string): Promise<MovEB[]> {
   const out: MovEB[] = []
   // Enable Banking exige un rango de fechas para las transacciones; sin date_from devuelve
-  // vacío. Pedimos ~2 años hacia atrás (el consentimiento PSD2 suele permitir 90d de histórico,
-  // el banco recorta a lo que tenga disponible).
-  const dateFrom = new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  // vacío. Por defecto ~89 días para el sync diario. Pasa dateFromOverride para importar
+  // histórico desde una fecha concreta (p. ej. "2026-01-01").
+  const dateFrom = dateFromOverride ?? new Date(Date.now() - 89 * 24 * 3600 * 1000).toISOString().slice(0, 10)
   let cont: string | undefined
   let guard = 0
   do {

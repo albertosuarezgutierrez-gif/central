@@ -3,9 +3,13 @@
 // app). La POLÍTICA (fallback, timeouts, selección de modelo) vive en cada app.
 
 export { cleanJSON } from './clean-json'
-export { nimText, nimChat, nimVision } from './nim'
-export type { NimChatMessage, NimChatOptions } from './nim'
+export { nimText, nimChat, nimVision, nimChatTools } from './nim'
+export type { NimChatMessage, NimChatOptions, NimToolMessage, NimToolCall, NimToolResult } from './nim'
+export { groqText, groqChat, groqChatTools } from './groq'
+export type { GroqConfig } from './groq'
 export { geminiSearch } from './gemini'
 export type { GeminiConfig } from './gemini'
 export type { ImageInput, NimConfig } from './types'
-export { aiComplete } from './client'
+export { aiComplete, aiTools } from './client'
+export { gatewayChat, gatewaySearch, gatewayVision, gatewayTools } from './gateway'
+export type { GatewayConfig } from './gateway'

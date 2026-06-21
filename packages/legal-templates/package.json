@@ -1,0 +1,12 @@
+{
+  "name": "@central/legal-templates",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Plantillas legales VERSIONADAS de la casa de marcas (RR.HH.): información de protección de datos al trabajador (RGPD), acuerdo de confidencialidad y código de conducta. Render PURO a HTML autocontenido, parametrizado por empresa/trabajador. La persistencia y la firma las pone cada vertical. Cada plantilla lleva versión: al cambiar la ley se publica una versión nueva y se puede re-emitir/re-firmar.",
+  "type": "module",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": { ".": "./src/index.ts" },
+  "sideEffects": false,
+  "license": "UNLICENSED"
+}

@@ -390,21 +390,6 @@ async function callNvidia(systemPrompt: string, userText: string): Promise<strin
   return text
 }
 
-/** Anthropic Claude Haiku — fallback de pago */
-async function callAnthropic(systemPrompt: string, userText: string): Promise<string> {
-  const Anthropic = await import('@anthropic-ai/sdk').then(m => m.default)
-  const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
-  const response = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 512,
-    system: systemPrompt,
-    messages: [{ role: 'user', content: userText }],
-  })
-  const content = response.content[0]
-  if (content.type !== 'text') throw new Error('Respuesta inesperada de Anthropic')
-  return content.text
-}
-
 // ── Función principal con cascada de proveedores ────────────────────────────
 
 export async function parsearComanda(
@@ -489,24 +474,9 @@ export async function parsearComanda(
     }
   }
 
-  // ── Intento 2: Claude Haiku con memoria de sesión ─────────────────────────
-  // Si NVIDIA falló completamente, Haiku lleva el contexto enriquecido
-  const systemPromptFallback = sesionContext
-    ? systemPromptBase + sesionContext
-    : systemPromptBase
-  try {
-    const raw = await Promise.race([
-      callAnthropic(systemPromptFallback, textoParaLLM),
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Anthropic timeout 20s')), 20_000)
-      ),
-    ])
-    const result = parseAndValidate(raw)
-    const via = hasNvidia ? 'anthropic[fallback+sesión]' : 'anthropic'
-    console.log(`[BRAIN] ✓ ${via}:`, result.tipo, result.mesa, result.items.length, 'items')
-    return { ...result, raw: texto }
-  } catch (e) {
-    console.error('[BRAIN] Todos los proveedores fallaron:', (e as Error).message)
-    return { mesa: 'T00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
-  }
+  // ── Sin fallback Anthropic (retirado: cuenta sin saldo) ───────────────────
+  // NVIDIA NIM es el único proveedor del brain. Si no está o falló, devolvemos un aviso
+  // (la IA del god-panel/agentes usa la pasarela central; el brain del POS va directo a NIM).
+  console.error('[BRAIN] NVIDIA no disponible o falló y no hay fallback (Anthropic retirado).')
+  return { mesa: 'T00', tipo: 'aviso', items: [], confianza: 0.1, raw: texto }
 }

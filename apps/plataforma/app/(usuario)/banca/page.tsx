@@ -5,7 +5,7 @@ import { getSaldoConsolidado, listarMovimientos, listarPorRevisar, getResumenPor
 import { DESTINO_LABEL, CATEGORIA_LABEL } from '@/lib/categorizar'
 import { getEstimacionFiscal, type Trimestre } from '@/lib/fiscal'
 import { getTesoreria } from '@/lib/tesoreria'
-import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja } from './BancaClient'
+import { ImportarExtractoBtn, ReanalizarBtn, ConciliarBtn, SubirFacturaBtn, ConectarBancoBtn, RevisarBandeja, ExportarBtn, MovimientosTabla, DuplicadosBandeja, RevisarCorreoBtn } from './BancaClient'
 
 export const dynamic = 'force-dynamic'
 
@@ -32,7 +32,14 @@ export default async function BancaPage() {
 
   return (
     <main style={{ maxWidth: '960px', margin: '0 auto', padding: '32px 24px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
+        <style>{`
+          @media (max-width: 768px) {
+            .banca-header { flex-direction: column !important; align-items: flex-start !important; }
+            .banca-table-wrap { overflow-x: auto !important; -webkit-overflow-scrolling: touch; }
+            .banca-acciones { flex-wrap: wrap !important; gap: 8px !important; }
+          }
+        `}</style>
+        <div className="banca-header" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', marginBottom: '24px' }}>
           <div>
             <div style={{ fontSize: '12px', color: 'var(--muted)', fontWeight: 500 }}>Saldo total del grupo</div>
             <div style={{ fontSize: '28px', fontWeight: 800, color: saldo.total >= 0 ? '#16a34a' : '#dc2626' }}>{fmtEur(saldo.total)}</div>
@@ -42,6 +49,7 @@ export default async function BancaPage() {
             {movimientos.length > 0 && <ConciliarBtn />}
             {movimientos.length > 0 && <SubirFacturaBtn />}
             {movimientos.length > 0 && <ExportarBtn />}
+            <RevisarCorreoBtn />
             <ConectarBancoBtn sociedades={sociedades} />
             <ImportarExtractoBtn sociedades={sociedades} />
           </div>
@@ -175,7 +183,7 @@ function EvolucionNegocio({ meses, filas }: { meses: string[]; filas: EvolucionD
   return (
     <section style={{ marginBottom: '32px' }}>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '14px' }}>📈 Neto por negocio (últimos {meses.length} meses)</h2>
-      <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'auto' }}>
+      <div className="banca-table-wrap" style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'auto' }}>
         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '13px' }}>
           <thead>
             <tr style={{ borderBottom: '1px solid var(--border)' }}>

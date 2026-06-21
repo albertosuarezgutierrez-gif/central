@@ -4,13 +4,13 @@
 // y lo aplica como customer.balance credit en Stripe
 // → la siguiente factura SaaS se reduce automáticamente
 import { NextRequest, NextResponse } from 'next/server'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 import { createServerClient } from '@/lib/supabase'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
-const getStripe = () => new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2026-04-22.dahlia' as never })
+const getStripe = () => createStripe()
 
 function autorizado(req: NextRequest): boolean {
   const secret = process.env.CRON_SECRET
