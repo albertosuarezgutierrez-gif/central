@@ -24,6 +24,24 @@ export default function AppBadge() {
   const [session, setSession] = useState<Session | null>(null)
   const [visible, setVisible] = useState(false)
 
+  // APK Android: inyecta las credenciales Supabase actuales (env vars) al bridge nativo,
+  // para que el Realtime de impresión no dependa de un proyecto hardcodeado obsoleto.
+  // Corre en todas las páginas privadas → cubre el dispositivo master del bridge.
+  useEffect(() => {
+    const w = window as unknown as {
+      isNativeApp?: boolean
+      IaRestBridge?: { setSupabase?: (url: string, anon: string, schema: string) => void }
+    }
+    if (!w.isNativeApp || !w.IaRestBridge?.setSupabase) return
+    try {
+      w.IaRestBridge.setSupabase(
+        process.env.NEXT_PUBLIC_SUPABASE_URL ?? '',
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? '',
+        process.env.NEXT_PUBLIC_SUPABASE_SCHEMA ?? 'public',
+      )
+    } catch { /* bridge no disponible */ }
+  }, [])
+
   useEffect(() => {
     const path = window.location.pathname
     const isPublic = PUBLIC_PATHS.some(p => path === p || path.startsWith(p))

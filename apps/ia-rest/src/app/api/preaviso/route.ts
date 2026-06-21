@@ -11,8 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { getSession, getRestauranteId } from '@/lib/session'
 import { createServerClient } from '@/lib/supabase'
-import { resumenPlatos, textoPreaviso, type PlatoLinea } from '@/lib/preaviso'
-import { enviarPushACamarero } from '@/lib/push'
+import { crearPreavisoParaComanda } from '@/lib/preaviso-server'
 
 export const dynamic = 'force-dynamic'
 
@@ -35,66 +34,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Preaviso desactivado' }, { status: 403 })
   }
 
-  // 2) Cargar comanda + mesa + camarero asignado (filtrando por restaurante)
-  const { data: comanda } = await supabase
-    .from('comandas')
-    .select('id, camarero_id, local_id, estado, mesa:mesas(codigo, nombre)')
-    .eq('id', comanda_id)
-    .eq('local_id', restauranteId)
-    .maybeSingle()
-  if (!comanda) return NextResponse.json({ error: 'Comanda no encontrada' }, { status: 404 })
+  // 2) Crear el preaviso (snapshot + insert + push). Lógica compartida con el cron.
+  const res = await crearPreavisoParaComanda({
+    supabase,
+    restauranteId,
+    comandaId: comanda_id,
+    emitidoPor: session.rol ?? 'cocina',
+  })
 
-  // mesas(...) puede llegar como objeto o array según la inferencia del cliente
-  const mesaRel = Array.isArray((comanda as { mesa?: unknown }).mesa)
-    ? (comanda as { mesa: Array<{ codigo?: string; nombre?: string }> }).mesa[0]
-    : (comanda as { mesa?: { codigo?: string; nombre?: string } }).mesa
-  const mesa = String(mesaRel?.nombre ?? mesaRel?.codigo ?? '')
-
-  // 3) Snapshot de los platos de la comanda
-  const { data: items } = await supabase
-    .from('comanda_items')
-    .select('nombre, cantidad')
-    .eq('comanda_id', comanda_id)
-  const platos = resumenPlatos((items ?? []) as PlatoLinea[])
-
-  // 4) Insertar (el índice único uq_preavisos_comanda_enviado garantiza el dedup)
-  const { data: preaviso, error } = await supabase
-    .from('preavisos')
-    .insert({
-      restaurante_id: restauranteId,
-      comanda_id,
-      mesa,
-      platos,
-      emitido_por: session.rol ?? 'cocina',
-      estado: 'enviado',
-    })
-    .select()
-    .single()
-
-  if (error) {
-    // 23505 = unique_violation → ya hay un preaviso activo para esta comanda
-    if ((error as { code?: string }).code === '23505') {
-      return NextResponse.json({ ok: true, dedup: true })
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 })
-  }
-
-  // 5) Push al camarero asignado (no romper el flujo si falla el push;
-  //    el banner Realtime en /edge cubre el caso de push caído)
-  if (comanda.camarero_id) {
-    try {
-      await enviarPushACamarero({
-        supabase,
-        localId: restauranteId,
-        camareroId: comanda.camarero_id,
-        title: 'Preaviso de marcha',
-        body: textoPreaviso(mesa, platos),
-        data: { url: '/edge', tipo: 'preaviso', preaviso_id: preaviso.id },
-      })
-    } catch { /* no crítico */ }
-  }
-
-  return NextResponse.json({ ok: true, preaviso })
+  if (!res.ok) return NextResponse.json({ error: res.error }, { status: res.status ?? 500 })
+  if (res.dedup) return NextResponse.json({ ok: true, dedup: true })
+  return NextResponse.json({ ok: true, preaviso: res.preaviso })
 }
 
 export async function PATCH(req: NextRequest) {

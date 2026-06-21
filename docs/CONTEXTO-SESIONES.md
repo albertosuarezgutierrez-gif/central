@@ -16,6 +16,52 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha — 21/06/2026**
+  - **Fase 1 (PR #408, MERGEADO en main):** botón 📣 en `/kds` → push + banner Realtime en `/edge`
+    → camarero confirma "mesa lista" → cocina lo ve. Tabla `preavisos` (schema iarest), gate
+    `restaurantes.preaviso_activo` (off por defecto, toggle en `/owner`). Migración aplicada en prod.
+  - **Voz en los cascos (Capa 1-2, en #408):** `/edge` lee el preaviso en voz alta (reutiliza
+    `speak()` VOX+WebSpeech) + vibración si la pantalla está visible y `!ttsOff`. Bloqueado en
+    navegador = solo tono del push (iOS imposible). Spec: `2026-06-21-preaviso-voz-cascos-design.md`.
+  - **Fase 2a — DISPARO AUTOMÁTICO (nuevo, rama `claude/plate-change-server-alert-n8prlu`):**
+    modelo v1 = umbral fijo por restaurante `restaurantes.preaviso_auto_min` (0=solo manual,
+    configurable en `/owner`). Cron `/api/cron/preavisos-auto` (cada 2 min) dispara el preaviso solo
+    para comandas en cocina que superan el umbral y no tienen preaviso (`emitido_por='auto'`). Lógica
+    crear+push extraída a `lib/preaviso-server.ts` (compartida con el POST manual). Migración
+    `preaviso_auto_min` APLICADA en prod. **Build verde.** Los preavisos manuales registran
+    `emitido_at` vs comanda `created_at` → base para aprender antelación por plato en el futuro.
+  - **Fase 2b — VOZ NATIVA bloqueado (APK Android, PENDIENTE construir):** spec
+    `2026-06-21-preaviso-voz-nativa-apk-design.md`. SÍ hay proyecto Android editable en
+    `apps/ia-rest/android/` (Kotlin, WebView + `BridgeService` foreground con Realtime Supabase, sin
+    FCM). Plan: extender `BridgeService` para escuchar `preavisos` por Realtime y hablar con el TTS
+    nativo de Android con la pantalla apagada. Caveat: compilar/firmar/publicar la APK (keystore) es
+    paso manual de Alberto; Claude escribe el Kotlin.
+  - **Docs de usuario (#414):** actualizada la ayuda en app (`help-prompts.ts`, roles camarero/cocina/owner)
+    y `public/manual.html` (subsección Preaviso) con la voz + el disparo automático. Los PDF de
+    `public/manuals/*` son binarios → pendientes de regenerar por Alberto (texto listo).
+  - **Auto-mantenimiento de manuales:** ampliado `/auditoria-diaria` (paso 4) para que el agente nocturno
+    también reconcilie los manuales de usuario (help-prompts.ts + manual.html) cuando haya features nuevas,
+    y deje los PDF como acción manual. Antes solo cubría memoria/skills/CLAUDE.md/SKILLS.md.
+  - **Fase 2b — VOZ NATIVA bloqueado: CÓDIGO ESCRITO (no compilado) en #414.** Nuevo
+    `android/.../PreavisoVozService.kt` (foreground `specialUse` + Supabase Realtime sobre
+    `preavisos` + TTS `es-ES`, habla solo si la app NO está visible → no duplica la voz web).
+    `BridgeInterface.setPreavisoSesion(...)`, `MainActivity` set `appVisible` en onResume/onPause,
+    manifest con permiso `FOREGROUND_SERVICE_SPECIAL_USE`. La WebView pasa las credenciales
+    Supabase ACTUALES (no hardcode). **Pendiente: build+firma+publicar APK (v13/v3.1) por Alberto.**
+  - **✅ HALLAZGO (pre-existente) ARREGLADO:** `BridgeService.kt` tenía hardcodeado el proyecto
+    Supabase viejo `efncqyvhniaxsirhdxaa` (sin schema `iarest` ya) para el Realtime de impresión.
+    La app vive en `wswbehlcuxqxyinousql` (BD unificada, schema `iarest`). Arreglado: la WebView
+    inyecta URL/anon/schema actuales vía `IaRestBridge.setSupabase` (desde `AppBadge`, todas las
+    páginas privadas); sin creds → omite Realtime y sigue por polling (sin regresión). Llega en APK v3.1.
+  - **📋 Acciones de Alberto:** `docs/ACCIONES-ALBERTO-preaviso.md` (merge #414, activar toggle,
+    build+firma+release APK v3.1, regenerar 3 PDF). BD y web ya hechos/automáticos.
+  - **Texto PDF manuales:** `docs/manuals-texto-preaviso.md` (camarero/cocina/owner) listo para
+    pegar al regenerar los PDF (binarios, no los toca Claude).
+  - **⚠️ Aclaración BD:** ia.rest en PROD usa `wswbehlcuxqxyinousql` (schema `iarest`), NO el
+    proyecto `efncqyvhniaxsirhdxaa` (ese es el viejo standalone, ya sin tablas iarest).
+  - **⚠️ Correción de nota previa:** el código de ia.rest SÍ vive en `central` (`apps/ia-rest`), buildea
+    en Vercel y se mergeó por #408. La nota antigua de "repo aparte" está desactualizada.
+
 - **🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis) — 21/06/2026**
   - **Contexto:** Alberto preguntó si los modelos gratis de moda (Llama 3, Groq, Mistral, Cohere, HF…)
     valdrían para el proyecto. Auditoría: **casi todo ya integrado y gratis** — texto/visión = Llama 3.3
