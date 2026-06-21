@@ -54,7 +54,7 @@ prompt; este documento lo formaliza tras una **auditoría read-only real** de lo
 
 **EXTRAER — solape real, bajo riesgo:**
 - **`core-ai`** ✅ — semilla ia.rest (`ai-client.ts` + `brain*`: NIM/Groq/Gemini/Azure + fallback
-  Claude); superficie mínima `complete()`/`vision()` que SIVRA e IALIMP ya cubren con `aiComplete`.
+  de texto **NIM → Groq, gratis** —Anthropic retirado—); superficie mínima `complete()`/`vision()` que SIVRA e IALIMP ya cubren con `aiComplete`.
   Puro, sin BD/auth.
 - **`core-fiscal`** ✅ — fusión `verifactu.ts` de ia.rest (cadena hash serie 'T', QR AEAT, SOAP) +
   `fiscal.ts` de IALIMP (validadores NIF/NIE/CIF/IBAN). **Funciones puras in→out**; la cadena

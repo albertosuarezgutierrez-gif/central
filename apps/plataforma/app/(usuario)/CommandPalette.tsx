@@ -10,6 +10,7 @@ const BASE_ITEMS: Item[] = [
   { label: 'Apartamentos', icon: '🏨', href: '/apartamentos', group: 'Mi negocio' },
   { label: 'Limpiezas', icon: '🧹', href: '/limpiezas', group: 'Mi negocio' },
   { label: 'Comunicación', icon: '💬', href: '/comunicacion', group: 'Mi negocio' },
+  { label: 'Concursos', icon: '🏛️', href: '/concursos', group: 'Mi negocio' },
 ]
 
 const OPERADOR_ITEMS: Item[] = [

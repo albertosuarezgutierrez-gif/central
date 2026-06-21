@@ -1,4 +1,5 @@
 import type {
+  DietaGrupo,
   ElaboracionTraza,
   ParteElaboracion,
   PuntoControl,
@@ -36,7 +37,13 @@ export interface EventoInput {
   pax: number
   fecha?: string | null
   fecha_evento: string
-  elaboraciones: string[]            // ids del catálogo servidos en este evento
+  elaboraciones: string[]            // ids del catálogo servidos en este evento (menú principal, todos los PAX)
+  dietas?: DietaGrupo[]              // comensales puntuales con dieta especial (platos adaptados)
+}
+
+/** Id sintético de una elaboración de dieta (plato adaptado + etiqueta de dieta). */
+export function dietaElaboracionId(recetaId: string, dieta: string): string {
+  return `${recetaId}::${dieta}`
 }
 
 function formatCantidad(total: number, unidad: string): string {
@@ -96,6 +103,7 @@ export function generarParte(catalogo: FichaCatalogo[], eventos: EventoInput[]):
 
     elaboraciones.push({
       id: ficha.id,
+      receta_base: ficha.id,
       nombre: ficha.nombre,
       partida: ficha.partida,
       ubicaciones: evs.map(e => e.id),
@@ -106,6 +114,48 @@ export function generarParte(catalogo: FichaCatalogo[], eventos: EventoInput[]):
       entrada: {},
       salida: {},
       firma: null,
+    })
+  }
+
+  // Elaboraciones de DIETA (comensales puntuales): NO tocan el menú principal.
+  // Se agrupan por (receta_id + dieta) sumando comensales entre eventos; el
+  // escandallo se multiplica por los COMENSALES de la dieta (no por el PAX del evento).
+  const gruposDieta = new Map<string, { ficha: FichaCatalogo; dieta: string; comensales: number; eventos: EventoInput[] }>()
+  for (const ev of eventos) {
+    for (const g of ev.dietas ?? []) {
+      const ficha = fichaPorId.get(g.receta_id)
+      if (!ficha || !(g.comensales > 0)) continue
+      const key = dietaElaboracionId(g.receta_id, g.dieta)
+      const acc = gruposDieta.get(key)
+      if (acc) { acc.comensales += g.comensales; if (!acc.eventos.includes(ev)) acc.eventos.push(ev) }
+      else gruposDieta.set(key, { ficha, dieta: g.dieta, comensales: g.comensales, eventos: [ev] })
+    }
+  }
+  for (const { ficha, dieta, comensales, eventos: evs } of gruposDieta.values()) {
+    const ingredientes: Ingrediente[] = ficha.ingredientes.map(ing => ({
+      nombre: ing.nombre,
+      cantidad: formatCantidad(ing.por_pax * comensales, ing.unidad ?? 'g'),
+      lote: '',
+      proveedor: '',
+      desinfeccion: ing.desinfeccion ?? null,
+      descongelacion: ing.descongelacion,
+    }))
+    const controles: PuntoControl[] = ficha.controles.map(tipo => ({ tipo, valor: null, hora: null }))
+    elaboraciones.push({
+      id: dietaElaboracionId(ficha.id, dieta),
+      receta_base: ficha.id,
+      nombre: `${ficha.nombre} (${dieta})`,
+      partida: ficha.partida,
+      ubicaciones: evs.map(e => e.id),
+      depende_de: ficha.depende_de,
+      ingredientes,
+      controles,
+      muestra_testigo: ficha.requiere_muestra ? null : false,
+      entrada: {},
+      salida: {},
+      firma: null,
+      dieta,
+      comensales,
     })
   }
 

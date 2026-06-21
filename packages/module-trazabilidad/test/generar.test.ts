@@ -78,3 +78,38 @@ test('paxTotal suma los eventos del parte', () => {
   const parte = generarParte(catalogo, eventos)
   assert.equal(paxTotal(parte), 150)
 })
+
+// --- Dietas de comensales puntuales (no tocan el menú principal) ---
+
+const eventosConDieta: EventoInput[] = [
+  { id: 'alba', nombre: 'El Alba', pax: 100, fecha_evento: '2026-06-20', elaboraciones: ['pollo', 'lomo'],
+    dietas: [{ receta_id: 'lomo', dieta: 'sin lactosa', comensales: 5 }] },
+  { id: 'fresnos', nombre: 'Los Fresnos', pax: 50, fecha_evento: '2026-06-20', elaboraciones: ['pollo'],
+    dietas: [{ receta_id: 'lomo', dieta: 'sin lactosa', comensales: 3 }] },
+]
+
+test('genera una elaboración de dieta aparte, agrupando (receta+dieta) y sumando comensales', () => {
+  const parte = generarParte(catalogo, eventosConDieta)
+  const dieta = parte.elaboraciones.find(e => e.dieta === 'sin lactosa')!
+  assert.ok(dieta, 'debe existir la elaboración de dieta')
+  assert.equal(dieta.id, 'lomo::sin lactosa')
+  assert.equal(dieta.comensales, 8) // 5 (Alba) + 3 (Fresnos)
+  assert.deepEqual(dieta.ubicaciones, ['alba', 'fresnos'])
+  // escandallo multiplicado por COMENSALES (8), no por el PAX del evento: 20 g × 8 = 160 g
+  assert.equal(dieta.ingredientes[0].cantidad, '160 g')
+})
+
+test('el menú principal NO se ve afectado por las dietas (sigue a PAX completo)', () => {
+  const parte = generarParte(catalogo, eventosConDieta)
+  const lomoPrincipal = parte.elaboraciones.find(e => e.id === 'lomo')!
+  assert.equal(lomoPrincipal.dieta ?? null, null)        // principal: sin etiqueta de dieta
+  assert.equal(lomoPrincipal.comensales ?? null, null)
+  assert.equal(lomoPrincipal.ingredientes[0].cantidad, '2 kg') // 20 g × 100 pax = 2 kg
+  const pollo = parte.elaboraciones.find(e => e.id === 'pollo')!
+  assert.equal(pollo.ingredientes[0].cantidad, '18 kg')   // 120 g × 150 pax
+})
+
+test('sin dietas declaradas no se generan elaboraciones de dieta', () => {
+  const parte = generarParte(catalogo, eventos)
+  assert.equal(parte.elaboraciones.filter(e => e.dieta).length, 0)
+})

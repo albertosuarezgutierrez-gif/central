@@ -5,8 +5,8 @@ import { verificarSecreto, registrarUso, dentroDePresupuesto, estimarTokens, cos
 export const maxDuration = 60
 
 /**
- * Pasarela IA — function-calling (NIM). Las verticales llaman con Bearer AI_GATEWAY_SECRET,
- * mandan `messages` + `tools` (formato OpenAI) y reciben `{content, tool_calls}`. Ejecutan las
+ * Pasarela IA — function-calling (NIM → Groq fallback, vía `aiTools`). Las verticales llaman con Bearer
+ * AI_GATEWAY_SECRET, mandan `messages` + `tools` (formato OpenAI) y reciben `{content, tool_calls}`. Ejecutan las
  * herramientas en su lado y reenvían los resultados como mensajes `role:'tool'` en la siguiente vuelta.
  */
 export async function POST(req: Request) {

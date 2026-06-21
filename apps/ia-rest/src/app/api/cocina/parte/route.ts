@@ -53,12 +53,20 @@ export async function GET(req: NextRequest) {
     ingredientes: ingredientesPorReceta.get(r.id) ?? [],
   }))
 
-  const elabsPorEvento = new Map<string, string[]>()
+  // Menú principal (dieta NULL) vs grupos de dieta de comensales puntuales (dieta != NULL).
+  const elabsPorEvento  = new Map<string, string[]>()
+  const dietasPorEvento = new Map<string, Array<{ receta_id: string; dieta: string; comensales: number }>>()
   for (const a of (asignRes.data ?? [])) {
     if (!eventoIds.has(a.evento_id) || !recetaIds.has(a.receta_id)) continue
-    const arr = elabsPorEvento.get(a.evento_id) ?? []
-    arr.push(a.receta_id)
-    elabsPorEvento.set(a.evento_id, arr)
+    if (a.dieta) {
+      const arr = dietasPorEvento.get(a.evento_id) ?? []
+      arr.push({ receta_id: a.receta_id, dieta: a.dieta, comensales: Number(a.comensales) || 0 })
+      dietasPorEvento.set(a.evento_id, arr)
+    } else {
+      const arr = elabsPorEvento.get(a.evento_id) ?? []
+      arr.push(a.receta_id)
+      elabsPorEvento.set(a.evento_id, arr)
+    }
   }
 
   const eventosOut = eventos.map(e => ({
@@ -67,7 +75,9 @@ export async function GET(req: NextRequest) {
     pax: e.pax,
     fecha_evento: e.fecha_evento,
     ubicacion: e.ubicacion,
+    evento_id: e.evento_id ?? null,
     elaboraciones: elabsPorEvento.get(e.id) ?? [],
+    dietas: dietasPorEvento.get(e.id) ?? [],
   }))
 
   return NextResponse.json({ recetas, eventos: eventosOut })

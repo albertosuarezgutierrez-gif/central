@@ -28,10 +28,10 @@ Query base (ventana corta para la pasada diaria; amplía a `newer_than:30d` en l
 newer_than:2d -label:Facturas/Procesado -in:draft
 ( subject:(factura OR justificante OR recibo OR invoice OR receipt OR pedido OR "ticket")
   OR has:attachment filename:pdf
-  OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi) )
+  OR from:(pricelabs.co OR amazon OR ionos OR booking OR smoobu OR stripe OR endesa OR emasesa OR digi OR mgx.cabify.com) )
 ```
 Incluye también los **reenvíos de `pilar.pina.franco@gmail.com`** que sean justificantes de compra.
-Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`), promociones y **notificaciones operativas de la correduría** (recibos devueltos de clientes, avisos de emisión, circulares de compañías aseguradoras — Allianz, Mapfre, Generali, Occident — que NO sean facturas a nombre de Alberto).
+Descarta newsletters, citas de calendario (`Invitación:`/`Aceptado:`), promociones, **notificaciones operativas de Cabify** que NO sean recibo (`¡Tu viaje ha finalizado sin cambios!`, `¡Esto solo acaba de empezar!`, emails de invitaciones/descuentos) y **notificaciones operativas de la correduría** (recibos devueltos de clientes, avisos de emisión, circulares de compañías aseguradoras — Allianz, Mapfre, Generali, Occident — que NO sean facturas a nombre de Alberto).
 
 Para cada candidato: `get_thread` FULL_CONTENT → extrae **emisor, fecha, importe(s), concepto,
 a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
@@ -46,7 +46,7 @@ a nombre de quién, método de pago** del cuerpo o del PDF adjunto.
 - **turistico_duplex (deducible):** COMUNIDAD, PASAJE FRANCISCO, **PASAJE/FRANCISCO MOLINA**,
   **VILLASÍS** y suministros del dúplex. ⚠️ El **dúplex = "Villasís"** son el **mismo piso** (Pasaje
   Villasís 1 / Pasaje Francisco Molina 4, dos accesos); tributa en el **IRPF personal de Alberto**.
-- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…).
+- **seguros (correduría, deducible):** compañías de seguros (Generali, Allianz, Mapfre, Caser, Anthropic Ireland — API Claude…), **CABIFY** (desplazamientos de la correduría — el recibo llega de `no-reply@mgx.cabify.com` con asunto `Alberto, tu viaje por X €`; incluye origen/destino/importe).
 - **personal (NO deducible):** Círculo Mercantil / natación / gimnasio / colegio / vacunas /
   compras de familia (**Pilar = la esposa**, los hijos, Carmen…), IBI de la vivienda habitual
   (Monte Carmelo), y **trading** (FTMO / retos de bróker, cuenta Interactive Brokers).

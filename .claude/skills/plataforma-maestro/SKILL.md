@@ -26,7 +26,9 @@ description: >
 | Tema | Fuente |
 |---|---|
 | Qué es, BD, envs, estado, reglas | `apps/plataforma/CLAUDE.md` |
+| **Concursos / licitaciones** (agente, sección de usuario `🏛️ Concursos`, scope CUENTA) | Portado de ialimp (jun-2026). Páginas `app/(usuario)/concursos/*`, API `app/api/concursos/**`, módulo puro `@central/module-concursos`. **Buscador** sobre corpus compartido `concursos_licitaciones`; ingesta PLACSP en `lib/concursos-ingesta.ts` (cron `concursos-ingesta` 6 h + botón "⟳ Actualizar ahora"). **PLACSP da 403 fuera de Vercel** → la ingesta solo trae datos en preview/prod. **Provincia** = del **código postal del órgano** (`provinciaDeCP` del módulo; el feed solo trae ubicación en ~56% → filtro de zona **estricto**, el resto sale solo en "Toda España"). Shims `lib/{prisma,tenant,mailer}.ts`; IA por `aiComplete` (NVIDIA). **Emails** (avisos/cierre) requieren `SMTP_*`/`RESEND_API_KEY` en el Vercel de plataforma. Detalle en `apps/plataforma/CLAUDE.md` |
 | **Personas a través de verticales** (god-panel, RR.HH., solo lectura) | `/operador/personas` + `lib/personas.ts`; consolida por `persona_id` (ialimp por prisma + rrhh por puerto `/api/operador/personas`), sugiere enlaces por DNI/email (`@central/core-identity`). Enlace MANUAL pendiente. Detalle en `apps/plataforma/CLAUDE.md` |
+| **Concursos públicos / licitaciones** (movido desde ialimp el 19/06/2026, PR #403) | Sección usuario **🏛️ Concursos** (`/concursos`, sidebar *Mi negocio*). Scope = CUENTA (`lib/tenant.ts` shim). Corpus `concursos_licitaciones` GLOBAL. Consume `@central/module-concursos`. Crons: `concursos-ingesta`, `concursos-radar`, `concursos-avisos`, `concursos-cierre` (en `vercel.json`). **OJO PLACSP da 403 a IPs no-Vercel** → ingesta solo en preview/prod. **PENDIENTE env**: `SMTP_*`/`RESEND_API_KEY` en el proyecto Vercel plataforma para que salgan los emails. Detalle en `apps/plataforma/CLAUDE.md` |
 | **Pasarela de IA central** (keys de proveedor solo aquí) | `/api/ai/{chat,search,vision,tools}` (Bearer `AI_GATEWAY_SECRET`) + `lib/ai-gateway.ts` (`verificarSecreto`/`registrarUso`/`dentroDePresupuesto`/`resumenIA`) + tabla `public.ai_usos`. Panel **god-panel → 🤖 IA · gasto** (`/operador/ia`). Las verticales (rrhh/ialimp/sivra/**ia-rest**) llaman con `gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` de `@central/core-ai`; conexión por envs Team-shared `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET`. ia-rest 100% conectado el 16/06/2026 — las 4 vías (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) pasan por la pasarela (`/api/ai/tools` = function-calling NIM con presupuesto+registro) |
 | Diseño del god-panel | `docs/DISEÑO-god-panel.md` |
 | Plataforma modular (roadmap) | `docs/PLAN-plataforma-modular.md` |
@@ -42,6 +44,10 @@ description: >
 - Envs: `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `IAREST_URL`, `IALIMP_URL`, `SIVRA_URL`,
   `OPERADOR_SHARED_SECRET` (mismo valor en el proyecto Vercel `ia-rest`).
 - Root Directory Vercel: `apps/plataforma`.
+
+## Módulo banca y finanzas (18/06/2026)
+- **`lib/destino.ts`** (puro, testeable `node --test`): clasifica el destino de un movimiento. En ABONOS recibidos (Norma 43), la contraparte es el TITULAR propio → clasificar por CONCEPTO, NO por nombre (de lo contrario, las comisiones de seguros quedan como 'traspaso_interno' y desaparecen del P&L). En CARGOS, el nombre sí identifica traspasos internos. `lib/categorizar.ts` reexporta.
+- **`/sivra/facturas-control`** (sidebar Mis pisos → 🗂️ Facturas): estado mensual por proveedor recurrente (✅/⏳/❌). API `GET/POST /api/sivra/facturas-control`. Alerta `facturasFaltantes` en `lib/banca.ts::getAlertas` → banner dashboard.
 
 ## Landmines (no romper — detalle en CLAUDE.md)
 - **ia-rest vive en OTRA BD**: la unificación quedó a medias; `iarest.*` del compartido es un **clon vacío del DDL**.

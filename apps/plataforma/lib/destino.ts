@@ -44,6 +44,10 @@ export function clasificarDestino(banco: string | null, concepto: string | null,
   // ABONOS (entradas): la contraparte es el TITULAR (no fiable) → clasificar por el concepto.
   if (esAbono) {
     if (RE_PERSONAL_IN.test(txt)) return 'personal'                       // pensión/nómina/Bizum personal
+    // "LIQ. OP. N XXXXXXX" en BBVA = liquidación de plataforma de reservas (Booking.com/Expedia)
+    // para el Dúplex. Tiene prioridad sobre RE_COMISIONES (que también captura "LIQ. OP.") para
+    // evitar clasificar cobros de reservas como "seguros".
+    if (esBBVA && /LIQ\.?\s*OP\./i.test(txt) && !RE_SEGUROS.test(txt)) return 'turistico_duplex'
     if (RE_COMISIONES.test(txt) || RE_SEGUROS.test(txt)) return 'seguros' // comisiones de la correduría
     if (RE_PISOS.test(txt)) return 'turistico_pisos'
     if (esBBVA) return RE_DUPLEX.test(txt) ? 'turistico_duplex' : 'seguros'

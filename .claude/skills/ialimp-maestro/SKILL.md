@@ -5,7 +5,7 @@ description: >
   turísticos; `app.ialimp.es`, cliente piloto Sique Brilla EN VIVO). NO duplica los docs:
   dice qué existe, dónde vive y qué NO romper antes de tocar nada. USAR SIEMPRE que Alberto
   pida cualquier cosa de ialimp: app de limpiadora (`/l`), portal del propietario, facturación,
-  white-label por empresa, concursos públicos, landing `ialimp.es`, contabilidad, Smoobu/iCal,
+  white-label por empresa, landing `ialimp.es`, contabilidad, Smoobu/iCal,
   o arquitectura/despliegue. Sin secretos: solo nombres de variable.
 ---
 
@@ -22,7 +22,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 ## Antes de tocar nada (gate obligatorio)
 1. Lee `apps/ialimp/CLAUDE.md` — son las reglas para trabajar **sin romper nada**.
 2. Identifica el objetivo y módulo (limpiadora `/l` / portal propietario / facturación / white-label /
-   concursos / contabilidad / landing / IA).
+   contabilidad / landing / IA). ⚠️ Concursos → ver **plataforma** (movido el 19/06/2026).
 3. Toda query/route **scopeada por `empresa_id`** — una fuga entre empresas es fallo grave de RGPD.
 4. SQL siempre `Prisma.sql` con casts en el SQL (nunca interpolar). Verifica tipos contra Supabase real.
 
@@ -51,7 +51,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 - **`ignoreBuildErrors`/`ignoreDuringBuilds` = true**: el build verde NO garantiza tipos sanos (sí caza sintaxis).
 - **White-label por empresa** (no por host): acentos con `var(--brand-*)`, no hex fijo (salvo colores semánticos).
 - **RGPD**: gate de consentimiento del portal del propietario; páginas legales rompen el white-label (responsable = IALIMP).
-- **Concursos públicos** = módulo puro `@central/module-concursos` (LLM por puerto `AiRunner`); migraciones `add_concursos*.sql` se aplican **a mano** en Supabase.
+- **Concursos públicos / licitaciones → YA NO viven en ialimp** (movidos a `apps/plataforma`, jun-2026): las licitaciones son transversales a la cuenta, no de la vertical de limpiezas. Se borraron de ialimp páginas/rutas/libs/crons; las tablas (`concursos*`) siguen en la BD compartida y las usa plataforma. Si Alberto pide algo de concursos → `plataforma-maestro`.
 - **Verificación de email**: Claude lo comprueba él mismo (Gmail de Alberto + runtime logs de Vercel), no se lo pide al usuario.
 - Bucket `cleaning-photos` **PRIVADO** (signed URLs vía proxy `/api/l/photo`).
 

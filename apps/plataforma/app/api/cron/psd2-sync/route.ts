@@ -16,7 +16,10 @@ export async function GET(req: NextRequest) {
   if (!ok) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
   if (!disponible()) return NextResponse.json({ ok: true, nota: 'Enable Banking sin configurar' })
 
-  const sync = await sincronizarTodas().catch(e => ({ conexiones: 0, insertados: 0, error: String(e) }))
+  // ?since=YYYY-MM-DD permite importar histórico puntualmente (p. ej. ?since=2026-01-01).
+  // Sin el parámetro se usan los últimos 89 días (sync normal diario).
+  const since = req.nextUrl.searchParams.get('since') ?? undefined
+  const sync = await sincronizarTodas(since).catch(e => ({ conexiones: 0, insertados: 0, error: String(e) }))
   // Tras sincronizar, categorizar los movimientos nuevos (degrada limpio sin NVIDIA_API_KEY).
   const cat = await categorizarPendientesTodas().catch(e => ({ cuentas: 0, categorizados: 0, error: String(e) }))
   return NextResponse.json({ ok: true, ...sync, categorizacion: cat })
