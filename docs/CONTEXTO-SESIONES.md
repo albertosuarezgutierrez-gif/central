@@ -16,6 +16,24 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis) — 21/06/2026**
+  - **Contexto:** Alberto preguntó si los modelos gratis de moda (Llama 3, Groq, Mistral, Cohere, HF…)
+    valdrían para el proyecto. Auditoría: **casi todo ya integrado y gratis** — texto/visión = Llama 3.3
+    70B + 3.2 11B Vision por **NVIDIA NIM**, voz = **Groq Whisper**, búsqueda web = **Gemini Flash**.
+    El hueco real NO era falta de modelos sino **falta de redundancia**: tras retirar Anthropic (sin saldo,
+    17/06), NIM quedó como **punto único de fallo** del texto (`callAI` lanzaba error si NIM caía).
+  - **Hecho:** adaptador puro `groqText`/`groqChat`/`groqChatTools` en `@central/core-ai`
+    (`packages/core-ai/src/groq.ts`, espejo de `nim.ts`, endpoint OpenAI-compat de Groq, default
+    `llama-3.3-70b-versatile`). Cableado fallback automático **NIM → Groq** en `apps/ia-rest/src/lib/ai-client.ts`
+    (`callAI` y `callAITools`). Reutiliza `GROQ_API_KEY` (ya existía para Whisper); override opcional
+    `GROQ_BRAIN_MODEL`. Visión sigue NIM-only (Groq no tiene vision model gratis equivalente). `noFallback`
+    pasa a ser legacy (ya no bloquea el fallback gratis). Doc en `docs/IA-busqueda-web-y-proveedores.md`.
+  - **Verificado:** `pnpm install` + `tsc --noEmit` en ia-rest → **0 errores**.
+  - **Pendiente (futuro, no en este PR):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
+    comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
+    CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host. Propagar el
+    fallback Groq a sivra/ialimp/plataforma si interesa (de momento solo ia-rest, el caso live/crítico).
+
 - **🌐 URLs de producción (no perder) — 16/06/2026**
   - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).
   - **sivra** (motor de pricing dinámico + endpoints `/api/pricing/*`, `/api/mercado/*`, etc.): `housesevillana.vercel.app` (la pantalla de login es la verde "SIVRA").
