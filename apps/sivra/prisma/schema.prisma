@@ -120,6 +120,7 @@ model SeoProposal {
   analysis           String    @db.Text
   currentTitle       String
   currentDescription String
+  currentOgDescription String?
   token              String    @unique
   status             SeoStatus @default(PENDING)
   createdAt          DateTime  @default(now())
@@ -131,4 +132,5 @@ enum SeoStatus {
   PENDING
   APPLIED
   REJECTED
+  REVERTED
 }

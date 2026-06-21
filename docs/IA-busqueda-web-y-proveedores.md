@@ -7,14 +7,17 @@
 
 | Función | Proveedor | Para qué | Fallback |
 |---|---|---|---|
-| `callAI(system, user, maxTokens, timeoutMs, noFallback=true)` | **NVIDIA NIM** (llama-3.3-70b) | Generación, clasificación, extracción, resúmenes (sin internet) | Anthropic Haiku **solo si `noFallback=false` explícito** |
-| `callAISearch(system, user, maxTokens, timeoutMs)` | **Gemini 2.0 Flash + Google Search grounding** | Cuando hace falta **buscar en internet** (leads, research, locales) | `callAI` (NIM puro) sin búsqueda |
-| `callAIVision(...)` | **NIM Vision** | Imágenes (carta, albarán, etiquetas) | Anthropic Vision solo si `noFallback=false` |
+| `callAI(system, user, maxTokens, timeoutMs, noFallback)` | **NVIDIA NIM** (llama-3.3-70b) | Generación, clasificación, extracción, resúmenes (sin internet) | **Groq** (`llama-3.3-70b-versatile`, gratis, MISMO modelo) — automático |
+| `callAISearch(system, user, maxTokens, timeoutMs)` | **Gemini 2.0 Flash + Google Search grounding** | Cuando hace falta **buscar en internet** (leads, research, locales) | `callAI` (NIM → Groq) sin búsqueda |
+| `callAITools(...)` | **NVIDIA NIM** (function-calling) | Agentes con tool-use (god-panel) | **Groq** (function-calling OpenAI-compat) — automático |
+| `callAIVision(...)` | **NIM Vision** | Imágenes (carta, albarán, etiquetas) | Sin fallback (Groq no tiene vision model gratis equivalente) |
 
-**Regla:** `noFallback=true` es el **default** (Anthropic está sin saldo; caer a él solo da
-"credit balance too low"). Para reactivar el fallback cuando haya crédito → pasar `false`
-explícito. Quedan 2 usos deliberados con `false`: `src/lib/fuzzy-comanda.ts` (alias fonéticos,
-auxiliar con try/catch) y `src/app/api/owner/carta/route.ts` (vision carta onboarding).
+**Fallback de texto restaurado con Groq (jun 2026).** Tras retirar Anthropic, NIM quedó como
+**punto único de fallo** del texto. Groq sirve el **mismo `llama-3.3-70b` gratis** desde otra
+infra y la `GROQ_API_KEY` ya existía (la usa el EAR/Whisper) → fallback ideal, cero re-tuning.
+`callAI`/`callAITools` caen a Groq automáticamente si NIM falla. `noFallback` es **legacy**: antaño
+evitaba el fallback de PAGO (Anthropic); ya **no bloquea** el fallback gratis a Groq. Override de
+modelo opcional con `GROQ_BRAIN_MODEL`.
 
 **`GEMINI_API_KEY`** debe estar en Vercel (de ella depende `callAISearch`). Ya operativa
 (la usa `cron/lead-onboarding`). Añadida a `.env.example` como referencia.

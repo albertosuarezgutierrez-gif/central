@@ -30,6 +30,156 @@
     §VeriFactu) **y** código `apps/ia-rest/src/lib/verifactu.ts` (`VERIFACTU_STATUS`, solo info en API,
     no gatea lógica). **Pendiente Alberto:** confirmar en sede oficial AEAT antes de uso legal/comercial.
   - **Para cerrar:** habilitar egress (o pegar el contenido de comandiavoz.com) y rellenar §2/§7/§11 del doc.
+- **📝 Doc drift corregido — crons de sivra — 21/06/2026**
+  El `CLAUDE.md` de sivra y el skill `sivra-maestro` decían "10 crons en vercel.json", pero es
+  **obsoleto**: el `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal, #419).
+  Los ~18 crons de negocio (pricing/apply-auto, mercado, limpiadoras, expenses, eventos, mensajes,
+  updates…) se **migraron a plataforma** (#348/#288) y viven en `apps/plataforma/vercel.json` como
+  `/api/sivra/*` (plataforma tiene 25 crons en total). Corregidos ambos docs; **no re-programar esos
+  crons en sivra** o correrían por duplicado. (Solo documentación, sin cambio de código.)
+
+- **🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google) — 21/06/2026**
+  Spec/plan en `docs/superpowers/{specs,plans}/2026-06-21-agente-seo-housesevillana-bloqueA*`.
+  - **Contexto:** housesevillana.es es una **landing estática de un fichero** (`app/route.ts` en repo
+    aparte `house-sevillana-landing`), editada por la GitHub API desde `apps/sivra/app/api/seo-refresh`.
+    No aplica el modelo "cambios como datos en BD" de ia-rest; la paridad = **seguridad + revert + schema**.
+  - **Hecho (Bloque A):** helpers extraídos a `lib/seo-landing.ts` (DRY, compartidos con revert);
+    **kill switch** `SEO_AGENT_ENABLED` (solo gatea el cron; el botón manual con sesión funciona siempre);
+    **snapshot+revert** (nueva columna `seo_proposals.currentOgDescription` + endpoint `/api/seo-revert`
+    que re-commitea title/desc/OG anteriores + botón "Revertir" en `/seo` + estado texto `REVERTED`);
+    **JSON-LD conservador** (solo reemplaza si ya existe bloque `ld+json` en la landing; si no, lo guarda
+    en `schemaDescription` y sigue). El análisis ya iba por `aiSearch` (pasarela/Gemini, fallback NIM).
+  - **Migración aplicada** a Supabase `wswbehlcuxqxyinousql` (`seo_proposals_revert`, aditiva): solo
+    `add column currentOgDescription text`. OJO: `seo_proposals.status` es **text** en la BD (NO hay enum
+    `SeoStatus` real) → `REVERTED` es solo a nivel Prisma/app; no se alteró ningún tipo.
+  - **Verificado:** lógica pura de `applySeoReplacements` (7 checks, vía node) ✅, `next build` sivra ✅.
+  - **⚠️ PENDIENTE de despliegue:** `GITHUB_TOKEN` en el Vercel de sivra (acceso a `house-sevillana-landing`)
+    y `SEO_AGENT_ENABLED=true` para activar el cron. Sin ellos: error claro / cron inactivo.
+  - **Bloque B pendiente:** conectar **GSC+GA4** de housesevillana.es (datos reales) — requiere OAuth de
+    Alberto; mismo trabajo que la **Fase 0 de ialimp** (compartir fontanería GSC/GA4).
+- **💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD — 21/06/2026**
+  - **Importación completa:** Kutxabank XLS (581 filas) + BBVA XLSX (379 filas) Jan 2025–Jun 2026 en `movimientos_bancarios`. Total BD: Kutxa 733, BBVA 458, Tarjeta 434, N26 1 → 1.626 filas. Autocategorización SQL de 848 filas NULL.
+  - **Dúplex BBVA 2026 corregido a €12.195,38:** filas XLS duplicadas de PSD2 marcadas `ignorado`; 8 "Transferencia recibida" Jan-Mar 2026 (antes de cobertura PSD2) reclasificadas a `turistico_duplex`.
+  - **Correcciones BBVA 2025 — "Transferencia recibida" = Booking dúplex:** Alberto confirmó que TODAS las "Transferencia recibida" en BBVA son pagos de Booking (dúplex). Reclasificadas 57 filas → `turistico_duplex` (€19.188). Dúplex BBVA 2025 recuperado.
+  - **Otras correcciones BBVA 2025:** Traspaso €6.000 + Cuenta cancelada €1.014,72 → `traspaso_interno`; Deuda €600 + Abono devolución €47,90 → `personal`; ANULACION RECIBO OCCIDENT (Kutxa) €627,01 → `personal` (devolución prima, no comisión).
+  - **Seguros BBVA 2025 limpio:** €6.176,53 neto (bruto estimado €7.267 ÷ 0,85). Modelo 190 bruto: €8.593,76 → neto €7.305. Gap ~€1.128 = timing (comisiones dic-2025 cobradas en ene-2026 que el pagador ya declaró en 2025).
+  - **`porCompania` mejorado (`finanzas.ts` líneas 441-475):** añadidos patrones Plataforma m00171, 8/92361, Liq.comisiones, Fra-comis, Comisiones mensuales, Pd005, Remsaldo, M1454, Liq. saldo cuenta, Pago saldo cta, Liquidación comisiones. Ya no todo va a "Otras comisiones".
+  - **Matches exactos Modelo 190 vs BD:** AXA €41,80 neto (Liq. saldo cuenta) ✓ | Reale €47,66 neto (Liquidacion comisiones) ✓ | Generali pequeño €32,24 (Pago saldo cta) ✓.
+  - **Pendiente:** Identificar a qué compañías corresponden los códigos de plataforma (m00171, liq.comisiones, M1454, etc.) para el desglose completo del Modelo 190. Necesita que Alberto lo confirme con su gestoría o extracto detallado de la plataforma.
+
+- **🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas — 21/06/2026**
+  - **Bug visto:** buscar Sevilla daba 0 aunque había 3 (Autoridad Portuaria/EMASESA): eran filas de una
+    ingesta vieja, ya fuera del feed, con `provincia=NULL` → el filtro estricto las ocultaba. Backfill manual aplicado.
+  - **Arreglo permanente:** la ingesta (`lib/concursos-ingesta.ts`) ahora **auto-sanea** en cada pasada:
+    rellena la provincia de las EN PLAZO sin ubicación deduciéndola del órgano (`provinciaDeTexto`); y el
+    `ON CONFLICT` usa `COALESCE(EXCLUDED.provincia, …)` para no pisar una provincia ya conocida con NULL.
+  - **Skills sincronizadas:** `ialimp-maestro` (concursos YA NO viven en ialimp), `central-maestro` (concursos→plataforma),
+    `plataforma-maestro` (nueva entrada de concursos en "Dónde vive cada cosa").
+  - **Diferencia Buscar vs Actualizar:** Buscar = filtra el corpus ya guardado (instantáneo); Actualizar = descarga
+    lo último de PLACSP (solo trae datos en Vercel; 403 fuera).
+
+- **🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo — 21/06/2026**
+  - Tras poblar provincia por código postal del órgano (#418), el filtro de zona pasa a **estricto**: al elegir
+    zona se muestran SOLO las ubicadas en ella. Verificado en la BD: **Andalucía → 6 resultados, todos andaluces,
+    0 de Canarias** (antes se colaban por la inclusión de NULL).
+  - **Límite de la fuente:** el feed PLACSP solo trae ubicación en ~56% de los anuncios; el ~44% restante queda
+    sin provincia y aparece solo en "Toda España" (no se cuela en otras zonas). Backfill de normalización aplicado
+    en la BD (`provincia` = provincia oficial o NULL; se limpiaron municipios crudos de la versión anterior).
+
+- **🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia — 21/06/2026**
+  - **Problema:** al elegir zona (Andalucía) salían licitaciones de otra región (Canarias) porque la
+    provincia estaba vacía en el corpus y el filtro incluía las de ubicación desconocida (recall sobre precisión).
+    Deducir la provincia del NOMBRE del órgano solo cubría ~30%.
+  - **Solución de raíz:** la provincia se deduce del **código postal del órgano** (PostalZone del feed) →
+    `provinciaDeCP` (mapa oficial 52 prov., 04=Almería…41=Sevilla…35=Las Palmas). Extracción **recursiva**
+    (`buscarValor`) para no depender de la ruta exacta del XML (PLACSP da 403 fuera de Vercel, no se pudo inspeccionar).
+    Precedencia: CP → CountrySubentity → CityName → nombre del órgano.
+  - **UI:** el campo "Provincia" pasa de texto libre a **desplegable** dependiente de la zona (`provinciasDeComunidad`).
+  - **Pendiente de dato:** se rellena al **reingerir** (cron 6 h o botón "Actualizar ahora"); el corpus viejo
+    queda null hasta entonces. El filtro sigue incluyendo las de ubicación aún desconocida (residuo pequeño).
+
+- **🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha — 21/06/2026**
+  - **Fase 1 (PR #408, MERGEADO en main):** botón 📣 en `/kds` → push + banner Realtime en `/edge`
+    → camarero confirma "mesa lista" → cocina lo ve. Tabla `preavisos` (schema iarest), gate
+    `restaurantes.preaviso_activo` (off por defecto, toggle en `/owner`). Migración aplicada en prod.
+  - **Voz en los cascos (Capa 1-2, en #408):** `/edge` lee el preaviso en voz alta (reutiliza
+    `speak()` VOX+WebSpeech) + vibración si la pantalla está visible y `!ttsOff`. Bloqueado en
+    navegador = solo tono del push (iOS imposible). Spec: `2026-06-21-preaviso-voz-cascos-design.md`.
+  - **Fase 2a — DISPARO AUTOMÁTICO (nuevo, rama `claude/plate-change-server-alert-n8prlu`):**
+    modelo v1 = umbral fijo por restaurante `restaurantes.preaviso_auto_min` (0=solo manual,
+    configurable en `/owner`). Cron `/api/cron/preavisos-auto` (cada 2 min) dispara el preaviso solo
+    para comandas en cocina que superan el umbral y no tienen preaviso (`emitido_por='auto'`). Lógica
+    crear+push extraída a `lib/preaviso-server.ts` (compartida con el POST manual). Migración
+    `preaviso_auto_min` APLICADA en prod. **Build verde.** Los preavisos manuales registran
+    `emitido_at` vs comanda `created_at` → base para aprender antelación por plato en el futuro.
+  - **Fase 2b — VOZ NATIVA bloqueado (APK Android, PENDIENTE construir):** spec
+    `2026-06-21-preaviso-voz-nativa-apk-design.md`. SÍ hay proyecto Android editable en
+    `apps/ia-rest/android/` (Kotlin, WebView + `BridgeService` foreground con Realtime Supabase, sin
+    FCM). Plan: extender `BridgeService` para escuchar `preavisos` por Realtime y hablar con el TTS
+    nativo de Android con la pantalla apagada. Caveat: compilar/firmar/publicar la APK (keystore) es
+    paso manual de Alberto; Claude escribe el Kotlin.
+  - **Docs de usuario (#414):** actualizada la ayuda en app (`help-prompts.ts`, roles camarero/cocina/owner)
+    y `public/manual.html` (subsección Preaviso) con la voz + el disparo automático. Los PDF de
+    `public/manuals/*` son binarios → pendientes de regenerar por Alberto (texto listo).
+  - **Auto-mantenimiento de manuales:** ampliado `/auditoria-diaria` (paso 4) para que el agente nocturno
+    también reconcilie los manuales de usuario (help-prompts.ts + manual.html) cuando haya features nuevas,
+    y deje los PDF como acción manual. Antes solo cubría memoria/skills/CLAUDE.md/SKILLS.md.
+  - **Fase 2b — VOZ NATIVA bloqueado: CÓDIGO ESCRITO (no compilado) en #414.** Nuevo
+    `android/.../PreavisoVozService.kt` (foreground `specialUse` + Supabase Realtime sobre
+    `preavisos` + TTS `es-ES`, habla solo si la app NO está visible → no duplica la voz web).
+    `BridgeInterface.setPreavisoSesion(...)`, `MainActivity` set `appVisible` en onResume/onPause,
+    manifest con permiso `FOREGROUND_SERVICE_SPECIAL_USE`. La WebView pasa las credenciales
+    Supabase ACTUALES (no hardcode). **Pendiente: build+firma+publicar APK (v13/v3.1) por Alberto.**
+  - **✅ HALLAZGO (pre-existente) ARREGLADO:** `BridgeService.kt` tenía hardcodeado el proyecto
+    Supabase viejo `efncqyvhniaxsirhdxaa` (sin schema `iarest` ya) para el Realtime de impresión.
+    La app vive en `wswbehlcuxqxyinousql` (BD unificada, schema `iarest`). Arreglado: la WebView
+    inyecta URL/anon/schema actuales vía `IaRestBridge.setSupabase` (desde `AppBadge`, todas las
+    páginas privadas); sin creds → omite Realtime y sigue por polling (sin regresión). Llega en APK v3.1.
+  - **📋 Acciones de Alberto:** `docs/ACCIONES-ALBERTO-preaviso.md` (merge #414, activar toggle,
+    build+firma+release APK v3.1, regenerar 3 PDF). BD y web ya hechos/automáticos.
+  - **Texto PDF manuales:** `docs/manuals-texto-preaviso.md` (camarero/cocina/owner) listo para
+    pegar al regenerar los PDF (binarios, no los toca Claude).
+  - **⚠️ Aclaración BD:** ia.rest en PROD usa `wswbehlcuxqxyinousql` (schema `iarest`), NO el
+    proyecto `efncqyvhniaxsirhdxaa` (ese es el viejo standalone, ya sin tablas iarest).
+  - **⚠️ Correción de nota previa:** el código de ia.rest SÍ vive en `central` (`apps/ia-rest`), buildea
+    en Vercel y se mergeó por #408. La nota antigua de "repo aparte" está desactualizada.
+
+- **🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis) — 21/06/2026**
+  - **Contexto:** Alberto preguntó si los modelos gratis de moda (Llama 3, Groq, Mistral, Cohere, HF…)
+    valdrían para el proyecto. Auditoría: **casi todo ya integrado y gratis** — texto/visión = Llama 3.3
+    70B + 3.2 11B Vision por **NVIDIA NIM**, voz = **Groq Whisper**, búsqueda web = **Gemini Flash**.
+    El hueco real NO era falta de modelos sino **falta de redundancia**: tras retirar Anthropic (sin saldo,
+    17/06), NIM quedó como **punto único de fallo** del texto (`callAI` lanzaba error si NIM caía).
+  - **Hecho:** adaptador puro `groqText`/`groqChat`/`groqChatTools` en `@central/core-ai`
+    (`packages/core-ai/src/groq.ts`, espejo de `nim.ts`, endpoint OpenAI-compat de Groq, default
+    `llama-3.3-70b-versatile`). Cableado fallback automático **NIM → Groq** en `apps/ia-rest/src/lib/ai-client.ts`
+    (`callAI` y `callAITools`). Reutiliza `GROQ_API_KEY` (ya existía para Whisper); override opcional
+    `GROQ_BRAIN_MODEL`. Visión sigue NIM-only (Groq no tiene vision model gratis equivalente). `noFallback`
+    pasa a ser legacy (ya no bloquea el fallback gratis). Doc en `docs/IA-busqueda-web-y-proveedores.md`.
+  - **✅ MERGEADO (PR #415, squash en `main`):** 11/11 checks verdes (typecheck de las 4 verticales,
+    tests, build, los 5 previews de Vercel Ready). Incluyó también un fix de CI ajeno: shim de tipos
+    `apps/plataforma/types/pdf-parse.d.ts` (deuda preexistente de `lib/concursos.ts`, #403).
+  - **Reconciliadas skills/docs** (que describían "NIM → Anthropic/Haiku fallback", ya obsoleto):
+    `.claude/skills/ia-rest-maestro/SKILL.md` (STACK IA), `packages/core-ai/README.md` (exports `groq*`
+    + scope `@central`), `docs/SKILL-proyecto-claude.md`, `docs/HANDOFF-unificacion-casa-marcas.md`, y
+    specs/planes forward-looking (maître-ia, consolidación/duplicados bancarios). Todos → "NIM → Groq, gratis".
+  - **Propagado a sivra/ialimp/plataforma (misma PR #415):** el fallback NIM → Groq se metió en el
+    **wrapper compartido** `aiComplete`/`aiTools` de `packages/core-ai/src/client.ts`. Como las rutas-servidor
+    de la **pasarela** (`apps/plataforma/app/api/ai/{chat,tools}/route.ts`) llaman a esos wrappers, UNA edición
+    cubre a la vez (a) el camino directo de las 3 verticales y (b) el tráfico por pasarela. En el chat de
+    pasarela queda **NIM → Groq → Gemini** (Gemini ya existía). Visión NIM-only. Verificado: tsc 0 errores en
+    plataforma/ia-rest/sivra (sivra tras `prisma generate`).
+    - ✅ **`GROQ_API_KEY` puesta en el Vercel de plataforma** (Production+Preview) y redeploy de prod
+      **READY** → el fallback **NIM → Groq → Gemini queda ACTIVO en producción** (host de la pasarela,
+      por donde va casi todo el tráfico de sivra/ialimp/plataforma). ia-rest ya la tenía (Whisper).
+      Override `GROQ_BRAIN_MODEL`. **Opcional pendiente:** la misma key en **sivra** e **ialimp** solo si
+      se quiere cubrir su camino directo SIN pasarela (por pasarela ya están cubiertas).
+    - Recordatorio de arquitectura: la IA vive en el núcleo compartido `@central/core-ai` (añadir un
+      proveedor nuevo = un solo sitio, lo heredan todos los módulos), pero las **claves son por vertical**
+      (cada proyecto Vercel inyecta las suyas) — por eso `GROQ_API_KEY` se configura por proyecto.
+  - **Pendiente (futuro):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
+    comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
+    CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host.
 
 - **🌐 URLs de producción (no perder) — 16/06/2026**
   - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).

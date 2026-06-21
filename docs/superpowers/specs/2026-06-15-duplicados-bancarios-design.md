@@ -22,8 +22,8 @@ la decisión **persista** (no vuelva a salir, sobrevive a reimportar el extracto
   y sobrevive a reimportar porque el `dedupe_hash` evita reinsertar la fila. Aditiva y nullable.
 - **Aditivo y multi-tenant:** todo scopeado por `cuenta_id`, sin tocar lo existente salvo
   reaprovechar la query de detección.
-- **IA gratis** (solo Fase 2): se reutiliza `@central/core-ai` (NVIDIA NIM gratis → Claude
-  Haiku fallback), ya declarado como dependencia de `apps/plataforma`.
+- **IA gratis** (solo Fase 2): se reutiliza `@central/core-ai` (NVIDIA NIM gratis → fallback Groq
+  `llama-3.3-70b-versatile`, sin coste), ya declarado como dependencia de `apps/plataforma`.
 - **Una sola fuente de verdad de detección:** `getAlertas` (banner) y la página de resolución
   leen la MISMA función, para que nunca se contradigan.
 
