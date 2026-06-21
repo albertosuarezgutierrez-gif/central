@@ -108,15 +108,15 @@ Verde marchar:    #3F7D44
 ```
 EAR (ASR):   Groq Whisper → buildWhisperPrompt() con carta+vocab (caché 5min/restaurante)
 BRAIN v2:    Patrón<10ms → nim_8b_fast~80ms (Groq llama-3.1-8b-instant, comandas ≤9 pal)
-                         → claude_api~800ms (NIM 70b + Haiku fallback)
+                         → cerebro 70b~800ms (NIM 70b + fallback Groq 70b, gratis)
 VOX (TTS):   /api/vox → msedge-tts → es-ES-ElviraNeural (sin API key, sin coste)
 LLM texto:   lib/ai-client.ts → callAI() → NVIDIA NIM meta/llama-3.3-70b-instruct primario
-                                          → Anthropic Claude Haiku (fallback timeout 8s)
-LLM visión:  lib/ai-client.ts → callAIVision() → NIM meta/llama-3.2-11b-vision-instruct → Haiku
+                                          → Groq llama-3.3-70b-versatile (fallback automático, gratis)
+LLM visión:  lib/ai-client.ts → callAIVision() → NIM meta/llama-3.2-11b-vision-instruct (sin fallback)
 ```
 
 Patrón lib/ai-client.ts: centraliza callAI(), callAIVision(), cleanJSON().
-El resto del código SOLO llama estas funciones — nunca llama a NVIDIA/Anthropic directamente.
+El resto del código SOLO llama estas funciones — nunca llama a NVIDIA/Groq/Gemini directamente.
 
 ### BRAIN — tipos de resultado (BrainResult.tipo)
 

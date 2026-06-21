@@ -5,6 +5,7 @@
 import { prisma } from '@/lib/prisma'
 import { Prisma } from '@prisma/client'
 import { parsearAtomPlacsp, dedupeKey } from '@/lib/concursos-radar'
+import { provinciaDeTexto } from '@central/module-concursos'
 
 const FEED_URL = process.env.PLACSP_FEED_URL
   || 'https://contrataciondelestado.es/sindicacion/sindicacion_643/licitacionesPerfilesContratanteCompleto3.atom'
@@ -39,15 +40,29 @@ export async function ingerirAnuncios(xml: string): Promise<number> {
       VALUES (
         ${k}, ${a.titulo}, ${objeto}, ${a.cpv ?? []}::text[], ${a.presupuesto ?? null}, ${a.organo ?? null},
         ${a.provincia ?? null}, ${a.tipo_contrato ?? null}, ${a.estado ?? null}, ${a.fin_presentacion ?? null}::date,
-        ${a.url ?? null}, 'placsp', to_tsvector('spanish', ${a.titulo + ' ' + objeto}), now()
+        ${a.url ?? null}, 'placsp', to_tsvector('spanish', ${a.titulo + ' ' + objeto + ' ' + (a.organo ?? '')}), now()
       )
       ON CONFLICT (dedupe_key) DO UPDATE SET
         titulo = EXCLUDED.titulo, objeto = EXCLUDED.objeto, cpv = EXCLUDED.cpv, presupuesto = EXCLUDED.presupuesto,
-        organo = EXCLUDED.organo, provincia = EXCLUDED.provincia, tipo_contrato = EXCLUDED.tipo_contrato,
+        organo = EXCLUDED.organo,
+        provincia = COALESCE(EXCLUDED.provincia, concursos_licitaciones.provincia), -- no pisar una provincia ya conocida con NULL
+        tipo_contrato = EXCLUDED.tipo_contrato,
         estado = EXCLUDED.estado, fin_presentacion = EXCLUDED.fin_presentacion, url = EXCLUDED.url,
         fts = EXCLUDED.fts, actualizado_en = now()
     `)
     upserts++
+  }
+
+  // Auto-saneo: rellenar la provincia de licitaciones EN PLAZO que se quedaron sin ella
+  // (p. ej. ingeridas antes del mapeo por CP y ya fuera del feed, por lo que no se refrescan
+  // en el upsert), deduciéndola del nombre del órgano. Así el filtro de zona no las oculta.
+  const huerfanas = await prisma.$queryRaw<{ dedupe_key: string; organo: string | null; titulo: string | null }[]>(Prisma.sql`
+    SELECT dedupe_key, organo, titulo FROM concursos_licitaciones
+    WHERE (provincia IS NULL OR provincia = '') AND fin_presentacion >= current_date
+  `)
+  for (const r of huerfanas) {
+    const prov = provinciaDeTexto(r.organo) || provinciaDeTexto(r.titulo)
+    if (prov) await prisma.$executeRaw(Prisma.sql`UPDATE concursos_licitaciones SET provincia = ${prov} WHERE dedupe_key = ${r.dedupe_key}`)
   }
   return upserts
 }

@@ -54,3 +54,45 @@ export function comunidadDeProvincia(provincia: string): string | undefined {
   if (!provincia) return undefined
   return PROV_A_CCAA[norm(provincia)]
 }
+
+const TODAS_PROVINCIAS: string[] = COMUNIDADES.flatMap(c => c.provincias)
+
+// Mapa CÓDIGO POSTAL (2 primeros dígitos) → provincia (nombre oficial del catálogo).
+// Determinista y exhaustivo (52 provincias): la vía MÁS fiable para ubicar una
+// licitación, porque el órgano de contratación SIEMPRE trae su dirección postal.
+const CP_A_PROVINCIA: Record<string, string> = {
+  '01':'Álava','02':'Albacete','03':'Alicante','04':'Almería','05':'Ávila','06':'Badajoz',
+  '07':'Balears','08':'Barcelona','09':'Burgos','10':'Cáceres','11':'Cádiz','12':'Castellón',
+  '13':'Ciudad Real','14':'Córdoba','15':'A Coruña','16':'Cuenca','17':'Girona','18':'Granada',
+  '19':'Guadalajara','20':'Gipuzkoa','21':'Huelva','22':'Huesca','23':'Jaén','24':'León',
+  '25':'Lleida','26':'Rioja','27':'Lugo','28':'Madrid','29':'Málaga','30':'Murcia','31':'Navarra',
+  '32':'Ourense','33':'Asturias','34':'Palencia','35':'Las Palmas','36':'Pontevedra','37':'Salamanca',
+  '38':'Santa Cruz de Tenerife','39':'Cantabria','40':'Segovia','41':'Sevilla','42':'Soria',
+  '43':'Tarragona','44':'Teruel','45':'Toledo','46':'Valencia','47':'Valladolid','48':'Bizkaia',
+  '49':'Zamora','50':'Zaragoza','51':'Ceuta','52':'Melilla',
+}
+
+/** Provincia a partir de un código postal español (acepta CP de 4-5 dígitos). `undefined` si no es válido. */
+export function provinciaDeCP(cp: string | number | null | undefined): string | undefined {
+  if (cp == null) return undefined
+  const d = String(cp).replace(/\D/g, '').padStart(5, '0')
+  if (d.length < 4) return undefined
+  return CP_A_PROVINCIA[d.slice(0, 2)]
+}
+
+/**
+ * Deduce la provincia (nombre oficial) mencionada en un texto libre — típicamente
+ * el nombre del ÓRGANO de contratación ("Autoridad Portuaria de Sevilla",
+ * "Ayuntamiento de Cádiz"). Útil cuando el feed PLACSP no trae la ubicación
+ * estructurada. Compara por palabra completa, tolerante a acentos/mayúsculas.
+ * `undefined` si no se reconoce ninguna.
+ */
+export function provinciaDeTexto(texto: string | null | undefined): string | undefined {
+  if (!texto) return undefined
+  const t = norm(texto)
+  for (const p of TODAS_PROVINCIAS) {
+    const np = norm(p).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    if (new RegExp(`(^|[^a-z])${np}([^a-z]|$)`).test(t)) return p
+  }
+  return undefined
+}

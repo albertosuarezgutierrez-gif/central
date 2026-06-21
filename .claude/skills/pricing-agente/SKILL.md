@@ -73,7 +73,9 @@ Pisos (property_id → smoobu_id): `prop_house_sevillana` 352007 · `prop_busto_
   (mercado p50 zona, evento, ocupación, coste, margen objetivo).
 
 ### 4. APLICA por los raíles (NUNCA escribas en Smoobu directo)
-- `POST /api/pricing/aplicar-propuesta` con body
+- **URLs (prod):** sivra = `housesevillana.vercel.app` (motor + endpoints `/api/pricing/*`); plataforma
+  (chat 🤖 Agente IA donde Alberto lee/da feedback) = `https://plataforma-ten-flame.vercel.app/agente`.
+- `POST /api/pricing/aplicar-propuesta` (en sivra) con body
   `{ "dryRun": true, "fuente": "agente", "proposals": [{property_id, rate_date, price, min_stay?, motivo, variables}] }`.
 - **Primer ciclo y tras cualquier cambio grande: `dryRun: true`.** Lee la respuesta y
   `pricing_decisiones` → revisa qué recortaron los raíles (suelo/tope/circuit-breaker) y los motivos.

@@ -293,3 +293,127 @@ o specs; sin urgencia, pero acumulan ruido en la lista de PRs.
    Rollback: `DROP TABLE`.
 5. **[B2 carry-forward]** Proyecto Supabase viejo `efncqyvhniaxsirhdxaa` — jubilar tras
    el corte de envs de ia-rest (aún ACTIVE).
+
+---
+
+## Addendum 2026-06-21 — Auditoría profunda semanal
+
+> Auditoría `auditoria-central` ENTERA: integridad estructural + typecheck 5 apps + tests +
+> seguridad Supabase + deps + infra Vercel + coherencia docs. Rango cubierto: desde PR #403
+> (port agente concursos ialimp→plataforma, 19/06) + PR #404 (fix buscador zona, 20/06).
+
+### Resumen ejecutivo
+
+| Bloque | Estado |
+|---|---|
+| Integridad estructural (lockfile, radiografía, guardián `@iarest/`) | ✅ Sano |
+| Typecheck 5 apps (ia-rest, sivra, ialimp, plataforma, rrhh) | ✅ 0 errores (1 fix aplicado) |
+| Tests (rrhh 25/25, packages 40/40, guardián 21/21) | ✅ Verde |
+| Seguridad Supabase (advisors) | 🟡 3 nuevos buckets con listing público |
+| Deps (`pnpm audit`) | 🟡 16 vulns (5 high), subida desde 6/2h de la pasada |
+| Infra Vercel (4 proyectos READY) | ✅ Sano |
+| Coherencia docs (SKILLS.md, commands) | ✅ En sync |
+| `concursos_radar_criterios` ausente en Supabase | 🔴 Cron roto (carry-forward A3) |
+| `module-concursos` huérfano en ialimp dep+transpile | 🟡 Arreglado en este PR |
+| SMTP/Resend ausentes en Vercel plataforma | 🟡 Crons de email concursos no envían |
+
+---
+
+### 🔴 Hallazgos ALTO
+
+#### Q1. `concursos_radar_criterios` sigue sin existir en Supabase — cron de plataforma roto
+Carry-forward de A3. Con el port del agente (PR #403) el cron `concursos-radar` ahora vive en
+**plataforma** (`apps/plataforma/vercel.json`, `/api/concursos/radar` cada 6 h). La tabla
+`concursos_radar_criterios` sigue sin aplicarse → el cron falla con *relation does not exist*
+al ejecutarse en producción.
+- `concursos_radar_anuncios` sí existe (se aplicó manualmente con PR #398).
+- **Acción de Alberto**: ejecutar en Supabase compartido (`wswbehlcuxqxyinousql`):
+  ```sql
+  -- de apps/ialimp/prisma/migrations/add_concursos_radar_criterios.sql
+  CREATE TABLE public.concursos_radar_criterios (
+    id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+    empresa_id uuid NOT NULL,
+    clave text NOT NULL,
+    valor text,
+    peso int DEFAULT 1,
+    created_at timestamptz DEFAULT now()
+  );
+  CREATE INDEX ON public.concursos_radar_criterios(empresa_id);
+  ```
+  Rollback: `DROP TABLE public.concursos_radar_criterios;`
+
+---
+
+### 🟡 Hallazgos MEDIO
+
+#### Q2. `module-concursos` huérfano en ialimp (dep + transpilePackages) ✅ ARREGLADO
+Tras el port del agente de concursos a plataforma (PR #403), el código de ialimp fue eliminado
+pero no sus declaraciones: `@central/module-concursos` seguía en `apps/ialimp/package.json`
+(deps) y en `apps/ialimp/next.config.ts` (`transpilePackages`). Ningún fichero de ialimp lo importa.
+Fix: eliminado de ambos sitios. Bajo riesgo (no hay código que lo use).
+
+#### Q3. plataforma — `types/pdf-parse.d.ts` faltaba tras el port ✅ ARREGLADO
+Al portar el agente de concursos desde ialimp, `lib/concursos.ts:26` importa
+`pdf-parse/lib/pdf-parse.js` de forma perezosa, pero la declaración de tipos
+`types/pdf-parse.d.ts` (presente en ialimp) no se copió a plataforma → error `TS7016`.
+Fix: copiado `apps/ialimp/types/pdf-parse.d.ts` → `apps/plataforma/types/pdf-parse.d.ts`.
+Resultado: plataforma typecheck 0 errores.
+
+#### Q4. 3 nuevos buckets públicos con listing habilitado (+ P1 carry-forward)
+`get_advisors("security")` devuelve `public_bucket_allows_listing` en 4 buckets:
+- `documentos-contables` (carry-forward P1, ya documentado 18/06)
+- `documentos-propiedad` — archivador de documentos del piso del propietario (nuevo)
+- `property-access-files` — ficheros de acceso a la propiedad (nuevo)
+- `propuestas-leads` — propuestas de leads (nuevo)
+
+Los 3 nuevos son públicos por diseño (URLs directas para propietarios), pero el **listing**
+expone el índice completo de ficheros a cualquier agente anónimo con la URL base.
+- **Acción de Alberto**: en Supabase Storage → cada bucket → deshabilitar "Allow public bucket listing":
+  `documentos-propiedad`, `property-access-files`, `propuestas-leads` (y `documentos-contables`).
+  Rollback: re-habilitar si alguna integración depende de listing.
+
+#### Q5. SMTP/Resend ausentes en plataforma → crons de email de concursos no envían
+`apps/plataforma/vercel.json` define 2 crons que envían email: `concursos-avisos` (digest
+de nuevos matches al radar) y `concursos-cierre` (recordatorio ≤3 días). Ambos usan
+`lib/mailer.ts` que necesita `SMTP_*` o `RESEND_API_KEY`. Esas envs solo están en ialimp.
+- **Acción de Alberto**: añadir al proyecto Vercel `plataforma` las variables de entorno
+  `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` (mismos valores que ialimp, o el
+  `RESEND_API_KEY` si se prefiere Resend). `MAIL_FROM` también (remitente).
+  Sin estas envs, los crons se ejecutan pero los emails no se envían (fallo silencioso).
+
+#### Q6. Subida de vulnerabilidades en `pnpm audit` — 16 vulns (5 high)
+Pasada anterior: 6 vulns (2 high). Esta pasada: 16 (5 high). Nuevas:
+- **`vite` ^6.3.5** (high, `@vitejs/plugin-react` transitiva): DOM Clobbering XSS en apps.
+  Afecta ialimp y plataforma si sirven bundles de Vite. Mitigar con override `"vite":">=6.3.5"`.
+- **`fast-xml-parser` ^5.0.9** (high, `ialimp/package.json` directa): ReDoS en DTD.
+  Actualizar a ≥5.2.5: `pnpm update fast-xml-parser --filter ialimp`.
+- **`nodemailer` ^8.0.7** (moderate, ialimp directa): header injection si `to` no se sanitiza.
+  Actualizar: `pnpm update nodemailer --filter ialimp`.
+- `xlsx` (high, carry-forward M3 — sin versión npm; ialimp solo escribe, no parsea → no explotable).
+- 12 vulns restantes: transitivas de bajo impacto real (path-to-regexp, esbuild dev-only, etc.).
+
+---
+
+### 🟢 Hallazgos BAJO
+
+#### Q7. `efncqyvhniaxsirhdxaa` (BD vieja ia-rest) sigue ACTIVE_HEALTHY
+Carry-forward B2. Sin acción hasta el corte de envs de ia-rest.
+
+---
+
+### Lo que se arregló en esta auditoría
+- **Q2**: `@central/module-concursos` eliminado de ialimp (`package.json` + `next.config.ts`).
+- **Q3**: `apps/plataforma/types/pdf-parse.d.ts` creado → plataforma typecheck 0 errores.
+
+### Checklist de acciones manuales de Alberto — 21/06/2026
+
+1. **[Q1]** Aplicar en Supabase `add_concursos_radar_criterios.sql` (arregla cron plataforma).
+   Rollback: `DROP TABLE public.concursos_radar_criterios;`
+2. **[Q4]** Deshabilitar "Allow public bucket listing" en Supabase Storage:
+   `documentos-propiedad`, `property-access-files`, `propuestas-leads`, `documentos-contables`.
+3. **[Q5]** Añadir `SMTP_HOST/PORT/USER/PASSWORD` + `MAIL_FROM` al proyecto Vercel `plataforma`
+   (mismos valores que ialimp) para que los crons de email de concursos envíen.
+4. **[Q6]** Actualizar `fast-xml-parser` y `nodemailer` en ialimp (altas). Añadir override
+   `"vite":">=6.3.5"` en `pnpm.overrides` del `package.json` raíz.
+5. **[A3/Q1 carry-forward]** Ya consolidado en Q1 arriba.
+6. **[B2 carry-forward]** Jubilar `efncqyvhniaxsirhdxaa` tras corte de envs de ia-rest.

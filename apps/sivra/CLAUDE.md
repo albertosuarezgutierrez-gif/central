@@ -24,7 +24,11 @@ público: todo está detrás de login. El `package.json` se llama `roi-intranet`
   `wswbehlcuxqxyinousql`). Prisma con conexión directa (`DATABASE_URL`).
 - **IA:** `lib/ai-client.ts` → **pasarela de IA central de plataforma** (las keys viven solo en plataforma; gasto en su god-panel). `aiComplete` (texto), `aiExtractInvoice` (OCR facturas) y `aiSearch` (búsqueda web, p. ej. `seo-refresh`) enrutan por la pasarela; sin los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` caen a NVIDIA NIM directo (fallback). **Ya NO se usa Anthropic** (el `seo-refresh` migró de Anthropic web_search a `aiSearch`→`gatewaySearch`/Gemini el 16/06/2026).
 - **i18n:** next-intl (es/en/fr/de/it).
-- **Deploy:** Vercel (build `prisma generate && next build`), 10 crons en `vercel.json`.
+- **Deploy:** Vercel (build `prisma generate && next build`). **Crons:** el `vercel.json` de sivra
+  solo tiene **1 cron** (`/api/seo-refresh`, semanal, añadido en #419). Los ~18 crons de negocio
+  (pricing, mercado, limpiadoras, expenses, eventos, mensajes, updates…) se **migraron a plataforma**
+  (#348/#288): viven en `apps/plataforma/vercel.json` como rutas `/api/sivra/*` y se disparan desde
+  ese proyecto. **NO los re-programes en sivra** o correrían por duplicado (pricing/facturas dobles).
 
 ## Avisos importantes (gotchas)
 - **🚨 La DB de Supabase es COMPARTIDA con otra app (`ialimp`).** Esta misma base

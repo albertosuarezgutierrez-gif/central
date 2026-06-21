@@ -51,7 +51,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 - **`ignoreBuildErrors`/`ignoreDuringBuilds` = true**: el build verde NO garantiza tipos sanos (sí caza sintaxis).
 - **White-label por empresa** (no por host): acentos con `var(--brand-*)`, no hex fijo (salvo colores semánticos).
 - **RGPD**: gate de consentimiento del portal del propietario; páginas legales rompen el white-label (responsable = IALIMP).
-- **Concursos públicos → MOVIDO a plataforma (19/06/2026, PR #403).** Las licitaciones son transversales a todos los negocios de la cuenta, no de la vertical de limpiezas. Las páginas, APIs, libs y crons de concursos se eliminaron de ialimp. Las **tablas** (`concursos*`, `concursos_licitaciones`) siguen en la BD compartida — las usa plataforma. Si necesitas tocar concursos: usa `plataforma-maestro`.
+- **Concursos públicos / licitaciones → YA NO viven en ialimp** (movidos a `apps/plataforma`, jun-2026): las licitaciones son transversales a la cuenta, no de la vertical de limpiezas. Se borraron de ialimp páginas/rutas/libs/crons; las tablas (`concursos*`) siguen en la BD compartida y las usa plataforma. Si Alberto pide algo de concursos → `plataforma-maestro`.
 - **Verificación de email**: Claude lo comprueba él mismo (Gmail de Alberto + runtime logs de Vercel), no se lo pide al usuario.
 - Bucket `cleaning-photos` **PRIVADO** (signed URLs vía proxy `/api/l/photo`).
 
