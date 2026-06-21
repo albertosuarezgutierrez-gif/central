@@ -1,10 +1,10 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T18:22:17Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T18:40:02Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
-**Resumen:** 5 apps · 24 packages · 23 capacidades · 16 skills · 922 rutas API.
+**Resumen:** 5 apps · 24 packages · 23 capacidades · 16 skills · 923 rutas API.
 
 ## Apps (verticales)
 ### ia-rest
@@ -31,7 +31,7 @@
 - **Módulos que usa:** core-ai, core-email, core-push, core-storage, module-contabilidad, module-materiales, module-proveedores
 - **Capacidades:** Eventos / catering / BEO, Equipo limpiadoras, Agenda / auto-asignación, Pricing dinámico, Mercado / ingest, Marketing (blog/IG/SEO), Almacén / stock / ASN, Proveedores / compras, Asistente / copiloto IA
 - **Tablas (1):** gastos_fijos
-- **Rutas API:** 92
+- **Rutas API:** 93
 
 ## Packages compartidos (`@central/*`)
 - **core-ai** (core) → `@central/core-ai`
@@ -149,6 +149,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (21/06/2026) 🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)
 - (21/06/2026) 💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD
 - (21/06/2026) 🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas
 - (21/06/2026) 🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo
@@ -158,5 +159,4 @@
 - (16/06/2026) 🌐 URLs de producción (no perder)
 - (21/06/2026) 🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito
 - (20/06/2026) 🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona
-- (19/06/2026) 🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)
 

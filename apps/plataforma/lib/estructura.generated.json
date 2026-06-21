@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T18:22:17Z",
+  "generadoEn": "2026-06-21T18:40:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1044,7 +1044,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 5
       }
     },
     "rrhh": {
@@ -2247,6 +2247,7 @@
       "/api/resumen-semanal",
       "/api/seo-proposals",
       "/api/seo-refresh",
+      "/api/seo-revert",
       "/api/smoobu/huespedes-repetidos",
       "/api/smoobu/import",
       "/api/updates",
@@ -2484,6 +2485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
       "fecha": "21/06/2026"
     },
@@ -2537,10 +2542,6 @@
     },
     {
       "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "📅 `diaHabitual` en facturas-control",
       "fecha": "19/06/2026"
     }
   ],
@@ -2813,7 +2814,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 922,
+    "apis": 923,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
