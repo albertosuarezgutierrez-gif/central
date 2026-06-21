@@ -1,5 +1,23 @@
 # CLAUDE.md — SIVRA
 
+> **⚠️ PARCIALMENTE DEPRECADO — la gestión interna se consolidó en `apps/plataforma` (21/06/2026).**
+> La funcionalidad **interna** de sivra (páginas `/sivra/*`, APIs `/api/sivra/*`, los crons, mensajería,
+> limpiadoras y el motor de pricing) vive ya en **plataforma** (`plataforma-ten-flame.vercel.app`), que
+> comparte la misma Supabase. **No añadas features internas nuevas aquí — hazlas en `apps/plataforma`.**
+>
+> **🚫 NO BORRAR esta app (decisión de Alberto, 21/06/2026).** `apps/sivra` sigue sirviendo la **web
+> PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`/`housesevillana.vercel.app`):
+> landing multidioma `app/[locale]/*`, SEO (`sitemap.ts`, `robots.ts`, schema), captación de reservas
+> directas. Esa parte **NO está replicada en plataforma** y **se queda viva**. Por tanto la "Fase 2
+> destructiva" original (redirigir el dominio → plataforma, borrar `apps/sivra` + proyecto Vercel `sivra`
+> + env `SIVRA_URL`) queda **CANCELADA**: redirigir el dominio de reservas a un login autenticado rompería
+> a los huéspedes y tiraría el SEO.
+>
+> Estado del gate (verificado 21/06/2026 contra la BD real): (1) limpiadoras reales = **100% Sique Brilla
+> (ialimp)**, 0 de housesevillana → flujo de limpiadoras de sivra sin usuarias; (2) crons de pricing ya en
+> `apps/plataforma/vercel.json` (`apps/sivra/vercel.json` → `crons: []`).
+> NO toques RLS/buckets/GRANTs de la BD compartida.
+
 Memoria de proyecto para sesiones de Claude Code. Léelo al empezar.
 
 ## Qué es

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server"
 import { POST as applyPost } from "../apply/route"
-import { PRICING_HORIZON_DAYS } from "@/lib/sivra/pricing-calendar"
+import { PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 
 export const dynamic = "force-dynamic"
 export const maxDuration = 300

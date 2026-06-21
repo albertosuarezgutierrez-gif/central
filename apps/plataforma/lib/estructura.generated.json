@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:23:18Z",
+  "generadoEn": "2026-06-21T20:24:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -926,7 +926,7 @@
       },
       "plataforma": {
         "presente": true,
-        "evidencias": 19
+        "evidencias": 20
       },
       "rrhh": {
         "presente": false,
@@ -2086,6 +2086,7 @@
       "/api/sivra/limpiadoras/auto-sessions",
       "/api/sivra/limpiadoras/checklist",
       "/api/sivra/limpiadoras/disponibilidad",
+      "/api/sivra/limpiadoras/early-checkin",
       "/api/sivra/limpiadoras/facturacion",
       "/api/sivra/limpiadoras/historial",
       "/api/sivra/limpiadoras/informe",
@@ -2490,6 +2491,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🗑️ RETIRADA DE `apps/sivra` — Fase 1 HECHA (sin riesgo)",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🧾 GROUND TRUTH FISCAL de Alberto persistido",
       "fecha": "19/06/2026"
     },
@@ -2544,10 +2549,6 @@
     {
       "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
       "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
-      "fecha": "20/06/2026"
     }
   ],
   "saludRepo": {
@@ -2819,7 +2820,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 17,
-    "apis": 923,
+    "apis": 924,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db'
 import { Prisma } from '@prisma/client'
 import { aiComplete } from '@central/core-ai'
 import { getSmoobuKey } from '@/lib/smoobu'
+import { registrarAvisoHuesped } from '@/lib/limpiadoras-early'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 30
@@ -39,15 +40,11 @@ function extractEarlyTime(text: string): { type: 'early_checkout' | 'early_check
 }
 
 async function notifyCleaningSession(propertyId: string, checkoutDate: string, type: string, time: string) {
-  // Fire-and-forget al API de sivra para alertar de early check-in/out a la sesión de limpieza
-  const sivraUrl = process.env.SIVRA_URL || 'https://roi-intranet.vercel.app'
+  // Fire-and-forget: alerta de early check-in/out a la sesión de limpieza.
+  // Antes era un fetch HTTP a la app sivra (SIVRA_URL); ahora es una llamada interna directa.
   try {
-    const res = await fetch(`${sivraUrl}/api/limpiadoras/early-checkin`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ property_id: propertyId, date: checkoutDate, type, time })
-    })
-    return res.ok
+    await registrarAvisoHuesped({ property_id: propertyId, date: checkoutDate, type, time })
+    return true
   } catch { return false }
 }
 

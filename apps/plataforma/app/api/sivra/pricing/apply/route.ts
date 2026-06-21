@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { getSession } from "@/lib/session"
 import { prisma } from "@/lib/db"
 import { Prisma } from "@prisma/client"
-import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/sivra/pricing-calendar"
+import { eventFactor, PRICING_HORIZON_DAYS } from "@/lib/pricing-calendar"
 import { getSmoobuKey } from "@/lib/smoobu"
 
 export const dynamic = "force-dynamic"

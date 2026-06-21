@@ -8,6 +8,7 @@ const NAV_NEGOCIO = [
   { href: '/finanzas', icon: '💶', label: 'Finanzas' },
   { href: '/banca', icon: '🏦', label: 'Banca' },
   { href: '/apartamentos', icon: '🏨', label: 'Apartamentos' },
+  { href: '/agente', icon: '🤖', label: 'Agente precios' },
   { href: '/limpiezas', icon: '🧹', label: 'Limpiezas' },
   { href: '/comunicacion', icon: '💬', label: 'Comunicación' },
   { href: '/concursos', icon: '🏛️', label: 'Concursos' },

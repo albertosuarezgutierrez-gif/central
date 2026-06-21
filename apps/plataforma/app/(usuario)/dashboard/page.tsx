@@ -66,7 +66,7 @@ const SECTOR_LABEL: Record<string, string> = {
 const APP_URL: Record<string, string> = {
   'ia-rest': process.env.IAREST_URL  || 'https://iarest.es',
   ialimp:    process.env.IALIMP_URL  || 'https://app.ialimp.es',
-  sivra:     process.env.SIVRA_URL   || '#',
+  sivra:     '/sivra/income',  // consolidado dentro de plataforma (antes app externa SIVRA_URL)
 }
 
 // Degradación elegante: la BD compartida (Supabase) puede dar timeouts puntuales bajo

@@ -33,7 +33,7 @@
 | Vertical | Producto | Proyecto Vercel | Estado |
 |---|---|---|---|
 | **ia-rest** | Voice POS / hostelería | `ia-rest` | ✅ En `apps/ia-rest`, Root Directory `apps/ia-rest` (live en `iarest.es`). |
-| **sivra** | Intranet pisos turísticos | `sivra` | ✅ En `apps/sivra`, Root Directory `apps/sivra`. |
+| **sivra** | Intranet pisos turísticos + web pública House Sevillana | `sivra` | ⚠️ Gestión **interna consolidada en `apps/plataforma`** (`/sivra/*`). `apps/sivra` **se mantiene** como **web pública de reserva directa + SEO** (`housesevillana.es`); **NO borrar** (decisión 21/06/2026). No añadir features internas aquí. |
 | **ialimp** | SaaS de limpiezas | `ialimp` | ✅ En `apps/ialimp`, Root Directory `apps/ialimp`. |
 | **plataforma** | Cuadro de mando consolidado + god-panel | `plataforma` | ✅ En `apps/plataforma`, Root Directory `apps/plataforma`. BD compartida `wswbehlcuxqxyinousql`. |
 | **rrhh** | Portal del Empleado multi-tenant (`central-rrhh.vercel.app`) | `rrhh` | ✅ En `apps/rrhh`, Root Directory `apps/rrhh`. Schema `rrhh` en la BD compartida. |
