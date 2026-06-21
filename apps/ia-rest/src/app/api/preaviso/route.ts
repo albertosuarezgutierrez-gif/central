@@ -96,3 +96,35 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ ok: true, preaviso })
 }
+
+export async function PATCH(req: NextRequest) {
+  const session = getSession(req)
+  if (!session) return NextResponse.json({ error: 'No autorizado' }, { status: 401 })
+  const restauranteId = getRestauranteId(req)
+  const supabase = createServerClient()
+
+  const { preaviso_id, accion } = await req.json() as {
+    preaviso_id?: string
+    accion?: 'mesa_lista' | 'cancelar'
+  }
+  if (!preaviso_id) return NextResponse.json({ error: 'preaviso_id requerido' }, { status: 400 })
+
+  const nuevoEstado = accion === 'cancelar' ? 'cancelado' : 'mesa_lista'
+  const patch: Record<string, unknown> = { estado: nuevoEstado }
+  if (nuevoEstado === 'mesa_lista') {
+    patch.mesa_lista_at = new Date().toISOString()
+    patch.mesa_lista_por = session.camarero_id ?? null
+  }
+
+  const { data, error } = await supabase
+    .from('preavisos')
+    .update(patch)
+    .eq('id', preaviso_id)
+    .eq('restaurante_id', restauranteId)
+    .select()
+    .single()
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  // El UPDATE viaja por Realtime al canal kds-{restaurante_id} → cocina lo ve.
+  return NextResponse.json({ ok: true, preaviso: data })
+}
