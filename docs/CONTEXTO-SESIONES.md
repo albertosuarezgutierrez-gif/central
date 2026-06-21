@@ -43,38 +43,28 @@
 - **🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA — 18/06/2026** (PR #384 + PR #385 mergeados a `main`)
   - **PR #384** — `fix(plataforma/banca)`: los ingresos de la correduría no cuadraban (~€10.026 ocultos en P&L). Causa: en abonos Norma 43, el banco rotula la contraparte con el TITULAR → la regla 'titular ⇒ traspaso_interno' escondía comisiones. Fix: lógica pura extraída a `lib/destino.ts` (nuevo, testeable `node --test`, 7 casos reales del extracto). ABONOS se clasifican por CONCEPTO (`LIQ.COMISIONES`/aseguradoras ⇒ `seguros`; pensión/nómina/Bizum ⇒ `personal`). CARGOS sin cambios (el titular sí marca traspaso en salidas). `lib/categorizar.ts` reexporta. SQL de reclasificación aplicado a BD compartida (`prisma/migrations/2026-06-16_reclasificar_abonos_correduria.sql`).
   - **PR #385** — `feat(plataforma)`: panel `/sivra/facturas-control` (entrada 🗂️ Facturas en sidebar, sección Mis pisos). Estado por proveedor/mes: ✅ En Drive / ⏳ En plazo / ❌ Falta. 17 proveedores recurrentes (mensual/bimestral_impar/anual_marzo) en `lib/sivra/facturas-control.ts`. API `GET/POST /api/sivra/facturas-control` (sube PDF → Apps Script → Drive → tabla `facturas_drive`). Alerta `facturasFaltantes` del mes anterior en `getAlertas(lib/banca.ts)` → banner en `/dashboard`.
+- **🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes — 21/06/2026**
+  - **Análisis Modelo 190 vs BD completo:** Modelo 190 bruto €8.593,76 → neto esperado €7.305. BD tras correcciones: €6.176,53. Gap ~€1.128 = timing (dic-2025 cobrado ene-2026).
+  - **Compañías identificadas definitivamente:**
+    - Occident: `Saldo. m00171` + `Saldo. 8/92361` ✅
+    - Mapfre: `Liq.comisiones YYYYMM` ✅
+    - Caser: `fra-comis` ✅
+    - Generali: `G.65792 liq.XXX generali se` + `Pago saldo cta` ✅
+    - Pelayo: `COMISIONES [nombre] [7 dígitos]` ✅
+    - ASISA: **M1454** (~€46/mes) ✅ confirmado por Alberto
+    - Aegon: `REMSALDO` ✅
+    - AXA: `Liq. saldo cuenta` ✅ (importe pequeño, ~€41 neto)
+    - Reale: `Liquidacion de comisiones` ✅
+    - Fidelidade: probable `Pd005 saldo agente` (pendiente confirmar)
+  - **Compañías con dinero retenido sin pagar:**
+    - **Allianz (mediador 18638/PA342520):** saldo **€521,53** a abr-2026. Extractos en Gmail desde mediador@allianz.es asunto "Cuenta Agente".
+    - **Helvetia:** trámite cambio cuenta iniciado mar-2025 (Nieves Calvo → Cac.corredores@helvetia.es + Elena Pérez) nunca completado.
+    - **AXA (mediador 634471):** sin comercial asignado, importe pendiente desconocido.
+  - **3 borradores Gmail creados** (Allianz/Helvetia/AXA) con IBAN ES34 0182 9465 6002 0233 1175 y enlace Drive.
+  - **⚠️ Certificado BBVA:** el PDF guardado en Drive era un justificante Bizum (equivocado). Pedir certificado de titularidad real desde app BBVA (Mis productos → cuenta → Documentos → Certificado de titularidad) y adjuntar manualmente a los 3 borradores.
+  - **Google Apps Script** creado para salvar adjuntos Gmail→Drive (script.google.com, función `guardarCertificadoBBVAenDrive`).
+  - **Pendiente Alberto:** obtener certificado titularidad BBVA real → adjuntar a los 3 borradores → enviar.
 
-- **🔧 FIX blog-seo: modelo rápido 8B para caber en ~60s Vercel — 18/06/2026** (commit `c4db1df`, recrea PR #302)
-  - Cron `/api/cron/blog-seo/route.ts` usaba el modelo grande y superaba el timeout de 60s de Vercel → 504. Fix: usa `meta/llama-3.1-8b-instruct` via la pasarela NIM con timeout interno <60s. `callAI` en `lib/ai-client.ts` ya acepta `model?` como 6º arg opcional para forzar un modelo concreto en una llamada.
-  - Skill `ia-rest-maestro` actualizada con la pauta: **para generaciones largas (blog-seo, texto largo) usar el 8B rápido** (`callAI(..., model)`) con timeout interno <60s.
-- **🔍 AUDITORÍA DIARIA LIGERA — 20/06/2026** (`docs/AUDITORIA-2026-06-20.md`) — **estado SANO, sin bugs nuevos.**
-  - Rango #384→#401 (26 commits). Radiografía al día. `transpilePackages` 14/14. Skills 16/16 documentadas.
-  - **Reconciliado:** 3 commits del 18/06 sin anotar (blog-seo fix + PR #384 banca + PR #385 Control Facturas); MATRIZ.md incompleta (faltaban plataforma y rrhh) → corregida.
-  - **Hallazgos pendientes (sin tocar):** `.claude/ia-rest-project.skill.md` + `docs/SKILL-proyecto-claude.md` orphaned (skills viejas); `next.config.js` residual ia-rest; bucket `documentos-contables` listing público; stale drafts #302/#322/#331 originales (recreados como #384/#385/blog-seo fix, cerrar si siguen abiertos); carry-forward: migraciones `concursos_radar` + jubilar `efncqyvhniaxsirhdxaa`.
-- **🔍 AUDITORÍA LIGERA — 21/06/2026** (`docs/AUDITORIA-2026-06.md` addendum) — **estado SANO.**
-  - Rango: 63 commits desde auditoría-18/06 hasta `0c2244a`. Verde: lockfile OK, radiografía OK, 0 refs `@iarest/`.
-  - **Arreglados en el acto:** (A1) `ialimp-maestro` describía Concursos como propio de ialimp tras PR #403 →
-    skill corregida; (B1) `plataforma-maestro` no mencionaba Concursos → añadida entrada; (B2) dep muerta
-    `@central/module-concursos` en ialimp (sin imports) → eliminada de `package.json` + `next.config.ts`;
-    (B3) MATRIZ.md no listaba `plataforma` ni `rrhh` → añadidas.
-  - **Pendiente manual Alberto (no urgente):** `SMTP_*`/`RESEND_API_KEY` en proyecto Vercel **plataforma** para
-    que los emails de avisos y recordatorio de Concursos funcionen.
-- **🔎 AUDITORÍA PROFUNDA SEMANAL — 21/06/2026** (rama `claude/inspiring-franklin-ncvw2c`)
-  - **Bloque 1 (Integridad):** lockfile ✅, radiografía ✅, guardián 21/21 ✅.
-  - **Bloque 2 (Typecheck 5 apps):** todas a 0 errores. Fix aplicado: `apps/plataforma/types/pdf-parse.d.ts`
-    no se copió al portar el agente de concursos → error TS7016 en `lib/concursos.ts:26`. Copiado de ialimp.
-  - **Bloque 3 (Tests):** 86 tests verdes (rrhh 25 + packages 40 + guardián 21).
-  - **Bloque 4 (Seguridad Supabase):** 0 ERRORs (mantenido). Nuevos: 3 buckets con listing público
-    (`documentos-propiedad`, `property-access-files`, `propuestas-leads`). `concursos_radar_criterios`
-    sigue sin aplicarse → cron `concursos-radar` de plataforma fallará en runtime.
-  - **Bloque 5 (Deps):** 16 vulns (5 high), subida desde 6/2h pasada. Nuevas high: `vite`, `fast-xml-parser`, `nodemailer`.
-  - **Bloque 6 (Vercel):** 4 proyectos READY en producción. rrhh no visible en el equipo (personal account).
-  - **Bloque 7 (Docs):** SKILLS.md y commands en sync.
-  - **Fix adicional:** `@central/module-concursos` huérfano en ialimp (dep + transpilePackages) → eliminado.
-  - **Pendientes manuales de Alberto:** (1) Aplicar SQL `concursos_radar_criterios` en Supabase.
-    (2) Deshabilitar listing en 4 buckets públicos. (3) Añadir SMTP_* a proyecto Vercel plataforma.
-    (4) Actualizar `fast-xml-parser`/`nodemailer` en ialimp + override `vite`.
-  - Ver addendum 21/06 en `docs/AUDITORIA-2026-06.md`.
 - **🕵️ ia-rest: inteligencia competitiva (comandiavoz.com) — 21/06/2026**
   - **Disparador:** Alberto pasó un anuncio de Meta/Instagram (`fbclid`) de **comandiavoz.com**
     (parece comanda-por-voz para hostelería = competidor directo de ia.rest) y pidió estudiar competencia.
