@@ -36,7 +36,9 @@
       sesiones/90d** (6 limpiadoras distintas, último 14-jun) son **100% Sique Brilla**, 0 huérfanas/otro
       origen. → El flujo de limpiadoras de sivra no tiene usuarias reales; seguro retirarlo.
     - **Pricing — confirmado:** los crons de pricing/mercado/limpiadoras ya están **todos en
-      `apps/plataforma/vercel.json`**; `apps/sivra/vercel.json` tiene `crons: []`. Apagar sivra NO tumba el pricing.
+      `apps/plataforma/vercel.json`**; `apps/sivra/vercel.json` tiene `crons: []`. Apagar sivra NO tumba el pricing
+      automático. **PERO** el raíl del **agente de pricing** (`/api/pricing/aplicar-propuesta` + `/api/pricing/pisos-zona`)
+      **sigue SOLO en sivra** (no portado a plataforma) → razón adicional para no apagar sivra.
     - **🚫 PERO la parte destructiva NO se hace (decisión de Alberto: "eso no tocar"):** `apps/sivra` también
       es la **web PÚBLICA de reserva directa de House Sevillana** (`housesevillana.es`: landing multidioma
       `app/[locale]`, SEO `sitemap.ts`/`robots.ts`/schema). Esa parte **NO está en plataforma** y **se queda

@@ -39,8 +39,11 @@ description: >
   Tablas propias: `cuentas`, `sociedades`, `negocios`.
 - Stack: Next 15 · Prisma · JWT (jose/bcryptjs, cookie `plataforma_session`) · sin Tailwind (CSS vars).
 - God-panel: auth propia (cookie `plataforma_admin`, 8h) contra tabla `superadmins` (mismo login que `/superadmin` de ialimp).
-- Envs: `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `IAREST_URL`, `IALIMP_URL`, `SIVRA_URL`,
+- Envs: `DATABASE_URL`, `DIRECT_URL`, `JWT_SECRET`, `IAREST_URL`, `IALIMP_URL`,
   `OPERADOR_SHARED_SECRET` (mismo valor en el proyecto Vercel `ia-rest`).
+  - `SIVRA_URL`: **YA NO se usa en runtime** (Fase 1 retirada de sivra, 21/06/2026 — el aviso de early
+    check-in pasó a llamada interna y el dashboard enlaza a `/sivra/income`). Env muerta; no se borra
+    porque la app standalone `apps/sivra` se mantiene como web pública (ver `sivra-maestro`).
 - Root Directory Vercel: `apps/plataforma`.
 
 ## Landmines (no romper — detalle en CLAUDE.md)
