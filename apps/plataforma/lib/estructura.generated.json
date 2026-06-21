@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:21:25Z",
+  "generadoEn": "2026-06-21T20:22:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2485,23 +2485,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔧 FIX blog-seo: modelo rápido 8B para caber en ~60s Vercel",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA DIARIA LIGERA",
-      "fecha": "20/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA LIGERA",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🔎 AUDITORÍA PROFUNDA SEMANAL",
+      "titulo": "🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes",
       "fecha": "21/06/2026"
     },
     {
@@ -2543,6 +2527,22 @@
     {
       "titulo": "🌐 URLs de producción (no perder)",
       "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
+      "fecha": "20/06/2026"
+    },
+    {
+      "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad",
+      "fecha": "19/06/2026"
     }
   ],
   "saludRepo": {
