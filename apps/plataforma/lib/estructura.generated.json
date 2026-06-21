@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-18T17:35:18Z",
+  "generadoEn": "2026-06-21T20:20:13Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -286,7 +286,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 4
+        "evidencias": 5
       },
       "rrhh": {
         "estado": "usado",
@@ -501,12 +501,12 @@
         "evidencias": 0
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 11
-      },
-      "plataforma": {
         "estado": "no",
         "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "no",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 24
+        "evidencias": 27
       },
       "ialimp": {
         "presente": false,
@@ -1006,7 +1006,7 @@
     "crm-leads": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 5
+        "evidencias": 6
       },
       "ialimp": {
         "presente": true,
@@ -1044,7 +1044,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 5
       }
     },
     "rrhh": {
@@ -1273,12 +1273,12 @@
         "evidencias": 0
       },
       "ialimp": {
-        "presente": true,
-        "evidencias": 14
-      },
-      "plataforma": {
         "presente": false,
         "evidencias": 0
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 19
       },
       "rrhh": {
         "presente": false,
@@ -1385,6 +1385,8 @@
       "/api/cocina/asignaciones",
       "/api/cocina/eventos",
       "/api/cocina/eventos/[id]",
+      "/api/cocina/eventos/[id]/crm",
+      "/api/cocina/eventos/[id]/material",
       "/api/cocina/menu-sugerido",
       "/api/cocina/parte",
       "/api/cocina/personal",
@@ -1422,6 +1424,7 @@
       "/api/cron/cobro-inactividad",
       "/api/cron/cobros-eventos",
       "/api/cron/completar-locales",
+      "/api/cron/crm-emails-catering",
       "/api/cron/crm-envio-auto",
       "/api/cron/crm-followup-sevilla",
       "/api/cron/crm-lead-hunter-sevilla",
@@ -1437,6 +1440,7 @@
       "/api/cron/lead-onboarding",
       "/api/cron/mantenimiento-espacios",
       "/api/cron/pipeline-comercial",
+      "/api/cron/preavisos-auto",
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
       "/api/cron/reposicion-stock",
@@ -1685,6 +1689,7 @@
       "/api/portal-proveedor/[token]",
       "/api/portal/stock-central",
       "/api/portal/transferencias",
+      "/api/preaviso",
       "/api/print",
       "/api/produccion/cocineros",
       "/api/produccion/perfil",
@@ -1731,6 +1736,7 @@
       "/api/super/cobro-resumen",
       "/api/super/cuentas",
       "/api/super/cuentas/[id]/restaurantes",
+      "/api/super/emails-catering",
       "/api/super/ga4-stats",
       "/api/super/google-oauth",
       "/api/super/google-oauth-callback",
@@ -1824,17 +1830,6 @@
       "/api/admin/clientes/[id]/desactivar",
       "/api/admin/clientes/[id]/enviar-acceso",
       "/api/admin/clientes/[id]/reactivar",
-      "/api/admin/concursos/[id]/memoria",
-      "/api/admin/concursos/[id]/oferta",
-      "/api/admin/concursos/[id]/sobre-administrativo",
-      "/api/admin/concursos/analizar",
-      "/api/admin/concursos/biblioteca",
-      "/api/admin/concursos/perfil",
-      "/api/admin/concursos/radar",
-      "/api/admin/concursos/radar/buscar",
-      "/api/admin/concursos/radar/criterios",
-      "/api/admin/concursos/radar/importar",
-      "/api/admin/concursos/radar/visto",
       "/api/admin/consumos",
       "/api/admin/contabilidad/adjunto",
       "/api/admin/contabilidad/apuntes",
@@ -1927,8 +1922,6 @@
       "/api/auth/register",
       "/api/catastro/municipio",
       "/api/cotizador",
-      "/api/cron/concursos-ingesta",
-      "/api/cron/concursos-radar",
       "/api/cron/impagos",
       "/api/cron/procesar-documentos",
       "/api/dashboard",
@@ -2044,8 +2037,28 @@
       "/api/comunicacion/grupos",
       "/api/comunicacion/grupos/[id]/personas",
       "/api/comunicacion/reglas",
+      "/api/concursos/[id]/memoria",
+      "/api/concursos/[id]/oferta",
+      "/api/concursos/[id]/sobre-administrativo",
+      "/api/concursos/analizar",
+      "/api/concursos/biblioteca",
+      "/api/concursos/ingesta",
+      "/api/concursos/perfil",
+      "/api/concursos/preparar",
+      "/api/concursos/radar",
+      "/api/concursos/radar/buscar",
+      "/api/concursos/radar/criterios",
+      "/api/concursos/radar/importar",
+      "/api/concursos/radar/interpretar",
+      "/api/concursos/radar/resumen",
+      "/api/concursos/radar/visto",
+      "/api/concursos/seguidos",
       "/api/cron/banca-alertas",
       "/api/cron/briefing",
+      "/api/cron/concursos-avisos",
+      "/api/cron/concursos-cierre",
+      "/api/cron/concursos-ingesta",
+      "/api/cron/concursos-radar",
       "/api/cron/psd2-sync",
       "/api/finanzas",
       "/api/finanzas/export",
@@ -2234,6 +2247,7 @@
       "/api/resumen-semanal",
       "/api/seo-proposals",
       "/api/seo-refresh",
+      "/api/seo-revert",
       "/api/smoobu/huespedes-repetidos",
       "/api/smoobu/import",
       "/api/updates",
@@ -2293,6 +2307,7 @@
       "movimientos_tesoreria",
       "pedidos_online",
       "pin_attempts",
+      "preavisos",
       "productos_86",
       "propinas",
       "prospeccion_apify_runs",
@@ -2335,6 +2350,7 @@
       "concursos_licitaciones",
       "concursos_perfil_empresa",
       "concursos_radar_anuncios",
+      "concursos_seguidos",
       "cuentas",
       "documentos_contables",
       "documentos_limpiadora",
@@ -2469,64 +2485,64 @@
   ],
   "novedades": [
     {
-      "titulo": "📱 RESPONSIVE COMPLETO",
-      "fecha": "18/06/2026"
+      "titulo": "🔍 AUDITORÍA DIARIA LIGERA",
+      "fecha": "20/06/2026"
     },
     {
-      "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
-      "fecha": "18/06/2026"
+      "titulo": "🔍 AUDITORÍA LIGERA",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🔍 AUDITORÍA PROFUNDA SEMANAL",
-      "fecha": "18/06/2026"
+      "titulo": "🔎 AUDITORÍA PROFUNDA SEMANAL",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
-      "fecha": "18/06/2026"
+      "titulo": "🕵️ ia-rest: inteligencia competitiva (comandiavoz.com)",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🔍 AUDITORÍA DIARIA",
-      "fecha": "18/06/2026"
+      "titulo": "📝 Doc drift corregido — crons de sivra",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "✨ COCINA CENTRAL · GENERADOR DE MENÚS IA",
-      "fecha": "18/06/2026"
+      "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🤖 COCINA CENTRAL · REPARTO IA + ATRIBUCIÓN + FOTO-RECEPCIÓN",
-      "fecha": "18/06/2026"
+      "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🗺️ ROADMAP COCINA CENTRAL (backlog acordado — \"todo menos voz\")",
-      "fecha": "18/06/2026"
+      "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "👥 COCINA CENTRAL · GESTIÓN DE EQUIPO",
-      "fecha": "18/06/2026"
+      "titulo": "🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🏭 COCINA CENTRAL — CICLO COMPLETO EN BD Y EDITABLE",
-      "fecha": "18/06/2026"
+      "titulo": "🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "📨 FIX FORMULARIO DE CONTACTO (landing) — no avisaba NUNCA",
-      "fecha": "18/06/2026"
+      "titulo": "🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🧾 FACTURAS CORREO · Pasada completa 60 días + fix skill",
-      "fecha": "18/06/2026"
+      "titulo": "🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis)",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🏭 COCINA CENTRAL DE CATERING ≠ RESTAURANTE",
-      "fecha": "18/06/2026"
+      "titulo": "🌐 URLs de producción (no perder)",
+      "fecha": "16/06/2026"
     },
     {
-      "titulo": "🍳 PARTE DE CARMEN — DEMO + VIVO MERGEADOS",
-      "fecha": "17/06/2026"
+      "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
+      "fecha": "21/06/2026"
     },
     {
-      "titulo": "🍳 DEMO PARTE CARMEN MERGEADO",
-      "fecha": "17/06/2026"
+      "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
+      "fecha": "20/06/2026"
     }
   ],
   "saludRepo": {
@@ -2789,18 +2805,6 @@
         "falta": [
           "sivra"
         ]
-      },
-      {
-        "capacidad": "concursos",
-        "label": "Concursos públicos",
-        "tiene": [
-          "ialimp"
-        ],
-        "falta": [
-          "ia-rest",
-          "rrhh",
-          "sivra"
-        ]
       }
     ],
     "reimplementaciones": []
@@ -2810,9 +2814,9 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 909,
+    "apis": 923,
     "modulosInfrautilizados": 0,
-    "oportunidadesPortar": 22,
+    "oportunidadesPortar": 21,
     "reimplementaciones": 0
   }
 }

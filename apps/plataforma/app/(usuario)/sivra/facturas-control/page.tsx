@@ -4,7 +4,7 @@ import { calcularEstado, type EstadoFactura } from '@/lib/sivra/facturas-control
 
 type ProvRow = {
   id: string; label: string; destino: string; importeAprox: string
-  driveUrl: string | null; importe: number | null
+  driveUrl: string | null; importe: number | null; diaHabitual?: number | null
 }
 
 const BADGE: Record<EstadoFactura, { icon: string; label: string; bg: string; color: string }> = {
@@ -133,7 +133,10 @@ export default function FacturasControlPage() {
                       {row.driveUrl
                         ? <a href={row.driveUrl} target="_blank" rel="noreferrer" style={{ color: 'var(--primary)', textDecoration: 'none' }}>{row.label}</a>
                         : row.label}
-                      {row.importe != null && <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2 }}>{row.importe.toFixed(2)} €</div>}
+                      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 2, display: 'flex', gap: 8 }}>
+                        {row.diaHabitual != null && <span>~{row.diaHabitual} {MESES[mes - 1].slice(0, 3).toLowerCase()}</span>}
+                        {row.importe != null && <span>{row.importe.toFixed(2)} €</span>}
+                      </div>
                     </td>
                     <td style={{ padding: '10px 14px', color: 'var(--muted)' }}>
                       {DESTINO_LABEL[row.destino] ?? row.destino}

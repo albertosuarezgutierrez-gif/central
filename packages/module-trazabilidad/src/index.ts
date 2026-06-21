@@ -10,6 +10,7 @@ export type {
   PuntoControl,
   RegistroTemp,
   ElaboracionTraza,
+  DietaGrupo,
   UbicacionEvento,
   ParteElaboracion,
   ResultadoControl,
@@ -37,5 +38,9 @@ export { muestrasACaducar } from './muestras.ts'
 export type { MuestraACaducar } from './muestras.ts'
 
 // Generación automática del parte a partir de catálogo + eventos
-export { generarParte, paxTotal } from './generar.ts'
+export { generarParte, paxTotal, dietaElaboracionId } from './generar.ts'
 export type { EscandalloIngrediente, FichaCatalogo, EventoInput } from './generar.ts'
+
+// Dietas de comensales puntuales: avisos de seguridad y mapeo dieta → alérgenos
+export { alergenosIncompatibles, avisosDietas } from './dietas.ts'
+export type { AvisoDieta } from './dietas.ts'

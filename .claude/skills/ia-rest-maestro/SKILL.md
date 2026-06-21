@@ -252,13 +252,13 @@ Authorization: Bearer {VERCEL_TOKEN}
 ## STACK IA
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
-- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**sin fallback Anthropic** — retirado 17/06/2026, cuenta sin saldo)
-- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback Anthropic**)
+- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
+- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback** — Groq no tiene vision model gratis equivalente)
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
-  - El parámetro `noFallback` se mantiene por compatibilidad, pero **ya no hay fallback de pago**:
-    `@anthropic-ai/sdk` se quitó de ia-rest (17/06/2026). Si NIM falla, lanza error.
+  - Si NIM falla, cae **automáticamente a Groq** (`llama-3.3-70b-versatile`, gratis, mismo modelo; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
+  - `noFallback` es **legacy** (antaño evitaba el fallback de PAGO a Anthropic, quitado el 17/06/2026); **ya NO bloquea** el fallback gratis a Groq.
   - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)
 - ⚠️ **LÍMITE ~60s en funciones Vercel de ia-rest** (el plan NO respeta `maxDuration=300` aquí, sí en
@@ -323,6 +323,34 @@ Piloto: **Catering Joaquín Jaén** (Carmen, rol `cocina`, PIN demo 1234).
   (describe el evento → menú del catálogo → abre `EventoForm` prerrellenado para revisión humana),
   **📷 Foto-recepción** (autorrellena el albarán). **Pendiente:** análisis de overrides para reentrenar la
   propuesta de reparto, recalibrado de tiempos con `hecho_at`, y **control por voz** (sin comandas).
+
+---
+
+## MATERIALES / LOGÍSTICA (mesas, sillas, menaje de catering) — ≠ almacén de cocina
+
+Módulo **independiente de eventos** (sirve para catering JJ, haciendas o alquiler puro), gating por
+`personal.modulos_gestion = 'materiales'`. Motor puro `@central/module-materiales`
+(`packages/module-materiales`: `expandirKit`, `disponibilidadEnFecha`, `stockActualDesdeLedger`,
+`ajusteInventario`, `alertasVencimiento`). UI: dueño en `/owner` tab **Materiales** (14 sub-pestañas:
+Resumen, Catálogo, Espacios, Transferencias, Serializados, Kits, Inventario, Mantenimiento, Reservas,
+Clientes, Proveedores, Historial, Importar, Informes); montador en **`/montaje`** (sus asignaciones,
+recogido/devuelto, rotura con foto).
+
+- **16 tablas en schema `iarest`** (aplicadas a la BD compartida el 18/06/2026 — antes solo existían
+  las 3 base y la Fase B fallaba en prod): `materiales`, `materiales_asignacion`, `materiales_dano`
+  (MVP) + `materiales_espacios`, `materiales_transferencias`, `materiales_categorias`,
+  `materiales_movimientos` (ledger), `materiales_unidades` (serializados/QR), `materiales_proveedores`,
+  `materiales_clientes`, `materiales_kits` (+`_items`), `materiales_inventario_fisico` (+`_lineas`),
+  `materiales_mantenimiento`, `materiales_reservas`. Todas RLS `service_role_all`.
+- **Enlace a evento (genérico, sin FK dura):** asignación con `destino_tipo`/`destino_ref`/`destino_nombre`;
+  reservas/movimientos con `parent_tipo`/`parent_id`. Permite colgar material de un `eventos.id`.
+- **APIs** `/api/materiales/*`: `route` (catálogo) · `asignacion` · `dano` · `perfil` · `categorias` ·
+  `espacios` · `proveedores` · `clientes` · `kits[/id/items][/instanciar]` · `reservas` · `movimientos` ·
+  `unidades` · `mantenimiento` · `inventario-fisico[/id/lineas|cerrar]` · `alertas` · `qr/[id]` · `import` · `informe`.
+- **Integración con cocina central (boda → cocina + material)** = diseñada, NO construida:
+  `docs/superpowers/specs/2026-06-18-eventos-spine-cocina-materiales-design.md` ("junto pero separado
+  por módulo", anclaje en tabla `eventos`).
+- Demo: owner Alberto PIN 1369 → tab Materiales; montador PIN 4040 → `/montaje`.
 
 ---
 
@@ -795,10 +823,16 @@ Obliga a encadenar facturas con hash SHA-256 para garantizar la integridad.
 
 | Colectivo | Fecha obligatoria |
 |---|---|
-| Sociedades | 1 enero 2026 |
-| Autónomos | 1 julio 2026 |
+| Sociedades | **1 enero 2027** |
+| Autónomos (resto de obligados) | **1 julio 2027** |
 
-> ⚠️ **Para restaurantes clientes de ia.rest, VeriFactu ya es obligatorio.**
+> ⚠️ **PLAZO APLAZADO UN AÑO.** El RD-ley 15/2025 (de 2 de diciembre, BOE 3-dic-2025)
+> prorrogó las fechas originales del RD 254/2025 (que eran sociedades 1-ene-**2026** /
+> resto 1-jul-**2026**). Las fechas vigentes son las de la tabla (2027).
+> A junio de 2026 VeriFactu **aún NO es obligatorio** para los restaurantes clientes;
+> sigue siendo un diferenciador (ya viene nativo) pero no comunicar "2026" como fecha límite.
+> Fuente: nota AEAT "Ampliación del plazo de adaptación" + RD-ley 15/2025.
+> **Pendiente:** confirmar en la sede oficial de la AEAT antes de usarlo en material legal/comercial.
 
 ---
 

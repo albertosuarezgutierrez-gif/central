@@ -14,6 +14,15 @@ function nimConfig(): NimConfig {
   return { apiKey, visionModel: NVIDIA_VISION }
 }
 
+/**
+ * Completion de texto (system+user…) para el módulo de concursos (portado de
+ * ialimp): mismo contrato que el `aiComplete` de ialimp → recibe mensajes
+ * {role,content} y devuelve el texto. Llama directo a NVIDIA NIM (Llama 3.3-70b).
+ */
+export async function aiComplete(messages: { role: string; content: string }[]): Promise<string> {
+  return nimChat(nimConfig(), messages as any, { model: NVIDIA_TEXT, maxTokens: 2048 })
+}
+
 // ─── Invoice extraction ───────────────────────────────────────────────
 
 const INVOICE_SYSTEM = `Eres un extractor de datos de facturas españolas.

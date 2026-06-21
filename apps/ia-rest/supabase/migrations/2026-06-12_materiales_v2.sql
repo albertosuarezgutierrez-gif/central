@@ -1,9 +1,12 @@
 -- ============================================================
 -- Materiales v2 — Módulo extendido
--- BD: ia-rest (efncqyvhniaxsirhdxaa, schema public)
+-- BD: compartida wswbehlcuxqxyinousql · schema iarest
+-- (aplicada 2026-06-18; antes apuntaba a la BD vieja efncqyvhniaxsirhdxaa)
 -- Añade columnas nuevas a `materiales` y crea tablas
 -- `materiales_espacios` y `materiales_transferencias`.
 -- ============================================================
+
+SET search_path TO iarest, public;
 
 -- ── Columnas nuevas en `materiales` ─────────────────────────
 
