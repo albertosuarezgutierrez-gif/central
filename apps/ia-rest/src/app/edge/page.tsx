@@ -27,7 +27,7 @@ import { HelpChat } from '@/components/help/HelpChat'
 import CuentasTab from '@/components/edge/CuentasTab'
 import PreavisoBanner, { type PreavisoEntrante } from '@/components/edge/PreavisoBanner'
 import { supabase, SB_SCHEMA } from '@/lib/supabase'
-import { resumenPlatos, type PlatoLinea } from '@/lib/preaviso'
+import { resumenPlatos, textoPreaviso, type PlatoLinea } from '@/lib/preaviso'
 
 /* ─── PALETA CREMA (light) ──────────────────────────────────── */
 
@@ -705,6 +705,9 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
   misComandaIdsRef.current = new Set(
     comandas.filter(c => c.camarero_id === session.id).map(c => c.id)
   )
+  // Ref síncrona del flag de voz → el handler Realtime no se recrea por ttsOff (evita stale closure)
+  const ttsOffRef = useRef(ttsOff)
+  ttsOffRef.current = ttsOff
 
   useEffect(() => {
     if (!session.restaurante_id) return
@@ -722,9 +725,17 @@ function EdgeContent({ session, turnoId, setTurnoId }:{
           const p = payload.new as { id: string; comanda_id: string; mesa: string | null; platos: PlatoLinea[] | null; estado: string }
           if (p.estado !== 'enviado') return
           if (!misComandaIdsRef.current.has(p.comanda_id)) return
+          const mesa = String(p.mesa ?? '')
+          const platos = resumenPlatos((p.platos ?? []) as PlatoLinea[])
           setPreavisos(prev => prev.some(x => x.id === p.id)
             ? prev
-            : [...prev, { id: p.id, mesa: String(p.mesa ?? ''), platos: resumenPlatos((p.platos ?? []) as PlatoLinea[]) }])
+            : [...prev, { id: p.id, mesa, platos }])
+          // Voz en los cascos: lee el preaviso si la voz está activa y la pantalla visible.
+          // Reutiliza speak() (VOX neural + fallback Web Speech). El push cubre el caso bloqueado.
+          if (!ttsOffRef.current && typeof document !== 'undefined' && document.visibilityState === 'visible') {
+            speak(textoPreaviso(mesa, platos))
+            if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate([30, 50, 30])
+          }
         })
       // Si otro retira/confirma el preaviso (UPDATE), lo quitamos de la cola.
       .on('postgres_changes',
