@@ -16,6 +16,13 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA — 18/06/2026** (PR #384 + PR #385 mergeados a `main`)
+  - **PR #384** — `fix(plataforma/banca)`: los ingresos de la correduría no cuadraban (~€10.026 ocultos en P&L). Causa: en abonos Norma 43, el banco rotula la contraparte con el TITULAR → la regla 'titular ⇒ traspaso_interno' escondía comisiones. Fix: lógica pura extraída a `lib/destino.ts` (nuevo, testeable `node --test`, 7 casos reales del extracto). ABONOS se clasifican por CONCEPTO (`LIQ.COMISIONES`/aseguradoras ⇒ `seguros`; pensión/nómina/Bizum ⇒ `personal`). CARGOS sin cambios (el titular sí marca traspaso en salidas). `lib/categorizar.ts` reexporta. SQL de reclasificación aplicado a BD compartida (`prisma/migrations/2026-06-16_reclasificar_abonos_correduria.sql`).
+  - **PR #385** — `feat(plataforma)`: panel `/sivra/facturas-control` (entrada 🗂️ Facturas en sidebar, sección Mis pisos). Estado por proveedor/mes: ✅ En Drive / ⏳ En plazo / ❌ Falta. 17 proveedores recurrentes (mensual/bimestral_impar/anual_marzo) en `lib/sivra/facturas-control.ts`. API `GET/POST /api/sivra/facturas-control` (sube PDF → Apps Script → Drive → tabla `facturas_drive`). Alerta `facturasFaltantes` del mes anterior en `getAlertas(lib/banca.ts)` → banner en `/dashboard`.
+
+- **🔧 FIX blog-seo: modelo rápido 8B para caber en ~60s Vercel — 18/06/2026** (commit `c4db1df`, recrea PR #302)
+  - Cron `/api/cron/blog-seo/route.ts` usaba el modelo grande y superaba el timeout de 60s de Vercel → 504. Fix: usa `meta/llama-3.1-8b-instruct` via la pasarela NIM con timeout interno <60s. `callAI` en `lib/ai-client.ts` ya acepta `model?` como 6º arg opcional para forzar un modelo concreto en una llamada.
+  - Skill `ia-rest-maestro` actualizada con la pauta: **para generaciones largas (blog-seo, texto largo) usar el 8B rápido** (`callAI(..., model)`) con timeout interno <60s.
 - **🔍 AUDITORÍA DIARIA LIGERA — 20/06/2026** (`docs/AUDITORIA-2026-06-20.md`) — **estado SANO, sin bugs nuevos.**
   - Rango #384→#401 (26 commits). Radiografía al día. `transpilePackages` 14/14. Skills 16/16 documentadas.
   - **Reconciliado:** 3 commits del 18/06 sin anotar (blog-seo fix + PR #384 banca + PR #385 Control Facturas); MATRIZ.md incompleta (faltaban plataforma y rrhh) → corregida.
