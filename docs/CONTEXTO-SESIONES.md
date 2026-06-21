@@ -33,11 +33,25 @@
     - **Allianz (mediador 18638/PA342520):** saldo **€521,53** a abr-2026. Extractos en Gmail desde mediador@allianz.es asunto "Cuenta Agente".
     - **Helvetia:** trámite cambio cuenta iniciado mar-2025 (Nieves Calvo → Cac.corredores@helvetia.es + Elena Pérez) nunca completado.
     - **AXA (mediador 634471):** sin comercial asignado, importe pendiente desconocido.
-  - **3 borradores Gmail creados** (Allianz/Helvetia/AXA) con IBAN ES34 0182 9465 6002 0233 1175.
-  - **⚠️ Certificado BBVA pendiente:** el PDF guardado en Drive era un justificante Bizum (equivocado). El certificado de titularidad hay que pedirlo desde la app BBVA (Mis productos → cuenta → Documentos → Certificado de titularidad) o banca online. Una vez obtenido, subir a Drive y actualizar el enlace en los 3 borradores.
-  - **Google Apps Script** creado en script.google.com para salvar adjuntos Gmail→Drive. Función: `guardarCertificadoBBVAenDrive()`.
+  - **3 borradores Gmail creados** (Allianz/Helvetia/AXA) con IBAN ES34 0182 9465 6002 0233 1175 y enlace Drive.
+  - **⚠️ Certificado BBVA:** el PDF guardado en Drive era un justificante Bizum (equivocado). Pedir certificado de titularidad real desde app BBVA (Mis productos → cuenta → Documentos → Certificado de titularidad) y adjuntar manualmente a los 3 borradores.
+  - **Google Apps Script** creado para salvar adjuntos Gmail→Drive (script.google.com, función `guardarCertificadoBBVAenDrive`).
   - **Pendiente Alberto:** obtener certificado titularidad BBVA real → adjuntar a los 3 borradores → enviar.
 
+- **🕵️ ia-rest: inteligencia competitiva (comandiavoz.com) — 21/06/2026**
+  - **Disparador:** Alberto pasó un anuncio de Meta/Instagram (`fbclid`) de **comandiavoz.com**
+    (parece comanda-por-voz para hostelería = competidor directo de ia.rest) y pidió estudiar competencia.
+  - **Bloqueo del entorno:** egress de red cortado en la sesión web (`WebFetch` → 403 "Host not in
+    allowlist" para TODOS los hosts; `WebSearch` US-only no indexa el dominio). **No se pudo leer
+    comandiavoz.com** → su perfil queda pendiente (ver checklist §11 del doc).
+  - **Hecho:** `apps/ia-rest/docs/competencia.md` — mapa del mercado VERIFICADO (Veovox, Storyous,
+    Qamarero, SmartBar; precios TPV ES: Glop/Ágora/Revo/Last.app/Tipsi/Cuiner; dolores cuantificados),
+    battlecard ia.rest y checklist para cerrar el perfil de comandiavoz. Rama `claude/competitor-research-rca1fz`.
+  - **🚨 VeriFactu APLAZADO a 2027 — CORREGIDO:** el RD-ley 15/2025 (BOE 3-dic-2025) prorrogó un año
+    (sociedades 1-ene-**2027**, resto 1-jul-**2027**). Corregido en este PR: maestro/skill (`SKILL.md`
+    §VeriFactu) **y** código `apps/ia-rest/src/lib/verifactu.ts` (`VERIFACTU_STATUS`, solo info en API,
+    no gatea lógica). **Pendiente Alberto:** confirmar en sede oficial AEAT antes de uso legal/comercial.
+  - **Para cerrar:** habilitar egress (o pegar el contenido de comandiavoz.com) y rellenar §2/§7/§11 del doc.
 - **📝 Doc drift corregido — crons de sivra — 21/06/2026**
   El `CLAUDE.md` de sivra y el skill `sivra-maestro` decían "10 crons en vercel.json", pero es
   **obsoleto**: el `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal, #419).
@@ -164,8 +178,9 @@
     (`callAI` y `callAITools`). Reutiliza `GROQ_API_KEY` (ya existía para Whisper); override opcional
     `GROQ_BRAIN_MODEL`. Visión sigue NIM-only (Groq no tiene vision model gratis equivalente). `noFallback`
     pasa a ser legacy (ya no bloquea el fallback gratis). Doc en `docs/IA-busqueda-web-y-proveedores.md`.
-  - **Verificado:** `pnpm install` + `tsc --noEmit` en ia-rest → **0 errores**. PR **#415** (draft): los
-    5 previews de Vercel en **Ready** (incl. ia-rest, el build real que ejercita el adaptador).
+  - **✅ MERGEADO (PR #415, squash en `main`):** 11/11 checks verdes (typecheck de las 4 verticales,
+    tests, build, los 5 previews de Vercel Ready). Incluyó también un fix de CI ajeno: shim de tipos
+    `apps/plataforma/types/pdf-parse.d.ts` (deuda preexistente de `lib/concursos.ts`, #403).
   - **Reconciliadas skills/docs** (que describían "NIM → Anthropic/Haiku fallback", ya obsoleto):
     `.claude/skills/ia-rest-maestro/SKILL.md` (STACK IA), `packages/core-ai/README.md` (exports `groq*`
     + scope `@central`), `docs/SKILL-proyecto-claude.md`, `docs/HANDOFF-unificacion-casa-marcas.md`, y
@@ -176,10 +191,15 @@
     cubre a la vez (a) el camino directo de las 3 verticales y (b) el tráfico por pasarela. En el chat de
     pasarela queda **NIM → Groq → Gemini** (Gemini ya existía). Visión NIM-only. Verificado: tsc 0 errores en
     plataforma/ia-rest/sivra (sivra tras `prisma generate`).
-    - ⚠️ **Requiere `GROQ_API_KEY` en el Vercel de plataforma** (host de la pasarela; ahí va casi todo el
-      tráfico de sivra/ialimp/plataforma) y, para el camino directo sin pasarela, también en sivra/ialimp.
-      ia-rest ya la tiene (Whisper). Sin la key el fallback queda inactivo, no rompe nada. Override `GROQ_BRAIN_MODEL`.
-  - **Pendiente (futuro, no en este PR):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
+    - ✅ **`GROQ_API_KEY` puesta en el Vercel de plataforma** (Production+Preview) y redeploy de prod
+      **READY** → el fallback **NIM → Groq → Gemini queda ACTIVO en producción** (host de la pasarela,
+      por donde va casi todo el tráfico de sivra/ialimp/plataforma). ia-rest ya la tenía (Whisper).
+      Override `GROQ_BRAIN_MODEL`. **Opcional pendiente:** la misma key en **sivra** e **ialimp** solo si
+      se quiere cubrir su camino directo SIN pasarela (por pasarela ya están cubiertas).
+    - Recordatorio de arquitectura: la IA vive en el núcleo compartido `@central/core-ai` (añadir un
+      proveedor nuevo = un solo sitio, lo heredan todos los módulos), pero las **claves son por vertical**
+      (cada proyecto Vercel inyecta las suyas) — por eso `GROQ_API_KEY` se configura por proyecto.
+  - **Pendiente (futuro):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
     comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
     CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host.
 
