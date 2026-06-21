@@ -117,10 +117,6 @@
       "schedule": "0 7 * * 1"
     },
     {
-      "path": "/api/cron/lead-onboarding",
-      "schedule": "*/30 * * * *"
-    },
-    {
       "path": "/api/cron/crm-lead-hunter-sevilla",
       "schedule": "0 6 * * 1-5"
     },
