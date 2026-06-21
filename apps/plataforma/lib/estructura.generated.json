@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T16:57:08Z",
+  "generadoEn": "2026-06-21T20:17:04Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -506,7 +506,7 @@
       },
       "plataforma": {
         "estado": "usado",
-        "evidencias": 13
+        "evidencias": 14
       },
       "rrhh": {
         "estado": "no",
@@ -1044,7 +1044,7 @@
       },
       "sivra": {
         "presente": true,
-        "evidencias": 3
+        "evidencias": 5
       }
     },
     "rrhh": {
@@ -2247,6 +2247,7 @@
       "/api/resumen-semanal",
       "/api/seo-proposals",
       "/api/seo-refresh",
+      "/api/seo-revert",
       "/api/smoobu/huespedes-repetidos",
       "/api/smoobu/import",
       "/api/updates",
@@ -2484,6 +2485,30 @@
   ],
   "novedades": [
     {
+      "titulo": "📝 Doc drift corregido — crons de sivra",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha",
       "fecha": "21/06/2026"
     },
@@ -2518,30 +2543,6 @@
     {
       "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda",
       "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "📅 `diaHabitual` en facturas-control",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina",
-      "fecha": "18/06/2026"
     }
   ],
   "saludRepo": {
@@ -2813,7 +2814,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 922,
+    "apis": 923,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0

@@ -19,10 +19,12 @@ function hashMov(accountUid: string, m: MovEB): string {
 }
 
 // Sincroniza todas las cuentas de una sesión vinculada. Idempotente (upsert + dedupe).
+// dateFrom: override opcional para importar histórico (p. ej. "2026-01-01"). Por defecto 89 días.
 export async function sincronizarSesion(
   cuentaId: string,
   sociedadId: string,
   sessionId: string,
+  dateFrom?: string,
 ): Promise<{ cuentas: number; insertados: number; duplicados: number }> {
   const ses = await getSesion(sessionId)
   let cuentas = 0, insertados = 0, duplicados = 0
@@ -31,7 +33,7 @@ export async function sincronizarSesion(
     const [detalle, saldo, movs] = await Promise.all([
       getDetalleCuenta(accountUid).catch(() => null),
       getSaldo(accountUid).catch(() => null),
-      getMovimientos(accountUid).catch(() => [] as MovEB[]),
+      getMovimientos(accountUid, dateFrom).catch(() => [] as MovEB[]),
     ])
     const iban = detalle?.iban || accountUid
     const banco = ses.aspsp || detalle?.nombre || 'Banco (PSD2)'
@@ -88,13 +90,14 @@ export async function sincronizarSesion(
 }
 
 // Re-sincroniza todas las conexiones vinculadas de todas las cuentas (cron diario).
-export async function sincronizarTodas(): Promise<{ conexiones: number; insertados: number }> {
+// dateFrom: override para importar histórico (p. ej. "2026-01-01"). Por defecto 89 días.
+export async function sincronizarTodas(dateFrom?: string): Promise<{ conexiones: number; insertados: number }> {
   const conns = await prisma.$queryRaw<Array<{ cuenta_id: string; sociedad_id: string; requisition_id: string }>>`
     SELECT cuenta_id, sociedad_id, requisition_id FROM conexiones_banco WHERE estado = 'vinculada'
   `
   let insertados = 0
   for (const c of conns) {
-    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id).catch(() => null)
+    const r = await sincronizarSesion(c.cuenta_id, c.sociedad_id, c.requisition_id, dateFrom).catch(() => null)
     if (r) insertados += r.insertados
   }
   return { conexiones: conns.length, insertados }
