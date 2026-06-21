@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T17:52:08Z",
+  "generadoEn": "2026-06-21T18:22:17Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2484,6 +2484,10 @@
   ],
   "novedades": [
     {
+      "titulo": "💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas",
       "fecha": "21/06/2026"
     },
@@ -2538,10 +2542,6 @@
     {
       "titulo": "📅 `diaHabitual` en facturas-control",
       "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
-      "fecha": "18/06/2026"
     }
   ],
   "saludRepo": {
