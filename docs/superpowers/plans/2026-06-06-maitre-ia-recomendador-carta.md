@@ -6,7 +6,7 @@
 
 **Architecture:** Motor puro (`lib/carta-recomendar.ts`) con el filtro de seguridad de alérgenos en código + prompt + `callAI`. Una API route Next.js `/api/qr/recomendar` (GET config para la UI, POST recomienda) valida el token QR sin sesión, igual que `/api/qr/carta-i18n`. UI en un componente nuevo `MaitreSheet.tsx` montado dentro de `QrClientApp`. Config 100% del dueño en `restaurantes.configuracion.maitre_ia`, gateado por el módulo `carta_ia`.
 
-**Tech Stack:** Next.js (App Router), TypeScript, Supabase (`createServerClient`), `lib/ai-client.ts` (`callAI` NIM→Haiku, `cleanJSON`).
+**Tech Stack:** Next.js (App Router), TypeScript, Supabase (`createServerClient`), `lib/ai-client.ts` (`callAI` NIM→Groq, gratis; `cleanJSON`).
 
 **Spec:** `docs/superpowers/specs/2026-06-06-maitre-ia-recomendador-carta-design.md`
 

@@ -11,7 +11,7 @@ y que, **al subir el extracto, un agente analice los datos** (categorizar, conci
 - **Entrada de datos = Norma 43 (Cuaderno 43, AEB-43)**: fichero descargable de cualquier banco
   español. Coste 0, sin licencia ni agregador. El conector automático PSD2 (GoCardless/Nordigen)
   es una capa posterior sobre el mismo modelo.
-- **IA gratis**: se reutiliza `@central/core-ai` (NVIDIA NIM gratis → Claude Haiku fallback), ya
+- **IA gratis**: se reutiliza `@central/core-ai` (NVIDIA NIM gratis → fallback Groq `llama-3.3-70b-versatile`, sin coste), ya
   declarado como dependencia de `apps/plataforma`.
 - **Multi-tenant**: todo scopeado por `cuenta_id` (y `sociedad_id`), patrón vigente del repo.
 - **Aditivo**: tablas nuevas en `public`, no se toca lo existente.

@@ -28,7 +28,12 @@
     (`callAI` y `callAITools`). Reutiliza `GROQ_API_KEY` (ya existía para Whisper); override opcional
     `GROQ_BRAIN_MODEL`. Visión sigue NIM-only (Groq no tiene vision model gratis equivalente). `noFallback`
     pasa a ser legacy (ya no bloquea el fallback gratis). Doc en `docs/IA-busqueda-web-y-proveedores.md`.
-  - **Verificado:** `pnpm install` + `tsc --noEmit` en ia-rest → **0 errores**.
+  - **Verificado:** `pnpm install` + `tsc --noEmit` en ia-rest → **0 errores**. PR **#415** (draft): los
+    5 previews de Vercel en **Ready** (incl. ia-rest, el build real que ejercita el adaptador).
+  - **Reconciliadas skills/docs** (que describían "NIM → Anthropic/Haiku fallback", ya obsoleto):
+    `.claude/skills/ia-rest-maestro/SKILL.md` (STACK IA), `packages/core-ai/README.md` (exports `groq*`
+    + scope `@central`), `docs/SKILL-proyecto-claude.md`, `docs/HANDOFF-unificacion-casa-marcas.md`, y
+    specs/planes forward-looking (maître-ia, consolidación/duplicados bancarios). Todos → "NIM → Groq, gratis".
   - **Pendiente (futuro, no en este PR):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
     comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
     CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host. Propagar el
