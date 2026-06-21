@@ -117,9 +117,10 @@ Precios verificados vía agregadores (extractos de búsqueda; ver §10):
 
 ## 6. Normativa — VeriFactu / TicketBAI
 
-> 🚨 **HALLAZGO ACCIONABLE: el calendario VeriFactu CAMBIÓ.** El maestro de
-> ia.rest (`.claude/skills/ia-rest-maestro`, §VeriFactu) y la skill todavía dicen
-> **sociedades 1-ene-2026 / autónomos 1-jul-2026**. Eso quedó **prorrogado un año**.
+> 🚨 **HALLAZGO ACCIONABLE: el calendario VeriFactu CAMBIÓ.** El maestro/skill y el
+> código (`lib/verifactu.ts → VERIFACTU_STATUS`) decían **sociedades 1-ene-2026 /
+> autónomos 1-jul-2026**. Quedó **prorrogado un año** → **corregido a 2027 en este PR**
+> (queda confirmar en sede AEAT antes de uso legal/comercial).
 
 - **Real Decreto-ley 15/2025, de 2 de diciembre** (BOE 3-dic-2025) aplazó ambas
   fechas: **sociedades → 1-enero-2027**, **resto de obligados → 1-julio-2027**.
@@ -131,10 +132,10 @@ Precios verificados vía agregadores (extractos de búsqueda; ver §10):
   1.000 € por licencia no homologada; hasta 150.000 €/año a fabricantes que
   incumplan.
 
-**Acción recomendada (no ejecutada aquí):** verificar la fecha en la sede oficial
-de la AEAT y, si se confirma, actualizar la sección VeriFactu del maestro y de la
-skill **antes** de usar "2026" en cualquier material comercial/legal. Sigue siendo
-un **argumento de venta**: ia.rest ya trae VeriFactu encadenado nativo.
+**Acción ejecutada en este PR:** fechas corregidas a 2027 en el maestro/skill y en
+`apps/ia-rest/src/lib/verifactu.ts` (`VERIFACTU_STATUS`). **Pendiente Alberto:**
+confirmar en la sede oficial de la AEAT antes de usarlo en material comercial/legal.
+Sigue siendo un **argumento de venta**: ia.rest ya trae VeriFactu encadenado nativo.
 
 ---
 

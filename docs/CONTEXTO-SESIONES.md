@@ -25,9 +25,10 @@
   - **Hecho:** `apps/ia-rest/docs/competencia.md` — mapa del mercado VERIFICADO (Veovox, Storyous,
     Qamarero, SmartBar; precios TPV ES: Glop/Ágora/Revo/Last.app/Tipsi/Cuiner; dolores cuantificados),
     battlecard ia.rest y checklist para cerrar el perfil de comandiavoz. Rama `claude/competitor-research-rca1fz`.
-  - **🚨 Hallazgo accionable — VeriFactu APLAZADO a 2027:** el RD-ley 15/2025 (BOE 3-dic-2025) prorrogó
-    un año (sociedades 1-ene-**2027**, resto 1-jul-**2027**). El maestro/skill de ia.rest aún dicen 2026.
-    **Verificar en sede AEAT y corregir** maestro+skill antes de comunicar "2026" en material comercial/legal.
+  - **🚨 VeriFactu APLAZADO a 2027 — CORREGIDO:** el RD-ley 15/2025 (BOE 3-dic-2025) prorrogó un año
+    (sociedades 1-ene-**2027**, resto 1-jul-**2027**). Corregido en este PR: maestro/skill (`SKILL.md`
+    §VeriFactu) **y** código `apps/ia-rest/src/lib/verifactu.ts` (`VERIFACTU_STATUS`, solo info en API,
+    no gatea lógica). **Pendiente Alberto:** confirmar en sede oficial AEAT antes de uso legal/comercial.
   - **Para cerrar:** habilitar egress (o pegar el contenido de comandiavoz.com) y rellenar §2/§7/§11 del doc.
 
 - **🌐 URLs de producción (no perder) — 16/06/2026**

@@ -823,10 +823,16 @@ Obliga a encadenar facturas con hash SHA-256 para garantizar la integridad.
 
 | Colectivo | Fecha obligatoria |
 |---|---|
-| Sociedades | 1 enero 2026 |
-| Autónomos | 1 julio 2026 |
+| Sociedades | **1 enero 2027** |
+| Autónomos (resto de obligados) | **1 julio 2027** |
 
-> ⚠️ **Para restaurantes clientes de ia.rest, VeriFactu ya es obligatorio.**
+> ⚠️ **PLAZO APLAZADO UN AÑO.** El RD-ley 15/2025 (de 2 de diciembre, BOE 3-dic-2025)
+> prorrogó las fechas originales del RD 254/2025 (que eran sociedades 1-ene-**2026** /
+> resto 1-jul-**2026**). Las fechas vigentes son las de la tabla (2027).
+> A junio de 2026 VeriFactu **aún NO es obligatorio** para los restaurantes clientes;
+> sigue siendo un diferenciador (ya viene nativo) pero no comunicar "2026" como fecha límite.
+> Fuente: nota AEAT "Ampliación del plazo de adaptación" + RD-ley 15/2025.
+> **Pendiente:** confirmar en la sede oficial de la AEAT antes de usarlo en material legal/comercial.
 
 ---
 
