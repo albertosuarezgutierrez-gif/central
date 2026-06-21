@@ -332,6 +332,24 @@
     El hook busca `origin/claude/responsive-panel` (no existe) → cae a `origin/HEAD` (main) →
     escanea 28 commits. Fix manual: `git fetch origin claude/responsive-panel && git push --force origin HEAD:claude/responsive-panel`.
 
+- **🟢 fix(ia-rest/blog-seo) + fix(plataforma/banca) + feat(plataforma): Control de Facturas — 18/06/2026** (PRs #384, #385 mergeados; blog-seo sin PR propio)
+  - **fix(ia-rest/blog-seo):** `callAI` gana 6º arg `model` opcional. El cron `app/api/cron/blog-seo/route.ts`
+    usa `meta/llama-3.1-8b-instruct` (8B) con timeout interno <60 s para no superar el límite de Vercel.
+    `ia-rest-maestro` skill actualizada. Añadida spec `docs/superpowers/specs/2026-06-16-core-receipts-design.md`.
+    Recrea PR #302 (stale draft, código portado directamente a main).
+  - **fix(plataforma/banca) — PR #384:** Ingresos de la correduría (comisiones + liquidaciones Allianz/Mapfre)
+    llegaban con signo negativo y se clasificaban como gastos, descuadrando el panel `/finanzas`. Solución:
+    nuevo `apps/plataforma/lib/destino.ts` (clasificador basado en destino, no en signo) +
+    `lib/destino.test.ts` (44 tests). Migración `2026-06-16_reclasificar_abonos_correduria.sql` (aplica
+    `UPDATE movimientos_bancarios SET clasificacion_manual=...` a los movimientos históricos mal clasificados).
+    Recrea PR #331 (stale draft).
+  - **feat(plataforma): Control de Facturas — PR #385:** Panel `/sivra/facturas-control` en plataforma
+    (lista de proveedores recurrentes con frecuencia esperada vs. última factura recibida).
+    `GET /api/sivra/facturas-control` compara `facturas_drive` contra el registry en
+    `apps/plataforma/lib/sivra/facturas-control.ts`. Alerta `facturasFaltantes` en `getAlertas`
+    (`lib/banca.ts`) + banner en `/dashboard` + entrada `🗂️ Facturas` en el sidebar (Mis pisos).
+    Spec `docs/superpowers/plans/2026-06-16-facturas-control.md` (741 líneas). Recrea PR #322.
+
 - **🐛 FIXES COMUNICACIÓN + FINANZAS — 18/06/2026** (PR #382 mergeado a `main`)
   - **`/comunicacion` → Nuevo mensaje → Persona**: dropdown vacío corregido. `sivraAdapter` no
     tenía `listarDirectorio` → añadido: query `limpiadoras WHERE activa = true ORDER BY nombre`
