@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA LIGERA — 21/06/2026** (`docs/AUDITORIA-2026-06.md` addendum) — **estado SANO.**
+  - Rango: 63 commits desde auditoría-18/06 hasta `0c2244a`. Verde: lockfile OK, radiografía OK, 0 refs `@iarest/`.
+  - **Arreglados en el acto:** (A1) `ialimp-maestro` describía Concursos como propio de ialimp tras PR #403 →
+    skill corregida; (B1) `plataforma-maestro` no mencionaba Concursos → añadida entrada; (B2) dep muerta
+    `@central/module-concursos` en ialimp (sin imports) → eliminada de `package.json` + `next.config.ts`;
+    (B3) MATRIZ.md no listaba `plataforma` ni `rrhh` → añadidas.
+  - **Pendiente manual Alberto (no urgente):** `SMTP_*`/`RESEND_API_KEY` en proyecto Vercel **plataforma** para
+    que los emails de avisos y recordatorio de Concursos funcionen.
 - **🔎 AUDITORÍA PROFUNDA SEMANAL — 21/06/2026** (rama `claude/inspiring-franklin-ncvw2c`)
   - **Bloque 1 (Integridad):** lockfile ✅, radiografía ✅, guardián 21/21 ✅.
   - **Bloque 2 (Typecheck 5 apps):** todas a 0 errores. Fix aplicado: `apps/plataforma/types/pdf-parse.d.ts`

@@ -22,7 +22,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 ## Antes de tocar nada (gate obligatorio)
 1. Lee `apps/ialimp/CLAUDE.md` — son las reglas para trabajar **sin romper nada**.
 2. Identifica el objetivo y módulo (limpiadora `/l` / portal propietario / facturación / white-label /
-   contabilidad / landing / IA).
+   contabilidad / landing / IA). ⚠️ Concursos → ver **plataforma** (movido el 19/06/2026).
 3. Toda query/route **scopeada por `empresa_id`** — una fuga entre empresas es fallo grave de RGPD.
 4. SQL siempre `Prisma.sql` con casts en el SQL (nunca interpolar). Verifica tipos contra Supabase real.
 

@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T20:18:47Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T20:19:22Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -149,6 +149,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (21/06/2026) 🔍 AUDITORÍA LIGERA
 - (21/06/2026) 🔎 AUDITORÍA PROFUNDA SEMANAL
 - (21/06/2026) 🕵️ ia-rest: inteligencia competitiva (comandiavoz.com)
 - (21/06/2026) 📝 Doc drift corregido — crons de sivra
@@ -158,5 +159,4 @@
 - (21/06/2026) 🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo
 - (21/06/2026) 🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia
 - (21/06/2026) 🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha
-- (21/06/2026) 🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis)
 

@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:18:47Z",
+  "generadoEn": "2026-06-21T20:19:22Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2485,6 +2485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA LIGERA",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🔎 AUDITORÍA PROFUNDA SEMANAL",
       "fecha": "21/06/2026"
     },
@@ -2538,10 +2542,6 @@
     },
     {
       "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
-      "fecha": "19/06/2026"
-    },
-    {
-      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad",
       "fecha": "19/06/2026"
     }
   ],
