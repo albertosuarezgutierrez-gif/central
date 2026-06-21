@@ -252,13 +252,13 @@ Authorization: Bearer {VERCEL_TOKEN}
 ## STACK IA
 
 - ASR: Groq Whisper turbo (verbose_json) — NUNCA cambiar a NIM
-- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**sin fallback Anthropic** — retirado 17/06/2026, cuenta sin saldo)
-- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback Anthropic**)
+- LLM texto: NVIDIA NIM meta/llama-3.3-70b-instruct (**fallback automático → Groq `llama-3.3-70b-versatile`, gratis, MISMO modelo**; Anthropic retirado 17/06/2026, sin saldo)
+- LLM visión: NVIDIA NIM meta/llama-3.2-11b-vision-instruct (**sin fallback** — Groq no tiene vision model gratis equivalente)
 - Centralizado en: `lib/ai-client.ts` → `callAI()`, `callAIVision()`, `callAISearch()`, `callAITools()`, `cleanJSON()`
 - **Pasarela central (16/06/2026):** si están los envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared en Vercel), las **4 vías** (`callAI`/`callAISearch`/`callAIVision`/`callAITools`) enrutan por la **pasarela de plataforma** (`gatewayChat`/`gatewaySearch`/`gatewayVision`/`gatewayTools` → `/api/ai/tools` para function-calling) y caen al camino directo NIM/Gemini si no está o falla. Gasto centralizado en `/operador/ia`
 - `callAI(system, user, maxTokens, timeoutMs, noFallback=true, model?)`
-  - El parámetro `noFallback` se mantiene por compatibilidad, pero **ya no hay fallback de pago**:
-    `@anthropic-ai/sdk` se quitó de ia-rest (17/06/2026). Si NIM falla, lanza error.
+  - Si NIM falla, cae **automáticamente a Groq** (`llama-3.3-70b-versatile`, gratis, mismo modelo; reutiliza `GROQ_API_KEY`, override `GROQ_BRAIN_MODEL`). `callAITools` igual. Solo lanza error si Groq tampoco está.
+  - `noFallback` es **legacy** (antaño evitaba el fallback de PAGO a Anthropic, quitado el 17/06/2026); **ya NO bloquea** el fallback gratis a Groq.
   - `model?` (6º arg) → fuerza un modelo NIM concreto en esa llamada (p. ej. el 8B rápido).
 - NUNCA llamar NIM/Gemini directamente desde componentes o API routes (usar `lib/ai-client.ts`)
 - ⚠️ **LÍMITE ~60s en funciones Vercel de ia-rest** (el plan NO respeta `maxDuration=300` aquí, sí en

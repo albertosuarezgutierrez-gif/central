@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T09:49:22Z",
+  "generadoEn": "2026-06-21T10:53:45Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 26
+        "evidencias": 27
       },
       "ialimp": {
         "presente": false,
@@ -1688,6 +1688,7 @@
       "/api/portal-proveedor/[token]",
       "/api/portal/stock-central",
       "/api/portal/transferencias",
+      "/api/preaviso",
       "/api/print",
       "/api/produccion/cocineros",
       "/api/produccion/perfil",
@@ -2304,6 +2305,7 @@
       "movimientos_tesoreria",
       "pedidos_online",
       "pin_attempts",
+      "preavisos",
       "productos_86",
       "propinas",
       "prospeccion_apify_runs",
@@ -2481,6 +2483,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis)",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🌐 URLs de producción (no perder)",
       "fecha": "16/06/2026"
     },
@@ -2534,10 +2540,6 @@
     },
     {
       "titulo": "📱 RESPONSIVE COMPLETO",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
       "fecha": "18/06/2026"
     }
   ],
@@ -2810,7 +2812,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 920,
+    "apis": 921,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
