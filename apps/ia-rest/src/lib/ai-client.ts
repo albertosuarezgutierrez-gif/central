@@ -156,8 +156,11 @@ export async function callAI(
 
   const user = messages[messages.length - 1]?.content ?? ''
 
-  // Pasarela central primero (si configurada). Si falla, sigue el camino directo de abajo.
-  const cfg = gatewayCfg()
+  // Pasarela central primero (si configurada). Si el llamante fuerza un `model` concreto
+  // (p. ej. el 8B rápido de blog-seo para caber en el límite de ~60s de Vercel), saltamos la
+  // pasarela —que usa su modelo por defecto e ignora `model`— y vamos directos a NIM, que sí
+  // lo respeta. Si falla, sigue el camino directo de abajo.
+  const cfg = model ? null : gatewayCfg()
   if (cfg) {
     try {
       return await gatewayChat(cfg, messages, { system, maxTokens, timeoutMs })
