@@ -142,8 +142,9 @@
     (`callAI` y `callAITools`). Reutiliza `GROQ_API_KEY` (ya existía para Whisper); override opcional
     `GROQ_BRAIN_MODEL`. Visión sigue NIM-only (Groq no tiene vision model gratis equivalente). `noFallback`
     pasa a ser legacy (ya no bloquea el fallback gratis). Doc en `docs/IA-busqueda-web-y-proveedores.md`.
-  - **Verificado:** `pnpm install` + `tsc --noEmit` en ia-rest → **0 errores**. PR **#415** (draft): los
-    5 previews de Vercel en **Ready** (incl. ia-rest, el build real que ejercita el adaptador).
+  - **✅ MERGEADO (PR #415, squash en `main`):** 11/11 checks verdes (typecheck de las 4 verticales,
+    tests, build, los 5 previews de Vercel Ready). Incluyó también un fix de CI ajeno: shim de tipos
+    `apps/plataforma/types/pdf-parse.d.ts` (deuda preexistente de `lib/concursos.ts`, #403).
   - **Reconciliadas skills/docs** (que describían "NIM → Anthropic/Haiku fallback", ya obsoleto):
     `.claude/skills/ia-rest-maestro/SKILL.md` (STACK IA), `packages/core-ai/README.md` (exports `groq*`
     + scope `@central`), `docs/SKILL-proyecto-claude.md`, `docs/HANDOFF-unificacion-casa-marcas.md`, y
@@ -154,10 +155,15 @@
     cubre a la vez (a) el camino directo de las 3 verticales y (b) el tráfico por pasarela. En el chat de
     pasarela queda **NIM → Groq → Gemini** (Gemini ya existía). Visión NIM-only. Verificado: tsc 0 errores en
     plataforma/ia-rest/sivra (sivra tras `prisma generate`).
-    - ⚠️ **Requiere `GROQ_API_KEY` en el Vercel de plataforma** (host de la pasarela; ahí va casi todo el
-      tráfico de sivra/ialimp/plataforma) y, para el camino directo sin pasarela, también en sivra/ialimp.
-      ia-rest ya la tiene (Whisper). Sin la key el fallback queda inactivo, no rompe nada. Override `GROQ_BRAIN_MODEL`.
-  - **Pendiente (futuro, no en este PR):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
+    - ✅ **`GROQ_API_KEY` puesta en el Vercel de plataforma** (Production+Preview) y redeploy de prod
+      **READY** → el fallback **NIM → Groq → Gemini queda ACTIVO en producción** (host de la pasarela,
+      por donde va casi todo el tráfico de sivra/ialimp/plataforma). ia-rest ya la tenía (Whisper).
+      Override `GROQ_BRAIN_MODEL`. **Opcional pendiente:** la misma key en **sivra** e **ialimp** solo si
+      se quiere cubrir su camino directo SIN pasarela (por pasarela ya están cubiertas).
+    - Recordatorio de arquitectura: la IA vive en el núcleo compartido `@central/core-ai` (añadir un
+      proveedor nuevo = un solo sitio, lo heredan todos los módulos), pero las **claves son por vertical**
+      (cada proyecto Vercel inyecta las suyas) — por eso `GROQ_API_KEY` se configura por proyecto.
+  - **Pendiente (futuro):** **Cohere Rerank/Embed** para mejorar RAG (buscador de
     comparables en sivra `app/api/mercado/*` y concursos LCSP en plataforma) — ese es el hueco de
     CALIDAD real. Mistral solo si se quiere diversidad de modelo; Ollama solo si self-host.
 
