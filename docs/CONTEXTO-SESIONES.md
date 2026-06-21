@@ -16,6 +16,28 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🛡️ CORREDURÍA — Reconciliación Modelo 190 IRPF 2025 + gestión cobros pendientes — 21/06/2026**
+  - **Análisis Modelo 190 vs BD completo:** Modelo 190 bruto €8.593,76 → neto esperado €7.305. BD tras correcciones: €6.176,53. Gap ~€1.128 = timing (dic-2025 cobrado ene-2026).
+  - **Compañías identificadas definitivamente:**
+    - Occident: `Saldo. m00171` + `Saldo. 8/92361` ✅
+    - Mapfre: `Liq.comisiones YYYYMM` ✅
+    - Caser: `fra-comis` ✅
+    - Generali: `G.65792 liq.XXX generali se` + `Pago saldo cta` ✅
+    - Pelayo: `COMISIONES [nombre] [7 dígitos]` ✅
+    - ASISA: **M1454** (~€46/mes) ✅ confirmado por Alberto
+    - Aegon: `REMSALDO` ✅
+    - AXA: `Liq. saldo cuenta` ✅ (importe pequeño, ~€41 neto)
+    - Reale: `Liquidacion de comisiones` ✅
+    - Fidelidade: probable `Pd005 saldo agente` (pendiente confirmar)
+  - **Compañías con dinero retenido sin pagar:**
+    - **Allianz (mediador 18638/PA342520):** saldo **€521,53** a abr-2026. Extractos en Gmail desde mediador@allianz.es asunto "Cuenta Agente".
+    - **Helvetia:** trámite cambio cuenta iniciado mar-2025 (Nieves Calvo → Cac.corredores@helvetia.es + Elena Pérez) nunca completado.
+    - **AXA (mediador 634471):** sin comercial asignado, importe pendiente desconocido.
+  - **3 borradores Gmail creados** (Allianz/Helvetia/AXA) con IBAN ES34 0182 9465 6002 0233 1175.
+  - **⚠️ Certificado BBVA pendiente:** el PDF guardado en Drive era un justificante Bizum (equivocado). El certificado de titularidad hay que pedirlo desde la app BBVA (Mis productos → cuenta → Documentos → Certificado de titularidad) o banca online. Una vez obtenido, subir a Drive y actualizar el enlace en los 3 borradores.
+  - **Google Apps Script** creado en script.google.com para salvar adjuntos Gmail→Drive. Función: `guardarCertificadoBBVAenDrive()`.
+  - **Pendiente Alberto:** obtener certificado titularidad BBVA real → adjuntar a los 3 borradores → enviar.
+
 - **📝 Doc drift corregido — crons de sivra — 21/06/2026**
   El `CLAUDE.md` de sivra y el skill `sivra-maestro` decían "10 crons en vercel.json", pero es
   **obsoleto**: el `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal, #419).
