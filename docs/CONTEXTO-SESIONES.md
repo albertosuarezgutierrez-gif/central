@@ -16,6 +16,14 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📝 Doc drift corregido — crons de sivra — 21/06/2026**
+  El `CLAUDE.md` de sivra y el skill `sivra-maestro` decían "10 crons en vercel.json", pero es
+  **obsoleto**: el `vercel.json` de sivra solo tiene **1 cron** (`/api/seo-refresh` semanal, #419).
+  Los ~18 crons de negocio (pricing/apply-auto, mercado, limpiadoras, expenses, eventos, mensajes,
+  updates…) se **migraron a plataforma** (#348/#288) y viven en `apps/plataforma/vercel.json` como
+  `/api/sivra/*` (plataforma tiene 25 crons en total). Corregidos ambos docs; **no re-programar esos
+  crons en sivra** o correrían por duplicado. (Solo documentación, sin cambio de código.)
+
 - **🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google) — 21/06/2026**
   Spec/plan en `docs/superpowers/{specs,plans}/2026-06-21-agente-seo-housesevillana-bloqueA*`.
   - **Contexto:** housesevillana.es es una **landing estática de un fichero** (`app/route.ts` en repo
