@@ -16,6 +16,10 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA DIARIA LIGERA — 20/06/2026** (`docs/AUDITORIA-2026-06-20.md`) — **estado SANO, sin bugs nuevos.**
+  - Rango #384→#401 (26 commits). Radiografía al día. `transpilePackages` 14/14. Skills 16/16 documentadas.
+  - **Reconciliado:** 3 commits del 18/06 sin anotar (blog-seo fix + PR #384 banca + PR #385 Control Facturas); MATRIZ.md incompleta (faltaban plataforma y rrhh) → corregida.
+  - **Hallazgos pendientes (sin tocar):** `.claude/ia-rest-project.skill.md` + `docs/SKILL-proyecto-claude.md` orphaned (skills viejas); `next.config.js` residual ia-rest; bucket `documentos-contables` listing público; stale drafts #302/#322/#331 originales (recreados como #384/#385/blog-seo fix, cerrar si siguen abiertos); carry-forward: migraciones `concursos_radar` + jubilar `efncqyvhniaxsirhdxaa`.
 - **🔍 AUDITORÍA LIGERA — 21/06/2026** (`docs/AUDITORIA-2026-06.md` addendum) — **estado SANO.**
   - Rango: 63 commits desde auditoría-18/06 hasta `0c2244a`. Verde: lockfile OK, radiografía OK, 0 refs `@iarest/`.
   - **Arreglados en el acto:** (A1) `ialimp-maestro` describía Concursos como propio de ialimp tras PR #403 →
@@ -333,6 +337,24 @@
   - **Stop hook:** local branch `claude/responsive-panel` → remote `claude/nice-heisenberg-jo4vy1`.
     El hook busca `origin/claude/responsive-panel` (no existe) → cae a `origin/HEAD` (main) →
     escanea 28 commits. Fix manual: `git fetch origin claude/responsive-panel && git push --force origin HEAD:claude/responsive-panel`.
+
+- **🟢 fix(ia-rest/blog-seo) + fix(plataforma/banca) + feat(plataforma): Control de Facturas — 18/06/2026** (PRs #384, #385 mergeados; blog-seo sin PR propio)
+  - **fix(ia-rest/blog-seo):** `callAI` gana 6º arg `model` opcional. El cron `app/api/cron/blog-seo/route.ts`
+    usa `meta/llama-3.1-8b-instruct` (8B) con timeout interno <60 s para no superar el límite de Vercel.
+    `ia-rest-maestro` skill actualizada. Añadida spec `docs/superpowers/specs/2026-06-16-core-receipts-design.md`.
+    Recrea PR #302 (stale draft, código portado directamente a main).
+  - **fix(plataforma/banca) — PR #384:** Ingresos de la correduría (comisiones + liquidaciones Allianz/Mapfre)
+    llegaban con signo negativo y se clasificaban como gastos, descuadrando el panel `/finanzas`. Solución:
+    nuevo `apps/plataforma/lib/destino.ts` (clasificador basado en destino, no en signo) +
+    `lib/destino.test.ts` (44 tests). Migración `2026-06-16_reclasificar_abonos_correduria.sql` (aplica
+    `UPDATE movimientos_bancarios SET clasificacion_manual=...` a los movimientos históricos mal clasificados).
+    Recrea PR #331 (stale draft).
+  - **feat(plataforma): Control de Facturas — PR #385:** Panel `/sivra/facturas-control` en plataforma
+    (lista de proveedores recurrentes con frecuencia esperada vs. última factura recibida).
+    `GET /api/sivra/facturas-control` compara `facturas_drive` contra el registry en
+    `apps/plataforma/lib/sivra/facturas-control.ts`. Alerta `facturasFaltantes` en `getAlertas`
+    (`lib/banca.ts`) + banner en `/dashboard` + entrada `🗂️ Facturas` en el sidebar (Mis pisos).
+    Spec `docs/superpowers/plans/2026-06-16-facturas-control.md` (741 líneas). Recrea PR #322.
 
 - **🐛 FIXES COMUNICACIÓN + FINANZAS — 18/06/2026** (PR #382 mergeado a `main`)
   - **`/comunicacion` → Nuevo mensaje → Persona**: dropdown vacío corregido. `sivraAdapter` no

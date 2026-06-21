@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:19:22Z",
+  "generadoEn": "2026-06-21T20:20:13Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2485,6 +2485,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔍 AUDITORÍA DIARIA LIGERA",
+      "fecha": "20/06/2026"
+    },
+    {
       "titulo": "🔍 AUDITORÍA LIGERA",
       "fecha": "21/06/2026"
     },
@@ -2539,10 +2543,6 @@
     {
       "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
       "fecha": "20/06/2026"
-    },
-    {
-      "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
-      "fecha": "19/06/2026"
     }
   ],
   "saludRepo": {
