@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T08:03:26Z",
+  "generadoEn": "2026-06-21T08:40:47Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1733,6 +1733,7 @@
       "/api/super/cobro-resumen",
       "/api/super/cuentas",
       "/api/super/cuentas/[id]/restaurantes",
+      "/api/super/emails-catering",
       "/api/super/ga4-stats",
       "/api/super/google-oauth",
       "/api/super/google-oauth-callback",
@@ -2808,7 +2809,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 918,
+    "apis": 919,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
