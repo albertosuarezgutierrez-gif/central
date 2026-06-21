@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T10:40:58Z",
+  "generadoEn": "2026-06-21T10:53:45Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -1440,7 +1440,6 @@
       "/api/cron/lead-onboarding",
       "/api/cron/mantenimiento-espacios",
       "/api/cron/pipeline-comercial",
-      "/api/cron/preavisos-auto",
       "/api/cron/prospeccion-apify",
       "/api/cron/prospeccion-leads",
       "/api/cron/reposicion-stock",
@@ -2484,7 +2483,7 @@
   ],
   "novedades": [
     {
-      "titulo": "🍽️ ia-rest PREAVISO de marcha — Fase 1 MERGEADA + voz + Fase 2 auto en marcha",
+      "titulo": "🤖 IA: fallback de TEXTO restaurado con Groq (mismo Llama 3.3 70B, gratis)",
       "fecha": "21/06/2026"
     },
     {
@@ -2813,7 +2812,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 922,
+    "apis": 921,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
