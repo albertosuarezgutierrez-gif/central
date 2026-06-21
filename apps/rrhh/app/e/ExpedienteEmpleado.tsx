@@ -1,16 +1,19 @@
 'use client'
 import { useState } from 'react'
 import ChatPanel from '@/components/ChatPanel'
+import AsistentePanel from '@/components/AsistentePanel'
 import SolicitudesEmpleado from '@/components/SolicitudesEmpleado'
 import ActivarPush from '@/components/ActivarPush'
 import Wordmark from '@/components/Wordmark'
+import { estiloMarca } from '@/lib/branding'
 
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; estado_firma: string; creada_at: string; url: string | null }
+type Branding = { nombre: string; color_primario: string | null; logo_url: string | null }
 
 const CONSENTIMIENTO = 'He leído el documento y lo firmo electrónicamente. Acepto que esta firma electrónica avanzada (Reglamento eIDAS, art. 26) queda vinculada a mi identidad y al contenido del documento, y tiene la misma validez que mi firma manuscrita.'
 
-export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[] }) {
+export default function ExpedienteEmpleado({ visibles, subibles, inicial, branding }: { visibles: Carpeta[]; subibles: Carpeta[]; inicial: Doc[]; branding?: Branding }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [carpeta, setCarpeta] = useState(subibles[0]?.id ?? '')
   const [subiendo, setSubiendo] = useState(false)
@@ -54,13 +57,17 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
   }
 
   return (
-    <main className="mx-auto max-w-[520px] p-4">
-      <header className="mb-3 flex items-center justify-between">
-        <Wordmark className="text-lg" />
+    <main className="mx-auto max-w-[520px] p-4" style={estiloMarca(branding?.color_primario) as React.CSSProperties}>
+      <header className="mb-3 flex items-center justify-between gap-3">
+        {branding?.logo_url
+          ? <img src={branding.logo_url} alt={branding.nombre || 'Logo'} className="max-h-9 w-auto max-w-[180px] object-contain" />
+          : <Wordmark className="text-lg" />}
         <span className="rounded-full bg-accent-soft px-3 py-0.5 text-sm text-accent-ink">Mi portal</span>
       </header>
 
       <p className="mb-2"><ActivarPush endpoint="/api/e/push/subscribe" /></p>
+
+      <AsistentePanel />
 
       <ChatPanel endpoint="/api/e/chat" yo="titular" />
 
@@ -88,6 +95,9 @@ export default function ExpedienteEmpleado({ visibles, subibles, inicial }: { vi
                 : <span>{d.nombre}</span>}
               <span className="text-ink-3 text-xs">· {etiqueta(d.carpeta)}</span>
               {d.estado_firma === 'firmado' && <span className="text-ok text-xs font-semibold">· ✔ Firmado</span>}
+              {d.estado_firma === 'firmado' && (
+                <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="text-accent text-xs no-underline hover:underline">· Verificar</a>
+              )}
               {d.estado_firma === 'pendiente' && (
                 <button onClick={() => abrirFirma(d)} className="ml-auto px-2 py-0.5 text-xs">Firmar</button>
               )}

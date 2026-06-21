@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>iarrhh · Manual del responsable de RR.HH.</title>
+<style>
+  :root{
+    --accent:#2B6A6E; --accent-soft:#E3F0F0; --ink:#1c2b2b; --ink-2:#48595a;
+    --ink-3:#7a8a8b; --line:#dde6e6; --paper:#f7fafa; --card:#ffffff;
+    --ok:#1f7a4d; --alert:#b4452f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    color:var(--ink);background:var(--paper);line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:820px;margin:0 auto;padding:32px 20px 80px}
+  .brand{font-size:26px;font-weight:800;letter-spacing:-.5px}
+  .brand .dot{color:var(--accent)} .brand .rrhh{color:var(--ink-3);font-weight:600}
+  header.hero{background:linear-gradient(180deg,var(--accent-soft),transparent);
+    border:1px solid var(--line);border-radius:18px;padding:28px 26px;margin-bottom:30px}
+  header.hero p{margin:.4em 0 0;color:var(--ink-2)}
+  .badge{display:inline-block;background:var(--accent);color:#fff;font-size:12px;font-weight:600;
+    border-radius:999px;padding:3px 12px;margin-bottom:14px}
+  h2{font-size:21px;margin:38px 0 6px;padding-top:14px;border-top:1px solid var(--line)}
+  h2 .n{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;
+    background:var(--accent);color:#fff;border-radius:8px;font-size:14px;margin-right:10px;vertical-align:middle}
+  h3{font-size:16px;margin:22px 0 4px;color:var(--accent)}
+  p,li{color:var(--ink-2)}
+  ol.steps{counter-reset:s;list-style:none;padding-left:0}
+  ol.steps>li{counter-increment:s;position:relative;padding:6px 0 6px 38px;margin:0}
+  ol.steps>li::before{content:counter(s);position:absolute;left:0;top:6px;width:26px;height:26px;
+    background:var(--accent-soft);color:var(--accent);font-weight:700;font-size:13px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center}
+  .btn{display:inline-block;background:var(--accent-soft);color:var(--accent);font-weight:600;
+    border-radius:7px;padding:1px 9px;font-size:.92em;white-space:nowrap}
+  .key{background:#eef3f3;border:1px solid var(--line);border-radius:6px;padding:1px 7px;
+    font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.88em;color:var(--ink)}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin:14px 0}
+  .note{border-left:4px solid var(--accent);background:var(--accent-soft);border-radius:0 10px 10px 0;
+    padding:12px 16px;margin:16px 0}
+  .warn{border-left:4px solid var(--alert);background:#fbeeea;border-radius:0 10px 10px 0;
+    padding:12px 16px;margin:16px 0}
+  table{width:100%;border-collapse:collapse;margin:14px 0;font-size:.95em}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{background:var(--accent-soft);color:var(--ink);font-weight:600}
+  .toc{columns:2;column-gap:28px;font-size:.95em}
+  .toc a{color:var(--accent);text-decoration:none;display:block;padding:3px 0}
+  .toc a:hover{text-decoration:underline}
+  .ok{color:var(--ok);font-weight:600}.al{color:var(--alert);font-weight:600}
+  footer{margin-top:50px;padding-top:18px;border-top:1px solid var(--line);color:var(--ink-3);font-size:13px}
+  @media(max-width:560px){.toc{columns:1}}
+  @media print{body{background:#fff}.note,.warn{break-inside:avoid}h2{break-after:avoid}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <span class="badge">Manual del responsable</span>
+    <div class="brand">ia<span class="dot">·</span><span class="rrhh">rrhh</span></div>
+    <p><strong>Portal del Empleado</strong> — guía para <strong>Pilar</strong>, responsable de RR.HH. de
+    <strong>Mariscos González</strong>.</p>
+    <p>Con iarrhh gestionas el <strong>expediente digital</strong> de cada trabajador: subes sus
+    <strong>contratos y nóminas</strong>, recibes sus <strong>partes médicos</strong>, apruebas sus
+    <strong>vacaciones</strong> y consigues que <strong>firmen documentos</strong> con validez legal,
+    todo desde el móvil o el ordenador.</p>
+  </header>
+
+  <div class="card">
+    <strong>Índice</strong>
+    <nav class="toc">
+      <a href="#entrar">1. Entrar y cambiar tu contraseña</a>
+      <a href="#alta">2. Dar de alta a un trabajador</a>
+      <a href="#enlace">3. Enviarle su acceso</a>
+      <a href="#expediente">4. El expediente: carpetas y documentos</a>
+      <a href="#nominas">5. Nóminas y firma de documentos</a>
+      <a href="#firma-empleado">6. Cómo firma el trabajador</a>
+      <a href="#solicitudes">7. Vacaciones y permisos</a>
+      <a href="#chat">8. Chat y notificaciones</a>
+      <a href="#editar">9. Editar, dar de baja o borrar</a>
+      <a href="#empleado">10. Qué ve el trabajador</a>
+      <a href="#faq">11. Preguntas frecuentes</a>
+    </nav>
+  </div>
+
+  <!-- 1 -->
+  <h2 id="entrar"><span class="n">1</span>Entrar y cambiar tu contraseña</h2>
+  <p>Abre <span class="key">central-rrhh.vercel.app</span> en el navegador (Chrome, Safari…) y pulsa
+  <span class="btn">Acceso responsable</span>.</p>
+  <ol class="steps">
+    <li>Escribe tu <strong>Email</strong> y tu <strong>Contraseña</strong> (las que te facilitó Alberto).</li>
+    <li>Pulsa <span class="btn">Entrar</span>. Entrarás directamente en la pantalla <strong>Empleados</strong>.</li>
+  </ol>
+  <div class="warn"><strong>Lo primero, cambia tu contraseña.</strong> Ve a <span class="btn">Mi cuenta</span>
+  (menú de la izquierda) → <strong>Cambiar contraseña</strong>: escribe la actual y una nueva de
+  <strong>mínimo 8 caracteres</strong>, y pulsa <span class="btn">Guardar</span>. Verás
+  <span class="ok">Contraseña actualizada</span>.</div>
+  <div class="note">📲 <strong>Truco:</strong> en el móvil puedes “Añadir a pantalla de inicio” desde el
+  navegador y iarrhh se abrirá como una app. Pulsa <span class="btn">Activar notificaciones</span> para
+  enterarte al instante cuando un trabajador firme algo.</div>
+
+  <!-- 2 -->
+  <h2 id="alta"><span class="n">2</span>Dar de alta a un trabajador</h2>
+  <p>En la pantalla <span class="btn">Empleados</span>, arriba tienes el formulario de alta:</p>
+  <ol class="steps">
+    <li>Rellena <strong>Nombre *</strong> y <strong>Email * (para firmar)</strong>. Estos dos son
+      <strong>obligatorios</strong>.</li>
+    <li>Opcional: <strong>DNI/NIE</strong>, <strong>Teléfono</strong> y <strong>Puesto</strong>.</li>
+    <li>Pulsa <span class="btn">Añadir</span>. El trabajador aparece en la lista de abajo.</li>
+  </ol>
+  <div class="warn"><strong>El email es imprescindible.</strong> Es a donde llega el <strong>código de
+  firma</strong> cuando el trabajador tenga que firmar una nómina o un contrato. Sin email no podrá firmar.</div>
+  <p>Para encontrar a alguien rápido usa el buscador <span class="key">Buscar por nombre o email…</span> y
+  los filtros <span class="btn">Activos</span> · <span class="btn">Baja</span> · <span class="btn">Todos</span>.</p>
+
+  <!-- 3 -->
+  <h2 id="enlace"><span class="n">3</span>Enviarle su acceso</h2>
+  <p>El trabajador <strong>no necesita usuario ni contraseña</strong>: entra con un <strong>enlace
+  personal</strong> que tú le envías.</p>
+  <ol class="steps">
+    <li>En la fila del trabajador pulsa <span class="btn">🔗 Copiar enlace</span> (verás <span class="ok">✓ Copiado</span>).</li>
+    <li>Pégalo en un <strong>WhatsApp o correo</strong> para esa persona. Ese enlace es su acceso a “Mi portal”.</li>
+  </ol>
+  <div class="note">¿El enlace se ha filtrado o quieres invalidarlo? Pulsa <span class="btn">Regenerar</span>.
+  Se crea un enlace nuevo y <strong>el anterior deja de funcionar</strong> al instante. Tendrás que volver a
+  enviarle el nuevo.</div>
+
+  <!-- 4 -->
+  <h2 id="expediente"><span class="n">4</span>El expediente: carpetas y documentos</h2>
+  <p>Pulsa el <strong>nombre</strong> de un trabajador para abrir su <strong>Expediente</strong>. Los
+  documentos se organizan en <strong>5 carpetas fijas</strong>:</p>
+  <table>
+    <tr><th>Carpeta</th><th>¿Quién sube aquí?</th><th>Para qué sirve</th></tr>
+    <tr><td><strong>Datos personales</strong></td><td>Tú y el trabajador</td><td>DNI, IBAN, número de afiliación…</td></tr>
+    <tr><td><strong>Contratos</strong></td><td>Solo tú</td><td>Contrato laboral, anexos, prórrogas.</td></tr>
+    <tr><td><strong>Nóminas</strong></td><td>Solo tú</td><td>Las nóminas mensuales (para firmar).</td></tr>
+    <tr><td><strong>Partes médicos</strong></td><td>Tú y el trabajador</td><td>Bajas e justificantes médicos.</td></tr>
+    <tr><td><strong>Otros</strong></td><td>Solo tú</td><td>Certificados, comunicaciones, etc.</td></tr>
+  </table>
+  <p>Para añadir un archivo, dentro de la carpeta pulsa <span class="key">Subir documento</span>, elige el
+  PDF o la imagen y se sube solo. Junto a cada documento puedes <span class="btn">Borrar</span> (te pedirá
+  confirmación) o abrirlo pulsando su nombre.</p>
+
+  <!-- 5 -->
+  <h2 id="nominas"><span class="n">5</span>Nóminas y firma de documentos</h2>
+  <p>Cuando subes una nómina (o cualquier documento que quieras que el trabajador firme):</p>
+  <ol class="steps">
+    <li>Súbela en la carpeta <strong>Nóminas</strong> (o la que corresponda).</li>
+    <li>Junto al documento pulsa <span class="btn">Solicitar firma</span>.</li>
+    <li>El documento pasa a <span class="al">Pendiente de firma</span> y al trabajador le llega un
+      <strong>aviso</strong> a su portal.</li>
+    <li>Cuando firme, lo verás como <span class="ok">✔ Firmado</span> y, si activaste las notificaciones,
+      recibirás un aviso: <em>“[nombre] ha firmado un documento.”</em></li>
+  </ol>
+  <div class="note">✍️ <strong>¿Qué validez tiene?</strong> Es una <strong>firma electrónica avanzada</strong>
+  (Reglamento europeo eIDAS, art. 26): se vincula a la identidad del trabajador mediante un
+  <strong>código enviado a su email</strong> y la confirmación de su nombre. Queda registrada con fecha y
+  hora exactas. Tiene la <strong>misma validez que una firma a mano</strong>.</div>
+
+  <!-- 6 -->
+  <h2 id="firma-empleado"><span class="n">6</span>Cómo firma el trabajador</h2>
+  <p>Así es el proceso desde el lado del trabajador (para que puedas ayudarle si te pregunta):</p>
+  <ol class="steps">
+    <li>Entra en su portal con su enlace y ve a <strong>Mis documentos</strong>.</li>
+    <li>En el documento pendiente pulsa <span class="btn">Firmar</span>. Se abre una ventana.</li>
+    <li>Le llega un <strong>código de 6 dígitos a su email</strong> (caduca en 10 minutos).</li>
+    <li>Escribe el <strong>código</strong> y su <strong>nombre y apellidos completos</strong>, y pulsa
+      <span class="btn">Firmar</span>.</li>
+  </ol>
+  <div class="warn">Si el código caduca, basta con volver a abrir <span class="btn">Firmar</span> y se envía
+  uno nuevo. El nombre tiene que <strong>coincidir</strong> con el que registraste en su ficha.</div>
+
+  <!-- 7 -->
+  <h2 id="solicitudes"><span class="n">7</span>Vacaciones y permisos</h2>
+  <p>El trabajador solicita sus <strong>vacaciones, permisos, partes médicos o bajas</strong> desde su
+  portal. A ti te llegan a la pantalla <span class="btn">Solicitudes</span>.</p>
+  <ol class="steps">
+    <li>Entra en <span class="btn">Solicitudes</span>: cada tarjeta muestra el trabajador, el tipo, las
+      fechas y el estado <span class="key">[solicitada]</span>.</li>
+    <li>Pulsa <span class="btn">Aprobar</span> o <span class="btn">Rechazar</span>.</li>
+    <li>La solicitud queda como <span class="ok">[aprobada]</span> o <span class="al">[rechazada]</span> y el
+      trabajador lo ve en su portal.</li>
+  </ol>
+
+  <!-- 8 -->
+  <h2 id="chat"><span class="n">8</span>Chat y notificaciones</h2>
+  <p>Dentro del expediente de cada trabajador tienes un <strong>Chat</strong> para hablar directamente con
+  esa persona (escribe el mensaje y pulsa <span class="btn">Enviar</span>). Le llega a su portal y te puede
+  responder.</p>
+  <p>Pulsa <span class="btn">Activar notificaciones</span> (en Empleados y en el expediente) para recibir
+  avisos en el móvil cuando alguien firme un documento o te escriba.</p>
+
+  <!-- 9 -->
+  <h2 id="editar"><span class="n">9</span>Editar, dar de baja o borrar</h2>
+  <p>En la fila de cada trabajador:</p>
+  <ul>
+    <li><span class="btn">Editar</span> — corrige nombre, email o puesto, o cambia el estado entre
+      <strong>Activo</strong> y <strong>Baja</strong>. Pulsa <span class="btn">Guardar</span>.</li>
+    <li><span class="btn">Borrar</span> — elimina la ficha <strong>y todo su expediente</strong>. No se puede
+      deshacer.</li>
+  </ul>
+  <div class="warn"><strong>Cuando alguien deja la empresa, ponle estado “Baja” en vez de borrarlo.</strong>
+  Así conservas su expediente y sus documentos firmados (que por ley debes guardar) y simplemente deja de
+  tener acceso. Usa <span class="btn">Borrar</span> solo si te equivocaste al crearlo.</div>
+
+  <!-- 10 -->
+  <h2 id="empleado"><span class="n">10</span>Qué ve el trabajador</h2>
+  <p>Con su enlace, el trabajador entra en <strong>“Mi portal”</strong>, donde puede:</p>
+  <ul>
+    <li>Ver y descargar <strong>sus</strong> documentos (contratos, nóminas, etc.).</li>
+    <li><strong>Firmar</strong> los documentos que le solicites.</li>
+    <li><strong>Subir</strong> sus datos personales y partes médicos.</li>
+    <li><strong>Pedir</strong> vacaciones, permisos o comunicar una baja.</li>
+    <li><strong>Chatear</strong> contigo.</li>
+  </ul>
+  <p>No ve los datos de otros trabajadores: cada persona solo accede a lo suyo.</p>
+
+  <!-- 11 -->
+  <h2 id="faq"><span class="n">11</span>Preguntas frecuentes</h2>
+  <h3>El trabajador dice que no le llega el código de firma</h3>
+  <p>Comprueba que su <strong>email es correcto</strong> en su ficha (<span class="btn">Editar</span>) y que
+  mire la carpeta de <strong>spam</strong>. El remitente es <span class="key">iarrhh &lt;hola@iarest.es&gt;</span>.
+  El código caduca a los 10 minutos: que vuelva a pulsar <span class="btn">Firmar</span> para recibir uno nuevo.</p>
+  <h3>Se me ha olvidado mi contraseña</h3>
+  <p>Avisa a Alberto para que te la restablezca; después cámbiala desde <span class="btn">Mi cuenta</span>.</p>
+  <h3>¿Puedo usarlo desde el móvil?</h3>
+  <p>Sí. Funciona igual en móvil y ordenador. Puedes instalarlo como app (“Añadir a pantalla de inicio”).</p>
+  <h3>Borré un trabajador por error</h3>
+  <p>El borrado no se puede deshacer. Vuelve a darlo de alta (tendrá un enlace nuevo) y resube sus documentos.</p>
+
+  <footer>
+    iarrhh · Portal del Empleado — casa de marcas · Manual para Mariscos González.<br>
+    ¿Dudas que no resuelve este manual? Escribe a Alberto.
+  </footer>
+
+</div>
+</body>
+</html>

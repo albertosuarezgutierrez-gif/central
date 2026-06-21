@@ -30,6 +30,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 | Tema | Fuente |
 |---|---|
 | Reglas, gotchas, módulos (TODO) | `apps/ialimp/CLAUDE.md` |
+| **RR.HH. de la limpiadora** (expediente + nómina PDF + **firma OTP**) | `apps/ialimp/CLAUDE.md` § "RR.HH. de la limpiadora"; consume `@central/module-rrhh`/`module-documental`/`core-firma`. `lib/*-limpiadora.ts` + `lib/nomina-pdf.ts`; UI `/l/documentos` + pestaña 📁 Expediente en `/admin/rrhh`. Bucket privado `documentos-limpiadora`. **email de limpiadora OBLIGATORIO** (OTP). `limpiadoras.persona_id` enlaza con `rrhh.empleados` (misma persona) |
 | Guía de la app de limpiadoras | `apps/ialimp/docs/guia-limpiadoras.md` |
 | Mejoras pedidas por Vanessa | `apps/ialimp/docs/mejoras-vanessa.md` |
 | Landing `ialimp.es` (proyecto Vercel separado) | `apps/ialimp/landing/ialimp-es/` (+ su README) |
@@ -40,7 +41,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 - **Supabase** `wswbehlcuxqxyinousql` (schema `public`) — **COMPARTIDA con sivra y plataforma**.
 - Stack: Next 15 · Prisma · **JWT propio (jose+bcryptjs, SIN NextAuth)** · cookie `ialimp_session`
   (portal propietario = cookie SEPARADA `ialimp_prop`; limpiadora = `limpiadora_token`).
-- IA: solo NVIDIA NIM vía `lib/ai-client.ts` (`@anthropic-ai/sdk` ELIMINADO).
+- IA: **pasarela central de plataforma** vía `lib/ai-client.ts` (`aiComplete` texto + `aiVision` OCR; NIM por debajo). Keys solo en plataforma; envs `AI_GATEWAY_URL`+`AI_GATEWAY_SECRET` (Team-shared) → fallback NIM directo. `@anthropic-ai/sdk` ELIMINADO.
 - Email: `lib/mailer.ts` (activo IONOS SMTP `:587`; orden Resend→IONOS→Gmail). `MAIL_FROM=hola@ialimp.es`.
 - Build: `prisma generate && next build`; **Vercel usa `buildCommand` de `vercel.json`** (debe incluir
   `node scripts/fetch-fonts.mjs`). Commits con prefijo `fix:`/`feat:`.
@@ -50,7 +51,7 @@ cualquier merge a `main` se ve al instante. No mergear sin preview verde validad
 - **`ignoreBuildErrors`/`ignoreDuringBuilds` = true**: el build verde NO garantiza tipos sanos (sí caza sintaxis).
 - **White-label por empresa** (no por host): acentos con `var(--brand-*)`, no hex fijo (salvo colores semánticos).
 - **RGPD**: gate de consentimiento del portal del propietario; páginas legales rompen el white-label (responsable = IALIMP).
-- **Concursos públicos** = módulo puro `@central/module-concursos` (LLM por puerto `AiRunner`); migraciones `add_concursos*.sql` se aplican **a mano** en Supabase.
+- **Concursos públicos** = módulo puro `@central/module-concursos` (LLM por puerto `AiRunner`); migraciones `add_concursos*.sql` se aplican **a mano** en Supabase. **Buscador** = corpus compartido `concursos_licitaciones` (ingesta PLACSP en `lib/concursos-ingesta.ts`: cron `concursos-ingesta` + botón "⟳ Actualizar ahora" → `POST /api/admin/concursos/ingesta`). **OJO: PLACSP da 403 a IPs no-Vercel** → la ingesta solo se prueba en preview/prod, NUNCA desde el contenedor de dev. Sectores→CPV y provincia→CCAA = mapas puros (`sectores.ts`/`provincias.ts`); el filtro casa por prefijo SIN punto (`4533`, no `45.33`).
 - **Verificación de email**: Claude lo comprueba él mismo (Gmail de Alberto + runtime logs de Vercel), no se lo pide al usuario.
 - Bucket `cleaning-photos` **PRIVADO** (signed URLs vía proxy `/api/l/photo`).
 

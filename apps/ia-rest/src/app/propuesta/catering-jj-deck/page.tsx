@@ -66,6 +66,15 @@ function Arrow({ label, color, dashed }: { label: string; color: string; dashed?
   )
 }
 
+function Quote({ text }: { text: string }) {
+  return (
+    <div style={{ display:'flex', gap:14, alignItems:'flex-start', padding:'16px 0', borderBottom:`1px solid ${C.bg3}` }}>
+      <div style={{ fontFamily:SE, fontSize:'clamp(30px,6vw,44px)', lineHeight:.9, color:C.gold, flexShrink:0 }}>“</div>
+      <p style={{ fontFamily:SE, fontStyle:'italic', fontSize:'clamp(18px,3.8vw,24px)', lineHeight:1.42, color:C.cream, margin:0 }}>{text}</p>
+    </div>
+  )
+}
+
 // ─── Contenido de la presentación ────────────────────────────
 const SLIDES: Slide[] = [
   // 1 · Portada
@@ -77,10 +86,10 @@ const SLIDES: Slide[] = [
         <div style={{ fontFamily:SN, letterSpacing:4, fontSize:14, color:C.gold, textTransform:'uppercase', marginBottom:28 }}>
           Catering Joaquín Jaén · Hacienda El Alba + Hacienda Trinidad
         </div>
-        <h1 style={{ fontFamily:SE, fontWeight:600, fontSize:60, lineHeight:1.08, color:C.paper, margin:'0 0 26px' }}>
+        <h1 style={{ fontFamily:SE, fontWeight:600, fontSize:'clamp(30px,7vw,60px)', lineHeight:1.08, color:C.paper, margin:'0 0 26px' }}>
           Una plataforma para <span style={{ color:C.gold }}>todo tu grupo</span>,<br/>en un solo sitio.
         </h1>
-        <p style={{ fontFamily:SN, fontSize:21, color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:680 }}>
+        <p style={{ fontFamily:SN, fontSize:'clamp(16px,3.6vw,21px)', color:C.ink3, lineHeight:1.5, margin:'0 auto', maxWidth:680 }}>
           Conectamos lo que ya funciona —empezando por tu cocina— y unimos comercial, material,
           eventos y contabilidad en un solo sitio.
         </p>
@@ -107,7 +116,23 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 3 · Principio
+  // 3 · En tus palabras
+  {
+    kicker: 'En tus palabras',
+    titulo: 'Lo que nos dijiste',
+    sub: 'Tus frases, tal cual. De aquí sale todo lo que te proponemos.',
+    color: C.gold,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:880 }}>
+        <Quote text="Todo lo que no está planificado depende de mí." />
+        <Quote text="Reduje los papeles un 75 %." />
+        <Quote text="El cliente no viene a comer cualquier cosa: quiere el arroz de categoría." />
+        <Quote text="Que llegue por la mañana, me identifique por mi partida y ya esté todo." />
+      </div>
+    ),
+  },
+
+  // 4 · Principio
   {
     kicker: 'El principio que lo ordena todo',
     titulo: 'Conectamos, no reemplazamos',
@@ -118,7 +143,7 @@ const SLIDES: Slide[] = [
           El sistema de cocina que ya tenéis <span style={{ color:C.green }}>se queda</span>.
           ia.rest se enchufa a él y reparte sus datos al resto del grupo.
         </p>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
           <Card icon="📋" color={C.gold} titulo="Escandallos → presupuesto" body="El coste por comensal que ya calculáis alimenta el presupuesto y la lista de compra." />
           <Card icon="🛒" color={C.teal} titulo="Cocina → compra" body="Lo que entra por un evento se convierte en pedido a proveedor, sin reteclear." />
           <Card icon="📊" color={C.red} titulo="Coste → contabilidad" body="Los costes reales suben solos al financiero consolidado del holding." />
@@ -151,7 +176,7 @@ const SLIDES: Slide[] = [
           <Arrow label="cierre" color={C.ink4} />
           <Node color={C.teal} title="Cerrado" sub="roturas + reseña" />
         </div>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
           <Card icon="🛒" color={C.red} titulo="Compra al proveedor" body="El evento confirmado genera el pedido solo; el albarán entra por foto y la factura cuadra sola." />
           <Card icon="👨‍🍳" color={C.teal} titulo="Parte de trabajo a cocina" body="El menú se explota en elaboraciones fechadas por caducidad, repartidas por cocinero con su tiempo." />
           <Card icon="📸" color={C.amber} titulo="Cierre del evento" body="Inventario y roturas por foto, informe de rentabilidad y la reseña que alimenta el ranking." />
@@ -163,14 +188,75 @@ const SLIDES: Slide[] = [
     ),
   },
 
-  // 5 · Comercial & comisiones
+  // 5 · El flujo de la cocina de Carmen (recepción → carro)
+  {
+    kicker: 'Os escuchamos · tal cual nos lo contasteis',
+    titulo: 'Tu cocina, de la recepción al carro',
+    sub: 'Este es el flujo que ya tienes en la cabeza. Lo dibujamos tal cual para que lo lleve el sistema — no tú.',
+    color: C.teal,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:1000 }}>
+        <div style={{ display:'flex', alignItems:'center', justifyContent:'center', gap:10, flexWrap:'wrap', marginBottom:26 }}>
+          <Node color={C.teal} title="Recepción" sub="pesa · escanea etiqueta" />
+          <Arrow label="entra valorado" color={C.gold} />
+          <Node color={C.gold} title="Economato" sub="almacén con valor" />
+          <Arrow label="parte de elaboración" color={C.red} />
+          <Node color={C.red} title="Producción" sub="partidas frío / caliente" />
+          <Arrow label="identificado por color" color={C.amber} />
+          <Node color={C.amber} title="Salida" sub="carros por evento" />
+          <Arrow label="transportista" color={C.green} />
+          <Node color={C.green} title="Evento" sub="montado y servido" />
+        </div>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
+          <Card icon="🏷️" color={C.gold} titulo="La etiqueta de entrada, sin duplicar"
+            body="La propia etiqueta del proveedor —con lote, alérgenos, caducidad y precio— se escanea y vale como referencia para todo el seguimiento, sin reimprimir un QR nuevo. Si el precio sube, salta el aviso y el coste se actualiza solo." />
+          <Card icon="🌡️" color={C.teal} titulo="Control sanitario, justificado"
+            body="Desinfección, enfriamiento y descongelación según ingredientes; vida útil justificada por pH y actividad de agua. La auditoría, siempre lista." />
+          <Card icon="⏱️" color={C.red} titulo="Partidas cronometradas"
+            body="Frío y caliente, corte, montaje y elaboración. Cada cocinero entra y encuentra su trabajo repartido y cronometrado, con avisos encadenados entre partidas." />
+          <Card icon="🎨" color={C.amber} titulo="Salida por color, no por nombre"
+            body="Cada evento, un color; los carros se identifican y el transportista los recoge. Cada fase entrega a la siguiente, como una cadena." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, marginTop:26, textAlign:'center' }}>
+          Todo esto ya lo haces tú de cabeza. El objetivo es que deje de depender de ti.
+        </p>
+      </div>
+    ),
+  },
+
+  // 6 · Fuera WhatsApp — todo en la intranet
+  {
+    kicker: 'Menos móvil, más control',
+    titulo: 'Fuera el WhatsApp: todo en la intranet',
+    sub: 'Hoy los pedidos y la comunicación van por tu WhatsApp personal, y acabas todo el día con el móvil. Lo movemos dentro de la app.',
+    color: C.green,
+    render: () => (
+      <div style={{ width:'100%', maxWidth:940 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18, marginBottom:24 }}>
+          <Card icon="💬" color={C.green} titulo="Mensajería interna en la app"
+            body="Equipo, comercial y dirección hablan dentro de la plataforma. Cada mensaje queda ligado a su evento o partida, no perdido en un chat del móvil personal." />
+          <Card icon="📦" color={C.teal} titulo="Pedidos por la intranet"
+            body="El apartado de proveedores ya está cerrado: pides, recibes el albarán y cuadras la entrada sin salir de la plataforma." />
+          <Card icon="📥" color={C.amber} titulo="Una sola bandeja de entrada"
+            body="Cambios de novios, altas y bajas y avisos entran a un único sitio y se convierten solos en tareas. Dejan de depender de que tú los vuelques cada noche." />
+          <Card icon="🗂️" color={C.gold} titulo="Todo queda registrado"
+            body="Cada conversación, pedido y cambio queda con histórico y trazable. Si alguien falta un día, la información no se va con él." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:17, color:C.ink3, textAlign:'center', lineHeight:1.5 }}>
+          El móvil deja de ser tu oficina: la información vive en la plataforma, no en tu chat.
+        </p>
+      </div>
+    ),
+  },
+
+  // 7 · Comercial & comisiones
   {
     kicker: 'Lo que pide el comprador',
     titulo: 'Comercial y comisiones',
     sub: 'El equipo se autogestiona y ves quién aporta de verdad.',
     color: C.red,
     render: () => (
-      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:18 }}>
+      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:18 }}>
         <Card icon="🏆" color={C.red} titulo="Ranking en tiempo real" body="Quién vende con más margen, no solo quién factura más. Cada comercial ve lo suyo." />
         <Card icon="💸" color={C.amber} titulo="Bonos automáticos" body="Por margen, por ticket más alto y por reseñas conseguidas. Se calculan solos." />
         <Card icon="📈" color={C.gold} titulo="Contrato con % escalable" body="La comisión sube sola al alcanzar objetivos; baja si no se cumplen. Sin discusiones." />
@@ -186,7 +272,7 @@ const SLIDES: Slide[] = [
     sub: 'Saber qué tienes, qué se rompió y qué hará falta — sin recuentos por vídeo.',
     color: C.teal,
     render: () => (
-      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18 }}>
+      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18 }}>
         <Card icon="🍽️" color={C.teal} titulo="Catálogo con stock real" body="Mesas, sillas, vajilla y cristalería. Cada evento descuenta lo que sale." />
         <Card icon="📸" color={C.red} titulo="Roturas con foto" body="Al cerrar la boda registras las roturas con foto y se liquidan solas." />
         <Card icon="🌡️" color={C.amber} titulo="Previsión por evento" body="Material y bebida según aforo, temporada y temperatura (verano/invierno, día/noche)." />
@@ -219,7 +305,7 @@ const SLIDES: Slide[] = [
     sub: 'El trabajador entra a su perfil, ve su trabajo ya organizado y lo cierra con foto — en sala y en cocina.',
     color: C.green,
     render: () => (
-      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(2,1fr)', gap:20 }}>
+      <div style={{ width:'100%', maxWidth:940, display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:20 }}>
         <Card icon="✅" color={C.green}
           titulo="Checklist de sala cruzado con la carga"
           body="Tareas por sección (barra, sala, terraza) marcadas con foto. ia.rest las cruza con las mesas y comandas reales: tarea sin hacer + sala vacía = «sin excusa»; sala llena = contexto. Reclamas el trabajo con datos." />
@@ -287,15 +373,27 @@ const SLIDES: Slide[] = [
   {
     kicker: 'No es una promesa',
     titulo: 'Ya funciona hoy',
+    sub: 'Casi todo lo que necesitas ya está construido y en producción. Lo nuevo es conectarlo a tu cocina.',
     color: C.green,
     render: () => (
-      <div style={{ width:'100%', maxWidth:900 }}>
-        <Bullet icon="📊" color={C.green} head="Financiero consolidado real"
-          body="La plataforma ya une el financiero de varios negocios reales de sectores distintos en un solo cuadro de mando — funcionando hoy, no en maqueta." />
-        <Bullet icon="🧾" color={C.red} head="Facturación y VeriFactu"
-          body="POS, comanda por QR y facturación legal ya en producción en iarest.es." />
-        <Bullet icon="🏛️" color={C.teal} head="Agente de concursos públicos"
-          body="Módulo terminado que rastrea licitaciones — cross-sell directo para la obra del cuñado." />
+      <div style={{ width:'100%', maxWidth:960 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap:16, marginBottom:22 }}>
+          <Card icon="🧾" color={C.red} titulo="Comanda, KDS y VeriFactu"
+            body="POS, comanda por QR, pantalla de cocina y facturación legal VeriFactu — en producción en iarest.es." />
+          <Card icon="📋" color={C.gold} titulo="Escandallos y coste por comensal"
+            body="Coste por comensal con factor de rendimiento y margen mínimo, ya calculado por evento." />
+          <Card icon="💬" color={C.teal} titulo="Mensajería interna"
+            body="Chat privado y de grupo por turno, con audio y auditoría. El sustituto del WhatsApp ya existe." />
+          <Card icon="🛒" color={C.amber} titulo="Proveedores: ASN + OCR"
+            body="Pedido, albarán por foto y cotejo a 3 bandas (pedido ↔ albarán ↔ stock). Apartado ya cerrado." />
+          <Card icon="📦" color={C.green} titulo="Almacén valorado"
+            body="Stock por ledger, kits, FEFO, alertas de mínimo y caducidad e inventario físico cíclico." />
+          <Card icon="🎯" color={C.red} titulo="Eventos y comisiones"
+            body="Pipeline con presupuesto, APPCC de alérgenos, comisiones y cierre con rentabilidad por evento." />
+        </div>
+        <p style={{ fontFamily:SN, fontSize:16, color:C.ink4, textAlign:'center', lineHeight:1.5 }}>
+          Lo que estamos terminando para ti: el reparto automático del trabajo a cocina. Su lógica ya está escrita y probada.
+        </p>
       </div>
     ),
   },
@@ -307,7 +405,7 @@ const SLIDES: Slide[] = [
     color: C.red,
     render: () => (
       <div style={{ width:'100%', maxWidth:960 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:18, marginBottom:24 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(min(100%,210px),1fr))', gap:18, marginBottom:24 }}>
           <Card icon="①" color={C.gold} titulo="Semana 1–2 · Material + comercial" body="Catálogo de material con stock real y alta del equipo comercial con sus comisiones. Primer evento descontando material solo." />
           <Card icon="②" color={C.teal} titulo="Semana 3–4 · Conectar cocina" body="Roturas por foto, ranking del equipo en vivo y puente con vuestros escandallos → presupuesto." />
           <Card icon="③" color={C.green} titulo="Mes 2 · Marketplace + holding" body="Previsión por evento, presupuesto self-service (piloto) y financiero del catering consolidado." />
@@ -365,17 +463,17 @@ export default function DeckCateringJJ() {
       <div style={{ position:'absolute', top:0, left:0, height:4, width:`${((i + 1) / n) * 100}%`, background:s.color, transition:'width .35s ease', zIndex:10 }} />
 
       {/* slide */}
-      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'center', padding:'72px 48px 96px' }}>
+      <div style={{ position:'absolute', inset:0, display:'flex', flexDirection:'column', alignItems:'center', justifyContent:'safe center', overflowY:'auto', WebkitOverflowScrolling:'touch', padding:'clamp(54px,8vh,72px) clamp(18px,5vw,48px) clamp(80px,11vh,96px)' }}>
         {(s.kicker || s.titulo) && (
           <div style={{ width:'100%', maxWidth:1000, marginBottom:28, textAlign: i === 0 ? 'center' : 'left' }}>
             {s.kicker && (
               <div style={{ fontFamily:SN, fontWeight:700, fontSize:13, letterSpacing:2.5, color:s.color, textTransform:'uppercase', marginBottom:12 }}>{s.kicker}</div>
             )}
             {s.titulo && (
-              <h2 style={{ fontFamily:SE, fontWeight:600, fontSize:44, lineHeight:1.12, color:C.paper, margin:0 }}>{s.titulo}</h2>
+              <h2 style={{ fontFamily:SE, fontWeight:600, fontSize:'clamp(26px,6vw,44px)', lineHeight:1.12, color:C.paper, margin:0 }}>{s.titulo}</h2>
             )}
             {s.sub && (
-              <p style={{ fontFamily:SN, fontSize:19, color:C.ink3, margin:'14px 0 0', lineHeight:1.45, maxWidth:820 }}>{s.sub}</p>
+              <p style={{ fontFamily:SN, fontSize:'clamp(15px,3.4vw,19px)', color:C.ink3, margin:'14px 0 0', lineHeight:1.45, maxWidth:820 }}>{s.sub}</p>
             )}
           </div>
         )}
@@ -383,9 +481,9 @@ export default function DeckCateringJJ() {
       </div>
 
       {/* navegación */}
-      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:64, display:'flex', alignItems:'center', justifyContent:'space-between', padding:'0 28px', borderTop:`1px solid ${C.bg3}`, background:C.bg2 }}>
-        <div style={{ fontFamily:SN, fontSize:13, color:C.ink4, letterSpacing:1 }}>CATERING JOAQUÍN JAÉN · ia.rest</div>
-        <div style={{ display:'flex', alignItems:'center', gap:14 }}>
+      <div style={{ position:'absolute', bottom:0, left:0, right:0, height:64, display:'flex', alignItems:'center', justifyContent:'space-between', gap:10, padding:'0 clamp(12px,4vw,28px)', borderTop:`1px solid ${C.bg3}`, background:C.bg2 }}>
+        <div style={{ fontFamily:SN, fontSize:13, color:C.ink4, letterSpacing:1, minWidth:0, flexShrink:1, overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap' }}>CATERING JOAQUÍN JAÉN · ia.rest</div>
+        <div style={{ display:'flex', alignItems:'center', gap:14, flexShrink:0 }}>
           <button onClick={() => go(-1)} disabled={i === 0}
             style={{ background:'transparent', border:`1px solid ${C.bg3}`, color: i === 0 ? C.ink4 : C.cream, borderRadius:8, padding:'8px 16px', fontSize:15, cursor: i === 0 ? 'default' : 'pointer' }}>← Atrás</button>
           <div style={{ fontFamily:SN, fontSize:14, color:C.ink3, minWidth:54, textAlign:'center' }}>{i + 1} / {n}</div>

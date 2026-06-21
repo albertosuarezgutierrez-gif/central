@@ -19,6 +19,25 @@
             "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/superpowers-session-start.sh\""
           }
         ]
+      },
+      {
+        "matcher": "startup|clear",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/memoria-record-base.sh\""
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/memoria-precompact.sh\""
+          }
+        ]
       }
     ]
   }

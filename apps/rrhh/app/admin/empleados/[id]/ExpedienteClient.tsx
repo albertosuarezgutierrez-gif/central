@@ -6,20 +6,33 @@ import AdminShell from '@/components/AdminShell'
 type Carpeta = { id: string; etiqueta: string }
 type Doc = { id: string; carpeta: string; nombre: string; subido_por: string; estado_firma: string; creada_at: string; url: string | null }
 type Empleado = { id: string; nombre: string; email: string | null; puesto: string | null }
+type Plantilla = { id: string; titulo: string; version: string }
 
 const FIRMA: Record<string, { txt: string; cls: string }> = {
   pendiente: { txt: 'Pendiente de firma', cls: 'text-alert' },
   firmado: { txt: '✔ Firmado', cls: 'text-ok' },
 }
 
-export default function ExpedienteClient({ empleado, carpetas, inicial }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[] }) {
+export default function ExpedienteClient({ empleado, carpetas, inicial, plantillas }: { empleado: Empleado; carpetas: Carpeta[]; inicial: Doc[]; plantillas: Plantilla[] }) {
   const [docs, setDocs] = useState<Doc[]>(inicial)
   const [subiendo, setSubiendo] = useState<string | null>(null)
   const [error, setError] = useState('')
+  const [plantilla, setPlantilla] = useState(plantillas[0]?.id ?? '')
+  const [generando, setGenerando] = useState(false)
 
   async function recargar() {
     const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos`)
     if (r.ok) setDocs((await r.json()).documentos)
+  }
+
+  async function generar() {
+    if (!plantilla) return
+    setGenerando(true); setError('')
+    const r = await fetch(`/api/admin/empleados/${empleado.id}/documentos/generar`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ plantilla }),
+    })
+    if (r.ok) await recargar(); else setError((await r.json()).error ?? 'Error al generar')
+    setGenerando(false)
   }
 
   async function subir(carpeta: string, file: File) {
@@ -51,6 +64,17 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
 
       <ChatPanel endpoint={`/api/admin/empleados/${empleado.id}/chat`} yo="gestor" />
 
+      <section className="my-3 rounded-card border border-line bg-card p-4">
+        <h2 className="mb-2 text-base">Generar documento legal</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <select value={plantilla} onChange={e => setPlantilla(e.target.value)}>
+            {plantillas.map(p => <option key={p.id} value={p.id}>{p.titulo} (v{p.version})</option>)}
+          </select>
+          <button onClick={generar} disabled={generando || !plantilla}>{generando ? 'Generando…' : 'Generar'}</button>
+        </div>
+        <p className="text-ink-3 mt-1 text-xs">Se añade al expediente como documento; luego pulsa «Solicitar firma».</p>
+      </section>
+
       {carpetas.map(c => {
         const dc = docs.filter(d => d.carpeta === c.id)
         return (
@@ -65,6 +89,9 @@ export default function ExpedienteClient({ empleado, carpetas, inicial }: { empl
                   <span className="text-ink-3 text-xs">· {d.subido_por}</span>
                   {FIRMA[d.estado_firma] && <span className={`text-xs font-semibold ${FIRMA[d.estado_firma].cls}`}>· {FIRMA[d.estado_firma].txt}</span>}
                   <span className="ml-auto flex items-center gap-1">
+                    {d.estado_firma === 'firmado' && (
+                      <a href={`/v/${d.id}`} target="_blank" rel="noreferrer" className="px-2 py-0.5 text-xs text-accent no-underline hover:underline">Verificar</a>
+                    )}
                     {d.estado_firma === 'no_requiere' && (
                       <button onClick={() => solicitarFirma(d.id)} className="bg-paper-2 px-2 py-0.5 text-xs text-accent-ink hover:bg-line">Solicitar firma</button>
                     )}

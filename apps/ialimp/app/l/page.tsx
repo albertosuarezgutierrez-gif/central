@@ -731,8 +731,11 @@ function LimpiadoarasApp() {
           ))}
         </div>
 
-        {/* Manual btn */}
-        <div className="l-manual-row">
+        {/* Manual + Mis documentos */}
+        <div className="l-manual-row" style={{ gap: 8 }}>
+          <a className="l-manual-btn" href="/l/documentos">
+            📄 Mis documentos
+          </a>
           <a className="l-manual-btn"
             href="https://wswbehlcuxqxyinousql.supabase.co/storage/v1/object/public/property-access-files/publico/manual_limpiadora_v1.pdf"
             target="_blank" rel="noreferrer" download="Manual_IALIMP.pdf">

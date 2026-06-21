@@ -11,6 +11,7 @@ import { listarTargets, RUTAS_SEO_EDITABLES } from '@/lib/seo/targets'
 import {
   agenteHabilitado, rutaEditable, dentroDeLimite, rutaEnCooldown, maxCambios, minImpresiones,
 } from '@/lib/seo/guardrails'
+import { callAITools, callAISearch } from '@/lib/ai-client'
 
 const TG_BOT  = process.env.TELEGRAM_BOT_TOKEN || ''
 const TG_CHAT = process.env.TELEGRAM_CHAT_ID || ''
@@ -45,15 +46,17 @@ METODOLOGÍA:
 
 Solo puedes editar las rutas que devuelve list_seo_targets. Tras terminar, deja de llamar herramientas.`
 
+// Tools en formato OpenAI (NVIDIA NIM, function-calling). web_search es custom, respaldada por Gemini.
+const fn = (name: string, description: string, parameters: any) => ({ type: 'function' as const, function: { name, description, parameters } })
 const TOOLS = [
-  { type: 'web_search_20250305', name: 'web_search' },
-  { name: 'get_gsc_data', description: 'Datos GSC reales (queries/pages/...)', input_schema: { type: 'object', properties: { type: { type: 'string', enum: ['queries','pages','countries','devices'] }, days: { type: 'number' }, rowLimit: { type: 'number' } }, required: ['type'] } },
-  { name: 'get_ga4_data', description: 'Datos GA4 reales', input_schema: { type: 'object', properties: { report: { type: 'string', enum: ['overview','pages','sources','conversions','landing'] }, days: { type: 'number' } }, required: ['report'] } },
-  { name: 'list_seo_targets', description: 'Rutas editables y su SEO actual + artículos existentes', input_schema: { type: 'object', properties: {} } },
-  { name: 'set_metadata', description: 'Fija title/description/canonical/og de una ruta editable', input_schema: { type: 'object', properties: { ruta: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' }, canonical: { type: 'string' }, motivo: { type: 'string' } }, required: ['ruta','motivo'] } },
-  { name: 'set_schema', description: 'Fija JSON-LD de una ruta editable', input_schema: { type: 'object', properties: { ruta: { type: 'string' }, jsonld: { type: 'object' }, motivo: { type: 'string' } }, required: ['ruta','jsonld','motivo'] } },
-  { name: 'set_content_block', description: 'Inserta/actualiza un bloque de contenido en una ruta editable', input_schema: { type: 'object', properties: { ruta: { type: 'string' }, posicion: { type: 'number' }, titulo: { type: 'string' }, html: { type: 'string' }, motivo: { type: 'string' } }, required: ['ruta','posicion','html','motivo'] } },
-  { name: 'create_article', description: 'Crea un artículo nuevo en /blog/{slug}', input_schema: { type: 'object', properties: { slug: { type: 'string' }, titulo: { type: 'string' }, meta_description: { type: 'string' }, keyword: { type: 'string' }, bloques: { type: 'array', items: { type: 'object', properties: { h2: { type: 'string' }, html: { type: 'string' } } } }, motivo: { type: 'string' } }, required: ['slug','titulo','bloques','motivo'] } },
+  fn('web_search', 'Busca en la web (competencia, keywords, noticias del sector) y devuelve un resumen.', { type: 'object', properties: { query: { type: 'string' } }, required: ['query'] }),
+  fn('get_gsc_data', 'Datos GSC reales (queries/pages/...)', { type: 'object', properties: { type: { type: 'string', enum: ['queries','pages','countries','devices'] }, days: { type: 'number' }, rowLimit: { type: 'number' } }, required: ['type'] }),
+  fn('get_ga4_data', 'Datos GA4 reales', { type: 'object', properties: { report: { type: 'string', enum: ['overview','pages','sources','conversions','landing'] }, days: { type: 'number' } }, required: ['report'] }),
+  fn('list_seo_targets', 'Rutas editables y su SEO actual + artículos existentes', { type: 'object', properties: {} }),
+  fn('set_metadata', 'Fija title/description/canonical/og de una ruta editable', { type: 'object', properties: { ruta: { type: 'string' }, title: { type: 'string' }, description: { type: 'string' }, canonical: { type: 'string' }, motivo: { type: 'string' } }, required: ['ruta','motivo'] }),
+  fn('set_schema', 'Fija JSON-LD de una ruta editable', { type: 'object', properties: { ruta: { type: 'string' }, jsonld: { type: 'object' }, motivo: { type: 'string' } }, required: ['ruta','jsonld','motivo'] }),
+  fn('set_content_block', 'Inserta/actualiza un bloque de contenido en una ruta editable', { type: 'object', properties: { ruta: { type: 'string' }, posicion: { type: 'number' }, titulo: { type: 'string' }, html: { type: 'string' }, motivo: { type: 'string' } }, required: ['ruta','posicion','html','motivo'] }),
+  fn('create_article', 'Crea un artículo nuevo en /blog/{slug}', { type: 'object', properties: { slug: { type: 'string' }, titulo: { type: 'string' }, meta_description: { type: 'string' }, keyword: { type: 'string' }, bloques: { type: 'array', items: { type: 'object', properties: { h2: { type: 'string' }, html: { type: 'string' } } } }, motivo: { type: 'string' } }, required: ['slug','titulo','bloques','motivo'] }),
 ]
 
 export async function GET(req: NextRequest) {
@@ -68,9 +71,6 @@ export async function GET(req: NextRequest) {
   // Kill switch
   if (!agenteHabilitado(process.env as any))
     return NextResponse.json({ ok: false, msg: 'SEO_AGENT_ENABLED != true' })
-
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) return NextResponse.json({ error: 'ANTHROPIC_API_KEY no configurado' }, { status: 500 })
 
   const runId = randomUUID()
   const max = maxCambios(process.env as any)
@@ -94,6 +94,7 @@ export async function GET(req: NextRequest) {
   }
 
   async function executeTool(name: string, input: any): Promise<string> {
+    if (name === 'web_search') return callAISearch('Eres un asistente de investigación SEO. Resume con datos concretos.', String(input?.query ?? ''), 1200)
     if (name === 'get_gsc_data') return getGscData(input)
     if (name === 'get_ga4_data') return getGa4Data(input)
     if (name === 'list_seo_targets') return JSON.stringify(await listarTargets())
@@ -118,28 +119,19 @@ export async function GET(req: NextRequest) {
 
   try {
     const system = `${SYSTEM}\n\nUMBRAL: solo actúa sobre queries con impresiones >= ${minImpresiones(process.env as any)} en GSC. No optimices ruido.`
-    let messages: any[] = [{ role: 'user', content: 'Analiza el SEO de iarest.es de esta semana y aplica las mejoras justificadas por los datos.' }]
+    // Bucle agéntico con NVIDIA NIM (function-calling). Las herramientas (GSC/GA4 + escritura SEO)
+    // se ejecutan aquí igual que antes; el "cerebro" pasó de Anthropic a NIM (gratis, sin saldo).
+    const messages: any[] = [{ role: 'user', content: 'Analiza el SEO de iarest.es de esta semana y aplica las mejoras justificadas por los datos.' }]
     for (let i = 0; i < 10; i++) {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'x-api-key': apiKey, 'anthropic-version': '2023-06-01', 'anthropic-beta': 'web-search-2025-03-05' },
-        body: JSON.stringify({ model: 'claude-haiku-4-5-20251001', max_tokens: 2048, system, tools: TOOLS, messages }),
-      })
-      const data = await res.json()
-      if (!data.content) break
-      if (data.stop_reason === 'end_turn') break
-      if (data.stop_reason === 'tool_use') {
-        messages = [...messages, { role: 'assistant', content: data.content }]
-        const toolUses = data.content.filter((b: any) => b.type === 'tool_use')
-        const results = await Promise.all(toolUses.map(async (tu: any) => {
-          let result: string
-          if (tu.name === 'web_search') {
-            const ws = data.content.find((b: any) => b.type === 'tool_result' && b.tool_use_id === tu.id)
-            result = ws?.content?.[0]?.text || 'Búsqueda procesada'
-          } else { result = await executeTool(tu.name, tu.input) }
-          return { type: 'tool_result', tool_use_id: tu.id, content: result }
-        }))
-        messages = [...messages, { role: 'user', content: results }]
+      const msg = await callAITools(system, messages, TOOLS, 2048)
+      if (msg.tool_calls?.length) {
+        messages.push({ role: 'assistant', content: msg.content ?? '', tool_calls: msg.tool_calls })
+        for (const tc of msg.tool_calls) {
+          let input: any = {}
+          try { input = JSON.parse(tc.function.arguments || '{}') } catch { /* args no-JSON */ }
+          const result = await executeTool(tc.function.name, input)
+          messages.push({ role: 'tool', tool_call_id: tc.id, content: result })
+        }
         continue
       }
       break

@@ -170,19 +170,26 @@ export default function ElaboracionesPanel({
 
   const imprimirRef = useRef<HTMLIFrameElement | null>(null)
 
-  const cargar = useCallback(async () => {
-    setLoading(true)
-    const r = await fetch('/api/kds/elaboraciones', { headers: sh() })
+  // `sh` llega como función nueva en cada render del KDS (que re-renderiza cada
+  // segundo por el reloj). La guardamos en un ref para que `cargar` sea ESTABLE y
+  // no se dispare en bucle (lo que hacía parpadear el panel entre "Cargando…" y la
+  // lista). `silent` evita el flash de carga en los refrescos de fondo.
+  const shRef = useRef(sh)
+  useEffect(() => { shRef.current = sh }, [sh])
+
+  const cargar = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true)
+    const r = await fetch('/api/kds/elaboraciones', { headers: shRef.current() })
     const d = await r.json().catch(() => ({ elaboraciones: [] }))
     setElaboraciones(d.elaboraciones ?? [])
     setLoading(false)
-  }, [sh])
+  }, [])
 
   useEffect(() => { cargar() }, [cargar])
 
-  // Recargar cada 5 min
+  // Recargar cada 5 min (silencioso, sin parpadeo)
   useEffect(() => {
-    const iv = setInterval(cargar, 300000)
+    const iv = setInterval(() => cargar(true), 300000)
     return () => clearInterval(iv)
   }, [cargar])
 

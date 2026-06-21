@@ -103,16 +103,17 @@ export async function POST(req: NextRequest) {
     modulos_gestion: personalData?.modulos_gestion ?? [],
   }
 
-  // Leer onboarding_completado para owners nuevos
-  let onboarding_completado: boolean | null = null
-  if (cam.rol === 'owner' || cam.rol === 'super_admin') {
-    const { data: rest } = await supabase
-      .from('restaurantes')
-      .select('onboarding_completado')
-      .eq('id', cam.restaurante_id)
-      .single()
-    onboarding_completado = rest?.onboarding_completado ?? false
-  }
+  // Datos del local: onboarding (owners) + modo (cocina central vs restaurante).
+  // `modo='cocina_central'` → catering: el login lleva a /produccion (sin mesas/comandas/voz).
+  const { data: rest } = await supabase
+    .from('restaurantes')
+    .select('onboarding_completado, modo')
+    .eq('id', cam.restaurante_id)
+    .single()
+  const onboarding_completado = (cam.rol === 'owner' || cam.rol === 'super_admin')
+    ? (rest?.onboarding_completado ?? false)
+    : null
+  const cocina_central = rest?.modo === 'cocina_central'
 
   return NextResponse.json({
     camarero: firmarSesion({
@@ -126,6 +127,7 @@ export async function POST(req: NextRequest) {
       puede_comandar: cam.puede_comandar ?? false,
       modulos_gestion: cam.modulos_gestion ?? [],
       onboarding_completado,
+      cocina_central,
     })
   })
 }

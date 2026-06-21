@@ -1,8 +1,10 @@
 -- ============================================================
 -- Materiales Fase B — Kits, Clientes, Proveedores,
 -- Inventario físico, Mantenimiento, Reservas
--- BD: ia-rest (efncqyvhniaxsirhdxaa)
+-- BD: compartida wswbehlcuxqxyinousql · schema iarest (aplicada 2026-06-18)
 -- ============================================================
+
+SET search_path TO iarest, public;
 
 CREATE TABLE IF NOT EXISTS materiales_proveedores (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),

@@ -268,11 +268,20 @@ export function RevisarBandeja({ movimientos, categorias }: {
   if (pendientes.length === 0) return null
   return (
     <section style={{ marginBottom: '32px' }}>
+      <style>{`
+        @media (max-width: 768px) {
+          .banca-revisar-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+          .banca-revisar-row { min-width: 520px; }
+          .banca-movs-row { min-width: 480px; }
+          .banca-movs-outer { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        }
+      `}</style>
       <h2 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '4px' }}>🔎 Por revisar ({pendientes.length})</h2>
       <p style={{ fontSize: '12px', color: 'var(--muted)', marginBottom: '14px' }}>La IA no tuvo clara la categoría de estos movimientos. Asígnasela tú con un clic.</p>
+      <div className="banca-revisar-wrap">
       <div style={{ background: 'var(--surface)', border: '1px solid #f59e0b66', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {pendientes.map((m, i) => (
-          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+          <div key={m.id} className="banca-revisar-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0, fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
@@ -282,6 +291,7 @@ export function RevisarBandeja({ movimientos, categorias }: {
             </select>
           </div>
         ))}
+      </div>
       </div>
     </section>
   )
@@ -423,6 +433,27 @@ export function DuplicadosBandeja({ grupos, resueltos }: { grupos: DupGrupoUI[];
 const dupGhost: React.CSSProperties = { background: 'transparent', color: 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
 const dupDanger: React.CSSProperties = { background: '#dc2626', color: '#fff', border: 'none', borderRadius: '8px', padding: '6px 12px', fontSize: '13px', fontWeight: 600, cursor: 'pointer' }
 
+// Botón que abre Claude Code web y copia /facturas-correo al portapapeles listo para pegar.
+export function RevisarCorreoBtn() {
+  const [estado, setEstado] = useState<'idle' | 'ok'>('idle')
+
+  function abrir() {
+    navigator.clipboard?.writeText('/facturas-correo').catch(() => {})
+    window.open('https://claude.ai/code', '_blank', 'noopener')
+    setEstado('ok')
+    setTimeout(() => setEstado('idle'), 3000)
+  }
+
+  return (
+    <span style={{ display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
+      <button onClick={abrir} style={ghost} title="Abre Claude Code y copia el comando al portapapeles">
+        {estado === 'ok' ? '✓ Comando copiado' : '📧 Revisar correo'}
+      </button>
+      {estado === 'ok' && <span style={{ fontSize: '12px', color: 'var(--muted)' }}>Pega con Ctrl+V en Claude</span>}
+    </span>
+  )
+}
+
 // Tabla de movimientos con buscador + filtros (texto, signo, categoría). Filtra en cliente
 // sobre los movimientos ya cargados; sin llamadas extra al servidor.
 type MovTabla = {
@@ -470,11 +501,12 @@ export function MovimientosTabla({ movimientos, catLabel }: {
           {cats.map(c => <option key={c} value={c}>{catLabel[c] || c}</option>)}
         </select>
       </div>
+      <div className="banca-movs-outer">
       <div style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
         {filtrados.length === 0 ? (
           <div style={{ padding: '24px', textAlign: 'center', color: 'var(--muted)', fontSize: '14px' }}>Sin movimientos que coincidan.</div>
         ) : filtrados.map((m, i) => (
-          <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
+          <div key={m.id} className="banca-movs-row" style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 16px', borderTop: i === 0 ? 'none' : '1px solid var(--border)' }}>
             <div style={{ fontSize: '12px', color: 'var(--muted)', width: '84px', flexShrink: 0 }}>{m.fecha || '—'}</div>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontSize: '14px', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{m.concepto}</div>
@@ -486,6 +518,7 @@ export function MovimientosTabla({ movimientos, catLabel }: {
             <div style={{ fontSize: '14px', fontWeight: 700, color: m.importe >= 0 ? '#16a34a' : '#dc2626', flexShrink: 0, width: '92px', textAlign: 'right' }}>{eur(m.importe)}</div>
           </div>
         ))}
+      </div>
       </div>
     </section>
   )

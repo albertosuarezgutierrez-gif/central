@@ -3,11 +3,9 @@ export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
 import { getSession } from '@/lib/session'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
 
-function getStripe() { return new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2023-10-16' as never,
-}) }
+const getStripe = () => createStripe()
 
 function isSuperAdmin(req: NextRequest) {
   const s = getSession(req)

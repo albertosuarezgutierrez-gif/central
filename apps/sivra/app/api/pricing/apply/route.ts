@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
   // conversión a precio BASE de Smoobu y la cadena de topes se hacen abajo en JS.
   // Sólo pisos con apply_enabled=true.
   const recs = await prisma.$queryRaw<{
-    property_id: string; recommended_guest: number; floor_guest: number; ceil_guest: number
+    property_id: string; recommended_guest: number; med_guest_global: number; floor_guest: number; ceil_guest: number
     channel_markup: number; max_change_pct: number; min_price: number | null; max_price: number | null
     sample_n: number; market_age_days: number; events_enabled: boolean; gap_discount_pct: number
   }[]>(Prisma.sql`
@@ -117,6 +117,7 @@ export async function POST(req: NextRequest) {
       ROUND(mkt.med
         * GREATEST(LEAST(1 + (COALESCE(occ.occupancy,0.5) - s.demand_baseline) * s.demand_k, 1.10), 0.92)
         * GREATEST(LEAST(1 + (s.own_score - mkt.mkt_score) * s.quality_k, 1.10), 0.90))::int AS recommended_guest,
+      ROUND(mkt.med)::int AS med_guest_global,
       ROUND(mkt.flo)::int AS floor_guest, ROUND(mkt.cei)::int AS ceil_guest,
       COALESCE(s.channel_markup, 1.16)::float8 AS channel_markup,
       s.max_change_pct::float8 AS max_change_pct,
@@ -146,6 +147,39 @@ export async function POST(req: NextRequest) {
     FROM pricing_eventos_auto WHERE rate_date >= CURRENT_DATE GROUP BY rate_date
   `).catch(() => [])
   const autoEv = new Map(autoEvRows.map(r => [r.rate_date, Number(r.factor)]))
+
+  // 📅 Fase 2-B (Paso 6/B2): mercado por MES de entrada (temporada), con fallback al global.
+  // Antes el motor usaba UN solo percentil por piso (mezclando todas las fechas), así que el
+  // precio salía plano. Aquí agrupamos los comps por mes de `checkin_date` (tomando el comp más
+  // reciente por scenario+fecha+nombre) para tarificar cada fecha con el mercado de SU temporada.
+  // MIN_BUCKET: nº mínimo de comps en el mes para fiarse; si no, se cae al global (comportamiento previo).
+  const MIN_BUCKET = 3
+  const mesRows = await prisma.$queryRaw<{
+    property_id: string; ym: string; med_guest: number; flo_guest: number; cei_guest: number; n: number
+  }[]>(Prisma.sql`
+    WITH recent AS (
+      SELECT DISTINCT ON (m.scenario, m.checkin_date, m.comp_name)
+        m.scenario, m.checkin_date, m.price_night
+      FROM market_rates m
+      WHERE m.price_night > 0 AND m.scenario LIKE 'prop_%'
+        AND m.checkin_date >= CURRENT_DATE
+        AND m.search_date >= CURRENT_DATE - 120
+      ORDER BY m.scenario, m.checkin_date, m.comp_name, m.search_date DESC
+    )
+    SELECT r.scenario AS property_id, to_char(r.checkin_date, 'YYYY-MM') AS ym,
+      ROUND(percentile_cont(s.target_pctl) WITHIN GROUP (ORDER BY r.price_night))::int AS med_guest,
+      ROUND(percentile_cont(s.floor_pctl)  WITHIN GROUP (ORDER BY r.price_night))::int AS flo_guest,
+      ROUND(percentile_cont(s.ceil_pctl)   WITHIN GROUP (ORDER BY r.price_night))::int AS cei_guest,
+      COUNT(*)::int AS n
+    FROM recent r JOIN pricing_settings s ON s.property_id = r.scenario
+    GROUP BY r.scenario, to_char(r.checkin_date, 'YYYY-MM'), s.target_pctl, s.floor_pctl, s.ceil_pctl
+  `).catch(() => [])
+  // mes[property_id][ym] = { med, flo, cei, n }
+  const mes = new Map<string, Map<string, { med: number; flo: number; cei: number; n: number }>>()
+  for (const m of mesRows) {
+    if (!mes.has(m.property_id)) mes.set(m.property_id, new Map())
+    mes.get(m.property_id)!.set(m.ym, { med: m.med_guest, flo: m.flo_guest, cei: m.cei_guest, n: m.n })
+  }
 
   const results: any[] = []
 
@@ -177,9 +211,15 @@ export async function POST(req: NextRequest) {
     // Conversión huésped → BASE de Smoobu: el canal suma su margen encima de la base,
     // así que base = precio_huésped / markup. El mercado (flo/cei) también se pasa a base.
     const markup = Number(r.channel_markup) > 1 ? Number(r.channel_markup) : 1.16
-    const baseTarget = Math.round(r.recommended_guest / markup)
-    const floorBase = Math.round(r.floor_guest / markup)
-    const ceilBase = Math.round(r.ceil_guest / markup)
+    // Factor demanda×calidad (ocupación + own_score vs mercado), independiente del nivel de mercado:
+    // recommended = med_global × factor ⇒ factor = recommended / med_global. Se reaplica al mercado
+    // del mes elegido. Si no hay med_global, factor=1 (neutro).
+    const dqFactor = r.med_guest_global > 0 ? r.recommended_guest / r.med_guest_global : 1
+    // Suelo/techo/base GLOBALes (fallback y suelo de evento), en términos BASE de Smoobu.
+    const baseTargetGlobal = Math.round(r.recommended_guest / markup)
+    const floorBaseGlobal = Math.round(r.floor_guest / markup)
+    const ceilBaseGlobal = Math.round(r.ceil_guest / markup)
+    const mesProp = mes.get(r.property_id)
 
     const ops: { dates: string[]; daily_price: number }[] = []
     const audit: { rate_date: string; old_price: number | null; new_price: number }[] = []
@@ -189,11 +229,26 @@ export async function POST(req: NextRequest) {
       const info = plRates[date]
       if (!info || !info.available) continue            // sólo fechas disponibles
       const old = info.price != null ? Math.round(info.price) : null
-      // Cadena de topes (en términos BASE): mercado → evento/hueco → cambio máx. por
-      // aplicación → min/max del propietario (autoridad FINAL — incluye el suelo de coste).
-      let target = clamp(baseTarget, floorBase, ceilBase)
-      // Premium por evento (Semana Santa/Feria/…): puede superar el techo del mercado normal.
-      if (r.events_enabled) target = Math.round(target * Math.max(eventFactor(date), autoEv.get(date) ?? 1))
+      // Cadena de topes (en términos BASE): mercado (por TEMPORADA si hay datos del mes) →
+      // evento/hueco → cambio máx. por aplicación → min/max del propietario (autoridad FINAL).
+      const ym = date.slice(0, 7)
+      const mb = mesProp?.get(ym)
+      const useMonth = !!mb && mb.n >= MIN_BUCKET
+      // Mercado del mes (estacional) si hay suficientes comps; si no, el global de hoy.
+      const baseD = useMonth ? Math.round((mb!.med * dqFactor) / markup) : baseTargetGlobal
+      const floorD = useMonth ? Math.round(mb!.flo / markup) : floorBaseGlobal
+      const ceilD = useMonth ? Math.round(mb!.cei / markup) : ceilBaseGlobal
+      let target = clamp(baseD, floorD, ceilD)
+      // Premium por evento. Si usamos el mes (mercado fechado ya refleja el evento) NO multiplicamos
+      // (evita doble conteo), pero garantizamos ≥ global×factor como suelo de seguridad. En fallback,
+      // comportamiento idéntico al anterior (global × eventFactor, puede superar el techo normal).
+      if (r.events_enabled) {
+        const ev = Math.max(eventFactor(date), autoEv.get(date) ?? 1)
+        if (ev > 1) {
+          const globalEvent = Math.round(clamp(baseTargetGlobal, floorBaseGlobal, ceilBaseGlobal) * ev)
+          target = useMonth ? Math.max(target, globalEvent) : globalEvent
+        }
+      }
       // Descuento de hueco: noche suelta libre entre dos reservas (difícil de vender).
       if (Number(r.gap_discount_pct) > 0) {
         const prevD = fmt(new Date(new Date(date).getTime() - 86400000))
@@ -245,8 +300,9 @@ export async function POST(req: NextRequest) {
 
     results.push({
       property: r.property_id,
-      recommended_guest: r.recommended_guest, base_target: baseTarget,
-      bounds: { floor_base: floorBase, ceil_base: ceilBase, min: r.min_price, max: r.max_price },
+      recommended_guest: r.recommended_guest, base_target: baseTargetGlobal,
+      meses_con_mercado: mesProp ? [...mesProp.entries()].filter(([, v]) => v.n >= MIN_BUCKET).map(([k]) => k) : [],
+      bounds: { floor_base: floorBaseGlobal, ceil_base: ceilBaseGlobal, min: r.min_price, max: r.max_price },
       dates_con_cambio: ops.length, written, sample: audit.slice(0, 3),
     })
   }

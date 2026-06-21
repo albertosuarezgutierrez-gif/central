@@ -6,11 +6,12 @@ export const runtime = 'nodejs'
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@/lib/supabase'
-import Stripe from 'stripe'
+import { createStripe } from '@central/core-payments'
+import type { Stripe } from '@central/core-payments'
 import { tgAlert } from '@/lib/telegram'
 
 export async function POST(req: NextRequest) {
-  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-10-16' as never })
+  const stripe = createStripe()
   const sig    = req.headers.get('stripe-signature') ?? ''
   const secret = process.env.STRIPE_WEBHOOK_SECRET_PROPINAS ?? ''
 
