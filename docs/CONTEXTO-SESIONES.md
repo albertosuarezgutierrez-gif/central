@@ -16,6 +16,15 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔍 AUDITORÍA LIGERA — 21/06/2026** (`docs/AUDITORIA-2026-06.md` addendum) — **estado SANO.**
+  - Rango: 63 commits desde auditoría-18/06 hasta `0c2244a`. Verde: lockfile OK, radiografía OK, 0 refs `@iarest/`.
+  - **Arreglados en el acto:** (A1) `ialimp-maestro` describía Concursos como propio de ialimp tras PR #403 →
+    skill corregida; (B1) `plataforma-maestro` no mencionaba Concursos → añadida entrada; (B2) dep muerta
+    `@central/module-concursos` en ialimp (sin imports) → eliminada de `package.json` + `next.config.ts`;
+    (B3) MATRIZ.md no listaba `plataforma` ni `rrhh` → añadidas.
+  - **Pendiente manual Alberto (no urgente):** `SMTP_*`/`RESEND_API_KEY` en proyecto Vercel **plataforma** para
+    que los emails de avisos y recordatorio de Concursos funcionen.
+
 - **🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona — 20/06/2026**
   - **Causa:** el feed PLACSP a menudo NO trae `provincia` (0/57 de las en-plazo la tenían), pero el
     buscador filtraba en duro `provincia ILIKE …` → cualquier CCAA/provincia seleccionada = 0 resultados.

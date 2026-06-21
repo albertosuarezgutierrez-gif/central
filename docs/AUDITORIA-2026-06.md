@@ -1,5 +1,44 @@
 # Auditoría con contexto — monorepo `central` (junio 2026)
 
+---
+
+## Auditoría LIGERA — 21/06/2026
+
+**Rango:** desde AUDITORIA-2026-06-18.md (18/06) hasta HEAD (`0c2244a`). 63 commits.
+**Modo:** ligero (sin typecheck ni tests pesados).
+**Estado final:** ✅ Verde en estructura. 1 bug de skill arreglado en el acto.
+
+| Bloque | Estado |
+|---|---|
+| Lockfile sync | ✅ OK (`pnpm-lock.yaml` + `package-lock.json` por app) |
+| Radiografía de estructura | ✅ Al día (generada 2026-06-20) |
+| Guardián de scope (`@iarest/`) | ✅ 0 referencias |
+| `transpilePackages` vs deps (ialimp) | 🟡 `module-concursos` era dep muerta → **eliminado** |
+| Skills-maestro vs código | 🔴 `ialimp-maestro` describía Concursos como si viviera en ialimp → **corregido** |
+| `plataforma-maestro` vs código | 🟡 No mencionaba Concursos (movido el 19/06) → **añadido** |
+| `MATRIZ.md` vs apps reales | 🟡 Faltaban `plataforma` y `rrhh` en la tabla de verticales → **añadidos** |
+
+### 🔴 A1. `ialimp-maestro` — Concursos en ialimp (ARREGLADO)
+La skill seguía describiendo el módulo de Concursos como funcionalidad propia de ialimp, incluyendo rutas API y crons que fueron eliminados en PR #403 (19/06). Una sesión que siguiera esa skill estaría buscando código que ya no existe en ialimp.
+- **Arreglado:** skill actualizada — sección Concursos reemplazada por nota de MOVIDO + referencia a `plataforma-maestro`.
+
+### 🟡 B1. `plataforma-maestro` — Concursos no documentado (ARREGLADO)
+La skill no mencionaba el módulo de Concursos que recibió de ialimp (PR #403), ni el pendiente de SMTP.
+- **Arreglado:** añadida entrada en "Dónde vive cada cosa" con scope, módulo, crons y acción manual SMTP pendiente.
+
+### 🟡 B2. `ialimp` — dep muerta `@central/module-concursos` (ARREGLADO)
+Tras el puerto de Concursos a plataforma (PR #403), ialimp mantenía `@central/module-concursos` en `package.json` y `transpilePackages` sin ningún import en su código.
+- **Arreglado:** eliminado de `apps/ialimp/package.json` y `apps/ialimp/next.config.ts`.
+
+### 🟡 B3. `MATRIZ.md` — faltaban `plataforma` y `rrhh` (ARREGLADO)
+La tabla de verticales de MATRIZ.md solo listaba ia-rest, sivra e ialimp. Tanto `apps/plataforma` como `apps/rrhh` existen desde hace semanas con sus proyectos Vercel propios.
+- **Arreglado:** añadidas ambas verticales al árbol y a la tabla.
+
+### 🟢 Info — Pendiente manual de Alberto (no urgente)
+- `SMTP_*`/`RESEND_API_KEY` en el proyecto Vercel **plataforma**: necesario para que los crons de avisos y recordatorio de cierre de Concursos envíen emails (documentado en `plataforma-maestro` y `apps/plataforma/CLAUDE.md`).
+
+---
+
 > Auditoría **con contexto** (no genérica) tras la reestructuración: rename `@iarest/*`→`@central/*`,
 > migración de la BD de ia-rest al Supabase compartido, `file:`→`workspace:*`, modularización en `packages/*`.
 > Alcance: código + flujo + estructura + infra real (Supabase/Vercel) + tests. Fecha: 2026-06-12.
