@@ -16,6 +16,11 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🌐 URLs de producción (no perder) — 16/06/2026**
+  - **plataforma** (web principal: dashboard + chat 🤖 Agente IA en `/agente`): **`https://plataforma-ten-flame.vercel.app`** (login `/login`).
+  - **sivra** (motor de pricing dinámico + endpoints `/api/pricing/*`, `/api/mercado/*`, etc.): `housesevillana.vercel.app` (la pantalla de login es la verde "SIVRA").
+  - Son **apps distintas** (no confundir): el chat del agente está en *plataforma*; aplicar precios a Smoobu se hace por el endpoint de *sivra* (logueado o por el cron con `CRON_SECRET`).
+
 - **🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito — 21/06/2026**
   - **Idea de Alberto:** avisar al camarero con tiempo de un cambio de plato (sale carne caliente →
     desbarasar y montar el cubierto/plato ANTES de que salga, para que no se enfríe esperando).
