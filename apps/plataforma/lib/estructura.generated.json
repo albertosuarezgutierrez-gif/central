@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T08:03:26Z",
+  "generadoEn": "2026-06-21T08:13:55Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2479,6 +2479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🕵️ ia-rest: inteligencia competitiva (comandiavoz.com)",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🌐 URLs de producción (no perder)",
       "fecha": "16/06/2026"
     },
@@ -2532,10 +2536,6 @@
     },
     {
       "titulo": "📱 RESPONSIVE COMPLETO",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
       "fecha": "18/06/2026"
     }
   ],
