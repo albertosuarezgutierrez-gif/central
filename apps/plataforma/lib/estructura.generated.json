@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T05:58:43Z",
+  "generadoEn": "2026-06-21T08:03:26Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2479,6 +2479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🌐 URLs de producción (no perder)",
+      "fecha": "16/06/2026"
+    },
+    {
       "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
       "fecha": "21/06/2026"
     },
@@ -2532,10 +2536,6 @@
     },
     {
       "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🔍 AUDITORÍA PROFUNDA SEMANAL",
       "fecha": "18/06/2026"
     }
   ],

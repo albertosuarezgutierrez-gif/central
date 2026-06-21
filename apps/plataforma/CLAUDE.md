@@ -6,6 +6,10 @@ Un dueño con varios negocios de sectores distintos inicia sesión aquí y ve **
 
 Jerarquía: `Cuenta → Sociedad (CIF) → Negocio (sector)`.
 
+> **🌐 URL producción (web principal):** **`https://plataforma-ten-flame.vercel.app`** (login en `/login`).
+> Es el dashboard + el **chat 🤖 Agente IA** (`/agente`). OJO: **sivra** (motor de pricing dinámico y sus
+> endpoints `/api/pricing/*`) es **otra app**, en `housesevillana.vercel.app` — no confundir dominios.
+
 ## Stack
 Next.js 15 · React 19 · Prisma 5 · jose/bcryptjs (JWT, cookie `plataforma_session`) · sin Tailwind (CSS variables).
 
