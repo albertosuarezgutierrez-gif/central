@@ -6,31 +6,37 @@ import { aiSearch } from '@/lib/ai-client'
 export const runtime = 'nodejs'
 export const maxDuration = 60
 
-const GITHUB_TOKEN  = process.env.GITHUB_TOKEN!
+const LANDING_API = 'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts'
+
+function githubToken(): string {
+  const t = process.env.GITHUB_TOKEN
+  if (!t) throw new Error('Falta GITHUB_TOKEN en el entorno de sivra (necesario para leer y commitear la landing de housesevillana).')
+  return t
+}
 
 async function fetchLanding() {
-  const res = await fetch(
-    'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts',
-    { headers: { Authorization: `token ${GITHUB_TOKEN}`, 'User-Agent': 'roi-intranet-seo' } }
-  )
-  const d = await res.json()
+  const res = await fetch(LANDING_API, {
+    headers: { Authorization: `token ${githubToken()}`, 'User-Agent': 'roi-intranet-seo', Accept: 'application/vnd.github+json' },
+  })
+  const d = await res.json().catch(() => ({}))
+  if (!res.ok || typeof d?.content !== 'string') {
+    const detalle = typeof d?.message === 'string' ? d.message : `HTTP ${res.status}`
+    throw new Error(`No se pudo leer la landing desde GitHub (${res.status}): ${detalle}. Revisa GITHUB_TOKEN y su acceso al repo house-sevillana-landing.`)
+  }
   return { content: Buffer.from(d.content, 'base64').toString('utf-8'), sha: d.sha as string }
 }
 
 async function pushToGitHub(content: string, sha: string) {
-  const res = await fetch(
-    'https://api.github.com/repos/albertosuarezgutierrez-gif/house-sevillana-landing/contents/app/route.ts',
-    {
-      method: 'PUT',
-      headers: { Authorization: `token ${GITHUB_TOKEN}`, 'Content-Type': 'application/json', 'User-Agent': 'roi-intranet-seo' },
-      body: JSON.stringify({
-        message: `chore(seo): actualización automática [${new Date().toISOString().split('T')[0]}]`,
-        content: Buffer.from(content).toString('base64'),
-        sha,
-      }),
-    }
-  )
-  if (!res.ok) throw new Error(`GitHub push failed: ${await res.text()}`)
+  const res = await fetch(LANDING_API, {
+    method: 'PUT',
+    headers: { Authorization: `token ${githubToken()}`, 'Content-Type': 'application/json', 'User-Agent': 'roi-intranet-seo' },
+    body: JSON.stringify({
+      message: `chore(seo): actualización automática [${new Date().toISOString().split('T')[0]}]`,
+      content: Buffer.from(content).toString('base64'),
+      sha,
+    }),
+  })
+  if (!res.ok) throw new Error(`GitHub push failed (${res.status}): ${await res.text()}`)
 }
 
 function extractSeoParams(raw: string) {
