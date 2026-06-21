@@ -16,6 +16,29 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **📝 ia-rest BLOG SEO: timeout 504 arreglado (modelo rápido 8B) + botón "Generar ahora" + acceso /super restaurado — PR #302 (mergeado 21/06)**
+  A raíz del aviso de Telegram "❌ Error generando artículo blog: NIM falló: NVIDIA timeout".
+  - **Causa raíz:** `/api/cron/blog-seo` se corta a **~60s** (el plan de Vercel **NO respeta `maxDuration=300`** en el
+    proyecto ia-rest, aunque sí en plataforma). Generar ~1800 palabras con `llama-3.3-70b` (no-stream) tarda >60s →
+    Vercel mata la función con **504** (devuelve texto plano, no JSON → el front petaba al parsear "Unexpected token 'A'…").
+    El primer intento (PR #254: timeout interno 110s + reintento + `maxDuration=300`) **no servía**: la plataforma corta antes.
+  - **Fix (PR #302, en producción):** generar con el **modelo rápido `meta/llama-3.1-8b-instruct`** (~30-40s),
+    `max_tokens` 3000, timeout interno 45s (salta antes del corte de Vercel → fallo = JSON limpio, no 504). `callAI`
+    acepta un 6º arg `model?` (sobrescribe el modelo NIM por llamada) y, si se fuerza `model`, **salta la pasarela
+    central** (que usa su modelo por defecto e ignoraría el 8B). Verificado en preview: "va ok". *Tradeoff:* 8B < 70B en
+    calidad; el artículo es **borrador** que se revisa. Para recuperar 70B: subir el límite de función en Vercel (plan) o
+    job en background.
+  - **Botón "⚡ Generar ahora" (PR #283):** el tab Blog de `/super` (`BlogSuperTab` en `app/super/page.tsx`) no tenía
+    generación manual (solo el cron de los lunes). Llama a `/api/cron/blog-seo` con `x-ia-session` (sin exponer `CRON_SECRET`).
+  - **🚨 Hueco de la migración Fase A2 (credenciales `personal`):** en la BD unificada (`wswbehlcuxqxyinousql`, schema
+    `iarest`), `personal` tenía **`email` y `password_hash` en NULL en TODAS las filas** → el login por email de
+    `super_admin` daba 401 con cualquier clave. **Restaurada** la fila super_admin (`alberto.suarez.gutierrez@gmail.com`).
+    **PENDIENTE (verificar, no urgente):** owner/camarero/cocina/running/jefe_sala/gestor siguen con email/password NULL;
+    probablemente entran por **PIN/código** (no por email) → seguramente no roto, pero conviene confirmar antes de migrar.
+  - **Datos viejos NO migrados (por diseño, A2 = solo-esquema):** la BD vieja `efncqyvhniaxsirhdxaa` conserva 8
+    `blog_borradores` (TODOS `publicado` → **vivos como ficheros** `app/blog/<slug>/page.tsx`, se sirven en iarest.es/blog),
+    395 leads y 142 comandas. La unificada arranca vacía → por eso `/super → Blog` dice "No hay artículos". Proyecto viejo a **jubilar**.
+
 - **🧹 Limpieza de PRs draft abiertos (merge masivo) + fix test destino — 21/06/2026**
   Petición de Alberto ("mergea todo y prueba todo"). Se cerraron los 10 PRs draft pendientes de
   otras sesiones a estado terminal: **mergeados** #416 (memoria Groq), #410 (competencia ia-rest +
