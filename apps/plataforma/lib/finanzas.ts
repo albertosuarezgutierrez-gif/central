@@ -457,18 +457,17 @@ export async function getResumenFinanciero(
     else if (txt.includes('LIBERTY')) nombre = 'Liberty'
     else if (txt.includes('PLUS ULTRA')) nombre = 'Plus Ultra'
     else if (txt.includes('SANITAS') || txt.includes('ADESLAS') || txt.includes('DKV') || txt.includes('ASISA')) nombre = 'Salud'
-    // Plataformas/agregadores que pagan en nombre de varias compañías
-    else if (txt.includes('M00171')) nombre = 'Plataforma (m00171)'
-    else if (txt.includes('8/92361')) nombre = 'Plataforma (8/92361)'
-    else if (/LIQ\.COMISIONES|LIQ\. COMISIONES/.test(txt)) nombre = 'Liq. comisiones'
-    else if (txt.includes('FRA-COMIS')) nombre = 'Fra-comisiones'
-    else if (/^COMISIONES /.test(txt)) nombre = 'Comisiones mensuales'
-    else if (txt.includes('PD005')) nombre = 'Pd005 agente'
-    else if (txt.includes('REMSALDO')) nombre = 'Remsaldo'
-    else if (txt.includes('M1454')) nombre = 'M1454'
-    else if (/LIQ\.?\s*SALDO CUENTA/.test(txt)) nombre = 'Liq. saldo cuenta'
-    else if (/PAGO SALDO CTA/.test(txt)) nombre = 'Pago saldo cta'
-    else if (/LIQUIDACION DE COMISIONES/.test(txt)) nombre = 'Liquidación comisiones'
+    // Plataformas/agregadores — compañía confirmada por Alberto
+    else if (txt.includes('M00171') || txt.includes('8/92361')) nombre = 'Occident'
+    else if (/LIQ\.COMISIONES|LIQ\. COMISIONES/.test(txt)) nombre = 'Mapfre'
+    else if (txt.includes('FRA-COMIS')) nombre = 'CSR/Caser'
+    else if (/^COMISIONES /.test(txt)) nombre = 'Pelayo'
+    else if (txt.includes('REMSALDO')) nombre = 'Aegon'
+    else if (txt.includes('M1454')) nombre = 'M1454 (por identificar)'
+    else if (txt.includes('PD005')) nombre = 'Pd005 (por identificar)'
+    else if (/LIQ\.?\s*SALDO CUENTA/.test(txt)) nombre = 'AXA'
+    else if (/LIQUIDACION DE COMISIONES/.test(txt)) nombre = 'Reale'
+    else if (/PAGO SALDO CTA/.test(txt)) nombre = 'Generali'
     compMap.set(nombre, (compMap.get(nombre) ?? 0) + Number(r.importe))
   }
   const porCompania = [...compMap.entries()]
