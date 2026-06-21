@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T20:20:13Z",
+  "generadoEn": "2026-06-21T20:21:25Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -2485,6 +2485,14 @@
   ],
   "novedades": [
     {
+      "titulo": "🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "🔧 FIX blog-seo: modelo rápido 8B para caber en ~60s Vercel",
+      "fecha": "18/06/2026"
+    },
+    {
       "titulo": "🔍 AUDITORÍA DIARIA LIGERA",
       "fecha": "20/06/2026"
     },
@@ -2535,14 +2543,6 @@
     {
       "titulo": "🌐 URLs de producción (no perder)",
       "fecha": "16/06/2026"
-    },
-    {
-      "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
-      "fecha": "21/06/2026"
-    },
-    {
-      "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
-      "fecha": "20/06/2026"
     }
   ],
   "saludRepo": {

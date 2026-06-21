@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T20:20:13Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T20:21:25Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -149,6 +149,8 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (18/06/2026) 🗂️ CONTROL DE FACTURAS + FIX BANCA CORREDURÍA
+- (18/06/2026) 🔧 FIX blog-seo: modelo rápido 8B para caber en ~60s Vercel
 - (20/06/2026) 🔍 AUDITORÍA DIARIA LIGERA
 - (21/06/2026) 🔍 AUDITORÍA LIGERA
 - (21/06/2026) 🔎 AUDITORÍA PROFUNDA SEMANAL
@@ -157,6 +159,4 @@
 - (21/06/2026) 🔎 Agente SEO de housesevillana.es (sivra) — Bloque A (paridad con ia-rest sin Google)
 - (21/06/2026) 💶 FINANZAS — Reconciliación BBVA 2025 con Modelo 190 IRPF + correcciones masivas BD
 - (21/06/2026) 🧹 CONCURSOS (plataforma) — auto-saneo de provincia en la ingesta + skills actualizadas
-- (21/06/2026) 🎯 CONCURSOS (plataforma) — filtro por zona ESTRICTO, probado en vivo
-- (21/06/2026) 🎯 CONCURSOS (plataforma) — filtro por ZONA fiable vía CÓDIGO POSTAL + desplegable de provincia
 
