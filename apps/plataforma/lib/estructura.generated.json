@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-21T07:58:41Z",
+  "generadoEn": "2026-06-21T08:16:59Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -808,7 +808,7 @@
     "kds": {
       "ia-rest": {
         "presente": true,
-        "evidencias": 26
+        "evidencias": 27
       },
       "ialimp": {
         "presente": false,
@@ -1687,6 +1687,7 @@
       "/api/portal-proveedor/[token]",
       "/api/portal/stock-central",
       "/api/portal/transferencias",
+      "/api/preaviso",
       "/api/print",
       "/api/produccion/cocineros",
       "/api/produccion/perfil",
@@ -2302,6 +2303,7 @@
       "movimientos_tesoreria",
       "pedidos_online",
       "pin_attempts",
+      "preavisos",
       "productos_86",
       "propinas",
       "prospeccion_apify_runs",
@@ -2808,7 +2810,7 @@
     "packages": 24,
     "capacidades": 23,
     "skills": 16,
-    "apis": 918,
+    "apis": 919,
     "modulosInfrautilizados": 0,
     "oportunidadesPortar": 21,
     "reimplementaciones": 0
