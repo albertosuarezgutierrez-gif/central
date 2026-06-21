@@ -48,11 +48,13 @@
     `BridgeInterface.setPreavisoSesion(...)`, `MainActivity` set `appVisible` en onResume/onPause,
     manifest con permiso `FOREGROUND_SERVICE_SPECIAL_USE`. La WebView pasa las credenciales
     Supabase ACTUALES (no hardcode). **Pendiente: build+firma+publicar APK (v13/v3.1) por Alberto.**
-  - **🔴 HALLAZGO (pre-existente):** `BridgeService.kt` apunta al proyecto Supabase viejo
-    `efncqyvhniaxsirhdxaa` (anon key hardcodeada), que YA NO tiene el schema `iarest`. Verificado
-    por MCP: la app vive en `wswbehlcuxqxyinousql` ("Ingresos Y gastos Smoobu", BD unificada,
-    schema `iarest`, donde están restaurantes/comandas/preavisos + mis columnas). → **La impresión
-    por el bridge nativo probablemente está ROTA en prod.** Acción de Alberto (fuera de alcance del PR).
+  - **✅ HALLAZGO (pre-existente) ARREGLADO:** `BridgeService.kt` tenía hardcodeado el proyecto
+    Supabase viejo `efncqyvhniaxsirhdxaa` (sin schema `iarest` ya) para el Realtime de impresión.
+    La app vive en `wswbehlcuxqxyinousql` (BD unificada, schema `iarest`). Arreglado: la WebView
+    inyecta URL/anon/schema actuales vía `IaRestBridge.setSupabase` (desde `AppBadge`, todas las
+    páginas privadas); sin creds → omite Realtime y sigue por polling (sin regresión). Llega en APK v3.1.
+  - **📋 Acciones de Alberto:** `docs/ACCIONES-ALBERTO-preaviso.md` (merge #414, activar toggle,
+    build+firma+release APK v3.1, regenerar 3 PDF). BD y web ya hechos/automáticos.
   - **Texto PDF manuales:** `docs/manuals-texto-preaviso.md` (camarero/cocina/owner) listo para
     pegar al regenerar los PDF (binarios, no los toca Claude).
   - **⚠️ Aclaración BD:** ia.rest en PROD usa `wswbehlcuxqxyinousql` (schema `iarest`), NO el

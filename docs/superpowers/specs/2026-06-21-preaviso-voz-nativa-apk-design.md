@@ -19,14 +19,15 @@
 > **Credenciales NO hardcodeadas** (decisión): la WebView las inyecta desde las env vars, para no
 > repetir el bug del `BridgeService` (ver hallazgo abajo).
 
-## ⚠️ Hallazgo colateral (pre-existente, NO de este PR) — acción de Alberto
-`BridgeService.kt` tiene **hardcodeado el proyecto Supabase `efncqyvhniaxsirhdxaa`** (URL + anon
+## ✅ Hallazgo colateral (pre-existente) — ARREGLADO en este PR
+`BridgeService.kt` tenía **hardcodeado el proyecto Supabase `efncqyvhniaxsirhdxaa`** (URL + anon
 key) para el Realtime de impresión. Verificado por MCP: ese proyecto **ya no tiene el schema
-`iarest`** (la app migró a la BD unificada `wswbehlcuxqxyinousql`, "Ingresos Y gastos Smoobu",
-donde SÍ están `iarest.restaurantes/comandas/preavisos`). → **La impresión por el bridge nativo
-probablemente está ROTA en producción.** Arreglo recomendado: que el `BridgeService` reciba la
-URL+anon key desde la WebView (igual que ahora hace la voz), o actualizar las constantes al
-proyecto unificado. Fuera del alcance de este PR (es impresión, no preaviso).
+`iarest`** (la app migró a la BD unificada `wswbehlcuxqxyinousql`). → el Realtime de impresión
+quedaba colgado (la impresión seguía por polling HTTP cada 5s, pero sin instantaneidad).
+**Arreglado:** se eliminaron las constantes obsoletas; ahora la WebView inyecta la URL/anon/schema
+ACTUALES vía `IaRestBridge.setSupabase` (llamado desde `AppBadge`, presente en todas las páginas
+privadas → cubre el dispositivo master). Si aún no hay credenciales, el bridge omite el Realtime
+y sigue con el polling (sin regresión). Llega en la misma APK v3.1.
 
 ### Versionado original (referencia)
 

@@ -36,6 +36,14 @@ class BridgeInterface(private val ctx: Context) {
     fun getToken(): String =
         BridgeService.getToken(ctx) ?: ""
 
+    // La WebView inyecta las credenciales Supabase actuales (env vars) para que el
+    // Realtime de impresión no dependa de un proyecto hardcodeado obsoleto.
+    @JavascriptInterface
+    fun setSupabase(url: String, anon: String, schema: String) {
+        if (url.isBlank() || anon.isBlank()) return
+        BridgeService.setSupabase(ctx, url, anon, schema)
+    }
+
     @JavascriptInterface
     fun stop() {
         ctx.stopService(Intent(ctx, BridgeService::class.java))
