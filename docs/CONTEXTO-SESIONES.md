@@ -16,6 +16,23 @@
 
 ## 📌 Estado actual (lo más reciente arriba)
 
+- **🔎 AUDITORÍA PROFUNDA SEMANAL — 21/06/2026** (rama `claude/inspiring-franklin-ncvw2c`)
+  - **Bloque 1 (Integridad):** lockfile ✅, radiografía ✅, guardián 21/21 ✅.
+  - **Bloque 2 (Typecheck 5 apps):** todas a 0 errores. Fix aplicado: `apps/plataforma/types/pdf-parse.d.ts`
+    no se copió al portar el agente de concursos → error TS7016 en `lib/concursos.ts:26`. Copiado de ialimp.
+  - **Bloque 3 (Tests):** 86 tests verdes (rrhh 25 + packages 40 + guardián 21).
+  - **Bloque 4 (Seguridad Supabase):** 0 ERRORs (mantenido). Nuevos: 3 buckets con listing público
+    (`documentos-propiedad`, `property-access-files`, `propuestas-leads`). `concursos_radar_criterios`
+    sigue sin aplicarse → cron `concursos-radar` de plataforma fallará en runtime.
+  - **Bloque 5 (Deps):** 16 vulns (5 high), subida desde 6/2h pasada. Nuevas high: `vite`, `fast-xml-parser`, `nodemailer`.
+  - **Bloque 6 (Vercel):** 4 proyectos READY en producción. rrhh no visible en el equipo (personal account).
+  - **Bloque 7 (Docs):** SKILLS.md y commands en sync.
+  - **Fix adicional:** `@central/module-concursos` huérfano en ialimp (dep + transpilePackages) → eliminado.
+  - **Pendientes manuales de Alberto:** (1) Aplicar SQL `concursos_radar_criterios` en Supabase.
+    (2) Deshabilitar listing en 4 buckets públicos. (3) Añadir SMTP_* a proyecto Vercel plataforma.
+    (4) Actualizar `fast-xml-parser`/`nodemailer` en ialimp + override `vite`.
+  - Ver addendum 21/06 en `docs/AUDITORIA-2026-06.md`.
+
 - **🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona — 20/06/2026**
   - **Causa:** el feed PLACSP a menudo NO trae `provincia` (0/57 de las en-plazo la tenían), pero el
     buscador filtraba en duro `provincia ILIKE …` → cualquier CCAA/provincia seleccionada = 0 resultados.
