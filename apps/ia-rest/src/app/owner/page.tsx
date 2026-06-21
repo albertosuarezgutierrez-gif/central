@@ -1681,6 +1681,7 @@ function RestauranteTab() {
   const [personal, setPersonal] = useState<{ id: string; nombre: string; rol: string }[]>([])
   const [responsableComprasId, setResponsableComprasId] = useState<string>('')
   const [preavisoActivo, setPreavisoActivo] = useState(false)
+  const [preavisoAutoMin, setPreavisoAutoMin] = useState(0)
   const [logoUploading, setLogoUploading] = useState(false)
   const [logoMsg, setLogoMsg] = useState('')
   const logoInputRef = useRef<HTMLInputElement>(null)
@@ -1709,6 +1710,7 @@ function RestauranteTab() {
         })
         setResponsableComprasId(rd.restaurante.responsable_compras_id ?? '')
         setPreavisoActivo(!!rd.restaurante.preaviso_activo)
+        setPreavisoAutoMin(Number(rd.restaurante.preaviso_auto_min ?? 0))
       }
       setHealth(hd)
       setPersonal((pd.camareros ?? pd.personal ?? []).map((p: { id: string; nombre: string; rol: string }) => ({
@@ -1743,6 +1745,18 @@ function RestauranteTab() {
       body: JSON.stringify({ preaviso_activo: valor }),
     })
     if (!r.ok) setPreavisoActivo(!valor)  // revertir si falla
+  }
+
+  const guardarPreavisoAutoMin = async (valor: number) => {
+    const limpio = Number.isFinite(valor) && valor > 0 ? Math.round(valor) : 0
+    const previo = preavisoAutoMin
+    setPreavisoAutoMin(limpio)  // optimista
+    const r = await fetch('/api/owner/restaurante', {
+      method: 'PATCH',
+      headers: { ...sh(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ preaviso_auto_min: limpio }),
+    })
+    if (!r.ok) setPreavisoAutoMin(previo)  // revertir si falla
   }
 
   const uploadLogo = async (file: File) => {
@@ -1885,6 +1899,34 @@ function RestauranteTab() {
             ? '✓ Preaviso activo — el botón 📣 aparece en el KDS de cada comanda.'
             : 'Desactivado — el botón de preaviso no se muestra en el KDS.'}
         </div>
+
+        {preavisoActivo && (
+          <div style={{ marginTop: 16, paddingTop: 16, borderTop: `1px solid ${C.rule}` }}>
+            <label style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
+              <span style={{ fontFamily: SN, fontSize: 14, color: C.ink }}>
+                Disparo automático tras
+              </span>
+              <input
+                type="number"
+                min={0}
+                max={120}
+                value={preavisoAutoMin || ''}
+                placeholder="0"
+                onChange={e => setPreavisoAutoMin(Number(e.target.value))}
+                onBlur={e => guardarPreavisoAutoMin(Number(e.target.value))}
+                style={{ width: 72, padding: '6px 8px', borderRadius: 6, border: `1px solid ${C.rule}`, fontFamily: SN, fontSize: 14, textAlign: 'center' }}
+              />
+              <span style={{ fontFamily: SN, fontSize: 14, color: C.ink }}>
+                min en cocina
+              </span>
+            </label>
+            <div style={{ marginTop: 8, fontFamily: SM, fontSize: 11, color: C.ink3 }}>
+              {preavisoAutoMin > 0
+                ? `✓ La cocina recibirá el preaviso sola cuando una comanda lleve ${preavisoAutoMin} min sin servir (además del botón 📣 manual).`
+                : 'En 0 = solo manual. Pon los minutos para que el preaviso salte solo por tiempo.'}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Datos fiscales Verifactu */}

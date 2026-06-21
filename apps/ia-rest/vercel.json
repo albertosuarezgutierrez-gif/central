@@ -25,6 +25,10 @@
       "schedule": "*/2 * * * *"
     },
     {
+      "path": "/api/cron/preavisos-auto",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/cobro-inactividad",
       "schedule": "*/5 * * * *"
     },
