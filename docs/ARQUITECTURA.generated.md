@@ -1,6 +1,6 @@
 # 🗺️ Arquitectura viva — casa de marcas `central`
 
-> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-20T06:52:46Z). NO editar a mano.
+> **Generado automáticamente** por `scripts/auditar-estructura.mjs` (2026-06-21T02:17:02Z). NO editar a mano.
 > Se regenera en cada push (`.github/workflows/auditoria.yml`). Es el mapa que una sesión nueva lee del repo.
 > Descripciones curadas, agentes y glosario: `apps/plataforma/lib/estructura.ts`. Visual: panel `/admin` → 🗺️ Estructura.
 
@@ -13,7 +13,7 @@
 - **Tablas (81):** arqueos_caja_empleado, beo_eventos, camareros, clientes_fiscales, cobro_config, comanda_items, comandas, config_horario, config_tienda, contract_acceptances, documentos_escaneados, facturas_cliente, feedback_visita, formularios_demo_recibidos, iarest.checklist_ejecuciones, iarest.checklist_plantillas, iarest.produccion_tareas, iarest.produccion_tiempos_estandar, iarest.recibos_digitales, incidencias_sistema, inventario_menaje, inventario_menaje_evento, leads, leads_eventos, leads_unsubscribes, leads_web_tracking, manual_voz_novedades, marchar_log, marketing_consentimientos, materiales…
 - **Rutas API:** 481
 ### ialimp
-- **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-storage, module-concursos, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
+- **Módulos que usa:** core-ai, core-email, core-firma, core-fiscal, core-identity, core-payments, core-push, core-storage, module-contabilidad, module-crm, module-documental, module-materiales, module-proveedores, module-rrhh
 - **Capacidades:** Equipo limpiadoras, Agenda / auto-asignación, CRM / leads / cotizador, RRHH / equipo, Almacén / stock / ASN, Proveedores / compras, Contabilidad, Facturación / VeriFactu, Escáner / OCR, Informes, Notificaciones (push), Asistente / copiloto IA
 - **Tablas (31):** apuntes_recurrentes, auth_rate_limit, biblioteca_documentos, catalogo_tarifas, cliente_auth_tokens, cliente_consentimientos, concursos, concursos_licitaciones, concursos_perfil_empresa, concursos_radar_anuncios, concursos_seguidos, cuentas, documentos_contables, documentos_limpiadora, firma_otps_limpiadora, firmas_limpiadora, ingresos_manuales, mailing_campanas, mailing_envios, mailing_eventos, mailing_pasos, mailing_prospectos, negocios, partes_trabajo, protocolo_fotos, protocolo_items, protocolos, recordatorios_impagos, sociedades, stock_consumos…
 - **Rutas API:** 180
@@ -68,7 +68,7 @@
   - Lo usan: rrhh
   - Depende de: —
 - **module-concursos** (module) → `@central/module-concursos`
-  - Lo usan: ialimp, plataforma
+  - Lo usan: plataforma
   - Depende de: —
 - **module-contabilidad** (module) → `@central/module-contabilidad`
   - Lo usan: ia-rest, ialimp, plataforma, sivra
@@ -149,6 +149,7 @@
 - ⚠️ **Notificaciones (push)**: en ia-rest, ialimp, rrhh; falta en sivra.
 
 ## Novedades recientes (de `docs/CONTEXTO-SESIONES.md`)
+- (21/06/2026) 🔎 AUDITORÍA PROFUNDA SEMANAL
 - (20/06/2026) 🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona
 - (19/06/2026) 🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)
 - (19/06/2026) 🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad
@@ -158,5 +159,4 @@
 - (19/06/2026) 📅 `diaHabitual` en facturas-control
 - (18/06/2026) 🐛 FIXES COMUNICACIÓN + FINANZAS
 - (19/06/2026) 🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)
-- (18/06/2026) 🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)
 

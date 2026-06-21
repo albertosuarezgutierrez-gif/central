@@ -1,5 +1,5 @@
 {
-  "generadoEn": "2026-06-20T06:52:46Z",
+  "generadoEn": "2026-06-21T02:17:02Z",
   "verticales": [
     "ia-rest",
     "ialimp",
@@ -501,8 +501,8 @@
         "evidencias": 0
       },
       "ialimp": {
-        "estado": "usado",
-        "evidencias": 1
+        "estado": "no",
+        "evidencias": 0
       },
       "plataforma": {
         "estado": "usado",
@@ -2479,6 +2479,10 @@
   ],
   "novedades": [
     {
+      "titulo": "🔎 AUDITORÍA PROFUNDA SEMANAL",
+      "fecha": "21/06/2026"
+    },
+    {
       "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
       "fecha": "20/06/2026"
     },
@@ -2532,10 +2536,6 @@
     },
     {
       "titulo": "🔍 AUDITORÍA PROFUNDA SEMANAL",
-      "fecha": "18/06/2026"
-    },
-    {
-      "titulo": "🧠 MEMORIA ANTI-PÉRDIDA + AUDITORÍA NOCTURNA",
       "fecha": "18/06/2026"
     }
   ],
