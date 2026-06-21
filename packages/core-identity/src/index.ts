@@ -1,0 +1,17 @@
+// @central/core-identity — contrato de identidad para la casa de marcas.
+//
+// Puerto + tipos agnósticos del mecanismo de auth (Supabase, jose/JWT, NextAuth).
+// Los módulos de packages/* dependen de ESTE contrato, no del auth de cada app;
+// cada app aporta un adaptador que implementa `IdentityProvider`. Multi-tenant:
+// usa `requireTenantId` para forzar el scoping por inquilino en cada query.
+// Ver docs/HANDOFF-unificacion-casa-marcas.md (Fase 1).
+
+export type { Session, Tenant, TenantBranding, TenantId, UserId, Cuenta, CuentaSession, Negocio, Sector, Sociedad } from './types'
+export { UnauthenticatedError, ForbiddenError } from './errors'
+export type { IdentityProvider } from './port'
+export { requireSession, requireTenantId, assertRole, hasRole } from './port'
+export { genHex, genJti, sha256Hex } from './crypto'
+export type { Persona } from './persona'
+export { nuevaPersonaId, normalizarDni, normalizarEmail, coincidenciaPersona, mismaPersona } from './persona'
+export { createSessionToken, verifySessionToken } from './token'
+export type { TokenResult, CreateSessionTokenOpts } from './token'

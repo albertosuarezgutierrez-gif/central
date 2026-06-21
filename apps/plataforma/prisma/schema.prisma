@@ -1,0 +1,94 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Cuenta {
+  id           String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  nombre       String
+  email        String
+  passwordHash String?    @map("password_hash")
+  sessionJti   String?    @map("session_jti")
+  createdAt    DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  sociedades   Sociedad[]
+
+  @@map("cuentas")
+}
+
+model Sociedad {
+  id        String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId  String    @map("cuenta_id") @db.Uuid
+  nombre    String
+  cif       String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  cuenta    Cuenta    @relation(fields: [cuentaId], references: [id], onDelete: Cascade)
+  negocios  Negocio[]
+
+  @@map("sociedades")
+}
+
+model Negocio {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sociedadId String   @map("sociedad_id") @db.Uuid
+  nombre     String
+  sector     String
+  refExt     String?  @map("ref_ext")
+  app        String?
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  sociedad   Sociedad @relation(fields: [sociedadId], references: [id], onDelete: Cascade)
+
+  @@map("negocios")
+}
+
+model FiscalPerfil {
+  cuentaId                  String   @id @map("cuenta_id") @db.Uuid
+  comunidadAutonoma         String   @default("andalucia") @map("comunidad_autonoma")
+  declaracionConjunta       Boolean  @default(true) @map("declaracion_conjunta")
+  familiaNumerosa           String?  @map("familia_numerosa")
+  conyugeTrabaja            Boolean  @default(false) @map("conyuge_trabaja")
+  gastoGuarderiaAnual       Decimal  @default(0) @map("gasto_guarderia_anual") @db.Decimal
+  aportacionPlanPensiones   Decimal  @default(0) @map("aportacion_plan_pensiones") @db.Decimal
+  gradoDiscapacidadTitular  Int      @default(0) @map("grado_discapacidad_titular")
+  gradoDiscapacidadConyuge  Int      @default(0) @map("grado_discapacidad_conyuge")
+  ascendientesACargo        Int      @default(0) @map("ascendientes_a_cargo")
+  ascendientesMayores75     Int      @default(0) @map("ascendientes_mayores_75")
+  donativosAnual            Decimal  @default(0) @map("donativos_anual") @db.Decimal
+  createdAt                 DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt                 DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  @@map("fiscal_perfil")
+}
+
+model FiscalDescendiente {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cuentaId          String   @map("cuenta_id") @db.Uuid
+  nombre            String
+  fechaNacimiento   DateTime @map("fecha_nacimiento") @db.Date
+  gradoDiscapacidad Int      @default(0) @map("grado_discapacidad")
+  computoCompleto   Boolean  @default(true) @map("computo_completo")
+  createdAt         DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@index([cuentaId])
+  @@map("fiscal_descendientes")
+}
+
+model FiscalNovedad {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  anio            Int
+  clave           String
+  importeAnterior Decimal? @map("importe_anterior") @db.Decimal
+  importeNuevo    Decimal? @map("importe_nuevo") @db.Decimal
+  beneficia       Boolean  @default(false)
+  ambito          String   @default("estatal")
+  fuenteUrl       String?  @map("fuente_url")
+  detectadoAt     DateTime @default(now()) @map("detectado_at") @db.Timestamptz(6)
+  descartado      Boolean  @default(false)
+
+  @@index([beneficia, descartado])
+  @@map("fiscal_novedades")
+}

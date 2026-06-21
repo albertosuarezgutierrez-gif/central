@@ -1,49 +1,36 @@
 {
-  "name": "ia-rest-app",
-  "version": "2.6.0",
+  "name": "casa-de-marcas",
+  "version": "1.0.0",
   "private": true,
+  "description": "Matriz de la casa de marcas (monorepo). La raíz NO es una vertical: las verticales viven en apps/* y los módulos compartidos en packages/*. Workspaces gestionados por pnpm (pnpm-workspace.yaml). Ver MATRIZ.md.",
+  "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
-    "qa": "tsx scripts/qa-check.ts"
-  },
-  "dependencies": {
-    "@anthropic-ai/sdk": "^0.92.0",
-    "@stripe/react-stripe-js": "^6.3.0",
-    "@stripe/stripe-js": "^9.5.0",
-    "@supabase/ssr": "^0.10.2",
-    "@supabase/supabase-js": "^2.105.1",
-    "@types/qrcode": "^1.5.6",
-    "bcryptjs": "^3.0.3",
-    "clsx": "^2.1.1",
-    "date-fns": "^4.1.0",
-    "fuse.js": "^7.3.0",
-    "groq-sdk": "^1.1.2",
-    "jsonwebtoken": "^9.0.3",
-    "lucide-react": "^1.14.0",
-    "msedge-tts": "^2.0.5",
-    "next": "^16.2.6",
-    "qrcode": "^1.5.4",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "resend": "^6.12.3",
-    "stripe": "^22.1.1",
-    "web-push": "^3.6.7"
+    "auditar": "node scripts/auditar-estructura.mjs",
+    "auditar:check": "node scripts/auditar-estructura.mjs --check",
+    "test": "node --test test/*.test.ts && pnpm -r run test && pnpm run test:vitest",
+    "test:guardia": "node --test test/*.test.ts",
+    "test:packages": "pnpm -r --filter \"./packages/*\" run test",
+    "test:vitest": "vitest run packages/core-firma packages/module-rrhh packages/module-documental packages/module-chat packages/core-identity/src/persona.test.ts"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^20.19.41",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "@types/web-push": "^3.6.4",
-    "eslint": "^9",
-    "eslint-config-next": "^16.2.6",
-    "glob": "^13.0.6",
-    "tailwindcss": "^4",
-    "tsx": "^4.22.4",
-    "typescript": "^5"
+    "vitest": "^3.2.6"
+  },
+  "pnpm": {
+    "overrides": {
+      "axios": ">=1.16.0",
+      "vitest": ">=3.2.6 <4.0.0",
+      "form-data": ">=4.0.6"
+    },
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "prisma",
+      "sharp",
+      "esbuild",
+      "@swc/core",
+      "@parcel/watcher",
+      "msedge-tts",
+      "unrs-resolver"
+    ]
   }
 }

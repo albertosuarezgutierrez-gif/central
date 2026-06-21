@@ -1,0 +1,77 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700;800&family=DM+Mono:wght@400&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* SIVRA Light palette */
+  --lime:       #7EC820;
+  --lime-d:     #5A9A12;
+  --lime-l:     #EFF7E4;
+  --navy:       #1A2535;
+  --slate:      #3D5166;
+  --muted:      #6B7F96;
+  --dim:        #8A9DB5;
+  --border:     #E8EDF3;
+  --sand:       #F4F6F9;
+
+  /* Semantic */
+  --bg:           #F4F6F9;
+  --bg-card:      #FFFFFF;
+  --sidebar-bg:   #FFFFFF;
+  --accent-1:     var(--lime);
+  --text-primary: var(--navy);
+  --text-secondary: var(--slate);
+  --shadow-card:  0 1px 3px rgba(26,37,53,0.06), 0 0 0 1px rgba(26,37,53,0.04);
+  --shadow-hover: 0 4px 16px rgba(26,37,53,0.10), 0 0 0 1px rgba(26,37,53,0.06);
+  --radius:       12px;
+  --radius-sm:    6px;
+  --radius-badge: 6px;
+}
+
+@layer base {
+  html { @apply antialiased; }
+  body {
+    font-family: 'Inter', -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--navy);
+    letter-spacing: -0.016em;
+  }
+}
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 4px; height: 4px; }
+::-webkit-scrollbar-track { background: var(--sand); }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--dim); }
+
+/* ── CARDS ── */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+}
+.card:hover {
+  box-shadow: var(--shadow-hover);
+}
+
+/* ── BADGE accent ── */
+.badge-lime {
+  background: var(--lime-l);
+  color: var(--lime-d);
+  border: 1px solid rgba(126,200,32,0.25);
+  border-radius: var(--radius-badge);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  letter-spacing: 0.5px;
+}
+
+/* ── MOBILE ── */
+@media (max-width: 767px) {
+  .income-wrapper { padding: 1rem !important; }
+  .stats-grid { grid-template-columns: repeat(2, 1fr) !important; }
+  .charts-grid { grid-template-columns: 1fr !important; }
+}

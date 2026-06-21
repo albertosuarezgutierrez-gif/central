@@ -1,0 +1,175 @@
+{
+  "meta": {
+    "siteName": "House Sevillana",
+    "homeTitle": "Apartamento con parking en el centro de Sevilla | House Sevillana",
+    "homeDescription": "Casa palacio de 290 m² con 6 dormitorios, parking privado y terraza en el casco antiguo de Sevilla. Ideal para familias y grupos. Reserva directa sin comisiones.",
+    "ogAlt": "Patio interior de House Sevillana en el casco antiguo de Sevilla"
+  },
+  "nav": {
+    "home": "Inicio",
+    "house": "La casa",
+    "location": "Ubicación",
+    "rates": "Precios",
+    "contact": "Contacto",
+    "bookNow": "Reservar"
+  },
+  "hero": {
+    "h1": "Casa con parking en el centro de Sevilla para grupos y familias",
+    "subtitle": "Casa palacio reformada de 290 m² con 6 dormitorios, 4 baños y terraza. A 10 minutos andando de la Catedral, en una casa palacio del casco antiguo.",
+    "ctaPrimary": "Consultar disponibilidad",
+    "ctaSecondary": "Recorrer la casa"
+  },
+  "valueProps": {
+    "title": "Por qué elegir House Sevillana",
+    "items": {
+      "parking": {
+        "title": "Parking privado en el alojamiento",
+        "body": "Aparcar en el casco antiguo de Sevilla es complicado. Aquí tu plaza está incluida, sin coste extra ni dar vueltas buscando sitio."
+      },
+      "capacity": {
+        "title": "6 dormitorios y 4 baños",
+        "body": "Espacio real para familias multigeneracionales y grupos de hasta 12 personas, con baños suficientes para que nadie haga cola."
+      },
+      "heritage": {
+        "title": "Casa palacio del casco antiguo",
+        "body": "Patio sevillano, azulejos originales y reforma actual. A pie de Plaza San Marcos, en una zona auténtica y tranquila."
+      },
+      "direct": {
+        "title": "Reserva directa, sin intermediarios",
+        "body": "Mejor precio garantizado y trato directo con el propietario. Sin comisiones de plataformas que encarecen el final."
+      }
+    }
+  },
+  "house": {
+    "title": "La casa por dentro",
+    "intro": "290 metros cuadrados distribuidos en una casa palacio reformada, con todos los rincones característicos de la arquitectura sevillana: patio interior, azulejos, terraza con vistas y un jardín para relajarse.",
+    "specsTitle": "En cifras",
+    "specs": {
+      "size": "290 m²",
+      "sizeLabel": "Superficie",
+      "bedrooms": "6",
+      "bedroomsLabel": "Dormitorios",
+      "bathrooms": "4",
+      "bathroomsLabel": "Baños",
+      "guests": "Hasta 12",
+      "guestsLabel": "Huéspedes"
+    },
+    "amenitiesTitle": "Equipamiento",
+    "amenities": [
+      "Parking privado en el alojamiento",
+      "WiFi gratis en toda la casa",
+      "Aire acondicionado en todas las estancias",
+      "Cocina totalmente equipada (horno, microondas, nevera, cafetera)",
+      "Terraza con vistas a la ciudad",
+      "Patio interior y jardín",
+      "TV pantalla plana con canales por satélite",
+      "Ropa de cama y toallas incluidas",
+      "Secador de pelo",
+      "Apto para familias con niños"
+    ]
+  },
+  "location": {
+    "title": "En pleno casco antiguo",
+    "intro": "House Sevillana está en Calle Bustos Tavera, junto a la Plaza de San Marcos, en el barrio de San Julián. Una zona auténtica y tranquila desde la que llegas andando a todo lo importante.",
+    "poisTitle": "A pie desde la casa",
+    "pois": [
+      {
+        "name": "Iglesia de San Luis de los Franceses",
+        "distance": "300 m"
+      },
+      {
+        "name": "Palacio de las Dueñas",
+        "distance": "5 min"
+      },
+      {
+        "name": "Setas de Sevilla",
+        "distance": "8 min"
+      },
+      {
+        "name": "Catedral y Giralda",
+        "distance": "10 min"
+      },
+      {
+        "name": "Barrio de Santa Cruz",
+        "distance": "15 min"
+      },
+      {
+        "name": "Real Alcázar",
+        "distance": "20 min"
+      }
+    ],
+    "transportTitle": "Cómo llegar",
+    "transport": {
+      "airport": "Aeropuerto de Sevilla (SVQ): 11 km, ~16 min en coche",
+      "station": "Estación Santa Justa: 10 min en coche",
+      "bus": "Parada de bus Plaza Ponce de León a pocos minutos andando"
+    }
+  },
+  "audience": {
+    "title": "Ideal para",
+    "intro": "Por su tamaño y distribución, House Sevillana funciona muy bien para algunos viajeros y no es la mejor opción para otros. Mejor que lo sepas antes de reservar.",
+    "yes": {
+      "title": "Funciona genial para",
+      "items": [
+        "Familias multigeneracionales (abuelos, hijos y nietos juntos)",
+        "Grupos de amigos grandes (8 a 12 personas)",
+        "Bodas o eventos donde varias parejas viajan juntas",
+        "Viajeros que llegan en coche y necesitan parking en el centro"
+      ]
+    },
+    "no": {
+      "title": "No es la mejor opción si",
+      "items": [
+        "Viajáis solo dos personas (sobra mucho espacio)",
+        "Buscáis fiestas o despedidas (no se permiten)",
+        "Necesitáis hotel con recepción 24h"
+      ]
+    }
+  },
+  "directBooking": {
+    "title": "¿Por qué reservar aquí y no en Booking o Airbnb?",
+    "body": "Reservar directamente en housesevillana.vercel.app te garantiza el mejor precio. Las plataformas tipo Booking aplican una comisión de casi el 20%, que se traslada al precio que pagas. Aquí no hay intermediarios: el mismo apartamento, el mismo servicio y trato directo con el propietario para resolver cualquier duda antes y durante la estancia.",
+    "cta": "Ver disponibilidad y reservar"
+  },
+  "faq": {
+    "title": "Preguntas frecuentes",
+    "items": [
+      {
+        "q": "¿House Sevillana tiene parking privado?",
+        "a": "Sí. La casa cuenta con parking privado dentro del propio alojamiento, algo poco habitual en el casco antiguo de Sevilla. La plaza está incluida en el precio, sin coste adicional ni necesidad de buscar aparcamiento en zona azul."
+      },
+      {
+        "q": "¿Para cuántas personas es House Sevillana?",
+        "a": "La casa dispone de 6 dormitorios y 4 baños distribuidos en 290 m², con capacidad para hasta 12 personas. Es ideal cuando varias parejas o varias generaciones viajan juntas."
+      },
+      {
+        "q": "¿A qué distancia está la Catedral de Sevilla?",
+        "a": "La Catedral y la Giralda están a unos 10 minutos andando desde House Sevillana. El Real Alcázar está aproximadamente a 20 minutos a pie. Todos los puntos icónicos del centro son accesibles caminando."
+      },
+      {
+        "q": "¿Se admiten niños y mascotas?",
+        "a": "Niños sí, de todas las edades. La distribución hace la casa especialmente cómoda para familias con hijos. Sobre mascotas, consulta antes de reservar."
+      },
+      {
+        "q": "¿Se permiten despedidas de soltero o fiestas?",
+        "a": "No. Por respeto al vecindario y a la propia casa, no se permiten despedidas, fiestas ni eventos similares. Hay horario de silencio obligatorio entre las 21:00 y las 09:00."
+      },
+      {
+        "q": "¿Cuál es el horario de check-in y check-out?",
+        "a": "Check-in a partir de las 16:00 y check-out hasta las 11:00. Si necesitas otros horarios, escríbenos antes de reservar y miramos qué se puede hacer."
+      }
+    ]
+  },
+  "footer": {
+    "tagline": "Casa palacio reformada con parking en el centro histórico de Sevilla.",
+    "navTitle": "Navegación",
+    "legalTitle": "Información legal",
+    "contactTitle": "Contacto",
+    "rights": "© {year} House Sevillana. Todos los derechos reservados.",
+    "vftLabel": "Nº licencia VFT",
+    "vftPending": "VFT/SE/01179",
+    "phoneLabel": "Teléfono",
+    "phone": "+34 637 349 990",
+    "email": "alberto.suarez.gutierrez@gmail.com"
+  }
+}

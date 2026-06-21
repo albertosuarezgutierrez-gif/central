@@ -1,0 +1,156 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npx --yes pnpm@10.33.0 install --no-frozen-lockfile",
+  "devCommand": "npm run dev",
+  "headers": [
+    {
+      "source": "/app/:file*.apk",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/vnd.android.package-archive"
+        },
+        {
+          "key": "Content-Disposition",
+          "value": "attachment; filename=\"iarest.apk\""
+        }
+      ]
+    }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron/alertas",
+      "schedule": "*/2 * * * *"
+    },
+    {
+      "path": "/api/cron/cobro-inactividad",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/reservas-noshow",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/cobro-descuento",
+      "schedule": "0 2 1 * *"
+    },
+    {
+      "path": "/api/backup/drive",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/completar-locales",
+      "schedule": "0 4 * * *"
+    },
+    {
+      "path": "/api/cron/eventos-entorno",
+      "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/instagram-ideas",
+      "schedule": "30 7 * * 1"
+    },
+    {
+      "path": "/api/cron/blog-seo",
+      "schedule": "0 8 * * 1"
+    },
+    {
+      "path": "/api/cron/prospeccion-leads",
+      "schedule": "0 9 * * 1"
+    },
+    {
+      "path": "/api/cron/prospeccion-apify",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/backfill-leads-sevilla",
+      "schedule": "0 5 * * *"
+    },
+    {
+      "path": "/api/cron/crm-whatsapp-sevilla",
+      "schedule": "0 10 * * 1-5"
+    },
+    {
+      "path": "/api/cron/crm-followup-sevilla",
+      "schedule": "0 11 * * 1-5"
+    },
+    {
+      "path": "/api/cron/instagram",
+      "schedule": "0 16 * * 3"
+    },
+    {
+      "path": "/api/cron/instagram",
+      "schedule": "0 22 * * 5"
+    },
+    {
+      "path": "/api/cron/briefing-semanal",
+      "schedule": "30 8 * * 1"
+    },
+    {
+      "path": "/api/cron/instagram-refresh",
+      "schedule": "0 6 1 * *"
+    },
+    {
+      "path": "/api/cron/instagram-metricas",
+      "schedule": "0 7 * * *"
+    },
+    {
+      "path": "/api/cron/mantenimiento-espacios",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/crm-recordatorios",
+      "schedule": "0 9 * * 1-5"
+    },
+    {
+      "path": "/api/cron/feedback-visita",
+      "schedule": "*/10 * * * *"
+    },
+    {
+      "path": "/api/super/qa-agent/cron",
+      "schedule": "0 6 * * *"
+    },
+    {
+      "path": "/api/super/qa-agent/cron",
+      "schedule": "0 7 * * 1"
+    },
+    {
+      "path": "/api/cron/crm-lead-hunter-sevilla",
+      "schedule": "0 6 * * 1-5"
+    },
+    {
+      "path": "/api/cron/crm-recordatorio-dia2",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/pipeline-comercial",
+      "schedule": "0 8 * * 1-5"
+    },
+    {
+      "path": "/api/cron/alias-ia",
+      "schedule": "0 3 * * *"
+    },
+    {
+      "path": "/api/cron/cobros-eventos",
+      "schedule": "0 * * * *"
+    },
+    {
+      "path": "/api/cron/reposicion-stock",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/cron/seo-agent",
+      "schedule": "0 7 * * 2"
+    },
+    {
+      "path": "/api/cron/seo-agent",
+      "schedule": "0 7 * * 5"
+    },
+    {
+      "path": "/api/cron/crm-envio-auto",
+      "schedule": "*/30 7-17 * * 1-5"
+    }
+  ]
+}

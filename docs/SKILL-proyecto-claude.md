@@ -30,7 +30,7 @@ Stack: Next.js (Vercel Pro) + Supabase (Postgres 17, RLS, Edge Functions Deno) +
 
 ## Flujo de trabajo Git/Deploy
 
-1. Clonar: `git clone https://ghp_[VER_MEMORIA]@github.com/albertosuarezgutierrez-gif/ia.rest`
+1. Clonar: `git clone https://<EN_GESTOR_DE_SECRETOS>@github.com/albertosuarezgutierrez-gif/ia.rest`
 2. Antes de push: `git pull --rebase origin main`
 3. Si conflictos: `git stash → pull --rebase → stash pop → push`
 4. Push a `main` = deploy automático Vercel Pro (sin límite, sin ignoreCommand)
@@ -43,14 +43,14 @@ Stack: Next.js (Vercel Pro) + Supabase (Postgres 17, RLS, Edge Functions Deno) +
 | Recurso | Valor |
 |---|---|
 | URL producción | www.iarest.es |
-| Supabase project | efncqyvhniaxsirhdxaa (eu-west-1, Postgres 17) |
-| Vercel team | team_f4gPpt6dPuNcd5YyMt3q27uf |
-| Vercel app | ia-rest → prj_A0xZtqWcH6dtNEmlRiOwgj52GTRo |
-| Vercel docs | ia-rest-docs → prj_eKC4r06S5svI3mwJJUbZmLVnbiQE |
+| Supabase project | <EN_GESTOR_DE_SECRETOS> (eu-west-1, Postgres 17) |
+| Vercel team | <EN_GESTOR_DE_SECRETOS> |
+| Vercel app | ia-rest → <EN_GESTOR_DE_SECRETOS> |
+| Vercel docs | ia-rest-docs → <EN_GESTOR_DE_SECRETOS> |
 | Repo | github.com/albertosuarezgutierrez-gif/ia.rest |
-| GitHub PAT | ghp_[VER_MEMORIA] |
-| DEMO token | www.iarest.es/login?t=62d3124f5185d326ba0e5632 |
-| SUPER shield | www.iarest.es/api/auth/super-shield?k=a484332b7cee3f1be49b473ebbf2d8ea5a575a8103c85e40 |
+| GitHub PAT | <EN_GESTOR_DE_SECRETOS> |
+| DEMO token | www.iarest.es/login?t=<EN_GESTOR_DE_SECRETOS> |
+| SUPER shield | www.iarest.es/api/auth/super-shield?k=<EN_GESTOR_DE_SECRETOS> |
 
 ---
 
@@ -324,12 +324,12 @@ serve(async (req) => {
 
 Ejemplos: 1u=59€ · 3u=99€ · 6u=159€
 
-Stripe TEST price IDs: base=price_1TUPaTK5xixGkeRIEU1x3sqG
-                       e20=price_1TUPaTK5xixGkeRIPu8nSS8q
-                       e15=price_1TUPaTK5xixGkeRIZJnwRPw0
-Stripe LIVE price IDs: base=price_1TUKYVK5xixGkeRIEGTKlZFp
-                       e20=price_1TUKYVK5xixGkeRIL33AA4Ef
-                       e15=price_1TUKYVK5xixGkeRIMbs7zJ2j
+Stripe TEST price IDs: base=<EN_GESTOR_DE_SECRETOS>
+                       e20=<EN_GESTOR_DE_SECRETOS>
+                       e15=<EN_GESTOR_DE_SECRETOS>
+Stripe LIVE price IDs: base=<EN_GESTOR_DE_SECRETOS>
+                       e20=<EN_GESTOR_DE_SECRETOS>
+                       e15=<EN_GESTOR_DE_SECRETOS>
 STRIPE_MODE=test (activo) — cambiar a live en primer cliente real
 
 ---

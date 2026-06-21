@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IALIMP · El sistema operativo de tu empresa de limpieza</title>
+<meta name="description" content="IALIMP — el sistema operativo de tu empresa de limpieza. Programación automática, app para tu equipo, control de calidad, portal del propietario, informes y facturación.">
+<meta name="theme-color" content="#4f46e5">
+<meta name="color-scheme" content="light">
+<link rel="canonical" href="https://ialimp.es/">
+<meta name="robots" content="index,follow">
+<meta name="author" content="IALIMP">
+
+<!-- Favicon (SVG, marca IALIMP). Sin assets binarios. -->
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/favicon.svg">
+
+<!-- Open Graph (cómo se ve el enlace al compartir en WhatsApp, redes, etc.) -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="IALIMP">
+<meta property="og:locale" content="es_ES">
+<meta property="og:url" content="https://ialimp.es/">
+<meta property="og:title" content="IALIMP · El sistema operativo de tu empresa de limpieza">
+<meta property="og:description" content="Programación automática, app para tu equipo, control de calidad con IA, portal del propietario, informes y facturación. Menos caos. Más control.">
+<meta property="og:image" content="https://ialimp.es/og-image.svg">
+<meta property="og:image:type" content="image/svg+xml">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="IALIMP — el sistema operativo de tu empresa de limpieza">
+
+<!-- Twitter / X Card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="IALIMP · El sistema operativo de tu empresa de limpieza">
+<meta name="twitter:description" content="Menos caos. Más control. Programación automática, app para tu equipo, control de calidad con IA, portal del propietario, informes y facturación.">
+<meta name="twitter:image" content="https://ialimp.es/og-image.svg">
+
+<!-- Datos estructurados (SEO) -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://ialimp.es/#org",
+      "name": "IALIMP",
+      "url": "https://ialimp.es/",
+      "logo": "https://ialimp.es/favicon.svg",
+      "email": "hola@ialimp.es",
+      "description": "El sistema operativo de tu empresa de limpieza de pisos turísticos."
+    },
+    {
+      "@type": "SoftwareApplication",
+      "name": "IALIMP",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "url": "https://ialimp.es/",
+      "publisher": { "@id": "https://ialimp.es/#org" },
+      "description": "Software de gestión de limpiezas para empresas de apartamentos turísticos: programación automática, app para el equipo, control de calidad con IA, portal del propietario, informes y facturación.",
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "EUR", "description": "Solicita una demo" }
+    }
+  ]
+}
+</script>
+<style>
+  /* Fuente auto-alojada (Nunito). Sin Google Fonts: ningún dato del visitante
+     sale a terceros. Los .woff2 se generan con fetch-fonts.sh antes de desplegar. */
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:400;font-display:swap;src:url('/fonts/nunito-400.woff2') format('woff2')}
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:500;font-display:swap;src:url('/fonts/nunito-500.woff2') format('woff2')}
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:600;font-display:swap;src:url('/fonts/nunito-600.woff2') format('woff2')}
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:700;font-display:swap;src:url('/fonts/nunito-700.woff2') format('woff2')}
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:800;font-display:swap;src:url('/fonts/nunito-800.woff2') format('woff2')}
+  @font-face{font-family:'Nunito';font-style:normal;font-weight:900;font-display:swap;src:url('/fonts/nunito-900.woff2') format('woff2')}
+
+  :root{
+    --primary:#4f46e5;--brand:#6366f1;--soft:#eef2ff;--ink:#1e1b4b;
+    --bg:#f1f5f9;--white:#fff;--muted:#64748b;--line:#e2e8f0;--ok:#16a34a;--warn:#d97706;
+    --shadow:0 24px 60px -24px rgba(30,27,75,.32);--shadow-sm:0 8px 22px -12px rgba(30,27,75,.22);--r:18px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth;color-scheme:light}
+  body{font-family:'Nunito',system-ui,sans-serif;color:var(--ink);background:var(--bg);line-height:1.5;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  a{color:inherit;text-decoration:none}
+  .wrap{max-width:1160px;margin:0 auto;padding:0 24px}
+  .logo{font-family:'Nunito',sans-serif;font-weight:800;font-size:24px;letter-spacing:-.03em;color:var(--ink)}
+  .logo .ia{color:var(--primary)}.logo .l2{font-weight:400}
+
+  /* Texto con degradado de marca (animado) */
+  .grad{background:linear-gradient(100deg,var(--primary),var(--brand) 45%,#8b89f2 70%,var(--primary));background-size:220% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:grad 7s ease-in-out infinite}
+  @keyframes grad{0%,100%{background-position:0% 50%}50%{background-position:100% 50%}}
+
+  .btn{position:relative;display:inline-flex;align-items:center;gap:9px;font-family:'Nunito';font-weight:600;font-size:15px;border:none;border-radius:13px;padding:13px 22px;cursor:pointer;transition:transform .16s ease,box-shadow .16s ease;white-space:nowrap}
+  .btn svg{width:17px;height:17px;transition:transform .2s ease}
+  .btn:hover svg{transform:translateX(3px)}
+  .btn-primary{background:var(--primary);color:#fff;box-shadow:0 10px 26px -10px rgba(79,70,229,.55)}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 18px 40px -12px rgba(79,70,229,.65)}
+  /* Brillo que cruza el botón primario */
+  .btn-primary::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%);transform:translateX(-120%);transition:transform .6s ease}
+  .btn-primary:hover::after{transform:translateX(120%)}
+  .btn-ghost{background:#fff;color:var(--ink);border:1px solid var(--line);box-shadow:var(--shadow-sm)}
+  .btn-ghost:hover{transform:translateY(-2px);border-color:var(--brand)}
+
+  header{position:sticky;top:0;z-index:100;backdrop-filter:saturate(1.4) blur(12px);background:rgba(255,255,255,.78);border-bottom:1px solid rgba(226,232,240,.8);transition:box-shadow .25s ease}
+  header.scrolled{box-shadow:0 10px 30px -22px rgba(30,27,75,.4)}
+  .nav{display:flex;align-items:center;justify-content:space-between;height:70px}
+  .nav .right{display:flex;gap:12px;align-items:center}
+
+  .hero{position:relative;padding:96px 0 72px;overflow:hidden}
+  /* Aurora animada de fondo (degradados de marca en movimiento, tema claro) */
+  .aurora{position:absolute;inset:-20% -10% 0;z-index:0;pointer-events:none;filter:blur(8px)}
+  .aurora span{position:absolute;border-radius:50%;opacity:.55;mix-blend-mode:multiply;will-change:transform}
+  .aurora .a1{width:640px;height:520px;top:-120px;right:-60px;background:radial-gradient(circle at 30% 30%,#dfe3ff,transparent 62%);animation:float1 18s ease-in-out infinite}
+  .aurora .a2{width:560px;height:480px;bottom:-160px;left:-80px;background:radial-gradient(circle at 60% 40%,#e9edff,transparent 60%);animation:float2 22s ease-in-out infinite}
+  .aurora .a3{width:420px;height:420px;top:30%;left:40%;background:radial-gradient(circle at 50% 50%,#eef2ff,transparent 58%);animation:float3 26s ease-in-out infinite}
+  @keyframes float1{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-40px,30px) scale(1.08)}}
+  @keyframes float2{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(50px,-30px) scale(1.1)}}
+  @keyframes float3{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(-30px,-40px) scale(1.06)}}
+  /* Rejilla sutil sobre la aurora */
+  .hero::before{content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background-image:linear-gradient(rgba(99,102,241,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(99,102,241,.05) 1px,transparent 1px);background-size:44px 44px;-webkit-mask-image:radial-gradient(80% 60% at 50% 30%,#000 30%,transparent 75%);mask-image:radial-gradient(80% 60% at 50% 30%,#000 30%,transparent 75%)}
+  .hero .wrap{position:relative;z-index:1;display:grid;grid-template-columns:1.04fr .96fr;gap:54px;align-items:center}
+  @media(max-width:940px){.hero .wrap{grid-template-columns:1fr;gap:46px}}
+  .pill{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:700;color:var(--primary);background:#fff;border:1px solid var(--line);box-shadow:var(--shadow-sm);padding:7px 14px;border-radius:999px;margin-bottom:22px}
+  .pill .dot{width:8px;height:8px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:pulse 2.4s ease-out infinite}
+  @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}70%{box-shadow:0 0 0 9px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
+  h1.hero-t{font-family:'Nunito';font-weight:800;font-size:clamp(40px,5.6vw,66px);line-height:1.0;letter-spacing:-.03em;margin-bottom:22px}
+  .hero .tag{font-family:'Nunito';font-weight:600;font-size:clamp(18px,2.2vw,24px);color:var(--muted);margin-bottom:32px;letter-spacing:-.01em}
+  .hero .ctas{display:flex;gap:14px;flex-wrap:wrap}
+
+  .stagger>*{opacity:0;transform:translateY(16px);animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .stagger>*:nth-child(1){animation-delay:.05s}.stagger>*:nth-child(2){animation-delay:.14s}
+  .stagger>*:nth-child(3){animation-delay:.23s}.stagger>*:nth-child(4){animation-delay:.32s}
+  .stagger>*:nth-child(5){animation-delay:.41s}
+  @keyframes rise{to{opacity:1;transform:none}}
+
+  .mock{position:relative;display:flex;justify-content:center;align-items:flex-end;perspective:1200px}
+  .tilt{transform-style:preserve-3d;transition:transform .25s cubic-bezier(.2,.7,.2,1)}
+  .dash{width:100%;max-width:430px;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden;animation:bob 7s ease-in-out infinite}
+  @keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+  .dash .bar{background:var(--primary);color:#fff;padding:16px 18px;display:flex;align-items:center;justify-content:space-between}
+  .dash .bar .logo{font-size:18px;color:#fff}.dash .bar .logo .l2{color:#c7d2fe}
+  .dash .bar .av{width:30px;height:30px;border-radius:9px;background:rgba(255,255,255,.2);display:grid;place-items:center;font-size:12px;font-weight:700;font-family:'Nunito'}
+  .dash .body{padding:18px}
+  .kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+  .kpi{background:var(--soft);border-radius:13px;padding:12px}
+  .kpi .n{font-family:'Nunito';font-weight:800;font-size:22px;color:var(--primary);line-height:1}
+  .kpi .l{font-size:10.5px;color:var(--muted);margin-top:5px;font-weight:500}
+  .lrow{display:flex;align-items:center;gap:11px;padding:11px 12px;border:1px solid var(--line);border-radius:12px;margin-bottom:9px}
+  .lrow .ic{width:34px;height:34px;border-radius:10px;flex:none;display:grid;place-items:center;font-size:15px}
+  .lrow .ic.b{background:var(--soft)}.lrow .ic.g{background:#f0fdf4}
+  .lrow .t1{font-weight:700;font-size:13.5px}.lrow .t2{font-size:11.5px;color:var(--muted)}
+  .lrow .st{margin-left:auto;font-size:10.5px;font-weight:700;padding:4px 9px;border-radius:999px}
+  .st.p{background:#fff7ed;color:var(--warn)}.st.d{background:#f0fdf4;color:var(--ok)}
+  .phone-mini{position:absolute;right:-22px;bottom:-26px;width:158px;background:#0b1020;border-radius:26px;padding:7px;box-shadow:var(--shadow);transform:rotate(4deg);animation:bob2 7s ease-in-out infinite}
+  @keyframes bob2{0%,100%{transform:rotate(4deg) translateY(0)}50%{transform:rotate(4deg) translateY(-14px)}}
+  .phone-mini .ps{background:#fff;border-radius:20px;overflow:hidden}
+  .phone-mini .pt{background:var(--primary);color:#fff;padding:14px 12px 10px}
+  .phone-mini .pt .logo{font-size:14px;color:#fff}.phone-mini .pt .logo .l2{color:#c7d2fe}
+  .phone-mini .pt .d{font-size:9px;color:#c7d2fe;margin-top:2px}
+  .phone-mini .pb{padding:10px}
+  .phone-mini .card{border:1px solid var(--line);border-radius:11px;padding:9px;margin-bottom:7px}
+  .phone-mini .card .a{font-weight:700;font-size:11px}.phone-mini .card .h{font-size:9.5px;color:var(--muted);margin-top:3px}
+  @media(max-width:520px){.phone-mini{display:none}}
+
+  /* Marquesina de capacidades */
+  .marquee{margin-top:8px;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(255,255,255,.5);overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent);mask-image:linear-gradient(90deg,transparent,#000 8%,#000 92%,transparent)}
+  .marquee .track{display:flex;gap:40px;width:max-content;animation:scroll 28s linear infinite}
+  .marquee:hover .track{animation-play-state:paused}
+  .marquee .it{display:inline-flex;align-items:center;gap:9px;font-weight:700;font-size:15px;color:var(--ink);white-space:nowrap;opacity:.85}
+  .marquee .it b{color:var(--primary)}
+  @keyframes scroll{to{transform:translateX(-50%)}}
+
+  section.block{padding:72px 0}
+  .eyebrow{display:inline-block;font-size:12.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--primary);margin-bottom:16px}
+  h2.sec{font-family:'Nunito';font-weight:800;font-size:clamp(30px,4vw,46px);line-height:1.04;letter-spacing:-.025em}
+  .center{text-align:center}
+  .lead{max-width:56ch;margin:14px auto 0;color:var(--muted);font-weight:500;font-size:clamp(15px,1.8vw,18px)}
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .7s ease,transform .7s cubic-bezier(.2,.7,.2,1)}
+  .reveal.in{opacity:1;transform:none}
+
+  .statement{position:relative;background:var(--ink);color:#fff;border-radius:28px;padding:72px 48px;text-align:center;overflow:hidden}
+  .statement::before{content:"";position:absolute;inset:0;background:radial-gradient(520px 280px at 18% 0%,rgba(99,102,241,.45),transparent 60%),radial-gradient(520px 280px at 90% 110%,rgba(79,70,229,.4),transparent 60%);animation:hue 12s ease-in-out infinite}
+  @keyframes hue{0%,100%{opacity:.8}50%{opacity:1}}
+  .statement h2{position:relative;font-family:'Nunito';font-weight:800;font-size:clamp(28px,4.2vw,48px);line-height:1.08;letter-spacing:-.025em;color:#fff;max-width:18ch;margin:0 auto}
+  @media(max-width:640px){.statement{padding:52px 28px}}
+
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
+  @media(max-width:900px){.feat-grid{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:560px){.feat-grid{grid-template-columns:1fr}}
+  .feat{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px 24px;box-shadow:var(--shadow-sm);transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;display:flex;align-items:flex-start;gap:16px;overflow:hidden}
+  .feat::before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(99,102,241,.06),transparent 55%);opacity:0;transition:opacity .25s ease}
+  .feat:hover{transform:translateY(-5px);box-shadow:var(--shadow);border-color:#c7d2fe}
+  .feat:hover::before{opacity:1}
+  .feat .ic{position:relative;width:48px;height:48px;border-radius:13px;background:var(--soft);color:var(--primary);display:grid;place-items:center;flex:none;transition:transform .25s ease}
+  .feat:hover .ic{transform:scale(1.08) rotate(-3deg)}
+  .feat .ic svg{width:24px;height:24px}
+  .feat .tx{position:relative}
+  .feat h3{font-family:'Nunito';font-weight:800;font-size:18px;letter-spacing:-.01em;margin-bottom:4px}
+  .feat p{font-size:13.5px;color:var(--muted);font-weight:500;line-height:1.45}
+
+  /* Métricas con contador animado */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:8px}
+  @media(max-width:760px){.stats{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:26px 22px;text-align:center;box-shadow:var(--shadow-sm)}
+  .stat .n{font-family:'Nunito';font-weight:900;font-size:clamp(30px,4.4vw,44px);line-height:1;letter-spacing:-.02em}
+  .stat .n .grad{display:inline}
+  .stat .l{margin-top:8px;font-size:13.5px;color:var(--muted);font-weight:600}
+
+  .ai{position:relative;border-radius:28px;overflow:hidden;padding:56px 48px;color:#fff;background:linear-gradient(135deg,#4f46e5 0,#6366f1 55%,#7c7af0 100%);text-align:center}
+  .ai::after{content:"";position:absolute;inset:0;background:radial-gradient(420px 240px at 88% 12%,rgba(255,255,255,.2),transparent 60%),radial-gradient(380px 220px at 10% 100%,rgba(255,255,255,.14),transparent 60%);pointer-events:none}
+  .ai .inner{position:relative}
+  .ai h2{color:#fff;margin-bottom:14px}
+  .ai .lead{color:rgba(255,255,255,.82);margin-bottom:30px}
+  .ai .chips{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+  .chip{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:999px;padding:12px 20px;font-family:'Nunito';font-weight:600;font-size:15px;display:inline-flex;align-items:center;gap:9px;transition:transform .18s ease,background .18s ease}
+  .chip:hover{transform:translateY(-3px);background:rgba(255,255,255,.2)}
+
+  .cta-final{background:var(--ink);border-radius:28px;padding:64px 48px;text-align:center;color:#fff;position:relative;overflow:hidden}
+  .cta-final::before{content:"";position:absolute;inset:0;background:radial-gradient(520px 280px at 50% -10%,rgba(99,102,241,.5),transparent 60%)}
+  .cta-final .inner{position:relative}
+  .cta-final h2{color:#fff;margin-bottom:28px}
+  .cta-final .ctas{display:flex;gap:14px;justify-content:center;flex-wrap:wrap}
+  .cta-final .btn-ghost{background:transparent;color:#fff;border-color:rgba(255,255,255,.3)}
+  .cta-final .btn-ghost:hover{border-color:#fff;background:rgba(255,255,255,.06)}
+  .cta-final .fine{margin-top:20px;font-size:13px;color:#9aa0c4}
+
+  .form-card{background:#fff;border:1px solid var(--line);border-radius:28px;padding:48px;box-shadow:var(--shadow);max-width:560px;margin:0 auto;text-align:left}
+  @media(max-width:560px){.form-card{padding:32px 22px}}
+  .form-card h2{margin-bottom:8px;text-align:center}
+  .form-card .lead{color:var(--muted);font-size:16px;text-align:center;margin-bottom:28px}
+  .field{display:flex;flex-direction:column;gap:7px;margin-bottom:16px}
+  .field label{font-weight:700;font-size:14px}
+  .field input,.field textarea{width:100%;font-family:'Nunito',sans-serif;font-size:15px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:13px;padding:13px 15px;transition:border-color .16s ease,box-shadow .16s ease}
+  .field input:focus,.field textarea:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px var(--soft)}
+  .field textarea{resize:vertical;min-height:96px}
+  .consent{display:flex;align-items:flex-start;gap:10px;margin:6px 0 20px}
+  .consent input{margin-top:3px;width:18px;height:18px;flex:none;accent-color:var(--primary)}
+  .consent label{font-size:13.5px;color:#475569;line-height:1.5}
+  .consent a{color:var(--primary);font-weight:600}
+  .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .form-card .btn-primary{width:100%;justify-content:center;font-size:16px;padding:15px}
+  .form-card .btn-primary:disabled{opacity:.6;cursor:default;transform:none}
+  .form-note{text-align:center;font-size:13px;color:var(--muted);margin-top:16px}
+  .form-msg{margin-top:18px;padding:14px 16px;border-radius:13px;font-size:14px;font-weight:600;display:none}
+  .form-msg.ok{display:block;background:#f0fdf4;color:var(--ok);border:1px solid #bbf7d0}
+  .form-msg.err{display:block;background:#fef2f2;color:#dc2626;border:1px solid #fecaca}
+
+  /* Cómo funciona — pasos numerados */
+  .steps{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:18px}
+  @media(max-width:880px){.steps{grid-template-columns:repeat(2,1fr)}}
+  @media(max-width:520px){.steps{grid-template-columns:1fr}}
+  .step{position:relative;background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:28px 22px;box-shadow:var(--shadow-sm);transition:transform .18s ease,box-shadow .18s ease}
+  .step:hover{transform:translateY(-4px);box-shadow:var(--shadow)}
+  .step .num{width:42px;height:42px;border-radius:12px;background:var(--soft);color:var(--primary);font-family:'Nunito';font-weight:900;font-size:18px;display:grid;place-items:center;margin-bottom:14px}
+  .step h3{font-family:'Nunito';font-weight:800;font-size:17px;letter-spacing:-.01em;margin-bottom:6px}
+  .step p{font-size:13.5px;color:var(--muted);font-weight:500;line-height:1.45}
+
+  /* FAQ — acordeón accesible (details/summary, sin JS) */
+  .faq{max-width:760px;margin:18px auto 0}
+  .faq details{background:#fff;border:1px solid var(--line);border-radius:14px;margin-bottom:12px;box-shadow:var(--shadow-sm);overflow:hidden}
+  .faq summary{cursor:pointer;list-style:none;padding:18px 22px;font-family:'Nunito';font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:space-between;gap:14px}
+  .faq summary::-webkit-details-marker{display:none}
+  .faq summary::after{content:"+";font-size:24px;color:var(--primary);font-weight:700;line-height:1;transition:transform .2s ease}
+  .faq details[open] summary::after{transform:rotate(45deg)}
+  .faq .a{padding:0 22px 20px;color:var(--muted);font-weight:500;font-size:14.5px;line-height:1.55}
+  .faq .a a{color:var(--primary);font-weight:600}
+
+  footer{padding:44px 0 36px;border-top:1px solid var(--line);margin-top:36px}
+  .foot{display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap}
+  .foot .muted{font-size:13px;color:var(--muted);margin-top:8px}
+  .foot-legal{display:flex;gap:18px;flex-wrap:wrap}
+  .foot-legal a{font-size:13px;color:var(--muted);font-weight:600}
+  .foot-legal a:hover{color:var(--primary)}
+
+  /* Accesibilidad: si el usuario prefiere menos movimiento, lo apagamos todo. */
+  @media(prefers-reduced-motion:reduce){
+    *{animation:none!important;transition:none!important}
+    .reveal,.stagger>*{opacity:1!important;transform:none!important}
+    html{scroll-behavior:auto}
+  }
+</style>
+<!-- Vercel Web Analytics (cookieless, sin banner) -->
+<script defer src="/_vercel/insights/script.js"></script>
+</head>
+<body>
+
+<header id="hdr">
+  <div class="wrap nav">
+    <div class="logo"><span class="ia">ia</span><span class="l2">limp</span></div>
+    <div class="right">
+      <a class="btn btn-primary" href="#contacto">Solicitar demo</a>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="aurora" aria-hidden="true"><span class="a1"></span><span class="a2"></span><span class="a3"></span></div>
+  <div class="wrap">
+    <div class="stagger">
+      <span class="pill"><span class="dot"></span> En vivo gestionando limpiezas reales</span>
+      <h1 class="hero-t">El sistema operativo de tu <span class="grad">empresa de limpieza</span>.</h1>
+      <p class="tag">Menos caos. Más control.</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href="#contacto">Solicitar demo
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </a>
+      </div>
+    </div>
+    <div class="mock reveal" id="mock">
+      <div class="tilt" id="tilt">
+        <div class="dash">
+          <div class="bar"><div class="logo"><span style="color:#fff">ia</span><span class="l2">limp</span></div><div class="av">IA</div></div>
+          <div class="body">
+            <div class="kpis">
+              <div class="kpi"><div class="n" data-count="12">0</div><div class="l">Hoy</div></div>
+              <div class="kpi"><div class="n" data-count="8">0</div><div class="l">Hechas</div></div>
+              <div class="kpi"><div class="n" data-count="4">0</div><div class="l">Pendientes</div></div>
+            </div>
+            <div class="lrow"><div class="ic b">🧹</div><div><div class="t1">Apartamento Centro</div><div class="t2">11:00 · Asignada</div></div><span class="st p">Pendiente</span></div>
+            <div class="lrow"><div class="ic b">🧹</div><div><div class="t1">Ático Catedral</div><div class="t2">14:00 · Sin asignar</div></div><span class="st p">Pendiente</span></div>
+            <div class="lrow"><div class="ic g">✓</div><div><div class="t1">Dúplex Ribera</div><div class="t2">09:00 · 6 fotos</div></div><span class="st d">Hecha</span></div>
+          </div>
+        </div>
+        <div class="phone-mini">
+          <div class="ps">
+            <div class="pt"><div class="logo"><span style="color:#fff">ia</span><span class="l2">limp</span></div><div class="d">Hoy</div></div>
+            <div class="pb">
+              <div class="card"><div class="a">Apartamento Centro</div><div class="h">11:00 → 13:00 🚪🔑</div></div>
+              <div class="card"><div class="a">Ático Catedral</div><div class="h">14:00 → 16:00 🚪🔑</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="marquee" aria-hidden="true">
+  <div class="track">
+    <span class="it"><b>🎯</b> Asignación automática</span>
+    <span class="it"><b>📱</b> App para tu equipo</span>
+    <span class="it"><b>📸</b> Control de calidad</span>
+    <span class="it"><b>🏠</b> Portal del propietario</span>
+    <span class="it"><b>📊</b> Informes al instante</span>
+    <span class="it"><b>🧾</b> Facturación lista</span>
+    <span class="it"><b>📅</b> Sincronización iCal</span>
+    <span class="it"><b>🤖</b> Agentes de IA</span>
+    <!-- duplicado para bucle continuo -->
+    <span class="it"><b>🎯</b> Asignación automática</span>
+    <span class="it"><b>📱</b> App para tu equipo</span>
+    <span class="it"><b>📸</b> Control de calidad</span>
+    <span class="it"><b>🏠</b> Portal del propietario</span>
+    <span class="it"><b>📊</b> Informes al instante</span>
+    <span class="it"><b>🧾</b> Facturación lista</span>
+    <span class="it"><b>📅</b> Sincronización iCal</span>
+    <span class="it"><b>🤖</b> Agentes de IA</span>
+  </div>
+</div>
+
+<section class="block">
+  <div class="wrap">
+    <div class="statement reveal">
+      <h2>Coordinar limpiezas no debería ser un caos.</h2>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap center">
+    <span class="eyebrow">Todo en un sitio</span>
+    <h2 class="sec">Tu operación, <span class="grad">ordenada</span>.</h2>
+    <p class="lead">Desde la salida del huésped hasta la factura al propietario, IALIMP conecta cada paso para que no se te escape ninguna limpieza.</p>
+  </div>
+  <div class="wrap">
+    <div class="feat-grid">
+      <div class="feat reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.2-8.5"/><path d="M21 4v5h-5"/></svg></div><div class="tx"><h3>Programación automática</h3><p>Las limpiezas se asignan solas a la persona idónea según turno y carga.</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18h2"/></svg></div><div class="tx"><h3>App para tu equipo</h3><p>Cada limpiadora ve su día, hace el checklist y sube las fotos desde el móvil.</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg></div><div class="tx"><h3>Control de calidad</h3><p>Fotos de cada limpieza y revisión asistida por IA para que nada se quede a medias.</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/></svg></div><div class="tx"><h3>Portal del propietario</h3><p>Tu cliente entra a ver el estado de su piso, documentos y facturas. Con tu marca.</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 3v18h18"/><path d="M7 14l4-4 4 4 5-6"/></svg></div><div class="tx"><h3>Informes al instante</h3><p>Resúmenes de actividad y rentabilidad listos en un clic, sin hojas de cálculo.</p></div></div>
+      <div class="feat reveal"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h11l5 5v11a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1z"/><path d="M9 13h6M9 17h6"/></svg></div><div class="tx"><h3>Facturación lista</h3><p>Factura a propietarios y calcula nóminas de tu equipo de forma automática.</p></div></div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="como-funciona">
+  <div class="wrap center">
+    <span class="eyebrow">Cómo funciona</span>
+    <h2 class="sec">De la salida del huésped a la <span class="grad">factura</span>.</h2>
+    <p class="lead">Cuatro pasos. IALIMP conecta el calendario de reservas con tu equipo y tus propietarios.</p>
+  </div>
+  <div class="wrap">
+    <div class="steps">
+      <div class="step reveal"><div class="num">1</div><h3>Llega la salida</h3><p>Sincroniza el calendario del piso (Smoobu / iCal) y se crea la sesión de limpieza sola.</p></div>
+      <div class="step reveal"><div class="num">2</div><h3>Se asigna</h3><p>El sistema reparte cada limpieza a la persona idónea según turno, carga y cercanía.</p></div>
+      <div class="step reveal"><div class="num">3</div><h3>Se limpia</h3><p>La limpiadora abre su app, sigue el checklist y sube las fotos. Tú lo ves en directo.</p></div>
+      <div class="step reveal"><div class="num">4</div><h3>Se factura</h3><p>Informe al propietario y factura listos. Las nóminas del equipo, calculadas solas.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="stats">
+      <div class="stat reveal"><div class="n"><span class="grad" data-count="100" data-suffix="%">0</span></div><div class="l">de tu operación en un sitio</div></div>
+      <div class="stat reveal"><div class="n"><span class="grad" data-count="0" data-prefix="" data-suffix="" data-text="24/7">24/7</span></div><div class="l">tu equipo y tus clientes, conectados</div></div>
+      <div class="stat reveal"><div class="n"><span class="grad" data-count="8" data-suffix="+">0</span></div><div class="l">agentes de IA trabajando por ti</div></div>
+      <div class="stat reveal"><div class="n"><span class="grad" data-count="0" data-text="0">0</span></div><div class="l">hojas de cálculo que mantener</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="ai reveal">
+      <div class="inner">
+        <span class="eyebrow" style="color:#dfe1ff">Inteligencia artificial</span>
+        <h2 class="sec">Agentes que trabajan contigo.</h2>
+        <p class="lead">No es una promesa de marketing: ya asignan limpiezas, revisan fotos y redactan tus informes.</p>
+        <div class="chips">
+          <span class="chip">🎯 Asignación</span>
+          <span class="chip">📸 Calidad de fotos</span>
+          <span class="chip">📊 Informes</span>
+          <span class="chip">💬 Briefing diario</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="faq">
+  <div class="wrap center">
+    <span class="eyebrow">Preguntas frecuentes</span>
+    <h2 class="sec">Lo que sueles <span class="grad">querer saber</span>.</h2>
+  </div>
+  <div class="wrap">
+    <div class="faq reveal">
+      <details>
+        <summary>¿Sirve si gestiono pisos de varios propietarios?</summary>
+        <div class="a">Sí. IALIMP está pensado justo para eso: cada propietario tiene su portal con el estado de su piso, sus documentos y sus facturas, y tú lo gestionas todo desde un único panel.</div>
+      </details>
+      <details>
+        <summary>¿La limpiadora tiene que instalar algo?</summary>
+        <div class="a">No. Entra desde el móvil con un enlace o un PIN, sin instalar ninguna app ni crear cuentas. Ve su día, hace el checklist y sube las fotos.</div>
+      </details>
+      <details>
+        <summary>¿Puedo ponerle mi marca?</summary>
+        <div class="a">Sí. El portal del propietario y la app del equipo se muestran con el nombre, el logo y los colores de tu empresa.</div>
+      </details>
+      <details>
+        <summary>¿Se conecta con mi calendario de reservas?</summary>
+        <div class="a">Sí. Se sincroniza con Smoobu y con cualquier calendario iCal (Airbnb, Booking, etc.), así las limpiezas se crean solas con cada salida.</div>
+      </details>
+      <details>
+        <summary>¿Cumple con la protección de datos (RGPD)?</summary>
+        <div class="a">Sí. Tratamos los datos conforme al RGPD y la LSSI. Puedes consultar el <a href="/aviso-legal.html">aviso legal</a>, la <a href="/privacidad.html">política de privacidad</a> y la <a href="/cookies.html">política de cookies</a>.</div>
+      </details>
+      <details>
+        <summary>¿Cómo empiezo?</summary>
+        <div class="a">Rellena el formulario de aquí abajo y te contactamos para montarte tu cuenta y enseñarte IALIMP con tus pisos.</div>
+      </details>
+    </div>
+  </div>
+</section>
+
+<section class="block" id="contacto">
+  <div class="wrap">
+    <div class="form-card reveal">
+      <h2 class="sec">Empieza hoy.</h2>
+      <p class="lead">Cuéntanos un poco y te contactamos para enseñarte IALIMP.</p>
+      <form id="form-contacto" novalidate>
+        <div class="field">
+          <label for="nombre">Nombre *</label>
+          <input id="nombre" name="nombre" type="text" autocomplete="name" required>
+        </div>
+        <div class="field">
+          <label for="email">Email *</label>
+          <input id="email" name="email" type="email" autocomplete="email" required>
+        </div>
+        <div class="field">
+          <label for="telefono">Teléfono *</label>
+          <input id="telefono" name="telefono" type="tel" autocomplete="tel" required>
+        </div>
+        <div class="field">
+          <label for="mensaje">Mensaje</label>
+          <textarea id="mensaje" name="mensaje" placeholder="¿Qué necesitas? (opcional)"></textarea>
+        </div>
+        <!-- Honeypot anti-spam: oculto para personas, los bots lo rellenan. -->
+        <div class="hp" aria-hidden="true">
+          <label for="website">No rellenar</label>
+          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off">
+        </div>
+        <div class="consent">
+          <input id="consentimiento" name="consentimiento" type="checkbox" required>
+          <label for="consentimiento">He leído y acepto la <a href="/privacidad.html" target="_blank" rel="noopener">Política de privacidad</a> y el tratamiento de mis datos para atender mi solicitud. *</label>
+        </div>
+        <button class="btn btn-primary" type="submit">Solicitar demo
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <div id="form-msg" class="form-msg" role="status" aria-live="polite"></div>
+        <p class="form-note">O escríbenos a <a href="mailto:hola@ialimp.es" style="color:var(--primary);font-weight:600">hola@ialimp.es</a></p>
+      </form>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot">
+    <div>
+      <div class="logo"><span class="ia">ia</span><span class="l2">limp</span></div>
+      <div class="muted">El sistema operativo de tu empresa de limpieza.</div>
+    </div>
+    <div class="foot-legal">
+      <a href="/aviso-legal.html">Aviso legal</a>
+      <a href="/privacidad.html">Privacidad</a>
+      <a href="/cookies.html">Cookies</a>
+    </div>
+    <div class="muted">© 2026 IALIMP · Esta web no usa cookies de seguimiento.</div>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Reveal al hacer scroll
+    var io = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); }
+      });
+    }, {threshold:.14});
+    document.querySelectorAll('.reveal').forEach(function(el){ io.observe(el); });
+
+    // Sombra en el header al hacer scroll
+    var hdr = document.getElementById('hdr');
+    var onScroll = function(){ if(hdr) hdr.classList.toggle('scrolled', window.scrollY > 8); };
+    window.addEventListener('scroll', onScroll, {passive:true}); onScroll();
+
+    // Contadores animados (cuando entran en pantalla)
+    function animateCount(el){
+      var target = parseFloat(el.getAttribute('data-count')) || 0;
+      var fixed = el.getAttribute('data-text');               // valor textual fijo (ej. 24/7, 0)
+      var suffix = el.getAttribute('data-suffix') || '';
+      var prefix = el.getAttribute('data-prefix') || '';
+      if(reduce || fixed){ el.textContent = fixed != null ? fixed : (prefix + target + suffix); return; }
+      var start = null, dur = 1100;
+      function step(ts){
+        if(!start) start = ts;
+        var p = Math.min((ts - start)/dur, 1);
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = prefix + Math.round(target * eased) + suffix;
+        if(p < 1) requestAnimationFrame(step);
+      }
+      requestAnimationFrame(step);
+    }
+    var cio = new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){ animateCount(e.target); cio.unobserve(e.target); }
+      });
+    }, {threshold:.6});
+    document.querySelectorAll('[data-count]').forEach(function(el){ cio.observe(el); });
+
+    // Parallax/tilt suave del mockup con el ratón (solo puntero fino, sin reduce-motion)
+    var tilt = document.getElementById('tilt');
+    var mock = document.getElementById('mock');
+    if(tilt && mock && !reduce && window.matchMedia('(pointer:fine)').matches){
+      mock.addEventListener('mousemove', function(ev){
+        var r = mock.getBoundingClientRect();
+        var x = (ev.clientX - r.left)/r.width - .5;
+        var y = (ev.clientY - r.top)/r.height - .5;
+        tilt.style.transform = 'rotateY(' + (x*7) + 'deg) rotateX(' + (-y*7) + 'deg)';
+      });
+      mock.addEventListener('mouseleave', function(){ tilt.style.transform = ''; });
+    }
+
+    // Formulario de contacto (lead capture → /api/contacto)
+    var form = document.getElementById('form-contacto');
+    var msg = document.getElementById('form-msg');
+    function show(type,text){ msg.className='form-msg '+type; msg.textContent=text; }
+    if(form){
+      form.addEventListener('submit', async function(e){
+        e.preventDefault();
+        var nombre=form.nombre.value.trim();
+        var email=form.email.value.trim();
+        var telefono=form.telefono.value.trim();
+        if(!nombre||!email||!telefono){ show('err','Completa nombre, email y teléfono.'); return; }
+        if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ show('err','Revisa el email.'); return; }
+        if(!form.consentimiento.checked){ show('err','Debes aceptar la política de privacidad.'); return; }
+        var btn=form.querySelector('button[type=submit]');
+        btn.disabled=true;
+        show('','');
+        try{
+          var r=await fetch('/api/contacto',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+            nombre:nombre,email:email,telefono:telefono,mensaje:form.mensaje.value.trim(),consentimiento:true,website:form.website.value
+          })});
+          var data=await r.json().catch(function(){return {};});
+          if(r.ok&&data.ok){ form.reset(); show('ok','¡Gracias! Hemos recibido tu solicitud y te contactamos pronto.'); }
+          else{ show('err','No se pudo enviar. Escríbenos a hola@ialimp.es y te respondemos enseguida.'); }
+        }catch(err){
+          show('err','No se pudo enviar. Escríbenos a hola@ialimp.es y te respondemos enseguida.');
+        }finally{ btn.disabled=false; }
+      });
+    }
+  })();
+</script>
+</body>
+</html>

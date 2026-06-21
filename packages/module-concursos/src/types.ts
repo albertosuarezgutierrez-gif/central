@@ -1,0 +1,346 @@
+// ────────────────────────────────────────────────────────────────────────────
+// PORT — Contrato del módulo de Concursos Públicos.
+//
+// El módulo es PURO: no conoce ninguna BD, ningún proveedor de IA ni secretos.
+// · El LLM entra por el puerto `AiRunner` (la app lo respalda con core-ai).
+// · La app normaliza el texto del pliego (extrae el PDF) antes de llamar.
+// · La app persiste la `FichaConcurso` y el `Checklist` en su propia BD,
+//   scopeados por su `empresa_id`.
+//
+// Vocabulario LCSP (Ley 9/2017 de Contratos del Sector Público).
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Puerto del LLM: la app inyecta una función que llama a su proveedor (core-ai). */
+export type AiRunner = (system: string, user: string) => Promise<string>
+
+export type TipoContrato =
+  | 'servicios'
+  | 'suministros'
+  | 'obras'
+  | 'concesion_servicios'
+  | 'concesion_obras'
+  | 'mixto'
+  | 'otro'
+
+export type TipoProcedimiento =
+  | 'abierto'
+  | 'abierto_simplificado'
+  | 'simplificado_sumario' // abreviado / "super simplificado"
+  | 'restringido'
+  | 'negociado'
+  | 'dialogo_competitivo'
+  | 'otro'
+
+/** Los tres sobres clásicos de una licitación. */
+export type TipoSobre = 'administrativo' | 'tecnico' | 'economico'
+
+/** Cómo se valora un criterio de adjudicación. */
+export type TipoCriterio = 'automatico' | 'juicio_valor'
+
+// ────────────────────────────────────────────────────────────────────────────
+// Piezas de la ficha
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Un criterio de adjudicación con su peso. */
+export interface CriterioValoracion {
+  nombre: string
+  puntos: number            // peso máximo en puntos
+  tipo: TipoCriterio        // automático (fórmula) o juicio de valor (subjetivo)
+  sobre?: TipoSobre         // dónde se evalúa (técnico vs económico)
+  formula?: string          // descripción de la fórmula si es automático (ej. precio)
+}
+
+/** Un requisito de solvencia exigido al licitador. */
+export interface RequisitoSolvencia {
+  ambito: 'economica' | 'tecnica'
+  descripcion: string
+  // Umbral cuantificable si el pliego lo da (ej. volumen de negocio mínimo)
+  importe_minimo?: number
+}
+
+/** Un documento que hay que aportar, asignado a su sobre. */
+export interface DocumentoRequerido {
+  nombre: string
+  sobre: TipoSobre
+  obligatorio: boolean
+  // Modelo/anexo del propio pliego a rellenar, si lo indica (ej. "Anexo II").
+  modelo?: string
+}
+
+/** Garantías exigidas (provisional/definitiva). */
+export interface Garantias {
+  provisional_pct?: number  // % sobre presupuesto base (0–100); normalmente 0
+  definitiva_pct?: number   // % sobre importe de adjudicación (normalmente 5)
+  complementaria_pct?: number
+}
+
+/** Fechas e hitos del expediente (ISO 8601 'YYYY-MM-DD' cuando se conozcan). */
+export interface PlazosConcurso {
+  publicacion?: string
+  fin_presentacion?: string  // fin de plazo de presentación de ofertas
+  fin_aclaraciones?: string  // fin del periodo de consultas/aclaraciones
+  ejecucion_meses?: number   // plazo de ejecución del contrato
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Ficha del concurso — salida principal de `analizarPliego`
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface FichaConcurso {
+  // Identificación
+  objeto: string                         // objeto del contrato
+  organo_contratacion?: string           // entidad convocante
+  expediente?: string                    // nº de expediente
+  cpv?: string[]                         // códigos CPV
+  tipo_contrato: TipoContrato
+  procedimiento: TipoProcedimiento
+
+  // Importes (en euros, sin IVA salvo que se indique)
+  presupuesto_base?: number              // presupuesto base de licitación
+  valor_estimado?: number                // valor estimado del contrato (VEC)
+  lotes: number                          // 0/1 = sin lotes; >1 = nº de lotes
+
+  // Plazos, solvencia, garantías, criterios y documentación
+  plazos: PlazosConcurso
+  solvencia: RequisitoSolvencia[]
+  garantias: Garantias
+  criterios: CriterioValoracion[]
+  documentos: DocumentoRequerido[]
+
+  // Trazas para auditar la extracción
+  avisos?: string[]                      // dudas/ambigüedades detectadas por el agente
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Checklist derivado (puro) de la ficha
+// ────────────────────────────────────────────────────────────────────────────
+
+export interface ItemChecklist {
+  sobre: TipoSobre
+  documento: string
+  obligatorio: boolean
+  modelo?: string
+  hecho: boolean        // la app lo marca; el módulo lo inicializa a false
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Go / No-Go (banderas rojas) — necesita el perfil de la empresa licitadora
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Datos mínimos de la empresa para decidir si puede presentarse. */
+export interface PerfilEmpresa {
+  // Solvencia económica que la empresa puede acreditar
+  volumen_negocio_anual?: number
+  // Capacidad operativa para asumir el plazo de ejecución
+  meses_disponibilidad?: number
+  // ¿Puede constituir las garantías exigidas? (avales)
+  puede_avalar?: boolean
+}
+
+export type Severidad = 'bloqueante' | 'aviso'
+export type Semaforo = 'verde' | 'ambar' | 'rojo'
+
+export interface BanderaRoja {
+  severidad: Severidad
+  motivo: string
+}
+
+export interface EvaluacionGoNoGo {
+  semaforo: Semaforo            // rojo = no apto; ámbar = revisar; verde = adelante
+  banderas: BanderaRoja[]
+  recomendacion: string
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Biblioteca de empresa (F2) — documentos/datos reutilizables del licitador.
+// Es lo que permite autocompletar el checklist de cada concurso.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Familia de documento del licitador (la app guarda el fichero aparte). */
+export type TipoDocumentoBiblioteca =
+  | 'escritura_constitucion'
+  | 'poderes'
+  | 'cif'
+  | 'certificado_aeat'          // estar al corriente con Hacienda
+  | 'certificado_ss'            // estar al corriente con la Seguridad Social
+  | 'cuentas_anuales'
+  | 'seguro_rc'                 // responsabilidad civil
+  | 'clasificacion_empresarial'
+  | 'certificado_iso'
+  | 'declaracion_responsable'
+  | 'deuc'
+  | 'otro'
+
+/** Un documento guardado en la biblioteca de la empresa. */
+export interface DocumentoBiblioteca {
+  tipo: TipoDocumentoBiblioteca
+  nombre: string
+  vigencia_hasta?: string                 // ISO 'YYYY-MM-DD' si caduca
+  datos?: Record<string, unknown>         // metadatos (p.ej. nº de póliza)
+}
+
+export type Biblioteca = DocumentoBiblioteca[]
+
+// ────────────────────────────────────────────────────────────────────────────
+// Sobre administrativo + DEUC (F3)
+// El módulo produce DATOS; la app los renderiza al formato oficial (PDF/XML).
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Datos de identificación de la empresa para el DEUC y la declaración responsable. */
+export interface DatosIdentificacionEmpresa {
+  razon_social: string
+  nif: string
+  domicilio?: string
+  representante?: string          // nombre del apoderado que firma
+  representante_dni?: string
+  email?: string
+  telefono?: string
+  es_pyme?: boolean               // Parte II del DEUC
+}
+
+/** Una entrada del Sobre 1: documento exigido + qué doc de la biblioteca lo cubre. */
+export interface ItemSobreAdministrativo {
+  documento: string
+  obligatorio: boolean
+  modelo?: string
+  cubiertoPor?: DocumentoBiblioteca   // undefined = aún no cubierto por la biblioteca
+}
+
+/** DEUC por partes (estructura de datos; la app la vuelca al formulario oficial). */
+export interface Deuc {
+  // Parte I — sobre el procedimiento de contratación
+  procedimiento: { objeto?: string; expediente?: string; organo?: string }
+  // Parte II — datos del operador económico
+  operador: DatosIdentificacionEmpresa
+  // Parte III — motivos de exclusión (el licitador declara NO estar incurso)
+  motivos_exclusion: {
+    sin_condenas: boolean
+    al_corriente_impuestos: boolean
+    al_corriente_ss: boolean
+    sin_quiebra: boolean
+  }
+  // Parte IV — criterios de selección (solvencia declarada, de la ficha)
+  solvencia: { economica: string[]; tecnica: string[] }
+  // Parte VI — declaraciones finales
+  declaraciones_finales: { veracidad: boolean; fecha?: string }
+}
+
+/** Declaración responsable (art. 140 LCSP) como datos. */
+export interface DeclaracionResponsable {
+  empresa: DatosIdentificacionEmpresa
+  objeto?: string
+  expediente?: string
+  declara: string[]               // afirmaciones que firma el representante
+  fecha?: string
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Memoria técnica (F4) — ataca los criterios de juicio de valor y estima puntos.
+// El módulo planifica y construye el prompt; la app llama al LLM por sección.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Una sección de la memoria, ligada a un criterio de juicio de valor. */
+export interface SeccionMemoria {
+  criterio: string        // nombre del criterio de adjudicación
+  puntos_max: number      // puntos que reparte ese criterio
+  guia: string            // qué debe demostrar esta sección para puntuar
+}
+
+/** Sección con el texto ya redactado (por el LLM o a mano). */
+export interface SeccionMemoriaRellena extends SeccionMemoria {
+  contenido: string
+}
+
+/** Memoria técnica completa (todas las secciones redactadas). */
+export interface MemoriaTecnica {
+  secciones: SeccionMemoriaRellena[]
+}
+
+/** Estimación de cuántos puntos técnicos cubre la memoria redactada. */
+export interface CoberturaMemoria {
+  puntos_cubiertos: number   // suma de puntos de las secciones con contenido suficiente
+  puntos_totales: number     // suma de puntos de todos los criterios de juicio de valor
+  pct: number                // 0–100, redondeado a entero
+  vacias: string[]           // criterios cuya sección sigue vacía/insuficiente
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Oferta económica + rentabilidad (F5) — el módulo opera números; el coste lo
+// aporta la app (puede venir de contabilidad). Reutiliza scoring.ts.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Coste de ejecutar el contrato, en euros (lo estima la app/empresa). */
+export interface CosteEjecucion {
+  directos: number               // mano de obra, materiales, subcontratas…
+  indirectos?: number            // estructura, overheads
+  margen_objetivo_pct?: number   // beneficio deseado sobre el PRECIO (0–100)
+}
+
+/** Evaluación de una oferta concreta frente a coste, competencia y pliego. */
+export interface EvaluacionOferta {
+  oferta: number                 // importe ofertado (€, sin IVA)
+  coste_total: number            // directos + indirectos
+  margen_euros: number           // oferta − coste_total
+  margen_pct: number             // margen_euros / oferta * 100 (0 si oferta<=0)
+  puntos_economicos: number      // puntos del criterio económico (0 si no aplica)
+  temeraria: boolean             // por debajo del umbral de baja temeraria
+  umbral_temeraria: number | null
+  viable: boolean                // margen_euros >= 0 && !temeraria
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Presentación + plazos/subsanación (F6) — cierra el flujo del concurso.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Si cada sobre está listo (lo decide la app a partir de F3/F4/F5). */
+export interface SobresListos {
+  administrativo: boolean
+  tecnico: boolean
+  economico: boolean
+}
+
+/** Estado de la presentación: plazo + sobres requeridos. */
+export interface EstadoPresentacion {
+  dias_para_fin: number | null   // días naturales hasta fin_presentacion (null si no consta)
+  plazo_abierto: boolean         // aún se puede presentar (hoy <= fin)
+  urgente: boolean               // plazo abierto y quedan <= 3 días
+  listo: boolean                 // plazo abierto y todos los sobres REQUERIDOS listos
+  pendientes: string[]           // qué falta para poder presentar
+}
+
+/** Plazo de subsanación (art. 141 LCSP): días hábiles desde el requerimiento. */
+export interface PlazoSubsanacion {
+  fecha_limite: string           // ISO 'YYYY-MM-DD'
+  dias_habiles: number
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// Radar PLACSP + OCR (F7) — el módulo empareja anuncios ya normalizados con los
+// criterios de la empresa y detecta pliegos escaneados. El sondeo en vivo y el
+// OCR son infraestructura de la app.
+// ────────────────────────────────────────────────────────────────────────────
+
+/** Un anuncio de licitación captado del radar (normalizado por la app). */
+export interface AnuncioRadar {
+  titulo: string
+  objeto?: string
+  cpv?: string[]            // códigos CPV del anuncio
+  presupuesto?: number      // € sin IVA si consta
+  organo?: string
+  url?: string
+}
+
+/** Qué busca la empresa en el radar. */
+export interface CriteriosRadar {
+  cpv?: string[]            // códigos/prefijos CPV de interés
+  palabras_clave?: string[] // términos a buscar en título/objeto
+  presupuesto_min?: number
+  presupuesto_max?: number
+}
+
+/** Resultado de evaluar un anuncio contra los criterios. */
+export interface CoincidenciaRadar {
+  coincide: boolean
+  puntuacion: number        // 0–100 (relevancia)
+  motivos: string[]         // por qué coincide
+}

@@ -1,1 +1,58 @@
-@AGENTS.md
+# CLAUDE.md — Central (casa de marcas)
+
+> **Este repo se llama provisionalmente `central`** (repo GitHub aún `ia.rest` hasta renombrar).
+> Es la RAÍZ del monorepo, no una vertical. No contiene lógica de producto.
+> Lee **`MATRIZ.md`** para la estructura (raíz = central, `packages/*` = módulos compartidos,
+> `apps/*` = verticales) y `docs/CONTEXTO-SESIONES.md` para el estado vivo del proyecto.
+
+## Verticales (cada una con su propio CLAUDE.md/AGENTS.md y proyecto Vercel)
+- **`apps/ia-rest`** — Voice POS / hostelería (`iarest.es`). Consume `packages/core-ai` y
+  `packages/core-fiscal` vía `file:` deps. Ver `apps/ia-rest/CLAUDE.md`.
+- **`apps/sivra`** — intranet de pisos turísticos. Ver `apps/sivra/CLAUDE.md`.
+- **`apps/ialimp`** — SaaS de limpiezas (`app.ialimp.es`). Ver `apps/ialimp/CLAUDE.md`.
+- **`apps/plataforma`** — cuadro de mando consolidado (HITO 2). Jerarquía `Cuenta → Sociedad → Negocio`.
+  BD compartida con sivra+ialimp. Ver `apps/plataforma/CLAUDE.md`.
+- **`apps/rrhh`** — **iarrhh**, Portal del Empleado (RR.HH. multi-tenant; `central-rrhh.vercel.app`). Schema
+  `rrhh` en la Supabase compartida (rol `rrhh_app`, BYPASSRLS). Alta de empresas desde el god-panel de
+  plataforma por puerto HTTP (`/api/operador/empresas`, Bearer `RRHH_OPERADOR_SECRET`).
+
+## Módulos compartidos (`packages/*`, fuente TS pura, portables)
+> **Scope npm = `@central/*`** (renombrado desde `@iarest/*` el 11/06/2026, antes de tener clientes).
+- `@central/core-ai`, `@central/core-fiscal`, `@central/core-push`, `@central/core-storage`, `@central/core-email`, `@central/core-identity`.
+  - `core-push` (Web Push, envoltura pura sobre `web-push`) es el **primer núcleo con
+    dependencia npm propia** — funciona porque pnpm symlinkea las deps de cada paquete
+    (el enfoque `file:` deps no las resolvía en Vercel). Lo consumen `ia-rest` e `ialimp`.
+
+## Memoria entre sesiones (entorno efímero)
+El contenedor cloud se borra al acabar la sesión: lo único que persiste es lo commiteado.
+Al terminar, actualiza `docs/CONTEXTO-SESIONES.md` (entrada nueva arriba). El hook `Stop`
+(`.claude/hooks/persist-memoria.sh`) lo commitea y empuja.
+
+Salvaguardas para no perder información:
+- **Guardián de cierre** (`persist-memoria.sh`): si la sesión hizo commits que tocan algo
+  distinto de la memoria pero NO anotó `CONTEXTO-SESIONES.md`, el hook `Stop` bloquea UNA
+  vez y pide anotarlo antes de cerrar. (Se apoya en el SHA base que graba
+  `.claude/hooks/memoria-record-base.sh` al arrancar.)
+- **Hook `PreCompact`** (`.claude/hooks/memoria-precompact.sh`): en sesiones largas,
+  recuerda volcar el estado clave a la memoria ANTES de compactar (el resumen pierde detalle).
+- **Auditoría programada** (`/auditoria-diaria`): red de seguridad nocturna que reconcilia
+  memoria/skills/docs contra el código real y abre PR draft. Cadencias y setup del trigger
+  en `docs/RUTINAS-PROGRAMADAS.md`. Índice de skills en `docs/SKILLS.md`.
+- **Límite conocido:** una sesión de **solo charla** (decisión importante pero sin commit)
+  no dispara el guardián — no hay "trabajo" detectable. Si una conversación produce una
+  decisión, anótala a mano en `CONTEXTO-SESIONES.md`.
+
+## Reglas de la matriz
+- Toda **vertical nueva** entra como `apps/<app>` con su `package.json`/`vercel.json` y un
+  proyecto Vercel con **Root Directory `apps/<app>`** + install `npm install --legacy-peer-deps`.
+- **NUNCA** poner `apps/` en el `.vercelignore` de la raíz (se aplica a todos los proyectos del
+  repo y borraría la carpeta del build por-app → el proyecto caería a construir la raíz).
+- Los módulos compartidos viven en `packages/*` (portables, sin acoplarse a una vertical); las
+  apps los consumen con `file:` deps (build aislado por Root Directory, sin pnpm/turbo).
+
+## ⏳ Principio: los cambios que ROMPEN se hacen AHORA (sin clientes)
+Renombrados de scope, reestructuras de BD, cortes de infraestructura y demás cambios de gran radio
+**se ejecutan mientras NO hay clientes en producción.** Con clientes vivos estos cambios pasan de ser
+"un PR mecánico" a ser un riesgo serio (downtime, migraciones de datos, ventanas de mantenimiento).
+Decisión de Alberto (11/06/2026), aplicada al rename `@iarest/*`→`@central/*`. Si un cambio así está
+pendiente y el árbol está limpio-ish, es mejor hacerlo ya que diferirlo.

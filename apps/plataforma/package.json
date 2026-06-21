@@ -1,0 +1,43 @@
+{
+  "name": "plataforma",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "prisma generate && next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@central/core-ai": "workspace:*",
+    "@central/core-email": "workspace:*",
+    "@central/core-identity": "workspace:*",
+    "@central/module-concursos": "workspace:*",
+    "@central/module-contabilidad": "workspace:*",
+    "@prisma/client": "^5.22.0",
+    "@supabase/supabase-js": "^2.105.1",
+    "bcryptjs": "^2.4.3",
+    "fast-xml-parser": "^4.5.0",
+    "jose": "^5.9.3",
+    "next": "^15.5.18",
+    "prisma": "^5.22.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "imapflow": "^1.0.171",
+    "mailparser": "^3.7.1",
+    "pdf-parse": "^1.1.1",
+    "xlsx": "^0.18.5",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/mailparser": "^3.4.4",
+    "@types/pdf-parse": "^1.1.4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "^16.2.6",
+    "typescript": "^5"
+  }
+}

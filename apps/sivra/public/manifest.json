@@ -1,0 +1,44 @@
+{
+  "name": "SIVRA — Gestión Apartamentos",
+  "short_name": "SIVRA",
+  "description": "Intranet de gestión de alojamientos turísticos · Sevilla",
+  "start_url": "/dashboard",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#060609",
+  "theme_color": "#060609",
+  "lang": "es",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Mensajes",
+      "url": "/mensajes",
+      "description": "Ver mensajes de huéspedes"
+    },
+    {
+      "name": "Dashboard",
+      "url": "/dashboard",
+      "description": "Panel principal"
+    },
+    {
+      "name": "Añadir gasto",
+      "url": "/expenses?new=1",
+      "description": "Registrar nuevo gasto"
+    }
+  ]
+}

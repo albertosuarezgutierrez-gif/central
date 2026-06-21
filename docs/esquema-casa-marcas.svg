@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1160 860" font-family="Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <rect width="1160" height="860" fill="#f8fafc"/>
+
+  <!-- Título -->
+  <text x="580" y="44" text-anchor="middle" font-size="30" font-weight="800" fill="#1e1b4b">LA MATRIZ  ·  «Encaje» (nombre provisional)</text>
+  <text x="580" y="72" text-anchor="middle" font-size="16" fill="#64748b">Casa de marcas: módulos que se construyen UNA vez y se ENCIENDEN en cada especialidad</text>
+
+  <!-- ============ BANDA A · MÓDULOS COMPARTIDOS ============ -->
+  <rect x="30" y="92" width="1100" height="252" rx="14" fill="#eef2ff" stroke="#6366f1" stroke-width="2"/>
+  <text x="50" y="122" font-size="18" font-weight="800" fill="#4338ca">① MÓDULOS TRANSVERSALES  — se construyen 1 vez, se quitan los duplicados, se encienden donde haga falta</text>
+
+  <!-- fila 1 -->
+  <g font-size="15" font-weight="600" fill="#312e81">
+    <rect x="50"  y="140" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="174" y="167" text-anchor="middle">Contabilidad / IVA</text>
+    <rect x="316" y="140" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="440" y="167" text-anchor="middle">Facturación (VeriFactu)</text>
+    <rect x="582" y="140" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="706" y="167" text-anchor="middle">Cobros / Pagos</text>
+    <rect x="848" y="140" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="972" y="167" text-anchor="middle">Ventas / CRM</text>
+    <!-- fila 2 -->
+    <rect x="50"  y="194" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="174" y="221" text-anchor="middle">Marketing</text>
+    <rect x="316" y="194" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="440" y="221" text-anchor="middle">SEO</text>
+    <rect x="582" y="194" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="706" y="221" text-anchor="middle">Constructor de webs</text>
+    <rect x="848" y="194" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="972" y="221" text-anchor="middle">Almacén / Stock</text>
+    <!-- fila 3 -->
+    <rect x="50"  y="248" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="174" y="275" text-anchor="middle">RRHH / Nóminas</text>
+    <rect x="316" y="248" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="440" y="275" text-anchor="middle">Mensajería</text>
+    <rect x="582" y="248" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="706" y="275" text-anchor="middle">Portal externo (cliente)</text>
+    <rect x="848" y="248" width="248" height="44" rx="9" fill="#fff" stroke="#a5b4fc"/><text x="972" y="275" text-anchor="middle">IA / Copiloto</text>
+  </g>
+  <text x="50" y="320" font-size="13.5" fill="#6366f1" font-style="italic">…+ pricing, captación de leads, RGPD/legal, notificaciones, onboarding  (catálogo ampliable)</text>
+
+  <!-- flechas hacia abajo -->
+  <g stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arr)">
+    <path d="M250,344 L250,372"/><path d="M580,344 L580,372"/><path d="M910,344 L910,372"/>
+  </g>
+  <defs><marker id="arr" markerWidth="10" markerHeight="10" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#94a3b8"/></marker></defs>
+
+  <!-- ============ BANDA B · ESPECIALIDADES ============ -->
+  <text x="50" y="396" font-size="18" font-weight="800" fill="#0f766e">② ESPECIALIDADES (verticales) — cada una mantiene su peculiaridad y enciende los módulos que usa</text>
+
+  <!-- ia.rest -->
+  <rect x="30" y="412" width="352" height="196" rx="14" fill="#fff" stroke="#0ea5e9" stroke-width="2"/>
+  <text x="50" y="444" font-size="20" font-weight="800" fill="#0369a1">ia.rest</text>
+  <text x="50" y="468" font-size="14.5" fill="#334155">Restauración / hostelería</text>
+  <text x="50" y="494" font-size="13" fill="#64748b">Núcleo propio: comanda por voz, TPV,</text>
+  <text x="50" y="512" font-size="13" fill="#64748b">carta, mesas, KDS/cocina, eventos/</text>
+  <text x="50" y="530" font-size="13" fill="#64748b">catering, hardware TPV, QR mesa.</text>
+  <text x="50" y="560" font-size="12.5" font-weight="700" fill="#0369a1">Enciende: Contab · Factur · Cobros ·</text>
+  <text x="50" y="578" font-size="12.5" font-weight="700" fill="#0369a1">Ventas · Marketing · Almacén · IA · Web</text>
+
+  <!-- ialimp -->
+  <rect x="404" y="412" width="352" height="196" rx="14" fill="#fff" stroke="#6366f1" stroke-width="2"/>
+  <text x="424" y="444" font-size="20" font-weight="800" fill="#4338ca">ialimp</text>
+  <text x="424" y="468" font-size="14.5" fill="#334155">Limpieza (+ mantenimiento)</text>
+  <text x="424" y="494" font-size="13" fill="#64748b">Núcleo propio: sesiones de limpieza,</text>
+  <text x="424" y="512" font-size="13" fill="#64748b">app del operario (checklist+fotos IA),</text>
+  <text x="424" y="530" font-size="13" fill="#64748b">auto-asignación, PMS/iCal.</text>
+  <text x="424" y="560" font-size="12.5" font-weight="700" fill="#4338ca">Enciende: Contab · Factur · RRHH ·</text>
+  <text x="424" y="578" font-size="12.5" font-weight="700" fill="#4338ca">Cotizador · Almacén · Portal · IA · Captación</text>
+
+  <!-- sivra -->
+  <rect x="778" y="412" width="352" height="196" rx="14" fill="#fff" stroke="#d4a017" stroke-width="2"/>
+  <text x="798" y="444" font-size="20" font-weight="800" fill="#a16207">sivra</text>
+  <text x="798" y="468" font-size="14.5" fill="#334155">Pisos turísticos / propietarios</text>
+  <text x="798" y="494" font-size="13" fill="#64748b">Núcleo propio: reservas (Smoobu),</text>
+  <text x="798" y="512" font-size="13" fill="#64748b">pricing dinámico, mensajería huésped.</text>
+  <text x="798" y="530" font-size="13" fill="#a16207" font-weight="700">Evoluciona → SERVICIOS al propietario</text>
+  <text x="798" y="560" font-size="12.5" font-weight="700" fill="#a16207">Enciende: Pricing · Contab · Mensajería ·</text>
+  <text x="798" y="578" font-size="12.5" font-weight="700" fill="#a16207">Web/SEO · Portal · IA  + Limpieza (de ialimp)*</text>
+
+  <!-- flechas -->
+  <g stroke="#94a3b8" stroke-width="2" fill="none" marker-end="url(#arr)">
+    <path d="M250,608 L250,648"/><path d="M580,608 L580,648"/><path d="M910,608 L910,648"/>
+  </g>
+
+  <!-- ============ BANDA C · NÚCLEOS TÉCNICOS ============ -->
+  <rect x="30" y="656" width="1100" height="118" rx="14" fill="#ecfeff" stroke="#06b6d4" stroke-width="2"/>
+  <text x="50" y="686" font-size="18" font-weight="800" fill="#0e7490">③ NÚCLEOS TÉCNICOS (packages/*) — primitivas puras, ya en producción</text>
+  <g font-size="14" font-weight="700" fill="#155e75">
+    <rect x="50"  y="704" width="168" height="44" rx="9" fill="#fff" stroke="#67e8f9"/><text x="134" y="731" text-anchor="middle">core-ai</text>
+    <rect x="232" y="704" width="168" height="44" rx="9" fill="#fff" stroke="#67e8f9"/><text x="316" y="731" text-anchor="middle">core-fiscal</text>
+    <rect x="414" y="704" width="168" height="44" rx="9" fill="#fff" stroke="#67e8f9"/><text x="498" y="731" text-anchor="middle">core-push</text>
+    <rect x="596" y="704" width="168" height="44" rx="9" fill="#fff" stroke="#67e8f9"/><text x="680" y="731" text-anchor="middle">core-storage</text>
+    <rect x="778" y="704" width="168" height="44" rx="9" fill="#fff" stroke="#67e8f9"/><text x="862" y="731" text-anchor="middle">core-email</text>
+    <rect x="960" y="704" width="140" height="44" rx="9" fill="#fff" stroke="#67e8f9"/><text x="1030" y="731" text-anchor="middle">core-identity</text>
+  </g>
+
+  <!-- nota -->
+  <text x="30" y="800" font-size="13" fill="#64748b">* La limpieza (ialimp) es un servicio que el propietario puede encender o no en sivra. Verticales = especialidades; comparten módulos (capa ①) y núcleos (capa ③).</text>
+  <text x="30" y="822" font-size="13" fill="#64748b">Hoy contabilidad / ventas / almacén / IA / portal están DUPLICADOS por vertical → el objetivo es unificarlos en la capa ① (una sola implementación).</text>
+  <text x="30" y="844" font-size="13" fill="#64748b">Vanessa (Sique Brilla) sigue en su ialimp actual sin tocar; migración planificada y probada.</text>
+</svg>

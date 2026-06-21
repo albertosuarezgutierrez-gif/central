@@ -1,0 +1,3 @@
+# Fuentes auto-alojadas: se descargan en el build (scripts/fetch-fonts.mjs).
+# No se versionan los binarios.
+*.woff2

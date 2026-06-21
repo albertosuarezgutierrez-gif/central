@@ -1,0 +1,2816 @@
+{
+  "generadoEn": "2026-06-21T08:03:26Z",
+  "verticales": [
+    "ia-rest",
+    "ialimp",
+    "plataforma",
+    "rrhh",
+    "sivra"
+  ],
+  "matriz": "plataforma",
+  "packages": [
+    {
+      "id": "core-ai",
+      "tipo": "core",
+      "npm": "@central/core-ai"
+    },
+    {
+      "id": "core-email",
+      "tipo": "core",
+      "npm": "@central/core-email"
+    },
+    {
+      "id": "core-firma",
+      "tipo": "core",
+      "npm": "@central/core-firma"
+    },
+    {
+      "id": "core-fiscal",
+      "tipo": "core",
+      "npm": "@central/core-fiscal"
+    },
+    {
+      "id": "core-identity",
+      "tipo": "core",
+      "npm": "@central/core-identity"
+    },
+    {
+      "id": "core-payments",
+      "tipo": "core",
+      "npm": "@central/core-payments"
+    },
+    {
+      "id": "core-push",
+      "tipo": "core",
+      "npm": "@central/core-push"
+    },
+    {
+      "id": "core-storage",
+      "tipo": "core",
+      "npm": "@central/core-storage"
+    },
+    {
+      "id": "module-agenda",
+      "tipo": "module",
+      "npm": "@central/module-agenda"
+    },
+    {
+      "id": "module-asn",
+      "tipo": "module",
+      "npm": "@central/module-asn"
+    },
+    {
+      "id": "module-chat",
+      "tipo": "module",
+      "npm": "@central/module-chat"
+    },
+    {
+      "id": "module-concursos",
+      "tipo": "module",
+      "npm": "@central/module-concursos"
+    },
+    {
+      "id": "module-contabilidad",
+      "tipo": "module",
+      "npm": "@central/module-contabilidad"
+    },
+    {
+      "id": "module-crm",
+      "tipo": "module",
+      "npm": "@central/module-crm"
+    },
+    {
+      "id": "module-documental",
+      "tipo": "module",
+      "npm": "@central/module-documental"
+    },
+    {
+      "id": "module-feedback",
+      "tipo": "module",
+      "npm": "@central/module-feedback"
+    },
+    {
+      "id": "module-horario",
+      "tipo": "module",
+      "npm": "@central/module-horario"
+    },
+    {
+      "id": "module-materiales",
+      "tipo": "module",
+      "npm": "@central/module-materiales"
+    },
+    {
+      "id": "module-organizador-trabajo",
+      "tipo": "module",
+      "npm": "@central/module-organizador-trabajo"
+    },
+    {
+      "id": "module-presupuestos",
+      "tipo": "module",
+      "npm": "@central/module-presupuestos"
+    },
+    {
+      "id": "module-proveedores",
+      "tipo": "module",
+      "npm": "@central/module-proveedores"
+    },
+    {
+      "id": "module-revenue",
+      "tipo": "module",
+      "npm": "@central/module-revenue"
+    },
+    {
+      "id": "module-rrhh",
+      "tipo": "module",
+      "npm": "@central/module-rrhh"
+    },
+    {
+      "id": "module-trazabilidad",
+      "tipo": "module",
+      "npm": "@central/module-trazabilidad"
+    }
+  ],
+  "capacidades": [
+    {
+      "id": "tpv",
+      "grupo": "Venta y operación",
+      "label": "TPV / comanda"
+    },
+    {
+      "id": "kds",
+      "grupo": "Venta y operación",
+      "label": "KDS (cocina)"
+    },
+    {
+      "id": "eventos-catering",
+      "grupo": "Venta y operación",
+      "label": "Eventos / catering / BEO"
+    },
+    {
+      "id": "reservas",
+      "grupo": "Venta y operación",
+      "label": "Reservas"
+    },
+    {
+      "id": "qr-portal",
+      "grupo": "Cliente",
+      "label": "QR / portal cliente"
+    },
+    {
+      "id": "feedback",
+      "grupo": "Cliente",
+      "label": "Feedback / propinas",
+      "modulo": "module-feedback"
+    },
+    {
+      "id": "limpiadoras",
+      "grupo": "Limpieza / inmob.",
+      "label": "Equipo limpiadoras"
+    },
+    {
+      "id": "agenda-asignacion",
+      "grupo": "Limpieza / inmob.",
+      "label": "Agenda / auto-asignación"
+    },
+    {
+      "id": "pricing",
+      "grupo": "Inmobiliario",
+      "label": "Pricing dinámico"
+    },
+    {
+      "id": "mercado",
+      "grupo": "Inmobiliario",
+      "label": "Mercado / ingest"
+    },
+    {
+      "id": "crm-leads",
+      "grupo": "Negocio",
+      "label": "CRM / leads / cotizador",
+      "modulo": "module-crm"
+    },
+    {
+      "id": "marketing",
+      "grupo": "Negocio",
+      "label": "Marketing (blog/IG/SEO)"
+    },
+    {
+      "id": "rrhh",
+      "grupo": "Negocio",
+      "label": "RRHH / equipo"
+    },
+    {
+      "id": "almacen-stock",
+      "grupo": "Stock",
+      "label": "Almacén / stock / ASN",
+      "modulo": "module-materiales"
+    },
+    {
+      "id": "proveedores",
+      "grupo": "Stock",
+      "label": "Proveedores / compras",
+      "modulo": "module-proveedores"
+    },
+    {
+      "id": "contabilidad",
+      "grupo": "Finanzas",
+      "label": "Contabilidad"
+    },
+    {
+      "id": "facturacion-verifactu",
+      "grupo": "Finanzas",
+      "label": "Facturación / VeriFactu"
+    },
+    {
+      "id": "hardware-bridge",
+      "grupo": "Plataforma",
+      "label": "Hardware bridge"
+    },
+    {
+      "id": "escaner-ocr",
+      "grupo": "Plataforma",
+      "label": "Escáner / OCR"
+    },
+    {
+      "id": "informes",
+      "grupo": "Plataforma",
+      "label": "Informes"
+    },
+    {
+      "id": "notificaciones",
+      "grupo": "Plataforma",
+      "label": "Notificaciones (push)"
+    },
+    {
+      "id": "asistente-ia",
+      "grupo": "Plataforma",
+      "label": "Asistente / copiloto IA"
+    },
+    {
+      "id": "concursos",
+      "grupo": "Negocio",
+      "label": "Concursos públicos",
+      "modulo": "module-concursos"
+    }
+  ],
+  "matrizModulos": {
+    "core-ai": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 16
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "core-email": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 5
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 5
+      }
+    },
+    "core-firma": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-fiscal": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-identity": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 9
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-payments": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 20
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "core-push": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 5
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "core-storage": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "module-agenda": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-asn": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-chat": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-concursos": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 1
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 13
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-contabilidad": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "plataforma": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "module-crm": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-documental": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-feedback": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 5
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-horario": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 5
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-materiales": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "module-organizador-trabajo": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 5
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-presupuestos": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-proveedores": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 2
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "usado",
+        "evidencias": 2
+      }
+    },
+    "module-revenue": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-rrhh": {
+      "ia-rest": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "ialimp": {
+        "estado": "usado",
+        "evidencias": 4
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "usado",
+        "evidencias": 3
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    },
+    "module-trazabilidad": {
+      "ia-rest": {
+        "estado": "usado",
+        "evidencias": 6
+      },
+      "ialimp": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "plataforma": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "rrhh": {
+        "estado": "no",
+        "evidencias": 0
+      },
+      "sivra": {
+        "estado": "no",
+        "evidencias": 0
+      }
+    }
+  },
+  "matrizCapacidades": {
+    "tpv": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 18
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "kds": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 26
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "eventos-catering": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 5
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "reservas": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "qr-portal": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 28
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "feedback": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 7
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "limpiadoras": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 8
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 19
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 31
+      }
+    },
+    "agenda-asignacion": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "pricing": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 17
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 24
+      }
+    },
+    "mercado": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 11
+      }
+    },
+    "crm-leads": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "marketing": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 12
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 3
+      }
+    },
+    "rrhh": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 10
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 5
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "almacen-stock": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 38
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 8
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "proveedores": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 8
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 1
+      }
+    },
+    "contabilidad": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 10
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 16
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "facturacion-verifactu": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 9
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 6
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "hardware-bridge": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 15
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "escaner-ocr": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "informes": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 3
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "notificaciones": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "plataforma": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "rrhh": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    },
+    "asistente-ia": {
+      "ia-rest": {
+        "presente": true,
+        "evidencias": 165
+      },
+      "ialimp": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 2
+      },
+      "rrhh": {
+        "presente": true,
+        "evidencias": 1
+      },
+      "sivra": {
+        "presente": true,
+        "evidencias": 3
+      }
+    },
+    "concursos": {
+      "ia-rest": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "ialimp": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "plataforma": {
+        "presente": true,
+        "evidencias": 19
+      },
+      "rrhh": {
+        "presente": false,
+        "evidencias": 0
+      },
+      "sivra": {
+        "presente": false,
+        "evidencias": 0
+      }
+    }
+  },
+  "depsModulos": {
+    "core-ai": [],
+    "core-email": [],
+    "core-firma": [],
+    "core-fiscal": [],
+    "core-identity": [],
+    "core-payments": [],
+    "core-push": [],
+    "core-storage": [],
+    "module-agenda": [],
+    "module-asn": [],
+    "module-chat": [],
+    "module-concursos": [],
+    "module-contabilidad": [],
+    "module-crm": [],
+    "module-documental": [],
+    "module-feedback": [],
+    "module-horario": [],
+    "module-materiales": [],
+    "module-organizador-trabajo": [],
+    "module-presupuestos": [],
+    "module-proveedores": [],
+    "module-revenue": [],
+    "module-rrhh": [
+      "core-firma",
+      "module-documental"
+    ],
+    "module-trazabilidad": []
+  },
+  "apisPorVertical": {
+    "ia-rest": [
+      "/api/admin/cobros",
+      "/api/admin/crecimiento",
+      "/api/admin/crm",
+      "/api/admin/restaurantes",
+      "/api/admin/restaurantes/[id]",
+      "/api/admin/sistema",
+      "/api/admin/soporte",
+      "/api/admin/sugerencias",
+      "/api/admin/suscripciones",
+      "/api/almacen-central/grupo",
+      "/api/almacen-central/login",
+      "/api/almacen-central/restaurante/[id]",
+      "/api/almacen/recepcion",
+      "/api/almacen/stock",
+      "/api/asesoria/agente",
+      "/api/asesoria/cliente/[id]",
+      "/api/asesoria/clientes",
+      "/api/asesoria/login",
+      "/api/asn",
+      "/api/asn/factura",
+      "/api/asn/ocr",
+      "/api/audit/resumen",
+      "/api/auth",
+      "/api/auth/eventos-wp",
+      "/api/auth/pin-cuenta",
+      "/api/auth/seleccionar-restaurante",
+      "/api/auth/super-login",
+      "/api/auth/super-pin",
+      "/api/auth/super-shield",
+      "/api/auth/voz",
+      "/api/auth/voz-seleccion",
+      "/api/backup/drive",
+      "/api/backup/drive-auth",
+      "/api/backup/drive-auth/callback",
+      "/api/brain/conversar",
+      "/api/bridge/cashlogy",
+      "/api/bridge/cashlogy/result",
+      "/api/bridge/info",
+      "/api/bridge/printers",
+      "/api/bridge/register-printer",
+      "/api/bridge/scan",
+      "/api/bridge/secciones",
+      "/api/bridge/setup-regla",
+      "/api/bridge/token-for-session",
+      "/api/bridge/update-ip",
+      "/api/bridge/verify",
+      "/api/bridge/version",
+      "/api/caja",
+      "/api/carta/[code]",
+      "/api/cashdro",
+      "/api/central/config",
+      "/api/central/stock",
+      "/api/central/transferencias",
+      "/api/checklists/informe",
+      "/api/checklists/marcar",
+      "/api/checklists/plantillas",
+      "/api/checklists/turno",
+      "/api/clientes-fiscales",
+      "/api/cloudprnt/[deviceId]",
+      "/api/cobros/[slug]",
+      "/api/cobros/[slug]/checkout",
+      "/api/cocina/asignaciones",
+      "/api/cocina/eventos",
+      "/api/cocina/eventos/[id]",
+      "/api/cocina/eventos/[id]/crm",
+      "/api/cocina/eventos/[id]/material",
+      "/api/cocina/menu-sugerido",
+      "/api/cocina/parte",
+      "/api/cocina/personal",
+      "/api/cocina/recepciones",
+      "/api/cocina/recepciones/[id]",
+      "/api/cocina/recepciones/reconocer",
+      "/api/cocina/recetas",
+      "/api/cocina/recetas/[id]",
+      "/api/cocina/registros",
+      "/api/cocina/validar-pin",
+      "/api/cocina/yo",
+      "/api/comanda",
+      "/api/comanda/[id]/audit",
+      "/api/comanda/[id]/camarero",
+      "/api/comanda/[id]/cancelar",
+      "/api/comanda/[id]/confirmar",
+      "/api/comanda/[id]/item",
+      "/api/comanda/[id]/item/[itemId]",
+      "/api/comanda/[id]/mesa",
+      "/api/comanda/[id]/nombre",
+      "/api/comanda/[id]/pax",
+      "/api/comanda/[id]/pedir-cuenta",
+      "/api/comanda/[id]/ticket-alias",
+      "/api/comandas/activas",
+      "/api/contrato/aceptar",
+      "/api/contrato/firmar",
+      "/api/contrato/publico",
+      "/api/crm/formulario-demo",
+      "/api/cron/alertas",
+      "/api/cron/alias-ia",
+      "/api/cron/backfill-leads-sevilla",
+      "/api/cron/blog-seo",
+      "/api/cron/briefing-semanal",
+      "/api/cron/cobro-descuento",
+      "/api/cron/cobro-inactividad",
+      "/api/cron/cobros-eventos",
+      "/api/cron/completar-locales",
+      "/api/cron/crm-envio-auto",
+      "/api/cron/crm-followup-sevilla",
+      "/api/cron/crm-lead-hunter-sevilla",
+      "/api/cron/crm-recordatorio-dia2",
+      "/api/cron/crm-recordatorios",
+      "/api/cron/crm-whatsapp-sevilla",
+      "/api/cron/eventos-entorno",
+      "/api/cron/feedback-visita",
+      "/api/cron/instagram",
+      "/api/cron/instagram-ideas",
+      "/api/cron/instagram-metricas",
+      "/api/cron/instagram-refresh",
+      "/api/cron/lead-onboarding",
+      "/api/cron/mantenimiento-espacios",
+      "/api/cron/pipeline-comercial",
+      "/api/cron/prospeccion-apify",
+      "/api/cron/prospeccion-leads",
+      "/api/cron/reposicion-stock",
+      "/api/cron/reservas-noshow",
+      "/api/cron/seo-agent",
+      "/api/cuenta-nominal",
+      "/api/demo",
+      "/api/demo/seed",
+      "/api/edge/mis-cuentas",
+      "/api/estado",
+      "/api/evento/briefing/[token]",
+      "/api/evento/briefing/[token]/completar",
+      "/api/evento/checkin/[token]",
+      "/api/evento/valoracion/[token]",
+      "/api/eventos",
+      "/api/eventos-catering/lead",
+      "/api/eventos-wp",
+      "/api/eventos-wp/disponibilidad",
+      "/api/eventos-wp/reservar",
+      "/api/eventos/costes",
+      "/api/factura/anular",
+      "/api/factura/cerrar",
+      "/api/factura/cliente",
+      "/api/factura/cliente/lista",
+      "/api/factura/enviar-aeat",
+      "/api/factura/lista",
+      "/api/factura/pago-parcial",
+      "/api/feedback/[token]",
+      "/api/health",
+      "/api/help/chat",
+      "/api/ig-img",
+      "/api/ig-lab-img",
+      "/api/ig-reel",
+      "/api/instagram/callback",
+      "/api/kds-evento/[evento_id]",
+      "/api/kds/asistente",
+      "/api/kds/elaboraciones",
+      "/api/kds/elaboraciones/[id]",
+      "/api/kds/pesar-item",
+      "/api/kds/validate-token",
+      "/api/kds/voz",
+      "/api/leads/landing",
+      "/api/leads/track-click",
+      "/api/leads/unsubscribe",
+      "/api/login/token",
+      "/api/marchar",
+      "/api/marketing/baja",
+      "/api/materiales",
+      "/api/materiales/alertas",
+      "/api/materiales/asignacion",
+      "/api/materiales/categorias",
+      "/api/materiales/clientes",
+      "/api/materiales/dano",
+      "/api/materiales/espacios",
+      "/api/materiales/import",
+      "/api/materiales/informe",
+      "/api/materiales/inventario-fisico",
+      "/api/materiales/inventario-fisico/[id]/cerrar",
+      "/api/materiales/inventario-fisico/[id]/lineas",
+      "/api/materiales/kits",
+      "/api/materiales/kits/[id]/items",
+      "/api/materiales/kits/instanciar",
+      "/api/materiales/mantenimiento",
+      "/api/materiales/movimientos",
+      "/api/materiales/perfil",
+      "/api/materiales/proveedores",
+      "/api/materiales/qr/[id]",
+      "/api/materiales/reservas",
+      "/api/materiales/unidades",
+      "/api/mensajes",
+      "/api/mensajes/activos",
+      "/api/mensajes/audio",
+      "/api/mesa/[id]/comanda",
+      "/api/mesa/asignar-rapida",
+      "/api/metodos-pago",
+      "/api/monitor/alert",
+      "/api/onboarding/complete",
+      "/api/onboarding/extract-carta",
+      "/api/operador/descuadres-empleado",
+      "/api/operador/directorio",
+      "/api/operador/evento-personas",
+      "/api/operador/financiero",
+      "/api/operador/restaurantes",
+      "/api/owner/agente-compras",
+      "/api/owner/agente-eventos",
+      "/api/owner/almacen/invitar-gestor",
+      "/api/owner/almacen/prediccion",
+      "/api/owner/analytics",
+      "/api/owner/billing",
+      "/api/owner/bridge-tokens",
+      "/api/owner/camareros",
+      "/api/owner/carta",
+      "/api/owner/carta/analisis",
+      "/api/owner/carta/generar-descripcion",
+      "/api/owner/cobro-config",
+      "/api/owner/cobros",
+      "/api/owner/cobros/[id]",
+      "/api/owner/cobros/[id]/items",
+      "/api/owner/cobros/stripe-onboarding",
+      "/api/owner/cobros/upload-imagen",
+      "/api/owner/cobros/upload-pdf",
+      "/api/owner/config-cobro",
+      "/api/owner/config/servicio",
+      "/api/owner/consumo",
+      "/api/owner/contabilidad/arqueos-empleado",
+      "/api/owner/contabilidad/arqueos-empleado/[id]/confirmar",
+      "/api/owner/contabilidad/cierre-diario",
+      "/api/owner/contabilidad/config",
+      "/api/owner/contabilidad/exportar",
+      "/api/owner/contabilidad/invitar",
+      "/api/owner/contabilidad/iva",
+      "/api/owner/contabilidad/resumen",
+      "/api/owner/contabilidad/tesoreria",
+      "/api/owner/contabilidad/umbral-empleado",
+      "/api/owner/contrato",
+      "/api/owner/copiloto",
+      "/api/owner/dashboard",
+      "/api/owner/diagnostico",
+      "/api/owner/ean-lookup",
+      "/api/owner/elaboraciones",
+      "/api/owner/escandallos",
+      "/api/owner/escandallos/analizar",
+      "/api/owner/escandallos/sugerir",
+      "/api/owner/espacios/[id]/mantenimiento",
+      "/api/owner/etiquetas",
+      "/api/owner/eventos",
+      "/api/owner/eventos/[id]/cerrar",
+      "/api/owner/eventos/[id]/galeria",
+      "/api/owner/eventos/[id]/informe",
+      "/api/owner/eventos/[id]/stock-check",
+      "/api/owner/eventos/[id]/valoracion-enviar",
+      "/api/owner/eventos/agenda",
+      "/api/owner/eventos/appcc",
+      "/api/owner/eventos/barra-tiers",
+      "/api/owner/eventos/barra-tiers/[id]",
+      "/api/owner/eventos/beo",
+      "/api/owner/eventos/briefings",
+      "/api/owner/eventos/briefings/[id]",
+      "/api/owner/eventos/briefings/[id]/convertir",
+      "/api/owner/eventos/cerrar",
+      "/api/owner/eventos/checklist",
+      "/api/owner/eventos/clonar",
+      "/api/owner/eventos/comisiones",
+      "/api/owner/eventos/conceptos-gasto",
+      "/api/owner/eventos/config",
+      "/api/owner/eventos/contratos",
+      "/api/owner/eventos/costes",
+      "/api/owner/eventos/disponibilidad",
+      "/api/owner/eventos/escandallo",
+      "/api/owner/eventos/espacios",
+      "/api/owner/eventos/franjas",
+      "/api/owner/eventos/galeria",
+      "/api/owner/eventos/historico-precios",
+      "/api/owner/eventos/leads",
+      "/api/owner/eventos/menus",
+      "/api/owner/eventos/menus/[id]/bloques",
+      "/api/owner/eventos/menus/[id]/calcular",
+      "/api/owner/eventos/menus/aplicar",
+      "/api/owner/eventos/menus/bebidas",
+      "/api/owner/eventos/pases",
+      "/api/owner/eventos/personal",
+      "/api/owner/eventos/personal-asignacion",
+      "/api/owner/eventos/plantillas",
+      "/api/owner/eventos/portal",
+      "/api/owner/eventos/presupuesto",
+      "/api/owner/eventos/presupuestos",
+      "/api/owner/eventos/presupuestos/[id]",
+      "/api/owner/eventos/produccion",
+      "/api/owner/eventos/proveedores-asignaciones",
+      "/api/owner/eventos/proveedores-externos",
+      "/api/owner/eventos/referidos",
+      "/api/owner/eventos/rentabilidad",
+      "/api/owner/eventos/scoring-nim",
+      "/api/owner/eventos/sobrantes",
+      "/api/owner/eventos/tareas",
+      "/api/owner/eventos/transporte",
+      "/api/owner/eventos/valoraciones",
+      "/api/owner/eventos/vehiculos",
+      "/api/owner/facturas-compra",
+      "/api/owner/feedback",
+      "/api/owner/feedback/config",
+      "/api/owner/forecaster",
+      "/api/owner/formatos",
+      "/api/owner/fuera-carta/stock",
+      "/api/owner/horario",
+      "/api/owner/horario/autocierre",
+      "/api/owner/horario/config",
+      "/api/owner/horario/coste",
+      "/api/owner/horario/cuadrante",
+      "/api/owner/impresoras",
+      "/api/owner/logo",
+      "/api/owner/manual-voz",
+      "/api/owner/menaje",
+      "/api/owner/mensajes-auditoria",
+      "/api/owner/mesas",
+      "/api/owner/metodos-pago",
+      "/api/owner/mis-restaurantes",
+      "/api/owner/modulos",
+      "/api/owner/notif-config",
+      "/api/owner/pagos",
+      "/api/owner/pagos/sepa",
+      "/api/owner/pedidos/sugerir",
+      "/api/owner/perfiles-acceso",
+      "/api/owner/personal",
+      "/api/owner/portal-stripe",
+      "/api/owner/print-jobs",
+      "/api/owner/propinas",
+      "/api/owner/propinas/config",
+      "/api/owner/proveedores",
+      "/api/owner/proveedores/asn-token",
+      "/api/owner/proveedores/informe",
+      "/api/owner/proveedores/stripe-onboard",
+      "/api/owner/recepciones",
+      "/api/owner/recepciones/confirmar",
+      "/api/owner/recepciones/historial-precios",
+      "/api/owner/recomendaciones",
+      "/api/owner/reglas-envio",
+      "/api/owner/reservas",
+      "/api/owner/restaurante",
+      "/api/owner/running-zonas",
+      "/api/owner/scanner",
+      "/api/owner/scanner/permiso",
+      "/api/owner/secciones",
+      "/api/owner/soporte",
+      "/api/owner/stock",
+      "/api/owner/stock/fefo",
+      "/api/owner/stock/ocr",
+      "/api/owner/stock/pedido",
+      "/api/owner/storefront",
+      "/api/owner/supervisor",
+      "/api/owner/turno",
+      "/api/owner/turnos/analisis",
+      "/api/owner/valoraciones/sentiment",
+      "/api/owner/vinos-stats",
+      "/api/owner/web",
+      "/api/owner/web/analytics",
+      "/api/owner/web/foto-sugerida",
+      "/api/owner/web/generar-descripcion",
+      "/api/owner/web/qr",
+      "/api/owner/web/traducir-carta",
+      "/api/owner/web/upload-logo",
+      "/api/owner/web/upload-portada",
+      "/api/owner/wine-enrich",
+      "/api/owner/zonas",
+      "/api/portal",
+      "/api/portal-proveedor/[token]",
+      "/api/portal/stock-central",
+      "/api/portal/transferencias",
+      "/api/print",
+      "/api/produccion/cocineros",
+      "/api/produccion/perfil",
+      "/api/produccion/planificar",
+      "/api/produccion/productividad",
+      "/api/produccion/tiempo",
+      "/api/propinas/[token]",
+      "/api/propinas/[token]/pagar",
+      "/api/propinas/webhook",
+      "/api/propuesta/[slug]/booking",
+      "/api/push/send",
+      "/api/push/subscribe",
+      "/api/qr/avisar",
+      "/api/qr/carta-i18n",
+      "/api/qr/cobrar-preauth",
+      "/api/qr/connect/callback",
+      "/api/qr/connect/link",
+      "/api/qr/connect/status",
+      "/api/qr/estado",
+      "/api/qr/marketing-consent",
+      "/api/qr/preauth",
+      "/api/qr/recomendar",
+      "/api/qr/sesiones-preauth",
+      "/api/qr/webhook",
+      "/api/recomendaciones",
+      "/api/rrhh/candidatos",
+      "/api/rrhh/candidatos/[id]",
+      "/api/scanner/clasificar",
+      "/api/scanner/permiso-check",
+      "/api/storefront/carta",
+      "/api/storefront/estado",
+      "/api/storefront/pedido",
+      "/api/storefront/pedido-operador",
+      "/api/storefront/webhook-pago",
+      "/api/sugerencias",
+      "/api/super/agente-arquitecto",
+      "/api/super/agentes-ai",
+      "/api/super/agentes-seo",
+      "/api/super/agentes/research",
+      "/api/super/agentes/research/enviar",
+      "/api/super/blog",
+      "/api/super/blog-publicar",
+      "/api/super/cobro-config-comision",
+      "/api/super/cobro-resumen",
+      "/api/super/cuentas",
+      "/api/super/cuentas/[id]/restaurantes",
+      "/api/super/ga4-stats",
+      "/api/super/google-oauth",
+      "/api/super/google-oauth-callback",
+      "/api/super/instagram",
+      "/api/super/instagram-catering",
+      "/api/super/instagram-eventos",
+      "/api/super/instagram/seed-music",
+      "/api/super/instagram/seed-reel-assets",
+      "/api/super/instagram/story-reminder",
+      "/api/super/instagram/test-carousel",
+      "/api/super/lead-hunter",
+      "/api/super/lead-hunter-franquicia",
+      "/api/super/lead-hunter-sevilla",
+      "/api/super/leads",
+      "/api/super/leads-landing",
+      "/api/super/leads/[id]",
+      "/api/super/leads/[id]/actualizar-landing",
+      "/api/super/leads/[id]/briefing",
+      "/api/super/leads/[id]/comunicaciones",
+      "/api/super/leads/[id]/contactos",
+      "/api/super/leads/[id]/locales",
+      "/api/super/leads/[id]/locales/buscar",
+      "/api/super/leads/agente",
+      "/api/super/prospeccion-apify",
+      "/api/super/proveedores-tech",
+      "/api/super/qa-agent",
+      "/api/super/qa-agent/cron",
+      "/api/super/reenviar-pendientes",
+      "/api/super/restaurantes",
+      "/api/super/restaurantes/[id]/config",
+      "/api/super/restaurantes/[id]/cuenta",
+      "/api/super/restaurantes/[id]/impersonate",
+      "/api/super/seo-revert",
+      "/api/super/soporte",
+      "/api/super/stripe-operador",
+      "/api/super/stripe-operador/cancelar",
+      "/api/super/stripe-operador/checkout",
+      "/api/super/sugerencias",
+      "/api/super/tg-notify",
+      "/api/super/training",
+      "/api/super/training-stats",
+      "/api/telegram/briefing-callback",
+      "/api/telegram/instagram-callback",
+      "/api/telegram/setup-webhook",
+      "/api/telegram/webhook",
+      "/api/thefork/close",
+      "/api/thefork/webhook",
+      "/api/tienda/buscar",
+      "/api/tienda/config",
+      "/api/tienda/venta",
+      "/api/track/[token]",
+      "/api/traducciones",
+      "/api/traducciones/auto",
+      "/api/transcribe",
+      "/api/transcribe/cocina",
+      "/api/turno",
+      "/api/turnos/activo",
+      "/api/turnos/fichar",
+      "/api/turnos/historial",
+      "/api/vinos/recomendar",
+      "/api/vinos/reconocer",
+      "/api/voice-profile/enroll",
+      "/api/voice-profile/reset",
+      "/api/voice-profile/status",
+      "/api/vox",
+      "/api/webhook/deploy-aprendizaje",
+      "/api/webhook/stripe-connect",
+      "/api/webhook/stripe-operador",
+      "/api/webhooks/vercel-deploy"
+    ],
+    "ialimp": [
+      "/api/admin/agenda",
+      "/api/admin/alertas",
+      "/api/admin/alertas-gastos",
+      "/api/admin/asignacion",
+      "/api/admin/asistente",
+      "/api/admin/ausencias",
+      "/api/admin/auto-assign",
+      "/api/admin/catalogo-tarifas",
+      "/api/admin/catalogos",
+      "/api/admin/chat",
+      "/api/admin/chat/hilos",
+      "/api/admin/chat/hilos/[hilo_id]",
+      "/api/admin/chat/sesiones",
+      "/api/admin/checklist",
+      "/api/admin/clientes",
+      "/api/admin/clientes/[id]",
+      "/api/admin/clientes/[id]/config",
+      "/api/admin/clientes/[id]/contactos",
+      "/api/admin/clientes/[id]/contactos/[contactoId]",
+      "/api/admin/clientes/[id]/desactivar",
+      "/api/admin/clientes/[id]/enviar-acceso",
+      "/api/admin/clientes/[id]/reactivar",
+      "/api/admin/consumos",
+      "/api/admin/contabilidad/adjunto",
+      "/api/admin/contabilidad/apuntes",
+      "/api/admin/contabilidad/apuntes/[id]",
+      "/api/admin/contabilidad/export",
+      "/api/admin/contabilidad/generar-recurrentes",
+      "/api/admin/contabilidad/ingresos",
+      "/api/admin/contabilidad/ingresos/[id]",
+      "/api/admin/contabilidad/iva",
+      "/api/admin/contabilidad/marcar",
+      "/api/admin/contabilidad/recurrentes",
+      "/api/admin/contabilidad/recurrentes/[id]",
+      "/api/admin/contabilidad/rentabilidad",
+      "/api/admin/contabilidad/resultado",
+      "/api/admin/contabilidad/tesoreria",
+      "/api/admin/cotizador-config",
+      "/api/admin/disponibilidad",
+      "/api/admin/empresa/branding",
+      "/api/admin/escanear",
+      "/api/admin/escanear/[id]",
+      "/api/admin/escanear/process",
+      "/api/admin/facturacion",
+      "/api/admin/facturas",
+      "/api/admin/facturas-clientes",
+      "/api/admin/facturas-clientes/[id]",
+      "/api/admin/fotos-cleanup",
+      "/api/admin/historial",
+      "/api/admin/ia/agente-cotizador",
+      "/api/admin/ia/analizar-botes",
+      "/api/admin/ia/analizar-foto",
+      "/api/admin/ia/briefing",
+      "/api/admin/ia/clasificar-queja",
+      "/api/admin/ia/comparar-foto",
+      "/api/admin/ia/patrones",
+      "/api/admin/incidencias",
+      "/api/admin/informe",
+      "/api/admin/informes/cron",
+      "/api/admin/informes/generar",
+      "/api/admin/items",
+      "/api/admin/kits",
+      "/api/admin/leads",
+      "/api/admin/lenceria",
+      "/api/admin/lenceria/[id]",
+      "/api/admin/limpiadoras",
+      "/api/admin/limpiadoras/[id]/acceso",
+      "/api/admin/limpiadoras/[id]/expediente",
+      "/api/admin/limpiadoras/[id]/expediente/[docId]",
+      "/api/admin/limpiadoras/[id]/nomina",
+      "/api/admin/limpiadoras/[id]/propiedades",
+      "/api/admin/limpiadoras/ranking",
+      "/api/admin/limpiadoras/usuarios",
+      "/api/admin/migrate-chat",
+      "/api/admin/migrate-chat-destinatario",
+      "/api/admin/migrate-contabilidad",
+      "/api/admin/nomina",
+      "/api/admin/operaciones",
+      "/api/admin/partes-trabajo",
+      "/api/admin/partes-trabajo/desde-sesiones",
+      "/api/admin/prevision-semanal",
+      "/api/admin/productos",
+      "/api/admin/programaciones",
+      "/api/admin/programaciones/[id]",
+      "/api/admin/programaciones/generar",
+      "/api/admin/propiedades",
+      "/api/admin/propiedades/[id]",
+      "/api/admin/protocolos",
+      "/api/admin/proveedores",
+      "/api/admin/push-notify",
+      "/api/admin/quejas",
+      "/api/admin/quejas/[id]",
+      "/api/admin/reposiciones",
+      "/api/admin/rrhh/analisis",
+      "/api/admin/rrhh/expedientes",
+      "/api/admin/rrhh/horario",
+      "/api/admin/sesiones",
+      "/api/admin/sesiones/[id]",
+      "/api/admin/sesiones/[id]/completar",
+      "/api/admin/sesiones/[id]/completions",
+      "/api/admin/sesiones/reordenar",
+      "/api/admin/sse",
+      "/api/admin/stock",
+      "/api/admin/tarifas",
+      "/api/admin/test-email",
+      "/api/admin/usuarios",
+      "/api/admin/usuarios-empresa",
+      "/api/admin/vapid-keys",
+      "/api/auth/login",
+      "/api/auth/login-usuario",
+      "/api/auth/logout",
+      "/api/auth/register",
+      "/api/catastro/municipio",
+      "/api/cotizador",
+      "/api/cron/impagos",
+      "/api/cron/procesar-documentos",
+      "/api/dashboard",
+      "/api/empresas/register",
+      "/api/l/auth",
+      "/api/l/auto-sessions",
+      "/api/l/chat",
+      "/api/l/complete",
+      "/api/l/consumo",
+      "/api/l/early-checkin",
+      "/api/l/expediente",
+      "/api/l/expediente/[docId]/firmar",
+      "/api/l/expediente/[docId]/firmar/codigo",
+      "/api/l/fichar",
+      "/api/l/incidencias",
+      "/api/l/inventario",
+      "/api/l/notas",
+      "/api/l/photo",
+      "/api/l/protocolo-refs",
+      "/api/l/push-subscribe",
+      "/api/l/sesiones",
+      "/api/l/sesiones/[id]",
+      "/api/l/sessions",
+      "/api/l/upload-photo",
+      "/api/lead-saas",
+      "/api/leads",
+      "/api/m/baja/[token]",
+      "/api/m/c/[token]",
+      "/api/m/o/[token]",
+      "/api/m/webhook/resend",
+      "/api/pms/connect",
+      "/api/pms/sync",
+      "/api/propietario/[token]/acceso",
+      "/api/propietario/[token]/chat",
+      "/api/propietario/[token]/consentimiento",
+      "/api/propietario/[token]/contabilidad",
+      "/api/propietario/[token]/documentos",
+      "/api/propietario/[token]/documentos-piso",
+      "/api/propietario/[token]/escanear",
+      "/api/propietario/[token]/factura/[id]",
+      "/api/propietario/[token]/firmar",
+      "/api/propietario/[token]/gastos",
+      "/api/propietario/[token]/gastos/[id]",
+      "/api/propietario/[token]/ical",
+      "/api/propietario/[token]/queja",
+      "/api/propietario/[token]/sesion/[sesionId]",
+      "/api/propietario/[token]/sesiones",
+      "/api/propietario/auth/login",
+      "/api/propietario/auth/logout",
+      "/api/propietario/auth/recuperar",
+      "/api/propietario/auth/set-password",
+      "/api/stripe/checkout",
+      "/api/stripe/webhook",
+      "/api/superadmin/consentimientos",
+      "/api/superadmin/empresas",
+      "/api/superadmin/login",
+      "/api/superadmin/mailing/analizar-web",
+      "/api/superadmin/mailing/apify",
+      "/api/superadmin/mailing/buscar-emails",
+      "/api/superadmin/mailing/buscar-google",
+      "/api/superadmin/mailing/campanas",
+      "/api/superadmin/mailing/campanas/[id]",
+      "/api/superadmin/mailing/campanas/[id]/generar-ia",
+      "/api/superadmin/mailing/cron",
+      "/api/superadmin/mailing/prospectos",
+      "/api/superadmin/mailing/prospectos/[id]"
+    ],
+    "plataforma": [
+      "/api/admin/clientes",
+      "/api/admin/clientes/[vertical]/[id]",
+      "/api/admin/clientes/[vertical]/[id]/modulos",
+      "/api/admin/descuadres-iarest",
+      "/api/admin/estructura/chat",
+      "/api/admin/estructura/clientes",
+      "/api/admin/iarest/cobros",
+      "/api/admin/iarest/crecimiento",
+      "/api/admin/iarest/crm",
+      "/api/admin/iarest/restaurantes",
+      "/api/admin/iarest/restaurantes/[id]",
+      "/api/admin/iarest/sistema",
+      "/api/admin/iarest/soporte",
+      "/api/admin/iarest/sugerencias",
+      "/api/admin/iarest/suscripciones",
+      "/api/admin/login",
+      "/api/admin/logout",
+      "/api/admin/personas",
+      "/api/admin/propiedades",
+      "/api/agente/chat",
+      "/api/ai/chat",
+      "/api/ai/health",
+      "/api/ai/search",
+      "/api/ai/tools",
+      "/api/ai/vision",
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/auth/register",
+      "/api/banca/analizar",
+      "/api/banca/conciliar",
+      "/api/banca/duplicados",
+      "/api/banca/duplicados/reclamacion",
+      "/api/banca/export",
+      "/api/banca/factura",
+      "/api/banca/importar",
+      "/api/banca/psd2/callback",
+      "/api/banca/psd2/conectar",
+      "/api/banca/psd2/instituciones",
+      "/api/banca/revisar",
+      "/api/comunicacion/categorias",
+      "/api/comunicacion/conversaciones",
+      "/api/comunicacion/conversaciones/[id]",
+      "/api/comunicacion/conversaciones/[id]/mensajes",
+      "/api/comunicacion/directorio",
+      "/api/comunicacion/grupos",
+      "/api/comunicacion/grupos/[id]/personas",
+      "/api/comunicacion/reglas",
+      "/api/concursos/[id]/memoria",
+      "/api/concursos/[id]/oferta",
+      "/api/concursos/[id]/sobre-administrativo",
+      "/api/concursos/analizar",
+      "/api/concursos/biblioteca",
+      "/api/concursos/ingesta",
+      "/api/concursos/perfil",
+      "/api/concursos/preparar",
+      "/api/concursos/radar",
+      "/api/concursos/radar/buscar",
+      "/api/concursos/radar/criterios",
+      "/api/concursos/radar/importar",
+      "/api/concursos/radar/interpretar",
+      "/api/concursos/radar/resumen",
+      "/api/concursos/radar/visto",
+      "/api/concursos/seguidos",
+      "/api/cron/banca-alertas",
+      "/api/cron/briefing",
+      "/api/cron/concursos-avisos",
+      "/api/cron/concursos-cierre",
+      "/api/cron/concursos-ingesta",
+      "/api/cron/concursos-radar",
+      "/api/cron/psd2-sync",
+      "/api/finanzas",
+      "/api/finanzas/export",
+      "/api/finanzas/novedades/[id]/descartar",
+      "/api/finanzas/perfil",
+      "/api/negocios",
+      "/api/negocios/[id]",
+      "/api/sivra/eventos/sync",
+      "/api/sivra/expenses",
+      "/api/sivra/expenses/agent/resumen-mensual",
+      "/api/sivra/expenses/agent/scan",
+      "/api/sivra/expenses/fijos",
+      "/api/sivra/expenses/fijos/generar",
+      "/api/sivra/expenses/parse-invoice",
+      "/api/sivra/facturas-control",
+      "/api/sivra/fiscal",
+      "/api/sivra/income",
+      "/api/sivra/incomes",
+      "/api/sivra/inversion",
+      "/api/sivra/inversion/analyze",
+      "/api/sivra/limpiadoras/alerta-ventana",
+      "/api/sivra/limpiadoras/asignacion",
+      "/api/sivra/limpiadoras/ausencias",
+      "/api/sivra/limpiadoras/auto-assign",
+      "/api/sivra/limpiadoras/auto-sessions",
+      "/api/sivra/limpiadoras/checklist",
+      "/api/sivra/limpiadoras/disponibilidad",
+      "/api/sivra/limpiadoras/facturacion",
+      "/api/sivra/limpiadoras/historial",
+      "/api/sivra/limpiadoras/informe",
+      "/api/sivra/limpiadoras/items",
+      "/api/sivra/limpiadoras/lenceria",
+      "/api/sivra/limpiadoras/productos",
+      "/api/sivra/limpiadoras/proveedores",
+      "/api/sivra/limpiadoras/tarifas",
+      "/api/sivra/limpiadoras/usuarios",
+      "/api/sivra/mensajes",
+      "/api/sivra/mensajes/[bookingId]",
+      "/api/sivra/mensajes/auto-reply",
+      "/api/sivra/mensajes/knowledge",
+      "/api/sivra/mensajes/reply",
+      "/api/sivra/mercado/cron",
+      "/api/sivra/mercado/ingest",
+      "/api/sivra/mercado/search",
+      "/api/sivra/mercado/stats",
+      "/api/sivra/mercado/sweep",
+      "/api/sivra/pricing/apply",
+      "/api/sivra/pricing/apply-auto",
+      "/api/sivra/pricing/config",
+      "/api/sivra/pricing/experiments",
+      "/api/sivra/pricing/experiments/check-results",
+      "/api/sivra/pricing/guard",
+      "/api/sivra/pricing/historial",
+      "/api/sivra/pricing/pilot-track",
+      "/api/sivra/pricing/pilot-track/historial",
+      "/api/sivra/pricing/recommend",
+      "/api/sivra/pricing/restore",
+      "/api/sivra/pricing/resultados",
+      "/api/sivra/pricing/resumen-diario",
+      "/api/sivra/pricing/settings",
+      "/api/sivra/pricing/stats",
+      "/api/sivra/rates/snapshot",
+      "/api/sivra/resumen-semanal",
+      "/api/sivra/seo-proposals",
+      "/api/sivra/seo-refresh",
+      "/api/sivra/updates/sync",
+      "/api/sociedades",
+      "/api/sociedades/[id]"
+    ],
+    "rrhh": [
+      "/api/admin/cuenta/branding",
+      "/api/admin/cuenta/convenio",
+      "/api/admin/cuenta/convenio/analizar",
+      "/api/admin/empleados",
+      "/api/admin/empleados/[id]",
+      "/api/admin/empleados/[id]/acceso",
+      "/api/admin/empleados/[id]/chat",
+      "/api/admin/empleados/[id]/documentos",
+      "/api/admin/empleados/[id]/documentos/[docId]",
+      "/api/admin/empleados/[id]/documentos/[docId]/solicitar-firma",
+      "/api/admin/empleados/[id]/documentos/generar",
+      "/api/admin/push/subscribe",
+      "/api/admin/solicitudes",
+      "/api/admin/solicitudes/[id]",
+      "/api/admin/solicitudes/[id]/justificante",
+      "/api/auth/cambiar-password",
+      "/api/auth/login",
+      "/api/auth/logout",
+      "/api/e/asistente",
+      "/api/e/chat",
+      "/api/e/expediente",
+      "/api/e/expediente/[docId]/firmar",
+      "/api/e/expediente/[docId]/firmar/codigo",
+      "/api/e/login",
+      "/api/e/push/subscribe",
+      "/api/e/solicitudes",
+      "/api/operador/empresas",
+      "/api/operador/personas"
+    ],
+    "sivra": [
+      "/api/admin/limpiadoras/asignacion",
+      "/api/admin/limpiadoras/ausencias",
+      "/api/admin/limpiadoras/checklist",
+      "/api/admin/limpiadoras/disponibilidad",
+      "/api/admin/limpiadoras/facturacion",
+      "/api/admin/limpiadoras/historial",
+      "/api/admin/limpiadoras/informe",
+      "/api/admin/limpiadoras/items",
+      "/api/admin/limpiadoras/lenceria",
+      "/api/admin/limpiadoras/productos",
+      "/api/admin/limpiadoras/proveedores",
+      "/api/admin/limpiadoras/tarifas",
+      "/api/admin/limpiadoras/usuarios",
+      "/api/agente",
+      "/api/agente/chat",
+      "/api/auth",
+      "/api/auth/[...nextauth]",
+      "/api/dashboard",
+      "/api/dashboard/forecast",
+      "/api/eventos/sync",
+      "/api/expenses",
+      "/api/expenses/agent/backfill",
+      "/api/expenses/agent/resumen-mensual",
+      "/api/expenses/agent/scan",
+      "/api/expenses/fijos",
+      "/api/expenses/fijos/generar",
+      "/api/expenses/parse-booking",
+      "/api/expenses/parse-invoice",
+      "/api/expenses/pendientes",
+      "/api/expenses/pendientes/[id]",
+      "/api/import-csv",
+      "/api/import-smoobu-bulk",
+      "/api/incomes",
+      "/api/incomes/today",
+      "/api/inversion",
+      "/api/inversion/analyze",
+      "/api/limpiadoras/alerta-ventana",
+      "/api/limpiadoras/alertas",
+      "/api/limpiadoras/auth",
+      "/api/limpiadoras/auto-assign",
+      "/api/limpiadoras/auto-sessions",
+      "/api/limpiadoras/complete",
+      "/api/limpiadoras/early-checkin",
+      "/api/limpiadoras/fichar",
+      "/api/limpiadoras/incidencias",
+      "/api/limpiadoras/inventario",
+      "/api/limpiadoras/notas",
+      "/api/limpiadoras/photo",
+      "/api/limpiadoras/sessions",
+      "/api/limpiadoras/upload-photo",
+      "/api/mensajes",
+      "/api/mensajes/[bookingId]",
+      "/api/mensajes/[bookingId]/email",
+      "/api/mensajes/auto-reply",
+      "/api/mensajes/knowledge",
+      "/api/mensajes/reply",
+      "/api/mercado/cron",
+      "/api/mercado/ingest",
+      "/api/mercado/ingest-auto",
+      "/api/mercado/search",
+      "/api/mercado/stats",
+      "/api/mercado/sweep",
+      "/api/pitch",
+      "/api/pricing-alerts",
+      "/api/pricing/aplicar-propuesta",
+      "/api/pricing/apply",
+      "/api/pricing/apply-auto",
+      "/api/pricing/config",
+      "/api/pricing/experiments",
+      "/api/pricing/experiments/check-results",
+      "/api/pricing/guard",
+      "/api/pricing/historial",
+      "/api/pricing/pilot-track",
+      "/api/pricing/pilot-track/historial",
+      "/api/pricing/pisos-zona",
+      "/api/pricing/recommend",
+      "/api/pricing/restore",
+      "/api/pricing/resultados",
+      "/api/pricing/resumen-diario",
+      "/api/pricing/settings",
+      "/api/pricing/stats",
+      "/api/properties",
+      "/api/propietario/push-subscribe",
+      "/api/rates",
+      "/api/rates/snapshot",
+      "/api/resumen-semanal",
+      "/api/seo-proposals",
+      "/api/seo-refresh",
+      "/api/smoobu/huespedes-repetidos",
+      "/api/smoobu/import",
+      "/api/updates",
+      "/api/updates/sync"
+    ]
+  },
+  "tablasPorVertical": {
+    "ia-rest": [
+      "arqueos_caja_empleado",
+      "beo_eventos",
+      "camareros",
+      "clientes_fiscales",
+      "cobro_config",
+      "comanda_items",
+      "comandas",
+      "config_horario",
+      "config_tienda",
+      "contract_acceptances",
+      "documentos_escaneados",
+      "facturas_cliente",
+      "feedback_visita",
+      "formularios_demo_recibidos",
+      "iarest.checklist_ejecuciones",
+      "iarest.checklist_plantillas",
+      "iarest.produccion_tareas",
+      "iarest.produccion_tiempos_estandar",
+      "iarest.recibos_digitales",
+      "incidencias_sistema",
+      "inventario_menaje",
+      "inventario_menaje_evento",
+      "leads",
+      "leads_eventos",
+      "leads_unsubscribes",
+      "leads_web_tracking",
+      "manual_voz_novedades",
+      "marchar_log",
+      "marketing_consentimientos",
+      "materiales",
+      "materiales_asignacion",
+      "materiales_categorias",
+      "materiales_clientes",
+      "materiales_dano",
+      "materiales_espacios",
+      "materiales_inventario_fisico",
+      "materiales_inventario_fisico_lineas",
+      "materiales_kits",
+      "materiales_kits_items",
+      "materiales_mantenimiento",
+      "materiales_movimientos",
+      "materiales_proveedores",
+      "materiales_reservas",
+      "materiales_transferencias",
+      "materiales_unidades",
+      "mensajes_turno",
+      "mesas",
+      "metodos_pago",
+      "movimientos_tesoreria",
+      "pedidos_online",
+      "pin_attempts",
+      "productos_86",
+      "propinas",
+      "prospeccion_apify_runs",
+      "proveedores_evento",
+      "proveedores_evento_asignaciones",
+      "qr_avisos_suscripciones",
+      "qr_division_slots",
+      "qr_items_reclamados",
+      "qr_sesiones_cliente",
+      "qr_valoraciones",
+      "recomendaciones_carta",
+      "reglas_envio",
+      "reservas",
+      "resumen_cobros_mensual",
+      "running_zonas",
+      "seo_articulos",
+      "seo_cambios",
+      "seo_content_blocks",
+      "seo_overrides",
+      "soporte_mensajes",
+      "soporte_tickets",
+      "storefront_config",
+      "sugerencias",
+      "system_errors",
+      "ticket_aliases",
+      "transcripciones",
+      "turnos",
+      "turnos_previstos",
+      "vinos_catalogo",
+      "voice_profiles"
+    ],
+    "ialimp": [
+      "apuntes_recurrentes",
+      "auth_rate_limit",
+      "biblioteca_documentos",
+      "catalogo_tarifas",
+      "cliente_auth_tokens",
+      "cliente_consentimientos",
+      "concursos",
+      "concursos_licitaciones",
+      "concursos_perfil_empresa",
+      "concursos_radar_anuncios",
+      "concursos_seguidos",
+      "cuentas",
+      "documentos_contables",
+      "documentos_limpiadora",
+      "firma_otps_limpiadora",
+      "firmas_limpiadora",
+      "ingresos_manuales",
+      "mailing_campanas",
+      "mailing_envios",
+      "mailing_eventos",
+      "mailing_pasos",
+      "mailing_prospectos",
+      "negocios",
+      "partes_trabajo",
+      "protocolo_fotos",
+      "protocolo_items",
+      "protocolos",
+      "recordatorios_impagos",
+      "sociedades",
+      "stock_consumos",
+      "tenant_modulos"
+    ],
+    "plataforma": [
+      "ai_usos",
+      "comunicacion_categorias",
+      "comunicacion_conversacion_participantes",
+      "comunicacion_conversaciones",
+      "comunicacion_grupo_miembros",
+      "comunicacion_grupos",
+      "comunicacion_mensajes",
+      "comunicacion_nodos",
+      "comunicacion_reglas",
+      "conexiones_banco",
+      "cuentas_bancarias",
+      "movimientos_bancarios"
+    ],
+    "rrhh": [
+      "rrhh.documentos",
+      "rrhh.empleados",
+      "rrhh.empresas",
+      "rrhh.firma_otps",
+      "rrhh.firmas",
+      "rrhh.mensajes",
+      "rrhh.push_subscriptions",
+      "rrhh.solicitudes",
+      "rrhh.usuarios_rrhh"
+    ],
+    "sivra": [
+      "gastos_fijos"
+    ]
+  },
+  "skills": [
+    {
+      "id": "auditoria-central",
+      "name": "auditoria-central",
+      "description": "Auditoría CON CONTEXTO del monorepo `central` (casa de marcas). Úsala tras renames de scope, migraciones de BD, reestructuras de packages/apps, o antes de un corte de infraestructura — cuando Alberto pregunte \"¿se ha roto algo?\", \"haz una auditoría\", \"revisa que todo está bien\" o pida pruebas/testeo del proyecto. NO es un checklist genérico: aprovecha la matriz de consumo, la BD compartida multi-tenant y la infra real (Supabase/Vercel por MCP)."
+    },
+    {
+      "id": "brainstorming",
+      "name": "brainstorming",
+      "description": "\"You MUST use this before any creative work - creating features, building components, adding functionality, or modifying behavior. Explores user intent, requirements and design before implementation.\""
+    },
+    {
+      "id": "central-maestro",
+      "name": "central-maestro",
+      "description": ">"
+    },
+    {
+      "id": "facturas-correo",
+      "name": "facturas-correo",
+      "description": "Agente PROGRAMADO que revisa el Gmail de Alberto buscando facturas/justificantes de gasto, los clasifica (personal vs negocio deducible), archiva en Google Drive los deducibles y los concilia con los movimientos bancarios de plataforma. Úsala cuando Alberto pida \"revisa mis correos/facturas\", o cuando la dispare el trigger diario de Claude Code web. NO es un proceso 24/7: se despierta, hace una pasada sobre lo nuevo y deja un resumen."
+    },
+    {
+      "id": "fiscal-novedades",
+      "name": "fiscal-novedades",
+      "description": "Agente PROGRAMADO que vigila cambios en las deducciones del IRPF (estatales en el BOE y autonómicas de Andalucía en el BOJA/AEAT) y los contrasta con los importes que usa el módulo /finanzas de plataforma (IMPORTES_POR_ANIO en apps/plataforma/lib/fiscal-deducciones.ts). Cuando un importe cambia, abre un PR draft que actualiza la constante e inserta una fila en fiscal_novedades para que la app avise EN PANTALLA si el cambio beneficia a Alberto. Úsala cuando Alberto pida \"revisa si han cambiado las deducciones\" o cuando la dispare su trigger (mensual + antes de la campaña de renta). NO se cuelga del agente de concursos (ese sondea PLACSP por CPV)."
+    },
+    {
+      "id": "ia-rest-maestro",
+      "name": "ia-rest-maestro",
+      "description": ">"
+    },
+    {
+      "id": "ialimp-maestro",
+      "name": "ialimp-maestro",
+      "description": ">"
+    },
+    {
+      "id": "plataforma-maestro",
+      "name": "plataforma-maestro",
+      "description": ">"
+    },
+    {
+      "id": "pricing-agente",
+      "name": "pricing-agente",
+      "description": ">"
+    },
+    {
+      "id": "receiving-code-review",
+      "name": "receiving-code-review",
+      "description": "Use when receiving code review feedback, before implementing suggestions, especially if feedback seems unclear or technically questionable - requires technical rigor and verification, not performative agreement or blind implementation"
+    },
+    {
+      "id": "requesting-code-review",
+      "name": "requesting-code-review",
+      "description": "Use when completing tasks, implementing major features, or before merging to verify work meets requirements"
+    },
+    {
+      "id": "sivra-maestro",
+      "name": "sivra-maestro",
+      "description": ">"
+    },
+    {
+      "id": "systematic-debugging",
+      "name": "systematic-debugging",
+      "description": "Use when encountering any bug, test failure, or unexpected behavior, before proposing fixes"
+    },
+    {
+      "id": "using-superpowers",
+      "name": "using-superpowers",
+      "description": "Use when starting any conversation - establishes how to find and use skills, requiring Skill tool invocation before ANY response including clarifying questions"
+    },
+    {
+      "id": "verification-before-completion",
+      "name": "verification-before-completion",
+      "description": "Use when about to claim work is complete, fixed, or passing, before committing or creating PRs - requires running verification commands and confirming output before making any success claims; evidence before assertions always"
+    },
+    {
+      "id": "writing-plans",
+      "name": "writing-plans",
+      "description": "Use when you have a spec or requirements for a multi-step task, before touching code"
+    }
+  ],
+  "novedades": [
+    {
+      "titulo": "🌐 URLs de producción (no perder)",
+      "fecha": "16/06/2026"
+    },
+    {
+      "titulo": "🍽️ idea ia-rest: PREAVISO de marcha cocina⇄sala — SPEC escrito",
+      "fecha": "21/06/2026"
+    },
+    {
+      "titulo": "🐛 CONCURSOS (plataforma) — buscador daba 0 al filtrar por zona",
+      "fecha": "20/06/2026"
+    },
+    {
+      "titulo": "🔀 AGENTE DE CONCURSOS — PORTADO de ialimp → PLATAFORMA (y borrado de ialimp)",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 3+4: del hallazgo a la oferta + usabilidad",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — FASE 2: proactivo (seguimiento + avisos)",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🟢 AGENTE DE CONCURSOS (ialimp) — buscador por sector/zona + ingesta a demanda",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🟢 DIETAS por COMENSALES PUNTUALES (cocina/catering JJ)",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "📅 `diaHabitual` en facturas-control",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🐛 FIXES COMUNICACIÓN + FINANZAS",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "🔗 UNIFICACIÓN spine `eventos` (boda = cocina + material + CRM)",
+      "fecha": "19/06/2026"
+    },
+    {
+      "titulo": "🔗 INTEGRACIÓN boda → cocina + material (1er corte CONSTRUIDO)",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "📦 MATERIALES · Fase B aplicada a la BD VIVA + diseño integración con cocina",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "📱 RESPONSIVE COMPLETO",
+      "fecha": "18/06/2026"
+    },
+    {
+      "titulo": "🧮 DEDUCCIONES FISCALES en `/finanzas` (plataforma)",
+      "fecha": "18/06/2026"
+    }
+  ],
+  "saludRepo": {
+    "packagesSinDescripcion": [],
+    "appsSinClaudeMd": [
+      "rrhh"
+    ]
+  },
+  "gaps": {
+    "modulosInfrautilizados": [],
+    "oportunidadesPortar": [
+      {
+        "capacidad": "tpv",
+        "label": "TPV / comanda",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "kds",
+        "label": "KDS (cocina)",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "eventos-catering",
+        "label": "Eventos / catering / BEO",
+        "tiene": [
+          "ia-rest",
+          "sivra"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "reservas",
+        "label": "Reservas",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "qr-portal",
+        "label": "QR / portal cliente",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "feedback",
+        "label": "Feedback / propinas",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "limpiadoras",
+        "label": "Equipo limpiadoras",
+        "tiene": [
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest",
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "agenda-asignacion",
+        "label": "Agenda / auto-asignación",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "pricing",
+        "label": "Pricing dinámico",
+        "tiene": [
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest",
+          "ialimp",
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "mercado",
+        "label": "Mercado / ingest",
+        "tiene": [
+          "sivra"
+        ],
+        "falta": [
+          "ia-rest",
+          "ialimp",
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "crm-leads",
+        "label": "CRM / leads / cotizador",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "marketing",
+        "label": "Marketing (blog/IG/SEO)",
+        "tiene": [
+          "ia-rest",
+          "sivra"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "rrhh",
+        "label": "RRHH / equipo",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "almacen-stock",
+        "label": "Almacén / stock / ASN",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "proveedores",
+        "label": "Proveedores / compras",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "sivra"
+        ],
+        "falta": [
+          "rrhh"
+        ]
+      },
+      {
+        "capacidad": "contabilidad",
+        "label": "Contabilidad",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "facturacion-verifactu",
+        "label": "Facturación / VeriFactu",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "hardware-bridge",
+        "label": "Hardware bridge",
+        "tiene": [
+          "ia-rest"
+        ],
+        "falta": [
+          "ialimp",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "escaner-ocr",
+        "label": "Escáner / OCR",
+        "tiene": [
+          "ia-rest",
+          "ialimp"
+        ],
+        "falta": [
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "informes",
+        "label": "Informes",
+        "tiene": [
+          "ialimp"
+        ],
+        "falta": [
+          "ia-rest",
+          "rrhh",
+          "sivra"
+        ]
+      },
+      {
+        "capacidad": "notificaciones",
+        "label": "Notificaciones (push)",
+        "tiene": [
+          "ia-rest",
+          "ialimp",
+          "rrhh"
+        ],
+        "falta": [
+          "sivra"
+        ]
+      }
+    ],
+    "reimplementaciones": []
+  },
+  "resumen": {
+    "verticales": 5,
+    "packages": 24,
+    "capacidades": 23,
+    "skills": 16,
+    "apis": 918,
+    "modulosInfrautilizados": 0,
+    "oportunidadesPortar": 21,
+    "reimplementaciones": 0
+  }
+}

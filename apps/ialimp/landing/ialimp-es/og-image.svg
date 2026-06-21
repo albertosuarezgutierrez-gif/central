@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630" role="img" aria-label="IALIMP — el sistema operativo de tu empresa de limpieza">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4f46e5"/>
+      <stop offset="0.55" stop-color="#6366f1"/>
+      <stop offset="1" stop-color="#7c7af0"/>
+    </linearGradient>
+    <radialGradient id="glow" cx="0.85" cy="0.12" r="0.6">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#glow)"/>
+  <!-- Logo -->
+  <g transform="translate(96,150)">
+    <rect x="0" y="-44" width="64" height="64" rx="16" fill="#ffffff"/>
+    <text x="32" y="-12" text-anchor="middle" font-family="Nunito, Arial, sans-serif" font-weight="900" font-size="34" fill="#4f46e5">ia</text>
+    <text x="84" y="6" font-family="Nunito, Arial, sans-serif" font-weight="900" font-size="40" fill="#ffffff">ialimp</text>
+  </g>
+  <!-- Titular -->
+  <text x="96" y="320" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="76" fill="#ffffff">El sistema operativo</text>
+  <text x="96" y="404" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="76" fill="#ffffff">de tu empresa de limpieza.</text>
+  <!-- Subtítulo -->
+  <text x="98" y="476" font-family="Nunito, Arial, sans-serif" font-weight="600" font-size="36" fill="#dfe1ff">Menos caos. Más control.</text>
+  <!-- Pie -->
+  <text x="96" y="566" font-family="Nunito, Arial, sans-serif" font-weight="700" font-size="26" fill="#c7d2fe">ialimp.es</text>
+</svg>
